@@ -539,16 +539,19 @@ class HostManagerTestCase(test.NoDBTestCase):
     @mock.patch('nova.objects.ServiceList.get_by_binary')
     @mock.patch('nova.objects.ComputeNodeList.get_all')
     @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
-    def test_get_all_host_states(self, mock_get_by_host, mock_get_all,
-                                 mock_get_by_binary, mock_log):
+    def test_get_host_states(self, mock_get_by_host, mock_get_all,
+                             mock_get_by_binary, mock_log):
         mock_get_by_host.return_value = []
         mock_get_all.return_value = fakes.COMPUTE_NODES
         mock_get_by_binary.return_value = fakes.SERVICES
         context = 'fake_context'
+        compute_nodes, services = self.host_manager._get_computes_for_cells(
+            context, self.host_manager.cells)
 
-        # get_all_host_states returns a generator, so make a map from it
+        # _get_host_states returns a generator, so make a map from it
         host_states_map = {(state.host, state.nodename): state for state in
-                           self.host_manager.get_all_host_states(context)}
+                           self.host_manager._get_host_states(
+                               context, compute_nodes, services)}
         self.assertEqual(4, len(host_states_map))
 
         calls = [
@@ -598,17 +601,22 @@ class HostManagerTestCase(test.NoDBTestCase):
     @mock.patch.object(host_manager.HostState, '_update_from_compute_node')
     @mock.patch.object(objects.ComputeNodeList, 'get_all')
     @mock.patch.object(objects.ServiceList, 'get_by_binary')
-    def test_get_all_host_states_with_no_aggs(self, svc_get_by_binary,
-                                              cn_get_all, update_from_cn,
-                                              mock_get_by_host):
+    def test_get_host_states_with_no_aggs(self, svc_get_by_binary,
+                                          cn_get_all, update_from_cn,
+                                          mock_get_by_host):
         svc_get_by_binary.return_value = [objects.Service(host='fake')]
         cn_get_all.return_value = [
             objects.ComputeNode(host='fake', hypervisor_hostname='fake')]
         mock_get_by_host.return_value = []
         self.host_manager.host_aggregates_map = collections.defaultdict(set)
 
-        hosts = self.host_manager.get_all_host_states('fake-context')
-        # get_all_host_states returns a generator, so make a map from it
+        context = nova_context.get_admin_context()
+        compute_nodes, services = self.host_manager._get_computes_for_cells(
+            context, self.host_manager.cells)
+
+        hosts = self.host_manager._get_host_states(
+            context, compute_nodes, services)
+        # _get_host_states returns a generator, so make a map from it
         host_states_map = {(state.host, state.nodename): state for state in
                            hosts}
         host_state = host_states_map[('fake', 'fake')]
@@ -618,10 +626,10 @@ class HostManagerTestCase(test.NoDBTestCase):
     @mock.patch.object(host_manager.HostState, '_update_from_compute_node')
     @mock.patch.object(objects.ComputeNodeList, 'get_all')
     @mock.patch.object(objects.ServiceList, 'get_by_binary')
-    def test_get_all_host_states_with_matching_aggs(self, svc_get_by_binary,
-                                                    cn_get_all,
-                                                    update_from_cn,
-                                                    mock_get_by_host):
+    def test_get_host_states_with_matching_aggs(self, svc_get_by_binary,
+                                                cn_get_all,
+                                                update_from_cn,
+                                                mock_get_by_host):
         svc_get_by_binary.return_value = [objects.Service(host='fake')]
         cn_get_all.return_value = [
             objects.ComputeNode(host='fake', hypervisor_hostname='fake')]
@@ -631,8 +639,13 @@ class HostManagerTestCase(test.NoDBTestCase):
             set, {'fake': set([1])})
         self.host_manager.aggs_by_id = {1: fake_agg}
 
-        hosts = self.host_manager.get_all_host_states('fake-context')
-        # get_all_host_states returns a generator, so make a map from it
+        context = nova_context.get_admin_context()
+        compute_nodes, services = self.host_manager._get_computes_for_cells(
+            context, self.host_manager.cells)
+
+        hosts = self.host_manager._get_host_states(
+            context, compute_nodes, services)
+        # _get_host_states returns a generator, so make a map from it
         host_states_map = {(state.host, state.nodename): state for state in
                            hosts}
         host_state = host_states_map[('fake', 'fake')]
@@ -642,11 +655,10 @@ class HostManagerTestCase(test.NoDBTestCase):
     @mock.patch.object(host_manager.HostState, '_update_from_compute_node')
     @mock.patch.object(objects.ComputeNodeList, 'get_all')
     @mock.patch.object(objects.ServiceList, 'get_by_binary')
-    def test_get_all_host_states_with_not_matching_aggs(self,
-                                                        svc_get_by_binary,
-                                                        cn_get_all,
-                                                        update_from_cn,
-                                                        mock_get_by_host):
+    def test_get_host_states_with_not_matching_aggs(self, svc_get_by_binary,
+                                                    cn_get_all,
+                                                    update_from_cn,
+                                                    mock_get_by_host):
         svc_get_by_binary.return_value = [objects.Service(host='fake'),
                                           objects.Service(host='other')]
         cn_get_all.return_value = [
@@ -658,8 +670,13 @@ class HostManagerTestCase(test.NoDBTestCase):
             set, {'other': set([1])})
         self.host_manager.aggs_by_id = {1: fake_agg}
 
-        hosts = self.host_manager.get_all_host_states('fake-context')
-        # get_all_host_states returns a generator, so make a map from it
+        context = nova_context.get_admin_context()
+        compute_nodes, services = self.host_manager._get_computes_for_cells(
+            context, self.host_manager.cells)
+
+        hosts = self.host_manager._get_host_states(
+            context, compute_nodes, services)
+        # _get_host_states returns a generator, so make a map from it
         host_states_map = {(state.host, state.nodename): state for state in
                            hosts}
         host_state = host_states_map[('fake', 'fake')]
@@ -670,11 +687,10 @@ class HostManagerTestCase(test.NoDBTestCase):
     @mock.patch.object(host_manager.HostState, '_update_from_compute_node')
     @mock.patch.object(objects.ComputeNodeList, 'get_all')
     @mock.patch.object(objects.ServiceList, 'get_by_binary')
-    def test_get_all_host_states_corrupt_aggregates_info(self,
-                                                         svc_get_by_binary,
-                                                         cn_get_all,
-                                                         update_from_cn,
-                                                         mock_get_by_host):
+    def test_get_host_states_corrupt_aggregates_info(self, svc_get_by_binary,
+                                                     cn_get_all,
+                                                     update_from_cn,
+                                                     mock_get_by_host):
         """Regression test for bug 1605804
 
         A host can be in multiple host-aggregates at the same time. When a
@@ -700,16 +716,14 @@ class HostManagerTestCase(test.NoDBTestCase):
         aggregate.hosts = [host_a]
         self.host_manager.delete_aggregate(aggregate)
 
-        self.host_manager.get_all_host_states('fake-context')
+        context = nova_context.get_admin_context()
+        compute_nodes, services = self.host_manager._get_computes_for_cells(
+            context, self.host_manager.cells)
 
-    @mock.patch('nova.objects.ServiceList.get_by_binary')
-    @mock.patch('nova.objects.ComputeNodeList.get_all')
+        self.host_manager._get_host_states(context, compute_nodes, services)
+
     @mock.patch('nova.objects.InstanceList.get_by_host')
-    def test_get_all_host_states_updated(self, mock_get_by_host,
-                                         mock_get_all_comp,
-                                         mock_get_svc_by_binary):
-        mock_get_all_comp.return_value = fakes.COMPUTE_NODES
-        mock_get_svc_by_binary.return_value = fakes.SERVICES
+    def test_host_state_update(self, mock_get_by_host):
         context = 'fake_context'
         hm = self.host_manager
         inst1 = objects.Instance(uuid=uuids.instance)
@@ -725,14 +739,8 @@ class HostManagerTestCase(test.NoDBTestCase):
         self.assertTrue(host_state.instances)
         self.assertEqual(host_state.instances[uuids.instance], inst1)
 
-    @mock.patch('nova.objects.ServiceList.get_by_binary')
-    @mock.patch('nova.objects.ComputeNodeList.get_all')
     @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
-    def test_get_all_host_states_not_updated(self, mock_get_by_host,
-                                             mock_get_all_comp,
-                                             mock_get_svc_by_binary):
-        mock_get_all_comp.return_value = fakes.COMPUTE_NODES
-        mock_get_svc_by_binary.return_value = fakes.SERVICES
+    def test_host_state_not_updated(self, mock_get_by_host):
         context = 'fake_context'
         hm = self.host_manager
         inst1 = objects.Instance(uuid=uuids.instance)
@@ -1061,24 +1069,28 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
     @mock.patch('nova.objects.ServiceList.get_by_binary')
     @mock.patch('nova.objects.ComputeNodeList.get_all')
     @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
-    def test_get_all_host_states(self, mock_get_by_host, mock_get_all,
-                                 mock_get_by_binary):
+    def test_get_host_states(self, mock_get_by_host, mock_get_all,
+                             mock_get_by_binary):
         mock_get_by_host.return_value = []
         mock_get_all.return_value = fakes.COMPUTE_NODES
         mock_get_by_binary.return_value = fakes.SERVICES
         context = 'fake_context'
 
-        # get_all_host_states returns a generator, so make a map from it
+        compute_nodes, services = self.host_manager._get_computes_for_cells(
+            context, self.host_manager.cells)
+
+        # _get_host_states returns a generator, so make a map from it
         host_states_map = {(state.host, state.nodename): state for state in
-                           self.host_manager.get_all_host_states(context)}
+                           self.host_manager._get_host_states(
+                               context, compute_nodes, services)}
         self.assertEqual(len(host_states_map), 4)
 
     @mock.patch('nova.objects.ServiceList.get_by_binary')
     @mock.patch('nova.objects.ComputeNodeList.get_all')
     @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
-    def test_get_all_host_states_after_delete_one(self, mock_get_by_host,
-                                                  mock_get_all,
-                                                  mock_get_by_binary):
+    def test_get_host_states_after_delete_one(self, mock_get_by_host,
+                                              mock_get_all,
+                                              mock_get_by_binary):
         getter = (lambda n: n.hypervisor_hostname
                   if 'hypervisor_hostname' in n else None)
         running_nodes = [n for n in fakes.COMPUTE_NODES
@@ -1090,14 +1102,20 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
         context = 'fake_context'
 
         # first call: all nodes
-        hosts = self.host_manager.get_all_host_states(context)
-        # get_all_host_states returns a generator, so make a map from it
+        compute_nodes, services = self.host_manager._get_computes_for_cells(
+            context, self.host_manager.cells)
+        hosts = self.host_manager._get_host_states(
+            context, compute_nodes, services)
+        # _get_host_states returns a generator, so make a map from it
         host_states_map = {(state.host, state.nodename): state for state in
                            hosts}
         self.assertEqual(len(host_states_map), 4)
 
         # second call: just running nodes
-        hosts = self.host_manager.get_all_host_states(context)
+        compute_nodes, services = self.host_manager._get_computes_for_cells(
+            context, self.host_manager.cells)
+        hosts = self.host_manager._get_host_states(
+            context, compute_nodes, services)
         host_states_map = {(state.host, state.nodename): state for state in
                            hosts}
         self.assertEqual(len(host_states_map), 3)
@@ -1105,23 +1123,29 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
     @mock.patch('nova.objects.ServiceList.get_by_binary')
     @mock.patch('nova.objects.ComputeNodeList.get_all')
     @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
-    def test_get_all_host_states_after_delete_all(self, mock_get_by_host,
-                                                  mock_get_all,
-                                                  mock_get_by_binary):
+    def test_get_host_states_after_delete_all(self, mock_get_by_host,
+                                              mock_get_all,
+                                              mock_get_by_binary):
         mock_get_by_host.return_value = []
         mock_get_all.side_effect = [fakes.COMPUTE_NODES, []]
         mock_get_by_binary.side_effect = [fakes.SERVICES, fakes.SERVICES]
         context = 'fake_context'
 
         # first call: all nodes
-        hosts = self.host_manager.get_all_host_states(context)
-        # get_all_host_states returns a generator, so make a map from it
+        compute_nodes, services = self.host_manager._get_computes_for_cells(
+            context, self.host_manager.cells)
+        hosts = self.host_manager._get_host_states(
+            context, compute_nodes, services)
+        # _get_host_states returns a generator, so make a map from it
         host_states_map = {(state.host, state.nodename): state for state in
                            hosts}
         self.assertEqual(len(host_states_map), 4)
 
         # second call: no nodes
-        hosts = self.host_manager.get_all_host_states(context)
+        compute_nodes, services = self.host_manager._get_computes_for_cells(
+            context, self.host_manager.cells)
+        hosts = self.host_manager._get_host_states(
+            context, compute_nodes, services)
         host_states_map = {(state.host, state.nodename): state for state in
                            hosts}
         self.assertEqual(len(host_states_map), 0)
@@ -1161,7 +1185,7 @@ class HostStateTestCase(test.NoDBTestCase):
     """Test case for HostState class."""
 
     # update_from_compute_node() and consume_from_request() are tested
-    # in HostManagerTestCase.test_get_all_host_states()
+    # in HostManagerTestCase.test_get_host_states()
 
     @mock.patch('nova.utils.synchronized',
                 side_effect=lambda a: lambda f: lambda *args: f(*args))
