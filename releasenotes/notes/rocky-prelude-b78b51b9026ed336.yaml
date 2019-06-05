@@ -55,4 +55,4 @@ prelude: |
     .. _purge archived shadow table data: https://docs.openstack.org/nova/latest/cli/nova-manage.html#nova-database
     .. _disable a cell: https://docs.openstack.org/nova/latest/cli/nova-manage.html#nova-cells-v2
     .. _image signature certificate validation: https://docs.openstack.org/nova/latest/user/certificate-validation.html
-    .. _placement policy: https://docs.openstack.org/nova/latest/configuration/placement-policy.html
+    .. _placement policy: https://docs.openstack.org/nova/rocky/configuration/placement-policy.html
