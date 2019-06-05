@@ -756,6 +756,10 @@ class HostManager(object):
                        'cells': ', '.join(
                        [c.identity for c in disabled_cells])})
 
+        # Dict, keyed by host name, to cell UUID to be used to look up the
+        # cell a particular host is in (used with self.cells).
+        self.host_to_cell_uuid = {}
+
     def get_host_states_by_uuids(self, context, compute_uuids, spec_obj):
 
         if not self.cells:
@@ -819,9 +823,40 @@ class HostManager(object):
         return [self.aggs_by_id[agg_id] for agg_id in
                 self.host_aggregates_map[host]]
 
+    def _get_cell_mapping_for_host(self, context, host_name):
+        """Finds the CellMapping for a particular host name
+
+        Relies on a cache to quickly fetch the CellMapping if we have looked
+        up this host before, otherwise gets the CellMapping via the
+        HostMapping record for the given host name.
+
+        :param context: nova auth request context
+        :param host_name: compute service host name
+        :returns: CellMapping object
+        :raises: HostMappingNotFound if the host is not mapped to a cell
+        """
+        # Check to see if we have the host in our cache.
+        if host_name in self.host_to_cell_uuid:
+            cell_uuid = self.host_to_cell_uuid[host_name]
+            if cell_uuid in self.cells:
+                return self.cells[cell_uuid]
+            # Something is wrong so log a warning and just fall through to
+            # lookup the HostMapping.
+            LOG.warning('Host %s is expected to be in cell %s but that cell '
+                        'uuid was not found in our cache. The service may '
+                        'need to be restarted to refresh the cache.',
+                        host_name, cell_uuid)
+
+        # We have not cached this host yet so get the HostMapping, cache the
+        # result and return the CellMapping.
+        hm = objects.HostMapping.get_by_host(context, host_name)
+        cell_mapping = hm.cell_mapping
+        self.host_to_cell_uuid[host_name] = cell_mapping.uuid
+        return cell_mapping
+
     def _get_instances_by_host(self, context, host_name):
         try:
-            hm = objects.HostMapping.get_by_host(context, host_name)
+            cm = self._get_cell_mapping_for_host(context, host_name)
         except exception.HostMappingNotFound:
             # It's possible to hit this when the compute service first starts
             # up and casts to update_instance_info with an empty list but
@@ -829,7 +864,7 @@ class HostManager(object):
             LOG.info('Host mapping not found for host %s. Not tracking '
                      'instance info for this host.', host_name)
             return {}
-        with context_module.target_cell(context, hm.cell_mapping) as cctxt:
+        with context_module.target_cell(context, cm) as cctxt:
             uuids = objects.InstanceList.get_uuids_by_host(cctxt, host_name)
             # Putting the context in the otherwise fake Instance object at
             # least allows out of tree filters to lazy-load fields.
