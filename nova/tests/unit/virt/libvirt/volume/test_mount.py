@@ -170,9 +170,6 @@ class ThreadController(object):
 
 
 class HostMountStateTestCase(test.NoDBTestCase):
-    def setUp(self):
-        super(HostMountStateTestCase, self).setUp()
-
     @mock.patch('os.path.ismount',
                 side_effect=[False, True, True, True, True])
     def test_init(self, mock_ismount):

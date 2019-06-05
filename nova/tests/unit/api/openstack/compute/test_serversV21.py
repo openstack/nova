@@ -2556,9 +2556,6 @@ class ServersControllerTestV273(ControllerTest):
     """
     wsgi_api_version = '2.73'
 
-    def setUp(self):
-        super(ServersControllerTestV273, self).setUp()
-
     def req(self, url, use_admin_context=False):
         return fakes.HTTPRequest.blank(url,
                                        use_admin_context=use_admin_context,
