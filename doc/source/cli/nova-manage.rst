@@ -327,6 +327,10 @@ Nova Cells v2
     found, 3 if a host with that name is not in a cell with that uuid, 4 if
     a host with that name has instances (host not empty).
 
+    .. note::
+
+      The scheduler caches host-to-cell mapping information so when deleting
+      a host the scheduler may need to be restarted or sent the SIGHUP signal.
 
 Placement
 ~~~~~~~~~

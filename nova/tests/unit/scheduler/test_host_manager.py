@@ -104,6 +104,8 @@ class HostManagerTestCase(test.NoDBTestCase):
                                             transport_url='fake:///mq3',
                                             disabled=False)
         cells = [cell_mapping1, cell_mapping2, cell_mapping3]
+        # Throw a random host-to-cell in that cache to make sure it gets reset.
+        self.host_manager.host_to_cell_uuid['fake-host'] = cell_uuid1
         with mock.patch('nova.objects.CellMappingList.get_all',
                         return_value=cells) as mock_cm:
             self.host_manager.refresh_cells_caches()
@@ -114,6 +116,8 @@ class HostManagerTestCase(test.NoDBTestCase):
         # But it is still in the full list.
         self.assertEqual(3, len(self.host_manager.cells))
         self.assertIn(cell_uuid2, self.host_manager.cells)
+        # The host_to_cell_uuid cache should have been reset.
+        self.assertEqual({}, self.host_manager.host_to_cell_uuid)
 
     def test_refresh_cells_caches_except_cell0(self):
         ctxt = nova_context.RequestContext('fake-user', 'fake_project')
@@ -130,6 +134,46 @@ class HostManagerTestCase(test.NoDBTestCase):
             self.host_manager.refresh_cells_caches()
             mock_cm.assert_called_once()
         self.assertEqual(0, len(self.host_manager.cells))
+
+    @mock.patch('nova.objects.HostMapping.get_by_host',
+                return_value=objects.HostMapping(
+                    cell_mapping=objects.CellMapping(uuid=uuids.cell1)))
+    def test_get_cell_mapping_for_host(self, mock_get_by_host):
+        # Starting with an empty cache, assert that the HostMapping is looked
+        # up and the result is cached.
+        ctxt = nova_context.get_admin_context()
+        host = 'fake-host'
+        self.assertEqual({}, self.host_manager.host_to_cell_uuid)
+        cm = self.host_manager._get_cell_mapping_for_host(ctxt, host)
+        self.assertIs(cm, mock_get_by_host.return_value.cell_mapping)
+        self.assertIn(host, self.host_manager.host_to_cell_uuid)
+        self.assertEqual(
+            uuids.cell1, self.host_manager.host_to_cell_uuid[host])
+        mock_get_by_host.assert_called_once_with(ctxt, host)
+
+        # Reset the mock and do it again, assert we do not query the DB.
+        mock_get_by_host.reset_mock()
+        self.host_manager._get_cell_mapping_for_host(ctxt, host)
+        mock_get_by_host.assert_not_called()
+
+        # Mix up the cache such that the host is mapped to a cell that
+        # is not in the cache which will make us query the DB. Also make the
+        # HostMapping query raise HostMappingNotFound to make sure that comes
+        # up to the caller.
+        mock_get_by_host.reset_mock()
+        self.host_manager.host_to_cell_uuid[host] = uuids.random_cell
+        mock_get_by_host.side_effect = exception.HostMappingNotFound(name=host)
+        with mock.patch('nova.scheduler.host_manager.LOG.warning') as warning:
+            self.assertRaises(exception.HostMappingNotFound,
+                              self.host_manager._get_cell_mapping_for_host,
+                              ctxt, host)
+            # We should have logged a warning because the host is cached to
+            # a cell uuid but that cell uuid is not in the cells cache.
+            warning.assert_called_once()
+            self.assertIn('Host %s is expected to be in cell %s',
+                          warning.call_args[0][0])
+            # And we should have also tried to lookup the HostMapping in the DB
+            mock_get_by_host.assert_called_once_with(ctxt, host)
 
     @mock.patch.object(nova.objects.InstanceList, 'get_by_filters')
     @mock.patch.object(nova.objects.ComputeNodeList, 'get_all')
