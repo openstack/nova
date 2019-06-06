@@ -70,12 +70,12 @@ server status is one of the following values:
 
 -  ``SUSPENDED``: The server is suspended, either by request or
    necessity. This status appears for only the following hypervisors:
-   XenServer/XCP, KVM, and ESXi. Administrative users may suspend a
-   server if it is infrequently used or to perform system maintenance.
-   When you suspend a server, its state is stored on disk, all
-   memory is written to disk, and the server is stopped.
-   Suspending a server is similar to placing a device in hibernation;
-   memory and vCPUs become available to create other servers.
+   XenServer/XCP, KVM, and ESXi. When you suspend a server, its state is stored
+   on disk, all memory is written to disk, and the server is stopped.
+   Suspending a server is similar to placing a device in hibernation and its
+   occupied resource will not be freed but rather kept for when the server is
+   resumed. If an instance is infrequently used and the occupied resource needs
+   to be freed to create other servers, it should be shelved.
 
 -  ``UNKNOWN``: The state of the server is unknown. It could be because a part
    of the infrastructure is temporarily down (see :doc:`down_cells`
