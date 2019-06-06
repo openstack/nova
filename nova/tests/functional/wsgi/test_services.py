@@ -116,3 +116,60 @@ class TestServicesAPI(test_servers.ProviderUsageBaseTestCase):
         # and allocation information.
         resp = self.placement_api.get('/resource_providers/%s' % rp_uuid)
         self.assertEqual(404, resp.status)
+
+    def test_evacuate_then_delete_compute_service(self):
+        """Tests a scenario where a server is created on a host, the host
+        goes down, the server is evacuated to another host, and then the
+        source host compute service is deleted. After that the deleted
+        compute service is restarted. Related placement resources are checked
+        throughout.
+        """
+        # Create our source host that we will evacuate *from* later.
+        host1 = self._start_compute('host1')
+        # Create a server which will go on host1 since it is the only host.
+        flavor = self.api.get_flavors()[0]
+        server = self._boot_and_check_allocations(flavor, 'host1')
+        # Get the compute service record for host1 so we can manage it.
+        service = self.admin_api.get_services(
+            binary='nova-compute', host='host1')[0]
+        # Get the corresponding resource provider uuid for host1.
+        rp_uuid = self._get_provider_uuid_by_host(service['host'])
+        # Make sure there is a resource provider for that compute node based
+        # on the uuid.
+        resp = self.placement_api.get('/resource_providers/%s' % rp_uuid)
+        self.assertEqual(200, resp.status)
+        # Down the compute service for host1 so we can evacuate from it.
+        self.admin_api.put_service(service['id'], {'forced_down': True})
+        host1.stop()
+        # Start another host and trigger the server evacuate to that host.
+        self._start_compute('host2')
+        self.admin_api.post_server_action(server['id'], {'evacuate': {}})
+        # The host does not change until after the status is changed to ACTIVE
+        # so wait for both parameters.
+        self._wait_for_server_parameter(
+            self.admin_api, server, {'status': 'ACTIVE',
+                                     'OS-EXT-SRV-ATTR:host': 'host2'})
+        # Delete the compute service for host1 and check the related
+        # placement resources for that host.
+        self.admin_api.api_delete('/os-services/%s' % service['id'])
+        # Make sure the service is gone.
+        services = self.admin_api.get_services(
+            binary='nova-compute', host='host1')
+        self.assertEqual(0, len(services), services)
+        # FIXME(mriedem): This is bug 1829479 where the compute service is
+        # deleted but the resource provider is not because there are still
+        # allocations against the provider from the evacuated server.
+        resp = self.placement_api.get('/resource_providers/%s' % rp_uuid)
+        self.assertEqual(200, resp.status)
+        self.assertFlavorMatchesUsage(rp_uuid, flavor)
+        # Try to restart the host1 compute service to create a new resource
+        # provider.
+        self.restart_compute_service(host1)
+        # FIXME(mriedem): This is bug 1817833 where restarting the now-deleted
+        # compute service attempts to create a new resource provider with a
+        # new uuid but the same name which results in a conflict. The service
+        # does not die, however, because _update_available_resource_for_node
+        # catches and logs but does not re-raise the error.
+        log_output = self.stdlog.logger.output
+        self.assertIn('Error updating resources for node host1.', log_output)
+        self.assertIn('Failed to create resource provider host1', log_output)
