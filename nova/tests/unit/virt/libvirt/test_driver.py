@@ -3812,13 +3812,17 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.features[2],
                               vconfig.LibvirtConfigGuestFeatureHyperV)
 
-    @mock.patch.object(host.Host, 'has_min_version')
-    def test_get_guest_config_windows_hyperv_feature2(self, mock_version):
-        mock_version.return_value = True
+    @mock.patch.object(host.Host, 'has_min_version',
+                       new=mock.Mock(return_value=True))
+    def _test_get_guest_config_windows_hyperv(
+            self, flavor=None, image_meta=None, hvid_hidden=False):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref['os_type'] = 'windows'
-        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        if flavor is not None:
+            instance_ref.flavor = flavor
+        if image_meta is None:
+            image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref,
@@ -3831,18 +3835,67 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                               vconfig.LibvirtConfigGuestClock)
         self.assertEqual(cfg.clock.offset, "localtime")
 
-        self.assertEqual(3, len(cfg.features))
+        num_features = 4 if hvid_hidden else 3
+        self.assertEqual(num_features, len(cfg.features))
         self.assertIsInstance(cfg.features[0],
                               vconfig.LibvirtConfigGuestFeatureACPI)
         self.assertIsInstance(cfg.features[1],
                               vconfig.LibvirtConfigGuestFeatureAPIC)
         self.assertIsInstance(cfg.features[2],
                               vconfig.LibvirtConfigGuestFeatureHyperV)
+        if hvid_hidden:
+            self.assertIsInstance(cfg.features[3],
+                                  vconfig.LibvirtConfigGuestFeatureKvmHidden)
 
         self.assertTrue(cfg.features[2].relaxed)
         self.assertTrue(cfg.features[2].spinlocks)
         self.assertEqual(8191, cfg.features[2].spinlock_retries)
         self.assertTrue(cfg.features[2].vapic)
+        self.assertEqual(hvid_hidden, cfg.features[2].vendorid_spoof)
+
+    def test_get_guest_config_windows_hyperv_feature2(self):
+        self._test_get_guest_config_windows_hyperv()
+
+    def test_get_guest_config_windows_hyperv_all_hide_flv(self):
+        # Similar to test_get_guest_config_windows_hyperv_feature2
+        #   but also test hiding the HyperV signature with the flavor
+        #   extra_spec "hide_hypervisor_id"
+        flavor_hide_id = fake_flavor.fake_flavor_obj(self.context,
+            extra_specs={"hide_hypervisor_id": "true"},
+            expected_attrs={"extra_specs"})
+        # this works for kvm (the default, tested below) and qemu
+        self.flags(virt_type='qemu', group='libvirt')
+
+        self._test_get_guest_config_windows_hyperv(
+            flavor=flavor_hide_id, hvid_hidden=True)
+
+    def test_get_guest_config_windows_hyperv_all_hide_img(self):
+        # Similar to test_get_guest_config_windows_hyperv_feature2
+        #   but also test hiding the HyperV signature with the image
+        #   property "img_hide_hypervisor_id"
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {"img_hide_hypervisor_id": "true"}})
+
+        self._test_get_guest_config_windows_hyperv(
+            image_meta=image_meta, hvid_hidden=True)
+
+    def test_get_guest_config_windows_hyperv_all_hide_flv_img(self):
+        # Similar to test_get_guest_config_windows_hyperv_feature2
+        #   but also test hiding the HyperV signature with both the flavor
+        #   extra_spec "hide_hypervisor_id" and the image property
+        #   "img_hide_hypervisor_id"
+        flavor_hide_id = fake_flavor.fake_flavor_obj(self.context,
+            extra_specs={"hide_hypervisor_id": "true"},
+            expected_attrs={"extra_specs"})
+        self.flags(virt_type='qemu', group='libvirt')
+
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {"img_hide_hypervisor_id": "true"}})
+
+        self._test_get_guest_config_windows_hyperv(
+            flavor=flavor_hide_id, image_meta=image_meta, hvid_hidden=True)
 
     def test_get_guest_config_with_two_nics(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)

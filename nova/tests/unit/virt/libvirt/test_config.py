@@ -2182,6 +2182,7 @@ class LibvirtConfigGuestFeatureTest(LibvirtConfigBaseTest):
         obj.relaxed = True
         obj.vapic = True
         obj.spinlocks = True
+        obj.vendorid_spoof = True
 
         xml = obj.to_xml()
         self.assertXmlEqual(xml, """
@@ -2189,6 +2190,7 @@ class LibvirtConfigGuestFeatureTest(LibvirtConfigBaseTest):
             <relaxed state="on"/>
             <vapic state="on"/>
             <spinlocks state="on" retries="4095"/>
+            <vendor_id state="on" value="1234567890ab"/>
           </hyperv>""")
 
 
