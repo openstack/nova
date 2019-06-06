@@ -345,7 +345,6 @@ Install and configure components
    .. code-block:: console
 
       # su -s /bin/sh -c "nova-manage cell_v2 create_cell --name=cell1 --verbose" nova
-      109e1d4b-536a-40d0-83c6-5f121b82b650
 
 #. Populate the nova database:
 
