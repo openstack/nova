@@ -119,6 +119,13 @@ class RbdTestCase(test.NoDBTestCase):
             self.assertFalse(self.driver.is_cloneable({'url': loc},
                                                       image_meta))
 
+    @mock.patch.object(rbd_utils, 'RADOSClient')
+    def test_rbddriver(self, mock_client):
+        client = mock_client.return_value
+        client.__enter__.return_value = client
+        client.cluster.get_fsid.side_effect = lambda: b'abc'
+        self.assertEqual('abc', self.driver.get_fsid())
+
     @mock.patch.object(rbd_utils.RBDDriver, 'get_fsid')
     def test_cloneable(self, mock_get_fsid):
         mock_get_fsid.return_value = 'abc'

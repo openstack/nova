@@ -28,6 +28,7 @@ from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_service import loopingcall
+from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import units
 
@@ -194,7 +195,7 @@ class RBDDriver(object):
 
     def get_fsid(self):
         with RADOSClient(self) as client:
-            return client.cluster.get_fsid()
+            return encodeutils.safe_decode(client.cluster.get_fsid())
 
     def is_cloneable(self, image_location, image_meta):
         url = image_location['url']
@@ -204,6 +205,7 @@ class RBDDriver(object):
             LOG.debug('not cloneable: %s', e)
             return False
 
+        fsid = encodeutils.safe_decode(fsid)
         if self.get_fsid() != fsid:
             reason = '%s is in a different ceph cluster' % url
             LOG.debug(reason)
