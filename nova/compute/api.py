@@ -3523,15 +3523,22 @@ class API(base.Base):
             availability_zones.get_host_availability_zone(
                 context, migration.source_compute))
 
-        # Conductor updated the RequestSpec.flavor during the initial resize
-        # operation to point at the new flavor, so we need to update the
-        # RequestSpec to point back at the original flavor, otherwise
-        # subsequent move operations through the scheduler will be using the
-        # wrong flavor.
+        # If this was a resize, the conductor may have updated the
+        # RequestSpec.flavor field (to point at the new flavor) and the
+        # RequestSpec.numa_topology field (to reflect the new flavor's extra
+        # specs) during the initial resize operation, so we need to update the
+        # RequestSpec to point back at the original flavor and reflect the NUMA
+        # settings of this flavor, otherwise subsequent move operations through
+        # the scheduler will be using the wrong values. There's no need to do
+        # this if the flavor hasn't changed though and we're migrating rather
+        # than resizing.
         reqspec = objects.RequestSpec.get_by_instance_uuid(
             context, instance.uuid)
-        reqspec.flavor = instance.old_flavor
-        reqspec.save()
+        if reqspec.flavor['id'] != instance.old_flavor['id']:
+            reqspec.flavor = instance.old_flavor
+            reqspec.numa_topology = hardware.numa_get_constraints(
+                instance.old_flavor, instance.image_meta)
+            reqspec.save()
 
         # NOTE(gibi): This is a performance optimization. If the network info
         # cache does not have ports with allocations in the binding profile
@@ -3698,6 +3705,11 @@ class API(base.Base):
         request_spec = objects.RequestSpec.get_by_instance_uuid(
             context, instance.uuid)
         request_spec.ignore_hosts = filter_properties['ignore_hosts']
+
+        # don't recalculate the NUMA topology unless the flavor has changed
+        if not same_instance_type:
+            request_spec.numa_topology = hardware.numa_get_constraints(
+                new_instance_type, instance.image_meta)
 
         instance.task_state = task_states.RESIZE_PREP
         instance.progress = 0
