@@ -182,12 +182,18 @@ class DbQuotaDriver(object):
             # such as AbsoluteResources.
             if not isinstance(resource, CountableResource):
                 continue
-            if resource.name in usages:
+            if resource.name in usages or 'instances' in usages and \
+                    resource.name.startswith('instances_'):
                 # This is needed because for any of the resources:
                 # ('instances', 'cores', 'ram'), they are counted at the same
                 # time for efficiency (query the instances table once instead
                 # of multiple times). So, a count of any one of them contains
                 # counts for the others and we can avoid re-counting things.
+                # NOTE(jkulik): If 'instances' is in there, our resources for
+                # baremetal flavors, which all start with `instances_` also
+                # have to be in there. If they are not in there, the
+                # user/project has no instance with that resource and we don't
+                # list it. Still, we don't have to re-compute the usages.
                 continue
             if resource.name in ('key_pairs', 'server_group_members'):
                 # These per user resources are special cases whose usages
