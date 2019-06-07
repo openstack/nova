@@ -138,7 +138,7 @@ If the server status does not change to ``ACTIVE``, the unshelve operation faile
 
 Normal response codes: 202
 
-Error response codes:  unauthorized(401), forbidden(403), itemNotFound(404), conflict(409)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404), conflict(409)
 
 Request
 -------
@@ -147,12 +147,18 @@ Request
 
   - server_id: server_id_path
   - unshelve: unshelve
+  - availability_zone: availability_zone_unshelve
 
 |
 
 **Example Unshelve server (unshelve Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-shelve/os-unshelve.json
+   :language: javascript
+
+**Example Unshelve server (unshelve Action) (v2.77)**
+
+.. literalinclude:: ../../doc/api_samples/os-shelve/v2.77/os-unshelve.json
    :language: javascript
 
 

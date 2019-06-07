@@ -1799,6 +1799,15 @@ availability_zone_state:
   in: body
   required: true
   type: object
+availability_zone_unshelve:
+  description: |
+    The availability zone name. Specifying an availability zone is only
+    allowed when the server status is ``SHELVED_OFFLOADED`` otherwise a
+    409 HTTPConflict response is returned.
+  in: body
+  required: false
+  type: string
+  min_version: 2.77
 available:
   description: |
     Returns true if the availability zone is available.

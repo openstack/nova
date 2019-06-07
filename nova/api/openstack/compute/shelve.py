@@ -16,8 +16,11 @@
 
 from webob import exc
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas import shelve as shelve_schemas
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova.compute import api as compute
 from nova.compute import vm_states
 from nova import exception
@@ -72,11 +75,22 @@ class ShelveController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((400, 404, 409))
     @wsgi.action('unshelve')
+    # In microversion 2.77 we support specifying 'availability_zone' to
+    # unshelve a server. But before 2.77 there is no request body
+    # schema validation (because of body=null).
+    @validation.schema(shelve_schemas.unshelve_v277, min_version='2.77')
     def _unshelve(self, req, id, body):
         """Restore an instance from shelved mode."""
         context = req.environ["nova.context"]
         context.can(shelve_policies.POLICY_ROOT % 'unshelve')
         instance = common.get_instance(self.compute_api, context, id)
+
+        new_az = None
+        unshelve_dict = body['unshelve']
+        if unshelve_dict and 'availability_zone' in unshelve_dict:
+            support_az = api_version_request.is_supported(req, '2.77')
+            if support_az:
+                new_az = unshelve_dict['availability_zone']
 
         # We could potentially move this check to conductor and avoid the
         # extra API call to neutron when we support move operations with ports
@@ -93,10 +107,14 @@ class ShelveController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=msg)
 
         try:
-            self.compute_api.unshelve(context, instance)
-        except exception.InstanceIsLocked as e:
+            self.compute_api.unshelve(context, instance, new_az=new_az)
+        except (exception.InstanceIsLocked,
+                exception.UnshelveInstanceInvalidState,
+                exception.MismatchVolumeAZException) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                                                                   'unshelve',
                                                                   id)
+        except exception.InvalidRequest as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())

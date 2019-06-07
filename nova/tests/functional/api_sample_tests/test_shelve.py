@@ -47,3 +47,29 @@ class ShelveJsonTest(test_servers.ServersSampleBase):
         uuid = self._post_server()
         self._test_server_action(uuid, 'os-shelve', 'shelve')
         self._test_server_action(uuid, 'os-unshelve', 'unshelve')
+
+
+class UnshelveJson277Test(test_servers.ServersSampleBase):
+    sample_dir = "os-shelve"
+    microversion = '2.77'
+    scenarios = [('v2_77', {'api_major_version': 'v2.1'})]
+    USE_NEUTRON = True
+
+    def _test_server_action(self, uuid, template, action, subs=None):
+        subs = subs or {}
+        subs.update({'action': action})
+        response = self._do_post('servers/%s/action' % uuid,
+                                 template, subs)
+        self.assertEqual(202, response.status_code)
+        self.assertEqual("", response.text)
+
+    def test_unshelve_with_az(self):
+        uuid = self._post_server()
+        self._test_server_action(uuid, 'os-shelve', 'shelve')
+        self._test_server_action(uuid, 'os-unshelve', 'unshelve',
+                                 subs={"availability_zone": "us-west"})
+
+    def test_unshelve_no_az(self):
+        uuid = self._post_server()
+        self._test_server_action(uuid, 'os-shelve', 'shelve')
+        self._test_server_action(uuid, 'os-unshelve-null', 'unshelve')

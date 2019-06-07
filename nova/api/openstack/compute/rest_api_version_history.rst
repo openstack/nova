@@ -993,3 +993,8 @@ Adds ``power-update`` event name to ``os-server-external-events`` API. The
 changes to the power state of an instance caused by this event can be viewed
 through ``GET /servers/{server_id}/os-instance-actions`` and
 ``GET /servers/{server_id}/os-instance-actions/{request_id}``.
+
+2.77
+----
+API microversion 2.77 adds support for specifying availability zone when
+unshelving a shelved offloaded server.

@@ -91,6 +91,9 @@ With respect to availability zones, a server is restricted to a zone if:
    parameter but the API service is configured for
    :oslo.config:option:`default_schedule_zone` then by default the server will
    be scheduled to that zone.
+3. The shelved offloaded server was unshelved by specifying the
+   ``availability_zone`` with the ``POST /servers/{server_id}/action`` request
+   using microversion 2.77 or greater.
 
 If the server was not created in a specific zone then it is free to be moved
 to other zones, i.e. the :ref:`AvailabilityZoneFilter <AvailabilityZoneFilter>`

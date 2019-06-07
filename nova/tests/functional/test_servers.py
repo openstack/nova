@@ -2577,7 +2577,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             source_hostname, source_rp_uuid)
 
         req = {
-            'unshelve': {}
+            'unshelve': None
         }
         self.api.post_server_action(server['id'], req)
         self._wait_for_state_change(self.api, server, 'ACTIVE')
@@ -2626,7 +2626,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.admin_api.put_service(source_service_id, {'status': 'disabled'})
 
         req = {
-            'unshelve': {}
+            'unshelve': None
         }
         self.api.post_server_action(server['id'], req)
         server = self._wait_for_state_change(self.api, server, 'ACTIVE')
@@ -2662,7 +2662,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.admin_api.put_service(source_service_id, {'status': 'disabled'})
 
         req = {
-            'unshelve': {}
+            'unshelve': None
         }
         self.api.post_server_action(server['id'], req)
         server = self._wait_for_state_change(self.api, server, 'ACTIVE')
@@ -3162,7 +3162,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             binary='nova-compute')[0]['id']
         self.admin_api.put_service(source_service_id, {'status': 'disabled'})
 
-        req = {'unshelve': {}}
+        req = {'unshelve': None}
         self.api.post_server_action(created_server['id'], req)
         new_server = self._wait_for_state_change(
             self.api, created_server, 'ACTIVE')
@@ -5906,7 +5906,7 @@ class UnsupportedPortResourceRequestBasedSchedulingTest(
 
         ex = self.assertRaises(
             client.OpenStackApiException,
-            self.api.post_server_action, server['id'], {'unshelve': {}})
+            self.api.post_server_action, server['id'], {'unshelve': None})
 
         self.assertEqual(400, ex.response.status_code)
         self.assertIn(
@@ -5939,7 +5939,7 @@ class UnsupportedPortResourceRequestBasedSchedulingTest(
         # can exist with such a port.
         self._add_resource_request_to_a_bound_port(self.neutron.port_1['id'])
 
-        self.api.post_server_action(server['id'], {'unshelve': {}})
+        self.api.post_server_action(server['id'], {'unshelve': None})
         self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
 
 

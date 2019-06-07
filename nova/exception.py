@@ -1863,6 +1863,19 @@ class UnshelveException(NovaException):
     msg_fmt = _("Error during unshelve instance %(instance_id)s: %(reason)s")
 
 
+class MismatchVolumeAZException(Invalid):
+    msg_fmt = _("The availability zone between the server and its attached "
+                "volumes do not match: %(reason)s.")
+    code = 409
+
+
+class UnshelveInstanceInvalidState(InstanceInvalidState):
+    msg_fmt = _('Specifying an availability zone when unshelving server '
+                '%(instance_uuid)s with status "%(state)s" is not supported. '
+                'The server status must be SHELVED_OFFLOADED.')
+    code = 409
+
+
 class ImageVCPULimitsRangeExceeded(Invalid):
     msg_fmt = _('Image vCPU topology limits (sockets=%(image_sockets)d, '
                 'cores=%(image_cores)d, threads=%(image_threads)d) exceeds '

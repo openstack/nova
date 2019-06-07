@@ -1,0 +1,14 @@
+---
+features:
+  - |
+    Microversion 2.77 adds the optional parameter ``availability_zone`` to
+    the ``unshelve`` server action API.
+
+    * Specifying an availability zone is only allowed when the server status
+      is ``SHELVED_OFFLOADED`` otherwise a 409 HTTPConflict response is
+      returned.
+
+    * If the ``[cinder]/cross_az_attach`` configuration option is False then
+      the specified availability zone has to be the same as the availability
+      zone of any volumes attached to the shelved offloaded server, otherwise
+      a 409 HTTPConflict error response is returned.

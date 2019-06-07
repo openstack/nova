@@ -3658,13 +3658,82 @@ class API(base.Base):
         self.compute_rpcapi.shelve_offload_instance(context, instance=instance,
             clean_shutdown=clean_shutdown)
 
+    def _validate_unshelve_az(self, context, instance, availability_zone):
+        """Verify the specified availability_zone during unshelve.
+
+        Verifies that the server is shelved offloaded, the AZ exists and
+        if [cinder]/cross_az_attach=False, that any attached volumes are in
+        the same AZ.
+
+        :param context: nova auth RequestContext for the unshelve action
+        :param instance: Instance object for the server being unshelved
+        :param availability_zone: The user-requested availability zone in
+            which to unshelve the server.
+        :raises: UnshelveInstanceInvalidState if the server is not shelved
+            offloaded
+        :raises: InvalidRequest if the requested AZ does not exist
+        :raises: MismatchVolumeAZException if [cinder]/cross_az_attach=False
+            and any attached volumes are not in the requested AZ
+        """
+        if instance.vm_state != vm_states.SHELVED_OFFLOADED:
+            # NOTE(brinzhang): If the server status is 'SHELVED', it still
+            # belongs to a host, the availability_zone has not changed.
+            # Unshelving a shelved offloaded server will go through the
+            # scheduler to find a new host.
+            raise exception.UnshelveInstanceInvalidState(
+                state=instance.vm_state, instance_uuid=instance.uuid)
+
+        available_zones = availability_zones.get_availability_zones(
+            context, self.host_api, get_only_available=True)
+        if availability_zone not in available_zones:
+            msg = _('The requested availability zone is not available')
+            raise exception.InvalidRequest(msg)
+
+        # NOTE(brinzhang): When specifying a availability zone to unshelve
+        # a shelved offloaded server, and conf cross_az_attach=False, need
+        # to determine if attached volume AZ matches the user-specified AZ.
+        if not CONF.cinder.cross_az_attach:
+            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance.uuid)
+            for bdm in bdms:
+                if bdm.is_volume and bdm.volume_id:
+                    volume = self.volume_api.get(context, bdm.volume_id)
+                    if availability_zone != volume['availability_zone']:
+                        msg = _("The specified availability zone does not "
+                                "match the volume %(vol_id)s attached to the "
+                                "server. Specified availability zone is "
+                                "%(az)s. Volume is in %(vol_zone)s.") % {
+                            "vol_id": volume['id'],
+                            "az": availability_zone,
+                            "vol_zone": volume['availability_zone']}
+                        raise exception.MismatchVolumeAZException(reason=msg)
+
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.SHELVED,
         vm_states.SHELVED_OFFLOADED])
-    def unshelve(self, context, instance):
+    def unshelve(self, context, instance, new_az=None):
         """Restore a shelved instance."""
         request_spec = objects.RequestSpec.get_by_instance_uuid(
             context, instance.uuid)
+
+        if new_az:
+            self._validate_unshelve_az(context, instance, new_az)
+            LOG.debug("Replace the old AZ %(old_az)s in RequestSpec "
+                      "with a new AZ %(new_az)s of the instance.",
+                      {"old_az": request_spec.availability_zone,
+                       "new_az": new_az}, instance=instance)
+            # Unshelving a shelved offloaded server will go through the
+            # scheduler to pick a new host, so we update the
+            # RequestSpec.availability_zone here. Note that if scheduling
+            # fails the RequestSpec will remain updated, which is not great,
+            # but if we want to change that we need to defer updating the
+            # RequestSpec until conductor which probably means RPC changes to
+            # pass the new_az variable to conductor. This is likely low
+            # priority since the RequestSpec.availability_zone on a shelved
+            # offloaded server does not mean much anyway and clearly the user
+            # is trying to put the server in the target AZ.
+            request_spec.availability_zone = new_az
+            request_spec.save()
 
         instance.task_state = task_states.UNSHELVING
         instance.save(expected_task_state=[None])
