@@ -167,8 +167,8 @@ There are many standard filter classes which may be used
   set of instances.
 * |SameHostFilter| - puts the instance on the same host as another instance in
   a set of instances.
-* |RetryFilter| - filters hosts that have been attempted for scheduling.
-  Only passes hosts that have not been previously attempted.
+* |RetryFilter| - DEPRECATED; filters hosts that have been attempted for
+  scheduling. Only passes hosts that have not been previously attempted.
 * |AggregateTypeAffinityFilter| - limits instance_type by aggregate.
    This filter passes hosts if no instance_type key is set or
    the instance_type aggregate metadata value contains the name of the
@@ -302,6 +302,15 @@ RetryFilter will return 0 hosts and the scheduler will raise a NoValidHost
 exception even if the problem is related to 1:N compute nodes. If you see that
 case in the scheduler logs, then your problem is most likely related to a
 compute problem and you should check the compute logs.
+
+.. note:: The ``RetryFilter`` is deprecated since the 20.0.0 (Train) release
+          and will be removed in an upcoming release. Since the 17.0.0 (Queens)
+          release, the scheduler has provided alternate hosts for rescheduling
+          so the scheduler does not need to be called during a reschedule which
+          makes the ``RetryFilter`` useless. See the `Return Alternate Hosts`_
+          spec for details.
+
+.. _Return Alternate Hosts: https://specs.openstack.org/openstack/nova-specs/specs/queens/implemented/return-alternate-hosts.html
 
 The |NUMATopologyFilter| considers the NUMA topology that was specified for the instance
 through the use of flavor extra_specs in combination with the image properties, as

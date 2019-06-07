@@ -29,6 +29,14 @@ class RetryFilter(filters.BaseHostFilter):
     # related to rebuild.
     RUN_ON_REBUILD = False
 
+    def __init__(self):
+        super(RetryFilter, self).__init__()
+        LOG.warning('The RetryFilter is deprecated since the 20.0.0 Train '
+                    'release. Since the 17.0.0 (Queens) release, the '
+                    'scheduler has provided alternate hosts for rescheduling '
+                    'so the scheduler does not need to be called during a '
+                    'reschedule which makes the RetryFilter useless.')
+
     def host_passes(self, host_state, spec_obj):
         """Skip nodes that have already been attempted."""
         retry = spec_obj.retry
