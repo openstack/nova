@@ -104,6 +104,16 @@ asse_regexpmatches = re.compile(
 privsep_file_re = re.compile('^nova/privsep[./]')
 privsep_import_re = re.compile(
     r"^(?:import|from).*\bprivsep\b")
+# Redundant parenthetical masquerading as a tuple, used with ``in``:
+# Space, "in", space, open paren
+# Optional single or double quote (so we match strings or symbols)
+# A sequence of the characters that can make up a symbol. (This is weak: a
+#   string can contain other characters; and a numeric symbol can start with a
+#   minus, and a method call has a param list, and... Not sure this gets better
+#   without a lexer.)
+# The same closing quote
+# Close paren
+disguised_as_tuple_re = re.compile(r''' in \((['"]?)[a-zA-Z0-9_.]+\1\)''')
 
 
 class BaseASTChecker(ast.NodeVisitor):
@@ -878,6 +888,16 @@ def privsep_imports_not_aliased(logical_line, filename):
                   "'from nova.privsep import path'.")
 
 
+def did_you_mean_tuple(logical_line):
+    """Disallow ``(not_a_tuple)`` because you meant ``(a_tuple_of_one,)``.
+
+    N363
+    """
+    if disguised_as_tuple_re.search(logical_line):
+        yield (0, "N363: You said ``in (not_a_tuple)`` when you almost "
+                  "certainly meant ``in (a_tuple_of_one,)``.")
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -923,3 +943,4 @@ def factory(register):
     register(yield_followed_by_space)
     register(assert_regexpmatches)
     register(privsep_imports_not_aliased)
+    register(did_you_mean_tuple)

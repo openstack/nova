@@ -1507,7 +1507,7 @@ def upgrade(migrate_engine):
             ])
 
     for fkey_pair in fkeys:
-        if migrate_engine.name in ('mysql'):
+        if migrate_engine.name == 'mysql':
             # For MySQL we name our fkeys explicitly
             # so they match Havana
             fkey = ForeignKeyConstraint(columns=fkey_pair[0],
