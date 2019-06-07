@@ -7261,7 +7261,15 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         def do_confirm_resize(mock_save, mock_drop, mock_delete,
                               mock_confirm, mock_nwapi, mock_notify,
                               mock_mig_save, mock_mig_get, mock_inst_get):
-            self._mock_rt()
+
+            def fake_drop_move_claim(*args, **kwargs):
+                # RT.drop_move_claim must be called before
+                # instance.drop_migration_context.
+                mock_drop.assert_not_called()
+
+            mock_rt = self._mock_rt()
+            # Enforce order of drop_move_claim/drop_migration_context calls.
+            mock_rt.drop_move_claim.side_effect = fake_drop_move_claim
             self.instance.migration_context = objects.MigrationContext(
                 new_pci_devices=None,
                 old_pci_devices=None)

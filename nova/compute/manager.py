@@ -4073,6 +4073,10 @@ class ComputeManager(manager.Manager):
         migration.status = 'confirmed'
         migration.save()
 
+        # NOTE(mriedem): drop_move_claim relies on
+        # instance.migration_context so make sure to not call
+        # instance.drop_migration_context() until after drop_move_claim
+        # is called.
         self.rt.drop_move_claim(context, instance, migration.source_node,
                                 old_instance_type, prefix='old_')
         instance.drop_migration_context()

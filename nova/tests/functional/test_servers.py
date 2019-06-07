@@ -2121,13 +2121,8 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self._wait_for_state_change(self.api, server, 'ACTIVE')
 
         # There should no resource usage for flavor1 on the source host.
-        # FIXME(mriedem): This is bug 1818914 where the source host continues
-        # to report old_flavor usage until the update_available_resource
-        # periodic task runs. Uncomment this once fixed.
-        # self.assert_hypervisor_usage(
-        #     source_rp_uuid, no_usage, volume_backed=False)
         self.assert_hypervisor_usage(
-            source_rp_uuid, self.flavor1, volume_backed=False)
+            source_rp_uuid, no_usage, volume_backed=False)
         # And resource usage for flavor2 should still be on the target host.
         self.assert_hypervisor_usage(
             dest_rp_uuid, self.flavor2, volume_backed=False)
