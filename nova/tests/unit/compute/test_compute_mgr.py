@@ -8762,13 +8762,13 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
 
         reportclient = self.compute.reportclient
 
-        @mock.patch.object(self.compute, '_reschedule')
+        @mock.patch.object(self.compute, '_reschedule_resize_or_reraise')
         @mock.patch.object(self.compute, '_prep_resize')
         def doit(mock_pr, mock_r):
             # Mock the resource tracker, but keep the report client
             self._mock_rt().reportclient = reportclient
-            mock_r.return_value = False
             mock_pr.side_effect = test.TestingException
+            mock_r.side_effect = test.TestingException
 
             instance = objects.Instance(uuid=uuids.instance,
                                         id=1,
@@ -8789,6 +8789,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             self.assertEqual(migration.status, 'error')
 
             migration.save.assert_called_once_with()
+            mock_r.assert_called_once_with(
+                self.context, instance, mock.ANY, flavor,
+                mock.sentinel.request_spec, {}, [])
             mock_notify_resize.assert_has_calls([
                 mock.call(self.context, instance, 'fake-mini',
                           'start', flavor),

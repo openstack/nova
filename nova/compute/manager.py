@@ -1422,37 +1422,6 @@ class ComputeManager(manager.Manager):
         LOG.error('Error: %s', exc_info[1], instance_uuid=instance_uuid,
                   exc_info=exc_info)
 
-    # TODO(mriedem): This method is confusing and only ever used for resize
-    # reschedules; remove it and merge into _reschedule_resize_or_reraise.
-    def _reschedule(self, context, request_spec, filter_properties,
-            instance, reschedule_method, method_args, task_state,
-            exc_info=None, host_list=None):
-        """Attempt to re-schedule a compute operation."""
-
-        instance_uuid = instance.uuid
-        retry = filter_properties.get('retry')
-        if not retry:
-            # no retry information, do not reschedule.
-            LOG.debug("Retry info not present, will not reschedule",
-                      instance_uuid=instance_uuid)
-            return
-
-        LOG.debug("Re-scheduling %(method)s: attempt %(num)d",
-                  {'method': reschedule_method.__name__,
-                   'num': retry['num_attempts']}, instance_uuid=instance_uuid)
-
-        # reset the task state:
-        self._instance_update(context, instance, task_state=task_state)
-
-        if exc_info:
-            # stringify to avoid circular ref problem in json serialization:
-            retry['exc'] = traceback.format_exception_only(exc_info[0],
-                                    exc_info[1])
-
-        reschedule_method(context, *method_args, request_spec=request_spec,
-                          host_list=host_list)
-        return True
-
     @periodic_task.periodic_task
     def _check_instance_build_time(self, context):
         """Ensure that instances are not stuck in build."""
@@ -4462,14 +4431,33 @@ class ComputeManager(manager.Manager):
         instance_uuid = instance.uuid
 
         try:
-            reschedule_method = self.compute_task_api.resize_instance
-            scheduler_hint = dict(filter_properties=filter_properties)
-            method_args = (instance, None, scheduler_hint, instance_type)
-            task_state = task_states.RESIZE_PREP
+            retry = filter_properties.get('retry')
+            if retry:
+                LOG.debug('Rescheduling, attempt %d', retry['num_attempts'],
+                          instance_uuid=instance_uuid)
 
-            rescheduled = self._reschedule(context, request_spec,
-                    filter_properties, instance, reschedule_method,
-                    method_args, task_state, exc_info, host_list=host_list)
+                # reset the task state
+                task_state = task_states.RESIZE_PREP
+                self._instance_update(context, instance, task_state=task_state)
+
+                if exc_info:
+                    # stringify to avoid circular ref problem in json
+                    # serialization
+                    retry['exc'] = traceback.format_exception_only(
+                        exc_info[0], exc_info[1])
+
+                scheduler_hint = {'filter_properties': filter_properties}
+
+                self.compute_task_api.resize_instance(
+                    context, instance, None, scheduler_hint, instance_type,
+                    request_spec=request_spec, host_list=host_list)
+
+                rescheduled = True
+            else:
+                # no retry information, do not reschedule.
+                LOG.debug('Retry info not present, will not reschedule',
+                          instance_uuid=instance_uuid)
+                rescheduled = False
         except Exception as error:
             rescheduled = False
             LOG.exception("Error trying to reschedule",
@@ -4485,6 +4473,7 @@ class ComputeManager(manager.Manager):
                 phase=fields.NotificationPhase.ERROR,
                 exception=error,
                 tb=','.join(traceback.format_exception(*exc_info)))
+
         if rescheduled:
             self._log_original_error(exc_info, instance_uuid)
             compute_utils.add_instance_fault_from_exc(context,

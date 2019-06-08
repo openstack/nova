@@ -22,7 +22,6 @@ from itertools import chain
 import operator
 import sys
 import time
-import traceback
 
 import ddt
 
@@ -12789,62 +12788,6 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
             self.compute_api.resize, self.context, instance, '4')
 
 
-class ComputeReschedulingTestCase(BaseTestCase):
-    """Tests re-scheduling logic for new build requests."""
-
-    def setUp(self):
-        super(ComputeReschedulingTestCase, self).setUp()
-
-        self.expected_task_state = task_states.SCHEDULING
-
-        def fake_update(*args, **kwargs):
-            self.updated_task_state = kwargs.get('task_state')
-        self.stub_out('nova.compute.manager.ComputeManager._instance_update',
-                      fake_update)
-
-    def _reschedule(self, request_spec=None, filter_properties=None,
-                    exc_info=None):
-        if not filter_properties:
-            filter_properties = {}
-        fake_taskapi = FakeComputeTaskAPI()
-        with mock.patch.object(self.compute, 'compute_task_api',
-                               fake_taskapi):
-            instance = self._create_fake_instance_obj()
-
-            scheduler_method = self.compute.compute_task_api.resize_instance
-            method_args = (instance, None,
-                           dict(filter_properties=filter_properties),
-                           {}, None)
-            return self.compute._reschedule(self.context, request_spec,
-                    filter_properties, instance, scheduler_method,
-                    method_args, self.expected_task_state, exc_info=exc_info)
-
-    def test_reschedule_no_filter_properties(self):
-        # no filter_properties will disable re-scheduling.
-        self.assertFalse(self._reschedule())
-
-    def test_reschedule_no_retry_info(self):
-        # no retry info will also disable re-scheduling.
-        filter_properties = {}
-        self.assertFalse(self._reschedule(filter_properties=filter_properties))
-
-    def test_reschedule_success(self):
-        retry = dict(num_attempts=1)
-        filter_properties = dict(retry=retry)
-        request_spec = {'num_instances': 1}
-        try:
-            raise test.TestingException("just need an exception")
-        except test.TestingException:
-            exc_info = sys.exc_info()
-            exc_str = traceback.format_exception_only(exc_info[0],
-                                                      exc_info[1])
-
-        self.assertTrue(self._reschedule(filter_properties=filter_properties,
-            request_spec=request_spec, exc_info=exc_info))
-        self.assertEqual(self.updated_task_state, self.expected_task_state)
-        self.assertEqual(exc_str, filter_properties['retry']['exc'])
-
-
 class InnerTestingException(Exception):
     pass
 
@@ -12859,6 +12802,7 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
         self.instance_uuid = self.instance['uuid']
         self.instance_type = objects.Flavor.get_by_name(
             context.get_admin_context(), 'm1.tiny')
+        self.request_spec = objects.RequestSpec()
 
     @mock.patch('nova.compute.manager.ComputeManager._prep_resize',
                 side_effect=test.TestingException)
@@ -12873,93 +12817,113 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
         self.compute.prep_resize(self.context, image=None,
                                  instance=inst_obj,
                                  instance_type=self.instance_type,
-                                 request_spec=mock.sentinel.reqspec,
+                                 request_spec=self.request_spec,
                                  filter_properties={}, migration=mock.Mock(),
                                  node=None,
                                  clean_shutdown=True, host_list=None)
 
         mock_res.assert_called_once_with(mock.ANY, inst_obj, mock.ANY,
                                          self.instance_type,
-                                         mock.sentinel.reqspec, {}, None)
+                                         self.request_spec, {}, None)
 
-    @mock.patch.object(compute_manager.ComputeManager, "_reschedule")
+    def test_reschedule_resize_or_reraise_no_filter_properties(self):
+        """Test behavior when ``filter_properties`` is None.
+
+        This should disable rescheduling and the original exception should be
+        raised.
+        """
+        filter_properties = None
+
+        try:
+            raise test.TestingException("Original")
+        except Exception:
+            exc_info = sys.exc_info()
+            # because we're not retrying, we should re-raise the exception
+            self.assertRaises(test.TestingException,
+                self.compute._reschedule_resize_or_reraise, self.context,
+                self.instance, exc_info, self.instance_type,
+                self.request_spec, filter_properties, None)
+
+    def test_reschedule_resize_or_reraise_no_retry_info(self):
+        """Test behavior when ``filter_properties`` doesn't contain 'retry'.
+
+        This should disable rescheduling and the original exception should be
+        raised.
+        """
+        filter_properties = {}
+
+        try:
+            raise test.TestingException("Original")
+        except Exception:
+            exc_info = sys.exc_info()
+            # because we're not retrying, we should re-raise the exception
+            self.assertRaises(test.TestingException,
+                self.compute._reschedule_resize_or_reraise, self.context,
+                self.instance, exc_info, self.instance_type,
+                self.request_spec, filter_properties, None)
+
+    @mock.patch.object(compute_manager.ComputeManager, '_instance_update')
+    @mock.patch('nova.conductor.api.ComputeTaskAPI.resize_instance',
+                side_effect=InnerTestingException('inner'))
     @mock.patch('nova.compute.utils.notify_about_instance_action')
-    def test_reschedule_fails_with_exception(self, mock_notify, mock_res):
-        """Original exception should be raised if the _reschedule method
-        raises another exception
-        """
-        instance = self._create_fake_instance_obj()
-        scheduler_hint = dict(filter_properties={})
-        method_args = (instance, None, scheduler_hint, self.instance_type)
-        mock_res.side_effect = InnerTestingException("Inner")
-
-        try:
-            raise test.TestingException("Original")
-        except Exception:
-            exc_info = sys.exc_info()
-            reqspec = objects.RequestSpec()
-            self.assertRaises(test.TestingException,
-                    self.compute._reschedule_resize_or_reraise, self.context,
-                    instance, exc_info, self.instance_type, reqspec,
-                    {}, None)
-
-            mock_res.assert_called_once_with(
-                    self.context, reqspec, {}, instance,
-                    self.compute.compute_task_api.resize_instance, method_args,
-                    task_states.RESIZE_PREP, exc_info, host_list=None)
-            mock_notify.assert_called_once_with(
-                self.context, instance, 'fake-mini', action='resize',
-                phase='error', exception=mock_res.side_effect, tb=mock.ANY)
-
-    @mock.patch.object(compute_manager.ComputeManager, "_reschedule")
-    def test_reschedule_false(self, mock_res):
-        """Original exception should be raised if the resize is not
-        rescheduled.
-        """
-        instance = self._create_fake_instance_obj()
-        scheduler_hint = dict(filter_properties={})
-        method_args = (instance, None, scheduler_hint, self.instance_type)
-        mock_res.return_value = False
-
-        try:
-            raise test.TestingException("Original")
-        except Exception:
-            exc_info = sys.exc_info()
-            reqspec = objects.RequestSpec()
-            self.assertRaises(test.TestingException,
-                    self.compute._reschedule_resize_or_reraise, self.context,
-                    instance, exc_info, self.instance_type, reqspec,
-                    {}, None)
-
-            mock_res.assert_called_once_with(
-                self.context, reqspec, {}, instance,
-                self.compute.compute_task_api.resize_instance, method_args,
-                task_states.RESIZE_PREP, exc_info, host_list=None)
-
-    @mock.patch.object(compute_manager.ComputeManager, "_reschedule")
     @mock.patch.object(compute_manager.ComputeManager, "_log_original_error")
-    def test_reschedule_true(self, mock_log, mock_res):
-        # If rescheduled, the original resize exception should be logged.
-        instance = self._create_fake_instance_obj()
-        scheduler_hint = dict(filter_properties={})
-        method_args = (instance, None, scheduler_hint, self.instance_type)
+    def test_reschedule_fails_with_exception(self, mock_log, mock_notify,
+            mock_resize, mock_update):
+        """Original exception should be raised if the conductor call
+        raises another exception.
+        """
+        filter_properties = {'retry': {'num_attempts': 0}}
+
+        try:
+            raise test.TestingException('Original')
+        except Exception:
+            exc_info = sys.exc_info()
+            self.assertRaises(test.TestingException,
+                self.compute._reschedule_resize_or_reraise, self.context,
+                self.instance, exc_info, self.instance_type,
+                self.request_spec, filter_properties, None)
+
+            mock_update.assert_called_once_with(
+                self.context, mock.ANY, task_state=task_states.RESIZE_PREP)
+            mock_resize.assert_called_once_with(
+                self.context, mock.ANY, None,
+                {'filter_properties': filter_properties}, self.instance_type,
+                request_spec=self.request_spec, host_list=None)
+            mock_notify.assert_called_once_with(
+                self.context, self.instance, 'fake-mini', action='resize',
+                phase='error', exception=mock_resize.side_effect, tb=mock.ANY)
+            # If not rescheduled, the original resize exception should not be
+            # logged.
+            mock_log.assert_not_called()
+
+    @mock.patch.object(compute_manager.ComputeManager, '_instance_update')
+    @mock.patch('nova.conductor.api.ComputeTaskAPI.resize_instance')
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    @mock.patch.object(compute_manager.ComputeManager, "_log_original_error")
+    def test_reschedule_passes(self, mock_log, mock_notify, mock_resize,
+            mock_update):
+        filter_properties = {'retry': {'num_attempts': 0}}
 
         try:
             raise test.TestingException("Original")
         except Exception:
             exc_info = sys.exc_info()
-            mock_res.return_value = True
 
-            reqspec = objects.RequestSpec()
             self.compute._reschedule_resize_or_reraise(
-                    self.context, instance, exc_info,
-                    self.instance_type, reqspec, {}, None)
+                self.context, self.instance, exc_info, self.instance_type,
+                self.request_spec, filter_properties, None)
 
-            mock_res.assert_called_once_with(self.context, reqspec, {},
-                    instance, self.compute.compute_task_api.resize_instance,
-                    method_args, task_states.RESIZE_PREP, exc_info,
-                    host_list=None)
-            mock_log.assert_called_once_with(exc_info, instance.uuid)
+            mock_update.assert_called_once_with(
+                self.context, mock.ANY, task_state=task_states.RESIZE_PREP)
+            mock_resize.assert_called_once_with(
+                self.context, mock.ANY, None,
+                {'filter_properties': filter_properties}, self.instance_type,
+                request_spec=self.request_spec, host_list=None)
+            mock_notify.assert_called_once_with(
+                self.context, self.instance, 'fake-mini', action='resize',
+                phase='error', exception=exc_info[1], tb=mock.ANY)
+            # If rescheduled, the original resize exception should be logged.
+            mock_log.assert_called_once_with(exc_info, self.instance.uuid)
 
 
 class ComputeInactiveImageTestCase(BaseTestCase):
