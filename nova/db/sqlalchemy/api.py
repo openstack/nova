@@ -46,7 +46,6 @@ from sqlalchemy import or_
 from sqlalchemy.orm import aliased
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm import joinedload
-from sqlalchemy.orm import joinedload_all
 from sqlalchemy.orm import noload
 from sqlalchemy.orm import undefer
 from sqlalchemy.schema import Table
@@ -94,6 +93,15 @@ def _context_manager_from_context(context):
             return context.db_connection
         except AttributeError:
             pass
+
+
+def _joinedload_all(column):
+    elements = column.split('.')
+    joined = joinedload(elements.pop(0))
+    for element in elements:
+        joined = joined.joinedload(element)
+
+    return joined
 
 
 def configure(conf):
@@ -841,7 +849,7 @@ def floating_ip_get(context, id):
     try:
         result = model_query(context, models.FloatingIp, project_only=True).\
                      filter_by(id=id).\
-                     options(joinedload_all('fixed_ip.instance')).\
+                     options(_joinedload_all('fixed_ip.instance')).\
                      first()
 
         if not result:
@@ -1060,7 +1068,7 @@ def floating_ip_get_all_by_project(context, project_id):
     return _floating_ip_get_all(context).\
                          filter_by(project_id=project_id).\
                          filter_by(auto_assigned=False).\
-                         options(joinedload_all('fixed_ip.instance')).\
+                         options(_joinedload_all('fixed_ip.instance')).\
                          all()
 
 
@@ -1078,7 +1086,7 @@ def _floating_ip_get_by_address(context, address):
     try:
         result = model_query(context, models.FloatingIp).\
                     filter_by(address=address).\
-                    options(joinedload_all('fixed_ip.instance')).\
+                    options(_joinedload_all('fixed_ip.instance')).\
                     first()
 
         if not result:
@@ -1393,7 +1401,7 @@ def _fixed_ip_get_by_address(context, address, columns_to_join=None):
     try:
         result = model_query(context, models.FixedIp)
         for column in columns_to_join:
-            result = result.options(joinedload_all(column))
+            result = result.options(_joinedload_all(column))
         result = result.filter_by(address=address).first()
         if not result:
             raise exception.FixedIpNotFoundForAddress(address=address)
@@ -1868,7 +1876,7 @@ def instance_get(context, instance_id, columns_to_join=None):
 
 def _build_instance_get(context, columns_to_join=None):
     query = model_query(context, models.Instance, project_only=True).\
-            options(joinedload_all('security_groups.rules')).\
+            options(_joinedload_all('security_groups.rules')).\
             options(joinedload('info_cache'))
     if columns_to_join is None:
         columns_to_join = ['metadata', 'system_metadata']
@@ -3882,7 +3890,7 @@ def _security_group_get_query(context, read_deleted=None,
     query = model_query(context, models.SecurityGroup,
             read_deleted=read_deleted, project_only=project_only)
     if join_rules:
-        query = query.options(joinedload_all('rules.grantee_group'))
+        query = query.options(_joinedload_all('rules.grantee_group'))
     return query
 
 
@@ -3926,7 +3934,7 @@ def security_group_get(context, security_group_id, columns_to_join=None):
         columns_to_join = []
     for column in columns_to_join:
         if column.startswith('instances'):
-            query = query.options(joinedload_all(column))
+            query = query.options(_joinedload_all(column))
 
     result = query.first()
     if not result:
@@ -3949,7 +3957,7 @@ def security_group_get_by_name(context, project_id, group_name,
         columns_to_join = ['instances', 'rules.grantee_group']
 
     for column in columns_to_join:
-        query = query.options(joinedload_all(column))
+        query = query.options(_joinedload_all(column))
 
     result = query.first()
     if not result:
@@ -4005,7 +4013,7 @@ def security_group_update(context, security_group_id, values,
         id=security_group_id)
     if columns_to_join:
         for column in columns_to_join:
-            query = query.options(joinedload_all(column))
+            query = query.options(_joinedload_all(column))
     security_group_ref = query.first()
 
     if not security_group_ref:
@@ -4121,7 +4129,7 @@ def security_group_rule_get_by_security_group(context, security_group_id,
     query = (_security_group_rule_get_query(context).
              filter_by(parent_group_id=security_group_id))
     for column in columns_to_join:
-        query = query.options(joinedload_all(column))
+        query = query.options(_joinedload_all(column))
     return query.all()
 
 
@@ -4357,7 +4365,7 @@ def migration_get_in_progress_by_host_and_node(context, host, node):
                                                  'reverted', 'error',
                                                  'failed', 'completed',
                                                  'cancelled', 'done'])).\
-            options(joinedload_all('instance.system_metadata')).\
+            options(_joinedload_all('instance.system_metadata')).\
             all()
 
 
