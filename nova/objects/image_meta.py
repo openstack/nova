@@ -173,12 +173,15 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.21: Added 'hw_time_hpet' field
     # Version 1.22: Added 'gop', 'virtio' and 'none' to hw_video_model field
     # Version 1.23: Added 'hw_pmu' field
-    VERSION = '1.23'
+    # Version 1.24: Added 'hw_mem_encryption' field
+    VERSION = '1.24'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 24):
+            primitive.pop('hw_mem_encryption', None)
         if target_version < (1, 23):
             primitive.pop('hw_pmu', None)
         # NOTE(sean-k-mooney): unlike other nova object we version this object
@@ -311,6 +314,10 @@ class ImageMetaProps(base.NovaObject):
         # is not practical to enumerate them all. So we use a free
         # form string
         'hw_machine_type': fields.StringField(),
+
+        # boolean indicating that the guest needs to be booted with
+        # encrypted memory
+        'hw_mem_encryption': fields.FlexibleBooleanField(),
 
         # One of the magic strings 'small', 'any', 'large'
         # or an explicit page size in KB (eg 4, 2048, ...)

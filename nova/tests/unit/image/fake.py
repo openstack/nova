@@ -24,6 +24,7 @@ from oslo_utils import uuidutils
 
 import nova.conf
 from nova import exception
+from nova import objects
 from nova.objects import fields as obj_fields
 from nova.tests import fixtures as nova_fixtures
 
@@ -323,3 +324,28 @@ def stub_out_image_service(test):
     test.useFixture(nova_fixtures.ConfPatcher(
         group="glance", api_servers=['http://localhost:9292']))
     return image_service
+
+
+def fake_image_obj(default_image_meta=None, default_image_props=None,
+                   variable_image_props=None):
+    """Helper for constructing a test ImageMeta object with attributes and
+    properties coming from a combination of (probably hard-coded)
+    values within a test, and (optionally) variable values from the
+    test's caller, if the test is actually a helper written to be
+    reusable and run multiple times with different parameters from
+    different "wrapper" tests.
+    """
+    image_meta_props = default_image_props or {}
+    if variable_image_props:
+        image_meta_props.update(variable_image_props)
+
+    test_image_meta = default_image_meta or {"disk_format": "raw"}
+    if 'name' not in test_image_meta:
+        # NOTE(aspiers): the name is specified here in case it's needed
+        # by the logging in nova.virt.hardware.get_mem_encryption_constraint()
+        test_image_meta['name'] = 'fake_image'
+    test_image_meta.update({
+        'properties': image_meta_props,
+    })
+
+    return objects.ImageMeta.from_dict(test_image_meta)

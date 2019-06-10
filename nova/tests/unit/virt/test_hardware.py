@@ -23,6 +23,7 @@ from nova.objects import fields
 from nova.pci import stats
 from nova import test
 from nova.tests.unit import fake_pci_device_pools as fake_pci
+from nova.tests.unit.image.fake import fake_image_obj
 from nova.virt import hardware as hw
 
 
@@ -3430,3 +3431,195 @@ class NetworkRequestSupportTestCase(test.NoDBTestCase):
         supports = hw._numa_cells_support_network_metadata(
             self.host, self.host.cells, network_metadata)
         self.assertTrue(supports)
+
+
+class MemEncryptionNotRequiredTestCase(test.NoDBTestCase):
+    def _test_encrypted_memory_support_not_required(self, flavor=None,
+                                                    image_meta=None):
+        if flavor is None:
+            flavor = objects.Flavor(extra_specs={})
+
+        if image_meta is None:
+            image_meta = objects.ImageMeta(properties=objects.ImageMetaProps())
+
+        self.assertFalse(hw.get_mem_encryption_constraint(flavor, image_meta))
+
+    def test_requirement_disabled(self):
+        self._test_encrypted_memory_support_not_required()
+
+    def test_require_false_extra_spec(self):
+        for extra_spec in ('0', 'false', 'False'):
+            self._test_encrypted_memory_support_not_required(
+                objects.Flavor(extra_specs={'hw:mem_encryption': extra_spec})
+            )
+
+    def test_require_false_image_prop(self):
+        for image_prop in ('0', 'false', 'False'):
+            self._test_encrypted_memory_support_not_required(
+                image_meta=objects.ImageMeta(
+                    properties=objects.ImageMetaProps(
+                        hw_mem_encryption=image_prop))
+            )
+
+    def test_require_both_false(self):
+        for extra_spec in ('0', 'false', 'False'):
+            for image_prop in ('0', 'false', 'False'):
+                self._test_encrypted_memory_support_not_required(
+                    objects.Flavor(
+                        extra_specs={'hw:mem_encryption': extra_spec}),
+                    objects.ImageMeta(
+                        properties=objects.ImageMetaProps(
+                            hw_mem_encryption=image_prop))
+                )
+
+
+class MemEncryptionFlavorImageConflictTestCase(test.NoDBTestCase):
+    def _test_encrypted_memory_support_conflict(self, extra_spec,
+                                                image_prop_in, image_prop_out):
+        # NOTE(aspiers): hw_mem_encryption image property is a
+        # FlexibleBooleanField, so the result should always be coerced
+        # to a boolean.
+        self.assertIsInstance(image_prop_out, bool)
+
+        flavor_name = 'm1.faketiny'
+        image_name = 'fakecirros'
+        flavor = objects.Flavor(
+            name=flavor_name,
+            extra_specs={'hw:mem_encryption': extra_spec}
+        )
+        image_meta = objects.ImageMeta(
+            name=image_name,
+            properties=objects.ImageMetaProps(
+                hw_mem_encryption=image_prop_in)
+        )
+
+        error = (
+            "Flavor %(flavor_name)s has hw:mem_encryption extra spec "
+            "explicitly set to %(flavor_val)s, conflicting with "
+            "image %(image_name)s which has hw_mem_encryption property "
+            "explicitly set to %(image_val)s"
+        )
+        exc = self.assertRaises(
+            exception.FlavorImageConflict,
+            hw.get_mem_encryption_constraint,
+            flavor, image_meta
+        )
+        error_data = {
+            'flavor_name': flavor_name,
+            'flavor_val': extra_spec,
+            'image_name': image_name,
+            'image_val': image_prop_out,
+        }
+        self.assertEqual(error % error_data, str(exc))
+
+    def test_require_encrypted_memory_support_conflict1(self):
+        for extra_spec in ('0', 'false', 'False'):
+            for image_prop_in in ('1', 'true', 'True'):
+                self._test_encrypted_memory_support_conflict(
+                    extra_spec, image_prop_in, True
+                )
+
+    def test_require_encrypted_memory_support_conflict2(self):
+        for extra_spec in ('1', 'true', 'True'):
+            for image_prop_in in ('0', 'false', 'False'):
+                self._test_encrypted_memory_support_conflict(
+                    extra_spec, image_prop_in, False
+                )
+
+
+class MemEncryptionRequestedWithoutUEFITestCase(test.NoDBTestCase):
+    flavor_name = 'm1.faketiny'
+    image_name = 'fakecirros'
+
+    def _test_encrypted_memory_support_no_uefi(self, extra_spec, image_prop,
+                                               requesters):
+        extra_specs = {}
+        if extra_spec:
+            extra_specs['hw:mem_encryption'] = extra_spec
+        flavor = objects.Flavor(name=self.flavor_name, extra_specs=extra_specs)
+        image_meta = fake_image_obj(
+            {'name': self.image_name}, {'hw_firmware_type': 'bios'},
+            {'hw_mem_encryption': True} if image_prop else {})
+        error = (
+            "Memory encryption requested by %(requesters)s but image "
+            "%(image_name)s doesn't have 'hw_firmware_type' property "
+            "set to 'uefi'"
+        )
+        exc = self.assertRaises(
+            exception.FlavorImageConflict,
+            hw.get_mem_encryption_constraint,
+            flavor, image_meta
+        )
+        error_data = {'requesters': requesters,
+                      'image_name': self.image_name}
+        self.assertEqual(error % error_data, str(exc))
+
+    def test_flavor_requires_encrypted_memory_support_no_uefi(self):
+        for extra_spec in ('1', 'true', 'True'):
+            self._test_encrypted_memory_support_no_uefi(
+                extra_spec, None,
+                "hw:mem_encryption extra spec in %s flavor" % self.flavor_name)
+
+    def test_image_requires_encrypted_memory_support_no_uefi(self):
+        for image_prop in ('1', 'true', 'True'):
+            self._test_encrypted_memory_support_no_uefi(
+                None, image_prop,
+                "hw_mem_encryption property of image %s" % self.image_name)
+
+    def test_flavor_image_require_encrypted_memory_support_no_uefi(self):
+        for extra_spec in ('1', 'true', 'True'):
+            for image_prop in ('1', 'true', 'True'):
+                self._test_encrypted_memory_support_no_uefi(
+                    extra_spec, image_prop,
+                    "hw:mem_encryption extra spec in %s flavor and "
+                    "hw_mem_encryption property of image %s"
+                    % (self.flavor_name, self.image_name))
+
+
+class MemEncryptionRequiredTestCase(test.NoDBTestCase):
+    flavor_name = "m1.faketiny"
+    image_name = 'fakecirros'
+
+    @mock.patch.object(hw, 'LOG')
+    def _test_encrypted_memory_support_required(self, extra_specs,
+                                                image_props,
+                                                requesters, mock_log):
+        flavor = objects.Flavor(name=self.flavor_name, extra_specs=extra_specs)
+        image_meta = objects.ImageMeta(name=self.image_name,
+                                       properties=image_props)
+
+        self.assertTrue(hw.get_mem_encryption_constraint(flavor, image_meta))
+        mock_log.debug.assert_has_calls([
+            mock.call("Memory encryption requested by %s", requesters)
+        ])
+
+    def test_require_encrypted_memory_support_extra_spec(self):
+        for extra_spec in ('1', 'true', 'True'):
+            self._test_encrypted_memory_support_required(
+                {'hw:mem_encryption': extra_spec},
+                objects.ImageMetaProps(hw_firmware_type='uefi'),
+                "hw:mem_encryption extra spec in %s flavor" % self.flavor_name
+            )
+
+    def test_require_encrypted_memory_support_image_prop(self):
+        for image_prop in ('1', 'true', 'True'):
+            self._test_encrypted_memory_support_required(
+                {},
+                objects.ImageMetaProps(
+                    hw_mem_encryption=image_prop,
+                    hw_firmware_type='uefi'),
+                "hw_mem_encryption property of image %s" % self.image_name
+            )
+
+    def test_require_encrypted_memory_support_both_required(self):
+        for extra_spec in ('1', 'true', 'True'):
+            for image_prop in ('1', 'true', 'True'):
+                self._test_encrypted_memory_support_required(
+                    {'hw:mem_encryption': extra_spec},
+                    objects.ImageMetaProps(
+                        hw_mem_encryption=image_prop,
+                        hw_firmware_type='uefi'),
+                    "hw:mem_encryption extra spec in %s flavor and "
+                    "hw_mem_encryption property of image %s" %
+                    (self.flavor_name, self.image_name)
+                )

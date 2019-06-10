@@ -2450,6 +2450,11 @@ class ReshapeNeeded(NovaException):
                 "moved.")
 
 
+class FlavorImageConflict(NovaException):
+    msg_fmt = _("Conflicting values for %(setting)s found in the flavor "
+                "(%(flavor_val)s) and the image (%(image_val)s).")
+
+
 class HealPortAllocationException(NovaException):
     msg_fmt = _("Healing port allocation failed.")
 

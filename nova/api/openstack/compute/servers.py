@@ -57,6 +57,7 @@ LOG = logging.getLogger(__name__)
 INVALID_FLAVOR_IMAGE_EXCEPTIONS = (
     exception.BadRequirementEmulatorThreadsPolicy,
     exception.CPUThreadPolicyConfigurationInvalid,
+    exception.FlavorImageConflict,
     exception.ImageCPUPinningForbidden,
     exception.ImageCPUThreadPolicyForbidden,
     exception.ImageNUMATopologyAsymmetric,

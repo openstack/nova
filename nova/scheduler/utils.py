@@ -35,6 +35,7 @@ from nova.objects import base as obj_base
 from nova.objects import instance as obj_instance
 from nova import rpc
 from nova.scheduler.filters import utils as filters_utils
+import nova.virt.hardware as hw
 
 
 LOG = logging.getLogger(__name__)
@@ -90,13 +91,15 @@ class ResourceRequest(object):
         # TODO(efried): Handle member_of[$N], which will need to be reconciled
         # with destination.aggregates handling in resources_from_request_spec
 
+        image = (request_spec.image if 'image' in request_spec
+                 else objects.ImageMeta(properties=objects.ImageMetaProps()))
+
         # Parse the flavor extra specs
         self._process_extra_specs(request_spec.flavor)
 
         self.numbered_groups_from_flavor = self.get_num_of_numbered_groups()
 
         # Now parse the (optional) image metadata
-        image = request_spec.image if 'image' in request_spec else None
         self._process_image_meta(image)
 
         # Finally, parse the flavor itself, though we'll only use these fields
@@ -118,6 +121,8 @@ class ResourceRequest(object):
 
             if disk:
                 self._add_resource(None, orc.DISK_GB, disk)
+
+        self._translate_memory_encryption(request_spec.flavor, image)
 
         self.strip_zeros()
 
@@ -156,6 +161,23 @@ class ResourceRequest(object):
             # unnumbered request group, granular request groups are not
             # supported in image traits
             self._add_trait(None, trait, "required")
+
+    def _translate_memory_encryption(self, flavor, image):
+        """When the hw:mem_encryption extra spec or the hw_mem_encryption
+        image property are requested, translate into a request for
+        resources:MEM_ENCRYPTION_CONTEXT=1 which requires a slot on a
+        host which can support encryption of the guest memory.
+        """
+        # NOTE(aspiers): In theory this could raise FlavorImageConflict,
+        # but we already check it in the API layer, so that should never
+        # happen.
+        if not hw.get_mem_encryption_constraint(flavor, image):
+            # No memory encryption required, so no further action required.
+            return
+
+        self._add_resource(None, orc.MEM_ENCRYPTION_CONTEXT, 1)
+        LOG.debug("Added %s=1 to requested resources",
+                  orc.MEM_ENCRYPTION_CONTEXT)
 
     @property
     def group_policy(self):

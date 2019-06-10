@@ -1137,6 +1137,96 @@ def _get_flavor_image_meta(key, flavor, image_meta, default=None):
     return flavor_policy, image_policy
 
 
+def get_mem_encryption_constraint(flavor, image_meta):
+    """Return a boolean indicating whether encryption of guest memory was
+    requested, either via the hw:mem_encryption extra spec or the
+    hw_mem_encryption image property (or both).
+
+    Also watch out for contradictory requests between the flavor and
+    image regarding memory encryption, and raise an exception where
+    encountered.  These conflicts can arise in two different ways:
+
+        1) the flavor requests memory encryption but the image
+           explicitly requests *not* to have memory encryption, or
+           vice-versa
+
+        2) the flavor and/or image request memory encryption, but the
+           image is missing hw_firmware_type=uefi
+
+    :param instance_type: Flavor object
+    :param image: an ImageMeta object
+    :raises: nova.exception.FlavorImageConflict
+    :returns: boolean indicating whether encryption of guest memory
+    was requested
+    """
+
+    flavor_mem_enc_str, image_mem_enc = _get_flavor_image_meta(
+        'mem_encryption', flavor, image_meta)
+
+    flavor_mem_enc = None
+    if flavor_mem_enc_str is not None:
+        flavor_mem_enc = strutils.bool_from_string(flavor_mem_enc_str)
+
+    # Image property is a FlexibleBooleanField, so coercion to a
+    # boolean is handled automatically
+
+    if not flavor_mem_enc and not image_mem_enc:
+        return False
+
+    _check_for_mem_encryption_requirement_conflicts(
+        flavor_mem_enc_str, flavor_mem_enc, image_mem_enc, flavor, image_meta)
+
+    # If we get this far, either the extra spec or image property explicitly
+    # specified a requirement regarding memory encryption, and if both did,
+    # they are asking for the same thing.
+    requesters = []
+    if flavor_mem_enc:
+        requesters.append("hw:mem_encryption extra spec in %s flavor" %
+                          flavor.name)
+    if image_mem_enc:
+        requesters.append("hw_mem_encryption property of image %s" %
+                          image_meta.name)
+
+    _check_mem_encryption_uses_uefi_image(requesters, image_meta)
+
+    LOG.debug("Memory encryption requested by %s", " and ".join(requesters))
+    return True
+
+
+def _check_for_mem_encryption_requirement_conflicts(
+        flavor_mem_enc_str, flavor_mem_enc, image_mem_enc, flavor, image_meta):
+    # Check for conflicts between explicit requirements regarding
+    # memory encryption.
+    if (flavor_mem_enc is not None and image_mem_enc is not None and
+            flavor_mem_enc != image_mem_enc):
+        emsg = _(
+            "Flavor %(flavor_name)s has hw:mem_encryption extra spec "
+            "explicitly set to %(flavor_val)s, conflicting with "
+            "image %(image_name)s which has hw_mem_encryption property "
+            "explicitly set to %(image_val)s"
+        )
+        data = {
+            'flavor_name': flavor.name,
+            'flavor_val': flavor_mem_enc_str,
+            'image_name': image_meta.name,
+            'image_val': image_mem_enc,
+        }
+        raise exception.FlavorImageConflict(emsg % data)
+
+
+def _check_mem_encryption_uses_uefi_image(requesters, image_meta):
+    if image_meta.properties.hw_firmware_type == 'uefi':
+        return
+
+    emsg = _(
+        "Memory encryption requested by %(requesters)s but image "
+        "%(image_name)s doesn't have 'hw_firmware_type' property set to 'uefi'"
+    )
+    data = {'requesters': " and ".join(requesters),
+            'image_name': image_meta.name}
+    raise exception.FlavorImageConflict(emsg % data)
+
+
 def _get_numa_pagesize_constraint(flavor, image_meta):
     """Return the requested memory page size
 

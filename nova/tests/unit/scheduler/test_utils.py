@@ -12,6 +12,7 @@
 
 import ddt
 import mock
+import os_resource_classes as orc
 from oslo_utils.fixture import uuidsentinel as uuids
 import six
 
@@ -38,11 +39,9 @@ class FakeResourceRequest(object):
         self._limit = 1000
 
 
-@ddt.ddt
-class TestUtils(test.NoDBTestCase):
-
+class TestUtilsBase(test.NoDBTestCase):
     def setUp(self):
-        super(TestUtils, self).setUp()
+        super(TestUtilsBase, self).setUp()
         self.context = nova_context.get_admin_context()
         self.mock_host_manager = mock.Mock()
 
@@ -55,6 +54,9 @@ class TestUtils(test.NoDBTestCase):
         for ident in ex_by_id:
             self.assertEqual(vars(ex_by_id[ident]), vars(ob_by_id[ident]))
 
+
+@ddt.ddt
+class TestUtils(TestUtilsBase):
     @staticmethod
     def _get_image_with_traits():
         image_prop = {
@@ -67,8 +69,9 @@ class TestUtils(test.NoDBTestCase):
         image = objects.ImageMeta.from_dict(image_prop)
         return image
 
-    def _test_resources_from_request_spec(self, expected, flavor,
-                                          image=objects.ImageMeta()):
+    def _test_resources_from_request_spec(self, expected, flavor, image=None):
+        if image is None:
+            image = objects.ImageMeta(properties=objects.ImageMetaProps())
         fake_spec = objects.RequestSpec(flavor=flavor, image=image)
         resources = utils.resources_from_request_spec(
             self.context, fake_spec, self.mock_host_manager)
@@ -1161,6 +1164,190 @@ class TestUtils(test.NoDBTestCase):
         )
 
 
+class TestEncryptedMemoryTranslation(TestUtilsBase):
+    flavor_name = 'm1.test'
+    image_name = 'cirros'
+
+    def _get_request_spec(self, extra_specs, image):
+        flavor = objects.Flavor(name=self.flavor_name,
+                                vcpus=1,
+                                memory_mb=1024,
+                                root_gb=10,
+                                ephemeral_gb=5,
+                                swap=0,
+                                extra_specs=extra_specs)
+
+        # NOTE(aspiers): RequestSpec.flavor is not nullable, but
+        # RequestSpec.image is.
+        reqspec = objects.RequestSpec(flavor=flavor)
+
+        if image:
+            reqspec.image = image
+
+        return reqspec
+
+    def _get_resource_request(self, extra_specs, image):
+        reqspec = self._get_request_spec(extra_specs, image)
+        return utils.ResourceRequest(reqspec)
+
+    def _get_expected_resource_request(self, mem_encryption_context):
+        expected_resources = {
+            'VCPU': 1,
+            'MEMORY_MB': 1024,
+            'DISK_GB': 15,
+        }
+        if mem_encryption_context:
+            expected_resources[orc.MEM_ENCRYPTION_CONTEXT] = 1
+
+        expected = FakeResourceRequest()
+        expected._rg_by_id[None] = objects.RequestGroup(
+            use_same_provider=False,
+            resources=expected_resources)
+        return expected
+
+    def _test_encrypted_memory_support_not_required(self, extra_specs,
+                                                    image=None):
+        resreq = self._get_resource_request(extra_specs, image)
+        expected = self._get_expected_resource_request(False)
+
+        self.assertResourceRequestsEqual(expected, resreq)
+
+    def test_encrypted_memory_support_empty_extra_specs(self):
+        self._test_encrypted_memory_support_not_required(extra_specs={})
+
+    def test_encrypted_memory_support_false_extra_spec(self):
+        for extra_spec in ('0', 'false', 'False'):
+            self._test_encrypted_memory_support_not_required(
+                extra_specs={'hw:mem_encryption': extra_spec})
+
+    def test_encrypted_memory_support_empty_image_props(self):
+        self._test_encrypted_memory_support_not_required(
+            extra_specs={},
+            image=objects.ImageMeta(properties=objects.ImageMetaProps()))
+
+    def test_encrypted_memory_support_false_image_prop(self):
+        for image_prop in ('0', 'false', 'False'):
+            self._test_encrypted_memory_support_not_required(
+                extra_specs={},
+                image=objects.ImageMeta(
+                    properties=objects.ImageMetaProps(
+                        hw_mem_encryption=image_prop))
+            )
+
+    def test_encrypted_memory_support_both_false(self):
+        for extra_spec in ('0', 'false', 'False'):
+            for image_prop in ('0', 'false', 'False'):
+                self._test_encrypted_memory_support_not_required(
+                    extra_specs={'hw:mem_encryption': extra_spec},
+                    image=objects.ImageMeta(
+                        properties=objects.ImageMetaProps(
+                            hw_mem_encryption=image_prop))
+                )
+
+    def _test_encrypted_memory_support_conflict(self, extra_spec,
+                                                image_prop_in,
+                                                image_prop_out):
+        # NOTE(aspiers): hw_mem_encryption image property is a
+        # FlexibleBooleanField, so the result should always be coerced
+        # to a boolean.
+        self.assertIsInstance(image_prop_out, bool)
+
+        image = objects.ImageMeta(
+            name=self.image_name,
+            properties=objects.ImageMetaProps(
+                hw_mem_encryption=image_prop_in)
+        )
+
+        reqspec = self._get_request_spec(
+            extra_specs={'hw:mem_encryption': extra_spec},
+            image=image)
+
+        # Sanity check that our test request spec has an extra_specs
+        # dict, which is needed in order for there to be a conflict.
+        self.assertIn('flavor', reqspec)
+        self.assertIn('extra_specs', reqspec.flavor)
+
+        error = (
+            "Flavor %(flavor_name)s has hw:mem_encryption extra spec "
+            "explicitly set to %(flavor_val)s, conflicting with "
+            "image %(image_name)s which has hw_mem_encryption property "
+            "explicitly set to %(image_val)s"
+        )
+        exc = self.assertRaises(
+            exception.FlavorImageConflict,
+            utils.ResourceRequest, reqspec
+        )
+        error_data = {
+            'flavor_name': self.flavor_name,
+            'flavor_val': extra_spec,
+            'image_name': self.image_name,
+            'image_val': image_prop_out,
+        }
+        self.assertEqual(error % error_data, str(exc))
+
+    def test_encrypted_memory_support_conflict1(self):
+        for extra_spec in ('0', 'false', 'False'):
+            for image_prop_in in ('1', 'true', 'True'):
+                self._test_encrypted_memory_support_conflict(
+                    extra_spec, image_prop_in, True
+                )
+
+    def test_encrypted_memory_support_conflict2(self):
+        for extra_spec in ('1', 'true', 'True'):
+            for image_prop_in in ('0', 'false', 'False'):
+                self._test_encrypted_memory_support_conflict(
+                    extra_spec, image_prop_in, False
+                )
+
+    @mock.patch.object(utils, 'LOG')
+    def _test_encrypted_memory_support_required(self, requesters, extra_specs,
+                                                mock_log, image=None):
+        resreq = self._get_resource_request(extra_specs, image)
+        expected = self._get_expected_resource_request(True)
+
+        self.assertResourceRequestsEqual(expected, resreq)
+        mock_log.debug.assert_has_calls([
+            mock.call('Added %s=1 to requested resources',
+                      orc.MEM_ENCRYPTION_CONTEXT)
+        ])
+
+    def test_encrypted_memory_support_extra_spec(self):
+        for extra_spec in ('1', 'true', 'True'):
+            self._test_encrypted_memory_support_required(
+                'hw:mem_encryption extra spec',
+                {'hw:mem_encryption': extra_spec},
+                image=objects.ImageMeta(
+                    properties=objects.ImageMetaProps(
+                        hw_firmware_type='uefi'))
+            )
+
+    def test_encrypted_memory_support_image_prop(self):
+        for image_prop in ('1', 'true', 'True'):
+            self._test_encrypted_memory_support_required(
+                'hw_mem_encryption image property',
+                {},
+                image=objects.ImageMeta(
+                    name=self.image_name,
+                    properties=objects.ImageMetaProps(
+                        hw_firmware_type='uefi',
+                        hw_mem_encryption=image_prop))
+            )
+
+    def test_encrypted_memory_support_both_required(self):
+        for extra_spec in ('1', 'true', 'True'):
+            for image_prop in ('1', 'true', 'True'):
+                self._test_encrypted_memory_support_required(
+                    'hw:mem_encryption extra spec and '
+                    'hw_mem_encryption image property',
+                    {'hw:mem_encryption': extra_spec},
+                    image=objects.ImageMeta(
+                        name=self.image_name,
+                        properties=objects.ImageMetaProps(
+                            hw_firmware_type='uefi',
+                            hw_mem_encryption=image_prop))
+                )
+
+
 class TestResourcesFromRequestGroupDefaultPolicy(test.NoDBTestCase):
     """These test cases assert what happens when the group policy is missing
     from the flavor but more than one numbered request group is requested from
@@ -1190,6 +1377,7 @@ class TestResourcesFromRequestGroupDefaultPolicy(test.NoDBTestCase):
                 "required": ["CUSTOM_PHYSNET_3",
                              "CUSTOM_VNIC_TYPE_DIRECT"]
             })
+        self.image = objects.ImageMeta(properties=objects.ImageMetaProps())
 
     def test_one_group_from_flavor_dont_warn(self):
         flavor = objects.Flavor(
@@ -1198,7 +1386,7 @@ class TestResourcesFromRequestGroupDefaultPolicy(test.NoDBTestCase):
                 'resources1:CUSTOM_BAR': '2',
             })
         request_spec = objects.RequestSpec(
-            flavor=flavor, image=objects.ImageMeta(), requested_resources=[])
+            flavor=flavor, image=self.image, requested_resources=[])
 
         rr = utils.resources_from_request_spec(
             self.context, request_spec, host_manager=mock.Mock())
@@ -1220,7 +1408,7 @@ class TestResourcesFromRequestGroupDefaultPolicy(test.NoDBTestCase):
             vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
             extra_specs={})
         request_spec = objects.RequestSpec(
-            flavor=flavor, image=objects.ImageMeta(),
+            flavor=flavor, image=self.image,
             requested_resources=[self.port_group1])
 
         rr = utils.resources_from_request_spec(
@@ -1246,7 +1434,7 @@ class TestResourcesFromRequestGroupDefaultPolicy(test.NoDBTestCase):
                 'resources2:CUSTOM_FOO': '1'
             })
         request_spec = objects.RequestSpec(
-            flavor=flavor, image=objects.ImageMeta(), requested_resources=[])
+            flavor=flavor, image=self.image, requested_resources=[])
 
         rr = utils.resources_from_request_spec(
             self.context, request_spec, host_manager=mock.Mock())
@@ -1270,7 +1458,7 @@ class TestResourcesFromRequestGroupDefaultPolicy(test.NoDBTestCase):
                 'resources1:CUSTOM_BAR': '2',
             })
         request_spec = objects.RequestSpec(
-            flavor=flavor, image=objects.ImageMeta(),
+            flavor=flavor, image=self.image,
             requested_resources=[self.port_group1])
 
         rr = utils.resources_from_request_spec(
@@ -1293,7 +1481,7 @@ class TestResourcesFromRequestGroupDefaultPolicy(test.NoDBTestCase):
             vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
             extra_specs={})
         request_spec = objects.RequestSpec(
-            flavor=flavor, image=objects.ImageMeta(),
+            flavor=flavor, image=self.image,
             requested_resources=[self.port_group1, self.port_group2])
 
         rr = utils.resources_from_request_spec(
