@@ -519,9 +519,6 @@ class ServersSampleJson273Test(ServersSampleBase):
     microversion = '2.73'
     scenarios = [('v2_73', {'api_major_version': 'v2.1'})]
 
-    def setUp(self):
-        super(ServersSampleJson273Test, self).setUp()
-
     def _post_server_and_lock(self):
         uuid = self._post_server(use_common_server_api_samples=False)
         reason = "I don't want to work"
