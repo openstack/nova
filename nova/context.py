@@ -19,7 +19,6 @@
 
 from contextlib import contextmanager
 import copy
-import warnings
 
 import eventlet.queue
 import eventlet.timeout
@@ -97,9 +96,6 @@ class RequestContext(context.RequestContext):
            :param overwrite: Set to False to ensure that the greenthread local
                 copy of the index is not overwritten.
 
-           :param instance_lock_checked: This is not used and will be removed
-                in a future release.
-
            :param user_auth_plugin: The auth plugin for the current request's
                 authentication data.
         """
@@ -107,12 +103,6 @@ class RequestContext(context.RequestContext):
             kwargs['user_id'] = user_id
         if project_id:
             kwargs['project_id'] = project_id
-
-        if kwargs.pop('instance_lock_checked', None) is not None:
-            # TODO(mriedem): Let this be a hard failure in 19.0.0 (S).
-            warnings.warn("The 'instance_lock_checked' kwarg to "
-                          "nova.context.RequestContext is no longer used and "
-                          "will be removed in a future version.")
 
         super(RequestContext, self).__init__(is_admin=is_admin, **kwargs)
 
