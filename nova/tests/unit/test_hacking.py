@@ -16,7 +16,6 @@ import textwrap
 
 import mock
 import pycodestyle
-import testtools
 
 from nova.hacking import checks
 from nova import test
@@ -276,7 +275,7 @@ class HackingTestCase(test.NoDBTestCase):
     def _run_check(self, code, checker, filename=None):
         pycodestyle.register_check(checker)
 
-        lines = textwrap.dedent(code).strip().splitlines(True)
+        lines = textwrap.dedent(code).lstrip().splitlines(True)
 
         checker = pycodestyle.Checker(filename=filename, lines=lines)
         # NOTE(sdague): the standard reporter has printing to stdout
@@ -578,19 +577,17 @@ class HackingTestCase(test.NoDBTestCase):
                                    checks.check_config_option_in_central_place,
                                    filename="nova/tests/dummy_test.py")
 
-    # TODO(cdent): Remove when https://bugs.launchpad.net/nova/+bug/1804062
-    # is resolved.
-    @testtools.skip(
-        'tokenize has backwards incompatible behavior from 3.6.7 and 2.7.15')
     def test_check_doubled_words(self):
         errors = [(1, 0, "N343")]
 
-        # Artificial break to stop flake8 detecting the test !
-        code = "This is the" + " the best comment"
+        # Explicit addition of line-ending here and below since this isn't a
+        # block comment and without it we trigger #1804062. Artificial break is
+        # necessary to stop flake8 detecting the test
+        code = "'This is the" + " the best comment'\n"
         self._assert_has_errors(code, checks.check_doubled_words,
                                 expected_errors=errors)
 
-        code = "This is the then best comment"
+        code = "'This is the then best comment'\n"
         self._assert_has_no_errors(code, checks.check_doubled_words)
 
     def test_dict_iteritems(self):
