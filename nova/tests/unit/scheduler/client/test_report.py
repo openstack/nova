@@ -3792,7 +3792,7 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
         }
         self.mock_get.return_value = get_resp
         name = 'cn1'
-        res = self.client._get_provider_by_name(self.context, name)
+        res = self.client.get_provider_by_name(self.context, name)
 
         exp_url = "/resource_providers?name=%s" % name
         self.mock_get.assert_called_once_with(
@@ -3817,7 +3817,7 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
         name = 'cn1'
         self.assertRaises(
             exception.ResourceProviderNotFound,
-            self.client._get_provider_by_name, self.context, name)
+            self.client.get_provider_by_name, self.context, name)
         mock_log.assert_called_once()
 
     @mock.patch.object(report.LOG, 'warning')
@@ -3828,7 +3828,7 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
         name = 'cn1'
         self.assertRaises(
             exception.ResourceProviderNotFound,
-            self.client._get_provider_by_name, self.context, name)
+            self.client.get_provider_by_name, self.context, name)
         mock_log.assert_called_once()
 
     @mock.patch.object(report.LOG, 'warning')
@@ -3839,7 +3839,7 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
         name = 'cn1'
         self.assertRaises(
             exception.ResourceProviderNotFound,
-            self.client._get_provider_by_name, self.context, name)
+            self.client.get_provider_by_name, self.context, name)
         mock_log.assert_not_called()
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -3847,7 +3847,7 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_provider_aggregates')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_provider_by_name')
+                'get_provider_by_name')
     def test_aggregate_add_host_success_no_existing(
             self, mock_get_by_name, mock_get_aggs, mock_set_aggs):
         mock_get_by_name.return_value = {
@@ -3868,7 +3868,7 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_provider_aggregates')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_provider_by_name', new=mock.NonCallableMock())
+                'get_provider_by_name', new=mock.NonCallableMock())
     def test_aggregate_add_host_rp_uuid(self, mock_get_aggs, mock_set_aggs):
         mock_get_aggs.return_value = report.AggInfo(
             aggregates=set([]), generation=42)
@@ -3883,7 +3883,7 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_provider_aggregates')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_provider_by_name')
+                'get_provider_by_name')
     def test_aggregate_add_host_success_already_existing(
             self, mock_get_by_name, mock_get_aggs, mock_set_aggs):
         mock_get_by_name.return_value = {
@@ -3908,14 +3908,12 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
             use_cache=False, generation=43)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_provider_by_name')
+                'get_provider_by_name',
+                side_effect=exception.PlacementAPIConnectFailure)
     def test_aggregate_add_host_no_placement(self, mock_get_by_name):
-        """In Rocky, we allow nova-api to not be able to communicate with
-        placement, so the @safe_connect decorator will return None. Check that
-        an appropriate exception is raised back to the nova-api code in this
-        case.
+        """Tests that PlacementAPIConnectFailure will be raised up from
+        aggregate_add_host if get_provider_by_name raises that error.
         """
-        mock_get_by_name.return_value = None  # emulate @safe_connect...
         name = 'cn1'
         agg_uuid = uuids.agg1
         self.assertRaises(
@@ -3929,7 +3927,7 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_provider_aggregates')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_provider_by_name')
+                'get_provider_by_name')
     def test_aggregate_add_host_retry_success(
             self, mock_get_by_name, mock_get_aggs, mock_set_aggs):
         mock_get_by_name.return_value = {
@@ -3957,7 +3955,7 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_provider_aggregates')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_provider_by_name')
+                'get_provider_by_name')
     def test_aggregate_add_host_retry_raises(
             self, mock_get_by_name, mock_get_aggs, mock_set_aggs):
         mock_get_by_name.return_value = {
@@ -3984,14 +3982,12 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
             self.client.aggregate_add_host, self.context, uuids.agg1)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_provider_by_name')
+                'get_provider_by_name',
+                side_effect=exception.PlacementAPIConnectFailure)
     def test_aggregate_remove_host_no_placement(self, mock_get_by_name):
-        """In Rocky, we allow nova-api to not be able to communicate with
-        placement, so the @safe_connect decorator will return None. Check that
-        an appropriate exception is raised back to the nova-api code in this
-        case.
+        """Tests that PlacementAPIConnectFailure will be raised up from
+        aggregate_remove_host if get_provider_by_name raises that error.
         """
-        mock_get_by_name.return_value = None  # emulate @safe_connect...
         name = 'cn1'
         agg_uuid = uuids.agg1
         self.assertRaises(
@@ -4004,7 +4000,7 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_provider_aggregates')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_provider_by_name')
+                'get_provider_by_name')
     def test_aggregate_remove_host_success_already_existing(
             self, mock_get_by_name, mock_get_aggs, mock_set_aggs):
         mock_get_by_name.return_value = {
@@ -4024,7 +4020,7 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_provider_aggregates')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_provider_by_name')
+                'get_provider_by_name')
     def test_aggregate_remove_host_success_no_existing(
             self, mock_get_by_name, mock_get_aggs, mock_set_aggs):
         mock_get_by_name.return_value = {
@@ -4053,7 +4049,7 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_provider_aggregates')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_provider_by_name')
+                'get_provider_by_name')
     def test_aggregate_remove_host_retry_success(
             self, mock_get_by_name, mock_get_aggs, mock_set_aggs):
         mock_get_by_name.return_value = {
@@ -4081,7 +4077,7 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_provider_aggregates')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_provider_by_name')
+                'get_provider_by_name')
     def test_aggregate_remove_host_retry_raises(
             self, mock_get_by_name, mock_get_aggs, mock_set_aggs):
         mock_get_by_name.return_value = {

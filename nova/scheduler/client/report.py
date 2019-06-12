@@ -28,6 +28,7 @@ from oslo_middleware import request_id
 from oslo_utils import excutils
 from oslo_utils import versionutils
 import retrying
+import six
 
 from nova.compute import provider_tree
 import nova.conf
@@ -2182,8 +2183,7 @@ class SchedulerReportClient(object):
             # for backward compatibility.
             pass
 
-    @safe_connect
-    def _get_provider_by_name(self, context, name):
+    def get_provider_by_name(self, context, name):
         """Queries the placement API for resource provider information matching
         a supplied name.
 
@@ -2193,9 +2193,17 @@ class SchedulerReportClient(object):
                  provider's UUID and generation
         :raises: `exception.ResourceProviderNotFound` when no such provider was
                  found
+        :raises: PlacementAPIConnectFailure if there was an issue making the
+                 API call to placement.
         """
-        resp = self.get("/resource_providers?name=%s" % name,
-                        global_request_id=context.global_id)
+        try:
+            resp = self.get("/resource_providers?name=%s" % name,
+                            global_request_id=context.global_id)
+        except ks_exc.ClientException as ex:
+            LOG.error('Failed to get resource provider by name: %s. Error: %s',
+                      name, six.text_type(ex))
+            raise exception.PlacementAPIConnectFailure()
+
         if resp.status_code == 200:
             data = resp.json()
             records = data['resource_providers']
@@ -2244,18 +2252,13 @@ class SchedulerReportClient(object):
                  failure attempting to save the provider aggregates
         :raises: `exception.ResourceProviderUpdateConflict` if a concurrent
                  update to the provider was detected.
+        :raises: PlacementAPIConnectFailure if there was an issue making an
+                 API call to placement.
         """
         if host_name is None and rp_uuid is None:
             raise ValueError(_("Either host_name or rp_uuid is required"))
         if rp_uuid is None:
-            rp = self._get_provider_by_name(context, host_name)
-            # NOTE(jaypipes): Unfortunately, due to @safe_connect,
-            # _get_provider_by_name() can return None. If that happens, raise
-            # an error so we can trap for it in the Nova API code and ignore in
-            # Rocky, blow up in Stein.
-            if rp is None:
-                raise exception.PlacementAPIConnectFailure()
-            rp_uuid = rp['uuid']
+            rp_uuid = self.get_provider_by_name(context, host_name)['uuid']
 
         # Now attempt to add the aggregate to the resource provider. We don't
         # want to overwrite any other aggregates the provider may be associated
@@ -2297,16 +2300,10 @@ class SchedulerReportClient(object):
                  failure attempting to save the provider aggregates
         :raises: `exception.ResourceProviderUpdateConflict` if a concurrent
                  update to the provider was detected.
+        :raises: PlacementAPIConnectFailure if there was an issue making an
+                 API call to placement.
         """
-        rp = self._get_provider_by_name(context, host_name)
-        # NOTE(jaypipes): Unfortunately, due to @safe_connect,
-        # _get_provider_by_name() can return None. If that happens, raise an
-        # error so we can trap for it in the Nova API code and ignore in Rocky,
-        # blow up in Stein.
-        if rp is None:
-            raise exception.PlacementAPIConnectFailure()
-        rp_uuid = rp['uuid']
-
+        rp_uuid = self.get_provider_by_name(context, host_name)['uuid']
         # Now attempt to remove the aggregate from the resource provider. We
         # don't want to overwrite any other aggregates the provider may be
         # associated with, however, so we first grab the list of aggregates for
