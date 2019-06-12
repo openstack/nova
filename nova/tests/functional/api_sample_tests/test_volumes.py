@@ -260,38 +260,7 @@ class VolumeAttachmentsSample(test_servers.ServersSampleBase):
     def test_attach_volume_to_server(self):
         self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
         self.stub_out('nova.volume.cinder.API.attachment_create',
-                      lambda *a, **k: {'id': uuids.attachment_id})
-        device_name = '/dev/vdd'
-        bdm = objects.BlockDeviceMapping()
-        bdm['device_name'] = device_name
-        self.stub_out(
-            'nova.compute.manager.ComputeManager.reserve_block_device_name',
-            lambda *a, **k: bdm)
-        self.stub_out(
-            'nova.compute.manager.ComputeManager.attach_volume',
-            lambda *a, **k: None)
-
-        volume = fakes.stub_volume_get(None, context.get_admin_context(),
-                                       self.OLD_VOLUME_ID)
-        subs = {
-            'volume_id': volume['id'],
-            'device': device_name
-        }
-        server_id = self._post_server()
-        subs = self._get_vol_attachment_subs(subs)
-        response = self._do_post('servers/%s/os-volume_attachments'
-                                 % server_id,
-                                 'attach-volume-to-server-req', subs)
-
-        self._verify_response('attach-volume-to-server-resp', subs,
-                              response, 200)
-
-    def test_attach_volume_to_server_new_flow(self):
-        self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
-        self.stub_out('nova.volume.cinder.API.attachment_create',
                       lambda *a, **k: {'id': uuids.volume})
-        self.stub_out('nova.objects.BlockDeviceMapping.save',
-                      lambda *a, **k: None)
         device_name = '/dev/vdd'
         bdm = objects.BlockDeviceMapping()
         bdm['device_name'] = device_name

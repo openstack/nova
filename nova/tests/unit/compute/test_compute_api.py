@@ -4132,42 +4132,6 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.context,
                           bdms, legacy_bdm=True)
 
-    @mock.patch.object(cinder.API, 'get')
-    @mock.patch.object(cinder.API, 'attachment_create',
-                       side_effect=exception.InvalidInput(reason='error'))
-    def test_validate_bdm_with_error_volume(self, mock_attach_create,
-                                            mock_get):
-        # Tests that an InvalidInput exception raised from
-        # volume_api.reserve_volume due to the volume status not being
-        # 'available' results in _validate_bdm re-raising InvalidVolume.
-        instance = self._create_instance_obj()
-        del instance.id
-        instance_type = self._create_flavor()
-        volume_id = 'e856840e-9f5b-4894-8bde-58c6e29ac1e8'
-        volume_info = {'status': 'error',
-                       'attach_status': 'detached',
-                       'id': volume_id,
-                       'multiattach': False}
-        mock_get.return_value = volume_info
-        bdms = [objects.BlockDeviceMapping(
-                **fake_block_device.FakeDbBlockDeviceDict(
-                {
-                 'boot_index': 0,
-                 'volume_id': volume_id,
-                 'source_type': 'volume',
-                 'destination_type': 'volume',
-                 'device_name': 'vda',
-                }))]
-
-        self.assertRaises(exception.InvalidVolume,
-                          self.compute_api._validate_bdm,
-                          self.context,
-                          instance, instance_type, bdms)
-
-        mock_get.assert_called_once_with(self.context, volume_id)
-        mock_attach_create.assert_called_once_with(
-            self.context, volume_id, instance.uuid)
-
     @mock.patch.object(cinder.API, 'get_snapshot',
              side_effect=exception.CinderConnectionFailed(reason='error'))
     @mock.patch.object(cinder.API, 'get',
@@ -4444,25 +4408,12 @@ class _ComputeAPIUnitTestMixIn(object):
         self._test_provision_instances_with_cinder_error(
             expected_exception=exception.CinderConnectionFailed)
 
-    @mock.patch.object(cinder.API, 'get',
-                       return_value={'id': '1', 'multiattach': False})
-    @mock.patch.object(cinder.API, 'check_availability_zone')
-    @mock.patch.object(cinder.API, 'attachment_create',
-                       side_effect=exception.InvalidInput(reason='error'))
-    def test_provision_instances_with_error_volume(self,
-                                                   mock_cinder_check_av_zone,
-                                                   mock_reserve_volume,
-                                                   mock_get):
-        self._test_provision_instances_with_cinder_error(
-            expected_exception=exception.InvalidVolume)
-
-    @mock.patch.object(cinder.API, 'get',
-                       return_value={'id': '1', 'multiattach': False})
-    @mock.patch.object(cinder.API, 'check_availability_zone')
-    @mock.patch.object(cinder.API, 'attachment_create',
-                       side_effect=exception.InvalidInput(reason='error'))
-    def test_provision_instances_with_error_volume_new_flow(self,
-        mock_cinder_check_av_zone, mock_attach_create, mock_get):
+    @mock.patch.object(cinder.API, 'get', new=mock.Mock(
+        return_value={'id': '1', 'multiattach': False}))
+    @mock.patch.object(cinder.API, 'check_availability_zone', new=mock.Mock())
+    @mock.patch.object(cinder.API, 'attachment_create', new=mock.Mock(
+        side_effect=exception.InvalidInput(reason='error')))
+    def test_provision_instances_with_error_volume(self):
         self._test_provision_instances_with_cinder_error(
             expected_exception=exception.InvalidVolume)
 
