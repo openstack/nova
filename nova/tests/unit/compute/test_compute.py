@@ -5819,6 +5819,8 @@ class ComputeTestCase(BaseTestCase,
         migration_context.migration_id = migration.id
         migration_context.old_numa_topology = old_inst_topology
         migration_context.new_numa_topology = new_inst_topology
+        migration_context.old_pci_devices = None
+        migration_context.new_pci_devices = None
 
         instance.migration_context = migration_context
         instance.vm_state = vm_states.RESIZED
@@ -5855,12 +5857,14 @@ class ComputeTestCase(BaseTestCase,
         old_pci_devices = objects.PciDeviceList(
             objects=[objects.PciDevice(vendor_id='1377',
                                        product_id='0047',
-                                       address='0000:0a:00.1')])
+                                       address='0000:0a:00.1',
+                                       request_id=uuids.req1)])
 
         new_pci_devices = objects.PciDeviceList(
             objects=[objects.PciDevice(vendor_id='1377',
                                        product_id='0047',
-                                       address='0000:0b:00.1')])
+                                       address='0000:0b:00.1',
+                                       request_id=uuids.req2)])
 
         if expected_pci_addr == old_pci_devices[0].address:
             expected_pci_device = old_pci_devices[0]
@@ -8129,7 +8133,10 @@ class ComputeTestCase(BaseTestCase,
         self.compute.confirm_resize(self.context, instance=instance,
                                     migration=migration)
 
-    def test_allow_confirm_resize_on_instance_in_deleting_task_state(self):
+    @mock.patch.object(objects.MigrationContext,
+                       'get_pci_mapping_for_migration')
+    def test_allow_confirm_resize_on_instance_in_deleting_task_state(
+            self, mock_pci_mapping):
         instance = self._create_fake_instance_obj()
         old_type = instance.flavor
         new_type = flavors.get_flavor_by_flavor_id('4')
@@ -8137,6 +8144,7 @@ class ComputeTestCase(BaseTestCase,
         instance.flavor = new_type
         instance.old_flavor = old_type
         instance.new_flavor = new_type
+        instance.migration_context = objects.MigrationContext()
 
         fake_rt = mock.MagicMock()
 
