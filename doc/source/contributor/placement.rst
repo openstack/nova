@@ -146,8 +146,9 @@ there are a few bits of required housekeeping that must be done in the code:
   microversion and give a very brief summary of the added feature.
 * Update ``nova/api/openstack/placement/rest_api_version_history.rst``
   to add a more detailed section describing the new microversion.
-* Add a :reno-doc:`release note <>` with a ``features`` section announcing the
-  new or changed feature and the microversion.
+* Add a `release note <https://docs.openstack.org/reno/latest/>` with a
+  ``features`` section announcing the new or changed feature and the
+  microversion.
 * If the ``version_handler`` decorator (see below) has been used,
   increment ``TOTAL_VERSIONED_METHODS`` in
   ``nova/tests/unit/api/openstack/placement/test_microversion.py``.
