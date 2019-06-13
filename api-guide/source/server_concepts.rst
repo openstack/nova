@@ -740,8 +740,34 @@ in this case since we are creating a volume-backed server.
 Scheduler Hints
 ~~~~~~~~~~~~~~~
 
-Refer to `this document`_ for information on scheduler hints.
+Scheduler hints are a way for the user to influence on which host the scheduler
+places a server. They are pre-determined key-value pairs specified as a
+dictionary separate from the main ``server`` dictionary in the server create
+request. Available scheduler hints vary from cloud to cloud, depending on the
+`cloud's configuration`_.
 
+.. code-block:: json
+
+    {
+        "server": {
+            "name": "server-in-group",
+            "imageRef": "52415800-8b69-11e0-9b19-734f6f006e54",
+            "flavorRef": "52415800-8b69-11e0-9b19-734f1195ff37"
+        },
+        "os:scheduler_hints": {
+            "group": "05a81485-010f-4df1-bbec-7821c85686e8"
+        }
+    }
+
+
+For more information on how to specify scheduler hints refer to
+`the create-server-detail Request section`_ in the Compute API reference.
+
+For more information on how scheduler hints are different from flavor extra
+specs, refer to `this document`_.
+
+.. _cloud's configuration: https://docs.openstack.org/nova/latest/admin/configuration/schedulers.html
+.. _the create-server-detail Request section: https://developer.openstack.org/api-ref/compute/?expanded=create-server-detail#create-server
 .. _this document: https://docs.openstack.org/nova/latest/reference/scheduler-hints-vs-flavor-extra-specs.html#scheduler-hints
 
 Server Consoles
