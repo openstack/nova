@@ -262,9 +262,9 @@ Nova Cells v2
     hosts which are not currently mapped. If a host is already mapped, nothing
     will be done. You need to re-run this command each time you add a batch of
     compute hosts to a cell (otherwise the scheduler will never place instances
-    there and the API will not list the new hosts). If --strict is specified,
+    there and the API will not list the new hosts). If ``--strict`` is specified,
     the command will only return 0 if an unmapped host was discovered and
-    mapped successfully. If --by-service is specified, this command will look
+    mapped successfully. If ``--by-service`` is specified, this command will look
     in the appropriate cell(s) for any nova-compute services and ensure there
     are host mappings for them. This is less efficient and is only necessary
     when using compute drivers that may manage zero or more actual compute
@@ -279,9 +279,9 @@ Nova Cells v2
     explained below:
 
     * Returns 0 if hosts were successfully mapped or no hosts needed to be
-      mapped. If --strict is specified, returns 0 only if an unmapped host was
+      mapped. If ``--strict`` is specified, returns 0 only if an unmapped host was
       discovered and mapped.
-    * Returns 1 if --strict is specified and no unmapped hosts were found.
+    * Returns 1 if ``--strict`` is specified and no unmapped hosts were found.
       Also returns 1 if an exception was raised while running.
     * Returns 2 if the command aborted because of a duplicate host mapping
       found. This means the command collided with another running
@@ -289,7 +289,7 @@ Nova Cells v2
 
 ``nova-manage cell_v2 list_cells [--verbose]``
     By default the cell name, uuid, disabled state, masked transport URL and
-    database connection details are shown. Use the --verbose option to see
+    database connection details are shown. Use the ``--verbose`` option to see
     transport URL and database connection with their sensitive details.
 
 ``nova-manage cell_v2 delete_cell [--force] --cell_uuid <cell_uuid>``
@@ -305,7 +305,7 @@ Nova Cells v2
 
 ``nova-manage cell_v2 list_hosts [--cell_uuid <cell_uuid>]``
     Lists the hosts in one or all v2 cells. By default hosts in all v2 cells
-    are listed. Use the --cell_uuid option to list hosts in a specific cell.
+    are listed. Use the ``--cell_uuid`` option to list hosts in a specific cell.
     If the cell is not found by uuid, this command will return an exit code
     of 1. Otherwise, the exit code will be 0.
 
@@ -379,7 +379,7 @@ Placement
     Return codes:
 
     * 0: Command completed successfully and allocations were created.
-    * 1: --max-count was reached and there are more instances to process.
+    * 1: ``--max-count`` was reached and there are more instances to process.
     * 2: Unable to find a compute node record for a given instance.
     * 3: Unable to create (or update) allocations for an instance against its
       compute node resource provider.
