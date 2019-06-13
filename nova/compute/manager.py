@@ -4455,7 +4455,7 @@ class ComputeManager(manager.Manager):
                 scheduler_hint = {'filter_properties': filter_properties}
 
                 self.compute_task_api.resize_instance(
-                    context, instance, None, scheduler_hint, instance_type,
+                    context, instance, scheduler_hint, instance_type,
                     request_spec=request_spec, host_list=host_list)
 
                 rescheduled = True

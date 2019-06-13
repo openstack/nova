@@ -117,9 +117,8 @@ class MissingReqSpecInstanceGroupUUIDTestCase(
         # This simulates the pre-Stein reschedule behavior.
         original_resize_instance = conductor_api.ComputeTaskAPI.resize_instance
 
-        def stub_resize_instance(_self, context, instance,
-                                 extra_instance_updates, scheduler_hint,
-                                 *args, **kwargs):
+        def stub_resize_instance(_self, context, instance, scheduler_hint,
+                                 flavor, *args, **kwargs):
             # Only remove the request spec if we know we're rescheduling
             # which we can determine from the filter_properties retry dict.
             filter_properties = scheduler_hint['filter_properties']
@@ -129,8 +128,8 @@ class MissingReqSpecInstanceGroupUUIDTestCase(
                 self.assertEqual(group_id, filter_properties['group_uuid'])
                 kwargs.pop('request_spec', None)
             return original_resize_instance(
-                _self, context, instance, extra_instance_updates,
-                scheduler_hint, *args, **kwargs)
+                _self, context, instance, scheduler_hint, flavor, *args,
+                **kwargs)
         self.stub_out('nova.conductor.api.ComputeTaskAPI.resize_instance',
                       stub_resize_instance)
 

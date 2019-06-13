@@ -144,10 +144,9 @@ def unify_instance(instance):
 
 class FakeComputeTaskAPI(object):
 
-    def resize_instance(self, ctxt, instance, extra_instance_updates,
-                        scheduler_hint, flavor, reservations=None,
-                        clean_shutdown=True, request_spec=None,
-                        host_list=None):
+    def resize_instance(self, ctxt, instance, scheduler_hint, flavor,
+                        reservations=None, clean_shutdown=True,
+                        request_spec=None, host_list=None):
         pass
 
 
@@ -12886,7 +12885,7 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
             mock_update.assert_called_once_with(
                 self.context, mock.ANY, task_state=task_states.RESIZE_PREP)
             mock_resize.assert_called_once_with(
-                self.context, mock.ANY, None,
+                self.context, mock.ANY,
                 {'filter_properties': filter_properties}, self.instance_type,
                 request_spec=self.request_spec, host_list=None)
             mock_notify.assert_called_once_with(
@@ -12916,7 +12915,7 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
             mock_update.assert_called_once_with(
                 self.context, mock.ANY, task_state=task_states.RESIZE_PREP)
             mock_resize.assert_called_once_with(
-                self.context, mock.ANY, None,
+                self.context, mock.ANY,
                 {'filter_properties': filter_properties}, self.instance_type,
                 request_spec=self.request_spec, host_list=None)
             mock_notify.assert_called_once_with(

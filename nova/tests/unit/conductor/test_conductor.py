@@ -401,7 +401,7 @@ class _BaseTaskTestCase(object):
             # The API method is actually 'resize_instance'.  It gets
             # converted into 'migrate_server' when doing RPC.
             self.conductor.resize_instance(
-                self.context, inst_obj, {}, scheduler_hint, flavor, [],
+                self.context, inst_obj, scheduler_hint, flavor, [],
                 clean_shutdown, host_list=None)
         else:
             self.conductor.migrate_server(
