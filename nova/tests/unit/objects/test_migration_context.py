@@ -52,6 +52,23 @@ def get_fake_migration_context_obj(ctxt):
     return obj
 
 
+def get_fake_migration_context_with_pci_devs(ctxt=None):
+    obj = get_fake_migration_context_obj(ctxt)
+    obj.old_pci_devices = objects.PciDeviceList(
+        objects=[objects.PciDevice(vendor_id='1377',
+                                   product_id='0047',
+                                   address='0000:0a:00.1',
+                                   compute_node_id=1,
+                                   request_id=uuids.pcidev)])
+    obj.new_pci_devices = objects.PciDeviceList(
+        objects=[objects.PciDevice(vendor_id='1377',
+                                   product_id='0047',
+                                   address='0000:0b:00.1',
+                                   compute_node_id=2,
+                                   request_id=uuids.pcidev)])
+    return obj
+
+
 class _TestMigrationContext(object):
 
     def _test_get_by_instance_uuid(self, db_data):
@@ -104,7 +121,20 @@ class _TestMigrationContext(object):
 
 
 class TestMigrationContext(test_objects._LocalTest, _TestMigrationContext):
-    pass
+
+    def test_pci_mapping_for_migration(self):
+        mig_ctx = get_fake_migration_context_with_pci_devs()
+        pci_mapping = mig_ctx.get_pci_mapping_for_migration(False)
+        self.assertDictEqual(
+            {mig_ctx.old_pci_devices[0].address: mig_ctx.new_pci_devices[0]},
+            pci_mapping)
+
+    def test_pci_mapping_for_migration_revert(self):
+        mig_ctx = get_fake_migration_context_with_pci_devs()
+        pci_mapping = mig_ctx.get_pci_mapping_for_migration(True)
+        self.assertDictEqual(
+            {mig_ctx.new_pci_devices[0].address: mig_ctx.old_pci_devices[0]},
+            pci_mapping)
 
 
 class TestMigrationContextRemote(test_objects._RemoteTest,
