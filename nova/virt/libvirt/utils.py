@@ -541,6 +541,19 @@ def get_cpu_model_from_arch(arch):
     return mode
 
 
+def get_machine_type(image_meta):
+    """The guest machine type can be set as an image metadata property, or
+    otherwise based on architecture-specific defaults. If no defaults are
+    found then None will be returned. This will ultimately lead to QEMU using
+    its own default which is currently the 'pc' machine type.
+    """
+    if image_meta.properties.get('hw_machine_type') is not None:
+        return image_meta.properties.hw_machine_type
+
+    # If set in the config, use that as the default.
+    return get_default_machine_type(get_arch(image_meta))
+
+
 def machine_type_mappings():
     mappings = {}
     for mapping in CONF.libvirt.hw_machine_type or {}:
@@ -553,7 +566,23 @@ def machine_type_mappings():
 
 
 def get_default_machine_type(arch):
-    return machine_type_mappings().get(arch)
+    # NOTE(lyarwood): Values defined in [libvirt]/hw_machine_type take
+    # precedence here if available for the provided arch.
+    machine_type = machine_type_mappings().get(arch)
+    if machine_type:
+        return machine_type
+    # NOTE(kchamart): For ARMv7 and AArch64, use the 'virt' board as the
+    # default machine type.  It is the recommended board, which is designed
+    # to be used with virtual machines.  The 'virt' board is more flexible,
+    # supports PCI, 'virtio', has decent RAM limits, etc.
+    if arch in (obj_fields.Architecture.ARMV7,
+                obj_fields.Architecture.AARCH64):
+        return "virt"
+
+    if arch in (obj_fields.Architecture.S390,
+                obj_fields.Architecture.S390X):
+        return "s390-ccw-virtio"
+    return None
 
 
 def mdev_name2uuid(mdev_name):
