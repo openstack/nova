@@ -28,7 +28,6 @@ import webob
 import nova.conf
 from nova import context
 from nova import exception
-from nova.i18n import _LI
 from nova import objects
 from nova import utils
 from nova import version
@@ -82,13 +81,12 @@ class XCPVNCProxy(object):
                     data += b
                     if data.find("\r\n\r\n") != -1:
                         if not data.split("\r\n")[0].find("200"):
-                            LOG.info(_LI("Error in handshake format: %s"),
-                                     data)
+                            LOG.info("Error in handshake format: %s", data)
                             return
                         break
 
                 if not b or len(data) > 4096:
-                    LOG.info(_LI("Error in handshake: %s"), data)
+                    LOG.info("Error in handshake: %s", data)
                     return
 
         client = req.environ['eventlet.input'].get_socket()
@@ -103,7 +101,7 @@ class XCPVNCProxy(object):
         t0.wait()
 
         if not sockets.get('client') or not sockets.get('server'):
-            LOG.info(_LI("Invalid request: %s"), req)
+            LOG.info("Invalid request: %s", req)
             start_response('400 Invalid Request',
                            [('content-type', 'text/html')])
             return "Invalid Request"
@@ -123,10 +121,10 @@ class XCPVNCProxy(object):
     def __call__(self, environ, start_response):
         try:
             req = webob.Request(environ)
-            LOG.info(_LI("Request: %s"), req)
+            LOG.info("Request: %s", req)
             token = req.params.get('token')
             if not token:
-                LOG.info(_LI("Request made with missing token: %s"), req)
+                LOG.info("Request made with missing token: %s", req)
                 start_response('400 Invalid Request',
                                [('content-type', 'text/html')])
                 return "Invalid Request"
@@ -137,14 +135,14 @@ class XCPVNCProxy(object):
                 connect_info = objects.ConsoleAuthToken.validate(
                     ctxt, token).to_dict()
             except exception.InvalidToken:
-                LOG.info(_LI("Request made with invalid token: %s"), req)
+                LOG.info("Request made with invalid token: %s", req)
                 start_response('401 Not Authorized',
                                [('content-type', 'text/html')])
                 return "Not Authorized"
 
             return self.proxy_connection(req, connect_info, start_response)
         except Exception as e:
-            LOG.info(_LI("Unexpected error: %s"), e)
+            LOG.info("Unexpected error: %s", e)
 
 
 class SafeHttpProtocol(eventlet.wsgi.HttpProtocol):
@@ -164,8 +162,8 @@ class SafeHttpProtocol(eventlet.wsgi.HttpProtocol):
 
 
 def get_wsgi_server():
-    LOG.info(_LI("Starting nova-xvpvncproxy node (version %s)"),
-              version.version_string_with_package())
+    LOG.info("Starting nova-xvpvncproxy node (version %s)",
+             version.version_string_with_package())
 
     LOG.warning('The nova-xvpvncproxy service is deprecated as it is Xen '
                 'specific and has effectively been replaced by noVNC '
