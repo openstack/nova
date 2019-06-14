@@ -259,17 +259,33 @@ Nova Cells v2
 ``nova-manage cell_v2 discover_hosts [--cell_uuid <cell_uuid>] [--verbose] [--strict] [--by-service]``
     Searches cells, or a single cell, and maps found hosts. This command will
     check the database for each cell (or a single one if passed in) and map any
-    hosts which are not currently mapped. If a host is already mapped nothing
-    will be done. You need to re-run this command each time you add more
+    hosts which are not currently mapped. If a host is already mapped, nothing
+    will be done. You need to re-run this command each time you add a batch of
     compute hosts to a cell (otherwise the scheduler will never place instances
-    there and the API will not list the new hosts). If the strict option is
-    provided the command will only be considered successful if an unmapped host
-    is discovered (exit code 0). Any other case is considered a failure (exit
-    code 1). If --by-service is specified, this command will look in the
-    appropriate cell(s) for any nova-compute services and ensure there are host
-    mappings for them. This is less efficient and is only necessary when using
-    compute drivers that may manage zero or more actual compute nodes at any
-    given time (currently only ironic).
+    there and the API will not list the new hosts). If --strict is specified,
+    the command will only return 0 if an unmapped host was discovered and
+    mapped successfully. If --by-service is specified, this command will look
+    in the appropriate cell(s) for any nova-compute services and ensure there
+    are host mappings for them. This is less efficient and is only necessary
+    when using compute drivers that may manage zero or more actual compute
+    nodes at any given time (currently only ironic).
+
+    This command should be run once after all compute hosts have been deployed
+    and should not be run in parallel. When run in parallel, the commands will
+    collide with each other trying to map the same hosts in the database at the
+    same time.
+
+    The meaning of the various exit codes returned by this command are
+    explained below:
+
+    * Returns 0 if hosts were successfully mapped or no hosts needed to be
+      mapped. If --strict is specified, returns 0 only if an unmapped host was
+      discovered and mapped.
+    * Returns 1 if --strict is specified and no unmapped hosts were found.
+      Also returns 1 if an exception was raised while running.
+    * Returns 2 if the command aborted because of a duplicate host mapping
+      found. This means the command collided with another running
+      discover_hosts command or scheduler periodic task and is safe to retry.
 
 ``nova-manage cell_v2 list_cells [--verbose]``
     By default the cell name, uuid, disabled state, masked transport URL and

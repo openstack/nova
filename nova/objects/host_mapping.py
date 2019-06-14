@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_db import exception as db_exc
 from sqlalchemy.orm import joinedload
 
 from nova import context
@@ -175,6 +176,13 @@ class HostMappingList(base.ObjectListBase, base.NovaObject):
         return base.obj_make_list(context, cls(), HostMapping, db_mappings)
 
 
+def _create_host_mapping(host_mapping):
+    try:
+        host_mapping.create()
+    except db_exc.DBDuplicateEntry:
+        raise exception.HostMappingExists(name=host_mapping.host)
+
+
 def _check_and_create_node_host_mappings(ctxt, cm, compute_nodes, status_fn):
     host_mappings = []
     for compute in compute_nodes:
@@ -190,7 +198,7 @@ def _check_and_create_node_host_mappings(ctxt, cm, compute_nodes, status_fn):
             host_mapping = HostMapping(
                 ctxt, host=compute.host,
                 cell_mapping=cm)
-            host_mapping.create()
+            _create_host_mapping(host_mapping)
             host_mappings.append(host_mapping)
             compute.mapped = 1
             compute.save()
@@ -208,7 +216,7 @@ def _check_and_create_service_host_mappings(ctxt, cm, services, status_fn):
             host_mapping = HostMapping(
                 ctxt, host=service.host,
                 cell_mapping=cm)
-            host_mapping.create()
+            _create_host_mapping(host_mapping)
             host_mappings.append(host_mapping)
     return host_mappings
 

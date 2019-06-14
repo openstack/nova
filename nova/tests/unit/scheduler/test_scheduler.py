@@ -22,6 +22,7 @@ import oslo_messaging as messaging
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import context
+from nova import exception
 from nova import objects
 from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
@@ -334,6 +335,27 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                                       objects.HostMapping(host='b',
                                                           cell_mapping=cm2)]
         self.manager._discover_hosts_in_cells(mock.sentinel.context)
+
+    @mock.patch('nova.scheduler.manager.LOG.debug')
+    @mock.patch('nova.scheduler.manager.LOG.warning')
+    @mock.patch('nova.objects.host_mapping.discover_hosts')
+    def test_discover_hosts_duplicate_host_mapping(self, mock_discover,
+                                                   mock_log_warning,
+                                                   mock_log_debug):
+        # This tests the scenario of multiple schedulers running discover_hosts
+        # at the same time.
+        mock_discover.side_effect = exception.HostMappingExists(name='a')
+        self.manager._discover_hosts_in_cells(mock.sentinel.context)
+        msg = ("This periodic task should only be enabled on a single "
+               "scheduler to prevent collisions between multiple "
+               "schedulers: Host 'a' mapping already exists")
+        mock_log_warning.assert_called_once_with(msg)
+        mock_log_debug.assert_not_called()
+        # Second collision should log at debug, not warning.
+        mock_log_warning.reset_mock()
+        self.manager._discover_hosts_in_cells(mock.sentinel.context)
+        mock_log_warning.assert_not_called()
+        mock_log_debug.assert_called_once_with(msg)
 
 
 class SchedulerTestCase(test.NoDBTestCase):
