@@ -191,6 +191,36 @@ class DbTestCase(test.TestCase):
         return meta, sys_meta
 
 
+class HelperTestCase(test.TestCase):
+    @mock.patch.object(sqlalchemy_api, 'joinedload')
+    def test_joinedload_helper(self, mock_jl):
+        query = sqlalchemy_api._joinedload_all('foo.bar.baz')
+
+        # We call sqlalchemy.orm.joinedload() on the first element
+        mock_jl.assert_called_once_with('foo')
+
+        # Then first.joinedload(second)
+        column2 = mock_jl.return_value
+        column2.joinedload.assert_called_once_with('bar')
+
+        # Then second.joinedload(third)
+        column3 = column2.joinedload.return_value
+        column3.joinedload.assert_called_once_with('baz')
+
+        self.assertEqual(column3.joinedload.return_value, query)
+
+    @mock.patch.object(sqlalchemy_api, 'joinedload')
+    def test_joinedload_helper_single(self, mock_jl):
+        query = sqlalchemy_api._joinedload_all('foo')
+
+        # We call sqlalchemy.orm.joinedload() on the first element
+        mock_jl.assert_called_once_with('foo')
+
+        # We should have gotten back just the result of the joinedload()
+        # call if there were no other elements
+        self.assertEqual(mock_jl.return_value, query)
+
+
 class DecoratorTestCase(test.TestCase):
     def _test_decorator_wraps_helper(self, decorator):
         def test_func():
