@@ -57,7 +57,7 @@ for details on command usage.
 Known issues
 ~~~~~~~~~~~~
 
-#. **Services and Performance:** In case a cell is down during the startup of nova
+1. **Services and Performance:** In case a cell is down during the startup of nova
    services, there is the chance that the services hang because of not being able
    to connect to all the cell databases that might be required for certain calculations
    and initializations. An example scenario of this situation is if
@@ -73,7 +73,9 @@ Known issues
    "slowness" may be experienced in operations requiring hitting all the cells
    because of the aforementioned configurable timeout/retry values.
 
-#. **Counting Quotas:** Another known issue is in the current approach of counting
+.. _cells-counting-quotas:
+
+2. **Counting Quotas:** Another known issue is in the current approach of counting
    quotas where we query each cell database to get the used resources and aggregate
    them which makes it sensitive to temporary cell outages. While the cell is
    unavailable, we cannot count resource usage residing in that cell database and
