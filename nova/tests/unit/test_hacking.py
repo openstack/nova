@@ -889,3 +889,27 @@ class HackingTestCase(test.NoDBTestCase):
         for filename in (good_filenames + bad_filenames):
             self._assert_has_no_errors(
                 code, checks.privsep_imports_not_aliased, filename=filename)
+
+    def test_did_you_mean_tuple(self):
+        code = """
+                    if foo in (bar):
+                    if foo in ('bar'):
+                    if foo in (path.to.CONST_1234):
+                    if foo in (
+                        bar):
+               """
+        errors = [(x + 1, 0, 'N363') for x in range(4)]
+        self._assert_has_errors(
+            code, checks.did_you_mean_tuple, expected_errors=errors)
+        code = """
+                    def in(this_would_be_weird):
+                        # A match in (any) comment doesn't count
+                        if foo in (bar,)
+                            or foo in ('bar',)
+                            or foo in ("bar",)
+                            or foo in (set1 + set2)
+                            or foo in ("string continuations "
+                                "are probably okay")
+                            or foo in (method_call_should_this_work()):
+               """
+        self._assert_has_no_errors(code, checks.did_you_mean_tuple)

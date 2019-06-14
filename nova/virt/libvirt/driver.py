@@ -2026,7 +2026,7 @@ class LibvirtDriver(driver.ComputeDriver):
         #               It is necessary in case this situation changes in the
         #               future.
         if (self._host.has_min_version(hv_type=host.HV_DRIVER_QEMU)
-                and source_type not in ('lvm')
+                and source_type != 'lvm'
                 and not CONF.ephemeral_storage_encryption.enabled
                 and not CONF.workarounds.disable_libvirt_livesnapshot
                 # NOTE(rmk): We cannot perform live snapshots when a
@@ -4802,7 +4802,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # NOTE(ldbragst): PowerKVM doesn't support 'cirrus' be default
             # so use 'vga' instead when running on Power hardware.
             video.type = 'vga'
-        elif guestarch in (fields.Architecture.AARCH64):
+        elif guestarch == fields.Architecture.AARCH64:
             # NOTE(kevinz): Only virtio device type is supported by AARCH64
             # so use 'virtio' instead when running on AArch64 hardware.
             video.type = 'virtio'
