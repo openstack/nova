@@ -1020,7 +1020,7 @@ class ResourceFilterTestCase(test.NoDBTestCase):
             {'key': 'baz', 'value': 'wibble'}], [])
 
         # Test for regex
-        self._assert_filtering(rl, {'value': '\\Aqu..*\\Z(?s)'}, [i22])
+        self._assert_filtering(rl, {'value': '(?s)\\Aqu..*\\Z'}, [i22])
 
         # Make sure bug #1365887 is fixed
         i1['metadata']['key3'] = 'a'
