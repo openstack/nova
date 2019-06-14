@@ -471,11 +471,13 @@ class IronicDriver(virt_driver.ComputeDriver):
                              'reason': e},
                             instance=instance)
 
-    def _cleanup_deploy(self, node, instance, network_info=None):
+    def _cleanup_deploy(self, node, instance, network_info=None,
+                        remove_instance_info=True):
         self._cleanup_volume_target_info(instance)
         self._unplug_vifs(node, instance, network_info)
         self._stop_firewall(instance, network_info)
-        self._remove_instance_info_from_node(node, instance)
+        if remove_instance_info:
+            self._remove_instance_info_from_node(node, instance)
 
     def _wait_for_active(self, instance):
         """Wait for the node to be marked as ACTIVE in Ironic."""
@@ -1264,7 +1266,12 @@ class IronicDriver(virt_driver.ComputeDriver):
                 #                removed from ironic node.
                 self._remove_instance_info_from_node(node, instance)
         finally:
-            self._cleanup_deploy(node, instance, network_info)
+            # NOTE(mgoddard): We don't need to remove instance info at this
+            # point since we will have already done it. The destroy will only
+            # succeed if this method returns without error, so we will end up
+            # removing the instance info eventually.
+            self._cleanup_deploy(node, instance, network_info,
+                                 remove_instance_info=False)
 
         LOG.info('Successfully unprovisioned Ironic node %s',
                  node.uuid, instance=instance)
