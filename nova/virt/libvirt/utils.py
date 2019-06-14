@@ -554,23 +554,15 @@ def get_machine_type(image_meta):
     return get_default_machine_type(get_arch(image_meta))
 
 
-def machine_type_mappings():
-    mappings = {}
+def get_default_machine_type(arch):
+    # NOTE(lyarwood): Values defined in [libvirt]/hw_machine_type take
+    # precedence here if available for the provided arch.
     for mapping in CONF.libvirt.hw_machine_type or {}:
         host_arch, _, machine_type = mapping.partition('=')
         if machine_type == '':
             LOG.warning("Invalid hw_machine_type config value %s", mapping)
-        else:
-            mappings[host_arch] = machine_type
-    return mappings
-
-
-def get_default_machine_type(arch):
-    # NOTE(lyarwood): Values defined in [libvirt]/hw_machine_type take
-    # precedence here if available for the provided arch.
-    machine_type = machine_type_mappings().get(arch)
-    if machine_type:
-        return machine_type
+        elif host_arch == arch:
+            return machine_type
     # NOTE(kchamart): For ARMv7 and AArch64, use the 'virt' board as the
     # default machine type.  It is the recommended board, which is designed
     # to be used with virtual machines.  The 'virt' board is more flexible,

@@ -971,18 +971,6 @@ sunrpc /var/lib/nfs/rpc_pipefs rpc_pipefs rw,relatime 0 0
         self.assertEqual('/test/disk', disk_path)
         self.assertEqual('ploop', format)
 
-    def test_machine_type_mappings(self):
-        self.useFixture(nova_fixtures.ConfPatcher(
-            group="libvirt", hw_machine_type=['x86_64=q35', 'i686=legacy']))
-        self.assertDictEqual({'x86_64': 'q35', 'i686': 'legacy'},
-                             libvirt_utils.machine_type_mappings())
-
-    def test_invalid_machine_type_mappings(self):
-        self.useFixture(nova_fixtures.ConfPatcher(
-            group="libvirt", hw_machine_type=['x86_64=q35', 'foo']))
-        self.assertDictEqual({'x86_64': 'q35'},
-                             libvirt_utils.machine_type_mappings())
-
     def test_get_default_machine_type(self):
         self.useFixture(nova_fixtures.ConfPatcher(
             group="libvirt", hw_machine_type=['x86_64=q35', 'i686=legacy']))
@@ -996,3 +984,9 @@ sunrpc /var/lib/nfs/rpc_pipefs rpc_pipefs rw,relatime 0 0
         self.useFixture(nova_fixtures.ConfPatcher(
             group="libvirt", hw_machine_type=['x86_64=q35', 'i686=legacy']))
         self.assertIsNone(libvirt_utils.get_default_machine_type('sparc'))
+
+    def test_get_default_machine_type_invalid(self):
+        self.useFixture(nova_fixtures.ConfPatcher(
+            group="libvirt", hw_machine_type=['x86_64=q35', 'foo']))
+        self.assertEqual('q35',
+                         libvirt_utils.get_default_machine_type('x86_64'))
