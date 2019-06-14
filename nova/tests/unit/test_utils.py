@@ -290,7 +290,7 @@ class TestCachedFile(test.NoDBTestCase):
         self.assertNotIn(filename, utils._FILE_CACHE)
 
 
-class RootwrapDaemonTesetCase(test.NoDBTestCase):
+class RootwrapDaemonTestCase(test.NoDBTestCase):
     @mock.patch('oslo_rootwrap.client.Client')
     def test_get_client(self, mock_client):
         mock_conf = mock.MagicMock()
@@ -337,6 +337,7 @@ class RootwrapDaemonTesetCase(test.NoDBTestCase):
         daemon.client.execute = mock.Mock(return_value=(-2, None, None))
         daemon.execute('b', 2, check_exit_code=[-2])
 
+    @mock.patch('time.sleep', new=mock.Mock())
     def test_execute_fail_with_retry(self):
         mock_conf = mock.MagicMock()
         daemon = utils.RootwrapDaemonHelper(mock_conf)
@@ -349,6 +350,7 @@ class RootwrapDaemonTesetCase(test.NoDBTestCase):
             [mock.call(['b', '2'], None),
              mock.call(['b', '2'], None)])
 
+    @mock.patch('time.sleep', new=mock.Mock())
     @mock.patch('nova.utils.LOG.log')
     def test_execute_fail_and_logging(self, mock_log):
         mock_conf = mock.MagicMock()
@@ -435,7 +437,8 @@ Exit code: -2''')
         daemon.client.execute.assert_called_once_with(['a', '1'], None)
         self.assertIn(expected_err, err)
 
-    def test_trycmd_fail_with_rety(self):
+    @mock.patch('time.sleep', new=mock.Mock())
+    def test_trycmd_fail_with_retry(self):
         mock_conf = mock.MagicMock()
         daemon = utils.RootwrapDaemonHelper(mock_conf)
         daemon.client = mock.MagicMock()

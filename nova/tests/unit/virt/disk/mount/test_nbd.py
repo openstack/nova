@@ -173,6 +173,7 @@ class NbdTestCase(test.NoDBTestCase):
             self.assertFalse(n._inner_get_dev())
             self.assertTrue(n.error.endswith('did not show up'))
 
+    @mock.patch('time.sleep', new=mock.Mock())
     @mock.patch('random.shuffle')
     @mock.patch('os.path.exists', side_effect=[True, False, False, False,
                                                False, True])
@@ -204,6 +205,7 @@ class NbdTestCase(test.NoDBTestCase):
         self.useFixture(fixtures.MonkeyPatch('nova.utils.execute', _fake_noop))
         n.unget_dev()
 
+    @mock.patch('time.sleep', new=mock.Mock())
     @mock.patch('random.shuffle')
     @mock.patch('os.path.exists', side_effect=[True, False, False, False,
                                                False, True])

@@ -325,6 +325,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
             expected_url, mock.ANY, version='1.28',
             global_request_id=self.context.global_id)
 
+    @mock.patch('time.sleep', new=mock.Mock())
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put')
     def test_put_allocations_retries_conflict(self, mock_put):
         failed = fake_requests.FakeResponse(
@@ -3593,6 +3594,7 @@ class TestAllocations(SchedulerReportClientTestCase):
             uuids.rp1,
             six.text_type(ex))
 
+    @mock.patch('time.sleep', new=mock.Mock())
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient.put")
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient.get")
     def test_remove_res_from_alloc_retry_succeed(
