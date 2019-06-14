@@ -133,7 +133,7 @@ class InterfaceAttachmentController(wsgi.Controller):
                     context, port_info['port'],
                     show_tag=api_version_request.is_supported(req, '2.70'))}
 
-    @wsgi.expected_errors((400, 404, 409, 500, 501))
+    @wsgi.expected_errors((400, 403, 404, 409, 500, 501))
     @validation.schema(attach_interfaces.create, '2.0', '2.48')
     @validation.schema(attach_interfaces.create_v249, '2.49')
     def create(self, req, server_id, body):
@@ -183,6 +183,8 @@ class InterfaceAttachmentController(wsgi.Controller):
         except (exception.PortNotFound,
                 exception.NetworkNotFound) as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.PortLimitExceeded as e:
+            raise exc.HTTPForbidden(explanation=e.format_message())
         except exception.InterfaceAttachFailed as e:
             raise webob.exc.HTTPInternalServerError(
                 explanation=e.format_message())

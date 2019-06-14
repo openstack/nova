@@ -14,6 +14,7 @@
 #    under the License.
 
 import mock
+import six
 from webob import exc
 
 from nova.api.openstack import common
@@ -307,6 +308,20 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         self.assertRaises(exc.HTTPConflict,
                           self.attachments.create, self.req, FAKE_UUID1,
                           body=body)
+
+    def test_attach_interface_port_limit_exceeded(self):
+        """Tests the scenario where nova-compute attempts to create a port to
+        attach but the tenant port quota is exceeded and PortLimitExceeded
+        is raised from the neutron API code which results in a 403 response.
+        """
+        with mock.patch.object(self.attachments.compute_api,
+                               'attach_interface',
+                               side_effect=exception.PortLimitExceeded):
+            body = {'interfaceAttachment': {}}
+            ex = self.assertRaises(
+                exc.HTTPForbidden, self.attachments.create,
+                self.req, FAKE_UUID1, body=body)
+        self.assertIn('Maximum number of ports exceeded', six.text_type(ex))
 
     def test_detach_interface_with_invalid_state(self):
         def fake_detach_interface_invalid_state(*args, **kwargs):
