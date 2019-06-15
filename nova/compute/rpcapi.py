@@ -796,13 +796,10 @@ class ComputeAPI(object):
     def rebuild_instance(self, ctxt, instance, new_pass, injected_files,
             image_ref, orig_image_ref, orig_sys_metadata, bdms,
             recreate, on_shared_storage, host, node,
-            preserve_ephemeral, migration, limits,
-            request_spec, kwargs=None):
+            preserve_ephemeral, migration, limits, request_spec):
         # NOTE(edleafe): compute nodes can only use the dict form of limits.
         if isinstance(limits, objects.SchedulerLimits):
             limits = limits.to_dict()
-        # NOTE(danms): kwargs is only here for cells compatibility, don't
-        # actually send it to compute
         msg_args = {'preserve_ephemeral': preserve_ephemeral,
                     'migration': migration,
                     'scheduled_node': node,

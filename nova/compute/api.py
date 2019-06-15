@@ -3158,6 +3158,7 @@ class API(base.Base):
                                             block_device_info=None,
                                             reboot_type='HARD')
 
+    # TODO(stephenfin): We should expand kwargs out to named args
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.ERROR])
@@ -3345,8 +3346,7 @@ class API(base.Base):
                 image_ref=image_href, orig_image_ref=orig_image_ref,
                 orig_sys_metadata=orig_sys_metadata, bdms=bdms,
                 preserve_ephemeral=preserve_ephemeral, host=host,
-                request_spec=request_spec,
-                kwargs=kwargs)
+                request_spec=request_spec)
 
     @staticmethod
     def _check_quota_for_upsize(context, instance, current_flavor, new_flavor):
