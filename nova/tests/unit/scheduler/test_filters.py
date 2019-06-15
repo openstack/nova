@@ -234,34 +234,3 @@ class FiltersTestCase(test.NoDBTestCase):
             cargs = mock_log.call_args[0][0]
             self.assertIn("with instance ID '%s'" % fake_uuid, cargs)
             self.assertIn(exp_output, cargs)
-
-    def test_get_filtered_objects_compatible_with_filt_props_dicts(self):
-        LOG = filters.LOG
-
-        class FilterA(filters.BaseFilter):
-            def filter_all(self, list_objs, spec_obj):
-                # return all but the first object
-                return list_objs[1:]
-
-        class FilterB(filters.BaseFilter):
-            def filter_all(self, list_objs, spec_obj):
-                # return an empty list
-                return []
-
-        filter_a = FilterA()
-        filter_b = FilterB()
-        all_filters = [filter_a, filter_b]
-        hosts = ["Host0", "Host1", "Host2"]
-        fake_uuid = uuids.instance
-        filt_props = {"request_spec": {"instance_properties": {
-                      "uuid": fake_uuid}}}
-        with mock.patch.object(LOG, "info") as mock_log:
-            result = self.filter_handler.get_filtered_objects(
-                    all_filters, hosts, filt_props)
-            self.assertFalse(result)
-            # FilterA should leave Host1 and Host2; FilterB should leave None.
-            exp_output = ("['FilterA: (start: 3, end: 2)', "
-                          "'FilterB: (start: 2, end: 0)']")
-            cargs = mock_log.call_args[0][0]
-            self.assertIn("with instance ID '%s'" % fake_uuid, cargs)
-            self.assertIn(exp_output, cargs)
