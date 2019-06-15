@@ -13,8 +13,15 @@ if test "x$1" = "x-HEAD" ; then
     shift
     files=$(git diff --name-only HEAD~1 | tr '\n' ' ')
     echo "Running flake8 on ${files}"
+    echo ""
+    echo "Consider using the 'pre-commit' tool instead."
+    echo ""
+    echo "    pip install --user pre-commit"
+    echo "    pre-commit install --allow-missing-config"
+    echo ""
     diff -u --from-file /dev/null ${files} | flake8 --diff "$@"
 else
     echo "Running flake8 on all files"
+    echo ""
     exec flake8 "$@"
 fi

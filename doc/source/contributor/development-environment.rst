@@ -163,6 +163,18 @@ Note that some unit and functional tests use a database. See the file
 ``tools/test-setup.sh`` on how the databases are set up in the
 OpenStack CI environment and replicate it in your test environment.
 
+Using the pre-commit hook
+=========================
+
+Nova makes use of the `pre-commit framework <https://pre-commit.com/>`__ to
+allow running of some linters on each commit. This must be enabled locally to
+function:
+
+.. code-block:: shell
+
+    $ pip install --user pre-commit
+    $ pre-commit install --allow-missing-config
+
 Using a remote debugger
 =======================
 
