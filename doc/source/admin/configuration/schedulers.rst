@@ -304,6 +304,8 @@ AllHostsFilter
 
 This is a no-op filter. It does not eliminate any of the available hosts.
 
+.. _AvailabilityZoneFilter:
+
 AvailabilityZoneFilter
 ----------------------
 
