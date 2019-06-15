@@ -2258,19 +2258,7 @@ class API(base.Base):
             instance.terminated_at = timeutils.utcnow()
             instance.save()
         else:
-            self.compute_rpcapi.terminate_instance(context, instance, bdms,
-                                                   delete_type='delete')
-        self._update_queued_for_deletion(context, instance, True)
-
-    def _do_force_delete(self, context, instance, bdms, local=False):
-        if local:
-            instance.vm_state = vm_states.DELETED
-            instance.task_state = None
-            instance.terminated_at = timeutils.utcnow()
-            instance.save()
-        else:
-            self.compute_rpcapi.terminate_instance(context, instance, bdms,
-                                                   delete_type='force_delete')
+            self.compute_rpcapi.terminate_instance(context, instance, bdms)
         self._update_queued_for_deletion(context, instance, True)
 
     def _do_soft_delete(self, context, instance, bdms, local=False):
@@ -2341,7 +2329,7 @@ class API(base.Base):
                           must_have_launched=False)
     def force_delete(self, context, instance):
         """Force delete an instance in any vm_state/task_state."""
-        self._delete(context, instance, 'force_delete', self._do_force_delete,
+        self._delete(context, instance, 'force_delete', self._do_delete,
                      task_state=task_states.DELETING)
 
     def force_stop(self, context, instance, do_cast=True, clean_shutdown=True):

@@ -1173,7 +1173,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 mock_soft_delete.assert_called_once_with(self.context, inst)
             elif delete_type in ['delete', 'force_delete']:
                 mock_terminate.assert_called_once_with(
-                    self.context, inst, [], delete_type=delete_type)
+                    self.context, inst, [])
 
         if CONF.workarounds.enable_consoleauth:
             mock_del_token.assert_called_once_with(self.context, instance_uuid)
@@ -1319,8 +1319,7 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_service_up.assert_called_once_with(
                     mock_service_get.return_value)
             mock_terminate.assert_called_once_with(
-                    self.context, inst, mock_bdm_get.return_value,
-                    delete_type='delete')
+                    self.context, inst, mock_bdm_get.return_value)
             mock_local_delete.assert_not_called()
 
     def test_delete_forced_when_task_state_is_not_none(self):
