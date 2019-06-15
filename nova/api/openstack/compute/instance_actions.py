@@ -25,7 +25,7 @@ from nova.api.openstack.compute.views \
     import instance_actions as instance_actions_view
 from nova.api.openstack import wsgi
 from nova.api import validation
-from nova import compute
+from nova.compute import api as compute
 from nova import exception
 from nova.i18n import _
 from nova.policies import instance_actions as ia_policies

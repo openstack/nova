@@ -20,7 +20,7 @@ from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import server_metadata
 from nova.api.openstack import wsgi
 from nova.api import validation
-from nova import compute
+from nova.compute import api as compute
 from nova import exception
 from nova.i18n import _
 from nova.policies import server_metadata as sm_policies

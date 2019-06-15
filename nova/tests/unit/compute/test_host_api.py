@@ -19,8 +19,7 @@ import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.api.openstack.compute import services
-from nova import compute
-from nova.compute import api as compute_api
+from nova.compute import api as compute
 from nova import context
 from nova import exception
 from nova import objects
@@ -36,7 +35,7 @@ class ComputeHostAPITestCase(test.TestCase):
     def setUp(self):
         super(ComputeHostAPITestCase, self).setUp()
         self.host_api = compute.HostAPI()
-        self.aggregate_api = compute_api.AggregateAPI()
+        self.aggregate_api = compute.AggregateAPI()
         self.ctxt = context.get_admin_context()
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
@@ -411,7 +410,7 @@ class ComputeHostAPITestCase(test.TestCase):
     @mock.patch('nova.compute.api.load_cells')
     @mock.patch('nova.objects.Service.get_by_id')
     def test_service_delete(self, get_by_id, load_cells, set_target):
-        compute_api.CELLS = [
+        compute.CELLS = [
             objects.CellMapping(),
             objects.CellMapping(),
             objects.CellMapping(),
@@ -426,13 +425,13 @@ class ComputeHostAPITestCase(test.TestCase):
                                     mock.call(self.ctxt, 1),
                                     mock.call(self.ctxt, 1)])
         service.destroy.assert_called_once_with()
-        set_target.assert_called_once_with(self.ctxt, compute_api.CELLS[1])
+        set_target.assert_called_once_with(self.ctxt, compute.CELLS[1])
 
     @mock.patch('nova.context.set_target_cell')
     @mock.patch('nova.compute.api.load_cells')
     @mock.patch('nova.objects.Service.get_by_id')
     def test_service_delete_ambiguous(self, get_by_id, load_cells, set_target):
-        compute_api.CELLS = [
+        compute.CELLS = [
             objects.CellMapping(),
             objects.CellMapping(),
             objects.CellMapping(),
@@ -489,10 +488,10 @@ class ComputeHostAPITestCase(test.TestCase):
             {'stat1': 1, 'stat2': 4.0},
             {'stat1': 5, 'stat2': 1.2},
         ]
-        compute_api.CELLS = [objects.CellMapping(uuid=uuids.cell1),
-                             objects.CellMapping(
+        compute.CELLS = [objects.CellMapping(uuid=uuids.cell1),
+                         objects.CellMapping(
                                  uuid=objects.CellMapping.CELL0_UUID),
-                             objects.CellMapping(uuid=uuids.cell2)]
+                         objects.CellMapping(uuid=uuids.cell2)]
         stats = self.host_api.compute_node_statistics(self.ctxt)
         self.assertEqual({'stat1': 6, 'stat2': 5.2}, stats)
 
@@ -561,7 +560,7 @@ class ComputeHostAPITestCase(test.TestCase):
 class ComputeAggregateAPITestCase(test.TestCase):
     def setUp(self):
         super(ComputeAggregateAPITestCase, self).setUp()
-        self.aggregate_api = compute_api.AggregateAPI()
+        self.aggregate_api = compute.AggregateAPI()
         self.ctxt = context.get_admin_context()
         # NOTE(jaypipes): We just mock out the HostNapping and Service object
         # lookups in order to bypass the code that does cell lookup stuff,
@@ -579,7 +578,7 @@ class ComputeAggregateAPITestCase(test.TestCase):
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_add_host')
-    @mock.patch.object(compute_api.LOG, 'warning')
+    @mock.patch.object(compute.LOG, 'warning')
     def test_aggregate_add_host_placement_missing_provider(
             self, mock_log, mock_pc_add_host):
         hostname = 'fake-host'
@@ -597,7 +596,7 @@ class ComputeAggregateAPITestCase(test.TestCase):
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_add_host')
-    @mock.patch.object(compute_api.LOG, 'warning')
+    @mock.patch.object(compute.LOG, 'warning')
     def test_aggregate_add_host_bad_placement(
             self, mock_log, mock_pc_add_host):
         hostname = 'fake-host'
@@ -617,7 +616,7 @@ class ComputeAggregateAPITestCase(test.TestCase):
     @mock.patch('nova.objects.Aggregate.delete_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_remove_host')
-    @mock.patch.object(compute_api.LOG, 'warning')
+    @mock.patch.object(compute.LOG, 'warning')
     def test_aggregate_remove_host_bad_placement(
             self, mock_log, mock_pc_remove_host, mock_agg_obj_delete_host):
         hostname = 'fake-host'
@@ -637,7 +636,7 @@ class ComputeAggregateAPITestCase(test.TestCase):
     @mock.patch('nova.objects.Aggregate.delete_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_remove_host')
-    @mock.patch.object(compute_api.LOG, 'warning')
+    @mock.patch.object(compute.LOG, 'warning')
     def test_aggregate_remove_host_placement_missing_provider(
             self, mock_log, mock_pc_remove_host, mock_agg_obj_delete_host):
         hostname = 'fake-host'

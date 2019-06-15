@@ -20,7 +20,7 @@ from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import rescue
 from nova.api.openstack import wsgi
 from nova.api import validation
-from nova import compute
+from nova.compute import api as compute
 import nova.conf
 from nova import exception
 from nova.policies import rescue as rescue_policies

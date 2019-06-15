@@ -16,7 +16,7 @@ from webob import exc
 
 from nova.api.openstack import common
 from nova.api.openstack import wsgi
-from nova import compute
+from nova.compute import api as compute
 from nova import exception
 from nova.policies import suspend_server as ss_policies
 

@@ -15,10 +15,10 @@
 
 from webob import exc
 
-import nova
 from nova.api.openstack import common
 from nova.api.openstack.compute.views import addresses as views_addresses
 from nova.api.openstack import wsgi
+from nova.compute import api as compute
 from nova.i18n import _
 from nova.policies import ips as ips_policies
 
@@ -33,7 +33,7 @@ class IPsController(wsgi.Controller):
 
     def __init__(self, **kwargs):
         super(IPsController, self).__init__(**kwargs)
-        self._compute_api = nova.compute.API()
+        self._compute_api = compute.API()
 
     @wsgi.expected_errors(404)
     def index(self, req, server_id):

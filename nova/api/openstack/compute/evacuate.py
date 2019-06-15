@@ -21,7 +21,7 @@ from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import evacuate
 from nova.api.openstack import wsgi
 from nova.api import validation
-from nova import compute
+from nova.compute import api as compute
 import nova.conf
 from nova import exception
 from nova.i18n import _

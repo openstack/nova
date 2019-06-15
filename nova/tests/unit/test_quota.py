@@ -19,7 +19,7 @@ import mock
 from oslo_db.sqlalchemy import enginefacade
 from six.moves import range
 
-from nova import compute
+from nova.compute import api as compute
 import nova.conf
 from nova import context
 from nova.db import api as db

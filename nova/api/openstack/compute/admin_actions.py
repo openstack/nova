@@ -18,7 +18,7 @@ from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import reset_server_state
 from nova.api.openstack import wsgi
 from nova.api import validation
-from nova import compute
+from nova.compute import api as compute
 from nova.compute import vm_states
 from nova import exception
 from nova.policies import admin_actions as aa_policies

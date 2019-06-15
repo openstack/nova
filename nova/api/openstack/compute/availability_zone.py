@@ -14,7 +14,7 @@
 
 from nova.api.openstack import wsgi
 from nova import availability_zones
-from nova import compute
+from nova.compute import api as compute
 import nova.conf
 from nova.policies import availability_zone as az_policies
 from nova import servicegroup
