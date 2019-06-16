@@ -1954,6 +1954,49 @@ class TestNeutronv2(TestNeutronv2Base):
         self.assertEqual(subnet_data1[0]['host_routes'][0]['nexthop'],
                          subnets[0]['routes'][0]['gateway']['address'])
 
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_get_subnets_from_port_enabled_dhcp(self, mock_get_client):
+        api = neutronapi.API()
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+
+        port_data = copy.copy(self.port_data1[0])
+        # add another IP on the same subnet and verify the subnet is deduped
+        port_data['fixed_ips'].append({'ip_address': '10.0.1.3',
+                                       'subnet_id': 'my_subid1'})
+        subnet_data1 = copy.copy(self.subnet_data1)
+        subnet_data1[0]['enable_dhcp'] = True
+
+        mocked_client.list_subnets.return_value = {'subnets': subnet_data1}
+        mocked_client.list_ports.return_value = {'ports': self.dhcp_port_data1}
+
+        subnets = api._get_subnets_from_port(self.context, port_data)
+
+        self.assertEqual(self.dhcp_port_data1[0]['fixed_ips'][0]['ip_address'],
+                         subnets[0]['meta']['dhcp_server'])
+
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_get_subnets_from_port_enabled_dhcp_no_dhcp_ports(self,
+            mock_get_client):
+        api = neutronapi.API()
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+
+        port_data = copy.copy(self.port_data1[0])
+        # add another IP on the same subnet and verify the subnet is deduped
+        port_data['fixed_ips'].append({'ip_address': '10.0.1.3',
+                                       'subnet_id': 'my_subid1'})
+        subnet_data1 = copy.copy(self.subnet_data1)
+        subnet_data1[0]['enable_dhcp'] = True
+
+        mocked_client.list_subnets.return_value = {'subnets': subnet_data1}
+        mocked_client.list_ports.return_value = {'ports': []}
+
+        subnets = api._get_subnets_from_port(self.context, port_data)
+
+        self.assertEqual(subnet_data1[0]['gateway_ip'],
+                         subnets[0]['meta']['dhcp_server'])
+
     def test_get_all_empty_list_networks(self):
         api = neutronapi.API()
         neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)

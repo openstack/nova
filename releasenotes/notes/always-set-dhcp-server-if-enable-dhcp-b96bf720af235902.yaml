@@ -1,0 +1,5 @@
+---
+features:
+  - When ``enable_dhcp`` is set on a subnet but there is no DHCP port on neutron
+    then the ``dhcp_server`` value in meta hash will contain the subnet
+    gateway IP instead of being absent.
