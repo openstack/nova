@@ -195,27 +195,24 @@ There are many standard filter classes which may be used
 * |NUMATopologyFilter| - filters hosts based on the NUMA topology requested by the
   instance, if any.
 
-Now we can focus on these standard filter classes in some detail. We'll skip the
-simplest ones, such as |AllHostsFilter|, |CoreFilter| and |RamFilter|,
-because their functionality is relatively simple and can be understood from the
-code. For example class |RamFilter| has the next realization:
+Now we can focus on these standard filter classes in some detail. Some filters
+such as |AllHostsFilter| and |NumInstancesFilter| are relatively simple and can be
+understood from the code. For example, |NumInstancesFilter| has the following implementation::
 
-::
+    class NumInstancesFilter(filters.BaseHostFilter):
+        """Filter out hosts with too many instances."""
 
-    class RamFilter(filters.BaseHostFilter):
-        """Ram Filter with over subscription flag"""
+        def _get_max_instances_per_host(self, host_state, spec_obj):
+            return CONF.filter_scheduler.max_instances_per_host
 
-        def host_passes(self, host_state, filter_properties):
-            """Only return hosts with sufficient available RAM."""
-            instance_type = filter_properties.get('instance_type')
-            requested_ram = instance_type['memory_mb']
-            free_ram_mb = host_state.free_ram_mb
-            total_usable_ram_mb = host_state.total_usable_ram_mb
-            used_ram_mb = total_usable_ram_mb - free_ram_mb
-            return total_usable_ram_mb * FLAGS.ram_allocation_ratio  - used_ram_mb >= requested_ram
+        def host_passes(self, host_state, spec_obj):
+            num_instances = host_state.num_instances
+            max_instances = self._get_max_instances_per_host(host_state, spec_obj)
+            passes = num_instances < max_instances
+            return passes
 
-Here :oslo.config:option:`ram_allocation_ratio` means the virtual RAM to physical
-RAM allocation ratio (it is ``1.5`` by default).
+Here :oslo.config:option:`filter_scheduler.max_instances_per_host` means the
+maximum number of instances that be active on a host.
 
 The |AvailabilityZoneFilter| looks at the availability zone of compute node
 and availability zone from the properties of the request. Each compute service
