@@ -407,6 +407,11 @@ class TestInstanceNotificationSample(
             # Ensure that instance is in active state after an action
             self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
 
+            # if the test step did not raised then we consider the step as
+            # succeeded. We drop the logs to avoid causing subunit parser
+            # errors due to logging too much at the end of the test case.
+            self.stdlog.delete_stored_logs()
+
     def test_create_delete_server(self):
         fake_trusted_certs = ['cert-id-1', 'cert-id-2']
         server = self._boot_a_server(
