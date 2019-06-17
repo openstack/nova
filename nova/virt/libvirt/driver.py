@@ -7246,22 +7246,6 @@ class LibvirtDriver(driver.ComputeDriver):
         :param disk_over_commit: if true, allow disk over commit
         :returns: a LibvirtLiveMigrateData object
         """
-
-        # TODO(zcornelius): Remove this check in Stein, as we'll only support
-        #                   Rocky and newer computes.
-        # If file_backed_memory is enabled on this host, we have to make sure
-        # the source is new enough to support it. Since the source generates
-        # the XML for the destination, we depend on the source generating a
-        # file-backed XML for us, so fail if it won't do that.
-        if CONF.libvirt.file_backed_memory > 0:
-            srv = objects.Service.get_by_compute_host(context, instance.host)
-            if srv.version < 32:
-                msg = ("Cannot migrate instance %(uuid)s from node %(node)s. "
-                       "Node %(node)s is not compatible with "
-                       "file_backed_memory" % {"uuid": instance.uuid,
-                                               "node": srv.host})
-                raise exception.MigrationPreCheckError(reason=msg)
-
         if disk_over_commit:
             disk_available_gb = dst_compute_info['free_disk_gb']
         else:

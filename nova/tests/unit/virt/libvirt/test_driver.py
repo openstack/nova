@@ -9324,30 +9324,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           self.context, instance_ref,
                           compute_info, compute_info, False)
 
-    @mock.patch.object(objects.Service, 'get_by_compute_host')
-    @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
-    @mock.patch('nova.objects.Service.version', 30)
-    def test_check_can_live_migrate_dest_incompatible_file_backed(
-            self, mock_cpu, mock_svc):
-
-        self.flags(file_backed_memory=1024, group='libvirt')
-
-        instance_ref = objects.Instance(**self.test_instance)
-
-        # _check_cpu_match
-        mock_cpu.return_value = 1
-
-        svc = objects.Service(host="old")
-        svc.version = 31
-        mock_svc.return_value = svc
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        compute_info = {'cpu_info': 'asdf', 'disk_available_least': 1}
-
-        self.assertRaises(exception.MigrationPreCheckError,
-                          drvr.check_can_live_migrate_destination,
-                          self.context, instance_ref,
-                          compute_info, compute_info, False)
-
     @mock.patch.object(host.Host, 'compare_cpu')
     @mock.patch.object(nova.virt.libvirt, 'config')
     def test_compare_cpu_compatible_host_cpu(self, mock_vconfig, mock_compare):
