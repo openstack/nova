@@ -117,14 +117,9 @@ you wanted to use both the built-in filters and your custom filter, your
    available_filters = nova.scheduler.filters.all_filters
    available_filters = myfilter.MyFilter
 
-The ``enabled_filters`` configuration option in ``nova.conf`` defines
-the list of filters that are applied by the ``nova-scheduler`` service. The
-default filters are:
-
-.. code-block:: ini
-
-   [filter_scheduler]
-   enabled_filters = RetryFilter, AvailabilityZoneFilter, ComputeCapabilitiesFilter, ImagePropertiesFilter, ServerGroupAntiAffinityFilter, ServerGroupAffinityFilter
+The :oslo.config:option:`filter_scheduler.enabled_filters` configuration option
+in ``nova.conf`` defines the list of filters that are applied by the
+``nova-scheduler`` service.
 
 Compute filters
 ~~~~~~~~~~~~~~~
@@ -1106,7 +1101,7 @@ as well as the other filters that are typically enabled:
 .. code-block:: ini
 
    [filter_scheduler]
-   enabled_filters=AggregateInstanceExtraSpecsFilter,RetryFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,ServerGroupAntiAffinityFilter,ServerGroupAffinityFilter
+   enabled_filters=...,AggregateInstanceExtraSpecsFilter
 
 Example: Specify compute hosts with SSDs
 ----------------------------------------
