@@ -476,6 +476,7 @@ Has "nova-manage cell_v2 map_cell0" been run?
 Is [api_database]/connection set in nova.conf?
 Is the cell0 database connection URL correct?
 Error: %s""") % six.text_type(e))
+                return 1
         return migration.db_sync(version)
 
     def version(self):
