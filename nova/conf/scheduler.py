@@ -239,7 +239,7 @@ Possible values:
         min=1,
         deprecated_group="DEFAULT",
         help="""
-Maximum number of instances that be active on a host.
+Maximum number of instances that can exist on a host.
 
 If you need to limit the number of instances on any given host, set this option
 to the maximum number of instances you want to allow. The NumInstancesFilter
@@ -248,8 +248,8 @@ instances as this option's value.
 
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
-only affects scheduling if the 'NumInstancesFilter' or
-'AggregateNumInstancesFilter' filter is enabled.
+only affects scheduling if the ``NumInstancesFilter`` or
+``AggregateNumInstancesFilter`` filter is enabled.
 
 Possible values:
 
