@@ -1,0 +1,11 @@
+---
+features:
+  - |
+    A new image metadata prefilter has been added to allow translation of
+    hypervisor-specific device model requests to standard traits. When this
+    feature is enabled, nova is able to utilize placement to select hosts that
+    are capable of emulating the requested devices, avoiding hosts that
+    could not support the request. This feature is currently supported by the
+    libvirt driver and can be enabled by configuring the
+    ``[scheduler]/image_metadata_prefilter`` to ``True`` in the controller
+    ``nova.conf``.
