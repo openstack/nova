@@ -2057,6 +2057,8 @@ class QuotaCountTestCase(test.NoDBTestCase):
                 # We only log the message if someone has opted in to counting
                 # from placement.
                 mock_warn_log.assert_called_once()
+            else:
+                mock_warn_log.assert_not_called()
             # We should not have called the API DB and placement counting
             # method.
             mock_api_db_placement_count.assert_not_called()

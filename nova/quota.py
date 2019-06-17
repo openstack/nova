@@ -1312,8 +1312,8 @@ def _instances_cores_ram_count(context, project_id, user_id=None):
             return _instances_cores_ram_count_api_db_placement(context,
                                                                project_id,
                                                                user_id=user_id)
-    LOG.warning('Falling back to legacy quota counting method for instances, '
-                'cores, and ram')
+        LOG.warning('Falling back to legacy quota counting method for '
+                    'instances, cores, and ram')
     return _instances_cores_ram_count_legacy(context, project_id,
                                              user_id=user_id)
 
