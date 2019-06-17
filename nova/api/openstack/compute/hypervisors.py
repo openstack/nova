@@ -45,9 +45,9 @@ class HypervisorsController(wsgi.Controller):
     _view_builder_class = hyper_view.ViewBuilder
 
     def __init__(self):
+        super(HypervisorsController, self).__init__()
         self.host_api = compute.HostAPI()
         self.servicegroup_api = servicegroup.API()
-        super(HypervisorsController, self).__init__()
 
     def _view_hypervisor(self, hypervisor, service, detail, req, servers=None,
                          **kwargs):

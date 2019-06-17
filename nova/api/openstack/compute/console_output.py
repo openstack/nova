@@ -28,8 +28,8 @@ from nova.policies import console_output as co_policies
 
 
 class ConsoleOutputController(wsgi.Controller):
-    def __init__(self, *args, **kwargs):
-        super(ConsoleOutputController, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(ConsoleOutputController, self).__init__()
         self.compute_api = compute.API()
 
     @wsgi.expected_errors((404, 409, 501))

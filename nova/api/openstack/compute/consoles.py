@@ -45,6 +45,7 @@ class ConsolesController(wsgi.Controller):
     """The Consoles controller for the OpenStack API."""
 
     def __init__(self):
+        super(ConsolesController, self).__init__()
         self.console_api = console_api.API()
 
     @wsgi.expected_errors(())

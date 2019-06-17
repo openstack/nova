@@ -28,9 +28,6 @@ class FlavorManageController(wsgi.Controller):
     """The Flavor Lifecycle API controller for the OpenStack API."""
     _view_builder_class = flavors_view.ViewBuilder
 
-    def __init__(self):
-        super(FlavorManageController, self).__init__()
-
     # NOTE(oomichi): Return 202 for backwards compatibility but should be
     # 204 as this operation complete the deletion of aggregate resource and
     # return no response body.

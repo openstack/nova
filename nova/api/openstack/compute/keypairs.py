@@ -38,8 +38,8 @@ class KeypairController(wsgi.Controller):
     _view_builder_class = keypairs_view.ViewBuilder
 
     def __init__(self):
-        self.api = compute_api.KeypairAPI()
         super(KeypairController, self).__init__()
+        self.api = compute_api.KeypairAPI()
 
     def _filter_keypair(self, keypair, **attrs):
         # TODO(claudiub): After v2 and v2.1 is no longer supported,

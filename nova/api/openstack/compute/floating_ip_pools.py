@@ -36,8 +36,8 @@ class FloatingIPPoolsController(wsgi.Controller):
     """The Floating IP Pool API controller for the OpenStack API."""
 
     def __init__(self):
-        self.network_api = network.API()
         super(FloatingIPPoolsController, self).__init__()
+        self.network_api = network.API()
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(())

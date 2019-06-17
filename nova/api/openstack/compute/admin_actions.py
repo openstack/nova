@@ -30,8 +30,8 @@ state_map = dict(active=vm_states.ACTIVE, error=vm_states.ERROR)
 
 
 class AdminActionsController(wsgi.Controller):
-    def __init__(self, *args, **kwargs):
-        super(AdminActionsController, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(AdminActionsController, self).__init__()
         self.compute_api = compute.API()
 
     @wsgi.response(202)

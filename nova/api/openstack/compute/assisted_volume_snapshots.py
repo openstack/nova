@@ -32,8 +32,8 @@ class AssistedVolumeSnapshotsController(wsgi.Controller):
     """The Assisted volume snapshots API controller for the OpenStack API."""
 
     def __init__(self):
-        self.compute_api = compute.API()
         super(AssistedVolumeSnapshotsController, self).__init__()
+        self.compute_api = compute.API()
 
     @wsgi.expected_errors(400)
     @validation.schema(assisted_volume_snapshots.snapshots_create)

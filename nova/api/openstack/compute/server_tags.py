@@ -45,8 +45,8 @@ class ServerTagsController(wsgi.Controller):
     _view_builder_class = server_tags.ViewBuilder
 
     def __init__(self):
-        self.compute_api = compute.API()
         super(ServerTagsController, self).__init__()
+        self.compute_api = compute.API()
 
     def _check_instance_in_valid_state(self, context, server_id, action):
         instance = common.get_instance(self.compute_api, context, server_id)

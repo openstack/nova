@@ -23,8 +23,8 @@ from nova.policies import lock_server as ls_policies
 
 
 class LockServerController(wsgi.Controller):
-    def __init__(self, *args, **kwargs):
-        super(LockServerController, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(LockServerController, self).__init__()
         self.compute_api = compute.API()
 
     @wsgi.response(202)

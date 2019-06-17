@@ -27,8 +27,8 @@ from nova.policies import shelve as shelve_policies
 
 
 class ShelveController(wsgi.Controller):
-    def __init__(self, *args, **kwargs):
-        super(ShelveController, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(ShelveController, self).__init__()
         self.compute_api = compute.API()
         self.network_api = network.API()
 

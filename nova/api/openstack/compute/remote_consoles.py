@@ -24,14 +24,14 @@ from nova.policies import remote_consoles as rc_policies
 
 
 class RemoteConsolesController(wsgi.Controller):
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
+        super(RemoteConsolesController, self).__init__()
         self.compute_api = compute.API()
         self.handlers = {'vnc': self.compute_api.get_vnc_console,
                          'spice': self.compute_api.get_spice_console,
                          'rdp': self.compute_api.get_rdp_console,
                          'serial': self.compute_api.get_serial_console,
                          'mks': self.compute_api.get_mks_console}
-        super(RemoteConsolesController, self).__init__(*args, **kwargs)
 
     @wsgi.Controller.api_version("2.1", "2.5")
     @wsgi.expected_errors((400, 404, 409, 501))

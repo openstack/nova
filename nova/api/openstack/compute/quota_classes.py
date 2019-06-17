@@ -47,7 +47,8 @@ class QuotaClassSetsController(wsgi.Controller):
 
     supported_quotas = []
 
-    def __init__(self, **kwargs):
+    def __init__(self):
+        super(QuotaClassSetsController, self).__init__()
         self.supported_quotas = QUOTAS.resources
 
     def _format_quota_set(self, quota_class, quota_set, filtered_quotas=None,

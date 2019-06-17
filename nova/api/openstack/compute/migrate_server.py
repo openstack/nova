@@ -33,8 +33,8 @@ LOG = logging.getLogger(__name__)
 
 
 class MigrateServerController(wsgi.Controller):
-    def __init__(self, *args, **kwargs):
-        super(MigrateServerController, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(MigrateServerController, self).__init__()
         self.compute_api = compute.API()
         self.network_api = network.API()
 

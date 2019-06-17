@@ -28,6 +28,8 @@ class NetworkAssociateActionController(wsgi.Controller):
     """Network Association API Controller."""
 
     def __init__(self, network_api=None):
+        super(NetworkAssociateActionController, self).__init__()
+        # TODO(stephenfin): 'network_api' is only being passed for use by tests
         self.network_api = network_api or network.API()
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)

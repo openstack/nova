@@ -27,9 +27,9 @@ CONF = nova.conf.CONF
 
 
 class ConsoleAuthTokensController(wsgi.Controller):
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
+        super(ConsoleAuthTokensController, self).__init__()
         self._consoleauth_rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
-        super(ConsoleAuthTokensController, self).__init__(*args, **kwargs)
 
     def _show(self, req, id, rdp_only):
         """Checks a console auth token and returns the related connect info."""

@@ -59,9 +59,9 @@ class InterfaceAttachmentController(wsgi.Controller):
     """The interface attachment API controller for the OpenStack API."""
 
     def __init__(self):
+        super(InterfaceAttachmentController, self).__init__()
         self.compute_api = compute.API()
         self.network_api = network.API()
-        super(InterfaceAttachmentController, self).__init__()
 
     @wsgi.expected_errors((404, 501))
     def index(self, req, server_id):
