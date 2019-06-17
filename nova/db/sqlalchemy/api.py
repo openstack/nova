@@ -3873,7 +3873,7 @@ def security_group_create(context, values):
     security_group_ref = models.SecurityGroup()
     # FIXME(devcamcar): Unless I do this, rules fails with lazy load exception
     # once save() is called.  This will get cleaned up in next orm pass.
-    security_group_ref.rules
+    security_group_ref.rules = []
     security_group_ref.update(values)
     try:
         with get_context_manager(context).writer.savepoint.using(context):
