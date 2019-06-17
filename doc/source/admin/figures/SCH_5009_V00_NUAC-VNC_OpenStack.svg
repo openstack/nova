@@ -467,12 +467,12 @@
 		</g>
 		<g id="shape53-111" v:mID="53" v:groupContext="shape" transform="translate(38.8888,-154.814)">
 			<title>Sheet.53</title>
-			<desc>Browses the url returned Http://novncip:port/?token=xyz</desc>
+			<desc>Browses the url returned Http://novncip:port/?path=%3Ftoken%3Dxyz</desc>
 			<v:textBlock v:margins="rect(4,4,4,4)" v:tabSpace="42.5197"/>
 			<v:textRect cx="58.9065" cy="303.793" width="117.82" height="25.387"/>
 			<rect x="0" y="291.1" width="117.813" height="25.387" class="st6"/>
 			<text x="4" y="301.39" class="st7" v:langID="1036"><v:paragraph/><v:tabList/>Browses the url returned<v:newlineChar/><tspan
-						x="4" dy="1.2em" class="st13">Http</tspan>://novncip:port/?token=xyz</text>		</g>
+						x="4" dy="1.2em" class="st13">Http</tspan>://novncip:port/?path=%3Ftoken%3Dxyz</text>		</g>
 		<g id="group28-115" transform="translate(591.296,-147.811)" v:mID="28" v:groupContext="group">
 			<title>Sheet.28</title>
 			<g id="shape29-116" v:mID="29" v:groupContext="shape">
