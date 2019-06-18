@@ -18,13 +18,11 @@ Compute is configured with the following default scheduler options in the
 
    [filter_scheduler]
    available_filters = nova.scheduler.filters.all_filters
-   enabled_filters = RetryFilter, AvailabilityZoneFilter, ComputeFilter, ComputeCapabilitiesFilter, ImagePropertiesFilter, ServerGroupAntiAffinityFilter, ServerGroupAffinityFilter
+   enabled_filters = AvailabilityZoneFilter, ComputeFilter, ComputeCapabilitiesFilter, ImagePropertiesFilter, ServerGroupAntiAffinityFilter, ServerGroupAffinityFilter
 
 By default, the scheduler ``driver`` is configured as a filter scheduler, as
 described in the next section. In the default configuration, this scheduler
 considers hosts that meet all the following criteria:
-
-* Have not been attempted for scheduling purposes (``RetryFilter``).
 
 * Are in the requested availability zone (``AvailabilityZoneFilter``).
 
@@ -720,13 +718,22 @@ free RAM.
 RetryFilter
 -----------
 
+.. deprecated:: 20.0.0
+
+   Since the 17.0.0 (Queens) release, the scheduler has provided alternate
+   hosts for rescheduling so the scheduler does not need to be called during
+   a reschedule which makes the ``RetryFilter`` useless. See the
+   `Return Alternate Hosts`_ spec for details.
+
 Filters out hosts that have already been attempted for scheduling purposes.  If
 the scheduler selects a host to respond to a service request, and the host
 fails to respond to the request, this filter prevents the scheduler from
 retrying that host for the service request.
 
-This filter is only useful if the ``scheduler_max_attempts`` configuration
-option is set to a value greater than zero.
+This filter is only useful if the :oslo.config:option:`scheduler.max_attempts`
+configuration option is set to a value greater than one.
+
+.. _Return Alternate Hosts: https://specs.openstack.org/openstack/nova-specs/specs/queens/implemented/return-alternate-hosts.html
 
 SameHostFilter
 --------------

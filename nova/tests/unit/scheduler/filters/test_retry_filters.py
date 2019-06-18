@@ -21,6 +21,8 @@ class TestRetryFilter(test.NoDBTestCase):
     def setUp(self):
         super(TestRetryFilter, self).setUp()
         self.filt_cls = retry_filter.RetryFilter()
+        self.assertIn('The RetryFilter is deprecated',
+                      self.stdlog.logger.output)
 
     def test_retry_filter_disabled(self):
         # Test case where retry/re-scheduling is disabled.

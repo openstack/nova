@@ -311,7 +311,6 @@ Related options:
         # Tempest's scheduler_enabled_filters to keep the default values in
         # sync.
         default=[
-          "RetryFilter",
           "AvailabilityZoneFilter",
           "ComputeFilter",
           "ComputeCapabilitiesFilter",

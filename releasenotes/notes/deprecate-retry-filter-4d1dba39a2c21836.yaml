@@ -1,0 +1,10 @@
+---
+deprecations:
+  - |
+    The ``RetryFilter`` is deprecated and will be removed in an upcoming
+    release. Since the 17.0.0 (Queens) release, the scheduler has provided
+    alternate hosts for rescheduling so the scheduler does not need to be
+    called during a reschedule which makes the ``RetryFilter`` useless.
+    See the `Return Alternate Hosts`_ spec for details.
+
+    .. _Return Alternate Hosts: https://specs.openstack.org/openstack/nova-specs/specs/queens/implemented/return-alternate-hosts.html
