@@ -3407,7 +3407,9 @@ class API(base.Base):
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.RESIZED])
     def revert_resize(self, context, instance):
-        """Reverts a resize, deleting the 'new' instance in the process."""
+        """Reverts a resize or cold migration, deleting the 'new' instance in
+        the process.
+        """
         elevated = context.elevated()
         migration = objects.Migration.get_by_instance_and_status(
             elevated, instance.uuid, 'finished')
