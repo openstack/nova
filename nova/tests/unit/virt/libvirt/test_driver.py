@@ -10104,7 +10104,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 migrate_data, guest, [])
             get_updated_guest_xml.assert_called_once()
             migrate.assert_called()
-            detach.asset_called()
+            detach.assert_called()
 
         _test_direct()
 
@@ -10123,7 +10123,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 migrate_data, guest, [])
             get_updated_guest_xml.assert_called_once()
             migrate.assert_called()
-            detach.asset_called_once()
+            detach.assert_called_once()
 
         _test_mix()
 
