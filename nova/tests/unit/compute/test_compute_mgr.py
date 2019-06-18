@@ -1168,8 +1168,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             mock_finish.assert_called_once_with(self.context, instance,
                                                 [], [], power_on)
             mock_save.assert_called_once_with()
-            mock_get_info.assert_has_calls([mock.call(instance),
-                                            mock.call(instance)])
+            mock_get_info.assert_has_calls(
+                [mock.call(instance, use_cache=False),
+                 mock.call(instance, use_cache=False)])
         self.assertIsNone(instance.task_state)
 
     def test_init_instance_reverts_crashed_migration_from_active(self):
@@ -1640,6 +1641,20 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             call = mock.call(self.context, instance, True)
             self.compute.stop_instance.assert_has_calls([call])
             self.assertIsNone(init_return)
+
+    def test_get_power_state(self):
+        instance = objects.Instance(self.context)
+        instance.uuid = uuids.instance
+        instance.id = 1
+        instance.vm_state = vm_states.STOPPED
+        instance.task_state = None
+        instance.host = self.compute.host
+        with mock.patch.object(self.compute.driver, 'get_info') as mock_info:
+            mock_info.return_value = hardware.InstanceInfo(
+                state=power_state.SHUTDOWN)
+            res = self.compute._get_power_state(self.context, instance)
+            mock_info.assert_called_once_with(instance, use_cache=False)
+            self.assertEqual(res, power_state.SHUTDOWN)
 
     @mock.patch('nova.objects.InstanceList.get_by_filters')
     def test_get_instances_on_driver(self, mock_instance_list):
