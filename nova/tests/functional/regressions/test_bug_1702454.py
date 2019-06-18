@@ -83,10 +83,6 @@ class SchedulerOnlyChecksTargetTest(test.TestCase,
         self.admin_api.microversion = 'latest'
         self.api.microversion = 'latest'
 
-        # The consoleauth service is needed for deleting console tokens when
-        # the server is deleted.
-        self.start_service('consoleauth')
-
         # Define a very basic scheduler that only verifies if host is down.
         self.flags(enabled_filters=['ComputeFilter'],
                    group='filter_scheduler')

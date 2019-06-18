@@ -40,7 +40,6 @@ class TestLocalDeleteAllocations(test.TestCase,
         nova.tests.unit.image.fake.stub_out_image_service(self)
 
         self.start_service('conductor')
-        self.start_service('consoleauth')
 
         self.start_service('scheduler')
 

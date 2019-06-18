@@ -53,9 +53,6 @@ class ServerTagsFilteringTest(test.TestCase,
         self.start_service('conductor')
         self.start_service('scheduler')
         self.start_service('compute')
-        # The consoleauth service is needed for deleting console tokens when
-        # the server is deleted.
-        self.start_service('consoleauth')
 
         # create two test servers
         self.servers = []

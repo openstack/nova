@@ -63,7 +63,6 @@ class TestRetryBetweenComputeNodeBuilds(test.TestCase):
         nova.tests.unit.image.fake.stub_out_image_service(self)
 
         self.start_service('conductor')
-        self.start_service('consoleauth')
 
         # We start two compute services because we're going to fake one
         # of them to fail the build so we can trigger the retry code.

@@ -11,11 +11,6 @@
             "zone": "nova"
         },
         {
-            "host_name": "e73ec0bd35c64de4a1adfa8b8969a1f6",
-            "service": "consoleauth",
-            "zone": "internal"
-        },
-        {
             "host_name": "396a8a0a234f476eb05fb9fbc5802ba7",
             "service": "network",
             "zone": "internal"
