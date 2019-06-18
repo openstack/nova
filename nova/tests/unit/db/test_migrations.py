@@ -1021,6 +1021,11 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         self.assertColumnExists(engine, 'shadow_block_device_mapping',
                                 'volume_type')
 
+    def _check_397(self, engine, data):
+        for prefix in ('', 'shadow_'):
+            self.assertColumnExists(
+                engine, '%smigrations' % prefix, 'cross_cell_move')
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_fixtures.OpportunisticDBTestMixin,

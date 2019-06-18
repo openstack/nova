@@ -41,7 +41,8 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
     # Version 1.3: Added get_by_id_and_instance()
     # Version 1.4: Added migration progress detail
     # Version 1.5: Added uuid
-    VERSION = '1.5'
+    # Version 1.6: Added cross_cell_move and get_by_uuid().
+    VERSION = '1.6'
 
     fields = {
         'id': fields.IntegerField(),
@@ -65,6 +66,7 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
         'disk_total': fields.IntegerField(nullable=True),
         'disk_processed': fields.IntegerField(nullable=True),
         'disk_remaining': fields.IntegerField(nullable=True),
+        'cross_cell_move': fields.BooleanField(default=False),
         }
 
     @staticmethod
@@ -100,14 +102,16 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
         if target_version < (1, 5):
             if 'uuid' in primitive:
                 del primitive['uuid']
+        if target_version < (1, 6) and 'cross_cell_move' in primitive:
+            del primitive['cross_cell_move']
 
     def obj_load_attr(self, attrname):
         if attrname == 'migration_type':
             # NOTE(danms): The only reason we'd need to load this is if
             # some older node sent us one. So, guess the type.
             self.migration_type = determine_migration_type(self)
-        elif attrname == 'hidden':
-            self.hidden = False
+        elif attrname in ['hidden', 'cross_cell_move']:
+            self.obj_set_defaults(attrname)
         else:
             super(Migration, self).obj_load_attr(attrname)
 
@@ -123,6 +127,11 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
             # so fetch the winner and use that uuid
             fresh = self.__class__.get_by_id(self.context, self.id)
             self.uuid = fresh.uuid
+
+    @base.remotable_classmethod
+    def get_by_uuid(cls, context, migration_uuid):
+        db_migration = db.migration_get_by_uuid(context, migration_uuid)
+        return cls._from_db_object(context, cls(), db_migration)
 
     @base.remotable_classmethod
     def get_by_id(cls, context, migration_id):

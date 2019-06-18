@@ -48,6 +48,7 @@ def _stub_migrations(stub_self, context, filters):
             'deleted_at': None,
             'deleted': False,
             'uuid': uuids.migration1,
+            'cross_cell_move': False,
         },
         {
             'id': 5678,
@@ -67,6 +68,7 @@ def _stub_migrations(stub_self, context, filters):
             'deleted_at': None,
             'deleted': False,
             'uuid': uuids.migration2,
+            'cross_cell_move': False,
         }
     ]
     return fake_migrations
@@ -111,7 +113,8 @@ class MigrationsSamplesJsonTestV2_23(api_sample_base.ApiSampleTestBaseV21):
             'created_at': datetime.datetime(2016, 0o1, 29, 13, 42, 2),
             'updated_at': datetime.datetime(2016, 0o1, 29, 13, 42, 2),
             'deleted_at': None,
-            'deleted': False
+            'deleted': False,
+            'cross_cell_move': False,
         },
         # non in-progress live-migration.
         {
@@ -129,7 +132,8 @@ class MigrationsSamplesJsonTestV2_23(api_sample_base.ApiSampleTestBaseV21):
             'created_at': datetime.datetime(2016, 0o1, 29, 13, 42, 2),
             'updated_at': datetime.datetime(2016, 0o1, 29, 13, 42, 2),
             'deleted_at': None,
-            'deleted': False
+            'deleted': False,
+            'cross_cell_move': False,
         },
         # non in-progress resize.
         {
@@ -147,7 +151,8 @@ class MigrationsSamplesJsonTestV2_23(api_sample_base.ApiSampleTestBaseV21):
             'created_at': datetime.datetime(2016, 0o1, 22, 13, 42, 2),
             'updated_at': datetime.datetime(2016, 0o1, 22, 13, 42, 2),
             'deleted_at': None,
-            'deleted': False
+            'deleted': False,
+            'cross_cell_move': False,
         },
         # in-progress resize.
         {
@@ -165,7 +170,8 @@ class MigrationsSamplesJsonTestV2_23(api_sample_base.ApiSampleTestBaseV21):
             'created_at': datetime.datetime(2016, 0o1, 22, 13, 42, 2),
             'updated_at': datetime.datetime(2016, 0o1, 22, 13, 42, 2),
             'deleted_at': None,
-            'deleted': False
+            'deleted': False,
+            'cross_cell_move': False,
         }
     ]
 
@@ -208,7 +214,8 @@ class MigrationsSamplesJsonTestV2_59(MigrationsSamplesJsonTestV2_23):
             'updated_at': datetime.datetime(2016, 0o1, 29, 11, 42, 2),
             'deleted_at': None,
             'deleted': False,
-            'uuid': '12341d4b-346a-40d0-83c6-5f4f6892b650'
+            'uuid': '12341d4b-346a-40d0-83c6-5f4f6892b650',
+            'cross_cell_move': False,
         },
         # non in-progress live-migration.
         {
@@ -227,7 +234,8 @@ class MigrationsSamplesJsonTestV2_59(MigrationsSamplesJsonTestV2_23):
             'updated_at': datetime.datetime(2016, 0o1, 29, 12, 42, 2),
             'deleted_at': None,
             'deleted': False,
-            'uuid': '22341d4b-346a-40d0-83c6-5f4f6892b650'
+            'uuid': '22341d4b-346a-40d0-83c6-5f4f6892b650',
+            'cross_cell_move': False,
         },
         # non in-progress resize.
         {
@@ -246,7 +254,8 @@ class MigrationsSamplesJsonTestV2_59(MigrationsSamplesJsonTestV2_23):
             'updated_at': datetime.datetime(2016, 0o6, 23, 13, 42, 2),
             'deleted_at': None,
             'deleted': False,
-            'uuid': '32341d4b-346a-40d0-83c6-5f4f6892b650'
+            'uuid': '32341d4b-346a-40d0-83c6-5f4f6892b650',
+            'cross_cell_move': False,
         },
         # in-progress resize.
         {
@@ -265,7 +274,8 @@ class MigrationsSamplesJsonTestV2_59(MigrationsSamplesJsonTestV2_23):
             'updated_at': datetime.datetime(2016, 0o6, 23, 14, 42, 2),
             'deleted_at': None,
             'deleted': False,
-            'uuid': '42341d4b-346a-40d0-83c6-5f4f6892b650'
+            'uuid': '42341d4b-346a-40d0-83c6-5f4f6892b650',
+            'cross_cell_move': False,
         }
     ]
 
