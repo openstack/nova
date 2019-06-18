@@ -5028,6 +5028,56 @@ class _ComputeAPIUnitTestMixIn(object):
         self.compute_api._populate_instance_names(instance, 2, 1)
         self.assertEqual('Server-%s' % instance.uuid, instance.hostname)
 
+    def test_host_statuses(self):
+        five_min_ago = timeutils.utcnow() - datetime.timedelta(minutes=5)
+        instances = [
+            objects.Instance(uuid=uuids.instance_1, host='host1', services=
+                             self._obj_to_list_obj(objects.ServiceList(
+                             self.context), objects.Service(id=0, host='host1',
+                             disabled=True, forced_down=True,
+                             binary='nova-compute'))),
+            objects.Instance(uuid=uuids.instance_2, host='host2', services=
+                             self._obj_to_list_obj(objects.ServiceList(
+                             self.context), objects.Service(id=0, host='host2',
+                             disabled=True, forced_down=False,
+                             binary='nova-compute'))),
+            objects.Instance(uuid=uuids.instance_3, host='host3', services=
+                             self._obj_to_list_obj(objects.ServiceList(
+                             self.context), objects.Service(id=0, host='host3',
+                             disabled=False, last_seen_up=five_min_ago,
+                             forced_down=False, binary='nova-compute'))),
+            objects.Instance(uuid=uuids.instance_4, host='host4', services=
+                             self._obj_to_list_obj(objects.ServiceList(
+                             self.context), objects.Service(id=0, host='host4',
+                             disabled=False, last_seen_up=timeutils.utcnow(),
+                             forced_down=False, binary='nova-compute'))),
+            objects.Instance(uuid=uuids.instance_5, host='host5', services=
+                             objects.ServiceList()),
+            objects.Instance(uuid=uuids.instance_6, host=None, services=
+                             self._obj_to_list_obj(objects.ServiceList(
+                             self.context), objects.Service(id=0, host='host6',
+                             disabled=True, forced_down=False,
+                             binary='nova-compute'))),
+            objects.Instance(uuid=uuids.instance_7, host='host2', services=
+                             self._obj_to_list_obj(objects.ServiceList(
+                             self.context), objects.Service(id=0, host='host2',
+                             disabled=True, forced_down=False,
+                             binary='nova-compute')))
+            ]
+
+        host_statuses = self.compute_api.get_instances_host_statuses(
+                        instances)
+        expect_statuses = {uuids.instance_1: fields_obj.HostStatus.DOWN,
+                           uuids.instance_2: fields_obj.HostStatus.MAINTENANCE,
+                           uuids.instance_3: fields_obj.HostStatus.UNKNOWN,
+                           uuids.instance_4: fields_obj.HostStatus.UP,
+                           uuids.instance_5: fields_obj.HostStatus.NONE,
+                           uuids.instance_6: fields_obj.HostStatus.NONE,
+                           uuids.instance_7: fields_obj.HostStatus.MAINTENANCE}
+        for instance in instances:
+            self.assertEqual(expect_statuses[instance.uuid],
+                             host_statuses[instance.uuid])
+
     @mock.patch.object(objects.Migration, 'get_by_id_and_instance')
     @mock.patch.object(objects.InstanceAction, 'action_start')
     def test_live_migrate_force_complete_succeeded(

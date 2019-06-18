@@ -4824,6 +4824,21 @@ class API(base.Base):
             host_status = fields_obj.HostStatus.NONE
         return host_status
 
+    def get_instances_host_statuses(self, instance_list):
+        host_status_dict = dict()
+        host_statuses = dict()
+        for instance in instance_list:
+            if instance.host:
+                if instance.host not in host_status_dict:
+                    host_status = self.get_instance_host_status(instance)
+                    host_status_dict[instance.host] = host_status
+                else:
+                    host_status = host_status_dict[instance.host]
+            else:
+                host_status = fields_obj.HostStatus.NONE
+            host_statuses[instance.uuid] = host_status
+        return host_statuses
+
 
 def target_host_cell(fn):
     """Target a host-based function to a cell.
