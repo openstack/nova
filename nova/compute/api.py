@@ -952,6 +952,48 @@ class API(base.Base):
         br.create()
         im.create()
 
+    def _validate_host_or_node(self, context, host, hypervisor_hostname):
+        """Check whether compute nodes exist by validating the host
+        and/or the hypervisor_hostname. There are three cases:
+        1. If only host is supplied, we can lookup the HostMapping in
+        the API DB.
+        2. If only node is supplied, we can query a resource provider
+        with that name in placement.
+        3. If both host and node are supplied, we can get the cell from
+        HostMapping and from that lookup the ComputeNode with the
+        given cell.
+
+        :param context: The API request context.
+        :param host: Target host.
+        :param hypervisor_hostname: Target node.
+        :raises: ComputeHostNotFound if we find no compute nodes with host
+                 and/or hypervisor_hostname.
+        """
+
+        if host:
+            # When host is specified.
+            try:
+                host_mapping = objects.HostMapping.get_by_host(context, host)
+            except exception.HostMappingNotFound:
+                LOG.warning('No host-to-cell mapping found for host '
+                            '%(host)s.', {'host': host})
+                raise exception.ComputeHostNotFound(host=host)
+            # When both host and node are specified.
+            if hypervisor_hostname:
+                cell = host_mapping.cell_mapping
+                with nova_context.target_cell(context, cell) as cctxt:
+                    # Here we only do an existence check, so we don't
+                    # need to store the return value into a variable.
+                    objects.ComputeNode.get_by_host_and_nodename(
+                        cctxt, host, hypervisor_hostname)
+        elif hypervisor_hostname:
+            # When only node is specified.
+            try:
+                self.placementclient.get_provider_by_name(
+                    context, hypervisor_hostname)
+            except exception.ResourceProviderNotFound:
+                raise exception.ComputeHostNotFound(host=hypervisor_hostname)
+
     def _provision_instances(self, context, instance_type, min_count,
             max_count, base_options, boot_meta, security_groups,
             block_device_mapping, shutdown_terminate,
