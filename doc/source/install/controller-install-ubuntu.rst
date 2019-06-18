@@ -166,17 +166,9 @@ Install and configure components
 
 #. Install the packages:
 
-   .. note:: ``nova-consoleauth`` is deprecated since 18.0.0 (Rocky) and will
-             be removed in an upcoming release. Console proxies should be
-             deployed per cell. If performing a fresh install (not an upgrade),
-             then you likely do not need to install the ``nova-consoleauth``
-             service. See
-             :oslo.config:option:`workarounds.enable_consoleauth` for details.
-
    .. code-block:: console
 
-      # apt install nova-api nova-conductor nova-consoleauth \
-        nova-novncproxy nova-scheduler
+      # apt install nova-api nova-conductor nova-novncproxy nova-scheduler
 
 #. Edit the ``/etc/nova/nova.conf`` file and complete the following actions:
 
@@ -375,9 +367,6 @@ Finalize installation
   .. code-block:: console
 
      # service nova-api restart
-     # service nova-consoleauth restart
      # service nova-scheduler restart
      # service nova-conductor restart
      # service nova-novncproxy restart
-
-  Note again that the ``nova-consoleauth`` service may not be necessary here.

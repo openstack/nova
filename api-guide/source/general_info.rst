@@ -176,10 +176,6 @@ on compute hosts rather than servers.
      This service handles networking of virtual servers. It is no longer under
      active development, and is being replaced by Neutron.
 
-   - **nova-consoleauth (deprecated)**
-
-     This service provides authorization for compute instances consoles.
-
 -  **Services Actions**
 
    .. note::

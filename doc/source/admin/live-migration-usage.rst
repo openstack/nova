@@ -67,9 +67,8 @@ Manual selection of the destination host
       +----+------------------+-------+----------+---------+-------+----------------------------+
       |  3 | nova-conductor   | HostA | internal | enabled | up    | 2017-02-18T09:42:29.000000 |
       |  4 | nova-scheduler   | HostA | internal | enabled | up    | 2017-02-18T09:42:26.000000 |
-      |  5 | nova-consoleauth | HostA | internal | enabled | up    | 2017-02-18T09:42:29.000000 |
-      |  6 | nova-compute     | HostB | nova     | enabled | up    | 2017-02-18T09:42:29.000000 |
-      |  7 | nova-compute     | HostC | nova     | enabled | up    | 2017-02-18T09:42:29.000000 |
+      |  5 | nova-compute     | HostB | nova     | enabled | up    | 2017-02-18T09:42:29.000000 |
+      |  6 | nova-compute     | HostC | nova     | enabled | up    | 2017-02-18T09:42:29.000000 |
       +----+------------------+-------+----------+---------+-------+----------------------------+
 
 #. Check that ``HostC`` has enough resources for migration:

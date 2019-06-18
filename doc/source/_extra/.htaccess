@@ -39,7 +39,6 @@ redirectmatch 301 ^/nova/([^/]+)/man/nova-cells.html$ /nova/$1/cli/nova-cells.ht
 redirectmatch 301 ^/nova/([^/]+)/man/nova-compute.html$ /nova/$1/cli/nova-compute.html
 redirectmatch 301 ^/nova/([^/]+)/man/nova-conductor.html$ /nova/$1/cli/nova-conductor.html
 redirectmatch 301 ^/nova/([^/]+)/man/nova-console.html$ /nova/$1/cli/nova-console.html
-redirectmatch 301 ^/nova/([^/]+)/man/nova-consoleauth.html$ /nova/$1/cli/nova-consoleauth.html
 redirectmatch 301 ^/nova/([^/]+)/man/nova-dhcpbridge.html$ /nova/$1/cli/nova-dhcpbridge.html
 redirectmatch 301 ^/nova/([^/]+)/man/nova-manage.html$ /nova/$1/cli/nova-manage.html
 redirectmatch 301 ^/nova/([^/]+)/man/nova-network.html$ /nova/$1/cli/nova-network.html

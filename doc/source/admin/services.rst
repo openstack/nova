@@ -10,22 +10,13 @@ enable the ``nova-compute`` service.
    .. code-block:: console
 
       $ openstack compute service list
-      +----+--------------+------------+----------+---------+-------+--------------+
-      | ID | Binary       | Host       | Zone     | Status  | State | Updated At   |
-      +----+--------------+------------+----------+---------+-------+--------------+
-      |  4 | nova-        | controller | internal | enabled | up    | 2016-12-20T0 |
-      |    | consoleauth  |            |          |         |       | 0:44:48.0000 |
-      |    |              |            |          |         |       | 00           |
-      |  5 | nova-        | controller | internal | enabled | up    | 2016-12-20T0 |
-      |    | scheduler    |            |          |         |       | 0:44:48.0000 |
-      |    |              |            |          |         |       | 00           |
-      |  6 | nova-        | controller | internal | enabled | up    | 2016-12-20T0 |
-      |    | conductor    |            |          |         |       | 0:44:54.0000 |
-      |    |              |            |          |         |       | 00           |
-      |  9 | nova-compute | compute    | nova     | enabled | up    | 2016-10-21T0 |
-      |    |              |            |          |         |       | 2:35:03.0000 |
-      |    |              |            |          |         |       | 00           |
-      +----+--------------+------------+----------+---------+-------+--------------+
+      +----+----------------+------------+----------+---------+-------+----------------------------+
+      | ID | Binary         | Host       | Zone     | Status  | State | Updated At                 |
+      +----+----------------+------------+----------+---------+-------+----------------------------+
+      |  4 | nova-scheduler | controller | internal | enabled | up    | 2016-12-20T00:44:48.000000 |
+      |  5 | nova-conductor | controller | internal | enabled | up    | 2016-12-20T00:44:54.000000 |
+      |  8 | nova-compute   | compute    | nova     | enabled | up    | 2016-10-21T02:35:03.000000 |
+      +----+----------------+------------+----------+---------+-------+----------------------------+
 
 #. Disable a nova service:
 
@@ -43,22 +34,13 @@ enable the ``nova-compute`` service.
    .. code-block:: console
 
       $ openstack compute service list
-      +----+--------------+------------+----------+---------+-------+--------------+
-      | ID | Binary       | Host       | Zone     | Status  | State | Updated At   |
-      +----+--------------+------------+----------+---------+-------+--------------+
-      |  4 | nova-        | controller | internal | enabled | up    | 2016-12-20T0 |
-      |    | consoleauth  |            |          |         |       | 0:44:48.0000 |
-      |    |              |            |          |         |       | 00           |
-      |  5 | nova-        | controller | internal | enabled | up    | 2016-12-20T0 |
-      |    | scheduler    |            |          |         |       | 0:44:48.0000 |
-      |    |              |            |          |         |       | 00           |
-      |  6 | nova-        | controller | internal | enabled | up    | 2016-12-20T0 |
-      |    | conductor    |            |          |         |       | 0:44:54.0000 |
-      |    |              |            |          |         |       | 00           |
-      |  9 | nova-compute | compute    | nova     | disabled| up    | 2016-10-21T0 |
-      |    |              |            |          |         |       | 2:35:03.0000 |
-      |    |              |            |          |         |       | 00           |
-      +----+--------------+------------+----------+---------+-------+--------------+
+      +----+----------------+------------+----------+---------+-------+----------------------------+
+      | ID | Binary         | Host       | Zone     | Status  | State | Updated At                 |
+      +----+----------------+------------+----------+---------+-------+----------------------------+
+      |  5 | nova-scheduler | controller | internal | enabled | up    | 2016-12-20T00:44:48.000000 |
+      |  6 | nova-conductor | controller | internal | enabled | up    | 2016-12-20T00:44:54.000000 |
+      |  9 | nova-compute   | compute    | nova     | disabled| up    | 2016-10-21T02:35:03.000000 |
+      +----+----------------+------------+----------+---------+-------+----------------------------+
 
 #. Enable the service:
 

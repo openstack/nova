@@ -48,15 +48,6 @@ responsibilities of services and drivers are:
   Provides database-access support for compute nodes (thereby reducing security
   risks).
 
-``nova-consoleauth``
-  Manages console authentication.
-
-  .. deprecated:: 18.0.0
-
-    ``nova-consoleauth`` is deprecated since 18.0.0 (Rocky) and will be removed
-    in an upcoming release. See
-    :oslo.config:option:`workarounds.enable_consoleauth` for details.
-
 ``nova-objectstore``
   A simple file-based storage system for images that replicates most of the S3
   API. It can be replaced with OpenStack Image service and either a simple

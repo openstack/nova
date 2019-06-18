@@ -30,7 +30,6 @@ The following examples show the host usage statistics for a host called
      | devstack  | compute     | nova     |
      | devstack  | network     | internal |
      | devstack  | scheduler   | internal |
-     | devstack  | consoleauth | internal |
      +-----------+-------------+----------+
 
 * Get a summary of resource usage of all of the instances running on the host:

@@ -174,18 +174,14 @@ Install and configure components
 
 #. Install the packages:
 
-   .. note:: ``nova-consoleauth`` is deprecated since 18.0.0 (Rocky) and will
-             be removed in an upcoming release. Console proxies should be
-             deployed per cell. If performing a fresh install (not an upgrade),
-             then you likely do not need to install the ``nova-consoleauth``
-             service. See
-             :oslo.config:option:`workarounds.enable_consoleauth` for details.
-
    .. code-block:: console
 
-      # zypper install openstack-nova-api openstack-nova-scheduler \
-        openstack-nova-conductor openstack-nova-consoleauth \
-        openstack-nova-novncproxy iptables
+      # zypper install \
+          openstack-nova-api \
+          openstack-nova-scheduler \
+          openstack-nova-conductor \
+          openstack-nova-novncproxy \
+          iptables
 
 #. Edit the ``/etc/nova/nova.conf`` file and complete the following actions:
 
@@ -390,11 +386,13 @@ Finalize installation
 
   .. code-block:: console
 
-     # systemctl enable openstack-nova-api.service \
-       openstack-nova-consoleauth.service openstack-nova-scheduler.service \
-       openstack-nova-conductor.service openstack-nova-novncproxy.service
-     # systemctl start openstack-nova-api.service \
-       openstack-nova-consoleauth openstack-nova-scheduler.service \
-       openstack-nova-conductor.service openstack-nova-novncproxy.service
-
-  Note again that the ``nova-consoleauth`` service may not be necessary here.
+     # systemctl enable \
+         openstack-nova-api.service \
+         openstack-nova-scheduler.service \
+         openstack-nova-conductor.service \
+         openstack-nova-novncproxy.service
+     # systemctl start \
+         openstack-nova-api.service \
+         openstack-nova-scheduler.service \
+         openstack-nova-conductor.service \
+         openstack-nova-novncproxy.service

@@ -319,17 +319,6 @@ case (e.g. must be run via the nova-api-metadata script).
 .. _Neutron metadata-agent: https://docs.openstack.org/neutron/latest/configuration/metadata-agent.html?#DEFAULT.nova_metadata_host
 
 
-Consoleauth service and console proxies
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-`As of Rocky`__, the ``nova-consoleauth`` service has been deprecated and cell
-databases are used for storing token authorizations. All new consoles will be
-supported by the database backend and existing consoles will be reset. Console
-proxies must be run per cell because the new console token authorizations are
-stored in cell databases.
-
-.. __: https://specs.openstack.org/openstack/nova-specs/specs/rocky/approved/convert-consoles-to-objects.html
-
 Operations Requiring upcalls
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
