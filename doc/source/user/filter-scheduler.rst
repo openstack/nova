@@ -131,12 +131,10 @@ There are many standard filter classes which may be used
   If more than one value is found for a host (meaning the host is in two or more
   different aggregates with different ratio settings), the minimum value will
   be used.
-* |NumInstancesFilter| - filters compute nodes by number of running instances.
-  Nodes with too many instances will be filtered.
-  :oslo.config:option:`filter_scheduler.max_instances_per_host` setting.
-  Maximum number of instances allowed to run on this host. The host will be
+* |NumInstancesFilter| - filters compute nodes by number of instances.
+  Nodes with too many instances will be filtered. The host will be
   ignored by the scheduler if more than
-  :oslo.config:option:`filter_scheduler.max_instances_per_host` already exists
+  :oslo.config:option:`filter_scheduler.max_instances_per_host` already exist
   on the host.
 * |AggregateNumInstancesFilter| - filters hosts by number of instances with
   per-aggregate :oslo.config:option:`filter_scheduler.max_instances_per_host`
@@ -197,7 +195,10 @@ There are many standard filter classes which may be used
 
 Now we can focus on these standard filter classes in some detail. Some filters
 such as |AllHostsFilter| and |NumInstancesFilter| are relatively simple and can be
-understood from the code. For example, |NumInstancesFilter| has the following implementation::
+understood from the code. For example, |NumInstancesFilter| has the following
+implementation:
+
+.. code-block:: python
 
     class NumInstancesFilter(filters.BaseHostFilter):
         """Filter out hosts with too many instances."""
@@ -212,7 +213,7 @@ understood from the code. For example, |NumInstancesFilter| has the following im
             return passes
 
 Here :oslo.config:option:`filter_scheduler.max_instances_per_host` means the
-maximum number of instances that be active on a host.
+maximum number of instances that can be on a host.
 
 The |AvailabilityZoneFilter| looks at the availability zone of compute node
 and availability zone from the properties of the request. Each compute service
