@@ -1357,6 +1357,15 @@ class ComputeTaskManager(base.Base):
                           'was already deleted.', instance=instance)
                 # This is a placeholder in case the quota recheck fails.
                 instances.append(None)
+                # If the build request was deleted and the instance is not
+                # going to be created, there is on point in leaving an orphan
+                # instance mapping so delete it.
+                try:
+                    im = objects.InstanceMapping.get_by_instance_uuid(
+                        context, instance.uuid)
+                    im.destroy()
+                except exception.InstanceMappingNotFound:
+                    pass
                 self.report_client.delete_allocation_for_instance(
                     context, instance.uuid)
                 continue

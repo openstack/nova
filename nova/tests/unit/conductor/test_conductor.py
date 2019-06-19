@@ -2108,6 +2108,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.assertFalse(bury.called)
         # we don't don't destroy the build request since it's already gone
         self.assertFalse(br_destroy.called)
+        # Make sure the instance mapping is gone.
+        self.assertRaises(exc.InstanceMappingNotFound,
+                          objects.InstanceMapping.get_by_instance_uuid,
+                          self.context, inst_uuid)
 
     @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
