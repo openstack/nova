@@ -1148,7 +1148,7 @@ def floating_ip_update(context, address, values):
 def dnsdomain_get(context, fqdomain):
     return model_query(context, models.DNSDomain, read_deleted="no").\
                filter_by(domain=fqdomain).\
-               with_lockmode('update').\
+               with_for_update().\
                first()
 
 
@@ -3101,7 +3101,7 @@ def network_associate(context, project_id, network_id=None, force=False):
             filter_kwargs['id'] = id
         return model_query(context, models.Network, read_deleted="no").\
                        filter_by(**filter_kwargs).\
-                       with_lockmode('update').\
+                       with_for_update().\
                        first()
 
     if not force:
