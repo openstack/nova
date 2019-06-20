@@ -4326,8 +4326,12 @@ class ComputeManager(manager.Manager):
             # check driver whether support migrate to same host
             if not self.driver.capabilities.get(
                     'supports_migrate_to_same_host', False):
-                raise exception.UnableToMigrateToSelf(
-                    instance_id=instance.uuid, host=self.host)
+                # Raise InstanceFaultRollback so that the
+                # _error_out_instance_on_exception context manager in
+                # prep_resize will set the instance.vm_state properly.
+                raise exception.InstanceFaultRollback(
+                    inner_exception=exception.UnableToMigrateToSelf(
+                        instance_id=instance.uuid, host=self.host))
 
         # NOTE(danms): Stash the new instance_type to avoid having to
         # look it up in the database later
@@ -4401,8 +4405,13 @@ class ComputeManager(manager.Manager):
         if node is None:
             node = self._get_nodename(instance, refresh=True)
 
-        with self._error_out_instance_on_exception(context, instance), \
-                 errors_out_migration_ctxt(migration):
+        # Pass instance_state=instance.vm_state because we can resize
+        # a STOPPED server and we don't want to set it back to ACTIVE
+        # in case _prep_resize fails.
+        instance_state = instance.vm_state
+        with self._error_out_instance_on_exception(
+                context, instance, instance_state=instance_state),\
+                errors_out_migration_ctxt(migration):
             self._send_prep_resize_notifications(
                 context, instance, fields.NotificationPhase.START,
                 instance_type)
