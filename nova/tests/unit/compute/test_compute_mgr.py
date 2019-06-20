@@ -4061,15 +4061,16 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         instance = fake_instance.fake_instance_obj(self.context)
 
         def do_test():
-            with self.compute._error_out_instance_on_exception(self.context,
-                                                               instance):
+            with self.compute._error_out_instance_on_exception(
+                    self.context, instance, instance_state=vm_states.STOPPED):
                 raise exception.InstanceFaultRollback(
                     inner_exception=test.TestingException('test'))
 
         self.assertRaises(test.TestingException, do_test)
+        # The vm_state should be set to the instance_state parameter.
         inst_update_mock.assert_called_once_with(
             self.context, instance,
-            vm_state=vm_states.ACTIVE, task_state=None)
+            vm_state=vm_states.STOPPED, task_state=None)
 
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_set_instance_obj_error_state')
