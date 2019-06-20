@@ -165,18 +165,21 @@ class LibvirtGenericVIFDriver(object):
                 CONF.libvirt.use_virtio_for_bridges):
             model = network_model.VIF_MODEL_VIRTIO
 
-        # Workaround libvirt bug, where it mistakenly
-        # enables vhost mode, even for non-KVM guests
-        if (model == network_model.VIF_MODEL_VIRTIO and
-            virt_type == "qemu"):
-            driver = "qemu"
+        if not is_vif_model_valid_for_virt(virt_type, model):
+            raise exception.UnsupportedHardware(model=model, virt=virt_type)
 
-        if not is_vif_model_valid_for_virt(virt_type,
-                                           model):
-            raise exception.UnsupportedHardware(model=model,
-                                                virt=virt_type)
-        if (virt_type in ('kvm', 'parallels') and
-            model == network_model.VIF_MODEL_VIRTIO):
+        # The rest of this only applies to virtio
+        if model != network_model.VIF_MODEL_VIRTIO:
+            designer.set_vif_guest_frontend_config(
+                conf, mac, model, driver, vhost_queues, rx_queue_size)
+            return conf
+
+        # Workaround libvirt bug, where it mistakenly enables vhost mode, even
+        # for non-KVM guests
+        if virt_type == 'qemu':
+            driver = 'qemu'
+
+        if virt_type in ('kvm', 'parallels'):
             vhost_drv, vhost_queues = self._get_virtio_mq_settings(image_meta,
                                                                    inst_type)
             # TODO(sahid): It seems that we return driver 'vhost' even
@@ -188,19 +191,17 @@ class LibvirtGenericVIFDriver(object):
             # use vhost and not None.
             driver = vhost_drv or driver
 
-        # Note(moshele): rx_queue_size is support only for virtio model
-        if model == network_model.VIF_MODEL_VIRTIO:
-            if driver == 'vhost' or driver is None:
-                # vhost backend only supports update of RX queue size
-                rx_queue_size, _ = self._get_virtio_queue_sizes(host)
-                if rx_queue_size:
-                    # TODO(sahid): Specifically force driver to be vhost
-                    # that because if None we don't generate the XML
-                    # driver element needed to set the queue size
-                    # attribute. This can be removed when get_base_config
-                    # will be fixed and rewrite to set the correct
-                    # backend.
-                    driver = 'vhost'
+        if driver == 'vhost' or driver is None:
+            # vhost backend only supports update of RX queue size
+            rx_queue_size, _ = self._get_virtio_queue_sizes(host)
+            if rx_queue_size:
+                # TODO(sahid): Specifically force driver to be vhost
+                # that because if None we don't generate the XML
+                # driver element needed to set the queue size
+                # attribute. This can be removed when get_base_config
+                # will be fixed and rewrite to set the correct
+                # backend.
+                driver = 'vhost'
 
         designer.set_vif_guest_frontend_config(
             conf, mac, model, driver, vhost_queues, rx_queue_size)
