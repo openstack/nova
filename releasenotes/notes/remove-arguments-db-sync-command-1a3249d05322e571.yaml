@@ -1,0 +1,8 @@
+---
+upgrade:
+  - |
+    The ``--version`` argument has been removed in the following commands.
+    Use the ``VERSION`` positional argument instead.
+
+    - ``nova-manage db sync``
+    - ``nova-manage api_db sync``
