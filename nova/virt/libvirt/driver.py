@@ -8025,19 +8025,34 @@ class LibvirtDriver(driver.ComputeDriver):
                     libvirt_migrate.save_stats(instance, migration,
                                                info, remaining)
 
+                    # NOTE(fanzhang): do not include disk transfer stats in
+                    # the progress percentage calculation but log them.
+                    disk_remaining = 100
+                    if info.disk_total != 0:
+                        disk_remaining = round(info.disk_remaining *
+                                               100 / info.disk_total)
+
                     lg = LOG.debug
                     if (n % 60) == 0:
                         lg = LOG.info
 
                     lg("Migration running for %(secs)d secs, "
-                       "memory %(remaining)d%% remaining; "
+                       "memory %(remaining)d%% remaining "
                        "(bytes processed=%(processed_memory)d, "
                        "remaining=%(remaining_memory)d, "
-                       "total=%(total_memory)d)",
+                       "total=%(total_memory)d); "
+                       "disk %(disk_remaining)d%% remaining "
+                       "(bytes processed=%(processed_disk)d, "
+                       "remaining=%(remaining_disk)d, "
+                       "total=%(total_disk)d).",
                        {"secs": n / 2, "remaining": remaining,
                         "processed_memory": info.memory_processed,
                         "remaining_memory": info.memory_remaining,
-                        "total_memory": info.memory_total}, instance=instance)
+                        "total_memory": info.memory_total,
+                        "disk_remaining": disk_remaining,
+                        "processed_disk": info.disk_processed,
+                        "remaining_disk": info.disk_remaining,
+                        "total_disk": info.disk_total}, instance=instance)
 
                 n = n + 1
             elif info.type == libvirt.VIR_DOMAIN_JOB_COMPLETED:
