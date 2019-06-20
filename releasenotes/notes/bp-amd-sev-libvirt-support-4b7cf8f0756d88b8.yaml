@@ -1,0 +1,33 @@
+---
+features:
+  - |
+    The libvirt driver can now support requests for guest RAM to be
+    encrypted at the hardware level, if there are compute hosts which
+    support it.  Currently only AMD SEV (Secure Encrypted
+    Virtualization) is supported, and it has certain minimum version
+    requirements regarding the kernel, QEMU, and libvirt.
+
+    Memory encryption can be required either via flavor which has the
+    ``hw:mem_encryption`` extra spec set to ``True``, or via an image
+    which has the ``hw_mem_encryption`` property set to ``True``.
+    These do not inherently cause a preference for SEV-capable
+    hardware, but for now SEV is the only way of fulfilling the
+    requirement.  However in the future, support for other
+    hardware-level guest memory encryption technology such as Intel
+    MKTME may be added.  If a guest specifically needs to be booted
+    using SEV rather than any other memory encryption technology, it
+    is possible to ensure this by adding
+    ``trait:HW_CPU_X86_AMD_SEV=required`` to the flavor extra specs or
+    image properties.
+
+    In all cases, SEV instances can only be booted from images which
+    have the ``hw_firmware_type`` property set to ``uefi``, and only
+    when the machine type is set to ``q35``.  This can be set per
+    image by setting the image property ``hw_machine_type=q35``, or
+    per compute node by the operator via the ``hw_machine_type``
+    configuration option in the ``[libvirt]`` section of
+    :file:`nova.conf`.
+
+    For information on how to set up support for AMD SEV, please see
+    the `KVM section of the Configuration Guide
+    <https://docs.openstack.org/nova/latest/admin/configuration/hypervisor-kvm.html#amd-sev>`_.
