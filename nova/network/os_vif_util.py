@@ -18,8 +18,6 @@ nova.network.model data structure, to the new os-vif based
 versioned object model os_vif.objects.*
 '''
 
-import sys
-
 from os_vif import objects
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -31,6 +29,13 @@ from nova.network import model
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
+
+LEGACY_VIFS = {
+    model.VIF_TYPE_DVS, model.VIF_TYPE_IOVISOR, model.VIF_TYPE_802_QBG,
+    model.VIF_TYPE_802_QBH, model.VIF_TYPE_HW_VEB, model.VIF_TYPE_HOSTDEV,
+    model.VIF_TYPE_IB_HOSTDEV, model.VIF_TYPE_MIDONET, model.VIF_TYPE_TAP,
+    model.VIF_TYPE_MACVTAP
+}
 
 
 def _get_vif_name(vif):
@@ -495,82 +500,6 @@ def _nova_to_osvif_vif_vrouter(vif):
     return obj
 
 
-# VIF_TYPE_DVS = 'dvs'
-def _nova_to_osvif_vif_dvs(vif):
-    raise NotImplementedError()
-
-
-# VIF_TYPE_IOVISOR = 'iovisor'
-def _nova_to_osvif_vif_iovisor(vif):
-    raise NotImplementedError()
-
-
-# VIF_TYPE_802_QBG = '802.1qbg'
-def _nova_to_osvif_vif_802_1qbg(vif):
-    raise NotImplementedError()
-
-
-# VIF_TYPE_802_QBH = '802.1qbh'
-def _nova_to_osvif_vif_802_1qbh(vif):
-    raise NotImplementedError()
-
-
-# VIF_TYPE_HW_VEB = 'hw_veb'
-def _nova_to_osvif_vif_hw_veb(vif):
-    raise NotImplementedError()
-
-
-# VIF_TYPE_IB_HOSTDEV = 'ib_hostdev'
-def _nova_to_osvif_vif_ib_hostdev(vif):
-    raise NotImplementedError()
-
-
-# VIF_TYPE_MIDONET = 'midonet'
-def _nova_to_osvif_vif_midonet(vif):
-    raise NotImplementedError()
-
-
-# VIF_TYPE_TAP = 'tap'
-def _nova_to_osvif_vif_tap(vif):
-    raise NotImplementedError()
-
-
-# VIF_TYPE_MACVTAP = 'macvtap'
-def _nova_to_osvif_vif_macvtap(vif):
-    raise NotImplementedError()
-
-
-# VIF_TYPE_HOSTDEV = 'hostdev_physical'
-def _nova_to_osvif_vif_hostdev_physical(vif):
-    raise NotImplementedError()
-
-
-# VIF_TYPE_BINDING_FAILED = 'binding_failed'
-def _nova_to_osvif_vif_binding_failed(vif):
-    """Special handler for the "binding_failed" vif type.
-
-    The "binding_failed" vif type indicates port binding to a host failed
-    and we are trying to plug the vifs again, which will fail because we
-    do not know the actual real vif type, like ovs, bridge, etc. We raise
-    NotImplementedError to indicate to the caller that we cannot handle
-    this type of vif rather than the generic "Unsupported VIF type" error
-    in nova_to_osvif_vif.
-    """
-    raise NotImplementedError()
-
-
-# VIF_TYPE_UNBOUND = 'unbound'
-def _nova_to_osvif_vif_unbound(vif):
-    """Special handler for the "unbound" vif type.
-
-    The "unbound" vif type indicates a port has not been hooked up to backend
-    network driver (OVS, linux bridge, ...). We raise NotImplementedError to
-    indicate to the caller that we cannot handle this type of vif rather than
-    the generic "Unsupported VIF type" error in nova_to_osvif_vif.
-    """
-    raise NotImplementedError()
-
-
 def nova_to_osvif_vif(vif):
     """Convert a Nova VIF model to an os-vif object
 
@@ -586,19 +515,40 @@ def nova_to_osvif_vif(vif):
 
     LOG.debug("Converting VIF %s", vif)
 
-    funcname = "_nova_to_osvif_vif_" + vif['type'].replace(".", "_")
-    func = getattr(sys.modules[__name__], funcname, None)
+    vif_type = vif['type']
 
-    if not func:
-        raise exception.NovaException(
-            "Unsupported VIF type %(type)s convert '%(func)s'" %
-            {'type': vif['type'], 'func': funcname})
-
-    try:
-        vifobj = func(vif)
-        LOG.debug("Converted object %s", vifobj)
-        return vifobj
-    except NotImplementedError:
-        LOG.debug("No conversion for VIF type %s yet",
-                  vif['type'])
+    if vif_type in LEGACY_VIFS:
+        # We want to explicitly fall back to the legacy path for these VIF
+        # types
+        LOG.debug('No conversion for VIF type %s yet', vif_type)
         return None
+
+    if vif_type in {model.VIF_TYPE_BINDING_FAILED, model.VIF_TYPE_UNBOUND}:
+        # These aren't real VIF types. VIF_TYPE_BINDING_FAILED indicates port
+        # binding to a host failed and we are trying to plug the VIFs again,
+        # which will fail because we do not know the actual real VIF type, like
+        # VIF_TYPE_OVS, VIF_TYPE_BRIDGE, etc. VIF_TYPE_UNBOUND, by comparison,
+        # is the default VIF type of a driver when it is not bound to any host,
+        # i.e. we have not set the host ID in the binding driver. This should
+        # also only happen in error cases.
+        # TODO(stephenfin): We probably want a more meaningful log here
+        LOG.debug('No conversion for VIF type %s yet', vif_type)
+        return None
+
+    if vif_type == model.VIF_TYPE_OVS:
+        vif_obj = _nova_to_osvif_vif_ovs(vif)
+    elif vif_type == model.VIF_TYPE_IVS:
+        vif_obj = _nova_to_osvif_vif_ivs(vif)
+    elif vif_type == model.VIF_TYPE_BRIDGE:
+        vif_obj = _nova_to_osvif_vif_bridge(vif)
+    elif vif_type == model.VIF_TYPE_AGILIO_OVS:
+        vif_obj = _nova_to_osvif_vif_agilio_ovs(vif)
+    elif vif_type == model.VIF_TYPE_VHOSTUSER:
+        vif_obj = _nova_to_osvif_vif_vhostuser(vif)
+    elif vif_type == model.VIF_TYPE_VROUTER:
+        vif_obj = _nova_to_osvif_vif_vrouter(vif)
+    else:
+        raise exception.NovaException('Unsupported VIF type %s' % vif_type)
+
+    LOG.debug('Converted object %s', vif_obj)
+    return vif_obj
