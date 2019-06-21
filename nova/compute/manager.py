@@ -639,6 +639,10 @@ class ComputeManager(manager.Manager):
         Then allocations are removed from Placement for every instance that is
         evacuated from this host regardless if the instance is reported by the
         hypervisor or not.
+
+        :param context: The request context
+        :return: A dict keyed by instance uuid mapped to Migration objects
+            for instances that were migrated away from this host
         """
         filters = {
             'source_compute': self.host,
@@ -659,7 +663,7 @@ class ComputeManager(manager.Manager):
             evacuations = objects.MigrationList.get_by_filters(context,
                                                                filters)
         if not evacuations:
-            return
+            return {}
         evacuations = {mig.instance_uuid: mig for mig in evacuations}
 
         # TODO(mriedem): We could optimize by pre-loading the joined fields
@@ -838,9 +842,8 @@ class ComputeManager(manager.Manager):
             # instance has already been scheduled to this particular host.
             LOG.debug("Instance failed to spawn correctly, "
                       "setting to ERROR state", instance=instance)
-            instance.task_state = None
-            instance.vm_state = vm_states.ERROR
-            instance.save()
+            self._set_instance_obj_error_state(
+                context, instance, clean_task_state=True)
             return
 
         if (instance.vm_state in [vm_states.ACTIVE, vm_states.STOPPED] and
@@ -851,9 +854,8 @@ class ComputeManager(manager.Manager):
             # spawned so set to ERROR state. This is consistent to BUILD
             LOG.debug("Instance failed to rebuild correctly, "
                       "setting to ERROR state", instance=instance)
-            instance.task_state = None
-            instance.vm_state = vm_states.ERROR
-            instance.save()
+            self._set_instance_obj_error_state(
+                context, instance, clean_task_state=True)
             return
 
         if (instance.vm_state != vm_states.ERROR and
@@ -1236,9 +1238,23 @@ class ComputeManager(manager.Manager):
 
             # Initialise instances on the host that are not evacuating
             for instance in instances:
-                if (not evacuated_instances or
-                        instance.uuid not in evacuated_instances):
+                if instance.uuid not in evacuated_instances:
                     self._init_instance(context, instance)
+
+            # NOTE(gibi): collect all the instance uuids that is in some way
+            # was already handled above. Either by init_instance or by
+            # _destroy_evacuated_instances. This way we can limit the scope of
+            # the _error_out_instances_whose_build_was_interrupted call to look
+            # only for instances that have allocations on this node and not
+            # handled by the above calls.
+            already_handled = {instance.uuid for instance in instances}.union(
+                evacuated_instances)
+            # NOTE(gibi): If ironic and vcenter virt driver slow start time
+            # becomes problematic here then we should consider adding a config
+            # option or a driver flag to tell us if we should thread this out
+            # in the background on startup
+            self._error_out_instances_whose_build_was_interrupted(
+                context, already_handled)
 
         finally:
             if CONF.defer_iptables_apply:
@@ -1251,6 +1267,87 @@ class ComputeManager(manager.Manager):
                 # instances on this host will update the scheduler, or the
                 # _sync_scheduler_instance_info periodic task will.
                 self._update_scheduler_instance_info(context, instances)
+
+    def _error_out_instances_whose_build_was_interrupted(
+            self, context, already_handled_instances):
+        """If there are instances in BUILDING state that are not
+        assigned to this host but have allocations in placement towards
+        this compute that means the nova-compute service was
+        restarted while those instances waited for the resource claim
+        to finish and the _set_instance_host_and_node() to update the
+        instance.host field. We need to push them to ERROR state here to
+        prevent keeping them in BUILDING state forever.
+
+        :param context: The request context
+        :param already_handled_instances: The set of instance UUIDs that the
+            host initialization process already handled in some way.
+        """
+
+        # Strategy:
+        # 1) Get the allocations from placement for our compute node(s)
+        # 2) Remove the already handled instances from the consumer list;
+        #    they are either already initialized or need to be skipped.
+        # 3) Check which remaining consumer is an instance in BUILDING state
+        #    and push it to ERROR state.
+
+        LOG.info(
+            "Looking for unclaimed instances stuck in BUILDING status for "
+            "nodes managed by this host")
+
+        try:
+            node_names = self.driver.get_available_nodes()
+        except exception.VirtDriverNotReady:
+            LOG.warning(
+                "Virt driver is not ready. Therefore unable to error out any "
+                "instances stuck in BUILDING state on this node. If this is "
+                "the first time this service is starting on this host, then "
+                "you can ignore this warning.")
+            return
+
+        for node_name in node_names:
+            try:
+                cn_uuid = objects.ComputeNode.get_by_host_and_nodename(
+                    context, self.host, node_name).uuid
+            except exception.ComputeHostNotFound:
+                LOG.warning(
+                    "Compute node %s not found in the database and therefore "
+                    "unable to error out any instances stuck in BUILDING "
+                    "state on this node. If this is the first time this "
+                    "service is starting on this host, then you can ignore "
+                    "this warning.", node_name)
+                continue
+
+            try:
+                f = self.reportclient.get_allocations_for_resource_provider
+                allocations = f(context, cn_uuid).allocations
+            except (exception.ResourceProviderAllocationRetrievalFailed,
+                    keystone_exception.ClientException) as e:
+                LOG.error(
+                    "Could not retrieve compute node resource provider %s and "
+                    "therefore unable to error out any instances stuck in "
+                    "BUILDING state. Error: %s", cn_uuid, six.text_type(e))
+                continue
+
+            not_handled_consumers = (set(allocations) -
+                                     already_handled_instances)
+
+            if not not_handled_consumers:
+                continue
+
+            filters = {
+                'vm_state': vm_states.BUILDING,
+                'uuid': not_handled_consumers
+            }
+
+            instances = objects.InstanceList.get_by_filters(
+                context, filters, expected_attrs=[])
+
+            for instance in instances:
+                LOG.debug(
+                    "Instance spawn was interrupted before instance_claim, "
+                    "setting instance to ERROR state", instance=instance)
+                self._set_instance_obj_error_state(
+                    context, instance, clean_task_state=True)
 
     def cleanup_host(self):
         self.driver.register_event_listener(None)
