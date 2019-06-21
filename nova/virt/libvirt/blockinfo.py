@@ -200,22 +200,24 @@ def find_disk_dev_for_disk_bus(mapping, bus,
     raise exception.TooManyDiskDevices(maximum=max_dev)
 
 
+# NOTE(aspiers): If you change this, don't forget to update the docs and
+# metadata for hw_*_bus in glance. In addition, these bus names map directly to
+# standard os-traits as 'foo' => 'COMPUTE_STORAGE_BUS_FOO'. If adding a new bus
+# name, make sure the standard trait conforms to this rule.
+SUPPORTED_STORAGE_BUSES = {
+    'qemu': ['virtio', 'scsi', 'ide', 'usb', 'fdc', 'sata'],
+    'kvm': ['virtio', 'scsi', 'ide', 'usb', 'fdc', 'sata'],
+    'xen': ['xen', 'ide'],
+    'uml': ['uml'],
+    'lxc': ['lxc'],
+    'parallels': ['ide', 'scsi']
+}
+
+
 def is_disk_bus_valid_for_virt(virt_type, disk_bus):
-    # NOTE(aspiers): If you change this, don't forget to update the
-    # docs and metadata for hw_*_bus in glance.
-    valid_bus = {
-        'qemu': ['virtio', 'scsi', 'ide', 'usb', 'fdc', 'sata'],
-        'kvm': ['virtio', 'scsi', 'ide', 'usb', 'fdc', 'sata'],
-        'xen': ['xen', 'ide'],
-        'uml': ['uml'],
-        'lxc': ['lxc'],
-        'parallels': ['ide', 'scsi']
-        }
-
-    if virt_type not in valid_bus:
+    if virt_type not in SUPPORTED_STORAGE_BUSES:
         raise exception.UnsupportedVirtType(virt=virt_type)
-
-    return disk_bus in valid_bus[virt_type]
+    return disk_bus in SUPPORTED_STORAGE_BUSES[virt_type]
 
 
 def get_disk_bus_for_device_type(instance,

@@ -7243,10 +7243,13 @@ class LibvirtDriver(driver.ComputeDriver):
         provider_tree.update_inventory(nodename, result)
         provider_tree.update_resources(nodename, resources)
 
+        # _get_cpu_traits and _get_storage_bus_traits return a dict of trait
+        # names mapped to boolean values...
         traits = self._get_cpu_traits()
-        # _get_cpu_traits returns a dict of trait names mapped to boolean
-        # values. Add traits equal to True to provider tree, remove
-        # those False traits from provider tree.
+        traits.update(self._get_storage_bus_traits())
+
+        # ..and we add traits equal to True to provider tree while removing
+        # those equal to False
         traits_to_add = [t for t in traits if traits[t]]
         traits_to_remove = set(traits) - set(traits_to_add)
         provider_tree.add_traits(nodename, *traits_to_add)
@@ -10354,6 +10357,23 @@ class LibvirtDriver(driver.ComputeDriver):
                            nova.privsep.fs.FS_FORMAT_EXT3,
                            nova.privsep.fs.FS_FORMAT_EXT4,
                            nova.privsep.fs.FS_FORMAT_XFS]
+
+    def _get_storage_bus_traits(self):
+        """Get storage bus traits based on the currently enabled virt_type.
+
+        :return: A dict of trait names mapped to boolean values.
+        """
+        all_buses = set(itertools.chain(
+            *blockinfo.SUPPORTED_STORAGE_BUSES.values()
+        ))
+        supported_buses = blockinfo.SUPPORTED_STORAGE_BUSES.get(
+            CONF.libvirt.virt_type, []
+        )
+        # construct the corresponding standard trait from the storage bus name
+        return {
+            f'COMPUTE_STORAGE_BUS_{bus.upper()}': bus in supported_buses
+            for bus in all_buses
+        }
 
     def _get_cpu_traits(self):
         """Get CPU-related traits to be set and unset on the host's resource

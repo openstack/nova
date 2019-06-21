@@ -19616,8 +19616,8 @@ class TestUpdateProviderTree(test.NoDBTestCase):
         self._test_update_provider_tree()
         self.assertEqual(self._get_inventory(),
                          (self.pt.data(self.cn_rp['uuid'])).inventory)
-        self.assertEqual(set(['HW_CPU_X86_AVX512F', 'HW_CPU_X86_BMI']),
-                         self.pt.data(self.cn_rp['uuid']).traits)
+        for trait in ['HW_CPU_X86_AVX512F', 'HW_CPU_X86_BMI']:
+            self.assertIn(trait, self.pt.data(self.cn_rp['uuid']).traits)
 
     def test_update_provider_tree_with_vgpus(self):
         pci_devices = ['pci_0000_06_00_0', 'pci_0000_07_00_0']
@@ -19780,8 +19780,8 @@ class TestUpdateProviderTree(test.NoDBTestCase):
         self.pt.add_traits(self.cn_rp['uuid'],
                            'HW_CPU_X86_VMX', 'HW_CPU_X86_XOP')
         self._test_update_provider_tree()
-        self.assertEqual(set(['HW_CPU_X86_AVX512F', 'HW_CPU_X86_BMI']),
-                         self.pt.data(self.cn_rp['uuid']).traits)
+        for trait in ['HW_CPU_X86_AVX512F', 'HW_CPU_X86_BMI']:
+            self.assertIn(trait, self.pt.data(self.cn_rp['uuid']).traits)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                 '_get_mediated_device_information')
@@ -23072,6 +23072,25 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 
         self.assertRaises(test.TestingException,
                           self._test_detach_mediated_devices, exc)
+
+    def test_storage_bus_traits(self):
+        """Test getting storage bus traits per virt type."""
+        all_traits = set()
+
+        # ensure each virt type reports the correct bus types
+        for virt_type, buses in blockinfo.SUPPORTED_STORAGE_BUSES.items():
+            self.flags(virt_type=virt_type, group='libvirt')
+            bus_traits = self.drvr._get_storage_bus_traits()
+            for bus in buses:
+                trait = f'COMPUTE_STORAGE_BUS_{bus.upper()}'
+                self.assertIn(trait, bus_traits)
+                self.assertTrue(bus_traits[trait])
+                all_traits.add(trait)
+
+        # ..and all the traits reported are valid os-trait traits
+        valid_traits = ot.check_traits(all_traits)
+        self.assertEqual(len(all_traits), len(valid_traits[0]))
+        self.assertEqual(0, len(valid_traits[1]))
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_cpu_feature_traits',
                        new=mock.Mock(return_value={}))

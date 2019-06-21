@@ -78,7 +78,8 @@ class LibvirtReportTraitsTests(LibvirtReportTraitsTestBase):
              # The periodic restored the COMPUTE_NODE trait.
              u'COMPUTE_NODE']
         )
-        self.assertItemsEqual(expected_traits, traits)
+        for trait in expected_traits:
+            self.assertIn(trait, traits)
 
 
 class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
