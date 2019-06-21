@@ -16,6 +16,7 @@ import time
 from nova import context as nova_context
 from nova import objects
 from nova.tests.functional import integrated_helpers
+from nova.tests.unit import fake_notifier
 from nova.tests.unit.image import fake as fake_image
 
 
@@ -118,3 +119,75 @@ class ComputeManagerInitHostTestCase(
         # the source host but is not tracking allocations against the source
         # host.
         self.assertNotIn(server['id'], source_allocations)
+
+
+class TestComputeRestartInstanceStuckInBuild(
+        integrated_helpers.ProviderUsageBaseTestCase):
+
+    compute_driver = 'fake.SmallFakeDriver'
+
+    def setUp(self):
+        super(TestComputeRestartInstanceStuckInBuild, self).setUp()
+        self.compute1 = self._start_compute(host='host1')
+
+        flavors = self.api.get_flavors()
+        self.flavor1 = flavors[0]
+
+    def test_restart_compute_while_instance_waiting_for_resource_claim(self):
+        """Test for bug 1833581 where an instance is stuck in
+        BUILD state forever due to compute service is restarted before the
+        resource claim finished.
+        """
+
+        # To reproduce the problem we need to stop / kill the compute service
+        # when an instance build request has already reached the service but
+        # the instance_claim() has not finished. One way that this
+        # happens in practice is when multiple builds are waiting for the
+        # 'nova-compute-resource' semaphore. So one way to reproduce this in
+        # the test would be to grab that semaphore, boot an instance, wait for
+        # it to reach the compute then stop the compute.
+        # Unfortunately when we release the semaphore after the simulated
+        # compute restart the original instance_claim execution continues as
+        # the stopped compute is not 100% stopped in the func test env. Also
+        # we cannot really keep the semaphore forever as this named semaphore
+        # is shared between the old and new compute service.
+        # There is another way to trigger the issue. We can inject a sleep into
+        # instance_claim() to stop it. This is less realistic but it works in
+        # the test env.
+        server_req = self._build_minimal_create_server_request(
+            self.api, 'interrupted-server', flavor_id=self.flavor1['id'],
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            networks='none')
+
+        def sleep_forever(*args, **kwargs):
+            time.sleep(1000000)
+
+        with mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                        'instance_claim') as mock_instance_claim:
+            mock_instance_claim.side_effect = sleep_forever
+
+            server = self.api.post_server({'server': server_req})
+            self._wait_for_state_change(self.admin_api, server, 'BUILD')
+
+            # the instance.create.start is the closest thing to the
+            # instance_claim call we can wait for in the test
+            fake_notifier.wait_for_versioned_notifications(
+                'instance.create.start')
+            self.restart_compute_service(self.compute1)
+
+        # This is bug 1833581 as the server remains in BUILD state after the
+        # compute restart.
+        self._wait_for_state_change(self.admin_api, server, 'BUILD')
+
+        # Not even the periodic task push this server to ERROR because the
+        # server host is still None since the instance_claim didn't set it.
+        self.flags(instance_build_timeout=1)
+        self.compute1.manager._check_instance_build_time(
+            nova_context.get_admin_context())
+        server = self.admin_api.get_server(server['id'])
+        self.assertEqual('BUILD', server['status'])
+        self.assertIsNone(server['OS-EXT-SRV-ATTR:host'])
+
+        # We expect that the instance is pushed to ERROR state during the
+        # compute restart.
+        # self._wait_for_state_change(self.admin_api, server, 'ERROR')
