@@ -4164,6 +4164,50 @@ class ComputeManager(manager.Manager):
             self.compute_rpcapi.finish_revert_resize(context, instance,
                     migration, migration.source_compute)
 
+    def _finish_revert_resize_network_migrate_finish(self, context, instance,
+                                                     migration):
+        """Causes port binding to be updated. In some Neutron or port
+        configurations - see NetworkModel.get_bind_time_events() - we
+        expect the vif-plugged event from Neutron immediately and wait for it.
+        The rest of the time, the event is expected further along in the
+        virt driver, so we don't wait here.
+
+        :param context: The request context.
+        :param instance: The instance undergoing the revert resize.
+        :param migration: The Migration object of the resize being reverted.
+        :raises: eventlet.timeout.Timeout or
+                 exception.VirtualInterfacePlugException.
+        """
+        network_info = instance.get_network_info()
+        events = []
+        deadline = CONF.vif_plugging_timeout
+        if deadline and utils.is_neutron() and network_info:
+            events = network_info.get_bind_time_events()
+            if events:
+                LOG.debug('Will wait for bind-time events: %s', events,
+                          instance=instance)
+        error_cb = self._neutron_failed_migration_callback
+        try:
+            with self.virtapi.wait_for_instance_event(instance, events,
+                                                      deadline=deadline,
+                                                      error_callback=error_cb):
+                # NOTE(hanrong): we need to change migration.dest_compute to
+                # source host temporarily.
+                # "network_api.migrate_instance_finish" will setup the network
+                # for the instance on the destination host. For revert resize,
+                # the instance will back to the source host, the setup of the
+                # network for instance should be on the source host. So set the
+                # migration.dest_compute to source host at here.
+                with utils.temporary_mutation(
+                        migration, dest_compute=migration.source_compute):
+                    self.network_api.migrate_instance_finish(context,
+                                                             instance,
+                                                             migration)
+        except eventlet.timeout.Timeout:
+            with excutils.save_and_reraise_exception():
+                LOG.error('Timeout waiting for Neutron events: %s', events,
+                          instance=instance)
+
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event(prefix='compute')
@@ -4211,17 +4255,8 @@ class ComputeManager(manager.Manager):
 
             self.network_api.setup_networks_on_host(context, instance,
                                                     migration.source_compute)
-            # NOTE(hanrong): we need to change migration.dest_compute to
-            # source host temporarily. "network_api.migrate_instance_finish"
-            # will setup the network for the instance on the destination host.
-            # For revert resize, the instance will back to the source host, the
-            # setup of the network for instance should be on the source host.
-            # So set the migration.dest_compute to source host at here.
-            with utils.temporary_mutation(
-                    migration, dest_compute=migration.source_compute):
-                self.network_api.migrate_instance_finish(context,
-                                                         instance,
-                                                         migration)
+            self._finish_revert_resize_network_migrate_finish(
+                context, instance, migration)
             network_info = self.network_api.get_instance_nw_info(context,
                                                                  instance)
 
@@ -6448,8 +6483,8 @@ class ComputeManager(manager.Manager):
         return migrate_data
 
     @staticmethod
-    def _neutron_failed_live_migration_callback(event_name, instance):
-        msg = ('Neutron reported failure during live migration '
+    def _neutron_failed_migration_callback(event_name, instance):
+        msg = ('Neutron reported failure during migration '
                'with %(event)s for instance %(uuid)s')
         msg_args = {'event': event_name, 'uuid': instance.uuid}
         if CONF.vif_plugging_is_fatal:
@@ -6527,7 +6562,7 @@ class ComputeManager(manager.Manager):
                 disk = None
 
             deadline = CONF.vif_plugging_timeout
-            error_cb = self._neutron_failed_live_migration_callback
+            error_cb = self._neutron_failed_migration_callback
             # In order to avoid a race with the vif plugging that the virt
             # driver does on the destination host, we register our events
             # to wait for before calling pre_live_migration. Then if the
