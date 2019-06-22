@@ -488,8 +488,9 @@ Error: %s""") % six.text_type(e))
                'rows, if any, that are removed from the API database for '
                'deleted instances.')
     @args('--before', metavar='<date>',
-          help=('Archive rows that have been deleted before this date'
-                '(YYYY-MM-DD)'))
+          help=('Archive rows that have been deleted before this date. '
+                'Accepts date strings in the default format output by the '
+                '``date`` command, as well as ``YYYY-MM-DD [HH:mm:ss]``.'))
     @args('--verbose', action='store_true', dest='verbose', default=False,
           help='Print how many rows were archived per table.')
     @args('--until-complete', action='store_true', dest='until_complete',
@@ -596,7 +597,9 @@ Error: %s""") % six.text_type(e))
 
     @args('--before', metavar='<before>', dest='before',
           help='If specified, purge rows from shadow tables that are older '
-               'than this. Fuzzy time specs are allowed')
+               'than this. Accepts date strings in the default format output '
+               'by the ``date`` command, as well as ``YYYY-MM-DD '
+               '[HH:mm:ss]``.')
     @args('--all', dest='purge_all', action='store_true',
           help='Purge all rows in the shadow tables')
     @args('--verbose', dest='verbose', action='store_true', default=False,
