@@ -508,7 +508,7 @@ List Servers Detailed
 
 .. rest_method:: GET /servers/detail
 
-For each server, shows server details including configuration drive,
+For each server, shows server details including config drive,
 extended status, and server usage information.
 
 The extended status information appears in the OS-EXT-STS:vm_state,

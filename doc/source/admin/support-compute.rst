@@ -266,10 +266,9 @@ To disable injection in libvirt, set the following in ``nova.conf``:
 
 .. note::
 
-   If you have not enabled the configuration drive and you want to make
-   user-specified files available from the metadata server for to improve
-   performance and avoid boot failure if injection fails, you must disable
-   injection.
+   If you have not enabled the config drive and you want to make user-specified
+   files available from the metadata server for to improve performance and
+   avoid boot failure if injection fails, you must disable injection.
 
 
 Cannot find suitable emulator for x86_64
