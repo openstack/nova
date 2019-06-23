@@ -23,7 +23,6 @@
 
 from __future__ import print_function
 
-import argparse
 import functools
 import re
 import sys
@@ -441,20 +440,12 @@ class DbCommands(object):
         else:
             print(encodeutils.safe_encode(pt.get_string()).decode())
 
-    @args('--version', metavar='<version>', help=argparse.SUPPRESS)
     @args('--local_cell', action='store_true',
           help='Only sync db in the local cell: do not attempt to fan-out '
                'to all cells')
-    @args('version2', metavar='VERSION', nargs='?', help='Database version')
-    def sync(self, version=None, local_cell=False, version2=None):
+    @args('version', metavar='VERSION', nargs='?', help='Database version')
+    def sync(self, version=None, local_cell=False):
         """Sync the database up to the most recent version."""
-        if version and not version2:
-            print(_("DEPRECATED: The '--version' parameter was deprecated in "
-                    "the Pike cycle and will not be supported in future "
-                    "versions of nova. Use the 'VERSION' positional argument "
-                    "instead"))
-            version2 = version
-
         if not local_cell:
             ctxt = context.RequestContext()
             # NOTE(mdoff): Multiple cells not yet implemented. Currently
@@ -463,7 +454,7 @@ class DbCommands(object):
                 cell_mapping = objects.CellMapping.get_by_uuid(ctxt,
                                             objects.CellMapping.CELL0_UUID)
                 with context.target_cell(ctxt, cell_mapping) as cctxt:
-                    migration.db_sync(version2, context=cctxt)
+                    migration.db_sync(version, context=cctxt)
             except exception.CellMappingNotFound:
                 print(_('WARNING: cell0 mapping not found - not'
                         ' syncing cell0.'))
@@ -874,18 +865,10 @@ class ApiDbCommands(object):
     def __init__(self):
         pass
 
-    @args('--version', metavar='<version>', help=argparse.SUPPRESS)
-    @args('version2', metavar='VERSION', nargs='?', help='Database version')
-    def sync(self, version=None, version2=None):
+    @args('version', metavar='VERSION', nargs='?', help='Database version')
+    def sync(self, version=None):
         """Sync the database up to the most recent version."""
-        if version and not version2:
-            print(_("DEPRECATED: The '--version' parameter was deprecated in "
-                    "the Pike cycle and will not be supported in future "
-                    "versions of nova. Use the 'VERSION' positional argument "
-                    "instead"))
-            version2 = version
-
-        return migration.db_sync(version2, database='api')
+        return migration.db_sync(version, database='api')
 
     def version(self):
         """Print the current database version."""
