@@ -294,8 +294,8 @@ details.
 Nova Metadata API service
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Starting from the Stein release, the Nova Metadata API service
-can be run either globally or per cell using the
+Starting from the Stein release, the :doc:`nova metadata API service
+</admin/metadata-service>` can be run either globally or per cell using the
 :oslo.config:option:`api.local_metadata_per_cell` configuration option.
 
 **Global**
@@ -303,20 +303,20 @@ can be run either globally or per cell using the
 If you have networks that span cells, you might need to run Nova metadata API
 globally. When running globally, it should be configured as an API-level
 service with access to the :oslo.config:option:`api_database.connection`
-information. The nova metadata API service must not be run as a standalone
-service in this case (e.g. must not be run via the nova-api-metadata script).
+information. The nova metadata API service **must not** be run as a standalone
+service, using the :program:`nova-api-metadata` service, in this case.
 
 **Local per cell**
 
 Running Nova metadata API per cell can have better performance and data
-isolation in a muli-cell deployment. If your networks are segmented along
-cell boundaries, then you can run Nova metadata API service per cell. If
-you choose to run it per cell, you should also configure each
-`Neutron metadata-agent`_ to point to the corresponding nova-metadata-api.
-The nova metadata API service must be run as a standalone service in this
-case (e.g. must be run via the nova-api-metadata script).
-
-.. _Neutron metadata-agent: https://docs.openstack.org/neutron/latest/configuration/metadata-agent.html?#DEFAULT.nova_metadata_host
+isolation in a multi-cell deployment. If your networks are segmented along
+cell boundaries, then you can run Nova metadata API service per cell. If you
+choose to run it per cell, you should also configure each
+:neutron-doc:`neutron-metadata-agent
+<configuration/metadata-agent.html?#DEFAULT.nova_metadata_host>` service to
+point to the corresponding :program:`nova-api-metadata`. The nova metadata API
+service **must** be run as a standalone service, using the
+:program:`nova-api-metadata` service, in this case.
 
 
 Operations Requiring upcalls

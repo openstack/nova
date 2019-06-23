@@ -61,8 +61,8 @@ VERSIONS = [
 # hidden from the listing, but can still be requested explicitly, which is
 # required for testing purposes. We know this isn't great, but its inherited
 # from EC2, which this needs to be compatible with.
-# NOTE(jichen): please update doc/source/user/metadata-service.rst on the
-# metadata output when new version is created in order to make doc up-to-date.
+# NOTE(jichen): please update doc/source/user/metadata.rst on the metadata
+# output when new version is created in order to make doc up-to-date.
 FOLSOM = '2012-08-10'
 GRIZZLY = '2013-04-04'
 HAVANA = '2013-10-17'

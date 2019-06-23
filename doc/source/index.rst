@@ -84,8 +84,8 @@ resources will help you get started with consuming the API directly.
 * :doc:`Block Device Mapping </user/block-device-mapping>`: One of the trickier
   parts to understand is the Block Device Mapping parameters used to connect
   specific block devices to computes. This deserves its own deep dive.
-* :doc:`Configuration drive </user/config-drive>`: Provide information to the
-  guest instance when it is created.
+* :doc:`Metadata </user/metadata>`: Provide information to the guest instance
+  when it is created.
 
 Nova can be configured to emit notifications over RPC.
 
@@ -158,9 +158,10 @@ Once you are running nova, the following information is extremely useful.
   configured, and how that will impact where compute instances land in your
   environment. If you are seeing unexpected distribution of compute instances
   in your hosts, you'll want to dive into this configuration.
-* :doc:`Exposing custom metadata to compute instances </user/vendordata>`: How and
-  when you might want to extend the basic metadata exposed to compute instances
-  (either via metadata server or config drive) for your specific purposes.
+* :doc:`Exposing custom metadata to compute instances </admin/vendordata>`: How
+  and when you might want to extend the basic metadata exposed to compute
+  instances (either via metadata server or config drive) for your specific
+  purposes.
 
 Reference Material
 ------------------
@@ -244,7 +245,6 @@ looking parts of our architecture. These are collected below.
    user/cellsv2-layout
    user/certificate-validation
    user/conductor
-   user/config-drive
    user/feature-classification
    user/filter-scheduler
    user/flavors
@@ -252,8 +252,6 @@ looking parts of our architecture. These are collected below.
    user/quotas
    user/support-matrix
    user/upgrade
-   user/user-data
-   user/vendordata
    user/wsgi
 
 
