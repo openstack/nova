@@ -120,6 +120,31 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         'connection_info': {"fake": "connection_info"},
         'delete_on_termination': False}
 
+    volume_bdm_dict_without_conn_info = block_device.BlockDeviceDict(
+        {'id': 3, 'instance_uuid': uuids.instance,
+         'device_name': '/dev/sda1',
+         'source_type': 'volume',
+         'disk_bus': 'scsi',
+         'device_type': 'disk',
+         'volume_size': 8,
+         'destination_type': 'volume',
+         'volume_id': 'fake-volume-id-1',
+         'guest_format': 'ext4',
+         'connection_info': None,
+         'delete_on_termination': False,
+         'boot_index': 0})
+
+    volume_driver_bdm_without_conn_info = {
+        'attachment_id': None,
+        'mount_device': '/dev/sda1',
+        'connection_info': {},
+        'delete_on_termination': False,
+        'disk_bus': 'scsi',
+        'device_type': 'disk',
+        'guest_format': 'ext4',
+        'boot_index': 0,
+        'volume_type': None}
+
     volsnapshot_bdm_dict = block_device.BlockDeviceDict(
         {'id': 4, 'instance_uuid': uuids.instance,
          'device_name': '/dev/sda2',
@@ -222,6 +247,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
             self.context, self.ephemeral_bdm_dict)
         self.volume_bdm = fake_block_device.fake_bdm_object(
             self.context, self.volume_bdm_dict)
+        self.volume_bdm_without_conn_info = fake_block_device.fake_bdm_object(
+            self.context, self.volume_bdm_dict_without_conn_info)
         self.volsnapshot_bdm = fake_block_device.fake_bdm_object(
             self.context, self.volsnapshot_bdm_dict)
         self.volimage_bdm = fake_block_device.fake_bdm_object(
@@ -1201,6 +1228,11 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.assertEqual(self.volsnapshot_driver_bdm,
                          driver_block_device.convert_volume(
                              self.volsnapshot_bdm))
+
+    def test_convert_volume_without_connection_info(self):
+        self.assertEqual(self.volume_driver_bdm_without_conn_info,
+                         driver_block_device.convert_volume(
+                             self.volume_bdm_without_conn_info))
 
     def test_legacy_block_devices(self):
         test_snapshot = self.driver_classes['volsnapshot'](
