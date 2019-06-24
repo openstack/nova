@@ -67,6 +67,7 @@ class RequestSpec(base.NovaObject):
         'availability_zone': fields.StringField(nullable=True),
         'flavor': fields.ObjectField('Flavor', nullable=False),
         'num_instances': fields.IntegerField(default=1),
+        # NOTE(alex_xu): This field won't be persisted.
         'ignore_hosts': fields.ListOfStringsField(nullable=True),
         # NOTE(mriedem): In reality, you can only ever have one
         # host in the force_hosts list. The fact this is a list
@@ -76,9 +77,11 @@ class RequestSpec(base.NovaObject):
         # node in the force_nodes list. The fact this is a list
         # is a mistake perpetuated over time.
         'force_nodes': fields.ListOfStringsField(nullable=True),
+        # NOTE(alex_xu): This field won't be persisted.
         'requested_destination': fields.ObjectField('Destination',
                                                     nullable=True,
                                                     default=None),
+        # NOTE(alex_xu): This field won't be persisted.
         'retry': fields.ObjectField('SchedulerRetries', nullable=True),
         'limits': fields.ObjectField('SchedulerLimits', nullable=True),
         'instance_group': fields.ObjectField('InstanceGroup', nullable=True),
@@ -88,6 +91,7 @@ class RequestSpec(base.NovaObject):
         'scheduler_hints': fields.DictOfListOfStringsField(nullable=True),
         'instance_uuid': fields.UUIDField(),
         'security_groups': fields.ObjectField('SecurityGroupList'),
+        # NOTE(alex_xu): This field won't be persisted.
         'network_metadata': fields.ObjectField('NetworkMetadata'),
         'is_bfv': fields.BooleanField(),
         # NOTE(gibi): Eventually we want to store every resource request as
@@ -95,6 +99,7 @@ class RequestSpec(base.NovaObject):
         # resources like vcpu, ram, disk, and flavor.extra_spec based resources
         # are not handled this way. See the Todo in from_components() where
         # requested_resources are set.
+        # NOTE(alex_xu): This field won't be persisted.
         'requested_resources': fields.ListOfObjectsField('RequestGroup',
                                                          nullable=True,
                                                          default=None)
