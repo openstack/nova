@@ -289,6 +289,12 @@ MIN_LIBVIRT_BETTER_SIGKILL_HANDLING = (4, 7, 0)
 
 VGPU_RESOURCE_SEMAPHORE = "vgpu_resources"
 
+# see https://libvirt.org/formatdomain.html#elementsVideo
+MIN_LIBVIRT_VIDEO_MODEL_VERSIONS = {
+    fields.VideoModel.GOP: (3, 2, 0),
+    fields.VideoModel.NONE: (4, 6, 0),
+}
+
 
 class LibvirtDriver(driver.ComputeDriver):
     def __init__(self, virtapi, read_only=False):
@@ -4782,9 +4788,15 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.SerialPortNumberLimitExceeded(
                 allowed=ALLOWED_QEMU_SERIAL_PORTS, virt_type=virt_type)
 
+    def _video_model_supported(self, model):
+        if model not in fields.VideoModel.ALL:
+            return False
+        min_ver = MIN_LIBVIRT_VIDEO_MODEL_VERSIONS.get(model)
+        if min_ver and not self._host.has_min_version(lv_ver=min_ver):
+            return False
+        return True
+
     def _add_video_driver(self, guest, image_meta, flavor):
-        VALID_VIDEO_DEVICES = ("vga", "cirrus", "vmvga",
-                               "xen", "qxl", "virtio")
         video = vconfig.LibvirtConfigGuestVideo()
         # NOTE(ldbragst): The following logic sets the video.type
         # depending on supported defaults given the architecture,
@@ -4810,7 +4822,7 @@ class LibvirtDriver(driver.ComputeDriver):
             video.type = 'qxl'
         if image_meta.properties.get('hw_video_model'):
             video.type = image_meta.properties.hw_video_model
-            if (video.type not in VALID_VIDEO_DEVICES):
+            if not self._video_model_supported(video.type):
                 raise exception.InvalidVideoMode(model=video.type)
 
         # Set video memory, only if the flavor's limit is set
@@ -4822,6 +4834,10 @@ class LibvirtDriver(driver.ComputeDriver):
         if max_vram and video_ram:
             video.vram = video_ram * units.Mi / units.Ki
         guest.add_device(video)
+
+        # NOTE(sean-k-mooney): return the video device we added
+        # for simpler testing.
+        return video
 
     def _add_qga_device(self, guest, instance):
         qga = vconfig.LibvirtConfigGuestChannel()

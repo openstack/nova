@@ -105,7 +105,8 @@ class ImageMetaPayload(base.NotificationPayloadBase):
 @nova_base.NovaObjectRegistry.register_notification
 class ImageMetaPropsPayload(base.NotificationPayloadBase):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Added 'gop', 'virtio' and  'none' to hw_video_model field
+    VERSION = '1.1'
 
     SCHEMA = {
         'hw_architecture': ('image_meta_props', 'hw_architecture'),

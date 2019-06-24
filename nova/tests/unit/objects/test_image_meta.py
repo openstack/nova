@@ -349,6 +349,23 @@ class TestImageMetaProps(test.NoDBTestCase):
             self.assertRaises(exception.ObjectActionError,
                               obj.obj_to_primitive, '1.0')
 
+    def test_obj_make_compatible_video_model(self):
+        # assert that older video models are not  preserved.
+        obj = objects.ImageMetaProps(
+            hw_video_model=objects.fields.VideoModel.QXL)
+        primitive = obj.obj_to_primitive('1.0')
+        self.assertIn("hw_video_model", primitive['nova_object.data'])
+
+        # Virtio, GOP and None were added in 1.22 and should raise and
+        # exception when backleveling.
+        models = [objects.fields.VideoModel.VIRTIO,
+                  objects.fields.VideoModel.GOP,
+                  objects.fields.VideoModel.NONE]
+        for model in models:
+            obj = objects.ImageMetaProps(hw_video_model=model)
+            self.assertRaises(exception.ObjectActionError,
+                              obj.obj_to_primitive, '1.0')
+
     def test_obj_make_compatible_watchdog_action_not_disabled(self):
         """Tests that we don't pop the hw_watchdog_action if the value is not
         'disabled'.

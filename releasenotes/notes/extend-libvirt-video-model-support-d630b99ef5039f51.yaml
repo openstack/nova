@@ -1,0 +1,13 @@
+---
+features:
+  - |
+    In this release support was added for two additional libvirt video models:
+    ``gop``, the UEFI graphic output protocol device model; and the ``none``
+    device model. Existing support for ``virtio`` has been extended to all
+    architectures and may now be requested via the ``hw_video_model`` image
+    metadata property. Prior to this release the ``virtio`` video model was
+    unconditionally enabled for ``AARCH64``. This is unchanged but it can now
+    be explicitly enabled on all supported architectures. The ``none`` video
+    model can be used to disable emulated video devices when using pGPU or
+    vGPU passthrough.
+
