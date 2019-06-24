@@ -5891,9 +5891,7 @@ class ComputeTestCase(BaseTestCase,
             old_vm_state = vm_states.ACTIVE
         else:
             old_vm_state = vm_states.STOPPED
-        params = {'vm_state': old_vm_state,
-                  'info_cache': objects.InstanceInfoCache(
-                      network_info=network_model.NetworkInfo([]))}
+        params = {'vm_state': old_vm_state}
         instance = self._create_fake_instance_obj(params)
 
         self.stub_out('nova.virt.fake.FakeDriver.finish_migration', fake)
@@ -6043,9 +6041,7 @@ class ComputeTestCase(BaseTestCase,
         def fake(*args, **kwargs):
             pass
 
-        params = {'info_cache': objects.InstanceInfoCache(
-                      network_info=network_model.NetworkInfo([]))}
-        instance = self._create_fake_instance_obj(params)
+        instance = self._create_fake_instance_obj()
 
         self.stub_out('nova.virt.fake.FakeDriver.finish_migration', fake)
         self.stub_out('nova.virt.fake.FakeDriver.finish_revert_migration',
