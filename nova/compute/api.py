@@ -2938,9 +2938,6 @@ class API(base.Base):
                 context, instance, name, 'backup', self.image_api,
                 extra_properties=props_copy)
 
-        # NOTE(comstud): Any changes to this method should also be made
-        # to the backup_instance() method in nova/cells/messaging.py
-
         instance.task_state = task_states.IMAGE_BACKUP
         instance.save(expected_task_state=[None])
 
@@ -2970,8 +2967,6 @@ class API(base.Base):
             context, instance, name, 'snapshot', self.image_api,
             extra_properties=extra_properties)
 
-        # NOTE(comstud): Any changes to this method should also be made
-        # to the snapshot_instance() method in nova/cells/messaging.py
         instance.task_state = task_states.IMAGE_SNAPSHOT_PENDING
         try:
             instance.save(expected_task_state=[None])
