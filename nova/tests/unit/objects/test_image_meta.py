@@ -13,6 +13,7 @@
 # under the License.
 
 import datetime
+import six
 
 from nova import exception
 from nova import objects
@@ -350,21 +351,29 @@ class TestImageMetaProps(test.NoDBTestCase):
                               obj.obj_to_primitive, '1.0')
 
     def test_obj_make_compatible_video_model(self):
-        # assert that older video models are not  preserved.
+        # assert that older video models are preserved.
         obj = objects.ImageMetaProps(
-            hw_video_model=objects.fields.VideoModel.QXL)
-        primitive = obj.obj_to_primitive('1.0')
+            hw_video_model=objects.fields.VideoModel.QXL,
+            hw_disk_bus=objects.fields.DiskBus.VIRTIO
+        )
+        primitive = obj.obj_to_primitive('1.21')
         self.assertIn("hw_video_model", primitive['nova_object.data'])
+        self.assertEqual(objects.fields.VideoModel.QXL,
+                         primitive['nova_object.data']['hw_video_model'])
+        self.assertIn("hw_disk_bus", primitive['nova_object.data'])
+        self.assertEqual(objects.fields.DiskBus.VIRTIO,
+                         primitive['nova_object.data']['hw_disk_bus'])
 
-        # Virtio, GOP and None were added in 1.22 and should raise and
+        # Virtio, GOP and None were added in 1.22 and should raise an
         # exception when backleveling.
         models = [objects.fields.VideoModel.VIRTIO,
                   objects.fields.VideoModel.GOP,
                   objects.fields.VideoModel.NONE]
         for model in models:
             obj = objects.ImageMetaProps(hw_video_model=model)
-            self.assertRaises(exception.ObjectActionError,
-                              obj.obj_to_primitive, '1.0')
+            ex = self.assertRaises(exception.ObjectActionError,
+                                   obj.obj_to_primitive, '1.21')
+            self.assertIn('hw_video_model', six.text_type(ex))
 
     def test_obj_make_compatible_watchdog_action_not_disabled(self):
         """Tests that we don't pop the hw_watchdog_action if the value is not
