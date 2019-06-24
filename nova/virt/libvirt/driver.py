@@ -5727,15 +5727,14 @@ class LibvirtDriver(driver.ComputeDriver):
                                    block_device_info=None, power_on=True,
                                    vifs_already_plugged=False,
                                    post_xml_callback=None,
-                                   destroy_disks_on_failure=False,
-                                   external_events=None):
+                                   destroy_disks_on_failure=False):
 
         """Do required network setup and create domain."""
         timeout = CONF.vif_plugging_timeout
-        if (self._conn_supports_start_paused and utils.is_neutron()
-                and not vifs_already_plugged and power_on and timeout):
-            events = (external_events if external_events
-                      else self._get_neutron_events(network_info))
+        if (self._conn_supports_start_paused and
+            utils.is_neutron() and not
+            vifs_already_plugged and power_on and timeout):
+            events = self._get_neutron_events(network_info)
         else:
             events = []
 
@@ -9130,19 +9129,9 @@ class LibvirtDriver(driver.ComputeDriver):
         xml = self._get_guest_xml(context, instance, network_info, disk_info,
                                   instance.image_meta,
                                   block_device_info=block_device_info)
-        # NOTE(artom) In some Neutron or port configurations we've already
-        # waited for vif-plugged events in the compute manager's
-        # _finish_revert_resize_network_migrate_finish(), right after updating
-        # the port binding. For any ports not covered by those "bind-time"
-        # events, we wait for "plug-time" events here.
-        events = network_info.get_plug_time_events()
-        if events:
-            LOG.debug('Instance is using plug-time events: %s', events,
-                      instance=instance)
-        self._create_domain_and_network(
-            context, xml, instance, network_info,
-            block_device_info=block_device_info, power_on=power_on,
-            external_events=events)
+        self._create_domain_and_network(context, xml, instance, network_info,
+                                        block_device_info=block_device_info,
+                                        power_on=power_on)
 
         if power_on:
             timer = loopingcall.FixedIntervalLoopingCall(

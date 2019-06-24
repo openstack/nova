@@ -15,7 +15,6 @@
 #    under the License.
 
 from oslo_config import cfg
-from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import exception
 from nova.network import model
@@ -857,21 +856,6 @@ iface eth1 inet static
                 use_ipv6=True, gateway=False, two_interfaces=True,
                 libvirt_virt_type='lxc')
         self.assertEqual(expected, template)
-
-    def test_get_events(self):
-        network_info = model.NetworkInfo([
-            model.VIF(
-                id=uuids.hybrid_vif,
-                details={'ovs_hybrid_plug': True}),
-            model.VIF(
-                id=uuids.normal_vif,
-                details={'ovs_hybrid_plug': False})])
-        self.assertEqual(
-            [('network-vif-plugged', uuids.hybrid_vif)],
-            network_info.get_bind_time_events())
-        self.assertEqual(
-            [('network-vif-plugged', uuids.normal_vif)],
-            network_info.get_plug_time_events())
 
 
 class TestNetworkMetadata(test.NoDBTestCase):
