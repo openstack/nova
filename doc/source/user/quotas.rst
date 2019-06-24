@@ -1,151 +1,235 @@
-..
-      Licensed under the Apache License, Version 2.0 (the "License"); you may
-      not use this file except in compliance with the License. You may obtain
-      a copy of the License at
-
-          http://www.apache.org/licenses/LICENSE-2.0
-
-      Unless required by applicable law or agreed to in writing, software
-      distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-      WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-      License for the specific language governing permissions and limitations
-      under the License.
-
-========
- Quotas
-========
+======
+Quotas
+======
 
 Nova uses a quota system for setting limits on resources such as number of
 instances or amount of CPU that a specific project or user can use.
 
-Starting in the 16.0.0 Pike release the quota calculation system in nova was
-overhauled and the old reserve/commit/rollback flow was changed to `count
-resource usage`_ at the point of whatever operation is being performed, such
-as creating or resizing a server. A check will be performed by counting
-current usage for the relevant resource and then if
-:oslo.config:option:`quota.recheck_quota` is True (it is by default) another
-check will be performed to ensure the initial check is still valid.
-
-By default resource usage is counted using the API and cell databases but
-nova can be configured to count some resource usage without using the cell
-databases, see `Quota usage from placement`_ for details.
-
-Quota limits and usage can be retrieved via the `limits`_ REST API. Quota
-limits can be set per-tenant using the `quota sets`_ REST API or per class
-(all tenants) using the `quota class sets`_ API.
-
-.. _count resource usage: https://specs.openstack.org/openstack/nova-specs/specs/pike/implemented/cells-count-resources-to-check-quota-in-api.html
-.. _limits: https://docs.openstack.org/api-ref/compute/#limits-limits
-.. _quota sets: https://docs.openstack.org/api-ref/compute/#quota-sets-os-quota-sets
-.. _quota class sets: https://docs.openstack.org/api-ref/compute/#quota-class-sets-os-quota-class-sets
-
-Checking quota
-==============
-
-When calculating limits for a given resource and tenant, the following
-checks are made in order:
-
-* Depending on the resource, is there a tenant-specific limit on the resource
-  in either the `quotas` or `project_user_quotas` tables in the database? If
-  so, use that as the limit. You can create these resources by doing::
-
-   openstack quota set --instances 5 <project>
-
-* Check to see if there is a hard limit for the given resource in the
-  `quota_classes` table in the database for the `default` quota class. If so,
-  use that as the limit. You can modify the default quota limit for a resource
-  by doing::
-
-   openstack quota set --class --instances 5 default
-
-* If the above does not provide a resource limit, then rely on the
-  :oslo.config:group:`quota` configuration options for the default limit.
-
-.. note:: The API sets the limit in the `quota_classes` table. Once a default
-   limit is set via the `default` quota class, that takes precedence over
-   any changes to that resource limit in the configuration options. In other
-   words, once you've changed things via the API, you either have to keep those
-   synchronized with the configuration values or remove the default limit from
-   the database manually as there is no REST API for removing quota class
-   values from the database.
-
-.. _quota-usage-from-placement:
-
-Quota usage from placement
-==========================
-
-Starting in the Train (20.0.0) release, it is possible to configure quota usage
-counting of cores and ram from the placement service and instances from
-instance mappings in the API database instead of counting resources from cell
-databases. This makes quota usage counting resilient in the presence of `down
-or poor-performing cells`_.
-
-Quota usage counting from placement is opt-in via configuration option:
-
-.. code-block:: ini
-
-   [quota]
-   count_usage_from_placement = True
-
-There are some things to note when opting in to counting quota usage from
-placement:
-
-* Counted usage will not be accurate in an environment where multiple Nova
-  deployments are sharing a placement deployment because currently placement
-  has no way of partitioning resource providers between different Nova
-  deployments. Operators who are running multiple Nova deployments that share a
-  placement deployment should not set the
-  :oslo.config:option:`quota.count_usage_from_placement` configuration option
-  to ``True``.
-
-* Behavior will be different for resizes. During a resize, resource allocations
-  are held on both the source and destination (even on the same host, see
-  https://bugs.launchpad.net/nova/+bug/1790204) until the resize is confirmed
-  or reverted. Quota usage will be inflated for servers in this state and
-  operators should weigh the advantages and disadvantages before enabling
-  :oslo.config:option:`quota.count_usage_from_placement`.
-
-* The ``populate_queued_for_delete`` and ``populate_user_id`` online data
-  migrations must be completed before usage can be counted from placement.
-  Until the data migration is complete, the system will fall back to legacy
-  quota usage counting from cell databases depending on the result of an EXISTS
-  database query during each quota check, if
-  :oslo.config:option:`quota.count_usage_from_placement` is set to ``True``.
-  Operators who want to avoid the performance hit from the EXISTS queries
-  should wait to set the :oslo.config:option:`quota.count_usage_from_placement`
-  configuration option to ``True`` until after they have completed their online
-  data migrations via ``nova-manage db online_data_migrations``.
-
-* Behavior will be different for unscheduled servers in ``ERROR`` state. A
-  server in ``ERROR`` state that has never been scheduled to a compute host
-  will not have placement allocations, so it will not consume quota usage for
-  cores and ram.
-
-* Behavior will be different for servers in ``SHELVED_OFFLOADED`` state. A
-  server in ``SHELVED_OFFLOADED`` state will not have placement allocations, so
-  it will not consume quota usage for cores and ram. Note that because of this,
-  it will be possible for a request to unshelve a server to be rejected if the
-  user does not have enough quota available to support the cores and ram needed
-  by the server to be unshelved.
-
-.. _down or poor-performing cells: https://docs.openstack.org/api-guide/compute/down_cells.html
+Quota limits and usage can be retrieved using the command-line interface.
 
 
-Known issues
-============
+Types of quota
+--------------
 
-If not :ref:`counting quota usage from placement <quota-usage-from-placement>`
-it is possible for down or poor performing cells to impact quota calculations.
-See the :ref:`cells documentation <cells-counting-quotas>` for details.
+.. list-table::
+   :header-rows: 1
+   :widths: 10 40
 
-Future plans
-============
+   * - Quota name
+     - Description
+   * - cores
+     - Number of instance cores (VCPUs) allowed per project.
+   * - instances
+     - Number of instances allowed per project.
+   * - key_pairs
+     - Number of key pairs allowed per user.
+   * - metadata_items
+     - Number of metadata items allowed per instance.
+   * - ram
+     - Megabytes of instance ram allowed per project.
+   * - server_groups
+     - Number of server groups per project.
+   * - server_group_members
+     - Number of servers per server group.
 
-Hierarchical quotas
--------------------
+The following quotas were previously available but were removed in microversion
+2.36 as they proxied information available from the networking service.
 
-There has long been a desire to support hierarchical or nested quotas
-leveraging support in the identity service for hierarchical projects.
-See the `unified limits`_ spec for details.
+.. list-table::
+   :header-rows: 1
+   :widths: 10 40
 
-.. _unified limits: https://review.opendev.org/#/c/602201/
+   * - Quota name
+     - Description
+   * - fixed_ips
+     - Number of fixed IP addresses allowed per project. This number
+       must be equal to or greater than the number of allowed
+       instances.
+   * - floating_ips
+     - Number of floating IP addresses allowed per project.
+   * - networks
+     - Number of networks allowed per project (nova-network only).
+   * - security_groups
+     - Number of security groups per project.
+   * - security_group_rules
+     - Number of security group rules per project.
+
+Similarly, the following quotas were previously available but were removed in
+microversion 2.57 as the personality files feature was deprecated.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 10 40
+
+   * - Quota name
+     - Description
+   * - injected_files
+     - Number of injected files allowed per project.
+   * - injected_file_content_bytes
+     - Number of content bytes allowed per injected file.
+   * - injected_file_path_bytes
+     - Length of injected file path.
+
+
+Usage
+-----
+
+Project quotas
+~~~~~~~~~~~~~~
+
+To list all default quotas for projects, run:
+
+.. code-block:: console
+
+    $ openstack quota show --default
+
+.. note::
+
+    This lists default quotas for all services and not just nova.
+
+For example:
+
+.. code-block:: console
+
+    $ openstack quota show --default
+    +----------------------+----------+
+    | Field                | Value    |
+    +----------------------+----------+
+    | backup-gigabytes     | 1000     |
+    | backups              | 10       |
+    | cores                | 20       |
+    | fixed-ips            | -1       |
+    | floating-ips         | 50       |
+    | gigabytes            | 1000     |
+    | health_monitors      | None     |
+    | injected-file-size   | 10240    |
+    | injected-files       | 5        |
+    | injected-path-size   | 255      |
+    | instances            | 10       |
+    | key-pairs            | 100      |
+    | l7_policies          | None     |
+    | listeners            | None     |
+    | load_balancers       | None     |
+    | location             | None     |
+    | name                 | None     |
+    | networks             | 10       |
+    | per-volume-gigabytes | -1       |
+    | pools                | None     |
+    | ports                | 50       |
+    | project              | None     |
+    | project_name         | project  |
+    | properties           | 128      |
+    | ram                  | 51200    |
+    | rbac_policies        | 10       |
+    | routers              | 10       |
+    | secgroup-rules       | 100      |
+    | secgroups            | 10       |
+    | server-group-members | 10       |
+    | server-groups        | 10       |
+    | snapshots            | 10       |
+    | subnet_pools         | -1       |
+    | subnets              | 10       |
+    | volumes              | 10       |
+    +----------------------+----------+
+
+To list the currently set quota values for your project, run:
+
+.. code-block:: console
+
+    $ openstack quota show PROJECT
+
+where ``PROJECT`` is the ID or name of your project. For example:
+
+.. code-block:: console
+
+    $ openstack quota show $OS_PROJECT_ID
+    +----------------------+----------------------------------+
+    | Field                | Value                            |
+    +----------------------+----------------------------------+
+    | backup-gigabytes     | 1000                             |
+    | backups              | 10                               |
+    | cores                | 32                               |
+    | fixed-ips            | -1                               |
+    | floating-ips         | 10                               |
+    | gigabytes            | 1000                             |
+    | health_monitors      | None                             |
+    | injected-file-size   | 10240                            |
+    | injected-files       | 5                                |
+    | injected-path-size   | 255                              |
+    | instances            | 10                               |
+    | key-pairs            | 100                              |
+    | l7_policies          | None                             |
+    | listeners            | None                             |
+    | load_balancers       | None                             |
+    | location             | None                             |
+    | name                 | None                             |
+    | networks             | 20                               |
+    | per-volume-gigabytes | -1                               |
+    | pools                | None                             |
+    | ports                | 60                               |
+    | project              | c8156b55ec3b486193e73d2974196993 |
+    | project_name         | project                          |
+    | properties           | 128                              |
+    | ram                  | 65536                            |
+    | rbac_policies        | 10                               |
+    | routers              | 10                               |
+    | secgroup-rules       | 50                               |
+    | secgroups            | 50                               |
+    | server-group-members | 10                               |
+    | server-groups        | 10                               |
+    | snapshots            | 10                               |
+    | subnet_pools         | -1                               |
+    | subnets              | 20                               |
+    | volumes              | 10                               |
+    +----------------------+----------------------------------+
+
+To view a list of options for the :command:`openstack quota show` command, run:
+
+.. code-block:: console
+
+    $ openstack quota show --help
+
+User quotas
+~~~~~~~~~~~
+
+.. note::
+
+    User-specific quotas are legacy and will be removed when migration to
+    :keystone-doc:`unified limits </admin/unified-limits.html>` is complete.
+    User-specific quotas were added as a way to provide two-level hierarchical
+    quotas and this feature is already being offered in unified limits. For
+    this reason, the below commands have not and will not be ported to
+    openstackclient.
+
+To list the quotas for your user, run:
+
+.. code-block:: console
+
+    $ nova quota-show --user USER --tenant PROJECT
+
+where ``USER`` is the ID or name of your user and ``PROJECT`` is the ID or name
+of your project. For example:
+
+.. code-block:: console
+
+    $ nova quota-show --user $OS_USERNAME --tenant $OS_PROJECT_ID
+    +-----------------------------+-------+
+    | Quota                       | Limit |
+    +-----------------------------+-------+
+    | instances                   | 10    |
+    | cores                       | 32    |
+    | ram                         | 65536 |
+    | metadata_items              | 128   |
+    | injected_files              | 5     |
+    | injected_file_content_bytes | 10240 |
+    | injected_file_path_bytes    | 255   |
+    | key_pairs                   | 100   |
+    | server_groups               | 10    |
+    | server_group_members        | 10    |
+    +-----------------------------+-------+
+
+To view a list of options for the :command:`nova quota-show` command, run:
+
+.. code-block:: console
+
+    $ nova help quota-show

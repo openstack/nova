@@ -151,7 +151,6 @@ Additional guides
    migrate-instance-with-snapshot
    networking-nova
    networking
-   quotas2
    quotas
    security-groups
    security

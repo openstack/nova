@@ -258,4 +258,4 @@ hosts which share a network. There are two possible values:
 Additionally, the number of maximum rules per security group is controlled by
 the ``security_group_rules`` and the number of allowed security groups per
 project is controlled by the ``security_groups`` quota (see
-:ref:`manage-quotas`).
+:doc:`/admin/quotas`).
