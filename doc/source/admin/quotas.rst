@@ -62,31 +62,55 @@ To view and update default quota values
    .. code-block:: console
 
       $ openstack quota show --default
+      +----------------------+----------+
+      | Field                | Value    |
+      +----------------------+----------+
+      | backup-gigabytes     | 1000     |
+      | backups              | 10       |
+      | cores                | 20       |
+      | fixed-ips            | -1       |
+      | floating-ips         | 50       |
+      | gigabytes            | 1000     |
+      | health_monitors      | None     |
+      | injected-file-size   | 10240    |
+      | injected-files       | 5        |
+      | injected-path-size   | 255      |
+      | instances            | 10       |
+      | key-pairs            | 100      |
+      | l7_policies          | None     |
+      | listeners            | None     |
+      | load_balancers       | None     |
+      | location             | None     |
+      | name                 | None     |
+      | networks             | 10       |
+      | per-volume-gigabytes | -1       |
+      | pools                | None     |
+      | ports                | 50       |
+      | project              | None     |
+      | project_name         | project  |
+      | properties           | 128      |
+      | ram                  | 51200    |
+      | rbac_policies        | 10       |
+      | routers              | 10       |
+      | secgroup-rules       | 100      |
+      | secgroups            | 10       |
+      | server-group-members | 10       |
+      | server-groups        | 10       |
+      | snapshots            | 10       |
+      | subnet_pools         | -1       |
+      | subnets              | 10       |
+      | volumes              | 10       |
+      +----------------------+----------+
 
-      +-----------------------------+-------+
-      | Quota                       | Limit |
-      +-----------------------------+-------+
-      | instances                   | 10    |
-      | cores                       | 20    |
-      | ram                         | 51200 |
-      | floating_ips                | 10    |
-      | fixed_ips                   | -1    |
-      | metadata_items              | 128   |
-      | injected_files              | 5     |
-      | injected_file_content_bytes | 10240 |
-      | injected_file_path_bytes    | 255   |
-      | key_pairs                   | 100   |
-      | security_groups             | 10    |
-      | security_group_rules        | 20    |
-      | server_groups               | 10    |
-      | server_group_members        | 10    |
-      +-----------------------------+-------+
+   .. note::
+
+      This lists default quotas for all services and not just nova.
 
 #. Update a default value for a new project, for example:
 
    .. code-block:: console
 
-      $ openstack quota set --instances 15 default
+      $ openstack quota set --instances 15 --class default
 
 To view quota values for an existing project
 --------------------------------------------
@@ -96,25 +120,50 @@ To view quota values for an existing project
    .. code-block:: console
 
       $ openstack quota show PROJECT_NAME
+      +----------------------+----------------------------------+
+      | Field                | Value                            |
+      +----------------------+----------------------------------+
+      | backup-gigabytes     | 1000                             |
+      | backups              | 10                               |
+      | cores                | 32                               |
+      | fixed-ips            | -1                               |
+      | floating-ips         | 10                               |
+      | gigabytes            | 1000                             |
+      | health_monitors      | None                             |
+      | injected-file-size   | 10240                            |
+      | injected-files       | 5                                |
+      | injected-path-size   | 255                              |
+      | instances            | 10                               |
+      | key-pairs            | 100                              |
+      | l7_policies          | None                             |
+      | listeners            | None                             |
+      | load_balancers       | None                             |
+      | location             | None                             |
+      | name                 | None                             |
+      | networks             | 20                               |
+      | per-volume-gigabytes | -1                               |
+      | pools                | None                             |
+      | ports                | 60                               |
+      | project              | c8156b55ec3b486193e73d2974196993 |
+      | project_name         | project                          |
+      | properties           | 128                              |
+      | ram                  | 65536                            |
+      | rbac_policies        | 10                               |
+      | routers              | 10                               |
+      | secgroup-rules       | 50                               |
+      | secgroups            | 50                               |
+      | server-group-members | 10                               |
+      | server-groups        | 10                               |
+      | snapshots            | 10                               |
+      | subnet_pools         | -1                               |
+      | subnets              | 20                               |
+      | volumes              | 10                               |
+      +----------------------+----------------------------------+
 
-      +-----------------------------+-------+
-      | Quota                       | Limit |
-      +-----------------------------+-------+
-      | instances                   | 10    |
-      | cores                       | 20    |
-      | ram                         | 51200 |
-      | floating_ips                | 10    |
-      | fixed_ips                   | -1    |
-      | metadata_items              | 128   |
-      | injected_files              | 5     |
-      | injected_file_content_bytes | 10240 |
-      | injected_file_path_bytes    | 255   |
-      | key_pairs                   | 100   |
-      | security_groups             | 10    |
-      | security_group_rules        | 20    |
-      | server_groups               | 10    |
-      | server_group_members        | 10    |
-      +-----------------------------+-------+
+   .. note::
+
+      This lists quotas for all services and not just nova.
+
 
 To update quota values for an existing project
 ----------------------------------------------
@@ -127,34 +176,35 @@ To update quota values for an existing project
 
 #. Update a particular quota value.
 
+   To update quotas for a project:
+
    .. code-block:: console
 
-      $ openstack quota set --QUOTA_NAME QUOTA_VALUE PROJECT_OR_CLASS
+      $ openstack quota set --QUOTA_NAME QUOTA_VALUE PROJECT_NAME
+
+   To update quotas for a class:
+
+   .. code-block:: console
+
+      $ openstack quota set --class --QUOTA_NAME QUOTA_VALUE CLASS_NAME
+
+   .. note::
+
+      Only the ``default`` class is supported by nova.
 
    For example:
 
    .. code-block:: console
 
-      $ openstack quota set --floating-ips 20 PROJECT_OR_CLASS
+      $ openstack quota set --instances 50 PROJECT_NAME
       $ openstack quota show PROJECT_NAME
-      +-----------------------------+-------+
-      | Quota                       | Limit |
-      +-----------------------------+-------+
-      | instances                   | 10    |
-      | cores                       | 20    |
-      | ram                         | 51200 |
-      | floating_ips                | 20    |
-      | fixed_ips                   | -1    |
-      | metadata_items              | 128   |
-      | injected_files              | 5     |
-      | injected_file_content_bytes | 10240 |
-      | injected_file_path_bytes    | 255   |
-      | key_pairs                   | 100   |
-      | security_groups             | 10    |
-      | security_group_rules        | 20    |
-      | server_groups               | 10    |
-      | server_group_members        | 10    |
-      +-----------------------------+-------+
+      +----------------------+----------------------------------+
+      | Field                | Value                            |
+      +----------------------+----------------------------------+
+      | ...                  | ...                              |
+      | instances            | 50                               |
+      | ...                  | ...                              |
+      +----------------------+----------------------------------+
 
    .. note::
 
