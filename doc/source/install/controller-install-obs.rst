@@ -219,7 +219,7 @@ Install and configure components
 
         [DEFAULT]
         # ...
-        transport_url = rabbit://openstack:RABBIT_PASS@controller
+        transport_url = rabbit://openstack:RABBIT_PASS@controller:5672/
 
      Replace ``RABBIT_PASS`` with the password you chose for the ``openstack``
      account in ``RabbitMQ``.
@@ -372,12 +372,12 @@ Install and configure components
    .. code-block:: console
 
       # su -s /bin/sh -c "nova-manage cell_v2 list_cells" nova
-      +-------+--------------------------------------+
-      | Name  | UUID                                 |
-      +-------+--------------------------------------+
-      | cell1 | 109e1d4b-536a-40d0-83c6-5f121b82b650 |
-      | cell0 | 00000000-0000-0000-0000-000000000000 |
-      +-------+--------------------------------------+
+      +-------+--------------------------------------+----------------------------------------------------+--------------------------------------------------------------+----------+
+      |  Name |                 UUID                 |                   Transport URL                    |                     Database Connection                      | Disabled |
+      +-------+--------------------------------------+----------------------------------------------------+--------------------------------------------------------------+----------+
+      | cell0 | 00000000-0000-0000-0000-000000000000 |                       none:/                       | mysql+pymysql://nova:****@controller/nova_cell0?charset=utf8 |  False   |
+      | cell1 | f690f4fd-2bc5-4f15-8145-db561a7b9d3d | rabbit://openstack:****@controller:5672/nova_cell1 | mysql+pymysql://nova:****@controller/nova_cell1?charset=utf8 |  False   |
+      +-------+--------------------------------------+----------------------------------------------------+--------------------------------------------------------------+----------+
 
 Finalize installation
 ---------------------
