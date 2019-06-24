@@ -24,7 +24,7 @@ By default, the scheduler ``driver`` is configured as a filter scheduler, as
 described in the next section. In the default configuration, this scheduler
 considers hosts that meet all the following criteria:
 
-* Are in the requested availability zone (``AvailabilityZoneFilter``).
+* Are in the requested :term:`availability zone` (``AvailabilityZoneFilter``).
 
 * Can service the request (``ComputeFilter``).
 
@@ -52,13 +52,14 @@ target host. For information about instance evacuation, see
 Prefiltering
 ~~~~~~~~~~~~
 
-As of the Rocky release, the scheduling process includes a prefilter
-step to increase the efficiency of subsequent stages. These prefilters
-are largely optional, and serve to augment the request that is sent to
-placement to reduce the set of candidate compute hosts based on
-attributes that placement is able to answer for us ahead of time. In
-addition to the prefilters listed here, also see `Tenant Isolation
-with Placement`_ and `Availability Zones with Placement`_.
+As of the Rocky release, the scheduling process includes a prefilter step to
+increase the efficiency of subsequent stages. These prefilters are largely
+optional, and serve to augment the request that is sent to placement to reduce
+the set of candidate compute hosts based on attributes that placement is able
+to answer for us ahead of time. In addition to the prefilters listed here, also
+see :ref:`tenant-isolation-with-placement` and
+:ref:`availability-zones-with-placement`.
+
 
 Compute Image Type Support
 --------------------------
@@ -157,6 +158,8 @@ Compute filters
 
 The following sections describe the available compute filters.
 
+.. _AggregateCoreFilter:
+
 AggregateCoreFilter
 -------------------
 
@@ -174,13 +177,20 @@ AggregateCoreFilter
 
 .. _`automatically mirrors`: https://specs.openstack.org/openstack/nova-specs/specs/rocky/implemented/placement-mirror-host-aggregates.html
 
-Filters host by CPU core numbers with a per-aggregate ``cpu_allocation_ratio``
+Filters host by CPU core count with a per-aggregate ``cpu_allocation_ratio``
 value. If the per-aggregate value is not found, the value falls back to the
 global setting.  If the host is in more than one aggregate and more than one
-value is found, the minimum value will be used.  For information about how to
-use this filter, see :ref:`host-aggregates`.
+value is found, the minimum value will be used.
 
-Note the ``cpu_allocation_ratio`` :ref:`bug 1804125 <bug-1804125>` restriction.
+Refer to :doc:`/admin/aggregates` for more information.
+
+.. important::
+
+     Note the ``cpu_allocation_ratio`` :ref:`bug 1804125 <bug-1804125>`
+     restriction.
+
+
+.. _AggregateDiskFilter:
 
 AggregateDiskFilter
 -------------------
@@ -200,13 +210,17 @@ AggregateDiskFilter
 Filters host by disk allocation with a per-aggregate ``disk_allocation_ratio``
 value. If the per-aggregate value is not found, the value falls back to the
 global setting.  If the host is in more than one aggregate and more than one
-value is found, the minimum value will be used.  For information about how to
-use this filter, see :ref:`host-aggregates`.
+value is found, the minimum value will be used.
 
-Note the ``disk_allocation_ratio`` :ref:`bug 1804125 <bug-1804125>`
-restriction.
+Refer to :doc:`/admin/aggregates` for more information.
 
-.. _`AggregateImagePropertiesIsolation`:
+.. important::
+
+    Note the ``disk_allocation_ratio`` :ref:`bug 1804125 <bug-1804125>`
+    restriction.
+
+
+.. _AggregateImagePropertiesIsolation:
 
 AggregateImagePropertiesIsolation
 ---------------------------------
@@ -265,6 +279,7 @@ following options in the ``nova.conf`` file:
 
 .. code-block:: ini
 
+   [scheduler]
    # Considers only keys matching the given namespace (string).
    # Multiple values can be given, as a comma-separated list.
    aggregate_image_properties_isolation_namespace = <None>
@@ -279,6 +294,9 @@ following options in the ``nova.conf`` file:
    which are addressed in placement :doc:`/reference/isolate-aggregates`
    request filter.
 
+Refer to :doc:`/admin/aggregates` for more information.
+
+
 .. _AggregateInstanceExtraSpecsFilter:
 
 AggregateInstanceExtraSpecsFilter
@@ -287,11 +305,15 @@ AggregateInstanceExtraSpecsFilter
 Matches properties defined in extra specs for an instance type against
 admin-defined properties on a host aggregate.  Works with specifications that
 are scoped with ``aggregate_instance_extra_specs``.  Multiple values can be
-given, as a comma-separated list.  For backward compatibility, also works with
+given, as a comma-separated list. For backward compatibility, also works with
 non-scoped specifications; this action is highly discouraged because it
 conflicts with :ref:`ComputeCapabilitiesFilter` filter when you enable both
-filters.  For information about how to use this filter, see the
-:ref:`host-aggregates` section.
+filters.
+
+Refer to :doc:`/admin/aggregates` for more information.
+
+
+.. _AggregateIoOpsFilter:
 
 AggregateIoOpsFilter
 --------------------
@@ -299,14 +321,18 @@ AggregateIoOpsFilter
 Filters host by disk allocation with a per-aggregate ``max_io_ops_per_host``
 value. If the per-aggregate value is not found, the value falls back to the
 global setting.  If the host is in more than one aggregate and more than one
-value is found, the minimum value will be used.  For information about how to
-use this filter, see :ref:`host-aggregates`. See also :ref:`IoOpsFilter`.
+value is found, the minimum value will be used.
+
+Refer to :doc:`/admin/aggregates` and :ref:`IoOpsFilter` for more information.
+
+
+.. _AggregateMultiTenancyIsolation:
 
 AggregateMultiTenancyIsolation
 ------------------------------
 
-Ensures hosts in tenant-isolated :ref:`host-aggregates` will only be available
-to a specified set of tenants. If a host is in an aggregate that has the
+Ensures hosts in tenant-isolated host aggregates will only be available to a
+specified set of tenants. If a host is in an aggregate that has the
 ``filter_tenant_id`` metadata key, the host can build instances from only that
 tenant or comma-separated list of tenants. A host can be in different
 aggregates. If a host does not belong to an aggregate with the metadata key,
@@ -320,12 +346,16 @@ scheduling. A server create request from another tenant Y will result in only
 HostA being a scheduling candidate since HostA is not part of the
 tenant-isolated aggregate.
 
-.. note:: There is a
-    `known limitation <https://bugs.launchpad.net/nova/+bug/1802111>`_ with
-    the number of tenants that can be isolated per aggregate using this
-    filter. This limitation does not exist, however, for the
-    `Tenant Isolation with Placement`_ filtering capability added in the
-    18.0.0 Rocky release.
+.. note::
+
+    There is a `known limitation
+    <https://bugs.launchpad.net/nova/+bug/1802111>`_ with the number of tenants
+    that can be isolated per aggregate using this filter. This limitation does
+    not exist, however, for the :ref:`tenant-isolation-with-placement`
+    filtering capability added in the 18.0.0 Rocky release.
+
+
+.. _AggregateNumInstancesFilter:
 
 AggregateNumInstancesFilter
 ---------------------------
@@ -334,8 +364,13 @@ Filters host by number of instances with a per-aggregate
 ``max_instances_per_host`` value. If the per-aggregate value is not found, the
 value falls back to the global setting.  If the host is in more than one
 aggregate and thus more than one value is found, the minimum value will be
-used.  For information about how to use this filter, see
-:ref:`host-aggregates`.  See also :ref:`NumInstancesFilter`.
+used.
+
+Refer to :doc:`/admin/aggregates` and :ref:`NumInstancesFilter` for more
+information.
+
+
+.. _AggregateRamFilter:
 
 AggregateRamFilter
 ------------------
@@ -356,10 +391,17 @@ Filters host by RAM allocation of instances with a per-aggregate
 ``ram_allocation_ratio`` value. If the per-aggregate value is not found, the
 value falls back to the global setting.  If the host is in more than one
 aggregate and thus more than one value is found, the minimum value will be
-used.  For information about how to use this filter, see
-:ref:`host-aggregates`.
+used.
 
-Note the ``ram_allocation_ratio`` :ref:`bug 1804125 <bug-1804125>` restriction.
+Refer to :doc:`/admin/aggregates` for more information.
+
+.. important::
+
+    Note the ``ram_allocation_ratio`` :ref:`bug 1804125 <bug-1804125>`
+    restriction.
+
+
+.. _AggregateTypeAffinityFilter:
 
 AggregateTypeAffinityFilter
 ---------------------------
@@ -369,8 +411,10 @@ This filter passes hosts if no ``instance_type`` key is set or the
 ``instance_type`` requested.  The value of the ``instance_type`` metadata entry
 is a string that may contain either a single ``instance_type`` name or a
 comma-separated list of ``instance_type`` names, such as ``m1.nano`` or
-``m1.nano,m1.small``.  For information about how to use this filter, see
-:ref:`host-aggregates`.
+``m1.nano,m1.small``.
+
+Refer to :doc:`/admin/aggregates` for more information.
+
 
 AllHostsFilter
 --------------
@@ -384,6 +428,8 @@ AvailabilityZoneFilter
 
 Filters hosts by availability zone. You must enable this filter for the
 scheduler to respect availability zones in requests.
+
+Refer to :doc:`/admin/availability-zones` for more information.
 
 .. _ComputeCapabilitiesFilter:
 
@@ -917,386 +963,6 @@ file.  For example to configure metric1 with ratio1 and metric2 with ratio2:
 .. code-block:: ini
 
    weight_setting = "metric1=ratio1, metric2=ratio2"
-
-.. _host-aggregates:
-
-Host aggregates and availability zones
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Host aggregates are a mechanism for partitioning hosts in an OpenStack cloud,
-or a region of an OpenStack cloud, based on arbitrary characteristics.
-Examples where an administrator may want to do this include where a group of
-hosts have additional hardware or performance characteristics.
-
-Host aggregates are not explicitly exposed to users.  Instead administrators
-map flavors to host aggregates.  Administrators do this by setting metadata on
-a host aggregate, and matching flavor extra specifications.  The scheduler then
-endeavors to match user requests for instance of the given flavor to a host
-aggregate with the same key-value pair in its metadata.  Compute nodes can be
-in more than one host aggregate. Weight multipliers can be controlled on a
-per-aggregate basis by setting the desired ``xxx_weight_multiplier`` aggregate
-metadata.
-Administrators are able to optionally expose a host aggregate as an
-availability zone. Availability zones are different from host aggregates in
-that they are explicitly exposed to the user, and hosts can only be in a single
-availability zone. Administrators can configure a default availability zone
-where instances will be scheduled when the user fails to specify one.
-
-Command-line interface
-----------------------
-
-The :command:`nova` command-line client supports the following
-aggregate-related commands.
-
-nova aggregate-list
-  Print a list of all aggregates.
-
-nova aggregate-create <name> [<availability-zone>]
-  Create a new aggregate named ``<name>``, and optionally in availability zone
-  ``[<availability-zone>]`` if specified. The command returns the ID of the
-  newly created aggregate. Hosts can be made available to multiple host
-  aggregates. Be careful when adding a host to an additional host aggregate
-  when the host is also in an availability zone. Pay attention when using the
-  :command:`nova aggregate-set-metadata` and :command:`nova aggregate-update`
-  commands to avoid user confusion when they boot instances in different
-  availability zones.  An error occurs if you cannot add a particular host to
-  an aggregate zone for which it is not intended.
-
-nova aggregate-delete <aggregate>
-  Delete an aggregate with its ``<id>`` or ``<name>``.
-
-nova aggregate-show <aggregate>
-  Show details of the aggregate with its ``<id>`` or ``<name>``.
-
-nova aggregate-add-host <aggregate> <host>
-  Add host with name ``<host>`` to aggregate with its ``<id>`` or ``<name>``.
-
-nova aggregate-remove-host <aggregate> <host>
-  Remove the host with name ``<host>`` from the aggregate with its ``<id>``
-  or ``<name>``.
-
-nova aggregate-set-metadata <aggregate> <key=value> [<key=value> ...]
-  Add or update metadata (key-value pairs) associated with the aggregate with
-  its ``<id>`` or ``<name>``.
-
-nova aggregate-update [--name <name>] [--availability-zone <availability-zone>] <aggregate>
-  Update the name and/or availability zone for the aggregate.
-
-nova host-list
-  List all hosts by service. It has been deprecated since microversion 2.43.
-  Use :command:`nova hypervisor-list` instead.
-
-nova hypervisor-list [--matching <hostname>] [--marker <marker>] [--limit <limit>]
-  List hypervisors.
-
-nova host-update [--status <enable|disable>] [--maintenance <enable|disable>] <hostname>
-  Put/resume host into/from maintenance. It has been deprecated since
-  microversion 2.43. To enable or disable a service,
-  use :command:`nova service-enable` or :command:`nova service-disable` instead.
-
-nova service-enable <id>
-  Enable the service.
-
-nova service-disable [--reason <reason>] <id>
-  Disable the service.
-
-.. note::
-
-   Only administrators can access these commands. If you try to use these
-   commands and the user name and tenant that you use to access the Compute
-   service do not have the ``admin`` role or the appropriate privileges, these
-   errors occur:
-
-   .. code-block:: console
-
-      ERROR: Policy doesn't allow compute_extension:aggregates to be performed. (HTTP 403) (Request-ID: req-299fbff6-6729-4cef-93b2-e7e1f96b4864)
-
-   .. code-block:: console
-
-      ERROR: Policy doesn't allow compute_extension:hosts to be performed. (HTTP 403) (Request-ID: req-ef2400f6-6776-4ea3-b6f1-7704085c27d1)
-
-.. _config-sch-for-aggs:
-
-Configure scheduler to support host aggregates
-----------------------------------------------
-
-One common use case for host aggregates is when you want to support scheduling
-instances to a subset of compute hosts because they have a specific capability.
-For example, you may want to allow users to request compute hosts that have SSD
-drives if they need access to faster disk I/O, or access to compute hosts that
-have GPU cards to take advantage of GPU-accelerated code.
-
-To configure the scheduler to support host aggregates, the
-:oslo.config:option:`filter_scheduler.enabled_filters` configuration option must
-contain the ``AggregateInstanceExtraSpecsFilter`` in addition to the other filters
-used by the scheduler. Add the following line to ``/etc/nova/nova.conf`` on the
-host that runs the ``nova-scheduler`` service to enable host aggregates filtering,
-as well as the other filters that are typically enabled:
-
-.. code-block:: ini
-
-   [filter_scheduler]
-   enabled_filters=...,AggregateInstanceExtraSpecsFilter
-
-Example: Specify compute hosts with SSDs
-----------------------------------------
-
-This example configures the Compute service to enable users to request nodes
-that have solid-state drives (SSDs). You create a ``fast-io`` host aggregate in
-the ``nova`` availability zone and you add the ``ssd=true`` key-value pair to
-the aggregate. Then, you add the ``node1``, and ``node2`` compute nodes to it.
-
-.. code-block:: console
-
-   $ openstack aggregate create --zone nova fast-io
-   +-------------------+----------------------------+
-   | Field             | Value                      |
-   +-------------------+----------------------------+
-   | availability_zone | nova                       |
-   | created_at        | 2016-12-22T07:31:13.013466 |
-   | deleted           | False                      |
-   | deleted_at        | None                       |
-   | id                | 1                          |
-   | name              | fast-io                    |
-   | updated_at        | None                       |
-   +-------------------+----------------------------+
-
-   $ openstack aggregate set --property ssd=true 1
-   +-------------------+----------------------------+
-   | Field             | Value                      |
-   +-------------------+----------------------------+
-   | availability_zone | nova                       |
-   | created_at        | 2016-12-22T07:31:13.000000 |
-   | deleted           | False                      |
-   | deleted_at        | None                       |
-   | hosts             | []                         |
-   | id                | 1                          |
-   | name              | fast-io                    |
-   | properties        | ssd='true'                 |
-   | updated_at        | None                       |
-   +-------------------+----------------------------+
-
-   $ openstack aggregate add host 1 node1
-   +-------------------+--------------------------------------------------+
-   | Field             | Value                                            |
-   +-------------------+--------------------------------------------------+
-   | availability_zone | nova                                             |
-   | created_at        | 2016-12-22T07:31:13.000000                       |
-   | deleted           | False                                            |
-   | deleted_at        | None                                             |
-   | hosts             | [u'node1']                                       |
-   | id                | 1                                                |
-   | metadata          | {u'ssd': u'true', u'availability_zone': u'nova'} |
-   | name              | fast-io                                          |
-   | updated_at        | None                                             |
-   +-------------------+--------------------------------------------------+
-
-   $ openstack aggregate add host 1 node2
-   +-------------------+--------------------------------------------------+
-   | Field             | Value                                            |
-   +-------------------+--------------------------------------------------+
-   | availability_zone | nova                                             |
-   | created_at        | 2016-12-22T07:31:13.000000                       |
-   | deleted           | False                                            |
-   | deleted_at        | None                                             |
-   | hosts             | [u'node1', u'node2']                             |
-   | id                | 1                                                |
-   | metadata          | {u'ssd': u'true', u'availability_zone': u'nova'} |
-   | name              | fast-io                                          |
-   | updated_at        | None                                             |
-   +-------------------+--------------------------------------------------+
-
-Use the :command:`openstack flavor create` command to create the ``ssd.large``
-flavor called with an ID of 6, 8 GB of RAM, 80 GB root disk, and 4 vCPUs.
-
-.. code-block:: console
-
-   $ openstack flavor create --id 6 --ram 8192 --disk 80 --vcpus 4 ssd.large
-   +----------------------------+-----------+
-   | Field                      | Value     |
-   +----------------------------+-----------+
-   | OS-FLV-DISABLED:disabled   | False     |
-   | OS-FLV-EXT-DATA:ephemeral  | 0         |
-   | disk                       | 80        |
-   | id                         | 6         |
-   | name                       | ssd.large |
-   | os-flavor-access:is_public | True      |
-   | ram                        | 8192      |
-   | rxtx_factor                | 1.0       |
-   | swap                       |           |
-   | vcpus                      | 4         |
-   +----------------------------+-----------+
-
-Once the flavor is created, specify one or more key-value pairs that match the
-key-value pairs on the host aggregates with scope
-``aggregate_instance_extra_specs``. In this case, that is the
-``aggregate_instance_extra_specs:ssd=true`` key-value pair.  Setting a
-key-value pair on a flavor is done using the :command:`openstack flavor set`
-command.
-
-.. code-block:: console
-
-   $ openstack flavor set --property aggregate_instance_extra_specs:ssd=true ssd.large
-
-Once it is set, you should see the ``extra_specs`` property of the
-``ssd.large`` flavor populated with a key of ``ssd`` and a corresponding value
-of ``true``.
-
-.. code-block:: console
-
-   $ openstack flavor show ssd.large
-   +----------------------------+-------------------------------------------+
-   | Field                      | Value                                     |
-   +----------------------------+-------------------------------------------+
-   | OS-FLV-DISABLED:disabled   | False                                     |
-   | OS-FLV-EXT-DATA:ephemeral  | 0                                         |
-   | disk                       | 80                                        |
-   | id                         | 6                                         |
-   | name                       | ssd.large                                 |
-   | os-flavor-access:is_public | True                                      |
-   | properties                 | aggregate_instance_extra_specs:ssd='true' |
-   | ram                        | 8192                                      |
-   | rxtx_factor                | 1.0                                       |
-   | swap                       |                                           |
-   | vcpus                      | 4                                         |
-   +----------------------------+-------------------------------------------+
-
-Now, when a user requests an instance with the ``ssd.large`` flavor,
-the scheduler only considers hosts with the ``ssd=true`` key-value pair.
-In this example, these are ``node1`` and ``node2``.
-
-Aggregates in Placement
------------------------
-
-Aggregates also exist in placement and are not the same thing as host
-aggregates in nova. These aggregates are defined (purely) as groupings
-of related resource providers. Since compute nodes in nova are
-represented in placement as resource providers, they can be added to a
-placement aggregate as well. For example, get the uuid of the compute
-node using :command:`openstack hypervisor list` and add it to an
-aggregate in placement using :command:`openstack resource provider aggregate
-set`.
-
-.. code-block:: console
-
-  $ openstack --os-compute-api-version=2.53 hypervisor list
-  +--------------------------------------+---------------------+-----------------+-----------------+-------+
-  | ID                                   | Hypervisor Hostname | Hypervisor Type | Host IP         | State |
-  +--------------------------------------+---------------------+-----------------+-----------------+-------+
-  | 815a5634-86fb-4e1e-8824-8a631fee3e06 | node1               | QEMU            | 192.168.1.123   | up    |
-  +--------------------------------------+---------------------+-----------------+-----------------+-------+
-
-  $ openstack --os-placement-api-version=1.2 resource provider aggregate set --aggregate df4c74f3-d2c4-4991-b461-f1a678e1d161 815a5634-86fb-4e1e-8824-8a631fee3e06
-
-Some scheduling filter operations can be performed by placement for
-increased speed and efficiency.
-
-.. note::
-
-    The nova-api service attempts (as of nova 18.0.0) to automatically mirror
-    the association of a compute host with an aggregate when an administrator
-    adds or removes a host to/from a nova host aggregate. This should alleviate
-    the need to manually create those association records in the placement API
-    using the ``openstack resource provider aggregate set`` CLI invocation.
-
-Tenant Isolation with Placement
--------------------------------
-
-In order to use placement to isolate tenants, there must be placement
-aggregates that match the membership and UUID of nova host aggregates
-that you want to use for isolation. The same key pattern in aggregate
-metadata used by the `AggregateMultiTenancyIsolation`_ filter controls
-this function, and is enabled by setting
-`[scheduler]/limit_tenants_to_placement_aggregate=True`.
-
-.. code-block:: console
-
-  $ openstack --os-compute-api-version=2.53 aggregate create myagg
-  +-------------------+--------------------------------------+
-  | Field             | Value                                |
-  +-------------------+--------------------------------------+
-  | availability_zone | None                                 |
-  | created_at        | 2018-03-29T16:22:23.175884           |
-  | deleted           | False                                |
-  | deleted_at        | None                                 |
-  | id                | 4                                    |
-  | name              | myagg                                |
-  | updated_at        | None                                 |
-  | uuid              | 019e2189-31b3-49e1-aff2-b220ebd91c24 |
-  +-------------------+--------------------------------------+
-
-  $ openstack --os-compute-api-version=2.53 aggregate add host myagg node1
-  +-------------------+--------------------------------------+
-  | Field             | Value                                |
-  +-------------------+--------------------------------------+
-  | availability_zone | None                                 |
-  | created_at        | 2018-03-29T16:22:23.175884           |
-  | deleted           | False                                |
-  | deleted_at        | None                                 |
-  | hosts             | [u'node1']                           |
-  | id                | 4                                    |
-  | name              | myagg                                |
-  | updated_at        | None                                 |
-  | uuid              | 019e2189-31b3-49e1-aff2-b220ebd91c24 |
-  +-------------------+--------------------------------------+
-
-  $ openstack project list -f value | grep 'demo'
-  9691591f913949818a514f95286a6b90 demo
-
-  $ openstack aggregate set --property filter_tenant_id=9691591f913949818a514f95286a6b90 myagg
-
-  $ openstack --os-placement-api-version=1.2 resource provider aggregate set --aggregate 019e2189-31b3-49e1-aff2-b220ebd91c24 815a5634-86fb-4e1e-8824-8a631fee3e06
-
-Note that the ``filter_tenant_id`` metadata key can be optionally suffixed
-with any string for multiple tenants, such as ``filter_tenant_id3=$tenantid``.
-
-Availability Zones with Placement
----------------------------------
-
-In order to use placement to honor availability zone requests, there must be
-placement aggregates that match the membership and UUID of nova host aggregates
-that you assign as availability zones. The same key in aggregate metadata used
-by the `AvailabilityZoneFilter` filter controls this function, and is enabled by
-setting `[scheduler]/query_placement_for_availability_zone=True`.
-
-.. code-block:: console
-
-  $ openstack --os-compute-api-version=2.53 aggregate create myaz
-  +-------------------+--------------------------------------+
-  | Field             | Value                                |
-  +-------------------+--------------------------------------+
-  | availability_zone | None                                 |
-  | created_at        | 2018-03-29T16:22:23.175884           |
-  | deleted           | False                                |
-  | deleted_at        | None                                 |
-  | id                | 4                                    |
-  | name              | myaz                                 |
-  | updated_at        | None                                 |
-  | uuid              | 019e2189-31b3-49e1-aff2-b220ebd91c24 |
-  +-------------------+--------------------------------------+
-
-  $ openstack --os-compute-api-version=2.53 aggregate add host myaz node1
-  +-------------------+--------------------------------------+
-  | Field             | Value                                |
-  +-------------------+--------------------------------------+
-  | availability_zone | None                                 |
-  | created_at        | 2018-03-29T16:22:23.175884           |
-  | deleted           | False                                |
-  | deleted_at        | None                                 |
-  | hosts             | [u'node1']                           |
-  | id                | 4                                    |
-  | name              | myagg                                |
-  | updated_at        | None                                 |
-  | uuid              | 019e2189-31b3-49e1-aff2-b220ebd91c24 |
-  +-------------------+--------------------------------------+
-
-  $ openstack aggregate set --property availability_zone=az002 myaz
-
-  $ openstack --os-placement-api-version=1.2 resource provider aggregate set --aggregate 019e2189-31b3-49e1-aff2-b220ebd91c24 815a5634-86fb-4e1e-8824-8a631fee3e06
-
-With the above configuration, the `AvailabilityZoneFilter` filter can be disabled
-in `[filter_scheduler]/enabled_filters` while retaining proper behavior (and doing
-so with the higher performance of placement's implementation).
 
 XenServer hypervisor pools to support live migration
 ----------------------------------------------------

@@ -72,8 +72,11 @@ Once you are running nova, the following information is extremely useful.
 
 * :doc:`Quotas </user/quotas>`: Managing project quotas in nova.
 
-* :doc:`Aggregates </user/aggregates>`: Aggregates are a useful way of grouping
-  hosts together for scheduling purposes.
+* :doc:`Availablity Zones </admin/availability-zones>`: Availability Zones are
+  an end-user visible logical abstraction for partitioning a cloud without
+  knowing the physical infrastructure. They can be used to partition a cloud on
+  arbitrary factors, such as location (country, datacenter, rack), network
+  layout and/or power source.
 
 * :doc:`Filter Scheduler </user/filter-scheduler>`: How the filter scheduler is
   configured, and how that will impact where compute instances land in your

@@ -152,7 +152,7 @@ Once you are running nova, the following information is extremely useful.
 * :doc:`Upgrades </user/upgrade>`: How nova is designed to be upgraded for minimal
   service impact, and the order you should do them in.
 * :doc:`Quotas </user/quotas>`: Managing project quotas in nova.
-* :doc:`Aggregates </user/aggregates>`: Aggregates are a useful way of grouping
+* :doc:`Aggregates </admin/aggregates>`: Aggregates are a useful way of grouping
   hosts together for scheduling purposes.
 * :doc:`Filter Scheduler </user/filter-scheduler>`: How the filter scheduler is
   configured, and how that will impact where compute instances land in your
@@ -225,6 +225,7 @@ looking parts of our architecture. These are collected below.
    contributor/ptl-guide
    reference/api-microversion-history.rst
    reference/conductor
+   reference/glossary
    reference/gmr
    reference/i18n
    reference/live-migration
@@ -242,8 +243,8 @@ looking parts of our architecture. These are collected below.
    reference/scheduler-hints-vs-flavor-extra-specs
    reference/isolate-aggregates
    user/index
-   user/aggregates
    user/architecture
+   user/availability-zones
    user/block-device-mapping
    user/cells
    user/cellsv2-layout

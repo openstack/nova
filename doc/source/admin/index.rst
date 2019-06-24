@@ -20,6 +20,7 @@ operating system, and exposes functionality over a web-based API.
 
    admin-password-injection.rst
    adv-config.rst
+   aggregates
    arch.rst
    availability-zones.rst
    cells.rst

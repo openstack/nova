@@ -27,7 +27,7 @@ Extra Specs
 
 In general flavor extra specs are specific to the cloud and how it is
 organized for capabilities, and should be abstracted from the end user.
-Extra specs are tied to :doc:`host aggregates </user/aggregates>` and a lot
+Extra specs are tied to :doc:`host aggregates </admin/aggregates>` and a lot
 of them also define how a guest is created in the hypervisor, for example
 what the watchdog action is for a VM. Extra specs are also generally
 interchangeable with `image properties`_ when it comes to VM behavior, like
@@ -104,7 +104,7 @@ different extra specs mean as they are just a key/value pair. There is some
 documentation for some "standard" extra specs though [3]_. However, that is
 not an exhaustive list and it does not include anything that different
 deployments would define for things like linking a flavor to a set of
-host aggregates, for example, when creating flavors
+:doc:`host aggregates </admin/aggregates>`, for example, when creating flavors
 for baremetal instances, or what the chosen
 :doc:`hypervisor driver </admin/configuration/hypervisors>` might support for
 flavor extra specs.
