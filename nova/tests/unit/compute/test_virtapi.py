@@ -15,8 +15,6 @@
 import mock
 
 from nova.compute import manager as compute_manager
-from nova import context
-from nova.db import api as db
 from nova import exception
 from nova import objects
 from nova import test
@@ -30,7 +28,6 @@ class VirtAPIBaseTest(test.NoDBTestCase, test.APICoverage):
 
     def setUp(self):
         super(VirtAPIBaseTest, self).setUp()
-        self.context = context.RequestContext('fake-user', 'fake-project')
         self.set_up_virtapi()
 
     def set_up_virtapi(self):
@@ -38,7 +35,7 @@ class VirtAPIBaseTest(test.NoDBTestCase, test.APICoverage):
 
     def assertExpected(self, method, *args, **kwargs):
         self.assertRaises(NotImplementedError,
-                          getattr(self.virtapi, method), self.context,
+                          getattr(self.virtapi, method),
                           *args, **kwargs)
 
     def test_wait_for_instance_event(self):
@@ -59,24 +56,8 @@ class FakeVirtAPITest(VirtAPIBaseTest):
             with self.virtapi.wait_for_instance_event(*args, **kwargs):
                 run = True
             self.assertTrue(run)
-            return
-
-        if method in ('aggregate_metadata_add', 'aggregate_metadata_delete',
-                      'security_group_rule_get_by_security_group'):
-            # NOTE(danms): FakeVirtAPI will convert the first argument to
-            # argument['id'], so expect that in the actual db call
-            e_args = tuple([args[0]['id']] + list(args[1:]))
-        elif method == 'security_group_get_by_instance':
-            e_args = tuple([args[0]['uuid']] + list(args[1:]))
         else:
-            e_args = args
-
-        with mock.patch.object(db, method,
-                               return_value='it worked') as mock_call:
-            result = getattr(self.virtapi, method)(self.context, *args,
-                                                   **kwargs)
-            self.assertEqual('it worked', result)
-            mock_call.assert_called_once_with(self.context, *e_args, **kwargs)
+            self.fail("Unhandled FakeVirtAPI method: %s" % method)
 
 
 class FakeCompute(object):
@@ -111,14 +92,6 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
     def set_up_virtapi(self):
         self.compute = FakeCompute()
         self.virtapi = compute_manager.ComputeVirtAPI(self.compute)
-
-    def assertExpected(self, method, *args, **kwargs):
-        with mock.patch.object(self.compute.conductor_api,
-                               method, return_value='it worked') as mock_call:
-            result = getattr(self.virtapi, method)(self.context, *args,
-                                                   **kwargs)
-            self.assertEqual('it worked', result)
-            mock_call.assert_called_once_with(self.context, *args, **kwargs)
 
     def test_wait_for_instance_event(self):
         and_i_ran = ''
