@@ -1,0 +1,12 @@
+---
+other:
+  - |
+    A new ``[libvirt]/rbd_connect_timeout`` configuration option has been
+    introduced to limit the time spent waiting when connecting to a RBD cluster
+    via the RADOS API. This timeout currently defaults to 5 seconds.
+
+    This aims to address issues reported in `bug 1834048`_ where failures to
+    initially connect to a RBD cluster left the nova-compute service inoperable
+    due to constant RPC timeouts being hit.
+
+    .. _bug 1834048: https://bugs.launchpad.net/nova/+bug/1834048

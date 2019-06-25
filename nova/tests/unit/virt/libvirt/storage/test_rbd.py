@@ -83,7 +83,9 @@ class RbdTestCase(test.NoDBTestCase):
         self.mock_rbd.ImageHasSnapshots = FakeException
 
         self.rbd_pool = 'rbd'
-        self.driver = rbd_utils.RBDDriver(self.rbd_pool, None, None)
+        self.rbd_connect_timeout = 5
+        self.driver = rbd_utils.RBDDriver(self.rbd_pool, None, None,
+                                          self.rbd_connect_timeout)
 
         self.volume_name = u'volume-00000001'
         self.snap_name = u'test-snap'
@@ -276,7 +278,8 @@ class RbdTestCase(test.NoDBTestCase):
 
     def test_connect_to_rados_default(self):
         ret = self.driver._connect_to_rados()
-        self.assertTrue(self.mock_rados.Rados.connect.called)
+        self.mock_rados.Rados.connect.assert_called_once_with(
+                timeout=self.rbd_connect_timeout)
         self.assertTrue(self.mock_rados.Rados.open_ioctx.called)
         self.assertIsInstance(ret[0], self.mock_rados.Rados)
         self.assertEqual(self.mock_rados.Rados.ioctx, ret[1])
@@ -284,7 +287,8 @@ class RbdTestCase(test.NoDBTestCase):
 
     def test_connect_to_rados_different_pool(self):
         ret = self.driver._connect_to_rados('alt_pool')
-        self.assertTrue(self.mock_rados.Rados.connect.called)
+        self.mock_rados.Rados.connect.assert_called_once_with(
+                timeout=self.rbd_connect_timeout)
         self.assertTrue(self.mock_rados.Rados.open_ioctx.called)
         self.assertIsInstance(ret[0], self.mock_rados.Rados)
         self.assertEqual(self.mock_rados.Rados.ioctx, ret[1])

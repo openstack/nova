@@ -1069,6 +1069,11 @@ the Ceph RBD server.
                help="""
 The libvirt UUID of the secret for the rbd_user volumes.
 """),
+    cfg.IntOpt('rbd_connect_timeout',
+               default=5,
+               help="""
+The RADOS client timeout in seconds when initially connecting to the cluster.
+"""),
 ]
 
 libvirt_volume_nfs_opts = [
