@@ -11,6 +11,9 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
+import copy
+
 from nova.api.validation import parameter_types
 
 create = {
@@ -88,7 +91,10 @@ index_query = {
     },
     # NOTE(gmann): This is kept True to keep backward compatibility.
     # As of now Schema validation stripped out the additional parameters and
-    # does not raise 400. In the future, we may block the additional parameters
-    # by bump in Microversion.
+    # does not raise 400. In microversion 2.75, we have blocked the additional
+    # parameters.
     'additionalProperties': True
 }
+
+index_query_275 = copy.deepcopy(index_query)
+index_query_275['additionalProperties'] = False

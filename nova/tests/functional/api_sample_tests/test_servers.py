@@ -623,6 +623,29 @@ class ServersUpdateSampleJson247Test(ServersUpdateSampleJsonTest):
     scenarios = [('v2_47', {'api_major_version': 'v2.1'})]
 
 
+class ServersSampleJson275Test(ServersUpdateSampleJsonTest):
+    microversion = '2.75'
+    scenarios = [('v2_75', {'api_major_version': 'v2.1'})]
+
+    def test_server_rebuild(self):
+        uuid = self._post_server()
+        image = fake.get_valid_image_id()
+        params = {
+            'uuid': image,
+            'name': 'foobar',
+            'pass': 'seekr3t',
+            'hostid': '[a-f0-9]+',
+            'access_ip_v4': '1.2.3.4',
+            'access_ip_v6': '80fe::',
+        }
+
+        resp = self._do_post('servers/%s/action' % uuid,
+                             'server-action-rebuild', params)
+        subs = params.copy()
+        del subs['uuid']
+        self._verify_response('server-action-rebuild-resp', subs, resp, 202)
+
+
 class ServerSortKeysJsonTests(ServersSampleBase):
     sample_dir = 'servers-sort'
 

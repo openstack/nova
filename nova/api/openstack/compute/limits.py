@@ -66,7 +66,8 @@ class LimitsController(wsgi.Controller):
 
     @wsgi.Controller.api_version('2.57')  # noqa
     @wsgi.expected_errors(())
-    @validation.query_schema(limits.limits_query_schema)
+    @validation.query_schema(limits.limits_query_schema_275, '2.75')
+    @validation.query_schema(limits.limits_query_schema, '2.57', '2.74')
     def index(self, req):
         return self._index(req, FILTERED_LIMITS_2_57, max_image_meta=False)
 

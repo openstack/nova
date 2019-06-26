@@ -105,3 +105,10 @@ show_query_schema_v20 = index_query_schema_v20
 show_query_schema_v210 = index_query_schema_v210
 delete_query_schema_v20 = index_query_schema_v20
 delete_query_schema_v210 = index_query_schema_v210
+
+index_query_schema_v275 = copy.deepcopy(index_query_schema_v235)
+index_query_schema_v275['additionalProperties'] = False
+show_query_schema_v275 = copy.deepcopy(show_query_schema_v210)
+show_query_schema_v275['additionalProperties'] = False
+delete_query_schema_v275 = copy.deepcopy(delete_query_schema_v210)
+delete_query_schema_v275['additionalProperties'] = False

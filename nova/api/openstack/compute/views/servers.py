@@ -88,13 +88,15 @@ class ViewBuilder(common.ViewBuilder):
                     'AUTO' if instance.get('auto_disk_config') else 'MANUAL'),
             },
         }
-        self._add_security_grps(request, [server["server"]], [instance])
+        self._add_security_grps(request, [server["server"]], [instance],
+                                create_request=True)
 
         return server
 
     def basic(self, request, instance, show_extra_specs=False,
               show_extended_attr=None, show_host_status=None,
-              show_sec_grp=None, bdms=None, cell_down_support=False):
+              show_sec_grp=None, bdms=None, cell_down_support=False,
+              show_user_data=False):
         """Generic, non-detailed view of an instance."""
         if cell_down_support and 'display_name' not in instance:
             # NOTE(tssurya): If the microversion is >= 2.69, this boolean will
@@ -187,7 +189,8 @@ class ViewBuilder(common.ViewBuilder):
              show_extended_attr=None, show_host_status=None,
              show_keypair=True, show_srv_usg=True, show_sec_grp=True,
              show_extended_status=True, show_extended_volumes=True,
-             bdms=None, cell_down_support=False, show_server_groups=False):
+             bdms=None, cell_down_support=False, show_server_groups=False,
+             show_user_data=True):
         """Detailed view of a single instance."""
         if show_extra_specs is None:
             # detail will pre-calculate this for us. If we're doing show,
@@ -284,7 +287,15 @@ class ViewBuilder(common.ViewBuilder):
                 # the OS-EXT-SRV-ATTR prefix.
                 properties += ['reservation_id', 'launch_index',
                                'hostname', 'kernel_id', 'ramdisk_id',
-                               'root_device_name', 'user_data']
+                               'root_device_name']
+                # NOTE(gmann): Since microversion 2.75, PUT and Rebuild
+                # response include all the server attributes including these
+                # extended attributes also. But microversion 2.57 already
+                # adding the 'user_data' in Rebuild response in API method.
+                # so we will skip adding the user data attribute for rebuild
+                # case. 'show_user_data' is false only in case of rebuild.
+                if show_user_data:
+                    properties += ['user_data']
             for attr in properties:
                 if attr == 'name':
                     key = "OS-EXT-SRV-ATTR:instance_%s" % attr
@@ -585,7 +596,8 @@ class ViewBuilder(common.ViewBuilder):
             if server['id'] in host_statuses:
                 server['host_status'] = host_statuses[server['id']]
 
-    def _add_security_grps(self, req, servers, instances):
+    def _add_security_grps(self, req, servers, instances,
+                           create_request=False):
         if not len(servers):
             return
         if not openstack_driver.is_neutron_security_groups():
@@ -597,11 +609,14 @@ class ViewBuilder(common.ViewBuilder):
                     server['security_groups'] = [{"name": group.name}
                                                  for group in groups]
         else:
-            # If method is a POST we get the security groups intended for an
-            # instance from the request. The reason for this is if using
-            # neutron security groups the requested security groups for the
-            # instance are not in the db and have not been sent to neutron yet.
-            if req.method != 'POST':
+            # If request is a POST create server we get the security groups
+            # intended for an instance from the request. The reason for this
+            # is if using neutron security groups the requested security
+            # groups for the instance are not in the db and have not been
+            # sent to neutron yet.
+            # Starting from microversion 2.75, security groups is returned in
+            # PUT and POST Rebuild response also.
+            if not create_request:
                 context = req.environ['nova.context']
                 sg_instance_bindings = (
                     self.security_group_api
@@ -612,8 +627,8 @@ class ViewBuilder(common.ViewBuilder):
                     if groups:
                         server['security_groups'] = groups
 
-            # This section is for POST request. There can be only one security
-            # group for POST request.
+            # This section is for POST create server request. There can be
+            # only one security group for POST create server request.
             else:
                 # try converting to json
                 req_obj = jsonutils.loads(req.body)

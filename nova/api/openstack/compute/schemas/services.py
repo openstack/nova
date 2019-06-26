@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
 from nova.api.validation import parameter_types
 
 service_update = {
@@ -76,3 +78,6 @@ index_query_schema = {
     # For backward compatible changes
     'additionalProperties': True
 }
+
+index_query_schema_275 = copy.deepcopy(index_query_schema)
+index_query_schema_275['additionalProperties'] = False

@@ -492,3 +492,32 @@ class LimitsControllerTestV239(BaseLimitTestSuite):
                 },
             }
             self.assertEqual(expected_response, response)
+
+
+class LimitsControllerTestV275(BaseLimitTestSuite):
+    def setUp(self):
+        super(LimitsControllerTestV275, self).setUp()
+        self.controller = limits_v21.LimitsController()
+
+    def test_index_additional_query_param_old_version(self):
+        absolute_limits = {
+            "metadata_items": 1,
+        }
+        req = fakes.HTTPRequest.blank("/?unkown=fake",
+                                       version='2.74')
+
+        def _get_project_quotas(context, project_id, usages=True):
+            return {k: dict(limit=v, in_use=v // 2)
+                    for k, v in absolute_limits.items()}
+
+        with mock.patch('nova.quota.QUOTAS.get_project_quotas') as \
+                get_project_quotas:
+            get_project_quotas.side_effect = _get_project_quotas
+            self.controller.index(req)
+
+    def test_index_additional_query_param(self):
+        req = fakes.HTTPRequest.blank("/?unkown=fake",
+                                      version='2.75')
+        self.assertRaises(
+            exception.ValidationError,
+            self.controller.index, req=req)

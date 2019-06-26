@@ -148,7 +148,8 @@ class ServerGroupController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
     @wsgi.expected_errors(())
-    @validation.query_schema(schema.server_groups_query_param)
+    @validation.query_schema(schema.server_groups_query_param_275, '2.75')
+    @validation.query_schema(schema.server_groups_query_param, '2.0', '2.74')
     def index(self, req):
         """Returns a list of server groups."""
         context = _authorize_context(req, 'index')

@@ -1,0 +1,17 @@
+---
+features:
+  - |
+    Multiple API cleanups is done in API microversion 2.75:
+
+    * 400 for unknown param for query param and for request body.
+
+    * Making server representation always consistent among GET, PUT
+      and Rebuild serevr APIs response. ``PUT /servers/{server_id}``
+      and ``POST /servers/{server_id}/action {rebuild}`` API response
+      is modified to add all the missing fields which are return
+      by ``GET /servers/{server_id}``.
+    * Change the default return value of swap field from the empty
+      string to 0 (integer) in flavor APIs.
+
+    * Return ``servers`` field always in the response of GET
+      hypervisors API even there are no servers on hypervisor.

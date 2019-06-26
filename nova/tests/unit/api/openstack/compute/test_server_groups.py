@@ -84,6 +84,7 @@ def server_group_db(sg):
 class ServerGroupTestV21(test.NoDBTestCase):
     USES_DB_SELF = True
     validation_error = exception.ValidationError
+    wsgi_api_version = '2.1'
 
     def setUp(self):
         super(ServerGroupTestV21, self).setUp()
@@ -306,7 +307,7 @@ class ServerGroupTestV21(test.NoDBTestCase):
 
         mock_get_by_project.return_value = return_tenant_server_groups()
 
-        path = '/os-server-groups?all_projects=True'
+        path = path or '/os-server-groups?all_projects=True'
         if limited:
             path += limited
         req = fakes.HTTPRequest.blank(path, version=api_version)
@@ -548,16 +549,19 @@ class ServerGroupTestV21(test.NoDBTestCase):
                           self.controller.create, self.req, body=body)
 
     def test_list_server_group_by_tenant(self):
-        self._test_list_server_group_by_tenant(api_version='2.1')
+        self._test_list_server_group_by_tenant(
+            api_version=self.wsgi_api_version)
 
     def test_list_server_group_all_v20(self):
         self._test_list_server_group_all(api_version='2.0')
 
     def test_list_server_group_all(self):
-        self._test_list_server_group_all(api_version='2.1')
+        self._test_list_server_group_all(
+            api_version=self.wsgi_api_version)
 
     def test_list_server_group_offset_and_limit(self):
-        self._test_list_server_group_offset_and_limit(api_version='2.1')
+        self._test_list_server_group_offset_and_limit(
+            api_version=self.wsgi_api_version)
 
     def test_list_server_groups_rbac_default(self):
         # test as admin
@@ -567,59 +571,59 @@ class ServerGroupTestV21(test.NoDBTestCase):
         self.controller.index(self.req)
 
     def test_list_server_group_multiple_param(self):
-        self._test_list_server_group(api_version='2.1',
+        self._test_list_server_group(api_version=self.wsgi_api_version,
             limited='&offset=2&limit=2&limit=1&offset=1',
             path='/os-server-groups?all_projects=False&all_projects=True')
 
     def test_list_server_group_additional_param(self):
-        self._test_list_server_group(api_version='2.1',
+        self._test_list_server_group(api_version=self.wsgi_api_version,
             limited='&offset=1&limit=1',
             path='/os-server-groups?dummy=False&all_projects=True')
 
     def test_list_server_group_param_as_int(self):
-        self._test_list_server_group(api_version='2.1',
+        self._test_list_server_group(api_version=self.wsgi_api_version,
             limited='&offset=1&limit=1',
             path='/os-server-groups?all_projects=1')
 
     def test_list_server_group_negative_int_as_offset(self):
         self.assertRaises(exception.ValidationError,
             self._test_list_server_group,
-            api_version='2.1',
+            api_version=self.wsgi_api_version,
             limited='&offset=-1',
             path='/os-server-groups?all_projects=1')
 
     def test_list_server_group_string_int_as_offset(self):
         self.assertRaises(exception.ValidationError,
             self._test_list_server_group,
-            api_version='2.1',
+            api_version=self.wsgi_api_version,
             limited='&offset=dummy',
             path='/os-server-groups?all_projects=1')
 
     def test_list_server_group_multiparam_string_as_offset(self):
         self.assertRaises(exception.ValidationError,
             self._test_list_server_group,
-            api_version='2.1',
+            api_version=self.wsgi_api_version,
             limited='&offset=dummy&offset=1',
             path='/os-server-groups?all_projects=1')
 
     def test_list_server_group_negative_int_as_limit(self):
         self.assertRaises(exception.ValidationError,
             self._test_list_server_group,
-            api_version='2.1',
+            api_version=self.wsgi_api_version,
             limited='&limit=-1',
             path='/os-server-groups?all_projects=1')
 
     def test_list_server_group_string_int_as_limit(self):
         self.assertRaises(exception.ValidationError,
             self._test_list_server_group,
-            api_version='2.1',
+            api_version=self.wsgi_api_version,
             limited='&limit=dummy',
             path='/os-server-groups?all_projects=1')
 
     def test_list_server_group_multiparam_string_as_limit(self):
         self.assertRaises(exception.ValidationError,
             self._test_list_server_group,
-            api_version='2.1',
+            api_version=self.wsgi_api_version,
             limited='&limit=dummy&limit=1',
             path='/os-server-groups?all_projects=1')
 
@@ -848,3 +852,18 @@ class ServerGroupTestV264(ServerGroupTestV213):
         sgroup = server_group_template(unknown='unknown')
         self.assertRaises(self.validation_error, self.controller.create,
                           req, body={'server_group': sgroup})
+
+
+class ServerGroupTestV275(ServerGroupTestV264):
+    wsgi_api_version = '2.75'
+
+    def test_list_server_group_additional_param_old_version(self):
+        self._test_list_server_group(api_version='2.74',
+            limited='&offset=1&limit=1',
+            path='/os-server-groups?dummy=False&all_projects=True')
+
+    def test_list_server_group_additional_param(self):
+        req = fakes.HTTPRequest.blank('/os-server-groups?dummy=False',
+                                      version=self.wsgi_api_version)
+        self.assertRaises(self.validation_error, self.controller.index,
+                          req)

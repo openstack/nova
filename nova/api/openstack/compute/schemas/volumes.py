@@ -101,9 +101,12 @@ index_query = {
     },
     # NOTE(gmann): This is kept True to keep backward compatibility.
     # As of now Schema validation stripped out the additional parameters and
-    # does not raise 400. In the future, we may block the additional parameters
-    # by bump in Microversion.
+    # does not raise 400. In microversion 2.75, we have blocked the additional
+    # parameters.
     'additionalProperties': True
 }
 
 detail_query = index_query
+
+index_query_275 = copy.deepcopy(index_query)
+index_query_275['additionalProperties'] = False

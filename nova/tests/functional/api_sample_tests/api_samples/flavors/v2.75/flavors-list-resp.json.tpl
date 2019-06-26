@@ -1,0 +1,109 @@
+{
+    "flavors": [
+        {
+            "description": null,
+            "id": "1",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/flavors/1",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/flavors/1",
+                    "rel": "bookmark"
+                }
+            ],
+            "name": "m1.tiny"
+        },
+        {
+            "description": null,
+            "id": "2",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/flavors/2",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/flavors/2",
+                    "rel": "bookmark"
+                }
+            ],
+            "name": "m1.small"
+        },
+        {
+            "description": null,
+            "id": "3",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/flavors/3",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/flavors/3",
+                    "rel": "bookmark"
+                }
+            ],
+            "name": "m1.medium"
+        },
+        {
+            "description": null,
+            "id": "4",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/flavors/4",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/flavors/4",
+                    "rel": "bookmark"
+                }
+            ],
+            "name": "m1.large"
+        },
+        {
+            "description": null,
+            "id": "5",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/flavors/5",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/flavors/5",
+                    "rel": "bookmark"
+                }
+            ],
+            "name": "m1.xlarge"
+        },
+        {
+            "description": null,
+            "id": "6",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/flavors/6",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/flavors/6",
+                    "rel": "bookmark"
+                }
+            ],
+            "name": "m1.tiny.specs"
+        },
+        {
+            "description": "test description",
+            "id": "7",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/flavors/7",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/flavors/7",
+                    "rel": "bookmark"
+                }
+            ],
+            "name": "m1.small.description"
+        }
+    ]
+}

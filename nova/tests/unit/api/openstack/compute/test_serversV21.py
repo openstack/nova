@@ -15,6 +15,7 @@
 #    under the License.
 
 import collections
+import copy
 import datetime
 import ddt
 
@@ -39,6 +40,7 @@ from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack import compute
 from nova.api.openstack.compute import ips
+from nova.api.openstack.compute.schemas import servers as servers_schema
 from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import views
 from nova.api.openstack import wsgi as os_wsgi
@@ -82,6 +84,23 @@ UUID2 = '00000000-0000-0000-0000-000000000002'
 
 INSTANCE_IDS = {FAKE_UUID: 1}
 FIELDS = instance_obj.INSTANCE_DEFAULT_FIELDS
+
+GET_ONLY_FIELDS = ['OS-EXT-AZ:availability_zone', 'config_drive',
+                   'OS-EXT-SRV-ATTR:host',
+                   'OS-EXT-SRV-ATTR:hypervisor_hostname',
+                   'OS-EXT-SRV-ATTR:instance_name',
+                   'OS-EXT-SRV-ATTR:hostname',
+                   'OS-EXT-SRV-ATTR:kernel_id',
+                   'OS-EXT-SRV-ATTR:launch_index',
+                   'OS-EXT-SRV-ATTR:ramdisk_id',
+                   'OS-EXT-SRV-ATTR:reservation_id',
+                   'OS-EXT-SRV-ATTR:root_device_name',
+                   'OS-EXT-SRV-ATTR:user_data', 'host_status',
+                   'key_name', 'OS-SRV-USG:launched_at',
+                   'OS-SRV-USG:terminated_at',
+                   'OS-EXT-STS:task_state', 'OS-EXT-STS:vm_state',
+                   'OS-EXT-STS:power_state', 'security_groups',
+                   'os-extended-volumes:volumes_attached']
 
 
 def instance_update_and_get_original(context, instance_uuid, values,
@@ -2655,6 +2674,128 @@ class ServersControllerTestV273(ControllerTest):
             cell_down_support=False, all_tenants=False)
 
 
+class ServersControllerTestV275(ControllerTest):
+    wsgi_api_version = '2.75'
+    image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+
+    @mock.patch('nova.compute.api.API.get_all')
+    def test_get_servers_additional_query_param_old_version(self, mock_get):
+        req = fakes.HTTPRequest.blank('/fake/servers?unknown=1',
+                                      use_admin_context=True,
+                                      version='2.74')
+        self.controller.index(req)
+
+    @mock.patch('nova.compute.api.API.get_all')
+    def test_get_servers_ignore_sort_key_old_version(self, mock_get):
+        req = fakes.HTTPRequest.blank('/fake/servers?sort_key=deleted',
+                                      use_admin_context=True,
+                                      version='2.74')
+        self.controller.index(req)
+
+    def test_get_servers_additional_query_param(self):
+        req = fakes.HTTPRequest.blank('/fake/servers?unknown=1',
+                                      use_admin_context=True,
+                                      version=self.wsgi_api_version)
+        self.assertRaises(exception.ValidationError, self.controller.index,
+                          req)
+
+    def test_get_servers_previously_ignored_sort_key(self):
+        for s_ignore in servers_schema.SERVER_LIST_IGNORE_SORT_KEY_V273:
+            req = fakes.HTTPRequest.blank(
+                '/fake/servers?sort_key=%s' % s_ignore,
+                use_admin_context=True,
+                version=self.wsgi_api_version)
+            self.assertRaises(exception.ValidationError, self.controller.index,
+                              req)
+
+    def test_get_servers_additional_sort_key(self):
+        req = fakes.HTTPRequest.blank('/fake/servers?sort_key=unknown',
+                                      use_admin_context=True,
+                                      version=self.wsgi_api_version)
+        self.assertRaises(exception.ValidationError, self.controller.index,
+                          req)
+
+    def test_update_response_no_show_server_only_attributes_old_version(self):
+        # There are some old server attributes which were added only for
+        # GET server APIs not for PUT. GET server and PUT server share the
+        # same view builder method SHOW() to build the response, So make sure
+        # attributes which are not supposed to be included for PUT
+        # response are not present.
+        body = {'server': {'name': 'server_test'}}
+        req = fakes.HTTPRequest.blank('/fake/servers?unknown=1',
+                                      use_admin_context=True,
+                                      version='2.74')
+        res_dict = self.controller.update(req, FAKE_UUID, body=body)
+        for field in GET_ONLY_FIELDS:
+            self.assertNotIn(field, res_dict['server'])
+        for items in res_dict['server']['addresses'].values():
+            for item in items:
+                self.assertNotIn('OS-EXT-IPS:type', item)
+                self.assertNotIn('OS-EXT-IPS-MAC:mac_addr', item)
+
+    def test_update_response_has_show_server_all_attributes(self):
+        body = {'server': {'name': 'server_test'}}
+        req = fakes.HTTPRequest.blank('/fake/servers?unknown=1',
+                                      use_admin_context=True,
+                                      version=self.wsgi_api_version)
+        res_dict = self.controller.update(req, FAKE_UUID, body=body)
+        for field in GET_ONLY_FIELDS:
+            self.assertIn(field, res_dict['server'])
+        for items in res_dict['server']['addresses'].values():
+            for item in items:
+                self.assertIn('OS-EXT-IPS:type', item)
+                self.assertIn('OS-EXT-IPS-MAC:mac_addr', item)
+
+    def test_rebuild_response_no_show_server_only_attributes_old_version(self):
+        # There are some old server attributes which were added only for
+        # GET server APIs not for Rebuild. GET server and Rebuild server share
+        # same view builder method SHOW() to build the response, So make sure
+        # the attributes which are not supposed to be included for Rebuild
+        # response are not present.
+        body = {'rebuild': {"imageRef": self.image_uuid}}
+        req = fakes.HTTPRequest.blank('/fake/servers?unknown=1',
+                                      use_admin_context=True,
+                                      version='2.74')
+        fake_get = fakes.fake_compute_get(
+            vm_state=vm_states.ACTIVE,
+            project_id=req.environ['nova.context'].project_id,
+            user_id=req.environ['nova.context'].user_id)
+        self.mock_get.side_effect = fake_get
+
+        res_dict = self.controller._action_rebuild(req, FAKE_UUID,
+                                                   body=body).obj
+        get_only_fields_Rebuild = copy.deepcopy(GET_ONLY_FIELDS)
+        get_only_fields_Rebuild.remove('key_name')
+        for field in get_only_fields_Rebuild:
+            self.assertNotIn(field, res_dict['server'])
+        for items in res_dict['server']['addresses'].values():
+            for item in items:
+                self.assertNotIn('OS-EXT-IPS:type', item)
+                self.assertNotIn('OS-EXT-IPS-MAC:mac_addr', item)
+
+    def test_rebuild_response_has_show_server_all_attributes(self):
+        body = {'rebuild': {"imageRef": self.image_uuid}}
+        req = fakes.HTTPRequest.blank('/fake/servers?unknown=1',
+                                      use_admin_context=True,
+                                      version=self.wsgi_api_version)
+        fake_get = fakes.fake_compute_get(
+            vm_state=vm_states.ACTIVE,
+            project_id=req.environ['nova.context'].project_id,
+            user_id=req.environ['nova.context'].user_id)
+        self.mock_get.side_effect = fake_get
+        res_dict = self.controller._action_rebuild(req, FAKE_UUID,
+                                                   body=body).obj
+        for field in GET_ONLY_FIELDS:
+            if field == 'OS-EXT-SRV-ATTR:user_data':
+                self.assertNotIn(field, res_dict['server'])
+                field = 'user_data'
+            self.assertIn(field, res_dict['server'])
+        for items in res_dict['server']['addresses'].values():
+            for item in items:
+                self.assertIn('OS-EXT-IPS:type', item)
+                self.assertIn('OS-EXT-IPS-MAC:mac_addr', item)
+
+
 class ServersControllerDeleteTest(ControllerTest):
 
     def setUp(self):
@@ -3007,22 +3148,9 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
 
         body = self.controller._action_rebuild(self.req, FAKE_UUID,
                                                body=body).obj
-
-        get_only_fields = ['OS-EXT-AZ:availability_zone', 'config_drive',
-                           'OS-EXT-SRV-ATTR:host',
-                           'OS-EXT-SRV-ATTR:hypervisor_hostname',
-                           'OS-EXT-SRV-ATTR:instance_name',
-                           'OS-EXT-SRV-ATTR:hostname'
-                           'OS-EXT-SRV-ATTR:kernel_id',
-                           'OS-EXT-SRV-ATTR:launch_index',
-                           'OS-EXT-SRV-ATTR:ramdisk_id',
-                           'OS-EXT-SRV-ATTR:reservation_id',
-                           'OS-EXT-SRV-ATTR:root_device_name',
-                           'OS-EXT-SRV-ATTR:user_data', 'host_status',
-                           'OS-SRV-USG:launched_at',
-                           'OS-SRV-USG:terminated_at']
-        if not self.expected_key_name:
-            get_only_fields.append('key_name')
+        get_only_fields = copy.deepcopy(GET_ONLY_FIELDS)
+        if self.expected_key_name:
+            get_only_fields.remove('key_name')
         for field in get_only_fields:
             self.assertNotIn(field, body['server'])
 
@@ -3637,20 +3765,7 @@ class ServersControllerUpdateTest(ControllerTest):
         body = {'server': {'name': 'server_test'}}
         req = self._get_request(body)
         res_dict = self.controller.update(req, FAKE_UUID, body=body)
-        get_only_fields = ['OS-EXT-AZ:availability_zone', 'config_drive',
-                           'OS-EXT-SRV-ATTR:host',
-                           'OS-EXT-SRV-ATTR:hypervisor_hostname',
-                           'OS-EXT-SRV-ATTR:instance_name',
-                           'OS-EXT-SRV-ATTR:hostname'
-                           'OS-EXT-SRV-ATTR:kernel_id',
-                           'OS-EXT-SRV-ATTR:launch_index',
-                           'OS-EXT-SRV-ATTR:ramdisk_id',
-                           'OS-EXT-SRV-ATTR:reservation_id',
-                           'OS-EXT-SRV-ATTR:root_device_name',
-                           'OS-EXT-SRV-ATTR:user_data', 'host_status',
-                           'key_name', 'OS-SRV-USG:launched_at',
-                           'OS-SRV-USG:terminated_at']
-        for field in get_only_fields:
+        for field in GET_ONLY_FIELDS:
             self.assertNotIn(field, res_dict['server'])
 
     def test_update_server_name_too_long(self):

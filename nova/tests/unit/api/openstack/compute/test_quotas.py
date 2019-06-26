@@ -675,3 +675,53 @@ class QuotaSetsTestV257(QuotaSetsTestV236):
     def setUp(self):
         super(QuotaSetsTestV257, self).setUp()
         self.filtered_quotas.extend(quotas_v21.FILTERED_QUOTAS_2_57)
+
+
+class QuotaSetsTestV275(QuotaSetsTestV257):
+    microversion = '2.75'
+
+    @mock.patch('nova.objects.Quotas.destroy_all_by_project')
+    @mock.patch('nova.objects.Quotas.create_limit')
+    @mock.patch('nova.quota.QUOTAS.get_settable_quotas')
+    @mock.patch('nova.quota.QUOTAS.get_project_quotas')
+    def test_quota_additional_filter_older_version(self, mock_quotas,
+                                                   mock_settable,
+                                                   mock_create_limit,
+                                                   mock_destroy):
+        mock_quotas.return_value = self.quotas
+        mock_settable.return_value = {'cores': {'maximum': -1, 'minimum': 0}}
+        query_string = 'additional_filter=2'
+        req = fakes.HTTPRequest.blank('', version='2.74',
+                                      query_string=query_string)
+        self.controller.show(req, 1234)
+        self.controller.update(req, 1234, body={'quota_set': {}})
+        self.controller.detail(req, 1234)
+        self.controller.delete(req, 1234)
+
+    def test_quota_update_additional_filter(self):
+        query_string = 'user_id=1&additional_filter=2'
+        req = fakes.HTTPRequest.blank('', version=self.microversion,
+                                      query_string=query_string)
+        self.assertRaises(exception.ValidationError, self.controller.update,
+                          req, 'update_me', body={'quota_set': {}})
+
+    def test_quota_show_additional_filter(self):
+        query_string = 'user_id=1&additional_filter=2'
+        req = fakes.HTTPRequest.blank('', version=self.microversion,
+                                      query_string=query_string)
+        self.assertRaises(exception.ValidationError, self.controller.show,
+                          req, 1234)
+
+    def test_quota_detail_additional_filter(self):
+        query_string = 'user_id=1&additional_filter=2'
+        req = fakes.HTTPRequest.blank('', version=self.microversion,
+                                      query_string=query_string)
+        self.assertRaises(exception.ValidationError, self.controller.detail,
+                          req, 1234)
+
+    def test_quota_delete_additional_filter(self):
+        query_string = 'user_id=1&additional_filter=2'
+        req = fakes.HTTPRequest.blank('', version=self.microversion,
+                                      query_string=query_string)
+        self.assertRaises(exception.ValidationError, self.controller.delete,
+                          req, 1234)

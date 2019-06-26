@@ -80,6 +80,10 @@ server_groups_query_param = {
         'offset': parameter_types.multi_params(
              parameter_types.non_negative_integer),
     },
-    # For backward compatible changes
+    # For backward compatible changes.  In microversion 2.75, we have
+    # blocked the additional parameters.
     'additionalProperties': True
 }
+
+server_groups_query_param_275 = copy.deepcopy(server_groups_query_param)
+server_groups_query_param_275['additionalProperties'] = False

@@ -292,7 +292,8 @@ class ServiceController(wsgi.Controller):
             explanation = _("Service id %s refers to multiple services.") % id
             raise webob.exc.HTTPBadRequest(explanation=explanation)
 
-    @validation.query_schema(services.index_query_schema)
+    @validation.query_schema(services.index_query_schema_275, '2.75')
+    @validation.query_schema(services.index_query_schema, '2.0', '2.74')
     @wsgi.expected_errors(())
     def index(self, req):
         """Return a list of all running services. Filter by host & service

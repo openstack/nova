@@ -267,7 +267,8 @@ class VolumeAttachmentController(wsgi.Controller):
         super(VolumeAttachmentController, self).__init__()
 
     @wsgi.expected_errors(404)
-    @validation.query_schema(volumes_schema.index_query)
+    @validation.query_schema(volumes_schema.index_query_275, '2.75')
+    @validation.query_schema(volumes_schema.index_query, '2.0', '2.74')
     def index(self, req, server_id):
         """Returns the list of volume attachments for a given instance."""
         context = req.environ['nova.context']

@@ -78,6 +78,7 @@ def fake_agent_build_create(context, values):
 class AgentsTestV21(test.NoDBTestCase):
     controller = agents_v21.AgentController()
     validation_error = exception.ValidationError
+    microversion = '2.1'
 
     def setUp(self):
         super(AgentsTestV21, self).setUp()
@@ -93,7 +94,7 @@ class AgentsTestV21(test.NoDBTestCase):
         self.req = self._get_http_request()
 
     def _get_http_request(self):
-        return fakes.HTTPRequest.blank('')
+        return fakes.HTTPRequest.blank('', version=self.microversion)
 
     def test_agents_create(self):
         body = {'agent': {'hypervisor': 'kvm',
@@ -210,7 +211,8 @@ class AgentsTestV21(test.NoDBTestCase):
 
     def _test_agents_list(self, query_string=None):
         req = fakes.HTTPRequest.blank('', use_admin_context=True,
-                                      query_string=query_string)
+                                      query_string=query_string,
+                                      version=self.microversion)
         res_dict = self.controller.index(req)
         agents_list = [{'hypervisor': 'kvm', 'os': 'win',
                      'architecture': 'x86',
@@ -244,7 +246,8 @@ class AgentsTestV21(test.NoDBTestCase):
 
     def test_agents_list_with_hypervisor(self):
         req = fakes.HTTPRequest.blank('', use_admin_context=True,
-                                      query_string='hypervisor=kvm')
+                                      query_string='hypervisor=kvm',
+                                      version=self.microversion)
         res_dict = self.controller.index(req)
         response = [{'hypervisor': 'kvm', 'os': 'win',
                      'architecture': 'x86',
@@ -264,7 +267,8 @@ class AgentsTestV21(test.NoDBTestCase):
     def test_agents_list_with_multi_hypervisor_filter(self):
         query_string = 'hypervisor=xen&hypervisor=kvm'
         req = fakes.HTTPRequest.blank('', use_admin_context=True,
-                                      query_string=query_string)
+                                      query_string=query_string,
+                                      version=self.microversion)
         res_dict = self.controller.index(req)
         response = [{'hypervisor': 'kvm', 'os': 'win',
                      'architecture': 'x86',
@@ -283,13 +287,15 @@ class AgentsTestV21(test.NoDBTestCase):
 
     def test_agents_list_query_allow_negative_int_as_string(self):
         req = fakes.HTTPRequest.blank('', use_admin_context=True,
-                                      query_string='hypervisor=-1')
+                                      query_string='hypervisor=-1',
+                                      version=self.microversion)
         res_dict = self.controller.index(req)
         self.assertEqual(res_dict, {'agents': []})
 
     def test_agents_list_query_allow_int_as_string(self):
         req = fakes.HTTPRequest.blank('', use_admin_context=True,
-                                      query_string='hypervisor=1')
+                                      query_string='hypervisor=1',
+                                      version=self.microversion)
         res_dict = self.controller.index(req)
         self.assertEqual(res_dict, {'agents': []})
 
@@ -300,7 +306,8 @@ class AgentsTestV21(test.NoDBTestCase):
     def test_agents_list_with_hypervisor_and_additional_filter(self):
         req = fakes.HTTPRequest.blank(
             '', use_admin_context=True,
-            query_string='hypervisor=kvm&additional_filter=abc')
+            query_string='hypervisor=kvm&additional_filter=abc',
+            version=self.microversion)
         res_dict = self.controller.index(req)
         response = [{'hypervisor': 'kvm', 'os': 'win',
                      'architecture': 'x86',
@@ -395,6 +402,33 @@ class AgentsTestV21(test.NoDBTestCase):
                     'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
             self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.update, self.req, 1, body=body)
+
+
+class AgentsTestV275(AgentsTestV21):
+    microversion = '2.75'
+
+    def test_agents_list_additional_filter_old_version(self):
+        req = fakes.HTTPRequest.blank(
+            '', use_admin_context=True,
+            query_string='additional_filter=abc',
+            version='2.74')
+        self.controller.index(req)
+
+    def test_agents_list_with_unknown_filter(self):
+        req = fakes.HTTPRequest.blank(
+            '', use_admin_context=True,
+            query_string='unknown_filter=abc',
+            version=self.microversion)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.index, req)
+
+    def test_agents_list_with_hypervisor_and_additional_filter(self):
+        req = fakes.HTTPRequest.blank(
+            '', use_admin_context=True,
+            query_string='hypervisor=kvm&additional_filter=abc',
+            version=self.microversion)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.index, req)
 
 
 class AgentsPolicyEnforcementV21(test.NoDBTestCase):

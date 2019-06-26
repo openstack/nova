@@ -120,7 +120,8 @@ class QuotaSetsController(wsgi.Controller):
     def show(self, req, id):
         return self._show(req, id, FILTERED_QUOTAS_2_57)
 
-    @validation.query_schema(quota_sets.query_schema)
+    @validation.query_schema(quota_sets.query_schema_275, '2.75')
+    @validation.query_schema(quota_sets.query_schema, '2.0', '2.74')
     def _show(self, req, id, filtered_quotas):
         context = req.environ['nova.context']
         context.can(qs_policies.POLICY_ROOT % 'show', {'project_id': id})
@@ -148,7 +149,8 @@ class QuotaSetsController(wsgi.Controller):
     def detail(self, req, id):
         return self._detail(req, id, FILTERED_QUOTAS_2_57)
 
-    @validation.query_schema(quota_sets.query_schema)
+    @validation.query_schema(quota_sets.query_schema_275, '2.75')
+    @validation.query_schema(quota_sets.query_schema, '2.0', '2.74')
     def _detail(self, req, id, filtered_quotas):
         context = req.environ['nova.context']
         context.can(qs_policies.POLICY_ROOT % 'detail', {'project_id': id})
@@ -179,7 +181,8 @@ class QuotaSetsController(wsgi.Controller):
     def update(self, req, id, body):
         return self._update(req, id, body, FILTERED_QUOTAS_2_57)
 
-    @validation.query_schema(quota_sets.query_schema)
+    @validation.query_schema(quota_sets.query_schema_275, '2.75')
+    @validation.query_schema(quota_sets.query_schema, '2.0', '2.74')
     def _update(self, req, id, body, filtered_quotas):
         context = req.environ['nova.context']
         context.can(qs_policies.POLICY_ROOT % 'update', {'project_id': id})
@@ -267,7 +270,8 @@ class QuotaSetsController(wsgi.Controller):
     # +microversions because the resource quota-set has been deleted completely
     # when returning a response.
     @wsgi.expected_errors(())
-    @validation.query_schema(quota_sets.query_schema)
+    @validation.query_schema(quota_sets.query_schema_275, '2.75')
+    @validation.query_schema(quota_sets.query_schema, '2.0', '2.74')
     @wsgi.response(202)
     def delete(self, req, id):
         context = req.environ['nova.context']

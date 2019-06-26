@@ -1323,6 +1323,27 @@ class ServicesTestV253(test.TestCase):
                          six.text_type(ex))
 
 
+class ServicesTestV275(test.TestCase):
+    wsgi_api_version = '2.75'
+
+    def setUp(self):
+        super(ServicesTestV275, self).setUp()
+        self.controller = services_v21.ServiceController()
+
+    def test_services_list_with_additional_filter_old_version(self):
+        url = '/fake/services?host=host1&binary=nova-compute&unknown=abc'
+        req = fakes.HTTPRequest.blank(url, use_admin_context=True,
+                                      version='2.74')
+        self.controller.index(req)
+
+    def test_services_list_with_additional_filter(self):
+        url = '/fake/services?host=host1&binary=nova-compute&unknown=abc'
+        req = fakes.HTTPRequest.blank(url, use_admin_context=True,
+                                      version=self.wsgi_api_version)
+        self.assertRaises(exception.ValidationError,
+            self.controller.index, req)
+
+
 class ServicesPolicyEnforcementV21(test.NoDBTestCase):
 
     def setUp(self):

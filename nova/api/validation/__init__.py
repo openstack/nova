@@ -186,8 +186,8 @@ def query_schema(query_params_schema, min_version=None,
                 # out when `additionalProperties=True`. This is for backward
                 # compatible with v2.1 API and legacy v2 API. But it makes the
                 # system more safe for no more unexpected parameters pass down
-                # to the system. In the future, we may block all of those
-                # additional parameters by Microversion.
+                # to the system. In microversion 2.75, we have blocked all of
+                # those additional parameters.
                 _strip_additional_query_parameters(query_params_schema, req)
             return func(*args, **kwargs)
         return wrapper
