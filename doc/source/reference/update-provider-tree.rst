@@ -175,7 +175,7 @@ would become:
 
 .. code::
 
-  def update_provider_tree(self, provider_tree, nodename):
+  def update_provider_tree(self, provider_tree, nodename, allocations=None):
       inv_data = {
           'VCPU': { ... },
           'MEMORY_MB': { ... },
@@ -206,7 +206,7 @@ would become:
 
 .. code::
 
-  def update_provider_tree(self, provider_tree, nodename):
+  def update_provider_tree(self, provider_tree, nodename, allocations=None):
       provider_tree.add_traits(
           nodename, 'HW_CPU_X86_AVX', 'HW_CPU_X86_AVX2', 'CUSTOM_GOLD')
 
