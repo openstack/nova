@@ -939,8 +939,6 @@ def _get_group_details(context, instance_uuid, user_group_hosts=None):
             msg = _("ServerGroupSoftAntiAffinityWeigher not configured")
             LOG.error(msg)
             raise exception.UnsupportedPolicyException(reason=msg)
-        # NOTE(melwitt): If the context is already targeted to a cell (during a
-        # move operation), we don't need to scatter-gather.
         group_hosts = set(group.get_hosts())
         user_hosts = set(user_group_hosts) if user_group_hosts else set()
         return GroupDetails(hosts=user_hosts | group_hosts,
