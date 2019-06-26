@@ -414,8 +414,8 @@ class InstanceMetadata(object):
                     device_metadata['mac'] = device.mac
                     # NOTE(artom) If a device has neither tags, vlan or
                     # vf_trusted, don't expose it
-                    if not ('tags' in device or 'vlan' in device_metadata
-                            or 'vf_trusted' in device_metadata):
+                    if not ('tags' in device or 'vlan' in device_metadata or
+                            'vf_trusted' in device_metadata):
                         continue
                 elif isinstance(device, metadata_obj.DiskMetadata):
                     device_metadata['type'] = 'disk'

@@ -168,8 +168,8 @@ class URLMap(paste.urlmap.URLMap):
         for (domain, app_url), app in self.applications:
             if domain and domain != host and domain != host + ':' + port:
                 continue
-            if (path_info == app_url
-                    or path_info.startswith(app_url + '/')):
+            if (path_info == app_url or
+                    path_info.startswith(app_url + '/')):
                 return app, app_url
 
         return None, None

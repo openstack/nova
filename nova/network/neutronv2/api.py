@@ -859,9 +859,9 @@ class API(base_api.NetworkAPI):
         # or if it is indirectly called through allocate_port_for_instance()
         # with None params=(network_id=None, requested_ip=None, port_id=None,
         # pci_request_id=None):
-        if (not requested_networks
-            or requested_networks.is_single_unspecified
-            or requested_networks.auto_allocate):
+        if (not requested_networks or
+            requested_networks.is_single_unspecified or
+            requested_networks.auto_allocate):
             # If no networks were requested and none are available, consider
             # it a bad request.
             if not nets:
@@ -1181,8 +1181,8 @@ class API(base_api.NetworkAPI):
     def _refresh_neutron_extensions_cache(self, context, neutron=None):
         """Refresh the neutron extensions cache when necessary."""
         if (not self.last_neutron_extension_sync or
-            ((time.time() - self.last_neutron_extension_sync)
-             >= CONF.neutron.extension_sync_interval)):
+            ((time.time() - self.last_neutron_extension_sync) >=
+             CONF.neutron.extension_sync_interval)):
             if neutron is None:
                 neutron = get_client(context)
             extensions_list = neutron.list_extensions()['extensions']
@@ -1691,8 +1691,8 @@ class API(base_api.NetworkAPI):
 
     def _delete_nic_metadata(self, instance, vif):
         for device in instance.device_metadata.devices:
-            if (isinstance(device, objects.NetworkInterfaceMetadata)
-                    and device.mac == vif.address):
+            if (isinstance(device, objects.NetworkInterfaceMetadata) and
+                    device.mac == vif.address):
                 instance.device_metadata.devices.remove(device)
                 instance.save()
                 break
@@ -2858,8 +2858,8 @@ class API(base_api.NetworkAPI):
             instance network info cache.
         """
         vif_active = False
-        if (current_neutron_port['admin_state_up'] is False
-            or current_neutron_port['status'] == 'ACTIVE'):
+        if (current_neutron_port['admin_state_up'] is False or
+            current_neutron_port['status'] == 'ACTIVE'):
             vif_active = True
 
         network_IPs = self._nw_info_get_ips(client,
@@ -3241,10 +3241,9 @@ class API(base_api.NetworkAPI):
             # that this function is called without a migration object, such
             # as in an unshelve operation.
             vnic_type = p.get('binding:vnic_type')
-            if (vnic_type in network_model.VNIC_TYPES_SRIOV
-                    and migration is not None
-                    and migration['migration_type'] !=
-                    constants.LIVE_MIGRATION):
+            if (vnic_type in network_model.VNIC_TYPES_SRIOV and
+                    migration is not None and
+                    migration['migration_type'] != constants.LIVE_MIGRATION):
                 # Note(adrianc): for live migration binding profile was already
                 # updated in conductor when calling bind_ports_to_host()
                 if not pci_mapping:

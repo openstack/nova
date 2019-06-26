@@ -1062,10 +1062,12 @@ class ComputeManager(manager.Manager):
         reboot_type = compute_utils.get_reboot_type(current_task_state,
                                                     current_power_state)
 
-        pending_soft = (current_task_state == task_states.REBOOT_PENDING and
-                        instance.vm_state in vm_states.ALLOW_SOFT_REBOOT)
-        pending_hard = (current_task_state == task_states.REBOOT_PENDING_HARD
-                        and instance.vm_state in vm_states.ALLOW_HARD_REBOOT)
+        pending_soft = (
+            current_task_state == task_states.REBOOT_PENDING and
+            instance.vm_state in vm_states.ALLOW_SOFT_REBOOT)
+        pending_hard = (
+            current_task_state == task_states.REBOOT_PENDING_HARD and
+            instance.vm_state in vm_states.ALLOW_HARD_REBOOT)
         started_not_running = (current_task_state in
                                [task_states.REBOOT_STARTED,
                                 task_states.REBOOT_STARTED_HARD] and
@@ -2080,9 +2082,9 @@ class ComputeManager(manager.Manager):
         RequestGroup.
         """
 
-        if (request_spec
-                and 'requested_resources' in request_spec
-                and request_spec.requested_resources is not None):
+        if (request_spec and
+                'requested_resources' in request_spec and
+                request_spec.requested_resources is not None):
             return {
                 group.requester_id: group.provider_uuids
                 for group in request_spec.requested_resources
@@ -2096,8 +2098,8 @@ class ComputeManager(manager.Manager):
             return
 
         def needs_update(pci_request, mapping):
-            return (pci_request.requester_id
-                    and pci_request.requester_id in mapping)
+            return (pci_request.requester_id and
+                    pci_request.requester_id in mapping)
 
         modified = False
         for pci_request in instance.pci_requests.requests:

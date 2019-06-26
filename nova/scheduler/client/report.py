@@ -646,8 +646,8 @@ class SchedulerReportClient(object):
         # - "Cascading generations" - i.e. a change to a leaf node percolates
         #   generation bump up the tree so that we bounce 409 the next time we
         #   try to update anything and have to refresh.
-        if (self._provider_tree.exists(uuid)
-                and not self._associations_stale(uuid)):
+        if (self._provider_tree.exists(uuid) and
+                not self._associations_stale(uuid)):
             uuids_to_refresh = [
                 u for u in self._provider_tree.get_provider_uuids(uuid)
                 if self._associations_stale(u)]
@@ -1117,8 +1117,8 @@ class SchedulerReportClient(object):
         # Check whether aggregates need updating.  We can only do this if we
         # have a cache entry with a matching generation.
         try:
-            if (self._provider_tree.data(rp_uuid).generation == generation
-                    and not self._provider_tree.have_aggregates_changed(
+            if (self._provider_tree.data(rp_uuid).generation == generation and
+                    not self._provider_tree.have_aggregates_changed(
                         rp_uuid, aggregates)):
                 return
         except ValueError:

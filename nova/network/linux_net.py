@@ -584,8 +584,8 @@ def metadata_forward():
 
 
 def _iptables_dest(ip):
-    if ((netaddr.IPAddress(ip).version == 4 and ip == '127.0.0.1')
-        or ip == '::1'):
+    if ((netaddr.IPAddress(ip).version == 4 and ip == '127.0.0.1') or
+            ip == '::1'):
         return '-m addrtype --dst-type LOCAL'
     else:
         return '-d %s' % ip

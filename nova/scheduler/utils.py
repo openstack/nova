@@ -482,8 +482,8 @@ def resources_from_request_spec(ctxt, spec_obj, host_manager):
         res_req.get_request_group(None).resources[rclass] = amount
 
     requested_resources = (spec_obj.requested_resources
-                           if 'requested_resources' in spec_obj
-                              and spec_obj.requested_resources
+                           if 'requested_resources' in spec_obj and
+                              spec_obj.requested_resources
                            else [])
     for group in requested_resources:
         res_req.add_request_group(group)
@@ -934,8 +934,8 @@ def _get_group_details(context, instance_uuid, user_group_hosts=None):
             msg = _("ServerGroupSoftAffinityWeigher not configured")
             LOG.error(msg)
             raise exception.UnsupportedPolicyException(reason=msg)
-        if (not _SUPPORTS_SOFT_ANTI_AFFINITY
-                and 'soft-anti-affinity' == group.policy):
+        if (not _SUPPORTS_SOFT_ANTI_AFFINITY and
+                'soft-anti-affinity' == group.policy):
             msg = _("ServerGroupSoftAntiAffinityWeigher not configured")
             LOG.error(msg)
             raise exception.UnsupportedPolicyException(reason=msg)

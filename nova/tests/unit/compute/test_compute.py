@@ -3043,18 +3043,18 @@ class ComputeTestCase(BaseTestCase,
                      test_unrescue=False, fail_reboot=False,
                      fail_running=False):
         reboot_type = soft and 'SOFT' or 'HARD'
-        task_pending = (soft and task_states.REBOOT_PENDING
-                        or task_states.REBOOT_PENDING_HARD)
-        task_started = (soft and task_states.REBOOT_STARTED
-                        or task_states.REBOOT_STARTED_HARD)
-        expected_task = (soft and task_states.REBOOTING
-                         or task_states.REBOOTING_HARD)
+        task_pending = (soft and task_states.REBOOT_PENDING or
+                        task_states.REBOOT_PENDING_HARD)
+        task_started = (soft and task_states.REBOOT_STARTED or
+                        task_states.REBOOT_STARTED_HARD)
+        expected_task = (soft and task_states.REBOOTING or
+                         task_states.REBOOTING_HARD)
         expected_tasks = (soft and (task_states.REBOOTING,
                                     task_states.REBOOT_PENDING,
-                                    task_states.REBOOT_STARTED)
-                          or (task_states.REBOOTING_HARD,
-                              task_states.REBOOT_PENDING_HARD,
-                              task_states.REBOOT_STARTED_HARD))
+                                    task_states.REBOOT_STARTED) or
+                          (task_states.REBOOTING_HARD,
+                           task_states.REBOOT_PENDING_HARD,
+                           task_states.REBOOT_STARTED_HARD))
 
         # This is a true unit test, so we don't need the network stubs.
         fake_network.unset_stub_network_methods(self)

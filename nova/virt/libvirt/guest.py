@@ -576,12 +576,12 @@ class Guest(object):
         :param reuse_ext: Reuse any existing external files
         :param quiesce: Use QGA to quiece all mounted file systems
         """
-        flags = no_metadata and (libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_NO_METADATA
-                                 or 0)
-        flags |= disk_only and (libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_DISK_ONLY
-                                or 0)
-        flags |= reuse_ext and (libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_REUSE_EXT
-                                or 0)
+        flags = no_metadata and (
+            libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_NO_METADATA or 0)
+        flags |= disk_only and (
+            libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_DISK_ONLY or 0)
+        flags |= reuse_ext and (
+            libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_REUSE_EXT or 0)
         flags |= quiesce and libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE or 0
 
         device_xml = conf.to_xml()

@@ -144,9 +144,9 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
 
     @staticmethod
     def _host_from_db_object(compute, db_compute):
-        if (('host' not in db_compute or db_compute['host'] is None)
-                and 'service_id' in db_compute
-                and db_compute['service_id'] is not None):
+        if (('host' not in db_compute or db_compute['host'] is None) and
+                'service_id' in db_compute and
+                db_compute['service_id'] is not None):
             # FIXME(sbauza) : Unconverted compute record, provide compatibility
             # This has to stay until we can be sure that any/all compute nodes
             # in the database have been converted to use the host field

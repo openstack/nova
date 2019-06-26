@@ -279,9 +279,8 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                        'device_type': None}
 
     def _transform(self):
-        if (not self._bdm_obj.source_type == self._valid_source
-                or not self._bdm_obj.destination_type ==
-                self._valid_destination):
+        if (not self._bdm_obj.source_type == self._valid_source or
+                not self._bdm_obj.destination_type == self._valid_destination):
             raise _InvalidType
 
         self.update(
@@ -927,9 +926,9 @@ def is_implemented(bdm):
 
 
 def is_block_device_mapping(bdm):
-    return (bdm.source_type in ('image', 'volume', 'snapshot', 'blank')
-            and bdm.destination_type == 'volume'
-            and is_implemented(bdm))
+    return (bdm.source_type in ('image', 'volume', 'snapshot', 'blank') and
+            bdm.destination_type == 'volume' and
+            is_implemented(bdm))
 
 
 def get_volume_id(connection_info):

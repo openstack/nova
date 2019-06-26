@@ -1034,8 +1034,8 @@ class ServersController(wsgi.Controller):
 
         helpers.translate_attributes(helpers.REBUILD, rebuild_dict, kwargs)
 
-        if (api_version_request.is_supported(req, min_version='2.54')
-                and 'key_name' in rebuild_dict):
+        if (api_version_request.is_supported(req, min_version='2.54') and
+                'key_name' in rebuild_dict):
             kwargs['key_name'] = rebuild_dict.get('key_name')
 
         # If user_data is not specified, we don't include it in kwargs because
@@ -1047,12 +1047,12 @@ class ServersController(wsgi.Controller):
 
         # Skip policy check for 'rebuild:trusted_certs' if no trusted
         # certificate IDs were provided.
-        if ((api_version_request.is_supported(req, min_version='2.63'))
+        if ((api_version_request.is_supported(req, min_version='2.63')) and
                 # Note that this is different from server create since with
                 # rebuild a user can unset/reset the trusted certs by
                 # specifying trusted_image_certificates=None, similar to
                 # key_name.
-                and ('trusted_image_certificates' in rebuild_dict)):
+                ('trusted_image_certificates' in rebuild_dict)):
             kwargs['trusted_certs'] = rebuild_dict.get(
                 'trusted_image_certificates')
             context.can(server_policies.SERVERS % 'rebuild:trusted_certs',

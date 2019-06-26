@@ -67,8 +67,8 @@ class SecurityGroupBase(object):
                     from_port is None and to_port is None):
                 from_port = -1
                 to_port = -1
-            elif (ip_proto_upper in ['TCP', 'UDP'] and from_port is None
-                  and to_port is None):
+            elif (ip_proto_upper in ['TCP', 'UDP'] and from_port is None and
+                  to_port is None):
                 from_port = 1
                 to_port = 65535
 

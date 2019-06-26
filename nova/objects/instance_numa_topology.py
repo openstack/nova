@@ -233,6 +233,6 @@ class InstanceNUMATopology(base.NovaObject,
     @property
     def emulator_threads_isolated(self):
         """Determines whether emulator threads should be isolated"""
-        return (self.obj_attr_is_set('emulator_threads_policy')
-                and (self.emulator_threads_policy
-                     == obj_fields.CPUEmulatorThreadsPolicy.ISOLATE))
+        return (self.obj_attr_is_set('emulator_threads_policy') and
+                (self.emulator_threads_policy ==
+                 obj_fields.CPUEmulatorThreadsPolicy.ISOLATE))

@@ -647,8 +647,9 @@ class Host(object):
             self._caps.parse_str(xmlstr)
             # NOTE(mriedem): Don't attempt to get baseline CPU features
             # if libvirt can't determine the host cpu model.
-            if (hasattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES')
-                and self._caps.host.cpu.model is not None):
+            if (hasattr(libvirt,
+                        'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES') and
+                    self._caps.host.cpu.model is not None):
                 try:
                     xml_str = self._caps.host.cpu.to_xml()
                     if six.PY3 and isinstance(xml_str, six.binary_type):

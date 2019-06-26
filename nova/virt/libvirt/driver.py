@@ -2031,10 +2031,10 @@ class LibvirtDriver(driver.ComputeDriver):
         #               redundant because LVM supports only cold snapshots.
         #               It is necessary in case this situation changes in the
         #               future.
-        if (self._host.has_min_version(hv_type=host.HV_DRIVER_QEMU)
-                and source_type != 'lvm'
-                and not CONF.ephemeral_storage_encryption.enabled
-                and not CONF.workarounds.disable_libvirt_livesnapshot
+        if (self._host.has_min_version(hv_type=host.HV_DRIVER_QEMU) and
+                source_type != 'lvm' and
+                not CONF.ephemeral_storage_encryption.enabled and
+                not CONF.workarounds.disable_libvirt_livesnapshot and
                 # NOTE(rmk): We cannot perform live snapshots when a
                 # managedSave file is present, so we will use the cold/legacy
                 # method for instances which are shutdown or paused.
@@ -2043,7 +2043,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 # remove the restriction on PAUSED once we require
                 # libvirt>=3.6.0 and qemu>=2.10 since that works with the
                 # Pike Ubuntu Cloud Archive testing in Queens.
-                and state not in (power_state.SHUTDOWN, power_state.PAUSED)):
+                state not in (power_state.SHUTDOWN, power_state.PAUSED)):
             live_snapshot = True
             # Abort is an idempotent operation, so make sure any block
             # jobs which may have failed are ended. This operation also
@@ -5273,12 +5273,12 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if not CONF.libvirt.num_pcie_ports:
             return False
-        if (caps.host.cpu.arch == fields.Architecture.AARCH64
-                and guest.os_mach_type.startswith('virt')):
+        if (caps.host.cpu.arch == fields.Architecture.AARCH64 and
+                guest.os_mach_type.startswith('virt')):
             return True
-        if (caps.host.cpu.arch == fields.Architecture.X86_64
-                and guest.os_mach_type is not None
-                and 'q35' in guest.os_mach_type):
+        if (caps.host.cpu.arch == fields.Architecture.X86_64 and
+                guest.os_mach_type is not None and
+                'q35' in guest.os_mach_type):
             return True
         return False
 
@@ -5432,8 +5432,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
     @staticmethod
     def _guest_add_spice_channel(guest):
-        if (CONF.spice.enabled and CONF.spice.agent_enabled
-                and guest.virt_type not in ('lxc', 'uml', 'xen')):
+        if (CONF.spice.enabled and CONF.spice.agent_enabled and
+                guest.virt_type not in ('lxc', 'uml', 'xen')):
             channel = vconfig.LibvirtConfigGuestChannel()
             channel.type = 'spicevmc'
             channel.target_name = "com.redhat.spice.0"
@@ -5457,8 +5457,8 @@ class LibvirtDriver(driver.ComputeDriver):
     def _guest_add_watchdog_action(guest, flavor, image_meta):
         # image meta takes precedence over flavor extra specs; disable the
         # watchdog action by default
-        watchdog_action = (flavor.extra_specs.get('hw:watchdog_action')
-                           or 'disabled')
+        watchdog_action = (flavor.extra_specs.get('hw:watchdog_action') or
+                           'disabled')
         watchdog_action = image_meta.properties.get('hw_watchdog_action',
                                                     watchdog_action)
         # NB(sross): currently only actually supported by KVM/QEmu
@@ -8258,8 +8258,8 @@ class LibvirtDriver(driver.ComputeDriver):
             is_shared_instance_path = True
             if migrate_data:
                 is_shared_instance_path = migrate_data.is_shared_instance_path
-                if (migrate_data.obj_attr_is_set("serial_listen_ports")
-                    and migrate_data.serial_listen_ports):
+                if (migrate_data.obj_attr_is_set("serial_listen_ports") and
+                        migrate_data.serial_listen_ports):
                     # Releases serial ports reserved.
                     for port in migrate_data.serial_listen_ports:
                         serial_console.release_port(

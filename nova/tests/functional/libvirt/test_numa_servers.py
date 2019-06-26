@@ -50,8 +50,8 @@ class NUMAServersTestBase(base.ServersTestBase):
     def _setup_scheduler_service(self):
         # Enable the 'NUMATopologyFilter'
         self.flags(driver='filter_scheduler', group='scheduler')
-        self.flags(enabled_filters=CONF.filter_scheduler.enabled_filters
-                                   + ['NUMATopologyFilter'],
+        self.flags(enabled_filters=CONF.filter_scheduler.enabled_filters +
+                                   ['NUMATopologyFilter'],
                    group='filter_scheduler')
         return self.start_service('scheduler')
 

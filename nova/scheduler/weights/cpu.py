@@ -40,6 +40,7 @@ class CPUWeigher(weights.BaseHostWeigher):
 
     def _weigh_object(self, host_state, weight_properties):
         """Higher weights win.  We want spreading to be the default."""
-        vcpus_free = (host_state.vcpus_total * host_state.cpu_allocation_ratio
-                      - host_state.vcpus_used)
+        vcpus_free = (
+            host_state.vcpus_total * host_state.cpu_allocation_ratio -
+            host_state.vcpus_used)
         return vcpus_free

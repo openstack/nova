@@ -5442,8 +5442,8 @@ class PortResourceRequestBasedSchedulingTestBase(
         # starts the scheduler
         if 'PciPassthroughFilter' not in CONF.filter_scheduler.enabled_filters:
             self.flags(
-                enabled_filters=CONF.filter_scheduler.enabled_filters
-                                + ['PciPassthroughFilter'],
+                enabled_filters=CONF.filter_scheduler.enabled_filters +
+                                ['PciPassthroughFilter'],
                 group='filter_scheduler')
 
         self.useFixture(

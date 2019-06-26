@@ -434,8 +434,8 @@ class BuildRequestList(base.ObjectListBase, base.NovaObject):
 
             filtered_build_reqs.append(build_req)
 
-        if (((len(filtered_build_reqs) < 2) or (not sort_keys))
-                and not marker):
+        if (((len(filtered_build_reqs) < 2) or (not sort_keys)) and
+                not marker):
             # No need to sort
             return cls(context, objects=filtered_build_reqs)
 

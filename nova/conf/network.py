@@ -1429,9 +1429,9 @@ nova-network is deprecated, as are any related configuration options.
 ]
 
 
-ALL_DEFAULT_OPTS = (linux_net_opts + network_opts + ldap_dns_opts
-                    + rpcapi_opts + driver_opts + floating_ip_opts
-                    + ipv6_opts + quota_opts + service_opts)
+ALL_DEFAULT_OPTS = (linux_net_opts + network_opts + ldap_dns_opts +
+                    rpcapi_opts + driver_opts + floating_ip_opts +
+                    ipv6_opts + quota_opts + service_opts)
 
 
 def register_opts(conf):
