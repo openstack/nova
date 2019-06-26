@@ -5806,32 +5806,32 @@ class TestNeutronv2ModuleMethods(test.NoDBTestCase):
                           None, ['list', 'of', 'port_ids'])
 
     def test_ensure_requested_network_ordering_no_preference_ids(self):
-        l = [1, 2, 3]
+        networks = [1, 2, 3]
 
         neutronapi._ensure_requested_network_ordering(
             lambda x: x,
-            l,
+            networks,
             None)
 
     def test_ensure_requested_network_ordering_no_preference_hashes(self):
-        l = [{'id': 3}, {'id': 1}, {'id': 2}]
+        networks = [{'id': 3}, {'id': 1}, {'id': 2}]
 
         neutronapi._ensure_requested_network_ordering(
             lambda x: x['id'],
-            l,
+            networks,
             None)
 
-        self.assertEqual(l, [{'id': 3}, {'id': 1}, {'id': 2}])
+        self.assertEqual(networks, [{'id': 3}, {'id': 1}, {'id': 2}])
 
     def test_ensure_requested_network_ordering_with_preference(self):
-        l = [{'id': 3}, {'id': 1}, {'id': 2}]
+        networks = [{'id': 3}, {'id': 1}, {'id': 2}]
 
         neutronapi._ensure_requested_network_ordering(
             lambda x: x['id'],
-            l,
+            networks,
             [1, 2, 3])
 
-        self.assertEqual(l, [{'id': 1}, {'id': 2}, {'id': 3}])
+        self.assertEqual(networks, [{'id': 1}, {'id': 2}, {'id': 3}])
 
 
 class TestNeutronv2Portbinding(TestNeutronv2Base):
