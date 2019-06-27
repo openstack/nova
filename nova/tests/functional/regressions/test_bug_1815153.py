@@ -23,7 +23,6 @@ from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit.image import fake as image_fake
 from nova.tests.unit import policy_fixture
-from nova.virt import fake
 
 
 class NonPersistentFieldNotResetTest(
@@ -69,9 +68,7 @@ class NonPersistentFieldNotResetTest(
 
         self.compute = {}
 
-        self.addCleanup(fake.restore_nodes)
         for host in ('host1', 'host2', 'host3'):
-            fake.set_nodes([host])
             compute_service = self.start_service('compute', host=host)
             self.compute.update({host: compute_service})
 
