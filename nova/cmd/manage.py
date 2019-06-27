@@ -1759,20 +1759,13 @@ class PlacementCommands(object):
         # return None if we can't communicate with Placement, and the
         # response can have an empty {'allocations': {}} response if
         # there are no allocations for the instance so handle both
-        if allocations and allocations.get('allocations'):
-            # Check to see if the allocation project_id
-            # and user_id matches the instance project and user and
-            # fix the allocation project/user if they don't match.
-            # Allocations created before Placement API version 1.8
-            # did not have a project_id/user_id, and migrated records
-            # could have sentinel values from config.
-            if (allocations.get('project_id') ==
-                    instance.project_id and
-                    allocations.get('user_id') == instance.user_id):
-                output(_('Instance %s already has allocations with '
-                         'matching consumer project/user.') %
-                       instance.uuid)
-                return
+        if not allocations or not allocations.get('allocations'):
+            # This instance doesn't have allocations
+            return self._heal_missing_alloc(
+                ctxt, instance, node_cache, dry_run, output, placement)
+
+        if (allocations.get('project_id') != instance.project_id or
+                allocations.get('user_id') != instance.user_id):
             # We have an instance with allocations but not the correct
             # project_id/user_id, so we want to update the allocations
             # and re-put them. We don't use put_allocations here
@@ -1781,10 +1774,9 @@ class PlacementCommands(object):
             return self._heal_missing_project_and_user_id(
                 allocations, instance, dry_run, output, placement)
 
-        # This instance doesn't have allocations so we need to find
-        # its compute node resource provider.
-        return self._heal_missing_alloc(
-            ctxt, instance, node_cache, dry_run, output, placement)
+        output(_('Instance %s already has allocations with '
+                 'matching consumer project/user.') % instance.uuid)
+        return
 
     def _heal_instances_in_cell(self, ctxt, max_count, unlimited, output,
                                 placement, dry_run, instance_uuid):
