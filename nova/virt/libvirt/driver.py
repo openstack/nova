@@ -8470,6 +8470,26 @@ class LibvirtDriver(driver.ComputeDriver):
             image.cache(fetch_func=copy_from_host, size=size,
                         filename=filename)
 
+        # NOTE(lyarwood): If the instance vm_state is shelved offloaded then we
+        # must be unshelving for _try_fetch_image_cache to be called.
+        if instance.vm_state == vm_states.SHELVED_OFFLOADED:
+            # NOTE(lyarwood): When using the rbd imagebackend the call to cache
+            # above will attempt to clone from the shelved snapshot in Glance
+            # if available from this compute. We then need to flatten the
+            # resulting image to avoid it still referencing and ultimately
+            # blocking the removal of the shelved snapshot at the end of the
+            # unshelve. This is a no-op for all but the rbd imagebackend.
+            try:
+                image.flatten()
+                LOG.debug('Image %s flattened successfully while unshelving '
+                          'instance.', image.path, instance=instance)
+            except NotImplementedError:
+                # NOTE(lyarwood): There's an argument to be made for logging
+                # our inability to call flatten here, however given this isn't
+                # implemented for most of the backends it may do more harm than
+                # good, concerning operators etc so for now just pass.
+                pass
+
     def _create_images_and_backing(self, context, instance, instance_dir,
                                    disk_info, fallback_from_host=None):
         """:param context: security context
