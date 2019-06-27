@@ -2478,7 +2478,7 @@ class TestNovaManagePlacement(test.NoDBTestCase):
             mock_get_compute_node, mock_get_allocs, mock_get_instances,
             mock_get_all_cells):
         self.assertEqual(3, self.cli.heal_allocations())
-        self.assertIn('Failed to create allocations for instance',
+        self.assertIn('Failed to update allocations for consumer',
                       self.output.getvalue())
         instance = mock_get_instances.return_value[0]
         mock_res_from_flavor.assert_called_once_with(
