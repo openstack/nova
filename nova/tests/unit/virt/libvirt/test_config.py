@@ -2284,6 +2284,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.uuid = "b38a3f43-4be2-4046-897f-b67c2f5e0147"
         obj.os_type = "exe"
         obj.os_init_path = "/sbin/init"
+        obj.os_init_env["foo"] = "bar"
 
         fs = config.LibvirtConfigGuestFilesys()
         fs.source_dir = "/root/lxc"
@@ -2301,6 +2302,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               <os>
                 <type>exe</type>
                 <init>/sbin/init</init>
+                <initenv name="foo">bar</initenv>
               </os>
               <devices>
                 <filesystem type="mount">
@@ -2765,6 +2767,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               <boot dev="fd"/>
               <bootmenu enable="yes"/>
               <smbios mode="sysinfo"/>
+              <initenv name="foo">bar</initenv>
             </os>
           </domain>
         """
@@ -2781,6 +2784,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         self.assertEqual('console=xvc0', obj.os_cmdline)
         self.assertEqual('root=xvda', obj.os_root)
         self.assertEqual('/sbin/init', obj.os_init_path)
+        self.assertEqual('bar', obj.os_init_env['foo'])
         self.assertEqual(['hd', 'cdrom', 'fd'], obj.os_boot_dev)
         self.assertTrue(obj.os_bootmenu)
         self.assertIsNone(obj.os_smbios)
