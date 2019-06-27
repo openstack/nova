@@ -188,8 +188,8 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
             rp = self.client._get_resource_provider(self.context,
                                                     self.compute_uuid)
             self.assertIsNone(rp)
-            rps = self.client._get_providers_in_tree(self.context,
-                                                     self.compute_uuid)
+            rps = self.client.get_providers_in_tree(self.context,
+                                                    self.compute_uuid)
             self.assertEqual([], rps)
             # But get_provider_tree_and_ensure_root creates one (via
             # _ensure_resource_provider)
@@ -209,8 +209,8 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
             rp = self.client._get_resource_provider(self.context,
                                                     self.compute_uuid)
             self.assertIsNotNone(rp)
-            rps = self.client._get_providers_in_tree(self.context,
-                                                     self.compute_uuid)
+            rps = self.client.get_providers_in_tree(self.context,
+                                                    self.compute_uuid)
             self.assertEqual(1, len(rps))
 
             # We should also have empty sets of aggregate and trait

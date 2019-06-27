@@ -491,8 +491,7 @@ class SchedulerReportClient(object):
         LOG.error(msg, args)
         raise exception.ResourceProviderRetrievalFailed(message=msg % args)
 
-    @safe_connect
-    def _get_providers_in_tree(self, context, uuid):
+    def get_providers_in_tree(self, context, uuid):
         """Queries the placement API for a list of the resource providers in
         the tree associated with the specified UUID.
 
@@ -501,6 +500,8 @@ class SchedulerReportClient(object):
         :return: A list of dicts of resource provider information, which may be
                  empty if no provider exists with the specified UUID.
         :raise: ResourceProviderRetrievalFailed on error.
+        :raise: keystoneauth1.exceptions.ClientException if placement API
+                communication fails.
         """
         resp = self.get("/resource_providers?in_tree=%s" % uuid,
                         version=NESTED_PROVIDER_API_VERSION,
@@ -628,6 +629,10 @@ class SchedulerReportClient(object):
                      value
         :param parent_provider_uuid: Optional UUID of the immediate parent,
                                      which must have been previously _ensured.
+        :raise ResourceProviderCreationFailed: If we expected to be creating
+                providers, but couldn't.
+        :raise: keystoneauth1.exceptions.ClientException if placement API
+                communication fails.
         """
         # NOTE(efried): We currently have no code path where we need to set the
         # parent_provider_uuid on a previously-parent-less provider - so we do
@@ -654,7 +659,7 @@ class SchedulerReportClient(object):
         else:
             # We either don't have it locally or it's stale. Pull or create it.
             created_rp = None
-            rps_to_refresh = self._get_providers_in_tree(context, uuid)
+            rps_to_refresh = self.get_providers_in_tree(context, uuid)
             if not rps_to_refresh:
                 created_rp = self._create_resource_provider(
                     context, uuid, name or uuid,
@@ -1801,7 +1806,7 @@ class SchedulerReportClient(object):
             # do anything with the return value except log
             return False
 
-        rps = self._get_providers_in_tree(context, root_rp_uuid)
+        rps = self.get_providers_in_tree(context, root_rp_uuid)
         rp_uuids = [rp['uuid'] for rp in rps]
 
         # go through the current allocations and remove every RP from it that
