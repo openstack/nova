@@ -262,6 +262,8 @@ class NbdTestCase(test.NoDBTestCase):
         mount.map_dev = fake_returns_true
 
         self.assertFalse(mount.do_mount())
+        mock_mount.assert_called_once_with(
+                None, None, tempdir, None)
 
     @mock.patch('nova.privsep.fs.nbd_connect')
     @mock.patch('nova.privsep.fs.nbd_disconnect')
