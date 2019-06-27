@@ -2615,6 +2615,12 @@ class ComputeManager(manager.Manager):
 
         network_info = instance.get_network_info()
 
+        # NOTE(arnaudmorin) to avoid nova destroying the instance without
+        # unplugging the interface, refresh network_info if it is empty.
+        if not network_info:
+            network_info = self.network_api.get_instance_nw_info(
+                context, instance)
+
         # NOTE(vish) get bdms before destroying the instance
         vol_bdms = [bdm for bdm in bdms if bdm.is_volume]
         block_device_info = self._get_instance_block_device_info(
