@@ -1,0 +1,4 @@
+---
+features:
+  - |
+    LXC instances now support cloud-init.

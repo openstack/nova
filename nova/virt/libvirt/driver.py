@@ -5068,6 +5068,7 @@ class LibvirtDriver(driver.ComputeDriver):
         elif virt_type == "lxc":
             guest.os_init_path = "/sbin/init"
             guest.os_cmdline = CONSOLE
+            guest.os_init_env["product_name"] = "OpenStack Nova"
         elif virt_type == "uml":
             guest.os_kernel = "/usr/bin/linux"
             guest.os_root = root_device_name

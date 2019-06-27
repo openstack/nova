@@ -2414,6 +2414,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual("/sbin/init", cfg.os_init_path)
         self.assertEqual("console=tty0 console=ttyS0 console=hvc0",
                          cfg.os_cmdline)
+        self.assertEqual("OpenStack Nova", cfg.os_init_env['product_name'])
         self.assertIsNone(cfg.os_root)
         self.assertEqual(3, len(cfg.devices))
         self.assertIsInstance(cfg.devices[0],
@@ -8665,6 +8666,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         check = [
             (lambda t: t.find('.').get('type'), 'lxc'),
             (lambda t: t.find('./os/type').text, 'exe'),
+            (lambda t: t.find("./os/initenv[@name='product_name']").text,
+                    'OpenStack Nova'),
             (lambda t: t.find('./devices/filesystem/target').get('dir'), '/')]
 
         for i, (check, expected_result) in enumerate(check):
