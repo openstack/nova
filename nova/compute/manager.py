@@ -1283,7 +1283,7 @@ class ComputeManager(manager.Manager):
         """Retrieve the power state for the given instance."""
         LOG.debug('Checking state', instance=instance)
         try:
-            return self.driver.get_info(instance).state
+            return self.driver.get_info(instance, use_cache=False).state
         except exception.InstanceNotFound:
             return power_state.NOSTATE
 
