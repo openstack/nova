@@ -1674,10 +1674,16 @@ class PlacementCommands(object):
                    {'instance': instance.uuid, 'node_uuid': node_uuid,
                     'resources': resources})
         else:
-            if placement.put_allocations(
-                    ctxt, node_uuid, instance.uuid, resources,
-                    instance.project_id, instance.user_id,
-                    consumer_generation=None):
+            payload = {
+                'allocations': {
+                    node_uuid: {'resources': resources},
+                },
+                'project_id': instance.project_id,
+                'user_id': instance.user_id,
+                'consumer_generation': None
+            }
+            resp = placement.put_allocations(ctxt, instance.uuid, payload)
+            if resp:
                 output(_('Successfully created allocations for '
                          'instance %(instance)s against resource '
                          'provider %(provider)s.') %
@@ -1688,21 +1694,16 @@ class PlacementCommands(object):
                     instance=instance.uuid, provider=node_uuid)
 
     def _heal_missing_project_and_user_id(
-            self, allocations, instance, dry_run, output, placement):
+            self, ctxt, allocations, instance, dry_run, output, placement):
 
         allocations['project_id'] = instance.project_id
         allocations['user_id'] = instance.user_id
-        # We use CONSUMER_GENERATION_VERSION for PUT
-        # /allocations/{consumer_id} to mirror the body structure from
-        # get_allocs_for_consumer.
         if dry_run:
             output(_('[dry-run] Update allocations for instance '
                      '%(instance)s: %(allocations)s') %
                    {'instance': instance.uuid, 'allocations': allocations})
         else:
-            resp = placement.put(
-                '/allocations/%s' % instance.uuid,
-                allocations, version=report.CONSUMER_GENERATION_VERSION)
+            resp = placement.put_allocations(ctxt, instance.uuid, allocations)
             if resp:
                 output(_('Successfully updated allocations for '
                          'instance %s.') % instance.uuid)
@@ -1772,7 +1773,7 @@ class PlacementCommands(object):
             # because we don't want to mess up shared or nested
             # provider allocations.
             return self._heal_missing_project_and_user_id(
-                allocations, instance, dry_run, output, placement)
+                ctxt, allocations, instance, dry_run, output, placement)
 
         output(_('Instance %s already has allocations with '
                  'matching consumer project/user.') % instance.uuid)

@@ -243,10 +243,16 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
             # Update allocations with our instance
             alloc_dict = utils.resources_from_flavor(self.instance,
                                                      self.instance.flavor)
+            payload = {
+                "allocations": {
+                    self.compute_uuid: {"resources": alloc_dict}
+                },
+                "project_id": self.instance.project_id,
+                "user_id": self.instance.user_id,
+                "consumer_generation": None
+            }
             self.client.put_allocations(
-                self.context, self.compute_uuid, self.instance_uuid,
-                alloc_dict, self.instance.project_id, self.instance.user_id,
-                None)
+                self.context, self.instance_uuid, payload)
 
             # Check that allocations were made
             resp = self.client.get('/allocations/%s' % self.instance_uuid)
@@ -685,13 +691,18 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
                 inv,
                 self.client._get_inventory(
                     self.context, uuids.cn)['inventories'])
-
+            payload = {
+                "allocations": {
+                    uuids.cn: {"resources": {orc.SRIOV_NET_VF: 1}}
+                },
+                "project_id": uuids.proj,
+                "user_id": uuids.user,
+                "consumer_generation": None
+            }
             # Now set up an InventoryInUse case by creating a VF allocation...
             self.assertTrue(
                 self.client.put_allocations(
-                    self.context, uuids.cn, uuids.consumer,
-                    {orc.SRIOV_NET_VF: 1},
-                    uuids.proj, uuids.user, None))
+                    self.context, uuids.consumer, payload))
             # ...and trying to delete the provider's VF inventory
             bad_inv = {
                 'CUSTOM_BANDWIDTH': {
