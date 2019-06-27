@@ -39,7 +39,7 @@ create = {
                 # positive ( > 0) float
                 'rxtx_factor': {
                     'type': ['number', 'string'],
-                    'pattern': '^[0-9]+(\.[0-9]+)?$',
+                    'pattern': r'^[0-9]+(\.[0-9]+)?$',
                     'minimum': 0, 'exclusiveMinimum': True,
                     # maximum's value is limited to db constant's
                     # SQL_SP_FLOAT_MAX (in nova/db/constants.py)

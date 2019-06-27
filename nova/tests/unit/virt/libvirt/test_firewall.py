@@ -280,13 +280,13 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
         self.assertTrue(security_group_chain,
                         "The security group chain wasn't added")
 
-        regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p icmp '
+        regex = re.compile(r'\[0\:0\] -A .* -j ACCEPT -p icmp '
                            '-s 192.168.11.0/24')
         match_rules = [rule for rule in self.out_rules if regex.match(rule)]
         self.assertGreater(len(match_rules), 0,
                            "ICMP acceptance rule wasn't added")
 
-        regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p icmp -m icmp '
+        regex = re.compile(r'\[0\:0\] -A .* -j ACCEPT -p icmp -m icmp '
                            '--icmp-type 8 -s 192.168.11.0/24')
         match_rules = [rule for rule in self.out_rules if regex.match(rule)]
         self.assertGreater(len(match_rules), 0,
@@ -295,13 +295,13 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
         for ip in network_model.fixed_ips():
             if ip['version'] != 4:
                 continue
-            regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p tcp -m multiport '
+            regex = re.compile(r'\[0\:0\] -A .* -j ACCEPT -p tcp -m multiport '
                                '--dports 80:81 -s %s' % ip['address'])
             match_rules = [rule for rule in self.out_rules
                            if regex.match(rule)]
             self.assertGreater(len(match_rules), 0,
                                "TCP port 80/81 acceptance rule wasn't added")
-            regex = re.compile('\[0\:0\] -A .* -j ACCEPT -s '
+            regex = re.compile(r'\[0\:0\] -A .* -j ACCEPT -s '
                                '%s' % ip['address'])
             match_rules = [rule for rule in self.out_rules
                            if regex.match(rule)]
@@ -309,7 +309,7 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
                                "Protocol/port-less acceptance rule"
                                " wasn't added")
 
-        regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p tcp '
+        regex = re.compile(r'\[0\:0\] -A .* -j ACCEPT -p tcp '
                            '-m multiport --dports 80:81 -s 192.168.10.0/24')
         match_rules = [rule for rule in self.out_rules if regex.match(rule)]
         self.assertGreater(len(match_rules), 0,

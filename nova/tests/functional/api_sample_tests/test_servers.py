@@ -118,7 +118,7 @@ class ServersSampleJsonTest(ServersSampleBase):
         subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
-        subs['instance_name'] = 'instance-\d{8}'
+        subs['instance_name'] = r'instance-\d{8}'
         subs['hypervisor_hostname'] = r'[\w\.\-]+'
         subs['hostname'] = r'[\w\.\-]+'
         subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
@@ -145,7 +145,7 @@ class ServersSampleJsonTest(ServersSampleBase):
         subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
-        subs['instance_name'] = 'instance-\d{8}'
+        subs['instance_name'] = r'instance-\d{8}'
         subs['hypervisor_hostname'] = r'[\w\.\-]+'
         subs['hostname'] = r'[\w\.\-]+'
         subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
@@ -261,7 +261,7 @@ class ServersSampleJson263Test(ServersSampleBase):
         super(ServersSampleJson263Test, self).setUp()
         self.common_subs = {
             'hostid': '[a-f0-9]+',
-            'instance_name': 'instance-\d{8}',
+            'instance_name': r'instance-\d{8}',
             'hypervisor_hostname': r'[\w\.\-]+',
             'hostname': r'[\w\.\-]+',
             'access_ip_v4': '1.2.3.4',
@@ -330,7 +330,7 @@ class ServersSampleJson266Test(ServersSampleBase):
         super(ServersSampleJson266Test, self).setUp()
         self.common_subs = {
             'hostid': '[a-f0-9]+',
-            'instance_name': 'instance-\d{8}',
+            'instance_name': r'instance-\d{8}',
             'hypervisor_hostname': r'[\w\.\-]+',
             'hostname': r'[\w\.\-]+',
             'access_ip_v4': '1.2.3.4',
@@ -430,7 +430,7 @@ class ServersSampleJson271Test(ServersSampleBase):
         super(ServersSampleJson271Test, self).setUp()
         self.common_subs = {
             'hostid': '[a-f0-9]+',
-            'instance_name': 'instance-\d{8}',
+            'instance_name': r'instance-\d{8}',
             'hypervisor_hostname': r'[\w\.\-]+',
             'hostname': r'[\w\.\-]+',
             'access_ip_v4': '1.2.3.4',

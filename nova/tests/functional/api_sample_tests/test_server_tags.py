@@ -36,7 +36,7 @@ class ServerTagsJsonTest(test_servers.ServersSampleBase):
         subs['access_ip_v4'] = '1.2.3.4'
         subs['access_ip_v6'] = '80fe::'
         subs['hostname'] = r'[\w\.\-]+'
-        subs['instance_name'] = 'instance-\d{8}'
+        subs['instance_name'] = r'instance-\d{8}'
         subs['hypervisor_hostname'] = r'[\w\.\-]+'
         subs['cdrive'] = '.*'
         subs['user_data'] = (self.user_data if six.PY2

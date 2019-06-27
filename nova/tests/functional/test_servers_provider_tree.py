@@ -156,7 +156,7 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
 
     def _update_provider_tree_multiple_providers(self, startup=False,
                                                  do_reshape=False):
-        """Make update_provider_tree create multiple providers, including an
+        r"""Make update_provider_tree create multiple providers, including an
         additional root as a sharing provider; and some descendants in the
         compute node's tree.
 

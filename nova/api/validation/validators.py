@@ -75,7 +75,7 @@ def _validate_cidr_format(cidr):
         return False
     if '/' not in cidr:
         return False
-    if re.search('\s', cidr):
+    if re.search(r'\s', cidr):
         return False
     return True
 

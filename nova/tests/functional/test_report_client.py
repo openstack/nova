@@ -325,7 +325,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
                             global_request_id=global_request_id)
 
     def test_get_provider_tree_with_nested_and_aggregates(self):
-        """A more in-depth test of get_provider_tree_and_ensure_root with
+        r"""A more in-depth test of get_provider_tree_and_ensure_root with
         nested and sharing resource providers.
 
                ss1(DISK)    ss2(DISK)           ss3(DISK)
@@ -1013,7 +1013,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
                 self.context, utils.ResourceRequest())
 
     def _set_up_provider_tree(self):
-        """Create two compute nodes in placement ("this" one, and another one)
+        r"""Create two compute nodes in placement ("this" one, and another one)
         and a storage provider sharing with both.
 
              +-----------------------+      +------------------------+

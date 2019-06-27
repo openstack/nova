@@ -161,7 +161,7 @@ class HostState(object):
         :returns: a list of pci devices on the node
         """
         def _compile_hex(pattern):
-            """Return a compiled regular expression pattern into which we have
+            r"""Return a compiled regular expression pattern into which we have
             replaced occurrences of hex by [\da-fA-F].
             """
             return re.compile(pattern.replace("hex", r"[\da-fA-F]"))

@@ -45,7 +45,7 @@ class RescueJsonTest(test_servers.ServersSampleBase):
         subs['status'] = 'RESCUE'
         subs['access_ip_v4'] = '1.2.3.4'
         subs['access_ip_v6'] = '80fe::'
-        subs['instance_name'] = 'instance-\d{8}'
+        subs['instance_name'] = r'instance-\d{8}'
         subs['hypervisor_hostname'] = r'[\w\.\-]+'
         subs['cdrive'] = '.*'
         self._verify_response('server-get-resp-rescue', subs, response, 200)
@@ -69,7 +69,7 @@ class RescueJsonTest(test_servers.ServersSampleBase):
         subs['status'] = 'RESCUE'
         subs['access_ip_v4'] = '1.2.3.4'
         subs['access_ip_v6'] = '80fe::'
-        subs['instance_name'] = 'instance-\d{8}'
+        subs['instance_name'] = r'instance-\d{8}'
         subs['hypervisor_hostname'] = r'[\w\.\-]+'
         subs['cdrive'] = '.*'
         self._verify_response('server-get-resp-rescue', subs, response, 200)
@@ -88,7 +88,7 @@ class RescueJsonTest(test_servers.ServersSampleBase):
         subs['status'] = 'ACTIVE'
         subs['access_ip_v4'] = '1.2.3.4'
         subs['access_ip_v6'] = '80fe::'
-        subs['instance_name'] = 'instance-\d{8}'
+        subs['instance_name'] = r'instance-\d{8}'
         subs['hypervisor_hostname'] = r'[\w\.\-]+'
         subs['cdrive'] = '.*'
         self._verify_response('server-get-resp-unrescue', subs, response, 200)

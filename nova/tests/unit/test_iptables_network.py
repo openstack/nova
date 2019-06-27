@@ -143,7 +143,7 @@ class IptablesManagerTestCase(test.NoDBTestCase):
         table.add_rule('OUTPUT', '-d 10.10.10.11 -j DNAT --to 10.0.0.10')
         new_lines = self.manager._modify_rules(current_lines, table, 'nat')
         self.assertEqual(len(new_lines) - len(current_lines), 8)
-        regex = '.*\s+%s(/32|\s+|$)'
+        regex = r'.*\s+%s(/32|\s+|$)'
         num_removed = table.remove_rules_regex(regex % '10.10.10.10')
         self.assertEqual(num_removed, 4)
         new_lines = self.manager._modify_rules(current_lines, table, 'nat')

@@ -515,7 +515,7 @@ def sanitize_hostname(hostname, default_name=None):
 
     hostname = truncate_hostname(hostname)
     hostname = re.sub('[ _]', '-', hostname)
-    hostname = re.sub('[^\w.-]+', '', hostname)
+    hostname = re.sub(r'[^\w.-]+', '', hostname)
     hostname = hostname.lower()
     hostname = hostname.strip('.-')
     # NOTE(eliqiao): set hostname to default_display_name to avoid

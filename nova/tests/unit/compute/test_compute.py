@@ -9472,7 +9472,7 @@ class ComputeAPITestCase(BaseTestCase):
         # ip ends up matching 2nd octet here.. so all 3 match ip
         # but 'name' only matches one
         instances = self.compute_api.get_all(c,
-                search_opts={'ip': '.*\.1', 'name': 'not.*'})
+                search_opts={'ip': r'.*\.1', 'name': 'not.*'})
         self.assertEqual(len(instances), 1)
         self.assertEqual(instances[0]['uuid'], instance3['uuid'])
 
@@ -9480,19 +9480,19 @@ class ComputeAPITestCase(BaseTestCase):
         # so instance 1 and 3.. but name should only match #1
         # but 'name' only matches one
         instances = self.compute_api.get_all(c,
-                search_opts={'ip': '.*\.1$', 'name': '^woo.*'})
+                search_opts={'ip': r'.*\.1$', 'name': '^woo.*'})
         self.assertEqual(len(instances), 1)
         self.assertEqual(instances[0]['uuid'], instance1['uuid'])
 
         # same as above but no match on name (name matches instance1
         # but the ip query doesn't
         instances = self.compute_api.get_all(c,
-                search_opts={'ip': '.*\.2$', 'name': '^woot.*'})
+                search_opts={'ip': r'.*\.2$', 'name': '^woot.*'})
         self.assertEqual(len(instances), 0)
 
         # ip matches all 3... ipv6 matches #2+#3...name matches #3
         instances = self.compute_api.get_all(c,
-                search_opts={'ip': '.*\.1',
+                search_opts={'ip': r'.*\.1',
                              'name': 'not.*',
                              'ip6': '^.*12.*34.*'})
         self.assertEqual(len(instances), 1)

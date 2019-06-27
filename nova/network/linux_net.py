@@ -690,7 +690,7 @@ def ensure_vpn_forward(public_ip, port, private_ip):
 def ensure_floating_forward(floating_ip, fixed_ip, device, network):
     """Ensure floating IP forwarding rule."""
     # NOTE(vish): Make sure we never have duplicate rules for the same ip
-    regex = '.*\s+%s(/32|\s+|$)' % floating_ip
+    regex = r'.*\s+%s(/32|\s+|$)' % floating_ip
     num_rules = iptables_manager.ipv4['nat'].remove_rules_regex(regex)
     if num_rules:
         LOG.warning('Removed %(num)d duplicate rules for floating IP '

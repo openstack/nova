@@ -2935,19 +2935,19 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
         self.assertTrue(security_group_chain,
                         "The security group chain wasn't added")
 
-        regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p icmp'
+        regex = re.compile(r'\[0\:0\] -A .* -j ACCEPT -p icmp'
                            ' -s 192.168.11.0/24')
         match_rules = [rule for rule in self._out_rules if regex.match(rule)]
         self.assertGreater(len(match_rules), 0,
                            "ICMP acceptance rule wasn't added")
 
-        regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p icmp -m icmp'
+        regex = re.compile(r'\[0\:0\] -A .* -j ACCEPT -p icmp -m icmp'
                            ' --icmp-type 8 -s 192.168.11.0/24')
         match_rules = [rule for rule in self._out_rules if regex.match(rule)]
         self.assertGreater(len(match_rules), 0,
                            "ICMP Echo Request acceptance rule wasn't added")
 
-        regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p tcp --dport 80:81'
+        regex = re.compile(r'\[0\:0\] -A .* -j ACCEPT -p tcp --dport 80:81'
                            ' -s 192.168.10.0/24')
         match_rules = [rule for rule in self._out_rules if regex.match(rule)]
         self.assertGreater(len(match_rules), 0,
@@ -2991,7 +2991,7 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
         for ip in network_model.fixed_ips():
             if ip['version'] != 4:
                 continue
-            regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p tcp'
+            regex = re.compile(r'\[0\:0\] -A .* -j ACCEPT -p tcp'
                                ' --dport 80:81 -s %s' % ip['address'])
             match_rules = [rule for rule in self._out_rules
                            if regex.match(rule)]
@@ -3063,7 +3063,7 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
                                        'cidr': '192.168.99.0/24'})
         # validate the extra rule
         self.fw.refresh_security_group_rules(secgroup)
-        regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p udp --dport 200:299'
+        regex = re.compile(r'\[0\:0\] -A .* -j ACCEPT -p udp --dport 200:299'
                            ' -s 192.168.99.0/24')
         match_rules = [rule for rule in self._out_rules if regex.match(rule)]
         self.assertGreater(len(match_rules), 0,

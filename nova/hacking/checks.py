@@ -48,10 +48,10 @@ virt_config_re = re.compile(
     r"CONF\.import_opt\('.*?', 'nova\.virt\.(\w+)('|.)")
 asse_trueinst_re = re.compile(
                      r"(.)*assertTrue\(isinstance\((\w|\.|\'|\"|\[|\])+, "
-                     "(\w|\.|\'|\"|\[|\])+\)\)")
+                     r"(\w|\.|\'|\"|\[|\])+\)\)")
 asse_equal_type_re = re.compile(
                        r"(.)*assertEqual\(type\((\w|\.|\'|\"|\[|\])+\), "
-                       "(\w|\.|\'|\"|\[|\])+\)")
+                       r"(\w|\.|\'|\"|\[|\])+\)")
 asse_equal_in_end_with_true_or_false_re = re.compile(r"assertEqual\("
                     r"(\w|[][.'\"])+ in (\w|[][.'\", ])+, (True|False)\)")
 asse_equal_in_start_with_true_or_false_re = re.compile(r"assertEqual\("
@@ -76,7 +76,7 @@ asse_raises_regexp = re.compile(r"assertRaisesRegexp\(")
 conf_attribute_set_re = re.compile(r"CONF\.[a-z0-9_.]+\s*=\s*\w")
 translated_log = re.compile(
     r"(.)*LOG\.(audit|error|info|critical|exception)"
-    "\(\s*_\(\s*('|\")")
+    r"\(\s*_\(\s*('|\")")
 mutable_default_args = re.compile(r"^\s*def .+\((.+=\{\}|.+=\[\])")
 string_translation = re.compile(r"[^_]*_\(\s*('|\")")
 underscore_import_check = re.compile(r"(.)*import _(.)*")

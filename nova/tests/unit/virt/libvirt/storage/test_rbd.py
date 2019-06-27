@@ -23,7 +23,7 @@ from nova.virt.libvirt.storage import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
 
 
-CEPH_MON_DUMP = """dumped monmap epoch 1
+CEPH_MON_DUMP = r"""dumped monmap epoch 1
 { "epoch": 1,
   "fsid": "33630410-6d93-4d66-8e42-3b953cf194aa",
   "modified": "2013-05-22 17:44:56.343618",
