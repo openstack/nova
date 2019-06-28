@@ -7355,8 +7355,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         snp_name = 'snapshot_name'
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         ret = drvr._create_snapshot_metadata(base, instance, img_fmt, snp_name)
-        expected = {'is_public': False,
-                    'status': 'active',
+        expected = {'status': 'active',
                     'name': snp_name,
                     'properties': {
                                    'kernel_id': instance['kernel_id'],

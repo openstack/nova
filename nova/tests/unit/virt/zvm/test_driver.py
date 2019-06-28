@@ -340,7 +340,6 @@ class TestZVMDriver(test.NoDBTestCase):
                           "dest_url": "file:///path/to/target"}, '']
         call.side_effect = call_resp
         new_image_meta = {
-            'is_public': False,
             'status': 'active',
             'properties': {
                  'image_location': 'snapshot',

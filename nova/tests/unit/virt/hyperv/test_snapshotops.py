@@ -37,8 +37,7 @@ class SnapshotOpsTestCase(test_base.HyperVBaseTestCase):
 
     @mock.patch('nova.image.glance.get_remote_image_service')
     def test_save_glance_image(self, mock_get_remote_image_service):
-        image_metadata = {"is_public": False,
-                          "disk_format": "vhd",
+        image_metadata = {"disk_format": "vhd",
                           "container_format": "bare"}
         glance_image_service = mock.MagicMock()
         mock_get_remote_image_service.return_value = (glance_image_service,
