@@ -326,7 +326,7 @@ class FlavorsTestV21(test.TestCase):
         self.stub_out('nova.api.openstack.common.get_limit_and_marker',
                       fake_get_limit_and_marker)
         self.flags(max_limit=1, group='api')
-        req = fakes.HTTPRequest.blank('/v2/fake/flavors?limit=2')
+        req = self._build_request('/flavors?limit=2')
         response = self.controller.index(req)
         response_list = response["flavors"]
         response_links = response["flavors_links"]
@@ -347,6 +347,9 @@ class FlavorsTestV21(test.TestCase):
                 ]
            }
         ]
+        if self.expect_description:
+            expected_flavors[0]['description'] = (
+                fakes.FLAVORS['1'].description)
 
         self.assertEqual(response_list, expected_flavors)
         self.assertEqual(response_links[0]['rel'], 'next')
@@ -526,7 +529,7 @@ class FlavorsTestV21(test.TestCase):
         controller_list = self.controller.index
         if 'detail' in url:
             controller_list = self.controller.detail
-        req = self.fake_request.blank(self._prefix + url)
+        req = self._build_request(url)
         self.assertRaises(expected_exception,
                           controller_list, req)
 
@@ -574,6 +577,12 @@ class FlavorsTestV21(test.TestCase):
         }]
         if expected:
             expected_resp[0].update(expected)
+        if self.expect_description:
+            expected_resp[0]['description'] = (
+                fakes.FLAVORS['2'].description)
+        if 'detail' in url and self.expect_extra_specs:
+            expected_resp[0]['extra_specs'] = (
+                fakes.FLAVORS['2'].extra_specs)
         params = {
             'limit': 1,
             'marker': 1,
@@ -585,8 +594,8 @@ class FlavorsTestV21(test.TestCase):
         }
 
         for param, value in params.items():
-            req = self.fake_request.blank(
-                self._prefix + url + '?marker=1&%s=%s&%s=%s' %
+            req = self._build_request(
+                url + '?marker=1&%s=%s&%s=%s' %
                 (param, value, param, value))
             result = controller_list(req)
             self.assertEqual(expected_resp, result['flavors'])
@@ -632,7 +641,13 @@ class FlavorsTestV21(test.TestCase):
         }]
         if expected:
             expected_resp[0].update(expected)
-        req = self.fake_request.blank(self._prefix + url + '&limit=1&marker=1')
+        if self.expect_description:
+            expected_resp[0]['description'] = (
+                fakes.FLAVORS['2'].description)
+        if 'detail' in url and self.expect_extra_specs:
+            expected_resp[0]['extra_specs'] = (
+                fakes.FLAVORS['2'].extra_specs)
+        req = self._build_request(url + '&limit=1&marker=1')
         result = controller_list(req)
         self.assertEqual(expected_resp, result['flavors'])
 
