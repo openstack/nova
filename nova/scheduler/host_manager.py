@@ -126,6 +126,7 @@ class HostState(object):
         # Additional host information from the compute node stats:
         self.num_instances = 0
         self.num_io_ops = 0
+        self.failed_builds = 0
 
         # Other information
         self.host_ip = None
