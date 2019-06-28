@@ -1655,6 +1655,33 @@ class TestUpdateComputeNode(BaseTestCase):
         self.assertIn('Unable to find services table record for nova-compute',
                       mock_log_error.call_args[0][0])
 
+    def test_update_compute_node_save_fails_restores_old_resources(self):
+        """Tests the scenario that compute_node.save() fails and the
+        old_resources value for the node is restored to its previous value
+        before calling _resource_change updated it.
+        """
+        self._setup_rt()
+        orig_compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()
+        # Pretend the ComputeNode was just created in the DB but not yet saved
+        # with the free_disk_gb field.
+        delattr(orig_compute, 'free_disk_gb')
+        nodename = orig_compute.hypervisor_hostname
+        self.rt.old_resources[nodename] = orig_compute
+        # Now have an updated compute node with free_disk_gb set which should
+        # make _resource_change modify old_resources and return True.
+        updated_compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()
+        ctxt = context.get_admin_context()
+        # Mock ComputeNode.save() to trigger some failure (realistically this
+        # could be a DBConnectionError).
+        with mock.patch.object(updated_compute, 'save',
+                               side_effect=test.TestingException('db error')):
+            self.assertRaises(test.TestingException,
+                              self.rt._update,
+                              ctxt, updated_compute, startup=True)
+        # Make sure that the old_resources entry for the node has not changed
+        # from the original.
+        self.assertTrue(self.rt._resource_change(updated_compute))
+
     def test_copy_resources_no_update_allocation_ratios(self):
         """Tests that a ComputeNode object's allocation ratio fields are
         not set if the configured allocation ratio values are default None.

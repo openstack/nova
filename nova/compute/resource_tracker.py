@@ -26,6 +26,7 @@ import os_resource_classes as orc
 import os_traits
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from oslo_utils import excutils
 import retrying
 
 from nova.compute import claims
@@ -1052,12 +1053,23 @@ class ResourceTracker(object):
 
     def _update(self, context, compute_node, startup=False):
         """Update partial stats locally and populate them to Scheduler."""
+        # _resource_change will update self.old_resources if it detects changes
+        # but we want to restore those if compute_node.save() fails.
+        nodename = compute_node.hypervisor_hostname
+        old_compute = self.old_resources[nodename]
         if self._resource_change(compute_node):
             # If the compute_node's resource changed, update to DB.
             # NOTE(jianghuaw): Once we completely move to use get_inventory()
             # for all resource provider's inv data. We can remove this check.
             # At the moment we still need this check and save compute_node.
-            compute_node.save()
+            try:
+                compute_node.save()
+            except Exception:
+                # Restore the previous state in self.old_resources so that on
+                # the next trip through here _resource_change does not have
+                # stale data to compare.
+                with excutils.save_and_reraise_exception(logger=LOG):
+                    self.old_resources[nodename] = old_compute
 
         self._update_to_placement(context, compute_node, startup)
 
