@@ -280,7 +280,8 @@ class _TestInstanceGroupObject(object):
             'deleted': False
         }
         mock_il_get.assert_called_once_with(self.context,
-                                            filters=expected_filters)
+                                            filters=expected_filters,
+                                            expected_attrs=[])
         self.assertEqual(2, len(hosts))
         self.assertIn('host1', hosts)
         self.assertIn('host2', hosts)
@@ -293,7 +294,8 @@ class _TestInstanceGroupObject(object):
             'deleted': False
         }
         mock_il_get.assert_called_once_with(self.context,
-                                            filters=expected_filters)
+                                            filters=expected_filters,
+                                            expected_attrs=[])
 
     def test_obj_make_compatible(self):
         obj = objects.InstanceGroup(self.context, **_INST_GROUP_OBJ_VALS)
