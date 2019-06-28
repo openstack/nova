@@ -1461,3 +1461,5 @@ class HostStateTestCase(test.NoDBTestCase):
         # Because compute record not ready, the update of free ram
         # will not happen and the value will still be 0
         self.assertEqual(0, host.free_ram_mb)
+        # same with failed_builds
+        self.assertEqual(0, host.failed_builds)
