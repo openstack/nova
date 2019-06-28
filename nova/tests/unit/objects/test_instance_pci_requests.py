@@ -123,7 +123,7 @@ class _TestInstancePCIRequests(object):
         self.assertEqual(2, len(req.requests))
         self.assertEqual('alias_1', req.requests[0].alias_name)
         self.assertEqual('preferred', req.requests[0].numa_policy)
-        self.assertIsNone(None, req.requests[0].requester_id)
+        self.assertIsNone(req.requests[0].requester_id)
         self.assertEqual(uuids.requester_id, req.requests[1].requester_id)
 
     def test_from_request_spec_instance_props(self):
