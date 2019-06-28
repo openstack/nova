@@ -51,6 +51,6 @@ class PciPassthroughFilter(filters.BaseHostFilter):
             not host_state.pci_stats.support_requests(pci_requests.requests)):
             LOG.debug("%(host_state)s doesn't have the required PCI devices"
                       " (%(requests)s)",
-                      {'host_state': host_state, 'requests': pci_requests})
+                      {'host_state': host_state, 'requests': pci_requests.requests})
             return False
         return True
