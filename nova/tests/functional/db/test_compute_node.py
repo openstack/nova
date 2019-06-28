@@ -106,7 +106,7 @@ class ComputeNodeTestCase(test.TestCase):
                                 'ram_allocation_ratio': None})
         cn2_db = db.compute_node_get(self.context, cn2.id)
         for x in ['cpu', 'disk', 'ram']:
-            self.assertIsNone(None, cn2_db['%s_allocation_ratio' % x])
+            self.assertIsNone(cn2_db['%s_allocation_ratio' % x])
 
     def test_get_all_by_uuids(self):
         cn1 = fake_compute_obj.obj_clone()
