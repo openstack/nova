@@ -358,7 +358,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
 class FlavorManageTestV2_55(FlavorManageTestV21):
     microversion = '2.55'
 
-    def get_flavor(self, flavor):
+    def get_flavor(self, flavor, **kwargs):
         return objects.Flavor(
             flavorid=flavor['id'], name=flavor['name'],
             memory_mb=flavor['ram'], vcpus=flavor['vcpus'],
@@ -367,7 +367,8 @@ class FlavorManageTestV2_55(FlavorManageTestV21):
             disabled=flavor['OS-FLV-DISABLED:disabled'],
             is_public=flavor['os-flavor-access:is_public'],
             rxtx_factor=flavor['rxtx_factor'],
-            description=flavor['description'])
+            description=flavor['description'],
+            **kwargs)
 
     def setUp(self):
         super(FlavorManageTestV2_55, self).setUp()
@@ -453,16 +454,8 @@ class FlavorManageTestV2_61(FlavorManageTestV2_55):
     microversion = '2.61'
 
     def get_flavor(self, flavor):
-        return objects.Flavor(
-            flavorid=flavor['id'], name=flavor['name'],
-            memory_mb=flavor['ram'], vcpus=flavor['vcpus'],
-            root_gb=flavor['disk'], swap=flavor['swap'],
-            ephemeral_gb=flavor['OS-FLV-EXT-DATA:ephemeral'],
-            disabled=flavor['OS-FLV-DISABLED:disabled'],
-            is_public=flavor['os-flavor-access:is_public'],
-            rxtx_factor=flavor['rxtx_factor'],
-            description=flavor['description'],
-            extra_specs={"key1": "value1"})
+        return super(FlavorManageTestV2_61, self).get_flavor(
+            flavor, extra_specs={"key1": "value1"})
 
     def setUp(self):
         super(FlavorManageTestV2_61, self).setUp()
