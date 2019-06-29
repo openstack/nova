@@ -856,6 +856,7 @@ def _create_test_instance():
         'vcpu_model': None,
         'host': 'fake-host',
         'task_state': None,
+        'vm_state': None,
         'trusted_certs': None
     }
 
@@ -16910,8 +16911,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         prepare.side_effect = fake_prepare
         drvr = libvirt_driver.LibvirtDriver(virtapi, False)
 
-        instance = objects.Instance(vm_state=vm_states.BUILDING,
-                                    **self.test_instance)
+        instance = objects.Instance(**self.test_instance)
+        instance.vm_state = vm_states.BUILDING
         vifs = [{'id': uuids.vif_1, 'active': False},
                 {'id': uuids.vif_2, 'active': False}]
 
@@ -18306,6 +18307,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         inst['system_metadata'] = {}
         inst['metadata'] = {}
         inst['task_state'] = None
+        inst['vm_state'] = None
 
         inst.update(params)
 
@@ -19288,6 +19290,54 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 
         bdm.append({'boot_index': 0})
         self.assertTrue(func(bdi))
+
+    def test_unshelve_noop_flatten_fetch_image_cache(self):
+        instance = self._create_instance(
+            params={'vm_state': vm_states.SHELVED_OFFLOADED})
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        mock_imagebackend = mock.Mock(spec=imagebackend.Lvm)
+        mock_imagebackend.flatten.side_effect = NotImplementedError()
+
+        # Assert that this doesn't raise NotImplementedError
+        drvr._try_fetch_image_cache(mock_imagebackend, mock.sentinel.fetch,
+                self.context, mock.sentinel.filename, uuids.image_id,
+                instance, mock.sentinel.size)
+
+        # Assert that we cache and then flatten the image when an instance is
+        # still SHELVED_OFFLOADED during _try_fetch_image_cache.
+        mock_imagebackend.cache.assert_called_once_with(
+            fetch_func=mock.sentinel.fetch, context=self.context,
+            filename=mock.sentinel.filename, image_id=uuids.image_id,
+            size=mock.sentinel.size, trusted_certs=instance.trusted_certs)
+        mock_imagebackend.flatten.assert_called_once()
+
+    def test_unshelve_rbd_image_flatten_during_fetch_image_cache(self):
+        instance = self._create_instance(
+            params={'vm_state': vm_states.SHELVED_OFFLOADED})
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        mock_rbd_driver = mock.Mock(spec=rbd_utils.RBDDriver)
+        mock_rbd_imagebackend = mock.Mock(spec=imagebackend.Rbd)
+        mock_rbd_imagebackend.rbd_name = mock.sentinel.rbd_name
+        mock_rbd_imagebackend.pool = mock.sentinel.rbd_pool
+        # This is logged so we can't use a sentinel
+        mock_rbd_imagebackend.path = 'rbd:pool/vol_disk'
+        mock_rbd_imagebackend.driver = mock_rbd_driver
+        mock_rbd_imagebackend.flatten.side_effect = \
+            imagebackend.Rbd.flatten(mock_rbd_imagebackend)
+
+        drvr._try_fetch_image_cache(mock_rbd_imagebackend, mock.sentinel.fetch,
+                self.context, mock.sentinel.filename, uuids.image_id,
+                instance, mock.sentinel.size)
+
+        # Assert that we cache and then flatten the image when an instance is
+        # still SHELVED_OFFLOADED during _try_fetch_image_cache.
+        mock_rbd_imagebackend.cache.assert_called_once_with(
+            fetch_func=mock.sentinel.fetch, context=self.context,
+            filename=mock.sentinel.filename, image_id=uuids.image_id,
+            size=mock.sentinel.size, trusted_certs=instance.trusted_certs)
+        mock_rbd_imagebackend.flatten.assert_called_once()
+        mock_rbd_driver.flatten.assert_called_once_with(
+            mock.sentinel.rbd_name, pool=mock.sentinel.rbd_pool)
 
     @mock.patch('nova.virt.libvirt.driver.imagebackend')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._inject_data')
