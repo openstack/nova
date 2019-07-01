@@ -43,6 +43,7 @@ import eventlet.semaphore
 import eventlet.timeout
 import futurist
 from keystoneauth1 import exceptions as keystone_exception
+import os_traits
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
@@ -90,6 +91,7 @@ from nova.pci import whitelist
 from nova import rpc
 from nova import safe_utils
 from nova.scheduler.client import query
+from nova.scheduler.client import report
 from nova import utils
 from nova.virt import block_device as driver_block_device
 from nova.virt import configdrive
@@ -420,6 +422,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
     def __init__(self, compute):
         super(ComputeVirtAPI, self).__init__()
         self._compute = compute
+        self.reportclient = compute.reportclient
 
     def _default_error_callback(self, event_name, instance):
         raise exception.NovaException(_('Instance event failed'))
@@ -484,6 +487,41 @@ class ComputeVirtAPI(virtapi.VirtAPI):
                 if decision is False:
                     break
 
+    def update_compute_provider_status(self, context, rp_uuid, enabled):
+        """Used to add/remove the COMPUTE_STATUS_DISABLED trait on the provider
+
+        :param context: nova auth RequestContext
+        :param rp_uuid: UUID of a compute node resource provider in Placement
+        :param enabled: True if the node is enabled in which case the trait
+            would be removed, False if the node is disabled in which case
+            the trait would be added.
+        :raises: ResourceProviderTraitRetrievalFailed
+        :raises: ResourceProviderUpdateConflict
+        :raises: ResourceProviderUpdateFailed
+        :raises: TraitRetrievalFailed
+        :raises: keystoneauth1.exceptions.ClientException
+        """
+        trait_name = os_traits.COMPUTE_STATUS_DISABLED
+        # Get the current traits (and generation) for the provider.
+        # TODO(mriedem): Leverage the ProviderTree cache in get_provider_traits
+        trait_info = self.reportclient.get_provider_traits(context, rp_uuid)
+        # If the host is enabled, remove the trait (if set), else add
+        # the trait if it doesn't already exist.
+        original_traits = trait_info.traits
+        new_traits = None
+        if enabled and trait_name in original_traits:
+            new_traits = original_traits - {trait_name}
+            LOG.debug('Removing trait %s from compute node resource '
+                      'provider %s in placement.', trait_name, rp_uuid)
+        elif not enabled and trait_name not in original_traits:
+            new_traits = original_traits | {trait_name}
+            LOG.debug('Adding trait %s to compute node resource '
+                      'provider %s in placement.', trait_name, rp_uuid)
+
+        if new_traits is not None:
+            self.reportclient.set_traits_for_provider(
+                context, rp_uuid, new_traits)
+
 
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
@@ -492,6 +530,10 @@ class ComputeManager(manager.Manager):
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
+        # We want the ComputeManager, ResourceTracker and ComputeVirtAPI all
+        # using the same instance of SchedulerReportClient which has the
+        # ProviderTree cache for this compute service.
+        self.reportclient = report.SchedulerReportClient()
         self.virtapi = ComputeVirtAPI(self)
         self.network_api = network.API()
         self.volume_api = cinder.API()
@@ -535,8 +577,8 @@ class ComputeManager(manager.Manager):
         self.driver = driver.load_compute_driver(self.virtapi, compute_driver)
         self.use_legacy_block_device_info = \
                             self.driver.need_legacy_block_device_info
-        self.rt = resource_tracker.ResourceTracker(self.host, self.driver)
-        self.reportclient = self.rt.reportclient
+        self.rt = resource_tracker.ResourceTracker(
+            self.host, self.driver, reportclient=self.reportclient)
 
     def reset(self):
         LOG.info('Reloading compute RPC API')
