@@ -44,6 +44,7 @@ from sqlalchemy import inspect
 from sqlalchemy import Integer
 from sqlalchemy import MetaData
 from sqlalchemy.orm import query
+from sqlalchemy.orm import session as sqla_session
 from sqlalchemy import sql
 from sqlalchemy import Table
 
@@ -3004,21 +3005,50 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         test(self.ctxt)
 
     def test_instance_update_and_get_original_conflict_race(self):
-        # Ensure that we retry if update_on_match fails for no discernable
-        # reason
-        instance = self.create_instance_with_args()
+        # Ensure that we correctly process expected_task_state when retrying
+        # due to an unknown conflict
 
-        orig_update_on_match = update_match.update_on_match
+        # This requires modelling the MySQL read view, which means that if we
+        # have read something in the current transaction and we read it again,
+        # we will read the same data every time even if another committed
+        # transaction has since altered that data. In this test we have an
+        # instance whose task state was originally None, but has been set to
+        # SHELVING by another, concurrent transaction. Therefore the first time
+        # we read the data we will read None, but when we restart the
+        # transaction we will read the correct data.
 
-        # Reproduce the conditions of a race between fetching and updating the
-        # instance by making update_on_match fail for no discernable reason the
-        # first time it is called, but work normally the second time.
-        with mock.patch.object(update_match, 'update_on_match',
-                        side_effect=[update_match.NoRowsMatched,
-                                     orig_update_on_match]):
-            db.instance_update_and_get_original(
-                self.ctxt, instance['uuid'], {'metadata': {'mk1': 'mv3'}})
-            self.assertEqual(update_match.update_on_match.call_count, 2)
+        instance = self.create_instance_with_args(
+                task_state=task_states.SHELVING)
+
+        instance_out_of_date = copy.copy(instance)
+        instance_out_of_date['task_state'] = None
+
+        # NOTE(mdbooth): SQLA magic which makes this dirty object look
+        # like a freshly loaded one.
+        sqla_session.make_transient(instance_out_of_date)
+        sqla_session.make_transient_to_detached(instance_out_of_date)
+
+        # update_on_match will fail first time because the actual task state
+        # (SHELVING) doesn't match the expected task state (None). However,
+        # we ensure that the first time we fetch the instance object we get
+        # out-of-date data. This forces us to retry the operation to find out
+        # what really went wrong.
+        with mock.patch.object(sqlalchemy_api, '_instance_get_by_uuid',
+                    side_effect=[instance_out_of_date, instance]), \
+                 mock.patch.object(sqlalchemy_api, '_instance_update',
+                     side_effect=sqlalchemy_api._instance_update):
+            self.assertRaises(exception.UnexpectedTaskStateError,
+                              db.instance_update_and_get_original,
+                              self.ctxt, instance['uuid'],
+                              {'expected_task_state': [None]})
+            sqlalchemy_api._instance_update.assert_has_calls([
+                mock.call(self.ctxt, instance['uuid'],
+                          {'expected_task_state': [None]}, None,
+                          original=instance_out_of_date),
+                mock.call(self.ctxt, instance['uuid'],
+                          {'expected_task_state': [None]}, None,
+                          original=instance),
+            ])
 
     def test_instance_update_and_get_original_conflict_race_fallthrough(self):
         # Ensure that is update_match continuously fails for no discernable
