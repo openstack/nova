@@ -8522,28 +8522,37 @@ class LibvirtDriver(driver.ComputeDriver):
                                errors_count=stats[4])
             except libvirt.libvirtError:
                 pass
-        for interface in dom_io["ifaces"]:
+
+        for interface in xml_doc.findall('./devices/interface'):
+            mac_address = interface.find('mac').get('address')
+            target = interface.find('./target')
+
+            # add nic that has no target (therefore no stats)
+            if target is None:
+                diags.add_nic(mac_address=mac_address)
+                continue
+
+            # add nic with stats
+            dev = target.get('dev')
             try:
-                # interfaceStats might launch an exception if the method
-                # is not supported by the underlying hypervisor being
-                # used by libvirt
-                stats = domain.interfaceStats(interface)
-                diags.add_nic(rx_octets=stats[0],
-                              rx_errors=stats[2],
-                              rx_drop=stats[3],
-                              rx_packets=stats[1],
-                              tx_octets=stats[4],
-                              tx_errors=stats[6],
-                              tx_drop=stats[7],
-                              tx_packets=stats[5])
+                if dev:
+                    # interfaceStats might launch an exception if the
+                    # method is not supported by the underlying hypervisor
+                    # being used by libvirt
+                    stats = domain.interfaceStats(dev)
+                    diags.add_nic(mac_address=mac_address,
+                                  rx_octets=stats[0],
+                                  rx_errors=stats[2],
+                                  rx_drop=stats[3],
+                                  rx_packets=stats[1],
+                                  tx_octets=stats[4],
+                                  tx_errors=stats[6],
+                                  tx_drop=stats[7],
+                                  tx_packets=stats[5])
+
             except libvirt.libvirtError:
                 pass
 
-        # Update mac addresses of interface if stats have been reported
-        if diags.nic_details:
-            nodes = xml_doc.findall('./devices/interface/mac')
-            for index, node in enumerate(nodes):
-                diags.nic_details[index].mac_address = node.get('address')
         return diags
 
     @staticmethod
