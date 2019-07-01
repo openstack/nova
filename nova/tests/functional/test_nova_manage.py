@@ -373,7 +373,7 @@ class TestNovaManagePlacementHealAllocations(
 
     def setUp(self):
         super(TestNovaManagePlacementHealAllocations, self).setUp()
-        self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
+        self.useFixture(nova_fixtures.CinderFixture(self))
         self.cli = manage.PlacementCommands()
         # We need to start a compute in each non-cell0 cell.
         for cell_name, cell_mapping in self.cell_mappings.items():
@@ -410,7 +410,7 @@ class TestNovaManagePlacementHealAllocations(
             networks='none')
         server_req['availability_zone'] = 'nova:%s' % hostname
         if volume_backed:
-            vol_id = nova_fixtures.CinderFixtureNewAttachFlow.IMAGE_BACKED_VOL
+            vol_id = nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
             server_req['block_device_mapping_v2'] = [{
                 'source_type': 'volume',
                 'destination_type': 'volume',

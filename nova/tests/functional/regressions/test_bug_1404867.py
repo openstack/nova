@@ -59,11 +59,11 @@ class DeleteWithReservedVolumes(integrated_helpers._IntegratedTestBase,
 
     def test_delete_with_reserved_volumes_new(self):
         self.cinder = self.useFixture(
-            nova_fixtures.CinderFixtureNewAttachFlow(self))
+            nova_fixtures.CinderFixture(self))
 
         # Create a server which should go to ERROR state because we don't
         # have any active computes.
-        volume_id = nova_fixtures.CinderFixtureNewAttachFlow.IMAGE_BACKED_VOL
+        volume_id = nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
         server = self._create_error_server(volume_id)
         server_id = server['id']
 

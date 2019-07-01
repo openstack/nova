@@ -28,7 +28,7 @@ class TestVolumeUsageNotificationSample(
         super(TestVolumeUsageNotificationSample, self).setUp()
         self.neutron = fixtures.NeutronFixture(self)
         self.useFixture(self.neutron)
-        self.cinder = fixtures.CinderFixtureNewAttachFlow(self)
+        self.cinder = fixtures.CinderFixture(self)
         self.useFixture(self.cinder)
 
     def _setup_server_with_volume_attached(self):

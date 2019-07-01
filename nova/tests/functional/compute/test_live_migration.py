@@ -54,7 +54,7 @@ class LiveMigrationCinderFailure(integrated_helpers._IntegratedTestBase,
         self.compute2 = self.start_service('compute', host='host2')
 
     def test_live_migrate_attachment_delete_fails(self):
-        self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
+        self.useFixture(nova_fixtures.CinderFixture(self))
         server = self.api.post_server({
             'server': {
                 'flavorRef': 1,

@@ -47,7 +47,7 @@ class BootFromVolumeOverQuotaRaceDeleteTest(
         super(BootFromVolumeOverQuotaRaceDeleteTest, self).setUp()
         # We need the cinder fixture for boot from volume testing.
         self.cinder_fixture = self.useFixture(
-            nova_fixtures.CinderFixtureNewAttachFlow(self))
+            nova_fixtures.CinderFixture(self))
         # Use the standard fixtures.
         self.useFixture(policy_fixture.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
@@ -66,7 +66,7 @@ class BootFromVolumeOverQuotaRaceDeleteTest(
         # volume attachment record for the given pre-existing volume.
         # We also tag the server since tags, like BDMs, should be created in
         # the cell database along with the instance.
-        volume_id = nova_fixtures.CinderFixtureNewAttachFlow.IMAGE_BACKED_VOL
+        volume_id = nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
         server = {
             'server': {
                 'name': 'test_bfv_quota_race_local_delete',

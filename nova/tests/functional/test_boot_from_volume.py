@@ -46,7 +46,7 @@ class BootFromVolumeTest(integrated_helpers.InstanceHelperMixin,
         self.flags(allow_resize_to_same_host=True)
         super(BootFromVolumeTest, self).setUp()
         self.admin_api = self.api_fixture.admin_api
-        self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
+        self.useFixture(nova_fixtures.CinderFixture(self))
 
     def test_boot_from_volume_larger_than_local_gb(self):
         # Verify no local disk is being used currently
@@ -62,7 +62,7 @@ class BootFromVolumeTest(integrated_helpers.InstanceHelperMixin,
         # disk. It should succeed for boot from volume.
         server = self._build_server(flavor_id)
         server['imageRef'] = ''
-        volume_uuid = nova_fixtures.CinderFixtureNewAttachFlow.IMAGE_BACKED_VOL
+        volume_uuid = nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
         bdm = {'boot_index': 0,
                'uuid': volume_uuid,
                'source_type': 'volume',
@@ -132,7 +132,7 @@ class BootFromVolumeTest(integrated_helpers.InstanceHelperMixin,
         self._verify_request_spec_flavor_not_zero(server_id)
 
         # Rebuild
-        # The image_uuid is from CinderFixtureNewAttachFlow for the
+        # The image_uuid is from CinderFixture for the
         # volume representing IMAGE_BACKED_VOL.
         image_uuid = '155d900f-4e14-4e4c-a73d-069cbf4541e6'
         post_data = {'rebuild': {'imageRef': image_uuid}}

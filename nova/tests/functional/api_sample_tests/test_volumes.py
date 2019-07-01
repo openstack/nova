@@ -350,7 +350,7 @@ class VolumeAttachmentsSampleV249(VolumeAttachmentsSample):
 
     def setUp(self):
         super(VolumeAttachmentsSampleV249, self).setUp()
-        self.useFixture(fixtures.CinderFixtureNewAttachFlow(self))
+        self.useFixture(fixtures.CinderFixture(self))
 
     def _get_vol_attachment_subs(self, subs):
         return dict(subs, tag='foo')

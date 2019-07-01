@@ -33,7 +33,7 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         super(TestInstanceNotificationSampleWithMultipleCompute, self).setUp()
         self.neutron = fixtures.NeutronFixture(self)
         self.useFixture(self.neutron)
-        self.cinder = fixtures.CinderFixtureNewAttachFlow(self)
+        self.cinder = fixtures.CinderFixture(self)
         self.useFixture(self.cinder)
         self.useFixture(fixtures.AllServicesCurrent())
 
@@ -326,7 +326,7 @@ class TestInstanceNotificationSample(
         super(TestInstanceNotificationSample, self).setUp()
         self.neutron = fixtures.NeutronFixture(self)
         self.useFixture(self.neutron)
-        self.cinder = fixtures.CinderFixtureNewAttachFlow(self)
+        self.cinder = fixtures.CinderFixture(self)
         self.useFixture(self.cinder)
 
     def _wait_until_swap_volume(self, server, volume_id):

@@ -34,7 +34,7 @@ class RebuildVolumeBackedSameImage(integrated_helpers._IntegratedTestBase,
     def setUp(self):
         super(RebuildVolumeBackedSameImage, self).setUp()
         # We are creating a volume-backed server so we need the CinderFixture.
-        self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
+        self.useFixture(nova_fixtures.CinderFixture(self))
 
     def _setup_scheduler_service(self):
         # Add the IsolatedHostsFilter to the list of enabled filters since it
@@ -46,7 +46,7 @@ class RebuildVolumeBackedSameImage(integrated_helpers._IntegratedTestBase,
 
     def test_volume_backed_rebuild_same_image(self):
         # First create our server as normal.
-        volume_id = nova_fixtures.CinderFixtureNewAttachFlow.IMAGE_BACKED_VOL
+        volume_id = nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
         server_req_body = {
             # There is no imageRef because this is boot from volume.
             'server': {
