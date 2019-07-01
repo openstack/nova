@@ -6655,7 +6655,8 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch.object(objects.ComputeNode,
                        'get_by_host_and_nodename')
     @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
-    def test_rollback_live_migration(self, mock_bdms, mock_get_node):
+    def test_rollback_live_migration(self, mock_bdms, mock_get_node,
+                                     migration_status=None):
         c = context.get_admin_context()
         instance = mock.MagicMock()
         migration = objects.Migration(uuid=uuids.migration)
@@ -6673,8 +6674,13 @@ class ComputeTestCase(BaseTestCase,
         @mock.patch.object(self.compute, 'network_api')
         def _test(mock_nw_api, mock_lmcf, mock_ra, mock_mig_save, mock_notify):
             mock_lmcf.return_value = False, False
-            self.compute._rollback_live_migration(c, instance, 'foo',
-                                                  migrate_data=migrate_data)
+            if migration_status:
+                self.compute._rollback_live_migration(
+                    c, instance, 'foo', migrate_data=migrate_data,
+                    migration_status=migration_status)
+            else:
+                self.compute._rollback_live_migration(
+                    c, instance, 'foo', migrate_data=migrate_data)
             mock_notify.assert_has_calls([
                 mock.call(c, instance, self.compute.host,
                           action='live_migration_rollback', phase='start',
@@ -6688,54 +6694,14 @@ class ComputeTestCase(BaseTestCase,
             ])
             mock_ra.assert_called_once_with(mock.ANY, instance, migration)
             mock_mig_save.assert_called_once_with()
+
         _test()
 
-        self.assertEqual('error', migration.status)
+        self.assertEqual(migration_status or 'error', migration.status)
         self.assertEqual(0, instance.progress)
 
-    @mock.patch('nova.objects.Migration.save')
-    @mock.patch.object(objects.ComputeNode,
-                       'get_by_host_and_nodename')
-    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
-    def test_rollback_live_migration_set_migration_status(self, mock_bdms,
-                                                          mock_get_node,
-                                                          mock_mig_save):
-        c = context.get_admin_context()
-        instance = mock.MagicMock()
-        migration = objects.Migration(context=c, id=0)
-        migrate_data = objects.LibvirtLiveMigrateData(migration=migration)
-
-        dest_node = objects.ComputeNode(host='foo', uuid=uuids.dest_node)
-        mock_get_node.return_value = dest_node
-        bdms = objects.BlockDeviceMappingList()
-        mock_bdms.return_value = bdms
-
-        @mock.patch.object(self.compute, '_revert_allocation')
-        @mock.patch('nova.compute.utils.notify_about_instance_action')
-        @mock.patch.object(self.compute, '_live_migration_cleanup_flags')
-        @mock.patch.object(self.compute, 'network_api')
-        def _test(mock_nw_api, mock_lmcf, mock_notify, mock_ra):
-            mock_lmcf.return_value = False, False
-            self.compute._rollback_live_migration(c, instance, 'foo',
-                                                  migrate_data=migrate_data,
-                                                  migration_status='fake')
-            mock_ra.assert_called_once_with(mock.ANY, instance, migration)
-            mock_notify.assert_has_calls([
-                mock.call(c, instance, self.compute.host,
-                          action='live_migration_rollback', phase='start',
-                          bdms=bdms),
-                mock.call(c, instance, self.compute.host,
-                          action='live_migration_rollback', phase='end',
-                          bdms=bdms)])
-            mock_nw_api.setup_networks_on_host.assert_has_calls([
-                mock.call(c, instance, self.compute.host),
-                mock.call(c, instance, teardown=True)
-            ])
-
-        _test()
-
-        self.assertEqual('fake', migration.status)
-        migration.save.assert_called_once_with()
+    def test_rollback_live_migration_set_migration_status(self):
+        self.test_rollback_live_migration(migration_status='fake')
 
     @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename',
                        return_value=objects.ComputeNode(
