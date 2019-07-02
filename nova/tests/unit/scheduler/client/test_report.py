@@ -1758,7 +1758,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_sharing_providers')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_providers_in_tree')
+                'get_providers_in_tree')
     def test_ensure_resource_provider_get(self, get_rpt_mock, get_shr_mock,
             get_trait_mock, get_agg_mock, get_inv_mock, create_rp_mock):
         # No resource provider exists in the client's cache, so validate that
@@ -1825,7 +1825,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_refresh_associations')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_providers_in_tree')
+                'get_providers_in_tree')
     def test_ensure_resource_provider_create_fail(self, get_rpt_mock,
             refresh_mock, create_rp_mock):
         # No resource provider exists in the client's cache, and
@@ -1858,7 +1858,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_refresh_associations')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_providers_in_tree')
+                'get_providers_in_tree')
     def test_ensure_resource_provider_create_no_placement(self, get_rpt_mock,
             refresh_mock, create_rp_mock):
         # No resource provider exists in the client's cache, and
@@ -1892,7 +1892,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_refresh_associations')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_providers_in_tree')
+                'get_providers_in_tree')
     def test_ensure_resource_provider_create(self, get_rpt_mock,
                                              refresh_inv_mock,
                                              refresh_assoc_mock,
@@ -1939,7 +1939,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_create_resource_provider')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_providers_in_tree')
+                'get_providers_in_tree')
     def test_ensure_resource_provider_tree(self, get_rpt_mock, create_rp_mock,
                                            refresh_mock):
         """Test _ensure_resource_provider with a tree of providers."""
@@ -2011,7 +2011,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         refresh_mock.assert_not_called()
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_providers_in_tree')
+                'get_providers_in_tree')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_refresh_associations')
     def test_ensure_resource_provider_refresh_fetch(self, mock_ref_assoc,
@@ -2033,7 +2033,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                          set(self.client._provider_tree.get_provider_uuids()))
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_providers_in_tree')
+                'get_providers_in_tree')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_create_resource_provider')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -2319,7 +2319,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                          logging_mock.call_args[0][1]['placement_req_id'])
 
     def test_get_providers_in_tree(self):
-        # Ensure _get_providers_in_tree() returns a list of resource
+        # Ensure get_providers_in_tree() returns a list of resource
         # provider dicts if it finds a resource provider record from the
         # placement API
         root = uuids.compute_node
@@ -2341,7 +2341,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         resp_mock.json.return_value = {'resource_providers': rpjson}
         self.ks_adap_mock.get.return_value = resp_mock
 
-        result = self.client._get_providers_in_tree(self.context, root)
+        result = self.client.get_providers_in_tree(self.context, root)
 
         expected_url = '/resource_providers?in_tree=' + root
         self.ks_adap_mock.get.assert_called_once_with(
@@ -2351,7 +2351,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
 
     @mock.patch.object(report.LOG, 'error')
     def test_get_providers_in_tree_error(self, logging_mock):
-        # Ensure _get_providers_in_tree() logs an error and raises if the
+        # Ensure get_providers_in_tree() logs an error and raises if the
         # placement API call doesn't respond 200
         resp_mock = mock.Mock(status_code=503)
         self.ks_adap_mock.get.return_value = resp_mock
@@ -2360,7 +2360,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
 
         uuid = uuids.compute_node
         self.assertRaises(exception.ResourceProviderRetrievalFailed,
-                          self.client._get_providers_in_tree, self.context,
+                          self.client.get_providers_in_tree, self.context,
                           uuid)
 
         expected_url = '/resource_providers?in_tree=' + uuid
@@ -2372,6 +2372,12 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.assertTrue(logging_mock.called)
         self.assertEqual('req-' + uuids.request_id,
                          logging_mock.call_args[0][1]['placement_req_id'])
+
+    def test_get_providers_in_tree_ksa_exc(self):
+        self.ks_adap_mock.get.side_effect = ks_exc.EndpointNotFound()
+        self.assertRaises(
+            ks_exc.ClientException,
+            self.client.get_providers_in_tree, self.context, uuids.whatever)
 
     def test_create_resource_provider(self):
         """Test that _create_resource_provider() sends a dict of resource
