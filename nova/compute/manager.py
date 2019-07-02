@@ -6155,7 +6155,7 @@ class ComputeManager(manager.Manager):
             return []
 
     def _cleanup_pre_live_migration(self, context, dest, instance,
-                                    migration, migrate_data):
+                                    migration, migrate_data, source_bdms):
         """Helper method for when pre_live_migration fails
 
         Sets the migration status to "error" and rolls back the live migration
@@ -6172,13 +6172,18 @@ class ComputeManager(manager.Manager):
         :param migrate_data: Data about the live migration, populated from
                              the destination host.
         :type migrate_data: Subclass of nova.objects.LiveMigrateData
+        :param source_bdms: BDMs prior to modification by the destination
+                            compute host. Set by _do_live_migration and not
+                            part of the callback interface, so this is never
+                            None
         """
         self._set_migration_status(migration, 'error')
         # Make sure we set this for _rollback_live_migration()
         # so it can find it, as expected if it was called later
         migrate_data.migration = migration
         self._rollback_live_migration(context, instance, dest,
-                                      migrate_data)
+                                      migrate_data=migrate_data,
+                                      source_bdms=source_bdms)
 
     def _do_live_migration(self, context, dest, instance, block_migration,
                            migration, migrate_data):
@@ -6218,20 +6223,23 @@ class ComputeManager(manager.Manager):
                               'to be plugged on the destination host %s.',
                               dest, instance=instance)
                 self._cleanup_pre_live_migration(
-                    context, dest, instance, migration, migrate_data)
+                    context, dest, instance, migration, migrate_data,
+                    source_bdms)
         except eventlet.timeout.Timeout:
             msg = 'Timed out waiting for events: %s'
             LOG.warning(msg, events, instance=instance)
             if CONF.vif_plugging_is_fatal:
                 self._cleanup_pre_live_migration(
-                    context, dest, instance, migration, migrate_data)
+                    context, dest, instance, migration, migrate_data,
+                    source_bdms)
                 raise exception.MigrationError(reason=msg % events)
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.exception('Pre live migration failed at %s',
                               dest, instance=instance)
                 self._cleanup_pre_live_migration(
-                    context, dest, instance, migration, migrate_data)
+                    context, dest, instance, migration, migrate_data,
+                    source_bdms)
 
         self._set_migration_status(migration, 'running')
 
@@ -6245,12 +6253,14 @@ class ComputeManager(manager.Manager):
         # cleanup.
         post_live_migration = functools.partial(self._post_live_migration,
                                                 source_bdms=source_bdms)
+        rollback_live_migration = functools.partial(
+            self._rollback_live_migration, source_bdms=source_bdms)
 
         LOG.debug('live_migration data is %s', migrate_data)
         try:
             self.driver.live_migration(context, instance, dest,
                                        post_live_migration,
-                                       self._rollback_live_migration,
+                                       rollback_live_migration,
                                        block_migration, migrate_data)
         except Exception:
             LOG.exception('Live migration failed.', instance=instance)
@@ -6639,7 +6649,8 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def _rollback_live_migration(self, context, instance,
                                  dest, migrate_data=None,
-                                 migration_status='error'):
+                                 migration_status='error',
+                                 source_bdms=None):
         """Recovers Instance/volume state from migrating -> running.
 
         :param context: security context
@@ -6651,6 +6662,10 @@ class ComputeManager(manager.Manager):
             if not none, contains implementation specific data.
         :param migration_status:
             Contains the status we want to set for the migration object
+        :param source_bdms: BDMs prior to modification by the destination
+                            compute host. Set by _do_live_migration and not
+                            part of the callback interface, so this is never
+                            None
 
         """
         if (isinstance(migrate_data, migrate_data_obj.LiveMigrateData) and
@@ -6676,11 +6691,19 @@ class ComputeManager(manager.Manager):
         # NOTE(tr3buchet): setup networks on source host (really it's re-setup)
         self.network_api.setup_networks_on_host(context, instance, self.host)
 
+        source_bdms_by_volid = {bdm.volume_id: bdm for bdm in source_bdms
+                                if bdm.is_volume}
+
+        # NOTE(lyarwood): Fetch the current list of BDMs and delete any volume
+        # attachments used by the destination host before rolling back to the
+        # original and still valid source host volume attachments.
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
         for bdm in bdms:
             if bdm.is_volume:
                 # remove the connection on the destination host
+                # NOTE(lyarwood): This actually calls the cinderv2
+                # os-terminate_connection API if required.
                 self.compute_rpcapi.remove_volume_connection(
                         context, instance, bdm.volume_id, dest)
 
@@ -6689,13 +6712,21 @@ class ComputeManager(manager.Manager):
                     # attachment_id to the old attachment of the source
                     # host. If old_attachments is not there, then
                     # there was an error before the new attachment was made.
+                    # TODO(lyarwood): migrate_data.old_vol_attachment_ids can
+                    # be removed now as we can lookup the original
+                    # attachment_ids from the source_bdms list here.
                     old_attachments = migrate_data.old_vol_attachment_ids \
                         if 'old_vol_attachment_ids' in migrate_data else None
                     if old_attachments and bdm.volume_id in old_attachments:
                         self.volume_api.attachment_delete(context,
                                                           bdm.attachment_id)
                         bdm.attachment_id = old_attachments[bdm.volume_id]
-                        bdm.save()
+
+                # NOTE(lyarwood): Rollback the connection_info stored within
+                # the BDM to that used by the source and not the destination.
+                source_bdm = source_bdms_by_volid[bdm.volume_id]
+                bdm.connection_info = source_bdm.connection_info
+                bdm.save()
 
         self._notify_about_instance_usage(context, instance,
                                           "live_migration._rollback.start")
