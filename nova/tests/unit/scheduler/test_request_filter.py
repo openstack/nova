@@ -170,6 +170,8 @@ class TestRequestFilter(test.NoDBTestCase):
         ]
         reqspec = objects.RequestSpec(project_id='owner',
                                       availability_zone='myaz')
+        # flavor is needed for the compute_status_filter
+        reqspec.flavor = objects.Flavor(extra_specs={})
         request_filter.process_reqspec(self.context, reqspec)
         self.assertEqual(
             ','.join(sorted([uuids.agg1, uuids.agg2])),
@@ -230,4 +232,19 @@ class TestRequestFilter(test.NoDBTestCase):
 
         log_lines = [c[0][0] for c in mock_log.debug.call_args_list]
         self.assertIn('added required trait', log_lines[0])
+        self.assertIn('took %.1f seconds', log_lines[1])
+
+    @mock.patch.object(request_filter, 'LOG')
+    def test_compute_status_filter(self, mock_log):
+        reqspec = objects.RequestSpec(flavor=objects.Flavor(extra_specs={}))
+        request_filter.compute_status_filter(self.context, reqspec)
+        # The forbidden trait should be added to the RequestSpec.flavor.
+        self.assertEqual({'trait:COMPUTE_STATUS_DISABLED': 'forbidden'},
+                         reqspec.flavor.extra_specs)
+        # The RequestSpec.flavor changes should be reset so they are not
+        # persisted.
+        self.assertEqual(set(), reqspec.flavor.obj_what_changed())
+        # Assert both the in-method logging and trace decorator.
+        log_lines = [c[0][0] for c in mock_log.debug.call_args_list]
+        self.assertIn('added forbidden trait', log_lines[0])
         self.assertIn('took %.1f seconds', log_lines[1])

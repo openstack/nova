@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    A mandatory scheduling pre-filter has been added which will exclude
+    disabled compute nodes where the related ``nova-compute`` service status
+    is mirrored with a ``COMPUTE_STATUS_DISABLED`` trait on the compute node
+    resource provider(s) for that service in Placement. See the
+    `admin scheduler configuration docs`__ for details.
+
+    __ https://docs.openstack.org/nova/latest/admin/configuration/schedulers.html#compute-disabled-status-support

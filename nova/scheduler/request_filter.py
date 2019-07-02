@@ -154,10 +154,32 @@ def require_image_type_support(ctxt, request_spec):
     return True
 
 
+@trace_request_filter
+def compute_status_filter(ctxt, request_spec):
+    """Pre-filter compute node resource providers using COMPUTE_STATUS_DISABLED
+
+    The ComputeFilter filters out hosts for compute services that are
+    disabled. Compute node resource providers managed by a disabled compute
+    service should have the COMPUTE_STATUS_DISABLED trait set and be excluded
+    by this mandatory pre-filter.
+    """
+    # We're called before scheduler utils resources_from_request_spec builds
+    # the RequestGroup stuff which gets used to form the
+    # GET /allocation_candidates call, so mutate the flavor for that call but
+    # don't persist the change.
+    trait_name = os_traits.COMPUTE_STATUS_DISABLED
+    request_spec.flavor.extra_specs['trait:%s' % trait_name] = 'forbidden'
+    request_spec.obj_reset_changes(fields=['flavor'], recursive=True)
+    LOG.debug('compute_status_filter request filter added forbidden '
+              'trait %s', trait_name)
+    return True
+
+
 ALL_REQUEST_FILTERS = [
     require_tenant_aggregate,
     map_az_to_placement_aggregate,
     require_image_type_support,
+    compute_status_filter,
 ]
 
 
