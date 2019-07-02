@@ -14,7 +14,6 @@ import time
 
 import mock
 
-from nova.compute import api as compute_api
 from nova import context
 from nova import exception
 from nova.tests import fixtures
@@ -22,9 +21,6 @@ from nova.tests.functional.api import client
 from nova.tests.functional.notification_sample_tests \
     import notification_sample_base
 from nova.tests.unit import fake_notifier
-
-COMPUTE_VERSION_OLD_ATTACH_FLOW = \
-    compute_api.CINDER_V3_ATTACH_MIN_COMPUTE_VERSION - 1
 
 
 class TestInstanceNotificationSampleWithMultipleCompute(
@@ -319,26 +315,6 @@ class TestInstanceNotificationSampleWithMultipleCompute(
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[5])
-
-
-class TestInstanceNotificationSampleWithMultipleComputeOldAttachFlow(
-        TestInstanceNotificationSampleWithMultipleCompute):
-
-    def setUp(self):
-        self.flags(compute_driver='fake.FakeLiveMigrateDriver')
-        self.flags(use_neutron=True)
-        self.flags(bdms_in_notifications='True', group='notifications')
-        super(TestInstanceNotificationSampleWithMultipleCompute, self).setUp()
-        self.neutron = fixtures.NeutronFixture(self)
-        self.useFixture(self.neutron)
-        self.cinder = fixtures.CinderFixture(self)
-        self.useFixture(self.cinder)
-
-        patcher = self.mock_min_service_version = \
-            mock.patch('nova.objects.Service.get_minimum_version',
-                       return_value=COMPUTE_VERSION_OLD_ATTACH_FLOW)
-        self.mock_min_service_version = patcher.start()
-        self.addCleanup(patcher.stop)
 
 
 class TestInstanceNotificationSample(
@@ -1973,40 +1949,3 @@ class TestInstanceNotificationSample(
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
-
-
-class TestInstanceNotificationSampleOldAttachFlow(
-        TestInstanceNotificationSample):
-
-    def setUp(self):
-        self.flags(use_neutron=True)
-        self.flags(bdms_in_notifications='True', group='notifications')
-        super(TestInstanceNotificationSample, self).setUp()
-        self.neutron = fixtures.NeutronFixture(self)
-        self.useFixture(self.neutron)
-        self.cinder = fixtures.CinderFixture(self)
-        self.useFixture(self.cinder)
-
-        patcher = self.mock_min_service_version = \
-            mock.patch('nova.objects.Service.get_minimum_version',
-                       return_value=COMPUTE_VERSION_OLD_ATTACH_FLOW)
-        self.mock_min_service_version = patcher.start()
-        self.addCleanup(patcher.stop)
-
-    def _do_setup_server_and_error_flag(self):
-        server = self._boot_a_server(
-            extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
-        self._attach_volume_to_server(server, self.cinder.SWAP_ERR_OLD_VOL)
-
-        self.cinder.swap_volume_instance_error_uuid = server['id']
-
-        return server
-
-    @mock.patch('nova.volume.cinder.API.attach')
-    def _test_attach_volume_error(self, server, mock_attach):
-        self._do_test_attach_volume_error(server, mock_attach)
-
-    def test_rebuild_server_with_trusted_cert(self):
-        # Skipping this test as trusted cert support needs a later service
-        # version than this test class is limited to.
-        pass

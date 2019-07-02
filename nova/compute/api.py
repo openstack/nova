@@ -103,7 +103,6 @@ AGGREGATE_ACTION_UPDATE = 'Update'
 AGGREGATE_ACTION_UPDATE_META = 'UpdateMeta'
 AGGREGATE_ACTION_DELETE = 'Delete'
 AGGREGATE_ACTION_ADD = 'Add'
-CINDER_V3_ATTACH_MIN_COMPUTE_VERSION = 24
 MIN_COMPUTE_TRUSTED_CERTS = 31
 MIN_COMPUTE_ABORT_QUEUED_LIVE_MIGRATION = 34
 MIN_COMPUTE_VOLUME_TYPE = 36
@@ -4026,46 +4025,17 @@ class API(base.Base):
         if volume['multiattach'] and not supports_multiattach:
             raise exception.MultiattachNotSupportedOldMicroversion()
 
-        if 'id' in instance:
-            # This is a volume attach to an existing instance, so
-            # we only care about the cell the instance is in.
-            min_compute_version = objects.Service.get_minimum_version(
-                context, 'nova-compute')
-        else:
-            # The instance is being created and we don't know which
-            # cell it's going to land in, so check all cells.
-            # NOTE(danms): We don't require all cells to report here since
-            # we're really concerned about the new-ness of cells that the
-            # instance may be scheduled into. If a cell doesn't respond here,
-            # then it won't be a candidate for the instance and thus doesn't
-            # matter.
-            min_compute_version = \
-                objects.service.get_minimum_version_all_cells(
-                    context, ['nova-compute'])
-
-        if min_compute_version >= CINDER_V3_ATTACH_MIN_COMPUTE_VERSION:
-            # Attempt a new style volume attachment, but fallback to old-style
-            # in case Cinder API 3.44 isn't available.
-            try:
-                attachment_id = self.volume_api.attachment_create(
-                    context, volume_id, instance.uuid)['id']
-                bdm.attachment_id = attachment_id
-                # NOTE(ildikov): In case of boot from volume the BDM at this
-                # point is not yet created in a cell database, so we can't
-                # call save().  When attaching a volume to an existing
-                # instance, the instance is already in a cell and the BDM has
-                # been created in that same cell so updating here in that case
-                # is "ok".
-                if bdm.obj_attr_is_set('id'):
-                    bdm.save()
-            except exception.CinderAPIVersionNotAvailable:
-                LOG.debug('The available Cinder microversion is not high '
-                          'enough to create new style volume attachment.')
-                self.volume_api.reserve_volume(context, volume_id)
-        else:
-            LOG.debug('The compute service version is not high enough to '
-                      'create a new style volume attachment.')
-            self.volume_api.reserve_volume(context, volume_id)
+        attachment_id = self.volume_api.attachment_create(
+            context, volume_id, instance.uuid)['id']
+        bdm.attachment_id = attachment_id
+        # NOTE(ildikov): In case of boot from volume the BDM at this
+        # point is not yet created in a cell database, so we can't
+        # call save().  When attaching a volume to an existing
+        # instance, the instance is already in a cell and the BDM has
+        # been created in that same cell so updating here in that case
+        # is "ok".
+        if bdm.obj_attr_is_set('id'):
+            bdm.save()
 
     # TODO(stephenfin): Fold this back in now that cells v1 no longer needs to
     # override it.
@@ -4155,27 +4125,14 @@ class API(base.Base):
         if device and not block_device.match_device(device):
             raise exception.InvalidDevicePath(path=device)
 
-        # Check to see if the computes in this cell can support new-style
-        # volume attachments.
-        min_compute_version = objects.Service.get_minimum_version(
-            context, 'nova-compute')
-        if min_compute_version >= CINDER_V3_ATTACH_MIN_COMPUTE_VERSION:
-            try:
-                # Check to see if Cinder is new enough to create new-style
-                # attachments.
-                cinder.is_microversion_supported(context, '3.44')
-            except exception.CinderAPIVersionNotAvailable:
-                pass
-            else:
-                # Make sure the volume isn't already attached to this instance
-                # because based on the above checks, we'll use the new style
-                # attachment flow in _check_attach_and_reserve_volume and
-                # Cinder will allow multiple attachments between the same
-                # volume and instance but the old flow API semantics don't
-                # allow that so we enforce it here.
-                self._check_volume_already_attached_to_instance(context,
-                                                                instance,
-                                                                volume_id)
+        # Make sure the volume isn't already attached to this instance
+        # because we'll use the v3.44 attachment flow in
+        # _check_attach_and_reserve_volume and Cinder will allow multiple
+        # attachments between the same volume and instance but the old flow
+        # API semantics don't allow that so we enforce it here.
+        self._check_volume_already_attached_to_instance(context,
+                                                        instance,
+                                                        volume_id)
 
         volume = self.volume_api.get(context, volume_id)
         is_shelved_offloaded = instance.vm_state == vm_states.SHELVED_OFFLOADED

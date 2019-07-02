@@ -46,6 +46,7 @@ class RebuildVolumeBackedSameImage(integrated_helpers._IntegratedTestBase,
 
     def test_volume_backed_rebuild_same_image(self):
         # First create our server as normal.
+        volume_id = nova_fixtures.CinderFixtureNewAttachFlow.IMAGE_BACKED_VOL
         server_req_body = {
             # There is no imageRef because this is boot from volume.
             'server': {
@@ -56,7 +57,7 @@ class RebuildVolumeBackedSameImage(integrated_helpers._IntegratedTestBase,
                 'networks': 'none',
                 'block_device_mapping_v2': [{
                     'boot_index': 0,
-                    'uuid': nova_fixtures.CinderFixture.IMAGE_BACKED_VOL,
+                    'uuid': volume_id,
                     'source_type': 'volume',
                     'destination_type': 'volume'
                 }]

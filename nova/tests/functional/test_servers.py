@@ -34,7 +34,6 @@ import six
 from nova.compute import api as compute_api
 from nova.compute import instance_actions
 from nova.compute import manager as compute_manager
-from nova.compute import rpcapi
 from nova import context
 from nova import exception
 from nova import objects
@@ -1121,95 +1120,6 @@ class ServerTestV220(ServersTestBase):
                      'destination_type': 'volume',
                      'volume_id': '5d721593-f033-4f6d-ab6f-b5b067e61bc4'})])
 
-    def test_attach_detach_vol_to_shelved_server(self):
-        self.flags(shelved_offload_time=-1)
-        found_server = self._shelve_server()
-        self.assertEqual('SHELVED', found_server['status'])
-        server_id = found_server['id']
-
-        # Test attach volume
-        self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
-        with test.nested(mock.patch.object(volume.cinder,
-                                       'is_microversion_supported'),
-                         mock.patch.object(compute_api.API,
-                                       '_check_attach_and_reserve_volume'),
-                         mock.patch.object(rpcapi.ComputeAPI,
-                                       'attach_volume')) as (mock_cinder_mv,
-                                                             mock_reserve,
-                                                             mock_attach):
-            mock_cinder_mv.side_effect = \
-                exception.CinderAPIVersionNotAvailable(version='3.44')
-            volume_attachment = {"volumeAttachment": {"volumeId":
-                                       "5d721593-f033-4f6d-ab6f-b5b067e61bc4"}}
-            self.api.api_post(
-                            '/servers/%s/os-volume_attachments' % (server_id),
-                            volume_attachment)
-            self.assertTrue(mock_reserve.called)
-            self.assertTrue(mock_attach.called)
-
-        # Test detach volume
-        with test.nested(mock.patch.object(volume.cinder.API,
-                                           'begin_detaching'),
-                         mock.patch.object(objects.BlockDeviceMappingList,
-                                           'get_by_instance_uuid'),
-                         mock.patch.object(rpcapi.ComputeAPI,
-                                           'detach_volume')
-                         ) as (mock_check, mock_get_bdms, mock_rpc):
-
-            mock_get_bdms.return_value = self._get_fake_bdms(self.ctxt)
-            attachment_id = mock_get_bdms.return_value[0]['volume_id']
-
-            self.api.api_delete('/servers/%s/os-volume_attachments/%s' %
-                            (server_id, attachment_id))
-            self.assertTrue(mock_check.called)
-            self.assertTrue(mock_rpc.called)
-
-        self._delete_server(server_id)
-
-    def test_attach_detach_vol_to_shelved_offloaded_server(self):
-        self.flags(shelved_offload_time=0)
-        found_server = self._shelve_server()
-        self.assertEqual('SHELVED_OFFLOADED', found_server['status'])
-        server_id = found_server['id']
-
-        # Test attach volume
-        self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
-        with test.nested(mock.patch.object(volume.cinder,
-                                       'is_microversion_supported'),
-                         mock.patch.object(compute_api.API,
-                                       '_check_attach_and_reserve_volume'),
-                         mock.patch.object(volume.cinder.API,
-                                       'attach')) as (mock_cinder_mv,
-                                                      mock_reserve, mock_vol):
-            mock_cinder_mv.side_effect = \
-                exception.CinderAPIVersionNotAvailable(version='3.44')
-            volume_attachment = {"volumeAttachment": {"volumeId":
-                                       "5d721593-f033-4f6d-ab6f-b5b067e61bc4"}}
-            attach_response = self.api.api_post(
-                             '/servers/%s/os-volume_attachments' % (server_id),
-                             volume_attachment).body['volumeAttachment']
-            self.assertTrue(mock_reserve.called)
-            self.assertTrue(mock_vol.called)
-            self.assertIsNone(attach_response['device'])
-
-        # Test detach volume
-        with test.nested(mock.patch.object(volume.cinder.API,
-                                           'begin_detaching'),
-                         mock.patch.object(objects.BlockDeviceMappingList,
-                                           'get_by_instance_uuid'),
-                         mock.patch.object(compute_api.API,
-                                           '_local_cleanup_bdm_volumes')
-                         ) as (mock_check, mock_get_bdms, mock_clean_vols):
-
-            mock_get_bdms.return_value = self._get_fake_bdms(self.ctxt)
-            attachment_id = mock_get_bdms.return_value[0]['volume_id']
-            self.api.api_delete('/servers/%s/os-volume_attachments/%s' %
-                            (server_id, attachment_id))
-            self.assertTrue(mock_check.called)
-            self.assertTrue(mock_clean_vols.called)
-
-        self._delete_server(server_id)
-
     def test_attach_detach_vol_to_shelved_offloaded_server_new_flow(self):
         self.flags(shelved_offload_time=0)
         found_server = self._shelve_server()
@@ -1219,9 +1129,7 @@ class ServerTestV220(ServersTestBase):
 
         # Test attach volume
         self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
-        with test.nested(mock.patch.object(volume.cinder,
-                                       'is_microversion_supported'),
-                         mock.patch.object(compute_api.API,
+        with test.nested(mock.patch.object(compute_api.API,
                             '_check_volume_already_attached_to_instance'),
                          mock.patch.object(volume.cinder.API,
                                         'check_availability_zone'),
@@ -1229,7 +1137,7 @@ class ServerTestV220(ServersTestBase):
                                         'attachment_create'),
                          mock.patch.object(volume.cinder.API,
                                         'attachment_complete')
-                         ) as (mock_cinder_mv, mock_check_vol_attached,
+                         ) as (mock_check_vol_attached,
                                mock_check_av_zone, mock_attach_create,
                                mock_attachment_complete):
             mock_attach_create.return_value = {'id': uuids.volume}
