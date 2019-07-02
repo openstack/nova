@@ -913,7 +913,9 @@ class ComputeAPI(object):
     def set_host_enabled(self, ctxt, host, enabled):
         version = '5.0'
         cctxt = self.router.client(ctxt).prepare(
-                server=host, version=version)
+                server=host, version=version,
+                call_monitor_timeout=CONF.rpc_response_timeout,
+                timeout=CONF.long_rpc_timeout)
         return cctxt.call(ctxt, 'set_host_enabled', enabled=enabled)
 
     def swap_volume(self, ctxt, instance, old_volume_id, new_volume_id,

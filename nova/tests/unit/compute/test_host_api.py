@@ -16,6 +16,7 @@
 
 import fixtures
 import mock
+import oslo_messaging as messaging
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.api.openstack.compute import services
@@ -327,17 +328,72 @@ class ComputeHostAPITestCase(test.TestCase):
         service_id = 42
         expected_result = dict(test_service.fake_service, id=service_id)
 
+        @mock.patch.object(self.host_api, '_update_compute_provider_status')
         @mock.patch.object(self.host_api.db, 'service_get_by_host_and_binary')
         @mock.patch.object(self.host_api.db, 'service_update')
-        def _do_test(mock_service_update, mock_service_get_by_host_and_binary):
+        def _do_test(mock_service_update, mock_service_get_by_host_and_binary,
+                     mock_update_compute_provider_status):
             mock_service_get_by_host_and_binary.return_value = expected_result
             mock_service_update.return_value = expected_result
 
             result = self.host_api.service_update_by_host_and_binary(
                 self.ctxt, host_name, binary, params_to_update)
             self._compare_obj(result, expected_result)
+            mock_update_compute_provider_status.assert_called_once_with(
+                self.ctxt, test.MatchType(objects.Service))
 
         _do_test()
+
+    @mock.patch('nova.compute.api.HostAPI._update_compute_provider_status',
+                new_callable=mock.NonCallableMock)
+    def test_service_update_no_update_provider_status(self, mock_ucps):
+        """Tests the scenario that the service is updated but the disabled
+        field is not changed, for example the forced_down field is only
+        updated. In this case _update_compute_provider_status should not be
+        called.
+        """
+        service = objects.Service(forced_down=True)
+        self.assertIn('forced_down', service.obj_what_changed())
+        with mock.patch.object(service, 'save') as mock_save:
+            retval = self.host_api.service_update(self.ctxt, service)
+            self.assertIs(retval, service)
+            mock_save.assert_called_once_with()
+
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.set_host_enabled',
+                new_callable=mock.NonCallableMock)
+    def test_update_compute_provider_status_service_too_old(self, mock_she):
+        """Tests the scenario that the service is up but is too old to sync the
+        COMPUTE_STATUS_DISABLED trait.
+        """
+        service = objects.Service(host='fake-host')
+        service.version = compute.MIN_COMPUTE_SYNC_COMPUTE_STATUS_DISABLED - 1
+        with mock.patch.object(
+                self.host_api.servicegroup_api, 'service_is_up',
+                return_value=True) as service_is_up:
+            self.host_api._update_compute_provider_status(self.ctxt, service)
+            service_is_up.assert_called_once_with(service)
+        self.assertIn('Compute service on host fake-host is too old to sync '
+                      'the COMPUTE_STATUS_DISABLED trait in Placement.',
+                      self.stdlog.logger.output)
+
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.set_host_enabled',
+                side_effect=messaging.MessagingTimeout)
+    def test_update_compute_provider_status_service_rpc_error(self, mock_she):
+        """Tests the scenario that the RPC call to the compute service raised
+        some exception.
+        """
+        service = objects.Service(host='fake-host', disabled=True)
+        with mock.patch.object(
+                self.host_api.servicegroup_api, 'service_is_up',
+                return_value=True) as service_is_up:
+            self.host_api._update_compute_provider_status(self.ctxt, service)
+            service_is_up.assert_called_once_with(service)
+        mock_she.assert_called_once_with(self.ctxt, 'fake-host', False)
+        log_output = self.stdlog.logger.output
+        self.assertIn('An error occurred while updating host enabled '
+                      'status to "disabled" for compute host: fake-host',
+                      log_output)
+        self.assertIn('MessagingTimeout', log_output)
 
     @mock.patch.object(objects.InstanceList, 'get_by_host',
                        return_value = ['fake-responses'])

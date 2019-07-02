@@ -468,8 +468,10 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 version='5.0')
 
     def test_set_host_enabled(self):
+        self.flags(long_rpc_timeout=600, rpc_response_timeout=120)
         self._test_compute_api('set_host_enabled', 'call',
-                enabled='enabled', host='host')
+                enabled='enabled', host='host',
+                call_monitor_timeout=120, timeout=600)
 
     def test_get_host_uptime(self):
         self._test_compute_api('get_host_uptime', 'call', host='host')
