@@ -204,7 +204,8 @@ class ServiceController(wsgi.Controller):
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
         try:
-            self.host_api.service_update(context, host, binary, payload)
+            self.host_api.service_update_by_host_and_binary(
+                context, host, binary, payload)
         except (exception.HostBinaryNotFound,
                 exception.HostMappingNotFound) as exc:
             raise webob.exc.HTTPNotFound(explanation=exc.format_message())
@@ -403,7 +404,7 @@ class ServiceController(wsgi.Controller):
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
         # Now save our updates to the service record in the database.
-        service.save()
+        self.host_api.service_update(context, service)
 
         # Return the full service record details.
         additional_fields = ['forced_down']

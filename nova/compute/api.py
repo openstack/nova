@@ -5090,22 +5090,44 @@ class HostAPI(base.Base):
         """Get service entry for the given compute hostname."""
         return objects.Service.get_by_compute_host(context, host_name)
 
-    def _service_update(self, context, host_name, binary, params_to_update):
-        """Performs the actual service update operation."""
-        service = objects.Service.get_by_args(context, host_name, binary)
-        service.update(params_to_update)
+    def service_update(self, context, service):
+        """Performs the actual service update operation.
+
+        :param context: nova auth RequestContext
+        :param service: nova.objects.Service object with changes already
+            set on the object
+        """
         service.save()
+        # TODO(mriedem): Reflect COMPUTE_STATUS_DISABLED trait changes to the
+        # associated compute node resource providers if the service's disabled
+        # status changed.
         return service
 
     @target_host_cell
-    def service_update(self, context, host_name, binary, params_to_update):
+    def service_update_by_host_and_binary(self, context, host_name, binary,
+                                          params_to_update):
         """Enable / Disable a service.
+
+        Determines the cell that the service is in using the HostMapping.
 
         For compute services, this stops new builds and migrations going to
         the host.
+
+        See also ``service_update``.
+
+        :param context: nova auth RequestContext
+        :param host_name: hostname of the service
+        :param binary: service binary (really only supports "nova-compute")
+        :param params_to_update: dict of changes to make to the Service object
+        :raises: HostMappingNotFound if the host is not mapped to a cell
+        :raises: HostBinaryNotFound if a services table record is not found
+            with the given host_name and binary
         """
-        return self._service_update(context, host_name, binary,
-                                    params_to_update)
+        # TODO(mriedem): Service.get_by_args is deprecated; we should use
+        # get_by_compute_host here (remember to update the "raises" docstring).
+        service = objects.Service.get_by_args(context, host_name, binary)
+        service.update(params_to_update)
+        return self.service_update(context, service)
 
     def _service_delete(self, context, service_id):
         """Performs the actual Service deletion operation."""
