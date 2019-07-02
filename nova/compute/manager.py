@@ -4982,10 +4982,69 @@ class ComputeManager(manager.Manager):
         """
         return self.driver.host_maintenance_mode(host, mode)
 
+    def _update_compute_provider_status(self, context, enabled):
+        """Adds or removes the COMPUTE_STATUS_DISABLED trait for this host.
+
+        For each ComputeNode managed by this service, adds or removes the
+        COMPUTE_STATUS_DISABLED traits to/from the associated resource provider
+        in Placement.
+
+        :param context: nova auth RequestContext
+        :param enabled: True if the node is enabled in which case the trait
+            would be removed, False if the node is disabled in which case
+            the trait would be added.
+        :raises: ComputeHostNotFound if there are no compute nodes found in
+            the ResourceTracker for this service.
+        """
+        # Get the compute node(s) on this host. Remember that ironic can be
+        # managing more than one compute node.
+        nodes = self.rt.compute_nodes.values()
+        if not nodes:
+            raise exception.ComputeHostNotFound(host=self.host)
+        # For each node, we want to add (or remove) the COMPUTE_STATUS_DISABLED
+        # trait on the related resource provider in placement so the scheduler
+        # (pre-)filters the provider based on its status.
+        for node in nodes:
+            try:
+                self.virtapi.update_compute_provider_status(
+                    context, node.uuid, enabled)
+            except (exception.ResourceProviderTraitRetrievalFailed,
+                    exception.ResourceProviderUpdateConflict,
+                    exception.ResourceProviderUpdateFailed,
+                    exception.TraitRetrievalFailed) as e:
+                # This is best effort so just log a warning and continue. The
+                # update_available_resource periodic task will sync the trait.
+                LOG.warning('An error occurred while updating '
+                            'COMPUTE_STATUS_DISABLED trait on compute node '
+                            'resource provider %s. Error: %s',
+                            node.uuid, e.format_message())
+            except Exception:
+                LOG.exception('An error occurred while updating '
+                              'COMPUTE_STATUS_DISABLED trait on compute node '
+                              'resource provider %s.', node.uuid)
+
     @wrap_exception()
     def set_host_enabled(self, context, enabled):
-        """Sets the specified host's ability to accept new instances."""
-        return self.driver.set_host_enabled(enabled)
+        """Sets the specified host's ability to accept new instances.
+
+        This method will add or remove the COMPUTE_STATUS_DISABLED trait
+        to/from the associated compute node resource provider(s) for this
+        compute service.
+        """
+        try:
+            self._update_compute_provider_status(context, enabled)
+        except exception.ComputeHostNotFound:
+            LOG.warning('Unable to add/remove trait COMPUTE_STATUS_DISABLED. '
+                        'No ComputeNode(s) found for host: %s', self.host)
+
+        try:
+            return self.driver.set_host_enabled(enabled)
+        except NotImplementedError:
+            # Only the xenapi driver implements set_host_enabled but we don't
+            # want NotImplementedError to get raised back to the API. We still
+            # need to honor the compute RPC API contract and return 'enabled'
+            # or 'disabled' though.
+            return 'enabled' if enabled else 'disabled'
 
     @wrap_exception()
     def get_host_uptime(self, context):

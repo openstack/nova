@@ -9082,3 +9082,174 @@ class ComputeManagerInstanceUsageAuditTestCase(test.TestCase):
         self.assertEqual(0, mock_task_log().errors,
                          'an error was encountered processing the deleted test'
                          ' instance')
+
+
+@ddt.ddt
+class ComputeManagerSetHostEnabledTestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        super(ComputeManagerSetHostEnabledTestCase, self).setUp()
+        self.compute = manager.ComputeManager()
+        self.context = context.RequestContext(user_id=fakes.FAKE_USER_ID,
+                                              project_id=fakes.FAKE_PROJECT_ID)
+
+    @ddt.data(True, False)
+    def test_set_host_enabled(self, enabled):
+        """Happy path test for set_host_enabled"""
+        with mock.patch.object(self.compute,
+                               '_update_compute_provider_status') as ucpt:
+            retval = self.compute.set_host_enabled(self.context, enabled)
+            expected_retval = 'enabled' if enabled else 'disabled'
+            self.assertEqual(expected_retval, retval)
+            ucpt.assert_called_once_with(self.context, enabled)
+
+    @mock.patch('nova.compute.manager.LOG.warning')
+    def test_set_host_enabled_compute_host_not_found(self, mock_warning):
+        """Tests _update_compute_provider_status raising ComputeHostNotFound"""
+        error = exception.ComputeHostNotFound(host=self.compute.host)
+        with mock.patch.object(self.compute,
+                               '_update_compute_provider_status',
+                               side_effect=error) as ucps:
+            retval = self.compute.set_host_enabled(self.context, False)
+            self.assertEqual('disabled', retval)
+            ucps.assert_called_once_with(self.context, False)
+        # A warning should have been logged for the ComputeHostNotFound error.
+        mock_warning.assert_called_once()
+        self.assertIn('Unable to add/remove trait COMPUTE_STATUS_DISABLED. '
+                      'No ComputeNode(s) found for host',
+                      mock_warning.call_args[0][0])
+
+    def test_set_host_enabled_update_provider_status_error(self):
+        """Tests _update_compute_provider_status raising some unexpected error
+        """
+        error = messaging.MessagingTimeout
+        with test.nested(
+            mock.patch.object(self.compute,
+                              '_update_compute_provider_status',
+                              side_effect=error),
+            mock.patch.object(self.compute.driver, 'set_host_enabled',
+                              # The driver is not called in this case.
+                              new_callable=mock.NonCallableMock),
+        ) as (
+            ucps, driver_set_host_enabled,
+        ):
+            self.assertRaises(error,
+                              self.compute.set_host_enabled,
+                              self.context, False)
+            ucps.assert_called_once_with(self.context, False)
+
+    @ddt.data(True, False)
+    def test_set_host_enabled_not_implemented_error(self, enabled):
+        """Tests the driver raising NotImplementedError"""
+        with test.nested(
+            mock.patch.object(self.compute, '_update_compute_provider_status'),
+            mock.patch.object(self.compute.driver, 'set_host_enabled',
+                              side_effect=NotImplementedError),
+        ) as (
+            ucps, driver_set_host_enabled,
+        ):
+            retval = self.compute.set_host_enabled(self.context, enabled)
+            expected_retval = 'enabled' if enabled else 'disabled'
+            self.assertEqual(expected_retval, retval)
+            ucps.assert_called_once_with(self.context, enabled)
+            driver_set_host_enabled.assert_called_once_with(enabled)
+
+    def test_set_host_enabled_driver_error(self):
+        """Tests the driver raising some unexpected error"""
+        error = exception.HypervisorUnavailable(host=self.compute.host)
+        with test.nested(
+            mock.patch.object(self.compute, '_update_compute_provider_status'),
+            mock.patch.object(self.compute.driver, 'set_host_enabled',
+                              side_effect=error),
+        ) as (
+            ucps, driver_set_host_enabled,
+        ):
+            self.assertRaises(exception.HypervisorUnavailable,
+                              self.compute.set_host_enabled,
+                              self.context, False)
+            ucps.assert_called_once_with(self.context, False)
+            driver_set_host_enabled.assert_called_once_with(False)
+
+    @ddt.data(True, False)
+    def test_update_compute_provider_status(self, enabled):
+        """Happy path test for _update_compute_provider_status"""
+        # Fake out some fake compute nodes (ironic driver case).
+        self.compute.rt.compute_nodes = {
+            uuids.node1: objects.ComputeNode(uuid=uuids.node1),
+            uuids.node2: objects.ComputeNode(uuid=uuids.node2),
+        }
+        with mock.patch.object(self.compute.virtapi,
+                               'update_compute_provider_status') as ucps:
+            self.compute._update_compute_provider_status(
+                self.context, enabled=enabled)
+            self.assertEqual(2, ucps.call_count)
+            ucps.assert_has_calls([
+                mock.call(self.context, uuids.node1, enabled),
+                mock.call(self.context, uuids.node2, enabled),
+            ], any_order=True)
+
+    def test_update_compute_provider_status_no_nodes(self):
+        """Tests the case that _update_compute_provider_status will raise
+        ComputeHostNotFound if there are no nodes in the resource tracker.
+        """
+        self.assertRaises(exception.ComputeHostNotFound,
+                          self.compute._update_compute_provider_status,
+                          self.context, enabled=True)
+
+    @mock.patch('nova.compute.manager.LOG.warning')
+    def test_update_compute_provider_status_expected_errors(self, m_warn):
+        """Tests _update_compute_provider_status handling a set of expected
+        errors from the ComputeVirtAPI and logging a warning.
+        """
+        # Setup a fake compute in the resource tracker.
+        self.compute.rt.compute_nodes = {
+            uuids.node: objects.ComputeNode(uuid=uuids.node)
+        }
+        errors = (
+            exception.ResourceProviderTraitRetrievalFailed(uuid=uuids.node),
+            exception.ResourceProviderUpdateConflict(
+                uuid=uuids.node, generation=1, error='conflict'),
+            exception.ResourceProviderUpdateFailed(
+                url='https://placement', error='dogs'),
+            exception.TraitRetrievalFailed(error='cats'),
+        )
+        for error in errors:
+            with mock.patch.object(
+                    self.compute.virtapi, 'update_compute_provider_status',
+                    side_effect=error) as ucps:
+                self.compute._update_compute_provider_status(
+                    self.context, enabled=False)
+                ucps.assert_called_once_with(self.context, uuids.node, False)
+            # The expected errors are logged as a warning.
+            m_warn.assert_called_once()
+            self.assertIn('An error occurred while updating '
+                          'COMPUTE_STATUS_DISABLED trait on compute node',
+                          m_warn.call_args[0][0])
+            m_warn.reset_mock()
+
+    @mock.patch('nova.compute.manager.LOG.exception')
+    def test_update_compute_provider_status_unexpected_error(self, m_exc):
+        """Tests _update_compute_provider_status handling an unexpected
+        exception from the ComputeVirtAPI and logging it.
+        """
+        # Use two fake nodes here to make sure we try updating each even when
+        # an error occurs.
+        self.compute.rt.compute_nodes = {
+            uuids.node1: objects.ComputeNode(uuid=uuids.node1),
+            uuids.node2: objects.ComputeNode(uuid=uuids.node2),
+        }
+        with mock.patch.object(
+                self.compute.virtapi, 'update_compute_provider_status',
+                side_effect=(TypeError, AttributeError)) as ucps:
+            self.compute._update_compute_provider_status(
+                self.context, enabled=False)
+            self.assertEqual(2, ucps.call_count)
+            ucps.assert_has_calls([
+                mock.call(self.context, uuids.node1, False),
+                mock.call(self.context, uuids.node2, False),
+            ], any_order=True)
+        # Each exception should have been logged.
+        self.assertEqual(2, m_exc.call_count)
+        self.assertIn('An error occurred while updating '
+                      'COMPUTE_STATUS_DISABLED trait',
+                      m_exc.call_args_list[0][0][0])
