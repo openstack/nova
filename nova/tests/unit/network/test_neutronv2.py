@@ -1735,9 +1735,9 @@ class TestNeutronv2(TestNeutronv2Base):
              'mac_address': 'de:ad:be:ef:00:04',
              'binding:vif_type': model.VIF_TYPE_HW_VEB,
              'binding:vnic_type': model.VNIC_TYPE_DIRECT,
-             neutronapi.BINDING_PROFILE: {'pci_vendor_info': '1137:0047',
-                                          'pci_slot': '0000:0a:00.1',
-                                          'physical_network': 'physnet1'},
+             constants.BINDING_PROFILE: {'pci_vendor_info': '1137:0047',
+                                         'pci_slot': '0000:0a:00.1',
+                                         'physical_network': 'physnet1'},
              'binding:vif_details': {model.VIF_DETAILS_PROFILEID: 'pfid'},
              },
             # admin_state_up=True and status='ACTIVE' thus vif.active=True
@@ -1749,9 +1749,9 @@ class TestNeutronv2(TestNeutronv2Base):
              'mac_address': 'de:ad:be:ef:00:05',
              'binding:vif_type': model.VIF_TYPE_802_QBH,
              'binding:vnic_type': model.VNIC_TYPE_MACVTAP,
-             neutronapi.BINDING_PROFILE: {'pci_vendor_info': '1137:0047',
-                                          'pci_slot': '0000:0a:00.2',
-                                          'physical_network': 'physnet1'},
+             constants.BINDING_PROFILE: {'pci_vendor_info': '1137:0047',
+                                         'pci_slot': '0000:0a:00.2',
+                                         'physical_network': 'physnet1'},
              'binding:vif_details': {model.VIF_DETAILS_PROFILEID: 'pfid'},
              },
             # admin_state_up=True and status='ACTIVE' thus vif.active=True
@@ -1847,7 +1847,8 @@ class TestNeutronv2(TestNeutronv2Base):
                 # If the requested port does not define a binding:profile, or
                 # has it set to None, we default to an empty dict to avoid
                 # NoneType errors.
-                requested_ports[index].get(neutronapi.BINDING_PROFILE) or {},
+                requested_ports[index].get(
+                    constants.BINDING_PROFILE) or {},
                 nw_info.get('profile'))
             index += 1
 
@@ -4172,11 +4173,11 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         # now we are just using a fake one to show that the code does not
         # remove the portbinding_profile if there is one.
         binding_profile = {'fake_profile': 'fake_data',
-                           neutronapi.MIGRATING_ATTR: 'my-dest-host'}
+                           constants.MIGRATING_ATTR: 'my-dest-host'}
         fake_ports = {'ports': [
                         {'id': 'fake-port-1',
-                         neutronapi.BINDING_PROFILE: binding_profile,
-                         neutronapi.BINDING_HOST_ID: instance.host}]}
+                         constants.BINDING_PROFILE: binding_profile,
+                         constants.BINDING_HOST_ID: instance.host}]}
         list_ports_mock = mock.Mock(return_value=fake_ports)
         get_client_mock.return_value.list_ports = list_ports_mock
         update_port_mock = mock.Mock()
@@ -4188,11 +4189,12 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         # different host and also the migration profile from the port is
         # removed since it does not match with the current host.
         update_port_mock.assert_called_once_with(
-            'fake-port-1', {'port': {neutronapi.BINDING_HOST_ID: 'my-host',
+            'fake-port-1', {'port': {
+                constants.BINDING_HOST_ID: 'my-host',
                                     'device_owner':
                                         'compute:%s' %
                                         instance.availability_zone,
-                                     neutronapi.BINDING_PROFILE: {
+                constants.BINDING_PROFILE: {
                                          'fake_profile': 'fake_data'}}})
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
@@ -4206,8 +4208,8 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
 
         fake_ports = {'ports': [
                         {'id': uuids.portid,
-                         neutronapi.BINDING_PROFILE: None,
-                         neutronapi.BINDING_HOST_ID: instance.host}]}
+                         constants.BINDING_PROFILE: None,
+                         constants.BINDING_HOST_ID: instance.host}]}
         list_ports_mock = mock.Mock(return_value=fake_ports)
         get_client_mock.return_value.list_ports = list_ports_mock
         update_port_mock = mock.Mock()
@@ -4218,7 +4220,8 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         # Assert that update_port was called on the port with a
         # different host but with no binding profile.
         update_port_mock.assert_called_once_with(
-            uuids.portid, {'port': {neutronapi.BINDING_HOST_ID: 'my-host',
+            uuids.portid, {'port': {
+                constants.BINDING_HOST_ID: 'my-host',
                                     'device_owner':
                                         'compute:%s' %
                                         instance.availability_zone}})
@@ -4232,7 +4235,7 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         # one where binding:host_id isn't set, so we update that port.
         fake_ports = {'ports': [
                         {'id': 'fake-port-1',
-                         neutronapi.BINDING_HOST_ID: instance.host},
+                         constants.BINDING_HOST_ID: instance.host},
                         {'id': 'fake-port-2'}]}
         list_ports_mock = mock.Mock(return_value=fake_ports)
         get_client_mock.return_value.list_ports = list_ports_mock
@@ -4244,7 +4247,7 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         # Assert that update_port was only called on the port without a host.
         update_port_mock.assert_called_once_with(
             'fake-port-2',
-            {'port': {neutronapi.BINDING_HOST_ID: instance.host,
+            {'port': {constants.BINDING_HOST_ID: instance.host,
                       'device_owner': 'compute:%s' %
                                       instance.availability_zone}})
 
@@ -4278,13 +4281,13 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         fake_ports = {'ports': [
                         {'id': 'fake-port-1',
                          'binding:vnic_type': 'direct',
-                         neutronapi.BINDING_HOST_ID: 'fake-host-old',
-                         neutronapi.BINDING_PROFILE:
+                         constants.BINDING_HOST_ID: 'fake-host-old',
+                         constants.BINDING_PROFILE:
                             {'pci_slot': '0000:0a:00.1',
                              'physical_network': 'old_phys_net',
                              'pci_vendor_info': 'old_pci_vendor_info'}},
                         {'id': 'fake-port-2',
-                         neutronapi.BINDING_HOST_ID: instance.host}]}
+                         constants.BINDING_HOST_ID: instance.host}]}
         migration = {'status': 'confirmed',
                      'migration_type': "migration"}
         list_ports_mock = mock.Mock(return_value=fake_ports)
@@ -4300,9 +4303,10 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         update_port_mock.assert_called_once_with(
             'fake-port-1',
                 {'port':
-                    {neutronapi.BINDING_HOST_ID: 'fake-host',
+                    {
+                        constants.BINDING_HOST_ID: 'fake-host',
                      'device_owner': 'compute:%s' % instance.availability_zone,
-                     neutronapi.BINDING_PROFILE:
+                        constants.BINDING_PROFILE:
                         {'pci_slot': '0000:0b:00.1',
                          'physical_network': 'physnet1',
                          'pci_vendor_info': '1377:0047'}}})
@@ -4336,8 +4340,8 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         fake_ports = {'ports': [
                         {'id': 'fake-port-1',
                          'binding:vnic_type': 'direct',
-                         neutronapi.BINDING_HOST_ID: 'fake-host-old',
-                         neutronapi.BINDING_PROFILE:
+                         constants.BINDING_HOST_ID: 'fake-host-old',
+                         constants.BINDING_PROFILE:
                             {'pci_slot': '0000:0a:00.1',
                              'physical_network': 'old_phys_net',
                              'pci_vendor_info': 'old_pci_vendor_info'}}]}
@@ -4384,8 +4388,8 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         fake_ports = {'ports': [
                         {'id': 'fake-port-1',
                          'binding:vnic_type': 'direct',
-                         neutronapi.BINDING_HOST_ID: instance.host,
-                         neutronapi.BINDING_PROFILE:
+                         constants.BINDING_HOST_ID: instance.host,
+                         constants.BINDING_PROFILE:
                             {'pci_slot': '0000:0a:00.1',
                              'physical_network': 'phys_net',
                              'pci_vendor_info': 'pci_vendor_info'}}]}
@@ -4413,16 +4417,16 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
                             model.VIF_TYPE_BINDING_FAILED)
         for vif_type in FAILED_VIF_TYPES:
             binding_profile = {'fake_profile': 'fake_data',
-                               neutronapi.MIGRATING_ATTR: 'my-dest-host'}
+                               constants.MIGRATING_ATTR: 'my-dest-host'}
             fake_ports = {'ports': [
                             {'id': 'fake-port-1',
                              'binding:vif_type': 'fake-vif-type',
-                             neutronapi.BINDING_PROFILE: binding_profile,
-                             neutronapi.BINDING_HOST_ID: instance.host},
+                             constants.BINDING_PROFILE: binding_profile,
+                             constants.BINDING_HOST_ID: instance.host},
                             {'id': 'fake-port-2',
                              'binding:vif_type': vif_type,
-                             neutronapi.BINDING_PROFILE: binding_profile,
-                             neutronapi.BINDING_HOST_ID: instance.host}
+                             constants.BINDING_PROFILE: binding_profile,
+                             constants.BINDING_HOST_ID: instance.host}
             ]}
 
             list_ports_mock.return_value = fake_ports
@@ -4435,8 +4439,8 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
             # failed vif_type and MIGRATING_ATTR is removed
             update_port_mock.assert_called_once_with(
                 'fake-port-2',
-                {'port': {neutronapi.BINDING_HOST_ID: instance.host,
-                          neutronapi.BINDING_PROFILE: {
+                {'port': {constants.BINDING_HOST_ID: instance.host,
+                          constants.BINDING_PROFILE: {
                               'fake_profile': 'fake_data'},
                           'device_owner': 'compute:%s' %
                                           instance.availability_zone
@@ -4449,12 +4453,12 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         self.api._has_port_binding_extension = mock.Mock(return_value=True)
 
         binding_profile = {'fake_profile': 'fake_data',
-                           neutronapi.MIGRATING_ATTR: 'my-dest-host'}
+                           constants.MIGRATING_ATTR: 'my-dest-host'}
         fake_ports = {'ports': [
                         {'id': 'fake-port-1',
                          'binding:vif_type': model.VIF_TYPE_UNBOUND,
-                         neutronapi.BINDING_PROFILE: binding_profile,
-                         neutronapi.BINDING_HOST_ID: instance.host},
+                         constants.BINDING_PROFILE: binding_profile,
+                         constants.BINDING_HOST_ID: instance.host},
         ]}
         list_ports_mock = mock.Mock(return_value=fake_ports)
         get_client_mock.return_value.list_ports = list_ports_mock
@@ -4467,12 +4471,13 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         # Assert that update_port was called on the port with a
         # 'unbound' vif_type, host updated and MIGRATING_ATTR is removed
         update_port_mock.assert_called_once_with(
-            'fake-port-1', {'port': {neutronapi.BINDING_HOST_ID: 'my-host',
-                                     neutronapi.BINDING_PROFILE: {
+            'fake-port-1', {'port': {
+                constants.BINDING_HOST_ID: 'my-host',
+                constants.BINDING_PROFILE: {
                                          'fake_profile': 'fake_data'},
                                      'device_owner': 'compute:%s' %
                                          instance.availability_zone
-                                     }})
+                }})
 
     @mock.patch.object(neutronapi.API, '_get_pci_mapping_for_migration')
     @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
@@ -4491,8 +4496,8 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         fake_ports = {'ports': [
             {'id': 'fake-port-1',
              'binding:vnic_type': 'direct',
-             neutronapi.BINDING_HOST_ID: 'old-host',
-             neutronapi.BINDING_PROFILE:
+             constants.BINDING_HOST_ID: 'old-host',
+             constants.BINDING_PROFILE:
                  {'pci_slot': '0000:0a:00.1',
                   'physical_network': 'phys_net',
                   'pci_vendor_info': 'vendor_info'}}]}
@@ -4514,9 +4519,10 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         called_port_attributes = update_port_mock.call_args[0][1]
         self.assertEqual(called_port_id, fake_ports['ports'][0]['id'])
         self.assertNotIn(
-            neutronapi.BINDING_PROFILE, called_port_attributes['port'])
+            constants.BINDING_PROFILE, called_port_attributes['port'])
         self.assertEqual(
-            called_port_attributes['port'][neutronapi.BINDING_HOST_ID],
+            called_port_attributes['port'][
+                constants.BINDING_HOST_ID],
             'new-host')
 
     def test_get_pci_mapping_for_migration(self):
@@ -4556,13 +4562,15 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         # port will be moving.
         get_ports = {'ports': [
                         {'id': uuids.port_id,
-                         neutronapi.BINDING_HOST_ID: instance.host}]}
+                         constants.BINDING_HOST_ID: instance.host}]}
         self.api.list_ports = mock.Mock(return_value=get_ports)
         update_port_mock = mock.Mock()
         get_client_mock.return_value.update_port = update_port_mock
-        migrate_profile = {neutronapi.MIGRATING_ATTR: 'my-new-host'}
+        migrate_profile = {
+            constants.MIGRATING_ATTR: 'my-new-host'}
         port_data = {'port':
-                        {neutronapi.BINDING_PROFILE: migrate_profile}}
+                        {
+                            constants.BINDING_PROFILE: migrate_profile}}
 
         self.api.setup_networks_on_host(self.context,
                                         instance,
@@ -4585,17 +4593,18 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         get_ports = {
             'ports': [
                 {'id': uuids.port_id,
-                 neutronapi.BINDING_HOST_ID: instance.host,
-                 neutronapi.BINDING_PROFILE: None}
+                 constants.BINDING_HOST_ID: instance.host,
+                 constants.BINDING_PROFILE: None}
             ]
         }
         self.api.list_ports = mock.Mock(return_value=get_ports)
         update_port_mock = mock.Mock()
         get_client_mock.return_value.update_port = update_port_mock
-        migrate_profile = {neutronapi.MIGRATING_ATTR: 'my-new-host'}
+        migrate_profile = {
+            constants.MIGRATING_ATTR: 'my-new-host'}
         port_data = {
             'port': {
-                neutronapi.BINDING_PROFILE: migrate_profile
+                constants.BINDING_PROFILE: migrate_profile
             }
         }
         self.api.setup_networks_on_host(
@@ -4613,7 +4622,7 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         port_id = uuids.port_id
         get_ports = {'ports': [
                         {'id': port_id,
-                         neutronapi.BINDING_HOST_ID: instance.host}]}
+                         constants.BINDING_HOST_ID: instance.host}]}
         self.api.list_ports = mock.Mock(return_value=get_ports)
         self.api._setup_migration_port_profile = mock.Mock()
         self.api.setup_networks_on_host(self.context,
@@ -4632,7 +4641,7 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         self.api._has_port_binding_extension = mock.Mock(return_value=True)
         get_ports = {'ports': [
                         {'id': uuids.port_id,
-                         neutronapi.BINDING_HOST_ID: instance.host}]}
+                         constants.BINDING_HOST_ID: instance.host}]}
         self.api.list_ports = mock.Mock(return_value=get_ports)
         self.api._setup_migration_port_profile = mock.Mock()
         self.api._clear_migration_port_profile = mock.Mock()
@@ -4649,9 +4658,9 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         call is skipped.
         """
         ports = [{
-            neutronapi.BINDING_HOST_ID: 'source-host',
-            neutronapi.BINDING_PROFILE: {
-                neutronapi.MIGRATING_ATTR: 'dest-host'
+            constants.BINDING_HOST_ID: 'source-host',
+            constants.BINDING_PROFILE: {
+                constants.MIGRATING_ATTR: 'dest-host'
             }
         }] * 2
         with mock.patch.object(self.api, '_update_port_with_migration_profile',
@@ -4666,13 +4675,14 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
 
         instance = fake_instance.fake_instance_obj(self.context)
         self.api._has_port_binding_extension = mock.Mock(return_value=True)
-        migrate_profile = {neutronapi.MIGRATING_ATTR: 'new-host'}
+        migrate_profile = {
+            constants.MIGRATING_ATTR: 'new-host'}
         # Pass a port with an migration porfile attribute.
         port_id = uuids.port_id
         get_ports = {'ports': [
                         {'id': port_id,
-                         neutronapi.BINDING_PROFILE: migrate_profile,
-                         neutronapi.BINDING_HOST_ID: instance.host}]}
+                         constants.BINDING_PROFILE: migrate_profile,
+                         constants.BINDING_HOST_ID: instance.host}]}
         self.api.list_ports = mock.Mock(return_value=get_ports)
         update_port_mock = mock.Mock()
         get_client_mock.return_value.update_port = update_port_mock
@@ -4684,7 +4694,8 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
                                                 host='new-host',
                                                 teardown=True)
         update_port_mock.assert_called_once_with(
-            port_id, {'port': {neutronapi.BINDING_PROFILE: migrate_profile}})
+            port_id, {'port': {
+                constants.BINDING_PROFILE: migrate_profile}})
         del_binding.assert_called_once_with(
             self.context, port_id, 'new-host')
 
@@ -4696,16 +4707,17 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         """
         instance = fake_instance.fake_instance_obj(self.context)
         self.api._has_port_binding_extension = mock.Mock(return_value=True)
-        migrate_profile = {neutronapi.MIGRATING_ATTR: 'new-host'}
+        migrate_profile = {
+            constants.MIGRATING_ATTR: 'new-host'}
         # Pass a port with an migration porfile attribute.
         get_ports = {
             'ports': [
                 {'id': uuids.port1,
-                 neutronapi.BINDING_PROFILE: migrate_profile,
-                 neutronapi.BINDING_HOST_ID: instance.host},
+                 constants.BINDING_PROFILE: migrate_profile,
+                 constants.BINDING_HOST_ID: instance.host},
                 {'id': uuids.port2,
-                 neutronapi.BINDING_PROFILE: migrate_profile,
-                 neutronapi.BINDING_HOST_ID: instance.host}]}
+                 constants.BINDING_PROFILE: migrate_profile,
+                 constants.BINDING_HOST_ID: instance.host}]}
         self.api.list_ports = mock.Mock(return_value=get_ports)
         self.api._clear_migration_port_profile = mock.Mock()
         with mock.patch.object(
@@ -4737,7 +4749,7 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         # Pass a port without any migration porfile attribute.
         get_ports = {'ports': [
                         {'id': uuids.port_id,
-                         neutronapi.BINDING_HOST_ID: instance.host}]}
+                         constants.BINDING_HOST_ID: instance.host}]}
         self.api.list_ports = mock.Mock(return_value=get_ports)
         update_port_mock = mock.Mock()
         get_client_mock.return_value.update_port = update_port_mock
@@ -4754,7 +4766,8 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         instance = fake_instance.fake_instance_obj(self.context)
         port_id = uuids.port_id
         migrate_profile = {'fake-attribute': 'my-new-host'}
-        port_profile = {'port': {neutronapi.BINDING_PROFILE: migrate_profile}}
+        port_profile = {'port': {
+            constants.BINDING_PROFILE: migrate_profile}}
         update_port_mock = mock.Mock(side_effect=test.TestingException())
         admin_client = mock.Mock(update_port=update_port_mock)
         self.assertRaises(test.TestingException,
@@ -4805,8 +4818,8 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         api._unbind_ports(mock_ctx, ports, mock_neutron, mock_client)
 
         body = {'port': {'device_id': '', 'device_owner': ''}}
-        body['port'][neutronapi.BINDING_HOST_ID] = None
-        body['port'][neutronapi.BINDING_PROFILE] = {}
+        body['port'][constants.BINDING_HOST_ID] = None
+        body['port'][constants.BINDING_PROFILE] = {}
         update_port_calls = []
         for p in ports:
             update_port_calls.append(mock.call(p, body))
@@ -5852,8 +5865,10 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
             self.context, instance, None, port_req_body,
             bind_host_id=host_id)
         self.assertEqual(host_id,
-                         port_req_body['port'][neutronapi.BINDING_HOST_ID])
-        self.assertFalse(port_req_body['port'].get(neutronapi.BINDING_PROFILE))
+                         port_req_body['port'][
+                             constants.BINDING_HOST_ID])
+        self.assertFalse(port_req_body['port'].get(
+            constants.BINDING_PROFILE))
         mock_get_client.assert_called_once_with(mock.ANY)
         mocked_client.list_extensions.assert_called_once_with()
 
@@ -5886,7 +5901,8 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
                                                    pci_req_id, port_req_body)
 
         self.assertEqual(profile,
-                         port_req_body['port'][neutronapi.BINDING_PROFILE])
+                         port_req_body['port'][
+                             constants.BINDING_PROFILE])
 
     @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
     @mock.patch.object(pci_manager, 'get_instance_pci_devs')
@@ -5896,7 +5912,7 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
         host_id = 'my_host_id'
         instance = {'host': host_id}
         port_req_body = {'port': {
-                             neutronapi.BINDING_PROFILE: {
+                             constants.BINDING_PROFILE: {
                                 'capabilities': ['switchdev']}}}
         pci_req_id = 'my_req_id'
         pci_dev = {'vendor_id': '1377',
@@ -5920,7 +5936,8 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
                                                    pci_req_id, port_req_body)
 
         self.assertEqual(profile,
-                         port_req_body['port'][neutronapi.BINDING_PROFILE])
+                         port_req_body['port'][
+                             constants.BINDING_PROFILE])
 
     @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
     @mock.patch.object(pci_manager, 'get_instance_pci_devs')
@@ -6064,7 +6081,7 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
                        'tenant_id': self.instance['project_id']}
         ports = {'ports': [{'id': 'test1'}]}
         port_req_body = {'port':
-                         {neutronapi.BINDING_HOST_ID: expected_bind_host,
+                         {constants.BINDING_HOST_ID: expected_bind_host,
                           'device_owner': 'compute:%s' %
                                           self.instance['availability_zone']}}
         mocked_client = mock.create_autospec(client.Client)
@@ -6087,7 +6104,7 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
                        'tenant_id': self.instance['project_id']}
         ports = {'ports': [{'id': 'test1'}]}
         port_req_body = {'port':
-                         {neutronapi.BINDING_HOST_ID: expected_bind_host,
+                         {constants.BINDING_HOST_ID: expected_bind_host,
                           'device_owner': 'compute:%s' %
                                           self.instance['availability_zone']}}
         mocked_client = mock.create_autospec(client.Client)
@@ -6694,7 +6711,7 @@ class TestAllocateForInstance(test.NoDBTestCase):
         mock_admin.update_port.assert_called_with(uuids.port2,
             {'port': {
                 'device_owner': 'compute:test_az',
-                neutronapi.BINDING_HOST_ID: bind_host_id,
+                constants.BINDING_HOST_ID: bind_host_id,
                 'device_id': self.instance.uuid}})
 
 
