@@ -1412,6 +1412,14 @@ class LibvirtDriver(driver.ComputeDriver):
             return self._host.delete_secret('volume', volume_id)
         if encryption is None:
             encryption = self._get_volume_encryption(context, connection_info)
+        # NOTE(lyarwood): Handle bug #1821696 where volume secrets have been
+        # removed manually by returning if native LUKS decryption is available
+        # and device_path is not present in the connection_info. This avoids
+        # VolumeEncryptionNotSupported being thrown when we incorrectly build
+        # the encryptor below due to the secrets not being present above.
+        if (encryption and self._use_native_luks(encryption) and
+            not connection_info['data'].get('device_path')):
+            return
         if encryption:
             encryptor = self._get_volume_encryptor(connection_info,
                                                    encryption)
