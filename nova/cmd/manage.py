@@ -2037,7 +2037,7 @@ class PlacementCommands(object):
         # there are no allocations for the instance
         if not allocations.get('allocations'):
             # This instance doesn't have allocations
-            need_healing = 'Create'
+            need_healing = 'create'
             allocations = self._heal_missing_alloc(ctxt, instance, node_cache)
 
         if (allocations.get('project_id') != instance.project_id or
@@ -2047,7 +2047,7 @@ class PlacementCommands(object):
             # and re-put them. We don't use put_allocations here
             # because we don't want to mess up shared or nested
             # provider allocations.
-            need_healing = 'Update'
+            need_healing = 'update'
             allocations = self._heal_missing_project_and_user_id(
                 allocations, instance)
 
@@ -2059,18 +2059,23 @@ class PlacementCommands(object):
             port_allocations, ports_to_update = {}, []
 
         if port_allocations:
-            need_healing = need_healing or 'Update'
+            need_healing = need_healing or 'update'
             # Merge in any missing port allocations
             allocations['allocations'] = self._merge_allocations(
                 allocations['allocations'], port_allocations)
 
         if need_healing:
             if dry_run:
-                output(_('[dry-run] %(operation)s allocations for instance '
-                         '%(instance)s: %(allocations)s') %
-                       {'operation': need_healing,
-                        'instance': instance.uuid,
-                        'allocations': allocations})
+                if need_healing == 'create':
+                    output(_('[dry-run] Create allocations for instance '
+                             '%(instance)s: %(allocations)s') %
+                           {'instance': instance.uuid,
+                            'allocations': allocations})
+                elif need_healing == 'update':
+                    output(_('[dry-run] Update allocations for instance '
+                             '%(instance)s: %(allocations)s') %
+                           {'instance': instance.uuid,
+                            'allocations': allocations})
             else:
                 # First update ports in neutron. If any of those operations
                 # fail, then roll back the successful part of it and fail the
@@ -2085,10 +2090,14 @@ class PlacementCommands(object):
                 resp = placement.put_allocations(ctxt, instance.uuid,
                                                  allocations)
                 if resp:
-                    output(_('Successfully %(operation)sd allocations for '
-                             'instance %(instance)s.') %
-                           {'operation': need_healing.lower(),
-                            'instance': instance.uuid})
+                    if need_healing == 'create':
+                        output(_('Successfully created allocations for '
+                                 'instance %(instance)s.') %
+                               {'instance': instance.uuid})
+                    elif need_healing == 'update':
+                        output(_('Successfully updated allocations for '
+                                 'instance %(instance)s.') %
+                               {'instance': instance.uuid})
                     return True
                 else:
                     # Rollback every neutron update. If we succeed to
