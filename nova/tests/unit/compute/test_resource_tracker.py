@@ -1450,8 +1450,8 @@ class TestUpdateComputeNode(BaseTestCase):
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_sync_compute_service_disabled_trait')
     @mock.patch('nova.objects.ComputeNode.save')
-    def test_existing_node_update_provider_tree_implemented(self, save_mock,
-                                                            mock_sync_disable):
+    def test_existing_node_update_provider_tree_implemented(
+            self, save_mock, mock_sync_disabled):
         """The update_provider_tree() virt driver method is only implemented
         for some virt drivers. This method returns inventory, trait, and
         aggregate information for resource providers in a tree associated with
@@ -1534,7 +1534,7 @@ class TestUpdateComputeNode(BaseTestCase):
         # 1024MB in GB
         exp_inv[orc.DISK_GB]['reserved'] = 1
         self.assertEqual(exp_inv, ptree.data(new_compute.uuid).inventory)
-        mock_sync_disable.assert_called_once()
+        mock_sync_disabled.assert_called_once()
 
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_sync_compute_service_disabled_trait')
@@ -1622,7 +1622,7 @@ class TestUpdateComputeNode(BaseTestCase):
         # First test with the trait actually in the set.
         traits = {os_traits.COMPUTE_STATUS_DISABLED}
         self.rt._sync_compute_service_disabled_trait(ctxt, traits)
-        self.assertEqual(0, len(traits))
+        self.assertEqual(set(), traits)
         mock_get_by_host.assert_called_once_with(ctxt, self.rt.host)
         # Now run it again with the empty set to make sure the method handles
         # the trait not already being in the set (idempotency).

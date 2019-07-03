@@ -390,8 +390,9 @@ class ComputeHostAPITestCase(test.TestCase):
             service_is_up.assert_called_once_with(service)
         mock_she.assert_called_once_with(self.ctxt, 'fake-host', False)
         log_output = self.stdlog.logger.output
-        self.assertIn('An error occurred while updating host enabled '
-                      'status to "disabled" for compute host: fake-host',
+        self.assertIn('An error occurred while updating the '
+                      'COMPUTE_STATUS_DISABLED trait on compute node '
+                      'resource providers managed by host fake-host.',
                       log_output)
         self.assertIn('MessagingTimeout', log_output)
 

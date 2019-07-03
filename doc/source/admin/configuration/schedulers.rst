@@ -80,18 +80,22 @@ Compute Disabled Status Support
 
 Starting in the Train release, there is a mandatory `pre-filter
 <https://specs.openstack.org/openstack/nova-specs/specs/train/approved/pre-filter-disabled-computes.html>`_
-which will exclude disabled compute nodes similar to the `ComputeFilter`_.
-Compute node resource providers with the ``COMPUTE_STATUS_DISABLED`` trait will
-be excluded as scheduling candidates. The trait is managed by the
-``nova-compute`` service and should mirror the ``disabled`` status on the
-related compute service record in the `os-services`_ API. For example, if a
-compute service's status is ``disabled``, the related compute node resource
-provider(s) for that service should have the ``COMPUTE_STATUS_DISABLED`` trait.
-When the service status is ``enabled`` the ``COMPUTE_STATUS_DISABLED`` trait
-shall be removed.
+which will exclude disabled compute nodes similar to (but does not fully
+replace) the `ComputeFilter`_. Compute node resource providers with the
+``COMPUTE_STATUS_DISABLED`` trait will be excluded as scheduling candidates.
+The trait is managed by the ``nova-compute`` service and should mirror the
+``disabled`` status on the related compute service record in the
+`os-services`_ API. For example, if a compute service's status is ``disabled``,
+the related compute node resource provider(s) for that service should have the
+``COMPUTE_STATUS_DISABLED`` trait. When the service status is ``enabled`` the
+``COMPUTE_STATUS_DISABLED`` trait shall be removed.
 
 If the compute service is down when the status is changed, the trait will be
-synchronized by the compute service when it is restarted.
+synchronized by the compute service when it is restarted. Similarly, if an
+error occurs when trying to add or remove the trait on a given resource
+provider, the trait will be synchronized when the ``update_available_resource``
+periodic task runs - which is controlled by the
+:oslo.config:option:`update_resources_interval` configuration option.
 
 .. _os-services: https://developer.openstack.org/api-ref/compute/#compute-services-os-services
 

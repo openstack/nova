@@ -5129,10 +5129,12 @@ class HostAPI(base.Base):
                       'COMPUTE_STATUS_DISABLED trait.', service.host)
             self.rpcapi.set_host_enabled(context, service.host, enabled)
         except Exception:
-            LOG.exception('An error occurred while updating host enabled '
-                          'status to "%s" for compute host: %s',
-                          'enabled' if enabled else 'disabled',
-                          service.host)
+            LOG.exception('An error occurred while updating the '
+                          'COMPUTE_STATUS_DISABLED trait on compute node '
+                          'resource providers managed by host %s. The trait '
+                          'will be synchronized automatically by the compute '
+                          'service when the update_available_resource '
+                          'periodic task runs.', service.host)
 
     def service_update(self, context, service):
         """Performs the actual service update operation.
