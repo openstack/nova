@@ -382,6 +382,8 @@
             irrelevant-files: *dsvm-irrelevant-files
         - neutron-tempest-dvr-ha-multinode-full:
             irrelevant-files: *dsvm-irrelevant-files
+        - neutron-tempest-iptables_hybrid:
+            irrelevant-files: *dsvm-irrelevant-files
         - os-vif-ovs:
             irrelevant-files: *dsvm-irrelevant-files
         # NOTE(mriedem): Consider moving nova-tox-functional-py37 to the
