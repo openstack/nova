@@ -214,14 +214,8 @@ class LiveMigrationTask(base.TaskBase):
             return
 
         for pci_request in self.instance.pci_requests.requests:
-            if pci_request.alias_name is not None:
+            if pci_request.source != objects.InstancePCIRequest.NEUTRON_PORT:
                 # allow only VIF related PCI requests in live migration.
-                # PCI requests come from two sources: instance flavor and
-                # SR-IOV ports.
-                # SR-IOV ports pci_request don't have an alias_name.
-                # TODO(adrianc): add an is_sriov_port property to PCIRequest
-                # to make this cryptic check clearer (also in resource_tracker)
-
                 raise exception.MigrationPreCheckError(
                     reason= "non-VIF related PCI requests for instance "
                             "are not allowed for live migration.")
@@ -232,6 +226,7 @@ class LiveMigrationTask(base.TaskBase):
             raise exception.MigrationPreCheckError(
                 reason="Cannot live migrate VIF with related PCI, Neutron "
                        "does not support required port binding extension.")
+
         if not (supports_vif_related_pci_allocations(self.context,
                                                      src_host) and
                 supports_vif_related_pci_allocations(self.context,
@@ -340,8 +335,8 @@ class LiveMigrationTask(base.TaskBase):
                 # migrate data vifs were not constructed in dest compute
                 # during check_can_live_migrate_destination, construct a
                 # skeleton to be updated after port binding.
-                # TODO(adrianc): This can be removed once we move to T release
-                self.migrate_data.vifs = migrate_data_obj.LiveMigrateData.\
+                # TODO(adrianc): This can be removed once we move to U release
+                self.migrate_data.vifs = migrate_data_obj.VIFMigrateData.\
                     create_skeleton_migrate_vifs(
                     self.instance.get_network_info())
             bindings = self._bind_ports_on_destination(destination)
@@ -356,7 +351,7 @@ class LiveMigrationTask(base.TaskBase):
         # that was bound. This information is then stuffed into the
         # migrate_data.
         try:
-            # Note(adrianc): migrate_data.vifs was partially filled
+            # NOTE(adrianc): migrate_data.vifs was partially filled
             # by destination compute if compute is new enough.
             # if that is the case, it may have updated the required port
             # profile for the destination node (e.g new PCI address if SR-IOV)
@@ -372,7 +367,8 @@ class LiveMigrationTask(base.TaskBase):
                                  for mig_vif in migrate_vifs_with_profile}
 
             bindings = self.network_api.bind_ports_to_host(
-                self.context, self.instance, destination, None, ports_profile)
+                context=self.context, instance=self.instance, host=destination,
+                vnic_types=None, port_profiles=ports_profile)
         except exception.PortBindingFailed as e:
             # Port binding failed for that host, try another one.
             raise exception.MigrationPreCheckError(

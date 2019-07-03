@@ -6298,7 +6298,7 @@ class ComputeManager(manager.Manager):
                                                               dest_check_data)
             # Create migrate_data vifs
             migrate_data.vifs = \
-                migrate_data_obj.LiveMigrateData.create_skeleton_migrate_vifs(
+                migrate_data_obj.VIFMigrateData.create_skeleton_migrate_vifs(
                     instance.get_network_info())
             # Claim PCI devices for VIFs on destination (if needed)
             port_id_to_pci = self._claim_pci_for_instance_vifs(ctxt, instance)

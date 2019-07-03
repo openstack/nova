@@ -2716,7 +2716,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                               'cleanup_live_migration_destination_check'),
             mock.patch.object(db, 'instance_fault_create'),
             mock.patch.object(compute_utils, 'EventReporter'),
-            mock.patch.object(migrate_data_obj.LiveMigrateData,
+            mock.patch.object(migrate_data_obj.VIFMigrateData,
                               'create_skeleton_migrate_vifs'),
             mock.patch.object(instance, 'get_network_info'),
             mock.patch.object(self.compute, '_claim_pci_for_instance_vifs'),
@@ -8911,7 +8911,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         # (_error_out_instance_on_exception will set to ACTIVE by default).
         self.assertEqual(vm_states.STOPPED, instance.vm_state)
 
-    def test__claim_pci_for_instance_vifs(self):
+    def test__claim_pci_for_instance_no_vifs(self):
         @mock.patch.object(self.compute, 'rt')
         @mock.patch.object(pci_request, 'get_instance_pci_request_from_vif')
         @mock.patch.object(self.instance, 'get_network_info')
@@ -8925,6 +8925,16 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 self.instance)
             rt_mock.claim_pci_devices.assert_not_called()
             self.assertEqual(0, len(port_id_to_pci))
+
+        _test()
+
+    def test__claim_pci_for_instance_vifs(self):
+        @mock.patch.object(self.compute, 'rt')
+        @mock.patch.object(pci_request, 'get_instance_pci_request_from_vif')
+        @mock.patch.object(self.instance, 'get_network_info')
+        def _test(mock_get_network_info,
+                  mock_get_instance_pci_request_from_vif,
+                  rt_mock):
             # when there are VIFs, expect only ones with related PCI to be
             # claimed and their migrate vif profile to be updated.
 
@@ -9001,7 +9011,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                                     vendor_id='15b3',
                                     product_id='1018')
         port_id_to_pci_dev = {uuids.port0: pci_dev}
-        mig_vifs = migrate_data_obj.LiveMigrateData.\
+        mig_vifs = migrate_data_obj.VIFMigrateData.\
             create_skeleton_migrate_vifs(nw_vifs)
         self.compute._update_migrate_vifs_profile_with_pci(mig_vifs,
                                                            port_id_to_pci_dev)
