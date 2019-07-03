@@ -30,27 +30,36 @@ class CommonMixin(object):
         self.req = fakes.HTTPRequest.blank('')
         self.context = self.req.environ['nova.context']
 
-    def _stub_instance_get(self, uuid=None):
-        if uuid is None:
+    def _stub_instance_get(self, action=None, uuid=None):
+        if not uuid:
             uuid = uuidutils.generate_uuid()
         instance = fake_instance.fake_instance_obj(self.context,
                 id=1, uuid=uuid, vm_state=vm_states.ACTIVE,
                 task_state=None, launched_at=timeutils.utcnow())
+
+        expected_attrs = None
+        if action == '_migrate_live':
+            expected_attrs = ['numa_topology']
+
         self.compute_api.get(
-            self.context, uuid, expected_attrs=None).AndReturn(instance)
+            self.context, uuid, expected_attrs=expected_attrs).AndReturn(
+                instance)
+
         return instance
 
-    def _stub_instance_get_failure(self, exc_info, uuid=None):
-        if uuid is None:
-            uuid = uuidutils.generate_uuid()
+    def _stub_instance_get_failure(self, action, exc_info, uuid):
+        expected_attrs = None
+        if action == '_migrate_live':
+            expected_attrs = ['numa_topology']
+
         self.compute_api.get(
-            self.context, uuid, expected_attrs=None).AndRaise(exc_info)
-        return uuid
+            self.context, uuid, expected_attrs=expected_attrs).AndRaise(
+                exc_info)
 
     def _test_non_existing_instance(self, action, body_map=None):
         uuid = uuidutils.generate_uuid()
         self._stub_instance_get_failure(
-                exception.InstanceNotFound(instance_id=uuid), uuid=uuid)
+            action, exception.InstanceNotFound(instance_id=uuid), uuid=uuid)
 
         self.mox.ReplayAll()
         controller_function = getattr(self.controller, action)
@@ -68,7 +77,7 @@ class CommonMixin(object):
             method = action.replace('_', '')
         compute_api_args_map = compute_api_args_map or {}
 
-        instance = self._stub_instance_get()
+        instance = self._stub_instance_get(action)
         args, kwargs = compute_api_args_map.get(action, ((), {}))
         getattr(self.compute_api, method)(self.context, instance, *args,
                                           **kwargs)
@@ -92,7 +101,7 @@ class CommonMixin(object):
         if method is None:
             method = action.replace('_', '')
 
-        instance = self._stub_instance_get()
+        instance = self._stub_instance_get(action)
         body = {}
         compute_api_args_map = {}
         args, kwargs = compute_api_args_map.get(action, ((), {}))
@@ -120,7 +129,7 @@ class CommonMixin(object):
         if compute_api_args_map is None:
             compute_api_args_map = {}
 
-        instance = self._stub_instance_get()
+        instance = self._stub_instance_get(action)
 
         args, kwargs = compute_api_args_map.get(action, ((), {}))
 
@@ -150,7 +159,7 @@ class CommonMixin(object):
             method = action.replace('_', '')
 
         compute_api_args_map = compute_api_args_map or {}
-        instance = self._stub_instance_get()
+        instance = self._stub_instance_get(action)
 
         args, kwargs = compute_api_args_map.get(action, ((), {}))
         getattr(self.compute_api, method)(self.context, instance, *args,
@@ -174,7 +183,7 @@ class CommonMixin(object):
             method = action.replace('_', '')
         compute_api_args_map = compute_api_args_map or {}
 
-        instance = self._stub_instance_get()
+        instance = self._stub_instance_get(action)
 
         args, kwargs = compute_api_args_map.get(action, ((), {}))
         getattr(self.compute_api, method)(self.context, instance, *args,

@@ -177,6 +177,32 @@ Related options:
 * ``[libvirt]/images_type`` (rbd)
 * ``instances_path``
 """),
+
+    cfg.BoolOpt(
+        'enable_numa_live_migration',
+        default=False,
+        help="""
+Enable live migration of instances with NUMA topologies.
+
+Live migration of instances with NUMA topologies is disabled by default
+when using the libvirt driver. This includes live migration of instances with
+CPU pinning or hugepages. CPU pinning and huge page information for such
+instances is not currently re-calculated, as noted in bug #1289064.  This
+means that if instances were already present on the destination host, the
+migrated instance could be placed on the same dedicated cores as these
+instances or use hugepages allocated for another instance. Alternately, if the
+host platforms were not homogeneous, the instance could be assigned to
+non-existent cores or be inadvertently split across host NUMA nodes.
+
+Despite these known issues, there may be cases where live migration is
+necessary. By enabling this option, operators that are aware of the issues and
+are willing to manually work around them can enable live migration support for
+these instances.
+
+Related options:
+
+* ``compute_driver``: Only the libvirt driver is affected.
+"""),
 ]
 
 

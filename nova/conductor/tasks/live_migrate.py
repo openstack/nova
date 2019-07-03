@@ -22,6 +22,7 @@ import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.objects import fields as obj_fields
 from nova.scheduler import utils as scheduler_utils
 from nova import utils
 
@@ -56,6 +57,7 @@ class LiveMigrationTask(base.TaskBase):
 
     def _execute(self):
         self._check_instance_is_active()
+        self._check_instance_has_no_numa()
         self._check_host_is_up(self.source)
 
         if should_do_migration_allocation(self.context):
@@ -140,6 +142,30 @@ class LiveMigrationTask(base.TaskBase):
                     attr='power_state',
                     state=self.instance.power_state,
                     method='live migrate')
+
+    def _check_instance_has_no_numa(self):
+        """Prevent live migrations of instances with NUMA topologies."""
+        if not self.instance.numa_topology:
+            return
+
+        # Only KVM (libvirt) supports NUMA topologies with CPU pinning;
+        # HyperV's vNUMA feature doesn't allow specific pinning
+        hypervisor_type = objects.ComputeNode.get_by_host_and_nodename(
+            self.context, self.source, self.instance.node).hypervisor_type
+        if hypervisor_type != obj_fields.HVType.KVM:
+            return
+
+        msg = ('Instance has an associated NUMA topology. '
+               'Instance NUMA topologies, including related attributes '
+               'such as CPU pinning, huge page and emulator thread '
+               'pinning information, are not currently recalculated on '
+               'live migration. See bug #1289064 for more information.'
+               )
+
+        if CONF.workarounds.enable_numa_live_migration:
+            LOG.warning(msg, instance=self.instance)
+        else:
+            raise exception.MigrationPreCheckError(reason=msg)
 
     def _check_host_is_up(self, host):
         service = objects.Service.get_by_compute_host(self.context, host)

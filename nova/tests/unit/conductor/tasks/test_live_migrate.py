@@ -18,6 +18,7 @@ from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import vm_states
 from nova.conductor.tasks import live_migrate
+from nova import context as nova_context
 from nova import exception
 from nova import objects
 from nova.scheduler import client as scheduler_client
@@ -38,7 +39,7 @@ fake_selection2 = objects.Selection(service_host="host2", nodename="node2",
 class LiveMigrationTaskTestCase(test.NoDBTestCase):
     def setUp(self):
         super(LiveMigrationTaskTestCase, self).setUp()
-        self.context = "context"
+        self.context = nova_context.get_admin_context()
         self.instance_host = "host"
         self.instance_uuid = uuids.instance
         self.instance_image = "image_ref"
@@ -52,6 +53,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.instance = objects.Instance._from_db_object(
                 self.context, objects.Instance(), db_instance)
         self.instance.system_metadata = {'image_hw_disk_bus': 'scsi'}
+        self.instance.numa_topology = None
         self.destination = "destination"
         self.block_migration = "bm"
         self.disk_over_commit = "doc"
@@ -175,6 +177,45 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.task.instance['power_state'] = power_state.SHUTDOWN
         self.assertRaises(exception.InstanceInvalidState,
                           self.task._check_instance_is_active)
+
+    @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename')
+    def test_check_instance_has_no_numa_passes_no_numa(self, mock_get):
+        self.flags(enable_numa_live_migration=False, group='workarounds')
+        self.task.instance.numa_topology = None
+        mock_get.return_value = objects.ComputeNode(
+            uuid=uuids.cn1, hypervisor_type='kvm')
+        self.task._check_instance_has_no_numa()
+
+    @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename')
+    def test_check_instance_has_no_numa_passes_non_kvm(self, mock_get):
+        self.flags(enable_numa_live_migration=False, group='workarounds')
+        self.task.instance.numa_topology = objects.InstanceNUMATopology(
+            cells=[objects.InstanceNUMACell(id=0, cpuset=set([0]),
+                                            memory=1024)])
+        mock_get.return_value = objects.ComputeNode(
+            uuid=uuids.cn1, hypervisor_type='xen')
+        self.task._check_instance_has_no_numa()
+
+    @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename')
+    def test_check_instance_has_no_numa_passes_workaround(self, mock_get):
+        self.flags(enable_numa_live_migration=True, group='workarounds')
+        self.task.instance.numa_topology = objects.InstanceNUMATopology(
+            cells=[objects.InstanceNUMACell(id=0, cpuset=set([0]),
+                                            memory=1024)])
+        mock_get.return_value = objects.ComputeNode(
+            uuid=uuids.cn1, hypervisor_type='kvm')
+        self.task._check_instance_has_no_numa()
+
+    @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename')
+    def test_check_instance_has_no_numa_fails(self, mock_get):
+        self.flags(enable_numa_live_migration=False, group='workarounds')
+        mock_get.return_value = objects.ComputeNode(
+            uuid=uuids.cn1, hypervisor_type='kvm')
+        self.task.instance.numa_topology = objects.InstanceNUMATopology(
+            cells=[objects.InstanceNUMACell(id=0, cpuset=set([0]),
+                                            memory=1024)])
+        self.assertRaises(exception.MigrationPreCheckError,
+                          self.task._check_instance_has_no_numa)
 
     @mock.patch.object(objects.Service, 'get_by_compute_host')
     @mock.patch.object(servicegroup.API, 'service_is_up')

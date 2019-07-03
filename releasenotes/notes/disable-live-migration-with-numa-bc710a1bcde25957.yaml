@@ -1,0 +1,25 @@
+---
+upgrade:
+  - |
+    Live migration of instances with NUMA topologies is now disabled by default
+    when using the libvirt driver. This includes live migration of instances
+    with CPU pinning or hugepages. CPU pinning and huge page information for
+    such instances is not currently re-calculated, as noted in `bug #1289064`_.
+    This means that if instances were already present on the destination host,
+    the migrated instance could be placed on the same dedicated cores as these
+    instances or use hugepages allocated for another instance. Alternately, if
+    the host platforms were not homogeneous, the instance could be assigned to
+    non-existent cores or be inadvertently split across host NUMA nodes.
+
+    The `long term solution`_ to these issues is to recalculate the XML on the
+    destination node. When this work is completed, the restriction on live
+    migration with NUMA topologies will be lifted.
+
+    For operators that are aware of the issues and are able to manually work
+    around them, the ``[workarounds] enable_numa_live_migration`` option can
+    be used to allow the broken behavior.
+
+    For more information, refer to `bug #1289064`_.
+
+    .. _bug #1289064: https://bugs.launchpad.net/nova/+bug/1289064
+    .. _long term solution: https://blueprints.launchpad.net/nova/+spec/numa-aware-live-migration
