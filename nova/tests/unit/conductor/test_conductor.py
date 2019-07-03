@@ -2834,13 +2834,15 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         exc_info = test.TestingException('something happened')
         select_dest_mock.return_value = [[fake_selection1]]
 
-        updates = {'vm_state': vm_states.STOPPED,
+        updates = {'vm_state': inst_obj.vm_state,
                    'task_state': None}
         prep_resize_mock.side_effect = exc_info
-        self.assertRaises(test.TestingException,
-                          self.conductor._cold_migrate,
-                          self.context, inst_obj, self.flavor,
-                          {}, True, None, None)
+        with mock.patch.object(inst_obj, 'refresh') as mock_refresh:
+            self.assertRaises(test.TestingException,
+                              self.conductor._cold_migrate,
+                              self.context, inst_obj, self.flavor,
+                              {}, True, None, None)
+            mock_refresh.assert_called_once_with()
 
         # Filter properties are populated during code execution
         legacy_filter_props = {'retry': {'num_attempts': 1,
@@ -2862,6 +2864,33 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                             'migrate_server', updates,
                                             exc_info, fake_spec)
         rollback_mock.assert_called_once_with(exc_info)
+
+    @mock.patch('nova.conductor.tasks.migrate.MigrationTask.execute',
+                side_effect=test.TestingException('execute fails'))
+    @mock.patch('nova.objects.Instance.refresh',
+                side_effect=exc.InstanceNotFound(instance_id=uuids.instance))
+    def test_cold_migrate_exception_instance_refresh_not_found(
+            self, mock_refresh, mock_execute):
+        """Tests the scenario where MigrationTask.execute raises some error
+        and then the instance.refresh() in the exception block raises
+        InstanceNotFound because the instance was deleted during the operation.
+        """
+        params = {'uuid': uuids.instance}
+        instance = self._create_fake_instance_obj(params=params)
+        filter_properties = {}
+        clean_shutdown = True
+        request_spec = fake_request_spec.fake_spec_obj()
+        request_spec.flavor = instance.flavor
+        host_list = None
+        self.assertRaises(test.TestingException,
+                          self.conductor._cold_migrate,
+                          self.context, instance, instance.flavor,
+                          filter_properties, clean_shutdown,
+                          request_spec, host_list)
+        self.assertIn('During cold migrate the instance was deleted.',
+                      self.stdlog.logger.output)
+        mock_execute.assert_called_once_with()
+        mock_refresh.assert_called_once_with()
 
     @mock.patch.object(objects.RequestSpec, 'save')
     @mock.patch.object(migrate.MigrationTask, 'execute')
