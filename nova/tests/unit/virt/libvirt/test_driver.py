@@ -7366,32 +7366,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         get_online_cpus.return_value = set([4, 5])
         self.assertRaises(exception.Invalid, drvr._get_vcpu_total)
 
-    @mock.patch('nova.virt.libvirt.host.Host.get_online_cpus')
-    def test_get_host_vcpus_libvirt_error(self, get_online_cpus):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        not_supported_exc = fakelibvirt.make_libvirtError(
-            fakelibvirt.libvirtError,
-            'this function is not supported by the connection driver:'
-            ' virNodeNumOfDevices',
-            error_code=fakelibvirt.VIR_ERR_NO_SUPPORT)
-        self.flags(vcpu_pin_set="4-6")
-        get_online_cpus.side_effect = not_supported_exc
-        self.assertRaises(exception.Invalid, drvr._get_vcpu_total)
-
-    @mock.patch('nova.virt.libvirt.host.Host.get_online_cpus')
-    def test_get_host_vcpus_libvirt_error_success(self, get_online_cpus):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        not_supported_exc = fakelibvirt.make_libvirtError(
-            fakelibvirt.libvirtError,
-            'this function is not supported by the connection driver:'
-            ' virNodeNumOfDevices',
-            error_code=fakelibvirt.VIR_ERR_NO_SUPPORT)
-        self.flags(vcpu_pin_set="1")
-        get_online_cpus.side_effect = not_supported_exc
-        expected_vcpus = 1
-        vcpus = drvr._get_vcpu_total()
-        self.assertEqual(expected_vcpus, vcpus)
-
     @mock.patch('nova.virt.libvirt.host.Host.get_cpu_count')
     def test_get_host_vcpus_after_hotplug(self, get_cpu_count):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
