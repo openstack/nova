@@ -924,21 +924,6 @@ class VolumeAttachTestsV260(test.NoDBTestCase):
         self.assertIn('Multiattach volumes are only supported starting with '
                       'compute API version 2.60', six.text_type(ex))
 
-    def test_attach_with_multiattach_fails_not_available(self):
-        """Tests the case that the user tries to attach with a
-        multiattach volume on cells v1 where multiattach volumes are
-        not supported.
-        """
-        with mock.patch.object(
-                self.controller.compute_api, 'attach_volume',
-                side_effect=
-                exception.MultiattachSupportNotYetAvailable) as attach:
-            ex = self.assertRaises(webob.exc.HTTPConflict, self._post_attach)
-        create_kwargs = attach.call_args[1]
-        self.assertTrue(create_kwargs['supports_multiattach'])
-        self.assertIn('Multiattach volume support is not yet available',
-                      six.text_type(ex))
-
     def test_attach_with_multiattach_fails_not_supported_by_driver(self):
         """Tests the case that the user tries to attach with a
         multiattach volume but the compute hosting the instance does
