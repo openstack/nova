@@ -36,7 +36,7 @@ class VolumeBackedResizeDiskDown(test.TestCase,
         self.api = api_fixture.admin_api
 
         self.useFixture(nova_fixtures.NeutronFixture(self))
-        self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
+        self.useFixture(nova_fixtures.CinderFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
         fake_image.stub_out_image_service(self)
         self.addCleanup(fake_image.FakeImageService_reset)
@@ -54,7 +54,7 @@ class VolumeBackedResizeDiskDown(test.TestCase,
         flavor2 = flavors[1]
         self.assertGreater(flavor2['disk'], flavor1['disk'])
 
-        vol_id = nova_fixtures.CinderFixtureNewAttachFlow.IMAGE_BACKED_VOL
+        vol_id = nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
         server = {
             'name': 'test_volume_backed_resize_disk_down',
             'imageRef': '',

@@ -369,7 +369,7 @@ class ServersSampleJson267Test(ServersSampleBase):
 
     def setUp(self):
         super(ServersSampleJson267Test, self).setUp()
-        self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
+        self.useFixture(nova_fixtures.CinderFixture(self))
 
     def test_servers_post(self):
         return self._post_server(use_common_server_api_samples=False)

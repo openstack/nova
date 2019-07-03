@@ -20,7 +20,7 @@ class TestMultiattachVolumes(integrated_helpers._IntegratedTestBase,
     """Functional tests for creating a server from a multiattach volume
     and attaching a multiattach volume to a server.
 
-    Uses the CinderFixtureNewAttachFlow fixture with a specific volume ID
+    Uses the CinderFixture fixture with a specific volume ID
     to represent a multiattach volume.
     """
     # These are all used in _IntegratedTestBase.
@@ -35,13 +35,13 @@ class TestMultiattachVolumes(integrated_helpers._IntegratedTestBase,
         # multiattach.
         self.useFixture(nova_fixtures.AllServicesCurrent())
         super(TestMultiattachVolumes, self).setUp()
-        self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
+        self.useFixture(nova_fixtures.CinderFixture(self))
 
     def test_boot_from_volume_and_attach_to_second_server(self):
         """This scenario creates a server from the multiattach volume, waits
         for it to be ACTIVE, and then attaches the volume to another server.
         """
-        volume_id = nova_fixtures.CinderFixtureNewAttachFlow.MULTIATTACH_VOL
+        volume_id = nova_fixtures.CinderFixture.MULTIATTACH_VOL
         create_req = self._build_server(flavor_id='1', image='')
         create_req['networks'] = 'none'
         create_req['block_device_mapping_v2'] = [{

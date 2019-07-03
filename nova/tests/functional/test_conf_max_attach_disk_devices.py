@@ -25,7 +25,7 @@ class ConfigurableMaxDiskDevicesTest(integrated_helpers.InstanceHelperMixin,
     def setUp(self):
         super(ConfigurableMaxDiskDevicesTest, self).setUp()
         self.cinder = self.useFixture(
-            nova_fixtures.CinderFixtureNewAttachFlow(self))
+            nova_fixtures.CinderFixture(self))
 
     def _wait_for_volume_attach(self, server_id, volume_id):
         for i in range(0, 100):
@@ -44,7 +44,7 @@ class ConfigurableMaxDiskDevicesTest(integrated_helpers.InstanceHelperMixin,
         self.flags(max_disk_devices_to_attach=1, group='compute')
         server = self._build_server(flavor_id='1')
         server['imageRef'] = ''
-        volume_uuid = nova_fixtures.CinderFixtureNewAttachFlow.IMAGE_BACKED_VOL
+        volume_uuid = nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
         bdm = {'boot_index': 0,
                'uuid': volume_uuid,
                'source_type': 'volume',
@@ -59,7 +59,7 @@ class ConfigurableMaxDiskDevicesTest(integrated_helpers.InstanceHelperMixin,
         self.flags(max_disk_devices_to_attach=1, group='compute')
         server = self._build_server(flavor_id='1')
         server['imageRef'] = ''
-        vol_img_id = nova_fixtures.CinderFixtureNewAttachFlow.IMAGE_BACKED_VOL
+        vol_img_id = nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
         boot_vol = {'boot_index': 0,
                     'uuid': vol_img_id,
                     'source_type': 'volume',

@@ -1636,8 +1636,7 @@ class EventReporterStub(fixtures.Fixture):
             lambda *args, **kwargs: mock.MagicMock()))
 
 
-# TODO(mriedem): Just rename this to be CinderFixture.
-class CinderFixtureNewAttachFlow(fixtures.Fixture):
+class CinderFixture(fixtures.Fixture):
     """A fixture to volume operations with the new Cinder attach/detach API"""
 
     # the default project_id in OSAPIFixtures
@@ -1658,7 +1657,7 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
     IMAGE_WITH_TRAITS_BACKED_VOL = '6194fc02-c60e-4a01-a8e5-600798208b5f'
 
     def __init__(self, test):
-        super(CinderFixtureNewAttachFlow, self).__init__()
+        super(CinderFixture, self).__init__()
         self.test = test
         self.swap_volume_instance_uuid = None
         self.swap_volume_instance_error_uuid = None
@@ -1684,7 +1683,7 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
                     break
 
     def setUp(self):
-        super(CinderFixtureNewAttachFlow, self).setUp()
+        super(CinderFixture, self).setUp()
 
         def fake_get(self_api, context, volume_id, microversion=None):
             # Check for the special swap volumes.

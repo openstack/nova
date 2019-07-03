@@ -46,7 +46,7 @@ class TestLocalDeleteAttachedVolumes(test.TestCase):
         self.useFixture(policy_fixture.RealPolicyFixture())
         # We need the CinderFixture to stub out the volume API.
         self.cinder = self.useFixture(
-            nova_fixtures.CinderFixtureNewAttachFlow(self))
+            nova_fixtures.CinderFixture(self))
         # The NeutronFixture is needed to stub out validate_networks in API.
         self.useFixture(nova_fixtures.NeutronFixture(self))
         # Use the PlacementFixture to avoid annoying warnings in the logs.

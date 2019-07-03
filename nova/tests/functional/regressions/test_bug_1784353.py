@@ -32,7 +32,7 @@ class TestRescheduleWithVolumesAttached(
         super(TestRescheduleWithVolumesAttached, self).setUp()
 
         # Use the new attach flow fixture for cinder
-        cinder_fixture = nova_fixtures.CinderFixtureNewAttachFlow(self)
+        cinder_fixture = nova_fixtures.CinderFixture(self)
         self.cinder = self.useFixture(cinder_fixture)
         self.useFixture(policy_fixture.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
@@ -63,7 +63,7 @@ class TestRescheduleWithVolumesAttached(
 
     def test_reschedule_with_volume_attached(self):
         # Boot a volume backed instance
-        volume_id = nova_fixtures.CinderFixtureNewAttachFlow.IMAGE_BACKED_VOL
+        volume_id = nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
         server_request = {
             'name': 'server',
             'flavorRef': self.flavor_id,

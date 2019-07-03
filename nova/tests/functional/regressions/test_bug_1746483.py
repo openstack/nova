@@ -39,7 +39,7 @@ class TestBootFromVolumeIsolatedHostsFilter(
 
         self.useFixture(policy_fixture.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
-        self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
+        self.useFixture(nova_fixtures.CinderFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
 
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
@@ -71,7 +71,7 @@ class TestBootFromVolumeIsolatedHostsFilter(
 
     def test_boot_from_volume_with_isolated_image(self):
         # Create our server without networking just to keep things simple.
-        image_id = nova_fixtures.CinderFixtureNewAttachFlow.IMAGE_BACKED_VOL
+        image_id = nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
         server_req_body = {
             # There is no imageRef because this is boot from volume.
             'server': {

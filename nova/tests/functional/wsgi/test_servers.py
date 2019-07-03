@@ -248,12 +248,12 @@ class ServersPreSchedulingTestCase(test.TestCase,
 
     def test_bfv_delete_build_request_pre_scheduling(self):
         cinder = self.useFixture(
-            nova_fixtures.CinderFixtureNewAttachFlow(self))
+            nova_fixtures.CinderFixture(self))
         # This makes the get_minimum_version_all_cells check say we're running
         # the latest of everything.
         self.useFixture(nova_fixtures.AllServicesCurrent())
 
-        volume_id = nova_fixtures.CinderFixtureNewAttachFlow.IMAGE_BACKED_VOL
+        volume_id = nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
         server = self.api.post_server({
             'server': {
                 'flavorRef': '1',
@@ -372,7 +372,7 @@ class EnforceVolumeBackedForZeroDiskFlavorTestCase(
         # we don't start compute so that scheduling fails; we don't really
         # care about successfully building an active server here.
         self.useFixture(func_fixtures.PlacementFixture())
-        self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
+        self.useFixture(nova_fixtures.CinderFixture(self))
         self.start_service('conductor')
         self.start_service('scheduler')
         server_req = self._build_minimal_create_server_request(
@@ -381,7 +381,7 @@ class EnforceVolumeBackedForZeroDiskFlavorTestCase(
             flavor_id=self.zero_disk_flavor['id'])
         server_req.pop('imageRef', None)
         server_req['block_device_mapping_v2'] = [{
-            'uuid': nova_fixtures.CinderFixtureNewAttachFlow.IMAGE_BACKED_VOL,
+            'uuid': nova_fixtures.CinderFixture.IMAGE_BACKED_VOL,
             'source_type': 'volume',
             'destination_type': 'volume',
             'boot_index': 0

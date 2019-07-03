@@ -858,7 +858,7 @@ class ServersTest(ServersTestBase):
         self.assertEqual(403, ex.response.status_code)
 
     def test_attach_vol_maximum_disk_devices_exceeded(self):
-        self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
+        self.useFixture(nova_fixtures.CinderFixture(self))
 
         server = self._build_minimal_create_server_request()
         created_server = self.api.post_server({"server": server})
@@ -1583,7 +1583,7 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
         different image than what is in the root disk of the root volume
         will result in a 400 BadRequest error.
         """
-        self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
+        self.useFixture(nova_fixtures.CinderFixture(self))
         # First create our server as normal.
         server_req_body = {
             # There is no imageRef because this is boot from volume.
@@ -1596,7 +1596,7 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
                 'block_device_mapping_v2': [{
                     'boot_index': 0,
                     'uuid':
-                    nova_fixtures.CinderFixtureNewAttachFlow.IMAGE_BACKED_VOL,
+                    nova_fixtures.CinderFixture.IMAGE_BACKED_VOL,
                     'source_type': 'volume',
                     'destination_type': 'volume'
                 }]
@@ -3703,8 +3703,8 @@ class VolumeBackedServerTest(integrated_helpers.ProviderUsageBaseTestCase):
         return server
 
     def _create_volume_backed_server(self):
-        self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
-        volume_id = nova_fixtures.CinderFixtureNewAttachFlow.IMAGE_BACKED_VOL
+        self.useFixture(nova_fixtures.CinderFixture(self))
+        volume_id = nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
         server_req_body = {
             # There is no imageRef because this is boot from volume.
             'server': {
@@ -4013,12 +4013,12 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
         rp_uuid = self._get_provider_uuid_by_host(self.compute2.host)
         self._set_provider_traits(rp_uuid, ['HW_CPU_X86_SGX'])
 
-        self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
+        self.useFixture(nova_fixtures.CinderFixture(self))
         # Create our server with a volume containing the image meta data with a
         # required trait
         server = self._create_volume_backed_server_with_traits(
             self.flavor_without_trait['id'],
-            nova_fixtures.CinderFixtureNewAttachFlow.
+            nova_fixtures.CinderFixture.
             IMAGE_WITH_TRAITS_BACKED_VOL)
 
         server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
@@ -4037,12 +4037,12 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
         self._set_provider_traits(rp_uuid, ['HW_CPU_X86_VMX',
                                             'HW_CPU_X86_SGX'])
 
-        self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
+        self.useFixture(nova_fixtures.CinderFixture(self))
         # Create our server with a flavor trait and a volume containing the
         # image meta data with a required trait
         server = self._create_volume_backed_server_with_traits(
             self.flavor_with_trait['id'],
-            nova_fixtures.CinderFixtureNewAttachFlow.
+            nova_fixtures.CinderFixture.
             IMAGE_WITH_TRAITS_BACKED_VOL)
 
         server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
@@ -4109,11 +4109,11 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
         fails to find a valid host since no compute node resource providers
         have the trait.
         """
-        self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
+        self.useFixture(nova_fixtures.CinderFixture(self))
         # Create our server with a volume
         server = self._create_volume_backed_server_with_traits(
             self.flavor_without_trait['id'],
-            nova_fixtures.CinderFixtureNewAttachFlow.
+            nova_fixtures.CinderFixture.
             IMAGE_WITH_TRAITS_BACKED_VOL)
 
         # The server should go to ERROR state because there is no valid host.
