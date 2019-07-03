@@ -270,9 +270,6 @@ MIN_LIBVIRT_MDEV_SUPPORT = (3, 4, 0)
 # for details.
 MIN_LIBVIRT_MULTIATTACH = (3, 10, 0)
 
-MIN_LIBVIRT_LUKS_VERSION = (2, 2, 0)
-MIN_QEMU_LUKS_VERSION = (2, 6, 0)
-
 MIN_LIBVIRT_FILE_BACKED_VERSION = (4, 0, 0)
 MIN_QEMU_FILE_BACKED_VERSION = (2, 6, 0)
 
@@ -763,10 +760,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._is_native_tls_available()):
             migration_flags |= libvirt.VIR_MIGRATE_TLS
         return migration_flags
-
-    def _is_native_luks_available(self):
-        return self._host.has_min_version(MIN_LIBVIRT_LUKS_VERSION,
-                                          MIN_QEMU_LUKS_VERSION)
 
     def _handle_live_migration_post_copy(self, migration_flags):
         if CONF.libvirt.live_migration_permit_post_copy:
@@ -1420,14 +1413,14 @@ class LibvirtDriver(driver.ComputeDriver):
                                         requested_size)
 
     def _use_native_luks(self, encryption=None):
-        """Is LUKS the required provider and native QEMU LUKS available
+        """Check if LUKS is the required 'provider'
         """
         provider = None
         if encryption:
             provider = encryption.get('provider', None)
         if provider in encryptors.LEGACY_PROVIDER_CLASS_TO_FORMAT_MAP:
             provider = encryptors.LEGACY_PROVIDER_CLASS_TO_FORMAT_MAP[provider]
-        return provider == encryptors.LUKS and self._is_native_luks_available()
+        return provider == encryptors.LUKS
 
     def _get_volume_config(self, connection_info, disk_info):
         vol_driver = self._get_volume_driver(connection_info)
@@ -8393,10 +8386,8 @@ class LibvirtDriver(driver.ComputeDriver):
             src_native_luks = False
             if migrate_data.obj_attr_is_set('src_supports_native_luks'):
                 src_native_luks = migrate_data.src_supports_native_luks
-            dest_native_luks = self._is_native_luks_available()
-            allow_native_luks = src_native_luks and dest_native_luks
             self._connect_volume(context, connection_info, instance,
-                                 allow_native_luks=allow_native_luks)
+                                 allow_native_luks=src_native_luks)
 
         self._pre_live_migration_plug_vifs(
             instance, network_info, migrate_data)

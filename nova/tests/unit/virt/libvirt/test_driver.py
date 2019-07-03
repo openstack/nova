@@ -8566,7 +8566,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(host.Host, "has_min_version")
     def test_use_native_luks(self, mock_has_min_version):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        # True only when the required QEMU and Libvirt versions are available
+        # The required QEMU and Libvirt versions are always available
         # on the host and a valid LUKS provider is present within the
         # encryption metadata dict.
         mock_has_min_version.return_value = True
@@ -8583,24 +8583,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertTrue(drvr._use_native_luks({
             'provider': 'LuksEncryptor'}))
         self.assertTrue(drvr._use_native_luks({
-            'provider': encryptors.LUKS}))
-
-        # Always False when the required QEMU and Libvirt versions are not
-        # available on the host.
-        mock_has_min_version.return_value = False
-        self.assertFalse(drvr._use_native_luks({}))
-        self.assertFalse(drvr._use_native_luks({
-            'provider': 'nova.volume.encryptors.cryptsetup.CryptSetupEncryptor'
-        }))
-        self.assertFalse(drvr._use_native_luks({
-            'provider': 'CryptSetupEncryptor'}))
-        self.assertFalse(drvr._use_native_luks({
-            'provider': encryptors.PLAIN}))
-        self.assertFalse(drvr._use_native_luks({
-            'provider': 'nova.volume.encryptors.luks.LuksEncryptor'}))
-        self.assertFalse(drvr._use_native_luks({
-            'provider': 'LuksEncryptor'}))
-        self.assertFalse(drvr._use_native_luks({
             'provider': encryptors.LUKS}))
 
     def test_multi_nic(self):
@@ -12083,13 +12065,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 src_supports_native_luks=None, dest_supports_native_luks=True,
                 allow_native_luks=False)
 
-    def test_pre_live_migration_only_src_supports_native_luks(self):
-        # Assert that allow_native_luks is False when dest_supports_native_luks
-        # is False due to unmet QEMU and Libvirt deps on the dest compute.
-        self._test_pre_live_migration_works_correctly_mocked(
-                src_supports_native_luks=True, dest_supports_native_luks=False,
-                allow_native_luks=False)
-
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'plug_vifs')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_connect_volume')
     @mock.patch('nova.virt.libvirt.utils.file_open',
@@ -12145,9 +12120,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.'
                       '_create_images_and_backing',
                       lambda *args, **kwargs: None)
-        self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.'
-                      '_is_native_luks_available',
-                      lambda self: dest_supports_native_luks)
 
         nw_info = FakeNetworkInfo()
 
@@ -12309,14 +12281,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         with test.nested(
-            mock.patch.object(drvr, '_is_native_luks_available'),
             mock.patch.object(drvr._host, 'find_secret'),
             mock.patch.object(drvr, '_connect_volume'),
             mock.patch.object(drvr, 'plug_vifs'),
-        ) as (mock_is_luks_available, mock_find_secret,
-              mock_connect_volume, mock_plug_vifs):
+        ) as (mock_find_secret, mock_connect_volume,
+              mock_plug_vifs):
 
-            mock_is_luks_available.return_value = True
             mock_find_secret.return_value = None
             if encrypted_volumes:
                 secret_vol1 = mock.Mock()
