@@ -30,6 +30,7 @@ from nova.compute import vm_states
 import nova.conf
 from nova import exception
 from nova.i18n import _
+from nova.network.neutronv2 import constants
 from nova import objects
 from nova import quota
 from nova import utils
@@ -578,9 +579,9 @@ def instance_has_port_with_resource_request(
     # instance has no port with resource request. If the instance is shelve
     # offloaded then we still have to hit neutron.
     search_opts = {'device_id': instance_uuid,
-                   'fields': ['resource_request']}
+                   'fields': [constants.RESOURCE_REQUEST]}
     ports = network_api.list_ports(context, **search_opts).get('ports', [])
     for port in ports:
-        if port.get('resource_request'):
+        if port.get(constants.RESOURCE_REQUEST):
             return True
     return False

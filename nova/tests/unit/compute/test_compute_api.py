@@ -43,6 +43,7 @@ from nova.db import api as db
 from nova import exception
 from nova.image import api as image_api
 from nova.network.neutronv2 import api as neutron_api
+from nova.network.neutronv2 import constants
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
@@ -6200,7 +6201,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         with mock.patch.object(
                 self.compute_api.network_api, 'show_port',
                 return_value={'port': {
-                    'resource_request': {
+                    constants.RESOURCE_REQUEST: {
                         'resources': {'CUSTOM_RESOURCE_CLASS': 42}
                 }}}) as mock_show_port:
             self.assertRaises(
