@@ -246,7 +246,7 @@ Things to consider here include:
 * Marking existing parameters as deprecated in a new microversion
 
 More information on the compute API reference format and conventions can
-be found here: https://wiki.openstack.org/wiki/NovaAPIRef
+be found in the :doc:`/contributor/api-ref-guideline`.
 
 For more detailed documentation of certain aspects of the API, consider
 writing something into the compute API guide found under path
