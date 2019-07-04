@@ -546,8 +546,8 @@ class ComputeManager(manager.Manager):
         self.instance_events = InstanceEvents()
         self._sync_power_pool = eventlet.GreenPool(
             size=CONF.sync_power_state_pool_size)
-        self.instance_running_pool = eventlet.GreenPool(
-            size=CONF.instance_running_pool_size)
+        self.instance_running_pool = utils.PoolProxy(eventlet.GreenPool(
+            size=CONF.instance_running_pool_size))
         self._syncs_in_progress = {}
         self.send_instance_updates = (
             CONF.filter_scheduler.track_instance_changes)
