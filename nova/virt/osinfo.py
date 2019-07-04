@@ -16,6 +16,7 @@ from oslo_log import log as logging
 from oslo_utils import importutils
 
 from nova import exception
+from nova.objects import fields
 
 libosinfo = None
 LOG = logging.getLogger(__name__)
@@ -102,7 +103,13 @@ class OsInfo(object):
             fltr.add_constraint("class", "net")
             devs = self._os_obj.get_all_devices(fltr)
             if devs.get_length():
-                return devs.get_nth(0).get_name()
+                net_model = devs.get_nth(0).get_name()
+                # convert to valid libvirt values
+                if net_model in ['virtio-net', 'virtio1.0-net']:
+                    return 'virtio'
+                # ignore any invalid ones
+                if net_model in fields.VIFModel.ALL:
+                    return net_model
 
     @property
     def disk_model(self):
@@ -111,7 +118,13 @@ class OsInfo(object):
             fltr.add_constraint("class", "block")
             devs = self._os_obj.get_all_devices(fltr)
             if devs.get_length():
-                return devs.get_nth(0).get_name()
+                disk_model = devs.get_nth(0).get_name()
+                # convert to valid libvirt values
+                if disk_model in ['virtio-block', 'virtio1.0-block']:
+                    return 'virtio'
+                # ignore any invalid ones
+                if disk_model in fields.DiskBus.ALL:
+                    return disk_model
 
 
 class HardwareProperties(object):
@@ -125,12 +138,10 @@ class HardwareProperties(object):
 
     @property
     def network_model(self):
-        model = self.img_props.get('hw_vif_model',
-                                    self.os_info_obj.network_model)
-        return 'virtio' if model == 'virtio-net' else model
+        return self.img_props.get('hw_vif_model',
+                                  self.os_info_obj.network_model)
 
     @property
     def disk_model(self):
-        model = self.img_props.get('hw_disk_bus',
-                                    self.os_info_obj.disk_model)
-        return 'virtio' if model == 'virtio-block' else model
+        return self.img_props.get('hw_disk_bus',
+                                  self.os_info_obj.disk_model)
