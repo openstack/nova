@@ -1718,20 +1718,17 @@ class PlacementCommands(object):
         try:
             allocations = placement.get_allocs_for_consumer(
                 ctxt, instance.uuid)
-        except ks_exc.ClientException as e:
+        except (ks_exc.ClientException,
+                exception.ConsumerAllocationRetrievalFailed) as e:
             raise exception.AllocationUpdateFailed(
                 consumer_uuid=instance.uuid,
                 error=_("Allocation retrieval failed: %s") % e)
-        except exception.ConsumerAllocationRetrievalFailed as e:
-            output(_("Allocation retrieval failed: %s") % e)
-            allocations = None
 
         need_healing = False
-        # get_allocations_for_consumer uses safe_connect which will
-        # return None if we can't communicate with Placement, and the
-        # response can have an empty {'allocations': {}} response if
-        # there are no allocations for the instance so handle both
-        if not allocations or not allocations.get('allocations'):
+
+        # Placement response can have an empty {'allocations': {}} in it if
+        # there are no allocations for the instance
+        if not allocations.get('allocations'):
             # This instance doesn't have allocations
             need_healing = 'Create'
             allocations = self._heal_missing_alloc(ctxt, instance, node_cache)
