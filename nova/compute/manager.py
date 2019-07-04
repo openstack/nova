@@ -4791,7 +4791,22 @@ class ComputeManager(manager.Manager):
                                        migration)
         except Exception:
             with excutils.save_and_reraise_exception():
-                self._revert_allocation(context, instance, migration)
+                # At this point, resize_instance (which runs on the source) has
+                # already updated the instance host/node values to point to
+                # this (the dest) compute, so we need to leave the allocations
+                # against the dest node resource provider intact and drop the
+                # allocations against the source node resource provider. If the
+                # user tries to recover the server by hard rebooting it, it
+                # will happen on this host so that's where the allocations
+                # should go. Note that this is the same method called from
+                # confirm_resize to cleanup the source node allocations held
+                # by the migration record.
+                LOG.info('Deleting allocations for old flavor on source node '
+                         '%s after finish_resize failure. You may be able to '
+                         'recover the instance by hard rebooting it.',
+                         migration.source_compute, instance=instance)
+                self._delete_allocation_after_move(
+                    context, instance, migration)
 
     def _finish_resize_helper(self, context, disk_info, image, instance,
                               migration):
