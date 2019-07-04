@@ -210,7 +210,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
     def test_check_instance_has_no_numa_fails(self, mock_get):
         self.flags(enable_numa_live_migration=False, group='workarounds')
         mock_get.return_value = objects.ComputeNode(
-            uuid=uuids.cn1, hypervisor_type='kvm')
+            uuid=uuids.cn1, hypervisor_type='QEMU')
         self.task.instance.numa_topology = objects.InstanceNUMATopology(
             cells=[objects.InstanceNUMACell(id=0, cpuset=set([0]),
                                             memory=1024)])
