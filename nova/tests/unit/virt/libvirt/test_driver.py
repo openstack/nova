@@ -7036,24 +7036,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.assertEqual(events, cfg.perf_events)
 
-    @mock.patch.object(host.Host, 'has_min_version')
-    def test_get_guest_with_perf_libvirt_unsupported(self, mock_min_version):
-
-        def fake_has_min_version(lv_ver=None, hv_ver=None, hv_type=None):
-            if lv_ver == libvirt_driver.MIN_LIBVIRT_PERF_VERSION:
-                return False
-            return True
-
-        mock_min_version.side_effect = fake_has_min_version
-        self.flags(enabled_perf_events=['cmt'], group='libvirt')
-
-        caps = vconfig.LibvirtConfigCaps()
-        caps.host = vconfig.LibvirtConfigCapsHost()
-        caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = fields.Architecture.X86_64
-
-        self._test_get_guest_with_perf(caps, [])
-
     @mock.patch.object(fakelibvirt, 'VIR_PERF_PARAM_CMT', True,
                        create=True)
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)

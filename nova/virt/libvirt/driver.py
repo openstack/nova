@@ -253,8 +253,6 @@ MIN_LIBVIRT_OTHER_ARCH = {
     fields.Architecture.AARCH64: MIN_LIBVIRT_KVM_AARCH64_VERSION,
 }
 
-# perf events support
-MIN_LIBVIRT_PERF_VERSION = (2, 0, 0)
 LIBVIRT_PERF_EVENT_PREFIX = 'VIR_PERF_PARAM_'
 
 PERF_EVENTS_CPU_FLAG_MAPPING = {'cmt': 'cmt',
@@ -4959,8 +4957,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _get_supported_perf_events(self):
 
-        if (len(CONF.libvirt.enabled_perf_events) == 0 or
-             not self._host.has_min_version(MIN_LIBVIRT_PERF_VERSION)):
+        if (len(CONF.libvirt.enabled_perf_events) == 0):
             return []
 
         supported_events = []
