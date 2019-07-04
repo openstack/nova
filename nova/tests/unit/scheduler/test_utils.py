@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import ddt
 import mock
 
 from nova.api.openstack.placement import lib as plib
@@ -23,6 +24,7 @@ from nova.tests.unit import fake_instance
 from nova.tests import uuidsentinel as uuids
 
 
+@ddt.ddt
 class TestUtils(test.NoDBTestCase):
 
     def setUp(self):
@@ -445,6 +447,42 @@ class TestUtils(test.NoDBTestCase):
                                 ephemeral_gb=0,
                                 swap=0)
         fake_spec = objects.RequestSpec(flavor=flavor, force_hosts=['test'])
+        expected = utils.ResourceRequest()
+        expected._rg_by_id[None] = plib.RequestGroup(
+            use_same_provider=False,
+            resources={
+                'VCPU': 1,
+                'MEMORY_MB': 1024,
+                'DISK_GB': 15,
+            },
+        )
+        expected._limit = None
+        resources = utils.resources_from_request_spec(fake_spec)
+        self.assertResourceRequestsEqual(expected, resources)
+        expected_querystring = (
+            'resources=DISK_GB%3A15%2CMEMORY_MB%3A1024%2CVCPU%3A1'
+        )
+        self.assertEqual(expected_querystring, resources.to_querystring())
+
+    @ddt.data(
+        # Test single hint that we are checking for.
+        {'group': [uuids.fake]},
+        # Test hint we care about and some other random hint.
+        {'same_host': [uuids.fake], 'fake-hint': ['fake-value']},
+        # Test multiple hints we are checking for.
+        {'same_host': [uuids.server1], 'different_host': [uuids.server2]})
+    def test_resources_from_request_spec_no_limit_based_on_hint(self, hints):
+        """Tests that there is no limit applied to the
+        GET /allocation_candidates query string if a given scheduler hint
+        is in the request spec.
+        """
+        flavor = objects.Flavor(vcpus=1,
+                                memory_mb=1024,
+                                root_gb=15,
+                                ephemeral_gb=0,
+                                swap=0)
+        fake_spec = objects.RequestSpec(
+            flavor=flavor, scheduler_hints=hints)
         expected = utils.ResourceRequest()
         expected._rg_by_id[None] = plib.RequestGroup(
             use_same_provider=False,
