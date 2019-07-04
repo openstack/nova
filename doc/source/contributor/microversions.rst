@@ -368,6 +368,8 @@ necessary to add changes to other places which describe your change:
 
 * Make a new commit to python-novaclient and update corresponding
   files to enable the newly added microversion API.
+  See :python-novaclient-doc:`Adding support for a new microversion
+  <contributor/microversions>` in python-novaclient for more details.
 
 * If the microversion changes the response schema, a new schema and test for
   the microversion must be added to Tempest.
