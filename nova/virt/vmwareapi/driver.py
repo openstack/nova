@@ -269,7 +269,8 @@ class VMwareVCDriver(driver.ComputeDriver):
         self._vmops.confirm_migration(migration, instance, network_info)
 
     def finish_revert_migration(self, context, instance, network_info,
-                                block_device_info=None, power_on=True):
+                                migration, block_device_info=None,
+                                power_on=True):
         """Finish reverting a resize, powering back on the instance."""
         self._vmops.finish_revert_migration(context, instance, network_info,
                                             block_device_info, power_on)

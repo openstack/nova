@@ -737,12 +737,14 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def finish_revert_migration(self, context, instance, network_info,
-                                block_device_info=None, power_on=True):
+                                migration, block_device_info=None,
+                                power_on=True):
         """Finish reverting a resize/migration.
 
         :param context: the context for the finish_revert_migration
         :param instance: nova.objects.instance.Instance being migrated/resized
         :param network_info: instance network information
+        :param migration: nova.objects.Migration for the migration
         :param block_device_info: instance volume block device info
         :param power_on: True if the instance should be powered on, False
                          otherwise

@@ -237,7 +237,8 @@ class FakeDriver(driver.ComputeDriver):
         pass
 
     def finish_revert_migration(self, context, instance, network_info,
-                                block_device_info=None, power_on=True):
+                                migration, block_device_info=None,
+                                power_on=True):
         self.instances[instance.uuid] = FakeInstance(
             instance.name, power_state.RUNNING, instance.uuid)
 

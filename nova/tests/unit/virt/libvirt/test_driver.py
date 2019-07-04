@@ -19645,8 +19645,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)
             ins_ref = self._create_instance()
-            ins_ref.migration_context = objects.MigrationContext(
-                migration_id=migration.id)
             os.mkdir(os.path.join(tmpdir, ins_ref['name']))
             libvirt_xml_path = os.path.join(tmpdir,
                                             ins_ref['name'],
@@ -19669,13 +19667,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 self.events_passed_to_fake_create = [
                     ('network-vif-plugged', uuids.normal_vif)]
 
-            with mock.patch.object(objects.Migration, 'get_by_id_and_instance',
-                                   return_value=migration) as mock_get_mig:
-                self.drvr.finish_revert_migration(
-                    context.get_admin_context(), ins_ref,
-                    network_info, None, power_on)
-                mock_get_mig.assert_called_with(mock.ANY, migration.id,
-                                                ins_ref.uuid)
+            self.drvr.finish_revert_migration(
+                context.get_admin_context(), ins_ref, network_info, migration,
+                None, power_on)
 
             self.assertTrue(self.fake_create_domain_called)
 
@@ -19707,8 +19701,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         drvr.image_backend.by_name.return_value = drvr.image_backend
         context = 'fake_context'
         ins_ref = self._create_instance()
-        ins_ref.migration_context = objects.MigrationContext(
-            migration_id=42)
         migration = objects.Migration(source_compute='fake-host1',
                                       dest_compute='fake-host2')
 
@@ -19720,17 +19712,15 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 mock.patch.object(drvr, '_get_guest_xml'),
                 mock.patch.object(shutil, 'rmtree'),
                 mock.patch.object(loopingcall, 'FixedIntervalLoopingCall'),
-                mock.patch.object(objects.Migration, 'get_by_id_and_instance',
-                                  return_value=migration)
         ) as (mock_stat, mock_path, mock_rename, mock_cdn, mock_ggx,
-              mock_rmtree, mock_looping_call, mock_get_mig):
+              mock_rmtree, mock_looping_call):
             mock_path.return_value = '/fake/foo'
             if del_inst_failed:
                 mock_rmtree.side_effect = OSError(errno.ENOENT,
                                                   'test exception')
             drvr.finish_revert_migration(context, ins_ref,
-                                         network_model.NetworkInfo())
-            mock_get_mig.assert_called_with(mock.ANY, 42, ins_ref.uuid)
+                                         network_model.NetworkInfo(),
+                                         migration)
             if backup_made:
                 mock_rename.assert_called_once_with('/fake/foo_resize',
                                                     '/fake/foo')
@@ -19759,8 +19749,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         image_meta = {"disk_format": "raw",
                       "properties": {"hw_disk_bus": "ide"}}
         instance = self._create_instance()
-        instance.migration_context = objects.MigrationContext(
-            migration_id=42)
         migration = objects.Migration(source_compute='fake-host1',
                                       dest_compute='fake-host2')
 
@@ -19773,36 +19761,28 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                                   return_value=image_meta),
                 mock.patch.object(drvr, '_get_guest_xml',
                                   side_effect=fake_get_guest_xml),
-                mock.patch.object(objects.Migration, 'get_by_id_and_instance',
-                                  return_value=migration)
-        ) as (mock_img_bkend, mock_cdan, mock_gifsm, mock_ggxml, mock_get_mig):
+        ) as (mock_img_bkend, mock_cdan, mock_gifsm, mock_ggxml):
             drvr.finish_revert_migration('', instance,
                                          network_model.NetworkInfo(),
-                                         power_on=False)
-            mock_get_mig.assert_called_with(mock.ANY, 42, instance.uuid)
+                                         migration, power_on=False)
 
     def test_finish_revert_migration_snap_backend(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr.image_backend = mock.Mock()
         drvr.image_backend.by_name.return_value = drvr.image_backend
         ins_ref = self._create_instance()
-        ins_ref.migration_context = objects.MigrationContext(
-            migration_id=42)
         migration = objects.Migration(source_compute='fake-host1',
                                       dest_compute='fake-host2')
 
         with test.nested(
                 mock.patch.object(utils, 'get_image_from_system_metadata'),
                 mock.patch.object(drvr, '_create_domain_and_network'),
-                mock.patch.object(drvr, '_get_guest_xml'),
-                mock.patch.object(objects.Migration, 'get_by_id_and_instance',
-                                  return_value=migration)) as (
-                mock_image, mock_cdn, mock_ggx, mock_get_mig):
+                mock.patch.object(drvr, '_get_guest_xml')) as (
+                mock_image, mock_cdn, mock_ggx):
             mock_image.return_value = {'disk_format': 'raw'}
             drvr.finish_revert_migration('', ins_ref,
                                          network_model.NetworkInfo(),
-                                         power_on=False)
-            mock_get_mig.assert_called_with(mock.ANY, 42, ins_ref.uuid)
+                                         migration, power_on=False)
 
             drvr.image_backend.rollback_to_snap.assert_called_once_with(
                     libvirt_utils.RESIZE_SNAPSHOT_NAME)
@@ -19814,6 +19794,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         drvr.image_backend = mock.Mock()
         drvr.image_backend.by_name.return_value = drvr.image_backend
         ins_ref = self._create_instance()
+        migration = objects.Migration(source_compute='fake-host1',
+                                      dest_compute='fake-host2')
 
         with test.nested(
                 mock.patch.object(utils, 'get_image_from_system_metadata'),
@@ -19825,7 +19807,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 exception.SnapshotNotFound(snapshot_id='testing'))
             self.assertRaises(exception.SnapshotNotFound,
                               drvr.finish_revert_migration,
-                              '', ins_ref, None, power_on=False)
+                              '', ins_ref, None, migration, power_on=False)
             drvr.image_backend.remove_snap.assert_not_called()
 
     def test_finish_revert_migration_snap_backend_image_does_not_exist(self):
@@ -19834,8 +19816,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         drvr.image_backend.by_name.return_value = drvr.image_backend
         drvr.image_backend.exists.return_value = False
         ins_ref = self._create_instance()
-        ins_ref.migration_context = objects.MigrationContext(
-            migration_id=42)
         migration = objects.Migration(source_compute='fake-host1',
                                       dest_compute='fake-host2')
 
@@ -19843,17 +19823,14 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 mock.patch.object(rbd_utils, 'RBDDriver'),
                 mock.patch.object(utils, 'get_image_from_system_metadata'),
                 mock.patch.object(drvr, '_create_domain_and_network'),
-                mock.patch.object(drvr, '_get_guest_xml'),
-                mock.patch.object(objects.Migration, 'get_by_id_and_instance',
-                                  return_value=migration)) as (
-                mock_rbd, mock_image, mock_cdn, mock_ggx, mock_get_mig):
+                mock.patch.object(drvr, '_get_guest_xml')) as (
+                mock_rbd, mock_image, mock_cdn, mock_ggx):
             mock_image.return_value = {'disk_format': 'raw'}
             drvr.finish_revert_migration('', ins_ref,
                                          network_model.NetworkInfo(),
-                                         power_on=False)
+                                         migration, power_on=False)
             self.assertFalse(drvr.image_backend.rollback_to_snap.called)
             self.assertFalse(drvr.image_backend.remove_snap.called)
-            mock_get_mig.assert_called_with(mock.ANY, 42, ins_ref.uuid)
 
     @mock.patch.object(shutil, 'rmtree')
     def test_cleanup_failed_migration(self, mock_rmtree):

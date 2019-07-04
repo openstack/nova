@@ -1140,6 +1140,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 system_metadata=sys_meta,
                 host=self.compute.host,
                 expected_attrs=['system_metadata'])
+        instance.migration_context = objects.MigrationContext(migration_id=42)
+        migration = objects.Migration(source_compute='fake-host1',
+                                      dest_compute='fake-host2')
 
         with test.nested(
             mock.patch.object(objects.Instance, 'get_network_info',
@@ -1151,22 +1154,25 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             mock.patch.object(self.compute.driver, 'get_info'),
             mock.patch.object(instance, 'save'),
             mock.patch.object(self.compute, '_retry_reboot',
-                              return_value=(False, None))
+                              return_value=(False, None)),
+            mock.patch.object(objects.Migration, 'get_by_id_and_instance',
+                              return_value=migration)
         ) as (mock_get_nw, mock_plug, mock_finish, mock_get_inst,
-              mock_get_info, mock_save, mock_retry):
+              mock_get_info, mock_save, mock_retry, mock_get_mig):
             mock_get_info.side_effect = (
                 hardware.InstanceInfo(state=power_state.SHUTDOWN),
                 hardware.InstanceInfo(state=power_state.SHUTDOWN))
 
             self.compute._init_instance(self.context, instance)
 
+            mock_get_mig.assert_called_with(self.context, 42, instance.uuid)
             mock_retry.assert_called_once_with(self.context, instance,
                 power_state.SHUTDOWN)
             mock_get_nw.assert_called_once_with()
             mock_plug.assert_called_once_with(instance, [])
             mock_get_inst.assert_called_once_with(self.context, instance)
             mock_finish.assert_called_once_with(self.context, instance,
-                                                [], [], power_on)
+                                                [], migration, [], power_on)
             mock_save.assert_called_once_with()
             mock_get_info.assert_has_calls(
                 [mock.call(instance, use_cache=False),
@@ -7270,7 +7276,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                                               migration=self.migration,
                                               instance=self.instance)
             finish_revert_migration.assert_called_with(self.context,
-                self.instance, 'nw_info', mock.ANY, mock.ANY)
+                self.instance, 'nw_info', self.migration, mock.ANY, mock.ANY)
             # Make sure the migration.dest_compute is not still set to the
             # source_compute value.
             self.assertNotEqual(self.migration.dest_compute,

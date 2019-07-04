@@ -9151,7 +9151,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise
 
     def finish_revert_migration(self, context, instance, network_info,
-                                block_device_info=None, power_on=True):
+                                migration, block_device_info=None,
+                                power_on=True):
         LOG.debug("Starting finish_revert_migration",
                   instance=instance)
 
@@ -9184,11 +9185,6 @@ class LibvirtDriver(driver.ComputeDriver):
         # _finish_revert_resize_network_migrate_finish(), right after updating
         # the port binding. For any ports not covered by those "bind-time"
         # events, we wait for "plug-time" events here.
-        # TODO(artom) This DB lookup is done for backportability. A subsequent
-        # patch will remove it and change the finish_revert_migration() method
-        # signature to pass is the migration object.
-        migration = objects.Migration.get_by_id_and_instance(
-            context, instance.migration_context.migration_id, instance.uuid)
         events = network_info.get_plug_time_events(migration)
         if events:
             LOG.debug('Instance is using plug-time events: %s', events,
