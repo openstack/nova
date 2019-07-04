@@ -48,8 +48,6 @@ LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
 
-#  vlan tag for macvtap passthrough mode on SRIOV VFs
-MIN_LIBVIRT_MACVTAP_PASSTHROUGH_VLAN = (1, 3, 5)
 # setting interface mtu was intoduced in libvirt 3.3, We also need to
 # check for QEMU that because libvirt is configuring in same time
 # host_mtu for virtio-net, fails if not supported.
@@ -356,11 +354,6 @@ class LibvirtGenericVIFDriver(object):
             conf, net_type, profile['pci_slot'],
             vif_details[network_model.VIF_DETAILS_VLAN])
 
-        # NOTE(vladikr): Not setting vlan tags for macvtap on SR-IOV VFs
-        # as vlan tag is not supported in Libvirt until version 1.3.5
-        if (vif['vnic_type'] == network_model.VNIC_TYPE_MACVTAP and not
-                host.has_min_version(MIN_LIBVIRT_MACVTAP_PASSTHROUGH_VLAN)):
-            conf.vlan = None
         designer.set_vif_bandwidth_config(conf, inst_type)
 
         return conf
