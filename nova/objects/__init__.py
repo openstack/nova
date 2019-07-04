@@ -48,7 +48,7 @@ def register_all():
     __import__('nova.objects.instance_group')
     __import__('nova.objects.instance_info_cache')
     __import__('nova.objects.instance_mapping')
-    __import__('nova.objects.instance_numa_topology')
+    __import__('nova.objects.instance_numa')
     __import__('nova.objects.instance_pci_requests')
     __import__('nova.objects.keypair')
     __import__('nova.objects.migrate_data')
