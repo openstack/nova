@@ -847,6 +847,7 @@ class Rbd(Image):
 
         self.pool = CONF.libvirt.images_rbd_pool
         self.rbd_user = CONF.libvirt.rbd_user
+        self.rbd_connect_timeout = CONF.libvirt.rbd_connect_timeout
         self.ceph_conf = CONF.libvirt.images_rbd_ceph_conf
 
         path = 'rbd:%s/%s' % (self.pool, self.rbd_name)
@@ -860,7 +861,8 @@ class Rbd(Image):
         self.driver = rbd_utils.RBDDriver(
             pool=self.pool,
             ceph_conf=self.ceph_conf,
-            rbd_user=self.rbd_user)
+            rbd_user=self.rbd_user,
+            rbd_connect_timeout=self.rbd_connect_timeout)
 
         self.discard_mode = CONF.libvirt.hw_disk_discard
 

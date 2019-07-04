@@ -118,12 +118,13 @@ class RADOSClient(object):
 
 class RBDDriver(object):
 
-    def __init__(self, pool, ceph_conf, rbd_user):
+    def __init__(self, pool, ceph_conf, rbd_user, rbd_connect_timeout):
         self.pool = pool
         # NOTE(angdraug): rados.Rados fails to connect if ceph_conf is None:
         # https://github.com/ceph/ceph/pull/1787
         self.ceph_conf = ceph_conf or ''
         self.rbd_user = rbd_user or None
+        self.rbd_connect_timeout = rbd_connect_timeout
         if rbd is None:
             raise RuntimeError(_('rbd python libraries not found'))
 
@@ -131,7 +132,7 @@ class RBDDriver(object):
         client = rados.Rados(rados_id=self.rbd_user,
                                   conffile=self.ceph_conf)
         try:
-            client.connect()
+            client.connect(timeout=self.rbd_connect_timeout)
             pool_to_open = pool or self.pool
             # NOTE(luogangyi): open_ioctx >= 10.1.0 could handle unicode
             # arguments perfectly as part of Python 3 support.

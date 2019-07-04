@@ -1262,7 +1262,8 @@ class LibvirtDriver(driver.ComputeDriver):
         return rbd_utils.RBDDriver(
                 pool=CONF.libvirt.images_rbd_pool,
                 ceph_conf=CONF.libvirt.images_rbd_ceph_conf,
-                rbd_user=CONF.libvirt.rbd_user)
+                rbd_user=CONF.libvirt.rbd_user,
+                rbd_connect_timeout=CONF.libvirt.rbd_connect_timeout)
 
     def _cleanup_rbd(self, instance):
         # NOTE(nic): On revert_resize, the cleanup steps for the root
