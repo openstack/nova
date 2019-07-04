@@ -66,13 +66,39 @@ class LibvirtOsInfoTest(test.NoDBTestCase):
             self.assertIsNone(os_info_db.get_os('fedora19'))
             self.assertEqual(1, mock_log.call_count)
 
-    def test_hardware_properties_from_osinfo(self):
+    def test_hardware_properties_from_osinfo_fedora19(self):
+        """Verifies that HardwareProperties attributes are being set
+           from libosinfo.
+        """
+        img_meta = {'properties':
+                        {'os_distro': 'fedora19'}
+                    }
+
+        img_meta = objects.ImageMeta.from_dict(img_meta)
+        osinfo_obj = osinfo.HardwareProperties(img_meta)
+        self.assertEqual('rtl8139', osinfo_obj.network_model)
+        self.assertEqual('ide', osinfo_obj.disk_model)
+
+    def test_hardware_properties_from_osinfo_fedora22(self):
         """Verifies that HardwareProperties attributes are being set
            from libosinfo.
         """
         img_meta = {'properties':
                        {'os_distro': 'fedora22'}
                    }
+
+        img_meta = objects.ImageMeta.from_dict(img_meta)
+        osinfo_obj = osinfo.HardwareProperties(img_meta)
+        self.assertEqual('virtio', osinfo_obj.network_model)
+        self.assertEqual('virtio', osinfo_obj.disk_model)
+
+    def test_hardware_properties_from_osinfo_fedora23(self):
+        """Verifies that HardwareProperties attributes are being set
+           from libosinfo.
+        """
+        img_meta = {'properties':
+                        {'os_distro': 'fedora23'}
+                    }
 
         img_meta = objects.ImageMeta.from_dict(img_meta)
         osinfo_obj = osinfo.HardwareProperties(img_meta)
