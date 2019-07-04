@@ -839,6 +839,13 @@ class FakeLiveMigrateDriverWithNestedCustomResources(
 
 class FakeDriverWithPciResources(SmallFakeDriver):
 
+    PCI_ADDR_PF1 = '0000:01:00.0'
+    PCI_ADDR_PF1_VF1 = '0000:01:00.1'
+    PCI_ADDR_PF2 = '0000:02:00.0'
+    PCI_ADDR_PF2_VF1 = '0000:02:00.1'
+    PCI_ADDR_PF3 = '0000:03:00.0'
+    PCI_ADDR_PF3_VF1 = '0000:03:00.1'
+
     # NOTE(gibi): Always use this fixture along with the
     # FakeDriverWithPciResources to make the necessary configuration for the
     # driver.
@@ -898,17 +905,17 @@ class FakeDriverWithPciResources(SmallFakeDriver):
     def get_available_resource(self, nodename):
         host_status = super(
             FakeDriverWithPciResources, self).get_available_resource(nodename)
-        # 01:00 - PF - ens1
+        # 01:00.0 - PF - ens1
         #  |---- 01:00.1 - VF
         #
-        # 02:00 - PF - ens2
+        # 02:00.0 - PF - ens2
         #  |---- 02:00.1 - VF
         #
-        # 03:00 - PF - ens3
+        # 03:00.0 - PF - ens3
         #  |---- 03:00.1 - VF
         host_status['pci_passthrough_devices'] = jsonutils.dumps([
             {
-                'address': '0000:01:00.0',
+                'address': self.PCI_ADDR_PF1,
                 'product_id': 'fake-product_id',
                 'vendor_id': 'fake-vendor_id',
                 'status': 'available',
@@ -918,18 +925,18 @@ class FakeDriverWithPciResources(SmallFakeDriver):
                 'label': 'fake-label',
             },
             {
-                'address': '0000:01:00.1',
+                'address': self.PCI_ADDR_PF1_VF1,
                 'product_id': 'fake-product_id',
                 'vendor_id': 'fake-vendor_id',
                 'status': 'available',
                 'dev_type': 'type-VF',
-                'parent_addr': '0000:01:00',
+                'parent_addr': self.PCI_ADDR_PF1,
                 'numa_node': 0,
                 'label': 'fake-label',
                 "parent_ifname": "ens1",
             },
             {
-                'address': '0000:02:00.0',
+                'address': self.PCI_ADDR_PF2,
                 'product_id': 'fake-product_id',
                 'vendor_id': 'fake-vendor_id',
                 'status': 'available',
@@ -939,18 +946,18 @@ class FakeDriverWithPciResources(SmallFakeDriver):
                 'label': 'fake-label',
             },
             {
-                'address': '0000:02:00.1',
+                'address': self.PCI_ADDR_PF2_VF1,
                 'product_id': 'fake-product_id',
                 'vendor_id': 'fake-vendor_id',
                 'status': 'available',
                 'dev_type': 'type-VF',
-                'parent_addr': '0000:02:00',
+                'parent_addr': self.PCI_ADDR_PF2,
                 'numa_node': 0,
                 'label': 'fake-label',
                 "parent_ifname": "ens2",
             },
             {
-                'address': '0000:03:00.0',
+                'address': self.PCI_ADDR_PF3,
                 'product_id': 'fake-product_id',
                 'vendor_id': 'fake-vendor_id',
                 'status': 'available',
@@ -960,12 +967,12 @@ class FakeDriverWithPciResources(SmallFakeDriver):
                 'label': 'fake-label',
             },
             {
-                'address': '0000:03:00.1',
+                'address': self.PCI_ADDR_PF3_VF1,
                 'product_id': 'fake-product_id',
                 'vendor_id': 'fake-vendor_id',
                 'status': 'available',
                 'dev_type': 'type-VF',
-                'parent_addr': '0000:03:00',
+                'parent_addr': self.PCI_ADDR_PF3,
                 'numa_node': 0,
                 'label': 'fake-label',
                 "parent_ifname": "ens3",
