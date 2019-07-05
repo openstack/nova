@@ -145,21 +145,25 @@ class LibvirtGenericVIFDriver(object):
         model = None
         driver = None
         vhost_queues = None
+        rx_queue_size = None
+
+        # NOTE(stephenfin): Skip most things here as only apply to virtio
+        # devices
+        if vnic_type in network_model.VNIC_TYPES_DIRECT_PASSTHROUGH:
+            designer.set_vif_guest_frontend_config(
+                conf, mac, model, driver, vhost_queues, rx_queue_size)
+            return conf
 
         # If the user has specified a 'vif_model' against the
         # image then honour that model
         if image_meta:
             model = osinfo.HardwareProperties(image_meta).network_model
 
-        # Note(moshele): Skip passthough vnic_types as they don't support
-        # virtio model.
-        if vnic_type not in network_model.VNIC_TYPES_DIRECT_PASSTHROUGH:
-            # Else if the virt type is KVM/QEMU/VZ(Parallels), then use virtio
-            # according to the global config parameter
-            if (model is None and
-                virt_type in ('kvm', 'qemu', 'parallels') and
-                        CONF.libvirt.use_virtio_for_bridges):
-                model = network_model.VIF_MODEL_VIRTIO
+        # If the virt type is KVM/QEMU/VZ(Parallels), then use virtio according
+        # to the global config parameter
+        if (model is None and virt_type in ('kvm', 'qemu', 'parallels') and
+                CONF.libvirt.use_virtio_for_bridges):
+            model = network_model.VIF_MODEL_VIRTIO
 
         # Workaround libvirt bug, where it mistakenly
         # enables vhost mode, even for non-KVM guests
@@ -184,7 +188,6 @@ class LibvirtGenericVIFDriver(object):
             # use vhost and not None.
             driver = vhost_drv or driver
 
-        rx_queue_size = None
         # Note(moshele): rx_queue_size is support only for virtio model
         if model == network_model.VIF_MODEL_VIRTIO:
             if driver == 'vhost' or driver is None:
