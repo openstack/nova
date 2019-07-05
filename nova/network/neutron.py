@@ -2366,14 +2366,24 @@ class API:
                                            neutron_client=neutron)
                     if port.get('device_id', None):
                         raise exception.PortInUse(port_id=request.port_id)
+
                     deferred_ip = port.get('ip_allocation') == 'deferred'
+                    ipless_port = port.get('ip_allocation') == 'none'
                     # NOTE(carl_baldwin) A deferred IP port doesn't have an
                     # address here. If it fails to get one later when nova
                     # updates it with host info, Neutron will error which
                     # raises an exception.
-                    if not deferred_ip and not port.get('fixed_ips'):
+                    # NOTE(sbauza): We don't need to validate the
+                    # 'connectivity' attribute of the port's
+                    # 'binding:vif_details' to ensure it's 'l2', as Neutron
+                    # already verifies it.
+                    if (
+                        not (deferred_ip or ipless_port) and
+                        not port.get('fixed_ips')
+                    ):
                         raise exception.PortRequiresFixedIP(
                             port_id=request.port_id)
+
                     request.network_id = port['network_id']
                 else:
                     ports_needed_per_instance += 1
