@@ -19,9 +19,6 @@ code to interact with every cloud.
 As such, the entire extensions concept is deprecated, and will be
 removed in the near future.
 
-For information about extensions, see `Extensions
-<http://developer.openstack.org/api-guide/compute/extensions.html>`__.
-
 List Extensions
 ===============
 
