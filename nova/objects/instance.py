@@ -1555,31 +1555,66 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
 
             if instances:
                 # TODO(xxx): cache flavor_ids
+                wanted_itypes = set(x[0] for x in instances)
                 instance_types = objects.FlavorList.get_by_id(
-                    context, [x[0] for x in instances])
+                    context, wanted_itypes)
+                missing_itypes = wanted_itypes - set(instance_types.keys())
 
-                for i in instances:
-                    itype = instance_types.get(i[0])
-                    if not itype:
-                        # Not found in flavor db of upstream api, searching
-                        # locally
-                        LOG.warning('flavor with ref id %s not found '
-                                    'in flavor db', i[0])
-                        flavor_query = context.session.query(
-                            models.InstanceTypes). \
-                            filter_by(id=i[0]). \
-                            options(joinedload('extra_specs'))
-                        old_flavor = flavor_query.first()
+                if missing_itypes:
+                    # Not found in flavor db. might be deleted. get it from the
+                    # saved info
+                    db_flavors = context.session.query(
+                            models.InstanceExtra.flavor
+                        ).join(models.Instance). \
+                        filter(
+                            models.Instance.instance_type_id.in_(
+                                missing_itypes)
+                        ).distinct(models.Instance.instance_type_id)
+                    for db_flavor in db_flavors:
+                        flavor_info = jsonutils.loads(db_flavor[0])
+                        flavor = objects.Flavor.obj_from_primitive(
+                                                            flavor_info['cur'])
+                        separate = flavor.extra_specs.get('quota:separate')
+                        instance_types[flavor.id] = {
+                            'name': 'instances_' + flavor.name,
+                            'baremetal': separate == 'true'
+                        }
+
+                missing_itypes = wanted_itypes - set(instance_types.keys())
+
+                if missing_itypes:
+                    # Not found in flavor db of upstream api, searching locally
+                    # This is probably not necessary anymore, because every
+                    # instance we have should have saved flavor information.
+                    msg = 'flavor(s) with ref id %s not found in flavor db'
+                    LOG.warning(msg, ', '.join(str(x) for x in missing_itypes))
+
+                    flavor_query = context.session.query(
+                        models.InstanceTypes). \
+                        filter(models.InstanceTypes.id.in_(missing_itypes)). \
+                        options(joinedload('extra_specs'))
+                    for old_flavor in flavor_query:
                         # Bad hack, but works
-                        itype = {'name': 'instances_' + old_flavor.name,
-                                 'baremetal': len(old_flavor.extra_specs) > 0}
-                    if itype.get('baremetal', False):
-                        old_val = counts.get(itype['name'], 0)
-                        counts.update({itype['name']: old_val + i[1]})
+                        instance_types[old_flavor.id] = {
+                            'name': 'instances_' + old_flavor.name,
+                            'baremetal': len(old_flavor.extra_specs) > 0
+                        }
+
+                for type_id, instance_count, cores, ram in instances:
+                    itype = instance_types.get(type_id)
+                    if itype is None:
+                        # log an error, but continue. We need the rest of the
+                        # function to work. We'll just add it to non-baremetal
+                        # instances, so the overall number is correct at least.
+                        # Also this should not happen.
+                        LOG.error('Unknown instance type id %s', type_id)
+                    if itype and itype.get('baremetal', False):
+                        t_name = itype['name']
+                        counts[t_name] = counts.get(t_name, 0) + instance_count
                     else:
-                        counts['instances'] = counts['instances'] + i[1]
-                        counts['cores'] = counts['cores'] + i[2]
-                        counts['ram'] = counts['ram'] + i[3]
+                        counts['instances'] += instance_count
+                        counts['cores'] += cores
+                        counts['ram'] += ram
 
             return counts
 
