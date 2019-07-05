@@ -3706,8 +3706,6 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertNotEqual(orig_key_name, instance.key_name)
         self.assertNotEqual(orig_key_data, instance.key_data)
 
-    @mock.patch('nova.objects.Service.get_minimum_version',
-                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS)
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(objects.Instance, 'get_flavor')
@@ -3719,7 +3717,7 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_rebuild_change_trusted_certs(self, _record_action_start,
             _checks_for_create_and_rebuild, _check_auto_disk_config,
             _get_image, bdm_get_by_instance_uuid, get_flavor, instance_save,
-            req_spec_get_by_inst_uuid, get_min_version):
+            req_spec_get_by_inst_uuid):
         orig_system_metadata = {}
         orig_trusted_certs = ['orig-trusted-cert-1', 'orig-trusted-cert-2']
         new_trusted_certs = ['new-trusted-cert-1', 'new-trusted-cert-2']
@@ -3765,8 +3763,6 @@ class _ComputeAPIUnitTestMixIn(object):
             self.context, None, image, flavor, {}, [], None)
         self.assertEqual(new_trusted_certs, instance.trusted_certs.ids)
 
-    @mock.patch('nova.objects.Service.get_minimum_version',
-                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS)
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(objects.Instance, 'get_flavor')
@@ -3780,8 +3776,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                           _check_auto_disk_config,
                                           _get_image, bdm_get_by_instance_uuid,
                                           get_flavor, instance_save,
-                                          req_spec_get_by_inst_uuid,
-                                          get_min_version):
+                                          req_spec_get_by_inst_uuid):
         """Tests the scenario that the server was created with some trusted
         certs and then rebuilt without trusted_image_certificates=None
         explicitly to unset the trusted certs on the server.
@@ -3831,8 +3826,6 @@ class _ComputeAPIUnitTestMixIn(object):
             self.context, None, image, flavor, {}, [], None)
         self.assertIsNone(instance.trusted_certs)
 
-    @mock.patch('nova.objects.Service.get_minimum_version',
-                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS)
     @mock.patch.object(compute_utils, 'is_volume_backed_instance',
                        return_value=True)
     @mock.patch.object(objects.Instance, 'get_flavor')
@@ -3842,8 +3835,7 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch.object(compute_api.API, '_record_action_start')
     def test_rebuild_volume_backed_instance_with_trusted_certs(
             self, _record_action_start, _check_auto_disk_config, _get_image,
-            bdm_get_by_instance_uuid, get_flavor, instance_is_volume_backed,
-            get_min_version):
+            bdm_get_by_instance_uuid, get_flavor, instance_is_volume_backed):
         orig_system_metadata = {}
         new_trusted_certs = ['new-trusted-cert-1', 'new-trusted-cert-2']
         instance = fake_instance.fake_instance_obj(
@@ -5919,9 +5911,7 @@ class _ComputeAPIUnitTestMixIn(object):
             False)
         self.assertEqual(0, len(instance.security_groups))
 
-    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
-                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS)
-    def test_retrieve_trusted_certs_object(self, get_min_version):
+    def test_retrieve_trusted_certs_object(self):
         ids = ['0b5d2c72-12cc-4ba6-a8d7-3ff5cc1d8cb8',
                '674736e3-f25c-405c-8362-bbf991e0ce0a']
 
@@ -5929,18 +5919,7 @@ class _ComputeAPIUnitTestMixIn(object):
             self.context, ids)
         self.assertEqual(ids, retrieved_certs.ids)
 
-    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
-                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS - 1)
-    def test_retrieve_trusted_certs_object_old_compute(self, get_min_version):
-        ids = ['trusted-cert-id']
-
-        self.assertRaises(exception.CertificateValidationNotYetAvailable,
-            self.compute_api._retrieve_trusted_certs_object,
-            self.context, ids)
-
-    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
-                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS)
-    def test_retrieve_trusted_certs_object_conf(self, get_min_version):
+    def test_retrieve_trusted_certs_object_conf(self):
         ids = ['conf-trusted-cert-1', 'conf-trusted-cert-2']
 
         self.flags(verify_glance_signatures=True, group='glance')
@@ -5962,16 +5941,6 @@ class _ComputeAPIUnitTestMixIn(object):
         self.flags(enable_certificate_validation=False, group='glance')
         self.assertIsNone(self.compute_api._retrieve_trusted_certs_object(
             self.context, []))
-
-    @mock.patch('nova.objects.Service.get_minimum_version',
-                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS - 1)
-    def test_retrieve_trusted_certs_object_old_compute_rebuild(
-            self, get_min_version):
-        ids = ['trusted-cert-id']
-        self.assertRaises(exception.CertificateValidationNotYetAvailable,
-            self.compute_api._retrieve_trusted_certs_object,
-            self.context, ids, rebuild=True)
-        get_min_version.assert_called_once_with(self.context, 'nova-compute')
 
     @mock.patch('nova.objects.HostMapping.get_by_host')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')

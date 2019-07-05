@@ -103,7 +103,6 @@ AGGREGATE_ACTION_UPDATE = 'Update'
 AGGREGATE_ACTION_UPDATE_META = 'UpdateMeta'
 AGGREGATE_ACTION_DELETE = 'Delete'
 AGGREGATE_ACTION_ADD = 'Add'
-MIN_COMPUTE_TRUSTED_CERTS = 31
 MIN_COMPUTE_ABORT_QUEUED_LIVE_MIGRATION = 34
 MIN_COMPUTE_VOLUME_TYPE = 36
 
@@ -1147,12 +1146,6 @@ class API(base.Base):
         :returns: nova.objects.TrustedCerts object or None if no user-specified
             trusted cert IDs were given and nova is not configured with
             default trusted cert IDs
-        :raises: nova.exception.CertificateValidationNotYetAvailable: If
-            rebuilding a server with trusted certs on a compute host that is
-            too old to supported trusted image cert validation, or if creating
-            a server with trusted certs and there are no compute hosts in the
-            deployment that are new enough to support trusted image cert
-            validation
         """
         # Retrieve trusted_certs parameter, or use CONF value if certificate
         # validation is enabled
@@ -1165,29 +1158,6 @@ class API(base.Base):
                 ids=CONF.glance.default_trusted_certificate_ids)
         else:
             return None
-
-        # Confirm trusted_certs are supported by the minimum nova
-        # compute service version
-        # TODO(mriedem): This minimum version compat code can be dropped in the
-        # 19.0.0 Stein release when all computes must be at a minimum running
-        # Rocky code.
-        if rebuild:
-            # we only care about the current cell since this is
-            # a rebuild
-            min_compute_version = objects.Service.get_minimum_version(
-                context, 'nova-compute')
-        else:
-            # we don't know which cell it's going to get scheduled
-            # to, so check all cells
-            # NOTE(mriedem): For multi-create server requests, we're hitting
-            # this for each instance since it's not cached; we could likely
-            # optimize this.
-            min_compute_version = \
-                objects.service.get_minimum_version_all_cells(
-                    context, ['nova-compute'])
-
-        if min_compute_version < MIN_COMPUTE_TRUSTED_CERTS:
-            raise exception.CertificateValidationNotYetAvailable()
 
         return certs_to_return
 
