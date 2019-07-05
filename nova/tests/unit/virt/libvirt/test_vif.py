@@ -1203,8 +1203,6 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         self._assertTypeEquals(node, "direct", "source",
                                "mode", "passthrough")
         self._assertMacEquals(node, self.vif_hw_veb_macvtap)
-        vlan = node.find("vlan")
-        self.assertIsNone(vlan)
 
     def test_driver_macvtap_vlan(self):
         d = vif.LibvirtGenericVIFDriver()
