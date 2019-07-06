@@ -2440,6 +2440,8 @@ class ComputeManager(manager.Manager):
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=e.format_message())
         except Exception as e:
+            LOG.exception('Failed to build and run instance',
+                          instance=instance)
             self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
             tb = traceback.format_exc()
