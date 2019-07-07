@@ -16,6 +16,7 @@ import datetime
 from keystoneauth1 import exceptions as ks_exc
 import mock
 import os_resource_classes as orc
+import os_traits
 from oslo_config import cfg
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
@@ -1414,7 +1415,9 @@ class TestUpdateComputeNode(BaseTestCase):
         save_mock.assert_called_once_with()
         norm_mock.assert_called_once_with(mock.sentinel.inv_data, new_compute)
 
-    def test_existing_node_capabilities_as_traits(self):
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_sync_compute_service_disabled_trait')
+    def test_existing_node_capabilities_as_traits(self, mock_sync_disabled):
         """The capabilities_as_traits() driver method returns traits
         information for a node/provider.
         """
@@ -1441,9 +1444,14 @@ class TestUpdateComputeNode(BaseTestCase):
             new_compute.hypervisor_hostname,
             [mock.sentinel.trait]
         )
+        mock_sync_disabled.assert_called_once_with(
+            mock.sentinel.ctx, {mock.sentinel.trait})
 
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_sync_compute_service_disabled_trait')
     @mock.patch('nova.objects.ComputeNode.save')
-    def test_existing_node_update_provider_tree_implemented(self, save_mock):
+    def test_existing_node_update_provider_tree_implemented(self, save_mock,
+                                                            mock_sync_disable):
         """The update_provider_tree() virt driver method is only implemented
         for some virt drivers. This method returns inventory, trait, and
         aggregate information for resource providers in a tree associated with
@@ -1526,10 +1534,14 @@ class TestUpdateComputeNode(BaseTestCase):
         # 1024MB in GB
         exp_inv[orc.DISK_GB]['reserved'] = 1
         self.assertEqual(exp_inv, ptree.data(new_compute.uuid).inventory)
+        mock_sync_disable.assert_called_once()
 
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_sync_compute_service_disabled_trait')
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_resource_change', return_value=False)
-    def test_update_retry_success(self, mock_resource_change):
+    def test_update_retry_success(self, mock_resource_change,
+                                  mock_sync_disabled):
         self._setup_rt()
         orig_compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()
         self.rt.compute_nodes[_NODENAME] = orig_compute
@@ -1550,12 +1562,16 @@ class TestUpdateComputeNode(BaseTestCase):
         self.rt._update(mock.sentinel.ctx, new_compute)
 
         self.assertEqual(2, ufpt_mock.call_count)
+        self.assertEqual(2, mock_sync_disabled.call_count)
         # The retry is restricted to _update_to_placement
         self.assertEqual(1, mock_resource_change.call_count)
 
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_sync_compute_service_disabled_trait')
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_resource_change', return_value=False)
-    def test_update_retry_raises(self, mock_resource_change):
+    def test_update_retry_raises(self, mock_resource_change,
+                                 mock_sync_disabled):
         self._setup_rt()
         orig_compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()
         self.rt.compute_nodes[_NODENAME] = orig_compute
@@ -1577,8 +1593,61 @@ class TestUpdateComputeNode(BaseTestCase):
                           self.rt._update, mock.sentinel.ctx, new_compute)
 
         self.assertEqual(4, ufpt_mock.call_count)
+        self.assertEqual(4, mock_sync_disabled.call_count)
         # The retry is restricted to _update_to_placement
         self.assertEqual(1, mock_resource_change.call_count)
+
+    @mock.patch('nova.objects.Service.get_by_compute_host',
+                return_value=objects.Service(disabled=True))
+    def test_sync_compute_service_disabled_trait_add(self, mock_get_by_host):
+        """Tests the scenario that the compute service is disabled so the
+        COMPUTE_STATUS_DISABLED trait is added to the traits set.
+        """
+        self._setup_rt()
+        ctxt = context.get_admin_context()
+        traits = set()
+        self.rt._sync_compute_service_disabled_trait(ctxt, traits)
+        self.assertEqual({os_traits.COMPUTE_STATUS_DISABLED}, traits)
+        mock_get_by_host.assert_called_once_with(ctxt, self.rt.host)
+
+    @mock.patch('nova.objects.Service.get_by_compute_host',
+                return_value=objects.Service(disabled=False))
+    def test_sync_compute_service_disabled_trait_remove(
+            self, mock_get_by_host):
+        """Tests the scenario that the compute service is enabled so the
+        COMPUTE_STATUS_DISABLED trait is removed from the traits set.
+        """
+        self._setup_rt()
+        ctxt = context.get_admin_context()
+        # First test with the trait actually in the set.
+        traits = {os_traits.COMPUTE_STATUS_DISABLED}
+        self.rt._sync_compute_service_disabled_trait(ctxt, traits)
+        self.assertEqual(0, len(traits))
+        mock_get_by_host.assert_called_once_with(ctxt, self.rt.host)
+        # Now run it again with the empty set to make sure the method handles
+        # the trait not already being in the set (idempotency).
+        self.rt._sync_compute_service_disabled_trait(ctxt, traits)
+        self.assertEqual(0, len(traits))
+
+    @mock.patch('nova.objects.Service.get_by_compute_host',
+                # One might think Service.get_by_compute_host would raise
+                # ServiceNotFound but the DB API raises ComputeHostNotFound.
+                side_effect=exc.ComputeHostNotFound(host=_HOSTNAME))
+    @mock.patch('nova.compute.resource_tracker.LOG.error')
+    def test_sync_compute_service_disabled_trait_service_not_found(
+            self, mock_log_error, mock_get_by_host):
+        """Tests the scenario that the compute service is not found so the
+        traits set is unmodified and an error is logged.
+        """
+        self._setup_rt()
+        ctxt = context.get_admin_context()
+        traits = set()
+        self.rt._sync_compute_service_disabled_trait(ctxt, traits)
+        self.assertEqual(0, len(traits))
+        mock_get_by_host.assert_called_once_with(ctxt, self.rt.host)
+        mock_log_error.assert_called_once()
+        self.assertIn('Unable to find services table record for nova-compute',
+                      mock_log_error.call_args[0][0])
 
     def test_copy_resources_no_update_allocation_ratios(self):
         """Tests that a ComputeNode object's allocation ratio fields are

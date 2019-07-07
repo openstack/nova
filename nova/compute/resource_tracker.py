@@ -23,6 +23,7 @@ import copy
 
 from keystoneauth1 import exceptions as ks_exc
 import os_resource_classes as orc
+import os_traits
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 import retrying
@@ -907,7 +908,46 @@ class ResourceTracker(object):
             return True
         return False
 
-    def _get_traits(self, nodename, provider_tree):
+    def _sync_compute_service_disabled_trait(self, context, traits):
+        """Synchronize the COMPUTE_STATUS_DISABLED trait on the node provider.
+
+        Determines if the COMPUTE_STATUS_DISABLED trait should be added to
+        or removed from the provider's set of traits based on the related
+        nova-compute service disabled status.
+
+        :param context: RequestContext for cell database access
+        :param traits: set of traits for the compute node resource provider;
+            this is modified by reference
+        """
+        trait = os_traits.COMPUTE_STATUS_DISABLED
+        try:
+            service = objects.Service.get_by_compute_host(context, self.host)
+            if service.disabled:
+                # The service is disabled so make sure the trait is reported.
+                traits.add(trait)
+            else:
+                # The service is not disabled so do not report the trait.
+                traits.discard(trait)
+        except exception.NotFound:
+            # This should not happen but handle it gracefully. The scheduler
+            # should ignore this node if the compute service record is gone.
+            LOG.error('Unable to find services table record for nova-compute '
+                      'host %s', self.host)
+
+    def _get_traits(self, context, nodename, provider_tree):
+        """Synchronizes internal and external traits for the node provider.
+
+        This works in conjunction with the ComptueDriver.update_provider_tree
+        flow and is used to synchronize traits reported by the compute driver,
+        traits based on information in the ComputeNode record, and traits set
+        externally using the placement REST API.
+
+        :param context: RequestContext for cell database access
+        :param nodename: ComputeNode.hypervisor_hostname for the compute node
+            resource provider whose traits are being synchronized; the node
+            must be in the ProviderTree.
+        :param provider_tree: ProviderTree being updated
+        """
         # Get the traits from the ProviderTree which will be the set
         # of virt-owned traits plus any externally defined traits set
         # on the provider that aren't owned by the virt driver.
@@ -921,6 +961,8 @@ class ResourceTracker(object):
                 traits.add(trait)
             elif trait in traits:
                 traits.remove(trait)
+
+        self._sync_compute_service_disabled_trait(context, traits)
 
         return list(traits)
 
@@ -977,7 +1019,10 @@ class ResourceTracker(object):
             # remove it.  But at both t1 and t2 there is a
             # CUSTOM_VENDOR_TRAIT_X which we can't touch because it
             # was set externally on the provider.
-            traits = self._get_traits(nodename, provider_tree=prov_tree)
+            # We also want to sync the COMPUTE_STATUS_DISABLED trait based
+            # on the related nova-compute service's disabled status.
+            traits = self._get_traits(
+                context, nodename, provider_tree=prov_tree)
             prov_tree.update_traits(nodename, traits)
         except NotImplementedError:
             # update_provider_tree isn't implemented yet - try get_inventory
