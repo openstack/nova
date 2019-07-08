@@ -940,3 +940,19 @@ server and exposes this information via ``GET /servers/detail``,
 ``POST /servers/{server_id}/action`` where the action is rebuild. It also
 supports ``locked`` as a filter/sort parameter for ``GET /servers/detail``
 and ``GET /servers``.
+
+2.74
+----
+
+API microversion 2.74 adds support for specifying optional ``host``
+and/or ``hypervisor_hostname`` parameters in the request body of
+``POST /servers``. These request a specific destination host/node
+to boot the requested server. These parameters are mutually exclusive
+with the special ``availability_zone`` format of ``zone:host:node``.
+Unlike ``zone:host:node``, the ``host`` and/or ``hypervisor_hostname``
+parameters still allow scheduler filters to be run. If the requested
+host/node is unavailable or otherwise unsuitable, earlier failure will
+be raised.
+There will be also a new policy named
+``compute:servers:create:requested_destination``. By default,
+it can be specified by administrators only.

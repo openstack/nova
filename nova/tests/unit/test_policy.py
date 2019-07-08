@@ -286,6 +286,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
         self.admin_only_rules = (
 "network:attach_external_network",
 "os_compute_api:servers:create:forced_host",
+"compute:servers:create:requested_destination",
 "os_compute_api:servers:detail:get_all_tenants",
 "os_compute_api:servers:index:get_all_tenants",
 "os_compute_api:servers:allow_all_filters",

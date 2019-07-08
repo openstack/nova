@@ -5955,6 +5955,16 @@ server_groups_quota_optional:
   in: body
   required: false
   type: integer
+# This is the host in a POST (create instance) request body.
+server_host_create:
+  description: |
+    The name of the compute service host on which the server is to be created.
+    The API will return 400 if no compute services are found with the given
+    host name. By default, it can be specified by administrators only.
+  in: body
+  required: false
+  type: string
+  min_version: 2.74
 server_hostname:
   in: body
   required: false
@@ -5963,6 +5973,16 @@ server_hostname:
     The hostname set on the instance when it is booted.
     By default, it appears in the response for administrative users only.
   min_version: 2.3
+# This is the hypervisor_hostname in a POST (create instance) request body.
+server_hypervisor_hostname_create:
+  description: |
+    The hostname of the hypervisor on which the server is to be created.
+    The API will return 400 if no hypervisors are found with the given
+    hostname. By default, it can be specified by administrators only.
+  in: body
+  required: false
+  type: string
+  min_version: 2.74
 server_id:
   description: |
     The UUID of the server.

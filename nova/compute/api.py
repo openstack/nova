@@ -998,7 +998,19 @@ class API(base.Base):
             block_device_mapping, shutdown_terminate,
             instance_group, check_server_group_quota, filter_properties,
             key_pair, tags, trusted_certs, supports_multiattach,
-            network_metadata=None):
+            network_metadata=None, requested_host=None,
+            requested_hypervisor_hostname=None):
+        # NOTE(boxiang): Check whether compute nodes exist by validating
+        # the host and/or the hypervisor_hostname. Pass the destination
+        # to the scheduler with host and/or hypervisor_hostname(node).
+        destination = None
+        if requested_host or requested_hypervisor_hostname:
+            self._validate_host_or_node(context, requested_host,
+                                        requested_hypervisor_hostname)
+            destination = objects.Destination()
+            if requested_host:
+                destination.host = requested_host
+            destination.node = requested_hypervisor_hostname
         # Check quotas
         num_instances = compute_utils.check_num_instances_quota(
                 context, instance_type, min_count, max_count)
@@ -1039,6 +1051,9 @@ class API(base.Base):
                 # and is therefore set after 'create' is called.
                 if network_metadata:
                     req_spec.network_metadata = network_metadata
+
+                if destination:
+                    req_spec.requested_destination = destination
 
                 # Create an instance object, but do not store in db yet.
                 instance = objects.Instance(context=context)
@@ -1262,7 +1277,8 @@ class API(base.Base):
                reservation_id=None, legacy_bdm=True, shutdown_terminate=False,
                check_server_group_quota=False, tags=None,
                supports_multiattach=False, trusted_certs=None,
-               supports_port_resource_request=False):
+               supports_port_resource_request=False,
+               requested_host=None, requested_hypervisor_hostname=None):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed and schedule the instance(s) for
         creation.
@@ -1338,7 +1354,8 @@ class API(base.Base):
             boot_meta, security_groups, block_device_mapping,
             shutdown_terminate, instance_group, check_server_group_quota,
             filter_properties, key_pair, tags, trusted_certs,
-            supports_multiattach, network_metadata)
+            supports_multiattach, network_metadata,
+            requested_host, requested_hypervisor_hostname)
 
         instances = []
         request_specs = []
@@ -1805,7 +1822,8 @@ class API(base.Base):
                legacy_bdm=True, shutdown_terminate=False,
                check_server_group_quota=False, tags=None,
                supports_multiattach=False, trusted_certs=None,
-               supports_port_resource_request=False):
+               supports_port_resource_request=False,
+               requested_host=None, requested_hypervisor_hostname=None):
         """Provision instances, sending instance information to the
         scheduler.  The scheduler will determine where the instance(s)
         go and will handle creating the DB entries.
@@ -1848,7 +1866,9 @@ class API(base.Base):
             check_server_group_quota=check_server_group_quota,
             tags=tags, supports_multiattach=supports_multiattach,
             trusted_certs=trusted_certs,
-            supports_port_resource_request=supports_port_resource_request)
+            supports_port_resource_request=supports_port_resource_request,
+            requested_host=requested_host,
+            requested_hypervisor_hostname=requested_hypervisor_hostname)
 
     def _check_auto_disk_config(self, instance=None, image=None,
                                 **extra_instance_updates):

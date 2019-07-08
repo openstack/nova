@@ -3014,6 +3014,133 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self._test_resize_to_same_host_instance_fails(
             '_finish_resize', 'compute_finish_resize')
 
+    def _server_created_with_host(self):
+        hostname = self.compute1.host
+        server_req = self._build_minimal_create_server_request(
+            self.api, "some-server", flavor_id=self.flavor1["id"],
+            image_uuid="155d900f-4e14-4e4c-a73d-069cbf4541e6",
+            networks='none')
+        server_req['host'] = hostname
+
+        created_server = self.api.post_server({"server": server_req})
+        server = self._wait_for_state_change(
+            self.api, created_server, "ACTIVE")
+        return server
+
+    def test_live_migration_after_server_created_with_host(self):
+        """Test after creating server with requested host, and then
+        do live-migration for the server. The requested host will not
+        effect the new moving operation.
+        """
+        dest_hostname = self.compute2.host
+        created_server = self._server_created_with_host()
+
+        post = {
+            'os-migrateLive': {
+                'host': None,
+                'block_migration': 'auto'
+            }
+        }
+        self.api.post_server_action(created_server['id'], post)
+        new_server = self._wait_for_server_parameter(
+            self.api, created_server, {'status': 'ACTIVE'})
+        inst_dest_host = new_server["OS-EXT-SRV-ATTR:host"]
+
+        self.assertEqual(dest_hostname, inst_dest_host)
+
+    def test_evacuate_after_server_created_with_host(self):
+        """Test after creating server with requested host, and then
+        do evacuation for the server. The requested host will not
+        effect the new moving operation.
+        """
+        dest_hostname = self.compute2.host
+        created_server = self._server_created_with_host()
+
+        source_compute_id = self.admin_api.get_services(
+            host=created_server["OS-EXT-SRV-ATTR:host"],
+            binary='nova-compute')[0]['id']
+
+        self.compute1.stop()
+        # force it down to avoid waiting for the service group to time out
+        self.admin_api.put_service(
+            source_compute_id, {'forced_down': 'true'})
+
+        post = {
+            'evacuate': {}
+        }
+        self.api.post_server_action(created_server['id'], post)
+        expected_params = {'OS-EXT-SRV-ATTR:host': dest_hostname,
+                           'status': 'ACTIVE'}
+        new_server = self._wait_for_server_parameter(self.api, created_server,
+                                                     expected_params)
+        inst_dest_host = new_server["OS-EXT-SRV-ATTR:host"]
+
+        self.assertEqual(dest_hostname, inst_dest_host)
+
+    def test_resize_and_confirm_after_server_created_with_host(self):
+        """Test after creating server with requested host, and then
+        do resize for the server. The requested host will not
+        effect the new moving operation.
+        """
+        dest_hostname = self.compute2.host
+        created_server = self._server_created_with_host()
+
+        # resize server
+        self.flags(allow_resize_to_same_host=False)
+        resize_req = {
+            'resize': {
+                'flavorRef': self.flavor2['id']
+            }
+        }
+        self.api.post_server_action(created_server['id'], resize_req)
+        self._wait_for_state_change(self.api, created_server, 'VERIFY_RESIZE')
+
+        # Confirm the resize
+        post = {'confirmResize': None}
+        self.api.post_server_action(
+            created_server['id'], post, check_response_status=[204])
+        new_server = self._wait_for_state_change(self.api, created_server,
+                                                 'ACTIVE')
+        inst_dest_host = new_server["OS-EXT-SRV-ATTR:host"]
+
+        self.assertEqual(dest_hostname, inst_dest_host)
+
+    def test_shelve_unshelve_after_server_created_with_host(self):
+        """Test after creating server with requested host, and then
+        do shelve and unshelve for the server. The requested host
+        will not effect the new moving operation.
+        """
+        dest_hostname = self.compute2.host
+        created_server = self._server_created_with_host()
+
+        self.flags(shelved_offload_time=-1)
+        req = {'shelve': {}}
+        self.api.post_server_action(created_server['id'], req)
+        self._wait_for_state_change(self.api, created_server, 'SHELVED')
+
+        req = {'shelveOffload': {}}
+        self.api.post_server_action(created_server['id'], req)
+        self._wait_for_server_parameter(
+            self.api, created_server, {'status': 'SHELVED_OFFLOADED',
+                                       'OS-EXT-SRV-ATTR:host': None,
+                                       'OS-EXT-AZ:availability_zone': ''})
+
+        # unshelve after shelve offload will do scheduling. this test case
+        # wants to test the scenario when the scheduler select a different host
+        # to ushelve the instance. So we disable the original host.
+        source_service_id = self.admin_api.get_services(
+            host=created_server["OS-EXT-SRV-ATTR:host"],
+            binary='nova-compute')[0]['id']
+        self.admin_api.put_service(source_service_id, {'status': 'disabled'})
+
+        req = {'unshelve': {}}
+        self.api.post_server_action(created_server['id'], req)
+        new_server = self._wait_for_state_change(
+            self.api, created_server, 'ACTIVE')
+        inst_dest_host = new_server["OS-EXT-SRV-ATTR:host"]
+
+        self.assertEqual(dest_hostname, inst_dest_host)
+
     def _test_resize_reschedule_uses_host_lists(self, fails, num_alts=None):
         """Test that when a resize attempt fails, the retry comes from the
         supplied host_list, and does not call the scheduler.

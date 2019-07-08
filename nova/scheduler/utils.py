@@ -532,6 +532,14 @@ def resources_from_request_spec(ctxt, spec_obj, host_manager):
                       {'host': target_host, 'node': target_node})
             raise exception.NoValidHost(reason=reason)
         if len(nodes) == 1:
+            if 'requested_destination' in spec_obj and destination:
+                # When we only supply hypervisor_hostname in api to create a
+                # server, the destination object will only include the node.
+                # Here when we get one node, we set both host and node to
+                # destination object. So we can reduce the number of HostState
+                # objects to run through the filters.
+                destination.host = nodes[0].host
+                destination.node = nodes[0].hypervisor_hostname
             grp = res_req.get_request_group(None)
             grp.in_tree = nodes[0].uuid
         else:

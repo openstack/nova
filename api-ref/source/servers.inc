@@ -397,6 +397,8 @@ Request
   - description: server_description
   - tags: server_tags_create
   - trusted_image_certificates: server_trusted_image_certificates_create_req
+  - host: server_host_create
+  - hypervisor_hostname: server_hypervisor_hostname_create
   - os:scheduler_hints: os:scheduler_hints
   - os:scheduler_hints.build_near_host_ip: os:scheduler_hints_build_near_host_ip
   - os:scheduler_hints.cidr: os:scheduler_hints_cidr
@@ -425,6 +427,11 @@ Request
 **Example Create Server With Trusted Image Certificates (v2.63)**
 
 .. literalinclude:: ../../doc/api_samples/servers/v2.63/server-create-req.json
+   :language: javascript
+
+**Example Create Server With Host and Hypervisor Hostname (v2.74)**
+
+.. literalinclude:: ../../doc/api_samples/servers/v2.74/server-create-req-with-host-and-node.json
    :language: javascript
 
 Response
