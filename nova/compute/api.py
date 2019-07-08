@@ -1036,7 +1036,7 @@ class API(base.Base):
                 req_spec.num_instances = num_instances
 
                 # NOTE(stephenfin): The network_metadata field is not persisted
-                # and is therefore set after 'create' is called.
+                # inside RequestSpec object.
                 if network_metadata:
                     req_spec.network_metadata = network_metadata
 
