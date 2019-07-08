@@ -3531,3 +3531,12 @@ class TestPciTrackerDelegationMethods(BaseTestCase):
             self.context,
             self.instance)
         self.assertTrue(self.rt.pci_tracker.save.called)
+
+
+class ResourceTrackerTestCase(test.NoDBTestCase):
+
+    def test_init_ensure_provided_reportclient_is_used(self):
+        """Simple test to make sure if a reportclient is provided it is used"""
+        rt = resource_tracker.ResourceTracker(
+            _HOSTNAME, mock.sentinel.driver, mock.sentinel.reportclient)
+        self.assertIs(rt.reportclient, mock.sentinel.reportclient)

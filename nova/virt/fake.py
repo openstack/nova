@@ -661,6 +661,9 @@ class FakeVirtAPI(virtapi.VirtAPI):
         # fall through
         yield
 
+    def update_compute_provider_status(self, context, rp_uuid, enabled):
+        pass
+
 
 class SmallFakeDriver(FakeDriver):
     # The api samples expect specific cpu memory and disk sizes. In order to
