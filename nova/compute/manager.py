@@ -1750,8 +1750,15 @@ class ComputeManager(manager.Manager):
         instance.power_state = self._get_power_state(context, instance)
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = None
-        instance.launched_at = timeutils.utcnow()
+        # NOTE(sean-k-mooney): configdrive.update_instance checks
+        # instance.launched_at to determine if it is the first or
+        # subsequent spawn of an instance. We need to call update_instance
+        # first before setting instance.launched_at or instance.config_drive
+        # will never be set to true based on the value of force_config_drive.
+        # As a result the config drive will be lost on a hard reboot of the
+        # instance even when force_config_drive=true. see bug #1835822.
         configdrive.update_instance(instance)
+        instance.launched_at = timeutils.utcnow()
 
     def _update_scheduler_instance_info(self, context, instance):
         """Sends an InstanceList with created or updated Instance objects to
