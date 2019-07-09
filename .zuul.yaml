@@ -224,6 +224,11 @@
             scheduler:
               # Added in Train.
               query_placement_for_image_type_support: True
+          "/$NEUTRON_CORE_PLUGIN_CONF":
+            # Needed for QoS port heal allocation testing.
+            ovs:
+              bridge_mappings: public:br-ex
+              resource_provider_bandwidths: br-ex:1000000:1000000
       devstack_localrc:
         # Added in Pike.
         NOVA_USE_SERVICE_TOKEN: True
@@ -236,8 +241,14 @@
         ENABLE_VOLUME_MULTIATTACH: True
       devstack_services:
         tls-proxy: true
+        # neutron-* needed for QoS port heal allocation testing.
+        neutron-placement: true
+        neutron-qos: true
         # Disable non-essential services that we don't need for this job.
         c-bak: false
+      devstack_plugins:
+        # Needed for QoS port heal allocation testing.
+        neutron: https://opendev.org/openstack/neutron
 
 - job:
     name: nova-tempest-v2-api
