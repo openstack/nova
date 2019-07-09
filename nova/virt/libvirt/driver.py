@@ -3894,6 +3894,25 @@ class LibvirtDriver(driver.ComputeDriver):
                  if pci_dev.address in direct_passthrough_pci_addresses])
             self._detach_pci_devices(guest, direct_passthrough_pci_addresses)
 
+    def _update_compute_provider_status(self, context, service):
+        """Calls the ComputeVirtAPI.update_compute_provider_status method
+
+        :param context: nova auth RequestContext
+        :param service: nova.objects.Service record for this host which is
+            expected to only manage a single ComputeNode
+        """
+        rp_uuid = None
+        try:
+            rp_uuid = service.compute_node.uuid
+            self.virtapi.update_compute_provider_status(
+                context, rp_uuid, enabled=not service.disabled)
+        except Exception:
+            LOG.warning(
+                'An error occurred while updating compute node '
+                'resource provider status to "%s" for provider: %s',
+                'disabled' if service.disabled else 'enabled',
+                rp_uuid or service.host, exc_info=True)
+
     def _set_host_enabled(self, enabled,
                           disable_reason=DISABLE_REASON_UNDEFINED):
         """Enables / Disables the compute service on this host.
@@ -3930,6 +3949,9 @@ class LibvirtDriver(driver.ComputeDriver):
                     service.save()
                     LOG.debug('Updating compute service status to %s',
                               status_name[disable_service])
+                    # Update the disabled trait status on the corresponding
+                    # compute node resource provider in placement.
+                    self._update_compute_provider_status(ctx, service)
                 else:
                     LOG.debug('Not overriding manual compute service '
                               'status with: %s',

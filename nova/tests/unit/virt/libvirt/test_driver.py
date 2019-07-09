@@ -1583,7 +1583,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         svc = self._create_service(host='fake-mini')
         mock_svc.return_value = svc
-        drvr._set_host_enabled(False)
+        with mock.patch.object(
+                drvr, '_update_compute_provider_status') as ucps:
+            drvr._set_host_enabled(False)
+            ucps.assert_called_once_with(
+                test.MatchType(context.RequestContext), svc)
         self.assertTrue(svc.disabled)
         mock_save.assert_called_once_with()
 
@@ -1594,7 +1598,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         svc = self._create_service(disabled=True, host='fake-mini')
         mock_svc.return_value = svc
-        drvr._set_host_enabled(True)
+        with mock.patch.object(
+                drvr, '_update_compute_provider_status') as ucps:
+            drvr._set_host_enabled(True)
+            ucps.assert_not_called()
         # since disabled_reason is not set and not prefixed with "AUTO:",
         # service should not be enabled.
         mock_save.assert_not_called()
@@ -1608,7 +1615,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         svc = self._create_service(disabled=False, host='fake-mini')
         mock_svc.return_value = svc
-        drvr._set_host_enabled(True)
+        with mock.patch.object(
+                drvr, '_update_compute_provider_status') as ucps:
+            drvr._set_host_enabled(True)
+            ucps.assert_not_called()
         self.assertFalse(svc.disabled)
         mock_save.assert_not_called()
 
@@ -1620,7 +1630,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         svc = self._create_service(disabled=True, host='fake-mini')
         mock_svc.return_value = svc
-        drvr._set_host_enabled(False)
+        with mock.patch.object(
+                drvr, '_update_compute_provider_status') as ucps:
+            drvr._set_host_enabled(False)
+            ucps.assert_not_called()
         mock_save.assert_not_called()
         self.assertTrue(svc.disabled)
 
@@ -1634,6 +1647,47 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             # is more robust than just raising ComputeHostNotFound.
             db_mock.side_effect = exception.NovaException
             drvr._set_host_enabled(False)
+
+    def test_update_compute_provider_status(self):
+        """Tests happy path of calling _update_compute_provider_status"""
+        virtapi = mock.Mock()
+        drvr = libvirt_driver.LibvirtDriver(virtapi, read_only=True)
+        ctxt = context.get_admin_context()
+        service = self._create_service()
+        service.compute_node = objects.ComputeNode(uuid=uuids.rp_uuid)
+        drvr._update_compute_provider_status(ctxt, service)
+        virtapi.update_compute_provider_status.assert_called_once_with(
+            ctxt, uuids.rp_uuid, enabled=not service.disabled)
+
+    def test_update_compute_provider_status_swallows_exceptions(self):
+        """Tests error path handling in _update_compute_provider_status"""
+        # First we'll make Service.compute_node loading raise an exception
+        # by not setting the field and we cannot lazy-load it from an orphaned
+        # Service object.
+        virtapi = mock.Mock()
+        drvr = libvirt_driver.LibvirtDriver(virtapi, read_only=True)
+        ctxt = context.get_admin_context()
+        service = self._create_service(host='fake-host', disabled=True)
+        drvr._update_compute_provider_status(ctxt, service)
+        virtapi.update_compute_provider_status.assert_not_called()
+        self.assertIn('An error occurred while updating compute node resource '
+                      'provider status to "disabled" for provider: fake-host',
+                      self.stdlog.logger.output)
+
+        # Now fix Service.compute_node loading but make the VirtAPI call fail.
+        service.compute_node = objects.ComputeNode(uuid=uuids.rp_uuid)
+        service.disabled = False  # make sure the log message logic works
+        error = exception.TraitRetrievalFailed(error='oops')
+        virtapi.update_compute_provider_status.side_effect = error
+        drvr._update_compute_provider_status(ctxt, service)
+        virtapi.update_compute_provider_status.assert_called_once_with(
+            ctxt, uuids.rp_uuid, enabled=True)
+        log_output = self.stdlog.logger.output
+        self.assertIn('An error occurred while updating compute node resource '
+                      'provider status to "enabled" for provider: %s' %
+                      uuids.rp_uuid, log_output)
+        # The error should have been logged as well.
+        self.assertIn(six.text_type(error), log_output)
 
     @mock.patch.object(fakelibvirt.virConnect, "nodeDeviceLookupByName")
     def test_prepare_pci_device(self, mock_lookup):
