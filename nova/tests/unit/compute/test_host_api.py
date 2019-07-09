@@ -320,7 +320,7 @@ class ComputeHostAPITestCase(test.TestCase):
 
         _do_test()
 
-    def test_service_update(self):
+    def test_service_update_by_host_and_binary(self):
         host_name = 'fake-host'
         binary = 'nova-compute'
         params_to_update = dict(disabled=True)
@@ -333,7 +333,7 @@ class ComputeHostAPITestCase(test.TestCase):
             mock_service_get_by_host_and_binary.return_value = expected_result
             mock_service_update.return_value = expected_result
 
-            result = self.host_api.service_update(
+            result = self.host_api.service_update_by_host_and_binary(
                 self.ctxt, host_name, binary, params_to_update)
             self._compare_obj(result, expected_result)
 
