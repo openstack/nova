@@ -373,10 +373,6 @@ class ViewBuilder(common.ViewBuilder):
             show_extra_specs = False
         show_extended_attr = context.can(
             esa_policies.BASE_POLICY_NAME, fatal=False)
-        show_host_status = False
-        if (api_version_request.is_supported(request, min_version='2.16')):
-            show_host_status = context.can(
-                servers_policies.SERVERS % 'show:host_status', fatal=False)
 
         instance_uuids = [inst['uuid'] for inst in instances]
         bdms = self._get_instance_bdms_in_multiple_cells(context,
@@ -389,10 +385,16 @@ class ViewBuilder(common.ViewBuilder):
         servers_dict = self._list_view(self.show, request, instances,
                                        coll_name, show_extra_specs,
                                        show_extended_attr=show_extended_attr,
-                                       show_host_status=show_host_status,
+                                       # We process host_status in aggregate.
+                                       show_host_status=False,
                                        show_sec_grp=False,
                                        bdms=bdms,
                                        cell_down_support=cell_down_support)
+
+        if (api_version_request.is_supported(request, min_version='2.16') and
+                context.can(servers_policies.SERVERS % 'show:host_status',
+                            fatal=False)):
+            self._add_host_status(list(servers_dict["servers"]), instances)
 
         self._add_security_grps(request, list(servers_dict["servers"]),
                                 instances)
@@ -561,6 +563,27 @@ class ViewBuilder(common.ViewBuilder):
                 fault_dict['details'] = fault["details"]
 
         return fault_dict
+
+    def _add_host_status(self, servers, instances):
+        """Adds the ``host_status`` field to the list of servers
+
+        This method takes care to filter instances from down cells since they
+        do not have a host set and as such we cannot determine the host status.
+
+        :param servers: list of detailed server dicts for the API response
+            body; this list is modified by reference by updating the server
+            dicts within the list
+        :param instances: list of Instance objects
+        """
+        # Filter out instances from down cells which do not have a host field.
+        instances = [instance for instance in instances if 'host' in instance]
+        # Get the dict, keyed by instance.uuid, of host status values.
+        host_statuses = self.compute_api.get_instances_host_statuses(instances)
+        for server in servers:
+            # Filter out anything that is not in the resulting dict because
+            # we had to filter the list of instances above for down cells.
+            if server['id'] in host_statuses:
+                server['host_status'] = host_statuses[server['id']]
 
     def _add_security_grps(self, req, servers, instances):
         if not len(servers):
