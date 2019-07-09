@@ -9050,12 +9050,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(29, fake_timer.counter, "Didn't wait the expected "
                                                  "amount of time")
 
-    @mock.patch.object(objects.Service, 'get_by_compute_host')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
         '_create_shared_storage_test_file')
     @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
     def test_check_can_live_migrate_dest_all_pass_with_block_migration(
-            self, mock_cpu, mock_test_file, mock_svc):
+            self, mock_cpu, mock_test_file):
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.vcpu_model = test_vcpu_model.fake_vcpumodel
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -9087,12 +9086,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           'serial_listen_addr': None},
                          return_value.obj_to_primitive()['nova_object.data'])
 
-    @mock.patch.object(objects.Service, 'get_by_compute_host')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
         '_create_shared_storage_test_file')
     @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
     def test_check_can_live_migrate_dest_all_pass_with_over_commit(
-            self, mock_cpu, mock_test_file, mock_svc):
+            self, mock_cpu, mock_test_file):
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.vcpu_model = test_vcpu_model.fake_vcpumodel
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -9125,12 +9123,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           'serial_listen_addr': None},
                          return_value.obj_to_primitive()['nova_object.data'])
 
-    @mock.patch.object(objects.Service, 'get_by_compute_host')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
         '_create_shared_storage_test_file')
     @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
     def test_check_can_live_migrate_dest_all_pass_no_block_migration(
-            self, mock_cpu, mock_test_file, mock_svc):
+            self, mock_cpu, mock_test_file):
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.vcpu_model = test_vcpu_model.fake_vcpumodel
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -9160,13 +9157,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           'serial_listen_addr': None},
                          return_value.obj_to_primitive()['nova_object.data'])
 
-    @mock.patch.object(objects.Service, 'get_by_compute_host')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_create_shared_storage_test_file',
                        return_value='fake')
     @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
     def test_check_can_live_migrate_dest_fills_listen_addrs(
-            self, mock_cpu, mock_test_file, mock_svc):
+            self, mock_cpu, mock_test_file):
         # Tests that check_can_live_migrate_destination returns the listen
         # addresses required by check_can_live_migrate_source.
         self.flags(server_listen='192.0.2.12', group='vnc')
@@ -9189,14 +9185,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual('203.0.113.56',
                          str(result.serial_listen_addr))
 
-    @mock.patch.object(objects.Service, 'get_by_compute_host')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_create_shared_storage_test_file',
                        return_value='fake')
     @mock.patch.object(fakelibvirt.Connection, 'compareCPU',
                        return_value=1)
     def test_check_can_live_migrate_dest_ensure_serial_adds_not_set(
-            self, mock_cpu, mock_test_file, mock_svc):
+            self, mock_cpu, mock_test_file):
         self.flags(proxyclient_address='127.0.0.1', group='serial_console')
         self.flags(enabled=False, group='serial_console')
         instance_ref = objects.Instance(**self.test_instance)
@@ -9237,12 +9232,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           'serial_listen_addr': None},
                          result.obj_to_primitive()['nova_object.data'])
 
-    @mock.patch.object(objects.Service, 'get_by_compute_host')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
         '_create_shared_storage_test_file')
     @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
     def test_check_can_live_migrate_dest_no_instance_cpu_info(
-            self, mock_cpu, mock_test_file, mock_svc):
+            self, mock_cpu, mock_test_file):
         instance_ref = objects.Instance(**self.test_instance)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         compute_info = {'cpu_info': jsonutils.dumps({
@@ -9276,12 +9270,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           'serial_listen_addr': None},
                          return_value.obj_to_primitive()['nova_object.data'])
 
-    @mock.patch.object(objects.Service, 'get_by_compute_host')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
         '_create_shared_storage_test_file')
     @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
     def test_check_can_live_migrate_dest_file_backed(
-            self, mock_cpu, mock_test_file, mock_svc):
+            self, mock_cpu, mock_test_file):
 
         self.flags(file_backed_memory=1024, group='libvirt')
 
@@ -9295,10 +9288,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         filename = "file"
 
-        svc = objects.Service()
-        svc.version = 32
-        mock_svc.return_value = svc
-
         # _check_cpu_match
         mock_cpu.return_value = 1
         # mounted_on_same_shared_storage
@@ -9311,13 +9300,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch.object(fakelibvirt.Connection, 'getVersion')
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion')
-    @mock.patch.object(objects.Service, 'get_by_compute_host')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_create_shared_storage_test_file')
     @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
     def _test_check_can_live_migrate_dest_file_backed_discard(
             self, libvirt_version, qemu_version, mock_cpu, mock_test_file,
-            mock_svc, mock_lib_version, mock_version):
+            mock_lib_version, mock_version):
 
         self.flags(file_backed_memory=1024, group='libvirt')
 
@@ -9333,10 +9321,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                         }
 
         filename = "file"
-
-        svc = objects.Service()
-        svc.version = 32
-        mock_svc.return_value = svc
 
         # _check_cpu_match
         mock_cpu.return_value = 1
@@ -9384,18 +9368,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertTrue(data.dst_wants_file_backed_memory)
         self.assertFalse(data.file_backed_memory_discard)
 
-    @mock.patch.object(objects.Service, 'get_by_compute_host')
     @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
     def test_check_can_live_migrate_dest_incompatible_cpu_raises(
-            self, mock_cpu, mock_svc):
+            self, mock_cpu):
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.vcpu_model = test_vcpu_model.fake_vcpumodel
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         compute_info = {'cpu_info': 'asdf', 'disk_available_least': 1}
-
-        svc = objects.Service(host="old")
-        svc.version = 32
-        mock_svc.return_value = svc
 
         mock_cpu.side_effect = exception.InvalidCPUInfo(reason='foo')
         self.assertRaises(exception.InvalidCPUInfo,
