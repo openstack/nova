@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 37
+SERVICE_VERSION = 38
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -150,6 +150,8 @@ SERVICE_VERSION_HISTORY = (
     # type when booting a volume-backed server.
     {'compute_rpc': '5.0'},
     # Version 37: prep_resize takes a RequestSpec object
+    {'compute_rpc': '5.1'},
+    # Version 38: set_host_enabled reflects COMPUTE_STATUS_DISABLED trait
     {'compute_rpc': '5.1'},
 )
 
