@@ -81,10 +81,11 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         manager = self.manager
         self.assertIsInstance(manager.driver, self.driver_cls)
 
+    @mock.patch('nova.scheduler.request_filter.process_reqspec')
     @mock.patch('nova.scheduler.utils.resources_from_request_spec')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get_allocation_candidates')
-    def test_select_destination(self, mock_get_ac, mock_rfrs):
+    def test_select_destination(self, mock_get_ac, mock_rfrs, mock_process):
         fake_spec = objects.RequestSpec()
         fake_spec.instance_uuid = uuids.instance
         fake_version = "9.42"
@@ -98,6 +99,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                 ) as select_destinations:
             self.manager.select_destinations(self.context, spec_obj=fake_spec,
                     instance_uuids=[fake_spec.instance_uuid])
+            mock_process.assert_called_once_with(self.context, fake_spec)
             select_destinations.assert_called_once_with(
                 self.context, fake_spec,
                 [fake_spec.instance_uuid], expected_alloc_reqs_by_rp_uuid,
@@ -115,11 +117,12 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                 [fake_spec.instance_uuid], expected_alloc_reqs_by_rp_uuid,
                 mock.sentinel.p_sums, fake_version, True)
 
+    @mock.patch('nova.scheduler.request_filter.process_reqspec')
     @mock.patch('nova.scheduler.utils.resources_from_request_spec')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get_allocation_candidates')
     def test_select_destination_return_objects(self, mock_get_ac,
-            mock_rfrs):
+            mock_rfrs, mock_process):
         fake_spec = objects.RequestSpec()
         fake_spec.instance_uuid = uuids.instance
         fake_version = "9.42"
@@ -141,6 +144,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                     return_objects=True, return_alternates=True)
             sel_host = dests[0][0]
             self.assertIsInstance(sel_host, objects.Selection)
+            mock_process.assert_called_once_with(None, fake_spec)
             # Since both return_objects and return_alternates are True, the
             # driver should have been called with True for return_alternates.
             select_destinations.assert_called_once_with(None, fake_spec,
@@ -163,11 +167,12 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                     [fake_spec.instance_uuid], expected_alloc_reqs_by_rp_uuid,
                     mock.sentinel.p_sums, fake_version, False)
 
+    @mock.patch('nova.scheduler.request_filter.process_reqspec')
     @mock.patch('nova.scheduler.utils.resources_from_request_spec')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get_allocation_candidates')
     def _test_select_destination(self, get_allocation_candidates_response,
-                                 mock_get_ac, mock_rfrs):
+                                 mock_get_ac, mock_rfrs, mock_process):
         fake_spec = objects.RequestSpec()
         fake_spec.instance_uuid = uuids.instance
         place_res = get_allocation_candidates_response
@@ -179,6 +184,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                     spec_obj=fake_spec,
                     instance_uuids=[fake_spec.instance_uuid])
             select_destinations.assert_not_called()
+            mock_process.assert_called_once_with(self.context, fake_spec)
             mock_get_ac.assert_called_once_with(
                 self.context, mock_rfrs.return_value)
 
@@ -227,10 +233,12 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
             mock_get_ac.assert_not_called()
             mock_process.assert_not_called()
 
+    @mock.patch('nova.scheduler.request_filter.process_reqspec')
     @mock.patch('nova.scheduler.utils.resources_from_request_spec')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get_allocation_candidates')
-    def test_select_destination_with_4_3_client(self, mock_get_ac, mock_rfrs):
+    def test_select_destination_with_4_3_client(self, mock_get_ac, mock_rfrs,
+                                                mock_process):
         fake_spec = objects.RequestSpec()
         place_res = (fakes.ALLOC_REQS, mock.sentinel.p_sums, "42.0")
         mock_get_ac.return_value = place_res
@@ -241,6 +249,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         with mock.patch.object(self.manager.driver, 'select_destinations'
                 ) as select_destinations:
             self.manager.select_destinations(self.context, spec_obj=fake_spec)
+            mock_process.assert_called_once_with(self.context, fake_spec)
             select_destinations.assert_called_once_with(self.context,
                 fake_spec, None, expected_alloc_reqs_by_rp_uuid,
                 mock.sentinel.p_sums, "42.0", False)
@@ -248,12 +257,13 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                 self.context, mock_rfrs.return_value)
 
     # TODO(sbauza): Remove that test once the API v4 is removed
+    @mock.patch('nova.scheduler.request_filter.process_reqspec')
     @mock.patch('nova.scheduler.utils.resources_from_request_spec')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get_allocation_candidates')
     @mock.patch.object(objects.RequestSpec, 'from_primitives')
     def test_select_destination_with_old_client(self, from_primitives,
-            mock_get_ac, mock_rfrs):
+            mock_get_ac, mock_rfrs, mock_process):
         fake_spec = objects.RequestSpec()
         fake_spec.instance_uuid = uuids.instance
         from_primitives.return_value = fake_spec
@@ -269,6 +279,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                 self.context, request_spec='fake_spec',
                 filter_properties='fake_props',
                 instance_uuids=[fake_spec.instance_uuid])
+            mock_process.assert_called_once_with(self.context, fake_spec)
             select_destinations.assert_called_once_with(
                 self.context, fake_spec,
                 [fake_spec.instance_uuid], expected_alloc_reqs_by_rp_uuid,
