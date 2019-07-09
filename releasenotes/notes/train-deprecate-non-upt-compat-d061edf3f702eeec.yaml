@@ -1,0 +1,8 @@
+---
+deprecations:
+  - |
+    Compatibility code for compute drivers that do not implement the
+    `update_provider_tree`__ interface is deprecated and will be removed
+    in a future release.
+
+    __ https://docs.openstack.org/nova/latest/reference/update-provider-tree.html

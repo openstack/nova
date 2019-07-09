@@ -446,6 +446,7 @@ def setup_rt(hostname, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES,
     virt_resources = copy.deepcopy(virt_resources)
     vd.get_available_resource.return_value = virt_resources
     vd.get_inventory.side_effect = NotImplementedError
+    # TODO(mriedem): Need to make this mocked virt driver implement upt.
     vd.update_provider_tree.side_effect = NotImplementedError
     vd.get_host_ip_addr.return_value = _NODENAME
     vd.estimate_instance_overhead.side_effect = estimate_overhead
@@ -1414,6 +1415,11 @@ class TestUpdateComputeNode(BaseTestCase):
         self.rt._update(mock.sentinel.ctx, new_compute)
         save_mock.assert_called_once_with()
         norm_mock.assert_called_once_with(mock.sentinel.inv_data, new_compute)
+        # Assert a warning was logged about using a virt driver that does not
+        # implement update_provider_tree.
+        self.assertIn('Compute driver "%s" does not implement the '
+                      '"update_provider_tree" interface.' %
+                      CONF.compute_driver, self.stdlog.logger.output)
 
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_sync_compute_service_disabled_trait')

@@ -1025,6 +1025,13 @@ class ResourceTracker(object):
                 context, nodename, provider_tree=prov_tree)
             prov_tree.update_traits(nodename, traits)
         except NotImplementedError:
+            # TODO(mriedem): Remove the compatibility code in the U release.
+            LOG.warning('Compute driver "%s" does not implement the '
+                        '"update_provider_tree" interface. Compatibility for '
+                        'non-update_provider_tree interfaces will be removed '
+                        'in a future release and result in an error to report '
+                        'inventory for this compute service.',
+                        CONF.compute_driver)
             # update_provider_tree isn't implemented yet - try get_inventory
             try:
                 inv_data = self.driver.get_inventory(nodename)
