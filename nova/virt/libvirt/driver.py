@@ -3907,6 +3907,8 @@ class LibvirtDriver(driver.ComputeDriver):
             self.virtapi.update_compute_provider_status(
                 context, rp_uuid, enabled=not service.disabled)
         except Exception:
+            # This is best effort so just log the exception but don't fail.
+            # The update_available_resource periodic task will sync the trait.
             LOG.warning(
                 'An error occurred while updating compute node '
                 'resource provider status to "%s" for provider: %s',

@@ -5012,16 +5012,20 @@ class ComputeManager(manager.Manager):
                     exception.ResourceProviderUpdateConflict,
                     exception.ResourceProviderUpdateFailed,
                     exception.TraitRetrievalFailed) as e:
-                # This is best effort so just log a warning and continue. The
-                # update_available_resource periodic task will sync the trait.
+                # This is best effort so just log a warning and continue.
                 LOG.warning('An error occurred while updating '
                             'COMPUTE_STATUS_DISABLED trait on compute node '
-                            'resource provider %s. Error: %s',
+                            'resource provider %s. The trait will be '
+                            'synchronized when the update_available_resource '
+                            'periodic task runs. Error: %s',
                             node.uuid, e.format_message())
             except Exception:
                 LOG.exception('An error occurred while updating '
                               'COMPUTE_STATUS_DISABLED trait on compute node '
-                              'resource provider %s.', node.uuid)
+                              'resource provider %s. The trait will be '
+                              'synchronized when the '
+                              'update_available_resource periodic task runs.',
+                              node.uuid)
 
     @wrap_exception()
     def set_host_enabled(self, context, enabled):
