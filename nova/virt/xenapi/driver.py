@@ -488,9 +488,67 @@ class XenAPIDriver(driver.ComputeDriver):
             total += vgpu_stats[grp_id]['total']
         return total
 
-    def get_inventory(self, nodename):
-        """Return a dict, keyed by resource class, of inventory information for
-        the supplied node.
+    def update_provider_tree(self, provider_tree, nodename, allocations=None):
+        """Update a ProviderTree object with current resource provider and
+        inventory information.
+
+        :param nova.compute.provider_tree.ProviderTree provider_tree:
+            A nova.compute.provider_tree.ProviderTree object representing all
+            the providers in the tree associated with the compute node, and any
+            sharing providers (those with the ``MISC_SHARES_VIA_AGGREGATE``
+            trait) associated via aggregate with any of those providers (but
+            not *their* tree- or aggregate-associated providers), as currently
+            known by placement. This object is fully owned by the
+            update_provider_tree method, and can therefore be modified without
+            locking/concurrency considerations. In other words, the parameter
+            is passed *by reference* with the expectation that the virt driver
+            will modify the object. Note, however, that it may contain
+            providers not directly owned/controlled by the compute host. Care
+            must be taken not to remove or modify such providers inadvertently.
+            In addition, providers may be associated with traits and/or
+            aggregates maintained by outside agents. The
+            `update_provider_tree`` method must therefore also be careful only
+            to add/remove traits/aggregates it explicitly controls.
+        :param nodename:
+            String name of the compute node (i.e.
+            ComputeNode.hypervisor_hostname) for which the caller is requesting
+            updated provider information. Drivers may use this to help identify
+            the compute node provider in the ProviderTree. Drivers managing
+            more than one node (e.g. ironic) may also use it as a cue to
+            indicate which node is being processed by the caller.
+        :param allocations:
+            Dict of allocation data of the form:
+              { $CONSUMER_UUID: {
+                    # The shape of each "allocations" dict below is identical
+                    # to the return from GET /allocations/{consumer_uuid}
+                    "allocations": {
+                        $RP_UUID: {
+                            "generation": $RP_GEN,
+                            "resources": {
+                                $RESOURCE_CLASS: $AMOUNT,
+                                ...
+                            },
+                        },
+                        ...
+                    },
+                    "project_id": $PROJ_ID,
+                    "user_id": $USER_ID,
+                    "consumer_generation": $CONSUMER_GEN,
+                },
+                ...
+              }
+            If None, and the method determines that any inventory needs to be
+            moved (from one provider to another and/or to a different resource
+            class), the ReshapeNeeded exception must be raised. Otherwise, this
+            dict must be edited in place to indicate the desired final state of
+            allocations. Drivers should *only* edit allocation records for
+            providers whose inventories are being affected by the reshape
+            operation.
+        :raises ReshapeNeeded: If allocations is None and any inventory needs
+            to be moved from one provider to another and/or to a different
+            resource class.
+        :raises: ReshapeFailed if the requested tree reshape fails for
+            whatever reason.
         """
         host_stats = self.host_state.get_host_stats(refresh=True)
 
@@ -498,25 +556,36 @@ class XenAPIDriver(driver.ComputeDriver):
         memory_mb = int(host_stats['host_memory_total'] / units.Mi)
         disk_gb = int(host_stats['disk_total'] / units.Gi)
         vgpus = self._get_vgpu_total(host_stats['vgpu_stats'])
-
+        # If the inventory record does not exist, the allocation_ratio
+        # will use the CONF.xxx_allocation_ratio value if xxx_allocation_ratio
+        # is set, and fallback to use the initial_xxx_allocation_ratio
+        # otherwise.
+        inv = provider_tree.data(nodename).inventory
+        ratios = self._get_allocation_ratios(inv)
         result = {
             orc.VCPU: {
                 'total': vcpus,
                 'min_unit': 1,
                 'max_unit': vcpus,
                 'step_size': 1,
+                'allocation_ratio': ratios[orc.VCPU],
+                'reserved': CONF.reserved_host_cpus,
             },
             orc.MEMORY_MB: {
                 'total': memory_mb,
                 'min_unit': 1,
                 'max_unit': memory_mb,
                 'step_size': 1,
+                'allocation_ratio': ratios[orc.MEMORY_MB],
+                'reserved': CONF.reserved_host_memory_mb,
             },
             orc.DISK_GB: {
                 'total': disk_gb,
                 'min_unit': 1,
                 'max_unit': disk_gb,
                 'step_size': 1,
+                'allocation_ratio': ratios[orc.DISK_GB],
+                'reserved': self._get_reserved_host_disk_gb_from_config(),
             },
         }
         if vgpus > 0:
@@ -533,7 +602,7 @@ class XenAPIDriver(driver.ComputeDriver):
                     }
                 }
             )
-        return result
+        provider_tree.update_inventory(nodename, result)
 
     def get_available_resource(self, nodename):
         """Retrieve resource information.
