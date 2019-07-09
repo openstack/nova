@@ -2017,22 +2017,22 @@ class CPUPinningNotSupported(Invalid):
 
 class CPUPinningInvalid(Invalid):
     msg_fmt = _("CPU set to pin %(requested)s must be a subset of "
-                "free CPU set %(free)s")
+                "free CPU set %(available)s")
 
 
 class CPUUnpinningInvalid(Invalid):
     msg_fmt = _("CPU set to unpin %(requested)s must be a subset of "
-                "pinned CPU set %(pinned)s")
+                "pinned CPU set %(available)s")
 
 
 class CPUPinningUnknown(Invalid):
     msg_fmt = _("CPU set to pin %(requested)s must be a subset of "
-                "known CPU set %(cpuset)s")
+                "known CPU set %(available)s")
 
 
 class CPUUnpinningUnknown(Invalid):
     msg_fmt = _("CPU set to unpin %(requested)s must be a subset of "
-                "known CPU set %(cpuset)s")
+                "known CPU set %(available)s")
 
 
 class ImageCPUPinningForbidden(Forbidden):
