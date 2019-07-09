@@ -106,6 +106,7 @@ AGGREGATE_ACTION_ADD = 'Add'
 MIN_COMPUTE_TRUSTED_CERTS = 31
 MIN_COMPUTE_ABORT_QUEUED_LIVE_MIGRATION = 34
 MIN_COMPUTE_VOLUME_TYPE = 36
+MIN_COMPUTE_SYNC_COMPUTE_STATUS_DISABLED = 38
 
 # FIXME(danms): Keep a global cache of the cells we find the
 # first time we look. This needs to be refreshed on a timer or
@@ -5047,17 +5048,69 @@ class HostAPI(base.Base):
         """Get service entry for the given compute hostname."""
         return objects.Service.get_by_compute_host(context, host_name)
 
+    def _update_compute_provider_status(self, context, service):
+        """Calls the compute service to sync the COMPUTE_STATUS_DISABLED trait.
+
+        There are two cases where the API will not call the compute service:
+
+        * The compute service is down. In this case the trait is synchronized
+          when the compute service is restarted.
+        * The compute service is old. In this case the trait is synchronized
+          when the compute service is upgraded and restarted.
+
+        :param context: nova auth RequestContext
+        :param service: nova.objects.Service object which has been enabled
+            or disabled (see ``service_update``).
+        """
+        # Make sure the service is up so we can make the RPC call.
+        if not self.servicegroup_api.service_is_up(service):
+            LOG.info('Compute service on host %s is down. The '
+                     'COMPUTE_STATUS_DISABLED trait will be synchronized '
+                     'when the service is restarted.', service.host)
+            return
+
+        # Make sure the compute service is new enough for the trait sync
+        # behavior.
+        # TODO(mriedem): Remove this compat check in the U release.
+        if service.version < MIN_COMPUTE_SYNC_COMPUTE_STATUS_DISABLED:
+            LOG.info('Compute service on host %s is too old to sync the '
+                     'COMPUTE_STATUS_DISABLED trait in Placement. The '
+                     'trait will be synchronized when the service is '
+                     'upgraded and restarted.', service.host)
+            return
+
+        enabled = not service.disabled
+        # Avoid leaking errors out of the API.
+        try:
+            LOG.debug('Calling the compute service on host %s to sync the '
+                      'COMPUTE_STATUS_DISABLED trait.', service.host)
+            self.rpcapi.set_host_enabled(context, service.host, enabled)
+        except Exception:
+            LOG.exception('An error occurred while updating host enabled '
+                          'status to "%s" for compute host: %s',
+                          'enabled' if enabled else 'disabled',
+                          service.host)
+
     def service_update(self, context, service):
         """Performs the actual service update operation.
+
+        If the "disabled" field is changed, potentially calls the compute
+        service to sync the COMPUTE_STATUS_DISABLED trait on the compute node
+        resource providers managed by this compute service.
 
         :param context: nova auth RequestContext
         :param service: nova.objects.Service object with changes already
             set on the object
         """
+        # Before persisting changes and resetting the changed fields on the
+        # Service object, determine if the disabled field changed.
+        update_placement = 'disabled' in service.obj_what_changed()
+        # Persist the Service object changes to the database.
         service.save()
-        # TODO(mriedem): Reflect COMPUTE_STATUS_DISABLED trait changes to the
-        # associated compute node resource providers if the service's disabled
-        # status changed.
+        # If the disabled field changed, potentially call the compute service
+        # to sync the COMPUTE_STATUS_DISABLED trait.
+        if update_placement:
+            self._update_compute_provider_status(context, service)
         return service
 
     @target_host_cell

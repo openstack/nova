@@ -37,6 +37,12 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV21):
                       test_services.fake_service_get_by_host_binary)
         self.stub_out("nova.db.api.service_update",
                       test_services.fake_service_update)
+        # If we are not using real services, we need to stub out
+        # HostAPI._update_compute_provider_status so we don't actually
+        # try to call a fake service over RPC.
+        self.stub_out('nova.compute.api.HostAPI.'
+                      '_update_compute_provider_status',
+                      lambda *args, **kwargs: None)
         self.useFixture(utils_fixture.TimeFixture(test_services.fake_utcnow()))
 
     def test_services_list(self):
