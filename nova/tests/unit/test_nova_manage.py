@@ -2531,20 +2531,11 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                 new=mock.Mock(
                     side_effect=exception.ConsumerAllocationRetrievalFailed(
                         consumer_uuid='CONSUMER', error='ERROR')))
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename',
-                new=mock.Mock(
-                    return_value=objects.ComputeNode(uuid=uuidsentinel.node)))
-    @mock.patch('nova.scheduler.utils.resources_from_flavor',
-                new=mock.Mock(return_value=mock.sentinel.resources))
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put',
-                return_value=fake_requests.FakeResponse(204))
+                new_callable=mock.NonCallableMagicMock)
     def test_heal_allocations_get_allocs_retrieval_fails(self, mock_put,
                                                          mock_getinst):
-        # This "succeeds"
-        self.assertEqual(0, self.cli.heal_allocations())
-        # We're really just verifying that we got to the end
-        mock_put.assert_called_once()
-        self.assertEqual(2, mock_getinst.call_count)
+        self.assertEqual(3, self.cli.heal_allocations())
 
     @mock.patch('nova.objects.CellMappingList.get_all',
                 return_value=objects.CellMappingList(objects=[
