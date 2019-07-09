@@ -5671,9 +5671,6 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             root_device_name = None
 
-        if root_device_name:
-            instance.root_device_name = root_device_name
-
         guest.os_type = (fields.VMMode.get_from_instance(instance) or
                 self._get_guest_os_type(virt_type))
         caps = self._host.get_capabilities()
