@@ -1687,7 +1687,7 @@ class PlacementCommands(object):
     @staticmethod
     def _has_request_but_no_allocation(port):
         request = port.get(constants.RESOURCE_REQUEST)
-        binding_profile = port.get(constants.BINDING_PROFILE, {}) or {}
+        binding_profile = neutron_api.get_binding_profile(port)
         allocation = binding_profile.get(constants.ALLOCATION)
         # We are defensive here about 'resources' and 'required' in the
         # 'resource_request' as neutron API is not clear about those fields
@@ -1875,7 +1875,7 @@ class PlacementCommands(object):
             # We also need to record the RP we are allocated from in the
             # port. This will be sent back to Neutron before the allocation
             # is updated in placement
-            binding_profile = port.get(constants.BINDING_PROFILE, {}) or {}
+            binding_profile = neutron_api.get_binding_profile(port)
             binding_profile[constants.ALLOCATION] = rp_uuid
             port[constants.BINDING_PROFILE] = binding_profile
 
@@ -1892,10 +1892,10 @@ class PlacementCommands(object):
         succeeded = []
         try:
             for port in ports_to_update:
+                profile = neutron_api.get_binding_profile(port)
                 body = {
                     'port': {
-                        constants.BINDING_PROFILE:
-                            port[constants.BINDING_PROFILE]
+                        constants.BINDING_PROFILE: profile
                     }
                 }
                 output(
@@ -1922,7 +1922,7 @@ class PlacementCommands(object):
         manual_rollback_needed = []
         last_exc = None
         for port in ports_to_rollback:
-            profile = port[constants.BINDING_PROFILE]
+            profile = neutron_api.get_binding_profile(port)
             profile.pop(constants.ALLOCATION)
             body = {
                 'port': {

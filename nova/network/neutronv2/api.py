@@ -82,7 +82,7 @@ def _load_auth_plugin(conf):
     raise neutron_client_exc.Unauthorized(message=err_msg)
 
 
-def _get_binding_profile(port):
+def get_binding_profile(port):
     """Convenience method to get the binding:profile from the port
 
     The binding:profile in the port is undefined in the networking service
@@ -272,7 +272,7 @@ class API(base_api.NetworkAPI):
             # If the port already has a migration profile and if
             # it is to be torn down, then we need to clean up
             # the migration profile.
-            port_profile = _get_binding_profile(p)
+            port_profile = get_binding_profile(p)
             if not port_profile:
                 continue
             if constants.MIGRATING_ATTR in port_profile:
@@ -293,7 +293,7 @@ class API(base_api.NetworkAPI):
             # the given 'host'.
             host_id = p.get(constants.BINDING_HOST_ID)
             if host_id != host:
-                port_profile = _get_binding_profile(p)
+                port_profile = get_binding_profile(p)
                 # If the "migrating_to" attribute already points at the given
                 # host, then skip the port update call since we're not changing
                 # anything.
@@ -587,7 +587,7 @@ class API(base_api.NetworkAPI):
                 port_profile = {}
                 network = {}
             else:
-                port_profile = port.get(constants.BINDING_PROFILE, {})
+                port_profile = get_binding_profile(port)
                 net_id = port.get('network_id')
                 if net_id in networks:
                     network = networks.get(net_id)
@@ -1004,7 +1004,7 @@ class API(base_api.NetworkAPI):
             # only communicate the allocations if the port has resource
             # requests
             if port.get(constants.RESOURCE_REQUEST):
-                profile = port.get(constants.BINDING_PROFILE, {})
+                profile = get_binding_profile(port)
                 # NOTE(gibi): In the resource provider mapping there can be
                 # more than one RP fulfilling a request group. But resource
                 # requests of a Neutron port is always mapped to a
@@ -1117,11 +1117,9 @@ class API(base_api.NetworkAPI):
                                       'device_owner': zone}}
             if (requested_ports_dict and
                 request.port_id in requested_ports_dict and
-                requested_ports_dict[request.port_id].get(
-                    constants.BINDING_PROFILE)):
-                port_req_body['port'][constants.BINDING_PROFILE] = (
-                    requested_ports_dict[request.port_id][
-                        constants.BINDING_PROFILE])
+                get_binding_profile(requested_ports_dict[request.port_id])):
+                port_req_body['port'][constants.BINDING_PROFILE] = \
+                    get_binding_profile(requested_ports_dict[request.port_id])
             try:
                 self._populate_neutron_extension_values(
                     context, instance, request.pci_request_id, port_req_body,
@@ -1441,10 +1439,7 @@ class API(base_api.NetworkAPI):
                     _('PCI device not found for request ID %s.') %
                     pci_request_id)
             pci_dev = pci_devices.pop()
-            if port_req_body['port'].get(constants.BINDING_PROFILE) is None:
-                port_req_body['port'][constants.BINDING_PROFILE] = {}
-            profile = copy.deepcopy(
-                port_req_body['port'][constants.BINDING_PROFILE])
+            profile = copy.deepcopy(get_binding_profile(port_req_body['port']))
             profile.update(self._get_pci_device_profile(pci_dev))
             port_req_body['port'][constants.BINDING_PROFILE] = profile
 
@@ -1669,8 +1664,8 @@ class API(base_api.NetworkAPI):
             # if there is resource associated to this port then that needs to
             # be deallocated so lets return info about such allocation
             resource_request = port.get(constants.RESOURCE_REQUEST)
-            allocated_rp = port.get(
-                constants.BINDING_PROFILE, {}).get(constants.ALLOCATION)
+            profile = get_binding_profile(port)
+            allocated_rp = profile.get(constants.ALLOCATION)
             if resource_request and allocated_rp:
                 port_allocation = {
                     allocated_rp: resource_request.get('resources', {})}
@@ -1935,7 +1930,7 @@ class API(base_api.NetworkAPI):
         If port binding does not provide any information about trusted
         status this function is returning None
         """
-        value = _get_binding_profile(port).get('trusted')
+        value = get_binding_profile(port).get('trusted')
         if value is not None:
             # This allows the user to specify things like '1' and 'yes' in
             # the port binding profile and we can handle it as a boolean.
@@ -2889,7 +2884,7 @@ class API(base_api.NetworkAPI):
             vnic_type=current_neutron_port.get('binding:vnic_type',
                                                network_model.VNIC_TYPE_NORMAL),
             type=current_neutron_port.get('binding:vif_type'),
-            profile=_get_binding_profile(current_neutron_port),
+            profile=get_binding_profile(current_neutron_port),
             details=current_neutron_port.get('binding:vif_details'),
             ovs_interfaceid=ovs_interfaceid,
             devname=devname,
@@ -3218,7 +3213,7 @@ class API(base_api.NetworkAPI):
                             network_model.VIF_TYPE_BINDING_FAILED)
         for p in ports:
             updates = {}
-            binding_profile = _get_binding_profile(p)
+            binding_profile = get_binding_profile(p)
 
             # We need to update the port binding if the host has changed or if
             # the binding is clearly wrong due to previous lost messages.
