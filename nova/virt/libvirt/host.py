@@ -909,7 +909,7 @@ class Host(object):
         for guest in self.list_guests(only_guests=False):
             try:
                 # TODO(sahid): Use get_info...
-                dom_mem = int(guest._get_domain_info(self)[2])
+                dom_mem = int(guest._get_domain_info()[2])
             except libvirt.libvirtError as e:
                 LOG.warning("couldn't obtain the memory from domain:"
                             " %(uuid)s, exception: %(ex)s",

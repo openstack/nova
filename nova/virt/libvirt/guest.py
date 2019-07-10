@@ -42,7 +42,6 @@ from nova import exception
 from nova.i18n import _
 import nova.privsep.libvirt
 from nova.virt import hardware
-from nova.virt.libvirt import compat
 from nova.virt.libvirt import config as vconfig
 
 libvirt = None
@@ -513,16 +512,12 @@ class Guest(object):
         """Configures a new user password."""
         self._domain.setUserPassword(user, new_pass, 0)
 
-    def _get_domain_info(self, host):
-        """Returns information on Guest
-
-        :param host: a host.Host object with current
-                     connection. Unfortunately we need to pass it
-                     because of a workaround with < version 1.2..11
+    def _get_domain_info(self):
+        """Returns information on Guest.
 
         :returns list: [state, maxMem, memory, nrVirtCpu, cpuTime]
         """
-        return compat.get_domain_info(libvirt, host, self._domain)
+        return self._domain.info()
 
     def get_info(self, host):
         """Retrieve information from libvirt for a specific instance name.
@@ -534,7 +529,7 @@ class Guest(object):
         :returns hardware.InstanceInfo:
         """
         try:
-            dom_info = self._get_domain_info(host)
+            dom_info = self._get_domain_info()
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
             if error_code == libvirt.VIR_ERR_NO_DOMAIN:

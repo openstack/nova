@@ -9287,8 +9287,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # TODO(sahid): Needs to use get_info but more changes have to
         # be done since a mapping STATE_MAP LIBVIRT_POWER_STATE is
         # needed.
-        (state, max_mem, mem, num_cpu, cpu_time) = \
-            guest._get_domain_info(self._host)
+        state, max_mem, mem, num_cpu, cpu_time = guest._get_domain_info()
         config_drive = configdrive.required_by(instance)
         launched_at = timeutils.normalize_time(instance.launched_at)
         uptime = timeutils.delta_seconds(launched_at,
