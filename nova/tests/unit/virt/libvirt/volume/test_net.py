@@ -14,7 +14,6 @@ import mock
 
 import nova.conf
 from nova.tests.unit.virt.libvirt.volume import test_volume
-from nova.virt.libvirt import host
 from nova.virt.libvirt.volume import net
 
 CONF = nova.conf.CONF
@@ -217,28 +216,6 @@ class LibvirtNetVolumeDriverTestCase(
         self.assertEqual(flags_user, tree.find('./auth').get('username'))
         self.assertEqual(secret_type, tree.find('./auth/secret').get('type'))
         self.assertEqual(flags_uuid, tree.find('./auth/secret').get('uuid'))
-        libvirt_driver.disconnect_volume(connection_info,
-                                         mock.sentinel.instance)
-
-    @mock.patch.object(host.Host, 'find_secret')
-    @mock.patch.object(host.Host, 'create_secret')
-    @mock.patch.object(host.Host, 'delete_secret')
-    def test_libvirt_iscsi_net_driver(self, mock_delete, mock_create,
-                                      mock_find):
-        mock_find.return_value = test_volume.FakeSecret()
-        mock_create.return_value = test_volume.FakeSecret()
-        libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_host)
-        connection_info = self.iscsi_connection(self.vol, self.location,
-                                                self.iqn, auth=True)
-        secret_type = 'iscsi'
-        flags_user = connection_info['data']['auth_username']
-        conf = libvirt_driver.get_config(connection_info, self.disk_info)
-        tree = conf.format_dom()
-        self._assertISCSINetworkAndProtocolEquals(tree)
-        self.assertEqual(flags_user, tree.find('./auth').get('username'))
-        self.assertEqual(secret_type, tree.find('./auth/secret').get('type'))
-        self.assertEqual(test_volume.SECRET_UUID,
-                         tree.find('./auth/secret').get('uuid'))
         libvirt_driver.disconnect_volume(connection_info,
                                          mock.sentinel.instance)
 
