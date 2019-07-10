@@ -31,6 +31,7 @@
           [[local|localrc]]
           NOVA_BACKEND=LVM
           LVM_VOLUME_CLEAR=none
+          TEMPEST_RUN_VALIDATION=false
 
           EOF
         executable: /bin/bash
