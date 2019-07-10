@@ -293,7 +293,7 @@ payload.
 
 Note that the notification's publisher instance can be created two different
 ways. It can be created by instantiating the ``NotificationPublisher`` object
-with a ``host`` and a ``binary`` string parameter or it can be generated from a
+with a ``host`` and a ``source`` string parameter or it can be generated from a
 ``Service`` object by calling ``NotificationPublisher.from_service_obj``
 function.
 
