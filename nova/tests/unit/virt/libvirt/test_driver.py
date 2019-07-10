@@ -21509,7 +21509,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.assertRaises(exception.ComputeResourcesUnavailable,
                           drvr._allocate_mdevs, allocations=allocations)
 
-    def test_allocate_mdevs_with_no_idea_of_the_provider(self):
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    def test_allocate_mdevs_with_no_idea_of_the_provider(self, mock_warning):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         # Mock the fact update_provider_tree() should have run
         drvr.provider_tree = self._get_fake_provider_tree_with_vgpu()
@@ -21536,6 +21537,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # Remember, rp2 has a wrong naming convention
         self.assertRaises(exception.ComputeResourcesUnavailable,
                           drvr._allocate_mdevs, allocations=allocations)
+        mock_warning.assert_called_once_with(
+            "pGPU device name %(name)s can't be guessed from the ProviderTree "
+            "roots %(roots)s", {'name': 'oops_I_did_it_again', 'roots': 'cn'})
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_mediated_devices')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
