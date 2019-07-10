@@ -559,14 +559,17 @@ def get_default_machine_type(arch):
     # default machine type.  It is the recommended board, which is designed
     # to be used with virtual machines.  The 'virt' board is more flexible,
     # supports PCI, 'virtio', has decent RAM limits, etc.
-    if arch in (obj_fields.Architecture.ARMV7,
-                obj_fields.Architecture.AARCH64):
-        return "virt"
-
-    if arch in (obj_fields.Architecture.S390,
-                obj_fields.Architecture.S390X):
-        return "s390-ccw-virtio"
-    return None
+    # NOTE(sean-k-mooney): Nova's default for x86 is still 'pc', so
+    # use that, not 'q35', for x86_64 and i686.
+    default_mtypes = {
+        obj_fields.Architecture.ARMV7: "virt",
+        obj_fields.Architecture.AARCH64: "virt",
+        obj_fields.Architecture.S390: "s390-ccw-virtio",
+        obj_fields.Architecture.S390X: "s390-ccw-virtio",
+        obj_fields.Architecture.I686: "pc",
+        obj_fields.Architecture.X86_64: "pc",
+    }
+    return default_mtypes.get(arch)
 
 
 def mdev_name2uuid(mdev_name):

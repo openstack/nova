@@ -22,6 +22,7 @@ from oslo_utils import uuidutils
 import six
 import testtools
 
+
 from nova.compute import vm_states
 from nova import exception
 from nova import objects
@@ -639,9 +640,20 @@ class HostTestCase(test.NoDBTestCase):
 
     def _test_get_domain_capabilities(self):
         caps = self.host.get_domain_capabilities()
-        self.assertIn('x86_64', caps.keys())
-        self.assertEqual(['q35'], list(caps['x86_64']))
-        return caps['x86_64']['q35']
+        for arch, mtypes in caps.items():
+            for mtype, dom_cap in mtypes.items():
+                # NOTE(sean-k-mooney): this should always be true since we are
+                # mapping from an arch and machine_type to a domain cap object
+                # for that pair. We use 'in' to allow libvirt to expand the
+                # unversioned alias such as 'pc' or 'q35' to its versioned
+                # form e.g. pc-i440fx-2.11
+                self.assertIn(mtype, dom_cap.machine_type)
+                self.assertIn(dom_cap.machine_type_alias, mtype)
+        # We assume we are testing with x86_64 in other parts of the code
+        # so we just assert it's in the test data and return it.
+        self.assertIn('x86_64', caps)
+        self.assertIn('pc', caps['x86_64'])
+        return caps['x86_64']['pc']
 
     def test_get_domain_capabilities(self):
         caps = self._test_get_domain_capabilities()
@@ -649,6 +661,111 @@ class HostTestCase(test.NoDBTestCase):
         # There is a <gic supported='no'/> feature in the fixture but
         # we don't parse that because nothing currently cares about it.
         self.assertEqual(0, len(caps.features))
+
+    def test_get_domain_capabilities_non_native_kvm(self):
+        # This test assumes that we are on a x86 host and the
+        # virt-type is set to kvm. In that case we would expect
+        # libvirt to raise an error if you try to get the domain
+        # capabilities for non-native archs specifying the kvm virt
+        # type.
+        archs = {
+            'sparc': 'SS-5',
+            'mips': 'malta',
+            'mipsel': 'malta',
+            'ppc': 'g3beige',
+            'armv7l': 'virt-2.11',
+        }
+
+        # Because we are mocking out the libvirt connection and
+        # supplying fake data, no exception will be raised, so we
+        # first store a reference to the original
+        # _get_domain_capabilities function
+        local__get_domain_caps = self.host._get_domain_capabilities
+
+        # We then define our own version that will raise for
+        # non-native archs and otherwise delegates to the private
+        # function.
+        def _get_domain_capabilities(**kwargs):
+            arch = kwargs['arch']
+            if arch not in archs:
+                return local__get_domain_caps(**kwargs)
+            else:
+                exc = fakelibvirt.make_libvirtError(
+                    fakelibvirt.libvirtError,
+                    "invalid argument: KVM is not supported by "
+                    "'/usr/bin/qemu-system-%s' on this host" % arch,
+                    error_code=fakelibvirt.VIR_ERR_INVALID_ARG)
+                raise exc
+
+        # Finally we patch to use our own version
+        with test.nested(
+            mock.patch.object(host.LOG, 'debug'),
+            mock.patch.object(self.host, "_get_domain_capabilities"),
+        ) as (mock_log, mock_caps):
+            mock_caps.side_effect = _get_domain_capabilities
+            self.flags(virt_type='kvm', group='libvirt')
+            # and call self.host.get_domain_capabilities() directly as
+            # the exception should be caught internally
+            caps = self.host.get_domain_capabilities()
+            # We don't really care what mock_caps is called with,
+            # as we assert the behavior we expect below. However we
+            # can at least check for the expected debug messages.
+            mock_caps.assert_called()
+            warnings = []
+            for call in mock_log.mock_calls:
+                name, args, kwargs = call
+                if "Error from libvirt when retrieving domain capabilities" \
+                        in args[0]:
+                    warnings.append(call)
+            self.assertTrue(len(warnings) > 0)
+
+        # The resulting capabilities object should be non-empty
+        # as the x86 archs won't raise a libvirtError exception
+        self.assertTrue(len(caps) > 0)
+        # but all of the archs we mocked out should be skipped and
+        # not included in the result set
+        for arch in archs:
+            self.assertNotIn(arch, caps)
+
+    def test_get_domain_capabilities_other_archs(self):
+        # NOTE(aspiers): only architectures which are returned by
+        # fakelibvirt's getCapabilities() can be tested here, since
+        # Host.get_domain_capabilities() iterates over those
+        # architectures.
+        archs = {
+            'sparc': 'SS-5',
+            'mips': 'malta',
+            'mipsel': 'malta',
+            'ppc': 'g3beige',
+            'armv7l': 'virt-2.11',
+        }
+
+        caps = self.host.get_domain_capabilities()
+
+        for arch, mtype in six.iteritems(archs):
+            self.assertIn(arch, caps)
+            self.assertNotIn('pc', caps[arch])
+            self.assertIn(mtype, caps[arch])
+            self.assertEqual(mtype, caps[arch][mtype].machine_type)
+
+    def test_get_domain_capabilities_with_versioned_machine_type(self):
+        caps = self.host.get_domain_capabilities()
+
+        # i686 supports both an unversioned pc alias and
+        # a versioned form.
+        i686 = caps['i686']
+        self.assertIn('pc', i686)
+        self.assertIn('pc-i440fx-2.11', i686)
+        # both the versioned and unversioned forms
+        # have the unversioned name available as a machine_type_alias
+        unversioned_caps = i686['pc']
+        self.assertEqual('pc', unversioned_caps.machine_type_alias)
+        versioned_caps = i686['pc-i440fx-2.11']
+        self.assertEqual('pc', versioned_caps.machine_type_alias)
+        # the unversioned_caps and versioned_caps
+        # are equal and are actually the same object.
+        self.assertEqual(unversioned_caps, versioned_caps)
+        self.assertIs(unversioned_caps, versioned_caps)
 
     @mock.patch.object(fakelibvirt.virConnect, '_domain_capability_features',
                        new='')

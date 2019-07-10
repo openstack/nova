@@ -742,7 +742,7 @@ class Host(object):
         for guest in caps.guests:
             arch = guest.arch
             machine_type = \
-                libvirt_utils.get_default_machine_type(arch) or 'q35'
+                libvirt_utils.get_default_machine_type(arch)
 
             emulator_bin = guest.emulator
             if virt_type in guest.domemulator:
@@ -752,12 +752,79 @@ class Host(object):
             # architecture, but it doesn't hurt to add a safety net to
             # avoid needlessly calling libvirt's API more times than
             # we need.
-            if machine_type in domain_caps[arch]:
+            if machine_type and machine_type in domain_caps[arch]:
                 continue
 
-            domain_caps[arch][machine_type] = \
-                self._get_domain_capabilities(emulator_bin, arch,
-                                              machine_type, virt_type)
+            # NOTE(aspiers): machine_type could be None here if nova
+            # doesn't have a default machine type for this
+            # architecture.  In that case we pass a machine_type of
+            # None to the libvirt API and rely on it choosing a
+            # sensible default which will be returned in the <machine>
+            # element.  It could also be an alias like 'pc' rather
+            # than a full machine type.
+            #
+            # NOTE(kchamart): Prior to libvirt v4.7.0 libvirt picked
+            # its default machine type for x86, 'pc', as reported by
+            # QEMU's default.  From libvirt v4.7.0 onwards, libvirt
+            # _explicitly_ declared the "preferred" default for x86 as
+            # 'pc' (and appropriate values for other architectures),
+            # and only uses QEMU's reported default (whatever that may
+            # be) if 'pc' does not exist.  This was done "to isolate
+            # applications from hypervisor changes that may cause
+            # incompatibilities" -- i.e. if, or when, QEMU changes its
+            # default machine type to something else.  Refer to this
+            # libvirt commit:
+            #
+            #   https://libvirt.org/git/?p=libvirt.git;a=commit;h=26cfb1a3
+            try:
+                cap_obj = self._get_domain_capabilities(
+                        emulator_bin=emulator_bin, arch=arch,
+                        machine_type=machine_type, virt_type=virt_type)
+            except libvirt.libvirtError as ex:
+                # NOTE(sean-k-mooney): This can happen for several
+                # reasons, but one common example is if you have
+                # multiple QEMU emulators installed and you set
+                # virt-type=kvm. In this case any non-native emulator,
+                # e.g. AArch64 on an x86 host, will (correctly) raise
+                # an exception as KVM cannot be used to accelerate CPU
+                # instructions for non-native architectures.
+                error_code = ex.get_error_code()
+                LOG.debug(
+                    "Error from libvirt when retrieving domain capabilities "
+                    "for arch %(arch)s / virt_type %(virt_type)s / "
+                    "machine_type %(mach_type)s: "
+                    "[Error Code %(error_code)s]: %(exception)s",
+                    {'arch': arch, 'virt_type': virt_type,
+                     'mach_type': machine_type, 'error_code': error_code,
+                     'exception': ex})
+                # Remove archs added by default dict lookup when checking
+                # if the machine type has already been recoded.
+                if arch in domain_caps:
+                    domain_caps.pop(arch)
+                continue
+
+            # Register the domain caps using the expanded form of
+            # machine type returned by libvirt in the <machine>
+            # element (e.g. pc-i440fx-2.11)
+            if cap_obj.machine_type:
+                domain_caps[arch][cap_obj.machine_type] = cap_obj
+            else:
+                # NOTE(aspiers): In theory this should never happen,
+                # but better safe than sorry.
+                LOG.warning(
+                    "libvirt getDomainCapabilities("
+                    "emulator_bin=%(emulator_bin)s, arch=%(arch)s, "
+                    "machine_type=%(machine_type)s, virt_type=%(virt_type)s) "
+                    "returned null <machine> type",
+                    {'emulator_bin': emulator_bin, 'arch': arch,
+                     'machine_type': machine_type, 'virt_type': virt_type}
+                )
+
+            # And if we passed an alias, register the domain caps
+            # under that too.
+            if machine_type and machine_type != cap_obj.machine_type:
+                domain_caps[arch][machine_type] = cap_obj
+                cap_obj.machine_type_alias = machine_type
 
         # NOTE(aspiers): Use a temporary variable to update the
         # instance variable atomically, otherwise if some API
@@ -767,8 +834,9 @@ class Host(object):
 
         return self._domain_caps
 
-    def _get_domain_capabilities(self, emulator_bin, arch, machine_type,
-                                 virt_type, flags=0):
+    def _get_domain_capabilities(self, emulator_bin=None, arch=None,
+        machine_type=None, virt_type=None, flags=0):
+
         xmlstr = self.get_connection().getDomainCapabilities(
             emulator_bin,
             arch,

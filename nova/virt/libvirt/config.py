@@ -118,6 +118,8 @@ class LibvirtConfigDomainCaps(LibvirtConfigObject):
         super(LibvirtConfigDomainCaps, self).__init__(
             root_name="domainCapabilities", **kwargs)
         self._features = None
+        self._machine = None
+        self._alias = None
 
     def parse_dom(self, xmldoc):
         super(LibvirtConfigDomainCaps, self).parse_dom(xmldoc)
@@ -127,12 +129,30 @@ class LibvirtConfigDomainCaps(LibvirtConfigObject):
                 features = LibvirtConfigDomainCapsFeatures()
                 features.parse_dom(c)
                 self._features = features
+            elif c.tag == "machine":
+                self._machine = c.text
 
     @property
     def features(self):
         if self._features is None:
             return []
         return self._features.features
+
+    @property
+    def machine_type(self):
+        if self._machine is None:
+            return ""
+        return self._machine
+
+    @property
+    def machine_type_alias(self):
+        if self._alias is None:
+            return self._machine
+        return self._alias
+
+    @machine_type_alias.setter
+    def machine_type_alias(self, alias):
+        self._alias = alias
 
 
 class LibvirtConfigDomainCapsFeatures(LibvirtConfigObject):
