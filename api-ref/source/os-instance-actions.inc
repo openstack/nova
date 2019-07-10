@@ -46,10 +46,10 @@ Response
   - action: action
   - instance_uuid: instance_id_body
   - message: message
-  - project_id: project_id_instance_action
+  - project_id: project_id_server_action
   - request_id: request_id_body
   - start_time: start_time
-  - user_id: user_id
+  - user_id: user_id_server_action
   - updated_at: updated_instance_action
   - links: instance_actions_next_links
 
@@ -101,10 +101,10 @@ Response
   - action: action
   - instance_uuid: instance_id_body
   - message: message
-  - project_id: project_id_instance_action
+  - project_id: project_id_server_action
   - request_id: request_id_body
   - start_time: start_time
-  - user_id: user_id
+  - user_id: user_id_server_action
   - events: instance_action_events_2_50
   - events: instance_action_events_2_51
   - events.event: event
