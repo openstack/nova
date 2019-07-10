@@ -181,7 +181,7 @@
 
 - job:
     name: nova-next
-    parent: nova-dsvm-base
+    parent: devstack-tempest
     description: |
       This job was added in Newton when placement and cellsv2
       were optional. Placement and cellsv2 are required starting in Ocata. In
@@ -194,8 +194,52 @@
       volume multi-attach testing.
       Starting in Train, the job enabled counting quota usage from placement.
       Runs all tempest compute API and most scenario tests concurrently.
-    run: playbooks/legacy/nova-next/run.yaml
-    post-run: playbooks/legacy/nova-next/post.yaml
+    irrelevant-files: *dsvm-irrelevant-files
+    # Run post-tempest tests like for nova-manage commands.
+    post-run: playbooks/nova-next/post.yaml
+    vars:
+      # We use the "all" environment for tempest_test_regex and
+      # tempest_black_regex.
+      tox_envlist: all
+      # Run all compute API tests and most scenario tests at the default
+      # concurrency (nproc/2 which is normally 4 in the gate).
+      tempest_test_regex: ^tempest\.(scenario|api\.compute)
+      # The tempest.scenario.test_network* tests are skipped because they
+      # (1) take a long time and (2) are already covered in the
+      # tempest-slow* job. If this regex gets more complicated use
+      # tempest_test_blacklist.
+      tempest_black_regex: ^tempest.scenario.test_network
+      devstack_local_conf:
+        post-config:
+          $NOVA_CONF:
+            compute:
+              # Switch off the provider association refresh, which should
+              # reduce the number of placement calls in steady state. Added in
+              # Stein.
+              # TODO(efried): Due to bug #1802143, nova-cpu.conf gets
+              # overwritten after post-config|$NOVA_CPU_CONF gets effected, so
+              # use $NOVA_CONF instead for now.
+              resource_provider_association_refresh: 0
+            quota:
+              # Added in Train.
+              count_usage_from_placement: True
+            scheduler:
+              # Added in Train.
+              query_placement_for_image_type_support: True
+      devstack_localrc:
+        # Added in Pike.
+        NOVA_USE_SERVICE_TOKEN: True
+        # Enable TLS between the noVNC proxy & compute nodes; this requires
+        # the tls-proxy service to be enabled. Added in Queens.
+        NOVA_CONSOLE_PROXY_COMPUTE_TLS: True
+        # Added in Stein.
+        USE_PYTHON3: True
+        # Added in Stein.
+        ENABLE_VOLUME_MULTIATTACH: True
+      devstack_services:
+        tls-proxy: true
+        # TODO(mriedem): Consider disabling other non-essential services like
+        # c-bak.
 
 - job:
     name: nova-tempest-v2-api
