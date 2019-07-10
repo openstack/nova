@@ -1393,6 +1393,232 @@ class TestNovaManagePlacementSyncAggregates(
                              '%s should be in two provider aggregates' % host)
 
 
+class TestNovaManagePlacementAudit(
+        integrated_helpers.ProviderUsageBaseTestCase):
+    """Functional tests for nova-manage placement audit"""
+
+    # Let's just use a simple fake driver
+    compute_driver = 'fake.SmallFakeDriver'
+
+    def setUp(self):
+        super(TestNovaManagePlacementAudit, self).setUp()
+        self.cli = manage.PlacementCommands()
+        # Make sure we have two computes for migrations
+        self.compute1 = self._start_compute('host1')
+        self.compute2 = self._start_compute('host2')
+
+        # Make sure we have two hypervisors reported in the API.
+        hypervisors = self.admin_api.api_get(
+            '/os-hypervisors').body['hypervisors']
+        self.assertEqual(2, len(hypervisors))
+
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
+
+        self.flavor = self.api.get_flavors()[0]
+
+    def _delete_instance_but_keep_its_allocations(self, server):
+        """Mocks out the call to Placement for deleting the allocations but
+           still performs the instance deletion.
+        """
+
+        with mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                        'delete_allocation_for_instance'):
+            self.api.delete_server(server['id'])
+            self._wait_until_deleted(server)
+
+    def test_audit_orphaned_allocation_from_instance_delete(self):
+        """Creates a server and deletes it by retaining its allocations so the
+           audit command can find it.
+        """
+        target_hostname = self.compute1.host
+        rp_uuid = self._get_provider_uuid_by_host(target_hostname)
+
+        server = self._boot_and_check_allocations(self.flavor, target_hostname)
+
+        # let's mock the allocation delete call to placement
+        with mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                        'delete_allocation_for_instance'):
+            self.api.delete_server(server['id'])
+            self._wait_until_deleted(server)
+
+        # make sure the allocation is still around
+        self.assertFlavorMatchesUsage(rp_uuid, self.flavor)
+
+        # Don't ask to delete the orphaned allocations, just audit them
+        ret = self.cli.audit(verbose=True)
+        # The allocation should still exist
+        self.assertFlavorMatchesUsage(rp_uuid, self.flavor)
+
+        output = self.output.getvalue()
+        self.assertIn(
+            'Allocations for consumer UUID %(consumer_uuid)s on '
+            'Resource Provider %(rp_uuid)s can be deleted' %
+            {'consumer_uuid': server['id'],
+             'rp_uuid': rp_uuid},
+            output)
+        self.assertIn('Processed 1 allocation.', output)
+        self.assertEqual(3, ret)
+
+        # Now ask the audit command to delete the rogue allocations.
+        ret = self.cli.audit(delete=True, verbose=True)
+
+        # The allocations are now deleted
+        self.assertRequestMatchesUsage({'VCPU': 0,
+                                        'MEMORY_MB': 0,
+                                        'DISK_GB': 0}, rp_uuid)
+
+        output = self.output.getvalue()
+        self.assertIn(
+            'Deleted allocations for consumer UUID %s' % server['id'], output)
+        self.assertIn('Processed 1 allocation.', output)
+        self.assertEqual(4, ret)
+
+    def test_audit_orphaned_allocations_from_confirmed_resize(self):
+        """Resize a server but when confirming it, leave the migration
+           allocation there so the audit command can find it.
+        """
+        source_hostname = self.compute1.host
+        dest_hostname = self.compute2.host
+
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        old_flavor = self.flavor
+        new_flavor = self.api.get_flavors()[1]
+        # we want to make sure we resize to compute2
+        self.flags(allow_resize_to_same_host=False)
+
+        server = self._boot_and_check_allocations(self.flavor, source_hostname)
+
+        # Do a resize
+        post = {
+            'resize': {
+                'flavorRef': new_flavor['id']
+            }
+        }
+        self._move_and_check_allocations(
+            server, request=post, old_flavor=old_flavor,
+            new_flavor=new_flavor, source_rp_uuid=source_rp_uuid,
+            dest_rp_uuid=dest_rp_uuid)
+
+        # Retain the migration UUID record for later usage
+        migration_uuid = self.get_migration_uuid_for_instance(server['id'])
+
+        # Confirm the resize so it should in theory delete the source
+        # allocations but mock out the allocation delete for the source
+        post = {'confirmResize': None}
+        with mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                        'delete_allocation_for_instance'):
+            self.api.post_server_action(
+                server['id'], post, check_response_status=[204])
+            self._wait_for_state_change(server, 'ACTIVE')
+
+        # The target host usage should be according to the new flavor...
+        self.assertFlavorMatchesUsage(dest_rp_uuid, new_flavor)
+        # ...but we should still see allocations for the source compute
+        self.assertFlavorMatchesUsage(source_rp_uuid, old_flavor)
+
+        # Now, run the audit command that will find this orphaned allocation
+        ret = self.cli.audit(verbose=True)
+        output = self.output.getvalue()
+        self.assertIn(
+            'Allocations for consumer UUID %(consumer_uuid)s on '
+            'Resource Provider %(rp_uuid)s can be deleted' %
+            {'consumer_uuid': migration_uuid,
+             'rp_uuid': source_rp_uuid},
+            output)
+        self.assertIn('Processed 1 allocation.', output)
+        self.assertEqual(3, ret)
+
+        # Now we want to delete the orphaned allocation that is duplicate
+        ret = self.cli.audit(delete=True, verbose=True)
+
+        # There should be no longer usage for the source host since the
+        # allocation disappeared
+        self.assertRequestMatchesUsage({'VCPU': 0,
+                                        'MEMORY_MB': 0,
+                                        'DISK_GB': 0}, source_rp_uuid)
+
+        output = self.output.getvalue()
+        self.assertIn(
+            'Deleted allocations for consumer UUID %(consumer_uuid)s on '
+            'Resource Provider %(rp_uuid)s' %
+            {'consumer_uuid': migration_uuid,
+             'rp_uuid': source_rp_uuid},
+            output)
+        self.assertIn('Processed 1 allocation.', output)
+        self.assertEqual(4, ret)
+
+    # TODO(sbauza): Mock this test once bug #1829479 is fixed
+    def test_audit_orphaned_allocations_from_deleted_compute_evacuate(self):
+        """Evacuate a server and the delete the source node so that it will
+           leave a source allocation that the audit command will find.
+        """
+
+        source_hostname = self.compute1.host
+        dest_hostname = self.compute2.host
+
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        server = self._boot_and_check_allocations(self.flavor, source_hostname)
+
+        # Stop the service and fake it down
+        self.compute1.stop()
+        source_service_id = self.admin_api.get_services(
+            host=source_hostname, binary='nova-compute')[0]['id']
+        self.admin_api.put_service(source_service_id, {'forced_down': 'true'})
+
+        # evacuate the instance to the target
+        post = {'evacuate': {"host": dest_hostname}}
+        self.admin_api.post_server_action(server['id'], post)
+        self._wait_for_server_parameter(server,
+                                        {'OS-EXT-SRV-ATTR:host': dest_hostname,
+                                         'status': 'ACTIVE'})
+
+        # Now the instance is gone, we can delete the compute service
+        self.admin_api.api_delete('/os-services/%s' % source_service_id)
+
+        # Since the compute is deleted, we should have in theory a single
+        # allocation against the destination resource provider, but evacuated
+        # instances are not having their allocations deleted. See bug #1829479.
+        # We have two allocations for the same consumer, source and destination
+        self._check_allocation_during_evacuate(
+            self.flavor, server['id'], source_rp_uuid, dest_rp_uuid)
+
+        # Now, run the audit command that will find this orphaned allocation
+        ret = self.cli.audit(verbose=True)
+        output = self.output.getvalue()
+        self.assertIn(
+            'Allocations for consumer UUID %(consumer_uuid)s on '
+            'Resource Provider %(rp_uuid)s can be deleted' %
+            {'consumer_uuid': server['id'],
+             'rp_uuid': source_rp_uuid},
+            output)
+        self.assertIn('Processed 1 allocation.', output)
+        self.assertEqual(3, ret)
+
+        # Now we want to delete the orphaned allocation that is duplicate
+        ret = self.cli.audit(delete=True, verbose=True)
+
+        # We finally should only have the target allocations
+        self.assertFlavorMatchesUsage(dest_rp_uuid, self.flavor)
+        self.assertRequestMatchesUsage({'VCPU': 0,
+                                        'MEMORY_MB': 0,
+                                        'DISK_GB': 0}, source_rp_uuid)
+
+        output = self.output.getvalue()
+        self.assertIn(
+            'Deleted allocations for consumer UUID %(consumer_uuid)s on '
+            'Resource Provider %(rp_uuid)s' %
+            {'consumer_uuid': server['id'],
+             'rp_uuid': source_rp_uuid},
+            output)
+        self.assertIn('Processed 1 allocation.', output)
+        self.assertEqual(4, ret)
+
+
 class TestDBArchiveDeletedRows(integrated_helpers._IntegratedTestBase):
     """Functional tests for the "nova-manage db archive_deleted_rows" CLI."""
     api_major_version = 'v2.1'

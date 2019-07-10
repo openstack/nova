@@ -686,6 +686,42 @@ Placement
          - An unexpected error occurred.
 
 
+``nova-manage placement audit [--verbose] [--delete] [--resource_provider <uuid>]``
+    Iterates over all the Resource Providers (or just one if you provide the
+    UUID) and then verifies if the compute allocations are either related to
+    an existing instance or a migration UUID.
+    If not, it will tell which allocations are orphaned.
+
+    You can also ask to delete all the orphaned allocations by specifying
+    ``-delete``.
+
+    Specify ``--verbose`` to get detailed progress output during execution.
+
+    This command requires that the
+    :oslo.config:option:`api_database.connection` and
+    :oslo.config:group:`placement` configuration options are set. Placement API
+    >= 1.14 is required.
+
+    **Return Codes**
+
+    .. list-table::
+       :widths: 20 80
+       :header-rows: 1
+
+       * - Return code
+         - Description
+       * - 0
+         - No orphaned allocations were found
+       * - 1
+         - An unexpected error occurred
+       * - 3
+         - Orphaned allocations were found
+       * - 4
+         - All found orphaned allocations were deleted
+       * - 127
+         - Invalid input
+
+
 See Also
 ========
 

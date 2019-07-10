@@ -32,6 +32,7 @@ import traceback
 from dateutil import parser as dateutil_parser
 from keystoneauth1 import exceptions as ks_exc
 from neutronclient.common import exceptions as neutron_client_exc
+import os_resource_classes as orc
 from oslo_config import cfg
 from oslo_db import exception as db_exc
 from oslo_log import log as logging
@@ -2390,6 +2391,300 @@ class PlacementCommands(object):
             return_code = 6
 
         return return_code
+
+    def _get_instances_and_current_migrations(self, ctxt, cn_uuid):
+        if self.cn_uuid_mapping.get(cn_uuid):
+            cell_uuid, cn_host, cn_node = self.cn_uuid_mapping[cn_uuid]
+        else:
+            # We need to find the compute node record from all cells.
+            results = context.scatter_gather_skip_cell0(
+                ctxt, objects.ComputeNode.get_by_uuid, cn_uuid)
+            for result_cell_uuid, result in results.items():
+                if not context.is_cell_failure_sentinel(result):
+                    cn = result
+                    cell_uuid = result_cell_uuid
+                    break
+            else:
+                return False
+            cn_host, cn_node = (cn.host, cn.hypervisor_hostname)
+            self.cn_uuid_mapping[cn_uuid] = (cell_uuid, cn_host, cn_node)
+        cell_mapping = objects.CellMapping.get_by_uuid(ctxt, cell_uuid)
+
+        # Get all the active instances from this compute node
+        if self.instances_mapping.get(cn_uuid):
+            inst_uuids = self.instances_mapping[cn_uuid]
+        else:
+            # Get the instance list record from the cell.
+            with context.target_cell(ctxt, cell_mapping) as cctxt:
+                instances = objects.InstanceList.get_by_host_and_node(
+                    cctxt, cn_host, cn_node, expected_attrs=[])
+            inst_uuids = [instance.uuid for instance in instances]
+            self.instances_mapping[cn_uuid] = inst_uuids
+
+        # Get all *active* migrations for this compute node
+        # NOTE(sbauza): Since migrations are transient, it's better to not
+        # cache the results as they could be stale
+        with context.target_cell(ctxt, cell_mapping) as cctxt:
+            migs = objects.MigrationList.get_in_progress_by_host_and_node(
+                cctxt, cn_host, cn_node)
+        mig_uuids = [migration.uuid for migration in migs]
+
+        return (inst_uuids, mig_uuids)
+
+    def _delete_allocations_from_consumer(self, ctxt, placement, provider,
+                                          consumer_uuid, consumer_type):
+        """Deletes allocations from a resource provider with consumer UUID.
+
+        :param ctxt: nova.context.RequestContext
+        :param placement: nova.scheduler.client.report.SchedulerReportClient
+            to communicate with the Placement service API.
+        :param provider: Resource Provider to look at.
+        :param consumer_uuid: the consumer UUID having allocations.
+        :param consumer_type: the type of consumer,
+            either 'instance' or 'migration'
+        :returns: bool whether the allocations were deleted.
+        """
+        # We need to be careful and only remove the allocations
+        # against this specific RP or we would delete the
+        # whole instance usage and then it would require some
+        # healing.
+        # TODO(sbauza): Remove this extra check once placement
+        # supports querying allocation delete on both
+        # consumer and resource provider parameters.
+        allocations = placement.get_allocs_for_consumer(
+            ctxt, consumer_uuid)
+        if len(allocations['allocations']) > 1:
+            # This consumer has resources spreaded amongst
+            # multiple RPs (think nested or shared for example)
+            # We then need to just update the usage to remove
+            # the orphaned resources on the specific RP
+            del allocations['allocations'][provider['uuid']]
+            try:
+                placement.put_allocations(
+                    ctxt, consumer_uuid, allocations)
+            except exception.AllocationUpdateFailed:
+                return False
+
+        else:
+            try:
+                placement.delete_allocation_for_instance(
+                    ctxt, consumer_uuid, consumer_type)
+            except exception.AllocationDeleteFailed:
+                return False
+        return True
+
+    def _check_orphaned_allocations_for_provider(self, ctxt, placement,
+                                                 output, provider,
+                                                 delete):
+        """Finds orphaned allocations for a specific resource provider.
+
+        :param ctxt: nova.context.RequestContext
+        :param placement: nova.scheduler.client.report.SchedulerReportClient
+            to communicate with the Placement service API.
+        :param output: function that takes a single message for verbose output
+        :param provider: Resource Provider to look at.
+        :param delete: deletes the found orphaned allocations.
+        :return: a tuple (<number of orphaned allocs>, <number of faults>)
+        """
+        num_processed = 0
+        faults = 0
+
+        # TODO(sbauza): Are we sure we have all Nova RCs ?
+        # FIXME(sbauza): Possibly use consumer types once Placement API
+        # supports them.
+        # NOTE(sbauza): We check allocations having *any* below RC, not having
+        # *all* of them.
+        NOVA_RCS = [orc.VCPU, orc.MEMORY_MB, orc.DISK_GB, orc.VGPU,
+                    orc.NET_BW_EGR_KILOBIT_PER_SEC,
+                    orc.NET_BW_IGR_KILOBIT_PER_SEC,
+                    orc.PCPU, orc.MEM_ENCRYPTION_CONTEXT]
+
+        # Since the RP can be a child RP, we need to get the root RP as it's
+        # the compute node UUID
+        # NOTE(sbauza): In case Placement doesn't support 1.14 microversion,
+        # that means we don't have nested RPs.
+        # Since we ask for microversion 1.14, all RPs have a root RP UUID.
+        cn_uuid = provider.get("root_provider_uuid")
+        # Now get all the existing instances and active migrations for this
+        # compute node
+        result = self._get_instances_and_current_migrations(ctxt, cn_uuid)
+        if result is False:
+            # We don't want to hard stop here because the compute service could
+            # have disappear while we could still have orphaned allocations.
+            output(_('The compute node for UUID %s can not be '
+                     'found') % cn_uuid)
+        inst_uuids, mig_uuids = result or ([], [])
+        try:
+            pallocs = placement.get_allocations_for_resource_provider(
+                ctxt, provider['uuid'])
+        except exception.ResourceProviderAllocationRetrievalFailed:
+            print(_('Not able to find allocations for resource '
+                    'provider %s.') % provider['uuid'])
+            raise
+
+        # Verify every allocations for each consumer UUID
+        for consumer_uuid, consumer_resources in six.iteritems(
+                pallocs.allocations):
+            consumer_allocs = consumer_resources['resources']
+            if any(rc in NOVA_RCS
+                   for rc in consumer_allocs):
+                # We reset the consumer type for each allocation
+                consumer_type = None
+                # This is an allocation for Nova resources
+                # We need to guess whether the instance was deleted
+                # or if the instance is currently migrating
+                if not (consumer_uuid in inst_uuids or
+                        consumer_uuid in mig_uuids):
+                    # By default we suspect the orphaned allocation was for a
+                    # migration...
+                    consumer_type = 'migration'
+                    if not(consumer_uuid in inst_uuids):
+                        # ... but if we can't find it either for an instance,
+                        # that means it was for this.
+                        consumer_type = 'instance'
+                if consumer_type is not None:
+                    output(_('Allocations were set against consumer UUID '
+                             '%(consumer_uuid)s but no existing instances or '
+                             'active migrations are related. ')
+                           % {'consumer_uuid': consumer_uuid})
+                    if delete:
+                        deleted = self._delete_allocations_from_consumer(
+                            ctxt, placement, provider, consumer_uuid,
+                            consumer_type)
+                        if not deleted:
+                            print(_('Not able to delete allocations '
+                                    'for consumer UUID %s')
+                                  % consumer_uuid)
+                            faults += 1
+                            continue
+                        output(_('Deleted allocations for consumer UUID '
+                                 '%(consumer_uuid)s on Resource Provider '
+                                 '%(rp)s: %(allocations)s')
+                               % {'consumer_uuid': consumer_uuid,
+                                  'rp': provider['uuid'],
+                                  'allocations': consumer_allocs})
+                    else:
+                        output(_('Allocations for consumer UUID '
+                                 '%(consumer_uuid)s on Resource Provider '
+                                 '%(rp)s can be deleted: '
+                                 '%(allocations)s')
+                               % {'consumer_uuid': consumer_uuid,
+                                  'rp': provider['uuid'],
+                                  'allocations': consumer_allocs})
+                    num_processed += 1
+        return (num_processed, faults)
+
+    # TODO(sbauza): Move this to the scheduler report client ?
+    def _get_resource_provider(self, context, placement, uuid):
+        """Returns a single Resource Provider by its UUID.
+
+        :param context: The nova.context.RequestContext auth context
+        :param placement: nova.scheduler.client.report.SchedulerReportClient
+            to communicate with the Placement service API.
+        :param uuid: A specific Resource Provider UUID
+        :return: the existing resource provider.
+        :raises: keystoneauth1.exceptions.base.ClientException on failure to
+                 communicate with the placement API
+        """
+
+        resource_providers = self._get_resource_providers(context, placement,
+                                                          uuid=uuid)
+        if not resource_providers:
+            # The endpoint never returns a 404, it rather returns an empty list
+            raise exception.ResourceProviderNotFound(name_or_uuid=uuid)
+        return resource_providers[0]
+
+    def _get_resource_providers(self, context, placement, **kwargs):
+        """Returns all resource providers regardless of their relationships.
+
+        :param context: The nova.context.RequestContext auth context
+        :param placement: nova.scheduler.client.report.SchedulerReportClient
+            to communicate with the Placement service API.
+        :param kwargs: extra attributes for the query string
+        :return: list of resource providers.
+        :raises: keystoneauth1.exceptions.base.ClientException on failure to
+                 communicate with the placement API
+        """
+        url = '/resource_providers'
+        if 'uuid' in kwargs:
+            url += '&uuid=%s' % kwargs['uuid']
+
+        resp = placement.get(url, global_request_id=context.global_id,
+                             version='1.14')
+        if resp is None:
+            raise exception.PlacementAPIConnectFailure()
+
+        data = resp.json()
+        resource_providers = data.get('resource_providers')
+
+        return resource_providers
+
+    @action_description(
+        _("Audits orphaned allocations that are no longer corresponding to "
+          "existing instance resources. This command requires that "
+          "the [api_database]/connection and [placement] configuration "
+          "options are set."))
+    @args('--verbose', action='store_true', dest='verbose', default=False,
+          help='Provide verbose output during execution.')
+    @args('--resource_provider', metavar='<provider_uuid>',
+          dest='provider_uuid',
+          help='UUID of a specific resource provider to verify.')
+    @args('--delete', action='store_true', dest='delete', default=False,
+          help='Deletes orphaned allocations that were found.')
+    def audit(self, verbose=False, provider_uuid=None, delete=False):
+        """Provides information about orphaned allocations that can be removed
+
+        Return codes:
+
+        * 0: Command completed successfully and no orphaned allocations exist.
+        * 1: An unexpected error happened during run.
+        * 3: Orphaned allocations were detected.
+        * 4: Orphaned allocations were detected and deleted.
+        * 127: Invalid input.
+        """
+
+        ctxt = context.get_admin_context()
+        output = lambda msg: None
+        if verbose:
+            output = lambda msg: print(msg)
+
+        placement = report.SchedulerReportClient()
+        # Resets two in-memory dicts for knowing instances per compute node
+        self.cn_uuid_mapping = collections.defaultdict(tuple)
+        self.instances_mapping = collections.defaultdict(list)
+
+        num_processed = 0
+        faults = 0
+
+        if provider_uuid:
+            try:
+                resource_provider = self._get_resource_provider(
+                    ctxt, placement, provider_uuid)
+            except exception.ResourceProviderNotFound:
+                print(_('Resource provider with UUID %s does not exist.') %
+                      provider_uuid)
+                return 127
+            resource_providers = [resource_provider]
+        else:
+            resource_providers = self._get_resource_providers(ctxt, placement)
+
+        for provider in resource_providers:
+            (nb_p, faults) = self._check_orphaned_allocations_for_provider(
+                ctxt, placement, output, provider, delete)
+            num_processed += nb_p
+            if faults > 0:
+                print(_('The Resource Provider %s had problems when '
+                        'deleting allocations. Stopping now. Please fix the '
+                        'problem by hand and run again.') %
+                      provider['uuid'])
+                return 1
+        if num_processed > 0:
+            suffix = 's.' if num_processed > 1 else '.'
+            output(_('Processed %(num)s allocation%(suffix)s')
+                   % {'num': num_processed,
+                      'suffix': suffix})
+            return 4 if delete else 3
+        return 0
 
 
 CATEGORIES = {
