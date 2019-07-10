@@ -317,6 +317,38 @@ class TestUtils(test.NoDBTestCase):
         )
         self.assertEqual(expected_querystring, rr.to_querystring())
 
+    def test_all_required_traits(self):
+        flavor = objects.Flavor(vcpus=1,
+                        memory_mb=1024,
+                        root_gb=10,
+                        ephemeral_gb=5,
+                        swap=0,
+                        extra_specs={
+                            'trait:HW_CPU_X86_SSE': 'required',
+                            'trait:HW_CPU_X86_AVX': 'required',
+                            'trait:HW_CPU_X86_AVX2': 'forbidden'})
+        expected_resources = utils.ResourceRequest()
+        expected_resources._rg_by_id[None] = objects.RequestGroup(
+            use_same_provider=False,
+            resources={
+                'VCPU': 1,
+                'MEMORY_MB': 1024,
+                'DISK_GB': 15,
+            },
+            required_traits={
+                'HW_CPU_X86_SSE',
+                'HW_CPU_X86_AVX'
+            },
+            forbidden_traits={
+                'HW_CPU_X86_AVX2'
+            }
+        )
+        resource = self._test_resources_from_request_spec(expected_resources,
+                                                          flavor)
+        expected_result = {'HW_CPU_X86_SSE', 'HW_CPU_X86_AVX'}
+        self.assertEqual(expected_result,
+                         resource.all_required_traits)
+
     def test_resources_from_request_spec_aggregates(self):
         destination = objects.Destination()
         flavor = objects.Flavor(vcpus=1, memory_mb=1024,
