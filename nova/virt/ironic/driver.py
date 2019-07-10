@@ -1026,17 +1026,13 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param network_info: Instance network information.
         """
         base_metadata = netutils.get_network_metadata(network_info)
-
-        # TODO(vdrok): change to doing a single "detailed vif list" call,
-        # when added to ironic API, response to that will contain all
-        # necessary information. Then we will be able to avoid looking at
-        # internal_info/extra fields.
-        ports = self.ironicclient.call("node.list_ports",
-                                       node.uuid, detail=True)
-        portgroups = self.ironicclient.call("portgroup.list", node=node.uuid,
-                                            detail=True)
+        ports = self.ironic_connection.ports(node=node.id, details=True)
+        port_groups = self.ironic_connection.port_groups(
+            node=node.id, details=True,
+        )
         vif_id_to_objects = {'ports': {}, 'portgroups': {}}
-        for collection, name in ((ports, 'ports'), (portgroups, 'portgroups')):
+        for collection, name in ((ports, 'ports'),
+                                 (port_groups, 'portgroups')):
             for p in collection:
                 vif_id = (p.internal_info.get('tenant_vif_port_id') or
                           p.extra.get('vif_port_id'))
@@ -1048,7 +1044,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             vif_id = link['vif_id']
             if vif_id in vif_id_to_objects['portgroups']:
                 pg = vif_id_to_objects['portgroups'][vif_id]
-                pg_ports = [p for p in ports if p.portgroup_uuid == pg.uuid]
+                pg_ports = [p for p in ports if p.port_group_id == pg.id]
                 link.update({'type': 'bond', 'bond_mode': pg.mode,
                              'bond_links': []})
                 # If address is set on the portgroup, an (ironic) vif-attach
@@ -1069,10 +1065,11 @@ class IronicDriver(virt_driver.ComputeDriver):
                     # cannot be in more than one port group for the same
                     # node.
                     additional_links.append({
-                        'id': port.uuid,
-                        'type': 'phy', 'ethernet_mac_address': port.address,
+                        'id': port.id,
+                        'type': 'phy',
+                        'ethernet_mac_address': port.address,
                     })
-                    link['bond_links'].append(port.uuid)
+                    link['bond_links'].append(port.id)
             elif vif_id in vif_id_to_objects['ports']:
                 p = vif_id_to_objects['ports'][vif_id]
                 # Ironic updates neutron port's address during attachment
