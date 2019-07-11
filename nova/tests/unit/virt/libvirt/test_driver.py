@@ -22242,6 +22242,138 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 </cpu>
 '''], 1)
 
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.getCapabilities')
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.baselineCPU')
+    def test_cpu_traits_with_mode_custom_multi_models(self, mocked_baseline,
+                                                      mocked_cap):
+        """Test getting CPU traits when cpu_mode is 'custom' and cpu_model is
+        ['qemu64', 'SandyBridge'], and guest CPU model is Broadwell-noTSX,
+        traits are calculated from _fake_qemu64_cpu_feature and
+        _fake_sandy_bridge_cpu_feature.
+        """
+        self.flags(cpu_mode='custom',
+                   cpu_models=['QEMU64', 'sandybridge'],
+                   group='libvirt')
+        mocked_cap.return_value = '''
+            <capabilities>
+                <host>
+                    <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+                    <cpu>
+                      <arch>x86_64</arch>
+                      <model>Broadwell-noTSX</model>
+                      <topology sockets='1' cores='2' threads='2'/>
+                      <feature policy='require' name='erms'/>
+                      <pages unit='KiB' size='4' />
+                      <pages unit='KiB' size='1024' />
+                    </cpu>
+                </host>
+            </capabilities>
+        '''
+        mocked_baseline.side_effect = (_fake_broadwell_cpu_feature,
+                                       _fake_qemu64_cpu_feature,
+                                       _fake_sandy_bridge_cpu_feature)
+
+        self.assertTraitsEqual(
+            [
+                'HW_CPU_X86_AVX',
+                'HW_CPU_X86_AESNI',
+                'HW_CPU_X86_SSE42',
+                'HW_CPU_X86_SSE41',
+                'HW_CPU_X86_CLMUL',
+                'HW_CPU_X86_SSSE3',
+                'HW_CPU_X86_SSE2',
+                'HW_CPU_X86_SSE',
+                'HW_CPU_X86_MMX',
+                'HW_CPU_X86_SVM'
+            ], self.drvr._get_cpu_feature_traits()
+        )
+
+        calls = [mock.call([u'''<cpu>
+  <arch>x86_64</arch>
+  <model>Broadwell-noTSX</model>
+  <topology sockets="1" cores="2" threads="2"/>
+  <feature name="erms"/>
+</cpu>
+'''], 1), mock.call([u'''<cpu>
+  <arch>x86_64</arch>
+  <model>qemu64</model>
+  <topology sockets="1" cores="2" threads="2"/>
+</cpu>
+'''], 1), mock.call([u'''<cpu>
+  <arch>x86_64</arch>
+  <model>SandyBridge</model>
+  <topology sockets="1" cores="2" threads="2"/>
+</cpu>
+'''], 1)]
+        mocked_baseline.assert_has_calls(calls)
+
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.getCapabilities')
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.baselineCPU')
+    def test_cpu_traits_with_mode_custom_multi_models_and_extra_flags(self,
+            mocked_baseline, mocked_cap):
+        """Test getting CPU traits when cpu_mode is 'custom' and cpu_model is
+        ['qemu64', 'SandyBridge'], cpu_model_extra_specs is ['pcid', 'avx2']
+        and guest CPU model is Broadwell-noTSX, traits are calculated from
+        _fake_qemu64_cpu_feature and _fake_sandy_bridge_cpu_feature.
+        """
+        self.flags(cpu_mode='custom',
+                   cpu_models=['QEMU64', 'sandybridge'],
+                   cpu_model_extra_flags=['pcid', 'avx2'],
+                   group='libvirt')
+        mocked_cap.return_value = '''
+            <capabilities>
+                <host>
+                    <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+                    <cpu>
+                      <arch>x86_64</arch>
+                      <model>Broadwell-noTSX</model>
+                      <topology sockets='1' cores='2' threads='2'/>
+                      <feature policy='require' name='erms'/>
+                      <pages unit='KiB' size='4' />
+                      <pages unit='KiB' size='1024' />
+                    </cpu>
+                </host>
+            </capabilities>
+        '''
+        mocked_baseline.side_effect = (_fake_broadwell_cpu_feature,
+                                       _fake_qemu64_cpu_feature,
+                                       _fake_sandy_bridge_cpu_feature)
+
+        self.assertTraitsEqual(
+            [
+                'HW_CPU_X86_AVX',
+                'HW_CPU_X86_AVX2',
+                'HW_CPU_X86_AESNI',
+                'HW_CPU_X86_SSE42',
+                'HW_CPU_X86_SSE41',
+                'HW_CPU_X86_CLMUL',
+                'HW_CPU_X86_SSSE3',
+                'HW_CPU_X86_SSE2',
+                'HW_CPU_X86_SSE',
+                'HW_CPU_X86_MMX',
+                'HW_CPU_X86_SVM'
+            ], self.drvr._get_cpu_feature_traits()
+        )
+
+        calls = [mock.call([u'''<cpu>
+  <arch>x86_64</arch>
+  <model>Broadwell-noTSX</model>
+  <topology sockets="1" cores="2" threads="2"/>
+  <feature name="erms"/>
+</cpu>
+'''], 1), mock.call([u'''<cpu>
+  <arch>x86_64</arch>
+  <model>qemu64</model>
+  <topology sockets="1" cores="2" threads="2"/>
+</cpu>
+'''], 1), mock.call([u'''<cpu>
+  <arch>x86_64</arch>
+  <model>SandyBridge</model>
+  <topology sockets="1" cores="2" threads="2"/>
+</cpu>
+'''], 1)]
+        mocked_baseline.assert_has_calls(calls)
+
     @mock.patch('nova.virt.libvirt.host.libvirt.Connection.baselineCPU')
     def test_cpu_traits_with_no_baseline_support(self, mock_baseline):
         """Test getting CPU traits when baseline call is not supported."""
@@ -22339,7 +22471,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 <model fallback='forbid'>IvyBridge</model>
                 <vendor>Intel</vendor>
                 <feature policy='require' name='erms'/>
-                <feature policy='require' name='pcid'/>
             </cpu>
             """
         self.drvr._get_cpu_feature_traits()
@@ -22348,7 +22479,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
   <model>IvyBridge</model>
   <vendor>Intel</vendor>
   <topology sockets="1" cores="2" threads="1"/>
-  <feature name="pcid"/>
 </cpu>
 '''], 1)
         self.assertItemsEqual(['pcid', 'erms'], mock_to_traits.call_args[0][0])
