@@ -184,6 +184,10 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              ``POST /servers/{server_id}/action`` where the action is rebuild.
              It also supports ``locked`` as a filter/sort parameter for
              ``GET /servers/detail`` and ``GET /servers``.
+    * 2.74 - Add support for specifying ``host`` and/or ``hypervisor_hostname``
+             in request body to ``POST /servers``. Allow users to specify which
+             host/node they want their servers to land on and still be
+             validated by the scheduler.
 """
 
 # The minimum and maximum versions of the API supported
@@ -192,7 +196,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.73"
+_MAX_API_VERSION = "2.74"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which are related to network, images and baremetal

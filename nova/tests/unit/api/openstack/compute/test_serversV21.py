@@ -6777,6 +6777,130 @@ class ServersControllerCreateTestV267(ServersControllerCreateTest):
         self.assertIn('is too long', six.text_type(ex))
 
 
+class ServersControllerCreateTestV274(ServersControllerCreateTest):
+    def setUp(self):
+        super(ServersControllerCreateTestV274, self).setUp()
+        self.req.environ['nova.context'] = fakes.FakeRequestContext(
+            user_id='fake_user',
+            project_id='fake',
+            is_admin=True)
+        self.mock_get = self.useFixture(
+            fixtures.MockPatch('nova.scheduler.client.report.'
+                               'SchedulerReportClient.get')).mock
+
+    def _generate_req(self, host=None, node=None, az=None,
+                      api_version='2.74'):
+        if host:
+            self.body['server']['host'] = host
+        if node:
+            self.body['server']['hypervisor_hostname'] = node
+        if az:
+            self.body['server']['availability_zone'] = az
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        self.req.api_version_request = \
+            api_version_request.APIVersionRequest(api_version)
+
+    def test_create_instance_with_invalid_host(self):
+        self._generate_req(host='node-invalid')
+
+        ex = self.assertRaises(webob.exc.HTTPBadRequest,
+                               self.controller.create,
+                               self.req, body=self.body)
+        self.assertIn('Compute host node-invalid could not be found.',
+                      six.text_type(ex))
+
+    def test_create_instance_with_non_string_host(self):
+        self._generate_req(host=123)
+
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller.create,
+                               self.req, body=self.body)
+        self.assertIn("Invalid input for field/attribute host.",
+                      six.text_type(ex))
+
+    def test_create_instance_with_invalid_hypervisor_hostname(self):
+        get_resp = mock.Mock()
+        get_resp.status_code = 404
+        self.mock_get.return_value = get_resp
+
+        self._generate_req(node='node-invalid')
+
+        ex = self.assertRaises(webob.exc.HTTPBadRequest,
+                               self.controller.create,
+                               self.req, body=self.body)
+        self.assertIn('Compute host node-invalid could not be found.',
+                      six.text_type(ex))
+
+    def test_create_instance_with_non_string_hypervisor_hostname(self):
+        get_resp = mock.Mock()
+        get_resp.status_code = 404
+        self.mock_get.return_value = get_resp
+
+        self._generate_req(node=123)
+
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller.create,
+                               self.req, body=self.body)
+        self.assertIn("Invalid input for field/attribute hypervisor_hostname.",
+                      six.text_type(ex))
+
+    def test_create_instance_with_invalid_host_and_hypervisor_hostname(self):
+        self._generate_req(host='host-invalid', node='node-invalid')
+
+        ex = self.assertRaises(webob.exc.HTTPBadRequest,
+                               self.controller.create,
+                               self.req, body=self.body)
+        self.assertIn('Compute host host-invalid could not be found.',
+                      six.text_type(ex))
+
+    def test_create_instance_with_non_string_host_and_hypervisor_hostname(
+            self):
+        self._generate_req(host=123, node=123)
+
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller.create,
+                               self.req, body=self.body)
+        self.assertIn("Invalid input for field/attribute",
+                      six.text_type(ex))
+
+    def test_create_instance_pre_274(self):
+        self._generate_req(host='host', node='node', api_version='2.73')
+
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller.create,
+                               self.req, body=self.body)
+        self.assertIn("Invalid input for field/attribute server.",
+                      six.text_type(ex))
+
+    def test_create_instance_mutual(self):
+        self._generate_req(host='host', node='node', az='nova:host:node')
+
+        ex = self.assertRaises(webob.exc.HTTPBadRequest,
+                               self.controller.create,
+                               self.req, body=self.body)
+        self.assertIn("mutually exclusive", six.text_type(ex))
+
+    def test_create_instance_invalid_policy(self):
+        self._generate_req(host='host', node='node')
+        # non-admin
+        self.req.environ['nova.context'] = fakes.FakeRequestContext(
+            user_id='fake_user',
+            project_id='fake',
+            is_admin=False)
+
+        ex = self.assertRaises(exception.PolicyNotAuthorized,
+                               self.controller.create,
+                               self.req, body=self.body)
+        self.assertIn("Policy doesn't allow compute:servers:create:"
+                      "requested_destination to be performed.",
+                      six.text_type(ex))
+
+    def test_create_instance_private_flavor(self):
+        # Here we use admin context, so if we do not pass it or
+        # we do not anything, the test case will be failed.
+        pass
+
+
 class ServersControllerCreateTestWithMock(test.TestCase):
     image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
     flavor_ref = 'http://localhost/123/flavors/3'

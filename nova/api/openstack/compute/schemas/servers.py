@@ -356,6 +356,14 @@ base_create_v267['properties']['server']['properties'][
     'properties']['volume_type'] = parameter_types.volume_type
 
 
+# Add host and hypervisor_hostname in server
+base_create_v274 = copy.deepcopy(base_create_v267)
+base_create_v274['properties']['server'][
+    'properties']['host'] = parameter_types.hostname
+base_create_v274['properties']['server'][
+    'properties']['hypervisor_hostname'] = parameter_types.hostname
+
+
 base_update = {
     'type': 'object',
     'properties': {

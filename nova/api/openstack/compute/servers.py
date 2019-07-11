@@ -561,6 +561,35 @@ class ServersController(wsgi.Controller):
 
         create_kwargs['requested_networks'] = requested_networks
 
+    @staticmethod
+    def _process_hosts_for_create(
+            context, target, server_dict, create_kwargs, host, node):
+        """Processes hosts request parameter for server create
+
+        :param context: The nova auth request context
+        :param target: The target dict for ``context.can`` policy checks
+        :param server_dict: The POST /servers request body "server" entry
+        :param create_kwargs: dict that gets populated by this method and
+            passed to nova.comptue.api.API.create()
+        :param host: Forced host of availability_zone
+        :param node: Forced node of availability_zone
+        :raise: webob.exc.HTTPBadRequest if the request parameters are invalid
+        :raise: nova.exception.Forbidden if a policy check fails
+        """
+        requested_host = server_dict.get('host')
+        requested_hypervisor_hostname = server_dict.get('hypervisor_hostname')
+        if requested_host or requested_hypervisor_hostname:
+            # If the policy check fails, this will raise Forbidden exception.
+            context.can(server_policies.REQUESTED_DESTINATION, target=target)
+            if host or node:
+                msg = _("One mechanism with host and/or "
+                        "hypervisor_hostname and another mechanism "
+                        "with zone:host:node are mutually exclusive.")
+                raise exc.HTTPBadRequest(explanation=msg)
+        create_kwargs['requested_host'] = requested_host
+        create_kwargs['requested_hypervisor_hostname'] = (
+            requested_hypervisor_hostname)
+
     @wsgi.response(202)
     @wsgi.expected_errors((400, 403, 409))
     @validation.schema(schema_servers.base_create_v20, '2.0', '2.0')
@@ -573,7 +602,8 @@ class ServersController(wsgi.Controller):
     @validation.schema(schema_servers.base_create_v252, '2.52', '2.56')
     @validation.schema(schema_servers.base_create_v257, '2.57', '2.62')
     @validation.schema(schema_servers.base_create_v263, '2.63', '2.66')
-    @validation.schema(schema_servers.base_create_v267, '2.67')
+    @validation.schema(schema_servers.base_create_v267, '2.67', '2.73')
+    @validation.schema(schema_servers.base_create_v274, '2.74')
     def create(self, req, body):
         """Creates a new server for a given user."""
         context = req.environ['nova.context']
@@ -652,6 +682,10 @@ class ServersController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=six.text_type(err))
         if host or node:
             context.can(server_policies.SERVERS % 'create:forced_host', {})
+
+        if api_version_request.is_supported(req, min_version='2.74'):
+            self._process_hosts_for_create(context, target, server_dict,
+                                           create_kwargs, host, node)
 
         # NOTE(danms): Don't require an answer from all cells here, as
         # we assume that if a cell isn't reporting we won't schedule into
@@ -750,7 +784,8 @@ class ServersController(wsgi.Controller):
                 exception.UnableToAutoAllocateNetwork,
                 exception.MultiattachNotSupportedOldMicroversion,
                 exception.CertificateValidationFailed,
-                exception.CreateWithPortResourceRequestOldVersion) as error:
+                exception.CreateWithPortResourceRequestOldVersion,
+                exception.ComputeHostNotFound) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except INVALID_FLAVOR_IMAGE_EXCEPTIONS as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())

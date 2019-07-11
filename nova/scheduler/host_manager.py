@@ -540,10 +540,29 @@ class HostManager(object):
                          "'force_nodes' value of '%s'", forced_nodes_str)
 
         def _get_hosts_matching_request(hosts, requested_destination):
+            """Get hosts through matching the requested destination.
+
+            We will both set host and node to requested destination object
+            and host will never be None and node will be None in some cases.
+            Starting with API 2.74 microversion, we also can specify the
+            host/node to select hosts to launch a server:
+             - If only host(or only node)(or both host and node) is supplied
+               and we get one node from get_compute_nodes_by_host_or_node which
+               is called in resources_from_request_spec function,
+               the destination will be set both host and node.
+             - If only host is supplied and we get more than one node from
+               get_compute_nodes_by_host_or_node which is called in
+               resources_from_request_spec function, the destination will only
+               include host.
+            """
             (host, node) = (requested_destination.host,
                             requested_destination.node)
-            requested_nodes = [x for x in hosts
-                               if x.host == host and x.nodename == node]
+            if node:
+                requested_nodes = [x for x in hosts
+                                   if x.host == host and x.nodename == node]
+            else:
+                requested_nodes = [x for x in hosts
+                                   if x.host == host]
             if requested_nodes:
                 LOG.info('Host filter only checking host %(host)s and '
                          'node %(node)s', {'host': host, 'node': node})

@@ -43,9 +43,9 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
         ('2.57', None, 'server-create-req-v257')
     ]
 
-    def _get_request_name(self, use_common):
+    def _get_request_name(self, use_common, sample_name=None):
         if not use_common:
-            return 'server-create-req'
+            return sample_name or 'server-create-req'
 
         api_version = self.microversion or '2.1'
         for min, max, name in self.common_req_names:
@@ -54,7 +54,7 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
                 return name
 
     def _post_server(self, use_common_server_api_samples=True, name=None,
-                     extra_subs=None):
+                     extra_subs=None, sample_name=None):
         # param use_common_server_api_samples: Boolean to set whether tests use
         # common sample files for server post request and response.
         # Default is True which means _get_sample_path method will fetch the
@@ -86,8 +86,13 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
         try:
             self.__class__._use_common_server_api_samples = (
                                         use_common_server_api_samples)
+            # If using common samples, we could only put samples under
+            # api_samples/servers. We will put a lot of samples when we
+            # have more and more microversions.
+            # Callers can specify the sample_name param so that we can add
+            # samples into api_samples/servers/v2.xx.
             response = self._do_post('servers', self._get_request_name(
-                use_common_server_api_samples), subs)
+                use_common_server_api_samples, sample_name), subs)
             status = self._verify_response('server-create-resp', subs,
                                            response, 202)
             return status
@@ -566,6 +571,38 @@ class ServersSampleJson273Test(ServersSampleBase):
         response = self._do_put('servers/%s' % uuid,
                                 'server-update-req', subs)
         self._verify_response('server-update-resp', subs, response, 200)
+
+
+class ServersSampleJson274Test(ServersSampleBase):
+    """Supporting host and/or hypervisor_hostname is an admin API
+    to create servers.
+    """
+    ADMIN_API = True
+    SUPPORTS_CELLS = True
+    microversion = '2.74'
+    scenarios = [('v2_74', {'api_major_version': 'v2.1'})]
+    # Do not put an availability_zone in the API sample request since it would
+    # be confusing with the requested host/hypervisor_hostname and forced
+    # host/node zone:host:node case.
+    availability_zones = []
+
+    def _setup_compute_service(self):
+        return self.start_service('compute', host='openstack-node-01')
+
+    def setUp(self):
+        super(ServersSampleJson274Test, self).setUp()
+
+    def test_servers_post_with_only_host(self):
+        self._post_server(use_common_server_api_samples=False,
+                          sample_name='server-create-req-with-only-host')
+
+    def test_servers_post_with_only_node(self):
+        self._post_server(use_common_server_api_samples=False,
+                          sample_name='server-create-req-with-only-node')
+
+    def test_servers_post_with_host_and_node(self):
+        self._post_server(use_common_server_api_samples=False,
+                          sample_name='server-create-req-with-host-and-node')
 
 
 class ServersUpdateSampleJsonTest(ServersSampleBase):

@@ -20,6 +20,7 @@ RULE_AOO = base.RULE_ADMIN_OR_OWNER
 SERVERS = 'os_compute_api:servers:%s'
 NETWORK_ATTACH_EXTERNAL = 'network:attach_external_network'
 ZERO_DISK_FLAVOR = SERVERS % 'create:zero_disk_flavor'
+REQUESTED_DESTINATION = 'compute:servers:create:requested_destination'
 
 rules = [
     policy.DocumentedRuleDefault(
@@ -115,7 +116,30 @@ rules = [
     policy.DocumentedRuleDefault(
         SERVERS % 'create:forced_host',
         base.RULE_ADMIN_API,
-        "Create a server on the specified host",
+        """
+Create a server on the specified host and/or node.
+
+In this case, the server is forced to launch on the specified
+host and/or node by bypassing the scheduler filters unlike the
+``compute:servers:create:requested_destination`` rule.
+""",
+        [
+            {
+                'method': 'POST',
+                'path': '/servers'
+            }
+        ]),
+    policy.DocumentedRuleDefault(
+        REQUESTED_DESTINATION,
+        base.RULE_ADMIN_API,
+        """
+Create a server on the requested compute service host and/or
+hypervisor_hostname.
+
+In this case, the requested host and/or hypervisor_hostname is
+validated by the scheduler filters unlike the
+``os_compute_api:servers:create:forced_host`` rule.
+""",
         [
             {
                 'method': 'POST',
