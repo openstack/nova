@@ -648,6 +648,64 @@ class LibvirtDriver(driver.ComputeDriver):
         if self._host.has_min_version(MIN_LIBVIRT_MDEV_SUPPORT):
             self._recreate_assigned_mediated_devices()
 
+        self._check_cpu_compatibility()
+
+    def _check_cpu_compatibility(self):
+        mode = CONF.libvirt.cpu_mode
+        models = CONF.libvirt.cpu_models
+
+        if (CONF.libvirt.virt_type not in ("kvm", "qemu") and
+                mode not in (None, 'none')):
+            msg = _("Config requested an explicit CPU model, but "
+                    "the current libvirt hypervisor '%s' does not "
+                    "support selecting CPU models") % CONF.libvirt.virt_type
+            raise exception.Invalid(msg)
+
+        if mode != "custom":
+            if not models:
+                return
+            msg = _("The cpu_models option is not required when "
+                    "cpu_mode!=custom")
+            raise exception.Invalid(msg)
+
+        if not models:
+            msg = _("The cpu_models option is required when cpu_mode=custom")
+            raise exception.Invalid(msg)
+
+        cpu = vconfig.LibvirtConfigGuestCPU()
+        for model in models:
+            cpu.model = self._get_cpu_model_mapping(model)
+            if not cpu.model:
+                msg = (_("Configured CPU model: %(model)s is not correct, "
+                         "or your host CPU arch does not suuport this "
+                         "model. Please correct your config and try "
+                         "again.") % {'model': model})
+                raise exception.InvalidCPUInfo(msg)
+            try:
+                self._compare_cpu(cpu, self._get_cpu_info(), None)
+            except exception.InvalidCPUInfo as e:
+                msg = (_("Configured CPU model: %(model)s is not "
+                         "compatible with host CPU. Please correct your "
+                         "config and try again. %(e)s") % {
+                            'model': model, 'e': e})
+                raise exception.InvalidCPUInfo(msg)
+
+        # Use guest CPU model to check the compatibility between guest CPU and
+        # configured extra_flags
+        cpu = vconfig.LibvirtConfigGuestCPU()
+        cpu.model = self._host.get_capabilities().host.cpu.arch
+        for flag in set(x.lower() for x in CONF.libvirt.cpu_model_extra_flags):
+            cpu.add_feature(vconfig.LibvirtConfigCPUFeature(flag))
+            try:
+                self._compare_cpu(cpu, self._get_cpu_info(), None)
+            except (exception.InvalidCPUInfo,
+                    exception.MigrationPreCheckError) as e:
+                msg = (_("Configured extra flag: %(flag)s it not correct, or "
+                         "the host CPU does not support this flag. Please "
+                         "correct the config and try again. %(e)s") % {
+                            'flag': flag, 'e': e})
+                raise exception.InvalidCPUInfo(msg)
+
     @staticmethod
     def _is_existing_mdev(uuid):
         # FIXME(sbauza): Some kernel can have a uevent race meaning that the
@@ -3964,11 +4022,21 @@ class LibvirtDriver(driver.ComputeDriver):
             mount.get_manager().host_down()
 
     def _get_cpu_model_mapping(self, model):
+        """Get the CPU model mapping
+
+        The CPU models which admin configured are case-insensitive, libvirt is
+        case-sensitive, therefore build a mapping to get the correct CPU model
+        name.
+
+        :param model: Case-insensitive CPU model name.
+        :return: Case-sensitive CPU model name, or None(Only when configured
+                 CPU model name not correct)
+        """
         if not self.cpu_models_mapping:
             cpu_models = self._host.get_cpu_model_names()
             for cpu_model in cpu_models:
                 self.cpu_models_mapping[cpu_model.lower()] = cpu_model
-        return self.cpu_models_mapping.get(model.lower())
+        return self.cpu_models_mapping.get(model.lower(), None)
 
     def _get_guest_cpu_model_config(self, flavor=None):
         mode = CONF.libvirt.cpu_mode
@@ -4002,23 +4070,6 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             if mode is None or mode == "none":
                 return None
-
-        if ((CONF.libvirt.virt_type != "kvm" and
-             CONF.libvirt.virt_type != "qemu")):
-            msg = _("Config requested an explicit CPU model, but "
-                    "the current libvirt hypervisor '%s' does not "
-                    "support selecting CPU models") % CONF.libvirt.virt_type
-            raise exception.Invalid(msg)
-
-        if mode == "custom" and not models:
-            msg = _("Config requested custom CPU models, but no "
-                    "model names was provided")
-            raise exception.Invalid(msg)
-
-        if mode != "custom" and models:
-            msg = _("CPU model names should not be set when a "
-                    "host CPU model is requested")
-            raise exception.Invalid(msg)
 
         cpu = vconfig.LibvirtConfigGuestCPU()
         cpu.mode = mode
@@ -7511,7 +7562,8 @@ class LibvirtDriver(driver.ComputeDriver):
     def _compare_cpu(self, guest_cpu, host_cpu_str, instance):
         """Check the host is compatible with the requested CPU
 
-        :param guest_cpu: nova.objects.VirtCPUModel or None
+        :param guest_cpu: nova.objects.VirtCPUModel
+            or nova.virt.libvirt.vconfig.LibvirtConfigGuestCPU or None.
         :param host_cpu_str: JSON from _get_cpu_info() method
 
         If the 'guest_cpu' parameter is not None, this will be
@@ -7545,6 +7597,8 @@ class LibvirtDriver(driver.ComputeDriver):
             cpu.threads = info['topology']['threads']
             for f in info['features']:
                 cpu.add_feature(vconfig.LibvirtConfigCPUFeature(f))
+        elif isinstance(guest_cpu, vconfig.LibvirtConfigGuestCPU):
+            cpu = guest_cpu
         else:
             cpu = self._vcpu_model_to_cpu_config(guest_cpu)
 
