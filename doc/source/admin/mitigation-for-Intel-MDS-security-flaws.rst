@@ -34,23 +34,24 @@ as follows.
     three following ways, given that Nova supports three distinct CPU
     modes:
 
-    a. ``[libvirt]/cpu_mode = host-model``
+    a. :oslo.config:option:`libvirt.cpu_mode`\ =host-model
 
        When using ``host-model`` CPU mode, the ``md-clear`` CPU flag
        will be passed through to the Nova guests automatically.
 
-       This mode is the default, when ``virt_type=kvm|qemu`` is
-       set in ``/etc/nova/nova-cpu.conf`` on compute nodes.
+       This mode is the default, when
+       :oslo.config:option:`libvirt.virt_type`\ =kvm|qemu is set in
+       ``/etc/nova/nova-cpu.conf`` on compute nodes.
 
-    b. ``[libvirt]/cpu_mode = host-passthrough``
+    b. :oslo.config:option:`libvirt.cpu_mode`\ =host-passthrough
 
        When using ``host-passthrough`` CPU mode, the ``md-clear`` CPU
        flag will be passed through to the Nova guests automatically.
 
-    c. A specific custom CPU model — this can be enabled using the
-       Nova config attributes: ``[libvirt]/cpu_mode = custom`` plus a
-       particular named CPU model, e.g. ``[libvirt]/cpu_model =
-       IvyBridge``
+    c. Specific custom CPU models — this can be enabled using the
+       Nova config attributes :oslo.config:option:`libvirt.cpu_mode`\ =custom
+       plus particular named CPU models, e.g.
+       :oslo.config:option:`libvirt.cpu_models`\ =IvyBridge.
 
        (The list of all valid named CPU models that are supported by
        your host, QEMU, and libvirt can be found by running the
@@ -59,11 +60,11 @@ as follows.
        When using a custom CPU mode, you must *explicitly* enable the
        CPU flag ``md-clear`` to the Nova instances, in addition to the
        flags required for previous vulnerabilities, using the
-       ``cpu_model_extra_flags``.  E.g.::
+       :oslo.config:option:`libvirt.cpu_model_extra_flags`.  E.g.::
 
            [libvirt]
            cpu_mode = custom
-           cpu_model = IvyBridge
+           cpu_models = IvyBridge
            cpu_model_extra_flags = spec-ctrl,ssbd,md-clear
 
 (3) Reboot the compute node for the fixes to take effect.  (To minimize
@@ -73,7 +74,7 @@ as follows.
 Once the above steps have been taken on every vulnerable compute
 node in the deployment, each running guest in the cluster must be
 fully powered down, and cold-booted (i.e. an explicit stop followed
-by a start), in order to activate the new CPU model.  This can be done
+by a start), in order to activate the new CPU models.  This can be done
 by the guest administrators at a time of their choosing.
 
 

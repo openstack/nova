@@ -637,6 +637,14 @@ class Host(object):
 
         return online_cpus
 
+    def get_cpu_model_names(self):
+        """Get the cpu models based on host CPU arch
+
+        :returns: a list of cpu models which supported by the given CPU arch
+        """
+        arch = self.get_capabilities().host.cpu.arch
+        return self.get_connection().getCPUModelNames(arch)
+
     def get_capabilities(self):
         """Returns the host capabilities information
 

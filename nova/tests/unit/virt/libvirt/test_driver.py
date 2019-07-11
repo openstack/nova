@@ -385,6 +385,49 @@ _fake_qemu64_cpu_feature = """
 </cpu>
 """
 
+_fake_sandy_bridge_cpu_feature = """<cpu mode='custom' match='exact'>
+  <model fallback='forbid'>SandyBridge</model>
+  <feature policy='require' name='aes'/>
+  <feature policy='require' name='apic'/>
+  <feature policy='require' name='avx'/>
+  <feature policy='require' name='clflush'/>
+  <feature policy='require' name='cmov'/>
+  <feature policy='require' name='cx16'/>
+  <feature policy='require' name='cx8'/>
+  <feature policy='require' name='de'/>
+  <feature policy='require' name='fpu'/>
+  <feature policy='require' name='fxsr'/>
+  <feature policy='require' name='lahf_lm'/>
+  <feature policy='require' name='lm'/>
+  <feature policy='require' name='mca'/>
+  <feature policy='require' name='mce'/>
+  <feature policy='require' name='mmx'/>
+  <feature policy='require' name='msr'/>
+  <feature policy='require' name='mtrr'/>
+  <feature policy='require' name='nx'/>
+  <feature policy='require' name='pae'/>
+  <feature policy='require' name='pat'/>
+  <feature policy='require' name='pclmuldq'/>
+  <feature policy='require' name='pge'/>
+  <feature policy='require' name='pni'/>
+  <feature policy='require' name='popcnt'/>
+  <feature policy='require' name='pse'/>
+  <feature policy='require' name='pse36'/>
+  <feature policy='require' name='rdtscp'/>
+  <feature policy='require' name='sep'/>
+  <feature policy='require' name='sse'/>
+  <feature policy='require' name='sse2'/>
+  <feature policy='require' name='sse4.1'/>
+  <feature policy='require' name='sse4.2'/>
+  <feature policy='require' name='ssse3'/>
+  <feature policy='require' name='syscall'/>
+  <feature policy='require' name='tsc'/>
+  <feature policy='require' name='tsc-deadline'/>
+  <feature policy='require' name='x2apic'/>
+  <feature policy='require' name='xsave'/>
+</cpu>
+"""
+
 _fake_broadwell_cpu_feature = """
 <cpu mode='custom' match='exact'>
   <model fallback='forbid'>Broadwell-noTSX</model>
@@ -6651,9 +6694,61 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                       </cpu>
                    """
 
+        def fake_getCPUModelNames(arch):
+            return [
+                '486',
+                'pentium',
+                'pentium2',
+                'pentium3',
+                'pentiumpro',
+                'coreduo',
+                'n270',
+                'core2duo',
+                'qemu32',
+                'kvm32',
+                'cpu64-rhel5',
+                'cpu64-rhel6',
+                'qemu64',
+                'kvm64',
+                'Conroe',
+                'Penryn',
+                'Nehalem',
+                'Nehalem-IBRS',
+                'Westmere',
+                'Westmere-IBRS',
+                'SandyBridge',
+                'SandyBridge-IBRS',
+                'IvyBridge',
+                'IvyBridge-IBRS',
+                'Haswell-noTSX',
+                'Haswell-noTSX-IBRS',
+                'Haswell',
+                'Haswell-IBRS',
+                'Broadwell-noTSX',
+                'Broadwell-noTSX-IBRS',
+                'Broadwell',
+                'Broadwell-IBRS',
+                'Skylake-Client',
+                'Skylake-Client-IBRS',
+                'Skylake-Server',
+                'Skylake-Server-IBRS',
+                'Cascadelake-Server',
+                'Icelake-Client',
+                'Icelake-Server',
+                'athlon',
+                'phenom',
+                'Opteron_G1',
+                'Opteron_G2',
+                'Opteron_G3',
+                'Opteron_G4',
+                'Opteron_G5',
+                'EPYC',
+                'EPYC-IBPB']
+
         # Make sure the host arch is mocked as x86_64
         self.create_fake_libvirt_mock(getCapabilities=fake_getCapabilities,
                                       baselineCPU=fake_baselineCPU,
+                                      getCPUModelNames=fake_getCPUModelNames,
                                       getVersion=lambda: 1005001)
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -6880,7 +6975,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         self.flags(cpu_mode="custom",
-                   cpu_model="Penryn",
+                   cpu_models=["Penryn"],
                    group='libvirt')
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref,
@@ -6904,7 +6999,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         self.flags(cpu_mode="custom",
-                   cpu_model="IvyBridge",
+                   cpu_models=["IvyBridge"],
                    cpu_model_extra_flags="pcid",
                    group='libvirt')
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -6931,7 +7026,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         self.flags(cpu_mode="custom",
-                   cpu_model="IvyBridge",
+                   cpu_models=["IvyBridge"],
                    cpu_model_extra_flags="PCID",
                    group='libvirt')
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -6960,7 +7055,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         self.flags(cpu_mode="custom",
-                   cpu_model="IvyBridge",
+                   cpu_models=["IvyBridge"],
                    cpu_model_extra_flags=['pcid', 'vmx'],
                    group='libvirt')
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -6980,6 +7075,188 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(conf.cpu.cores, 1)
         self.assertEqual(conf.cpu.threads, 1)
         mock_warn.assert_not_called()
+
+    def test_get_guest_cpu_config_custom_upper_cpu_model(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+
+        self.flags(cpu_mode="custom",
+                   cpu_models=["PENRYN", "IVYBRIDGE"],
+                   group="libvirt")
+        conf = drvr._get_guest_config(instance_ref,
+                                      _fake_network_info(self, 1),
+                                      image_meta, disk_info)
+        self.assertEqual(conf.cpu.mode, "custom")
+        self.assertEqual(conf.cpu.model, "Penryn")
+        self.assertEqual(conf.cpu.sockets, instance_ref.flavor.vcpus)
+        self.assertEqual(conf.cpu.cores, 1)
+        self.assertEqual(conf.cpu.threads, 1)
+
+    def test_get_guest_cpu_config_custom_without_traits(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+
+        self.flags(cpu_mode="custom",
+                   cpu_models=["SandyBridge", "IvyBridge"],
+                   group="libvirt")
+        conf = drvr._get_guest_config(instance_ref,
+                                      _fake_network_info(self, 1),
+                                      image_meta, disk_info)
+        self.assertEqual(conf.cpu.mode, "custom")
+        self.assertEqual(conf.cpu.model, "SandyBridge")
+        self.assertEqual(conf.cpu.sockets, instance_ref.flavor.vcpus)
+        self.assertEqual(conf.cpu.cores, 1)
+        self.assertEqual(conf.cpu.threads, 1)
+
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.baselineCPU')
+    def test_get_guest_cpu_config_custom_with_traits(self, mocked_baseline):
+        mocked_baseline.side_effect = ('', _fake_qemu64_cpu_feature,
+                                       _fake_broadwell_cpu_feature)
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        extra_specs = {
+            "trait:HW_CPU_X86_AVX": "required",
+            "trait:HW_CPU_X86_AVX2": "required"
+        }
+        test_instance = _create_test_instance()
+        test_instance["flavor"]["extra_specs"] = extra_specs
+        instance_ref = objects.Instance(**test_instance)
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+
+        self.flags(cpu_mode="custom",
+                   cpu_models=["qemu64", "Broadwell-noTSX"],
+                   group="libvirt")
+        conf = drvr._get_guest_config(instance_ref,
+                                      _fake_network_info(self, 1),
+                                      image_meta, disk_info)
+        self.assertEqual(conf.cpu.mode, "custom")
+        self.assertEqual(conf.cpu.model, "Broadwell-noTSX")
+        self.assertEqual(conf.cpu.sockets, instance_ref.flavor.vcpus)
+        self.assertEqual(conf.cpu.cores, 1)
+        self.assertEqual(conf.cpu.threads, 1)
+
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.baselineCPU')
+    def test_get_guest_cpu_config_custom_with_traits_multi_models(self,
+            mocked_baseline):
+        mocked_baseline.side_effect = ('', _fake_qemu64_cpu_feature,
+                                       _fake_broadwell_cpu_feature)
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        extra_specs = {
+            "trait:HW_CPU_X86_SSE41": "required",
+            "trait:HW_CPU_X86_SSE42": "required"
+        }
+        test_instance = _create_test_instance()
+        test_instance["flavor"]["extra_specs"] = extra_specs
+        instance_ref = objects.Instance(**test_instance)
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+
+        self.flags(cpu_mode="custom",
+                   cpu_models=["qemu64", "SandyBridge", "Broadwell-noTSX"],
+                   group="libvirt")
+        conf = drvr._get_guest_config(instance_ref,
+                                      _fake_network_info(self, 1),
+                                      image_meta, disk_info)
+        self.assertEqual(conf.cpu.mode, "custom")
+        self.assertEqual(conf.cpu.model, "SandyBridge")
+        self.assertEqual(conf.cpu.sockets, instance_ref.flavor.vcpus)
+        self.assertEqual(conf.cpu.cores, 1)
+        self.assertEqual(conf.cpu.threads, 1)
+
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.baselineCPU')
+    def test_get_guest_cpu_config_custom_with_traits_none_model(self,
+            mocked_baseline):
+        mocked_baseline.side_effect = ('', _fake_qemu64_cpu_feature,
+                                       _fake_sandy_bridge_cpu_feature)
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        extra_specs = {
+            "trait:HW_CPU_X86_AVX": "required",
+            "trait:HW_CPU_X86_AVX2": "required"
+        }
+        test_instance = _create_test_instance()
+        test_instance["flavor"]["extra_specs"] = extra_specs
+        instance_ref = objects.Instance(**test_instance)
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+
+        self.flags(cpu_mode="custom",
+                   cpu_models=["qemu64", "SandyBridge"],
+                   group="libvirt")
+        self.assertRaises(exception.InvalidCPUInfo,
+                          drvr._get_guest_config,
+                          instance_ref,
+                          _fake_network_info(self, 1),
+                          image_meta,
+                          disk_info)
+
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.baselineCPU')
+    def test_get_guest_cpu_config_custom_with_progressive_model(self,
+            mocked_baseline):
+        """Test progressive models
+
+        If require two flags: flag1 and flag2, and there are three sorted
+        CPU models: [model1, model2, model3], model1 only has flag1, model2
+        only has flag2, model3 both have flag1 and flag2.
+
+        Test that the driver will select model3 but not model2.
+        """
+        # Assume that qemu64 have flag avx2 for the test.
+        fake_qemu64_cpu_feature_with_avx2 = _fake_qemu64_cpu_feature.split(
+            '\n')
+        fake_qemu64_cpu_feature_with_avx2.insert(
+            -2, "  <feature policy='require' name='avx2'/>")
+        fake_qemu64_cpu_feature_with_avx2 = "\n".join(
+            fake_qemu64_cpu_feature_with_avx2)
+
+        mocked_baseline.side_effect = ('', fake_qemu64_cpu_feature_with_avx2,
+                                       _fake_sandy_bridge_cpu_feature,
+                                       _fake_broadwell_cpu_feature)
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        extra_specs = {
+            "trait:HW_CPU_X86_AVX": "required",
+            "trait:HW_CPU_X86_AVX2": "required"
+        }
+        test_instance = _create_test_instance()
+        test_instance["flavor"]["extra_specs"] = extra_specs
+        instance_ref = objects.Instance(**test_instance)
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+
+        self.flags(cpu_mode="custom",
+                   cpu_models=["qemu64", "SandyBridge", "Broadwell-noTSX"],
+                   group="libvirt")
+        conf = drvr._get_guest_config(instance_ref,
+                                      _fake_network_info(self, 1),
+                                      image_meta, disk_info)
+        self.assertEqual(conf.cpu.mode, "custom")
+        self.assertEqual(conf.cpu.model, "Broadwell-noTSX")
+        self.assertEqual(conf.cpu.sockets, instance_ref.flavor.vcpus)
+        self.assertEqual(conf.cpu.cores, 1)
+        self.assertEqual(conf.cpu.threads, 1)
 
     @mock.patch.object(libvirt_driver.LOG, 'warning')
     def test_get_guest_cpu_config_host_model_with_extra_flags(self,
@@ -12895,12 +13172,64 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                       </cpu>
                    """
 
+        def fake_getCPUModelNames(arch):
+            return [
+                '486',
+                'pentium',
+                'pentium2',
+                'pentium3',
+                'pentiumpro',
+                'coreduo',
+                'n270',
+                'core2duo',
+                'qemu32',
+                'kvm32',
+                'cpu64-rhel5',
+                'cpu64-rhel6',
+                'qemu64',
+                'kvm64',
+                'Conroe',
+                'Penryn',
+                'Nehalem',
+                'Nehalem-IBRS',
+                'Westmere',
+                'Westmere-IBRS',
+                'SandyBridge',
+                'SandyBridge-IBRS',
+                'IvyBridge',
+                'IvyBridge-IBRS',
+                'Haswell-noTSX',
+                'Haswell-noTSX-IBRS',
+                'Haswell',
+                'Haswell-IBRS',
+                'Broadwell-noTSX',
+                'Broadwell-noTSX-IBRS',
+                'Broadwell',
+                'Broadwell-IBRS',
+                'Skylake-Client',
+                'Skylake-Client-IBRS',
+                'Skylake-Server',
+                'Skylake-Server-IBRS',
+                'Cascadelake-Server',
+                'Icelake-Client',
+                'Icelake-Server',
+                'athlon',
+                'phenom',
+                'Opteron_G1',
+                'Opteron_G2',
+                'Opteron_G3',
+                'Opteron_G4',
+                'Opteron_G5',
+                'EPYC',
+                'EPYC-IBPB']
+
         # _fake_network_info must be called before create_fake_libvirt_mock(),
         # as _fake_network_info calls importutils.import_class() and
         # create_fake_libvirt_mock() mocks importutils.import_class().
         network_info = _fake_network_info(self, 1)
         self.create_fake_libvirt_mock(getLibVersion=fake_getLibVersion,
                                       getCapabilities=fake_getCapabilities,
+                                      getCPUModelNames=fake_getCPUModelNames,
                                       getVersion=lambda: 1005001,
                                       baselineCPU=fake_baselineCPU)
 
@@ -21820,7 +22149,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         _fake_broadwell_cpu_features.
         """
         self.flags(cpu_mode='custom',
-                   cpu_model='Broadwell-noTSX',
+                   cpu_models=['Broadwell-noTSX'],
                    group='libvirt')
         mock_baseline.return_value = _fake_broadwell_cpu_feature
 
@@ -21908,7 +22237,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         the feature, only kvm and qemu supports reporting CPU traits.
         """
         self.flags(cpu_mode='custom',
-                   cpu_model='IvyBridge',
+                   cpu_models=['IvyBridge'],
                    virt_type='lxc',
                    group='libvirt'
                    )
@@ -21948,7 +22277,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         """Test if extra flags are accounted when cpu_mode is set to custom.
         """
         self.flags(cpu_mode='custom',
-                   cpu_model='IvyBridge',
+                   cpu_models=['IvyBridge'],
                    cpu_model_extra_flags='PCID',
                    group='libvirt')
 

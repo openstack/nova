@@ -283,7 +283,7 @@ determine which models are supported by your local installation.
 Two Compute configuration options in the :oslo.config:group:`libvirt` group
 of ``nova.conf`` define which type of CPU model is exposed to the hypervisor
 when using KVM: :oslo.config:option:`libvirt.cpu_mode` and
-:oslo.config:option:`libvirt.cpu_model`.
+:oslo.config:option:`libvirt.cpu_models`.
 
 The :oslo.config:option:`libvirt.cpu_mode` option can take one of the following
 values: ``none``, ``host-passthrough``, ``host-model``, and ``custom``.
@@ -337,26 +337,53 @@ may even include the running kernel. Use this mode only if
 Custom
 ------
 
-If your ``nova.conf`` file contains ``cpu_mode=custom``, you can explicitly
-specify one of the supported named models using the cpu_model configuration
-option. For example, to configure the KVM guests to expose Nehalem CPUs, your
-``nova.conf`` file should contain:
+If :file:`nova.conf` contains :oslo.config:option:`libvirt.cpu_mode`\ =custom,
+you can explicitly specify an ordered list of supported named models using
+the :oslo.config:option:`libvirt.cpu_models` configuration option. It is
+expected that the list is ordered so that the more common and less advanced cpu
+models are listed earlier.
+
+An end user can specify required CPU features through traits. When specified,
+the libvirt driver will select the first cpu model in the
+:oslo.config:option:`libvirt.cpu_models` list that can provide the requested
+feature traits. If no CPU feature traits are specified then the instance will
+be configured with the first cpu model in the list.
+
+For example, if specifying CPU features ``avx`` and ``avx2`` as follows:
+
+.. code-block:: console
+
+    $ openstack flavor set FLAVOR_ID --property trait:HW_CPU_X86_AVX=required \
+                                     --property trait:HW_CPU_X86_AVX2=required
+
+and :oslo.config:option:`libvirt.cpu_models` is configured like this:
 
 .. code-block:: ini
 
-   [libvirt]
-   cpu_mode = custom
-   cpu_model = Nehalem
+    [libvirt]
+    cpu_mode = custom
+    cpu_models = Penryn,IvyBridge,Haswell,Broadwell,Skylake-Client
+
+Then ``Haswell``, the first cpu model supporting both ``avx`` and ``avx2``,
+will be chosen by libvirt.
 
 In selecting the ``custom`` mode, along with a
-:oslo.config:option:`libvirt.cpu_model` that matches the oldest of your compute
+:oslo.config:option:`libvirt.cpu_models` that matches the oldest of your compute
 node CPUs, you can ensure that live migration between compute nodes will always
 be possible. However, you should ensure that the
-:oslo.config:option:`libvirt.cpu_model` you select passes the correct CPU
+:oslo.config:option:`libvirt.cpu_models` you select passes the correct CPU
 feature flags to the guest.
 
 If you need to further tweak your CPU feature flags in the ``custom``
 mode, see `Set CPU feature flags`_.
+
+.. note::
+
+  If :oslo.config:option:`libvirt.cpu_models` is configured,
+  the CPU models in the list needs to be compatible with the host CPU. Also, if
+  :oslo.config:option:`libvirt.cpu_model_extra_flags` is configured, all flags
+  needs to be compatible with the host CPU. If incompatible CPU models or flags
+  are specified, nova service will raise an error and fail to start.
 
 
 None (default for all libvirt-driven hypervisors other than KVM & QEMU)
@@ -379,7 +406,7 @@ not enable the ``pcid`` feature flag --- but you do want to pass
 
    [libvirt]
    cpu_mode = custom
-   cpu_model = IvyBridge
+   cpu_models = IvyBridge
    cpu_model_extra_flags = pcid
 
 Nested guest support
@@ -451,7 +478,7 @@ Custom
 
      [libvirt]
      cpu_mode = custom
-     cpu_model = IvyBridge
+     cpu_models = IvyBridge
      cpu_model_extra_flags = vmx,pcid
 
 Nested guest support limitations

@@ -117,7 +117,7 @@ Related options:
 * ``connection_uri``: depends on this
 * ``disk_prefix``: depends on this
 * ``cpu_mode``: depends on this
-* ``cpu_model``: depends on this
+* ``cpu_models``: depends on this
 """),
     cfg.StrOpt('connection_uri',
                default='',
@@ -527,7 +527,7 @@ Related options:
         choices=[
             ('host-model', 'Clone the host CPU feature flags'),
             ('host-passthrough', 'Use the host CPU model exactly'),
-            ('custom', 'Use the CPU model in ``[libvirt]cpu_model``'),
+            ('custom', 'Use the CPU model in ``[libvirt]cpu_models``'),
             ('none', "Don't set a specific CPU model. For instances with "
              "``[libvirt] virt_type`` as KVM/QEMU, the default CPU model from "
              "QEMU will be used, which provides a basic set of CPU features "
@@ -541,13 +541,20 @@ will default to ``none``.
 
 Related options:
 
-* ``cpu_model``: This should be set ONLY when ``cpu_mode`` is set to
+* ``cpu_models``: This should be set ONLY when ``cpu_mode`` is set to
   ``custom``. Otherwise, it would result in an error and the instance launch
   will fail.
 """),
-    cfg.StrOpt('cpu_model',
-               help="""
-Set the name of the libvirt CPU model the instance should use.
+    cfg.ListOpt('cpu_models',
+        deprecated_name='cpu_model',
+        default=[],
+        help="""
+An ordered list of CPU models the host supports.
+
+It is expected that the list is ordered so that the more common and less
+advanced CPU models are listed earlier. Here is an example:
+``SandyBridge,IvyBridge,Haswell,Broadwell``, the latter CPU model's features is
+richer that the previous CPU model.
 
 Possible values:
 
@@ -558,9 +565,13 @@ Possible values:
 Related options:
 
 * ``cpu_mode``: This should be set to ``custom`` ONLY when you want to
-  configure (via ``cpu_model``) a specific named CPU model.  Otherwise, it
+  configure (via ``cpu_models``) a specific named CPU model.  Otherwise, it
   would result in an error and the instance launch will fail.
 * ``virt_type``: Only the virtualization types ``kvm`` and ``qemu`` use this.
+
+.. note::
+    Be careful to only specify models which can be fully supported in
+    hardware.
 """),
     cfg.ListOpt(
         'cpu_model_extra_flags',
@@ -578,7 +589,7 @@ to address the guest performance degradation as a result of applying the
 
     [libvirt]
     cpu_mode = custom
-    cpu_model = IvyBridge
+    cpu_models = IvyBridge
     cpu_model_extra_flags = pcid
 
 To specify multiple CPU flags (e.g. the Intel ``VMX`` to expose the
@@ -587,13 +598,13 @@ huge pages for CPU models that do not provide it)::
 
     [libvirt]
     cpu_mode = custom
-    cpu_model = Haswell-noTSX-IBRS
+    cpu_models = Haswell-noTSX-IBRS
     cpu_model_extra_flags = PCID, VMX, pdpe1gb
 
 As it can be noticed from above, the ``cpu_model_extra_flags`` config
 attribute is case insensitive.  And specifying extra flags is valid in
 combination with all the three possible values for ``cpu_mode``:
-``custom`` (this also requires an explicit ``cpu_model`` to be
+``custom`` (this also requires an explicit ``cpu_models`` to be
 specified), ``host-model``, or ``host-passthrough``.  A valid example
 for allowing extra CPU flags even for ``host-passthrough`` mode is that
 sometimes QEMU may disable certain CPU features -- e.g. Intel's
@@ -630,7 +641,7 @@ need to use the ``cpu_model_extra_flags``.
 Related options:
 
 * cpu_mode
-* cpu_model
+* cpu_models
 """),
     cfg.StrOpt('snapshots_directory',
                default='$instances_path/snapshots',
