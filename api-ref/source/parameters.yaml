@@ -1154,7 +1154,23 @@ sort_key_flavor:
     Sorts by a flavor attribute. Default attribute is ``flavorid``. You can specify
     multiple pairs of sort key and sort direction query parameters. If you omit the
     sort direction in a pair, the API uses the natural sorting direction of the flavor
-    ``sort_key`` attribute.
+    ``sort_key`` attribute. The sort keys are limited to:
+
+    - ``created_at``
+    - ``description``
+    - ``disabled``
+    - ``ephemeral_gb``
+    - ``flavorid``
+    - ``id``
+    - ``is_public``
+    - ``memory_mb``
+    - ``name``
+    - ``root_gb``
+    - ``rxtx_factor``
+    - ``swap``
+    - ``updated_at``
+    - ``vcpu_weight``
+    - ``vcpus``
   in: query
   required: false
   type: string
