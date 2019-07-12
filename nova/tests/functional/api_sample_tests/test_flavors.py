@@ -22,6 +22,11 @@ class FlavorsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     sample_dir = 'flavors'
     flavor_show_id = '1'
     subs = {}
+    sort_keys = ['created_at', 'description', 'disabled', 'ephemeral_gb',
+                 'flavorid', 'id', 'is_public', 'memory_mb', 'name',
+                 'root_gb', 'rxtx_factor', 'swap', 'updated_at',
+                 'vcpu_weight', 'vcpus']
+    sort_dirs = ['asc', 'desc']
 
     def test_flavors_get(self):
         response = self._do_get('flavors/%s' % self.flavor_show_id)
@@ -31,10 +36,50 @@ class FlavorsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         response = self._do_get('flavors')
         self._verify_response('flavors-list-resp', self.subs, response, 200)
 
+    def test_flavors_list_with_sort_key(self):
+        for sort_key in self.sort_keys:
+            response = self._do_get('flavors?sort_key=%s' % sort_key)
+            self._verify_response('flavors-list-resp', self.subs, response,
+                                  200)
+
+    def test_flavors_list_with_invalid_sort_key(self):
+        response = self._do_get('flavors?sort_key=invalid')
+        self.assertEqual(400, response.status_code)
+
+    def test_flavors_list_with_sort_dir(self):
+        for sort_dir in self.sort_dirs:
+            response = self._do_get('flavors?sort_dir=%s' % sort_dir)
+            self._verify_response('flavors-list-resp', self.subs, response,
+                                  200)
+
+    def test_flavors_list_with_invalid_sort_dir(self):
+        response = self._do_get('flavors?sort_dir=invalid')
+        self.assertEqual(400, response.status_code)
+
     def test_flavors_detail(self):
         response = self._do_get('flavors/detail')
         self._verify_response('flavors-detail-resp', self.subs, response,
                               200)
+
+    def test_flavors_detail_with_sort_key(self):
+        for sort_key in self.sort_keys:
+            response = self._do_get('flavors/detail?sort_key=%s' % sort_key)
+            self._verify_response('flavors-detail-resp', self.subs, response,
+                                  200)
+
+    def test_flavors_detail_with_invalid_sort_key(self):
+        response = self._do_get('flavors/detail?sort_key=invalid')
+        self.assertEqual(400, response.status_code)
+
+    def test_flavors_detail_with_sort_dir(self):
+        for sort_dir in self.sort_dirs:
+            response = self._do_get('flavors/detail?sort_dir=%s' % sort_dir)
+            self._verify_response('flavors-detail-resp', self.subs, response,
+                                  200)
+
+    def test_flavors_detail_with_invalid_sort_dir(self):
+        response = self._do_get('flavors/detail?sort_dir=invalid')
+        self.assertEqual(400, response.status_code)
 
 
 class FlavorsSampleJsonTest2_55(FlavorsSampleJsonTest):
