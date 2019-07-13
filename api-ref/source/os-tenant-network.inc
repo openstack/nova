@@ -1,7 +1,6 @@
 .. -*- rst -*-
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
+.. NOTE(gmann): These APIs are deprecated so do not update this
+   file even body, example or parameters are not complete.
 
 ===================================================
  Project networks (os-tenant-networks) (DEPRECATED)

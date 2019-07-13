@@ -1,10 +1,6 @@
 .. -*- rst -*-
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
-.. NOTE(sdague): for future verification only worry about the non
-   deprecated methods in this file. Let's not spend a ton of brain
-   power on the associate/disassociate that's going away.
+.. NOTE(sdague): These APIs are deprecated so do not update this
+   file even body, example or parameters are not complete.
 
 =====================================
  Networks (os-networks)  (DEPRECATED)

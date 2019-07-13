@@ -1,6 +1,7 @@
 .. -*- rst -*-
 
-.. needs:body_verification
+.. NOTE(gmann): These APIs are deprecated so do not update this
+   file even body, example or parameters are not complete.
 
 ================================================================================
  Rules for default security group (os-security-group-default-rules) (DEPRECATED)
