@@ -1,0 +1,13 @@
+---
+features:
+  - |
+    Blueprint `placement-req-filter-forbidden-aggregates`_ adds the ability
+    for operators to set traits on aggregates which if not requested in flavor
+    extra specs or image properties will result in disallowing all hosts
+    belonging to those aggregates from booting the requested instances. This
+    feature is enabled via a new config option
+    ``[scheduler]/enable_isolated_aggregate_filtering``.
+    See `Filtering hosts by isolated aggregates`_ for more details.
+
+    .. _placement-req-filter-forbidden-aggregates: https://specs.openstack.org/openstack/nova-specs/specs/train/approved/placement-req-filter-forbidden-aggregates.html
+    .. _Filtering hosts by isolated aggregates: https://docs.openstack.org/nova/latest/reference/isolate-aggregates.html

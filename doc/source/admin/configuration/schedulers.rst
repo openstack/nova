@@ -99,6 +99,14 @@ periodic task runs - which is controlled by the
 
 .. _os-services: https://docs.openstack.org/api-ref/compute/#compute-services-os-services
 
+Isolate Aggregates
+------------------
+
+Starting in the Train release, there is an optional placement pre-request filter
+:doc:`/reference/isolate-aggregates`
+When enabled, the traits required in the server's flavor and image must be at
+least those required in an aggregate's metadata in order for the server to be
+eligible to boot on hosts in that aggregate.
 
 Filter scheduler
 ~~~~~~~~~~~~~~~~
@@ -198,6 +206,8 @@ use this filter, see :ref:`host-aggregates`.
 Note the ``disk_allocation_ratio`` :ref:`bug 1804125 <bug-1804125>`
 restriction.
 
+.. _`AggregateImagePropertiesIsolation`:
+
 AggregateImagePropertiesIsolation
 ---------------------------------
 
@@ -261,6 +271,13 @@ following options in the ``nova.conf`` file:
 
    # Separator used between the namespace and keys (string).
    aggregate_image_properties_isolation_separator = .
+
+.. note::
+
+   This filter has limitations as described in `bug 1677217
+   <https://bugs.launchpad.net/nova/+bug/1677217>`_
+   which are addressed in placement :doc:`/reference/isolate-aggregates`
+   request filter.
 
 .. _AggregateInstanceExtraSpecsFilter:
 
