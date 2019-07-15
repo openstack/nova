@@ -410,6 +410,49 @@ class TestUtils(TestUtilsBase):
                 self.context, reqspec, self.mock_host_manager)
         self.assertEqual([], req.get_request_group(None).aggregates)
 
+    def test_resources_from_request_spec_forbidden_aggregates(self):
+        flavor = objects.Flavor(vcpus=1, memory_mb=1024,
+                                root_gb=1, ephemeral_gb=0,
+                                swap=0)
+        reqspec = objects.RequestSpec(
+            flavor=flavor,
+            requested_destination=objects.Destination(
+                forbidden_aggregates=set(['foo', 'bar'])))
+
+        req = utils.resources_from_request_spec(self.context, reqspec,
+                                                self.mock_host_manager)
+        self.assertEqual(set(['foo', 'bar']),
+                         req.get_request_group(None).forbidden_aggregates)
+
+    def test_resources_from_request_spec_no_forbidden_aggregates(self):
+        flavor = objects.Flavor(vcpus=1, memory_mb=1024,
+                                root_gb=1, ephemeral_gb=0,
+                                swap=0)
+        reqspec = objects.RequestSpec(flavor=flavor)
+
+        req = utils.resources_from_request_spec(
+                self.context, reqspec, self.mock_host_manager)
+        self.assertEqual(set([]), req.get_request_group(None).
+                         forbidden_aggregates)
+
+        reqspec.requested_destination = None
+        req = utils.resources_from_request_spec(
+                self.context, reqspec, self.mock_host_manager)
+        self.assertEqual(set([]), req.get_request_group(None).
+                         forbidden_aggregates)
+
+        reqspec.requested_destination = objects.Destination()
+        req = utils.resources_from_request_spec(
+                self.context, reqspec, self.mock_host_manager)
+        self.assertEqual(set([]), req.get_request_group(None).
+                         forbidden_aggregates)
+
+        reqspec.requested_destination.forbidden_aggregates = None
+        req = utils.resources_from_request_spec(
+                self.context, reqspec, self.mock_host_manager)
+        self.assertEqual(set([]), req.get_request_group(None).
+                         forbidden_aggregates)
+
     def test_process_extra_specs_granular_called(self):
         flavor = objects.Flavor(vcpus=1,
                                 memory_mb=1024,
