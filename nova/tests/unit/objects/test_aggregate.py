@@ -239,6 +239,24 @@ class _TestAggregateObject(object):
         self.assertEqual(1, len(aggs))
         self.compare_obj(aggs[0], fake_aggregate, subs=SUBS)
 
+    @mock.patch('nova.objects.aggregate.'
+                '_get_non_matching_by_metadata_keys_from_db')
+    def test_get_non_matching_by_metadata_keys(
+            self, get_non_matching_by_metadata_keys):
+        get_non_matching_by_metadata_keys.return_value = [fake_aggregate]
+        aggs = aggregate.AggregateList.get_non_matching_by_metadata_keys(
+            self.context, ['abc'], 'th', value='that')
+        self.assertEqual('that', aggs[0].metadata['this'])
+
+    @mock.patch('nova.objects.aggregate.'
+                '_get_non_matching_by_metadata_keys_from_db')
+    def test_get_non_matching_by_metadata_keys_and_hosts_no_match(
+            self, get_non_matching_by_metadata_keys):
+        get_non_matching_by_metadata_keys.return_value = []
+        aggs = aggregate.AggregateList.get_non_matching_by_metadata_keys(
+            self.context, ['this'], 'th', value='that')
+        self.assertEqual(0, len(aggs))
+
 
 class TestAggregateObject(test_objects._LocalTest,
                           _TestAggregateObject):

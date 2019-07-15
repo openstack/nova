@@ -561,3 +561,121 @@ class AggregateObjectTestCase(test.TestCase):
         self.assertRaises(AssertionError,
                           aggregate_obj._get_by_metadata_from_db,
                           self.context)
+
+    def test_get_non_matching_by_metadata_keys(self):
+        """Test aggregates that are not matching with metadata."""
+
+        agg = aggregate_obj.Aggregate.get_by_id(self.context, 1)
+        agg.update_metadata({'trait:HW_CPU_X86_MMX': 'required'})
+
+        agg = aggregate_obj.Aggregate.get_by_id(self.context, 2)
+        agg.update_metadata({'trait:HW_CPU_X86_SGX': 'required'})
+
+        agg = aggregate_obj.Aggregate.get_by_id(self.context, 3)
+        agg.update_metadata({'trait:HW_CPU_X86_MMX': 'required',
+                             'trait:HW_CPU_X86_SGX': 'required'})
+
+        agg = aggregate_obj.Aggregate.get_by_id(self.context, 4)
+        agg.update_metadata({'trait:HW_CPU_X86_MMX': 'required',
+                             'trait:HW_CPU_X86_SGX': 'just_for_marking'})
+
+        agg = aggregate_obj.Aggregate.get_by_id(self.context, 5)
+        agg.update_metadata({'trait:HW_CPU_X86_MMX': 'just_for_marking'})
+
+        aggs = aggregate_obj.AggregateList.get_non_matching_by_metadata_keys(
+            self.context, ['trait:HW_CPU_X86_MMX'], 'trait:',
+            value='required')
+
+        self.assertEqual(2, len(aggs))
+        self.assertItemsEqual([2, 3], [a.id for a in aggs])
+
+    def test_matching_aggregates_multiple_keys(self):
+        """All matching aggregates for multiple keys."""
+
+        agg = aggregate_obj.Aggregate.get_by_id(self.context, 1)
+        agg.update_metadata({'trait:HW_CPU_X86_MMX': 'required'})
+
+        agg = aggregate_obj.Aggregate.get_by_id(self.context, 2)
+        agg.update_metadata({'trait:HW_CPU_X86_SGX': 'required'})
+
+        agg = aggregate_obj.Aggregate.get_by_id(self.context, 3)
+        agg.update_metadata({'trait:HW_CPU_X86_MMX': 'required',
+                             'trait:HW_CPU_X86_SGX': 'required'})
+
+        agg = aggregate_obj.Aggregate.get_by_id(self.context, 4)
+        agg.update_metadata({'trait:HW_CPU_X86_MMX': 'required',
+                             'trait:HW_CPU_X86_SGX': 'just_for_marking'})
+
+        aggs = aggregate_obj.AggregateList.get_non_matching_by_metadata_keys(
+            self.context, ['trait:HW_CPU_X86_MMX', 'trait:HW_CPU_X86_SGX'],
+            'trait:', value='required')
+
+        self.assertEqual(0, len(aggs))
+
+    def test_get_non_matching_aggregates_multiple_keys(self):
+        """Return non matching aggregates for multiple keys."""
+
+        agg = aggregate_obj.Aggregate.get_by_id(self.context, 1)
+        agg.update_metadata({'trait:HW_CPU_X86_MMX': 'required'})
+
+        agg = aggregate_obj.Aggregate.get_by_id(self.context, 2)
+        agg.update_metadata({'trait:HW_CPU_X86_MMX': 'required',
+                             'trait:HW_CPU_X86_SGX': 'required',
+                             'trait:HW_CPU_API_DXVA': 'required'})
+
+        agg = aggregate_obj.Aggregate.get_by_id(self.context, 3)
+        agg.update_metadata({'trait:HW_CPU_X86_MMX': 'required',
+                             'trait:HW_CPU_X86_SGX': 'required'})
+
+        agg = aggregate_obj.Aggregate.get_by_id(self.context, 4)
+        agg.update_metadata({'trait:HW_CPU_X86_MMX': 'required',
+                             'trait:HW_CPU_X86_SGX': 'just_for_marking'})
+
+        agg = aggregate_obj.Aggregate.get_by_id(self.context, 5)
+        agg.update_metadata({'trait:HW_CPU_X86_MMX': 'required',
+                             'trait:HW_CPU_X86_SGX': 'just_for_marking',
+                             'trait:HW_CPU_X86_SSE': 'required'})
+
+        aggs = aggregate_obj.AggregateList.get_non_matching_by_metadata_keys(
+            self.context, ['trait:HW_CPU_X86_MMX', 'trait:HW_CPU_X86_SGX'],
+            'trait:', value='required')
+
+        self.assertEqual(2, len(aggs))
+        self.assertItemsEqual([2, 5], [a.id for a in aggs])
+
+    def test_get_non_matching_by_metadata_keys_empty_keys(self):
+        """Test aggregates non matching by metadata with empty keys."""
+
+        agg = aggregate_obj.Aggregate.get_by_id(self.context, 1)
+        agg.update_metadata({'trait:HW_CPU_X86_MMX': 'required'})
+
+        agg = aggregate_obj.Aggregate.get_by_id(self.context, 2)
+        agg.update_metadata({'trait:HW_CPU_X86_SGX': 'required'})
+
+        agg = aggregate_obj.Aggregate.get_by_id(self.context, 3)
+        agg.update_metadata({'trait:HW_CPU_X86_MMX': 'required',
+                             'trait:HW_CPU_X86_SGX': 'required'})
+
+        agg = aggregate_obj.Aggregate.get_by_id(self.context, 4)
+        agg.update_metadata({'trait:HW_CPU_X86_MMX': 'required',
+                             'trait:HW_CPU_X86_SGX': 'just_for_marking'})
+
+        agg = aggregate_obj.Aggregate.get_by_id(self.context, 5)
+        agg.update_metadata({'trait:HW_CPU_X86_MMX': 'required',
+                             'trait:HW_CPU_X86_SGX': 'just_for_marking',
+                             'trait:HW_CPU_X86_SSE': 'required'})
+
+        aggs = aggregate_obj.AggregateList.get_non_matching_by_metadata_keys(
+            self.context, [], 'trait:', value='required')
+
+        self.assertEqual(5, len(aggs))
+        self.assertItemsEqual([1, 2, 3, 4, 5], [a.id for a in aggs])
+
+    def test_get_non_matching_by_metadata_keys_empty_key_prefix(self):
+        """Test aggregates non matching by metadata with empty key_prefix."""
+
+        self.assertRaises(
+                ValueError,
+                aggregate_obj.AggregateList.get_non_matching_by_metadata_keys,
+                self.context, ['trait:HW_CPU_X86_MMX'], '',
+                value='required')
