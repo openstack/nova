@@ -5715,7 +5715,7 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         activate.assert_called_once_with(self.context, uuids.port_id, 'dest')
         get_client_mock.return_value.get.assert_called_once_with(
             '/v2.0/ports/%s/bindings/dest' % uuids.port_id, raise_exc=False,
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
 
     @mock.patch('nova.network.neutronv2.api._get_ksa_client')
     def test_migrate_instance_start_already_active(self, get_client_mock):
@@ -5738,7 +5738,7 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
                     self.context, instance, migration)
         get_client_mock.return_value.get.assert_called_once_with(
             '/v2.0/ports/%s/bindings/dest' % uuids.port_id, raise_exc=False,
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
 
     @mock.patch('nova.network.neutronv2.api._get_ksa_client')
     def test_migrate_instance_start_no_bindings(self, get_client_mock):
@@ -5763,7 +5763,7 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
                     self.context, instance, migration)
         get_client_mock.return_value.get.assert_called_once_with(
             '/v2.0/ports/%s/bindings/dest' % uuids.port1, raise_exc=False,
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
 
     @mock.patch('nova.network.neutronv2.api._get_ksa_client')
     def test_migrate_instance_start_get_error(self, get_client_mock):
@@ -5788,11 +5788,11 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
             mock.call(
                 '/v2.0/ports/%s/bindings/dest' % uuids.port1,
                 raise_exc=False,
-                headers={'X-Openstack-Request-Id': self.context.global_id}),
+                global_request_id=self.context.global_id),
             mock.call(
                 '/v2.0/ports/%s/bindings/dest' % uuids.port2,
                 raise_exc=False,
-                headers={'X-Openstack-Request-Id': self.context.global_id})])
+                global_request_id=self.context.global_id)])
 
 
 class TestNeutronv2ModuleMethods(test.NoDBTestCase):
@@ -6294,7 +6294,7 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
         mock_client.return_value.put.assert_called_once_with(
             '/v2.0/ports/%s/bindings/fake-host/activate' % uuids.port_id,
             raise_exc=False,
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
 
     @mock.patch('nova.network.neutronv2.api._get_ksa_client')
     @mock.patch('nova.network.neutronv2.api.LOG.warning')
@@ -6307,7 +6307,7 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
         mock_client.return_value.put.assert_called_once_with(
             '/v2.0/ports/%s/bindings/fake-host/activate' % uuids.port_id,
             raise_exc=False,
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
         self.assertEqual(1, mock_log_warning.call_count)
         self.assertIn('is already active', mock_log_warning.call_args[0][0])
 
@@ -6321,7 +6321,7 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
         mock_client.return_value.put.assert_called_once_with(
             '/v2.0/ports/%s/bindings/fake-host/activate' % uuids.port_id,
             raise_exc=False,
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
 
 
 class TestAllocateForInstance(test.NoDBTestCase):
