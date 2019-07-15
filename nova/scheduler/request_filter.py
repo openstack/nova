@@ -20,6 +20,7 @@ import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.scheduler import utils
 
 
 CONF = nova.conf.CONF
@@ -43,6 +44,48 @@ def trace_request_filter(fn):
                         fn.__name__, timer.elapsed())
         return ran
     return wrapper
+
+
+@trace_request_filter
+def isolate_aggregates(ctxt, request_spec):
+    """Prepare list of aggregates that should be isolated.
+
+    This filter will prepare the list of aggregates that should be
+    ignored by the placement service. It checks if aggregates has metadata
+    'trait:<trait_name>='required' and if <trait_name> is not present in
+    either of flavor extra specs or image properties, then those aggregates
+    will be included in the list of isolated aggregates.
+
+    Precisely this filter gets the trait request form the image and
+    flavor and unions them. Then it accumulates the set of aggregates that
+    request traits are "non_matching_by_metadata_keys" and uses that to
+    produce the list of isolated aggregates.
+    """
+
+    if not CONF.scheduler.enable_isolated_aggregate_filtering:
+        return False
+
+    # Get required traits set in flavor and image
+    res_req = utils.ResourceRequest(request_spec)
+    required_traits = res_req.all_required_traits
+
+    keys = ['trait:%s' % trait for trait in required_traits]
+
+    isolated_aggregates = (
+        objects.aggregate.AggregateList.get_non_matching_by_metadata_keys(
+            ctxt, keys, 'trait:', value='required'))
+
+    # Set list of isolated aggregates to destination object of request_spec
+    if isolated_aggregates:
+        if ('requested_destination' not in request_spec or
+                request_spec.requested_destination is None):
+            request_spec.requested_destination = objects.Destination()
+
+        destination = request_spec.requested_destination
+        destination.append_forbidden_aggregates(
+            agg.uuid for agg in isolated_aggregates)
+
+    return True
 
 
 @trace_request_filter
@@ -180,6 +223,7 @@ ALL_REQUEST_FILTERS = [
     map_az_to_placement_aggregate,
     require_image_type_support,
     compute_status_filter,
+    isolate_aggregates,
 ]
 
 

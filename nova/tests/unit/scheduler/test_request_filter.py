@@ -30,6 +30,8 @@ class TestRequestFilter(test.NoDBTestCase):
                    group='scheduler')
         self.flags(query_placement_for_availability_zone=True,
                    group='scheduler')
+        self.flags(enable_isolated_aggregate_filtering=True,
+                   group='scheduler')
 
     def test_process_reqspec(self):
         fake_filters = [mock.MagicMock(), mock.MagicMock()]
@@ -99,6 +101,118 @@ class TestRequestFilter(test.NoDBTestCase):
         self.assertIn('filter added aggregates', log_lines[0])
         self.assertIn('took %.1f seconds', log_lines[1])
 
+    @mock.patch('nova.objects.aggregate.AggregateList.'
+                'get_non_matching_by_metadata_keys')
+    def test_isolate_aggregates(self, mock_getnotmd):
+        agg4_traits = {'trait:HW_GPU_API_DXVA': 'required',
+                       'trait:HW_NIC_DCB_ETS': 'required'}
+        mock_getnotmd.return_value = [
+            objects.Aggregate(
+                uuid=uuids.agg1,
+                metadata={'trait:CUSTOM_WINDOWS_LICENSED_TRAIT': 'required'}),
+            objects.Aggregate(
+                uuid=uuids.agg2,
+                metadata={'trait:CUSTOM_WINDOWS_LICENSED_TRAIT': 'required',
+                          'trait:CUSTOM_XYZ_TRAIT': 'required'}),
+            objects.Aggregate(
+                uuid=uuids.agg4,
+                metadata=agg4_traits),
+        ]
+        fake_flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
+            extra_specs=agg4_traits)
+        fake_image = objects.ImageMeta(
+            properties=objects.ImageMetaProps(
+                traits_required=[]))
+        reqspec = objects.RequestSpec(flavor=fake_flavor, image=fake_image)
+        result = request_filter.isolate_aggregates(self.context, reqspec)
+        self.assertTrue(result)
+        self.assertItemsEqual(
+            set([uuids.agg1, uuids.agg2, uuids.agg4]),
+            reqspec.requested_destination.forbidden_aggregates)
+        mock_getnotmd.assert_called_once_with(self.context, mock.ANY,
+                                              'trait:', value='required')
+        self.assertItemsEqual(agg4_traits, mock_getnotmd.call_args[0][1])
+
+    @mock.patch('nova.objects.aggregate.AggregateList.'
+                'get_non_matching_by_metadata_keys')
+    def test_isolate_aggregates_union(self, mock_getnotmd):
+        agg_traits = {'trait:HW_GPU_API_DXVA': 'required',
+                       'trait:CUSTOM_XYZ_TRAIT': 'required'}
+        mock_getnotmd.return_value = [
+            objects.Aggregate(
+                uuid=uuids.agg2,
+                metadata={'trait:CUSTOM_WINDOWS_LICENSED_TRAIT': 'required',
+                          'trait:CUSTOM_XYZ_TRAIT': 'required'}),
+            objects.Aggregate(
+                uuid=uuids.agg4,
+                metadata={'trait:HW_GPU_API_DXVA': 'required',
+                          'trait:HW_NIC_DCB_ETS': 'required'}),
+        ]
+        fake_flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
+            extra_specs=agg_traits)
+        fake_image = objects.ImageMeta(
+            properties=objects.ImageMetaProps(
+                traits_required=[]))
+        reqspec = objects.RequestSpec(flavor=fake_flavor, image=fake_image)
+        reqspec.requested_destination = objects.Destination(
+            forbidden_aggregates={uuids.agg1})
+        result = request_filter.isolate_aggregates(self.context, reqspec)
+        self.assertTrue(result)
+        self.assertEqual(
+            ','.join(sorted([uuids.agg1, uuids.agg2, uuids.agg4])),
+            ','.join(sorted(
+                reqspec.requested_destination.forbidden_aggregates)))
+        mock_getnotmd.assert_called_once_with(self.context, mock.ANY,
+                                              'trait:', value='required')
+        self.assertItemsEqual(agg_traits, mock_getnotmd.call_args[0][1])
+
+    @mock.patch('nova.objects.aggregate.AggregateList.'
+                'get_non_matching_by_metadata_keys')
+    def test_isolate_agg_trait_on_flavor_destination_not_set(self,
+                                                             mock_getnotmd):
+        mock_getnotmd.return_value = []
+        traits = set(['HW_GPU_API_DXVA', 'HW_NIC_DCB_ETS'])
+        fake_flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
+            extra_specs={'trait:' + trait: 'required' for trait in traits})
+        fake_image = objects.ImageMeta(
+            properties=objects.ImageMetaProps(
+                traits_required=[]))
+        reqspec = objects.RequestSpec(flavor=fake_flavor, image=fake_image)
+        result = request_filter.isolate_aggregates(self.context, reqspec)
+        self.assertTrue(result)
+        self.assertNotIn('requested_destination', reqspec)
+        keys = ['trait:%s' % trait for trait in traits]
+        mock_getnotmd.assert_called_once_with(self.context, mock.ANY,
+                                              'trait:', value='required')
+        self.assertItemsEqual(keys, mock_getnotmd.call_args[0][1])
+
+    @mock.patch('nova.objects.aggregate.AggregateList.'
+                'get_non_matching_by_metadata_keys')
+    def test_isolate_agg_trait_on_flv_img_destination_not_set(self,
+                                                              mock_getnotmd):
+        mock_getnotmd.return_value = []
+        flavor_traits = set(['HW_GPU_API_DXVA'])
+        image_traits = set(['HW_NIC_DCB_ETS'])
+        fake_flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
+            extra_specs={
+                'trait:' + trait: 'required' for trait in flavor_traits})
+        fake_image = objects.ImageMeta(
+            properties=objects.ImageMetaProps(
+                traits_required=[trait for trait in image_traits]))
+        reqspec = objects.RequestSpec(flavor=fake_flavor, image=fake_image)
+        result = request_filter.isolate_aggregates(self.context, reqspec)
+        self.assertTrue(result)
+        self.assertNotIn('requested_destination', reqspec)
+        keys = ['trait:%s' % trait for trait in flavor_traits.union(
+            image_traits)]
+        mock_getnotmd.assert_called_once_with(self.context, mock.ANY,
+                                              'trait:', value='required')
+        self.assertItemsEqual(keys, mock_getnotmd.call_args[0][1])
+
     @mock.patch('nova.objects.AggregateList.get_by_metadata')
     def test_require_tenant_aggregate_no_match(self, getmd):
         self.flags(placement_aggregate_required_for_tenants=True,
@@ -150,9 +264,11 @@ class TestRequestFilter(test.NoDBTestCase):
         request_filter.map_az_to_placement_aggregate(self.context, reqspec)
         getmd.assert_not_called()
 
+    @mock.patch('nova.objects.aggregate.AggregateList.'
+                'get_non_matching_by_metadata_keys')
     @mock.patch('nova.objects.AggregateList.get_by_metadata')
-    def test_with_tenant_and_az(self, getmd):
-        getmd.side_effect = [
+    def test_with_tenant_and_az_and_traits(self, mock_getmd, mock_getnotmd):
+        mock_getmd.side_effect = [
             # Tenant filter
             [objects.Aggregate(
                 uuid=uuids.agg1,
@@ -168,10 +284,33 @@ class TestRequestFilter(test.NoDBTestCase):
                 uuid=uuids.agg4,
                 metadata={'availability_zone': 'myaz'})],
         ]
+
+        mock_getnotmd.side_effect = [
+            # isolate_aggregates filter
+            [objects.Aggregate(
+                uuid=uuids.agg1,
+                metadata={'trait:CUSTOM_WINDOWS_LICENSED_TRAIT': 'required'}),
+            objects.Aggregate(
+                uuid=uuids.agg2,
+                metadata={'trait:CUSTOM_WINDOWS_LICENSED_TRAIT': 'required',
+                          'trait:CUSTOM_XYZ_TRAIT': 'required'}),
+            objects.Aggregate(
+                uuid=uuids.agg3,
+                metadata={'trait:CUSTOM_XYZ_TRAIT': 'required'}),
+            ],
+        ]
+
+        traits = set(['HW_GPU_API_DXVA', 'HW_NIC_DCB_ETS'])
+        fake_flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
+            extra_specs={'trait:' + trait: 'required' for trait in traits})
+        fake_image = objects.ImageMeta(
+            properties=objects.ImageMetaProps(
+                traits_required=[]))
         reqspec = objects.RequestSpec(project_id='owner',
-                                      availability_zone='myaz')
-        # flavor is needed for the compute_status_filter
-        reqspec.flavor = objects.Flavor(extra_specs={})
+                                      availability_zone='myaz',
+                                      flavor=fake_flavor,
+                                      image=fake_image)
         request_filter.process_reqspec(self.context, reqspec)
         self.assertEqual(
             ','.join(sorted([uuids.agg1, uuids.agg2])),
@@ -181,11 +320,19 @@ class TestRequestFilter(test.NoDBTestCase):
             ','.join(sorted([uuids.agg4])),
             ','.join(sorted(
                 reqspec.requested_destination.aggregates[1].split(','))))
-        getmd.assert_has_calls([
+        self.assertItemsEqual(
+            set([uuids.agg1, uuids.agg2, uuids.agg3]),
+            reqspec.requested_destination.forbidden_aggregates)
+        mock_getmd.assert_has_calls([
             mock.call(self.context, value='owner'),
             mock.call(self.context,
                       key='availability_zone',
                       value='myaz')])
+
+        keys = ['trait:%s' % trait for trait in traits]
+        mock_getnotmd.assert_called_once_with(self.context, mock.ANY,
+                'trait:', value='required')
+        self.assertItemsEqual(keys, mock_getnotmd.call_args[0][1])
 
     def test_require_image_type_support_disabled(self):
         self.flags(query_placement_for_image_type_support=False,

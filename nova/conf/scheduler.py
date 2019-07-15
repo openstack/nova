@@ -184,6 +184,17 @@ AvailabilityZoneFilter in the scheduler.
 This setting causes the scheduler to ask placement only for compute
 hosts that support the ``disk_format`` of the image used in the request.
 """),
+    cfg.BoolOpt("enable_isolated_aggregate_filtering",
+                default=False,
+                help="""
+This setting allows the scheduler to restrict hosts in aggregates based on
+matching required traits in the aggregate metadata and the instance
+flavor/image. If an aggregate is configured with a property with key
+``trait:$TRAIT_NAME`` and value ``required``, the instance flavor extra_specs
+and/or image metadata must also contain ``trait:$TRAIT_NAME=required`` to be
+eligible to be scheduled to hosts in that aggregate. More technical details
+at https://docs.openstack.org/nova/latest/reference/isolate-aggregates.html
+""")
 ]
 
 filter_scheduler_group = cfg.OptGroup(name="filter_scheduler",
