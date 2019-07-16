@@ -23,6 +23,7 @@ import os
 import os_vif
 from os_vif import exception as osv_exception
 from os_vif.objects import fields as osv_fields
+from os_vif.objects import vif as osv_vifs
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils import strutils
@@ -119,9 +120,6 @@ def set_vf_interface_vlan(pci_addr, mac_addr, vlan=0):
 @profiler.trace_cls("vif_driver")
 class LibvirtGenericVIFDriver(object):
     """Generic VIF driver for libvirt networking."""
-
-    def _normalize_vif_type(self, vif_type):
-        return vif_type.replace('2.1q', '2q')
 
     def get_vif_devname(self, vif):
         if 'devname' in vif:
@@ -432,6 +430,10 @@ class LibvirtGenericVIFDriver(object):
 
         return conf
 
+    def get_config_ib_hostdev(self, instance, vif, image_meta,
+                              inst_type, virt_type, host):
+        return self.get_base_hostdev_pci_config(vif)
+
     def _get_virtio_queue_sizes(self, host):
         """Returns rx/tx queue sizes configured or (None, None)
 
@@ -463,10 +465,6 @@ class LibvirtGenericVIFDriver(object):
                             MIN_QEMU_TX_QUEUE_SIZE))
             tx = None
         return rx, tx
-
-    def get_config_ib_hostdev(self, instance, vif, image_meta,
-                              inst_type, virt_type, host):
-        return self.get_base_hostdev_pci_config(vif)
 
     def _set_config_VIFGeneric(self, instance, vif, conf, host):
         dev = vif.vif_name
@@ -522,14 +520,12 @@ class LibvirtGenericVIFDriver(object):
 
     def _set_config_VIFPortProfile(self, instance, vif, conf):
         # Set any port profile that may be required
-        profilefunc = "_set_config_" + vif.port_profile.obj_name()
-        func = getattr(self, profilefunc, None)
-        if not func:
+        profile_name = vif.port_profile.obj_name()
+        if profile_name == 'VIFPortProfileOpenVSwitch':
+            self._set_config_VIFPortProfileOpenVSwitch(vif.port_profile, conf)
+        else:
             raise exception.InternalError(
-                _("Unsupported VIF port profile type %(obj)s func %(func)s") %
-                {'obj': vif.port_profile.obj_name(), 'func': profilefunc})
-
-        func(vif.port_profile, conf)
+                _('Unsupported VIF port profile type %s') % profile_name)
 
     def _get_config_os_vif(self, instance, vif, image_meta, inst_type,
                            virt_type, host, vnic_type):
@@ -552,13 +548,19 @@ class LibvirtGenericVIFDriver(object):
                                     host)
 
         # Do the VIF type specific config
-        viffunc = "_set_config_" + vif.obj_name()
-        func = getattr(self, viffunc, None)
-        if not func:
+        if isinstance(vif, osv_vifs.VIFGeneric):
+            self._set_config_VIFGeneric(instance, vif, conf, host)
+        elif isinstance(vif, osv_vifs.VIFBridge):
+            self._set_config_VIFBridge(instance, vif, conf, host)
+        elif isinstance(vif, osv_vifs.VIFOpenVSwitch):
+            self._set_config_VIFOpenVSwitch(instance, vif, conf, host)
+        elif isinstance(vif, osv_vifs.VIFVHostUser):
+            self._set_config_VIFVHostUser(instance, vif, conf, host)
+        elif isinstance(vif, osv_vifs.VIFHostDevice):
+            self._set_config_VIFHostDevice(instance, vif, conf, host)
+        else:
             raise exception.InternalError(
-                _("Unsupported VIF type %(obj)s func %(func)s") %
-                {'obj': vif.obj_name(), 'func': viffunc})
-        func(instance, vif, conf, host)
+                _("Unsupported VIF type %s") % vif.obj_name())
 
         # not all VIF types support bandwidth configuration
         # https://github.com/libvirt/libvirt/blob/568a41722/src/conf/netdev_bandwidth_conf.h#L38
@@ -596,13 +598,29 @@ class LibvirtGenericVIFDriver(object):
                                            vnic_type)
 
         # Legacy non-os-vif codepath
-        vif_slug = self._normalize_vif_type(vif_type)
-        func = getattr(self, 'get_config_%s' % vif_slug, None)
-        if not func:
-            raise exception.InternalError(
-                _("Unexpected vif_type=%s") % vif_type)
-        return func(instance, vif, image_meta,
-                    inst_type, virt_type, host)
+        args = (instance, vif, image_meta, inst_type, virt_type, host)
+        if vif_type == network_model.VIF_TYPE_IOVISOR:
+            return self.get_config_iovisor(*args)
+        elif vif_type == network_model.VIF_TYPE_BRIDGE:
+            return self.get_config_bridge(*args)
+        elif vif_type == network_model.VIF_TYPE_802_QBG:
+            return self.get_config_802qbg(*args)
+        elif vif_type == network_model.VIF_TYPE_802_QBH:
+            return self.get_config_802qbh(*args)
+        elif vif_type == network_model.VIF_TYPE_HW_VEB:
+            return self.get_config_hw_veb(*args)
+        elif vif_type == network_model.VIF_TYPE_HOSTDEV:
+            return self.get_config_hostdev_physical(*args)
+        elif vif_type == network_model.VIF_TYPE_MACVTAP:
+            return self.get_config_macvtap(*args)
+        elif vif_type == network_model.VIF_TYPE_MIDONET:
+            return self.get_config_midonet(*args)
+        elif vif_type == network_model.VIF_TYPE_TAP:
+            return self.get_config_tap(*args)
+        elif vif_type == network_model.VIF_TYPE_IB_HOSTDEV:
+            return self.get_config_ib_hostdev(*args)
+
+        raise exception.InternalError(_('Unexpected vif_type=%s') % vif_type)
 
     def plug_ib_hostdev(self, instance, vif):
         fabric = vif.get_physical_network()
@@ -621,12 +639,6 @@ class LibvirtGenericVIFDriver(object):
             LOG.exception(_("Failed while plugging ib hostdev vif"),
                           instance=instance)
 
-    def plug_802qbg(self, instance, vif):
-        pass
-
-    def plug_802qbh(self, instance, vif):
-        pass
-
     def plug_hw_veb(self, instance, vif):
         # TODO(vladikr): This code can be removed once the minimum version of
         # Libvirt is incleased above 1.3.5, as vlan will be set by libvirt
@@ -641,9 +653,6 @@ class LibvirtGenericVIFDriver(object):
                 vif['profile'].get('trusted', "False"))
             if trusted:
                 linux_net.set_vf_trusted(vif['profile']['pci_slot'], True)
-
-    def plug_hostdev_physical(self, instance, vif):
-        pass
 
     def plug_macvtap(self, instance, vif):
         vif_details = vif['details']
@@ -726,13 +735,27 @@ class LibvirtGenericVIFDriver(object):
             return
 
         # Legacy non-os-vif codepath
-        vif_slug = self._normalize_vif_type(vif_type)
-        func = getattr(self, 'plug_%s' % vif_slug, None)
-        if not func:
+        if vif_type == network_model.VIF_TYPE_IB_HOSTDEV:
+            self.plug_ib_hostdev(instance, vif)
+        elif vif_type == network_model.VIF_TYPE_HW_VEB:
+            self.plug_hw_veb(instance, vif)
+        elif vif_type == network_model.VIF_TYPE_MACVTAP:
+            self.plug_macvtap(instance, vif)
+        elif vif_type == network_model.VIF_TYPE_MIDONET:
+            self.plug_midonet(instance, vif)
+        elif vif_type == network_model.VIF_TYPE_IOVISOR:
+            self.plug_iovisor(instance, vif)
+        elif vif_type == network_model.VIF_TYPE_TAP:
+            self.plug_tap(instance, vif)
+        elif vif_type in {network_model.VIF_TYPE_802_QBG,
+                          network_model.VIF_TYPE_802_QBH,
+                          network_model.VIF_TYPE_HOSTDEV}:
+            # These are no-ops
+            pass
+        else:
             raise exception.VirtualInterfacePlugException(
-                _("Plug vif failed because of unexpected "
+                _("Plug VIF failed because of unexpected "
                   "vif_type=%s") % vif_type)
-        func(instance, vif)
 
     def unplug_ib_hostdev(self, instance, vif):
         fabric = vif.get_physical_network()
@@ -745,12 +768,6 @@ class LibvirtGenericVIFDriver(object):
             nova.privsep.libvirt.unplug_infiniband_vif(fabric, vnic_mac)
         except Exception:
             LOG.exception(_("Failed while unplugging ib hostdev vif"))
-
-    def unplug_802qbg(self, instance, vif):
-        pass
-
-    def unplug_802qbh(self, instance, vif):
-        pass
 
     def unplug_hw_veb(self, instance, vif):
         # TODO(sean-k-mooney): remove in Train after backporting 0 mac
@@ -769,12 +786,6 @@ class LibvirtGenericVIFDriver(object):
         elif vif['vnic_type'] == network_model.VNIC_TYPE_DIRECT:
             if "trusted" in vif['profile']:
                 linux_net.set_vf_trusted(vif['profile']['pci_slot'], False)
-
-    def unplug_hostdev_physical(self, instance, vif):
-        pass
-
-    def unplug_macvtap(self, instance, vif):
-        pass
 
     def unplug_midonet(self, instance, vif):
         """Unplug from MidoNet network port
@@ -842,9 +853,25 @@ class LibvirtGenericVIFDriver(object):
             return
 
         # Legacy non-os-vif codepath
-        vif_slug = self._normalize_vif_type(vif_type)
-        func = getattr(self, 'unplug_%s' % vif_slug, None)
-        if not func:
-            msg = _("Unexpected vif_type=%s") % vif_type
-            raise exception.InternalError(msg)
-        func(instance, vif)
+        if vif_type == network_model.VIF_TYPE_IB_HOSTDEV:
+            self.unplug_ib_hostdev(instance, vif)
+        elif vif_type == network_model.VIF_TYPE_HW_VEB:
+            self.unplug_hw_veb(instance, vif)
+        elif vif_type == network_model.VIF_TYPE_MIDONET:
+            self.unplug_midonet(instance, vif)
+        elif vif_type == network_model.VIF_TYPE_IOVISOR:
+            self.unplug_iovisor(instance, vif)
+        elif vif_type == network_model.VIF_TYPE_TAP:
+            self.unplug_tap(instance, vif)
+        elif vif_type in {network_model.VIF_TYPE_802_QBG,
+                          network_model.VIF_TYPE_802_QBH,
+                          network_model.VIF_TYPE_HOSTDEV,
+                          network_model.VIF_TYPE_MACVTAP}:
+            # These are no-ops
+            pass
+        else:
+            # TODO(stephenfin): This should probably raise
+            # VirtualInterfaceUnplugException
+            raise exception.InternalError(
+                _("Unplug VIF failed because of unexpected "
+                  "vif_type=%s") % vif_type)
