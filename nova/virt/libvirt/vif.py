@@ -694,9 +694,6 @@ class LibvirtGenericVIFDriver(object):
         mtu = network.get_meta('mtu') if network else None
         nova.privsep.linux_net.set_device_mtu(dev, mtu)
 
-    def plug_vhostuser(self, instance, vif):
-        pass
-
     def _plug_os_vif(self, instance, vif):
         instance_info = os_vif_util.nova_to_osvif_instance(instance)
 
@@ -812,9 +809,6 @@ class LibvirtGenericVIFDriver(object):
             nova.privsep.linux_net.delete_net_dev(dev)
         except processutils.ProcessExecutionError:
             LOG.exception(_("Failed while unplugging vif"), instance=instance)
-
-    def unplug_vhostuser(self, instance, vif):
-        pass
 
     def _unplug_os_vif(self, instance, vif):
         instance_info = os_vif_util.nova_to_osvif_instance(instance)
