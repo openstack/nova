@@ -2379,12 +2379,6 @@ class CertificateValidationFailed(NovaException):
                 "certificate: %(cert_uuid)s. %(reason)s")
 
 
-class CertificateValidationNotYetAvailable(NovaException):
-    msg_fmt = _("Image signature certificate validation support is "
-                "not yet available.")
-    code = 409
-
-
 class InstanceRescueFailure(NovaException):
     msg_fmt = _("Failed to move instance to rescue mode: %(reason)s")
 

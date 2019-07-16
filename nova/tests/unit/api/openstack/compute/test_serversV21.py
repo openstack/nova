@@ -3442,9 +3442,7 @@ class ServersControllerRebuildTestV263(ControllerTest):
                 # either not set or empty
                 self.assertIsNone(server['trusted_image_certificates'])
 
-    @mock.patch('nova.objects.Service.get_minimum_version',
-                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS)
-    def test_rebuild_server_with_trusted_certs(self, get_min_ver):
+    def test_rebuild_server_with_trusted_certs(self):
         """Test rebuild with valid trusted_image_certificates argument"""
         self._rebuild_server(
             certs=['0b5d2c72-12cc-4ba6-a8d7-3ff5cc1d8cb8',
@@ -3454,9 +3452,7 @@ class ServersControllerRebuildTestV263(ControllerTest):
         """Test rebuild without trusted image certificates"""
         self._rebuild_server()
 
-    @mock.patch('nova.objects.Service.get_minimum_version',
-                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS)
-    def test_rebuild_server_conf_options_turned_off_set(self, get_min_ver):
+    def test_rebuild_server_conf_options_turned_off_set(self):
         """Test rebuild with feature disabled and certs specified"""
         self._rebuild_server(
             certs=['0b5d2c72-12cc-4ba6-a8d7-3ff5cc1d8cb8'], conf_enabled=False)
@@ -3469,9 +3465,7 @@ class ServersControllerRebuildTestV263(ControllerTest):
         """Test rebuild with feature enabled and no certs specified"""
         self._rebuild_server(conf_enabled=True)
 
-    @mock.patch('nova.objects.Service.get_minimum_version',
-                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS)
-    def test_rebuild_server_default_trusted_certificates(self, get_min_ver):
+    def test_rebuild_server_default_trusted_certificates(self):
         """Test rebuild with certificate specified in configurations"""
         self._rebuild_server(conf_enabled=True, conf_certs=['conf-id'])
 
@@ -3530,10 +3524,7 @@ class ServersControllerRebuildTestV263(ControllerTest):
                                self.req, FAKE_UUID, body=self.body)
         self.assertIn('is not of type', six.text_type(ex))
 
-    @mock.patch('nova.objects.Service.get_minimum_version',
-                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS)
-    def test_rebuild_server_with_trusted_certs_pre_2_63_fails(self,
-            get_min_ver):
+    def test_rebuild_server_with_trusted_certs_pre_2_63_fails(self):
         """Make sure we can't use trusted_certs before 2.63"""
         self._rebuild_server(certs=['trusted-cert-id'])
         self.req.api_version_request = \
@@ -3566,17 +3557,6 @@ class ServersControllerRebuildTestV263(ControllerTest):
                                self._rebuild_server,
                                certs=['trusted-cert-id'])
         self.assertIn('test cert validation error',
-                      six.text_type(ex))
-
-    @mock.patch('nova.objects.Service.get_minimum_version',
-                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS - 1)
-    def test_rebuild_server_with_cert_validation_not_available(
-            self, get_min_ver):
-        ex = self.assertRaises(webob.exc.HTTPConflict,
-                               self._rebuild_server,
-                               certs=['trusted-cert-id'])
-        self.assertIn('Image signature certificate validation support '
-                      'is not yet available',
                       six.text_type(ex))
 
 
@@ -6571,9 +6551,7 @@ class ServersControllerCreateTestV263(ServersControllerCreateTest):
         self.req.api_version_request = \
             api_version_request.APIVersionRequest('2.63')
 
-    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
-                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS)
-    def test_create_instance_with_trusted_certs(self, get_min_ver):
+    def test_create_instance_with_trusted_certs(self):
         """Test create with valid trusted_image_certificates argument"""
         self._create_instance_req(
             ['0b5d2c72-12cc-4ba6-a8d7-3ff5cc1d8cb8',
@@ -6676,18 +6654,6 @@ class ServersControllerCreateTestV263(ServersControllerCreateTest):
                                self.controller.create, self.req,
                                body=self.body)
         self.assertIn('test cert validation error',
-                      six.text_type(ex))
-
-    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
-                return_value=compute_api.MIN_COMPUTE_TRUSTED_CERTS - 1)
-    def test_create_server_with_cert_validation_not_available(
-            self, mock_get_min_version_all_cells):
-        self._create_instance_req(['trusted-cert-id'])
-        ex = self.assertRaises(webob.exc.HTTPConflict,
-                               self.controller.create, self.req,
-                               body=self.body)
-        self.assertIn('Image signature certificate validation support '
-                      'is not yet available',
                       six.text_type(ex))
 
 
