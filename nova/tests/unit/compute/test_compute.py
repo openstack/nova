@@ -6147,15 +6147,6 @@ class ComputeTestCase(BaseTestCase,
         self.assertEqual(instance.vm_state, vm_states.ERROR)
         self.compute.terminate_instance(self.context, instance, [])
 
-    def test_pre_live_migration_instance_has_no_fixed_ip(self):
-        # Confirm that no exception is raised if there is no fixed ip on
-        # pre_live_migration
-        self.compute.driver.pre_live_migration(
-            test.MatchType(nova.context.RequestContext),
-            test.MatchType(objects.Instance),
-            {'block_device_mapping': []},
-            mock.ANY, mock.ANY, mock.ANY)
-
     @mock.patch.object(fake.FakeDriver, 'ensure_filtering_rules_for_instance')
     @mock.patch.object(fake.FakeDriver, 'pre_live_migration')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
