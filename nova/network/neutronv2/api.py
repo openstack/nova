@@ -22,7 +22,6 @@ from keystoneauth1 import loading as ks_loading
 from neutronclient.common import exceptions as neutron_client_exc
 from neutronclient.v2_0 import client as clientv20
 from oslo_log import log as logging
-from oslo_middleware import request_id
 from oslo_utils import excutils
 from oslo_utils import strutils
 from oslo_utils import uuidutils
@@ -1328,7 +1327,7 @@ class API(base_api.NetworkAPI):
         """
         return client.post(
             '/v2.0/ports/%s/bindings' % port_id, json=data, raise_exc=False,
-            headers={request_id.INBOUND_HEADER: context.global_id})
+            global_request_id=context.global_id)
 
     def delete_port_binding(self, context, port_id, host):
         """Delete the port binding for the given port ID and host
@@ -1371,7 +1370,7 @@ class API(base_api.NetworkAPI):
         """
         return client.delete(
             '/v2.0/ports/%s/bindings/%s' % (port_id, host), raise_exc=False,
-            headers={request_id.INBOUND_HEADER: context.global_id})
+            global_request_id=context.global_id)
 
     def activate_port_binding(self, context, port_id, host):
         """Activates an inactive port binding.
@@ -1393,7 +1392,7 @@ class API(base_api.NetworkAPI):
         resp = client.put(
             '/v2.0/ports/%s/bindings/%s/activate' % (port_id, host),
             raise_exc=False,
-            headers={request_id.INBOUND_HEADER: context.global_id})
+            global_request_id=context.global_id)
         if resp:
             LOG.debug('Activated binding for port %s and host %s.',
                       port_id, host)
@@ -2701,8 +2700,7 @@ class API(base_api.NetworkAPI):
             # port and destination host.
             resp = client.get(
                 '/v2.0/ports/%s/bindings/%s' % (vif['id'], dest_host),
-                raise_exc=False,
-                headers={request_id.INBOUND_HEADER: context.global_id})
+                raise_exc=False, global_request_id=context.global_id)
             if resp:
                 if resp.json()['binding']['status'] != 'ACTIVE':
                     self.activate_port_binding(context, vif['id'], dest_host)

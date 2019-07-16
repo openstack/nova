@@ -438,7 +438,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         expected_payload['user_id'] = user_id
         self.ks_adap_mock.put.assert_called_once_with(
             expected_url, microversion='1.12', json=expected_payload,
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
 
         self.assertTrue(res)
 
@@ -482,7 +482,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
             'user_id': user_id}
         self.ks_adap_mock.put.assert_called_once_with(
             expected_url, microversion='1.12', json=expected_payload,
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
         self.assertTrue(res)
 
     def test_claim_resources_success_resize_to_same_host_no_shared(self):
@@ -548,7 +548,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
             'user_id': user_id}
         self.ks_adap_mock.put.assert_called_once_with(
             expected_url, microversion='1.28', json=mock.ANY,
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
         # We have to pull the json body from the mock call_args to validate
         # it separately otherwise hash seed issues get in the way.
         actual_payload = self.ks_adap_mock.put.call_args[1]['json']
@@ -628,7 +628,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
             'user_id': user_id}
         self.ks_adap_mock.put.assert_called_once_with(
             expected_url, microversion='1.28', json=mock.ANY,
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
         # We have to pull the json body from the mock call_args to validate
         # it separately otherwise hash seed issues get in the way.
         actual_payload = self.ks_adap_mock.put.call_args[1]['json']
@@ -715,7 +715,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
             'user_id': user_id}
         self.ks_adap_mock.put.assert_called_once_with(
             expected_url, microversion='1.28', json=mock.ANY,
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
         # We have to pull the json body from the mock call_args to validate
         # it separately otherwise hash seed issues get in the way.
         actual_payload = self.ks_adap_mock.put.call_args[1]['json']
@@ -814,7 +814,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
             'user_id': user_id}
         self.ks_adap_mock.put.assert_called_once_with(
             expected_url, microversion='1.28', json=mock.ANY,
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
         # We have to pull the json body from the mock call_args to validate
         # it separately otherwise hash seed issues get in the way.
         actual_payload = self.ks_adap_mock.put.call_args[1]['json']
@@ -904,7 +904,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
             'user_id': user_id}
         self.ks_adap_mock.put.assert_called_once_with(
             expected_url, microversion='1.28', json=mock.ANY,
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
         # We have to pull the json body from the mock call_args to validate
         # it separately otherwise hash seed issues get in the way.
         actual_payload = self.ks_adap_mock.put.call_args[1]['json']
@@ -1007,7 +1007,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
             'user_id': user_id}
         self.ks_adap_mock.put.assert_called_once_with(
             expected_url, microversion='1.28', json=mock.ANY,
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
         # We have to pull the json body from the mock call_args to validate
         # it separately otherwise hash seed issues get in the way.
         actual_payload = self.ks_adap_mock.put.call_args[1]['json']
@@ -1063,8 +1063,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         # identical since we're retrying the same HTTP request
         expected_calls = [
             mock.call(expected_url, microversion='1.28', json=expected_payload,
-                      headers={'X-Openstack-Request-Id':
-                               self.context.global_id})] * 2
+                      global_request_id=self.context.global_id)] * 2
         self.assertEqual(len(expected_calls),
                          self.ks_adap_mock.put.call_count)
         self.ks_adap_mock.put.assert_has_calls(expected_calls)
@@ -1115,7 +1114,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         expected_payload['consumer_generation'] = None
         self.ks_adap_mock.put.assert_called_once_with(
             expected_url, microversion='1.28', json=expected_payload,
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
 
         self.assertFalse(res)
         self.assertTrue(mock_log.called)
@@ -1163,7 +1162,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
             'consumer_generation': None}
         self.ks_adap_mock.put.assert_called_once_with(
             expected_url, microversion='1.28', json=expected_payload,
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
 
     def test_remove_provider_from_inst_alloc_no_shared(self):
         """Tests that the method which manipulates an existing doubled-up
@@ -1235,7 +1234,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         self.assertEqual(expected_payload, actual_payload)
         self.ks_adap_mock.put.assert_called_once_with(
             expected_url, microversion='1.28', json=mock.ANY,
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
 
         self.assertTrue(res)
 
@@ -1322,7 +1321,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         self.assertEqual(expected_payload, actual_payload)
         self.ks_adap_mock.put.assert_called_once_with(
             expected_url, microversion='1.28', json=mock.ANY,
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
 
         self.assertTrue(res)
 
@@ -1507,12 +1506,12 @@ class TestPutAllocations(SchedulerReportClientTestCase):
             [
                 mock.call(
                     '/allocations/%s' % consumer_uuid,
-                    headers=mock.ANY,
+                    global_request_id=self.context.global_id,
                     microversion='1.28'
                 ),
                 mock.call(
                     '/resource_providers?in_tree=%s' % uuids.source_compute,
-                    headers=mock.ANY,
+                    global_request_id=self.context.global_id,
                     microversion='1.14'
                 )
             ],
@@ -1524,7 +1523,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         self.assertEqual(expected_payload, actual_payload)
         self.ks_adap_mock.put.assert_called_once_with(
             expected_url, microversion='1.28', json=mock.ANY,
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
 
         self.assertTrue(res)
 
@@ -2115,7 +2114,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             expected_query)
         self.ks_adap_mock.get.assert_called_once_with(
             expected_url, microversion='1.31',
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
         self.assertEqual(mock.sentinel.alloc_reqs, alloc_reqs)
         self.assertEqual(mock.sentinel.p_sums, p_sums)
 
@@ -2155,7 +2154,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.assertEqual(mock.sentinel.alloc_reqs, alloc_reqs)
         self.ks_adap_mock.get.assert_called_once_with(
             expected_url, microversion='1.31',
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
         self.assertEqual(mock.sentinel.p_sums, p_sums)
 
     def test_get_allocation_candidates_not_found(self):
@@ -2177,7 +2176,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
 
         self.ks_adap_mock.get.assert_called_once_with(
             mock.ANY, microversion='1.31',
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
         url = self.ks_adap_mock.get.call_args[0][0]
         split_url = parse.urlsplit(url)
         query = parse.parse_qs(split_url.query)
@@ -2210,7 +2209,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         expected_url = '/resource_providers/' + uuid
         self.ks_adap_mock.get.assert_called_once_with(
             expected_url, microversion='1.14',
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
         self.assertEqual(expected_provider_dict, result)
 
     def test_get_resource_provider_not_found(self):
@@ -2225,7 +2224,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         expected_url = '/resource_providers/' + uuid
         self.ks_adap_mock.get.assert_called_once_with(
             expected_url, microversion='1.14',
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
         self.assertIsNone(result)
 
     @mock.patch.object(report.LOG, 'error')
@@ -2246,7 +2245,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         expected_url = '/resource_providers/' + uuid
         self.ks_adap_mock.get.assert_called_once_with(
             expected_url, microversion='1.14',
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
         # A 503 Service Unavailable should trigger an error log that
         # includes the placement request id and return None
         # from _get_resource_provider()
@@ -2285,7 +2284,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                         '&required=MISC_SHARES_VIA_AGGREGATE')
         self.ks_adap_mock.get.assert_called_once_with(
             expected_url, microversion='1.18',
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
         self.assertEqual(rpjson, result)
 
     def test_get_sharing_providers_emptylist(self):
@@ -2311,7 +2310,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                         '&required=MISC_SHARES_VIA_AGGREGATE')
         self.ks_adap_mock.get.assert_called_once_with(
             expected_url, microversion='1.18',
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
         # A 503 Service Unavailable should trigger an error log that
         # includes the placement request id
         self.assertTrue(logging_mock.called)
@@ -2346,7 +2345,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         expected_url = '/resource_providers?in_tree=' + root
         self.ks_adap_mock.get.assert_called_once_with(
             expected_url, microversion='1.14',
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
         self.assertEqual(rpjson, result)
 
     @mock.patch.object(report.LOG, 'error')
@@ -2366,7 +2365,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         expected_url = '/resource_providers?in_tree=' + uuid
         self.ks_adap_mock.get.assert_called_once_with(
             expected_url, microversion='1.14',
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
         # A 503 Service Unavailable should trigger an error log that includes
         # the placement request id
         self.assertTrue(logging_mock.called)
@@ -2400,7 +2399,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         expected_url = '/resource_providers'
         self.ks_adap_mock.post.assert_called_once_with(
             expected_url, json=expected_payload, microversion='1.20',
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
 
     def test_create_resource_provider_with_parent(self):
         """Test that when specifying a parent provider UUID, that the
@@ -2430,7 +2429,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         expected_url = '/resource_providers'
         self.ks_adap_mock.post.assert_called_once_with(
             expected_url, json=expected_payload, microversion='1.20',
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
 
     @mock.patch.object(report.LOG, 'info')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -2460,7 +2459,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         expected_url = '/resource_providers'
         self.ks_adap_mock.post.assert_called_once_with(
             expected_url, json=expected_payload, microversion='1.20',
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
         self.assertEqual(mock.sentinel.get_rp, result)
         # The 409 response will produce a message to the info log.
         self.assertTrue(logging_mock.called)
@@ -2500,7 +2499,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         expected_url = '/resource_providers'
         self.ks_adap_mock.post.assert_called_once_with(
             expected_url, json=expected_payload, microversion='1.20',
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
         # A 503 Service Unavailable should log an error that
         # includes the placement request id and
         # _create_resource_provider() should return None
@@ -2515,7 +2514,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         url = '/resource_providers/%s/aggregates' % uuids.foo
         self.client.put(url, [])
         self.ks_adap_mock.put.assert_called_once_with(
-            url, json=[], microversion=None, headers={})
+            url, json=[], microversion=None, global_request_id=None)
 
     def test_delete_provider(self):
         delete_mock = fake_requests.FakeResponse(None)
@@ -2532,7 +2531,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
 
             self.ks_adap_mock.delete.assert_called_once_with(
                 '/resource_providers/' + uuids.root,
-                headers={'X-Openstack-Request-Id': 'gri'}, microversion=None)
+                global_request_id='gri', microversion=None)
             self.assertFalse(self.client._provider_tree.exists(uuids.root))
             self.assertNotIn(uuids.root, self.client._association_refresh_time)
 
@@ -2549,7 +2548,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             self.assertRaises(exc, self.client._delete_provider, uuids.root)
             self.ks_adap_mock.delete.assert_called_once_with(
                 '/resource_providers/' + uuids.root, microversion=None,
-                headers={})
+                global_request_id=None)
 
             self.ks_adap_mock.delete.reset_mock()
 
@@ -2572,7 +2571,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.ks_adap_mock.put.assert_called_once_with(
             '/resource_providers/%s/aggregates' % uuids.rp, json=exp_payload,
             microversion='1.19',
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
         # Cache was updated
         ptree_data = self.client._provider_tree.data(uuids.rp)
         self.assertEqual(set(aggs), ptree_data.aggregates)
@@ -2634,7 +2633,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.ks_adap_mock.put.assert_called_once_with(
             '/resource_providers/%s/aggregates' % uuids.rp, json=exp_payload,
             microversion='1.19',
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
         # Cache was updated
         ptree_data = self.client._provider_tree.data(uuids.rp)
         self.assertEqual(set(), ptree_data.aggregates)
@@ -2712,7 +2711,7 @@ class TestAggregates(SchedulerReportClientTestCase):
         expected_url = '/resource_providers/' + uuid + '/aggregates'
         self.ks_adap_mock.get.assert_called_once_with(
             expected_url, microversion='1.19',
-            headers={'X-Openstack-Request-Id': self.context.global_id})
+            global_request_id=self.context.global_id)
         self.assertEqual(set(aggs), result)
         self.assertEqual(42, gen)
 
@@ -2735,7 +2734,7 @@ class TestAggregates(SchedulerReportClientTestCase):
             expected_url = '/resource_providers/' + uuid + '/aggregates'
             self.ks_adap_mock.get.assert_called_once_with(
                 expected_url, microversion='1.19',
-                headers={'X-Openstack-Request-Id': self.context.global_id})
+                global_request_id=self.context.global_id)
             self.assertTrue(log_mock.called)
             self.assertEqual(uuids.request_id,
                              log_mock.call_args[0][1]['placement_req_id'])
@@ -2762,7 +2761,7 @@ class TestTraits(SchedulerReportClientTestCase):
         expected_url = '/resource_providers/' + uuid + '/traits'
         self.ks_adap_mock.get.assert_called_once_with(
             expected_url,
-            headers={'X-Openstack-Request-Id': self.context.global_id},
+            global_request_id=self.context.global_id,
             **self.trait_api_kwargs)
         self.assertEqual(set(traits), result)
         self.assertEqual(42, gen)
@@ -2786,7 +2785,7 @@ class TestTraits(SchedulerReportClientTestCase):
             expected_url = '/resource_providers/' + uuid + '/traits'
             self.ks_adap_mock.get.assert_called_once_with(
                 expected_url,
-                headers={'X-Openstack-Request-Id': self.context.global_id},
+                global_request_id=self.context.global_id,
                 **self.trait_api_kwargs)
             self.assertTrue(log_mock.called)
             self.assertEqual(uuids.request_id,
@@ -2803,7 +2802,7 @@ class TestTraits(SchedulerReportClientTestCase):
         expected_url = '/resource_providers/' + uuid + '/traits'
         self.ks_adap_mock.get.assert_called_once_with(
             expected_url,
-            headers={'X-Openstack-Request-Id': self.context.global_id},
+            global_request_id=self.context.global_id,
             **self.trait_api_kwargs)
 
     def test_ensure_traits(self):
@@ -2822,12 +2821,12 @@ class TestTraits(SchedulerReportClientTestCase):
         self.client._ensure_traits(self.context, all_traits)
         self.ks_adap_mock.get.assert_called_once_with(
             '/traits?name=in:' + ','.join(all_traits),
-            headers={'X-Openstack-Request-Id': self.context.global_id},
+            global_request_id=self.context.global_id,
             **self.trait_api_kwargs)
         self.ks_adap_mock.put.assert_has_calls(
             [mock.call('/traits/' + trait,
-            headers={'X-Openstack-Request-Id': self.context.global_id},
-            **self.trait_api_kwargs)
+             global_request_id=self.context.global_id, json=None,
+             **self.trait_api_kwargs)
              for trait in custom_traits], any_order=True)
 
         self.ks_adap_mock.reset_mock()
@@ -2837,7 +2836,7 @@ class TestTraits(SchedulerReportClientTestCase):
         self.client._ensure_traits(self.context, standard_traits)
         self.ks_adap_mock.get.assert_called_once_with(
             '/traits?name=in:' + ','.join(standard_traits),
-            headers={'X-Openstack-Request-Id': self.context.global_id},
+            global_request_id=self.context.global_id,
             **self.trait_api_kwargs)
         self.ks_adap_mock.put.assert_not_called()
 
@@ -2858,7 +2857,7 @@ class TestTraits(SchedulerReportClientTestCase):
 
         self.ks_adap_mock.get.assert_called_once_with(
             '/traits?name=in:FOO',
-            headers={'X-Openstack-Request-Id': self.context.global_id},
+            global_request_id=self.context.global_id,
             **self.trait_api_kwargs)
         self.ks_adap_mock.put.assert_not_called()
 
@@ -2874,11 +2873,11 @@ class TestTraits(SchedulerReportClientTestCase):
 
         self.ks_adap_mock.get.assert_called_once_with(
             '/traits?name=in:FOO',
-            headers={'X-Openstack-Request-Id': self.context.global_id},
+            global_request_id=self.context.global_id,
             **self.trait_api_kwargs)
         self.ks_adap_mock.put.assert_called_once_with(
             '/traits/FOO',
-            headers={'X-Openstack-Request-Id': self.context.global_id},
+            global_request_id=self.context.global_id, json=None,
             **self.trait_api_kwargs)
 
     def test_set_traits_for_provider(self):
@@ -2904,12 +2903,12 @@ class TestTraits(SchedulerReportClientTestCase):
         # Verify API calls
         self.ks_adap_mock.get.assert_called_once_with(
             '/traits?name=in:' + ','.join(traits),
-            headers={'X-Openstack-Request-Id': self.context.global_id},
+            global_request_id=self.context.global_id,
             **self.trait_api_kwargs)
         self.ks_adap_mock.put.assert_called_once_with(
             '/resource_providers/%s/traits' % uuids.rp,
             json={'traits': traits, 'resource_provider_generation': 0},
-            headers={'X-Openstack-Request-Id': self.context.global_id},
+            global_request_id=self.context.global_id,
             **self.trait_api_kwargs)
 
         # And ensure the provider tree cache was updated appropriately

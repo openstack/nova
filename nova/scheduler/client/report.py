@@ -247,36 +247,28 @@ class SchedulerReportClient(object):
         return client
 
     def get(self, url, version=None, global_request_id=None):
-        headers = ({request_id.INBOUND_HEADER: global_request_id}
-                   if global_request_id else {})
-        return self._client.get(url, microversion=version, headers=headers)
+        return self._client.get(url, microversion=version,
+                                global_request_id=global_request_id)
 
     def post(self, url, data, version=None, global_request_id=None):
-        headers = ({request_id.INBOUND_HEADER: global_request_id}
-                   if global_request_id else {})
         # NOTE(sdague): using json= instead of data= sets the
         # media type to application/json for us. Placement API is
         # more sensitive to this than other APIs in the OpenStack
         # ecosystem.
         return self._client.post(url, json=data, microversion=version,
-                                 headers=headers)
+                                 global_request_id=global_request_id)
 
     def put(self, url, data, version=None, global_request_id=None):
         # NOTE(sdague): using json= instead of data= sets the
         # media type to application/json for us. Placement API is
         # more sensitive to this than other APIs in the OpenStack
         # ecosystem.
-        kwargs = {'microversion': version,
-                  'headers': {request_id.INBOUND_HEADER:
-                              global_request_id} if global_request_id else {}}
-        if data is not None:
-            kwargs['json'] = data
-        return self._client.put(url, **kwargs)
+        return self._client.put(url, json=data, microversion=version,
+                                global_request_id=global_request_id)
 
     def delete(self, url, version=None, global_request_id=None):
-        headers = ({request_id.INBOUND_HEADER: global_request_id}
-                   if global_request_id else {})
-        return self._client.delete(url, microversion=version, headers=headers)
+        return self._client.delete(url, microversion=version,
+                                   global_request_id=global_request_id)
 
     @safe_connect
     def get_allocation_candidates(self, context, resources):
