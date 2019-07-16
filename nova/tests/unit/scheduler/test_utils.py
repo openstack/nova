@@ -362,7 +362,8 @@ class TestUtils(test.NoDBTestCase):
                 self.context, reqspec, self.mock_host_manager)
         self.assertEqual([], req.get_request_group(None).aggregates)
 
-    @mock.patch("nova.scheduler.utils.ResourceRequest.from_extra_specs")
+    @mock.patch("nova.scheduler.utils.ResourceRequest.from_extra_specs",
+                return_value=utils.ResourceRequest())
     def test_process_extra_specs_granular_called(self, mock_proc):
         flavor = objects.Flavor(vcpus=1,
                                 memory_mb=1024,
@@ -794,20 +795,6 @@ class TestUtils(test.NoDBTestCase):
         )
         self.assertEqual(expected_querystring, rr.to_querystring())
 
-    def test_more_than_one_resource_request_without_group_policy_warns(self):
-        extra_specs = {
-            'resources:VCPU': '2',
-            'resources1:CUSTOM_FOO': '1'
-        }
-        rr = utils.ResourceRequest.from_extra_specs(extra_specs)
-        rr.add_request_group(objects.RequestGroup(resources={'CUSTOM_BAR': 5}))
-
-        rr.to_querystring()
-        self.assertIn(
-            "There is more than one numbered request group in the allocation "
-            "candidate query but the flavor did not specify any group policy.",
-            self.stdlog.logger.output)
-
     def test_resource_request_from_extra_specs_append_request(self):
         extra_specs = {
             'resources:VCPU': '2',
@@ -1138,3 +1125,154 @@ class TestUtils(test.NoDBTestCase):
             1.8,
             utils.get_weight_multiplier(host1, 'cpu_weight_multiplier', 1.0)
         )
+
+
+class TestResourcesFromRequestGroupDefaultPolicy(test.NoDBTestCase):
+    """These test cases assert what happens when the group policy is missing
+    from the flavor but more than one numbered request group is requested from
+    various sources. Note that while image can provide required traits for the
+    resource request those traits are always added to the unnumbered group so
+    image cannot be a source of additional numbered groups.
+    """
+
+    def setUp(self):
+        super(TestResourcesFromRequestGroupDefaultPolicy, self).setUp()
+        self.context = nova_context.get_admin_context()
+        self.port_group1 = objects.RequestGroup.from_port_request(
+            self.context, uuids.port1,
+            port_resource_request={
+                "resources": {
+                    "NET_BW_IGR_KILOBIT_PER_SEC": 1000,
+                    "NET_BW_EGR_KILOBIT_PER_SEC": 1000},
+                "required": ["CUSTOM_PHYSNET_2",
+                             "CUSTOM_VNIC_TYPE_NORMAL"]
+            })
+        self.port_group2 = objects.RequestGroup.from_port_request(
+            self.context, uuids.port2,
+            port_resource_request={
+                "resources": {
+                    "NET_BW_IGR_KILOBIT_PER_SEC": 2000,
+                    "NET_BW_EGR_KILOBIT_PER_SEC": 2000},
+                "required": ["CUSTOM_PHYSNET_3",
+                             "CUSTOM_VNIC_TYPE_DIRECT"]
+            })
+
+    def test_one_group_from_flavor_dont_warn(self):
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
+            extra_specs={
+                'resources1:CUSTOM_BAR': '2',
+            })
+        request_spec = objects.RequestSpec(
+            flavor=flavor, image=objects.ImageMeta(), requested_resources=[])
+
+        rr = utils.resources_from_request_spec(
+            self.context, request_spec, host_manager=mock.Mock())
+
+        log = self.stdlog.logger.output
+        self.assertNotIn(
+            "There is more than one numbered request group in the allocation "
+            "candidate query but the flavor did not specify any group policy.",
+            log)
+        self.assertNotIn(
+            "To avoid the placement failure nova defaults the group policy to "
+            "'none'.",
+            log)
+        self.assertIsNone(rr.group_policy)
+        self.assertNotIn('group_policy=none', rr.to_querystring())
+
+    def test_one_group_from_port_dont_warn(self):
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
+            extra_specs={})
+        request_spec = objects.RequestSpec(
+            flavor=flavor, image=objects.ImageMeta(),
+            requested_resources=[self.port_group1])
+
+        rr = utils.resources_from_request_spec(
+            self.context, request_spec, host_manager=mock.Mock())
+
+        log = self.stdlog.logger.output
+        self.assertNotIn(
+            "There is more than one numbered request group in the allocation "
+            "candidate query but the flavor did not specify any group policy.",
+            log)
+        self.assertNotIn(
+            "To avoid the placement failure nova defaults the group policy to "
+            "'none'.",
+            log)
+        self.assertIsNone(rr.group_policy)
+        self.assertNotIn('group_policy=none', rr.to_querystring())
+
+    def test_two_groups_from_flavor_only_warns(self):
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
+            extra_specs={
+                'resources1:CUSTOM_BAR': '2',
+                'resources2:CUSTOM_FOO': '1'
+            })
+        request_spec = objects.RequestSpec(
+            flavor=flavor, image=objects.ImageMeta(), requested_resources=[])
+
+        rr = utils.resources_from_request_spec(
+            self.context, request_spec, host_manager=mock.Mock())
+
+        log = self.stdlog.logger.output
+        self.assertIn(
+            "There is more than one numbered request group in the allocation "
+            "candidate query but the flavor did not specify any group policy.",
+            log)
+        self.assertNotIn(
+            "To avoid the placement failure nova defaults the group policy to "
+            "'none'.",
+            log)
+        self.assertIsNone(rr.group_policy)
+        self.assertNotIn('group_policy', rr.to_querystring())
+
+    def test_one_group_from_flavor_one_from_port_policy_defaulted(self):
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
+            extra_specs={
+                'resources1:CUSTOM_BAR': '2',
+            })
+        request_spec = objects.RequestSpec(
+            flavor=flavor, image=objects.ImageMeta(),
+            requested_resources=[self.port_group1])
+
+        rr = utils.resources_from_request_spec(
+            self.context, request_spec, host_manager=mock.Mock())
+
+        log = self.stdlog.logger.output
+        self.assertIn(
+            "There is more than one numbered request group in the allocation "
+            "candidate query but the flavor did not specify any group policy.",
+            log)
+        self.assertIn(
+            "To avoid the placement failure nova defaults the group policy to "
+            "'none'.",
+            log)
+        self.assertEqual('none', rr.group_policy)
+        self.assertIn('group_policy=none', rr.to_querystring())
+
+    def test_two_groups_from_ports_policy_defaulted(self):
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
+            extra_specs={})
+        request_spec = objects.RequestSpec(
+            flavor=flavor, image=objects.ImageMeta(),
+            requested_resources=[self.port_group1, self.port_group2])
+
+        rr = utils.resources_from_request_spec(
+            self.context, request_spec, host_manager=mock.Mock())
+
+        log = self.stdlog.logger.output
+        self.assertIn(
+            "There is more than one numbered request group in the allocation "
+            "candidate query but the flavor did not specify any group policy.",
+            log)
+        self.assertIn(
+            "To avoid the placement failure nova defaults the group policy to "
+            "'none'.",
+            log)
+        self.assertEqual('none', rr.group_policy)
+        self.assertIn('group_policy=none', rr.to_querystring())
