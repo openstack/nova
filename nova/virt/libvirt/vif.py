@@ -55,9 +55,6 @@ CONF = nova.conf.CONF
 MIN_LIBVIRT_INTERFACE_MTU = (3, 3, 0)
 MIN_QEMU_INTERFACE_MTU = (2, 9, 0)
 
-# virtio-net.rx_queue_size support
-MIN_LIBVIRT_RX_QUEUE_SIZE = (2, 3, 0)
-MIN_QEMU_RX_QUEUE_SIZE = (2, 7, 0)
 # virtio-net.tx_queue_size support
 MIN_LIBVIRT_TX_QUEUE_SIZE = (3, 7, 0)
 MIN_QEMU_TX_QUEUE_SIZE = (2, 10, 0)
@@ -447,15 +444,6 @@ class LibvirtGenericVIFDriver(object):
         # configure vhostuser interface meaning that the logs can be
         # duplicated. In future we want to rewrite get_base_config.
         rx, tx = CONF.libvirt.rx_queue_size, CONF.libvirt.tx_queue_size
-        if rx and not host.has_min_version(
-                MIN_LIBVIRT_RX_QUEUE_SIZE, MIN_QEMU_RX_QUEUE_SIZE):
-            LOG.warning('Setting RX queue size requires libvirt %s and QEMU '
-                        '%s version or greater.',
-                        libvirt_utils.version_to_string(
-                            MIN_LIBVIRT_RX_QUEUE_SIZE),
-                        libvirt_utils.version_to_string(
-                            MIN_QEMU_RX_QUEUE_SIZE))
-            rx = None
         if tx and not host.has_min_version(
                 MIN_LIBVIRT_TX_QUEUE_SIZE, MIN_QEMU_TX_QUEUE_SIZE):
             LOG.warning('Setting TX queue size requires libvirt %s and QEMU '

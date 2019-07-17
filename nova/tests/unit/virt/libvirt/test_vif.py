@@ -737,7 +737,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
     @mock.patch.object(host.Host, "has_min_version", return_value=False)
     def test_virtio_vhost_queue_sizes_nover(self, has_min_version):
         _, _, conf = self._test_virtio_config_queue_sizes()
-        self.assertIsNone(conf.vhost_rx_queue_size)
+        self.assertEqual(512, conf.vhost_rx_queue_size)
         self.assertIsNone(conf.vhost_tx_queue_size)
 
     @mock.patch.object(host.Host, "has_min_version", return_value=True)
@@ -753,7 +753,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         hostimpl, v, conf = self._test_virtio_config_queue_sizes()
         v._set_config_VIFVHostUser(self.instance, self.os_vif_vhostuser,
                                    conf, hostimpl)
-        self.assertIsNone(conf.vhost_rx_queue_size)
+        self.assertEqual(512, conf.vhost_rx_queue_size)
         self.assertIsNone(conf.vhost_tx_queue_size)
 
     def test_multiple_nics(self):
@@ -1177,23 +1177,6 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         vlan = node.find("vlan").find("tag").get("id")
         vlan_want = self.vif_hw_veb["details"]["vlan"]
         self.assertEqual(int(vlan), vlan_want)
-
-    @mock.patch.object(pci_utils, 'get_ifname_by_pci_address',
-                       return_value='eth1')
-    @mock.patch.object(host.Host, "has_min_version", return_value=False)
-    def test_hw_veb_driver_macvtap_pre_vlan_support(self, ver_mock,
-                                                    mock_get_ifname):
-        d = vif.LibvirtGenericVIFDriver()
-        xml = self._get_instance_xml(
-            d, self.vif_hw_veb_macvtap,
-            has_min_libvirt_version=ver_mock.return_value)
-        node = self._get_node(xml)
-        self.assertEqual(node.get("type"), "direct")
-        self._assertTypeEquals(node, "direct", "source",
-                               "dev", "eth1")
-        self._assertTypeEquals(node, "direct", "source",
-                               "mode", "passthrough")
-        self._assertMacEquals(node, self.vif_hw_veb_macvtap)
 
     def test_driver_macvtap_vlan(self):
         d = vif.LibvirtGenericVIFDriver()
