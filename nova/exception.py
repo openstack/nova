@@ -2045,6 +2045,11 @@ class ImageCPUThreadPolicyForbidden(Forbidden):
                 "override CPU thread pinning policy set against the flavor")
 
 
+class ImagePMUConflict(Forbidden):
+    msg_fmt = _("Image property 'hw_pmu' is not permitted to "
+                "override the PMU policy set in the flavor")
+
+
 class UnsupportedPolicyException(Invalid):
     msg_fmt = _("ServerGroup policy is not supported: %(reason)s")
 

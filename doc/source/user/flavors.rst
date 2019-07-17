@@ -373,6 +373,27 @@ Random-number generator
     the host's entropy per period.
   - RATE-PERIOD: (integer) Duration of the read period in seconds.
 
+.. _extra-specs-performance-monitoring-unit:
+
+Performance Monitoring Unit (vPMU)
+  If nova is deployed with the libvirt virt driver and ``[libvirt]/virt_type``
+  is set to ``qemu`` or ``kvm``, a vPMU can be enabled or disabled for an
+  instance using the ``hw:pmu`` extra_spec or the ``hw_pmu`` image property.
+  The supported values are ``True`` or ``False``. If the vPMU is not
+  explicitly enabled or disabled via the flavor or image, its presence is left
+  to QEMU to decide.
+
+  .. code-block:: console
+
+     $ openstack flavor set FLAVOR-NAME --property hw:pmu=True|False
+
+  The vPMU is used by tools like ``perf`` in the guest to provide more accurate
+  information for profiling application and monitoring guest performance.
+  For realtime workloads, the emulation of a vPMU can introduce additional
+  latency which may be undesirable. If the telemetry it provides is not
+  required, such workloads should set ``hw:pmu=False``. For most workloads
+  the default of unset or enabling the vPMU ``hw:pmu=True`` will be correct.
+
 .. _extra-specs-cpu-topology:
 
 CPU topology

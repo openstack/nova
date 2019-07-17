@@ -6596,7 +6596,8 @@ class ServersControllerCreateTestV260(test.NoDBTestCase):
         get_flavor_mock = mock.patch(
             'nova.compute.flavors.get_flavor_by_flavor_id',
             return_value=fake_flavor.fake_flavor_obj(
-                context.get_admin_context(), flavorid='1'))
+                context.get_admin_context(), flavorid='1',
+                expected_attrs=['extra_specs']))
         get_flavor_mock.start()
         self.addCleanup(get_flavor_mock.stop)
         reqspec_create_mock = mock.patch(

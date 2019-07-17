@@ -172,12 +172,15 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.20: Added 'traits_required' list field
     # Version 1.21: Added 'hw_time_hpet' field
     # Version 1.22: Added 'gop', 'virtio' and 'none' to hw_video_model field
-    VERSION = '1.22'
+    # Version 1.23: Added 'hw_pmu' field
+    VERSION = '1.23'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 23):
+            primitive.pop('hw_pmu', None)
         # NOTE(sean-k-mooney): unlike other nova object we version this object
         # when composed object are updated.
         if target_version < (1, 22):
@@ -326,6 +329,10 @@ class ImageMetaProps(base.NovaObject):
 
         # Generic property to specify the pointer model type.
         'hw_pointer_model': fields.PointerModelField(),
+
+        # boolean 'true' or 'false' to enable virtual performance
+        # monitoring unit (vPMU).
+        'hw_pmu': fields.FlexibleBooleanField(),
 
         # boolean 'yes' or 'no' to enable QEMU guest agent
         'hw_qemu_guest_agent': fields.FlexibleBooleanField(),

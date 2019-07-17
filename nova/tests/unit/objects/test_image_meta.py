@@ -403,3 +403,11 @@ class TestImageMetaProps(test.NoDBTestCase):
         obj = objects.ImageMetaProps(traits_required=['CUSTOM_TRUSTED'])
         primitive = obj.obj_to_primitive('1.19')
         self.assertNotIn('traits_required', primitive['nova_object.data'])
+
+    def test_obj_make_compatible_pmu(self):
+        """Tests that checks if we pop hw_pmu."""
+        obj = objects.ImageMetaProps(hw_pmu=True)
+        primitive = obj.obj_to_primitive()
+        old_primitive = obj.obj_to_primitive('1.22')
+        self.assertIn('hw_pmu', primitive['nova_object.data'])
+        self.assertNotIn('hw_pmu', old_primitive['nova_object.data'])
