@@ -110,8 +110,9 @@ def set_vf_interface_vlan(pci_addr, mac_addr, vlan=0):
 
     # Bring up/down the VF's interface
     # TODO(edand): The mac is assigned as a workaround for the following issue
-    #              https://bugzilla.redhat.com/show_bug.cgi?id=1372944
-    #              once resolved it will be removed
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1415609 and should be removed
+    # once we bump the libvirt minimum to 3.2.0, as noted in
+    # https://bugzilla.redhat.com/show_bug.cgi?id=1372944
     port_state = 'up' if vlan > 0 else 'down'
     nova.privsep.linux_net.set_device_macaddr(vf_ifname, mac_addr,
                                               port_state=port_state)
@@ -640,15 +641,7 @@ class LibvirtGenericVIFDriver(object):
                           instance=instance)
 
     def plug_hw_veb(self, instance, vif):
-        # TODO(vladikr): This code can be removed once the minimum version of
-        # Libvirt is incleased above 1.3.5, as vlan will be set by libvirt
-        if vif['vnic_type'] == network_model.VNIC_TYPE_MACVTAP:
-            set_vf_interface_vlan(
-                vif['profile']['pci_slot'],
-                mac_addr=vif['address'],
-                vlan=vif['details'][network_model.VIF_DETAILS_VLAN])
-
-        elif vif['vnic_type'] == network_model.VNIC_TYPE_DIRECT:
+        if vif['vnic_type'] == network_model.VNIC_TYPE_DIRECT:
             trusted = strutils.bool_from_string(
                 vif['profile'].get('trusted', "False"))
             if trusted:
