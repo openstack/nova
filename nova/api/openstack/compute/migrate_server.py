@@ -58,18 +58,8 @@ class MigrateServerController(wsgi.Controller):
         instance = common.get_instance(self.compute_api, context, id,
                                        expected_attrs=['flavor'])
 
-        # We could potentially move this check to conductor and avoid the
-        # extra API call to neutron when we support move operations with ports
-        # having resource requests.
         if common.instance_has_port_with_resource_request(
                 context, instance.uuid, self.network_api):
-            if not common.supports_port_resource_request_during_move(req):
-                msg = _("The migrate action on a server with ports having "
-                        "resource requests, like a port with a QoS minimum "
-                        "bandwidth policy, is not supported with this "
-                        "microversion")
-                raise exc.HTTPBadRequest(explanation=msg)
-
             # TODO(gibi): Remove when nova only supports compute newer than
             # Train
             source_service = objects.Service.get_by_host_and_binary(

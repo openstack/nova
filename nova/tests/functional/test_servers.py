@@ -5820,26 +5820,6 @@ class UnsupportedPortResourceRequestBasedSchedulingTest(
             'The resize action on a server with ports having resource '
             'requests', six.text_type(ex))
 
-    def test_migrate_server_with_port_resource_request_old_microversion(self):
-        server = self._create_server(
-            flavor=self.flavor,
-            networks=[{'port': self.neutron.port_1['id']}])
-        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
-
-        # We need to simulate that the above server has a port that has
-        # resource request; we cannot boot with such a port but legacy servers
-        # can exist with such a port.
-        self._add_resource_request_to_a_bound_port(self.neutron.port_1['id'])
-
-        ex = self.assertRaises(
-            client.OpenStackApiException,
-            self.api.post_server_action, server['id'], {'migrate': None})
-
-        self.assertEqual(400, ex.response.status_code)
-        self.assertIn(
-            'The migrate action on a server with ports having resource '
-            'requests', six.text_type(ex))
-
     def test_live_migrate_server_with_port_resource_request_old_microversion(
             self):
         server = self._create_server(
@@ -6362,18 +6342,6 @@ class ServerMoveWithPortResourceRequestTest(
         self.flags(weight_classes=[__name__ + '.HostNameWeigher'],
                    group='filter_scheduler')
         super(ServerMoveWithPortResourceRequestTest, self).setUp()
-
-        # The API actively rejecting the move operations with resource
-        # request so we have to turn off that check.
-        # TODO(gibi): Remove this when the move operations are supported and
-        # the API check is removed.
-        patcher = mock.patch(
-            'nova.api.openstack.common.'
-            'supports_port_resource_request_during_move',
-            return_value=True)
-        self.addCleanup(patcher.stop)
-        patcher.start()
-
         self.compute2 = self._start_compute('host2')
         self.compute2_rp_uuid = self._get_provider_uuid_by_host('host2')
         self._create_networking_rp_tree('host2', self.compute2_rp_uuid)
