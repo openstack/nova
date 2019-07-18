@@ -224,7 +224,9 @@ class HostState(object):
         self.vcpus_total = compute.vcpus
         self.vcpus_used = compute.vcpus_used
         self.updated = compute.updated_at
-        self.numa_topology = compute.numa_topology
+        # the ComputeNode.numa_topology field is a StringField so deserialize
+        self.numa_topology = objects.NUMATopology.obj_from_db_obj(
+            compute.numa_topology) if compute.numa_topology else None
         self.pci_stats = pci_stats.PciDeviceStats(
             stats=compute.pci_device_pools)
 
@@ -293,33 +295,22 @@ class HostState(object):
         else:
             pci_requests = None
 
-        # Calculate the numa usage
-        host_numa_topology, _fmt = hardware.host_topology_and_format_from_host(
-                                self)
-        instance_numa_topology = spec_obj.numa_topology
-        if host_numa_topology and instance_numa_topology:
+        # Calculate the NUMA usage...
+        if self.numa_topology and spec_obj.numa_topology:
             spec_obj.numa_topology = hardware.numa_fit_instance_to_host(
-                host_numa_topology, instance_numa_topology,
+                self.numa_topology, spec_obj.numa_topology,
                 limits=self.limits.get('numa_topology'),
                 pci_requests=pci_requests, pci_stats=self.pci_stats)
+
+            self.numa_topology = hardware.numa_usage_from_instances(
+                self.numa_topology, [spec_obj.numa_topology])
+
+        # ...and the PCI usage
         if pci_requests:
             instance_cells = None
             if spec_obj.numa_topology:
                 instance_cells = spec_obj.numa_topology.cells
             self.pci_stats.apply_requests(pci_requests, instance_cells)
-
-        # NOTE(sbauza): Yeah, that's crap. We should get rid of all of those
-        # NUMA helpers because now we're 100% sure that spec_obj.numa_topology
-        # is an InstanceNUMATopology object. Unfortunately, since
-        # HostState.host_numa_topology is still limbo between an NUMATopology
-        # object (when updated by consume_from_request), a ComputeNode object
-        # (when updated by update_from_compute_node), we need to keep the call
-        # to get_host_numa_usage_from_instance until it's fixed (and use a
-        # temporary orphaned Instance object as a proxy)
-        instance = objects.Instance(numa_topology=spec_obj.numa_topology)
-
-        self.numa_topology = hardware.get_host_numa_usage_from_instance(
-                self, instance)
 
         # NOTE(sbauza): By considering all cases when the scheduler is called
         # and when consume_from_request() is run, we can safely say that there

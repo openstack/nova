@@ -1080,11 +1080,20 @@ class ResourceTracker(object):
         stats = self.stats[nodename]
         cn.running_vms = stats.num_instances
 
-        # Calculate the numa usage
-        free = sign == -1
-        updated_numa_topology = hardware.get_host_numa_usage_from_instance(
-                cn, usage, free)
-        cn.numa_topology = updated_numa_topology
+        # calculate the NUMA usage, assuming the instance is actually using
+        # NUMA, of course
+        if cn.numa_topology and usage.get('numa_topology'):
+            instance_numa_topology = usage.get('numa_topology')
+            # the ComputeNode.numa_topology field is a StringField, so
+            # deserialize
+            host_numa_topology = objects.NUMATopology.obj_from_db_obj(
+                cn.numa_topology)
+
+            free = sign == -1
+
+            # ...and reserialize once we save it back
+            cn.numa_topology = hardware.numa_usage_from_instances(
+                host_numa_topology, [instance_numa_topology], free)._to_json()
 
     def _get_migration_context_resource(self, resource, instance,
                                         prefix='new_'):
