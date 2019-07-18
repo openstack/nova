@@ -11,13 +11,14 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
 import copy
 import itertools
 
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
-
+import six
 
 from nova.db.sqlalchemy import api as db
 from nova.db.sqlalchemy import api_models
@@ -26,7 +27,6 @@ from nova import objects
 from nova.objects import base
 from nova.objects import fields
 from nova.objects import instance as obj_instance
-from nova.virt import hardware
 
 LOG = logging.getLogger(__name__)
 
@@ -215,11 +215,11 @@ class RequestSpec(base.NovaObject):
             self.pci_requests = pci_requests
 
     def _from_instance_numa_topology(self, numa_topology):
-        if isinstance(numa_topology, dict):
-            self.numa_topology = hardware.instance_topology_from_instance(
-                dict(numa_topology=numa_topology))
-        else:
-            self.numa_topology = numa_topology
+        if isinstance(numa_topology, six.string_types):
+            numa_topology = objects.InstanceNUMATopology.obj_from_primitive(
+                jsonutils.loads(numa_topology))
+
+        self.numa_topology = numa_topology
 
     def _from_flavor(self, flavor):
         if isinstance(flavor, objects.Flavor):
