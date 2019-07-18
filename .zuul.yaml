@@ -301,7 +301,7 @@
     # Please try to keep the list of job names sorted alphabetically.
     templates:
       - check-requirements
-      - integrated-gate-py3
+      - integrated-gate-compute
       - openstack-cover-jobs
       - openstack-lower-constraints-jobs
       - openstack-python-jobs
@@ -335,7 +335,7 @@
         - nova-next
         - nova-tox-functional
         - nova-tox-functional-py36
-        - tempest-full-py3:
+        - tempest-integrated-compute:
             irrelevant-files: *dsvm-irrelevant-files
         - tempest-slow-py3:
             irrelevant-files: *dsvm-irrelevant-files
@@ -348,7 +348,7 @@
         - nova-tox-functional
         - nova-tox-functional-py36
         - nova-next
-        - tempest-full-py3:
+        - tempest-integrated-compute:
             irrelevant-files: *dsvm-irrelevant-files
         - tempest-slow-py3:
             irrelevant-files: *dsvm-irrelevant-files
