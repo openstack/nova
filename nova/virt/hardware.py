@@ -2038,8 +2038,7 @@ def host_topology_and_format_from_host(host):
 
 
 # TODO(ndipanov): Remove when all code paths are using objects
-def get_host_numa_usage_from_instance(host, instance, free=False,
-                                     never_serialize_result=False):
+def get_host_numa_usage_from_instance(host, instance, free=False):
     """Calculate new host NUMA usage from an instance's NUMA usage.
 
     Until the RPC version is bumped to 5.x, both host and instance
@@ -2054,12 +2053,9 @@ def get_host_numa_usage_from_instance(host, instance, free=False,
                      dict
     :param free: if True the returned topology will have its usage
                  decreased instead
-    :param never_serialize_result: if True result will always be an
-                                   instance of objects.NUMATopology
 
-    :returns: a objects.NUMATopology instance if never_serialize_result
-              was True, else numa_usage in the format it was on the
-              host
+    :returns: An instance of ``objects.NUMATopology`` or a dict, depending on
+              the original format of the ``host.numa_topology`` field.
     """
     instance_numa_topology = instance_topology_from_instance(instance)
     if instance_numa_topology:
@@ -2073,7 +2069,7 @@ def get_host_numa_usage_from_instance(host, instance, free=False,
             host_numa_topology, instance_numa_topology, free=free))
 
     if updated_numa_topology is not None:
-        if jsonify_result and not never_serialize_result:
+        if jsonify_result:
             updated_numa_topology = updated_numa_topology._to_json()
 
     return updated_numa_topology
