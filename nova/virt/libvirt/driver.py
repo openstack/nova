@@ -500,6 +500,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._set_multiattach_support()
 
+        self._check_my_ip()
+
         if (CONF.libvirt.virt_type == 'lxc' and
                 not (CONF.libvirt.uid_maps and CONF.libvirt.gid_maps)):
             LOG.warning("Running libvirt-lxc without user namespaces is "
@@ -620,6 +622,13 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.debug('Volume multiattach is not supported based on current '
                       'versions of QEMU and libvirt. QEMU must be less than '
                       '2.10 or libvirt must be greater than or equal to 3.10.')
+
+    def _check_my_ip(self):
+        ips = compute_utils.get_machine_ips()
+        if CONF.my_ip not in ips:
+            LOG.warning('my_ip address (%(my_ip)s) was not found on '
+                        'any of the interfaces: %(ifaces)s',
+                        {'my_ip': CONF.my_ip, 'ifaces': ", ".join(ips)})
 
     def _prepare_migration_flags(self):
         migration_flags = 0
@@ -3226,11 +3235,6 @@ class LibvirtDriver(driver.ComputeDriver):
         return self._get_console_output_file(instance, console_log)
 
     def get_host_ip_addr(self):
-        ips = compute_utils.get_machine_ips()
-        if CONF.my_ip not in ips:
-            LOG.warning('my_ip address (%(my_ip)s) was not found on '
-                        'any of the interfaces: %(ifaces)s',
-                        {'my_ip': CONF.my_ip, 'ifaces': ", ".join(ips)})
         return CONF.my_ip
 
     def get_vnc_console(self, context, instance):

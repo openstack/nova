@@ -1535,6 +1535,9 @@ class FakeLibvirtFixture(fixtures.Fixture):
             # NOTE(mdbooth): The strange incantation below means 'this module'
             self.useFixture(fixtures.MonkeyPatch(i, sys.modules[__name__]))
 
+        self.useFixture(
+            fixtures.MockPatch('nova.compute.utils.get_machine_ips'))
+
         disable_event_thread(self)
 
         if self.stub_os_vif:

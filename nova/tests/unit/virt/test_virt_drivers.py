@@ -889,6 +889,7 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         # will try to execute some commands which hangs tests so let's just
         # stub out the unplug call to os-vif since we don't care about it.
         self.stub_out('os_vif.unplug', lambda a, kw: None)
+        self.stub_out('nova.compute.utils.get_machine_ips', lambda: [])
 
     def _fake_admin_context(self, *args, **kwargs):
         return self.ctxt
