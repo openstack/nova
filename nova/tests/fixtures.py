@@ -2672,3 +2672,23 @@ class CyborgFixture(fixtures.Fixture):
             'nova.accelerator.cyborg._CyborgClient.'
             'delete_arqs_for_instance',
             side_effect=self.fake_delete_arqs_for_instance)).mock
+
+
+class GenericPoisonFixture(fixtures.Fixture):
+    POISON_THESE = (
+        ('netifaces.interfaces',
+         'a test environment should not be inspecting real interfaces on the '
+         'test node'),
+    )
+
+    def setUp(self):
+        def poison_configure(method, reason):
+            def fail(*a, **k):
+                raise Exception('This test invokes %s, which is bad (%s); you '
+                                'should mock it.' % (method, reason))
+            return fail
+
+        super(GenericPoisonFixture, self).setUp()
+        for meth, why in self.POISON_THESE:
+            self.useFixture(fixtures.MonkeyPatch(
+                meth, poison_configure(meth, why)))
