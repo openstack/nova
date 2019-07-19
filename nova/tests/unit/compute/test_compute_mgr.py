@@ -253,7 +253,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                       bdms=mock_bdms)])
 
     def _make_compute_node(self, hyp_hostname, cn_id):
-        cn = mock.Mock(spec_set=['hypervisor_hostname', 'id',
+        cn = mock.Mock(spec_set=['hypervisor_hostname', 'id', 'uuid',
                                  'destroy'])
         cn.id = cn_id
         cn.hypervisor_hostname = hyp_hostname
@@ -303,15 +303,18 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.context, mock.sentinel.node, startup=True)
         log_mock.exception.assert_called_once()
 
+    @mock.patch.object(manager, 'LOG')
     @mock.patch.object(manager.ComputeManager,
                        '_update_available_resource_for_node')
     @mock.patch.object(fake_driver.FakeDriver, 'get_available_nodes')
     @mock.patch.object(manager.ComputeManager, '_get_compute_nodes_in_db')
     def test_update_available_resource(self, get_db_nodes, get_avail_nodes,
-                                       update_mock):
+                                       update_mock, mock_log):
         mock_rt = self._mock_rt()
         rc_mock = self.useFixture(fixtures.fixtures.MockPatchObject(
             self.compute, 'reportclient')).mock
+        rc_mock.delete_resource_provider.side_effect = (
+            keystone_exception.EndpointNotFound)
         db_nodes = [self._make_compute_node('node%s' % i, i)
                     for i in range(1, 5)]
         avail_nodes = set(['node2', 'node3', 'node4', 'node5'])
@@ -335,6 +338,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                     self.context, db_node, cascade=True)
                 mock_rt.remove_node.assert_called_once_with(
                     'node1')
+                mock_log.error.assert_called_once_with(
+                    "Failed to delete compute node resource provider for "
+                    "compute node %s: %s", db_node.uuid, mock.ANY)
             else:
                 self.assertFalse(db_node.destroy.called)
 

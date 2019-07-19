@@ -403,7 +403,7 @@ class SchedulerReportClient(object):
         :return: The name of the RP
         :raise: ResourceProviderRetrievalFailed if the RP is not in the cache
             and the communication with the placement is failed.
-        :raise: ResourceProviderNotFound if the RP does not exists.
+        :raise: ResourceProviderNotFound if the RP does not exist.
         """
 
         try:
@@ -681,7 +681,6 @@ class SchedulerReportClient(object):
 
         return uuid
 
-    @safe_connect
     def _delete_provider(self, rp_uuid, global_request_id=None):
         resp = self.delete('/resource_providers/%s' % rp_uuid,
                            global_request_id=global_request_id)
@@ -1307,6 +1306,8 @@ class SchedulerReportClient(object):
                  reshape (see below).
         :raises: ReshapeFailed if a reshape was signaled (allocations not None)
                  and it fails for any reason.
+        :raises: keystoneauth1.exceptions.base.ClientException on failure to
+                 communicate with the placement API
         """
         # NOTE(efried): We currently do not handle the "rename" case.  This is
         # where new_tree contains a provider named Y whose UUID already exists
@@ -2009,7 +2010,7 @@ class SchedulerReportClient(object):
         if allocations['allocations'] == {}:
             # the consumer did not exist in the first place
             LOG.debug('Cannot delete allocation for %s consumer in placement '
-                      'as consumer does not exists', uuid)
+                      'as consumer does not exist', uuid)
             return False
 
         # removing all resources from the allocation will auto delete the
@@ -2140,8 +2141,9 @@ class SchedulerReportClient(object):
         :param compute_node: The nova.objects.ComputeNode object that is the
                              resource provider being deleted.
         :param cascade: Boolean value that, when True, will first delete any
-                        associated Allocation and Inventory records for the
-                        compute node
+                        associated Allocation records for the compute node
+        :raises: keystoneauth1.exceptions.base.ClientException on failure to
+                 communicate with the placement API
         """
         nodename = compute_node.hypervisor_hostname
         host = compute_node.host

@@ -12,8 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from keystoneauth1 import exceptions as ks_exc
+from oslo_log import log as logging
 from oslo_utils import strutils
 from oslo_utils import uuidutils
+import six
 import webob.exc
 
 from nova.api.openstack import api_version_request
@@ -32,6 +35,8 @@ from nova import utils
 
 UUID_FOR_ID_MIN_VERSION = '2.53'
 PARTIAL_CONSTRUCT_FOR_CELL_DOWN_MIN_VERSION = '2.69'
+
+LOG = logging.getLogger(__name__)
 
 
 class ServiceController(wsgi.Controller):
@@ -272,8 +277,14 @@ class ServiceController(wsgi.Controller):
                 compute_nodes = objects.ComputeNodeList.get_all_by_host(
                     context, service.host)
                 for compute_node in compute_nodes:
-                    self.placementclient.delete_resource_provider(
-                        context, compute_node, cascade=True)
+                    try:
+                        self.placementclient.delete_resource_provider(
+                            context, compute_node, cascade=True)
+                    except ks_exc.ClientException as e:
+                        LOG.error(
+                            "Failed to delete compute node resource provider "
+                            "for compute node %s: %s",
+                            compute_node.uuid, six.text_type(e))
                 # remove the host_mapping of this host.
                 try:
                     hm = objects.HostMapping.get_by_host(context, service.host)

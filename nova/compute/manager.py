@@ -8301,9 +8301,14 @@ class ComputeManager(manager.Manager):
                 cn.destroy()
                 self.rt.remove_node(cn.hypervisor_hostname)
                 # Delete the corresponding resource provider in placement,
-                # along with any associated allocations and inventory.
-                self.reportclient.delete_resource_provider(context, cn,
-                                                           cascade=True)
+                # along with any associated allocations.
+                try:
+                    self.reportclient.delete_resource_provider(context, cn,
+                                                               cascade=True)
+                except keystone_exception.ClientException as e:
+                    LOG.error(
+                        "Failed to delete compute node resource provider "
+                        "for compute node %s: %s", cn.uuid, six.text_type(e))
 
         for nodename in nodenames:
             self._update_available_resource_for_node(context, nodename,

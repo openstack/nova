@@ -16,6 +16,7 @@
 import copy
 import datetime
 
+from keystoneauth1 import exceptions as ks_exc
 import mock
 from oslo_utils import fixture as utils_fixture
 from oslo_utils.fixture import uuidsentinel
@@ -713,9 +714,11 @@ class ServicesTestV21(test.TestCase):
         """
         @mock.patch('nova.objects.ComputeNodeList.get_all_by_host',
                     return_value=objects.ComputeNodeList(objects=[
-                        objects.ComputeNode(host='host1',
+                        objects.ComputeNode(uuid=uuidsentinel.uuid1,
+                                            host='host1',
                                             hypervisor_hostname='node1'),
-                        objects.ComputeNode(host='host1',
+                        objects.ComputeNode(uuid=uuidsentinel.uuid2,
+                                            host='host1',
                                             hypervisor_hostname='node2')]))
         @mock.patch.object(self.controller.host_api, 'service_get_by_id',
                            return_value=objects.Service(
@@ -724,8 +727,11 @@ class ServicesTestV21(test.TestCase):
                            'get_aggregates_by_host',
                            return_value=objects.AggregateList())
         @mock.patch.object(self.controller.placementclient,
-                           'delete_resource_provider')
-        def _test(delete_resource_provider,
+                           'delete_resource_provider',
+                           # placement connect error doesn't stop the loop
+                           side_effect=[ks_exc.EndpointNotFound, None])
+        @mock.patch.object(services_v21, 'LOG')
+        def _test(mock_log, delete_resource_provider,
                   get_aggregates_by_host, service_get_by_id,
                   cn_get_all_by_host):
             self.controller.delete(self.req, 2)
@@ -740,6 +746,9 @@ class ServicesTestV21(test.TestCase):
             ], any_order=True)
             get_hm.assert_called_once_with(ctxt, 'host1')
             service_delete.assert_called_once_with()
+            mock_log.error.assert_called_once_with(
+                "Failed to delete compute node resource provider for compute "
+                "node %s: %s", uuidsentinel.uuid1, mock.ANY)
         _test()
 
     # This test is just to verify that the servicegroup API gets used when
