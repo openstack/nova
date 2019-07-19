@@ -900,6 +900,7 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         # will try to execute some commands which hangs tests so let's just
         # stub out the unplug call to os-vif since we don't care about it.
         self.stub_out('os_vif.unplug', lambda a, kw: None)
+        self.stub_out('nova.compute.utils.get_machine_ips', lambda: [])
 
     def test_force_hard_reboot(self):
         self.flags(wait_soft_reboot_seconds=0, group='libvirt')
