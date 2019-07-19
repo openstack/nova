@@ -1998,7 +1998,8 @@ class SchedulerReportClient(object):
             # at the moment there is no way placement returns a failure so we
             # could even delete this code
             LOG.warning('Unable to delete allocation for %(consumer_type)s '
-                        '%(uuid)s: (%(code)i %(text)s)',
+                        '%(uuid)s. Got %(code)i while retrieving existing '
+                        'allocations: (%(text)s)',
                         {'consumer_type': consumer_type,
                          'uuid': uuid,
                          'code': r.status_code,
