@@ -1933,6 +1933,8 @@ class FakeLibvirtFixture(fixtures.Fixture):
 
         self.useFixture(
             fixtures.MockPatch('nova.virt.libvirt.utils.get_fs_info'))
+        self.useFixture(
+            fixtures.MockPatch('nova.compute.utils.get_machine_ips'))
 
         # libvirt driver needs to call out to the filesystem to get the
         # parent_ifname for the SRIOV VFs.
