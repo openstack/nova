@@ -69,7 +69,6 @@ todo_include_todos = True
 master_doc = 'index'
 
 # General information about the project.
-project = u'nova'
 copyright = u'2010-present, OpenStack Foundation'
 
 # The name of the Pygments (syntax highlighting) style to use.

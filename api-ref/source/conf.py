@@ -22,8 +22,6 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-from nova.version import version_info
-
 
 extensions = [
     'openstackdocstheme',
@@ -42,22 +40,12 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Compute API Reference'
 copyright = u'2010-present, OpenStack Foundation'
 
 # openstackdocstheme options
 repository_name = 'openstack/nova'
 bug_project = 'nova'
 bug_tag = 'api-ref'
-
-# The version info for the project you're documenting, acts as replacement for
-# |version| and |release|, also used in various other places throughout the
-# built documents.
-#
-# The full version, including alpha/beta/rc tags.
-release = version_info.release_string()
-# The short X.Y version.
-version = version_info.version_string()
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
@@ -74,10 +62,6 @@ html_theme = 'openstackdocs'
 html_theme_options = {
     "sidebar_mode": "toc",
 }
-
-# If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
-# using the given strftime format.
-html_last_updated_fmt = '%Y-%m-%d %H:%M'
 
 # -- Options for LaTeX output -------------------------------------------------
 
