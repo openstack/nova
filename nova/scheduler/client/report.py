@@ -2150,14 +2150,16 @@ class SchedulerReportClient(object):
             # Delete any allocations for this resource provider.
             # Since allocations are by consumer, we get the consumers on this
             # host, which are its instances.
-            # TODO(mriedem): Optimize this up by adding an
-            # InstanceList.get_uuids_by_host_and_node method.
-            # Pass expected_attrs=[] to avoid joining on extra columns we
-            # don't use.
-            instances = objects.InstanceList.get_by_host_and_node(
-                context, host, nodename, expected_attrs=[])
-            for instance in instances:
-                self.delete_allocation_for_instance(context, instance.uuid)
+            # NOTE(mriedem): This assumes the only allocations on this node
+            # are instances, but there could be migration consumers if the
+            # node is deleted during a migration or allocations from an
+            # evacuated host (bug 1829479). Obviously an admin shouldn't
+            # do that but...you know. I guess the provider deletion should fail
+            # in that case which is what we'd want to happen.
+            instance_uuids = objects.InstanceList.get_uuids_by_host_and_node(
+                context, host, nodename)
+            for instance_uuid in instance_uuids:
+                self.delete_allocation_for_instance(context, instance_uuid)
         try:
             self._delete_provider(rp_uuid, global_request_id=context.global_id)
         except (exception.ResourceProviderInUse,

@@ -3219,21 +3219,18 @@ class TestAllocations(SchedulerReportClientTestCase):
                 "delete")
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient."
                 "delete_allocation_for_instance")
-    @mock.patch("nova.objects.InstanceList.get_by_host_and_node")
+    @mock.patch("nova.objects.InstanceList.get_uuids_by_host_and_node")
     def test_delete_resource_provider_cascade(self, mock_by_host,
             mock_del_alloc, mock_delete):
         self.client._provider_tree.new_root(uuids.cn, uuids.cn, generation=1)
         cn = objects.ComputeNode(uuid=uuids.cn, host="fake_host",
                 hypervisor_hostname="fake_hostname", )
-        inst1 = objects.Instance(uuid=uuids.inst1)
-        inst2 = objects.Instance(uuid=uuids.inst2)
-        mock_by_host.return_value = objects.InstanceList(
-                objects=[inst1, inst2])
+        mock_by_host.return_value = [uuids.inst1, uuids.inst2]
         resp_mock = mock.Mock(status_code=204)
         mock_delete.return_value = resp_mock
         self.client.delete_resource_provider(self.context, cn, cascade=True)
         mock_by_host.assert_called_once_with(
-            self.context, cn.host, cn.hypervisor_hostname, expected_attrs=[])
+            self.context, cn.host, cn.hypervisor_hostname)
         self.assertEqual(2, mock_del_alloc.call_count)
         exp_url = "/resource_providers/%s" % uuids.cn
         mock_delete.assert_called_once_with(
@@ -3244,17 +3241,14 @@ class TestAllocations(SchedulerReportClientTestCase):
                 "delete")
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient."
                 "delete_allocation_for_instance")
-    @mock.patch("nova.objects.InstanceList.get_by_host_and_node")
+    @mock.patch("nova.objects.InstanceList.get_uuids_by_host_and_node")
     def test_delete_resource_provider_no_cascade(self, mock_by_host,
             mock_del_alloc, mock_delete):
         self.client._provider_tree.new_root(uuids.cn, uuids.cn, generation=1)
         self.client._association_refresh_time[uuids.cn] = mock.Mock()
         cn = objects.ComputeNode(uuid=uuids.cn, host="fake_host",
                 hypervisor_hostname="fake_hostname", )
-        inst1 = objects.Instance(uuid=uuids.inst1)
-        inst2 = objects.Instance(uuid=uuids.inst2)
-        mock_by_host.return_value = objects.InstanceList(
-                objects=[inst1, inst2])
+        mock_by_host.return_value = [uuids.inst1, uuids.inst2]
         resp_mock = mock.Mock(status_code=204)
         mock_delete.return_value = resp_mock
         self.client.delete_resource_provider(self.context, cn)

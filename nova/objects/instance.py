@@ -1219,7 +1219,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 2.2: Pagination for get_active_by_window_joined()
     # Version 2.3: Add get_count_by_vm_state()
     # Version 2.4: Add get_counts()
-    VERSION = '2.4'
+    # Version 2.5: Add get_uuids_by_host_and_node()
+    VERSION = '2.5'
 
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
@@ -1281,6 +1282,24 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
             columns_to_join=_expected_cols(expected_attrs))
         return _make_instance_list(context, cls(), db_inst_list,
                                    expected_attrs)
+
+    @staticmethod
+    @db_api.pick_context_manager_reader
+    def _get_uuids_by_host_and_node(context, host, node):
+        return context.session.query(
+            models.Instance.uuid).filter_by(
+            host=host).filter_by(node=node).filter_by(deleted=0).all()
+
+    @base.remotable_classmethod
+    def get_uuids_by_host_and_node(cls, context, host, node):
+        """Return non-deleted instance UUIDs for the given host and node.
+
+        :param context: nova auth request context
+        :param host: Filter instances on this host.
+        :param node: Filter instances on this node.
+        :returns: list of non-deleted instance UUIDs on the given host and node
+        """
+        return cls._get_uuids_by_host_and_node(context, host, node)
 
     @base.remotable_classmethod
     def get_by_host_and_not_type(cls, context, host, type_id=None,
