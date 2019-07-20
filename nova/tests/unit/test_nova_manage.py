@@ -729,7 +729,8 @@ Cell %s: 456
         """Asserts that a detailed error message is given when an unknown
         error occurs trying to get the cell0 cell mapping.
         """
-        self.commands.sync()
+        result = self.commands.sync()
+        self.assertEqual(1, result)
         mock_get_by_uuid.assert_called_once_with(
             test.MatchType(context.RequestContext),
             objects.CellMapping.CELL0_UUID)

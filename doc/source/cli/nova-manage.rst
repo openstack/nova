@@ -56,7 +56,10 @@ Nova Database
     the cell0 database). If ``--local_cell`` is specified, then only the main
     database in the current cell is upgraded. The local database connection is
     determined by ``[database]/connection`` in the configuration file passed to
-    nova-manage.
+    nova-manage. This command should be run after ``nova-manage api_db sync``.
+
+    Returns exit code 0 if the database schema was synced successfully, or 1 if
+    cell0 cannot be accessed.
 
 ``nova-manage db archive_deleted_rows [--max_rows <number>] [--verbose] [--until-complete] [--before <date>] [--purge]``
     Move deleted rows from production tables to shadow tables. Note that the
@@ -200,6 +203,9 @@ Nova API Database
     Starting in the 18.0.0 Rocky release, this command will also upgrade the
     optional placement database if ``[placement_database]/connection`` is
     configured.
+
+    Returns exit code 0 if the database schema was synced successfully. This
+    command should be run before ``nova-manage db sync``.
 
 .. _man-page-cells-v2:
 

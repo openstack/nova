@@ -69,10 +69,11 @@ same time.
      version of Nova, either in a venv or a separate control plane node,
      including all the python dependencies.
 
-   * Using the newly installed nova code, run the DB sync.
-     (``nova-manage api_db sync``; ``nova-manage db sync``). These schema
-     change operations should have minimal or no effect on performance, and
-     should not cause any operations to fail.
+   * Using the newly installed nova code, run the DB sync. First run
+     ``nova-manage api_db sync``, then ``nova-manage db sync``. In a multi-cell
+     environment, ``nova-manage db sync`` must currently be run in each cell.
+     These schema change operations should have minimal or no effect on
+     performance, and should not cause any operations to fail.
 
    * At this point, new columns and tables may exist in the database. These
      DB schema changes are done in a way that both the N and N+1 release can
