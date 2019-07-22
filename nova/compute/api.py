@@ -63,6 +63,7 @@ from nova.i18n import _
 from nova import image
 from nova import network
 from nova.network import model as network_model
+from nova.network.neutronv2 import constants
 from nova.network.security_group import openstack_driver
 from nova.network.security_group import security_group_base
 from nova import objects
@@ -4352,7 +4353,7 @@ class API(base.Base):
         # need a new scheduling if resource on this host is not available.
         if port_id:
             port = self.network_api.show_port(context, port_id)
-            if port['port'].get('resource_request'):
+            if port['port'].get(constants.RESOURCE_REQUEST):
                 raise exception.AttachInterfaceWithQoSPolicyNotSupported(
                     instance_uuid=instance.uuid)
 

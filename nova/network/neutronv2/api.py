@@ -462,7 +462,7 @@ class API(base_api.NetworkAPI):
             # such ports are currently not supported as they would at least
             # need resource allocation manipulation in placement but might also
             # need a new scheduling if resource on this host is not available.
-            if port.get('resource_request', None):
+            if port.get(constants.RESOURCE_REQUEST, None):
                 msg = _(
                     "The auto-created port %(port_id)s is being deleted due "
                     "to its network having QoS policy.")
@@ -1003,7 +1003,7 @@ class API(base_api.NetworkAPI):
         for port in requested_ports_dict.values():
             # only communicate the allocations if the port has resource
             # requests
-            if port.get('resource_request'):
+            if port.get(constants.RESOURCE_REQUEST):
                 profile = port.get(constants.BINDING_PROFILE, {})
                 # NOTE(gibi): In the resource provider mapping there can be
                 # more than one RP fulfilling a request group. But resource
@@ -1668,7 +1668,7 @@ class API(base_api.NetworkAPI):
         if port:
             # if there is resource associated to this port then that needs to
             # be deallocated so lets return info about such allocation
-            resource_request = port.get('resource_request')
+            resource_request = port.get(constants.RESOURCE_REQUEST)
             allocated_rp = port.get(
                 constants.BINDING_PROFILE, {}).get(constants.ALLOCATION)
             if resource_request and allocated_rp:
@@ -1955,7 +1955,7 @@ class API(base_api.NetworkAPI):
         port = self._show_port(
             context, port_id, neutron_client=neutron,
             fields=['binding:vnic_type', constants.BINDING_PROFILE,
-                    'network_id', 'resource_request'])
+                    'network_id', constants.RESOURCE_REQUEST])
         network_id = port.get('network_id')
         trusted = None
         vnic_type = port.get('binding:vnic_type',
@@ -1967,7 +1967,7 @@ class API(base_api.NetworkAPI):
         # set depending on neutron configuration, e.g. if QoS rules are
         # applied to the port/network and the port-resource-request API
         # extension is enabled.
-        resource_request = port.get('resource_request', None)
+        resource_request = port.get(constants.RESOURCE_REQUEST, None)
         return vnic_type, trusted, network_id, resource_request
 
     def create_resource_requests(self, context, requested_networks,

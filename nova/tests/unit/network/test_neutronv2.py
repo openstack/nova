@@ -2135,7 +2135,8 @@ class TestNeutronv2(TestNeutronv2Base):
         if binding_vnic_type:
             test_port['port']['binding:vnic_type'] = binding_vnic_type
         if port_resource_request:
-            test_port['port']['resource_request'] = port_resource_request
+            test_port['port'][
+                constants.RESOURCE_REQUEST] = port_resource_request
 
         mock_get_client.reset_mock()
         mock_client = mock_get_client()
@@ -2147,7 +2148,7 @@ class TestNeutronv2(TestNeutronv2Base):
 
         mock_client.show_port.assert_called_once_with(test_port['port']['id'],
             fields=['binding:vnic_type', 'binding:profile', 'network_id',
-                    'resource_request'])
+                    constants.RESOURCE_REQUEST])
         self.assertEqual(expected_vnic_type, vnic_type)
         self.assertEqual('net-id', network_id)
         self.assertIsNone(trusted)
@@ -3523,7 +3524,7 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
 
         mock_client.show_port.assert_called_once_with(test_port['port']['id'],
             fields=['binding:vnic_type', 'binding:profile', 'network_id',
-                    'resource_request'])
+                    constants.RESOURCE_REQUEST])
         self.assertEqual(model.VNIC_TYPE_DIRECT, vnic_type)
         self.assertEqual('net-id', network_id)
         self.assertTrue(trusted)
@@ -3968,7 +3969,8 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         mock_client = mock.MagicMock()
         mock_client.create_port.return_value = {'port': {
             'id': uuids.port_id,
-            'resource_request': {'resources': {'CUSTOM_RESOURCE_CLASS': 42}}
+            constants.RESOURCE_REQUEST: {
+                'resources': {'CUSTOM_RESOURCE_CLASS': 42}}
         }}
 
         exc = self.assertRaises(exception.NetworksWithQoSPolicyNotSupported,
@@ -3989,7 +3991,8 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         mock_client = mock.MagicMock()
         mock_client.create_port.return_value = {'port': {
             'id': uuids.port_id,
-            'resource_request': {'resources': {'CUSTOM_RESOURCE_CLASS': 42}}
+            constants.RESOURCE_REQUEST: {
+                'resources': {'CUSTOM_RESOURCE_CLASS': 42}}
         }}
         mock_client.delete_port.side_effect = \
             exceptions.NeutronClientException()
@@ -5038,7 +5041,7 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         mock_client = mock.Mock()
         mock_client.show_port.return_value = {
             'port': {
-                'resource_request': {
+                constants.RESOURCE_REQUEST: {
                     'resources': {
                         'NET_BW_EGR_KILOBIT_PER_SEC': 1000
                     }
@@ -5178,7 +5181,7 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
             'tenant_id': uuids.project_id,
             'network_id': uuids.networkid_1,
             'mac_address': 'fake-mac',
-            'resource_request': 'fake-request'
+            constants.RESOURCE_REQUEST: 'fake-request'
         }
         mock_show_port.return_value = port
         mock_get_client.return_value.list_networks.return_value = {

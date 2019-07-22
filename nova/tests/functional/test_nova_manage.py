@@ -24,6 +24,7 @@ from nova.cmd import manage
 from nova import config
 from nova import context
 from nova import exception
+from nova.network.neutronv2 import constants
 from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
@@ -770,7 +771,7 @@ class TestNovaManagePlacementHealPortAllocations(
         # _ports list is safe as it is re-created for each Neutron fixture
         # instance therefore for each individual test using that fixture.
         bound_port = self.neutron._ports[port_id]
-        bound_port['resource_request'] = resource_request
+        bound_port[constants.RESOURCE_REQUEST] = resource_request
 
     def _create_server_with_missing_port_alloc(
             self, ports, resource_request=None):
@@ -822,7 +823,7 @@ class TestNovaManagePlacementHealPortAllocations(
         # bridge RP
         total_request = collections.defaultdict(int)
         for port in ports:
-            port_request = port['resource_request']['resources']
+            port_request = port[constants.RESOURCE_REQUEST]['resources']
             for rc, amount in port_request.items():
                 total_request[rc] += amount
         self.assertEqual(total_request, network_allocations)

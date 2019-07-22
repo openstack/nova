@@ -1284,7 +1284,7 @@ class NeutronFixture(fixtures.Fixture):
             }
         ],
         'tenant_id': tenant_id,
-        'resource_request': {
+        neutron_constants.RESOURCE_REQUEST: {
             "resources": {
                     orc.NET_BW_IGR_KILOBIT_PER_SEC: 1000,
                     orc.NET_BW_EGR_KILOBIT_PER_SEC: 1000},
@@ -1337,7 +1337,7 @@ class NeutronFixture(fixtures.Fixture):
             }
         ],
         'tenant_id': tenant_id,
-        'resource_request': {},
+        neutron_constants.RESOURCE_REQUEST: {},
         'binding:vnic_type': 'direct',
     }
 
@@ -1355,7 +1355,7 @@ class NeutronFixture(fixtures.Fixture):
             }
         ],
         'tenant_id': tenant_id,
-        'resource_request': {
+        neutron_constants.RESOURCE_REQUEST: {
             "resources": {
                 orc.NET_BW_IGR_KILOBIT_PER_SEC: 10000,
                 orc.NET_BW_EGR_KILOBIT_PER_SEC: 10000},
@@ -1378,7 +1378,7 @@ class NeutronFixture(fixtures.Fixture):
             }
         ],
         'tenant_id': tenant_id,
-        'resource_request': {
+        neutron_constants.RESOURCE_REQUEST: {
             "resources": {
                 orc.NET_BW_IGR_KILOBIT_PER_SEC: 10000,
                 orc.NET_BW_EGR_KILOBIT_PER_SEC: 10000},

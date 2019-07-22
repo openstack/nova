@@ -36,6 +36,7 @@ from nova.compute import instance_actions
 from nova.compute import manager as compute_manager
 from nova import context
 from nova import exception
+from nova.network.neutronv2 import constants
 from nova import objects
 from nova.objects import block_device as block_device_obj
 from nova.scheduler import utils
@@ -5655,7 +5656,7 @@ class PortResourceRequestBasedSchedulingTestBase(
         self._create_sriov_networking_rp_tree(compute_rp_uuid)
 
     def assertPortMatchesAllocation(self, port, allocations):
-        port_request = port['resource_request']['resources']
+        port_request = port[constants.RESOURCE_REQUEST]['resources']
         for rc, amount in allocations.items():
             self.assertEqual(port_request[rc], amount,
                              'port %s requested %d %s '
@@ -5674,8 +5675,9 @@ class UnsupportedPortResourceRequestBasedSchedulingTest(
         # _ports list is safe as it is re-created for each Neutron fixture
         # instance therefore for each individual test using that fixture.
         bound_port = self.neutron._ports[port_id]
-        bound_port['resource_request'] = (
-            self.neutron.port_with_resource_request['resource_request'])
+        bound_port[constants.RESOURCE_REQUEST] = (
+            self.neutron.port_with_resource_request[
+                constants.RESOURCE_REQUEST])
 
     def test_interface_attach_with_port_resource_request(self):
         # create a server

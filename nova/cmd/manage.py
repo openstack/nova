@@ -1677,7 +1677,8 @@ class PlacementCommands(object):
         try:
             return neutron.list_ports(
                 ctxt, device_id=instance.uuid,
-                fields=['id', 'resource_request', constants.BINDING_PROFILE]
+                fields=['id', constants.RESOURCE_REQUEST,
+                        constants.BINDING_PROFILE]
             )['ports']
         except neutron_client_exc.NeutronClientException as e:
             raise exception.UnableToQueryPorts(
@@ -1685,7 +1686,7 @@ class PlacementCommands(object):
 
     @staticmethod
     def _has_request_but_no_allocation(port):
-        request = port.get('resource_request')
+        request = port.get(constants.RESOURCE_REQUEST)
         binding_profile = port.get(constants.BINDING_PROFILE, {}) or {}
         allocation = binding_profile.get(constants.ALLOCATION)
         # We are defensive here about 'resources' and 'required' in the
@@ -1775,7 +1776,8 @@ class PlacementCommands(object):
             instance allocation dict.
         """
         matching_rp_uuids = self._get_rps_in_tree_with_required_traits(
-            ctxt, node_uuid, port['resource_request']['required'], placement)
+            ctxt, node_uuid, port[constants.RESOURCE_REQUEST]['required'],
+            placement)
 
         if len(matching_rp_uuids) > 1:
             # If there is more than one such RP then it is an ambiguous
@@ -1797,7 +1799,7 @@ class PlacementCommands(object):
             raise exception.NoResourceProviderToHealFrom(
                 port_id=port['id'],
                 instance_uuid=instance_uuid,
-                traits=port['resource_request']['required'],
+                traits=port[constants.RESOURCE_REQUEST]['required'],
                 node_uuid=node_uuid)
 
         # We found one RP that matches the traits. Assume that we can allocate
@@ -1807,7 +1809,7 @@ class PlacementCommands(object):
 
         port_allocation = {
             rp_uuid: {
-                'resources': port['resource_request']['resources']
+                'resources': port[constants.RESOURCE_REQUEST]['resources']
             }
         }
         return port_allocation
@@ -1881,7 +1883,7 @@ class PlacementCommands(object):
                      "traits for port %(port_uuid)s with resource request "
                      "%(request)s attached to instance %(instance_uuid)s") %
                      {"rp_uuid": rp_uuid, "port_uuid": port["id"],
-                      "request": port.get("resource_request"),
+                      "request": port.get(constants.RESOURCE_REQUEST),
                       "instance_uuid": instance.uuid})
 
         return allocations, ports_to_heal
