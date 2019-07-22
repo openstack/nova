@@ -1,0 +1,9 @@
+---
+other:
+  - |
+    The ``nova-manage placement heal_allocations`` `CLI`_ has been extended to
+    heal missing port allocations which are possible due to `bug 1819923`_ .
+
+
+    .. _bug 1819923: https://bugs.launchpad.net/nova/+bug/1819923
+    .. _CLI: https://docs.openstack.org/nova/latest/cli/nova-manage.html#placement

@@ -23,6 +23,7 @@
 
 from __future__ import print_function
 
+import collections
 import functools
 import re
 import sys
@@ -32,6 +33,7 @@ from dateutil import parser as dateutil_parser
 import decorator
 from keystoneauth1 import exceptions as ks_exc
 import netaddr
+from neutronclient.common import exceptions as neutron_client_exc
 from oslo_config import cfg
 from oslo_db import exception as db_exc
 from oslo_log import log as logging
@@ -54,6 +56,7 @@ from nova.db import migration
 from nova.db.sqlalchemy import api as sa_db
 from nova import exception
 from nova.i18n import _
+from nova.network.neutronv2 import api as neutron_api
 from nova import objects
 from nova.objects import block_device as block_device_obj
 from nova.objects import build_request as build_request_obj
@@ -1659,6 +1662,290 @@ class PlacementCommands(object):
         node_cache[instance.node] = node_uuid
         return node_uuid
 
+    @staticmethod
+    def _get_ports(ctxt, instance, neutron):
+        """Return the ports that are bound to the instance
+
+        :param ctxt: nova.context.RequestContext
+        :param instance: the instance to return the ports for
+        :param neutron: nova.network.neutronv2.api.ClientWrapper to
+            communicate with Neutron
+        :return: a list of neutron port dict objects
+        :raise UnableToQueryPorts: If the neutron list ports query fails.
+        """
+        try:
+            return neutron.list_ports(
+                ctxt, device_id=instance.uuid,
+                fields=['id', 'resource_request', 'binding:profile'])['ports']
+        except neutron_client_exc.NeutronClientException as e:
+            raise exception.UnableToQueryPorts(
+                instance_uuid=instance.uuid, error=six.text_type(e))
+
+    @staticmethod
+    def _has_request_but_no_allocation(port):
+        request = port.get('resource_request')
+        binding_profile = port.get('binding:profile', {}) or {}
+        allocation = binding_profile.get('allocation')
+        # We are defensive here about 'resources' and 'required' in the
+        # 'resource_request' as neutron API is not clear about those fields
+        # being optional.
+        return (request and request.get('resources') and
+                request.get('required') and
+                not allocation)
+
+    @staticmethod
+    def _get_rps_in_tree_with_required_traits(
+            ctxt, rp_uuid, required_traits, placement):
+        """Find the RPs that have all the required traits in the given rp tree.
+
+        :param ctxt: nova.context.RequestContext
+        :param rp_uuid: the RP uuid that will be used to query the tree.
+        :param required_traits: the traits that need to be supported by
+            the returned resource providers.
+        :param placement: nova.scheduler.client.report.SchedulerReportClient
+            to communicate with the Placement service API.
+        :raise PlacementAPIConnectFailure: if placement API cannot be reached
+        :raise ResourceProviderRetrievalFailed: if the resource provider does
+            not exist.
+        :raise ResourceProviderTraitRetrievalFailed: if resource provider
+            trait information cannot be read from placement.
+        :return: A list of RP UUIDs that supports every required traits and
+            in the tree for the provider rp_uuid.
+        """
+        try:
+            rps = placement.get_providers_in_tree(ctxt, rp_uuid)
+            matching_rps = [
+                rp['uuid']
+                for rp in rps
+                if set(required_traits).issubset(
+                    placement.get_provider_traits(ctxt, rp['uuid']).traits)
+            ]
+        except ks_exc.ClientException:
+            raise exception.PlacementAPIConnectFailure()
+
+        return matching_rps
+
+    @staticmethod
+    def _merge_allocations(alloc1, alloc2):
+        """Return a new allocation dict that contains the sum of alloc1 and
+        alloc2.
+
+        :param alloc1: a dict in the form of
+            {
+                <rp_uuid>: {'resources': {<resource class>: amount,
+                                          <resource class>: amount},
+                <rp_uuid>: {'resources': {<resource class>: amount},
+            }
+        :param alloc2: a dict in the same form as alloc1
+        :return: the merged allocation of alloc1 and alloc2 in the same format
+        """
+
+        allocations = collections.defaultdict(
+            lambda: {'resources': collections.defaultdict(int)})
+
+        for alloc in [alloc1, alloc2]:
+            for rp_uuid in alloc:
+                for rc, amount in alloc[rp_uuid]['resources'].items():
+                    allocations[rp_uuid]['resources'][rc] += amount
+        return allocations
+
+    def _get_port_allocation(
+            self, ctxt, node_uuid, port, instance_uuid, placement):
+        """Return the extra allocation the instance needs due to the given
+        port.
+
+        :param ctxt: nova.context.RequestContext
+        :param node_uuid: the ComputeNode uuid the instance is running on.
+        :param port: the port dict returned from neutron
+        :param instance_uuid: The uuid of the instance the port is bound to
+        :param placement: nova.scheduler.client.report.SchedulerReportClient
+            to communicate with the Placement service API.
+        :raise PlacementAPIConnectFailure: if placement API cannot be reached
+        :raise ResourceProviderRetrievalFailed: compute node resource provider
+            does not exist.
+        :raise ResourceProviderTraitRetrievalFailed: if resource provider
+            trait information cannot be read from placement.
+        :raise MoreThanOneResourceProviderToHealFrom: if it cannot be decided
+            unambiguously which resource provider to heal from.
+        :raise NoResourceProviderToHealFrom: if there is no resource provider
+            found to heal from.
+        :return: A dict of resources keyed by RP uuid to be included in the
+            instance allocation dict.
+        """
+        matching_rp_uuids = self._get_rps_in_tree_with_required_traits(
+            ctxt, node_uuid, port['resource_request']['required'], placement)
+
+        if len(matching_rp_uuids) > 1:
+            # If there is more than one such RP then it is an ambiguous
+            # situation that we cannot handle here efficiently because that
+            # would require the reimplementation of most of the allocation
+            # candidate query functionality of placement. Also if more
+            # than one such RP exists then selecting the right one might
+            # need extra information from the compute node. For example
+            # which PCI PF the VF is allocated from and which RP represents
+            # that PCI PF in placement. When migration is supported with such
+            # servers then we can ask the admin to migrate these servers
+            # instead to heal their allocation.
+            raise exception.MoreThanOneResourceProviderToHealFrom(
+                rp_uuids=','.join(matching_rp_uuids),
+                port_id=port['id'],
+                instance_uuid=instance_uuid)
+
+        if len(matching_rp_uuids) == 0:
+            raise exception.NoResourceProviderToHealFrom(
+                port_id=port['id'],
+                instance_uuid=instance_uuid,
+                traits=port['resource_request']['required'],
+                node_uuid=node_uuid)
+
+        # We found one RP that matches the traits. Assume that we can allocate
+        # the resources from it. If there is not enough inventory left on the
+        # RP then the PUT /allocations placement call will detect that.
+        rp_uuid = matching_rp_uuids[0]
+
+        port_allocation = {
+            rp_uuid: {
+                'resources': port['resource_request']['resources']
+            }
+        }
+        return port_allocation
+
+    def _get_port_allocations_to_heal(
+            self, ctxt, instance, node_cache, placement, neutron, output):
+        """Return the needed extra allocation for the ports of the instance.
+
+        :param ctxt: nova.context.RequestContext
+        :param instance: instance to get the port allocations for
+        :param node_cache: dict of Instance.node keys to ComputeNode.uuid
+            values; this cache is updated if a new node is processed.
+        :param placement: nova.scheduler.client.report.SchedulerReportClient
+            to communicate with the Placement service API.
+        :param neutron: nova.network.neutronv2.api.ClientWrapper to
+            communicate with Neutron
+        :param output: function that takes a single message for verbose output
+        :raise UnableToQueryPorts: If the neutron list ports query fails.
+        :raise nova.exception.ComputeHostNotFound: if compute node of the
+            instance not found in the db.
+        :raise PlacementAPIConnectFailure: if placement API cannot be reached
+        :raise ResourceProviderRetrievalFailed: if the resource provider
+            representing the compute node the instance is running on does not
+            exist.
+        :raise ResourceProviderTraitRetrievalFailed: if resource provider
+            trait information cannot be read from placement.
+        :raise MoreThanOneResourceProviderToHealFrom: if it cannot be decided
+            unambiguously which resource provider to heal from.
+        :raise NoResourceProviderToHealFrom: if there is no resource provider
+            found to heal from.
+        :return: A two tuple where the first item is a dict of resources keyed
+            by RP uuid to be included in the instance allocation dict. The
+            second item is a list of port dicts to be updated in Neutron.
+        """
+        # We need to heal port allocations for ports that have resource_request
+        # but do not have an RP uuid in the binding:profile.allocation field.
+        # We cannot use the instance info_cache to check the binding profile
+        # as this code needs to be able to handle ports that were attached
+        # before nova in stein started updating the allocation key in the
+        # binding:profile.
+        # In theory a port can be assigned to an instance without it being
+        # bound to any host (e.g. in case of shelve offload) but
+        # _heal_allocations_for_instance() already filters out instances that
+        # are not on any host.
+        ports_to_heal = [
+            port for port in self._get_ports(ctxt, instance, neutron)
+            if self._has_request_but_no_allocation(port)]
+
+        if not ports_to_heal:
+            # nothing to do, return early
+            return {}, []
+
+        node_uuid = self._get_compute_node_uuid(
+            ctxt, instance, node_cache)
+
+        allocations = {}
+        for port in ports_to_heal:
+            port_allocation = self._get_port_allocation(
+                ctxt, node_uuid, port, instance.uuid, placement)
+            rp_uuid = list(port_allocation)[0]
+            allocations = self._merge_allocations(
+                allocations, port_allocation)
+            # We also need to record the RP we are allocated from in the
+            # port. This will be sent back to Neutron before the allocation
+            # is updated in placement
+            binding_profile = port.get('binding:profile', {}) or {}
+            binding_profile['allocation'] = rp_uuid
+            port['binding:profile'] = binding_profile
+
+            output(_("Found resource provider %(rp_uuid)s having matching "
+                     "traits for port %(port_uuid)s with resource request "
+                     "%(request)s attached to instance %(instance_uuid)s") %
+                     {"rp_uuid": rp_uuid, "port_uuid": port["id"],
+                      "request": port.get("resource_request"),
+                      "instance_uuid": instance.uuid})
+
+        return allocations, ports_to_heal
+
+    def _update_ports(self, neutron, ports_to_update, output):
+        succeeded = []
+        try:
+            for port in ports_to_update:
+                body = {
+                    'port': {
+                        'binding:profile': port['binding:profile']
+                    }
+                }
+                output(
+                    _('Updating port %(port_uuid)s with attributes '
+                      '%(attributes)s') %
+                      {'port_uuid': port['id'], 'attributes': body['port']})
+                neutron.update_port(port['id'], body=body)
+                succeeded.append(port)
+        except neutron_client_exc.NeutronClientException as e:
+            output(
+                _('Updating port %(port_uuid)s failed: %(error)s') %
+                {'port_uuid': port['id'], 'error': six.text_type(e)})
+            # one of the port updates failed. We need to roll back the updates
+            # that succeeded before
+            self._rollback_port_updates(neutron, succeeded, output)
+            # we failed to heal so we need to stop but we successfully rolled
+            # back the partial updates so the admin can retry the healing.
+            raise exception.UnableToUpdatePorts(error=six.text_type(e))
+
+    @staticmethod
+    def _rollback_port_updates(neutron, ports_to_rollback, output):
+        # _update_ports() added the allocation key to these ports, so we need
+        # to remove them during the rollback.
+        manual_rollback_needed = []
+        last_exc = None
+        for port in ports_to_rollback:
+            profile = port['binding:profile']
+            profile.pop('allocation')
+            body = {
+                'port': {
+                    'binding:profile': profile
+                }
+            }
+            try:
+                output(_('Rolling back port update for %(port_uuid)s') %
+                       {'port_uuid': port['id']})
+                neutron.update_port(port['id'], body=body)
+            except neutron_client_exc.NeutronClientException as e:
+                output(
+                    _('Rolling back update for port %(port_uuid)s failed: '
+                      '%(error)s') % {'port_uuid': port['id'],
+                                      'error': six.text_type(e)})
+                # TODO(gibi): We could implement a retry mechanism with
+                # back off.
+                manual_rollback_needed.append(port['id'])
+                last_exc = e
+
+        if manual_rollback_needed:
+            # At least one of the port operation failed so we failed to roll
+            # back. There are partial updates in neutron. Human intervention
+            # needed.
+            raise exception.UnableToRollbackPortUpdates(
+                error=six.text_type(last_exc),
+                port_uuids=manual_rollback_needed)
+
     def _heal_missing_alloc(self, ctxt, instance, node_cache):
         node_uuid = self._get_compute_node_uuid(
             ctxt, instance, node_cache)
@@ -1684,18 +1971,23 @@ class PlacementCommands(object):
         return allocations
 
     def _heal_allocations_for_instance(self, ctxt, instance, node_cache,
-                                       output, placement, dry_run):
+                                       output, placement, dry_run,
+                                       heal_port_allocations, neutron):
         """Checks the given instance to see if it needs allocation healing
 
         :param ctxt: cell-targeted nova.context.RequestContext
         :param instance: the instance to check for allocation healing
         :param node_cache: dict of Instance.node keys to ComputeNode.uuid
             values; this cache is updated if a new node is processed.
-        :param outout: function that takes a single message for verbose output
+        :param output: function that takes a single message for verbose output
         :param placement: nova.scheduler.client.report.SchedulerReportClient
             to communicate with the Placement service API.
         :param dry_run: Process instances and print output but do not commit
             any changes.
+        :param heal_port_allocations: True if healing port allocation is
+            requested, False otherwise.
+        :param neutron: nova.network.neutronv2.api.ClientWrapper to
+            communicate with Neutron
         :return: True if allocations were created or updated for the instance,
             None if nothing needed to be done
         :raises: nova.exception.ComputeHostNotFound if a compute node for a
@@ -1704,6 +1996,21 @@ class PlacementCommands(object):
             a given instance against a given compute node resource provider
         :raises: AllocationUpdateFailed if unable to update allocations for
             a given instance with consumer project/user information
+        :raise UnableToQueryPorts: If the neutron list ports query fails.
+        :raise PlacementAPIConnectFailure: if placement API cannot be reached
+        :raise ResourceProviderRetrievalFailed: if the resource provider
+            representing the compute node the instance is running on does not
+            exist.
+        :raise ResourceProviderTraitRetrievalFailed: if resource provider
+            trait information cannot be read from placement.
+        :raise MoreThanOneResourceProviderToHealFrom: if it cannot be decided
+            unambiguously which resource provider to heal from.
+        :raise NoResourceProviderToHealFrom: if there is no resource provider
+            found to heal from.
+        :raise UnableToUpdatePorts: if a port update failed in neutron but any
+            partial update was rolled back successfully.
+        :raise UnableToRollbackPortUpdates: if a port update failed in neutron
+            and the rollback of the partial updates also failed.
         """
         if instance.task_state is not None:
             output(_('Instance %(instance)s is undergoing a task '
@@ -1745,6 +2052,19 @@ class PlacementCommands(object):
             allocations = self._heal_missing_project_and_user_id(
                 allocations, instance)
 
+        if heal_port_allocations:
+            to_heal = self._get_port_allocations_to_heal(
+                ctxt, instance, node_cache, placement, neutron, output)
+            port_allocations, ports_to_update = to_heal
+        else:
+            port_allocations, ports_to_update = {}, []
+
+        if port_allocations:
+            need_healing = need_healing or 'Update'
+            # Merge in any missing port allocations
+            allocations['allocations'] = self._merge_allocations(
+                allocations['allocations'], port_allocations)
+
         if need_healing:
             if dry_run:
                 output(_('[dry-run] %(operation)s allocations for instance '
@@ -1753,6 +2073,16 @@ class PlacementCommands(object):
                         'instance': instance.uuid,
                         'allocations': allocations})
             else:
+                # First update ports in neutron. If any of those operations
+                # fail, then roll back the successful part of it and fail the
+                # healing. We do this first because rolling back the port
+                # updates is more straight-forward than rolling back allocation
+                # changes.
+                self._update_ports(neutron, ports_to_update, output)
+
+                # Now that neutron update succeeded we can try to update
+                # placement. If it fails we need to rollback every neutron port
+                # update done before.
                 resp = placement.put_allocations(ctxt, instance.uuid,
                                                  allocations)
                 if resp:
@@ -1762,15 +2092,24 @@ class PlacementCommands(object):
                             'instance': instance.uuid})
                     return True
                 else:
+                    # Rollback every neutron update. If we succeed to
+                    # roll back then it is safe to stop here and let the admin
+                    # retry. If the rollback fails then
+                    # _rollback_port_updates() will raise another exception
+                    # that instructs the operator how to clean up manually
+                    # before the healing can be retried
+                    self._rollback_port_updates(
+                        neutron, ports_to_update, output)
                     raise exception.AllocationUpdateFailed(
                         consumer_uuid=instance.uuid, error='')
         else:
-            output(_('Instance %s already has allocations with '
-                     'matching consumer project/user.') % instance.uuid)
+            output(_('The allocation of instance %s is up-to-date. '
+                     'Nothing to be healed.') % instance.uuid)
             return
 
     def _heal_instances_in_cell(self, ctxt, max_count, unlimited, output,
-                                placement, dry_run, instance_uuid):
+                                placement, dry_run, instance_uuid,
+                                heal_port_allocations, neutron):
         """Checks for instances to heal in a given cell.
 
         :param ctxt: cell-targeted nova.context.RequestContext
@@ -1783,6 +2122,10 @@ class PlacementCommands(object):
         :param dry_run: Process instances and print output but do not commit
             any changes.
         :param instance_uuid: UUID of a specific instance to process.
+        :param heal_port_allocations: True if healing port allocation is
+            requested, False otherwise.
+        :param neutron: nova.network.neutronv2.api.ClientWrapper to
+            communicate with Neutron
         :return: Number of instances that had allocations created.
         :raises: nova.exception.ComputeHostNotFound if a compute node for a
             given instance cannot be found
@@ -1790,6 +2133,21 @@ class PlacementCommands(object):
             a given instance against a given compute node resource provider
         :raises: AllocationUpdateFailed if unable to update allocations for
             a given instance with consumer project/user information
+        :raise UnableToQueryPorts: If the neutron list ports query fails.
+        :raise PlacementAPIConnectFailure: if placement API cannot be reached
+        :raise ResourceProviderRetrievalFailed: if the resource provider
+            representing the compute node the instance is running on does not
+            exist.
+        :raise ResourceProviderTraitRetrievalFailed: if resource provider
+            trait information cannot be read from placement.
+        :raise MoreThanOneResourceProviderToHealFrom: if it cannot be decided
+            unambiguously which resource provider to heal from.
+        :raise NoResourceProviderToHealFrom: if there is no resource provider
+            found to heal from.
+        :raise UnableToUpdatePorts: if a port update failed in neutron but any
+            partial update was rolled back successfully.
+        :raise UnableToRollbackPortUpdates: if a port update failed in neutron
+            and the rollback of the partial updates also failed.
         """
         # Keep a cache of instance.node to compute node resource provider UUID.
         # This will save some queries for non-ironic instances to the
@@ -1821,7 +2179,7 @@ class PlacementCommands(object):
             for instance in instances:
                 if self._heal_allocations_for_instance(
                         ctxt, instance, node_cache, output, placement,
-                        dry_run):
+                        dry_run, heal_port_allocations, neutron):
                     num_processed += 1
 
             # Make sure we don't go over the max count. Note that we
@@ -1844,7 +2202,8 @@ class PlacementCommands(object):
     @action_description(
         _("Iterates over non-cell0 cells looking for instances which do "
           "not have allocations in the Placement service, or have incomplete "
-          "consumer project_id/user_id values in existing allocations, and "
+          "consumer project_id/user_id values in existing allocations or "
+          "missing allocations for ports having resource request, and "
           "which are not undergoing a task state transition. For each "
           "instance found, allocations are created (or updated) against the "
           "compute node resource provider for that instance based on the "
@@ -1865,8 +2224,16 @@ class PlacementCommands(object):
     @args('--instance', metavar='<instance_uuid>', dest='instance_uuid',
           help='UUID of a specific instance to process. If specified '
                '--max-count has no effect.')
+    @args('--skip-port-allocations', action='store_true',
+          dest='skip_port_allocations', default=False,
+          help='Skip the healing of the resource allocations of bound ports. '
+               'E.g. healing bandwidth resource allocation for ports having '
+               'minimum QoS policy rules attached. If your deployment does '
+               'not use such a feature then the performance impact of '
+               'querying neutron ports for each instance can be avoided with '
+               'this flag.')
     def heal_allocations(self, max_count=None, verbose=False, dry_run=False,
-                         instance_uuid=None):
+                         instance_uuid=None, skip_port_allocations=False):
         """Heals instance allocations in the Placement service
 
         Return codes:
@@ -1877,6 +2244,9 @@ class PlacementCommands(object):
         * 3: Unable to create (or update) allocations for an instance against
              its compute node resource provider.
         * 4: Command completed successfully but no allocations were created.
+        * 5: Unable to query ports from neutron
+        * 6: Unable to update ports in neutron
+        * 7: Cannot roll back neutron port updates. Manual steps needed.
         * 127: Invalid input.
         """
         # NOTE(mriedem): Thoughts on ways to expand this:
@@ -1891,6 +2261,8 @@ class PlacementCommands(object):
         #   have allocations (but the operator thinks might be wrong?); this
         #   would probably only be safe with a specific instance.
         # - deal with nested resource providers?
+
+        heal_port_allocations = not skip_port_allocations
 
         output = lambda msg: None
         if verbose:
@@ -1938,6 +2310,11 @@ class PlacementCommands(object):
                 return 4
 
         placement = report.SchedulerReportClient()
+
+        neutron = None
+        if heal_port_allocations:
+            neutron = neutron_api.get_client(ctxt, admin=True)
+
         num_processed = 0
         # TODO(mriedem): Use context.scatter_gather_skip_cell0.
         for cell in cells:
@@ -1958,14 +2335,28 @@ class PlacementCommands(object):
                 try:
                     num_processed += self._heal_instances_in_cell(
                         cctxt, limit_per_cell, unlimited, output, placement,
-                        dry_run, instance_uuid)
+                        dry_run, instance_uuid, heal_port_allocations, neutron)
                 except exception.ComputeHostNotFound as e:
                     print(e.format_message())
                     return 2
                 except (exception.AllocationCreateFailed,
-                        exception.AllocationUpdateFailed) as e:
+                        exception.AllocationUpdateFailed,
+                        exception.NoResourceProviderToHealFrom,
+                        exception.MoreThanOneResourceProviderToHealFrom,
+                        exception.PlacementAPIConnectFailure,
+                        exception.ResourceProviderRetrievalFailed,
+                        exception.ResourceProviderTraitRetrievalFailed) as e:
                     print(e.format_message())
                     return 3
+                except exception.UnableToQueryPorts as e:
+                    print(e.format_message())
+                    return 5
+                except exception.UnableToUpdatePorts as e:
+                    print(e.format_message())
+                    return 6
+                except exception.UnableToRollbackPortUpdates as e:
+                    print(e.format_message())
+                    return 7
 
                 # Make sure we don't go over the max count. Note that we
                 # don't include instances that already have allocations in the

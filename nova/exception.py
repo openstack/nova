@@ -2434,3 +2434,53 @@ class ReshapeFailed(NovaException):
 class ReshapeNeeded(NovaException):
     msg_fmt = _("Virt driver indicates that provider inventories need to be "
                 "moved.")
+
+
+class HealPortAllocationException(NovaException):
+    msg_fmt = _("Healing port allocation failed.")
+
+
+class MoreThanOneResourceProviderToHealFrom(HealPortAllocationException):
+    msg_fmt = _("More than one matching resource provider %(rp_uuids)s is "
+                "available for healing the port allocation for port "
+                "%(port_id)s for instance %(instance_uuid)s. This script "
+                "does not have enough information to select the proper "
+                "resource provider from which to heal.")
+
+
+class NoResourceProviderToHealFrom(HealPortAllocationException):
+    msg_fmt = _("No matching resource provider is "
+                "available for healing the port allocation for port "
+                "%(port_id)s for instance %(instance_uuid)s. There are no "
+                "resource providers with matching traits %(traits)s in the "
+                "provider tree of the resource provider %(node_uuid)s ."
+                "This probably means that the neutron QoS configuration is "
+                "wrong. Consult with "
+                "https://docs.openstack.org/neutron/latest/admin/"
+                "config-qos-min-bw.html for information on how to configure "
+                "neutron. If the configuration is fixed the script can be run "
+                "again.")
+
+
+class UnableToQueryPorts(HealPortAllocationException):
+    msg_fmt = _("Unable to query ports for instance %(instance_uuid)s: "
+                "%(error)s")
+
+
+class UnableToUpdatePorts(HealPortAllocationException):
+    msg_fmt = _("Unable to update ports with allocations that are about to be "
+                "created in placement: %(error)s. The healing of the "
+                "instance is aborted. It is safe to try to heal the instance "
+                "again.")
+
+
+class UnableToRollbackPortUpdates(HealPortAllocationException):
+    msg_fmt = _("Failed to update neutron ports with allocation keys and the "
+                "automatic rollback of the previously successful port updates "
+                "also failed: %(error)s. Make sure that the "
+                "binding:profile.allocation key of the affected ports "
+                "%(port_uuids)s are manually cleaned in neutron according to "
+                "document https://docs.openstack.org/nova/latest/cli/"
+                "nova-manage.html#placement. If you re-run the script without "
+                "the manual fix then the missing allocation for these ports "
+                "will not be healed in placement.")
