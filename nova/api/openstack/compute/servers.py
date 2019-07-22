@@ -43,12 +43,10 @@ from nova.i18n import _
 from nova.image import api as image_api
 from nova import network as network_api
 from nova import objects
-from nova.objects import service as service_obj
 from nova.policies import servers as server_policies
 from nova import utils
 
 TAG_SEARCH_FILTERS = ('tags', 'tags-any', 'not-tags', 'not-tags-any')
-DEVICE_TAGGING_MIN_COMPUTE_VERSION = 14
 PARTIAL_CONSTRUCT_FOR_CELL_DOWN_MIN_VERSION = '2.69'
 PAGING_SORTING_PARAMS = ('sort_key', 'sort_dir', 'limit', 'marker')
 
@@ -398,8 +396,7 @@ class ServersController(wsgi.Controller):
             expl = _("Duplicate networks (%s) are not allowed") % net_id
             raise exc.HTTPBadRequest(explanation=expl)
 
-    def _get_requested_networks(self, requested_networks,
-                                supports_device_tagging=False):
+    def _get_requested_networks(self, requested_networks):
         """Create a list of requested networks from the networks attribute."""
 
         # Starting in the 2.37 microversion, requested_networks is either a
@@ -422,9 +419,6 @@ class ServersController(wsgi.Controller):
                 request.port_id = network.get('port', None)
 
                 request.tag = network.get('tag', None)
-                if request.tag and not supports_device_tagging:
-                    msg = _('Network interface tags are not yet supported.')
-                    raise exc.HTTPBadRequest(explanation=msg)
 
                 if request.port_id:
                     request.network_id = None
@@ -474,8 +468,7 @@ class ServersController(wsgi.Controller):
 
     @staticmethod
     def _process_bdms_for_create(
-            context, target, server_dict, create_kwargs,
-            supports_device_tagging):
+            context, target, server_dict, create_kwargs):
         """Processes block_device_mapping(_v2) req parameters for server create
 
         :param context: The nova auth request context
@@ -483,8 +476,6 @@ class ServersController(wsgi.Controller):
         :param server_dict: The POST /servers request body "server" entry
         :param create_kwargs: dict that gets populated by this method and
             passed to nova.comptue.api.API.create()
-        :param supports_device_tagging: True if a suitable microversion was
-            provided for bdm tags during server create, False otherwise
         :raises: webob.exc.HTTPBadRequest if the request parameters are invalid
         :raises: nova.exception.Forbidden if a policy check fails
         """
@@ -526,14 +517,9 @@ class ServersController(wsgi.Controller):
         if block_device_mapping:
             context.can(server_policies.SERVERS % 'create:attach_volume',
                         target)
-            for bdm in block_device_mapping:
-                if bdm.get('tag', None) and not supports_device_tagging:
-                    msg = _('Block device tags are not yet supported.')
-                    raise exc.HTTPBadRequest(explanation=msg)
 
     def _process_networks_for_create(
-            self, context, target, server_dict, create_kwargs,
-            supports_device_tagging):
+            self, context, target, server_dict, create_kwargs):
         """Processes networks request parameter for server create
 
         :param context: The nova auth request context
@@ -541,8 +527,6 @@ class ServersController(wsgi.Controller):
         :param server_dict: The POST /servers request body "server" entry
         :param create_kwargs: dict that gets populated by this method and
             passed to nova.comptue.api.API.create()
-        :param supports_device_tagging: True if a suitable microversion was
-            provided for VIF tags during server create, False otherwise
         :raises: webob.exc.HTTPBadRequest if the request parameters are invalid
         :raises: nova.exception.Forbidden if a policy check fails
         """
@@ -550,7 +534,7 @@ class ServersController(wsgi.Controller):
 
         if requested_networks is not None:
             requested_networks = self._get_requested_networks(
-                requested_networks, supports_device_tagging)
+                requested_networks)
 
         # Skip policy check for 'create:attach_network' if there is no
         # network allocation request.
@@ -687,23 +671,13 @@ class ServersController(wsgi.Controller):
             self._process_hosts_for_create(context, target, server_dict,
                                            create_kwargs, host, node)
 
-        # NOTE(danms): Don't require an answer from all cells here, as
-        # we assume that if a cell isn't reporting we won't schedule into
-        # it anyway. A bit of a gamble, but a reasonable one.
-        min_compute_version = service_obj.get_minimum_version_all_cells(
-            nova_context.get_admin_context(), ['nova-compute'])
-        supports_device_tagging = (min_compute_version >=
-                                   DEVICE_TAGGING_MIN_COMPUTE_VERSION)
-
         self._process_bdms_for_create(
-            context, target, server_dict, create_kwargs,
-            supports_device_tagging)
+            context, target, server_dict, create_kwargs)
 
         image_uuid = self._image_from_req_data(server_dict, create_kwargs)
 
         self._process_networks_for_create(
-            context, target, server_dict, create_kwargs,
-            supports_device_tagging)
+            context, target, server_dict, create_kwargs)
 
         flavor_id = self._flavor_id_from_req_data(body)
         try:
