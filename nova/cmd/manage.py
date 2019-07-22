@@ -57,6 +57,7 @@ from nova.db.sqlalchemy import api as sa_db
 from nova import exception
 from nova.i18n import _
 from nova.network.neutronv2 import api as neutron_api
+from nova.network.neutronv2 import constants
 from nova import objects
 from nova.objects import block_device as block_device_obj
 from nova.objects import build_request as build_request_obj
@@ -1676,7 +1677,8 @@ class PlacementCommands(object):
         try:
             return neutron.list_ports(
                 ctxt, device_id=instance.uuid,
-                fields=['id', 'resource_request', 'binding:profile'])['ports']
+                fields=['id', 'resource_request', constants.BINDING_PROFILE]
+            )['ports']
         except neutron_client_exc.NeutronClientException as e:
             raise exception.UnableToQueryPorts(
                 instance_uuid=instance.uuid, error=six.text_type(e))
@@ -1684,8 +1686,8 @@ class PlacementCommands(object):
     @staticmethod
     def _has_request_but_no_allocation(port):
         request = port.get('resource_request')
-        binding_profile = port.get('binding:profile', {}) or {}
-        allocation = binding_profile.get('allocation')
+        binding_profile = port.get(constants.BINDING_PROFILE, {}) or {}
+        allocation = binding_profile.get(constants.ALLOCATION)
         # We are defensive here about 'resources' and 'required' in the
         # 'resource_request' as neutron API is not clear about those fields
         # being optional.
@@ -1871,9 +1873,9 @@ class PlacementCommands(object):
             # We also need to record the RP we are allocated from in the
             # port. This will be sent back to Neutron before the allocation
             # is updated in placement
-            binding_profile = port.get('binding:profile', {}) or {}
-            binding_profile['allocation'] = rp_uuid
-            port['binding:profile'] = binding_profile
+            binding_profile = port.get(constants.BINDING_PROFILE, {}) or {}
+            binding_profile[constants.ALLOCATION] = rp_uuid
+            port[constants.BINDING_PROFILE] = binding_profile
 
             output(_("Found resource provider %(rp_uuid)s having matching "
                      "traits for port %(port_uuid)s with resource request "
@@ -1890,7 +1892,8 @@ class PlacementCommands(object):
             for port in ports_to_update:
                 body = {
                     'port': {
-                        'binding:profile': port['binding:profile']
+                        constants.BINDING_PROFILE:
+                            port[constants.BINDING_PROFILE]
                     }
                 }
                 output(
@@ -1917,11 +1920,11 @@ class PlacementCommands(object):
         manual_rollback_needed = []
         last_exc = None
         for port in ports_to_rollback:
-            profile = port['binding:profile']
-            profile.pop('allocation')
+            profile = port[constants.BINDING_PROFILE]
+            profile.pop(constants.ALLOCATION)
             body = {
                 'port': {
-                    'binding:profile': profile
+                    constants.BINDING_PROFILE: profile
                 }
             }
             try:
