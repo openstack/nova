@@ -18,37 +18,7 @@ from nova import test
 from nova.tests.unit.scheduler import fakes
 
 
-class TestCoreFilter(test.NoDBTestCase):
-
-    def test_core_filter_passes(self):
-        self.filt_cls = core_filter.CoreFilter()
-        spec_obj = objects.RequestSpec(flavor=objects.Flavor(vcpus=1))
-        host = fakes.FakeHostState('host1', 'node1',
-                {'vcpus_total': 4, 'vcpus_used': 7,
-                 'cpu_allocation_ratio': 2})
-        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
-
-    def test_core_filter_fails_safe(self):
-        self.filt_cls = core_filter.CoreFilter()
-        spec_obj = objects.RequestSpec(flavor=objects.Flavor(vcpus=1))
-        host = fakes.FakeHostState('host1', 'node1', {})
-        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
-
-    def test_core_filter_fails(self):
-        self.filt_cls = core_filter.CoreFilter()
-        spec_obj = objects.RequestSpec(flavor=objects.Flavor(vcpus=1))
-        host = fakes.FakeHostState('host1', 'node1',
-                {'vcpus_total': 4, 'vcpus_used': 8,
-                 'cpu_allocation_ratio': 2})
-        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
-
-    def test_core_filter_single_instance_overcommit_fails(self):
-        self.filt_cls = core_filter.CoreFilter()
-        spec_obj = objects.RequestSpec(flavor=objects.Flavor(vcpus=2))
-        host = fakes.FakeHostState('host1', 'node1',
-                {'vcpus_total': 1, 'vcpus_used': 0,
-                 'cpu_allocation_ratio': 2})
-        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+class TestAggregateCoreFilter(test.NoDBTestCase):
 
     @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_key')
     def test_aggregate_core_filter_value_error(self, agg_mock):

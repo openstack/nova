@@ -2407,9 +2407,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         # to make the claim fail, by doing something like returning a too high
         # memory_mb overhead, but the limits dict passed to the claim is empty
         # so the claim test is considering it as unlimited and never actually
-        # performs a claim test. Configuring the scheduler to use the RamFilter
-        # to get the memory_mb limit at least seems like it should work but
-        # it doesn't appear to for some reason...
+        # performs a claim test.
         def fake_move_claim(*args, **kwargs):
             # Assert the destination node allocation exists.
             self.assertFlavorMatchesUsage(dest_rp_uuid, self.flavor1)

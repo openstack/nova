@@ -18,63 +18,7 @@ from nova import test
 from nova.tests.unit.scheduler import fakes
 
 
-class TestDiskFilter(test.NoDBTestCase):
-
-    def test_disk_filter_passes(self):
-        filt_cls = disk_filter.DiskFilter()
-        spec_obj = objects.RequestSpec(
-            flavor=objects.Flavor(root_gb=1, ephemeral_gb=1, swap=512))
-        host = fakes.FakeHostState('host1', 'node1',
-                {'free_disk_mb': 11 * 1024, 'total_usable_disk_gb': 13,
-                 'disk_allocation_ratio': 1.0})
-        self.assertTrue(filt_cls.host_passes(host, spec_obj))
-
-    def test_disk_filter_fails(self):
-        filt_cls = disk_filter.DiskFilter()
-        spec_obj = objects.RequestSpec(
-            flavor=objects.Flavor(
-                root_gb=10, ephemeral_gb=1, swap=1024))
-        host = fakes.FakeHostState('host1', 'node1',
-                {'free_disk_mb': 11 * 1024, 'total_usable_disk_gb': 13,
-                 'disk_allocation_ratio': 1.0})
-        self.assertFalse(filt_cls.host_passes(host, spec_obj))
-
-    def test_disk_filter_oversubscribe(self):
-        filt_cls = disk_filter.DiskFilter()
-        spec_obj = objects.RequestSpec(
-            flavor=objects.Flavor(
-                root_gb=3, ephemeral_gb=3, swap=1024))
-        # Only 1Gb left, but with 10x overprovision a 7Gb instance should
-        #  still fit.  Schedule will succeed.
-        host = fakes.FakeHostState('host1', 'node1',
-                {'free_disk_mb': 1 * 1024, 'total_usable_disk_gb': 12,
-                 'disk_allocation_ratio': 10.0})
-        self.assertTrue(filt_cls.host_passes(host, spec_obj))
-        self.assertEqual(12 * 10.0, host.limits['disk_gb'])
-
-    def test_disk_filter_oversubscribe_single_instance_fails(self):
-        filt_cls = disk_filter.DiskFilter()
-        spec_obj = objects.RequestSpec(
-            flavor=objects.Flavor(
-                root_gb=10, ephemeral_gb=2, swap=1024))
-        # According to the allocation ratio, This host has 119 Gb left,
-        #  but it doesn't matter because the requested instance is
-        #  bigger than the whole drive.  Schedule will fail.
-        host = fakes.FakeHostState('host1', 'node1',
-                {'free_disk_mb': 11 * 1024, 'total_usable_disk_gb': 12,
-                 'disk_allocation_ratio': 10.0})
-        self.assertFalse(filt_cls.host_passes(host, spec_obj))
-
-    def test_disk_filter_oversubscribe_fail(self):
-        filt_cls = disk_filter.DiskFilter()
-        spec_obj = objects.RequestSpec(
-            flavor=objects.Flavor(
-                root_gb=100, ephemeral_gb=19, swap=1024))
-        # 1GB used... so 119GB allowed...
-        host = fakes.FakeHostState('host1', 'node1',
-                {'free_disk_mb': 11 * 1024, 'total_usable_disk_gb': 12,
-                 'disk_allocation_ratio': 10.0})
-        self.assertFalse(filt_cls.host_passes(host, spec_obj))
+class TestAggregateDiskFilter(test.NoDBTestCase):
 
     @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_key')
     def test_aggregate_disk_filter_value_error(self, agg_mock):

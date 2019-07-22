@@ -18,46 +18,6 @@ from nova import test
 from nova.tests.unit.scheduler import fakes
 
 
-class TestRamFilter(test.NoDBTestCase):
-
-    def setUp(self):
-        super(TestRamFilter, self).setUp()
-        self.filt_cls = ram_filter.RamFilter()
-
-    def test_ram_filter_fails_on_memory(self):
-        spec_obj = objects.RequestSpec(
-            flavor=objects.Flavor(memory_mb=1024))
-        host = fakes.FakeHostState('host1', 'node1',
-                {'free_ram_mb': 1023, 'total_usable_ram_mb': 1024,
-                 'ram_allocation_ratio': 1.0})
-        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
-
-    def test_ram_filter_passes(self):
-        spec_obj = objects.RequestSpec(
-            flavor=objects.Flavor(memory_mb=1024))
-        host = fakes.FakeHostState('host1', 'node1',
-                {'free_ram_mb': 1024, 'total_usable_ram_mb': 1024,
-                 'ram_allocation_ratio': 1.0})
-        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
-
-    def test_ram_filter_oversubscribe(self):
-        spec_obj = objects.RequestSpec(
-            flavor=objects.Flavor(memory_mb=1024))
-        host = fakes.FakeHostState('host1', 'node1',
-                {'free_ram_mb': -1024, 'total_usable_ram_mb': 2048,
-                 'ram_allocation_ratio': 2.0})
-        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
-        self.assertEqual(2048 * 2.0, host.limits['memory_mb'])
-
-    def test_ram_filter_oversubscribe_singe_instance_fails(self):
-        spec_obj = objects.RequestSpec(
-            flavor=objects.Flavor(memory_mb=1024))
-        host = fakes.FakeHostState('host1', 'node1',
-                {'free_ram_mb': 512, 'total_usable_ram_mb': 512,
-                 'ram_allocation_ratio': 2.0})
-        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
-
-
 @mock.patch('nova.scheduler.filters.utils.aggregate_values_from_key')
 class TestAggregateRamFilter(test.NoDBTestCase):
 

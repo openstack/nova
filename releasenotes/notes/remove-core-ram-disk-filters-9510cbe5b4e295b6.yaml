@@ -1,0 +1,15 @@
+---
+upgrade:
+  - |
+    The ``CoreFilter``, ``DiskFilter`` and ``RamFilter``, which were
+    deprecated in Stein (19.0.0), are now removed. ``VCPU``,
+    ``DISK_GB`` and ``MEMORY_MB`` filtering is performed natively
+    using the Placement service. These filters have been warning
+    operators at startup that they conflict with proper operation of
+    placement and should have been disabled since approximately
+    Pike. If you did still have these filters enabled and were relying
+    on them to account for virt driver overhead (at the expense of
+    scheduler races and retries), see the `scheduler`_ documentation about
+    the topic.
+
+    .. _scheduler: https://docs.openstack.org/nova/latest/admin/configuration/schedulers.html#hypervisor-specific-considerations

@@ -23,12 +23,26 @@ from nova.scheduler.filters import utils
 LOG = logging.getLogger(__name__)
 
 
-class BaseCoreFilter(filters.BaseHostFilter):
+class AggregateCoreFilter(filters.BaseHostFilter):
+    """AggregateCoreFilter with per-aggregate CPU subscription flag.
+
+    Fall back to global cpu_allocation_ratio if no per-aggregate setting found.
+    """
 
     RUN_ON_REBUILD = False
 
     def _get_cpu_allocation_ratio(self, host_state, spec_obj):
-        raise NotImplementedError
+        aggregate_vals = utils.aggregate_values_from_key(
+            host_state,
+            'cpu_allocation_ratio')
+        try:
+            ratio = utils.validate_num_values(
+                aggregate_vals, host_state.cpu_allocation_ratio, cast_to=float)
+        except ValueError as e:
+            LOG.warning("Could not decode cpu_allocation_ratio: '%s'", e)
+            ratio = host_state.cpu_allocation_ratio
+
+        return ratio
 
     def host_passes(self, host_state, spec_obj):
         """Return True if host has sufficient CPU cores.
@@ -73,39 +87,3 @@ class BaseCoreFilter(filters.BaseHostFilter):
             return False
 
         return True
-
-
-class CoreFilter(BaseCoreFilter):
-    """DEPRECATED: CoreFilter filters based on CPU core utilization."""
-
-    def __init__(self):
-        super(CoreFilter, self).__init__()
-        LOG.warning('The CoreFilter is deprecated since the 19.0.0 Stein '
-                    'release. VCPU filtering is performed natively using the '
-                    'Placement service when using the filter_scheduler '
-                    'driver. Furthermore, enabling CoreFilter '
-                    'may incorrectly filter out baremetal nodes which must be '
-                    'scheduled using custom resource classes.')
-
-    def _get_cpu_allocation_ratio(self, host_state, spec_obj):
-        return host_state.cpu_allocation_ratio
-
-
-class AggregateCoreFilter(BaseCoreFilter):
-    """AggregateCoreFilter with per-aggregate CPU subscription flag.
-
-    Fall back to global cpu_allocation_ratio if no per-aggregate setting found.
-    """
-
-    def _get_cpu_allocation_ratio(self, host_state, spec_obj):
-        aggregate_vals = utils.aggregate_values_from_key(
-            host_state,
-            'cpu_allocation_ratio')
-        try:
-            ratio = utils.validate_num_values(
-                aggregate_vals, host_state.cpu_allocation_ratio, cast_to=float)
-        except ValueError as e:
-            LOG.warning("Could not decode cpu_allocation_ratio: '%s'", e)
-            ratio = host_state.cpu_allocation_ratio
-
-        return ratio

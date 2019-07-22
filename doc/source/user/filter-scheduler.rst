@@ -95,8 +95,6 @@ There are many standard filter classes which may be used
   use a comma. E.g., "value1,value2". All hosts are passed if no extra_specs
   are specified.
 * |ComputeFilter| - passes all hosts that are operational and enabled.
-* |CoreFilter| - DEPRECATED; filters based on CPU core utilization. It passes
-  hosts with sufficient number of CPU cores.
 * |AggregateCoreFilter| - filters hosts by CPU core number with per-aggregate
   :oslo.config:option:`cpu_allocation_ratio` setting. If no
   per-aggregate value is found, it will fall back to the global default
@@ -110,8 +108,6 @@ There are many standard filter classes which may be used
   and :oslo.config:option:`filter_scheduler.restrict_isolated_hosts_to_isolated_images`
   flags.
 * |JsonFilter| - allows simple JSON-based grammar for selecting hosts.
-* |RamFilter| - DEPRECATED; filters hosts by their RAM. Only hosts with
-  sufficient RAM to host the instance are passed.
 * |AggregateRamFilter| - filters hosts by RAM with per-aggregate
   :oslo.config:option:`ram_allocation_ratio` setting. If no per-aggregate value
   is found, it will fall back to the global default
@@ -119,11 +115,6 @@ There are many standard filter classes which may be used
   If more than one value is found for a host (meaning the host is in two
   different aggregates with different ratio settings), the minimum value
   will be used.
-* |DiskFilter| - DEPRECATED; filters hosts by their disk allocation. Only
-  hosts with sufficient disk space to host the instance are passed.
-  :oslo.config:option:`disk_allocation_ratio` setting. The virtual disk to
-  physical disk allocation ratio, 1.0 by default. The total allowed allocated
-  disk size will be physical disk multiplied this ratio.
 * |AggregateDiskFilter| - filters hosts by disk allocation with per-aggregate
   :oslo.config:option:`disk_allocation_ratio` setting. If no per-aggregate value
   is found, it will fall back to the global default
@@ -356,8 +347,8 @@ of :oslo.config:option:`filter_scheduler.enabled_filters` affects scheduling
 performance. The general suggestion is to filter out invalid hosts as soon as
 possible to avoid unnecessary costs. We can sort
 :oslo.config:option:`filter_scheduler.enabled_filters`
-items by their costs in reverse order. For example, ComputeFilter is better
-before any resource calculating filters like RamFilter, CoreFilter.
+items by their costs in reverse order. For example, ``ComputeFilter`` is better
+before any resource calculating filters like ``NUMATopologyFilter``.
 
 In medium/large environments having AvailabilityZoneFilter before any
 capability or resource calculating filters can be useful.
@@ -389,7 +380,7 @@ settings:
     --scheduler.driver=nova.scheduler.FilterScheduler
     --filter_scheduler.available_filters=nova.scheduler.filters.all_filters
     --filter_scheduler.available_filters=myfilter.MyFilter
-    --filter_scheduler.enabled_filters=RamFilter,ComputeFilter,MyFilter
+    --filter_scheduler.enabled_filters=ComputeFilter,MyFilter
 
 .. note:: When writing your own filter, be sure to add it to the list of available filters
    and enable it in the default filters. The "all_filters" setting  only includes the
@@ -397,7 +388,7 @@ settings:
 
 With these settings, nova will use the ``FilterScheduler`` for the scheduler
 driver. All of the standard nova filters and MyFilter are available to the
-FilterScheduler, but just the RamFilter, ComputeFilter, and MyFilter will be
+FilterScheduler, but just the ``ComputeFilter`` and ``MyFilter`` will be
 used on each request.
 
 Weights
@@ -558,13 +549,10 @@ in :mod:`nova.tests.scheduler`.
 .. |BaseHostFilter| replace:: :class:`BaseHostFilter <nova.scheduler.filters.BaseHostFilter>`
 .. |ComputeCapabilitiesFilter| replace:: :class:`ComputeCapabilitiesFilter <nova.scheduler.filters.compute_capabilities_filter.ComputeCapabilitiesFilter>`
 .. |ComputeFilter| replace:: :class:`ComputeFilter <nova.scheduler.filters.compute_filter.ComputeFilter>`
-.. |CoreFilter| replace:: :class:`CoreFilter <nova.scheduler.filters.core_filter.CoreFilter>`
 .. |AggregateCoreFilter| replace:: :class:`AggregateCoreFilter <nova.scheduler.filters.core_filter.AggregateCoreFilter>`
 .. |IsolatedHostsFilter| replace:: :class:`IsolatedHostsFilter <nova.scheduler.filters.isolated_hosts_filter>`
 .. |JsonFilter| replace:: :class:`JsonFilter <nova.scheduler.filters.json_filter.JsonFilter>`
-.. |RamFilter| replace:: :class:`RamFilter <nova.scheduler.filters.ram_filter.RamFilter>`
 .. |AggregateRamFilter| replace:: :class:`AggregateRamFilter <nova.scheduler.filters.ram_filter.AggregateRamFilter>`
-.. |DiskFilter| replace:: :class:`DiskFilter <nova.scheduler.filters.disk_filter.DiskFilter>`
 .. |AggregateDiskFilter| replace:: :class:`AggregateDiskFilter <nova.scheduler.filters.disk_filter.AggregateDiskFilter>`
 .. |NumInstancesFilter| replace:: :class:`NumInstancesFilter <nova.scheduler.filters.num_instances_filter.NumInstancesFilter>`
 .. |AggregateNumInstancesFilter| replace:: :class:`AggregateNumInstancesFilter <nova.scheduler.filters.num_instances_filter.AggregateNumInstancesFilter>`
