@@ -52,13 +52,6 @@ LOG = logging.getLogger(__name__)
 _SESSION = None
 _ADMIN_AUTH = None
 
-DEFAULT_SECGROUP = 'default'
-BINDING_PROFILE = 'binding:profile'
-BINDING_HOST_ID = 'binding:host_id'
-MIGRATING_ATTR = 'migrating_to'
-L3_NETWORK_TYPES = ['vxlan', 'gre', 'geneve']
-ALLOCATION = 'allocation'
-
 
 def reset_state():
     global _ADMIN_AUTH
@@ -99,7 +92,7 @@ def _get_binding_profile(port):
     :param port: dict port response body from the networking service API
     :returns: The port binding:profile dict; empty if not set on the port
     """
-    return port.get(BINDING_PROFILE, {}) or {}
+    return port.get(constants.BINDING_PROFILE, {}) or {}
 
 
 @profiler.trace_cls("neutron_api")
@@ -264,7 +257,7 @@ class API(base_api.NetworkAPI):
             self, instance, port_id, port_profile, admin_client):
         try:
             updated_port = admin_client.update_port(
-                port_id, {'port': {BINDING_PROFILE: port_profile}})
+                port_id, {'port': {constants.BINDING_PROFILE: port_profile}})
             return updated_port
         except Exception as ex:
             with excutils.save_and_reraise_exception():
@@ -282,8 +275,8 @@ class API(base_api.NetworkAPI):
             port_profile = _get_binding_profile(p)
             if not port_profile:
                 continue
-            if MIGRATING_ATTR in port_profile:
-                del port_profile[MIGRATING_ATTR]
+            if constants.MIGRATING_ATTR in port_profile:
+                del port_profile[constants.MIGRATING_ATTR]
                 LOG.debug("Removing port %s migration profile", p['id'],
                           instance=instance)
                 self._update_port_with_migration_profile(
@@ -296,16 +289,16 @@ class API(base_api.NetworkAPI):
             # If the host hasn't changed, there is nothing to do.
             # But if the destination host is different than the
             # current one, please update the port_profile with
-            # the 'migrating_to'(MIGRATING_ATTR) key pointing to
+            # the 'migrating_to'(constants.MIGRATING_ATTR) key pointing to
             # the given 'host'.
-            host_id = p.get(BINDING_HOST_ID)
+            host_id = p.get(constants.BINDING_HOST_ID)
             if host_id != host:
                 port_profile = _get_binding_profile(p)
                 # If the "migrating_to" attribute already points at the given
                 # host, then skip the port update call since we're not changing
                 # anything.
-                if host != port_profile.get(MIGRATING_ATTR):
-                    port_profile[MIGRATING_ATTR] = host
+                if host != port_profile.get(constants.MIGRATING_ATTR):
+                    port_profile[constants.MIGRATING_ATTR] = host
                     self._update_port_with_migration_profile(
                         instance, p['id'], port_profile, admin_client)
                     LOG.debug("Port %(port_id)s updated with migration "
@@ -340,7 +333,7 @@ class API(base_api.NetworkAPI):
         if port_migrating or teardown:
             search_opts = {'device_id': instance.uuid,
                            'tenant_id': instance.project_id,
-                           BINDING_HOST_ID: instance.host}
+                           constants.BINDING_HOST_ID: instance.host}
             # Now get the port details to process the ports
             # binding profile info.
             data = self.list_ports(context, **search_opts)
@@ -577,11 +570,11 @@ class API(base_api.NetworkAPI):
             if port_id is None:
                 continue
             port_req_body = {'port': {'device_id': '', 'device_owner': ''}}
-            port_req_body['port'][BINDING_HOST_ID] = None
+            port_req_body['port'][constants.BINDING_HOST_ID] = None
             try:
-                port = self._show_port(context, port_id,
-                                       neutron_client=neutron,
-                                       fields=[BINDING_PROFILE, 'network_id'])
+                port = self._show_port(
+                    context, port_id, neutron_client=neutron,
+                    fields=[constants.BINDING_PROFILE, 'network_id'])
             except exception.PortNotFound:
                 LOG.debug('Unable to show port %s as it no longer '
                           'exists.', port_id)
@@ -594,7 +587,7 @@ class API(base_api.NetworkAPI):
                 port_profile = {}
                 network = {}
             else:
-                port_profile = port.get(BINDING_PROFILE, {})
+                port_profile = port.get(constants.BINDING_PROFILE, {})
                 net_id = port.get('network_id')
                 if net_id in networks:
                     network = networks.get(net_id)
@@ -607,10 +600,11 @@ class API(base_api.NetworkAPI):
             # NOTE: We're doing this to remove the binding information
             # for the physical device but don't want to overwrite the other
             # information in the binding profile.
-            for profile_key in ('pci_vendor_info', 'pci_slot', ALLOCATION):
+            for profile_key in ('pci_vendor_info', 'pci_slot',
+                                constants.ALLOCATION):
                 if profile_key in port_profile:
                     del port_profile[profile_key]
-            port_req_body['port'][BINDING_PROFILE] = port_profile
+            port_req_body['port'][constants.BINDING_PROFILE] = port_profile
 
             # NOTE: For internal DNS integration (network does not have a
             # dns_domain), or if we cannot retrieve network info, we use the
@@ -732,7 +726,7 @@ class API(base_api.NetworkAPI):
         """
         if not security_groups:
             security_groups = []
-        elif security_groups == [DEFAULT_SECGROUP]:
+        elif security_groups == [constants.DEFAULT_SECGROUP]:
             security_groups = []
         return security_groups
 
@@ -1010,15 +1004,15 @@ class API(base_api.NetworkAPI):
             # only communicate the allocations if the port has resource
             # requests
             if port.get('resource_request'):
-                profile = port.get(BINDING_PROFILE, {})
+                profile = port.get(constants.BINDING_PROFILE, {})
                 # NOTE(gibi): In the resource provider mapping there can be
                 # more than one RP fulfilling a request group. But resource
                 # requests of a Neutron port is always mapped to a
                 # numbered request group that is always fulfilled by one
                 # resource provider. So we only pass that single RP UUID here.
-                profile[ALLOCATION] = resource_provider_mapping[
+                profile[constants.ALLOCATION] = resource_provider_mapping[
                     port['id']][0]
-                port[BINDING_PROFILE] = profile
+                port[constants.BINDING_PROFILE] = profile
 
         # Create ports from the list of ordered_networks. The returned
         # requests_and_created_ports variable is a list of 2-item tuples of
@@ -1123,9 +1117,11 @@ class API(base_api.NetworkAPI):
                                       'device_owner': zone}}
             if (requested_ports_dict and
                 request.port_id in requested_ports_dict and
-                requested_ports_dict[request.port_id].get(BINDING_PROFILE)):
-                port_req_body['port'][BINDING_PROFILE] = (
-                    requested_ports_dict[request.port_id][BINDING_PROFILE])
+                requested_ports_dict[request.port_id].get(
+                    constants.BINDING_PROFILE)):
+                port_req_body['port'][constants.BINDING_PROFILE] = (
+                    requested_ports_dict[request.port_id][
+                        constants.BINDING_PROFILE])
             try:
                 self._populate_neutron_extension_values(
                     context, instance, request.pci_request_id, port_req_body,
@@ -1445,11 +1441,12 @@ class API(base_api.NetworkAPI):
                     _('PCI device not found for request ID %s.') %
                     pci_request_id)
             pci_dev = pci_devices.pop()
-            if port_req_body['port'].get(BINDING_PROFILE) is None:
-                port_req_body['port'][BINDING_PROFILE] = {}
-            profile = copy.deepcopy(port_req_body['port'][BINDING_PROFILE])
+            if port_req_body['port'].get(constants.BINDING_PROFILE) is None:
+                port_req_body['port'][constants.BINDING_PROFILE] = {}
+            profile = copy.deepcopy(
+                port_req_body['port'][constants.BINDING_PROFILE])
             profile.update(self._get_pci_device_profile(pci_dev))
-            port_req_body['port'][BINDING_PROFILE] = profile
+            port_req_body['port'][constants.BINDING_PROFILE] = profile
 
     @staticmethod
     def _populate_pci_mac_address(instance, pci_request_id, port_req_body):
@@ -1495,7 +1492,7 @@ class API(base_api.NetworkAPI):
             flavor = instance.get_flavor()
             rxtx_factor = flavor.get('rxtx_factor')
             port_req_body['port']['rxtx_factor'] = rxtx_factor
-        port_req_body['port'][BINDING_HOST_ID] = bind_host_id
+        port_req_body['port'][constants.BINDING_HOST_ID] = bind_host_id
         self._populate_neutron_binding_profile(instance,
                                                pci_request_id,
                                                port_req_body)
@@ -1672,7 +1669,8 @@ class API(base_api.NetworkAPI):
             # if there is resource associated to this port then that needs to
             # be deallocated so lets return info about such allocation
             resource_request = port.get('resource_request')
-            allocated_rp = port.get(BINDING_PROFILE, {}).get(ALLOCATION)
+            allocated_rp = port.get(
+                constants.BINDING_PROFILE, {}).get(constants.ALLOCATION)
             if resource_request and allocated_rp:
                 port_allocation = {
                     allocated_rp: resource_request.get('resources', {})}
@@ -1683,7 +1681,7 @@ class API(base_api.NetworkAPI):
             for vif in instance.get_network_info():
                 if vif['id'] == port_id:
                     profile = vif.get('profile') or {}
-                    rp_uuid = profile.get(ALLOCATION)
+                    rp_uuid = profile.get(constants.ALLOCATION)
                     if rp_uuid:
                         LOG.warning(
                             'Port %s disappeared during deallocate but it had '
@@ -1928,7 +1926,7 @@ class API(base_api.NetworkAPI):
             net_id, fields=['provider:physical_network',
                             'provider:network_type']).get('network')
         return (net.get('provider:physical_network'),
-                net.get('provider:network_type') in L3_NETWORK_TYPES)
+                net.get('provider:network_type') in constants.L3_NETWORK_TYPES)
 
     @staticmethod
     def _get_trusted_mode_from_port(port):
@@ -1954,9 +1952,10 @@ class API(base_api.NetworkAPI):
                  request of the port if any. Trusted status only affects SR-IOV
                  ports and will always be None for other port types.
         """
-        port = self._show_port(context, port_id, neutron_client=neutron,
-                               fields=['binding:vnic_type', BINDING_PROFILE,
-                                       'network_id', 'resource_request'])
+        port = self._show_port(
+            context, port_id, neutron_client=neutron,
+            fields=['binding:vnic_type', constants.BINDING_PROFILE,
+                    'network_id', 'resource_request'])
         network_id = port.get('network_id')
         trusted = None
         vnic_type = port.get('binding:vnic_type',
@@ -3224,21 +3223,22 @@ class API(base_api.NetworkAPI):
             # We need to update the port binding if the host has changed or if
             # the binding is clearly wrong due to previous lost messages.
             vif_type = p.get('binding:vif_type')
-            if p.get(BINDING_HOST_ID) != host or vif_type in FAILED_VIF_TYPES:
+            if (p.get(constants.BINDING_HOST_ID) != host or
+                    vif_type in FAILED_VIF_TYPES):
                 # TODO(gibi): To support ports with resource request during
                 # server move operations we need to take care of 'allocation'
                 # key in the binding profile per binding.
 
-                updates[BINDING_HOST_ID] = host
+                updates[constants.BINDING_HOST_ID] = host
                 # If the host changed, the AZ could have also changed so we
                 # need to update the device_owner.
                 updates['device_owner'] = (
                         'compute:%s' % instance.availability_zone)
                 # NOTE: Before updating the port binding make sure we
                 # remove the pre-migration status from the binding profile
-                if binding_profile.get(MIGRATING_ATTR):
-                    del binding_profile[MIGRATING_ATTR]
-                    updates[BINDING_PROFILE] = binding_profile
+                if binding_profile.get(constants.MIGRATING_ATTR):
+                    del binding_profile[constants.MIGRATING_ATTR]
+                    updates[constants.BINDING_PROFILE] = binding_profile
 
             # Update port with newly allocated PCI devices.  Even if the
             # resize is happening on the same host, a new PCI device can be
@@ -3261,7 +3261,7 @@ class API(base_api.NetworkAPI):
                 if new_dev:
                     binding_profile.update(
                         self._get_pci_device_profile(new_dev))
-                    updates[BINDING_PROFILE] = binding_profile
+                    updates[constants.BINDING_PROFILE] = binding_profile
                 else:
                     raise exception.PortUpdateFailed(port_id=p['id'],
                         reason=_("Unable to correlate PCI slot %s") %
