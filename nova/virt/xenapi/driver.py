@@ -23,8 +23,6 @@ A driver for XenServer or Xen Cloud Platform.
 - suffix "_rec" for record objects
 """
 
-import math
-
 import os_resource_classes as orc
 from os_xenapi.client import session
 from oslo_log import log as logging
@@ -47,10 +45,6 @@ from nova.virt.xenapi import volumeops
 LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
-
-OVERHEAD_BASE = 3
-OVERHEAD_PER_MB = 0.00781
-OVERHEAD_PER_VCPU = 1.5
 
 
 def invalid_option(option_name, recommended_value):
@@ -154,30 +148,6 @@ class XenAPIDriver(driver.ComputeDriver):
         efficiency.
         """
         return self._vmops.instance_exists(instance.name)
-
-    def estimate_instance_overhead(self, instance_info):
-        """Get virtualization overhead required to build an instance of the
-        given flavor.
-
-        :param instance_info: Instance/flavor to calculate overhead for.
-        :returns: Overhead memory in MB.
-        """
-
-        # XenServer memory overhead is proportional to the size of the
-        # VM.  Larger flavor VMs become more efficient with respect to
-        # overhead.
-
-        # interpolated formula to predict overhead required per vm.
-        # based on data from:
-        # https://wiki.openstack.org/wiki/XenServer/Overhead
-        # Some padding is done to each value to fit all available VM data
-        memory_mb = instance_info['memory_mb']
-        vcpus = instance_info.get('vcpus', 1)
-        overhead = ((memory_mb * OVERHEAD_PER_MB) +
-                    (vcpus * OVERHEAD_PER_VCPU) +
-                    OVERHEAD_BASE)
-        overhead = math.ceil(overhead)
-        return {'memory_mb': overhead}
 
     def list_instances(self):
         """List VM instances."""
