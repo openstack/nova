@@ -10,7 +10,7 @@
    deprecated all the proxy APIs and users should use the native APIs
    instead. These will fail with a 404 starting from microversion 2.36.
    See: `Relevant Network APIs
-   <https://developer.openstack.org/api-ref/networking/v2/#security-group-rules-security-group-rules>`__.
+   <https://docs.openstack.org/api-ref/network/v2/#security-group-rules-security-group-rules>`__.
 
 Creates and deletes security group rules.
 

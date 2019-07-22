@@ -51,7 +51,7 @@ def _get_ironic_client():
     # TODO(NobodyCam): Fix insecure setting
     # NOTE(efried): This should all be replaced by ksa adapter options; but the
     # nova-to-baremetal API is deprecated, so not changing it.
-    # https://developer.openstack.org/api-ref/compute/#bare-metal-nodes-os-baremetal-nodes-deprecated  # noqa
+    # https://docs.openstack.org/api-ref/compute/#bare-metal-nodes-os-baremetal-nodes-deprecated  # noqa
     kwargs = {'os_username': CONF.ironic.admin_username,
               'os_password': CONF.ironic.admin_password,
               'os_auth_url': CONF.ironic.admin_url,

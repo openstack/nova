@@ -6,7 +6,7 @@
 
 This is a reference for the OpenStack Compute API which is provided by the Nova
 project. To learn more about the OpenStack Compute API concepts, please refer to
-the `API guide <http://developer.openstack.org/api-guide/compute/index.html>`_.
+the `API guide <https://docs.openstack.org/api-guide/compute/index.html>`_.
 
 .. rest_expand_all::
 

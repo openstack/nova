@@ -25,7 +25,7 @@ Provides details why any services were disabled.
    due to a transient condition in the deployment like infrastructure failure,
    the response body for those unavailable compute services in the down cells
    will be missing keys. See `handling down cells
-   <https://developer.openstack.org/api-guide/compute/down_cells.html>`__
+   <https://docs.openstack.org/api-guide/compute/down_cells.html>`__
    section of the Compute API guide for more information on the keys that
    would be returned in the partial constructs.
 

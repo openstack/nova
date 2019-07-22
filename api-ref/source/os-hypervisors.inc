@@ -154,7 +154,7 @@ the ``policy.json`` file.
    the totals and the usages. A more accurate representation of state can be
    obtained using `placement`__.
 
-   __ https://developer.openstack.org/api-ref/placement/#list-resource-provider-usages
+   __ https://docs.openstack.org/api-ref/placement/#list-resource-provider-usages
 
 Normal response codes: 200
 
@@ -202,7 +202,7 @@ the ``policy.json`` file.
    the totals and the usages. A more accurate representation of state can be
    obtained using `placement`__.
 
-   __ https://developer.openstack.org/api-ref/placement/#show-resource-provider-usages
+   __ https://docs.openstack.org/api-ref/placement/#show-resource-provider-usages
 
 Normal response codes: 200
 

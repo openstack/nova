@@ -311,4 +311,4 @@ The general steps for removing support for a deprecated REST API are:
 Here is an example of the above steps: https://review.opendev.org/567682/
 
 .. _route mapping: https://opendev.org/openstack/nova/src/branch/master/nova/api/openstack/compute/routes.py
-.. _Obsolete APIs: https://developer.openstack.org/api-ref/compute/#obsolete-apis
+.. _Obsolete APIs: https://docs.openstack.org/api-ref/compute/#obsolete-apis

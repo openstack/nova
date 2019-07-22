@@ -36,7 +36,7 @@ Newer code is called the "v2.1 API" and exists in the
 The v2 API is the old Nova REST API. It is mostly replaced by v2.1 API.
 
 The v2.1 API is the new Nova REST API with a set of improvements which
-includes `Microversion <https://developer.openstack.org/api-guide/compute/microversions.html>`_
+includes `Microversion <https://docs.openstack.org/api-guide/compute/microversions.html>`_
 and standardized validation of inputs using JSON-Schema.
 Also the v2.1 API is totally backwards compatible with the v2 API (That is the
 reason we call it as v2.1 API).
@@ -124,7 +124,7 @@ for more information.
 The '/extensions' API exposed the list of enabled API functions to users
 by GET method. However as the above, new API extensions should not be added
 to the list of this API. The '/extensions' API is frozen in Nova V2.1 API and
-is `deprecated <https://developer.openstack.org/api-ref/compute/#extensions-extensions-deprecated>`_.
+is `deprecated <https://docs.openstack.org/api-ref/compute/#extensions-extensions-deprecated>`_.
 
 Things which are History now
 ****************************

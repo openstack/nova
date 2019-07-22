@@ -35,9 +35,9 @@ limits can be set per-tenant using the `quota sets`_ REST API or per class
 (all tenants) using the `quota class sets`_ API.
 
 .. _count resource usage: https://specs.openstack.org/openstack/nova-specs/specs/pike/implemented/cells-count-resources-to-check-quota-in-api.html
-.. _limits: https://developer.openstack.org/api-ref/compute/#limits-limits
-.. _quota sets: https://developer.openstack.org/api-ref/compute/#quota-sets-os-quota-sets
-.. _quota class sets: https://developer.openstack.org/api-ref/compute/#quota-class-sets-os-quota-class-sets
+.. _limits: https://docs.openstack.org/api-ref/compute/#limits-limits
+.. _quota sets: https://docs.openstack.org/api-ref/compute/#quota-sets-os-quota-sets
+.. _quota class sets: https://docs.openstack.org/api-ref/compute/#quota-class-sets-os-quota-class-sets
 
 Checking quota
 ==============
@@ -128,7 +128,7 @@ placement:
   user does not have enough quota available to support the cores and ram needed
   by the server to be unshelved.
 
-.. _down or poor-performing cells: https://developer.openstack.org/api-guide/compute/down_cells.html
+.. _down or poor-performing cells: https://docs.openstack.org/api-guide/compute/down_cells.html
 
 
 Known issues

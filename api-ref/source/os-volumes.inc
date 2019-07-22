@@ -10,7 +10,7 @@
    deprecated all the proxy APIs and users should use the native APIs
    instead. These will fail with a 404 starting from microversion 2.36.
    See: `Relevant Volume APIs
-   <https://developer.openstack.org/api-ref/block-storage/v3/index.html>`__.
+   <https://docs.openstack.org/api-ref/block-storage/v3/index.html>`__.
 
 Manages volumes and snapshots for use with the Compute API.
 Lists, shows details, creates, and deletes volumes and snapshots.

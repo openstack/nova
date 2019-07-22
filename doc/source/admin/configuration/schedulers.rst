@@ -97,7 +97,7 @@ provider, the trait will be synchronized when the ``update_available_resource``
 periodic task runs - which is controlled by the
 :oslo.config:option:`update_resources_interval` configuration option.
 
-.. _os-services: https://developer.openstack.org/api-ref/compute/#compute-services-os-services
+.. _os-services: https://docs.openstack.org/api-ref/compute/#compute-services-os-services
 
 
 Filter scheduler
@@ -1463,7 +1463,7 @@ the configuration settings alone.
    See `bug 1804125 <https://bugs.launchpad.net/nova/+bug/1804125>`_ for more
    details.
 
-.. _resource provider inventory: https://developer.openstack.org/api-ref/placement/?expanded=#resource-provider-inventories
+.. _resource provider inventory: https://docs.openstack.org/api-ref/placement/?expanded=#resource-provider-inventories
 
 Usage scenarios
 ---------------

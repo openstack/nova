@@ -708,7 +708,7 @@ For more information, refer to `Block Device Mapping
 
 For the full list of ``block_device_mapping_v2`` parameters available when
 creating a server, see the `API reference
-<https://developer.openstack.org/api-ref/compute/?expanded=create-server-detail#create-server>`_.
+<https://docs.openstack.org/api-ref/compute/?expanded=create-server-detail#create-server>`_.
 
 **Example for block_device_mapping_v2**
 
@@ -767,7 +767,7 @@ For more information on how scheduler hints are different from flavor extra
 specs, refer to `this document`_.
 
 .. _cloud's configuration: https://docs.openstack.org/nova/latest/admin/configuration/schedulers.html
-.. _the create-server-detail Request section: https://developer.openstack.org/api-ref/compute/?expanded=create-server-detail#create-server
+.. _the create-server-detail Request section: https://docs.openstack.org/api-ref/compute/?expanded=create-server-detail#create-server
 .. _this document: https://docs.openstack.org/nova/latest/reference/scheduler-hints-vs-flavor-extra-specs.html#scheduler-hints
 
 Server Consoles

@@ -183,7 +183,7 @@ whitelist will be silently ignored.
    due to a transient condition in the deployment like infrastructure failure,
    the response body for those unavailable servers will be missing keys. See
    `handling down cells
-   <https://developer.openstack.org/api-guide/compute/down_cells.html>`__
+   <https://docs.openstack.org/api-guide/compute/down_cells.html>`__
    section of the Compute API guide for more information on the keys that
    would be returned in the partial constructs.
 
@@ -301,7 +301,7 @@ request body to boot a server from a volume.
 Include the ``key_name`` parameter in the create request body to add a
 keypair to the server when you create it. To create a keypair, make a
 `create keypair
-<http://developer.openstack.org/api-ref/compute/#create-or-import-keypair>`__
+<https://docs.openstack.org/api-ref/compute/#create-or-import-keypair>`__
 request.
 
 .. note:: Starting with microversion 2.37 the ``networks`` field is required.
@@ -530,7 +530,7 @@ HostId is unique per account and is not globally unique.
    due to a transient condition in the deployment like infrastructure failure,
    the response body for those unavailable servers will be missing keys. See
    `handling down cells
-   <https://developer.openstack.org/api-guide/compute/down_cells.html>`__
+   <https://docs.openstack.org/api-guide/compute/down_cells.html>`__
    section of the Compute API guide for more information on the keys that
    would be returned in the partial constructs.
 
@@ -699,7 +699,7 @@ The server must exist.
    due to a transient condition in the deployment like infrastructure failure,
    the response body for the unavailable server will be missing keys. See
    `handling down cells
-   <http://developer.openstack.org/api-guide/compute/down_cells.html>`__
+   <https://docs.openstack.org/api-guide/compute/down_cells.html>`__
    section of the Compute API guide for more information on the keys that
    would be returned in the partial constructs.
 

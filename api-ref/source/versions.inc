@@ -14,7 +14,7 @@ supports versioning. There are two kinds of versions in Nova.
 
 For more details about Microversions, please reference:
 `Microversions
-<https://developer.openstack.org/api-guide/compute/microversions.html>`_
+<https://docs.openstack.org/api-guide/compute/microversions.html>`_
 
 .. note:: The maximum microversion supported by each release varies.
   Please reference:

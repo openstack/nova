@@ -21,8 +21,8 @@ API
 
 To learn how to use Nova's API, consult the documentation available online at:
 
-- `Compute API Guide <https://developer.openstack.org/api-guide/compute/>`__
-- `Compute API Reference <https://developer.openstack.org/api-ref/compute/>`__
+- `Compute API Guide <https://docs.openstack.org/api-guide/compute/>`__
+- `Compute API Reference <https://docs.openstack.org/api-ref/compute/>`__
 
 For more information on OpenStack APIs, SDKs and CLIs in general, refer to:
 
