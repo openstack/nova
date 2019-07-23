@@ -85,6 +85,10 @@ _EXTRA_DEFAULT_LOG_LEVELS = ['oslo_concurrency=INFO',
                              'oslo_db=INFO',
                              'oslo_policy=INFO']
 
+# Consts indicating whether allocations need to be healed by creating them or
+# by updating existing allocations.
+_CREATE = 'create'
+_UPDATE = 'update'
 
 # Decorators for actions
 args = cmd_common.args
@@ -2037,7 +2041,7 @@ class PlacementCommands(object):
         # there are no allocations for the instance
         if not allocations.get('allocations'):
             # This instance doesn't have allocations
-            need_healing = 'create'
+            need_healing = _CREATE
             allocations = self._heal_missing_alloc(ctxt, instance, node_cache)
 
         if (allocations.get('project_id') != instance.project_id or
@@ -2047,7 +2051,7 @@ class PlacementCommands(object):
             # and re-put them. We don't use put_allocations here
             # because we don't want to mess up shared or nested
             # provider allocations.
-            need_healing = 'update'
+            need_healing = _UPDATE
             allocations = self._heal_missing_project_and_user_id(
                 allocations, instance)
 
@@ -2059,19 +2063,19 @@ class PlacementCommands(object):
             port_allocations, ports_to_update = {}, []
 
         if port_allocations:
-            need_healing = need_healing or 'update'
+            need_healing = need_healing or _UPDATE
             # Merge in any missing port allocations
             allocations['allocations'] = self._merge_allocations(
                 allocations['allocations'], port_allocations)
 
         if need_healing:
             if dry_run:
-                if need_healing == 'create':
+                if need_healing == _CREATE:
                     output(_('[dry-run] Create allocations for instance '
                              '%(instance)s: %(allocations)s') %
                            {'instance': instance.uuid,
                             'allocations': allocations})
-                elif need_healing == 'update':
+                elif need_healing == _UPDATE:
                     output(_('[dry-run] Update allocations for instance '
                              '%(instance)s: %(allocations)s') %
                            {'instance': instance.uuid,
@@ -2090,11 +2094,11 @@ class PlacementCommands(object):
                 resp = placement.put_allocations(ctxt, instance.uuid,
                                                  allocations)
                 if resp:
-                    if need_healing == 'create':
+                    if need_healing == _CREATE:
                         output(_('Successfully created allocations for '
                                  'instance %(instance)s.') %
                                {'instance': instance.uuid})
-                    elif need_healing == 'update':
+                    elif need_healing == _UPDATE:
                         output(_('Successfully updated allocations for '
                                  'instance %(instance)s.') %
                                {'instance': instance.uuid})
