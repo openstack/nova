@@ -1572,12 +1572,12 @@ class ConfigDriveNotFound(NotFound):
                 "does not exist.")
 
 
-class InterfaceAttachFailed(Invalid):
+class InterfaceAttachFailed(NovaException):
     msg_fmt = _("Failed to attach network adapter device to "
                 "%(instance_uuid)s")
 
 
-class InterfaceAttachFailedNoNetwork(InterfaceAttachFailed):
+class InterfaceAttachFailedNoNetwork(Invalid):
     msg_fmt = _("No specific network was requested and none are available "
                 "for project '%(project_id)s'.")
 

@@ -6285,6 +6285,20 @@ class ComputeManager(manager.Manager):
                                     {'port_id': port_id, 'error': ex},
                                     instance=instance)
 
+    # TODO(mriedem): There are likely race failures which can result in
+    # NotFound and QuotaError exceptions getting traced as well.
+    @messaging.expected_exceptions(
+        # Do not log a traceback for user errors. We use Invalid generically
+        # since this method can raise lots of different exceptions:
+        # AttachInterfaceNotSupported
+        # NetworkInterfaceTaggedAttachNotSupported
+        # NetworkAmbiguous
+        # PortNotUsable
+        # PortInUse
+        # PortNotUsableDNS
+        # AttachSRIOVPortNotSupported
+        # NetworksWithQoSPolicyNotSupported
+        exception.Invalid)
     @wrap_exception()
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault

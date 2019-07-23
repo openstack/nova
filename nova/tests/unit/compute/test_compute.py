@@ -10473,10 +10473,13 @@ class ComputeAPITestCase(BaseTestCase):
         with mock.patch.dict(self.compute.driver.capabilities,
                              supports_attach_interface=True,
                              supports_tagged_attach_interface=False):
-            self.assertRaises(
-                exception.NetworkInterfaceTaggedAttachNotSupported,
+            expected_exception = self.assertRaises(
+                messaging.ExpectedException,
                 self.compute.attach_interface, self.context, instance,
                 'fake-network-id', 'fake-port-id', 'fake-req-ip', tag='foo')
+        wrapped_exc = expected_exception.exc_info[1]
+        self.assertIsInstance(
+            wrapped_exc, exception.NetworkInterfaceTaggedAttachNotSupported)
 
     def test_attach_interface_failed(self):
         new_type = flavors.get_flavor_by_flavor_id('4')
