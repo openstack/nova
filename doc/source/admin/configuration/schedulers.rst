@@ -156,7 +156,7 @@ Filters host by CPU core numbers with a per-aggregate ``cpu_allocation_ratio``
 value. If the per-aggregate value is not found, the value falls back to the
 global setting.  If the host is in more than one aggregate and more than one
 value is found, the minimum value will be used.  For information about how to
-use this filter, see :ref:`host-aggregates`. See also :ref:`CoreFilter`.
+use this filter, see :ref:`host-aggregates`.
 
 Note the ``cpu_allocation_ratio`` :ref:`bug 1804125 <bug-1804125>` restriction.
 
@@ -167,7 +167,7 @@ Filters host by disk allocation with a per-aggregate ``disk_allocation_ratio``
 value. If the per-aggregate value is not found, the value falls back to the
 global setting.  If the host is in more than one aggregate and more than one
 value is found, the minimum value will be used.  For information about how to
-use this filter, see :ref:`host-aggregates`. See also :ref:`DiskFilter`.
+use this filter, see :ref:`host-aggregates`.
 
 Note the ``disk_allocation_ratio`` :ref:`bug 1804125 <bug-1804125>`
 restriction.
@@ -302,7 +302,7 @@ Filters host by RAM allocation of instances with a per-aggregate
 value falls back to the global setting.  If the host is in more than one
 aggregate and thus more than one value is found, the minimum value will be
 used.  For information about how to use this filter, see
-:ref:`host-aggregates`.  See also :ref:`ramfilter`.
+:ref:`host-aggregates`.
 
 Note the ``ram_allocation_ratio`` :ref:`bug 1804125 <bug-1804125>` restriction.
 
@@ -364,50 +364,6 @@ Passes all hosts that are operational and enabled.
 
 In general, you should always enable this filter.
 
-.. _CoreFilter:
-
-CoreFilter
-----------
-
-.. deprecated:: 19.0.0
-
-   ``CoreFilter`` is deprecated since the 19.0.0 Stein release. VCPU
-   filtering is performed natively using the Placement service when using the
-   ``filter_scheduler`` driver. Furthermore, enabling CoreFilter may
-   incorrectly filter out `baremetal nodes`_ which must be scheduled using
-   custom resource classes.
-
-Only schedules instances on hosts if sufficient CPU cores are available.  If
-this filter is not set, the scheduler might over-provision a host based on
-cores. For example, the virtual cores running on an instance may exceed the
-physical cores.
-
-You can configure this filter to enable a fixed amount of vCPU overcommitment
-by using the ``cpu_allocation_ratio`` configuration option in ``nova.conf``.
-The default setting is:
-
-.. code-block:: ini
-
-   cpu_allocation_ratio = 16.0
-
-With this setting, if 8 vCPUs are on a node, the scheduler allows instances up
-to 128 vCPU to be run on that node.
-
-To disallow vCPU overcommitment set:
-
-.. code-block:: ini
-
-   cpu_allocation_ratio = 1.0
-
-.. note::
-
-   The Compute API always returns the actual number of CPU cores available on a
-   compute node regardless of the value of the ``cpu_allocation_ratio``
-   configuration key. As a result changes to the ``cpu_allocation_ratio`` are
-   not reflected via the command line clients or the dashboard.  Changes to
-   this configuration key are only taken into account internally in the
-   scheduler.
-
 DifferentHostFilter
 -------------------
 
@@ -441,83 +397,6 @@ With the API, use the ``os:scheduler_hints`` key. For example:
            ]
        }
    }
-
-.. _DiskFilter:
-
-DiskFilter
-----------
-
-.. deprecated:: 19.0.0
-
-   ``DiskFilter`` is deprecated since the 19.0.0 Stein release. DISK_GB
-   filtering is performed natively using the Placement service when using the
-   ``filter_scheduler`` driver. Furthermore, enabling DiskFilter may
-   incorrectly filter out `baremetal nodes`_ which must be scheduled using
-   custom resource classes.
-
-Only schedules instances on hosts if there is sufficient disk space available
-for root and ephemeral storage.
-
-You can configure this filter to enable a fixed amount of disk overcommitment
-by using the ``disk_allocation_ratio`` configuration option in the
-``nova.conf`` configuration file.  The default setting disables the possibility
-of the overcommitment and allows launching a VM only if there is a sufficient
-amount of disk space available on a host:
-
-.. code-block:: ini
-
-   disk_allocation_ratio = 1.0
-
-DiskFilter always considers the value of the ``disk_available_least`` property
-and not the one of the ``free_disk_gb`` property of a hypervisor's statistics:
-
-.. code-block:: console
-
-   $ openstack hypervisor stats show
-   +----------------------+-------+
-   | Field                | Value |
-   +----------------------+-------+
-   | count                | 1     |
-   | current_workload     | 0     |
-   | disk_available_least | 14    |
-   | free_disk_gb         | 27    |
-   | free_ram_mb          | 15374 |
-   | local_gb             | 27    |
-   | local_gb_used        | 0     |
-   | memory_mb            | 15886 |
-   | memory_mb_used       | 512   |
-   | running_vms          | 0     |
-   | vcpus                | 8     |
-   | vcpus_used           | 0     |
-   +----------------------+-------+
-
-As it can be viewed from the command output above, the amount of the available
-disk space can be less than the amount of the free disk space.  It happens
-because the ``disk_available_least`` property accounts for the virtual size
-rather than the actual size of images.  If you use an image format that is
-sparse or copy on write so that each virtual instance does not require a 1:1
-allocation of a virtual disk to a physical storage, it may be useful to allow
-the overcommitment of disk space.
-
-When disk space is overcommitted, the value of ``disk_available_least`` can
-be negative. Rather than rounding up to 0, the original negative value is
-reported, as this way a user can see the amount by which they are
-overcommitting, and the disk weigher can select a host which is less
-overcommitted than another host.
-
-To enable scheduling instances while overcommitting disk resources on the node,
-adjust the value of the ``disk_allocation_ratio`` configuration option to
-greater than ``1.0``:
-
-.. code-block:: none
-
-   disk_allocation_ratio > 1.0
-
-.. note::
-
-   If the value is set to ``>1``, we recommend keeping track of the free disk
-   space, as the value approaching ``0`` may result in the incorrect
-   functioning of instances using it at the moment.
 
 .. _ImagePropertiesFilter:
 
@@ -708,37 +587,6 @@ PciPassthroughFilter
 
 The filter schedules instances on a host if the host has devices that meet the
 device requests in the ``extra_specs`` attribute for the flavor.
-
-.. _RamFilter:
-
-RamFilter
----------
-
-.. deprecated:: 19.0.0
-
-   ``RamFilter`` is deprecated since the 19.0.0 Stein release. MEMORY_MB
-   filtering is performed natively using the Placement service when using the
-   ``filter_scheduler`` driver. Furthermore, enabling RamFilter may
-   incorrectly filter out `baremetal nodes`_ which must be scheduled using
-   custom resource classes.
-
-.. _baremetal nodes: https://docs.openstack.org/ironic/latest/install/configure-nova-flavors.html
-
-Only schedules instances on hosts that have sufficient RAM available.  If this
-filter is not set, the scheduler may over provision a host based on RAM (for
-example, the RAM allocated by virtual machine instances may exceed the physical
-RAM).
-
-You can configure this filter to enable a fixed amount of RAM overcommitment by
-using the ``ram_allocation_ratio`` configuration option in ``nova.conf``. The
-default setting is:
-
-.. code-block:: ini
-
-   ram_allocation_ratio = 1.5
-
-This setting enables 1.5 GB instances to run on any compute node with 1 GB of
-free RAM.
 
 RetryFilter
 -----------
@@ -1436,10 +1284,6 @@ The allocation ratio configuration is used both during reporting of compute
 node `resource provider inventory`_ to the placement service and during
 scheduling.
 
-The (deprecated) `CoreFilter`_, `DiskFilter`_ and `RamFilter`_ filters will use
-the allocation ratio from the compute node directly when calculating available
-capacity on a given node during scheduling.
-
 The `AggregateCoreFilter`_, `AggregateDiskFilter`_ and `AggregateRamFilter`_
 filters allow overriding per-compute allocation ratios by setting an allocation
 ratio value using host aggregate metadata. This provides a convenient way to
@@ -1507,6 +1351,41 @@ here.
    `bug 1804125 <https://bugs.launchpad.net/nova/+bug/1804125>`_.
 
 .. _osc-placement: https://docs.openstack.org/osc-placement/latest/index.html
+
+.. _hypervisor-specific-considerations:
+
+Hypervisor-specific considerations
+----------------------------------
+
+Nova provides three configuration options,
+:oslo.config:option:`reserved_host_cpus`,
+:oslo.config:option:`reserved_host_memory_mb`, and
+:oslo.config:option:`reserved_host_disk_mb`, that can be used to set aside some
+number of resources that will not be consumed by an instance, whether these
+resources are overcommitted or not. Some virt drivers may benefit from the use
+of these options to account for hypervisor-specific overhead.
+
+HyperV
+    Hyper-V creates a VM memory file on the local disk when an instance starts.
+    The size of this file corresponds to the amount of RAM allocated to the
+    instance.
+
+    You should configure the
+    :oslo.config:option:`reserved_host_disk_mb` config option to
+    account for this overhead, based on the amount of memory available
+    to instances.
+
+XenAPI
+    XenServer memory overhead is proportional to the size of the VM and larger
+    flavor VMs become more efficient with respect to overhead. This overhead
+    can be calculated using the following formula::
+
+      overhead (MB) = (instance.memory * 0.00781) + (instance.vcpus * 1.5) + 3
+
+    You should configure the
+    :oslo.config:option:`reserved_host_memory_mb` config option to
+    account for this overhead, based on the size of your hosts and
+    instances.
 
 Cells considerations
 ~~~~~~~~~~~~~~~~~~~~

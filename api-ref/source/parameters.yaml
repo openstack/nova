@@ -2378,14 +2378,16 @@ disabled_reason_body:
 disk_available_least:
   description: |
     The actual free disk on this hypervisor(in GiB). If allocation ratios used
-    for overcommit are configured, this may be negative.
+    for overcommit are configured, this may be negative. This is intentional as
+    it provides insight into the amount by which the disk is overcommitted.
   in: body
   required: true
   type: integer
 disk_available_least_total:
   description: |
     The actual free disk on all hypervisors(in GiB). If allocation ratios used
-    for overcommit are configured, this may be negative.
+    for overcommit are configured, this may be negative. This is intentional as
+    it provides insight into the amount by which the disk is overcommitted.
   in: body
   required: true
   type: integer

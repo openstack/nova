@@ -22,12 +22,27 @@ from nova.scheduler.filters import utils
 LOG = logging.getLogger(__name__)
 
 
-class BaseRamFilter(filters.BaseHostFilter):
+class AggregateRamFilter(filters.BaseHostFilter):
+    """AggregateRamFilter with per-aggregate ram subscription flag.
+
+    Fall back to global ram_allocation_ratio if no per-aggregate setting found.
+    """
 
     RUN_ON_REBUILD = False
 
     def _get_ram_allocation_ratio(self, host_state, spec_obj):
-        raise NotImplementedError
+        aggregate_vals = utils.aggregate_values_from_key(
+            host_state,
+            'ram_allocation_ratio')
+
+        try:
+            ratio = utils.validate_num_values(
+                aggregate_vals, host_state.ram_allocation_ratio, cast_to=float)
+        except ValueError as e:
+            LOG.warning("Could not decode ram_allocation_ratio: '%s'", e)
+            ratio = host_state.ram_allocation_ratio
+
+        return ratio
 
     def host_passes(self, host_state, spec_obj):
         """Only return hosts with sufficient available RAM."""
@@ -63,40 +78,3 @@ class BaseRamFilter(filters.BaseHostFilter):
         # save oversubscription limit for compute node to test against:
         host_state.limits['memory_mb'] = memory_mb_limit
         return True
-
-
-class RamFilter(BaseRamFilter):
-    """Ram Filter with over subscription flag."""
-
-    def __init__(self):
-        super(RamFilter, self).__init__()
-        LOG.warning('The RamFilter is deprecated since the 19.0.0 Stein '
-                    'release. MEMORY_MB filtering is performed natively '
-                    'using the Placement service when using the '
-                    'filter_scheduler driver. Furthermore, enabling RamFilter '
-                    'may incorrectly filter out baremetal nodes which must be '
-                    'scheduled using custom resource classes.')
-
-    def _get_ram_allocation_ratio(self, host_state, spec_obj):
-        return host_state.ram_allocation_ratio
-
-
-class AggregateRamFilter(BaseRamFilter):
-    """AggregateRamFilter with per-aggregate ram subscription flag.
-
-    Fall back to global ram_allocation_ratio if no per-aggregate setting found.
-    """
-
-    def _get_ram_allocation_ratio(self, host_state, spec_obj):
-        aggregate_vals = utils.aggregate_values_from_key(
-            host_state,
-            'ram_allocation_ratio')
-
-        try:
-            ratio = utils.validate_num_values(
-                aggregate_vals, host_state.ram_allocation_ratio, cast_to=float)
-        except ValueError as e:
-            LOG.warning("Could not decode ram_allocation_ratio: '%s'", e)
-            ratio = host_state.ram_allocation_ratio
-
-        return ratio

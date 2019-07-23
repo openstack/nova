@@ -387,23 +387,20 @@ allocation_ratio_opts = [
         default=None,
         min=0.0,
         help="""
-This option helps you specify virtual CPU to physical CPU allocation ratio.
+Virtual CPU to physical CPU allocation ratio.
 
-From Ocata (15.0.0) this is used to influence the hosts selected by
-the Placement API. Note that when Placement is used, the CoreFilter
-is redundant, because the Placement API will have already filtered
-out hosts that would have failed the CoreFilter.
+This option is used to influence the hosts selected by the Placement API. In
+addition, the ``AggregateCoreFilter`` will fall back to this configuration
+value if no per-aggregate setting is found.
 
-This configuration specifies ratio for CoreFilter which can be set
-per compute node. For AggregateCoreFilter, it will fall back to this
-configuration value if no per-aggregate setting is found.
+.. note::
 
-NOTE: If this option is set to something *other than* ``None`` or ``0.0``, the
-allocation ratio will be overwritten by the value of this option, otherwise,
-the allocation ratio will not change. Once set to a non-default value, it is
-not possible to "unset" the config to get back to the default behavior. If you
-want to reset back to the initial value, explicitly specify it to the value of
-``initial_cpu_allocation_ratio``.
+   If this option is set to something *other than* ``None`` or ``0.0``, the
+   allocation ratio will be overwritten by the value of this option, otherwise,
+   the allocation ratio will not change. Once set to a non-default value, it is
+   not possible to "unset" the config to get back to the default behavior. If
+   you want to reset back to the initial value, explicitly specify it to the
+   value of ``initial_cpu_allocation_ratio``.
 
 Possible values:
 
@@ -417,24 +414,20 @@ Related options:
         default=None,
         min=0.0,
         help="""
-This option helps you specify virtual RAM to physical RAM
-allocation ratio.
+Virtual RAM to physical RAM allocation ratio.
 
-From Ocata (15.0.0) this is used to influence the hosts selected by
-the Placement API. Note that when Placement is used, the RamFilter
-is redundant, because the Placement API will have already filtered
-out hosts that would have failed the RamFilter.
+This option is used to influence the hosts selected by the Placement API. In
+addition, the ``AggregateRamFilter`` will fall back to this configuration value
+if no per-aggregate setting is found.
 
-This configuration specifies ratio for RamFilter which can be set
-per compute node. For AggregateRamFilter, it will fall back to this
-configuration value if no per-aggregate setting found.
+.. note::
 
-NOTE: If this option is set to something *other than* ``None`` or ``0.0``, the
-allocation ratio will be overwritten by the value of this option, otherwise,
-the allocation ratio will not change. Once set to a non-default value, it is
-not possible to "unset" the config to get back to the default behavior. If you
-want to reset back to the initial value, explicitly specify it to the value of
-``initial_ram_allocation_ratio``.
+   If this option is set to something *other than* ``None`` or ``0.0``, the
+   allocation ratio will be overwritten by the value of this option, otherwise,
+   the allocation ratio will not change. Once set to a non-default value, it is
+   not possible to "unset" the config to get back to the default behavior. If
+   you want to reset back to the initial value, explicitly specify it to the
+   value of ``initial_ram_allocation_ratio``.
 
 Possible values:
 
@@ -448,28 +441,32 @@ Related options:
         default=None,
         min=0.0,
         help="""
-This option helps you specify virtual disk to physical disk
-allocation ratio.
+Virtual disk to physical disk allocation ratio.
 
-From Ocata (15.0.0) this is used to influence the hosts selected by
-the Placement API. Note that when Placement is used, the DiskFilter
-is redundant, because the Placement API will have already filtered
-out hosts that would have failed the DiskFilter.
+This option is used to influence the hosts selected by the Placement API. In
+addition, the ``AggregateDiskFilter`` will fall back to this configuration
+value if no per-aggregate setting is found.
 
-A ratio greater than 1.0 will result in over-subscription of the
-available physical disk, which can be useful for more
-efficiently packing instances created with images that do not
-use the entire virtual disk, such as sparse or compressed
-images. It can be set to a value between 0.0 and 1.0 in order
-to preserve a percentage of the disk for uses other than
-instances.
+When configured, a ratio greater than 1.0 will result in over-subscription of
+the available physical disk, which can be useful for more efficiently packing
+instances created with images that do not use the entire virtual disk, such as
+sparse or compressed images. It can be set to a value between 0.0 and 1.0 in
+order to preserve a percentage of the disk for uses other than instances.
 
-NOTE: If this option is set to something *other than* ``None`` or ``0.0``, the
-allocation ratio will be overwritten by the value of this option, otherwise,
-the allocation ratio will not change. Once set to a non-default value, it is
-not possible to "unset" the config to get back to the default behavior. If you
-want to reset back to the initial value, explicitly specify it to the value of
-``initial_disk_allocation_ratio``.
+.. note::
+
+   If the value is set to ``>1``, we recommend keeping track of the free disk
+   space, as the value approaching ``0`` may result in the incorrect
+   functioning of instances using it at the moment.
+
+.. note::
+
+   If this option is set to something *other than* ``None`` or ``0.0``, the
+   allocation ratio will be overwritten by the value of this option, otherwise,
+   the allocation ratio will not change. Once set to a non-default value, it is
+   not possible to "unset" the config to get back to the default behavior. If
+   you want to reset back to the initial value, explicitly specify it to the
+   value of ``initial_disk_allocation_ratio``.
 
 Possible values:
 
@@ -483,8 +480,7 @@ Related options:
                  default=16.0,
                  min=0.0,
                  help="""
-This option helps you specify initial virtual CPU to physical CPU allocation
-ratio.
+Initial virtual CPU to physical CPU allocation ratio.
 
 This is only used when initially creating the ``computes_nodes`` table record
 for a given nova-compute service.
@@ -500,8 +496,7 @@ Related options:
                  default=1.5,
                  min=0.0,
                  help="""
-This option helps you specify initial virtual RAM to physical RAM allocation
-ratio.
+Initial virtual RAM to physical RAM allocation ratio.
 
 This is only used when initially creating the ``computes_nodes`` table record
 for a given nova-compute service.
@@ -517,8 +512,7 @@ Related options:
                  default=1.0,
                  min=0.0,
                  help="""
-This option helps you specify initial virtual disk to physical disk allocation
-ratio.
+Initial virtual disk to physical disk allocation ratio.
 
 This is only used when initially creating the ``computes_nodes`` table record
 for a given nova-compute service.

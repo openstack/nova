@@ -21,25 +21,28 @@ from nova.scheduler.filters import utils
 LOG = logging.getLogger(__name__)
 
 
-class DiskFilter(filters.BaseHostFilter):
-    """DEPRECATED: Disk Filter with over subscription flag."""
+class AggregateDiskFilter(filters.BaseHostFilter):
+    """AggregateDiskFilter with per-aggregate disk allocation ratio flag.
+
+    Fall back to global disk_allocation_ratio if no per-aggregate setting
+    found.
+    """
 
     RUN_ON_REBUILD = False
-    DEPRECATED = True
-
-    def __init__(self):
-        super(DiskFilter, self).__init__()
-        if self.DEPRECATED:
-            LOG.warning('The DiskFilter is deprecated since the 19.0.0 Stein '
-                        'release. DISK_GB filtering is performed natively '
-                        'using the Placement service when using the '
-                        'filter_scheduler driver. Furthermore, enabling '
-                        'DiskFilter may incorrectly filter out baremetal '
-                        'nodes which must be scheduled using custom resource '
-                        'classes.')
 
     def _get_disk_allocation_ratio(self, host_state, spec_obj):
-        return host_state.disk_allocation_ratio
+        aggregate_vals = utils.aggregate_values_from_key(
+            host_state,
+            'disk_allocation_ratio')
+        try:
+            ratio = utils.validate_num_values(
+                aggregate_vals, host_state.disk_allocation_ratio,
+                cast_to=float)
+        except ValueError as e:
+            LOG.warning("Could not decode disk_allocation_ratio: '%s'", e)
+            ratio = host_state.disk_allocation_ratio
+
+        return ratio
 
     def host_passes(self, host_state, spec_obj):
         """Filter based on disk usage."""
@@ -81,28 +84,3 @@ class DiskFilter(filters.BaseHostFilter):
         disk_gb_limit = disk_mb_limit / 1024
         host_state.limits['disk_gb'] = disk_gb_limit
         return True
-
-
-class AggregateDiskFilter(DiskFilter):
-    """AggregateDiskFilter with per-aggregate disk allocation ratio flag.
-
-    Fall back to global disk_allocation_ratio if no per-aggregate setting
-    found.
-    """
-
-    RUN_ON_REBUILD = False
-    DEPRECATED = False
-
-    def _get_disk_allocation_ratio(self, host_state, spec_obj):
-        aggregate_vals = utils.aggregate_values_from_key(
-            host_state,
-            'disk_allocation_ratio')
-        try:
-            ratio = utils.validate_num_values(
-                aggregate_vals, host_state.disk_allocation_ratio,
-                cast_to=float)
-        except ValueError as e:
-            LOG.warning("Could not decode disk_allocation_ratio: '%s'", e)
-            ratio = host_state.disk_allocation_ratio
-
-        return ratio
