@@ -122,7 +122,6 @@ Nova Database
      |                  Migration                  | Total Needed | Completed |
      +---------------------------------------------+--------------+-----------+
      |         create_incomplete_consumers         |      0       |     0     |
-     | delete_build_requests_with_no_instance_uuid |      0       |     0     |
      |      migrate_instances_add_request_spec     |      2       |     0     |
      |       migrate_quota_classes_to_api_db       |      0       |     0     |
      |        migrate_quota_limits_to_api_db       |      0       |     0     |
