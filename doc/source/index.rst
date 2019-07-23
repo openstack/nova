@@ -70,15 +70,15 @@ API, which can be used to build more complicated logic or automation with
 nova. This can be consumed directly, or via various SDKs. The following
 resources will help you get started with consuming the API directly.
 
-* `Compute API Guide <https://developer.openstack.org/api-guide/compute/>`_: The
+* `Compute API Guide <https://docs.openstack.org/api-guide/compute/>`_: The
   concept guide for the API. This helps lay out the concepts behind the API to
   make consuming the API reference easier.
-* `Compute API Reference <http://developer.openstack.org/api-ref/compute/>`_:
+* `Compute API Reference <https://docs.openstack.org/api-ref/compute/>`_:
   The complete reference for the compute API, including all methods and
   request / response parameters and their meaning.
 * :doc:`Compute API Microversion History </reference/api-microversion-history>`:
   The compute API evolves over time through `Microversions
-  <https://developer.openstack.org/api-guide/compute/microversions.html>`_. This
+  <https://docs.openstack.org/api-guide/compute/microversions.html>`_. This
   provides the history of all those changes. Consider it a "what's new" in the
   compute API.
 * :doc:`Block Device Mapping </user/block-device-mapping>`: One of the trickier

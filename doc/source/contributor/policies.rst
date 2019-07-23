@@ -33,7 +33,7 @@ Public Contractual APIs
 Although nova has many internal APIs, they are not all public contractual
 APIs. Below is a link of our public contractual APIs:
 
-* https://developer.openstack.org/api-ref/compute/
+* https://docs.openstack.org/api-ref/compute/
 
 Anything not in this list is considered private, not to be used outside of
 nova, and should not be considered stable.

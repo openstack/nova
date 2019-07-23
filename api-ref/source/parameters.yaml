@@ -2348,7 +2348,7 @@ device_volume_type:
     The device ``volume_type``. This can be used to specify the type of volume
     which the compute service will create and attach to the server.
     If not specified, the block storage service will provide a default volume
-    type. See the `block storage volume types API <https://developer.openstack.org/api-ref/block-storage/v3/#volume-types-types>`_
+    type. See the `block storage volume types API <https://docs.openstack.org/api-ref/block-storage/v3/#volume-types-types>`_
     for more details.
     There are some restrictions on ``volume_type``:
 
@@ -2980,7 +2980,7 @@ flavor_links_2_46:
   description: |
     Links to the flavor resource. See `API Guide / Links and
     References
-    <http://developer.openstack.org/api-guide/compute/links_and_references.html>`_
+    <https://docs.openstack.org/api-guide/compute/links_and_references.html>`_
     for more info.
   in: body
   required: true
@@ -3611,7 +3611,7 @@ hypervisor_links:
   description: |
     Links to the hypervisors resource. See `API Guide / Links and
     References
-    <http://developer.openstack.org/api-guide/compute/links_and_references.html>`_
+    <https://docs.openstack.org/api-guide/compute/links_and_references.html>`_
     for more info.
   in: body
   type: array
@@ -3926,7 +3926,7 @@ instance_actions_next_links:
     Links pertaining to the instance action.
     This parameter is returned when paging and more data is available.
     See `API Guide / Links and References
-    <http://developer.openstack.org/api-guide/compute/links_and_references.html>`_
+    <https://docs.openstack.org/api-guide/compute/links_and_references.html>`_
     for more info.
   in: body
   required: false
@@ -4177,7 +4177,7 @@ keypair_links:
   description: |
     Links pertaining to keypair. See `API Guide / Links and
     References
-    <http://developer.openstack.org/api-guide/compute/links_and_references.html>`_
+    <https://docs.openstack.org/api-guide/compute/links_and_references.html>`_
     for more info.
   in: body
   type: array
@@ -4294,7 +4294,7 @@ links:
   description: |
     Links to the resources in question. See `API Guide / Links and
     References
-    <http://developer.openstack.org/api-guide/compute/links_and_references.html>`_
+    <https://docs.openstack.org/api-guide/compute/links_and_references.html>`_
     for more info.
   in: body
   required: true
@@ -4617,7 +4617,7 @@ migration_links_2_23:
     This parameter is returned if the migration type is ``live-migration`` and
     the migration status is one of ``queued``, ``preparing``, ``running``
     and ``post-migrating``. See `API Guide / Links and References
-    <http://developer.openstack.org/api-guide/compute/links_and_references.html>`_
+    <https://docs.openstack.org/api-guide/compute/links_and_references.html>`_
     for more info.
   in: body
   required: false
@@ -4640,7 +4640,7 @@ migration_next_links_2_59:
     Links pertaining to the migration.
     This parameter is returned when paging and more data is available.
     See `API Guide / Links and References
-    <http://developer.openstack.org/api-guide/compute/links_and_references.html>`_
+    <https://docs.openstack.org/api-guide/compute/links_and_references.html>`_
     for more info.
   in: body
   required: false
@@ -6016,7 +6016,7 @@ server_links:
   description: |
     Links pertaining to the server. See `API Guide / Links and
     References
-    <http://developer.openstack.org/api-guide/compute/links_and_references.html>`_
+    <https://docs.openstack.org/api-guide/compute/links_and_references.html>`_
     for more info.
   in: body
   type: array
@@ -6159,7 +6159,7 @@ servers_links:
     Links to the next server. It is available when the number of servers exceeds
     ``limit`` parameter or ``[api]/max_limit`` in the configuration file.
     See `API Guide / Links and References
-    <http://developer.openstack.org/api-guide/compute/links_and_references.html>`_
+    <https://docs.openstack.org/api-guide/compute/links_and_references.html>`_
     for more info.
   in: body
   type: array
@@ -6707,7 +6707,7 @@ usage_links:
   description: |
     Links pertaining to usage. See `API Guide / Links and
     References
-    <http://developer.openstack.org/api-guide/compute/links_and_references.html>`_
+    <https://docs.openstack.org/api-guide/compute/links_and_references.html>`_
     for more info.
   in: body
   type: array

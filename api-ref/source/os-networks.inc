@@ -14,7 +14,7 @@
              using ``neutron`` directly. These will fail with a 404
              starting from microversion 2.36.
              See: `Relevant Network APIs
-             <https://developer.openstack.org/api-ref/networking/v2/#networks>`__.
+             <https://docs.openstack.org/api-ref/network/v2/#networks>`__.
 
 
 Creates, lists, shows information for, and deletes networks.

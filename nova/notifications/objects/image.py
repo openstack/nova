@@ -47,7 +47,7 @@ class ImageMetaPayload(base.NotificationPayloadBase):
     # a. It is defined as "The value might be null (JSON null data type)."
     #    in the "Show image" API (GET /v2/images/{image_id})
     #    in the glance API v2 Reference.
-    #    (https://developer.openstack.org/api-ref/image/v2/index.html)
+    #    (https://docs.openstack.org/api-ref/image/v2/index.html)
     #
     #   * checksum
     #   * container_format

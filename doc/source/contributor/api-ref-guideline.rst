@@ -9,7 +9,7 @@ This page describes the guideline for updating the API reference.
 API reference
 =============
 
-* `Compute API reference <https://developer.openstack.org/api-ref/compute/>`_
+* `Compute API reference <https://docs.openstack.org/api-ref/compute/>`_
 
 The guideline to write the API reference
 ========================================

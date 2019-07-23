@@ -877,7 +877,7 @@ down part of the infrastructure for the above four requests will have missing
 key values to make it more resilient. The response body will only have a
 minimal set of information obtained from the available information in the API
 database for the down cells. See `handling down cells
-<https://developer.openstack.org/api-guide/compute/down_cells.html>`__ for
+<https://docs.openstack.org/api-guide/compute/down_cells.html>`__ for
 more information.
 
 2.70

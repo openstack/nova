@@ -751,7 +751,7 @@ FAQs
    ``GET /servers/detail``, ``GET /servers/{server_id}`` and
    ``GET /os-services`` may contain missing keys during down cell situations.
    See the `Handling Down Cells
-   <https://developer.openstack.org/api-guide/compute/down_cells.html>`__
+   <https://docs.openstack.org/api-guide/compute/down_cells.html>`__
    section of the Compute API guide for more information on the partial
    constructs.
 

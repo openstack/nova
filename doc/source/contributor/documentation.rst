@@ -47,7 +47,7 @@ every stable release (e.g. ``pike``).
    unimproved as we address content in ``latest``.
 
 The ``api-ref`` and ``api-guide`` publish only from master to a single site on
-`developer.openstack.org`. As such, they are effectively branchless.
+`docs.openstack.org`. As such, they are effectively branchless.
 
 Guidelines for consumable docs
 ==============================

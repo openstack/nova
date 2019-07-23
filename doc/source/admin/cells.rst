@@ -13,7 +13,7 @@ Handling cell failures
 ----------------------
 
 For an explanation on how ``nova-api`` handles cell failures please see the
-`Handling Down Cells <https://developer.openstack.org/api-guide/compute/down_cells.html>`__
+`Handling Down Cells <https://docs.openstack.org/api-guide/compute/down_cells.html>`__
 section of the Compute API guide. Below, you can find some recommended practices and
 considerations for effectively tolerating cell failure situations.
 

@@ -8,7 +8,7 @@ Contributor developer docs are built to:
 https://docs.openstack.org/nova/latest/
 
 API guide docs are built to:
-https://developer.openstack.org/api-guide/compute/
+https://docs.openstack.org/api-guide/compute/
 
 For more details, see the "Building the Documentation" section of
 doc/source/contributor/development-environment.rst.

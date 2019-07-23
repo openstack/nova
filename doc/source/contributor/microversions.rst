@@ -377,7 +377,7 @@ necessary to add changes to other places which describe your change:
 * Update the `API Reference`_ documentation as appropriate.  The source is
   located under `api-ref/source/`.
 
-.. _API Reference: https://developer.openstack.org/api-ref/compute/
+.. _API Reference: https://docs.openstack.org/api-ref/compute/
 
 Allocating a microversion
 -------------------------

@@ -365,7 +365,7 @@ Note that from API microversion 2.69 there could be transient conditions in the
 deployment where certain records are not available and the results could be
 partial for certain requests containing those records. In those cases this
 option will be ignored. See "Handling Down Cells" section of the Compute API
-guide (https://developer.openstack.org/api-guide/compute/down_cells.html) for
+guide (https://docs.openstack.org/api-guide/compute/down_cells.html) for
 more information.
 """),
 ]

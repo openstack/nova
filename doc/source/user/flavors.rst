@@ -731,7 +731,7 @@ Required traits
     the set of traits specified in the flavor. The traits are associated with
     the resource provider that represents the compute node in the Placement
     API. See the resource provider traits API reference for more details:
-    https://developer.openstack.org/api-ref/placement/#resource-provider-traits
+    https://docs.openstack.org/api-ref/placement/#resource-provider-traits
 
     The syntax of the extra spec is ``trait:<trait_name>=required``, for
     example:

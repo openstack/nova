@@ -8,7 +8,7 @@ Users can specify the global request ID in the request header.
 Users can receive the local request ID in the response header.
 
 For more details about Request IDs, please reference: `Faults
-<https://developer.openstack.org/api-guide/compute/faults.html>`_
+<https://docs.openstack.org/api-guide/compute/faults.html>`_
 
 **Request**
 

@@ -135,7 +135,7 @@ and a new description as follows:
    instances if required but as a resize performs a cold migration
    it is not transparent to a tenant.
 
-.. _updating flavor extra_specs: https://developer.openstack.org/api-ref/compute/?expanded=#update-an-extra-spec-for-a-flavor
+.. _updating flavor extra_specs: https://docs.openstack.org/api-ref/compute/?expanded=#update-an-extra-spec-for-a-flavor
 
 Delete a flavor
 ---------------

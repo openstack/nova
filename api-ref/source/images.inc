@@ -13,7 +13,7 @@
    The image metadata APIs will fail with a 404 starting from
    microversion 2.39.
    See: `Relevant Image APIs
-   <https://developer.openstack.org/api-ref/image/v2/index.html>`__.
+   <https://docs.openstack.org/api-ref/image/v2/index.html>`__.
 
 Lists, shows details and deletes images.
 Also sets, lists, shows details, create, update and deletes image metadata.
@@ -21,7 +21,7 @@ Also sets, lists, shows details, create, update and deletes image metadata.
 An image is a collection of files that you use to create and rebuild a
 server. By default, operators provide pre-built operating system images.
 You can also create custom images. See: `Create Image Action
-<https://developer.openstack.org/api-ref/compute/#create-image-createimage-action>`__.
+<https://docs.openstack.org/api-ref/compute/#create-image-createimage-action>`__.
 
 By default, the ``policy.json`` file authorizes all users to view the
 image size in the ``OS-EXT-IMG-SIZE:size`` extended attribute.
