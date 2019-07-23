@@ -2395,9 +2395,6 @@ class API(base.Base):
         instance.save(expected_task_state=[None])
 
         self._record_action_start(context, instance, instance_actions.START)
-        # TODO(yamahata): injected_files isn't supported right now.
-        #                 It is used only for osapi. not for ec2 api.
-        #                 availability_zone isn't used by run_instance.
         self.compute_rpcapi.start_instance(context, instance)
 
     @check_instance_lock
