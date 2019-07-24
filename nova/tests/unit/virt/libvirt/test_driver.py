@@ -894,6 +894,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                       'resolve_driver_format',
                       imagebackend.Image._get_driver_format)
 
+        self.stub_out('nova.compute.utils.get_machine_ips', lambda: [])
+
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
         self.test_instance = _create_test_instance()
         self.test_image_meta = {
@@ -13801,15 +13803,21 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch.object(libvirt_driver.LOG, 'warning')
     @mock.patch('nova.compute.utils.get_machine_ips')
-    def test_get_host_ip_addr_failure(self, mock_ips, mock_log):
+    def test_check_my_ip(self, mock_ips, mock_log):
         mock_ips.return_value = ['8.8.8.8', '75.75.75.75']
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        drvr.get_host_ip_addr()
+        drvr._check_my_ip()
         mock_log.assert_called_once_with(u'my_ip address (%(my_ip)s) was '
                                          u'not found on any of the '
                                          u'interfaces: %(ifaces)s',
                                          {'ifaces': '8.8.8.8, 75.75.75.75',
                                           'my_ip': mock.ANY})
+
+    def test_init_host_checks_ip(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        with mock.patch.object(drvr, '_check_my_ip') as mock_check:
+            drvr.init_host('fake-host')
+            mock_check.assert_called_once_with()
 
     def test_conn_event_handler(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -21546,6 +21554,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.assertEqual(set([uuids.mdev1]),
                          drvr._get_existing_mdevs_not_assigned())
 
+    @mock.patch('nova.compute.utils.get_machine_ips',
+                new=mock.Mock(return_value=[]))
     @mock.patch.object(nova.privsep.libvirt, 'create_mdev')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_get_mdev_capable_devices')
