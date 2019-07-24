@@ -386,83 +386,6 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
             return upgradecheck.Result(upgradecheck.Code.FAILURE, msg)
         return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
-    def _check_console_auths(self):
-        """Checks for console usage and warns with info for rolling upgrade.
-
-        Iterates all cells checking to see if the nova-consoleauth service is
-        non-deleted/non-disabled and whether there are any console token auths
-        in that cell database. If there is a nova-consoleauth service being
-        used and no console token auths in the cell database, emit a warning
-        telling the user to set [workarounds]enable_consoleauth = True if they
-        are performing a rolling upgrade.
-        """
-        # If the operator has already enabled the workaround, we don't need
-        # to check anything.
-        if CONF.workarounds.enable_consoleauth:
-            return upgradecheck.Result(upgradecheck.Code.SUCCESS)
-
-        # We need to check cell0 for nova-consoleauth service records because
-        # it's possible a deployment could have services stored in the cell0
-        # database, if they've defaulted their [database]connection in
-        # nova.conf to cell0.
-        mappings = self._get_cell_mappings()
-
-        if not mappings:
-            # There are no cell mappings so we can't determine this, just
-            # return a warning. The cellsv2 check would have already failed
-            # on this.
-            msg = (_('Unable to check consoles without cell mappings.'))
-            return upgradecheck.Result(upgradecheck.Code.WARNING, msg)
-
-        ctxt = nova_context.get_admin_context()
-        # If we find a non-deleted, non-disabled nova-consoleauth service in
-        # any cell, we will assume the deployment is using consoles.
-        using_consoles = False
-        for mapping in mappings:
-            with nova_context.target_cell(ctxt, mapping) as cctxt:
-                # Check for any non-deleted, non-disabled nova-consoleauth
-                # service.
-                meta = MetaData(bind=db_session.get_engine(context=cctxt))
-                services = Table('services', meta, autoload=True)
-                consoleauth_service_record = (
-                    select([services.c.id]).select_from(services).where(and_(
-                        services.c.binary == 'nova-consoleauth',
-                        services.c.deleted == 0,
-                        services.c.disabled == false())).execute().first())
-                if consoleauth_service_record:
-                    using_consoles = True
-                    break
-
-        if using_consoles:
-            # If the deployment is using consoles, we can only be certain the
-            # upgrade is complete if each compute service is >= Rocky and
-            # supports storing console token auths in the database backend.
-            for mapping in mappings:
-                # Skip cell0 as no compute services should be in it.
-                if mapping.is_cell0():
-                    continue
-                # Get the minimum nova-compute service version in this
-                # cell.
-                with nova_context.target_cell(ctxt, mapping) as cctxt:
-                    min_version = self._get_min_service_version(
-                        cctxt, 'nova-compute')
-                    # We could get None for the minimum version in the case of
-                    # new install where there are no computes. If there are
-                    # compute services, they should all have versions.
-                    if min_version is not None and min_version < 35:
-                        msg = _("One or more cells were found which have "
-                                "nova-compute services older than Rocky. "
-                                "Please set the "
-                                "'[workarounds]enable_consoleauth' "
-                                "configuration option to 'True' on your "
-                                "console proxy host if you are performing a "
-                                "rolling upgrade to enable consoles to "
-                                "function during a partial upgrade.")
-                        return upgradecheck.Result(upgradecheck.Code.WARNING,
-                                                  msg)
-
-        return upgradecheck.Result(upgradecheck.Code.SUCCESS)
-
     def _check_cinder(self):
         """Checks to see that the cinder API is available at a given minimum
         microversion.
@@ -507,8 +430,6 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         (_('Ironic Flavor Migration'), _check_ironic_flavor_migration),
         # Added in Rocky
         (_('Request Spec Migration'), _check_request_spec_migration),
-        # Added in Stein (but also useful going back to Rocky)
-        (_('Console Auths'), _check_console_auths),
         # Added in Train
         (_('Cinder API'), _check_cinder),
     )

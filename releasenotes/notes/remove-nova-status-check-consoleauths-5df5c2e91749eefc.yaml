@@ -1,0 +1,5 @@
+---
+upgrade:
+  - |
+    A check for the use of the ``nova-consoleauth`` service, added to the
+    ``nova-status upgrade check`` CLI in Rocky, is now removed.
