@@ -66,10 +66,9 @@ class NovaProxyRequestHandlerDBTestCase(test.TestCase):
     @mock.patch('nova.objects.ConsoleAuthToken.validate')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.compute.rpcapi.ComputeAPI.validate_console_port')
-    @mock.patch('nova.consoleauth.rpcapi.ConsoleAuthAPI.check_token')
     def test_new_websocket_client_db(
-            self, mock_ca_check, mock_validate_port, mock_inst_get,
-            mock_validate, internal_access_path=None,
+            self, mock_validate_port, mock_inst_get, mock_validate,
+            internal_access_path=None,
             instance_not_found=False):
 
         db_obj = self._fake_console_db(
@@ -113,7 +112,6 @@ class NovaProxyRequestHandlerDBTestCase(test.TestCase):
             mock_validate_port.assert_called_once_with(
                 ctxt, mock_inst_get.return_value, str(db_obj['port']),
                 db_obj['console_type'])
-            mock_ca_check.assert_not_called()
 
             self.wh.socket.assert_called_with('node1', 10000, connect=True)
 
@@ -200,60 +198,6 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         'Origin': 'https://example.net:6080',
         'Host': 'example.net:6080',
     }
-
-    @mock.patch('nova.consoleauth.rpcapi.ConsoleAuthAPI.check_token')
-    def test_new_websocket_client_enable_consoleauth(self, check_token):
-        self.flags(enable_consoleauth=True, group='workarounds')
-
-        check_token.return_value = {
-            'host': 'node1',
-            'port': '10000',
-            'console_type': 'novnc',
-            'access_url': 'https://example.net:6080'
-        }
-        self.wh.socket.return_value = '<socket>'
-        self.wh.path = "http://127.0.0.1/?%s" % self.path
-        self.wh.headers = self.fake_header
-
-        self.wh.new_websocket_client()
-
-        check_token.assert_called_with(mock.ANY, token="123-456-789")
-        self.wh.socket.assert_called_with('node1', 10000, connect=True)
-        self.wh.do_proxy.assert_called_with('<socket>')
-
-    @mock.patch('nova.consoleauth.rpcapi.ConsoleAuthAPI.check_token',
-                return_value=None)
-    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandlerBase.'
-                '_check_console_port')
-    @mock.patch('nova.objects.ConsoleAuthToken.validate')
-    def test_new_websocket_client_enable_consoleauth_fallback(self, validate,
-                                                              check_port,
-                                                              check_token):
-        # Since consoleauth is enabled, it should be called first before
-        # falling back to the database.
-        self.flags(enable_consoleauth=True, group='workarounds')
-
-        params = {
-            'id': 1,
-            'token': '123-456-789',
-            'instance_uuid': uuids.instance,
-            'host': 'node1',
-            'port': '10000',
-            'console_type': 'novnc',
-            'access_url_base': 'https://example.net:6080'
-        }
-        validate.return_value = objects.ConsoleAuthToken(**params)
-
-        self.wh.socket.return_value = '<socket>'
-        self.wh.path = "http://127.0.0.1/?%s" % self.path
-        self.wh.headers = self.fake_header
-
-        self.wh.new_websocket_client()
-
-        check_token.assert_called_with(mock.ANY, token="123-456-789")
-        validate.assert_called_with(mock.ANY, "123-456-789")
-        self.wh.socket.assert_called_with('node1', 10000, connect=True)
-        self.wh.do_proxy.assert_called_with('<socket>')
 
     @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandlerBase.'
                 '_check_console_port')
@@ -440,23 +384,6 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         validate.assert_called_with(mock.ANY, "123-456-789")
         self.wh.socket.assert_called_with('node1', 10000, connect=True)
         self.wh.do_proxy.assert_called_with('<socket>')
-
-    @mock.patch.object(websocketproxy, 'sys')
-    @mock.patch('nova.consoleauth.rpcapi.ConsoleAuthAPI.check_token')
-    def test_new_websocket_client_py273_special_scheme(
-            self, check_token, mock_sys):
-        mock_sys.version_info = (2, 7, 3)
-        check_token.return_value = {
-            'host': 'node1',
-            'port': '10000',
-            'console_type': 'novnc'
-        }
-        self.wh.socket.return_value = '<socket>'
-        self.wh.path = "ws://127.0.0.1/?%s" % self.path
-        self.wh.headers = self.fake_header
-
-        self.assertRaises(exception.NovaException,
-                          self.wh.new_websocket_client)
 
     @mock.patch('socket.getfqdn')
     def test_address_string_doesnt_do_reverse_dns_lookup(self, getfqdn):

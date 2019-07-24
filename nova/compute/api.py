@@ -51,7 +51,6 @@ from nova.compute.utils import wrap_instance_event
 from nova.compute import vm_states
 from nova import conductor
 import nova.conf
-from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context as nova_context
 from nova import crypto
 from nova.db import base
@@ -259,7 +258,6 @@ class API(base.Base):
         self._placementclient = None  # Lazy-load on first access.
         self.security_group_api = (security_group_api or
             openstack_driver.get_openstack_security_group_driver())
-        self.consoleauth_rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.compute_task_api = conductor.ComputeTaskAPI()
         self.servicegroup_api = servicegroup.API()
@@ -2057,13 +2055,6 @@ class API(base.Base):
             instance.progress = 0
             instance.save()
 
-            if CONF.workarounds.enable_consoleauth:
-                # TODO(melwitt): Remove the conditions for running this line
-                # with cells v2, when consoleauth is no longer being used by
-                # cells v2, in Stein.
-                self.consoleauth_rpcapi.delete_tokens_for_instance(
-                    context, instance.uuid)
-
             if not instance.host and not may_have_ports_or_volumes:
                 try:
                     with compute_utils.notify_about_instance_delete(
@@ -3789,18 +3780,6 @@ class API(base.Base):
         """Get a url to an instance Console."""
         connect_info = self.compute_rpcapi.get_vnc_console(context,
                 instance=instance, console_type=console_type)
-
-        # TODO(melwitt): In Rocky, the compute manager puts the
-        # console authorization in the database in the above method.
-        # The following will be removed when everything has been
-        # converted to use the database, in Stein.
-        if CONF.workarounds.enable_consoleauth:
-            self.consoleauth_rpcapi.authorize_console(context,
-                    connect_info['token'], console_type,
-                    connect_info['host'], connect_info['port'],
-                    connect_info['internal_access_path'], instance.uuid,
-                    access_url=connect_info['access_url'])
-
         return {'url': connect_info['access_url']}
 
     @check_instance_host
@@ -3810,17 +3789,6 @@ class API(base.Base):
         """Get a url to an instance Console."""
         connect_info = self.compute_rpcapi.get_spice_console(context,
                 instance=instance, console_type=console_type)
-        # TODO(melwitt): In Rocky, the compute manager puts the
-        # console authorization in the database in the above method.
-        # The following will be removed when everything has been
-        # converted to use the database, in Stein.
-        if CONF.workarounds.enable_consoleauth:
-            self.consoleauth_rpcapi.authorize_console(context,
-                    connect_info['token'], console_type,
-                    connect_info['host'], connect_info['port'],
-                    connect_info['internal_access_path'], instance.uuid,
-                    access_url=connect_info['access_url'])
-
         return {'url': connect_info['access_url']}
 
     @check_instance_host
@@ -3830,17 +3798,6 @@ class API(base.Base):
         """Get a url to an instance Console."""
         connect_info = self.compute_rpcapi.get_rdp_console(context,
                 instance=instance, console_type=console_type)
-        # TODO(melwitt): In Rocky, the compute manager puts the
-        # console authorization in the database in the above method.
-        # The following will be removed when everything has been
-        # converted to use the database, in Stein.
-        if CONF.workarounds.enable_consoleauth:
-            self.consoleauth_rpcapi.authorize_console(context,
-                    connect_info['token'], console_type,
-                    connect_info['host'], connect_info['port'],
-                    connect_info['internal_access_path'], instance.uuid,
-                    access_url=connect_info['access_url'])
-
         return {'url': connect_info['access_url']}
 
     @check_instance_host
@@ -3850,17 +3807,6 @@ class API(base.Base):
         """Get a url to a serial console."""
         connect_info = self.compute_rpcapi.get_serial_console(context,
                 instance=instance, console_type=console_type)
-
-        # TODO(melwitt): In Rocky, the compute manager puts the
-        # console authorization in the database in the above method.
-        # The following will be removed when everything has been
-        # converted to use the database, in Stein.
-        if CONF.workarounds.enable_consoleauth:
-            self.consoleauth_rpcapi.authorize_console(context,
-                    connect_info['token'], console_type,
-                    connect_info['host'], connect_info['port'],
-                    connect_info['internal_access_path'], instance.uuid,
-                    access_url=connect_info['access_url'])
         return {'url': connect_info['access_url']}
 
     @check_instance_host
@@ -3870,16 +3816,6 @@ class API(base.Base):
         """Get a url to a MKS console."""
         connect_info = self.compute_rpcapi.get_mks_console(context,
                 instance=instance, console_type=console_type)
-        # TODO(melwitt): In Rocky, the compute manager puts the
-        # console authorization in the database in the above method.
-        # The following will be removed when everything has been
-        # converted to use the database, in Stein.
-        if CONF.workarounds.enable_consoleauth:
-            self.consoleauth_rpcapi.authorize_console(context,
-                    connect_info['token'], console_type,
-                    connect_info['host'], connect_info['port'],
-                    connect_info['internal_access_path'], instance.uuid,
-                    access_url=connect_info['access_url'])
         return {'url': connect_info['access_url']}
 
     @check_instance_host
@@ -4436,15 +4372,6 @@ class API(base.Base):
 
         self._record_action_start(context, instance,
                                   instance_actions.LIVE_MIGRATION)
-
-        # TODO(melwitt): In Rocky, we optionally store console authorizations
-        # in both the consoleauth service and the database while
-        # we convert to using the database. Remove the condition for running
-        # this line with cells v2, when consoleauth is no longer being used by
-        # cells v2, in Stein.
-        if CONF.workarounds.enable_consoleauth:
-            self.consoleauth_rpcapi.delete_tokens_for_instance(
-                context, instance.uuid)
 
         # NOTE(sbauza): Force is a boolean by the new related API version
         if force is False and host_name:

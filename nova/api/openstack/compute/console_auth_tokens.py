@@ -17,7 +17,6 @@ import webob
 
 from nova.api.openstack import wsgi
 import nova.conf
-from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context as nova_context
 from nova.i18n import _
 from nova import objects
@@ -27,9 +26,6 @@ CONF = nova.conf.CONF
 
 
 class ConsoleAuthTokensController(wsgi.Controller):
-    def __init__(self):
-        super(ConsoleAuthTokensController, self).__init__()
-        self._consoleauth_rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
 
     def _show(self, req, id, rdp_only):
         """Checks a console auth token and returns the related connect info."""
@@ -42,21 +38,19 @@ class ConsoleAuthTokensController(wsgi.Controller):
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
         connect_info = None
-        if CONF.workarounds.enable_consoleauth:
-            connect_info = self._consoleauth_rpcapi.check_token(context, token)
-        else:
-            results = nova_context.scatter_gather_skip_cell0(
-                context, objects.ConsoleAuthToken.validate, token)
-            # NOTE(melwitt): Console token auths are stored in cell databases,
-            # but with only the token as a request param, we can't know which
-            # cell database contains the token's corresponding connection info.
-            # So, we must query all cells for the info and we can break the
-            # loop as soon as we find a result because the token is associated
-            # with one instance, which can only be in one cell.
-            for result in results.values():
-                if not nova_context.is_cell_failure_sentinel(result):
-                    connect_info = result.to_dict()
-                    break
+
+        results = nova_context.scatter_gather_skip_cell0(
+            context, objects.ConsoleAuthToken.validate, token)
+        # NOTE(melwitt): Console token auths are stored in cell databases,
+        # but with only the token as a request param, we can't know which
+        # cell database contains the token's corresponding connection info.
+        # So, we must query all cells for the info and we can break the
+        # loop as soon as we find a result because the token is associated
+        # with one instance, which can only be in one cell.
+        for result in results.values():
+            if not nova_context.is_cell_failure_sentinel(result):
+                connect_info = result.to_dict()
+                break
 
         if not connect_info:
             raise webob.exc.HTTPNotFound(explanation=_("Token not found"))

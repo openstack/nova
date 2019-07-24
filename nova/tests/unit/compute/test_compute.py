@@ -10153,12 +10153,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertRaises(exception.InvalidVolume,
                 self.compute_api.rescue, self.context, instance)
 
-    @ddt.data(True, False)
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'get_vnc_console')
-    @mock.patch.object(compute.consoleauth_rpcapi.ConsoleAuthAPI,
-                       'authorize_console')
-    def test_vnc_console(self, enable_consoleauth, mock_auth, mock_get):
-        self.flags(enable_consoleauth=enable_consoleauth, group='workarounds')
+    def test_vnc_console(self, mock_get):
         # Make sure we can a vnc console for an instance.
 
         fake_instance = self._fake_instance(
@@ -10181,14 +10177,6 @@ class ComputeAPITestCase(BaseTestCase):
         mock_get.assert_called_once_with(
                 self.context, instance=fake_instance,
                 console_type=fake_console_type)
-        if enable_consoleauth:
-            mock_auth.assert_called_once_with(
-                self.context, 'fake_token', fake_console_type,
-                'fake_console_host', 'fake_console_port', 'fake_access_path',
-                'f3000000-0000-0000-0000-000000000000',
-                access_url='fake_console_url')
-        else:
-            mock_auth.assert_not_called()
 
     def test_get_vnc_console_no_host(self):
         instance = self._create_fake_instance_obj(params={'host': ''})
@@ -10197,12 +10185,8 @@ class ComputeAPITestCase(BaseTestCase):
                           self.compute_api.get_vnc_console,
                           self.context, instance, 'novnc')
 
-    @ddt.data(True, False)
-    @mock.patch.object(compute.consoleauth_rpcapi.ConsoleAuthAPI,
-                       'authorize_console')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'get_spice_console')
-    def test_spice_console(self, enable_consoleauth, mock_spice, mock_auth):
-        self.flags(enable_consoleauth=enable_consoleauth, group='workarounds')
+    def test_spice_console(self, mock_spice):
         # Make sure we can a spice console for an instance.
 
         fake_instance = self._fake_instance(
@@ -10225,14 +10209,6 @@ class ComputeAPITestCase(BaseTestCase):
         mock_spice.assert_called_once_with(self.context,
                                            instance=fake_instance,
                                            console_type=fake_console_type)
-        if enable_consoleauth:
-            mock_auth.assert_called_once_with(
-                self.context, 'fake_token', fake_console_type,
-                'fake_console_host', 'fake_console_port', 'fake_access_path',
-                'f3000000-0000-0000-0000-000000000000',
-                access_url='fake_console_url')
-        else:
-            mock_auth.assert_not_called()
 
     def test_get_spice_console_no_host(self):
         instance = self._create_fake_instance_obj(params={'host': ''})
@@ -10260,12 +10236,8 @@ class ComputeAPITestCase(BaseTestCase):
             getattr(self.compute_api, 'get_%s_console' % console_type),
             self.context, instance, console_type)
 
-    @ddt.data(True, False)
-    @mock.patch.object(compute.consoleauth_rpcapi.ConsoleAuthAPI,
-                       'authorize_console')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'get_rdp_console')
-    def test_rdp_console(self, enable_consoleauth, mock_rdp, mock_auth):
-        self.flags(enable_consoleauth=enable_consoleauth, group='workarounds')
+    def test_rdp_console(self, mock_rdp):
         # Make sure we can a rdp console for an instance.
         fake_instance = self._fake_instance({
                          'uuid': 'f3000000-0000-0000-0000-000000000000',
@@ -10286,14 +10258,6 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(console, {'url': 'fake_console_url'})
         mock_rdp.assert_called_once_with(self.context, instance=fake_instance,
                                          console_type=fake_console_type)
-        if enable_consoleauth:
-            mock_auth.assert_called_once_with(
-                self.context, 'fake_token', fake_console_type,
-                'fake_console_host', 'fake_console_port', 'fake_access_path',
-                'f3000000-0000-0000-0000-000000000000',
-                access_url='fake_console_url')
-        else:
-            mock_auth.assert_not_called()
 
     def test_get_rdp_console_no_host(self):
         instance = self._create_fake_instance_obj(params={'host': ''})
@@ -10317,21 +10281,8 @@ class ComputeAPITestCase(BaseTestCase):
                              'instance_uuid': fake_instance.uuid,
                              'access_url': 'fake_access_url'}
 
-        rpcapi = compute_rpcapi.ComputeAPI
-
-        with test.nested(
-            mock.patch.object(rpcapi, 'get_serial_console',
-                              return_value=fake_connect_info),
-            mock.patch.object(self.compute_api.consoleauth_rpcapi,
-                              'authorize_console')
-        ) as (mock_get_serial_console, mock_authorize_console):
-            self.compute_api.consoleauth_rpcapi.authorize_console(
-                    self.context, 'fake_token', fake_console_type,
-                    'fake_serial_host', 'fake_tcp_port',
-                    'fake_access_path',
-                    'f3000000-0000-0000-0000-000000000000',
-                    access_url='fake_access_url')
-
+        with mock.patch.object(self.compute_api.compute_rpcapi,
+                'get_serial_console', return_value=fake_connect_info):
             console = self.compute_api.get_serial_console(self.context,
                                                           fake_instance,
                                                           fake_console_type)
@@ -10358,13 +10309,8 @@ class ComputeAPITestCase(BaseTestCase):
                              'instance_uuid': fake_instance.uuid,
                              'access_url': 'fake_access_url'}
 
-        with test.nested(
-            mock.patch.object(self.compute_api.compute_rpcapi,
-                              'get_mks_console',
-                              return_value=fake_connect_info),
-            mock.patch.object(self.compute_api.consoleauth_rpcapi,
-                              'authorize_console')
-        ) as (mock_get_mks_console, mock_authorize_console):
+        with mock.patch.object(self.compute_api.compute_rpcapi,
+                'get_mks_console', return_value=fake_connect_info):
             console = self.compute_api.get_mks_console(self.context,
                                                        fake_instance,
                                                        fake_console_type)
@@ -11283,17 +11229,14 @@ class ComputeAPITestCase(BaseTestCase):
         instance, instance_uuid = self._run_instance()
 
         rpcapi = self.compute_api.compute_task_api
-        consoleauth_rpcapi = self.compute_api.consoleauth_rpcapi
         fake_spec = objects.RequestSpec()
 
-        @mock.patch.object(consoleauth_rpcapi, 'delete_tokens_for_instance')
         @mock.patch.object(rpcapi, 'live_migrate_instance')
         @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
         @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
         @mock.patch.object(self.compute_api, '_record_action_start')
         def do_test(record_action_start, get_by_instance_uuid,
-                    get_all_by_host, live_migrate_instance,
-                    delete_tokens_for_instance):
+                    get_all_by_host, live_migrate_instance):
             get_by_instance_uuid.return_value = fake_spec
             get_all_by_host.return_value = objects.ComputeNodeList(
                 objects=[objects.ComputeNode(
@@ -11318,12 +11261,6 @@ class ComputeAPITestCase(BaseTestCase):
                 disk_over_commit=True,
                 request_spec=fake_spec, async_=False)
 
-            if CONF.workarounds.enable_consoleauth:
-                delete_tokens_for_instance.assert_called_once_with(
-                    self.context, instance.uuid)
-            else:
-                delete_tokens_for_instance.assert_not_called()
-
         do_test()
         instance.refresh()
         self.assertEqual(instance['task_state'], task_states.MIGRATING)
@@ -11334,19 +11271,13 @@ class ComputeAPITestCase(BaseTestCase):
             self.assertEqual('fake_dest_host', req_dest.host)
             self.assertEqual('fake_dest_node', req_dest.node)
 
-    @ddt.data(True, False)
-    def test_live_migrate(self, enable_consoleauth):
-        self.flags(enable_consoleauth=enable_consoleauth, group='workarounds')
+    def test_live_migrate(self):
         self._test_live_migrate()
 
-    @ddt.data(True, False)
-    def test_live_migrate_with_not_forced_host(self, enable_consoleauth):
-        self.flags(enable_consoleauth=enable_consoleauth, group='workarounds')
+    def test_live_migrate_with_not_forced_host(self):
         self._test_live_migrate(force=False)
 
-    @ddt.data(True, False)
-    def test_live_migrate_with_forced_host(self, enable_consoleauth):
-        self.flags(enable_consoleauth=enable_consoleauth, group='workarounds')
+    def test_live_migrate_with_forced_host(self):
         self._test_live_migrate(force=True)
 
     def test_fail_live_migrate_with_non_existing_destination(self):

@@ -768,6 +768,8 @@ class NotificationSource(BaseNovaEnum):
     CONDUCTOR = 'nova-conductor'
     SCHEDULER = 'nova-scheduler'
     NETWORK = 'nova-network'
+    # TODO(stephenfin): Remove 'CONSOLEAUTH' when 'NotificationPublisher' is
+    # updated to version 3.0
     CONSOLEAUTH = 'nova-consoleauth'
     # TODO(stephenfin): Remove when 'NotificationPublisher' object version is
     # bumped to 3.0

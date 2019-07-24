@@ -15,21 +15,18 @@
 
 import copy
 
-import ddt
 import mock
 import webob
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack.compute import console_auth_tokens \
         as console_auth_tokens_v21
-from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import exception
 from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 
 
-@ddt.ddt
 class ConsoleAuthTokensExtensionTestV21(test.NoDBTestCase):
     controller_class = console_auth_tokens_v21
 
@@ -52,86 +49,35 @@ class ConsoleAuthTokensExtensionTestV21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
         self.context = self.req.environ['nova.context']
 
-    @ddt.data(True, False)
     @mock.patch('nova.objects.ConsoleAuthToken.validate',
                 return_value=objects.ConsoleAuthToken(
                     instance_uuid=fakes.FAKE_UUID, host='fake_host',
                     port='1234', internal_access_path='fake_access_path',
                     console_type='rdp-html5', token=fakes.FAKE_UUID))
-    @mock.patch.object(consoleauth_rpcapi.ConsoleAuthAPI, 'check_token',
-                       return_value={
-                           'instance_uuid': fakes.FAKE_UUID,
-                           'host': 'fake_host',
-                           'port': '1234',
-                           'internal_access_path': 'fake_access_path',
-                           'console_type': 'rdp-html5'})
-    def test_get_console_connect_info(self, enable_consoleauth,
-                                      mock_check_token, mock_validate):
-        self.flags(enable_consoleauth=enable_consoleauth, group='workarounds')
+    def test_get_console_connect_info(self, mock_validate):
         output = self.controller.show(self.req, fakes.FAKE_UUID)
-        if enable_consoleauth:
-            self.assertEqual(self._EXPECTED_OUTPUT, output)
-            mock_check_token.assert_called_once_with(self.context,
-                                                     fakes.FAKE_UUID)
-            mock_validate.assert_not_called()
-        else:
-            self.assertEqual(self._EXPECTED_OUTPUT_DB, output)
-            mock_validate.assert_called_once_with(self.context,
-                                                  fakes.FAKE_UUID)
-            mock_check_token.assert_not_called()
+        self.assertEqual(self._EXPECTED_OUTPUT_DB, output)
+        mock_validate.assert_called_once_with(self.context, fakes.FAKE_UUID)
 
-    @ddt.data(True, False)
     @mock.patch('nova.objects.ConsoleAuthToken.validate',
                 side_effect=exception.InvalidToken(token='***'))
-    @mock.patch.object(consoleauth_rpcapi.ConsoleAuthAPI, 'check_token',
-                       return_value=None)
-    def test_get_console_connect_info_token_not_found(self, enable_consoleauth,
-                                                      mock_check_token,
-                                                      mock_validate):
-        self.flags(enable_consoleauth=enable_consoleauth, group='workarounds')
+    def test_get_console_connect_info_token_not_found(self, mock_validate):
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.show, self.req, fakes.FAKE_UUID)
-        if enable_consoleauth:
-            mock_check_token.assert_called_once_with(self.context,
-                                                     fakes.FAKE_UUID)
-            mock_validate.assert_not_called()
-        else:
-            mock_validate.assert_called_once_with(self.context,
-                                                  fakes.FAKE_UUID)
-            mock_check_token.assert_not_called()
+        mock_validate.assert_called_once_with(self.context, fakes.FAKE_UUID)
 
-    @ddt.data(True, False)
     @mock.patch('nova.objects.ConsoleAuthToken.validate',
                 return_value=objects.ConsoleAuthToken(
                     instance_uuid=fakes.FAKE_UUID, host='fake_host',
                     port='1234', internal_access_path='fake_access_path',
                     console_type='unauthorized_console_type',
                     token=fakes.FAKE_UUID))
-    @mock.patch.object(consoleauth_rpcapi.ConsoleAuthAPI, 'check_token',
-                       return_value={
-                           'instance_uuid': fakes.FAKE_UUID,
-                           'host': 'fake_host',
-                           'port': '1234',
-                           'internal_access_path': 'fake_access_path',
-                           'console_type': 'unauthorized_console_type'})
-    def test_get_console_connect_info_nonrdp_console_type(self,
-                                                          enable_consoleauth,
-                                                          mock_check_token,
-                                                          mock_validate):
-        self.flags(enable_consoleauth=enable_consoleauth, group='workarounds')
+    def test_get_console_connect_info_nonrdp_console_type(self, mock_validate):
         self.assertRaises(webob.exc.HTTPUnauthorized,
                           self.controller.show, self.req, fakes.FAKE_UUID)
-        if enable_consoleauth:
-            mock_check_token.assert_called_once_with(self.context,
-                                                     fakes.FAKE_UUID)
-            mock_validate.assert_not_called()
-        else:
-            mock_validate.assert_called_once_with(self.context,
-                                                  fakes.FAKE_UUID)
-            mock_check_token.assert_not_called()
+        mock_validate.assert_called_once_with(self.context, fakes.FAKE_UUID)
 
 
-@ddt.ddt
 class ConsoleAuthTokensExtensionTestV231(ConsoleAuthTokensExtensionTestV21):
 
     def setUp(self):
@@ -139,30 +85,13 @@ class ConsoleAuthTokensExtensionTestV231(ConsoleAuthTokensExtensionTestV21):
         self.req.api_version_request = api_version_request.APIVersionRequest(
             '2.31')
 
-    @ddt.data(True, False)
-    @mock.patch('nova.objects.ConsoleAuthToken.validate')
-    @mock.patch.object(consoleauth_rpcapi.ConsoleAuthAPI, 'check_token')
-    def test_get_console_connect_info_nonrdp_console_type(self,
-                                                          enable_consoleauth,
-                                                          mock_check,
-                                                          mock_validate):
-        self.flags(enable_consoleauth=enable_consoleauth, group='workarounds')
-        mock_validate.return_value = objects.ConsoleAuthToken(
-            instance_uuid=fakes.FAKE_UUID, host='fake_host', port='1234',
-            internal_access_path='fake_access_path', console_type='webmks',
-            token=fakes.FAKE_UUID)
-        mock_check.return_value = {'instance_uuid': fakes.FAKE_UUID,
-                                   'host': 'fake_host',
-                                   'port': '1234',
-                                   'internal_access_path': 'fake_access_path',
-                                   'console_type': 'webmks'}
+    @mock.patch('nova.objects.ConsoleAuthToken.validate',
+                return_value = objects.ConsoleAuthToken(
+                    instance_uuid=fakes.FAKE_UUID, host='fake_host',
+                    port='1234', internal_access_path='fake_access_path',
+                    console_type='webmks',
+                    token=fakes.FAKE_UUID))
+    def test_get_console_connect_info_nonrdp_console_type(self, mock_validate):
         output = self.controller.show(self.req, fakes.FAKE_UUID)
-        if enable_consoleauth:
-            self.assertEqual(self._EXPECTED_OUTPUT, output)
-            mock_check.assert_called_once_with(self.context, fakes.FAKE_UUID)
-            mock_validate.assert_not_called()
-        else:
-            self.assertEqual(self._EXPECTED_OUTPUT_DB, output)
-            mock_validate.assert_called_once_with(self.context,
-                                                  fakes.FAKE_UUID)
-            mock_check.assert_not_called()
+        self.assertEqual(self._EXPECTED_OUTPUT_DB, output)
+        mock_validate.assert_called_once_with(self.context, fakes.FAKE_UUID)
