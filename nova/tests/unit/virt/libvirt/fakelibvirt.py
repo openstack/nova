@@ -477,7 +477,7 @@ class HostMdevDevicesInfo(object):
 class HostInfo(object):
 
     def __init__(self, cpu_nodes=1, cpu_sockets=1, cpu_cores=2, cpu_threads=1,
-                 kB_mem=4096):
+                 kB_mem=4096, mempages=None):
         """Create a new Host Info object
 
         :param cpu_nodes: (int) the number of NUMA cell, 1 for unusual
@@ -501,7 +501,7 @@ class HostInfo(object):
         self.cpu_vendor = "Intel"
         self.numa_topology = NUMATopology(self.cpu_nodes, self.cpu_sockets,
                                           self.cpu_cores, self.cpu_threads,
-                                          self.kB_mem)
+                                          self.kB_mem, mempages)
 
 
 class NUMATopology(vconfig.LibvirtConfigCapsNUMATopology):
@@ -765,6 +765,7 @@ class Domain(object):
         self._has_saved_state = False
         self._snapshots = {}
         self._id = self._connection._id_counter
+        self._job_type = VIR_DOMAIN_JOB_UNBOUNDED
 
     def _parse_definition(self, xml):
         try:
@@ -826,6 +827,25 @@ class Domain(object):
             features['acpi'] = True
 
         definition['features'] = features
+
+        cpu_pins = {}
+
+        pins = tree.findall('./cputune/vcpupin')
+        for pin in pins:
+            cpu_pins[pin.get('vcpu')] = pin.get('cpuset')
+
+        definition['cpu_pins'] = cpu_pins
+
+        emulator_pin = tree.find('./cputune/emulatorpin')
+        if emulator_pin is not None:
+            definition['emulator_pin'] = emulator_pin.get('cpuset')
+
+        memnodes = {}
+
+        for node in tree.findall('./numatune/memnode'):
+            memnodes[node.get('cellid')] = node.get('nodeset')
+
+        definition['memnodes'] = memnodes
 
         devices = {}
 
@@ -1067,6 +1087,24 @@ class Domain(object):
       </target>
     </memory>
             ''' % vpmem
+        cputune = ''
+        for vcpu, cpuset in self._def['cpu_pins'].items():
+            cputune += '<vcpupin vcpu="%d" cpuset="%s"/>' % (int(vcpu), cpuset)
+        emulatorpin = None
+        if 'emulator_pin' in self._def:
+            emulatorpin = ('<emulatorpin cpuset="%s"/>' %
+                           self._def['emulator_pin'])
+        if cputune or emulatorpin:
+            cputune = '<cputune>%s%s</cputune>' % (emulatorpin, cputune)
+
+        numatune = ''
+        for cellid, nodeset in self._def['memnodes'].items():
+            numatune += '<memnode cellid="%d" nodeset="%s"/>' % (int(cellid),
+                                                                 nodeset)
+            numatune += '<memory nodeset="%s"/>' % ','.join(
+                self._def['memnodes'].values())
+        if numatune:
+            numatune = '<numatune>%s</numatune>' % numatune
 
         serial_console = ''
         if CONF.serial_console.enabled:
@@ -1093,6 +1131,8 @@ class Domain(object):
   <on_poweroff>destroy</on_poweroff>
   <on_reboot>restart</on_reboot>
   <on_crash>restart</on_crash>
+  %(cputune)s
+  %(numatune)s
   <devices>
     <emulator>/usr/bin/kvm</emulator>
     %(disks)s
@@ -1131,7 +1171,9 @@ class Domain(object):
                 'nics': nics,
                 'hostdevs': hostdevs,
                 'vpmems': vpmems,
-                'serial_console': serial_console}
+                'serial_console': serial_console,
+                'cputune': cputune,
+                'numatune': numatune}
 
     def managedSave(self, flags):
         self._connection._mark_not_running(self)
@@ -1194,7 +1236,17 @@ class Domain(object):
         return [0] * 12
 
     def jobStats(self, flags=0):
-        return {}
+        # NOTE(artom) By returning VIR_DOMAIN_JOB_UNBOUNDED, we're pretending a
+        # job is constantly running. Tests are expected to call the
+        # complete_job or fail_job methods when they're ready for jobs (read:
+        # live migrations) to "complete".
+        return {'type': self._job_type}
+
+    def complete_job(self):
+        self._job_type = VIR_DOMAIN_JOB_COMPLETED
+
+    def fail_job(self):
+        self._job_type = VIR_DOMAIN_JOB_FAILED
 
     def injectNMI(self, flags=0):
         return 0

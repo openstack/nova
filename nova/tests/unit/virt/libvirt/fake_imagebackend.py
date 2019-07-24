@@ -184,11 +184,17 @@ class ImageBackendFixture(fixtures.Fixture):
         # class.
         image_init.SUPPORTS_CLONE = False
 
-        # Ditto for the 'is_shared_block_storage' function
+        # Ditto for the 'is_shared_block_storage' and
+        # 'is_file_in_instance_path' functions
         def is_shared_block_storage():
             return False
 
+        def is_file_in_instance_path():
+            return False
+
         setattr(image_init, 'is_shared_block_storage', is_shared_block_storage)
+        setattr(image_init, 'is_file_in_instance_path',
+                is_file_in_instance_path)
 
         return image_init
 
