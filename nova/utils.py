@@ -1180,3 +1180,17 @@ class Semaphores(object):
     def __len__(self):
         """Returns how many semaphores exist at the current time."""
         return len(self._semaphores)
+
+
+def is_big_vm(memory_mb, flavor):
+    # small VMs are not big
+    if memory_mb < CONF.bigvm_mb:
+        return False
+
+    # baremetal instances are not big
+    baremetal_match = ('quota:separate', 'true')
+    for spec in flavor.extra_specs.items():
+        if spec == baremetal_match:
+            return False
+
+    return True
