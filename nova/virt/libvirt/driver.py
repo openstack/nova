@@ -6366,7 +6366,7 @@ class LibvirtDriver(driver.ComputeDriver):
             rp_name = allocated_rp.name
             # There can be multiple roots, we need to find the root name
             # to guess the physical device name
-            roots = self.provider_tree.roots
+            roots = list(self.provider_tree.roots)
             for root in roots:
                 if rp_name.startswith(root.name + '_'):
                     # The RP name convention is :
@@ -6374,10 +6374,11 @@ class LibvirtDriver(driver.ComputeDriver):
                     parent_device = rp_name[len(root.name) + 1:]
                     break
             else:
-                LOG.warning("pGPU device name %(name)s can't be guessed from "
-                            "the ProviderTree "
-                            "roots %(roots)s", {'name': rp_name,
-                                                 'roots': roots})
+                LOG.warning(
+                    "pGPU device name %(name)s can't be guessed from the "
+                    "ProviderTree roots %(roots)s",
+                    {'name': rp_name,
+                     'roots': ', '.join([root.name for root in roots])})
                 # We f... have no idea what was the parent device
                 # If we can't find devices having available VGPUs, just raise
                 raise exception.ComputeResourcesUnavailable(
