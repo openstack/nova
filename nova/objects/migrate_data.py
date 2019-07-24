@@ -124,7 +124,7 @@ class LiveMigrateData(obj_base.NovaObject):
         # old_vol_attachment_ids is a dict used to store the old attachment_ids
         # for each volume so they can be restored on a migration rollback. The
         # key is the volume_id, and the value is the attachment_id.
-        # TODO(mdbooth): This field was made redundant by change I0390c9ff. We
+        # TODO(mdbooth): This field was made redundant by change Ibe9215c0. We
         # should eventually remove it.
         'old_vol_attachment_ids': fields.DictOfStringsField(),
         # wait_for_vif_plugged is set in pre_live_migration on the destination
