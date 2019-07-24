@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import io
 import six
 
 import mock
@@ -56,6 +57,14 @@ class NUMAServersTestBase(base.ServersTestBase):
         return self.start_service('scheduler')
 
 
+@mock.patch('nova.virt.libvirt.LibvirtDriver._get_local_gb_info',
+            new=mock.Mock(return_value={'total': 128,
+                                        'used': 44,
+                                        'free': 84}))
+@mock.patch('nova.virt.libvirt.driver.libvirt_utils.is_valid_hostname',
+            new=mock.Mock(return_value=True))
+@mock.patch('nova.virt.libvirt.driver.libvirt_utils.file_open',
+            new=mock.Mock(side_effect=[io.BytesIO(b''), io.BytesIO(b'')]))
 class NUMAServersTest(NUMAServersTestBase):
 
     def _run_build_test(self, flavor_id, end_status='ACTIVE'):
@@ -179,7 +188,16 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
 
         return self._wait_for_state_change(found_server, 'BUILD')
 
-    def test_create_server_with_single_physnet(self):
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._get_local_gb_info',
+                return_value={'total': 128,
+                              'used': 44,
+                              'free': 84})
+    @mock.patch('nova.virt.libvirt.driver.libvirt_utils.is_valid_hostname',
+                return_value=True)
+    @mock.patch('nova.virt.libvirt.driver.libvirt_utils.file_open',
+                side_effect=[io.BytesIO(b''), io.BytesIO(b'')])
+    def test_create_server_with_single_physnet(
+            self, mock_file_open, mock_valid_hostname, mock_get_fs_info):
         extra_spec = {'hw:numa_nodes': '1'}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
         networks = [
@@ -192,7 +210,16 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         self.assertTrue(self.mock_filter.called)
         self.assertEqual('ACTIVE', status)
 
-    def test_create_server_with_multiple_physnets(self):
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._get_local_gb_info',
+                return_value={'total': 128,
+                              'used': 44,
+                              'free': 84})
+    @mock.patch('nova.virt.libvirt.driver.libvirt_utils.is_valid_hostname',
+                return_value=True)
+    @mock.patch('nova.virt.libvirt.driver.libvirt_utils.file_open',
+                side_effect=[io.BytesIO(b''), io.BytesIO(b'')])
+    def test_create_server_with_multiple_physnets(
+            self, mock_file_open, mock_valid_hostname, mock_get_fs_info):
         """Test multiple networks split across host NUMA nodes.
 
         This should pass because the networks requested are split across
@@ -212,7 +239,16 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         self.assertTrue(self.mock_filter.called)
         self.assertEqual('ACTIVE', status)
 
-    def test_create_server_with_multiple_physnets_fail(self):
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._get_local_gb_info',
+                return_value={'total': 128,
+                              'used': 44,
+                              'free': 84})
+    @mock.patch('nova.virt.libvirt.driver.libvirt_utils.is_valid_hostname',
+                return_value=True)
+    @mock.patch('nova.virt.libvirt.driver.libvirt_utils.file_open',
+                side_effect=[io.BytesIO(b''), io.BytesIO(b'')])
+    def test_create_server_with_multiple_physnets_fail(
+            self, mock_file_open, mock_valid_hostname, mock_get_fs_info):
         """Test multiple networks split across host NUMA nodes.
 
         This should fail because we've requested a single-node instance but the
@@ -231,7 +267,16 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         self.assertTrue(self.mock_filter.called)
         self.assertEqual('ERROR', status)
 
-    def test_create_server_with_physnet_and_tunneled_net(self):
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._get_local_gb_info',
+                return_value={'total': 128,
+                              'used': 44,
+                              'free': 84})
+    @mock.patch('nova.virt.libvirt.driver.libvirt_utils.is_valid_hostname',
+                return_value=True)
+    @mock.patch('nova.virt.libvirt.driver.libvirt_utils.file_open',
+                side_effect=[io.BytesIO(b''), io.BytesIO(b'')])
+    def test_create_server_with_physnet_and_tunneled_net(
+            self, mock_file_open, mock_valid_hostname, mock_get_fs_info):
         """Test combination of physnet and tunneled network.
 
         This should pass because we've requested a single-node instance and the
@@ -250,7 +295,16 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         self.assertTrue(self.mock_filter.called)
         self.assertEqual('ACTIVE', status)
 
-    def test_rebuild_server_with_network_affinity(self):
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._get_local_gb_info',
+                return_value={'total': 128,
+                              'used': 44,
+                              'free': 84})
+    @mock.patch('nova.virt.libvirt.driver.libvirt_utils.is_valid_hostname',
+                return_value=True)
+    @mock.patch('nova.virt.libvirt.driver.libvirt_utils.file_open',
+                side_effect=[io.BytesIO(b''), io.BytesIO(b'')])
+    def test_rebuild_server_with_network_affinity(
+            self, mock_file_open, mock_valid_hostname, mock_get_fs_info):
         extra_spec = {'hw:numa_nodes': '1'}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
         networks = [
@@ -299,7 +353,16 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         self.assertEqual(500, ex.response.status_code)
         self.assertIn('NoValidHost', six.text_type(ex))
 
-    def test_cold_migrate_with_physnet(self):
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._get_local_gb_info',
+                return_value={'total': 128,
+                              'used': 44,
+                              'free': 84})
+    @mock.patch('nova.virt.libvirt.driver.libvirt_utils.is_valid_hostname',
+                return_value=True)
+    @mock.patch('nova.virt.libvirt.driver.libvirt_utils.file_open',
+                side_effect=[io.BytesIO(b''), io.BytesIO(b'')])
+    def test_cold_migrate_with_physnet(
+            self, mock_file_open, mock_valid_hostname, mock_get_fs_info):
         host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
                                              cpu_cores=2, cpu_threads=2,
                                              kB_mem=15740000)
@@ -363,7 +426,16 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         self.assertIsNotNone(network_metadata)
         self.assertEqual(set(['foo']), network_metadata.physnets)
 
-    def test_cold_migrate_with_physnet_fails(self):
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._get_local_gb_info',
+                return_value={'total': 128,
+                              'used': 44,
+                              'free': 84})
+    @mock.patch('nova.virt.libvirt.driver.libvirt_utils.is_valid_hostname',
+                return_value=True)
+    @mock.patch('nova.virt.libvirt.driver.libvirt_utils.file_open',
+                side_effect=[io.BytesIO(b''), io.BytesIO(b'')])
+    def test_cold_migrate_with_physnet_fails(
+            self, mock_file_open, mock_valid_hostname, mock_get_fs_info):
         host_infos = [
             # host 1 has room on both nodes
             fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,

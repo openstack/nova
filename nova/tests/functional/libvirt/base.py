@@ -23,7 +23,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import test_servers as base
 from nova.tests.unit.virt.libvirt import fake_imagebackend
-from nova.tests.unit.virt.libvirt import fake_libvirt_utils
 from nova.tests.unit.virt.libvirt import fakelibvirt
 
 
@@ -34,9 +33,6 @@ class ServersTestBase(base.ServersTestBase):
 
         # Replace libvirt with fakelibvirt
         self.useFixture(fake_imagebackend.ImageBackendFixture())
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.virt.libvirt.driver.libvirt_utils',
-            fake_libvirt_utils))
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.driver.libvirt',
             fakelibvirt))

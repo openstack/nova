@@ -13,6 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import io
+
+import fixtures
 import mock
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -43,11 +46,21 @@ class _PCIServersTestBase(base.ServersTestBase):
         host_manager = self.scheduler.manager.driver.host_manager
         pci_filter_class = host_manager.filter_cls_map['PciPassthroughFilter']
         host_pass_mock = mock.Mock(wraps=pci_filter_class().host_passes)
-        _p = mock.patch('nova.scheduler.filters.pci_passthrough_filter'
-                        '.PciPassthroughFilter.host_passes',
-                        side_effect=host_pass_mock)
-        self.mock_filter = _p.start()
-        self.addCleanup(_p.stop)
+        self.mock_filter = self.useFixture(fixtures.MockPatch(
+            'nova.scheduler.filters.pci_passthrough_filter'
+            '.PciPassthroughFilter.host_passes',
+            side_effect=host_pass_mock)).mock
+        self.useFixture(fixtures.MockPatch(
+            'nova.virt.libvirt.LibvirtDriver._get_local_gb_info',
+            return_value={'total': 128,
+                          'used': 44,
+                          'free': 84}))
+        self.useFixture(fixtures.MockPatch(
+            'nova.virt.libvirt.driver.libvirt_utils.is_valid_hostname',
+            return_value=True))
+        self.useFixture(fixtures.MockPatch(
+            'nova.virt.libvirt.driver.libvirt_utils.file_open',
+            side_effect=[io.BytesIO(b''), io.BytesIO(b'')]))
 
     def _setup_scheduler_service(self):
         # Enable the 'NUMATopologyFilter', 'PciPassthroughFilter'
