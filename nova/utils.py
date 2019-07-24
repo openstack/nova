@@ -1213,3 +1213,15 @@ def is_baremetal_host(host_state):
 
 def is_baremetal_flavor(flavor):
     return 'capabilities:cpu_arch' in flavor.extra_specs
+
+
+def is_big_vm(memory_mb, flavor):
+    # small VMs are not big
+    if memory_mb < CONF.bigvm_mb:
+        return False
+
+    # baremetal instances are not big
+    if is_baremetal_flavor(flavor):
+        return False
+
+    return True

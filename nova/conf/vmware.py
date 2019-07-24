@@ -100,7 +100,10 @@ If defined it will override serial_log_dir.
 If true, it is not possible to over-commit memory in the vCenter, but there's
 also no swap file pre-created on the ephemeral storage. Swap still works, but
 is hot-created.
-""")
+
+For big VMs as determined by the `bigvm_mb` setting, this setting is not used.
+Big VMs always reserve all their memory.
+"""),
 ]
 
 vmwareapi_opts = [
