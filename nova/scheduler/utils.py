@@ -898,13 +898,7 @@ def _get_group_details(context, instance_uuid, user_group_hosts=None):
             raise exception.UnsupportedPolicyException(reason=msg)
         # NOTE(melwitt): If the context is already targeted to a cell (during a
         # move operation), we don't need to scatter-gather.
-        if context.db_connection:
-            # We don't need to target the group object's context because it was
-            # retrieved with the targeted context earlier in this method.
-            group_hosts = set(group.get_hosts())
-        else:
-            group_hosts = set(_get_instance_group_hosts_all_cells(context,
-                                                                  group))
+        group_hosts = set(group.get_hosts())
         user_hosts = set(user_group_hosts) if user_group_hosts else set()
         return GroupDetails(hosts=user_hosts | group_hosts,
                             policy=group.policy, members=group.members)
