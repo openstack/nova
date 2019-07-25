@@ -193,23 +193,11 @@ class ResourceTracker(object):
                         "until resources have been claimed.",
                         instance=instance)
 
-        # get the overhead required to build this instance:
-        overhead = self.driver.estimate_instance_overhead(instance)
-        LOG.debug("Memory overhead for %(flavor)d MB instance; %(overhead)d "
-                  "MB", {'flavor': instance.flavor.memory_mb,
-                         'overhead': overhead['memory_mb']})
-        LOG.debug("Disk overhead for %(flavor)d GB instance; %(overhead)d "
-                  "GB", {'flavor': instance.flavor.root_gb,
-                         'overhead': overhead.get('disk_gb', 0)})
-        LOG.debug("CPU overhead for %(flavor)d vCPUs instance; %(overhead)d "
-                  "vCPU(s)", {'flavor': instance.flavor.vcpus,
-                              'overhead': overhead.get('vcpus', 0)})
-
         cn = self.compute_nodes[nodename]
         pci_requests = objects.InstancePCIRequests.get_by_instance_uuid(
             context, instance.uuid)
         claim = claims.Claim(context, instance, nodename, self, cn,
-                             pci_requests, overhead=overhead, limits=limits)
+                             pci_requests, limits=limits)
 
         # self._set_instance_host_and_node() will save instance to the DB
         # so set instance.numa_topology first.  We need to make sure
@@ -290,18 +278,6 @@ class ResourceTracker(object):
             # generate the migration record and continue the resize:
             return claims.NopClaim(migration=migration)
 
-        # get memory overhead required to build this instance:
-        overhead = self.driver.estimate_instance_overhead(new_instance_type)
-        LOG.debug("Memory overhead for %(flavor)d MB instance; %(overhead)d "
-                  "MB", {'flavor': new_instance_type.memory_mb,
-                          'overhead': overhead['memory_mb']})
-        LOG.debug("Disk overhead for %(flavor)d GB instance; %(overhead)d "
-                  "GB", {'flavor': instance.flavor.root_gb,
-                         'overhead': overhead.get('disk_gb', 0)})
-        LOG.debug("CPU overhead for %(flavor)d vCPUs instance; %(overhead)d "
-                  "vCPU(s)", {'flavor': instance.flavor.vcpus,
-                              'overhead': overhead.get('vcpus', 0)})
-
         cn = self.compute_nodes[nodename]
 
         # TODO(moshele): we are recreating the pci requests even if
@@ -319,7 +295,7 @@ class ResourceTracker(object):
                     new_pci_requests.requests.append(request)
         claim = claims.MoveClaim(context, instance, nodename,
                                  new_instance_type, image_meta, self, cn,
-                                 new_pci_requests, overhead=overhead,
+                                 new_pci_requests,
                                  limits=limits)
 
         claim.migration = migration

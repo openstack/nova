@@ -2197,25 +2197,6 @@ class TestInstanceClaim(BaseTestCase):
         self.assertEqual(0, cn.memory_mb_used)
         self.assertEqual(0, cn.running_vms)
 
-    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
-    @mock.patch('nova.objects.ComputeNode.save')
-    def test_claim_limits(self, save_mock, migr_mock, pci_mock):
-        pci_mock.return_value = objects.InstancePCIRequests(requests=[])
-
-        good_limits = {
-            'memory_mb': _COMPUTE_NODE_FIXTURES[0].memory_mb,
-            'disk_gb': _COMPUTE_NODE_FIXTURES[0].local_gb,
-            'vcpu': _COMPUTE_NODE_FIXTURES[0].vcpus,
-        }
-        for key in good_limits.keys():
-            bad_limits = copy.deepcopy(good_limits)
-            bad_limits[key] = 0
-
-            self.assertRaises(exc.ComputeResourcesUnavailable,
-                    self.rt.instance_claim,
-                    self.ctx, self.instance, _NODENAME, bad_limits)
-
     @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
