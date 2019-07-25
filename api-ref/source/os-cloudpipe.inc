@@ -33,7 +33,7 @@ Response
   - created_at: created
   - instance_id: instance_id_cloudpipe
   - internal_ip: fixed_ip
-  - project_id: project_id_instance_action
+  - project_id: project_id_server
   - public_ip: vpn_public_ip_resp
   - public_port: vpn_public_port_resp
   - state: vpn_state

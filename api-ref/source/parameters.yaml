@@ -5482,9 +5482,15 @@ project_id:
   in: body
   required: false
   type: string
-project_id_instance_action:
+project_id_server:
   description: |
-    The UUID of the project that this server belongs to.
+    The ID of the project that this server belongs to.
+  in: body
+  required: true
+  type: string
+project_id_server_action:
+  description: |
+    The ID of the project which initiated the server action.
   in: body
   required: true
   type: string
@@ -6746,6 +6752,12 @@ user_data_rebuild_resp:
 user_id:
   description: |
     The user ID of the user who owns the server.
+  in: body
+  required: true
+  type: string
+user_id_server_action:
+  description: |
+    The ID of the user which initiated the server action.
   in: body
   required: true
   type: string
