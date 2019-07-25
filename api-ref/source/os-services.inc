@@ -58,12 +58,12 @@ Response
   - zone: OS-EXT-AZ:availability_zone
   - forced_down: forced_down_2_11
 
-**Example List Compute Services**
+**Example List Compute Services (v2.11)**
 
 .. literalinclude:: ../../doc/api_samples/os-services/v2.11/services-list-get-resp.json
    :language: javascript
 
-**Example List Compute Services (2.69)**
+**Example List Compute Services (v2.69)**
 
 This is a sample response for the services from the non-responsive part of the
 deployment. The responses for the available service records will be normal
@@ -272,7 +272,8 @@ Update Compute Service
 
 Update a compute service to enable or disable scheduling, including recording a
 reason why a compute service was disabled from scheduling. Set or unset the
-``forced_down`` flag for the service.
+``forced_down`` flag for the service. This operation is only allowed on
+services whose ``binary`` is ``nova-compute``.
 
 This API is available starting with microversion 2.53.
 
