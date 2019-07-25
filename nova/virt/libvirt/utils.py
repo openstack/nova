@@ -265,22 +265,14 @@ def copy_image(src, dest, host=None, receive=False,
             compression=compression)
 
 
-def write_to_file(path, contents, umask=None):
+def write_to_file(path, contents):
     """Write the given contents to a file
 
     :param path: Destination file
     :param contents: Desired contents of the file
-    :param umask: Umask to set when creating this file (will be reset)
     """
-    if umask:
-        saved_umask = os.umask(umask)
-
-    try:
-        with open(path, 'w') as f:
-            f.write(contents)
-    finally:
-        if umask:
-            os.umask(saved_umask)
+    with open(path, 'w') as f:
+        f.write(contents)
 
 
 def chown_for_id_maps(path, id_maps):
