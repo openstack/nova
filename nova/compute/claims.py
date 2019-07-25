@@ -158,35 +158,6 @@ class Claim(NopClaim):
             elif instance_topology:
                 self.claimed_numa_topology = instance_topology
 
-    def _test(self, type_, unit, total, used, requested, limit):
-        """Test if the given type of resource needed for a claim can be safely
-        allocated.
-        """
-        LOG.info('Total %(type)s: %(total)d %(unit)s, used: %(used).02f '
-                 '%(unit)s',
-                  {'type': type_, 'total': total, 'unit': unit, 'used': used},
-                  instance=self.instance)
-
-        if limit is None:
-            # treat resource as unlimited:
-            LOG.info('%(type)s limit not specified, defaulting to unlimited',
-                     {'type': type_}, instance=self.instance)
-            return
-
-        free = limit - used
-
-        # Oversubscribed resource policy info:
-        LOG.info('%(type)s limit: %(limit).02f %(unit)s, '
-                 'free: %(free).02f %(unit)s',
-                  {'type': type_, 'limit': limit, 'free': free, 'unit': unit},
-                  instance=self.instance)
-
-        if requested > free:
-            return (_('Free %(type)s %(free).02f '
-                      '%(unit)s < requested %(requested)d %(unit)s') %
-                      {'type': type_, 'free': free, 'unit': unit,
-                       'requested': requested})
-
 
 class MoveClaim(Claim):
     """Claim used for holding resources for an incoming move operation.
