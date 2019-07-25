@@ -656,8 +656,6 @@ class ServersController(wsgi.Controller):
             context.can(server_policies.SERVERS % 'create:trusted_certs',
                         target=target)
 
-        # TODO(Shao He, Feng) move this policy check to os-availability-zone
-        # extension after refactor it.
         parse_az = self.compute_api.parse_availability_zone
         try:
             availability_zone, host, node = parse_az(context,
