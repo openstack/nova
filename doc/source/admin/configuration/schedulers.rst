@@ -1385,7 +1385,8 @@ XenAPI
     You should configure the
     :oslo.config:option:`reserved_host_memory_mb` config option to
     account for this overhead, based on the size of your hosts and
-    instances.
+    instances. For more information, refer to
+    https://wiki.openstack.org/wiki/XenServer/Overhead.
 
 Cells considerations
 ~~~~~~~~~~~~~~~~~~~~

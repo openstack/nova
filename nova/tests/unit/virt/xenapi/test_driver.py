@@ -12,9 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
-import math
-
 import mock
 import os_resource_classes as orc
 from oslo_utils.fixture import uuidsentinel as uuids
@@ -104,19 +101,6 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
             self.assertEqual('somename', resources['hypervisor_hostname'])
             self.assertEqual(1, resources['disk_available_least'])
             mock_get.assert_called_once_with(refresh=True)
-
-    def test_overhead(self):
-        driver = self._get_driver()
-        instance = {'memory_mb': 30720, 'vcpus': 4}
-
-        # expected memory overhead per:
-        # https://wiki.openstack.org/wiki/XenServer/Overhead
-        expected = ((instance['memory_mb'] * xenapi_driver.OVERHEAD_PER_MB) +
-                    (instance['vcpus'] * xenapi_driver.OVERHEAD_PER_VCPU) +
-                    xenapi_driver.OVERHEAD_BASE)
-        expected = math.ceil(expected)
-        overhead = driver.estimate_instance_overhead(instance)
-        self.assertEqual(expected, overhead['memory_mb'])
 
     def test_set_bootable(self):
         driver = self._get_driver()

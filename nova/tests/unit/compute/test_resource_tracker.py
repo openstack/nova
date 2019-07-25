@@ -417,26 +417,12 @@ _MIGRATION_CONTEXT_FIXTURES = {
 }
 
 
-def overhead_zero(instance):
-    # Emulate that the driver does not adjust the memory
-    # of the instance...
-    return {
-        'memory_mb': 0,
-        'disk_gb': 0,
-        'vcpus': 0,
-    }
-
-
-def setup_rt(hostname, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES,
-             estimate_overhead=overhead_zero):
+def setup_rt(hostname, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES):
     """Sets up the resource tracker instance with mock fixtures.
 
     :param virt_resources: Optional override of the resource representation
                            returned by the virt driver's
                            `get_available_resource()` method.
-    :param estimate_overhead: Optional override of a function that should
-                              return overhead of memory given an instance
-                              object. Defaults to returning zero overhead.
     """
     query_client_mock = mock.MagicMock()
     report_client_mock = mock.MagicMock()
@@ -449,7 +435,6 @@ def setup_rt(hostname, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES,
     # TODO(mriedem): Need to make this mocked virt driver implement upt.
     vd.update_provider_tree.side_effect = NotImplementedError
     vd.get_host_ip_addr.return_value = _NODENAME
-    vd.estimate_instance_overhead.side_effect = estimate_overhead
     vd.rebalances_nodes = False
 
     with test.nested(
@@ -481,11 +466,9 @@ class BaseTestCase(test.NoDBTestCase):
                    reserved_host_memory_mb=0,
                    reserved_host_cpus=0)
 
-    def _setup_rt(self, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES,
-                  estimate_overhead=overhead_zero):
+    def _setup_rt(self, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES):
         (self.rt, self.sched_client_mock, self.report_client_mock,
-         self.driver_mock) = setup_rt(
-                 _HOSTNAME, virt_resources, estimate_overhead)
+         self.driver_mock) = setup_rt(_HOSTNAME, virt_resources)
 
     def _setup_ptree(self, compute):
         """Set up a ProviderTree with a compute node root, and mock the

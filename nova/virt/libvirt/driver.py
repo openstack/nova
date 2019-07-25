@@ -890,24 +890,6 @@ class LibvirtDriver(driver.ComputeDriver):
         except (exception.InternalError, exception.InstanceNotFound):
             return False
 
-    def estimate_instance_overhead(self, instance_info):
-        overhead = super(LibvirtDriver, self).estimate_instance_overhead(
-            instance_info)
-        if isinstance(instance_info, objects.Flavor):
-            # A flavor object is passed during case of migrate
-            emu_policy = hardware.get_emulator_thread_policy_constraint(
-                instance_info)
-            if emu_policy == fields.CPUEmulatorThreadsPolicy.ISOLATE:
-                overhead['vcpus'] += 1
-        else:
-            # An instance object is passed during case of spawing or a
-            # dict is passed when computing resource for an instance
-            numa_topology = hardware.instance_topology_from_instance(
-                instance_info)
-            if numa_topology and numa_topology.emulator_threads_isolated:
-                overhead['vcpus'] += 1
-        return overhead
-
     def list_instances(self):
         names = []
         for guest in self._host.list_guests(only_running=False):
