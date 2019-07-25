@@ -9818,6 +9818,35 @@ class ConsoleAuthTokenTestCase(test.TestCase):
         self.assertEqual(hash1, db_obj1['token_hash'])
         self.assertIsNone(db_obj2, "the token uuid should not match")
 
+    def test_console_auth_token_destroy_expired(self):
+        uuid1 = uuidsentinel.uuid1
+        uuid2 = uuidsentinel.uuid2
+        uuid3 = uuidsentinel.uuid3
+        hash1 = utils.get_sha256_str(uuidsentinel.token1)
+        hash2 = utils.get_sha256_str(uuidsentinel.token2)
+        hash3 = utils.get_sha256_str(uuidsentinel.token3)
+        self.addCleanup(timeutils.clear_time_override)
+        timeutils.set_time_override(timeutils.utcnow())
+        self._create_instances([uuid1, uuid2, uuid3])
+
+        self._create(hash1, uuid1, 10)
+        self._create(hash2, uuid2, 10, host='other-host')
+        timeutils.advance_time_seconds(100)
+        self._create(hash3, uuid3, 10)
+
+        db.console_auth_token_destroy_expired(self.context)
+
+        # the api only supports getting unexpired tokens
+        # but by rolling back time we can see if a token that
+        # should be deleted is still there
+        timeutils.advance_time_seconds(-100)
+        db_obj1 = db.console_auth_token_get_valid(self.context, hash1, uuid1)
+        db_obj2 = db.console_auth_token_get_valid(self.context, hash2, uuid2)
+        db_obj3 = db.console_auth_token_get_valid(self.context, hash3, uuid3)
+        self.assertIsNone(db_obj1, "the token should have been deleted")
+        self.assertIsNone(db_obj2, "the token should have been deleted")
+        self.assertIsNotNone(db_obj3, "a valid token should be found here")
+
     def test_console_auth_token_destroy_expired_by_host(self):
         uuid1 = uuidsentinel.uuid1
         uuid2 = uuidsentinel.uuid2

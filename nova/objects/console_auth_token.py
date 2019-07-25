@@ -34,7 +34,10 @@ LOG = logging.getLogger(__name__)
 @base.NovaObjectRegistry.register
 class ConsoleAuthToken(base.NovaTimestampObject, base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Add clean_expired_console_auths method.
+    #              The clean_expired_console_auths_for_host method
+    #              was deprecated.
+    VERSION = '1.1'
 
     fields = {
         'id': fields.IntegerField(),
@@ -176,6 +179,19 @@ class ConsoleAuthToken(base.NovaTimestampObject, base.NovaObject):
         """
         db.console_auth_token_destroy_all_by_instance(context, instance_uuid)
 
+    @base.remotable_classmethod
+    def clean_expired_console_auths(cls, context):
+        """Remove all expired console authorizations.
+
+        :param context: the context
+
+        All expired authorizations will be removed.
+        Tokens that have not expired will remain.
+        """
+        db.console_auth_token_destroy_expired(context)
+
+    # TODO(takashin): This method was deprecated and will be removed
+    # in a next major version bump.
     @base.remotable_classmethod
     def clean_expired_console_auths_for_host(cls, context, host):
         """Remove all expired console authorizations for the host.

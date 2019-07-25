@@ -5834,6 +5834,13 @@ def console_auth_token_destroy_all_by_instance(context, instance_uuid):
 
 
 @pick_context_manager_writer
+def console_auth_token_destroy_expired(context):
+    context.session.query(models.ConsoleAuthToken).\
+        filter(models.ConsoleAuthToken.expires <= timeutils.utcnow_ts()).\
+        delete()
+
+
+@pick_context_manager_writer
 def console_auth_token_destroy_expired_by_host(context, host):
     context.session.query(models.ConsoleAuthToken).\
         filter_by(host=host).\

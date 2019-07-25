@@ -8835,15 +8835,14 @@ class ComputeManager(manager.Manager):
 
     @periodic_task.periodic_task(spacing=CONF.instance_delete_interval)
     def _cleanup_expired_console_auth_tokens(self, context):
-        """Remove expired console auth tokens for this host.
+        """Remove all expired console auth tokens.
 
         Console authorization tokens and their connection data are stored
         in the database when a user asks for a console connection to an
         instance. After a time they expire. We periodically remove any expired
         tokens from the database.
         """
-        objects.ConsoleAuthToken.clean_expired_console_auths_for_host(
-            context, self.host)
+        objects.ConsoleAuthToken.clean_expired_console_auths(context)
 
     def _claim_pci_for_instance_vifs(self, ctxt, instance):
         """Claim PCI devices for the instance's VIFs on the compute node
