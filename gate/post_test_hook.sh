@@ -34,8 +34,8 @@ function purge_db {
 }
 
 BASE=${BASE:-/opt/stack}
-source ${BASE}/new/devstack/functions-common
-source ${BASE}/new/devstack/lib/nova
+source ${BASE}/devstack/functions-common
+source ${BASE}/devstack/lib/nova
 cell_conf=$(conductor_conf 1)
 # NOTE(danms): We need to pass the main config to get the api db
 # bits, and then also the cell config for the cell1 db (instead of
@@ -49,7 +49,7 @@ purge_db
 set -e
 # We need to get the admin credentials to run the OSC CLIs for Placement.
 set +x
-source $BASE/new/devstack/openrc admin
+source $BASE/devstack/openrc admin
 set -x
 
 # TODO(mriedem): Consider checking for instances in ERROR state because

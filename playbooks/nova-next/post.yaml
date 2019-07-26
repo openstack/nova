@@ -1,0 +1,4 @@
+- hosts: controller
+  roles:
+    # Runs gate/post_test_hook.sh to test things like nova-manage commands.
+    - run-post-test-hook
