@@ -19,22 +19,34 @@ from oslo_concurrency import processutils
 
 import nova.privsep.linux_net
 from nova import test
+from nova.tests import fixtures
 
 
 class LinuxNetTestCase(test.NoDBTestCase):
     """Test networking helpers."""
 
+    def setUp(self):
+        super(LinuxNetTestCase, self).setUp()
+        self.useFixture(fixtures.PrivsepFixture())
+
     @mock.patch('oslo_concurrency.processutils.execute',
                 return_value=('', ''))
     def test_set_device_mtu_default(self, mock_exec):
-        calls = []
-        nova.privsep.linux_net._set_device_mtu_inner('fake-dev', None)
-        mock_exec.assert_has_calls(calls)
+        nova.privsep.linux_net.set_device_mtu('fake-dev', None)
+        mock_exec.assert_has_calls([])
+
+    @mock.patch('oslo_concurrency.processutils.execute',
+                return_value=('', ''))
+    def test_set_device_mtu_actual(self, mock_exec):
+        nova.privsep.linux_net.set_device_mtu('fake-dev', 1500)
+        mock_exec.assert_has_calls([
+            mock.call('ip', 'link', 'set', 'fake-dev', 'mtu',
+                      1500, check_exit_code=[0, 2, 254])])
 
     @mock.patch('oslo_concurrency.processutils.execute')
     @mock.patch('nova.privsep.linux_net._set_device_enabled_inner')
     def test_create_tap_dev(self, mock_enabled, mock_execute):
-        nova.privsep.linux_net._create_tap_dev_inner('tap42')
+        nova.privsep.linux_net.create_tap_dev('tap42')
 
         mock_execute.assert_has_calls([
             mock.call('ip', 'tuntap', 'add', 'tap42', 'mode', 'tap',
@@ -45,7 +57,7 @@ class LinuxNetTestCase(test.NoDBTestCase):
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('oslo_concurrency.processutils.execute')
     def test_create_tap_skipped_when_exists(self, mock_execute, mock_exists):
-        nova.privsep.linux_net._create_tap_dev_inner('tap42')
+        nova.privsep.linux_net.create_tap_dev('tap42')
 
         mock_exists.assert_called_once_with('/sys/class/net/tap42')
         mock_execute.assert_not_called()
@@ -55,7 +67,7 @@ class LinuxNetTestCase(test.NoDBTestCase):
     @mock.patch('nova.privsep.linux_net._set_device_macaddr_inner')
     def test_create_tap_dev_mac(self, mock_set_macaddr, mock_enabled,
                                 mock_execute):
-        nova.privsep.linux_net._create_tap_dev_inner(
+        nova.privsep.linux_net.create_tap_dev(
             'tap42', '00:11:22:33:44:55')
 
         mock_execute.assert_has_calls([
@@ -73,7 +85,7 @@ class LinuxNetTestCase(test.NoDBTestCase):
         # ip failed, fall back to tunctl
         mock_execute.side_effect = [processutils.ProcessExecutionError, 0, 0]
 
-        nova.privsep.linux_net._create_tap_dev_inner('tap42')
+        nova.privsep.linux_net.create_tap_dev('tap42')
 
         mock_execute.assert_has_calls([
             mock.call('ip', 'tuntap', 'add', 'tap42', 'mode', 'tap',
@@ -85,7 +97,7 @@ class LinuxNetTestCase(test.NoDBTestCase):
     @mock.patch('oslo_concurrency.processutils.execute')
     @mock.patch('nova.privsep.linux_net._set_device_enabled_inner')
     def test_create_tap_dev_multiqueue(self, mock_enabled, mock_execute):
-        nova.privsep.linux_net._create_tap_dev_inner(
+        nova.privsep.linux_net.create_tap_dev(
             'tap42', multiqueue=True)
 
         mock_execute.assert_has_calls([
@@ -101,5 +113,5 @@ class LinuxNetTestCase(test.NoDBTestCase):
         mock_execute.side_effect = processutils.ProcessExecutionError
         # but tunctl can't create multiqueue taps, so the failure is expected
         self.assertRaises(processutils.ProcessExecutionError,
-                          nova.privsep.linux_net._create_tap_dev_inner,
+                          nova.privsep.linux_net.create_tap_dev,
                           'tap42', multiqueue=True)

@@ -79,6 +79,7 @@ from nova.pci import utils as pci_utils
 import nova.privsep.fs
 import nova.privsep.libvirt
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_diagnostics
 from nova.tests.unit import fake_flavor
@@ -13797,6 +13798,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('nova.virt.libvirt.host.Host._get_domain')
     @mock.patch.object(libvirt_guest.Guest, 'get_xml_desc')
     def test_get_console_output_logrotate(self, mock_get_xml, get_domain):
+        self.useFixture(nova_fixtures.PrivsepFixture())
+
         fake_files = {}
         fake_files['console.log'] = b'uvwxyz'
         fake_files['console.log.0'] = b'klmnopqrst'
@@ -13805,9 +13808,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         def mock_path_exists(path):
             return os.path.basename(path) in fake_files
 
-        def mock_last_bytes(path, count):
-            flo = io.BytesIO(fake_files[os.path.basename(path)])
-            return nova.privsep.path._last_bytes_inner(flo, count)
+        def fake_open(path, mode):
+            if path.endswith('console.log'):
+                return io.BytesIO(b'uvwxyz')
+            if path.endswith('console.log.0'):
+                return io.BytesIO(b'klmnopqrst')
+            if path.endswith('console.log.1'):
+                return io.BytesIO(b'abcdefghij')
+            raise Exception('No such file in testing')
 
         xml = """
         <domain type='kvm'>
@@ -13835,12 +13843,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 try:
                     prev_max = libvirt_driver.MAX_CONSOLE_BYTES
                     libvirt_driver.MAX_CONSOLE_BYTES = bytes_to_read
-                    with mock.patch('os.path.exists',
-                                    side_effect=mock_path_exists):
-                        with mock.patch('nova.privsep.path.last_bytes',
-                                        side_effect=mock_last_bytes):
-                            log_data = drvr.get_console_output(self.context,
-                                                               instance)
+                    with test.nested(
+                            mock.patch('os.path.exists',
+                                       side_effect=mock_path_exists),
+                            mock.patch.object(six.moves.builtins, 'open',
+                                              fake_open)):
+                        log_data = drvr.get_console_output(self.context,
+                                                           instance)
                 finally:
                     libvirt_driver.MAX_CONSOLE_BYTES = prev_max
                 return log_data
