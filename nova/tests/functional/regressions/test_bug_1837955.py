@@ -84,31 +84,15 @@ class BuildRescheduleClaimFailsTestCase(
             image_uuid=fake_image.get_valid_image_id(),
             networks=[{'port': self.neutron.port_1['id']}])
         server = self.api.post_server({'server': server})
-        # FIXME(mriedem): This is bug 1837955 where the status is stuck in
-        # BUILD rather than the vm_state being set to error and the task_state
-        # being set to None. Uncomment this when the bug is fixed.
-        # server = self._wait_for_state_change(self.api, server, 'ERROR')
+        server = self._wait_for_state_change(self.api, server, 'ERROR')
 
         # Wait for the MaxRetriesExceeded fault to be recorded.
         # set_vm_state_and_notify sets the vm_state to ERROR before the fault
         # is recorded but after the notification is sent. So wait for the
         # unversioned notification to show up and then get the fault.
-        # FIXME(mriedem): Uncomment this when bug 1837955 is fixed.
-        # self._wait_for_unversioned_notification(
-        #     'compute_task.build_instances')
-        # server = self.api.get_server(server['id'])
-        # self.assertIn('fault', server)
-        # self.assertIn('Exceeded maximum number of retries',
-        #               server['fault']['message'])
-
-        # TODO(mriedem): Remove this when the bug is fixed. We need to assert
-        # something before the bug is fixed to show the failure so check the
-        # logs.
-        for x in range(20):
-            logs = self.stdlog.logger.output
-            if 'MaxRetriesExceeded' in logs:
-                break
-            time.sleep(.5)
-        else:
-            self.fail('Timed out waiting for MaxRetriesExceeded to show up '
-                      'in the logs.')
+        self._wait_for_unversioned_notification(
+            'compute_task.build_instances')
+        server = self.api.get_server(server['id'])
+        self.assertIn('fault', server)
+        self.assertIn('Exceeded maximum number of retries',
+                      server['fault']['message'])
