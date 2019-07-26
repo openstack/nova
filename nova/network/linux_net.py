@@ -736,19 +736,12 @@ def floating_forward_rules(floating_ip, fixed_ip, device):
     return rules
 
 
-def _enable_ipv4_forwarding():
-    sysctl_key = 'net.ipv4.ip_forward'
-    stdout, stderr = _execute('sysctl', '-n', sysctl_key)
-    if stdout.strip() is not '1':
-        _execute('sysctl', '-w', '%s=1' % sysctl_key, run_as_root=True)
-
-
 @utils.synchronized('lock_gateway', external=True)
 def initialize_gateway_device(dev, network_ref):
     if not network_ref:
         return
 
-    _enable_ipv4_forwarding()
+    nova.privsep.linux_net.enable_ipv4_forwarding()
 
     # NOTE(vish): The ip for dnsmasq has to be the first address on the
     #             bridge for it to respond to requests properly

@@ -942,7 +942,12 @@ class VlanNetworkTestCase(test.TestCase):
     @mock.patch('nova.privsep.linux_net.lookup_ip', return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.change_ip')
     @mock.patch('nova.privsep.linux_net.address_command_deprecated')
-    def test_vpn_allocate_fixed_ip(self, mock_address_command,
+    @mock.patch('nova.privsep.linux_net.ipv4_forwarding_check',
+                return_value=False)
+    @mock.patch('nova.privsep.linux_net._enable_ipv4_forwarding_inner')
+    def test_vpn_allocate_fixed_ip(self, mock_forwarding_enable,
+                                   mock_forwarding_check,
+                                   mock_address_command,
                                    mock_change_ip, mock_lookup_ip,
                                    mock_routes_show, mock_enabled,
                                    mock_add_bridge):
@@ -984,8 +989,13 @@ class VlanNetworkTestCase(test.TestCase):
     @mock.patch('nova.privsep.linux_net.lookup_ip', return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.change_ip')
     @mock.patch('nova.privsep.linux_net.address_command_deprecated')
-    def test_allocate_fixed_ip(self, mock_address_command, mock_change_ip,
-                               mock_lookup_ip, mock_routes_show, mock_enabled,
+    @mock.patch('nova.privsep.linux_net.ipv4_forwarding_check',
+                return_value=False)
+    @mock.patch('nova.privsep.linux_net._enable_ipv4_forwarding_inner')
+    def test_allocate_fixed_ip(self, mock_forwarding_enable,
+                               mock_forwarding_check, mock_address_command,
+                               mock_change_ip, mock_lookup_ip,
+                               mock_routes_show, mock_enabled,
                                mock_add_bridge):
         self.stubs.Set(self.network,
                 '_do_trigger_security_group_members_refresh_for_instance',
@@ -1710,8 +1720,12 @@ class VlanNetworkTestCase(test.TestCase):
     @mock.patch('nova.privsep.linux_net.lookup_ip', return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.change_ip')
     @mock.patch('nova.privsep.linux_net.address_command_deprecated')
+    @mock.patch('nova.privsep.linux_net.ipv4_forwarding_check',
+                return_value=False)
+    @mock.patch('nova.privsep.linux_net._enable_ipv4_forwarding_inner')
     def test_add_fixed_ip_instance_without_vpn_requested_networks(
-            self, mock_address_command, mock_change_ip, mock_lookup_ip,
+            self, mock_forwarding_enable, mock_forwarding_check,
+            mock_address_command, mock_change_ip, mock_lookup_ip,
             mock_routes_show, mock_enabled, mock_add_bridge):
         self.stubs.Set(self.network,
                 '_do_trigger_security_group_members_refresh_for_instance',
@@ -2870,7 +2884,12 @@ class AllocateTestCase(test.TestCase):
     @mock.patch('nova.privsep.linux_net.change_ip')
     @mock.patch('nova.privsep.linux_net.clean_conntrack')
     @mock.patch('nova.privsep.linux_net.address_command_deprecated')
-    def test_allocate_for_instance(self, mock_clean_conntrack,
+    @mock.patch('nova.privsep.linux_net.ipv4_forwarding_check',
+                return_value=False)
+    @mock.patch('nova.privsep.linux_net._enable_ipv4_forwarding_inner')
+    def test_allocate_for_instance(self, mock_forwarding_enable,
+                                   mock_forwarding_check,
+                                   mock_clean_conntrack,
                                    mock_address_command,
                                    mock_change_ip, mock_lookup_ip,
                                    mock_routes_show, mock_unbind, mock_bind,
@@ -2947,7 +2966,12 @@ class AllocateTestCase(test.TestCase):
     @mock.patch('nova.privsep.linux_net.lookup_ip', return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.change_ip')
     @mock.patch('nova.privsep.linux_net.address_command_deprecated')
-    def test_allocate_for_instance_with_mac(self, mock_address_command,
+    @mock.patch('nova.privsep.linux_net.ipv4_forwarding_check',
+                return_value=False)
+    @mock.patch('nova.privsep.linux_net._enable_ipv4_forwarding_inner')
+    def test_allocate_for_instance_with_mac(self, mock_forwarding_enable,
+                                            mock_forwarding_check,
+                                            mock_address_command,
                                             mock_change_ip,
                                             mock_lookup_ip,
                                             mock_routes_show,

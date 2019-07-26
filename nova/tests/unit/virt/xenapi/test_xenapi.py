@@ -1141,7 +1141,12 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
     @mock.patch('nova.privsep.linux_net.set_device_macaddr')
     @mock.patch('nova.privsep.linux_net.change_ip')
     @mock.patch('nova.privsep.linux_net.address_command_deprecated')
-    def test_spawn_vlanmanager(self, mock_address_command_deprecated,
+    @mock.patch('nova.privsep.linux_net.ipv4_forwarding_check',
+                return_value=False)
+    @mock.patch('nova.privsep.linux_net._enable_ipv4_forwarding_inner')
+    def test_spawn_vlanmanager(self, mock_forwarding_enable,
+                               mock_forwarding_check,
+                               mock_address_command_horrid,
                                mock_change_ip, mock_set_macaddr,
                                mock_set_enabled, mock_set_mtu, mock_add_bridge,
                                mock_create_vifs):
