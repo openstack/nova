@@ -10,7 +10,14 @@ function archive_deleted_rows {
         return 1
     fi
     for i in `seq 30`; do
-        $MANAGE $* db archive_deleted_rows --verbose --max_rows 1000 --before "$(date -d tomorrow)"
+        if [[ $i -eq 1 ]]; then
+            # This is just a test wrinkle to make sure we're covering the
+            # non-all-cells (cell0) case, as we're not passing in the cell1
+            # config.
+            $MANAGE $* db archive_deleted_rows --verbose --max_rows 50 --before "$(date -d tomorrow)"
+        else
+            $MANAGE $* db archive_deleted_rows --verbose --max_rows 1000 --before "$(date -d tomorrow)" --all-cells
+        fi
         RET=$?
         if [[ $RET -gt 1 ]]; then
             echo Archiving failed with result $RET
@@ -36,17 +43,11 @@ function purge_db {
 BASE=${BASE:-/opt/stack}
 source ${BASE}/devstack/functions-common
 source ${BASE}/devstack/lib/nova
-cell_conf=$(conductor_conf 1)
-# NOTE(danms): We need to pass the main config to get the api db
-# bits, and then also the cell config for the cell1 db (instead of
-# the cell0 config that is in the main config file). Later files
-# take precedence.
-conf="--config-file $NOVA_CONF --config-file $cell_conf"
 
 # This needs to go before 'set -e' because otherwise the intermediate runs of
 # 'nova-manage db archive_deleted_rows' returning 1 (normal and expected) would
 # cause this script to exit and fail.
-archive_deleted_rows $conf
+archive_deleted_rows
 
 set -e
 
@@ -58,6 +59,17 @@ purge_db
 set +x
 source $BASE/devstack/openrc admin
 set -x
+
+# Verify whether instances were archived from all cells. Admin credentials are
+# needed to list deleted instances across all projects.
+echo "Verifying that instances were archived from all cells"
+deleted_servers=$(openstack server list --deleted --all-projects -c ID -f value)
+
+# Fail if any deleted servers were found.
+if [[ -n "$deleted_servers" ]]; then
+    echo "There were unarchived instances found after archiving; failing."
+    exit 1
+fi
 
 # TODO(mriedem): Consider checking for instances in ERROR state because
 # if there are any, we would expect them to retain allocations in Placement
