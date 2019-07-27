@@ -1,0 +1,113 @@
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+provider_by_uuid:
+  config:
+    meta:
+      schema_version: '1.0'
+    providers:
+      - identification:
+          uuid: aa884151-b4e2-4e82-9fd4-81cfcd01abb9
+provider_magic_uuid:
+  config:
+    meta:
+      schema_version: '1.0'
+    providers:
+      - identification:
+          uuid: "$COMPUTE_NODE"
+provider_by_name:
+  config:
+    meta:
+      schema_version: '1.0'
+    providers:
+      - identification:
+          name: custom_provider
+inventories_additional_resource_class:
+  config:
+    meta:
+      schema_version: '1.0'
+    providers:
+      - identification:
+          uuid: aa884151-b4e2-4e82-9fd4-81cfcd01abb9
+        inventories:
+          additional:
+            - CUSTOM_RESOURCE1:
+                total: 1
+inventories_unknown_adjective:
+  config:
+    meta:
+      schema_version: '1.0'
+    providers:
+      - identification:
+          uuid: aa884151-b4e2-4e82-9fd4-81cfcd01abb9
+        inventories:
+          invalid_adjective:
+            - CUSTOM_RESOURCE1:
+                total: 1
+inventories_multiple_additional_resource_classes:
+  config:
+    meta:
+      schema_version: '1.0'
+    providers:
+      - identification:
+          uuid: aa884151-b4e2-4e82-9fd4-81cfcd01abb9
+        inventories:
+          additional:
+            - CUSTOM_RESOURCE1:
+                total: 1
+            - CUSTOM_RESOURCE2:
+                total: 1
+traits_one_additional_trait:
+  config:
+    meta:
+      schema_version: '1.0'
+    providers:
+      - identification:
+          uuid: aa884151-b4e2-4e82-9fd4-81cfcd01abb9
+        traits:
+          additional:
+            - CUSTOM_TRAIT1
+traits_multiple_additional_traits:
+  config:
+    meta:
+      schema_version: '1.0'
+    providers:
+      - identification:
+          uuid: aa884151-b4e2-4e82-9fd4-81cfcd01abb9
+        traits:
+          additional:
+            - CUSTOM_TRAIT1
+            - CUSTOM_TRAIT2
+traits_unknown_adjective:
+  config:
+    meta:
+      schema_version: '1.0'
+    providers:
+      - identification:
+          uuid: aa884151-b4e2-4e82-9fd4-81cfcd01abb9
+        traits:
+          invalid:
+            - CUSTOM_TRAIT1
+inventories_and_traits_additional_resource_class_and_trait:
+  config:
+    meta:
+      schema_version: '1.0'
+    providers:
+      - identification:
+          uuid: aa884151-b4e2-4e82-9fd4-81cfcd01abb9
+        inventories:
+          additional:
+            - CUSTOM_RESOURCE1:
+                total: 1
+        traits:
+          additional:
+            - CUSTOM_TRAIT1

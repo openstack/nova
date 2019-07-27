@@ -2345,3 +2345,13 @@ class MixedInstanceNotSupportByComputeService(NovaException):
 class InvalidMixedInstanceDedicatedMask(Invalid):
     msg_fmt = _("Mixed instance must have at least 1 pinned vCPU and 1 "
                 "unpinned vCPU. See 'hw:cpu_dedicated_mask'.")
+
+
+class ProviderConfigException(NovaException):
+    """Exception indicating an error occurred processing provider config files.
+
+    This class is used to avoid a raised exception inadvertently being caught
+    and mishandled by the resource tracker.
+    """
+    msg_fmt = _("An error occurred while processing "
+                "a provider config file: %(error)s")

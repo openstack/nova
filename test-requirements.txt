@@ -5,7 +5,7 @@
 hacking>=3.1.0,<3.2.0 # Apache-2.0
 mypy>=0.761 # MIT
 coverage!=4.4,>=4.0 # Apache-2.0
-ddt>=1.0.1 # MIT
+ddt>=1.2.1 # MIT
 fixtures>=3.0.0 # Apache-2.0/BSD
 mock>=3.0.0 # BSD
 psycopg2>=2.7 # LGPL/ZPL
