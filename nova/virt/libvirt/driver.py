@@ -6057,11 +6057,11 @@ class LibvirtDriver(driver.ComputeDriver):
         caps = self._host.get_capabilities()
         instance_caps = list()
         for g in caps.guests:
-            for dt in g.domtype:
+            for domain_type in g.domains:
                 try:
                     instance_cap = (
                         fields.Architecture.canonicalize(g.arch),
-                        fields.HVType.canonicalize(dt),
+                        fields.HVType.canonicalize(domain_type),
                         fields.VMMode.canonicalize(g.ostype))
                     instance_caps.append(instance_cap)
                 except exception.InvalidArchitectureName:

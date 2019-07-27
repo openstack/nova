@@ -28,6 +28,7 @@ from nova import exception
 from nova import objects
 from nova.objects import fields as obj_fields
 from nova import test
+from nova.tests.unit.virt.libvirt import fake_libvirt_data
 from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt import event
 from nova.virt.libvirt import config as vconfig
@@ -638,10 +639,36 @@ class HostTestCase(test.NoDBTestCase):
             self.assertIsNone(caps.host.cpu.model)
             self.assertEqual(0, len(caps.host.cpu.features))
 
+    def test__get_machine_types(self):
+        expected = [
+            # NOTE(aspiers): in the real world, i686 would probably
+            # have q35 too, but our fixtures are manipulated to
+            # exclude it to allow more thorough testing the our
+            # canonical machine types logic is correct.
+            ('i686', 'qemu', ['pc']),
+            ('i686', 'kvm', ['pc']),
+            ('x86_64', 'qemu', ['pc', 'q35']),
+            ('x86_64', 'kvm', ['pc', 'q35']),
+            ('armv7l', 'qemu', ['virt']),
+            # NOTE(aspiers): we're currently missing default machine
+            # types for the other architectures for which we have fake
+            # capabilities.
+        ]
+        for arch, domain, expected_mach_types in expected:
+            guest_xml = fake_libvirt_data.CAPABILITIES_GUEST[arch]
+            guest = vconfig.LibvirtConfigCapsGuest()
+            guest.parse_str(guest_xml)
+            domain = guest.domains[domain]
+            self.assertEqual(set(expected_mach_types),
+                             self.host._get_machine_types(arch, domain),
+                             "for arch %s domain %s" %
+                             (arch, domain.domtype))
+
     def _test_get_domain_capabilities(self):
         caps = self.host.get_domain_capabilities()
         for arch, mtypes in caps.items():
             for mtype, dom_cap in mtypes.items():
+                self.assertIsInstance(dom_cap, vconfig.LibvirtConfigDomainCaps)
                 # NOTE(sean-k-mooney): this should always be true since we are
                 # mapping from an arch and machine_type to a domain cap object
                 # for that pair. We use 'in' to allow libvirt to expand the
@@ -649,10 +676,18 @@ class HostTestCase(test.NoDBTestCase):
                 # form e.g. pc-i440fx-2.11
                 self.assertIn(mtype, dom_cap.machine_type)
                 self.assertIn(dom_cap.machine_type_alias, mtype)
+
         # We assume we are testing with x86_64 in other parts of the code
         # so we just assert it's in the test data and return it.
-        self.assertIn('x86_64', caps)
-        self.assertIn('pc', caps['x86_64'])
+        expected = [
+            ('i686', ['pc', 'pc-i440fx-2.11']),
+            ('x86_64', ['pc', 'pc-i440fx-2.11', 'q35', 'pc-q35-2.11']),
+        ]
+        for arch, expected_mtypes in expected:
+            self.assertIn(arch, caps)
+            for mach_type in expected_mtypes:
+                self.assertIn(mach_type, caps[arch], "for arch %s" % arch)
+
         return caps['x86_64']['pc']
 
     def test_get_domain_capabilities(self):
@@ -742,7 +777,7 @@ class HostTestCase(test.NoDBTestCase):
 
         caps = self.host.get_domain_capabilities()
 
-        for arch, mtype in six.iteritems(archs):
+        for arch, mtype in archs.items():
             self.assertIn(arch, caps)
             self.assertNotIn('pc', caps[arch])
             self.assertIn(mtype, caps[arch])

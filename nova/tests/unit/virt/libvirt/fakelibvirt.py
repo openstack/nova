@@ -1366,9 +1366,10 @@ class Connection(object):
             return fake_libvirt_data.STATIC_DOMCAPABILITIES[arch]
 
         if arch == 'x86_64':
+            aliases = {'pc': 'pc-i440fx-2.11', 'q35': 'pc-q35-2.11'}
             return fake_libvirt_data.DOMCAPABILITIES_X86_64_TEMPLATE % \
                 {'features': self._domain_capability_features,
-                 'mtype': machine_type}
+                 'mtype': aliases.get(machine_type, machine_type)}
 
         raise Exception("fakelibvirt doesn't support getDomainCapabilities "
                         "for %s architecture" % arch)
