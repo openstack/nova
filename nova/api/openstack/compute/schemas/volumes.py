@@ -87,6 +87,10 @@ create_volume_attachment_v249 = copy.deepcopy(create_volume_attachment)
 create_volume_attachment_v249['properties']['volumeAttachment'][
                               'properties']['tag'] = parameter_types.tag
 
+create_volume_attachment_v279 = copy.deepcopy(create_volume_attachment_v249)
+create_volume_attachment_v279['properties']['volumeAttachment'][
+    'properties']['delete_on_termination'] = parameter_types.boolean
+
 update_volume_attachment = copy.deepcopy(create_volume_attachment)
 del update_volume_attachment['properties']['volumeAttachment'][
     'properties']['device']

@@ -361,8 +361,10 @@ class _ComputeAPIUnitTestMixIn(object):
         self._test_specified_ip_and_multiple_instances_helper(
             requested_networks)
 
+    @mock.patch('nova.objects.BlockDeviceMapping.save')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'reserve_block_device_name')
-    def test_create_volume_bdm_call_reserve_dev_name(self, mock_reserve):
+    def test_create_volume_bdm_call_reserve_dev_name(self, mock_reserve,
+                                                     mock_bdm_save):
         bdm = objects.BlockDeviceMapping(
                 **fake_block_device.FakeDbBlockDeviceDict(
                 {
@@ -384,6 +386,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                                      None)
         self.assertTrue(mock_reserve.called)
         self.assertEqual(result, bdm)
+        mock_bdm_save.assert_called_once_with()
 
     @mock.patch.object(objects.BlockDeviceMapping, 'create')
     def test_create_volume_bdm_local_creation(self, bdm_create):

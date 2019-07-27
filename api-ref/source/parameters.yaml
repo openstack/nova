@@ -2248,6 +2248,22 @@ delete_on_termination:
   in: body
   required: false
   type: boolean
+delete_on_termination_attachments_req:
+  description: |
+    To delete the attached volume when the server is destroyed, specify ``true``.
+    Otherwise, specify ``false``. Default: ``false``
+  in: body
+  required: false
+  type: boolean
+  min_version: 2.79
+delete_on_termination_attachments_resp:
+  description: |
+    A flag indicating if the attached volume will be deleted when the server is
+    deleted.
+  in: body
+  required: true
+  type: boolean
+  min_version: 2.79
 deleted:
   description: |
     A boolean indicates whether this aggregate is deleted or not, if it has
@@ -5148,9 +5164,7 @@ os-extended-volumes:volumes_attached:
 os-extended-volumes:volumes_attached.delete_on_termination:
   description: |
     A flag indicating if the attached volume will be deleted
-    when the server is deleted. By default this is False and
-    can only be set when creating a volume while creating a
-    server, which is commonly referred to as boot from volume.
+    when the server is deleted. By default this is False.
   in: body
   required: true
   type: boolean
@@ -5158,9 +5172,7 @@ os-extended-volumes:volumes_attached.delete_on_termination:
 os-extended-volumes:volumes_attached.delete_on_termination_update_rebuild:
   description: |
     A flag indicating if the attached volume will be deleted
-    when the server is deleted. By default this is False and
-    can only be set when creating a volume while creating a
-    server, which is commonly referred to as boot from volume.
+    when the server is deleted. By default this is False.
   in: body
   required: true
   type: boolean

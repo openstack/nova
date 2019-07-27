@@ -572,7 +572,8 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         self.stub_out('nova.compute.api.API.attach_volume',
                       lambda self, context, instance, volume_id,
                               device, tag=None,
-                              supports_multiattach=False: None)
+                              supports_multiattach=False,
+                              delete_on_termination=False: None)
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
                                     'device': '/dev/fake'}}
         result = self.attachments.create(self.req, FAKE_UUID, body=body)
@@ -649,7 +650,8 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         mock_attach_volume.assert_called_once_with(
             self.req.environ['nova.context'],
             test.MatchType(objects.Instance), FAKE_UUID_A, '/dev/fake',
-            supports_multiattach=supports_multiattach, tag=None)
+            supports_multiattach=supports_multiattach,
+            delete_on_termination=False, tag=None)
 
     def test_attach_volume_bad_id(self):
         self.stub_out('nova.compute.api.API.attach_volume',
@@ -991,6 +993,102 @@ class VolumeAttachTestsV2_75(VolumeAttachTestsV21):
             '?limit=1&additional=something')
         self.assertRaises(self.validation_error, self.attachments.index,
                           req, FAKE_UUID)
+
+
+class VolumeAttachTestsV279(VolumeAttachTestsV2_75):
+    microversion = '2.79'
+
+    def setUp(self):
+        super(VolumeAttachTestsV279, self).setUp()
+        self.controller = volumes_v21.VolumeAttachmentController()
+        self.expected_show = {'volumeAttachment':
+            {'device': '/dev/fake0',
+             'serverId': FAKE_UUID,
+             'id': FAKE_UUID_A,
+             'volumeId': FAKE_UUID_A,
+             'tag': None,
+             'delete_on_termination': False
+            }}
+
+    def _get_req(self, body, microversion=None):
+        req = fakes.HTTPRequest.blank(
+            '/v2/servers/id/os-volume_attachments/uuid',
+            version=microversion or self.microversion)
+        req.body = jsonutils.dump_as_bytes(body)
+        req.method = 'POST'
+        req.headers['content-type'] = 'application/json'
+        return req
+
+    def test_create_volume_attach_pre_v279(self):
+        """Tests the case that the user tries to attach a volume with
+        delete_on_termination field, but before using microversion 2.79.
+        """
+        body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
+                                     'delete_on_termination': False}}
+        req = self._get_req(body, microversion='2.78')
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller.create,
+                               req, FAKE_UUID, body=body)
+        self.assertIn("Additional properties are not allowed",
+                      six.text_type(ex))
+
+    @mock.patch('nova.compute.api.API.attach_volume', return_value=None)
+    def test_attach_volume_pre_v279(self, mock_attach_volume):
+        """Before microversion 2.79, attach a volume will not contain
+        'delete_on_termination' field in the response.
+        """
+        body = {'volumeAttachment': {'volumeId': FAKE_UUID_A}}
+        req = self._get_req(body, microversion='2.78')
+        result = self.attachments.create(req, FAKE_UUID, body=body)
+        self.assertNotIn('delete_on_termination', result['volumeAttachment'])
+        mock_attach_volume.assert_called_once_with(
+            req.environ['nova.context'], test.MatchType(objects.Instance),
+            FAKE_UUID_A, None, tag=None, supports_multiattach=True,
+            delete_on_termination=False)
+
+    @mock.patch('nova.compute.api.API.attach_volume', return_value=None)
+    def test_attach_volume_with_delete_on_termination_default_value(
+            self, mock_attach_volume):
+        """Test attach a volume doesn't specify 'delete_on_termination' in
+        the request, you will be get it's default value in the response.
+        The delete_on_termination's default value is 'False'.
+        """
+        body = {'volumeAttachment': {'volumeId': FAKE_UUID_A}}
+        req = self._get_req(body)
+        result = self.attachments.create(req, FAKE_UUID, body=body)
+        self.assertFalse(result['volumeAttachment']['delete_on_termination'])
+        mock_attach_volume.assert_called_once_with(
+            req.environ['nova.context'], test.MatchType(objects.Instance),
+            FAKE_UUID_A, None, tag=None, supports_multiattach=True,
+            delete_on_termination=False)
+
+    def test_create_volume_attach_invalid_delete_on_termination_empty(self):
+        body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
+                                     'delete_on_termination': None}}
+        req = self._get_req(body)
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller.create,
+                               req, FAKE_UUID, body=body)
+        self.assertIn("Invalid input for field/attribute "
+                      "delete_on_termination.", six.text_type(ex))
+
+    def test_create_volume_attach_invalid_delete_on_termination_value(self):
+        """"Test the case that the user tries to set the delete_on_termination
+        value not in the boolean or string-boolean check, the valid boolean
+        value are:
+
+        [True, 'True', 'TRUE', 'true', '1', 'ON', 'On', 'on', 'YES', 'Yes',
+        'yes', False, 'False', 'FALSE', 'false', '0', 'OFF', 'Off', 'off',
+        'NO', 'No', 'no']
+        """
+        body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
+                                     'delete_on_termination': 'foo'}}
+        req = self._get_req(body)
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller.create,
+                               req, FAKE_UUID, body=body)
+        self.assertIn("Invalid input for field/attribute "
+                      "delete_on_termination.", six.text_type(ex))
 
 
 class SwapVolumeMultiattachTestCase(test.NoDBTestCase):

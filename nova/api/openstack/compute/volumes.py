@@ -207,12 +207,16 @@ class VolumeController(wsgi.Controller):
         return wsgi.ResponseObject(result, headers=dict(location=location))
 
 
-def _translate_attachment_detail_view(bdm, show_tag=False):
+def _translate_attachment_detail_view(bdm, show_tag=False,
+                                      show_delete_on_termination=False):
     """Maps keys for attachment details view.
 
     :param bdm: BlockDeviceMapping object for an attached volume
     :param show_tag: True if the "tag" field should be in the response, False
         to exclude the "tag" field from the response
+    :param show_delete_on_termination: True if the "delete_on_termination"
+        field should be in the response, False to exclude the
+        "delete_on_termination" field from the response
     """
 
     d = _translate_attachment_summary_view(
@@ -220,6 +224,9 @@ def _translate_attachment_detail_view(bdm, show_tag=False):
 
     if show_tag:
         d['tag'] = bdm.tag
+
+    if show_delete_on_termination:
+        d['delete_on_termination'] = bdm.delete_on_termination
 
     return d
 
@@ -282,9 +289,13 @@ class VolumeAttachmentController(wsgi.Controller):
 
         results = []
         show_tag = api_version_request.is_supported(req, '2.70')
+        show_delete_on_termination = api_version_request.is_supported(
+            req, '2.79')
         for bdm in limited_list:
             if bdm.volume_id:
-                va = _translate_attachment_detail_view(bdm, show_tag=show_tag)
+                va = _translate_attachment_detail_view(
+                    bdm, show_tag=show_tag,
+                    show_delete_on_termination=show_delete_on_termination)
                 results.append(va)
 
         return {'volumeAttachments': results}
@@ -308,13 +319,18 @@ class VolumeAttachmentController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
 
         show_tag = api_version_request.is_supported(req, '2.70')
+        show_delete_on_termination = api_version_request.is_supported(
+            req, '2.79')
         return {'volumeAttachment': _translate_attachment_detail_view(
-            bdm, show_tag=show_tag)}
+            bdm, show_tag=show_tag,
+            show_delete_on_termination=show_delete_on_termination)}
 
     # TODO(mriedem): This API should return a 202 instead of a 200 response.
     @wsgi.expected_errors((400, 403, 404, 409))
     @validation.schema(volumes_schema.create_volume_attachment, '2.0', '2.48')
-    @validation.schema(volumes_schema.create_volume_attachment_v249, '2.49')
+    @validation.schema(volumes_schema.create_volume_attachment_v249, '2.49',
+                       '2.78')
+    @validation.schema(volumes_schema.create_volume_attachment_v279, '2.79')
     def create(self, req, server_id, body):
         """Attach a volume to an instance."""
         context = req.environ['nova.context']
@@ -323,6 +339,8 @@ class VolumeAttachmentController(wsgi.Controller):
         volume_id = body['volumeAttachment']['volumeId']
         device = body['volumeAttachment'].get('device')
         tag = body['volumeAttachment'].get('tag')
+        delete_on_termination = body['volumeAttachment'].get(
+            'delete_on_termination', False)
 
         instance = common.get_instance(self.compute_api, context, server_id)
 
@@ -335,7 +353,8 @@ class VolumeAttachmentController(wsgi.Controller):
             supports_multiattach = common.supports_multiattach_volume(req)
             device = self.compute_api.attach_volume(
                 context, instance, volume_id, device, tag=tag,
-                supports_multiattach=supports_multiattach)
+                supports_multiattach=supports_multiattach,
+                delete_on_termination=delete_on_termination)
         except exception.VolumeNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         except (exception.InstanceIsLocked,
@@ -367,6 +386,8 @@ class VolumeAttachmentController(wsgi.Controller):
         attachment['device'] = device
         if api_version_request.is_supported(req, '2.70'):
             attachment['tag'] = tag
+        if api_version_request.is_supported(req, '2.79'):
+            attachment['delete_on_termination'] = delete_on_termination
         return {'volumeAttachment': attachment}
 
     @wsgi.response(202)

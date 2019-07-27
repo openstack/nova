@@ -209,6 +209,11 @@ class VolumeAttachmentsSample(test_servers.ServersSampleBase):
         """
         return {}
 
+    # TODO(mriedem): There is really no good reason we should have to stub
+    # so much of this DB and compute service code when we can just use the
+    # CinderFixture. The stubs make these tests very brittle and potentially
+    # false regarding how the API/compute service interaction works.
+
     def _stub_db_bdms_get_all_by_instance(self, server_id):
 
         def fake_bdms_get_all_by_instance(context, instance_uuid,
@@ -240,7 +245,7 @@ class VolumeAttachmentsSample(test_servers.ServersSampleBase):
                 {'id': 1, 'volume_id': self.OLD_VOLUME_ID,
                  'instance_uuid': instance_uuid, 'source_type': 'volume',
                  'destination_type': 'volume', 'device_name': '/dev/sdd',
-                 'tag': tag})
+                 'tag': tag, 'delete_on_termination': False})
         )
 
     def _stub_compute_api_get(self):
@@ -264,9 +269,14 @@ class VolumeAttachmentsSample(test_servers.ServersSampleBase):
         device_name = '/dev/vdd'
         bdm = objects.BlockDeviceMapping()
         bdm['device_name'] = device_name
+        bdm['delete_on_termination'] = True
         self.stub_out(
             'nova.compute.manager.ComputeManager.reserve_block_device_name',
             lambda *a, **k: bdm)
+        # 2.79+ will save the delete_on_termination value on the BDM after
+        # reserve_block_device_name "creates" the BDM.
+        self.stub_out('nova.objects.BlockDeviceMapping.save',
+                      lambda *a, **k: None)
         self.stub_out(
             'nova.compute.manager.ComputeManager.attach_volume',
             lambda *a, **k: None)
@@ -366,3 +376,11 @@ class VolumeAttachmentsSampleV270(VolumeAttachmentsSampleV249):
             self.OLD_VOLUME_ID: 'foo',
             self.NEW_VOLUME_ID: None
         }
+
+
+class VolumeAttachmentsSampleV279(VolumeAttachmentsSampleV270):
+    """Microversion 2.79 adds the "delete_on_termination" parameter to the
+    request and response body.
+    """
+    microversion = '2.79'
+    scenarios = [('v2_79', {'api_major_version': 'v2.1'})]

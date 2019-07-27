@@ -1011,3 +1011,18 @@ The default behavior is configurable using two new policies:
 
 * ``compute:server:topology:index``
 * ``compute:server:topology:host:index``
+
+2.79
+----
+
+API microversion 2.79 adds support for specifying the ``delete_on_termination``
+field in the request body when attaching a volume to a server, to support
+configuring whether to delete the data volume when the server is destroyed.
+Also, ``delete_on_termination`` is added to the GET responses when showing
+attached volumes.
+
+The affected APIs are as follows:
+
+* ``POST /servers/{server_id}/os-volume_attachments``
+* ``GET /servers/{server_id}/os-volume_attachments``
+* ``GET /servers/{server_id}/os-volume_attachments/{volume_id}``

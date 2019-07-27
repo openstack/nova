@@ -1,0 +1,7 @@
+{
+    "volumeAttachment": {
+        "volumeId": "a26887c6-c47b-4654-abb5-dfadf7d3f803",
+        "tag": "foo",
+        "delete_on_termination": true
+    }
+}
