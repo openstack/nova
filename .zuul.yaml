@@ -238,8 +238,8 @@
         ENABLE_VOLUME_MULTIATTACH: True
       devstack_services:
         tls-proxy: true
-        # TODO(mriedem): Consider disabling other non-essential services like
-        # c-bak.
+        # Disable non-essential services that we don't need for this job.
+        c-bak: false
 
 - job:
     name: nova-tempest-v2-api
