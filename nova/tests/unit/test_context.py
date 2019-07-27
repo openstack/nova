@@ -216,8 +216,7 @@ class ContextTestCase(test.NoDBTestCase):
 
         self.assertTrue(result)
         mock_authorize.assert_called_once_with(
-          ctxt, mock.sentinel.rule,
-          {'project_id': ctxt.project_id, 'user_id': ctxt.user_id})
+          ctxt, mock.sentinel.rule, None)
 
     @mock.patch.object(context.policy, 'authorize')
     def test_can_fatal(self, mock_authorize):

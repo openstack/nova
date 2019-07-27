@@ -134,6 +134,10 @@ class PolicyTestCase(test.NoDBTestCase):
         target_not_mine = {'project_id': 'another'}
         action = "example:my_file"
         policy.authorize(self.context, action, target_mine)
+        # check we fallback to context.project_id
+        # TODO(johngarbutt): longer term we need to remove this and make
+        #  the target a required param.
+        policy.authorize(self.context, action)
         self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
                           self.context, action, target_not_mine)
 
