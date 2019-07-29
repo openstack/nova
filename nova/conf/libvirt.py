@@ -551,7 +551,9 @@ Set the name of the libvirt CPU model the instance should use.
 
 Possible values:
 
-* The named CPU models listed in ``/usr/share/libvirt/cpu_map.xml``
+* The named CPU models listed in ``/usr/share/libvirt/cpu_map.xml`` for
+  libvirt prior to version 4.7.0 or ``/usr/share/libvirt/cpu_map/*.xml``
+  for version 4.7.0 and higher.
 
 Related options:
 
@@ -600,8 +602,9 @@ expose that CPU flag to the Nova instance, the you need to explicitly
 ask for it.
 
 The possible values for ``cpu_model_extra_flags`` depends on the CPU
-model in use.  Refer to ``/usr/share/libvirt/cpu_map.xml`` possible CPU
-feature flags for a given CPU model.
+model in use. Refer to ``/usr/share/libvirt/cpu_map.xml`` for libvirt
+prior to version 4.7.0 or ``/usr/share/libvirt/cpu_map/*.xml`` thereafter
+for possible CPU feature flags for a given CPU model.
 
 Note that when using this config attribute to set the 'PCID' CPU flag
 with the ``custom`` CPU mode, not all virtual (i.e. libvirt / QEMU) CPU
