@@ -39,7 +39,6 @@ from nova import exception
 # NOTE(mriedem): We only use objects as a convenience to populate the database
 # in the tests, we don't use them in the actual CLI.
 from nova import objects
-from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 
@@ -508,113 +507,6 @@ class TestUpgradeCheckIronicFlavorMigration(test.NoDBTestCase):
                     for cell_id in
                     sorted(unmigrated_instance_count_by_cell.keys())),
             result.details)
-
-
-def _create_minimal_request_spec(ctxt, instance):
-    request_spec = objects.RequestSpec.from_components(
-        ctxt, instance.uuid, instance.image_meta,
-        instance.flavor, instance.numa_topology,
-        instance.pci_requests,
-        {}, None, instance.availability_zone,
-        project_id=instance.project_id,
-        user_id=instance.user_id
-    )
-    scheduler_utils.setup_instance_group(ctxt, request_spec)
-    request_spec.create()
-
-
-class TestUpgradeCheckRequestSpecMigration(test.NoDBTestCase):
-    """Tests for the nova-status upgrade check for request spec migration."""
-
-    # We'll setup the database ourselves because we need to use cells fixtures
-    # for multiple cell mappings.
-    USES_DB_SELF = True
-
-    # This will create three cell mappings: cell0, cell1 (default) and cell2
-    NUMBER_OF_CELLS = 2
-
-    def setUp(self):
-        super(TestUpgradeCheckRequestSpecMigration, self).setUp()
-        self.output = StringIO()
-        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
-        # We always need the API DB to be setup.
-        self.useFixture(nova_fixtures.Database(database='api'))
-        self.cmd = status.UpgradeCommands()
-
-    @staticmethod
-    def _create_instance_in_cell(ctxt, cell, is_deleted=False,
-                                 create_request_spec=False):
-        with context.target_cell(ctxt, cell) as cctxt:
-            inst = objects.Instance(
-                context=cctxt,
-                uuid=uuidutils.generate_uuid())
-            inst.create()
-
-            if is_deleted:
-                inst.destroy()
-
-        if create_request_spec:
-            # Fake out some fields in the Instance so we don't lazy-load them.
-            inst.flavor = objects.Flavor()
-            inst.numa_topology = None
-            inst.system_metadata = {}
-            inst.pci_requests = None
-            inst.project_id = 'fake-project'
-            inst.user_id = 'fake-user'
-            _create_minimal_request_spec(ctxt, inst)
-
-        return inst
-
-    def test_fresh_install_no_cell_mappings(self):
-        """Tests the scenario where we don't have any cell mappings (no cells
-        v2 setup yet) so we don't know what state we're in and we return a
-        warning.
-        """
-        result = self.cmd._check_request_spec_migration()
-        self.assertEqual(upgradecheck.Code.WARNING, result.code)
-        self.assertIn('Unable to determine request spec migrations without '
-                      'cell mappings.', result.details)
-
-    def test_deleted_instance_one_cell_migrated_other_success(self):
-        """Tests the scenario that we have two cells, one has only a single
-        deleted instance in it and the other has a single already-migrated
-        instance in it, so the overall result is success.
-        """
-        self._setup_cells()
-        ctxt = context.get_admin_context()
-
-        # Create a deleted instance in cell1.
-        self._create_instance_in_cell(
-            ctxt, self.cell_mappings['cell1'], is_deleted=True)
-
-        # Create a migrated instance in cell2.
-        self._create_instance_in_cell(
-            ctxt, self.cell_mappings['cell2'], create_request_spec=True)
-
-        result = self.cmd._check_request_spec_migration()
-        self.assertEqual(upgradecheck.Code.SUCCESS, result.code)
-
-    def test_unmigrated_request_spec_instances(self):
-        """Tests the scenario that we have a migrated instance in cell1 and
-        an unmigrated instance in cell2 so the check fails.
-        """
-        self._setup_cells()
-        ctxt = context.get_admin_context()
-
-        # Create a migrated instance in cell1.
-        self._create_instance_in_cell(
-            ctxt, self.cell_mappings['cell1'], create_request_spec=True)
-
-        # Create an unmigrated instance in cell2.
-        self._create_instance_in_cell(ctxt, self.cell_mappings['cell2'])
-
-        result = self.cmd._check_request_spec_migration()
-        self.assertEqual(upgradecheck.Code.FAILURE, result.code)
-        self.assertIn("The following cells have instances which do not have "
-                      "matching request_specs in the API database: %s Run "
-                      "'nova-manage db online_data_migrations' on each cell "
-                      "to create the missing request specs." %
-                      self.cell_mappings['cell2'].uuid, result.details)
 
 
 class TestUpgradeCheckCinderAPI(test.NoDBTestCase):
