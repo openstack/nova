@@ -385,6 +385,8 @@
             irrelevant-files: *dsvm-irrelevant-files
         - grenade-py3:
             irrelevant-files: *dsvm-irrelevant-files
+        - tempest-ipv6-only:
+            irrelevant-files: *dsvm-irrelevant-files
     gate:
       jobs:
         - nova-grenade-live-migration
@@ -397,6 +399,8 @@
         - tempest-slow-py3:
             irrelevant-files: *dsvm-irrelevant-files
         - grenade-py3:
+            irrelevant-files: *dsvm-irrelevant-files
+        - tempest-ipv6-only:
             irrelevant-files: *dsvm-irrelevant-files
     experimental:
       jobs:
