@@ -67,11 +67,13 @@ Response header example::
 Server Actions
 --------------
 
-There is an API for end users to list the outcome of Server Actions,
+There is an API for end users to list the outcome of `Server Actions`_,
 referencing the requested action by request id.
 
 For more details, please see:
-https://docs.openstack.org/api-ref/compute/#servers-run-an-action-servers-action
+https://docs.openstack.org/api-ref/compute/#servers-actions-servers-os-instance-actions
+
+.. _Server Actions: https://docs.openstack.org/api-ref/compute/#servers-run-an-action-servers-action
 
 Logs
 ----
