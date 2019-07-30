@@ -178,7 +178,7 @@ are assumed. To request an instance to use 2 MB huge pages, run one of:
 
 .. code-block:: console
 
-   $ openstack flavor set m1.large --property hw:mem_page_size=2Mb
+   $ openstack flavor set m1.large --property hw:mem_page_size=2MB
 
 .. code-block:: console
 
