@@ -33,32 +33,77 @@ class Loader(object):
 
 class Db(object):
 
-    def __init__(self):
-        # Generate test devices
-        self.devs = []
-        self.oslist = None
+    def _get_fedora19(self):
+        devs = []
+        net = Device()
+        net._class = 'net'
+        net.name = 'rtl8139'
+        devs.append(net)
 
+        net = Device()
+        net._class = 'block'
+        net.name = 'ide'
+        devs.append(net)
+
+        devlist = DeviceList()
+        devlist.devices = devs
+
+        fedora = Os()
+        fedora.name = 'Fedora 19'
+        fedora.id = 'http://fedoraproject.org/fedora/19'
+        fedora.short_id = 'fedora19'
+        fedora.dev_list = devlist
+        return fedora
+
+    def _get_fedora22(self):
+        devs = []
         net = Device()
         net._class = 'net'
         net.name = 'virtio-net'
-        self.devs.append(net)
+        devs.append(net)
 
         net = Device()
         net._class = 'block'
         net.name = 'virtio-block'
-        self.devs.append(net)
+        devs.append(net)
 
         devlist = DeviceList()
-        devlist.devices = self.devs
+        devlist.devices = devs
 
         fedora = Os()
         fedora.name = 'Fedora 22'
         fedora.id = 'http://fedoraproject.org/fedora/22'
         fedora.short_id = 'fedora22'
         fedora.dev_list = devlist
+        return fedora
 
+    def _get_fedora23(self):
+        devs = []
+        net = Device()
+        net._class = 'net'
+        net.name = 'virtio1.0-net'
+        devs.append(net)
+
+        net = Device()
+        net._class = 'block'
+        net.name = 'virtio1.0-block'
+        devs.append(net)
+
+        devlist = DeviceList()
+        devlist.devices = devs
+
+        fedora = Os()
+        fedora.name = 'Fedora 23'
+        fedora.id = 'http://fedoraproject.org/fedora/23'
+        fedora.short_id = 'fedora23'
+        fedora.dev_list = devlist
+        return fedora
+
+    def __init__(self):
         self.oslist = OsList()
-        self.oslist.os_list = [fedora]
+        self.oslist.os_list = [
+            self._get_fedora19(), self._get_fedora22(), self._get_fedora23(),
+        ]
 
     def get_os_list(self):
         return self.oslist
