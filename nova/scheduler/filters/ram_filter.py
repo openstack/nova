@@ -23,12 +23,21 @@ LOG = logging.getLogger(__name__)
 
 
 class AggregateRamFilter(filters.BaseHostFilter):
-    """AggregateRamFilter with per-aggregate ram subscription flag.
+    """DEPRECATED: AggregateRamFilter with per-aggregate ram subscription flag.
 
     Fall back to global ram_allocation_ratio if no per-aggregate setting found.
     """
 
     RUN_ON_REBUILD = False
+
+    def __init__(self):
+        super(AggregateRamFilter, self).__init__()
+        LOG.warning('The AggregateRamFilter is deprecated since the 20.0.0 '
+                    'Train release. MEMORY_MB filtering is performed natively '
+                    'using the Placement service when using the '
+                    'filter_scheduler driver. Operators should define ram '
+                    'allocation ratios either per host in the nova.conf '
+                    'or via the placement API.')
 
     def _get_ram_allocation_ratio(self, host_state, spec_obj):
         aggregate_vals = utils.aggregate_values_from_key(

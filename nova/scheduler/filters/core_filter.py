@@ -24,12 +24,21 @@ LOG = logging.getLogger(__name__)
 
 
 class AggregateCoreFilter(filters.BaseHostFilter):
-    """AggregateCoreFilter with per-aggregate CPU subscription flag.
+    """DEPRECATED: AggregateCoreFilter with per-aggregate allocation ratio.
 
     Fall back to global cpu_allocation_ratio if no per-aggregate setting found.
     """
 
     RUN_ON_REBUILD = False
+
+    def __init__(self):
+        super(AggregateCoreFilter, self).__init__()
+        LOG.warning('The AggregateCoreFilter is deprecated since the 20.0.0 '
+                    'Train release. VCPU filtering is performed natively '
+                    'using the Placement service when using the '
+                    'filter_scheduler driver. Operators should define cpu '
+                    'allocation ratios either per host in the nova.conf '
+                    'or via the placement API.')
 
     def _get_cpu_allocation_ratio(self, host_state, spec_obj):
         aggregate_vals = utils.aggregate_values_from_key(

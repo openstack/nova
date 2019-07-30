@@ -95,7 +95,7 @@ There are many standard filter classes which may be used
   use a comma. E.g., "value1,value2". All hosts are passed if no extra_specs
   are specified.
 * |ComputeFilter| - passes all hosts that are operational and enabled.
-* |AggregateCoreFilter| - filters hosts by CPU core number with per-aggregate
+* |AggregateCoreFilter| - DEPRECATED; filters hosts by CPU core number with per-aggregate
   :oslo.config:option:`cpu_allocation_ratio` setting. If no
   per-aggregate value is found, it will fall back to the global default
   :oslo.config:option:`cpu_allocation_ratio`.
@@ -108,14 +108,14 @@ There are many standard filter classes which may be used
   and :oslo.config:option:`filter_scheduler.restrict_isolated_hosts_to_isolated_images`
   flags.
 * |JsonFilter| - allows simple JSON-based grammar for selecting hosts.
-* |AggregateRamFilter| - filters hosts by RAM with per-aggregate
+* |AggregateRamFilter| - DEPRECATED; filters hosts by RAM with per-aggregate
   :oslo.config:option:`ram_allocation_ratio` setting. If no per-aggregate value
   is found, it will fall back to the global default
   :oslo.config:option:`ram_allocation_ratio`.
   If more than one value is found for a host (meaning the host is in two
   different aggregates with different ratio settings), the minimum value
   will be used.
-* |AggregateDiskFilter| - filters hosts by disk allocation with per-aggregate
+* |AggregateDiskFilter| - DEPRECATED; filters hosts by disk allocation with per-aggregate
   :oslo.config:option:`disk_allocation_ratio` setting. If no per-aggregate value
   is found, it will fall back to the global default
   :oslo.config:option:`disk_allocation_ratio`.
