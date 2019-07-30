@@ -17,7 +17,6 @@ import calendar
 import datetime
 import os
 import re
-import time
 
 import mock
 import netifaces
@@ -793,7 +792,8 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         ]
         self._test_dnsmasq_execute(extra_expected=expected)
 
-    def test_isolated_host(self):
+    @mock.patch('nova.privsep.linux_net.modify_ebtables')
+    def test_isolated_host(self, mock_modify_ebtables):
         self.flags(fake_network=False,
                    share_dhcp_address=True)
         executes = []
@@ -824,34 +824,47 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         driver.plug(network, 'fakemac')
 
         expected = [
-            ('ebtables', '--concurrent', '-t', 'filter', '-D', 'INPUT', '-p',
-             'ARP', '-i', iface, '--arp-ip-dst', dhcp, '-j', 'DROP'),
-            ('ebtables', '--concurrent', '-t', 'filter', '-I', 'INPUT', '-p',
-             'ARP', '-i', iface, '--arp-ip-dst', dhcp, '-j', 'DROP'),
-            ('ebtables', '--concurrent', '-t', 'filter', '-D', 'OUTPUT', '-p',
-             'ARP', '-o', iface, '--arp-ip-src', dhcp, '-j', 'DROP'),
-            ('ebtables', '--concurrent', '-t', 'filter', '-I', 'OUTPUT', '-p',
-             'ARP', '-o', iface, '--arp-ip-src', dhcp, '-j', 'DROP'),
-            ('ebtables', '--concurrent', '-t', 'filter', '-D', 'FORWARD',
-             '-p', 'IPv4', '-i', iface, '--ip-protocol', 'udp',
-             '--ip-destination-port', '67:68', '-j', 'DROP'),
-            ('ebtables', '--concurrent', '-t', 'filter', '-I', 'FORWARD',
-             '-p', 'IPv4', '-i', iface, '--ip-protocol', 'udp',
-             '--ip-destination-port', '67:68', '-j', 'DROP'),
-            ('ebtables', '--concurrent', '-t', 'filter', '-D', 'FORWARD',
-             '-p', 'IPv4', '-o', iface, '--ip-protocol', 'udp',
-             '--ip-destination-port', '67:68', '-j', 'DROP'),
-            ('ebtables', '--concurrent', '-t', 'filter', '-I', 'FORWARD',
-             '-p', 'IPv4', '-o', iface, '--ip-protocol', 'udp',
-             '--ip-destination-port', '67:68', '-j', 'DROP'),
             ('iptables-save', '-c'),
             ('iptables-restore', '-c'),
             ('ip6tables-save', '-c'),
             ('ip6tables-restore', '-c'),
         ]
         self.assertEqual(expected, executes)
+        mock_modify_ebtables.assert_has_calls([
+            mock.call('filter',
+                      ['INPUT', '-p', 'ARP', '-i', iface, '--arp-ip-dst',
+                       dhcp, '-j', 'DROP'],
+                      insert_rule=False),
+            mock.call('filter',
+                      ['INPUT', '-p', 'ARP', '-i', iface, '--arp-ip-dst',
+                       dhcp, '-j', 'DROP'],
+                      insert_rule=True),
+            mock.call('filter',
+                      ['OUTPUT', '-p', 'ARP', '-o', iface, '--arp-ip-src',
+                       dhcp, '-j', 'DROP'],
+                      insert_rule=False),
+            mock.call('filter',
+                      ['OUTPUT', '-p', 'ARP', '-o', iface, '--arp-ip-src',
+                       dhcp, '-j', 'DROP'],
+                      insert_rule=True),
+            mock.call('filter',
+                      ['FORWARD', '-p', 'IPv4', '-i', iface, '--ip-protocol',
+                       'udp', '--ip-destination-port', '67:68', '-j', 'DROP'],
+                      insert_rule=False),
+            mock.call('filter',
+                      ['FORWARD', '-p', 'IPv4', '-i', iface, '--ip-protocol',
+                       'udp', '--ip-destination-port', '67:68', '-j', 'DROP'],
+                      insert_rule=True),
+            mock.call('filter',
+                      ['FORWARD', '-p', 'IPv4', '-o', iface, '--ip-protocol',
+                       'udp', '--ip-destination-port', '67:68', '-j', 'DROP'],
+                      insert_rule=False),
+            mock.call('filter',
+                      ['FORWARD', '-p', 'IPv4', '-o', iface, '--ip-protocol',
+                       'udp', '--ip-destination-port', '67:68', '-j', 'DROP'],
+                      insert_rule=True)])
 
-        executes = []
+        mock_modify_ebtables.reset_mock()
 
         def fake_remove(bridge, gateway):
             return
@@ -861,19 +874,23 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             fake_remove)
 
         driver.unplug(network)
-        expected = [
-            ('ebtables', '--concurrent', '-t', 'filter', '-D', 'INPUT', '-p',
-             'ARP', '-i', iface, '--arp-ip-dst', dhcp, '-j', 'DROP'),
-            ('ebtables', '--concurrent', '-t', 'filter', '-D', 'OUTPUT', '-p',
-             'ARP', '-o', iface, '--arp-ip-src', dhcp, '-j', 'DROP'),
-            ('ebtables', '--concurrent', '-t', 'filter', '-D', 'FORWARD',
-             '-p', 'IPv4', '-i', iface, '--ip-protocol', 'udp',
-             '--ip-destination-port', '67:68', '-j', 'DROP'),
-            ('ebtables', '--concurrent', '-t', 'filter', '-D', 'FORWARD',
-             '-p', 'IPv4', '-o', iface, '--ip-protocol', 'udp',
-             '--ip-destination-port', '67:68', '-j', 'DROP'),
-        ]
-        self.assertEqual(expected, executes)
+        mock_modify_ebtables.assert_has_calls([
+            mock.call('filter',
+                      ['INPUT', '-p', 'ARP', '-i', iface, '--arp-ip-dst',
+                       dhcp, '-j', 'DROP'],
+                      insert_rule=False),
+            mock.call('filter',
+                      ['OUTPUT', '-p', 'ARP', '-o', iface, '--arp-ip-src',
+                       dhcp, '-j', 'DROP'],
+                      insert_rule=False),
+            mock.call('filter',
+                      ['FORWARD', '-p', 'IPv4', '-i', iface, '--ip-protocol',
+                       'udp', '--ip-destination-port', '67:68', '-j', 'DROP'],
+                      insert_rule=False),
+            mock.call('filter',
+                      ['FORWARD', '-p', 'IPv4', '-o', iface, '--ip-protocol',
+                       'udp', '--ip-destination-port', '67:68', '-j', 'DROP'],
+                      insert_rule=False)])
 
     @mock.patch('nova.privsep.linux_net.routes_show')
     @mock.patch('nova.privsep.linux_net.route_delete')
@@ -1211,85 +1228,66 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             driver.ensure_bridge('brq1234567-89', '')
             device_exists.assert_called_once_with('brq1234567-89')
 
-    def test_exec_ebtables_success(self):
-        executes = []
+    @mock.patch('nova.privsep.linux_net.modify_ebtables',
+                return_value=('', ''))
+    def test_exec_ebtables_success(self, mock_modify_ebtables):
+        self.driver._exec_ebtables('fake', 'fake')
+        mock_modify_ebtables.assert_called()
 
-        def fake_execute(*args, **kwargs):
-            executes.append(args)
-            return "", ""
+    @mock.patch('nova.privsep.linux_net.modify_ebtables',
+                side_effect=processutils.ProcessExecutionError(
+                    'error',
+                    stderr=(u'Unable to update the kernel. Two possible '
+                            'causes:\n1. Multiple ebtables programs were '
+                            'executing simultaneously. The ebtables\n '
+                            'userspace tool doesn\'t by default support '
+                            'multiple ebtables programs running\n '
+                            'concurrently. The ebtables option --concurrent '
+                            'or a tool like flock can be\n used to support '
+                            'concurrent scripts that update the ebtables '
+                            'kernel tables.\n2. The kernel doesn\'t support '
+                            'a certain ebtables extension, consider\n '
+                            'recompiling your kernel or insmod the '
+                            'extension.\n.\n')))
+    @mock.patch('time.sleep')
+    def test_exec_ebtables_fail_all(self, mock_sleep, mock_modify_ebtables):
+        self.flags(ebtables_exec_attempts=5)
+        self.assertRaises(processutils.ProcessExecutionError,
+                          self.driver._exec_ebtables, 'fake', 'fake')
+        self.assertEqual(5, mock_modify_ebtables.call_count)
 
-        with mock.patch.object(self.driver, '_execute',
-                               side_effect=fake_execute):
-            self.driver._exec_ebtables('fake', ['fake'])
-            self.assertEqual(1, len(executes))
+    @mock.patch('nova.privsep.linux_net.modify_ebtables',
+                side_effect=processutils.ProcessExecutionError(
+                    'error',
+                    stderr=(u'Sorry, rule does not exist')))
+    @mock.patch('time.sleep')
+    def test_exec_ebtables_fail_no_retry(self, mock_sleep,
+                                         mock_modify_ebtables):
+        self.assertRaises(processutils.ProcessExecutionError,
+                          self.driver._exec_ebtables, 'fake', 'fake')
+        mock_modify_ebtables.assert_called()
 
-    def _ebtables_race_stderr(self):
-        return (u"Unable to update the kernel. Two possible causes:\n"
-                "1. Multiple ebtables programs were executing simultaneously."
-                " The ebtables\n userspace tool doesn't by default support "
-                "multiple ebtables programs running\n concurrently. The "
-                "ebtables option --concurrent or a tool like flock can be\n "
-                "used to support concurrent scripts that update the ebtables "
-                "kernel tables.\n2. The kernel doesn't support a certain "
-                "ebtables extension, consider\n recompiling your kernel or "
-                "insmod the extension.\n.\n")
-
-    def test_exec_ebtables_fail_all(self):
-        executes = []
-
-        def fake_sleep(interval):
-            pass
-
-        def fake_execute(*args, **kwargs):
-            executes.append(args)
-            raise processutils.ProcessExecutionError('error',
-                    stderr=self._ebtables_race_stderr())
-
-        with mock.patch.object(time, 'sleep', side_effect=fake_sleep), \
-                mock.patch.object(self.driver, '_execute',
-                                  side_effect=fake_execute):
-            self.assertRaises(processutils.ProcessExecutionError,
-                              self.driver._exec_ebtables, 'fake', ['fake'])
-            max_calls = CONF.ebtables_exec_attempts
-            self.assertEqual(max_calls, len(executes))
-
-    def test_exec_ebtables_fail_no_retry(self):
-        executes = []
-
-        def fake_sleep(interval):
-            pass
-
-        def fake_execute(*args, **kwargs):
-            executes.append(args)
-            raise processutils.ProcessExecutionError('error',
-                    stderr="Sorry, rule does not exist")
-
-        with mock.patch.object(time, 'sleep', side_effect=fake_sleep), \
-                mock.patch.object(self.driver, '_execute',
-                              side_effect=fake_execute):
-            self.assertRaises(processutils.ProcessExecutionError,
-                              self.driver._exec_ebtables, 'fake', 'fake')
-            self.assertEqual(1, len(executes))
-
-    def test_exec_ebtables_fail_once(self):
-        executes = []
-
-        def fake_sleep(interval):
-            pass
-
-        def fake_execute(*args, **kwargs):
-            executes.append(args)
-            if len(executes) == 1:
-                raise processutils.ProcessExecutionError('error',
-                        stderr=self._ebtables_race_stderr())
-            else:
-                return "", ""
-
-        with mock.patch.object(time, 'sleep', side_effect=fake_sleep), \
-                mock.patch.object(self.driver, '_execute',
-                                  side_effect=fake_execute):
-            self.driver._exec_ebtables('fake', 'fake')
-            self.assertEqual(2, len(executes))
+    @mock.patch('nova.privsep.linux_net.modify_ebtables',
+                side_effect=[
+                    processutils.ProcessExecutionError(
+                        'error',
+                        stderr=(u'Unable to update the kernel. Two possible '
+                                'causes:\n1. Multiple ebtables programs were '
+                                'executing simultaneously. The ebtables\n '
+                                'userspace tool doesn\'t by default support '
+                                'multiple ebtables programs running\n '
+                                'concurrently. The ebtables option '
+                                '--concurrent or a tool like flock can be\n '
+                                'used to support concurrent scripts that '
+                                'update the ebtables kernel tables.\n2. The '
+                                'kernel doesn\'t support a certain ebtables '
+                                'extension, consider\n recompiling your '
+                                'kernel or insmod the extension.\n.\n')),
+                    ('', '')])
+    @mock.patch('time.sleep')
+    def test_exec_ebtables_fail_once(self, mock_sleep, mock_modify_ebtables):
+        self.driver._exec_ebtables('fake', 'fake')
+        self.assertEqual(2, mock_modify_ebtables.call_count)
 
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('nova.privsep.linux_net.set_device_disabled')

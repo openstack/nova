@@ -1491,30 +1491,27 @@ def _exec_ebtables(table, rule, insert_rule=True, check_exit_code=True):
         #            other error (like a rule doesn't exist) so we have to
         #            to parse stderr.
         try:
-            cmd = ['ebtables', '--concurrent', '-t', table]
-            if insert_rule:
-                cmd.append('-I')
-            else:
-                cmd.append('-D')
-            cmd.extend(rule)
-
-            _execute(*cmd, check_exit_code=[0], run_as_root=True)
+            nova.privsep.linux_net.modify_ebtables(table, rule,
+                                                   insert_rule=insert_rule)
         except processutils.ProcessExecutionError as exc:
             # See if we can retry the error.
             if any(error in exc.stderr for error in retry_strings):
                 if count > attempts and check_exit_code:
-                    LOG.warning('%s failed. Not Retrying.', ' '.join(cmd))
+                    LOG.warning('Rule edit for %s failed. Not Retrying.',
+                                table)
                     raise
                 else:
                     # We need to sleep a bit before retrying
-                    LOG.warning("%(cmd)s failed. Sleeping %(time)s "
-                                "seconds before retry.",
-                                {'cmd': ' '.join(cmd), 'time': sleep})
+                    LOG.warning('Rule edit for %(table)s failed. '
+                                'Sleeping %(time)s seconds before retry.',
+                                {'table': table, 'time': sleep})
                     time.sleep(sleep)
             else:
                 # Not eligible for retry
                 if check_exit_code:
-                    LOG.warning('%s failed. Not Retrying.', ' '.join(cmd))
+                    LOG.warning('Rule edit for %s failed and not eligible '
+                                'for retry.',
+                                table)
                     raise
                 else:
                     return

@@ -884,7 +884,9 @@ class FlatDHCPNetworkTestCase(test.TestCase):
     @mock.patch('nova.objects.floating_ip.FloatingIPList.get_by_host')
     @mock.patch('nova.network.linux_net.iptables_manager._apply')
     @mock.patch('nova.privsep.linux_net.bind_ip')
-    def test_init_host_iptables_defer_apply(self, bind_ip, iptable_apply,
+    @mock.patch('nova.privsep.linux_net.modify_ebtables')
+    def test_init_host_iptables_defer_apply(self, modify_ebtables,
+                                            bind_ip, iptable_apply,
                                             floating_get_by_host,
                                             fixed_get_by_id):
         def get_by_id(context, fixed_ip_id, **kwargs):
@@ -1770,8 +1772,10 @@ class VlanNetworkTestCase(test.TestCase):
     @mock.patch('nova.privsep.linux_net.bind_ip')
     @mock.patch('nova.privsep.linux_net.unbind_ip')
     @mock.patch('nova.privsep.linux_net.clean_conntrack')
+    @mock.patch('nova.privsep.linux_net.modify_ebtables')
     def test_ip_association_and_allocation_of_other_project(
-            self, clean_conntrack, unbind_ip, bind_ip, net_get, fixed_get):
+            self, modify_ebtables, clean_conntrack, unbind_ip, bind_ip,
+            net_get, fixed_get):
         """Makes sure that we cannot deallocaate or disassociate
         a public IP of other project.
         """
@@ -2089,7 +2093,9 @@ class VlanNetworkTestCase(test.TestCase):
     @mock.patch('nova.objects.floating_ip.FloatingIPList.get_by_host')
     @mock.patch('nova.network.linux_net.iptables_manager._apply')
     @mock.patch('nova.privsep.linux_net.bind_ip')
-    def test_init_host_iptables_defer_apply(self, bind_ip, iptable_apply,
+    @mock.patch('nova.privsep.linux_net.modify_ebtables')
+    def test_init_host_iptables_defer_apply(self, modify_ebtables, bind_ip,
+                                            iptable_apply,
                                             floating_get_by_host,
                                             fixed_get_by_id):
         def get_by_id(context, fixed_ip_id, **kwargs):
@@ -2887,7 +2893,9 @@ class AllocateTestCase(test.TestCase):
     @mock.patch('nova.privsep.linux_net.ipv4_forwarding_check',
                 return_value=False)
     @mock.patch('nova.privsep.linux_net._enable_ipv4_forwarding_inner')
-    def test_allocate_for_instance(self, mock_forwarding_enable,
+    @mock.patch('nova.privsep.linux_net.modify_ebtables')
+    def test_allocate_for_instance(self, mock_modify_ebtables,
+                                   mock_forwarding_enable,
                                    mock_forwarding_check,
                                    mock_clean_conntrack,
                                    mock_address_command,
@@ -3133,7 +3141,10 @@ class FloatingIPTestCase(test.TestCase):
 
     @mock.patch('nova.privsep.linux_net.unbind_ip')
     @mock.patch('nova.privsep.linux_net.clean_conntrack')
-    def test_deallocation_deleted_instance(self, mock_clean_conntrack,
+    @mock.patch('nova.privsep.linux_net.modify_ebtables')
+    def test_deallocation_deleted_instance(self,
+                                           mock_modify_ebtables,
+                                           mock_clean_conntrack,
                                            mock_unbind_ip):
         self.stubs.Set(self.network, '_teardown_network_on_host',
                        lambda *args, **kwargs: None)
@@ -3156,7 +3167,10 @@ class FloatingIPTestCase(test.TestCase):
 
     @mock.patch('nova.privsep.linux_net.unbind_ip')
     @mock.patch('nova.privsep.linux_net.clean_conntrack')
-    def test_deallocation_duplicate_floating_ip(self, mock_clean_conntrack,
+    @mock.patch('nova.privsep.linux_net.modify_ebtables')
+    def test_deallocation_duplicate_floating_ip(self,
+                                                mock_modify_ebtables,
+                                                mock_clean_conntrack,
                                                 mock_unbind_ip):
         self.stubs.Set(self.network, '_teardown_network_on_host',
                        lambda *args, **kwargs: None)
