@@ -1748,7 +1748,15 @@ class API(base_api.NetworkAPI):
         # NOTE(danms): This is an inner method intended to be called
         # by other code that updates instance nwinfo. It *must* be
         # called with the refresh_cache-%(instance_uuid) lock held!
-        LOG.debug('_get_instance_nw_info()', instance=instance)
+        if force_refresh:
+            LOG.debug('Forcefully refreshing network info cache for instance',
+                      instance=instance)
+        elif refresh_vif_id:
+            LOG.debug('Refreshing network info cache for port %s',
+                      refresh_vif_id, instance=instance)
+        else:
+            LOG.debug('Building network info cache for instance',
+                      instance=instance)
         # Ensure that we have an up to date copy of the instance info cache.
         # Otherwise multiple requests could collide and cause cache
         # corruption.
