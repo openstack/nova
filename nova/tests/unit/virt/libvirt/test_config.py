@@ -3735,7 +3735,7 @@ class LibvirtConfigGuestVPMEMTest(LibvirtConfigBaseTest):
           </memory>""")
 
 
-class LibvirtConfigVideoModelsTests(LibvirtConfigBaseTest):
+class LibvirtConfigDomainCapsVideoModelsTests(LibvirtConfigBaseTest):
 
     def test_parse_video_model(self):
 
@@ -3759,7 +3759,7 @@ class LibvirtConfigVideoModelsTests(LibvirtConfigBaseTest):
         self.assertNotIn('gop', obj.models)
 
 
-class LibvirtConfigDiskBusesTests(LibvirtConfigBaseTest):
+class LibvirtConfigDomainCapsDiskBusesTests(LibvirtConfigBaseTest):
 
     def test_parse_disk_buses(self):
 
@@ -3862,6 +3862,50 @@ class LibvirtConfigDomainCapsDevicesTests(LibvirtConfigBaseTest):
             obj.disk, config.LibvirtConfigDomainCapsDiskBuses)
         self.assertIsInstance(
             obj.video, config.LibvirtConfigDomainCapsVideoModels)
+
+
+class LibvirtConfigDomainCapsOSTests(LibvirtConfigBaseTest):
+
+    def test_parse_domain_caps_os(self):
+        xml = """
+        <os supported="yes">
+          <enum name="firmware">
+            <value>efi</value>
+          </enum>
+          <loader supported="yes">
+            <value>/usr/share/edk2/ovmf/OVMF_CODE.fd</value>
+            <value>/usr/share/edk2/ovmf/OVMF_CODE.secboot.fd</value>
+            <enum name="type">
+              <value>rom</value>
+              <value>pflash</value>
+            </enum>
+            <enum name="readonly">
+              <value>yes</value>
+              <value>no</value>
+            </enum>
+            <enum name="secure">
+              <value>no</value>
+              <value>yes</value>
+            </enum>
+          </loader>
+        </os>
+        """
+
+        obj = config.LibvirtConfigDomainCapsOS()
+        obj.parse_str(xml)
+
+        self.assertTrue(obj.supported)
+        self.assertTrue(obj.loader_supported)
+        self.assertTrue(obj.uefi_autoconfig_supported)
+        self.assertEqual(
+            [
+                '/usr/share/edk2/ovmf/OVMF_CODE.fd',
+                '/usr/share/edk2/ovmf/OVMF_CODE.secboot.fd',
+            ],
+            obj.loader_paths,
+        )
+        self.assertTrue(obj.uefi_supported)
+        self.assertTrue(obj.secure_boot_supported)
 
 
 class LibvirtConfigTPMTest(LibvirtConfigBaseTest):

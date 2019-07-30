@@ -117,10 +117,12 @@ class Host(object):
         self._libvirt_proxy_classes = self._get_libvirt_proxy_classes(libvirt)
         self._libvirt_proxy = self._wrap_libvirt_proxy(libvirt)
 
-        # AMD SEV is conditional on support in the hardware, kernel,
-        # qemu, and libvirt.  This is determined on demand and
-        # memoized by the supports_amd_sev property below.
+        # A number of features are conditional on support in the hardware,
+        # kernel, QEMU, and/or libvirt. These are determined on demand and
+        # memoized by various properties below
         self._supports_amd_sev = None
+        self._supports_uefi: ty.Optional[bool] = None
+        self._supports_secure_boot: ty.Optional[bool] = None
 
         self._has_hyperthreading = None
 
@@ -801,13 +803,9 @@ class Host(object):
         _domain_caps.
 
         :returns: a nested dict of dicts which maps architectures to
-        machine types to instances of config.LibvirtConfigDomainCaps
-        representing the domain capabilities of the host for that arch
-        and machine type:
-
-        { arch:
-          { machine_type: LibvirtConfigDomainCaps }
-        }
+            machine types to instances of config.LibvirtConfigDomainCaps
+            representing the domain capabilities of the host for that arch and
+            machine type: ``{arch:  machine_type: LibvirtConfigDomainCaps}{``
         """
         if self._domain_caps:
             return self._domain_caps
@@ -1225,6 +1223,55 @@ class Host(object):
                 break
 
         return self._has_hyperthreading
+
+    @property
+    def supports_uefi(self) -> bool:
+        """Returns whether the host supports UEFI guests."""
+
+        if self._supports_uefi is not None:
+            return self._supports_uefi
+
+        # we only check the host architecture since nova doesn't support
+        # non-host architectures currently
+        arch = self.get_capabilities().host.cpu.arch
+        domain_caps = self.get_domain_capabilities()
+        for machine_type in domain_caps[arch]:
+            LOG.debug("Checking UEFI support for host arch (%s)", arch)
+            _domain_caps = domain_caps[arch][machine_type]
+            if _domain_caps.os.uefi_supported:
+                LOG.info('UEFI support detected')
+                self._supports_uefi = True
+                return True
+
+        LOG.debug('No UEFI support detected')
+        self._supports_uefi = False
+        return False
+
+    @property
+    def supports_secure_boot(self) -> bool:
+        """Determine if the host supports Secure Boot for guests."""
+
+        if self._supports_secure_boot is not None:
+            return self._supports_secure_boot
+
+        # we only check the host architecture since nova doesn't support
+        # non-host architectures currently
+        arch = self.get_capabilities().host.cpu.arch
+        domain_caps = self.get_domain_capabilities()
+        for machine_type in domain_caps[arch]:
+            LOG.debug(
+                "Checking secure boot support for host arch (%s)",
+                arch,
+            )
+            _domain_caps = domain_caps[arch][machine_type]
+            if _domain_caps.os.secure_boot_supported:
+                LOG.info('Secure Boot support detected')
+                self._supports_secure_boot = True
+                return True
+
+        LOG.debug('No Secure Boot support detected')
+        self._supports_secure_boot = False
+        return False
 
     def _kernel_supports_amd_sev(self):
         if not os.path.exists(SEV_KERNEL_PARAM_FILE):

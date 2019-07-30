@@ -1222,6 +1222,189 @@ cg /cgroup/memory cg opt1,opt2 0 0
         """
         self.assertFalse(self.host.has_hyperthreading)
 
+    @mock.patch(
+        'nova.virt.libvirt.host.libvirt.Connection.getDomainCapabilities')
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.getCapabilities')
+    def test_supports_uefi__false(self, mock_caps, mock_domcaps):
+        mock_caps.return_value = """
+        <capabilities>
+          <host>
+            <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+            <cpu>
+              <arch>x86_64</arch>
+              <vendor>Intel</vendor>
+            </cpu>
+          </host>
+          <guest>
+            <os_type>hvm</os_type>
+            <arch name='x86_64'/>
+          </guest>
+        </capabilities>
+        """
+        mock_domcaps.return_value = """
+        <domainCapabilities>
+          <machine>pc-q35-5.1</machine>
+          <arch>x86_64</arch>
+          <os supported='yes'>
+            <enum name='firmware'>
+              <value>bios</value>
+            </enum>
+            <loader supported='yes'>
+              <enum name='type'>
+                <value>rom</value>
+              </enum>
+              <enum name='readonly'>
+                <value>yes</value>
+              </enum>
+              <enum name='secure'>
+                <value>no</value>
+              </enum>
+            </loader>
+          </os>
+        </domainCapabilities>
+        """
+        self.assertFalse(self.host.supports_uefi)
+
+    @mock.patch(
+        'nova.virt.libvirt.host.libvirt.Connection.getDomainCapabilities')
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.getCapabilities')
+    def test_supports_uefi__true(self, mock_caps, mock_domcaps):
+        mock_caps.return_value = """
+        <capabilities>
+          <host>
+            <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+            <cpu>
+              <arch>x86_64</arch>
+              <vendor>Intel</vendor>
+            </cpu>
+          </host>
+          <guest>
+            <os_type>hvm</os_type>
+            <arch name='x86_64'/>
+          </guest>
+        </capabilities>
+        """
+        mock_domcaps.return_value = """
+        <domainCapabilities>
+          <machine>pc-q35-5.1</machine>
+          <arch>x86_64</arch>
+          <os supported='yes'>
+            <enum name='firmware'>
+              <value>efi</value>
+            </enum>
+            <loader supported='yes'>
+              <value>/usr/share/edk2/ovmf/OVMF_CODE.fd</value>
+              <enum name='type'>
+                <value>rom</value>
+                <value>pflash</value>
+              </enum>
+              <enum name='readonly'>
+                <value>yes</value>
+                <value>no</value>
+              </enum>
+              <enum name='secure'>
+                <value>no</value>
+              </enum>
+            </loader>
+          </os>
+        </domainCapabilities>
+        """
+        self.assertTrue(self.host.supports_uefi)
+
+    @mock.patch(
+        'nova.virt.libvirt.host.libvirt.Connection.getDomainCapabilities')
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.getCapabilities')
+    def test_supports_secure_boot__false(self, mock_caps, mock_domcaps):
+        mock_caps.return_value = """
+        <capabilities>
+          <host>
+            <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+            <cpu>
+              <arch>x86_64</arch>
+              <vendor>Intel</vendor>
+            </cpu>
+          </host>
+          <guest>
+            <os_type>hvm</os_type>
+            <arch name='x86_64'/>
+          </guest>
+        </capabilities>
+        """
+        mock_domcaps.return_value = """
+        <domainCapabilities>
+          <machine>pc-q35-5.1</machine>
+          <arch>x86_64</arch>
+          <os supported='yes'>
+            <enum name='firmware'>
+              <value>efi</value>
+            </enum>
+            <loader supported='yes'>
+              <value>/usr/share/edk2/ovmf/OVMF_CODE.fd</value>
+              <enum name='type'>
+                <value>rom</value>
+                <value>pflash</value>
+              </enum>
+              <enum name='readonly'>
+                <value>yes</value>
+                <value>no</value>
+              </enum>
+              <enum name='secure'>
+                <value>no</value>
+              </enum>
+            </loader>
+          </os>
+        </domainCapabilities>
+        """
+        self.assertFalse(self.host.supports_secure_boot)
+
+    @mock.patch(
+        'nova.virt.libvirt.host.libvirt.Connection.getDomainCapabilities')
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.getCapabilities')
+    def test_supports_secure_boot__true(self, mock_caps, mock_domcaps):
+        mock_caps.return_value = """
+        <capabilities>
+          <host>
+            <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+            <cpu>
+              <arch>x86_64</arch>
+              <vendor>Intel</vendor>
+            </cpu>
+          </host>
+          <guest>
+            <os_type>hvm</os_type>
+            <arch name='x86_64'/>
+          </guest>
+        </capabilities>
+        """
+        mock_domcaps.return_value = """
+        <domainCapabilities>
+          <machine>pc-q35-5.1</machine>
+          <arch>x86_64</arch>
+          <os supported='yes'>
+            <enum name='firmware'>
+              <value>efi</value>
+            </enum>
+            <loader supported='yes'>
+              <value>/usr/share/edk2/ovmf/OVMF_CODE.fd</value>
+              <value>/usr/share/edk2/ovmf/OVMF_CODE.secboot.fd</value>
+              <enum name='type'>
+                <value>rom</value>
+                <value>pflash</value>
+              </enum>
+              <enum name='readonly'>
+                <value>yes</value>
+                <value>no</value>
+              </enum>
+              <enum name='secure'>
+                <value>yes</value>
+                <value>no</value>
+              </enum>
+            </loader>
+          </os>
+        </domainCapabilities>
+        """
+        self.assertTrue(self.host.supports_secure_boot)
+
 
 vc = fakelibvirt.virConnect
 
@@ -1281,7 +1464,6 @@ class TestLibvirtSEVUnsupported(TestLibvirtSEV):
 </capabilities>'''
         with mock.patch.object(fakelibvirt.virConnect, 'getCapabilities',
                                return_value=fake_caps_xml):
-            self.host._set_amd_sev_support()
             self.assertFalse(self.host.supports_amd_sev)
 
 
