@@ -1798,6 +1798,7 @@ def pcidevice_online_data_migration(context, max_count):
     return IMPL.pcidevice_online_data_migration(context, max_count)
 
 
+# TODO(mriedem): Remove this in the U release.
 def service_uuids_online_data_migration(context, max_count):
     return IMPL.service_uuids_online_data_migration(context, max_count)
 

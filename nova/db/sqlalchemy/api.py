@@ -5680,6 +5680,7 @@ def purge_shadow_tables(context, before_date, status_fn=None):
     return total_deleted
 
 
+# TODO(mriedem): Remove this in the U release.
 @pick_context_manager_writer
 def service_uuids_online_data_migration(context, max_count):
     from nova.objects import service
