@@ -32,9 +32,13 @@ from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import units
 
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.virt.libvirt import utils as libvirt_utils
+
+
+CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
@@ -118,15 +122,14 @@ class RADOSClient(object):
 
 class RBDDriver(object):
 
-    def __init__(self, pool, ceph_conf, rbd_user, rbd_connect_timeout):
-        self.pool = pool
-        # NOTE(angdraug): rados.Rados fails to connect if ceph_conf is None:
-        # https://github.com/ceph/ceph/pull/1787
-        self.ceph_conf = ceph_conf or ''
-        self.rbd_user = rbd_user or None
-        self.rbd_connect_timeout = rbd_connect_timeout
+    def __init__(self):
         if rbd is None:
             raise RuntimeError(_('rbd python libraries not found'))
+
+        self.pool = CONF.libvirt.images_rbd_pool
+        self.rbd_user = CONF.libvirt.rbd_user
+        self.rbd_connect_timeout = CONF.libvirt.rbd_connect_timeout
+        self.ceph_conf = CONF.libvirt.images_rbd_ceph_conf
 
     def _connect_to_rados(self, pool=None):
         client = rados.Rados(rados_id=self.rbd_user,

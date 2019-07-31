@@ -1683,7 +1683,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
 
     def test_direct_snapshot_cleans_up_on_failures(self):
         image = self.image_class(self.INSTANCE, self.NAME)
-        test_snap = 'rbd://%s/%s/%s/snap' % (self.FSID, image.pool,
+        test_snap = 'rbd://%s/%s/%s/snap' % (self.FSID, image.driver.pool,
                                              image.rbd_name)
         with test.nested(
                 mock.patch.object(rbd_utils.RBDDriver, 'get_fsid',
@@ -1707,7 +1707,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
 
     def test_cleanup_direct_snapshot(self):
         image = self.image_class(self.INSTANCE, self.NAME)
-        test_snap = 'rbd://%s/%s/%s/snap' % (self.FSID, image.pool,
+        test_snap = 'rbd://%s/%s/%s/snap' % (self.FSID, image.driver.pool,
                                              image.rbd_name)
         with test.nested(
                 mock.patch.object(rbd_utils.RBDDriver, 'remove_snap'),
@@ -1721,12 +1721,12 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
             image.cleanup_direct_snapshot(dict(url=test_snap))
             mock_rm.assert_called_once_with(image.rbd_name, 'snap', force=True,
                                             ignore_errors=False,
-                                            pool=image.pool)
+                                            pool=image.driver.pool)
             self.assertFalse(mock_destroy.called)
 
     def test_cleanup_direct_snapshot_destroy_volume(self):
         image = self.image_class(self.INSTANCE, self.NAME)
-        test_snap = 'rbd://%s/%s/%s/snap' % (self.FSID, image.pool,
+        test_snap = 'rbd://%s/%s/%s/snap' % (self.FSID, image.driver.pool,
                                              image.rbd_name)
         with test.nested(
                 mock.patch.object(rbd_utils.RBDDriver, 'remove_snap'),
@@ -1738,9 +1738,9 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
             mock_rm.assert_called_once_with(image.rbd_name, 'snap',
                                             force=True,
                                             ignore_errors=False,
-                                            pool=image.pool)
+                                            pool=image.driver.pool)
             mock_destroy.assert_called_once_with(image.rbd_name,
-                                                 pool=image.pool)
+                                                 pool=image.driver.pool)
 
 
 class PloopTestCase(_ImageTestCase, test.NoDBTestCase):

@@ -20015,9 +20015,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             params={'vm_state': vm_states.SHELVED_OFFLOADED})
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         mock_rbd_driver = mock.Mock(spec=rbd_utils.RBDDriver)
+        mock_rbd_driver.pool = mock.sentinel.rbd_pool
         mock_rbd_imagebackend = mock.Mock(spec=imagebackend.Rbd)
         mock_rbd_imagebackend.rbd_name = mock.sentinel.rbd_name
-        mock_rbd_imagebackend.pool = mock.sentinel.rbd_pool
         # This is logged so we can't use a sentinel
         mock_rbd_imagebackend.path = 'rbd:pool/vol_disk'
         mock_rbd_imagebackend.driver = mock_rbd_driver

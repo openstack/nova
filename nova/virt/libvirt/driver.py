@@ -1239,14 +1239,6 @@ class LibvirtDriver(driver.ComputeDriver):
             ret.append(int(obj.get('unit', 0)))
         return max(ret)
 
-    @staticmethod
-    def _get_rbd_driver():
-        return rbd_utils.RBDDriver(
-                pool=CONF.libvirt.images_rbd_pool,
-                ceph_conf=CONF.libvirt.images_rbd_ceph_conf,
-                rbd_user=CONF.libvirt.rbd_user,
-                rbd_connect_timeout=CONF.libvirt.rbd_connect_timeout)
-
     def _cleanup_rbd(self, instance):
         # NOTE(nic): On revert_resize, the cleanup steps for the root
         # volume are handled with an "rbd snap rollback" command,
@@ -1257,7 +1249,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                       disk.endswith('disk.local'))
         else:
             filter_fn = lambda disk: disk.startswith(instance.uuid)
-        LibvirtDriver._get_rbd_driver().cleanup_volumes(filter_fn)
+        rbd_utils.RBDDriver().cleanup_volumes(filter_fn)
 
     def _cleanup_lvm(self, instance, block_device_info):
         """Delete all LVM disks for given instance object."""
@@ -3197,7 +3189,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if CONF.libvirt.images_type == 'rbd':
             filter_fn = lambda disk: (disk.startswith(instance.uuid) and
                                       disk.endswith('.rescue'))
-            LibvirtDriver._get_rbd_driver().cleanup_volumes(filter_fn)
+            rbd_utils.RBDDriver().cleanup_volumes(filter_fn)
 
     def poll_rebooting_instances(self, timeout, instances):
         pass
@@ -5866,7 +5858,7 @@ class LibvirtDriver(driver.ComputeDriver):
             info = lvm.get_volume_group_info(
                                CONF.libvirt.images_volume_group)
         elif CONF.libvirt.images_type == 'rbd':
-            info = LibvirtDriver._get_rbd_driver().get_pool_info()
+            info = rbd_utils.RBDDriver().get_pool_info()
         else:
             info = libvirt_utils.get_fs_info(CONF.instances_path)
 

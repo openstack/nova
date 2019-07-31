@@ -60,6 +60,12 @@ class RbdTestCase(test.NoDBTestCase):
     def setUp(self):
         super(RbdTestCase, self).setUp()
 
+        self.rbd_pool = 'rbd'
+        self.rbd_connect_timeout = 5
+        self.flags(images_rbd_pool=self.rbd_pool, group='libvirt')
+        self.flags(rbd_connect_timeout=self.rbd_connect_timeout,
+                    group='libvirt')
+
         rados_patcher = mock.patch.object(rbd_utils, 'rados')
         self.mock_rados = rados_patcher.start()
         self.addCleanup(rados_patcher.stop)
@@ -82,10 +88,7 @@ class RbdTestCase(test.NoDBTestCase):
         self.mock_rbd.ImageBusy = FakeException
         self.mock_rbd.ImageHasSnapshots = FakeException
 
-        self.rbd_pool = 'rbd'
-        self.rbd_connect_timeout = 5
-        self.driver = rbd_utils.RBDDriver(self.rbd_pool, None, None,
-                                          self.rbd_connect_timeout)
+        self.driver = rbd_utils.RBDDriver()
 
         self.volume_name = u'volume-00000001'
         self.snap_name = u'test-snap'
