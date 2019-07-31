@@ -240,7 +240,7 @@ class SchedulerReportClient(object):
         """Create the HTTP session accessing the placement service."""
         # Flush provider tree and associations so we start from a clean slate.
         self.clear_provider_cache(init=True)
-        client = self._adapter or utils.get_ksa_adapter('placement')
+        client = self._adapter or utils.get_sdk_adapter('placement')
         # Set accept header on every request to ensure we notify placement
         # service of our response body media type preferences.
         client.additional_headers = {'accept': 'application/json'}

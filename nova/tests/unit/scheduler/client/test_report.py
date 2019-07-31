@@ -152,27 +152,29 @@ class SafeConnectedTestCase(test.NoDBTestCase):
 
 
 class TestConstructor(test.NoDBTestCase):
-    @mock.patch('keystoneauth1.loading.load_session_from_conf_options')
-    @mock.patch('keystoneauth1.loading.load_auth_from_conf_options')
-    def test_constructor(self, load_auth_mock, load_sess_mock):
+    def setUp(self):
+        super(TestConstructor, self).setUp()
+        ksafx = self.useFixture(nova_fixtures.KSAFixture())
+        self.load_auth_mock = ksafx.mock_load_auth
+        self.load_sess_mock = ksafx.mock_load_sess
+
+    def test_constructor(self):
         client = report.SchedulerReportClient()
 
-        load_auth_mock.assert_called_once_with(CONF, 'placement')
-        load_sess_mock.assert_called_once_with(CONF, 'placement',
-                                              auth=load_auth_mock.return_value)
+        self.load_auth_mock.assert_called_once_with(CONF, 'placement')
+        self.load_sess_mock.assert_called_once_with(
+            CONF, 'placement', auth=self.load_auth_mock.return_value)
         self.assertEqual(['internal', 'public'], client._client.interface)
         self.assertEqual({'accept': 'application/json'},
                          client._client.additional_headers)
 
-    @mock.patch('keystoneauth1.loading.load_session_from_conf_options')
-    @mock.patch('keystoneauth1.loading.load_auth_from_conf_options')
-    def test_constructor_admin_interface(self, load_auth_mock, load_sess_mock):
+    def test_constructor_admin_interface(self):
         self.flags(valid_interfaces='admin', group='placement')
         client = report.SchedulerReportClient()
 
-        load_auth_mock.assert_called_once_with(CONF, 'placement')
-        load_sess_mock.assert_called_once_with(CONF, 'placement',
-                                              auth=load_auth_mock.return_value)
+        self.load_auth_mock.assert_called_once_with(CONF, 'placement')
+        self.load_sess_mock.assert_called_once_with(
+            CONF, 'placement', auth=self.load_auth_mock.return_value)
         self.assertEqual(['admin'], client._client.interface)
         self.assertEqual({'accept': 'application/json'},
                          client._client.additional_headers)
@@ -183,6 +185,7 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
     def setUp(self):
         super(SchedulerReportClientTestCase, self).setUp()
         self.context = context.get_admin_context()
+        self.useFixture(nova_fixtures.KSAFixture())
         self.ks_adap_mock = mock.Mock()
         self.compute_node = objects.ComputeNode(
             uuid=uuids.compute_node,
@@ -195,12 +198,7 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
             disk_allocation_ratio=1.0,
         )
 
-        with test.nested(
-                mock.patch('keystoneauth1.adapter.Adapter',
-                           return_value=self.ks_adap_mock),
-                mock.patch('keystoneauth1.loading.load_auth_from_conf_options')
-        ):
-            self.client = report.SchedulerReportClient()
+        self.client = report.SchedulerReportClient(self.ks_adap_mock)
 
     def _init_provider_tree(self, generation_override=None,
                             resources_override=None):
