@@ -259,3 +259,10 @@ def modify_ebtables(table, rule, insert_rule=True):
     cmd.extend(rule)
 
     processutils.execute(*cmd, check_exit_code=[0])
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def add_vlan(bridge_interface, interface, vlan_num):
+    processutils.execute('ip', 'link', 'add', 'link', bridge_interface,
+                         'name', interface, 'type', 'vlan',
+                         'id', vlan_num, check_exit_code=[0, 2, 254])

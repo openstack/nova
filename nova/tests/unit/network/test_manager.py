@@ -2894,7 +2894,9 @@ class AllocateTestCase(test.TestCase):
                 return_value=False)
     @mock.patch('nova.privsep.linux_net._enable_ipv4_forwarding_inner')
     @mock.patch('nova.privsep.linux_net.modify_ebtables')
-    def test_allocate_for_instance(self, mock_modify_ebtables,
+    @mock.patch('nova.privsep.linux_net.add_vlan')
+    def test_allocate_for_instance(self, mock_add_vlan,
+                                   mock_modify_ebtables,
                                    mock_forwarding_enable,
                                    mock_forwarding_check,
                                    mock_clean_conntrack,
@@ -2977,7 +2979,9 @@ class AllocateTestCase(test.TestCase):
     @mock.patch('nova.privsep.linux_net.ipv4_forwarding_check',
                 return_value=False)
     @mock.patch('nova.privsep.linux_net._enable_ipv4_forwarding_inner')
-    def test_allocate_for_instance_with_mac(self, mock_forwarding_enable,
+    @mock.patch('nova.privsep.linux_net.add_vlan')
+    def test_allocate_for_instance_with_mac(self, mock_add_vlan,
+                                            mock_forwarding_enable,
                                             mock_forwarding_check,
                                             mock_address_command,
                                             mock_change_ip,

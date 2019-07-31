@@ -1317,10 +1317,8 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             interface = 'vlan%s' % vlan_num
         if not nova.privsep.linux_net.device_exists(interface):
             LOG.debug('Starting VLAN interface %s', interface)
-            _execute('ip', 'link', 'add', 'link', bridge_interface,
-                     'name', interface, 'type', 'vlan',
-                     'id', vlan_num, run_as_root=True,
-                     check_exit_code=[0, 2, 254])
+            nova.privsep.linux_net.add_vlan(bridge_interface, interface,
+                                            vlan_num)
             # (danwent) the bridge will inherit this address, so we want to
             # make sure it is the value set from the NetworkManager
             if mac_address:

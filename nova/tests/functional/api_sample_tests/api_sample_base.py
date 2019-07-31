@@ -143,6 +143,7 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
                       fake_true)
         self.stub_out('nova.privsep.linux_net._enable_ipv4_forwarding_inner',
                       fake_noop)
+        self.stub_out('nova.privsep.linux_net.add_vlan', fake_noop)
 
         if self.availability_zones:
             self.useFixture(
