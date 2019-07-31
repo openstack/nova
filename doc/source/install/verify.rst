@@ -119,11 +119,7 @@ Verify operation of the Compute service.
       | Result: Success                                                    |
       | Details: None                                                      |
       +--------------------------------------------------------------------+
-      | Check: Request Spec Migration                                      |
-      | Result: Success                                                    |
-      | Details: None                                                      |
-      +--------------------------------------------------------------------+
-      | Check: Console Auths                                               |
+      | Check: Cinder API                                                  |
       | Result: Success                                                    |
       | Details: None                                                      |
       +--------------------------------------------------------------------+

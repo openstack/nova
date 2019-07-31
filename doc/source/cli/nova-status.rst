@@ -138,6 +138,7 @@ Upgrade
     If ``[cinder]/auth_type`` is not configured this is a no-op check.
   * The "**nova-consoleauth** service" upgrade check was removed since the
     service was removed in Train.
+  * The ``Request Spec Migration`` check was removed.
 
 See Also
 ========

@@ -327,65 +327,6 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
                 services.c.deleted == 0,
                 services.c.forced_down == false())).scalar()
 
-    def _check_request_spec_migration(self):
-        """Checks to make sure request spec migrations are complete.
-
-        Iterates all cells checking to see that non-deleted instances have
-        a matching request spec in the API database. This is necessary in order
-        to drop the migrate_instances_add_request_spec online data migration
-        and accompanying compatibility code found through nova-api and
-        nova-conductor.
-        """
-        meta = MetaData(bind=db_session.get_api_engine())
-        mappings = self._get_cell_mappings()
-
-        if not mappings:
-            # There are no cell mappings so we can't determine this, just
-            # return a warning. The cellsv2 check would have already failed
-            # on this.
-            msg = (_('Unable to determine request spec migrations without '
-                     'cell mappings.'))
-            return upgradecheck.Result(upgradecheck.Code.WARNING, msg)
-
-        request_specs = Table('request_specs', meta, autoload=True)
-        ctxt = nova_context.get_admin_context()
-        incomplete_cells = []  # list of cell mapping uuids
-        for mapping in mappings:
-            with nova_context.target_cell(ctxt, mapping) as cctxt:
-                # Get all instance uuids for non-deleted instances in this
-                # cell.
-                meta = MetaData(bind=db_session.get_engine(context=cctxt))
-                instances = Table('instances', meta, autoload=True)
-                instance_records = (
-                    select([instances.c.uuid]).select_from(instances).where(
-                        instances.c.deleted == 0
-                    ).execute().fetchall())
-                # For each instance in the list, verify that it has a matching
-                # request spec in the API DB.
-                for inst in instance_records:
-                    spec_id = (
-                        select([request_specs.c.id]).select_from(
-                            request_specs).where(
-                            request_specs.c.instance_uuid == inst['uuid']
-                        ).execute().scalar())
-                    if spec_id is None:
-                        # This cell does not have all of its instances
-                        # migrated for request specs so track it and move on.
-                        incomplete_cells.append(mapping.uuid)
-                        break
-
-        # It's a failure if there are any unmigrated instances at this point
-        # because we are planning to drop the online data migration routine and
-        # compatibility code in Stein.
-        if incomplete_cells:
-            msg = (_("The following cells have instances which do not have "
-                     "matching request_specs in the API database: %s Run "
-                     "'nova-manage db online_data_migrations' on each cell "
-                     "to create the missing request specs.") %
-                   ', '.join(incomplete_cells))
-            return upgradecheck.Result(upgradecheck.Code.FAILURE, msg)
-        return upgradecheck.Result(upgradecheck.Code.SUCCESS)
-
     def _check_cinder(self):
         """Checks to see that the cinder API is available at a given minimum
         microversion.
@@ -428,8 +369,6 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         (_('Placement API'), _check_placement),
         # Added in Rocky (but also useful going back to Pike)
         (_('Ironic Flavor Migration'), _check_ironic_flavor_migration),
-        # Added in Rocky
-        (_('Request Spec Migration'), _check_request_spec_migration),
         # Added in Train
         (_('Cinder API'), _check_cinder),
     )
