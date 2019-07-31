@@ -347,3 +347,24 @@ class CyborgTestCase(test.NoDBTestCase):
         mock_cyborg_get.assert_called_once_with(
             self.client.ARQ_URL, params=query)
         self.assertEqual(ret_arqs, [bound_arqs[0]])
+
+    @mock.patch('nova.accelerator.cyborg._CyborgClient._call_cyborg')
+    def test_delete_arqs_for_instance(self, mock_call_cyborg):
+        # Happy path
+        mock_call_cyborg.return_value = ('Some Value', None)
+        instance_uuid = 'edbba496-3cc8-4256-94ca-dfe3413348eb'
+        self.client.delete_arqs_for_instance(instance_uuid)
+        mock_call_cyborg.assert_called_once_with(mock.ANY,
+            self.client.ARQ_URL, params={'instance': instance_uuid})
+
+    @mock.patch('nova.accelerator.cyborg._CyborgClient._call_cyborg')
+    def test_delete_arqs_for_instance_exception(self, mock_call_cyborg):
+        # If Cyborg returns invalid response, raise exception.
+        err_msg = 'Some error'
+        mock_call_cyborg.return_value = (None, err_msg)
+        instance_uuid = 'edbba496-3cc8-4256-94ca-dfe3413348eb'
+        exc = self.assertRaises(exception.AcceleratorRequestOpFailed,
+            self.client.delete_arqs_for_instance, instance_uuid)
+        expected_msg = ('Failed to delete accelerator requests: ' +
+                        err_msg + ' Instance ' + instance_uuid)
+        self.assertEqual(expected_msg, exc.format_message())

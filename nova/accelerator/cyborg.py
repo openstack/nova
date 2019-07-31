@@ -263,3 +263,18 @@ class _CyborgClient(object):
             arqs = [arq for arq in arqs if
                     arq['state'] in ['Bound', 'BindFailed', 'Deleting']]
         return arqs
+
+    def delete_arqs_for_instance(self, instance_uuid):
+        """Delete ARQs for instance, after unbinding if needed.
+
+           :param instance_uuid: Instance UUID
+           :raises: AcceleratorRequestOpFailed
+        """
+        # Unbind and delete the ARQs
+        params = {"instance": instance_uuid}
+        resp, err_msg = self._call_cyborg(self._client.delete,
+            self.ARQ_URL, params=params)
+        if err_msg:
+            msg = err_msg + _(' Instance %s') % instance_uuid
+            raise exception.AcceleratorRequestOpFailed(
+                op=_('delete'), msg=msg)

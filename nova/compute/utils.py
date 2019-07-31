@@ -27,6 +27,7 @@ from oslo_serialization import jsonutils
 from oslo_utils import excutils
 import six
 
+from nova.accelerator import cyborg
 from nova import block_device
 from nova.compute import power_state
 from nova.compute import task_states
@@ -1548,3 +1549,18 @@ def update_pci_request_spec_with_allocated_interface_name(
 
             for spec in pci_request.spec:
                 spec['parent_ifname'] = rp_name_pieces[2]
+
+
+def delete_arqs_if_needed(context, instance):
+    """Delete Cyborg ARQs for the instance."""
+    dp_name = instance.flavor.extra_specs.get('accel:device_profile')
+    if dp_name is None:
+        return
+    cyclient = cyborg.get_client(context)
+    LOG.debug('Calling Cyborg to delete ARQs for instance %(instance)s',
+              {'instance': instance.uuid})
+    try:
+        cyclient.delete_arqs_for_instance(instance.uuid)
+    except exception.AcceleratorRequestOpFailed as e:
+        LOG.exception('Failed to delete accelerator requests for '
+                      'instance %s. Exception: %s', instance.uuid, e)

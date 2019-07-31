@@ -595,6 +595,7 @@ class ComputeTaskManager(base.Base):
             legacy_request_spec)
         self._cleanup_allocated_networks(
             context, instance, requested_networks)
+        compute_utils.delete_arqs_if_needed(context, instance)
 
     # NOTE(danms): This is never cell-targeted because it is only used for
     # n-cpu reschedules which go to the cell conductor and thus are always
