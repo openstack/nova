@@ -40,6 +40,7 @@ from nova import exception
 from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit.objects import test_objects
 from nova.tests.unit import utils as test_utils
 from nova import utils
@@ -1207,28 +1208,24 @@ class GetKSAAdapterTestCase(test.NoDBTestCase):
         self.auth = mock.create_autospec(ks_identity.BaseIdentityPlugin,
                                          instance=True)
 
-        load_sess_p = mock.patch(
-            'keystoneauth1.loading.load_session_from_conf_options')
-        self.addCleanup(load_sess_p.stop)
-        self.load_sess = load_sess_p.start()
-        self.load_sess.return_value = self.sess
-
         load_adap_p = mock.patch(
             'keystoneauth1.loading.load_adapter_from_conf_options')
         self.addCleanup(load_adap_p.stop)
         self.load_adap = load_adap_p.start()
 
-        load_auth_p = mock.patch(
-            'keystoneauth1.loading.load_auth_from_conf_options')
-        self.addCleanup(load_auth_p.stop)
-        self.load_auth = load_auth_p.start()
-        self.load_auth.return_value = self.auth
+        ksa_fixture = self.useFixture(nova_fixtures.KSAFixture())
+        self.mock_ksa_load_auth = ksa_fixture.mock_load_auth
+        self.mock_ksa_load_sess = ksa_fixture.mock_load_sess
+        self.mock_ksa_session = ksa_fixture.mock_session
+
+        self.mock_ksa_load_auth.return_value = self.auth
+        self.mock_ksa_load_sess.return_value = self.sess
 
     def test_bogus_service_type(self):
         self.assertRaises(exception.ConfGroupForServiceTypeNotFound,
                           utils.get_ksa_adapter, 'bogus')
-        self.load_auth.assert_not_called()
-        self.load_sess.assert_not_called()
+        self.mock_ksa_load_auth.assert_not_called()
+        self.mock_ksa_load_sess.assert_not_called()
         self.load_adap.assert_not_called()
 
     def test_all_params(self):
@@ -1238,9 +1235,9 @@ class GetKSAAdapterTestCase(test.NoDBTestCase):
         # Returned the result of load_adapter_from_conf_options
         self.assertEqual(self.load_adap.return_value, ret)
         # Because we supplied ksa_auth, load_auth* not called
-        self.load_auth.assert_not_called()
+        self.mock_ksa_load_auth.assert_not_called()
         # Ditto ksa_session/load_session*
-        self.load_sess.assert_not_called()
+        self.mock_ksa_load_sess.assert_not_called()
         # load_adapter* called with what we passed in (and the right group)
         self.load_adap.assert_called_once_with(
             utils.CONF, 'glance', session='sess', auth='auth',
@@ -1252,9 +1249,9 @@ class GetKSAAdapterTestCase(test.NoDBTestCase):
         # Returned the result of load_adapter_from_conf_options
         self.assertEqual(self.load_adap.return_value, ret)
         # Because ksa_auth found in ksa_session, load_auth* not called
-        self.load_auth.assert_not_called()
+        self.mock_ksa_load_auth.assert_not_called()
         # Because we supplied ksa_session, load_session* not called
-        self.load_sess.assert_not_called()
+        self.mock_ksa_load_sess.assert_not_called()
         # load_adapter* called with the auth from the session
         self.load_adap.assert_called_once_with(
             utils.CONF, 'ironic', session=self.sess, auth='auth',
@@ -1265,10 +1262,10 @@ class GetKSAAdapterTestCase(test.NoDBTestCase):
         # Returned the result of load_adapter_from_conf_options
         self.assertEqual(self.load_adap.return_value, ret)
         # Had to load the auth
-        self.load_auth.assert_called_once_with(utils.CONF, 'cinder')
+        self.mock_ksa_load_auth.assert_called_once_with(utils.CONF, 'cinder')
         # Had to load the session, passed in the loaded auth
-        self.load_sess.assert_called_once_with(utils.CONF, 'cinder',
-                                               auth=self.auth)
+        self.mock_ksa_load_sess.assert_called_once_with(utils.CONF, 'cinder',
+                                                        auth=self.auth)
         # load_adapter* called with the loaded auth & session
         self.load_adap.assert_called_once_with(
             utils.CONF, 'cinder', session=self.sess, auth=self.auth,
@@ -1443,3 +1440,159 @@ class TestResourceClassNormalize(test.NoDBTestCase):
         """
         name = u'Fu\xdfball'
         self.assertEqual(u'CUSTOM_FU_BALL', utils.normalize_rc_name(name))
+
+
+class TestGetConfGroup(test.NoDBTestCase):
+    """Tests for nova.utils._get_conf_group"""
+    @mock.patch('nova.utils.CONF')
+    @mock.patch('nova.utils._SERVICE_TYPES.get_project_name')
+    def test__get_conf_group(self, mock_get_project_name, mock_conf):
+        test_conf_grp = 'test_confgrp'
+        test_service_type = 'test_service_type'
+        mock_get_project_name.return_value = test_conf_grp
+
+        # happy path
+        mock_conf.test_confgrp = None
+        actual_conf_grp = utils._get_conf_group(test_service_type)
+        self.assertEqual(test_conf_grp, actual_conf_grp)
+        mock_get_project_name.assert_called_once_with(test_service_type)
+
+        # service type as the conf group
+        del mock_conf.test_confgrp
+        mock_conf.test_service_type = None
+        actual_conf_grp = utils._get_conf_group(test_service_type)
+        self.assertEqual(test_service_type, actual_conf_grp)
+
+    @mock.patch('nova.utils._SERVICE_TYPES.get_project_name')
+    def test__get_conf_group_fail(self, mock_get_project_name):
+        test_service_type = 'test_service_type'
+
+        # not confgrp
+        mock_get_project_name.return_value = None
+        self.assertRaises(exception.ConfGroupForServiceTypeNotFound,
+                          utils._get_conf_group, None)
+
+        # not hasattr
+        mock_get_project_name.return_value = 'test_fail'
+        self.assertRaises(exception.ConfGroupForServiceTypeNotFound,
+                          utils._get_conf_group, test_service_type)
+
+
+class TestGetAuthAndSession(test.NoDBTestCase):
+    """Tests for nova.utils._get_auth_and_session"""
+    def setUp(self):
+        super(TestGetAuthAndSession, self).setUp()
+
+        self.test_auth = 'test_auth'
+        self.test_session = 'test_session'
+        self.test_session_auth = 'test_session_auth'
+        self.test_confgrp = 'test_confgrp'
+        self.mock_session = mock.Mock()
+        self.mock_session.auth = self.test_session_auth
+
+    @mock.patch('nova.utils.ks_loading.load_auth_from_conf_options')
+    @mock.patch('nova.utils.ks_loading.load_session_from_conf_options')
+    def test_auth_and_session(self, mock_load_session, mock_load_auth):
+        # yes auth, yes session
+        actual = utils._get_auth_and_session(self.test_confgrp,
+                                             ksa_auth=self.test_auth,
+                                             ksa_session=self.test_session)
+        self.assertEqual(actual, (self.test_auth, self.test_session))
+        mock_load_session.assert_not_called()
+        mock_load_auth.assert_not_called()
+
+    @mock.patch('nova.utils.ks_loading.load_auth_from_conf_options')
+    @mock.patch('nova.utils.ks_loading.load_session_from_conf_options')
+    @mock.patch('nova.utils.CONF')
+    def test_no_session(self, mock_CONF, mock_load_session, mock_load_auth):
+        # yes auth, no session
+        mock_load_session.return_value = self.test_session
+
+        actual = utils._get_auth_and_session(self.test_confgrp,
+                                             ksa_auth=self.test_auth,
+                                             ksa_session=None)
+
+        self.assertEqual(actual, (self.test_auth, self.test_session))
+        mock_load_session.assert_called_once_with(mock_CONF, self.test_confgrp,
+                                                  auth=self.test_auth)
+        mock_load_auth.assert_not_called()
+
+    @mock.patch('nova.utils.ks_loading.load_auth_from_conf_options')
+    @mock.patch('nova.utils.ks_loading.load_session_from_conf_options')
+    def test_no_auth(self, mock_load_session, mock_load_auth):
+        # no auth, yes session, yes session.auth
+        actual = utils._get_auth_and_session(self.test_confgrp, ksa_auth=None,
+                                             ksa_session=self.mock_session)
+        self.assertEqual(actual, (self.test_session_auth, self.mock_session))
+        mock_load_session.assert_not_called()
+        mock_load_auth.assert_not_called()
+
+    @mock.patch('nova.utils.ks_loading.load_auth_from_conf_options')
+    @mock.patch('nova.utils.ks_loading.load_session_from_conf_options')
+    @mock.patch('nova.utils.CONF')
+    def test_no_auth_no_sauth(self, mock_CONF, mock_load_session,
+                              mock_load_auth):
+        # no auth, yes session, no session.auth
+        mock_load_auth.return_value = self.test_auth
+        self.mock_session.auth = None
+        actual = utils._get_auth_and_session(self.test_confgrp, ksa_auth=None,
+                                             ksa_session=self.mock_session)
+        self.assertEqual(actual, (self.test_auth, self.mock_session))
+        mock_load_session.assert_not_called()
+        mock_load_auth.assert_called_once_with(mock_CONF, self.test_confgrp)
+
+    @mock.patch('nova.utils.ks_loading.load_auth_from_conf_options')
+    @mock.patch('nova.utils.ks_loading.load_session_from_conf_options')
+    @mock.patch('nova.utils.CONF')
+    def test__get_auth_and_session(self, mock_CONF, mock_load_session,
+                                   mock_load_auth):
+        # no auth, no session
+        mock_load_auth.return_value = self.test_auth
+        mock_load_session.return_value = self.test_session
+        actual = utils._get_auth_and_session(self.test_confgrp, ksa_auth=None,
+                                             ksa_session=None)
+        self.assertEqual(actual, (self.test_auth, self.test_session))
+        mock_load_session.assert_called_once_with(mock_CONF, self.test_confgrp,
+                                                  auth=self.test_auth)
+        mock_load_auth.assert_called_once_with(mock_CONF, self.test_confgrp)
+
+
+class TestGetSDKAdapter(test.NoDBTestCase):
+    """Tests for nova.utils.get_sdk_adapter"""
+    @mock.patch('nova.utils._get_conf_group')
+    @mock.patch('nova.utils._get_auth_and_session')
+    @mock.patch('nova.utils.connection.Connection')
+    @mock.patch('nova.utils.CONF')
+    def test_get_sdk_adapter(self, mock_conf, mock_connection,
+                             mock_get_auth_sess, mock_get_confgrp):
+        service_type = 'test_service'
+        mock_conn = mock.Mock()
+        mock_proxy = mock.Mock()
+        setattr(mock_conn, service_type, mock_proxy)
+        mock_connection.return_value = mock_conn
+        mock_session = mock.Mock()
+        mock_get_auth_sess.return_value = (None, mock_session)
+        mock_get_confgrp.return_value = mock_confgrp = mock.Mock()
+
+        actual = utils.get_sdk_adapter(service_type)
+
+        self.assertEqual(actual, mock_proxy)
+        mock_get_confgrp.assert_called_once_with(service_type)
+        mock_get_auth_sess.assert_called_once_with(mock_confgrp)
+        mock_connection.assert_called_once_with(session=mock_session,
+                                                oslo_conf=mock_conf)
+
+    @mock.patch('nova.utils._get_conf_group')
+    @mock.patch('nova.utils._get_auth_and_session')
+    @mock.patch('nova.utils.connection.Connection')
+    def test_get_sdk_adapter_fail(self, mock_connection, mock_get_auth_sess,
+                                  mock_get_confgrp):
+        service_type = 'test_service'
+        mock_get_confgrp.side_effect = \
+            exception.ConfGroupForServiceTypeNotFound(stype=service_type)
+
+        self.assertRaises(exception.ConfGroupForServiceTypeNotFound,
+                          utils.get_sdk_adapter, service_type)
+        mock_get_confgrp.assert_called_once_with(service_type)
+        mock_connection.assert_not_called()
+        mock_get_auth_sess.assert_not_called()

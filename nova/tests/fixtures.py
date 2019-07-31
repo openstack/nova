@@ -2106,3 +2106,28 @@ class AvailabilityZoneFixture(fixtures.Fixture):
         self.useFixture(fixtures.MonkeyPatch(
             'nova.availability_zones.get_instance_availability_zone',
             fake_get_instance_availability_zone))
+
+
+class KSAFixture(fixtures.Fixture):
+    """Lets us initialize an openstack.connection.Connection by stubbing the
+    auth plugin.
+    """
+    def setUp(self):
+        super(KSAFixture, self).setUp()
+        self.mock_load_auth = self.useFixture(fixtures.MockPatch(
+            'keystoneauth1.loading.load_auth_from_conf_options')).mock
+        self.mock_load_sess = self.useFixture(fixtures.MockPatch(
+            'keystoneauth1.loading.load_session_from_conf_options')).mock
+        # For convenience, an attribute for the "Session" itself
+        self.mock_session = self.mock_load_sess.return_value
+
+
+class OpenStackSDKFixture(fixtures.Fixture):
+    # This satisfies tests that happen to run through get_sdk_adapter but don't
+    # care about the adapter itself (default mocks are fine).
+    # TODO(efried): Get rid of this and use fixtures from openstacksdk once
+    # https://storyboard.openstack.org/#!/story/2005475 is resolved.
+    def setUp(self):
+        super(OpenStackSDKFixture, self).setUp()
+        self.useFixture(fixtures.MockPatch(
+            'keystoneauth1.adapter.Adapter.get_api_major_version'))
