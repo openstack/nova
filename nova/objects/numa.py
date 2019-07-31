@@ -17,7 +17,7 @@ from oslo_utils import versionutils
 
 from nova import exception
 from nova.objects import base
-from nova.objects import fields
+from nova.objects import fields as obj_fields
 from nova.virt import hardware
 
 
@@ -47,16 +47,16 @@ class NUMACell(base.NovaObject):
     VERSION = '1.3'
 
     fields = {
-        'id': fields.IntegerField(read_only=True),
-        'cpuset': fields.SetOfIntegersField(),
-        'memory': fields.IntegerField(),
-        'cpu_usage': fields.IntegerField(default=0),
-        'memory_usage': fields.IntegerField(default=0),
-        'pinned_cpus': fields.SetOfIntegersField(),
-        'siblings': fields.ListOfSetsOfIntegersField(),
-        'mempages': fields.ListOfObjectsField('NUMAPagesTopology'),
-        'network_metadata': fields.ObjectField('NetworkMetadata'),
-        }
+        'id': obj_fields.IntegerField(read_only=True),
+        'cpuset': obj_fields.SetOfIntegersField(),
+        'memory': obj_fields.IntegerField(),
+        'cpu_usage': obj_fields.IntegerField(default=0),
+        'memory_usage': obj_fields.IntegerField(default=0),
+        'pinned_cpus': obj_fields.SetOfIntegersField(),
+        'siblings': obj_fields.ListOfSetsOfIntegersField(),
+        'mempages': obj_fields.ListOfObjectsField('NUMAPagesTopology'),
+        'network_metadata': obj_fields.ObjectField('NetworkMetadata'),
+    }
 
     def obj_make_compatible(self, primitive, target_version):
         super(NUMACell, self).obj_make_compatible(primitive, target_version)
@@ -165,10 +165,10 @@ class NUMAPagesTopology(base.NovaObject):
     VERSION = '1.1'
 
     fields = {
-        'size_kb': fields.IntegerField(),
-        'total': fields.IntegerField(),
-        'used': fields.IntegerField(default=0),
-        'reserved': fields.IntegerField(default=0),
+        'size_kb': obj_fields.IntegerField(),
+        'total': obj_fields.IntegerField(),
+        'used': obj_fields.IntegerField(default=0),
+        'reserved': obj_fields.IntegerField(default=0),
         }
 
     def obj_make_compatible(self, primitive, target_version):
@@ -212,7 +212,7 @@ class NUMATopology(base.NovaObject):
     VERSION = '1.2'
 
     fields = {
-        'cells': fields.ListOfObjectsField('NUMACell'),
+        'cells': obj_fields.ListOfObjectsField('NUMACell'),
     }
 
     def __eq__(self, other):
@@ -268,9 +268,9 @@ class NUMATopologyLimits(base.NovaObject):
     VERSION = '1.1'
 
     fields = {
-        'cpu_allocation_ratio': fields.FloatField(),
-        'ram_allocation_ratio': fields.FloatField(),
-        'network_metadata': fields.ObjectField('NetworkMetadata'),
+        'cpu_allocation_ratio': obj_fields.FloatField(),
+        'ram_allocation_ratio': obj_fields.FloatField(),
+        'network_metadata': obj_fields.ObjectField('NetworkMetadata'),
     }
 
     def obj_make_compatible(self, primitive, target_version):
