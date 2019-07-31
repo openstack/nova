@@ -2815,8 +2815,8 @@ class TestUpdateUsageFromMigration(test.NoDBTestCase):
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_get_instance_type')
     def test_unsupported_move_type(self, get_mock):
-        rt = resource_tracker.ResourceTracker(mock.sentinel.virt_driver,
-                                              _HOSTNAME)
+        rt = resource_tracker.ResourceTracker(_HOSTNAME,
+                                              mock.sentinel.virt_driver)
         migration = objects.Migration(migration_type='live-migration')
         # For same-node migrations, the RT's _get_instance_type() method is
         # called if there is a migration that is trackable. Here, we want to
