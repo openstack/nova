@@ -7765,3 +7765,89 @@ class PortResourceRequestReSchedulingTest(
         updated_port = self.neutron.show_port(port['id'])['port']
         binding_profile = neutronapi.get_binding_profile(updated_port)
         self.assertNotIn('allocation', binding_profile)
+
+
+class AcceleratorServerBase(integrated_helpers.ProviderUsageBaseTestCase):
+
+    compute_driver = 'fake.SmallFakeDriver'
+
+    def setUp(self):
+        super(AcceleratorServerBase, self).setUp()
+        self.cyborg = self.useFixture(nova_fixtures.CyborgFixture())
+        # dict of form {$compute_rp_uuid: $device_rp_uuid}
+        self.device_rp_map = {}
+        # self.NUM_HOSTS should be set up by derived classes
+        if not hasattr(self, 'NUM_HOSTS'):
+            self.NUM_HOSTS = 1
+        self._setup_compute_nodes_and_device_rps()
+
+    def _setup_compute_nodes_and_device_rps(self):
+        for i in range(self.NUM_HOSTS):
+            self._start_compute(host='accel_host' + str(i))
+        self.compute_rp_uuids = [
+           rp['uuid'] for rp in self._get_all_providers()
+           if rp['uuid'] == rp['root_provider_uuid']]
+        for index, uuid in enumerate(self.compute_rp_uuids):
+            device_rp_uuid = self._create_device_rp(index, uuid)
+            self.device_rp_map[uuid] = device_rp_uuid
+        self.device_rp_uuids = list(self.device_rp_map.values())
+
+    def _create_device_rp(self, index, compute_rp_uuid,
+                          resource='FPGA', res_amt=2):
+        """Created nested RP for a device. There is one per host.
+
+        :param index: Number of the device rp uuid for this setup
+        :param compute_rp_uuid: Resource provider UUID of the host.
+        :param resource: Placement resource name.
+            Assumed to be a standard resource class.
+        :param res_amt: Amount of the resource.
+        :returns: Device RP UUID
+        """
+        resp = self._post_nested_resource_provider(
+            'FakeDevice' + str(index), parent_rp_uuid=compute_rp_uuid)
+        device_rp_uuid = resp['uuid']
+        inventory = {
+            'resource_provider_generation': 0,
+            'inventories': {
+                resource: {
+                    'total': res_amt,
+                    'allocation_ratio': 1.0,
+                    'max_unit': res_amt,
+                    'min_unit': 1,
+                    'reserved': 0,
+                    'step_size': 1,
+                 }
+             },
+        }
+        self._update_inventory(device_rp_uuid, inventory)
+        self._create_trait(self.cyborg.trait)
+        self._set_provider_traits(device_rp_uuid, [self.cyborg.trait])
+        return device_rp_uuid
+
+    def _post_nested_resource_provider(self, rp_name, parent_rp_uuid):
+        body = {'name': rp_name, 'parent_provider_uuid': parent_rp_uuid}
+        return self.placement_api.post(
+            url='/resource_providers', version='1.20', body=body).body
+
+    def _create_acc_flavor(self):
+        extra_specs = {'accel:device_profile': self.cyborg.dp_name}
+        flavor_id = self._create_flavor(name='acc.tiny',
+                                        extra_spec=extra_specs)
+        return flavor_id
+
+
+class AcceleratorServerTest(AcceleratorServerBase):
+    def setUp(self):
+        self.NUM_HOSTS = 1
+        super(AcceleratorServerTest, self).setUp()
+
+    def test_create_server(self):
+        flavor_id = self._create_acc_flavor()
+        server_name = 'accel_server1'
+        self._create_server(
+            server_name, flavor_id=flavor_id,
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            networks='none', expected_state='ACTIVE')
+
+        self.cyborg.mock_get_dp.assert_called_once_with(self.cyborg.dp_name)
+        # TODO(Sundar): Add checks for Placement allocations.

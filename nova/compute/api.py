@@ -37,6 +37,7 @@ from oslo_utils import uuidutils
 import six
 from six.moves import range
 
+from nova.accelerator import cyborg
 from nova import availability_zones
 from nova import block_device
 from nova.compute import flavors
@@ -1212,6 +1213,12 @@ class API(base.Base):
             # base_options to match the volume zone.
             base_options['availability_zone'] = volume_az
         LOG.debug("Going to run %s instances...", num_instances)
+        extra_specs = instance_type.extra_specs
+        dp_name = extra_specs.get('accel:device_profile')
+        dp_request_groups = []
+        if dp_name:
+            dp_request_groups = cyborg.get_device_profile_request_groups(
+                context, dp_name)
         try:
             for i in range(num_instances):
                 # Create a uuid for the instance so we can store the
@@ -1246,6 +1253,9 @@ class API(base.Base):
 
                 if destination:
                     req_spec.requested_destination = destination
+
+                if dp_request_groups:
+                    req_spec.requested_resources.extend(dp_request_groups)
 
                 # Create an instance object, but do not store in db yet.
                 instance = objects.Instance(context=context)

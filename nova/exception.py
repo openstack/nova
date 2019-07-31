@@ -2289,3 +2289,7 @@ class UnexpectedResourceProviderNameForPCIRequest(NovaException):
                 "formatted name. Expected name format is "
                 "<hostname>:<agentname>:<interfacename>, but got "
                 "%(provider_name)s")
+
+
+class DeviceProfileError(NovaException):
+    msg_fmt = _("Device profile name %(name)s: %(msg)s")
