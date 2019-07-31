@@ -1387,12 +1387,26 @@ class ResourceTracker(object):
             if (instance.host == cn.host and
                     instance.node == cn.hypervisor_hostname):
                 # The instance is supposed to be on this compute host but is
-                # not in the list of actively managed instances.
-                LOG.warning("Instance %s is not being actively managed by "
-                            "this compute host but has allocations "
-                            "referencing this compute host: %s. Skipping "
-                            "heal of allocation because we do not know "
-                            "what to do.", instance_uuid, alloc)
+                # not in the list of actively managed instances. This could be
+                # because we are racing with an instance_claim call during
+                # initial build or unshelve where the instance host/node is set
+                # before the instance is added to tracked_instances. If the
+                # task_state is set, then consider things in motion and log at
+                # debug level instead of warning.
+                if instance.task_state:
+                    LOG.debug('Instance with task_state "%s" is not being '
+                              'actively managed by this compute host but has '
+                              'allocations referencing this compute node '
+                              '(%s): %s. Skipping heal of allocations during '
+                              'the task state transition.',
+                              instance.task_state, cn.uuid, alloc,
+                              instance=instance)
+                else:
+                    LOG.warning("Instance %s is not being actively managed by "
+                                "this compute host but has allocations "
+                                "referencing this compute host: %s. Skipping "
+                                "heal of allocation because we do not know "
+                                "what to do.", instance_uuid, alloc)
                 continue
             if instance.host != cn.host:
                 # The instance has been moved to another host either via a
