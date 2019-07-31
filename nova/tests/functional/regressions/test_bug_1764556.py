@@ -10,13 +10,10 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import six
-
 from nova import context as nova_context
 from nova.db import api as db
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-from nova.tests.functional.api import client as api_client
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit.image import fake as fake_image
@@ -149,10 +146,6 @@ class InstanceListWithDeletedServicesTestCase(
 
         # Finally, list servers as an admin so it joins on services to get host
         # information.
-        # FIXME(mriedem): This is bug 1764556 where the join on the services
-        # table also pulls the deleted service that doesn't have a uuid and
-        # attempts to migrate that service to have a uuid, which fails because
-        # it's not using a read_deleted='yes' context.
-        ex = self.assertRaises(api_client.OpenStackApiException,
-                               self.admin_api.get_servers, detail=True)
-        self.assertIn('ServiceNotFound', six.text_type(ex))
+        servers = self.admin_api.get_servers(detail=True)
+        for server in servers:
+            self.assertEqual('UP', server['host_status'])
