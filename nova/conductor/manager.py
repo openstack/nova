@@ -720,7 +720,11 @@ class ComputeTaskManager(base.Base):
                     msg = ("Exhausted all hosts available for retrying build "
                            "failures for instance %(instance_uuid)s." %
                            {"instance_uuid": instance.uuid})
-                    raise exception.MaxRetriesExceeded(reason=msg)
+                    exc = exception.MaxRetriesExceeded(reason=msg)
+                    self._cleanup_when_reschedule_fails(
+                        context, instance, exc, legacy_request_spec,
+                        requested_networks)
+                    return
             instance.availability_zone = (
                 availability_zones.get_host_availability_zone(context,
                         host.service_host))

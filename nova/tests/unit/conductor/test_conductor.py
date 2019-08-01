@@ -693,28 +693,36 @@ class _BaseTaskTestCase(object):
             mock.call(self.context, instances[1].uuid)])
         self.assertFalse(mock_get_by_host.called)
 
-    @mock.patch("nova.scheduler.utils.claim_resources", return_value=False)
+    @mock.patch('nova.compute.utils.notify_about_compute_task_error')
     @mock.patch.object(objects.Instance, 'save')
-    def test_build_instances_exhaust_host_list(self, _mock_save, mock_claim):
+    def test_build_instances_exhaust_host_list(self, _mock_save, mock_notify):
         # A list of three alternate hosts for one instance
         host_lists = copy.deepcopy(fake_host_lists_alt)
         instance = fake_instance.fake_instance_obj(self.context)
         image = {'fake-data': 'should_pass_silently'}
-        expected_claim_count = len(host_lists[0])
 
         # build_instances() is a cast, we need to wait for it to complete
         self.useFixture(cast_as_call.CastAsCall(self))
+
+        self.conductor.build_instances(
+            context=self.context,
+            instances=[instance], image=image,
+            filter_properties={},
+            admin_password='admin_password',
+            injected_files='injected_files',
+            requested_networks=None,
+            security_groups='security_groups',
+            block_device_mapping=None,
+            legacy_bdm=None,
+            host_lists=host_lists
+        )
+
         # Since claim_resources() is mocked to always return False, we will run
-        # out of alternate hosts, and MaxRetriesExceeded should be raised.
-        self.assertRaises(exc.MaxRetriesExceeded,
-                self.conductor.build_instances, context=self.context,
-                instances=[instance], image=image, filter_properties={},
-                admin_password='admin_password',
-                injected_files='injected_files', requested_networks=None,
-                security_groups='security_groups',
-                block_device_mapping=None, legacy_bdm=None,
-                host_lists=host_lists)
-        self.assertEqual(expected_claim_count, mock_claim.call_count)
+        # out of alternate hosts, and complain about MaxRetriesExceeded.
+        mock_notify.assert_called_once_with(
+            self.context, 'build_instances',
+            instance.uuid, test.MatchType(dict), 'error',
+            test.MatchType(exc.MaxRetriesExceeded), test.MatchType(str))
 
     @mock.patch.object(conductor_manager.ComputeTaskManager,
             '_destroy_build_request')
