@@ -1,4 +1,4 @@
---- 
+---
 upgrade:
   - Removed the ``security_group_api`` configuration option that was deprecated
     in Mitaka. The correct security_group_api option will be chosen based on

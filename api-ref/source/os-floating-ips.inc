@@ -86,7 +86,7 @@ can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: badRequest(400), unauthorized(401), forbidden(403), 
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
 itemNotFound(404)
 
 Request
@@ -131,7 +131,7 @@ can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: badRequest(400), unauthorized(401), forbidden(403), 
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
 itemNotFound(404)
 
 Request

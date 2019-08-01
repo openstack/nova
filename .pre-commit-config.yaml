@@ -6,16 +6,27 @@ repos:
       - id: trailing-whitespace
       - id: mixed-line-ending
         args: ['--fix', 'lf']
+        exclude: '.*\.(svg)$'
       - id: check-byte-order-marker
       - id: check-executables-have-shebangs
       - id: check-merge-conflict
       - id: debug-statements
-      - id: flake8
-        additional_dependencies:
-          - hacking>=1.1.0,<1.2.0
+        # nova/cmd/manage.py imports pdb on purpose.
+        exclude: 'nova/cmd/manage.py'
       - id: check-yaml
         files: .*\.(yaml|yml)$
   - repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.1.7
     hooks:
       - id: remove-tabs
+        exclude: '.*\.(svg)$'
+  - repo: local
+    hooks:
+      - id: flake8
+        name: flake8
+        additional_dependencies:
+          - hacking>=1.1.0,<1.2.0
+        language: python
+        entry: flake8
+        files: '^.*\.py$'
+        exclude: '^(doc|releasenotes|tools)/.*$'

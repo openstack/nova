@@ -103,7 +103,7 @@ Response
    - name: image_name
    - minRam: minRam_body
    - minDisk: minDisk_body
-   - metadata: metadata_object 
+   - metadata: metadata_object
    - created: created
    - updated: updated
    - status: image_status
@@ -147,7 +147,7 @@ Response
    - name: image_name
    - minRam: minRam_body
    - minDisk: minDisk_body
-   - metadata: metadata_object 
+   - metadata: metadata_object
    - created: created
    - updated: updated
    - status: image_status
@@ -208,7 +208,7 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-   - metadata: metadata_object 
+   - metadata: metadata_object
 
 **Example List Image Metadata Details: JSON response**
 
@@ -233,7 +233,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - image_id: image_id
-  - metadata: metadata_object 
+  - metadata: metadata_object
 
 **Example Create Image Metadata: JSON request**
 
@@ -245,7 +245,7 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-   - metadata: metadata_object 
+   - metadata: metadata_object
 
 **Example Create Image Metadata: JSON response**
 
@@ -270,7 +270,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - image_id: image_id
-  - metadata: metadata_object 
+  - metadata: metadata_object
 
 **Example Update Image Metadata: JSON request**
 
@@ -282,7 +282,7 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-   - metadata: metadata_object 
+   - metadata: metadata_object
 
 **Example Update Image Metadata: JSON response**
 
