@@ -56,6 +56,8 @@ fake_migrations = [
         'deleted': False,
         'uuid': uuids.migration1,
         'cross_cell_move': False,
+        'user_id': None,
+        'project_id': None
     },
     # non in-progress live migration
     {
@@ -83,6 +85,8 @@ fake_migrations = [
         'deleted': False,
         'uuid': uuids.migration2,
         'cross_cell_move': False,
+        'user_id': None,
+        'project_id': None
     },
     # in-progress resize
     {
@@ -110,6 +114,8 @@ fake_migrations = [
         'deleted': False,
         'uuid': uuids.migration3,
         'cross_cell_move': False,
+        'user_id': None,
+        'project_id': None
     },
     # non in-progress resize
     {
@@ -137,6 +143,8 @@ fake_migrations = [
         'deleted': False,
         'uuid': uuids.migration4,
         'cross_cell_move': False,
+        'user_id': None,
+        'project_id': None
     }
 ]
 

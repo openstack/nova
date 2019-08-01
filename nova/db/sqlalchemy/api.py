@@ -4484,6 +4484,13 @@ def migration_get_all_by_filters(context, filters,
     if "instance_uuid" in filters:
         instance_uuid = filters["instance_uuid"]
         query = query.filter(models.Migration.instance_uuid == instance_uuid)
+    if 'user_id' in filters:
+        user_id = filters['user_id']
+        query = query.filter(models.Migration.user_id == user_id)
+    if 'project_id' in filters:
+        project_id = filters['project_id']
+        query = query.filter(models.Migration.project_id == project_id)
+
     if marker:
         try:
             marker = migration_get_by_uuid(context, marker)
