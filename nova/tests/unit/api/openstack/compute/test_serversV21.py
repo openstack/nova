@@ -2026,6 +2026,7 @@ class ServersControllerTestV216(ServersControllerTest):
         super(ServersControllerTestV216, self).setUp()
         self.mock_get.side_effect = fakes.fake_compute_get(
             id=2, uuid=FAKE_UUID,
+            host="node-fake",
             node="node-fake",
             reservation_id="r-1", launch_index=0,
             kernel_id=UUID1, ramdisk_id=UUID2,
@@ -2046,9 +2047,10 @@ class ServersControllerTestV216(ServersControllerTest):
             task_state=None,
             vm_state=vm_states.ACTIVE,
             power_state=1)
-        self.useFixture(fixtures.MockPatchObject(
-            compute_api.API, 'get_instance_host_status',
-            return_value='UP')).mock
+        self.mock_get_instance_host_status = self.useFixture(
+            fixtures.MockPatchObject(
+                compute_api.API, 'get_instance_host_status',
+                return_value='UP')).mock
 
     def _get_server_data_dict(self, uuid, image_bookmark, flavor_bookmark,
                               status="ACTIVE", progress=100):
@@ -2061,6 +2063,9 @@ class ServersControllerTestV216(ServersControllerTest):
         server_dict['server']['locked'] = False
         server_dict['server']["host_status"] = "UP"
         server_dict['server']["OS-EXT-SRV-ATTR:hostname"] = "server2"
+        server_dict['server']['hostId'] = nova_utils.generate_hostid(
+            'node-fake', server_dict['server']['tenant_id'])
+        server_dict['server']["OS-EXT-SRV-ATTR:host"] = "node-fake"
         server_dict['server'][
             "OS-EXT-SRV-ATTR:hypervisor_hostname"] = "node-fake"
         server_dict['server']["OS-EXT-SRV-ATTR:kernel_id"] = UUID1
@@ -2097,6 +2102,7 @@ class ServersControllerTestV216(ServersControllerTest):
             for i in range(2):
                 server = fakes.stub_instance_obj(context,
                               id=2, uuid=FAKE_UUID,
+                              host="node-fake",
                               node="node-fake",
                               reservation_id="r-1", launch_index=0,
                               kernel_id=UUID1, ramdisk_id=UUID2,
@@ -2129,6 +2135,7 @@ class ServersControllerTestV216(ServersControllerTest):
 
         req = self.req('/fake/servers/detail')
         servers_list = self.controller.detail(req)
+        self.assertEqual(2, len(servers_list['servers']))
         image_bookmark = "http://localhost/fake/images/10"
         flavor_bookmark = "http://localhost/fake/flavors/2"
         expected_server = self._get_server_data_dict(FAKE_UUID,
@@ -2137,6 +2144,9 @@ class ServersControllerTestV216(ServersControllerTest):
                                                      progress=0)
 
         self.assertIn(expected_server['server'], servers_list['servers'])
+        # We should have only gotten the host status once per host (and the
+        # 2 servers in the response are using the same host).
+        self.mock_get_instance_host_status.assert_called_once()
 
 
 class ServersControllerTestV219(ServersControllerTest):
