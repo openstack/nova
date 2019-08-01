@@ -16916,8 +16916,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual(0, domain.resume.call_count)
 
     def _test_create_with_network_events(self, neutron_failure=None,
-                                         power_on=True):
+                                         power_on=True, events=None):
         generated_events = []
+        events_passed_to_prepare = []
 
         def wait_timeout():
             event = mock.MagicMock()
@@ -16935,6 +16936,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             m.event_name = '%s-%s' % (name, tag)
             m.wait.side_effect = wait_timeout
             generated_events.append(m)
+            events_passed_to_prepare.append((name, tag))
             return m
 
         virtapi = manager.ComputeVirtAPI(mock.MagicMock())
@@ -16954,7 +16956,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         def test_create(cleanup, create, fw_driver, plug_vifs):
             domain = drvr._create_domain_and_network(self.context, 'xml',
                                                      instance, vifs,
-                                                     power_on=power_on)
+                                                     power_on=power_on,
+                                                     external_events=events)
             plug_vifs.assert_called_with(instance, vifs)
 
             pause = self._get_pause_flag(drvr, vifs, power_on=power_on)
@@ -16969,7 +16972,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         test_create()
 
-        if utils.is_neutron() and CONF.vif_plugging_timeout and power_on:
+        if events and utils.is_neutron() and CONF.vif_plugging_timeout:
+            self.assertEqual(events_passed_to_prepare, events)
+        elif utils.is_neutron() and CONF.vif_plugging_timeout and power_on:
             prepare.assert_has_calls([
                 mock.call(instance, 'network-vif-plugged', uuids.vif_1),
                 mock.call(instance, 'network-vif-plugged', uuids.vif_2)])
@@ -16981,6 +16986,22 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     event.wait.assert_called_once_with()
         else:
             self.assertEqual(0, prepare.call_count)
+
+    @mock.patch('nova.utils.is_neutron', new=mock.Mock(return_value=True))
+    def test_create_with_network_events_passed_in(self):
+        self._test_create_with_network_events(
+            events=[('network-vif-plugged', uuids.fake_vif)])
+
+    @mock.patch('nova.utils.is_neutron', new=mock.Mock(return_value=False))
+    def test_create_with_network_events_passed_in_nova_net(self):
+        self._test_create_with_network_events(
+            events=[('network-vif-plugged', uuids.fake_vif)])
+
+    @mock.patch('nova.utils.is_neutron', new=mock.Mock(return_value=True))
+    def test_create_with_network_events_passed_in_0_timeout(self):
+        self.flags(vif_plugging_timeout=0)
+        self._test_create_with_network_events(
+            events=[('network-vif-plugged', uuids.fake_vif)])
 
     @mock.patch('nova.utils.is_neutron', return_value=True)
     def test_create_with_network_events_neutron(self, is_neutron):
@@ -18926,7 +18947,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     def test_finish_migration_power_off(self):
         self._test_finish_migration(power_on=False)
 
-    def _test_finish_revert_migration(self, power_on):
+    def _test_finish_revert_migration(self, power_on, migration):
         """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
         .finish_revert_migration.
         """
@@ -18942,10 +18963,13 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 
         def fake_create_domain(context, xml, instance, network_info,
                                block_device_info=None, power_on=None,
-                               vifs_already_plugged=None):
+                               vifs_already_plugged=None,
+                               external_events=None):
             self.fake_create_domain_called = True
             self.assertEqual(powered_on, power_on)
             self.assertFalse(vifs_already_plugged)
+            self.assertEqual(self.events_passed_to_fake_create,
+                             external_events)
             return mock.MagicMock()
 
         def fake_enable_hairpin():
@@ -18979,6 +19003,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)
             ins_ref = self._create_instance()
+            ins_ref.migration_context = objects.MigrationContext(
+                migration_id=migration.id)
             os.mkdir(os.path.join(tmpdir, ins_ref['name']))
             libvirt_xml_path = os.path.join(tmpdir,
                                             ins_ref['name'],
@@ -18986,16 +19012,50 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             f = open(libvirt_xml_path, 'w')
             f.close()
 
-            self.drvr.finish_revert_migration(
-                                       context.get_admin_context(), ins_ref,
-                                       [], None, power_on)
+            network_info = network_model.NetworkInfo(
+                [network_model.VIF(id=uuids.normal_vif),
+                 network_model.VIF(id=uuids.hybrid_vif,
+                                   details={'ovs_hybrid_plug': True})])
+            if migration.is_same_host():
+                # Same host is all plug-time
+                self.events_passed_to_fake_create = [
+                    ('network-vif-plugged', uuids.normal_vif),
+                    ('network-vif-plugged', uuids.hybrid_vif)]
+            else:
+                # For different host migration only non-hybrid plug
+                # ("normal") VIFs "emit" plug-time events.
+                self.events_passed_to_fake_create = [
+                    ('network-vif-plugged', uuids.normal_vif)]
+
+            with mock.patch.object(objects.Migration, 'get_by_id_and_instance',
+                                   return_value=migration) as mock_get_mig:
+                self.drvr.finish_revert_migration(
+                    context.get_admin_context(), ins_ref,
+                    network_info, None, power_on)
+                mock_get_mig.assert_called_with(mock.ANY, migration.id,
+                                                ins_ref.uuid)
+
             self.assertTrue(self.fake_create_domain_called)
 
     def test_finish_revert_migration_power_on(self):
-        self._test_finish_revert_migration(True)
+        migration = objects.Migration(id=42, source_compute='fake-host1',
+                                      dest_compute='fake-host2')
+        self._test_finish_revert_migration(power_on=True, migration=migration)
 
     def test_finish_revert_migration_power_off(self):
-        self._test_finish_revert_migration(False)
+        migration = objects.Migration(id=42, source_compute='fake-host1',
+                                      dest_compute='fake-host2')
+        self._test_finish_revert_migration(power_on=False, migration=migration)
+
+    def test_finish_revert_migration_same_host(self):
+        migration = objects.Migration(id=42, source_compute='fake-host',
+                                      dest_compute='fake-host')
+        self._test_finish_revert_migration(power_on=True, migration=migration)
+
+    def test_finish_revert_migration_diff_host(self):
+        migration = objects.Migration(id=42, source_compute='fake-host1',
+                                      dest_compute='fake-host2')
+        self._test_finish_revert_migration(power_on=True, migration=migration)
 
     def _test_finish_revert_migration_after_crash(self, backup_made=True,
                                                   del_inst_failed=False):
@@ -19005,6 +19065,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         drvr.image_backend.by_name.return_value = drvr.image_backend
         context = 'fake_context'
         ins_ref = self._create_instance()
+        ins_ref.migration_context = objects.MigrationContext(
+            migration_id=42)
+        migration = objects.Migration(source_compute='fake-host1',
+                                      dest_compute='fake-host2')
 
         with test.nested(
                 mock.patch.object(os.path, 'exists', return_value=backup_made),
@@ -19014,13 +19078,17 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 mock.patch.object(drvr, '_get_guest_xml'),
                 mock.patch.object(shutil, 'rmtree'),
                 mock.patch.object(loopingcall, 'FixedIntervalLoopingCall'),
+                mock.patch.object(objects.Migration, 'get_by_id_and_instance',
+                                  return_value=migration)
         ) as (mock_stat, mock_path, mock_rename, mock_cdn, mock_ggx,
-              mock_rmtree, mock_looping_call):
+              mock_rmtree, mock_looping_call, mock_get_mig):
             mock_path.return_value = '/fake/foo'
             if del_inst_failed:
                 mock_rmtree.side_effect = OSError(errno.ENOENT,
                                                   'test exception')
-            drvr.finish_revert_migration(context, ins_ref, [])
+            drvr.finish_revert_migration(context, ins_ref,
+                                         network_model.NetworkInfo())
+            mock_get_mig.assert_called_with(mock.ANY, 42, ins_ref.uuid)
             if backup_made:
                 mock_rename.assert_called_once_with('/fake/foo_resize',
                                                     '/fake/foo')
@@ -19049,6 +19117,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         image_meta = {"disk_format": "raw",
                       "properties": {"hw_disk_bus": "ide"}}
         instance = self._create_instance()
+        instance.migration_context = objects.MigrationContext(
+            migration_id=42)
+        migration = objects.Migration(source_compute='fake-host1',
+                                      dest_compute='fake-host2')
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
@@ -19058,22 +19130,37 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 mock.patch.object(utils, 'get_image_from_system_metadata',
                                   return_value=image_meta),
                 mock.patch.object(drvr, '_get_guest_xml',
-                                  side_effect=fake_get_guest_xml)):
-            drvr.finish_revert_migration('', instance, None, power_on=False)
+                                  side_effect=fake_get_guest_xml),
+                mock.patch.object(objects.Migration, 'get_by_id_and_instance',
+                                  return_value=migration)
+        ) as (mock_img_bkend, mock_cdan, mock_gifsm, mock_ggxml, mock_get_mig):
+            drvr.finish_revert_migration('', instance,
+                                         network_model.NetworkInfo(),
+                                         power_on=False)
+            mock_get_mig.assert_called_with(mock.ANY, 42, instance.uuid)
 
     def test_finish_revert_migration_snap_backend(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr.image_backend = mock.Mock()
         drvr.image_backend.by_name.return_value = drvr.image_backend
         ins_ref = self._create_instance()
+        ins_ref.migration_context = objects.MigrationContext(
+            migration_id=42)
+        migration = objects.Migration(source_compute='fake-host1',
+                                      dest_compute='fake-host2')
 
         with test.nested(
                 mock.patch.object(utils, 'get_image_from_system_metadata'),
                 mock.patch.object(drvr, '_create_domain_and_network'),
-                mock.patch.object(drvr, '_get_guest_xml')) as (
-                mock_image, mock_cdn, mock_ggx):
+                mock.patch.object(drvr, '_get_guest_xml'),
+                mock.patch.object(objects.Migration, 'get_by_id_and_instance',
+                                  return_value=migration)) as (
+                mock_image, mock_cdn, mock_ggx, mock_get_mig):
             mock_image.return_value = {'disk_format': 'raw'}
-            drvr.finish_revert_migration('', ins_ref, None, power_on=False)
+            drvr.finish_revert_migration('', ins_ref,
+                                         network_model.NetworkInfo(),
+                                         power_on=False)
+            mock_get_mig.assert_called_with(mock.ANY, 42, ins_ref.uuid)
 
             drvr.image_backend.rollback_to_snap.assert_called_once_with(
                     libvirt_utils.RESIZE_SNAPSHOT_NAME)
@@ -19105,17 +19192,26 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         drvr.image_backend.by_name.return_value = drvr.image_backend
         drvr.image_backend.exists.return_value = False
         ins_ref = self._create_instance()
+        ins_ref.migration_context = objects.MigrationContext(
+            migration_id=42)
+        migration = objects.Migration(source_compute='fake-host1',
+                                      dest_compute='fake-host2')
 
         with test.nested(
                 mock.patch.object(rbd_utils, 'RBDDriver'),
                 mock.patch.object(utils, 'get_image_from_system_metadata'),
                 mock.patch.object(drvr, '_create_domain_and_network'),
-                mock.patch.object(drvr, '_get_guest_xml')) as (
-                mock_rbd, mock_image, mock_cdn, mock_ggx):
+                mock.patch.object(drvr, '_get_guest_xml'),
+                mock.patch.object(objects.Migration, 'get_by_id_and_instance',
+                                  return_value=migration)) as (
+                mock_rbd, mock_image, mock_cdn, mock_ggx, mock_get_mig):
             mock_image.return_value = {'disk_format': 'raw'}
-            drvr.finish_revert_migration('', ins_ref, None, power_on=False)
+            drvr.finish_revert_migration('', ins_ref,
+                                         network_model.NetworkInfo(),
+                                         power_on=False)
             self.assertFalse(drvr.image_backend.rollback_to_snap.called)
             self.assertFalse(drvr.image_backend.remove_snap.called)
+            mock_get_mig.assert_called_with(mock.ANY, 42, ins_ref.uuid)
 
     def test_cleanup_failed_migration(self):
         self.mox.StubOutWithMock(shutil, 'rmtree')
