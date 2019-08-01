@@ -915,6 +915,9 @@ class API(base.Base):
 
         system_metadata = {}
 
+        pci_numa_affinity_policy = hardware.get_pci_numa_policy_constraint(
+            instance_type, image_meta)
+
         # PCI requests come from two sources: instance flavor and
         # requested_networks. The first call in below returns an
         # InstancePCIRequests object which is a list of InstancePCIRequest
@@ -922,9 +925,10 @@ class API(base.Base):
         # object for each SR-IOV port, and append it to the list in the
         # InstancePCIRequests object
         pci_request_info = pci_request.get_pci_requests_from_flavor(
-            instance_type)
+            instance_type, affinity_policy=pci_numa_affinity_policy)
         result = self.network_api.create_resource_requests(
-            context, requested_networks, pci_request_info)
+            context, requested_networks, pci_request_info,
+            affinity_policy=pci_numa_affinity_policy)
         network_metadata, port_resource_requests = result
 
         # Creating servers with ports that have resource requests, like QoS

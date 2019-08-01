@@ -106,7 +106,8 @@ class ImageMetaPayload(base.NotificationPayloadBase):
 class ImageMetaPropsPayload(base.NotificationPayloadBase):
     # Version 1.0: Initial version
     # Version 1.1: Added 'gop', 'virtio' and  'none' to hw_video_model field
-    VERSION = '1.1'
+    # Version 1.2: Added hw_pci_numa_affinity_policy field
+    VERSION = '1.2'
 
     SCHEMA = {
         'hw_architecture': ('image_meta_props', 'hw_architecture'),
@@ -133,6 +134,8 @@ class ImageMetaPropsPayload(base.NotificationPayloadBase):
         'hw_numa_nodes': ('image_meta_props', 'hw_numa_nodes'),
         'hw_numa_cpus': ('image_meta_props', 'hw_numa_cpus'),
         'hw_numa_mem': ('image_meta_props', 'hw_numa_mem'),
+        'hw_pci_numa_affinity_policy': ('image_meta_props',
+                                        'hw_pci_numa_affinity_policy'),
         'hw_pointer_model': ('image_meta_props', 'hw_pointer_model'),
         'hw_qemu_guest_agent': ('image_meta_props', 'hw_qemu_guest_agent'),
         'hw_rescue_bus': ('image_meta_props', 'hw_rescue_bus'),
@@ -210,6 +213,7 @@ class ImageMetaPropsPayload(base.NotificationPayloadBase):
         'hw_numa_nodes': fields.IntegerField(),
         'hw_numa_cpus': fields.ListOfSetsOfIntegersField(),
         'hw_numa_mem': fields.ListOfIntegersField(),
+        'hw_pci_numa_affinity_policy': fields.PCINUMAAffinityPolicyField(),
         'hw_pointer_model': fields.PointerModelField(),
         'hw_qemu_guest_agent': fields.FlexibleBooleanField(),
         'hw_rescue_bus': fields.DiskBusField(),

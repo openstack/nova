@@ -171,9 +171,10 @@ found on the compute nodes. For example:
 .. code-block:: ini
 
    [pci]
-   alias = { "vendor_id":"8086", "product_id":"154d", "device_type":"type-PF", "name":"a1" }
+   alias = { "vendor_id":"8086", "product_id":"154d", "device_type":"type-PF", "name":"a1", "numa_policy":"preferred" }
 
 Refer to :oslo.config:option:`pci.alias` for syntax information.
+Refer to :ref:`Affinity  <pci_numa_affinity_policy>` for ``numa_policy`` information.
 
 Once configured, restart the :program:`nova-api` service.
 

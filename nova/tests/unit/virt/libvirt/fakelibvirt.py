@@ -305,6 +305,11 @@ class FakePCIDevice(object):
             'iommu_group': iommu_group,
             'numa_node': numa_node,
         }
+        # -1 is the sentinel set in /sys/bus/pci/devices/*/numa_node
+        # for no NUMA affinity. When the numa_node is set to -1 on a device
+        # Libvirt omits the NUMA element so we remove it.
+        if numa_node == -1:
+            self.pci_device = self.pci_device.replace("<numa node='-1'/>", "")
 
     def XMLDesc(self, flags):
         return self.pci_device

@@ -1971,8 +1971,9 @@ class API(base_api.NetworkAPI):
         resource_request = port.get(constants.RESOURCE_REQUEST, None)
         return vnic_type, trusted, network_id, resource_request
 
-    def create_resource_requests(self, context, requested_networks,
-                                 pci_requests=None):
+    def create_resource_requests(
+            self, context, requested_networks, pci_requests=None,
+            affinity_policy=None):
         """Retrieve all information for the networks passed at the time of
         creating the server.
 
@@ -1982,6 +1983,8 @@ class API(base_api.NetworkAPI):
         :param pci_requests: The list of PCI requests to which additional PCI
             requests created here will be added.
         :type pci_requests: nova.objects.InstancePCIRequests
+        :param affinity_policy: requested pci numa affinity policy
+        :type affinity_policy: nova.objects.fields.PCINUMAAffinityPolicy
 
         :returns: A tuple with an instance of ``objects.NetworkMetadata`` for
                   use by the scheduler or None and a list of RequestGroup
@@ -2062,6 +2065,8 @@ class API(base_api.NetworkAPI):
                     spec=[spec],
                     request_id=uuidutils.generate_uuid(),
                     requester_id=requester_id)
+                if affinity_policy:
+                    request.numa_policy = affinity_policy
                 pci_requests.requests.append(request)
                 pci_request_id = request.request_id
 

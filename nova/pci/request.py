@@ -148,7 +148,7 @@ def _get_alias_from_config():
     return aliases
 
 
-def _translate_alias_to_requests(alias_spec):
+def _translate_alias_to_requests(alias_spec, affinity_policy=None):
     """Generate complete pci requests from pci aliases in extra_spec."""
     pci_aliases = _get_alias_from_config()
 
@@ -160,6 +160,7 @@ def _translate_alias_to_requests(alias_spec):
 
         count = int(count)
         numa_policy, spec = pci_aliases[name]
+        policy = affinity_policy or numa_policy
 
         # NOTE(gibi): InstancePCIRequest has a requester_id field that could
         # be filled with the flavor.flavorid but currently there is no special
@@ -169,7 +170,7 @@ def _translate_alias_to_requests(alias_spec):
             count=count,
             spec=spec,
             alias_name=name,
-            numa_policy=numa_policy))
+            numa_policy=policy))
     return pci_requests
 
 
@@ -227,7 +228,7 @@ def get_instance_pci_request_from_vif(context, instance, vif):
         node_id=cn_id)
 
 
-def get_pci_requests_from_flavor(flavor):
+def get_pci_requests_from_flavor(flavor, affinity_policy=None):
     """Validate and return PCI requests.
 
     The ``pci_passthrough:alias`` extra spec describes the flavor's PCI
@@ -265,6 +266,7 @@ def get_pci_requests_from_flavor(flavor):
         }]
 
     :param flavor: The flavor to be checked
+    :param affinity_policy: pci numa affinity policy
     :returns: A list of PCI requests
     :rtype: nova.objects.InstancePCIRequests
     :raises: exception.PciRequestAliasNotDefined if an invalid PCI alias is
@@ -276,6 +278,7 @@ def get_pci_requests_from_flavor(flavor):
     if ('extra_specs' in flavor and
             'pci_passthrough:alias' in flavor['extra_specs']):
         pci_requests = _translate_alias_to_requests(
-            flavor['extra_specs']['pci_passthrough:alias'])
+            flavor['extra_specs']['pci_passthrough:alias'],
+            affinity_policy=affinity_policy)
 
     return objects.InstancePCIRequests(requests=pci_requests)

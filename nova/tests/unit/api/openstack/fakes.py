@@ -202,8 +202,9 @@ def stub_out_nw_api(test, cls=None, private=None, publics=None):
         def validate_networks(self, context, networks, max_count):
             return max_count
 
-        def create_resource_requests(self, context, requested_networks,
-                                     pci_requests):
+        def create_resource_requests(
+                self, context, requested_networks,
+                pci_requests=None, affinity_policy=None):
             return None, []
 
     if cls is None:

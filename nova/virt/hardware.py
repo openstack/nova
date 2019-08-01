@@ -1715,6 +1715,28 @@ def get_emulator_thread_policy_constraint(flavor):
     return emu_threads_policy
 
 
+def get_pci_numa_policy_constraint(flavor, image_meta):
+    """Return pci numa affinity policy or None.
+
+    :param flavor: a flavor object to read extra specs from
+    :param image_meta: nova.objects.ImageMeta object instance
+    :raises: nova.exception.ImagePCINUMAPolicyForbidden
+    :raises: nova.exception.InvalidPCINUMAAffinity
+    """
+    flavor_policy, image_policy = _get_flavor_image_meta(
+        'pci_numa_affinity_policy', flavor, image_meta)
+
+    if flavor_policy and image_policy and flavor_policy != image_policy:
+        raise exception.ImagePCINUMAPolicyForbidden()
+
+    policy = flavor_policy or image_policy
+
+    if policy and policy not in fields.PCINUMAAffinityPolicy.ALL:
+        raise exception.InvalidPCINUMAAffinity(policy=policy)
+
+    return policy
+
+
 # TODO(sahid): Move numa related to hardware/numa.py
 def numa_get_constraints(flavor, image_meta):
     """Return topology related to input request.
