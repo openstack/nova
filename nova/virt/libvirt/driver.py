@@ -5866,11 +5866,17 @@ class LibvirtDriver(driver.ComputeDriver):
             for dt in g.domtype:
                 if dt != CONF.libvirt.virt_type:
                     continue
-                instance_cap = (
-                    fields.Architecture.canonicalize(g.arch),
-                    fields.HVType.canonicalize(dt),
-                    fields.VMMode.canonicalize(g.ostype))
-                instance_caps.append(instance_cap)
+                try:
+                    instance_cap = (
+                        fields.Architecture.canonicalize(g.arch),
+                        fields.HVType.canonicalize(dt),
+                        fields.VMMode.canonicalize(g.ostype))
+                    instance_caps.append(instance_cap)
+                except exception.InvalidArchitectureName:
+                    # NOTE(danms): Libvirt is exposing a guest arch that nova
+                    # does not even know about. Avoid aborting here and
+                    # continue to process the rest.
+                    pass
 
         return instance_caps
 
