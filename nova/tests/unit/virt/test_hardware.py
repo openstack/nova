@@ -2192,15 +2192,6 @@ class HelperMethodsTestCase(test.NoDBTestCase):
         self.assertIsInstance(res, six.string_types)
         self._check_usage(objects.NUMATopology.obj_from_db_obj(res))
 
-    def test_never_serialize_result(self):
-        host = {'numa_topology': self.hosttopo._to_json()}
-        instance = {'numa_topology': self.instancetopo}
-
-        res = hw.get_host_numa_usage_from_instance(host, instance,
-                                                  never_serialize_result=True)
-        self.assertIsInstance(res, objects.NUMATopology)
-        self._check_usage(res)
-
     def test_dict_numa_topology_to_obj(self):
         fake_uuid = uuids.fake
         instance = objects.Instance(context=self.context, id=1, uuid=fake_uuid,
