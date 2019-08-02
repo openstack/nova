@@ -241,16 +241,26 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
                                             tunneled=False)
         network_b = objects.NetworkMetadata(physnets=set(), tunneled=True)
         host_topology = objects.NUMATopology(cells=[
-            objects.NUMACell(id=1, cpuset=set([1, 2]), memory=2048,
-                             cpu_usage=2, memory_usage=2048, mempages=[],
-                             siblings=[set([1]), set([2])],
-                             pinned_cpus=set([]),
-                             network_metadata=network_a),
-            objects.NUMACell(id=2, cpuset=set([3, 4]), memory=2048,
-                             cpu_usage=2, memory_usage=2048, mempages=[],
-                             siblings=[set([3]), set([4])],
-                             pinned_cpus=set([]),
-                             network_metadata=network_b)])
+            objects.NUMACell(
+                id=1,
+                cpuset=set([1, 2]),
+                memory=2048,
+                cpu_usage=2,
+                memory_usage=2048,
+                mempages=[],
+                siblings=[set([1]), set([2])],
+                pinned_cpus=set(),
+                network_metadata=network_a),
+            objects.NUMACell(
+                id=2,
+                cpuset=set([3, 4]),
+                memory=2048,
+                cpu_usage=2,
+                memory_usage=2048,
+                mempages=[],
+                siblings=[set([3]), set([4])],
+                pinned_cpus=set(),
+                network_metadata=network_b)])
 
         return fakes.FakeHostState('host1', 'node1', {
             'numa_topology': host_topology,

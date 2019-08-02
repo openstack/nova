@@ -5678,16 +5678,26 @@ class ComputeTestCase(BaseTestCase,
         # instance placed in node_0 on current host. cpu1 and cpu2 from node_0
         # are used
         cell1 = objects.NUMACell(
-            id=0, cpuset=set([1, 2]), pinned_cpus=set([1, 2]), memory=512,
-            pagesize=2048, cpu_usage=2, memory_usage=0,
+            id=0,
+            cpuset=set([1, 2]),
+            memory=512,
+            pagesize=2048,
+            cpu_usage=2,
+            memory_usage=0,
+            pinned_cpus=set([1, 2]),
             siblings=[set([1]), set([2])],
             mempages=[objects.NUMAPagesTopology(
                 size_kb=2048, total=256, used=256)])
         # as instance placed in node_0 all cpus from node_1 (cpu3 and cpu4)
         # are free (on current host)
         cell2 = objects.NUMACell(
-            id=1, cpuset=set([3, 4]), pinned_cpus=set(), memory=512,
-            pagesize=2048, memory_usage=0, cpu_usage=0,
+            id=1,
+            cpuset=set([3, 4]),
+            pinned_cpus=set(),
+            memory=512,
+            pagesize=2048,
+            memory_usage=0,
+            cpu_usage=0,
             siblings=[set([3]), set([4])],
             mempages=[objects.NUMAPagesTopology(
                 size_kb=2048, total=256, used=0)])

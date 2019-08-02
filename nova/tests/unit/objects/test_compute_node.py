@@ -40,15 +40,25 @@ fake_stats_db_format = jsonutils.dumps(fake_stats)
 # host_ip is coerced from a string to an IPAddress
 # but needs to be converted to a string for the database format
 fake_host_ip = '127.0.0.1'
-fake_numa_topology = objects.NUMATopology(
-        cells=[objects.NUMACell(id=0, cpuset=set([1, 2]), memory=512,
-                                cpu_usage=0, memory_usage=0,
-                                mempages=[], pinned_cpus=set([]),
-                                siblings=[set([1]), set([2])]),
-               objects.NUMACell(id=1, cpuset=set([3, 4]), memory=512,
-                                cpu_usage=0, memory_usage=0,
-                                mempages=[], pinned_cpus=set([]),
-                                siblings=[set([3]), set([4])])])
+fake_numa_topology = objects.NUMATopology(cells=[
+    objects.NUMACell(
+        id=0,
+        cpuset=set([1, 2]),
+        memory=512,
+        cpu_usage=0,
+        memory_usage=0,
+        mempages=[],
+        pinned_cpus=set(),
+        siblings=[set([1]), set([2])]),
+    objects.NUMACell(
+        id=1,
+        cpuset=set([3, 4]),
+        memory=512,
+        cpu_usage=0,
+        memory_usage=0,
+        mempages=[],
+        pinned_cpus=set(),
+        siblings=[set([3]), set([4])])])
 fake_numa_topology_db_format = fake_numa_topology._to_json()
 fake_supported_instances = [('x86_64', 'kvm', 'hvm')]
 fake_hv_spec = hv_spec.HVSpec(arch=fake_supported_instances[0][0],

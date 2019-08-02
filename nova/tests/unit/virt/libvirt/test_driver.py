@@ -2540,18 +2540,18 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(host.Host,
                        'has_min_version', return_value=True)
     def test_get_guest_memory_backing_config_large_success(self, mock_version):
-        host_topology = objects.NUMATopology(
-            cells=[
-                objects.NUMACell(
-                    id=3, cpuset=set([1]), siblings=[set([1])], memory=1024,
-                    mempages=[
-                        objects.NUMAPagesTopology(size_kb=4, total=2000,
-                                                  used=0),
-                        objects.NUMAPagesTopology(size_kb=2048, total=512,
-                                                  used=0),
-                        objects.NUMAPagesTopology(size_kb=1048576, total=0,
-                                                  used=0),
-                    ])])
+        host_topology = objects.NUMATopology(cells=[
+            objects.NUMACell(
+                id=3,
+                cpuset=set([1]),
+                siblings=[set([1])],
+                memory=1024,
+                mempages=[
+                    objects.NUMAPagesTopology(size_kb=4, total=2000, used=0),
+                    objects.NUMAPagesTopology(size_kb=2048, total=512, used=0),
+                    objects.NUMAPagesTopology(size_kb=1048576, total=0,
+                                              used=0),
+                ])])
         inst_topology = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(
                 id=3, cpuset=set([0, 1]), memory=1024, pagesize=2048)])
@@ -2570,18 +2570,18 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(host.Host,
                        'has_min_version', return_value=True)
     def test_get_guest_memory_backing_config_smallest(self, mock_version):
-        host_topology = objects.NUMATopology(
-            cells=[
-                objects.NUMACell(
-                    id=3, cpuset=set([1]), siblings=[set([1])], memory=1024,
-                    mempages=[
-                        objects.NUMAPagesTopology(size_kb=4, total=2000,
-                                                  used=0),
-                        objects.NUMAPagesTopology(size_kb=2048, total=512,
-                                                  used=0),
-                        objects.NUMAPagesTopology(size_kb=1048576, total=0,
-                                                  used=0),
-                    ])])
+        host_topology = objects.NUMATopology(cells=[
+            objects.NUMACell(
+                id=3,
+                cpuset=set([1]),
+                siblings=[set([1])],
+                memory=1024,
+                mempages=[
+                    objects.NUMAPagesTopology(size_kb=4, total=2000, used=0),
+                    objects.NUMAPagesTopology(size_kb=2048, total=512, used=0),
+                    objects.NUMAPagesTopology(size_kb=1048576, total=0,
+                                              used=0),
+                ])])
         inst_topology = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(
                 id=3, cpuset=set([0, 1]), memory=1024, pagesize=4)])
@@ -2666,18 +2666,18 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     def test_get_guest_memory_backing_config_file_backed_hugepages(self):
         self.flags(file_backed_memory=1024, group="libvirt")
-        host_topology = objects.NUMATopology(
-            cells=[
-                objects.NUMACell(
-                    id=3, cpuset=set([1]), siblings=[set([1])], memory=1024,
-                    mempages=[
-                        objects.NUMAPagesTopology(size_kb=4, total=2000,
-                                                  used=0),
-                        objects.NUMAPagesTopology(size_kb=2048, total=512,
-                                                  used=0),
-                        objects.NUMAPagesTopology(size_kb=1048576, total=0,
-                                                  used=0),
-                    ])])
+        host_topology = objects.NUMATopology(cells=[
+            objects.NUMACell(
+                id=3,
+                cpuset=set([1]),
+                siblings=[set([1])],
+                memory=1024,
+                mempages=[
+                    objects.NUMAPagesTopology(size_kb=4, total=2000, used=0),
+                    objects.NUMAPagesTopology(size_kb=2048, total=512, used=0),
+                    objects.NUMAPagesTopology(size_kb=1048576, total=0,
+                                              used=0),
+                ])])
         inst_topology = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(
                 id=3, cpuset=set([0, 1]), memory=1024, pagesize=2048)])
@@ -3544,17 +3544,25 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             objects.InstanceNUMACell(id=16, cpuset=set([5, 6]), memory=128)
         ])
 
-        host_topology = objects.NUMATopology(
-            cells=[
-                objects.NUMACell(
-                    id=0, cpuset=set([1, 2]), siblings=[set([1]), set([2])],
-                    memory=1024, mempages=[]),
-                objects.NUMACell(
-                    id=1, cpuset=set([3, 4]), siblings=[set([3]), set([4])],
-                    memory=1024, mempages=[]),
-                objects.NUMACell(
-                    id=16, cpuset=set([5, 6]), siblings=[set([5]), set([6])],
-                    memory=1024, mempages=[])])
+        host_topology = objects.NUMATopology(cells=[
+            objects.NUMACell(
+                id=0,
+                cpuset=set([1, 2]),
+                siblings=[set([1]), set([2])],
+                memory=1024,
+                mempages=[]),
+            objects.NUMACell(
+                id=1,
+                cpuset=set([3, 4]),
+                siblings=[set([3]), set([4])],
+                memory=1024,
+                mempages=[]),
+            objects.NUMACell(
+                id=16,
+                cpuset=set([5, 6]),
+                siblings=[set([5]), set([6])],
+                memory=1024,
+                mempages=[])])
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         with test.nested(
@@ -18463,11 +18471,23 @@ class HostStateTestCase(test.NoDBTestCase):
         "phys_function": None}]
     numa_topology = objects.NUMATopology(cells=[
         objects.NUMACell(
-            id=1, cpuset=set([1, 2]), memory=1024, cpu_usage=0, memory_usage=0,
-            mempages=[], siblings=[set([1]), set([2])], pinned_cpus=set([])),
+            id=1,
+            cpuset=set([1, 2]),
+            memory=1024,
+            cpu_usage=0,
+            memory_usage=0,
+            mempages=[],
+            siblings=[set([1]), set([2])],
+            pinned_cpus=set()),
         objects.NUMACell(
-            id=2, cpuset=set([3, 4]), memory=1024, cpu_usage=0, memory_usage=0,
-            mempages=[], siblings=[set([3]), set([4])], pinned_cpus=set([]))])
+            id=2,
+            cpuset=set([3, 4]),
+            memory=1024,
+            cpu_usage=0,
+            memory_usage=0,
+            mempages=[],
+            siblings=[set([3]), set([4])],
+            pinned_cpus=set())])
 
     class FakeConnection(libvirt_driver.LibvirtDriver):
         """Fake connection object."""
