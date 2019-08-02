@@ -59,6 +59,7 @@ CPU_TRAITS_MAPPING = {
     'avx512f': os_traits.HW_CPU_X86_AVX512F,
     'avx512pf': os_traits.HW_CPU_X86_AVX512PF,
     'avx512vl': os_traits.HW_CPU_X86_AVX512VL,
+    'avx512vnni': os_traits.HW_CPU_X86_AVX512VNNI,
     'bmi1': os_traits.HW_CPU_X86_BMI,
     'bmi2': os_traits.HW_CPU_X86_BMI2,
     'pclmuldq': os_traits.HW_CPU_X86_CLMUL,
