@@ -322,6 +322,13 @@ class ResourceRequest(object):
 
         return parse.urlencode(sorted(qparams))
 
+    @property
+    def all_required_traits(self):
+        traits = set()
+        for rr in self._rg_by_id.values():
+            traits = traits.union(rr.required_traits)
+        return traits
+
 
 def build_request_spec(image, instances, instance_type=None):
     """Build a request_spec for the scheduler.
