@@ -4505,7 +4505,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return emulatorpin_cpuset
 
     def _get_guest_numa_config(self, instance_numa_topology, flavor,
-                               allowed_cpus=None, image_meta=None):
+                               image_meta):
         """Returns the config objects for the guest NUMA specs.
 
         Determines the CPUs that the guest can be pinned to if the guest
@@ -4520,9 +4520,7 @@ class LibvirtDriver(driver.ComputeDriver):
             a) If there is no specified guest NUMA topology, then
                all tuple elements except cpu_set shall be None. cpu_set
                will be populated with the chosen CPUs that the guest
-               allowed CPUs fit within, which could be the supplied
-               allowed_cpus value if the host doesn't support NUMA
-               topologies.
+               allowed CPUs fit within.
 
             b) If there is a specified guest NUMA topology, then
                cpu_set will be None and guest_cpu_numa will be the
@@ -4543,6 +4541,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # mess up though, raise an exception
             raise exception.NUMATopologyUnsupported()
 
+        allowed_cpus = hardware.get_vcpu_pin_set()
         topology = self._get_host_numa_topology()
 
         # We have instance NUMA so translate it to the config class
@@ -5338,10 +5337,9 @@ class LibvirtDriver(driver.ComputeDriver):
         # We are using default unit for memory: KiB
         guest.memory = flavor.memory_mb * units.Ki
         guest.vcpus = flavor.vcpus
-        allowed_cpus = hardware.get_vcpu_pin_set()
 
         guest_numa_config = self._get_guest_numa_config(
-            instance.numa_topology, flavor, allowed_cpus, image_meta)
+            instance.numa_topology, flavor, image_meta)
 
         guest.cpuset = guest_numa_config.cpuset
         guest.cputune = guest_numa_config.cputune
