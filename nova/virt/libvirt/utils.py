@@ -45,7 +45,7 @@ LOG = logging.getLogger(__name__)
 RESIZE_SNAPSHOT_NAME = 'nova-resize'
 
 # Mapping used to convert libvirt cpu features to traits, for more details, see
-# https://github.com/libvirt/libvirt/blob/master/src/cpu/cpu_map.xml.
+# https://github.com/libvirt/libvirt/blob/master/src/cpu_map/
 CPU_TRAITS_MAPPING = {
     '3dnow': os_traits.HW_CPU_X86_3DNOW,
     'abm': os_traits.HW_CPU_X86_ABM,

@@ -274,10 +274,11 @@ to KVM virtual machines. Use cases include:
 
 In libvirt, the CPU is specified by providing a base CPU model name (which is a
 shorthand for a set of feature flags), a set of additional feature flags, and
-the topology (sockets/cores/threads).  The libvirt KVM driver provides a number
-of standard CPU model names.  These models are defined in the
-``/usr/share/libvirt/cpu_map.xml`` file.  Check this file to determine which
-models are supported by your local installation.
+the topology (sockets/cores/threads). The libvirt KVM driver provides a number
+of standard CPU model names. These models are defined in the
+``/usr/share/libvirt/cpu_map.xml`` file for libvirt prior to version 4.7.0 or
+``/usr/share/libvirt/cpu_map/*.xml`` files thereafter. Make a check to
+determine which models are supported by your local installation.
 
 Two Compute configuration options in the :oslo.config:group:`libvirt` group
 of ``nova.conf`` define which type of CPU model is exposed to the hypervisor
@@ -296,10 +297,11 @@ Host model (default for KVM & QEMU)
 -----------------------------------
 
 If your ``nova.conf`` file contains ``cpu_mode=host-model``, libvirt identifies
-the CPU model in ``/usr/share/libvirt/cpu_map.xml`` file that most closely
-matches the host, and requests additional CPU flags to complete the match. This
-configuration provides the maximum functionality and performance and maintains
-good reliability.
+the CPU model in ``/usr/share/libvirt/cpu_map.xml`` for version prior to 4.7.0
+or ``/usr/share/libvirt/cpu_map/*.xml`` for version 4.7.0 and higher that most
+closely matches the host, and requests additional CPU flags to complete the
+match. This configuration provides the maximum functionality and performance
+and maintains good reliability.
 
 With regard to enabling and facilitating live migration between
 compute nodes, you should assess whether ``host-model`` is suitable
