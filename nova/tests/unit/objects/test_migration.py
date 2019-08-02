@@ -300,7 +300,7 @@ class _TestMigrationObject(object):
         data = lambda x: x['nova_object.data']
         primitive = data(mig.obj_to_primitive(target_version='1.5'))
         self.assertIn('uuid', primitive)
-        self.assertNotIn('cross_cell_resize', primitive)
+        self.assertNotIn('cross_cell_move', primitive)
         primitive = data(mig.obj_to_primitive(target_version='1.4'))
         self.assertIn('memory_total', primitive)
         self.assertNotIn('uuid', primitive)
