@@ -2031,9 +2031,15 @@ def numa_usage_from_instance_numa(host_topology, instance_topology,
         cpu_usage = host_cell.cpu_usage
 
         new_cell = objects.NUMACell(
-            id=host_cell.id, cpuset=host_cell.cpuset, memory=host_cell.memory,
-            cpu_usage=0, memory_usage=0, mempages=host_cell.mempages,
-            pinned_cpus=host_cell.pinned_cpus, siblings=host_cell.siblings)
+            id=host_cell.id,
+            cpuset=host_cell.cpuset,
+            pcpuset=set(),  # TODO(stephenfin): Start setting this
+            memory=host_cell.memory,
+            cpu_usage=0,
+            memory_usage=0,
+            mempages=host_cell.mempages,
+            pinned_cpus=host_cell.pinned_cpus,
+            siblings=host_cell.siblings)
 
         if 'network_metadata' in host_cell:
             new_cell.network_metadata = host_cell.network_metadata

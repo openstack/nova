@@ -197,7 +197,6 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
 
     def test_numa_topology_filter_pass_cpu_thread_policy_others(self):
         cpu_policy = fields.CPUAllocationPolicy.DEDICATED
-        cpu_thread_policy = fields.CPUThreadAllocationPolicy.PREFER
         numa_topology = fakes.NUMA_TOPOLOGY
 
         for cpu_thread_policy in [
@@ -244,6 +243,7 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
             objects.NUMACell(
                 id=1,
                 cpuset=set([1, 2]),
+                pcpuset=set(),
                 memory=2048,
                 cpu_usage=2,
                 memory_usage=2048,
@@ -254,6 +254,7 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
             objects.NUMACell(
                 id=2,
                 cpuset=set([3, 4]),
+                pcpuset=set(),
                 memory=2048,
                 cpu_usage=2,
                 memory_usage=2048,

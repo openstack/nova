@@ -2847,6 +2847,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             objects.NUMACell(
                 id=3,
                 cpuset=set([1]),
+                pcpuset=set(),
                 siblings=[set([1])],
                 memory=1024,
                 mempages=[
@@ -2877,6 +2878,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             objects.NUMACell(
                 id=3,
                 cpuset=set([1]),
+                pcpuset=set(),
                 siblings=[set([1])],
                 memory=1024,
                 mempages=[
@@ -3169,6 +3171,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             objects.NUMACell(
                 id=3,
                 cpuset=set([1]),
+                pcpuset=set(),
                 siblings=[set([1])],
                 memory=1024,
                 mempages=[
@@ -4047,18 +4050,21 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             objects.NUMACell(
                 id=0,
                 cpuset=set([1, 2]),
+                pcpuset=set(),
                 siblings=[set([1]), set([2])],
                 memory=1024,
                 mempages=[]),
             objects.NUMACell(
                 id=1,
                 cpuset=set([3, 4]),
+                pcpuset=set(),
                 siblings=[set([3]), set([4])],
                 memory=1024,
                 mempages=[]),
             objects.NUMACell(
                 id=16,
                 cpuset=set([5, 6]),
+                pcpuset=set(),
                 siblings=[set([5]), set([6])],
                 memory=1024,
                 mempages=[])])
@@ -19414,6 +19420,7 @@ class HostStateTestCase(test.NoDBTestCase):
         objects.NUMACell(
             id=1,
             cpuset=set([1, 2]),
+            pcpuset=set(),
             memory=1024,
             cpu_usage=0,
             memory_usage=0,
@@ -19423,6 +19430,7 @@ class HostStateTestCase(test.NoDBTestCase):
         objects.NUMACell(
             id=2,
             cpuset=set([3, 4]),
+            pcpuset=set(),
             memory=1024,
             cpu_usage=0,
             memory_usage=0,

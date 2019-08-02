@@ -21,6 +21,7 @@ fake_obj_numa = objects.NUMATopology(cells=[
     objects.NUMACell(
         id=0,
         cpuset=set([1, 2]),
+        pcpuset=set(),
         memory=512,
         cpu_usage=2,
         memory_usage=256,
@@ -30,6 +31,7 @@ fake_obj_numa = objects.NUMATopology(cells=[
     objects.NUMACell(
         id=1,
         cpuset=set([3, 4]),
+        pcpuset=set(),
         memory=512,
         cpu_usage=1,
         memory_usage=128,
@@ -44,6 +46,7 @@ class _TestNUMACell(object):
         cell_a = objects.NUMACell(
             id=0,
             cpuset=set([1, 2]),
+            pcpuset=set(),
             memory=512,
             cpu_usage=2,
             memory_usage=256,
@@ -53,6 +56,7 @@ class _TestNUMACell(object):
         cell_b = objects.NUMACell(
             id=1,
             cpuset=set([3, 4]),
+            pcpuset=set(),
             memory=512,
             cpu_usage=1,
             memory_usage=128,
@@ -67,6 +71,7 @@ class _TestNUMACell(object):
         numacell = objects.NUMACell(
             id=0,
             cpuset=set([1, 2, 3, 4]),
+            pcpuset=set(),
             memory=512,
             cpu_usage=2,
             memory_usage=256,
@@ -100,6 +105,7 @@ class _TestNUMACell(object):
         numacell = objects.NUMACell(
             id=0,
             cpuset=set([1, 2, 3, 4]),
+            pcpuset=set(),
             memory=512,
             cpu_usage=2,
             memory_usage=256,
@@ -128,6 +134,7 @@ class _TestNUMACell(object):
         numacell = objects.NUMACell(
             id=0,
             cpuset=set([1, 2, 3, 4]),
+            pcpuset=set(),
             memory=512,
             cpu_usage=0,
             memory_usage=256,
@@ -152,6 +159,7 @@ class _TestNUMACell(object):
         cell = objects.NUMACell(
             id=0,
             cpuset=set([1, 2]),
+            pcpuset=set(),
             memory=1024,
             siblings=[set([1]), set([2])],
             pinned_cpus=set(),
@@ -187,6 +195,7 @@ class _TestNUMACell(object):
         cell = objects.NUMACell(
             id=0,
             cpuset=set([1, 2]),
+            pcpuset=set(),
             memory=1024,
             siblings=[set([1]), set([2])],
             pinned_cpus=set(),
@@ -212,6 +221,7 @@ class _TestNUMACell(object):
         cell1 = objects.NUMACell(
             id=1,
             cpuset=set([1, 2]),
+            pcpuset=set(),
             memory=32,
             cpu_usage=10,
             pinned_cpus=set([3, 4]),
@@ -219,6 +229,7 @@ class _TestNUMACell(object):
         cell2 = objects.NUMACell(
             id=1,
             cpuset=set([1, 2]),
+            pcpuset=set(),
             memory=32,
             cpu_usage=10,
             pinned_cpus=set([3, 4]),
@@ -229,6 +240,7 @@ class _TestNUMACell(object):
         cell1 = objects.NUMACell(
             id=1,
             cpuset=set([1, 2]),
+            pcpuset=set(),
             memory=32,
             cpu_usage=10,
             pinned_cpus=set([3, 4]),
@@ -236,6 +248,7 @@ class _TestNUMACell(object):
         cell2 = objects.NUMACell(
             id=2,
             cpuset=set([1, 2]),
+            pcpuset=set(),
             memory=32,
             cpu_usage=10,
             pinned_cpus=set([3, 4]),
@@ -246,12 +259,14 @@ class _TestNUMACell(object):
         cell1 = objects.NUMACell(
             id=1,
             cpuset=set([1, 2]),
+            pcpuset=set(),
             memory=32,
             pinned_cpus=set([3, 4]),
             siblings=[set([5, 6])])
         cell2 = objects.NUMACell(
             id=2,
             cpuset=set([1, 2]),
+            pcpuset=set(),
             memory=32,
             cpu_usage=10,
             pinned_cpus=set([3, 4]),
@@ -262,6 +277,7 @@ class _TestNUMACell(object):
         cell1 = objects.NUMACell(
             id=1,
             cpuset=set([1, 2]),
+            pcpuset=set(),
             memory=32,
             cpu_usage=10,
             pinned_cpus=set([3, 4]),
@@ -269,6 +285,7 @@ class _TestNUMACell(object):
         cell2 = objects.NUMACell(
             id=2,
             cpuset=set([1, 2]),
+            pcpuset=set(),
             memory=32,
             pinned_cpus=set([3, 4]),
             siblings=[set([5, 6])])
@@ -280,6 +297,7 @@ class _TestNUMACell(object):
         cell1 = objects.NUMACell(
             id=1,
             cpuset=set([1, 2]),
+            pcpuset=set(),
             memory=32,
             cpu_usage=10,
             pinned_cpus=set([3, 4]),
@@ -288,6 +306,7 @@ class _TestNUMACell(object):
         cell2 = objects.NUMACell(
             id=1,
             cpuset=set([1, 2]),
+            pcpuset=set(),
             memory=32,
             cpu_usage=10,
             pinned_cpus=set([3, 4]),
@@ -301,6 +320,7 @@ class _TestNUMACell(object):
         cell1 = objects.NUMACell(
             id=1,
             cpuset=set([1, 2]),
+            pcpuset=set(),
             memory=32,
             cpu_usage=10,
             pinned_cpus=set([3, 4]),
@@ -309,6 +329,7 @@ class _TestNUMACell(object):
         cell2 = objects.NUMACell(
             id=1,
             cpuset=set([1, 2]),
+            pcpuset=set(),
             memory=32,
             cpu_usage=10,
             pinned_cpus=set([3, 4]),
@@ -322,6 +343,7 @@ class _TestNUMACell(object):
         cell = objects.NUMACell(
             id=0,
             cpuset=set([1, 2]),
+            pcpuset=set([3, 4]),
             memory=32,
             cpu_usage=10,
             pinned_cpus=set([3, 4]),
@@ -329,8 +351,14 @@ class _TestNUMACell(object):
             network_metadata=network_metadata)
 
         versions = ovo_base.obj_tree_get_versions('NUMACell')
+
+        primitive = cell.obj_to_primitive(target_version='1.4',
+                                          version_manifest=versions)
+        self.assertIn('pcpuset', primitive['nova_object.data'])
+
         primitive = cell.obj_to_primitive(target_version='1.3',
                                           version_manifest=versions)
+        self.assertNotIn('pcpuset', primitive['nova_object.data'])
         self.assertIn('network_metadata', primitive['nova_object.data'])
 
         primitive = cell.obj_to_primitive(target_version='1.2',

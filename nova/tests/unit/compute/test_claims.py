@@ -135,6 +135,7 @@ class ClaimTestCase(test.NoDBTestCase):
                 objects.NUMACell(
                     id=1,
                     cpuset=set([1, 2]),
+                    pcpuset=set(),
                     memory=512,
                     memory_usage=0, cpu_usage=0,
                     mempages=[],
@@ -143,6 +144,7 @@ class ClaimTestCase(test.NoDBTestCase):
                 objects.NUMACell(
                     id=2,
                     cpuset=set([3, 4]),
+                    pcpuset=set(),
                     memory=512,
                     memory_usage=0,
                     cpu_usage=0,
