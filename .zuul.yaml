@@ -339,6 +339,21 @@
           # job.
           c-bak: false
 
+- job:
+    name: nova-osprofiler-redis
+    parent: tempest-smoke-py3-osprofiler-redis
+    description: |
+      Runs osprofiler with the Redis collector on a subset of compute-specific
+      tempest-full-py3 smoke tests.
+    irrelevant-files: *dsvm-irrelevant-files
+    required-projects:
+      - openstack/nova
+    vars:
+      # We use the "all" environment for tempest_test_regex.
+      tox_envlist: all
+      # Run compute API and only the test_server_basic_ops scenario tests.
+      tempest_test_regex: ^tempest\.(scenario\.test_server_basic_ops|(api\.compute))
+
 - project:
     # Please try to keep the list of job names sorted alphabetically.
     templates:
@@ -414,6 +429,7 @@
             irrelevant-files: *dsvm-irrelevant-files
         - legacy-tempest-dsvm-full-devstack-plugin-nfs:
             irrelevant-files: *dsvm-irrelevant-files
+        - nova-osprofiler-redis
         - tempest-full-py3-opensuse150:
             irrelevant-files: *dsvm-irrelevant-files
         - tempest-pg-full:
