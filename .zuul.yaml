@@ -150,17 +150,14 @@
 
 - job:
     name: nova-lvm
-    parent: nova-dsvm-base
+    parent: devstack-tempest
     description: |
       Run tempest compute API tests using LVM image backend. This only runs
       against nova/virt/libvirt/* changes.
-    run: playbooks/legacy/nova-lvm/run.yaml
-    post-run: playbooks/legacy/nova-lvm/post.yaml
     # Copy irrelevant-files from nova-dsvm-base and then exclude anything
-    # that is not in nova/virt/libvirt/* or nova/privsep/* (besides the actual
-    # zuul playbook and tempest rc files so this can be self-testing).
+    # that is not in nova/virt/libvirt/* or nova/privsep/*.
     irrelevant-files:
-      - ^(?!.zuul.yaml)(?!playbooks/legacy/nova-lvm/)(?!devstack/tempest-dsvm-lvm-rc)(?!nova/virt/libvirt/)(?!nova/privsep/).*$
+      - ^(?!.zuul.yaml)(?!nova/virt/libvirt/)(?!nova/privsep/).*$
       - ^api-.*$
       - ^(test-|)requirements.txt$
       - ^.*\.rst$
@@ -178,6 +175,28 @@
     # TODO(mriedem): Make this voting and gating once bug 1771700 is fixed
     # and we've had enough runs to feel comfortable with this setup.
     voting: false
+    vars:
+      # We use the "all" environment for tempest_test_regex and
+      # tempest_black_regex.
+      tox_envlist: all
+      # Only run compute API tests.
+      tempest_test_regex: ^tempest\.api\.compute
+      # Skip slow tests.
+      tempest_black_regex: .*\[.*\bslow\b.*\]
+      devstack_local_conf:
+        test-config:
+          $TEMPEST_CONFIG:
+            compute-feature-enabled:
+              # NOTE(mriedem): resize of non-volume-backed lvm instances does
+              # not yet work (bug 1831657).
+              resize: false
+              cold_migration: false
+      devstack_localrc:
+        NOVA_BACKEND: LVM
+        # Do not waste time clearing volumes.
+        LVM_VOLUME_CLEAR: none
+        # Disable SSH validation in tests to save time.
+        TEMPEST_RUN_VALIDATION: false
 
 - job:
     name: nova-next
