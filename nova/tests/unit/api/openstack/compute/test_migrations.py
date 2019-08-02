@@ -449,6 +449,63 @@ class MigrationTestCaseV266(MigrationsTestCaseV259):
             {'instance_uuid': uuids.instance_uuid})
 
 
+class MigrationsTestCaseV280(MigrationTestCaseV266):
+    wsgi_api_version = '2.80'
+
+    def test_index(self):
+        migrations = {'migrations': self.controller._output(
+                                        self.req, migrations_obj,
+                                        add_link=True, add_uuid=True,
+                                        add_user_project=True)}
+
+        for i, mig in enumerate(migrations['migrations']):
+            # first item is in-progress live migration
+            if i == 0:
+                self.assertIn('links', mig)
+            else:
+                self.assertNotIn('links', mig)
+
+            self.assertIn('migration_type', mig)
+            self.assertIn('id', mig)
+            self.assertIn('uuid', mig)
+            self.assertIn('user_id', mig)
+            self.assertIn('project_id', mig)
+            self.assertNotIn('deleted', mig)
+            self.assertNotIn('deleted_at', mig)
+
+        with mock.patch.object(self.controller.compute_api,
+                               'get_migrations_sorted') as m_get:
+            m_get.return_value = migrations_obj
+            response = self.controller.index(self.req)
+            self.assertEqual(migrations, response)
+            self.assertIn('links', response['migrations'][0])
+            self.assertIn('migration_type', response['migrations'][0])
+
+    def test_index_filter_by_user_id_pre_v280(self):
+        """Tests that the migrations by user_id query parameter
+        is not allowed before microversion 2.80.
+        """
+        req = fakes.HTTPRequest.blank(
+            '/os-migrations?user_id=%s' % uuids.user_id,
+            version='2.79', use_admin_context=True)
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller.index, req)
+        self.assertIn('Additional properties are not allowed',
+                      six.text_type(ex))
+
+    def test_index_filter_by_project_id_pre_v280(self):
+        """Tests that the migrations by project_id query parameter
+        is not allowed before microversion 2.80.
+        """
+        req = fakes.HTTPRequest.blank(
+            '/os-migrations?project_id=%s' % uuids.project_id,
+            version='2.79', use_admin_context=True)
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller.index, req)
+        self.assertIn('Additional properties are not allowed',
+                      six.text_type(ex))
+
+
 class MigrationsPolicyEnforcement(test.NoDBTestCase):
     def setUp(self):
         super(MigrationsPolicyEnforcement, self).setUp()
@@ -476,3 +533,7 @@ class MigrationsPolicyEnforcementV223(MigrationsPolicyEnforcement):
 
 class MigrationsPolicyEnforcementV259(MigrationsPolicyEnforcementV223):
     wsgi_api_version = '2.59'
+
+
+class MigrationsPolicyEnforcementV280(MigrationsPolicyEnforcementV259):
+    wsgi_api_version = '2.80'

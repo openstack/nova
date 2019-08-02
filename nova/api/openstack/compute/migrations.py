@@ -13,6 +13,7 @@
 from oslo_utils import timeutils
 from webob import exc
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import migrations as schema_migrations
 from nova.api.openstack.compute.views import migrations as migrations_view
@@ -35,7 +36,8 @@ class MigrationsController(wsgi.Controller):
         super(MigrationsController, self).__init__()
         self.compute_api = compute.API()
 
-    def _output(self, req, migrations_obj, add_link=False, add_uuid=False):
+    def _output(self, req, migrations_obj, add_link=False,
+                add_uuid=False, add_user_project=False):
         """Returns the desired output of the API from an object.
 
         From a MigrationsList's object this method returns a list of
@@ -62,10 +64,11 @@ class MigrationsController(wsgi.Controller):
             if 'memory_total' in obj:
                 for key in detail_keys:
                     del obj[key]
-            if 'user_id' in obj:
-                del obj['user_id']
-            if 'project_id' in obj:
-                del obj['project_id']
+            if not add_user_project:
+                if 'user_id' in obj:
+                    del obj['user_id']
+                if 'project_id' in obj:
+                    del obj['project_id']
             # NOTE(Shaohe Feng) above version 2.23, add migration_type for all
             # kinds of migration, but we only add links just for in-progress
             # live-migration.
@@ -127,7 +130,9 @@ class MigrationsController(wsgi.Controller):
             migrations = self.compute_api.get_migrations(
                 context, search_opts)
 
-        migrations = self._output(req, migrations, add_link, add_uuid)
+        add_user_project = api_version_request.is_supported(req, '2.80')
+        migrations = self._output(req, migrations, add_link,
+                                  add_uuid, add_user_project)
         migrations_dict = {'migrations': migrations}
 
         if next_link:
@@ -168,7 +173,9 @@ class MigrationsController(wsgi.Controller):
     @wsgi.Controller.api_version("2.66")  # noqa
     @wsgi.expected_errors(400)
     @validation.query_schema(schema_migrations.list_query_params_v266,
-                             "2.66")
+                             "2.66", "2.79")
+    @validation.query_schema(schema_migrations.list_query_params_v280,
+                             "2.80")
     def index(self, req):
         """Return all migrations using the query parameters as filters."""
         limit, marker = common.get_limit_and_marker(req)
