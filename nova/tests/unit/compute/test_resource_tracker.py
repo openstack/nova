@@ -2774,6 +2774,29 @@ class TestUpdateUsageFromMigration(test.NoDBTestCase):
                                         _NODENAME)
         self.assertFalse(get_mock.called)
 
+    def test_missing_old_flavor_outbound_resize(self):
+        """Tests the case that an instance is not being tracked on the source
+        host because it has been resized to a dest host. The confirm_resize
+        operation in ComputeManager sets instance.old_flavor to None before
+        the migration.status is changed to "confirmed" so the source compute
+        RT considers it an in-progress migration and tries to update tracked
+        usage from the instance.old_flavor (which is None when
+        _update_usage_from_migration runs). This test just makes sure that the
+        RT method gracefully handles the instance.old_flavor being gone.
+        """
+        migration = _MIGRATION_FIXTURES['source-only']
+        rt = resource_tracker.ResourceTracker(
+            migration.source_compute, mock.sentinel.virt_driver)
+        ctxt = context.get_admin_context()
+        instance = objects.Instance(
+            uuid=migration.instance_uuid, old_flavor=None,
+            migration_context=objects.MigrationContext())
+        rt._update_usage_from_migration(
+            ctxt, instance, migration, migration.source_node)
+        self.assertNotIn('Starting to track outgoing migration',
+                         self.stdlog.logger.output)
+        self.assertNotIn(migration.instance_uuid, rt.tracked_migrations)
+
 
 class TestUpdateUsageFromMigrations(BaseTestCase):
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'

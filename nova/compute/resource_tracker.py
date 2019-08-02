@@ -1138,8 +1138,14 @@ class ResourceTracker(object):
                     migration)
             numa_topology = self._get_migration_context_resource(
                 'numa_topology', instance, prefix='old_')
-            LOG.debug('Starting to track outgoing migration %s with flavor %s',
-                      migration.uuid, itype.flavorid, instance=instance)
+            # We could be racing with confirm_resize setting the
+            # instance.old_flavor field to None before the migration status
+            # is "confirmed" so if we did not find the flavor in the outgoing
+            # resized instance we won't track it.
+            if itype:
+                LOG.debug('Starting to track outgoing migration %s with '
+                          'flavor %s', migration.uuid, itype.flavorid,
+                          instance=instance)
 
         if itype:
             cn = self.compute_nodes[nodename]
