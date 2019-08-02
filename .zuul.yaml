@@ -192,11 +192,15 @@
               resize: false
               cold_migration: false
       devstack_localrc:
+        USE_PYTHON3: True
         NOVA_BACKEND: LVM
         # Do not waste time clearing volumes.
         LVM_VOLUME_CLEAR: none
         # Disable SSH validation in tests to save time.
         TEMPEST_RUN_VALIDATION: false
+      devstack_services:
+        # Disable non-essential services that we don't need for this job.
+        c-bak: false
 
 - job:
     name: nova-next
