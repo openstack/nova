@@ -291,9 +291,6 @@
       cells. The compute on the controller runs in cell1 and the compute
       on the subnode runs in cell2.
     irrelevant-files: *dsvm-irrelevant-files
-    # TODO(mriedem): Make this job voting and gating once we're happy with
-    # its relative stability.
-    voting: false
     vars:
       # We use the "all" environment for tempest_test_regex and
       # tempest_test_blacklist.
@@ -391,6 +388,7 @@
         - nova-live-migration
         - nova-tox-functional
         - nova-tox-functional-py36
+        - nova-multi-cell
         - nova-next
         - tempest-integrated-compute:
             irrelevant-files: *dsvm-irrelevant-files
