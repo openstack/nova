@@ -2157,7 +2157,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         self._delete_and_check_allocations(server)
 
-    def test_evacuate(self):
+    def _test_evacuate(self, keep_hypervisor_state):
         source_hostname = self.compute1.host
         dest_hostname = self.compute2.host
         server = self._boot_and_check_allocations(
@@ -2193,7 +2193,8 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             self.flavor1, server['id'], source_rp_uuid, dest_rp_uuid)
 
         # restart the source compute
-        self.compute1 = self.restart_compute_service(self.compute1)
+        self.compute1 = self.restart_compute_service(
+            self.compute1, keep_hypervisor_state=keep_hypervisor_state)
 
         self.admin_api.put_service(
             source_compute_id, {'forced_down': 'false'})
@@ -2211,7 +2212,13 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         self._delete_and_check_allocations(server)
 
-    def test_evacuate_forced_host(self):
+    def test_evacuate_instance_kept_on_the_hypervisor(self):
+        self._test_evacuate(keep_hypervisor_state=True)
+
+    def test_evacuate_clean_hypervisor(self):
+        self._test_evacuate(keep_hypervisor_state=False)
+
+    def _test_evacuate_forced_host(self, keep_hypervisor_state):
         """Evacuating a server with a forced host bypasses the scheduler
         which means conductor has to create the allocations against the
         destination node. This test recreates the scenarios and asserts
@@ -2264,7 +2271,8 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             self.flavor1, server['id'], source_rp_uuid, dest_rp_uuid)
 
         # restart the source compute
-        self.compute1 = self.restart_compute_service(self.compute1)
+        self.compute1 = self.restart_compute_service(
+            self.compute1, keep_hypervisor_state=keep_hypervisor_state)
         self.admin_api.put_service(
             source_compute_id, {'forced_down': 'false'})
 
@@ -2285,6 +2293,12 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
                                            dest_rp_uuid)
 
         self._delete_and_check_allocations(server)
+
+    def test_evacuate_forced_host_instance_kept_on_the_hypervisor(self):
+        self._test_evacuate_forced_host(keep_hypervisor_state=True)
+
+    def test_evacuate_forced_host_clean_hypervisor(self):
+        self._test_evacuate_forced_host(keep_hypervisor_state=False)
 
     def test_evacuate_forced_host_v268(self):
         """Evacuating a server with a forced host was removed in API
@@ -2384,7 +2398,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         self._delete_and_check_allocations(server)
 
-    def test_evacuate_claim_on_dest_fails(self):
+    def _test_evacuate_claim_on_dest_fails(self, keep_hypervisor_state):
         """Tests that the allocations on the destination node are cleaned up
         when the rebuild move claim fails due to insufficient resources.
         """
@@ -2440,7 +2454,8 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
                                            source_rp_uuid)
 
         # restart the source compute
-        self.compute1 = self.restart_compute_service(self.compute1)
+        self.compute1 = self.restart_compute_service(
+            self.compute1, keep_hypervisor_state=keep_hypervisor_state)
         self.admin_api.put_service(
             source_compute_id, {'forced_down': 'false'})
 
@@ -2454,7 +2469,14 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
                                            source_rp_uuid)
 
-    def test_evacuate_rebuild_on_dest_fails(self):
+    def test_evacuate_claim_on_dest_fails_instance_kept_on_the_hypervisor(
+            self):
+        self._test_evacuate_claim_on_dest_fails(keep_hypervisor_state=True)
+
+    def test_evacuate_claim_on_dest_fails_clean_hypervisor(self):
+        self._test_evacuate_claim_on_dest_fails(keep_hypervisor_state=False)
+
+    def _test_evacuate_rebuild_on_dest_fails(self, keep_hypervisor_state):
         """Tests that the allocations on the destination node are cleaned up
         automatically when the claim is made but the actual rebuild
         via the driver fails.
@@ -2507,7 +2529,8 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
                                            source_rp_uuid)
 
         # restart the source compute
-        self.compute1 = self.restart_compute_service(self.compute1)
+        self.compute1 = self.restart_compute_service(
+            self.compute1, keep_hypervisor_state=keep_hypervisor_state)
         self.admin_api.put_service(
             source_compute_id, {'forced_down': 'false'})
 
@@ -2520,6 +2543,13 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         self.assertFlavorMatchesAllocation(self.flavor1, server['id'],
                                            source_rp_uuid)
+
+    def test_evacuate_rebuild_on_dest_fails_instance_kept_on_the_hypervisor(
+            self):
+        self._test_evacuate_rebuild_on_dest_fails(keep_hypervisor_state=True)
+
+    def test_evacuate_rebuild_on_dest_fails_clean_hypervisor(self):
+        self._test_evacuate_rebuild_on_dest_fails(keep_hypervisor_state=False)
 
     def _boot_then_shelve_and_check_allocations(self, hostname, rp_uuid):
         # avoid automatic shelve offloading
@@ -5176,7 +5206,7 @@ class ServerMovingTestsWithNestedResourceRequests(
 
         self._delete_and_check_allocations(server)
 
-    def test_evacuate_forced_host(self):
+    def _test_evacuate_forced_host(self, keep_hypervisor_state):
         # Nova intentionally does not support force evacuating server
         # with nested allocations.
 
@@ -5234,7 +5264,8 @@ class ServerMovingTestsWithNestedResourceRequests(
                                            source_rp_uuid)
 
         # restart the source compute
-        self.compute1 = self.restart_compute_service(self.compute1)
+        self.compute1 = self.restart_compute_service(
+            self.compute1, keep_hypervisor_state=keep_hypervisor_state)
         self.admin_api.put_service(
             source_compute_id, {'forced_down': 'false'})
 
