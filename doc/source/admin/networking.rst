@@ -84,7 +84,7 @@ For all other types of ports, some manual configuration is required.
 
    Consider an L2-type network using the Linux Bridge mechanism driver. As
    noted in the :neutron-doc:`neutron documentation
-   <admin/deploy-lb-selfservice.html>`, *physets* are mapped to interfaces
+   <admin/deploy-lb-selfservice.html>`, *physnets* are mapped to interfaces
    using the ``[linux_bridge] physical_interface_mappings`` configuration
    option. For example:
 
