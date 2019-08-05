@@ -15346,13 +15346,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             caps.host = vconfig.LibvirtConfigCapsHost()
             caps.host.cpu = cpu
 
-            guest = vconfig.LibvirtConfigGuest()
+            guest = vconfig.LibvirtConfigCapsGuest()
             guest.ostype = fields.VMMode.HVM
             guest.arch = fields.Architecture.X86_64
             guest.domtype = ["kvm"]
             caps.guests.append(guest)
 
-            guest = vconfig.LibvirtConfigGuest()
+            guest = vconfig.LibvirtConfigCapsGuest()
             guest.ostype = fields.VMMode.HVM
             guest.arch = fields.Architecture.I686
             guest.domtype = ["kvm"]
@@ -16380,13 +16380,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         def get_host_capabilities_stub(self):
             caps = vconfig.LibvirtConfigCaps()
 
-            guest = vconfig.LibvirtConfigGuest()
+            guest = vconfig.LibvirtConfigCapsGuest()
             guest.ostype = 'hvm'
             guest.arch = fields.Architecture.X86_64
             guest.domtype = ['kvm', 'qemu']
             caps.guests.append(guest)
 
-            guest = vconfig.LibvirtConfigGuest()
+            guest = vconfig.LibvirtConfigCapsGuest()
             guest.ostype = 'hvm'
             guest.arch = fields.Architecture.I686
             guest.domtype = ['kvm']
@@ -16394,7 +16394,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
             # Include one that is not known to nova to make sure it
             # does not trip us up.
-            guest = vconfig.LibvirtConfigGuest()
+            guest = vconfig.LibvirtConfigCapsGuest()
             guest.ostype = 'hvm'
             guest.arch = 'itanic'
             guest.domtype = ['kvm']
