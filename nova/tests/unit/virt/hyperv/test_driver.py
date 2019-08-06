@@ -419,8 +419,8 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
     def test_finish_revert_migration(self):
         self.driver.finish_revert_migration(
             mock.sentinel.context, mock.sentinel.instance,
-            mock.sentinel.network_info, mock.sentinel.block_device_info,
-            mock.sentinel.power_on)
+            mock.sentinel.network_info, mock.sentinel.migration,
+            mock.sentinel.block_device_info, mock.sentinel.power_on)
 
         finish_revert_migr = self.driver._migrationops.finish_revert_migration
         finish_revert_migr.assert_called_once_with(

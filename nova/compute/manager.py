@@ -1040,8 +1040,11 @@ class ComputeManager(manager.Manager):
                 block_dev_info = self._get_instance_block_device_info(context,
                                                                       instance)
 
-                self.driver.finish_revert_migration(context,
-                    instance, net_info, block_dev_info, power_on)
+                migration = objects.Migration.get_by_id_and_instance(
+                    context, instance.migration_context.migration_id,
+                    instance.uuid)
+                self.driver.finish_revert_migration(context, instance,
+                    net_info, migration, block_dev_info, power_on)
 
             except Exception:
                 LOG.exception('Failed to revert crashed migration',
@@ -4316,9 +4319,9 @@ class ComputeManager(manager.Manager):
                     context, instance, refresh_conn_info=True, bdms=bdms)
 
             power_on = old_vm_state != vm_states.STOPPED
-            self.driver.finish_revert_migration(context, instance,
-                                       network_info,
-                                       block_device_info, power_on)
+            self.driver.finish_revert_migration(
+                context, instance, network_info, migration, block_device_info,
+                power_on)
 
             instance.drop_migration_context()
             instance.launched_at = timeutils.utcnow()

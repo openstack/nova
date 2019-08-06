@@ -224,7 +224,8 @@ class XenAPIDriver(driver.ComputeDriver):
         self._vmops.confirm_migration(migration, instance, network_info)
 
     def finish_revert_migration(self, context, instance, network_info,
-                                block_device_info=None, power_on=True):
+                                migration, block_device_info=None,
+                                power_on=True):
         """Finish reverting a resize."""
         # NOTE(vish): Xen currently does not use network info.
         self._vmops.finish_revert_migration(context, instance,
