@@ -7900,7 +7900,7 @@ class AcceleratorServerBase(integrated_helpers.ProviderUsageBaseTestCase):
                                         extra_spec=extra_specs)
         return flavor_id
 
-    def _check_allocations_usage(self, server):
+    def _check_allocations_usage(self, server, check_other_host_alloc=True):
         # Check allocations on host where instance is running
         server_uuid = server['id']
 
@@ -7921,7 +7921,8 @@ class AcceleratorServerBase(integrated_helpers.ProviderUsageBaseTestCase):
                 self.assertEqual(expected_device_alloc,
                                  device_alloc[server_uuid])
             else:
-                self.assertEqual({}, host_alloc)
+                if check_other_host_alloc:
+                    self.assertEqual({}, host_alloc)
                 self.assertEqual({}, device_alloc)
 
         # NOTE(Sundar): ARQs for an instance could come from different
@@ -8088,3 +8089,154 @@ class AcceleratorServerReschedTest(AcceleratorServerBase):
             [mock.call(server_uuid),
              mock.call(server_uuid),
              mock.call(server_uuid)])
+
+
+class AcceleratorServerOpsTest(AcceleratorServerBase):
+
+    def setUp(self):
+        self.NUM_HOSTS = 2  # 2nd host needed for evacuate
+        super(AcceleratorServerOpsTest, self).setUp()
+        flavor_id = self._create_acc_flavor()
+        server_name = 'accel_server1'
+        self.server = self._create_server(
+            server_name, flavor_id=flavor_id,
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            networks='none', expected_state='ACTIVE')
+
+    def test_soft_reboot_ok(self):
+        params = {'reboot': {'type': 'SOFT'}}
+        self.api.post_server_action(self.server['id'], params)
+        self._wait_for_state_change(self.server, 'ACTIVE')
+        self._check_allocations_usage(self.server)
+
+    def test_hard_reboot_ok(self):
+        params = {'reboot': {'type': 'HARD'}}
+        self.api.post_server_action(self.server['id'], params)
+        self._wait_for_state_change(self.server, 'HARD_REBOOT')
+        self._wait_for_state_change(self.server, 'ACTIVE')
+        self._check_allocations_usage(self.server)
+
+    def test_pause_unpause_ok(self):
+        # Pause and unpause should work with accelerators.
+        # This is not a general test of un/pause functionality.
+        self.api.post_server_action(self.server['id'], {'pause': {}})
+        self._wait_for_state_change(self.server, 'PAUSED')
+        self._check_allocations_usage(self.server)
+        # ARQs didn't get deleted (and so didn't have to be re-created).
+        self.cyborg.mock_del_arqs.assert_not_called()
+
+        self.api.post_server_action(self.server['id'], {'unpause': {}})
+        self._wait_for_state_change(self.server, 'ACTIVE')
+        self._check_allocations_usage(self.server)
+
+    def test_stop_start_ok(self):
+        # Stop and start should work with accelerators.
+        # This is not a general test of start/stop functionality.
+        self.api.post_server_action(self.server['id'], {'os-stop': {}})
+        self._wait_for_state_change(self.server, 'SHUTOFF')
+        self._check_allocations_usage(self.server)
+        # ARQs didn't get deleted (and so didn't have to be re-created).
+        self.cyborg.mock_del_arqs.assert_not_called()
+
+        self.api.post_server_action(self.server['id'], {'os-start': {}})
+        self._wait_for_state_change(self.server, 'ACTIVE')
+        self._check_allocations_usage(self.server)
+
+    def test_lock_unlock_ok(self):
+        # Lock/unlock are no-ops for accelerators.
+        self.api.post_server_action(self.server['id'], {'lock': {}})
+        server = self.api.get_server(self.server['id'])
+        self.assertTrue(server['locked'])
+        self._check_allocations_usage(self.server)
+
+        self.api.post_server_action(self.server['id'], {'unlock': {}})
+        server = self.api.get_server(self.server['id'])
+        self.assertTrue(not server['locked'])
+        self._check_allocations_usage(self.server)
+
+    def test_backup_ok(self):
+        self.api.post_server_action(self.server['id'],
+            {'createBackup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': 1}})
+        self._check_allocations_usage(self.server)
+
+    def test_create_image_ok(self):  # snapshot
+        self.api.post_server_action(self.server['id'],
+            {'createImage': {
+                'name': 'foo-image',
+                'metadata': {'meta_var': 'meta_val'}}})
+        self._check_allocations_usage(self.server)
+
+    def test_rescue_unrescue_ok(self):
+        self.api.post_server_action(self.server['id'],
+            {'rescue': {
+                'adminPass': 'MySecretPass',
+                'rescue_image_ref': '70a599e0-31e7-49b7-b260-868f441e862b'}})
+        self._check_allocations_usage(self.server)
+        # ARQs didn't get deleted (and so didn't have to be re-created).
+        self.cyborg.mock_del_arqs.assert_not_called()
+        self._wait_for_state_change(self.server, 'RESCUE')
+
+        self.api.post_server_action(self.server['id'], {'unrescue': {}})
+        self._check_allocations_usage(self.server)
+
+    def test_resize_fails(self):
+        ex = self.assertRaises(client.OpenStackApiException,
+            self.api.post_server_action, self.server['id'],
+            {'resize': {'flavorRef': '2', 'OS-DCF:diskConfig': 'AUTO'}})
+        self.assertEqual(403, ex.response.status_code)
+        self._check_allocations_usage(self.server)
+
+    def test_suspend_fails(self):
+        ex = self.assertRaises(client.OpenStackApiException,
+            self.api.post_server_action, self.server['id'], {'suspend': {}})
+        self.assertEqual(403, ex.response.status_code)
+        self._check_allocations_usage(self.server)
+
+    def test_migrate_fails(self):
+        ex = self.assertRaises(client.OpenStackApiException,
+            self.api.post_server_action, self.server['id'], {'migrate': {}})
+        self.assertEqual(403, ex.response.status_code)
+        self._check_allocations_usage(self.server)
+
+    def test_live_migrate_fails(self):
+        ex = self.assertRaises(client.OpenStackApiException,
+            self.api.post_server_action, self.server['id'],
+            {'migrate': {'host': 'accel_host1'}})
+        self.assertEqual(403, ex.response.status_code)
+        self._check_allocations_usage(self.server)
+
+    def test_evacuate_fails(self):
+        server_hostname = self.server['OS-EXT-SRV-ATTR:host']
+        for i in range(self.NUM_HOSTS):
+            hostname = 'accel_host' + str(i)
+            if hostname != server_hostname:
+                other_hostname = hostname
+            if self.compute_services[i].host == server_hostname:
+                compute_to_stop = self.compute_services[i]
+
+        # Stop and force down the compute service.
+        compute_id = self.admin_api.get_services(
+            host=server_hostname, binary='nova-compute')[0]['id']
+        compute_to_stop.stop()
+        self.admin_api.put_service(compute_id, {'forced_down': 'true'})
+
+        ex = self.assertRaises(client.OpenStackApiException,
+            self.api.post_server_action, self.server['id'],
+            {'evacuate': {
+                 'host': other_hostname,
+                 'adminPass': 'MySecretPass'}})
+        self.assertEqual(403, ex.response.status_code)
+        self._check_allocations_usage(self.server)
+
+    def test_rebuild_fails(self):
+        rebuild_image_ref = fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID
+        ex = self.assertRaises(client.OpenStackApiException,
+            self.api.post_server_action, self.server['id'],
+            {'rebuild': {
+                'imageRef': rebuild_image_ref,
+                'OS-DCF:diskConfig': 'AUTO'}})
+        self.assertEqual(403, ex.response.status_code)
+        self._check_allocations_usage(self.server)
