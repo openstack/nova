@@ -1050,7 +1050,12 @@ migration_status:
   type: string
 migration_type:
   description: |
-    The type of migration to filter.
+    The type of migration to filter. Valid values are:
+
+    * ``evacuation``
+    * ``live-migration``
+    * ``migration``
+    * ``resize``
   in: query
   required: false
   type: string
