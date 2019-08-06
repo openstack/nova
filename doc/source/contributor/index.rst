@@ -80,6 +80,10 @@ be Python code. All new code needs to be validated somehow.
 
   * :doc:`/contributor/testing/down-cell`
 
+* **Profiling Guides**: These are guides to profiling nova.
+
+  * :doc:`/contributor/testing/eventlet-profiling`
+
 The Nova API
 ============
 

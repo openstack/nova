@@ -217,6 +217,7 @@ looking parts of our architecture. These are collected below.
    contributor/testing/serial-console
    contributor/testing/zero-downtime-upgrade
    contributor/testing/down-cell
+   contributor/testing/eventlet-profiling
    contributor/how-to-get-involved
    contributor/process
    contributor/project-scope
