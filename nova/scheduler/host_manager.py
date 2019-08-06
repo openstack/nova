@@ -873,19 +873,18 @@ class HostManager(object):
     def _get_instance_info(self, context, compute):
         """Gets the host instance info from the compute host.
 
-        Some older compute nodes may not be sending instance change updates to
-        the Scheduler; other sites may disable this feature for performance
-        reasons. In either of these cases, there will either be no information
-        for the host, or the 'updated' value for that host dict will be False.
-        In those cases, we need to grab the current InstanceList instead of
-        relying on the version in _instance_info.
+        Some sites may disable ``track_instance_changes`` for performance or
+        isolation reasons. In either of these cases, there will either be no
+        information for the host, or the 'updated' value for that host dict
+        will be False. In those cases, we need to grab the current InstanceList
+        instead of relying on the version in _instance_info.
         """
         host_name = compute.host
         host_info = self._instance_info.get(host_name)
         if host_info and host_info.get("updated"):
             inst_dict = host_info["instances"]
         else:
-            # Host is running old version, or updates aren't flowing.
+            # Updates aren't flowing from nova-compute.
             inst_dict = self._get_instances_by_host(context, host_name)
         return inst_dict
 
