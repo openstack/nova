@@ -5283,24 +5283,25 @@ class _ComputeAPIUnitTestMixIn(object):
         return migration
 
     @mock.patch('nova.compute.api.API._record_action_start')
-    @mock.patch.object(compute_rpcapi.ComputeAPI, 'live_migration_abort')
     @mock.patch.object(objects.Migration, 'get_by_id_and_instance')
     def test_live_migrate_abort_succeeded(self,
                                           mock_get_migration,
-                                          mock_lm_abort,
                                           mock_rec_action):
         instance = self._create_instance_obj()
         instance.task_state = task_states.MIGRATING
         migration = self._get_migration(21, 'running', 'live-migration')
         mock_get_migration.return_value = migration
 
-        self.compute_api.live_migrate_abort(self.context,
-                                            instance,
-                                            migration.id)
+        with mock.patch.object(self.compute_api.compute_rpcapi,
+                               'live_migration_abort') as mock_lm_abort:
+            self.compute_api.live_migrate_abort(self.context,
+                                                instance,
+                                                migration.id)
+            mock_lm_abort.assert_called_once_with(self.context, instance,
+                                                  migration.id)
         mock_rec_action.assert_called_once_with(self.context,
                                     instance,
                                     instance_actions.LIVE_MIGRATION_CANCEL)
-        mock_lm_abort.called_once_with(self.context, instance, migration.id)
 
     @mock.patch.object(objects.Migration, 'get_by_id_and_instance')
     def test_live_migration_abort_wrong_migration_status(self,
