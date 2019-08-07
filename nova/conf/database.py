@@ -36,13 +36,16 @@ api_db_group = cfg.OptGroup('api_database',
 The *Nova API Database* is a separate database which is used for information
 which is used across *cells*. This database is mandatory since the Mitaka
 release (13.0.0).
+
+This group should **not** be configured for the ``nova-compute`` service.
 """)
 
 api_db_opts = [
     # TODO(markus_z): This should probably have a required=True attribute
     cfg.StrOpt('connection',
         secret=True,
-        help=''),
+        # This help gets appended to the oslo.db help so prefix with a space.
+        help=' Do not set this for the ``nova-compute`` service.'),
     cfg.StrOpt('connection_parameters',
         default='',
         help=''),
