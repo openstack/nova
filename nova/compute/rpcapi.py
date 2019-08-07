@@ -18,6 +18,7 @@ Client side of the compute RPC API.
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
+from oslo_utils import excutils
 
 import nova.conf
 from nova import context
@@ -389,8 +390,22 @@ class ComputeAPI(object):
         # NOTE(danms): If we have a connection to the api database,
         # we should iterate all cells. If not, we must only look locally.
         if CONF.api_database.connection:
-            service_version = service_obj.get_minimum_version_all_cells(
-                context.get_admin_context(), ['nova-compute'])
+            try:
+                service_version = service_obj.get_minimum_version_all_cells(
+                    context.get_admin_context(), ['nova-compute'])
+            except exception.DBNotAllowed:
+                # This most likely means we are in a nova-compute service
+                # configured with [upgrade_levels]/compute=auto and a
+                # connection to the API database. We should not be attempting
+                # to "get out" of our cell to look at the minimum versions of
+                # nova-compute services in other cells, so DBNotAllowed was
+                # raised. Log a user-friendly message and re-raise the error.
+                with excutils.save_and_reraise_exception():
+                    LOG.error('This service is configured for access to the '
+                              'API database but is not allowed to directly '
+                              'access the database. You should run this '
+                              'service without the [api_database]/connection '
+                              'config option.')
         else:
             service_version = objects.Service.get_minimum_version(
                 context.get_admin_context(), 'nova-compute')
