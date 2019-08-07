@@ -7600,8 +7600,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr._disconnect_volume(self.context, connection_info, instance,
                                 encryption=encryption)
         drvr._host.delete_secret.assert_not_called()
-        mock_encryptor.detach_volume.called_once_with(self.context,
-                                                      **encryption)
+        mock_encryptor.detach_volume.assert_called_once_with(**encryption)
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_detach_encryptor')
     @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
@@ -12459,9 +12458,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(info[1]['over_committed_disk_size'], 18146236825)
 
         vdmock.XMLDesc.assert_called_once_with(0)
-        mock_qemu_img_info.called_once_with('/test/disk.local')
-        mock_stat.called_once_with('/test/disk')
-        mock_get_size.called_once_with('/test/disk')
+        mock_qemu_img_info.assert_called_once_with('/test/disk.local')
+        mock_stat.assert_called_once_with('/test/disk')
+        mock_get_size.assert_called_once_with('/test/disk')
 
     def test_post_live_migration(self):
         vol1_conn_info = {'data': {'test_data': mock.sentinel.vol1},
@@ -15159,8 +15158,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                  "rxvlan", "txvlan"]
             }
             self.assertEqual(expect_vf, actualvf)
-            mock_get_net_name.called_once_with(parent_address)
-            mock_dev_lookup.called_once_with(dev_name)
+            mock_get_net_name.assert_called_once_with(parent_address)
+            mock_dev_lookup.assert_called_once_with(dev_name)
 
     def test_get_pcidev_info(self):
         self.stub_out('nova.virt.libvirt.host.Host.device_lookup_by_name',
@@ -17118,7 +17117,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertRaises(test.TestingException,
                               drvr._cleanup_failed_start,
                               None, None, None, None, guest, True)
-            mock_cleanup.called_once_with(None, None, network_info=None,
+            mock_cleanup.assert_called_once_with(None, None, network_info=None,
                     block_device_info=None, destroy_disks=True)
             self.assertTrue(guest.poweroff.called)
 
@@ -19366,7 +19365,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 self.context, ins_ref, _fake_network_info(self, 1))
             mock_get_path.assert_called_once_with(ins_ref)
             self.assertFalse(mock_remove.called)
-            mock_rmtree.called_once_with('/fake/inst')
+            self.assertEqual(5, mock_rmtree.call_count)
+            mock_rmtree.assert_has_calls([mock.call('/fake/inst_resize',
+                                                    ignore_errors=True)] * 5)
 
     def test_get_instance_disk_info_exception(self):
         instance = self._create_instance()

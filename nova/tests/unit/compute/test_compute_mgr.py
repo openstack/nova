@@ -8513,8 +8513,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
             mock_remove_conn.assert_called_once_with(self.context, instance,
                                                      bdm.volume_id, None)
-            mock_attach_delete.called_once_with(self.context,
-                                                new_attachment_id)
+            mock_attach_delete.assert_called_once_with(self.context,
+                                                       new_attachment_id)
             self.assertEqual(bdm.attachment_id, orig_attachment_id)
             self.assertEqual(orig_attachment_id, bdm.connection_info)
             bdm.save.assert_called_once_with()
