@@ -59,7 +59,20 @@ LOG = log.getLogger(__name__)
 
 
 def exception_to_dict(fault, message=None):
-    """Converts exceptions to a dict for use in notifications."""
+    """Converts exceptions to a dict for use in notifications.
+
+    :param fault: Exception that occurred
+    :param message: Optional fault message, otherwise the message is derived
+        from the fault itself.
+    :returns: dict with the following items:
+
+        - exception: the fault itself
+        - message: one of (in priority order):
+                   - the provided message to this method
+                   - a formatted NovaException message
+                   - the fault class name
+        - code: integer code for the fault (defaults to 500)
+    """
     # TODO(johngarbutt) move to nova/exception.py to share with wrap_exception
 
     code = 500
@@ -74,11 +87,17 @@ def exception_to_dict(fault, message=None):
     # These exception handlers are broad so we don't fail to log the fault
     # just because there is an unexpected error retrieving the message
     except Exception:
-        try:
-            message = six.text_type(fault)
-        except Exception:
-            message = None
-    if not message:
+        # In this case either we have a NovaException which failed to format
+        # the message or we have a non-nova exception which could contain
+        # sensitive details. Since we're not sure, be safe and set the message
+        # to the exception class name. Note that we don't guard on
+        # context.is_admin here because the message is always shown in the API,
+        # even to non-admin users (e.g. NoValidHost) but only the traceback
+        # details are shown to users with the admin role. Checking for admin
+        # context here is also not helpful because admins can perform
+        # operations on a tenant user's server (migrations, reboot, etc) and
+        # service startup and periodic tasks could take actions on a server
+        # and those use an admin context.
         message = fault.__class__.__name__
     # NOTE(dripton) The message field in the database is limited to 255 chars.
     # MySQL silently truncates overly long messages, but PostgreSQL throws an
@@ -92,10 +111,14 @@ def exception_to_dict(fault, message=None):
 
 def _get_fault_details(exc_info, error_code):
     details = ''
+    # TODO(mriedem): Why do we only include the details if the code is 500?
+    # Though for non-nova exceptions the code will probably be 500.
     if exc_info and error_code == 500:
-        tb = exc_info[2]
-        if tb:
-            details = ''.join(traceback.format_tb(tb))
+        # We get the full exception details including the value since
+        # the fault message may not contain that information for non-nova
+        # exceptions (see exception_to_dict).
+        details = ''.join(traceback.format_exception(
+            exc_info[0], exc_info[1], exc_info[2]))
     return six.text_type(details)
 
 
