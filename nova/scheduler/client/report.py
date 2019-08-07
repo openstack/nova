@@ -35,7 +35,6 @@ import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import objects
-from nova.scheduler import utils as scheduler_utils
 from nova import utils
 
 
@@ -121,19 +120,6 @@ def retries(f):
                   f.__name__)
         return False
     return wrapper
-
-
-def _instance_to_allocations_dict(instance):
-    """Given an `objects.Instance` object, return a dict, keyed by resource
-    class of the amount used by the instance.
-
-    :param instance: `objects.Instance` object to translate
-    """
-    alloc_dict = scheduler_utils.resources_from_flavor(instance,
-        instance.flavor)
-
-    # Remove any zero allocations.
-    return {key: val for key, val in alloc_dict.items() if val}
 
 
 def _move_operation_alloc_request(source_allocs, dest_alloc_req):
