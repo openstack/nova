@@ -583,7 +583,7 @@ Rows were archived, running purge...
         output = self.output.getvalue()
         expected = '''\
 Failed to connect to API DB so aborting this archival attempt. \
-Please check your config file to make sure that CONF.api_database.connection \
+Please check your config file to make sure that [api_database]/connection \
 is set and run this command again.
 '''
         self.assertEqual(expected, output)
