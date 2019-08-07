@@ -109,7 +109,7 @@ class NovaProxyRequestHandlerDBTestCase(test.TestCase):
                             return_value=ctxt):
                 self.wh.new_websocket_client()
 
-            mock_validate.called_once_with(ctxt, '123-456-789')
+            mock_validate.assert_called_once_with(ctxt, '123-456-789')
             mock_validate_port.assert_called_once_with(
                 ctxt, mock_inst_get.return_value, str(db_obj['port']),
                 db_obj['console_type'])
