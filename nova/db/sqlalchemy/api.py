@@ -5436,7 +5436,10 @@ def _archive_deleted_rows_for_table(tablename, max_rows, before):
     """Move up to max_rows rows from one tables to the corresponding
     shadow table.
 
-    :returns: number of rows archived
+    :returns: 2-item tuple:
+
+        - number of rows archived
+        - list of UUIDs of instances that were archived
     """
     engine = get_engine()
     conn = engine.connect()
@@ -5523,17 +5526,20 @@ def archive_deleted_rows(max_rows=None, before=None):
     """Move up to max_rows rows from production tables to the corresponding
     shadow tables.
 
-    :returns: dict that maps table name to number of rows archived from that
-              table, for example:
+    :param max_rows: Maximum number of rows to archive (required)
+    :param before: optional datetime which when specified filters the records
+        to only archive those records deleted before the given date
+    :returns: 2-item tuple:
 
-    ::
+        - dict that maps table name to number of rows archived from that table,
+          for example::
 
-        {
-            'instances': 5,
-            'block_device_mapping': 5,
-            'pci_devices': 2,
-        }
-
+            {
+                'instances': 5,
+                'block_device_mapping': 5,
+                'pci_devices': 2,
+            }
+        - list of UUIDs of instances that were archived
     """
     table_to_rows_archived = {}
     deleted_instance_uuids = []
@@ -5549,14 +5555,14 @@ def archive_deleted_rows(max_rows=None, before=None):
         if (tablename == 'migrate_version' or
                 tablename.startswith(_SHADOW_TABLE_PREFIX)):
             continue
-        rows_archived, deleted_instance_uuid = (
+        rows_archived, _deleted_instance_uuids = (
             _archive_deleted_rows_for_table(
                 tablename,
                 max_rows=max_rows - total_rows_archived,
                 before=before))
         total_rows_archived += rows_archived
         if tablename == 'instances':
-            deleted_instance_uuids = deleted_instance_uuid
+            deleted_instance_uuids = _deleted_instance_uuids
         # Only report results for tables that had updates.
         if rows_archived:
             table_to_rows_archived[tablename] = rows_archived

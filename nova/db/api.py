@@ -1773,20 +1773,23 @@ def task_log_get(context, task_name, period_beginning,
 
 
 def archive_deleted_rows(max_rows=None, before=None):
-    """Move up to max_rows rows from production tables to corresponding shadow
-    tables.
+    """Move up to max_rows rows from production tables to the corresponding
+    shadow tables.
 
-    :returns: dict that maps table name to number of rows archived from that
-              table, for example:
+    :param max_rows: Maximum number of rows to archive (required)
+    :param before: optional datetime which when specified filters the records
+        to only archive those records deleted before the given date
+    :returns: 2-item tuple:
 
-    ::
+        - dict that maps table name to number of rows archived from that table,
+          for example::
 
-        {
-            'instances': 5,
-            'block_device_mapping': 5,
-            'pci_devices': 2,
-        }
-
+            {
+                'instances': 5,
+                'block_device_mapping': 5,
+                'pci_devices': 2,
+            }
+        - list of UUIDs of instances that were archived
     """
     return IMPL.archive_deleted_rows(max_rows=max_rows, before=before)
 
