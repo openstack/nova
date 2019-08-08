@@ -145,7 +145,8 @@ class NotificationSampleTestBase(test.TestCase,
                        notification emitted during the test.
         """
         if not actual:
-            self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+            self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                             fake_notifier.VERSIONED_NOTIFICATIONS)
             notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
         else:
             notification = actual

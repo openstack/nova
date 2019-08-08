@@ -40,7 +40,8 @@ class TestComputeTaskNotificationSample(
         self._wait_for_notification('compute_task.build_instances.error')
         # 0. scheduler.select_destinations.start
         # 1. compute_task.rebuild_server.error
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'compute_task-build_instances-error',
             replacements={
@@ -77,7 +78,8 @@ class TestComputeTaskNotificationSample(
         # 0. instance.evacuate
         # 1. scheduler.select_destinations.start
         # 2. compute_task.rebuild_server.error
-        self.assertEqual(3, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(3, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'compute_task-rebuild_server-error',
             replacements={
@@ -111,7 +113,8 @@ class TestComputeTaskNotificationSample(
         self._wait_for_notification('compute_task.migrate_server.error')
         # 0. scheduler.select_destinations.start
         # 1. compute_task.migrate_server.error
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'compute_task-migrate_server-error',
             replacements={

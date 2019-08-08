@@ -268,7 +268,8 @@ class TestInstanceNotificationSampleWithMultipleCompute(
                                     expected_status='ACTIVE')
 
         notifications = self._get_notifications('instance.evacuate')
-        self.assertEqual(1, len(notifications))
+        self.assertEqual(1, len(notifications),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-evacuate',
             replacements={
@@ -443,7 +444,8 @@ class TestInstanceNotificationSample(
         # 1. scheduler.select_destinations.end
         # 2. instance-create-start
         # 3. instance-create-error
-        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
 
         tb = fake_notifier.VERSIONED_NOTIFICATIONS[3]['payload'][
             'nova_object.data']['fault']['nova_object.data']['traceback']
@@ -468,7 +470,8 @@ class TestInstanceNotificationSample(
         self.api.delete_server(server['id'])
         self._wait_until_deleted(server)
 
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-delete-start_not_scheduled',
             replacements={
@@ -536,7 +539,8 @@ class TestInstanceNotificationSample(
         self.api.delete_server(server['id'])
         self._wait_until_deleted(server)
 
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-delete-start_compute_down',
             replacements={
@@ -673,7 +677,8 @@ class TestInstanceNotificationSample(
         self._wait_until_deleted(server)
 
         instance_updates = self._get_notifications('instance.update')
-        self.assertEqual(2, len(instance_updates))
+        self.assertEqual(2, len(instance_updates),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
 
         delete_steps = [
             # active -> deleting
@@ -743,7 +748,8 @@ class TestInstanceNotificationSample(
         self._wait_for_state_change(self.api, server,
                                     expected_status='ACTIVE')
 
-        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-power_off-start',
             replacements={
@@ -776,7 +782,8 @@ class TestInstanceNotificationSample(
         self._wait_for_state_change(self.api, server,
                                     expected_status='SHELVED')
 
-        self.assertEqual(3, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(3, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-shelve-start',
             replacements={
@@ -800,7 +807,8 @@ class TestInstanceNotificationSample(
                                         {'status': 'SHELVED_OFFLOADED',
                                          'OS-EXT-SRV-ATTR:host': None})
 
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-shelve_offload-start',
             replacements={
@@ -835,7 +843,8 @@ class TestInstanceNotificationSample(
         self.api.post_server_action(server['id'], post)
         self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
         self._wait_for_notification('instance.unshelve.end')
-        self.assertEqual(9, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(9, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-unshelve-start',
             replacements={
@@ -863,7 +872,8 @@ class TestInstanceNotificationSample(
         # 1. instance-suspend-end
         # 2. instance-resume-start
         # 3. instance-resume-end
-        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-suspend-start',
             replacements={
@@ -904,7 +914,8 @@ class TestInstanceNotificationSample(
         # 1. instance-pause-end
         # 2. instance-unpause-start
         # 3. instance-unpause-end
-        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-pause-start',
             replacements={
@@ -988,7 +999,8 @@ class TestInstanceNotificationSample(
                 'flavor.extra_specs': extra_specs['extra_specs'],
                 'requested_destination': self._build_destination_payload()})
 
-        self.assertEqual(7, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(7, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         # ignore instance.exists
         fake_notifier.VERSIONED_NOTIFICATIONS.pop(0)
 
@@ -1015,7 +1027,8 @@ class TestInstanceNotificationSample(
         self.api.post_server_action(server['id'], post)
         self._wait_for_state_change(self.api, server, 'ACTIVE')
 
-        self.assertEqual(3, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(3, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         # ignore instance.exists
         fake_notifier.VERSIONED_NOTIFICATIONS.pop(0)
         self._verify_notification(
@@ -1187,7 +1200,8 @@ class TestInstanceNotificationSample(
         response = self.api.post_server_action(server['id'], post)
         self._wait_for_notification('instance.snapshot.end')
 
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-snapshot-start',
             replacements={
@@ -1253,7 +1267,8 @@ class TestInstanceNotificationSample(
         # 4. instance.detach.end
         # 5. instance.rebuild.end
         # The compute/manager will detach every volume during rebuild
-        self.assertEqual(6, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(6, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-rebuild_scheduled',
             replacements={
@@ -1348,7 +1363,8 @@ class TestInstanceNotificationSample(
         # 4. instance.detach.end
         # 5. instance.rebuild.end
         # The compute/manager will detach every volume during rebuild
-        self.assertEqual(6, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(6, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-rebuild_scheduled',
             replacements={
@@ -1409,7 +1425,8 @@ class TestInstanceNotificationSample(
         mock_rebuild.side_effect = _virtual_interface_create_failed
         self._wait_for_state_change(self.api, server, expected_status='ERROR')
         notification = self._get_notifications('instance.rebuild.error')
-        self.assertEqual(1, len(notification))
+        self.assertEqual(1, len(notification),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
 
         tb = notification[0]['payload']['nova_object.data']['fault'][
                 'nova_object.data']['traceback']
@@ -1433,7 +1450,8 @@ class TestInstanceNotificationSample(
         self.api.post_server_action(server['id'], {'restore': {}})
         self._wait_for_state_change(self.api, server, 'ACTIVE')
 
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-restore-start',
             replacements={
@@ -1453,7 +1471,8 @@ class TestInstanceNotificationSample(
         self._wait_for_notification('instance.reboot.start')
         self._wait_for_notification('instance.reboot.end')
 
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-reboot-start',
             replacements={
@@ -1476,7 +1495,8 @@ class TestInstanceNotificationSample(
         self.api.post_server_action(server['id'], post)
         self._wait_for_notification('instance.reboot.start')
         self._wait_for_notification('instance.reboot.error')
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
 
         tb = fake_notifier.VERSIONED_NOTIFICATIONS[1]['payload'][
             'nova_object.data']['fault']['nova_object.data']['traceback']
@@ -1617,7 +1637,8 @@ class TestInstanceNotificationSample(
         self.api.post_server_action(server['id'], post)
         self._wait_for_state_change(self.api, server, 'ACTIVE')
 
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-resize_confirm-start',
             replacements={
@@ -1637,7 +1658,8 @@ class TestInstanceNotificationSample(
 
         self._wait_for_notification('instance.trigger_crash_dump.end')
 
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-trigger_crash_dump-start',
             replacements={
@@ -1656,7 +1678,8 @@ class TestInstanceNotificationSample(
 
         # 0. volume_detach-start
         # 1. volume_detach-end
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-volume_detach-start',
             replacements={
@@ -1675,7 +1698,8 @@ class TestInstanceNotificationSample(
 
         # 0. volume_attach-start
         # 1. volume_attach-end
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-volume_attach-start',
             replacements={
@@ -1703,7 +1727,8 @@ class TestInstanceNotificationSample(
         # 0. instance.rescue.start
         # 1. instance.exists
         # 2. instance.rescue.end
-        self.assertEqual(3, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(3, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-rescue-start',
             replacements={
@@ -1725,7 +1750,8 @@ class TestInstanceNotificationSample(
         self.api.post_server_action(server['id'], post)
         self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
 
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-unrescue-start',
             replacements={
@@ -1744,7 +1770,8 @@ class TestInstanceNotificationSample(
         self.api.delete_server(server['id'])
         self._wait_for_state_change(self.api, server, 'SOFT_DELETED')
 
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-soft_delete-start',
             replacements={
@@ -1833,7 +1860,8 @@ class TestInstanceNotificationSample(
         }
         self.api.attach_interface(server['id'], post)
         self._wait_for_notification('instance.interface_attach.end')
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-interface_attach-start',
             replacements={
@@ -1848,13 +1876,15 @@ class TestInstanceNotificationSample(
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
         fake_notifier.reset()
-        self.assertEqual(0, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(0, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
 
         self.api.detach_interface(
             server['id'],
             fixtures.NeutronFixture.port_2['id'])
         self._wait_for_notification('instance.interface_detach.end')
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-interface_detach-start',
             replacements={
@@ -1914,7 +1944,8 @@ class TestInstanceNotificationSample(
         # 0. instance-lock
         # 1. instance-unlock
 
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-lock',
             replacements={
@@ -1938,7 +1969,8 @@ class TestInstanceNotificationSample(
         # 0. instance-lock
         # 1. instance-unlock
 
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-lock-with-reason',
             replacements={
