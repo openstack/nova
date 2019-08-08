@@ -13,6 +13,8 @@
 import mock
 import time
 
+import testtools
+
 from nova import context as nova_context
 from nova import objects
 from nova.tests.functional import integrated_helpers
@@ -26,6 +28,7 @@ class ComputeManagerInitHostTestCase(
 
     compute_driver = 'fake.MediumFakeDriver'
 
+    @testtools.skip('Bug 1839515')
     def test_migrate_disk_and_power_off_crash_finish_revert_migration(self):
         """Tests the scenario that the compute service crashes while the
         driver's migrate_disk_and_power_off method is running (we could be
