@@ -404,7 +404,7 @@ class Guest(object):
                               device, persistent, live)
 
             except libvirt.libvirtError as ex:
-                with excutils.save_and_reraise_exception():
+                with excutils.save_and_reraise_exception(reraise=False) as ctx:
                     errcode = ex.get_error_code()
                     if errcode in (libvirt.VIR_ERR_OPERATION_FAILED,
                                    libvirt.VIR_ERR_INTERNAL_ERROR):
@@ -421,6 +421,10 @@ class Guest(object):
                             # detach fails because the device is not found
                             raise exception.DeviceNotFound(
                                 device=alternative_device_name)
+                    # Re-raise the original exception if we're not raising
+                    # DeviceNotFound instead. This will avoid logging of a
+                    # "Original exception being dropped" traceback.
+                    ctx.reraise = True
 
         conf = get_device_conf_func(device)
         if conf is None:

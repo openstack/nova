@@ -325,6 +325,11 @@ class GuestTestCase(test.NoDBTestCase):
             inc_sleep_time=.01, max_retry_count=3)
         # Some time later, we can do the wait/retry to ensure detach
         self.assertRaises(exception.DeviceNotFound, retry_detach)
+        # Check that the save_and_reraise_exception context manager didn't log
+        # a traceback when the libvirtError was caught and DeviceNotFound was
+        # raised.
+        self.assertNotIn('Original exception being dropped',
+                         self.stdlog.logger.output)
 
     @mock.patch.object(libvirt_guest.Guest, "detach_device")
     def test_detach_device_with_retry_operation_internal(self, mock_detach):
