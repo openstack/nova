@@ -739,8 +739,7 @@ class DefaultFlavorsFixture(fixtures.Fixture):
         defaults = {'rxtx_factor': 1.0, 'disabled': False, 'is_public': True,
                     'ephemeral_gb': 0, 'swap': 0}
         extra_specs = {
-            "hw:mem_page_size": "2048",
-            "hw:cpu_policy": "dedicated"
+            "hw:numa_nodes": "1"
         }
         default_flavors = [
             objects.Flavor(context=ctxt, memory_mb=512, vcpus=1,
