@@ -6766,7 +6766,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                 test_instance_fault.fake_faults['fake-uuid'][0])
             yield _finish_resize
 
-    def test_finish_resize_failure(self):
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'delete_allocation_for_instance')
+    def test_finish_resize_failure(self, mock_del_allocs):
         self.migration.status = 'post-migrating'
 
         with self._mock_finish_resize() as _finish_resize:
@@ -6780,10 +6782,14 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
         # Assert that we set the migration to an error state
         self.assertEqual("error", self.migration.status)
+        mock_del_allocs.assert_called_once_with(
+            self.context, self.migration.uuid)
 
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'delete_allocation_for_instance')
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_notify_about_instance_usage')
-    def test_finish_resize_notify_failure(self, notify):
+    def test_finish_resize_notify_failure(self, notify, mock_del_allocs):
         self.migration.status = 'post-migrating'
 
         with self._mock_finish_resize():
@@ -6797,6 +6803,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
         # Assert that we did not set the migration to an error state
         self.assertEqual('post-migrating', self.migration.status)
+        mock_del_allocs.assert_called_once_with(
+            self.context, self.migration.uuid)
 
     @contextlib.contextmanager
     def _mock_resize_instance(self):

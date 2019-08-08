@@ -4727,12 +4727,50 @@ class ComputeManager(manager.Manager):
         new host machine.
 
         """
+        # _finish_resize sets instance.old_flavor to instance.flavor and
+        # changes instance.flavor to instance.new_flavor (if doing a resize
+        # rather than a cold migration). We save off the old_flavor here in
+        # case we need it for error handling below.
+        old_flavor = instance.flavor
         try:
             self._finish_resize_helper(context, disk_info, image, instance,
                                        migration)
         except Exception:
             with excutils.save_and_reraise_exception():
-                self._revert_allocation(context, instance, migration)
+                # At this point, resize_instance (which runs on the source) has
+                # already updated the instance host/node values to point to
+                # this (the dest) compute, so we need to leave the allocations
+                # against the dest node resource provider intact and drop the
+                # allocations against the source node resource provider. If the
+                # user tries to recover the server by hard rebooting it, it
+                # will happen on this host so that's where the allocations
+                # should go.
+                LOG.info('Deleting allocations for old flavor on source node '
+                         '%s after finish_resize failure. You may be able to '
+                         'recover the instance by hard rebooting it.',
+                         migration.source_compute, instance=instance)
+                # NOTE(mriedem): We can't use _delete_allocation_after_move
+                # because it relies on the resource tracker to look up the
+                # node uuid and since we are on the dest host, passing the
+                # source nodename won't work since the RT isn't tracking that
+                # node here. So we just try to remove the migration-based
+                # allocations directly and handle the case they don't exist.
+                if not self.reportclient.delete_allocation_for_instance(
+                        context, migration.uuid):
+                    # No migration-based allocation. Try to cleanup directly.
+                    cn = objects.ComputeNode.get_by_host_and_nodename(
+                        context, migration.source_compute,
+                        migration.source_node)
+                    if not scheduler_utils.remove_allocation_from_compute(
+                            context, instance, cn.uuid, self.reportclient,
+                            flavor=old_flavor):
+                        LOG.error('Failed to delete allocations for old '
+                                  'flavor %s against source node %s. The '
+                                  'instance is now on the dest node %s. The '
+                                  'allocations against the source node need '
+                                  'to be manually cleaned up in Placement.',
+                                  old_flavor.flavorid, migration.source_node,
+                                  migration.dest_node, instance=instance)
 
     def _finish_resize_helper(self, context, disk_info, image, instance,
                               migration):
