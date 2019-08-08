@@ -1166,6 +1166,56 @@ cg /cgroup/memory cg opt1,opt2 0 0
     def test_is_cpu_control_policy_capable_ioerror(self, mock_open):
         self.assertFalse(self.host.is_cpu_control_policy_capable())
 
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.getCapabilities')
+    def test_has_hyperthreading__true(self, mock_cap):
+        mock_cap.return_value = """
+        <capabilities>
+          <host>
+            <uuid>1f71d34a-7c89-45cf-95ce-3df20fc6b936</uuid>
+            <cpu>
+            </cpu>
+            <topology>
+              <cells num='1'>
+                <cell id='0'>
+                  <cpus num='4'>
+                    <cpu id='0' socket_id='0' core_id='0' siblings='0,2'/>
+                    <cpu id='1' socket_id='0' core_id='1' siblings='1,3'/>
+                    <cpu id='2' socket_id='0' core_id='0' siblings='0,2'/>
+                    <cpu id='3' socket_id='0' core_id='1' siblings='1,3'/>
+                  </cpus>
+                </cell>
+              </cells>
+            </topology>
+          </host>
+        </capabilities>
+        """
+        self.assertTrue(self.host.has_hyperthreading)
+
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.getCapabilities')
+    def test_has_hyperthreading__false(self, mock_cap):
+        mock_cap.return_value = """
+        <capabilities>
+          <host>
+            <uuid>1f71d34a-7c89-45cf-95ce-3df20fc6b936</uuid>
+            <cpu>
+            </cpu>
+            <topology>
+              <cells num='1'>
+                <cell id='0'>
+                  <cpus num='4'>
+                    <cpu id='0' socket_id='0' core_id='0' siblings='0'/>
+                    <cpu id='1' socket_id='0' core_id='1' siblings='1'/>
+                    <cpu id='2' socket_id='0' core_id='2' siblings='2'/>
+                    <cpu id='3' socket_id='0' core_id='3' siblings='3'/>
+                  </cpus>
+                </cell>
+              </cells>
+            </topology>
+          </host>
+        </capabilities>
+        """
+        self.assertFalse(self.host.has_hyperthreading)
+
 
 vc = fakelibvirt.virConnect
 

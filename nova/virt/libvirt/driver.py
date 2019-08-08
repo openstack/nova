@@ -357,8 +357,8 @@ class LibvirtDriver(driver.ComputeDriver):
         self._initiator = None
         self._fc_wwnns = None
         self._fc_wwpns = None
-        self._caps = None
         self._supported_perf_events = []
+        self.__has_hyperthreading = None
         self.firewall_driver = firewall.load_driver(
             DEFAULT_FIREWALL_DRIVER,
             host=self._host)
@@ -10269,6 +10269,8 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         traits = self._get_cpu_feature_traits()
         traits[ot.HW_CPU_X86_AMD_SEV] = self._host.supports_amd_sev
+        traits[ot.HW_CPU_HYPERTHREADING] = self._host.has_hyperthreading
+
         return traits
 
     def _get_cpu_feature_traits(self):
