@@ -10,10 +10,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import ddt
 import fixtures
 import microversion_parse
+import os
 
+from unittest import mock
+
+from oslo_utils.fixture import uuidsentinel
 from oslotest import base
 
 from nova.compute import provider_config
@@ -122,3 +127,408 @@ class SchemaValidationTestCasesV1(SchemaValidationMixin):
     def test_schema_version_matching(self):
         self.run_schema_version_matching(self.MIN_SCHEMA_VERSION,
                                          self.MAX_SCHEMA_VERSION)
+
+
+@ddt.ddt
+class ValidateProviderConfigTestCases(base.BaseTestCase):
+    @ddt.unpack
+    @ddt.file_data('provider_config_data/validate_provider_test_data.yaml')
+    def test__validate_provider_config(self, sample):
+        provider_config._validate_provider_config(sample, "fake_path")
+
+    # TODO(tony): gibi's comment,
+    # negative tests should be in the same format as the other test
+    # for the provider config. continue work on this a follow up.
+    def test__validate_provider_config_one_invalid_additional_inventory(self):
+        config = {
+            "providers": [
+                {
+                    "identification": {"name": "NAME"},
+                    "inventories": {
+                        "additional": [
+                            {"CUSTOM_RESOURCE_CLASS": {}},
+                            {"INVALID_RESOURCE_CLASS": {}}
+                        ]
+                    }
+                }
+            ]
+        }
+
+        actual = self.assertRaises(nova_exc.ProviderConfigException,
+                                   provider_config._validate_provider_config,
+                                   config, "fake_path").message
+
+        self.assertEqual(
+            "An error occurred while processing a provider config file: "
+            "Invalid resource class, only custom resource classes are allowed:"
+            " INVALID_RESOURCE_CLASS", actual)
+
+    def test__validate_provider_config_two_invalid_additional_inventory(self):
+        config = {
+            "providers": [
+                {
+                    "identification": {"name": "NAME"},
+                    "inventories": {
+                        "additional": [
+                            {"CUSTOM_RESOURCE_CLASS": {}},
+                            {"INVALID_RESOURCE_CLASS": {}},
+                            {"INVALID_RESOURCE_CLASS2": {}}
+                        ]
+                    }
+                }
+            ]
+        }
+
+        actual = self.assertRaises(nova_exc.ProviderConfigException,
+                                   provider_config._validate_provider_config,
+                                   config, "fake_path").message
+
+        self.assertEqual(
+            "An error occurred while processing a provider config file: "
+            "Invalid resource class, only custom resource classes are allowed:"
+            " INVALID_RESOURCE_CLASS, INVALID_RESOURCE_CLASS2", actual)
+
+    def test__validate_provider_config_one_invalid_additional_trait(self):
+        config = {
+            "providers": [
+                {
+                    "identification": {"name": "NAME"},
+                    "traits": {
+                        "additional": [
+                            "CUSTOM_TRAIT",
+                            "INVALID_TRAIT"
+                        ]
+                    }
+                }
+            ]
+        }
+
+        actual = self.assertRaises(nova_exc.ProviderConfigException,
+                                   provider_config._validate_provider_config,
+                                   config, "fake_path").message
+
+        self.assertEqual(
+            "An error occurred while processing a provider config "
+            "file: Invalid traits, only custom traits are allowed: "
+            "['INVALID_TRAIT']", actual)
+
+    def test__validate_provider_config_two_invalid_additional_trait(self):
+        config = {
+            "providers": [
+                {
+                    "identification": {"name": "NAME"},
+                    "traits": {
+                        "additional": [
+                            "CUSTOM_TRAIT",
+                            "INVALID_TRAIT",
+                            "INVALID_TRAIT2"
+                        ]
+                    }
+                }
+            ]
+        }
+
+        actual = self.assertRaises(nova_exc.ProviderConfigException,
+                                   provider_config._validate_provider_config,
+                                   config, "fake_path").message
+
+        self.assertEqual(
+            "An error occurred while processing a provider config "
+            "file: Invalid traits, only custom traits are allowed: "
+            "['INVALID_TRAIT', 'INVALID_TRAIT2']", actual)
+
+    @mock.patch.object(provider_config, 'LOG')
+    def test__validate_provider_config_one_noop_provider(self, mock_log):
+        expected = {
+            "providers": [
+                {
+                    "identification": {"name": "NAME1"},
+                    "inventories": {
+                        "additional": [
+                            {"CUSTOM_RESOURCE_CLASS": {}}
+                        ]
+                    }
+                },
+                {
+                    "identification": {"name": "NAME_453764"},
+                    "inventories": {
+                        "additional": []
+                    },
+                    "traits": {
+                        "additional": []
+                    }
+                }
+            ]
+        }
+        data = copy.deepcopy(expected)
+
+        valid = provider_config._validate_provider_config(data, "fake_path")
+
+        mock_log.warning.assert_called_once_with(
+            "Provider NAME_453764 defined in "
+            "fake_path has no additional "
+            "inventories or traits and will be ignored."
+        )
+        # assert that _validate_provider_config does not mutate inputs
+        self.assertEqual(expected, data)
+        # assert that the first entry in the returned tuple is the full set
+        # of providers not a copy and is equal to the expected providers.
+        self.assertIs(data['providers'][0], valid[0])
+        self.assertEqual(expected['providers'][0], valid[0])
+
+
+class GetProviderConfigsTestCases(base.BaseTestCase):
+    @mock.patch.object(provider_config, 'glob')
+    def test_get_provider_configs_one_file(self, mock_glob):
+        expected = {
+            "$COMPUTE_NODE": {
+                "__source_file": "example_provider.yaml",
+                "identification": {
+                    "name": "$COMPUTE_NODE"
+                },
+                "inventories": {
+                    "additional": [
+                        {
+                            "CUSTOM_EXAMPLE_RESOURCE_CLASS": {
+                                "total": 100,
+                                "reserved": 0,
+                                "min_unit": 1,
+                                "max_unit": 10,
+                                "step_size": 1,
+                                "allocation_ratio": 1.0
+                            }
+                        }
+                    ]
+                },
+                "traits": {
+                    "additional": [
+                        "CUSTOM_TRAIT_ONE",
+                        "CUSTOM_TRAIT2"
+                    ]
+                }
+            }
+        }
+
+        example_file = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            'provider_config_data/v1/example_provider.yaml')
+        mock_glob.glob.return_value = [example_file]
+
+        actual = provider_config.get_provider_configs('path')
+
+        self.assertEqual(expected, actual)
+        mock_glob.glob.assert_called_with('path/*.yaml')
+
+    @mock.patch.object(provider_config, 'glob')
+    @mock.patch.object(provider_config, '_parse_provider_yaml')
+    def test_get_provider_configs_one_file_uuid_conflict(
+            self, mock_parser, mock_glob):
+        # one config file with conflicting identification
+        providers = [
+            {"__source_file": "file1.yaml",
+             "identification": {
+                 "uuid": uuidsentinel.uuid1
+             },
+             "inventories": {
+                 "additional": [
+                     {
+                         "CUSTOM_EXAMPLE_RESOURCE_CLASS1": {
+                             "total": 100,
+                             "reserved": 0,
+                             "min_unit": 1,
+                             "max_unit": 10,
+                             "step_size": 1,
+                             "allocation_ratio": 1
+                         }
+                     }
+                 ]
+             },
+             "traits": {
+                 "additional": [
+                     "CUSTOM_TRAIT1"
+                 ]
+             }
+             },
+            {"__source_file": "file1.yaml",
+             "identification": {
+                 "uuid": uuidsentinel.uuid1
+             },
+             "inventories": {
+                 "additional": [
+                     {
+                         "CUSTOM_EXAMPLE_RESOURCE_CLASS2": {
+                             "total": 100,
+                             "reserved": 0,
+                             "min_unit": 1,
+                             "max_unit": 10,
+                             "step_size": 1,
+                             "allocation_ratio": 1
+                         }
+                     }
+                 ]
+             },
+             "traits": {
+                 "additional": [
+                     "CUSTOM_TRAIT2"
+                 ]
+             }
+             }
+        ]
+        mock_parser.side_effect = [{"providers": providers}]
+        mock_glob.glob.return_value = ['file1.yaml']
+
+        # test that correct error is raised and message matches
+        error = self.assertRaises(nova_exc.ProviderConfigException,
+                                  provider_config.get_provider_configs,
+                                  'dummy_path').kwargs['error']
+        self.assertEqual("Provider %s has multiple definitions in source "
+                         "file(s): ['file1.yaml']." % uuidsentinel.uuid1,
+                         error)
+
+    @mock.patch.object(provider_config, 'glob')
+    @mock.patch.object(provider_config, '_parse_provider_yaml')
+    def test_get_provider_configs_two_files(self, mock_parser, mock_glob):
+        expected = {
+            "EXAMPLE_RESOURCE_PROVIDER1": {
+                "__source_file": "file1.yaml",
+                "identification": {
+                    "name": "EXAMPLE_RESOURCE_PROVIDER1"
+                },
+                "inventories": {
+                    "additional": [
+                        {
+                            "CUSTOM_EXAMPLE_RESOURCE_CLASS1": {
+                                "total": 100,
+                                "reserved": 0,
+                                "min_unit": 1,
+                                "max_unit": 10,
+                                "step_size": 1,
+                                "allocation_ratio": 1
+                            }
+                        }
+                    ]
+                },
+                "traits": {
+                    "additional": [
+                        "CUSTOM_TRAIT1"
+                    ]
+                }
+            },
+            "EXAMPLE_RESOURCE_PROVIDER2": {
+                "__source_file": "file2.yaml",
+                "identification": {
+                    "name": "EXAMPLE_RESOURCE_PROVIDER2"
+                },
+                "inventories": {
+                    "additional": [
+                        {
+                            "CUSTOM_EXAMPLE_RESOURCE_CLASS2": {
+                                "total": 100,
+                                "reserved": 0,
+                                "min_unit": 1,
+                                "max_unit": 10,
+                                "step_size": 1,
+                                "allocation_ratio": 1
+                            }
+                        }
+                    ]
+                },
+                "traits": {
+                    "additional": [
+                        "CUSTOM_TRAIT2"
+                    ]
+                }
+            }
+        }
+        mock_parser.side_effect = [
+            {"providers": [provider]} for provider in expected.values()]
+        mock_glob_return = ['file1.yaml', 'file2.yaml']
+        mock_glob.glob.return_value = mock_glob_return
+        dummy_path = 'dummy_path'
+
+        actual = provider_config.get_provider_configs(dummy_path)
+
+        mock_glob.glob.assert_called_once_with(os.path.join(dummy_path,
+                                                            '*.yaml'))
+        mock_parser.assert_has_calls([mock.call(param)
+                                      for param in mock_glob_return])
+        self.assertEqual(expected, actual)
+
+    @mock.patch.object(provider_config, 'glob')
+    @mock.patch.object(provider_config, '_parse_provider_yaml')
+    def test_get_provider_configs_two_files_name_conflict(self, mock_parser,
+                                                          mock_glob):
+        # two config files with conflicting identification
+        configs = {
+            "EXAMPLE_RESOURCE_PROVIDER1": {
+                "__source_file": "file1.yaml",
+                "identification": {
+                    "name": "EXAMPLE_RESOURCE_PROVIDER1"
+                },
+                "inventories": {
+                    "additional": [
+                        {
+                            "CUSTOM_EXAMPLE_RESOURCE_CLASS1": {
+                                "total": 100,
+                                "reserved": 0,
+                                "min_unit": 1,
+                                "max_unit": 10,
+                                "step_size": 1,
+                                "allocation_ratio": 1
+                            }
+                        }
+                    ]
+                },
+                "traits": {
+                    "additional": [
+                        "CUSTOM_TRAIT1"
+                    ]
+                }
+            },
+            "EXAMPLE_RESOURCE_PROVIDER2": {
+                "__source_file": "file2.yaml",
+                "identification": {
+                    "name": "EXAMPLE_RESOURCE_PROVIDER1"
+                },
+                "inventories": {
+                    "additional": [
+                        {
+                            "CUSTOM_EXAMPLE_RESOURCE_CLASS1": {
+                                "total": 100,
+                                "reserved": 0,
+                                "min_unit": 1,
+                                "max_unit": 10,
+                                "step_size": 1,
+                                "allocation_ratio": 1
+                            }
+                        }
+                    ]
+                },
+                "traits": {
+                    "additional": [
+                        "CUSTOM_TRAIT1"
+                    ]
+                }
+            }
+        }
+        mock_parser.side_effect = [{"providers": [configs[provider]]}
+                                   for provider in configs]
+        mock_glob.glob.return_value = ['file1.yaml', 'file2.yaml']
+
+        # test that correct error is raised and message matches
+        error = self.assertRaises(nova_exc.ProviderConfigException,
+                                  provider_config.get_provider_configs,
+                                  'dummy_path').kwargs['error']
+        self.assertEqual("Provider EXAMPLE_RESOURCE_PROVIDER1 has multiple "
+                         "definitions in source file(s): "
+                         "['file1.yaml', 'file2.yaml'].", error)
+
+    @mock.patch.object(provider_config, 'LOG')
+    def test_get_provider_configs_no_configs(self, mock_log):
+        path = "invalid_path!@#"
+        actual = provider_config.get_provider_configs(path)
+
+        self.assertEqual({}, actual)
+        mock_log.info.assert_called_once_with(
+            "No provider configs found in %s. If files are present, "
+            "ensure the Nova process has access.", path)

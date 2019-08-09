@@ -1,0 +1,103 @@
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+# This file contains ddt test data consumed by test_provider_config.py to test
+# good paths through _validate_provider_config(). Sample is required for each
+# test. This sample and passed to _validate_provider_config(). If no exception
+# is raised, the test passes.
+
+no_trait_or_inventory_keys:
+  sample:
+    providers:
+      - identification:
+          name: name
+additional_traits_empty_list:
+  sample:
+    providers:
+      - identification:
+          name: name
+        traits:
+          additional: []
+one_additional_valid_trait:
+  sample:
+    providers:
+      - identification:
+          uuid: uuid
+        traits:
+          additional:
+            - CUSTOM_TRAIT
+additional_inventories_empty_list:
+  sample:
+    providers:
+      - identification:
+          uuid: uuid
+        inventories:
+          additional: []
+one_valid_additional_inventory:
+  sample:
+    providers:
+      - identification:
+          name: name
+        inventories:
+          additional:
+            - CUSTOM_RESOURCE_CLASS:
+                total: 1
+four_providers_one_valid_additional_inventory_each:
+  sample:
+    providers:
+      - identification:
+          name: name1
+        inventories:
+          additional:
+            - CUSTOM_RESOURCE_CLASS:
+                total: 1
+      - identification:
+          name: name2
+        inventories:
+          additional:
+            - CUSTOM_RESOURCE_CLASS:
+                total: 1
+      - identification:
+          uuid: uuid1
+        inventories:
+          additional:
+            - CUSTOM_RESOURCE_CLASS:
+                total: 1
+      - identification:
+          uuid: uuid2
+        inventories:
+          additional:
+            - CUSTOM_RESOURCE_CLASS:
+                total: 1
+four_providers_one_valid_additional_trait_each:
+  sample:
+    providers:
+      - identification:
+          name: name1
+        traits:
+          additional:
+            - CUSTOM_TRAIT
+      - identification:
+          name: name2
+        traits:
+          additional:
+            - CUSTOM_TRAIT
+      - identification:
+          uuid: uuid1
+        traits:
+          additional:
+            - CUSTOM_TRAIT
+      - identification:
+          uuid: uuid2
+        traits:
+          additional:
+            - CUSTOM_TRAIT

@@ -10,10 +10,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import glob
 import jsonschema
 import logging
 import microversion_parse
+import os
 import yaml
+
+import os_resource_classes
+import os_traits
 
 from nova import exception as nova_exc
 from nova.i18n import _
@@ -232,6 +237,79 @@ def _load_yaml_file(path):
         raise nova_exc.ProviderConfigException(error=message)
 
 
+def _validate_provider_config(config, provider_config_path):
+    """Accepts a schema-verified provider config in the form of a dict and
+     performs additional checks for format and required keys.
+
+    :param config: Dict containing a provider config file
+    :param provider_config_path: Path to the provider config, used for logging
+    :return: List of valid providers
+    :raise nova.exception.ProviderConfigException: If provider id is missing,
+        or a resource class or trait name is invalid.
+    """
+    def _validate_traits(provider):
+        # Check that traits are custom
+        additional_traits = set(provider.get("traits", {}).get(
+            "additional", []))
+        trait_conflicts = [trait for trait in additional_traits
+                           if not os_traits.is_custom(trait)]
+        if trait_conflicts:
+            # sort for more predictable message for testing
+            message = _(
+                "Invalid traits, only custom traits are allowed: %s"
+            ) % sorted(trait_conflicts)
+            raise nova_exc.ProviderConfigException(error=message)
+        return additional_traits
+
+    def _validate_rc(provider):
+        # Check that resource classes are custom
+        additional_inventories = provider.get("inventories", {}).get(
+            "additional", [])
+        all_inventory_conflicts = []
+        for inventory in additional_inventories:
+            inventory_conflicts = [rc for rc in inventory
+                                   if not os_resource_classes.is_custom(rc)]
+            if inventory_conflicts:
+                all_inventory_conflicts += inventory_conflicts
+
+        if all_inventory_conflicts:
+            # sort for more predictable message for testing
+            message = _(
+                "Invalid resource class, only custom resource classes "
+                "are allowed: %s") % ', '.join(sorted(all_inventory_conflicts))
+            raise nova_exc.ProviderConfigException(error=message)
+        return additional_inventories
+
+    # store valid providers
+    valid_providers = []
+
+    for provider in config.get("providers", []):
+        # Check that the identification method is known since
+        # the schema only requires that some property be present
+        pid = provider["identification"]
+        provider_id = pid.get("name") or pid.get("uuid")
+        # Not checking the validity of provider_id since
+        # the schema has already ensured that.
+
+        additional_traits = _validate_traits(provider)
+        additional_inventories = _validate_rc(provider)
+
+        # filter out no-op providers so they will not be returned
+        if not additional_traits and not additional_inventories:
+            message = (
+                "Provider %(provider_id)s defined in %(provider_config_path)s "
+                "has no additional inventories or traits and will be ignored."
+            ) % {
+                "provider_id": provider_id,
+                "provider_config_path": provider_config_path
+            }
+            LOG.warning(message)
+        else:
+            valid_providers.append(provider)
+
+    return valid_providers
+
+
 def _parse_provider_yaml(path):
     """Loads schema, parses a provider.yaml file and validates the content.
 
@@ -276,3 +354,68 @@ def _parse_provider_yaml(path):
                 "path": path, "schema_version": schema_version, "reason": e}
         raise nova_exc.ProviderConfigException(error=message)
     return yaml_file
+
+
+def get_provider_configs(provider_config_dir):
+    """Gathers files in the provided path and calls the parser for each file
+    and merges them into a list while checking for a number of possible
+    conflicts.
+
+    :param provider_config_dir: Path to a directory containing provider config
+        files to be loaded.
+    :raise nova.exception.ProviderConfigException: If unable to read provider
+        config directory or if one of a number of validation checks fail:
+        - Unknown, unsupported, or missing schema major version.
+        - Unknown, unsupported, or missing resource provider identification.
+        - A specific resource provider is identified twice with the same
+          method. If the same provider identified by *different* methods,
+          such conflict will be detected in a later stage.
+        - A resource class or trait name is invalid or not custom.
+        - A general schema validation error occurs (required fields,
+          types, etc).
+    :return: A dict of dicts keyed by uuid_or_name with the parsed and
+    validated contents of all files in the provided dir. Each value in the dict
+    will include the source file name the value of the __source_file key.
+    """
+    provider_configs = {}
+
+    provider_config_paths = glob.glob(
+        os.path.join(provider_config_dir, "*.yaml"))
+    provider_config_paths.sort()
+
+    if not provider_config_paths:
+        message = (
+            "No provider configs found in %s. If files are present, "
+            "ensure the Nova process has access."
+        )
+        LOG.info(message, provider_config_dir)
+
+        # return an empty dict as no provider configs found
+        return provider_configs
+
+    for provider_config_path in provider_config_paths:
+        provider_config = _parse_provider_yaml(provider_config_path)
+
+        for provider in _validate_provider_config(
+            provider_config, provider_config_path,
+        ):
+            provider['__source_file'] = os.path.basename(provider_config_path)
+            pid = provider["identification"]
+            uuid_or_name = pid.get("uuid") or pid.get("name")
+            # raise exception if this provider was already processed
+            if uuid_or_name in provider_configs:
+                raise nova_exc.ProviderConfigException(
+                    error=_(
+                        "Provider %(provider_id)s has multiple definitions "
+                        "in source file(s): %(source_files)s."
+                    ) % {
+                        "provider_id": uuid_or_name,
+                        # sorted set for deduplication and consistent order
+                        "source_files": sorted({
+                            provider_configs[uuid_or_name]["__source_file"],
+                            provider_config_path
+                        })
+                    }
+                )
+            provider_configs[uuid_or_name] = provider
+    return provider_configs
