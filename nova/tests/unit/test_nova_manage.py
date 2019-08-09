@@ -2075,7 +2075,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     def test_delete_host_success(self, mock_get_cn, mock_destroy,
                                  mock_get_by_host):
-        """Tests trying to delete a host that has not instances."""
+        """Tests trying to delete a host that has no instances."""
         ctxt = context.get_admin_context()
         # create the cell mapping
         cm1 = objects.CellMapping(
@@ -2099,6 +2099,38 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         for node in mock_get_cn.return_value:
             self.assertEqual(0, node.mapped)
             node.save.assert_called_once_with()
+
+    @mock.patch.object(objects.InstanceList, 'get_by_host',
+                       return_value=[])
+    @mock.patch.object(objects.HostMapping, 'destroy')
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host',
+        side_effect=exception.ComputeHostNotFound(host='fake-host'))
+    def test_delete_host_success_compute_host_not_found(self, mock_get_cn,
+                                                        mock_destroy,
+                                                        mock_get_by_host):
+        """Tests trying to delete a host that has no instances, but cannot
+           be found by ComputeNodeList.get_all_by_host.
+        """
+        ctxt = context.get_admin_context()
+        # create the cell mapping
+        cm1 = objects.CellMapping(
+            context=ctxt, uuid=uuidsentinel.cell1,
+            database_connection='fake:///db', transport_url='fake:///mq')
+        cm1.create()
+        # create a host mapping in the cell
+        hm = objects.HostMapping(
+            context=ctxt, host='fake-host', cell_mapping=cm1)
+        hm.create()
+
+        self.assertEqual(0, self.commands.delete_host(uuidsentinel.cell1,
+                                                      'fake-host'))
+        output = self.output.getvalue().strip()
+        self.assertEqual('', output)
+        mock_get_by_host.assert_called_once_with(
+            test.MatchType(context.RequestContext), 'fake-host')
+        mock_destroy.assert_called_once_with()
+        mock_get_cn.assert_called_once_with(
+            test.MatchType(context.RequestContext), 'fake-host')
 
 
 class TestNovaManageMain(test.NoDBTestCase):
