@@ -139,8 +139,11 @@ DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     libvirt_firewall.IptablesFirewallDriver.__name__)
 
 DEFAULT_UEFI_LOADER_PATH = {
-    "x86_64": "/usr/share/OVMF/OVMF_CODE.fd",
-    "aarch64": "/usr/share/AAVMF/AAVMF_CODE.fd"
+    "x86_64": ['/usr/share/OVMF/OVMF_CODE.fd',
+               '/usr/share/OVMF/OVMF_CODE.secboot.fd',
+               '/usr/share/qemu/ovmf-x86_64-code.bin'],
+    "aarch64": ['/usr/share/AAVMF/AAVMF_CODE.fd',
+                '/usr/share/qemu/aavmf-aarch64-code.bin']
 }
 
 MAX_CONSOLE_BYTES = 100 * units.Ki
@@ -4951,12 +4954,33 @@ class LibvirtDriver(driver.ComputeDriver):
         return instance.flavor
 
     def _has_uefi_support(self):
-        # This means that the host can support uefi booting for guests
+        # This means that the host can support UEFI booting for guests
         supported_archs = [fields.Architecture.X86_64,
                            fields.Architecture.AARCH64]
         caps = self._host.get_capabilities()
+        # TODO(dmllr, kchamart): Get rid of probing the OVMF binary file
+        # paths, it is not robust, because nothing but the binary's
+        # filename is reported, which means you have to detect its
+        # architecture and features by other means.  To solve this,
+        # query the libvirt's getDomainCapabilities() to get the
+        # firmware paths (as reported in the 'loader' value).  Nova now
+        # has a wrapper method for this, get_domain_capabilities().
+        # This is a more reliable way to detect UEFI boot support.
+        #
+        # Further, with libvirt 5.3 onwards, support for UEFI boot is
+        # much more simplified by the "firmware auto-selection" feature.
+        # When using this, Nova doesn't need to query OVMF file paths at
+        # all; libvirt will take care of it.  This is done by taking
+        # advantage of the so-called firmware "descriptor files" --
+        # small JSON files (which will be shipped by Linux
+        # distributions) that describe a UEFI firmware binary's
+        # "characteristics", such as the binary's file path, its
+        # features, architecture, supported machine type, NVRAM template
+        # and so forth.
+
         return ((caps.host.cpu.arch in supported_archs) and
-                os.path.exists(DEFAULT_UEFI_LOADER_PATH[caps.host.cpu.arch]))
+                any((os.path.exists(p)
+                     for p in DEFAULT_UEFI_LOADER_PATH[caps.host.cpu.arch])))
 
     def _get_supported_perf_events(self):
 
@@ -5015,8 +5039,9 @@ class LibvirtDriver(driver.ComputeDriver):
                                     "functional testing and therefore "
                                     "considered experimental.")
                         uefi_logged = True
-                    guest.os_loader = DEFAULT_UEFI_LOADER_PATH[
-                        caps.host.cpu.arch]
+                    for lpath in DEFAULT_UEFI_LOADER_PATH[caps.host.cpu.arch]:
+                        if os.path.exists(lpath):
+                            guest.os_loader = lpath
                     guest.os_loader_type = "pflash"
                 else:
                     raise exception.UEFINotSupported()

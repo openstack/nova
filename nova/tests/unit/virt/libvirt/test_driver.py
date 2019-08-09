@@ -6423,8 +6423,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                      _fake_network_info(self, 1),
                                      image_meta, disk_info)
         self.assertTrue(mock_path_exists.called)
-        mock_path_exists.assert_called_with(
-            libvirt_driver.DEFAULT_UEFI_LOADER_PATH['aarch64'])
+        mock_path_exists.assert_any_call(
+            libvirt_driver.DEFAULT_UEFI_LOADER_PATH['aarch64'][0])
         self.assertEqual(cfg.os_mach_type, "virt")
 
         num_ports = 0
@@ -6468,8 +6468,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         cfg = self._get_guest_config_with_graphics()
 
         self.assertTrue(mock_path_exists.called)
-        mock_path_exists.assert_called_with(
-            libvirt_driver.DEFAULT_UEFI_LOADER_PATH['aarch64'])
+        mock_path_exists.assert_any_call(
+            libvirt_driver.DEFAULT_UEFI_LOADER_PATH['aarch64'][0])
         self.assertEqual(cfg.os_mach_type, "virt")
 
         usbhost_exists = False
