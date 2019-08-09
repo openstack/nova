@@ -540,7 +540,6 @@ class ComputeManager(manager.Manager):
         self.image_api = image.API()
         self._last_bw_usage_poll = 0
         self._bw_usage_supported = True
-        self._last_bw_usage_cell_update = 0
         self.compute_api = compute.API()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.compute_task_api = conductor.ComputeTaskAPI()
