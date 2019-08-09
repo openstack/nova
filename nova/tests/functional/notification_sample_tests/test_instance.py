@@ -631,6 +631,7 @@ class TestInstanceNotificationSample(
 
         self.api.post_server_action(server['id'], {'unshelve': None})
         self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_notification('instance.unshelve.end')
 
     def _test_unshelve_server(self, server):
         # setting the shelved_offload_time to 0 should set the
@@ -648,6 +649,7 @@ class TestInstanceNotificationSample(
         post = {'unshelve': None}
         self.api.post_server_action(server['id'], post)
         self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        self._wait_for_notification('instance.unshelve.end')
         self.assertEqual(6, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
             'instance-unshelve-start',
