@@ -9193,7 +9193,7 @@ class LibvirtDriver(driver.ComputeDriver):
         for block, key in blocks:
             section = doc.findall(block)
             for node in section:
-                for child in node.getchildren():
+                for child in node:
                     if child.tag == 'target' and child.get('dev'):
                         result[key].append(child.get('dev'))
         return result
