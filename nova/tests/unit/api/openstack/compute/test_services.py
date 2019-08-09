@@ -713,10 +713,15 @@ class ServicesTestV21(test.TestCase):
         """Tests that we are still able to successfully delete a nova-compute
         service even if the HostMapping is not found.
         """
+        @mock.patch('nova.objects.ComputeNodeList.get_all_by_host',
+                    return_value=objects.ComputeNodeList(objects=[
+                        objects.ComputeNode(host='host1',
+                                            hypervisor_hostname='node1'),
+                        objects.ComputeNode(host='host1',
+                                            hypervisor_hostname='node2')]))
         @mock.patch.object(self.controller.host_api, 'service_get_by_id',
                            return_value=objects.Service(
-                               host='host1', binary='nova-compute',
-                               compute_node=objects.ComputeNode()))
+                               host='host1', binary='nova-compute'))
         @mock.patch.object(self.controller.aggregate_api,
                            'get_aggregates_by_host',
                            return_value=objects.AggregateList())
@@ -724,15 +729,18 @@ class ServicesTestV21(test.TestCase):
                            'delete_resource_provider')
         @mock.patch.object(self.controller.host_api, 'service_delete')
         def _test(service_delete, delete_resource_provider,
-                  get_aggregates_by_host, service_get_by_id):
+                  get_aggregates_by_host, service_get_by_id,
+                  cn_get_all_by_host):
             self.controller.delete(self.req, 2)
             ctxt = self.req.environ['nova.context']
             service_get_by_id.assert_called_once_with(ctxt, 2)
             get_instances.assert_called_once_with(ctxt, 'host1')
             get_aggregates_by_host.assert_called_once_with(ctxt, 'host1')
-            delete_resource_provider.assert_called_once_with(
-                ctxt, service_get_by_id.return_value.compute_node,
-                cascade=True)
+            self.assertEqual(2, delete_resource_provider.call_count)
+            nodes = cn_get_all_by_host.return_value
+            delete_resource_provider.assert_has_calls([
+                mock.call(ctxt, node, cascade=True) for node in nodes
+            ], any_order=True)
             get_hm.assert_called_once_with(ctxt, 'host1')
             service_delete.assert_called_once_with(ctxt, 2)
         _test()
