@@ -534,6 +534,23 @@ class ComputeTaskManager(base.Base):
                     bdm.attachment_id = attachment['id']
                     bdm.save()
 
+    def _cleanup_when_reschedule_fails(
+            self, context, instance, exception, request_spec,
+            requested_networks):
+        """Set the instance state and clean up.
+
+        It is only used in case build_instance fails while rescheduling the
+        instance
+        """
+
+        updates = {'vm_state': vm_states.ERROR,
+                   'task_state': None}
+        self._set_vm_state_and_notify(
+            context, instance.uuid, 'build_instances', updates, exception,
+            request_spec)
+        self._cleanup_allocated_networks(
+            context, instance, requested_networks)
+
     # NOTE(danms): This is never cell-targeted because it is only used for
     # cellsv1 (which does not target cells directly) and n-cpu reschedules
     # (which go to the cell conductor and thus are always cell-specific).
@@ -607,11 +624,7 @@ class ComputeTaskManager(base.Base):
         except Exception as exc:
             num_attempts = filter_properties.get(
                 'retry', {}).get('num_attempts', 1)
-            updates = {'vm_state': vm_states.ERROR, 'task_state': None}
             for instance in instances:
-                self._set_vm_state_and_notify(
-                    context, instance.uuid, 'build_instances', updates,
-                    exc, request_spec)
                 # If num_attempts > 1, we're in a reschedule and probably
                 # either hit NoValidHost or MaxRetriesExceeded. Either way,
                 # the build request should already be gone and we probably
@@ -624,8 +637,9 @@ class ComputeTaskManager(base.Base):
                         self._destroy_build_request(context, instance)
                     except exception.BuildRequestNotFound:
                         pass
-                self._cleanup_allocated_networks(
-                    context, instance, requested_networks)
+                self._cleanup_when_reschedule_fails(
+                    context, instance, exc, request_spec,
+                    requested_networks)
             return
 
         elevated = context.elevated()
@@ -666,7 +680,11 @@ class ComputeTaskManager(base.Base):
                     msg = ("Exhausted all hosts available for retrying build "
                            "failures for instance %(instance_uuid)s." %
                            {"instance_uuid": instance.uuid})
-                    raise exception.MaxRetriesExceeded(reason=msg)
+                    exc = exception.MaxRetriesExceeded(reason=msg)
+                    self._cleanup_when_reschedule_fails(
+                        context, instance, exc, request_spec,
+                        requested_networks)
+                    return
             instance.availability_zone = (
                 availability_zones.get_host_availability_zone(context,
                         host.service_host))
