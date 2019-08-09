@@ -923,7 +923,7 @@ class TestRemoteRequestSpecObject(test_objects._RemoteTest,
     pass
 
 
-class TestRequestGroupObject(test.TestCase):
+class TestRequestGroupObject(test.NoDBTestCase):
     def setUp(self):
         super(TestRequestGroupObject, self).setUp()
         self.user_id = uuids.user_id
