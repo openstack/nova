@@ -2618,15 +2618,15 @@ class LibvirtConfigGuest(LibvirtConfigObject):
                         obj.parse_dom(d)
                         self.devices.append(obj)
             if c.tag == 'idmap':
-                for map in c:
+                for idmap in c:
                     obj = None
-                    if map.tag == 'uid':
+                    if idmap.tag == 'uid':
                         obj = LibvirtConfigGuestUIDMap()
-                    elif map.tag == 'gid':
+                    elif idmap.tag == 'gid':
                         obj = LibvirtConfigGuestGIDMap()
 
                     if obj:
-                        obj.parse_dom(map)
+                        obj.parse_dom(idmap)
                         self.idmaps.append(obj)
             elif c.tag == 'cpu':
                 obj = LibvirtConfigGuestCPU()
