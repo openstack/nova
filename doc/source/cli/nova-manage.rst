@@ -55,8 +55,9 @@ Nova Database
     ``map_cell0`` or ``simple_cell_setup`` commands for more details on mapping
     the cell0 database). If ``--local_cell`` is specified, then only the main
     database in the current cell is upgraded. The local database connection is
-    determined by ``[database]/connection`` in the configuration file passed to
-    nova-manage. This command should be run after ``nova-manage api_db sync``.
+    determined by :oslo.config:option:`database.connection` in the
+    configuration file passed to nova-manage. This command should be run after
+    ``nova-manage api_db sync``.
 
     Returns exit code 0 if the database schema was synced successfully, or 1 if
     cell0 cannot be accessed.
@@ -65,18 +66,19 @@ Nova Database
     Move deleted rows from production tables to shadow tables. Note that the
     corresponding rows in the ``instance_mappings``, ``request_specs`` and
     ``instance_group_member`` tables of the API database are purged when
-    instance records are archived and thus, ``[api_database]/connection`` is
-    required in the config file. Specifying ``--verbose`` will print the results
-    of the archive operation for any tables that were changed. Specifying
-    ``--until-complete`` will make the command run continuously until all
-    deleted rows are archived. Use the ``--max_rows`` option, which defaults to
-    1000, as a batch size for each iteration (note that the purged API database
-    table records are not included in this batch size). Specifying ``--before``
-    will archive only instances that were deleted before the date_ provided, and
-    records in other tables related to those instances. Specifying ``--purge``
-    will cause a `full` DB purge to be completed after archival. If a date
-    range is desired for the purge, then run ``nova-manage db purge --before
-    <date>`` manually after archiving is complete.
+    instance records are archived and thus,
+    :oslo.config:option:`api_database.connection` is required in the config
+    file. Specifying ``--verbose`` will print the results of the archive
+    operation for any tables that were changed. Specifying ``--until-complete``
+    will make the command run continuously until all deleted rows are archived.
+    Use the ``--max_rows`` option, which defaults to 1000, as a batch size for
+    each iteration (note that the purged API database table records are not
+    included in this batch size). Specifying ``--before`` will archive only
+    instances that were deleted before the date_ provided, and records in other
+    tables related to those instances. Specifying ``--purge`` will cause a
+    *full* DB purge to be completed after archival. If a date range is desired
+    for the purge, then run ``nova-manage db purge --before <date>`` manually
+    after archiving is complete.
 
 ``nova-manage db purge [--all] [--before <date>] [--verbose] [--all-cells]``
     Delete rows from shadow tables. Specifying ``--all`` will delete all data from
@@ -142,7 +144,7 @@ Nova Database
 
 ``nova-manage db ironic_flavor_migration [--all] [--host] [--node] [--resource_class]``
    Perform the ironic flavor migration process against the database
-   while services are offline. This is `not recommended` for most
+   while services are offline. This is *not recommended* for most
    people. The ironic compute driver will do this online and as
    necessary if run normally. This routine is provided only for
    advanced users that may be skipping the 16.0.0 Pike release, never
@@ -196,11 +198,11 @@ Nova API Database
     Upgrade the API database schema up to the most recent version or
     ``[VERSION]`` if specified. This command does not create the API
     database, it runs schema migration scripts. The API database connection is
-    determined by ``[api_database]/connection`` in the configuration file
-    passed to nova-manage.
+    determined by :oslo.config:option:`api_database.connection` in the
+    configuration file passed to nova-manage.
 
-    Starting in the 18.0.0 Rocky release, this command will also upgrade the
-    optional placement database if ``[placement_database]/connection`` is
+    In the 18.0.0 Rocky or 19.0.0 Stein release, this command will also upgrade
+    the optional placement database if ``[placement_database]/connection`` is
     configured.
 
     Returns exit code 0 if the database schema was synced successfully. This
@@ -213,7 +215,7 @@ Nova Cells v2
 
 ``nova-manage cell_v2 simple_cell_setup [--transport-url <transport_url>]``
     Setup a fresh cells v2 environment. If a ``transport_url`` is not
-    specified, it will use the one defined by ``[DEFAULT]/transport_url``
+    specified, it will use the one defined by :oslo.config:option:`transport_url`
     in the configuration file. Returns 0 if setup is completed
     (or has already been done), 1 if no hosts are reporting (and cannot be
     mapped) and 1 if the transport url is missing or invalid.
@@ -221,11 +223,11 @@ Nova Cells v2
 ``nova-manage cell_v2 map_cell0 [--database_connection <database_connection>]``
     Create a cell mapping to the database connection for the cell0 database.
     If a database_connection is not specified, it will use the one defined by
-    ``[database]/connection`` in the configuration file passed to nova-manage.
-    The cell0 database is used for instances that have not been scheduled to
-    any cell. This generally applies to instances that have encountered an
-    error before they have been scheduled. Returns 0 if cell0 is created
-    successfully or already setup.
+    :oslo.config:option:`database.connection` in the configuration file passed
+    to nova-manage. The cell0 database is used for instances that have not been
+    scheduled to any cell. This generally applies to instances that have
+    encountered an error before they have been scheduled. Returns 0 if cell0 is
+    created successfully or already setup.
 
 ``nova-manage cell_v2 map_instances --cell_uuid <cell_uuid> [--max-count <max_count>] [--reset]``
     Map instances to the provided cell. Instances in the nova database will
@@ -245,12 +247,13 @@ Nova Cells v2
 ``nova-manage cell_v2 map_cell_and_hosts [--name <cell_name>] [--transport-url <transport_url>] [--verbose]``
     Create a cell mapping to the database connection and message queue
     transport url, and map hosts to that cell. The database connection
-    comes from the ``[database]/connection`` defined in the configuration
-    file passed to nova-manage. If a transport_url is not specified, it will
-    use the one defined by ``[DEFAULT]/transport_url`` in the configuration
-    file. This command is idempotent (can be run multiple times), and the
-    verbose option will print out the resulting cell mapping uuid. Returns 0
-    on successful completion, and 1 if the transport url is missing or invalid.
+    comes from the :oslo.config:option:`database.connection` defined in the
+    configuration file passed to nova-manage. If a transport_url is not
+    specified, it will use the one defined by
+    :oslo.config:option:`transport_url` in the configuration file. This command
+    is idempotent (can be run multiple times), and the verbose option will
+    print out the resulting cell mapping uuid. Returns 0 on successful
+    completion, and 1 if the transport url is missing or invalid.
 
 ``nova-manage cell_v2 verify_instance --uuid <instance_uuid> [--quiet]``
     Verify instance mapping to a cell. This command is useful to determine if
@@ -267,11 +270,12 @@ Nova Cells v2
 ``nova-manage cell_v2 create_cell [--name <cell_name>] [--transport-url <transport_url>] [--database_connection <database_connection>] [--verbose] [--disabled]``
     Create a cell mapping to the database connection and message queue
     transport url. If a database_connection is not specified, it will use the
-    one defined by ``[database]/connection`` in the configuration file passed
-    to nova-manage. If a transport_url is not specified, it will use the one
-    defined by ``[DEFAULT]/transport_url`` in the configuration file. The
-    verbose option will print out the resulting cell mapping uuid. All the
-    cells created are by default enabled. However passing the ``--disabled`` option
+    one defined by :oslo.config:option:`database.connection` in the
+    configuration file passed to nova-manage. If a transport_url is not
+    specified, it will use the one defined by
+    :oslo.config:option:`transport_url` in the configuration file. The verbose
+    option will print out the resulting cell mapping uuid. All the cells
+    created are by default enabled. However passing the ``--disabled`` option
     can create a pre-disabled cell, meaning no scheduling will happen to this
     cell. The meaning of the various exit codes returned by this command are
     explained below:
@@ -338,10 +342,11 @@ Nova Cells v2
 ``nova-manage cell_v2 update_cell --cell_uuid <cell_uuid> [--name <cell_name>] [--transport-url <transport_url>] [--database_connection <database_connection>] [--disable] [--enable]``
     Updates the properties of a cell by the given uuid. If a
     database_connection is not specified, it will attempt to use the one
-    defined by ``[database]/connection`` in the configuration file. If a
-    transport_url is not specified, it will attempt to use the one defined by
-    ``[DEFAULT]/transport_url`` in the configuration file. The meaning of the
-    various exit codes returned by this command are explained below:
+    defined by :oslo.config:option:`database.connection` in the configuration
+    file. If a transport_url is not specified, it will attempt to use the one
+    defined by :oslo.config:option:`transport_url` in the configuration file.
+    The meaning of the various exit codes returned by this command are
+    explained below:
 
     * If successful, it will return 0.
     * If the cell is not found by the provided uuid, it will return 1.
@@ -429,9 +434,10 @@ Placement
     ports for each instance can be avoided with this flag.
     *(Since 20.0.0 Train)*
 
-    This command requires that the ``[api_database]/connection`` and
-    ``[placement]`` configuration options are set. Placement API >= 1.28 is
-    required.
+    This command requires that the
+    :oslo.config:option:`api_database.connection` and
+    :oslo.config:group:`placement` configuration options are set. Placement API
+    >= 1.28 is required.
 
     Return codes:
 
@@ -453,9 +459,9 @@ Placement
 
 ``nova-manage placement sync_aggregates [--verbose]``
     Mirrors compute host aggregates to resource provider aggregates
-    in the Placement service. Requires the ``[api_database]`` and
-    ``[placement]`` sections of the nova configuration file to be
-    populated.
+    in the Placement service. Requires the :oslo.config:group:`api_database`
+    and :oslo.config:group:`placement` sections of the nova configuration file
+    to be populated.
 
     Specify ``--verbose`` to get detailed progress output during execution.
 
