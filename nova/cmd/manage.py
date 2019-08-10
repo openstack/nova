@@ -523,7 +523,7 @@ Error: %s""") % six.text_type(e))
         except db_exc.CantStartEngineError:
             print(_('Failed to connect to API DB so aborting this archival '
                     'attempt. Please check your config file to make sure that '
-                    'CONF.api_database.connection is set and run this '
+                    '[api_database]/connection is set and run this '
                     'command again.'))
             return 3
 

@@ -65,7 +65,7 @@ Nova Database
     Move deleted rows from production tables to shadow tables. Note that the
     corresponding rows in the ``instance_mappings``, ``request_specs`` and
     ``instance_group_member`` tables of the API database are purged when
-    instance records are archived and thus, ``CONF.api_database.connection`` is
+    instance records are archived and thus, ``[api_database]/connection`` is
     required in the config file. Specifying ``--verbose`` will print the results
     of the archive operation for any tables that were changed. Specifying
     ``--until-complete`` will make the command run continuously until all
