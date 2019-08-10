@@ -451,7 +451,7 @@ class TestRemoteServiceObject(test_objects._RemoteTest,
     pass
 
 
-class TestServiceVersion(test.TestCase):
+class TestServiceVersion(test.NoDBTestCase):
     def setUp(self):
         self.ctxt = context.get_admin_context()
         super(TestServiceVersion, self).setUp()
