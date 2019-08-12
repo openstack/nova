@@ -1454,18 +1454,20 @@ class VMwareVMOps(object):
             server_group_info = vm_util._get_server_group(context, instance)
             if server_group_info:
                 cluster = cluster_util.validate_vm_group(self._session, vm_ref)
+                config_info_ex = cluster.propSet[0].val
 
-                for key, group in enumerate(cluster.propSet[0].val.group):
-                    if not hasattr(group, 'vm'):
-                        continue
+                if hasattr(config_info_ex, 'group'):
+                    for key, group in enumerate(config_info_ex.group):
+                        if not hasattr(group, 'vm'):
+                            continue
 
-                    for vm in group.vm:
-                        if vm.value == vm_ref.value and len(group.vm) == 1:
-                            cluster_util.delete_vm_group(self._session,
-                                cluster.obj,
-                                cluster.propSet[0].val.group[key])
-                            break
-                    break
+                        for vm in group.vm:
+                            if vm.value == vm_ref.value and len(group.vm) == 1:
+                                cluster_util.delete_vm_group(
+                                            self._session, cluster.obj,
+                                            config_info_ex.group[key])
+                                break
+                        break
 
             lst_properties = ["config.files.vmPathName", "runtime.powerState",
                               "datastore"]
