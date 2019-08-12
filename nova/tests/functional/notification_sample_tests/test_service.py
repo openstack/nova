@@ -49,6 +49,13 @@ class TestServiceUpdateNotificationSamplev2_52(TestServiceNotificationBase):
                       test_services.fake_service_get_by_host_binary)
         self.stub_out("nova.db.api.service_update",
                       test_services.fake_service_update)
+        # NOTE(gibi): enable / disable a compute service tries to call
+        # the compute service via RPC to update placement. However in these
+        # tests the compute services are faked. So stub out the RPC call to
+        # avoid waiting for the RPC timeout. The notifications are generated
+        # regardless of the result of the RPC call anyhow.
+        self.stub_out("nova.compute.rpcapi.ComputeAPI.set_host_enabled",
+                      lambda *args, **kwargs: None)
         self.useFixture(utils_fixture.TimeFixture(test_services.fake_utcnow()))
         self.useFixture(fixtures.SingleCellSimple())
         self.service_uuid = test_services.fake_service_get_by_host_binary(
