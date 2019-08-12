@@ -6912,6 +6912,18 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         new_stats = jsonutils.loads(self.item['stats'])
         self.assertEqual(self.stats, new_stats)
 
+    def test_compute_node_create_duplicate_host_hypervisor_hostname(self):
+        """Tests to make sure that DBDuplicateEntry is raised when trying to
+        create a duplicate ComputeNode with the same host and
+        hypervisor_hostname values but different uuid values. This makes
+        sure that when _compute_node_get_and_update_deleted returns None
+        the DBDuplicateEntry is re-raised.
+        """
+        other_node = dict(self.compute_node_dict)
+        other_node['uuid'] = uuidutils.generate_uuid()
+        self.assertRaises(db_exc.DBDuplicateEntry,
+                          db.compute_node_create, self.ctxt, other_node)
+
     def test_compute_node_get_all(self):
         nodes = db.compute_node_get_all(self.ctxt)
         self.assertEqual(1, len(nodes))

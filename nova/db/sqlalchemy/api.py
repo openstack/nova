@@ -30,6 +30,7 @@ from oslo_db.sqlalchemy import enginefacade
 from oslo_db.sqlalchemy import update_match
 from oslo_db.sqlalchemy import utils as sqlalchemyutils
 from oslo_log import log as logging
+from oslo_utils import excutils
 from oslo_utils import importutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
@@ -692,9 +693,52 @@ def compute_node_create(context, values):
 
     compute_node_ref = models.ComputeNode()
     compute_node_ref.update(values)
-    compute_node_ref.save(context.session)
+    try:
+        compute_node_ref.save(context.session)
+    except db_exc.DBDuplicateEntry:
+        with excutils.save_and_reraise_exception(logger=LOG) as err_ctx:
+            # Check to see if we have a (soft) deleted ComputeNode with the
+            # same UUID and if so just update it and mark as no longer (soft)
+            # deleted. See bug 1839560 for details.
+            if 'uuid' in values:
+                # Get a fresh context for a new DB session and allow it to
+                # get a deleted record.
+                ctxt = nova.context.get_admin_context(read_deleted='yes')
+                compute_node_ref = _compute_node_get_and_update_deleted(
+                    ctxt, values)
+                # If we didn't get anything back we failed to find the node
+                # by uuid and update it so re-raise the DBDuplicateEntry.
+                if compute_node_ref:
+                    err_ctx.reraise = False
 
     return compute_node_ref
+
+
+@pick_context_manager_writer
+def _compute_node_get_and_update_deleted(context, values):
+    """Find a ComputeNode by uuid, update and un-delete it.
+
+    This is a special case from the ``compute_node_create`` method which
+    needs to be separate to get a new Session.
+
+    This method will update the ComputeNode, if found, to have deleted=0 and
+    deleted_at=None values.
+
+    :param context: request auth context which should be able to read deleted
+        records
+    :param values: values used to update the ComputeNode record - must include
+        uuid
+    :return: updated ComputeNode sqlalchemy model object if successfully found
+        and updated, None otherwise
+    """
+    cn = model_query(
+        context, models.ComputeNode).filter_by(uuid=values['uuid']).first()
+    if cn:
+        # Update with the provided values but un-soft-delete.
+        update_values = copy.deepcopy(values)
+        update_values['deleted'] = 0
+        update_values['deleted_at'] = None
+        return compute_node_update(context, cn.id, update_values)
 
 
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
