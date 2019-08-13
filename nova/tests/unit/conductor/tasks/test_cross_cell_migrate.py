@@ -235,9 +235,10 @@ class TargetDBSetupTaskTestCase(
         # Assert that the various records created in _create_instance_data are
         # found in the target cell database. We ignore 'hidden' because the
         # values are explicitly different between source and target DB. The
-        # pci_devices/services/tags fields are not set on the target instance
+        # pci_devices and services fields are not set on the target instance
         # during TargetDBSetupTask.execute so we ignore those here and verify
-        # them below.
+        # them below. tags are also special in that we have to lazy-load them
+        # on target_cell_instance so we check those explicitly below as well.
         ignored_keys = ['hidden', 'pci_devices', 'services', 'tags']
         self._compare_objs(source_cell_instance, target_cell_instance,
                            ignored_keys=ignored_keys)
