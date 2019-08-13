@@ -21,6 +21,7 @@ from oslo_utils import timeutils
 import six
 
 from nova.db import api as db
+from nova import exception
 from nova.objects import instance_action
 from nova import test
 from nova.tests.unit.objects import test_objects
@@ -179,6 +180,21 @@ class _TestInstanceActionObject(object):
             self.compare_obj(action, fake_actions[index])
         mock_get.assert_called_once_with(self.context, 'fake-uuid', None,
                                          None, None)
+
+    def test_create_id_in_updates_error(self):
+        action = instance_action.InstanceAction(self.context, id=1)
+        ex = self.assertRaises(exception.ObjectActionError, action.create)
+        self.assertIn('already created', six.text_type(ex))
+
+    @mock.patch('nova.db.api.action_start')
+    def test_create(self, mock_action_start):
+        mock_action_start.return_value = fake_action
+        action = instance_action.InstanceAction(self.context)
+        expected_updates = action.obj_get_changes()
+        action.create()
+        mock_action_start.assert_called_once_with(
+            self.context, expected_updates)
+        self.compare_obj(action, fake_action)
 
 
 class TestInstanceActionObject(test_objects._LocalTest,
@@ -361,6 +377,25 @@ class _TestInstanceActionEventObject(object):
                                           exc_val=str(mock.sentinel.exc_val),
                                           exc_tb='traceback')
         mock_format.assert_called_once_with(mock.sentinel.exc_tb)
+
+    def test_create_id_in_updates_error(self):
+        event = instance_action.InstanceActionEvent(self.context, id=1)
+        ex = self.assertRaises(
+            exception.ObjectActionError, event.create,
+            fake_action['instance_uuid'], fake_action['request_id'])
+        self.assertIn('already created', six.text_type(ex))
+
+    @mock.patch('nova.db.api.action_event_start')
+    def test_create(self, mock_action_event_start):
+        mock_action_event_start.return_value = fake_event
+        event = instance_action.InstanceActionEvent(self.context)
+        expected_updates = event.obj_get_changes()
+        expected_updates['instance_uuid'] = fake_action['instance_uuid']
+        expected_updates['request_id'] = fake_action['request_id']
+        event.create(fake_action['instance_uuid'], fake_action['request_id'])
+        mock_action_event_start.assert_called_once_with(
+            self.context, expected_updates)
+        self.compare_obj(event, fake_event)
 
 
 class TestInstanceActionEventObject(test_objects._LocalTest,
