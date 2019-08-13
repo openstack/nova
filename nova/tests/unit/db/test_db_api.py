@@ -1464,7 +1464,7 @@ class ModelsObjectComparatorMixin(object):
                          "Keys mismatch: %s" %
                           str(set(obj1.keys()) ^ set(obj2.keys())))
         for key, value in obj1.items():
-            self.assertEqual(value, obj2[key])
+            self.assertEqual(value, obj2[key], "Key mismatch: %s" % key)
 
     def _assertEqualListsOfObjects(self, objs1, objs2, ignored_keys=None):
         obj_to_dict = lambda o: self._dict_from_object(o, ignored_keys)
