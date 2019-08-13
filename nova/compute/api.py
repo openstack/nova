@@ -2819,13 +2819,6 @@ class API(base.Base):
                               address, six.text_type(e))
         return uuids
 
-    def _get_instances_by_filters(self, context, filters,
-                                  limit=None, marker=None, fields=None,
-                                  sort_keys=None, sort_dirs=None):
-        return objects.InstanceList.get_by_filters(
-            context, filters=filters, limit=limit, marker=marker,
-            expected_attrs=fields, sort_keys=sort_keys, sort_dirs=sort_dirs)
-
     def update_instance(self, context, instance, updates):
         """Updates a single Instance object with some updates dict.
 
