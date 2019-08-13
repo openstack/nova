@@ -186,8 +186,9 @@ class _TestBuildRequestObject(object):
                          len(build_request_obj.instance.tags))
         # Can't compare list objects directly, just compare the single
         # item they contain.
-        base.obj_equal_prims(build_request_obj.tags[0],
-                             build_request_obj.instance.tags[0])
+        self.assertTrue(base.obj_equal_prims(
+                            build_request_obj.tags[0],
+                            build_request_obj.instance.tags[0]))
 
 
 class TestBuildRequestObject(test_objects._LocalTest,
