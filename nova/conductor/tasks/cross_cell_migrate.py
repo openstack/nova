@@ -277,12 +277,10 @@ class CrossCellMigrationTask(base.TaskBase):
         """Performs checks on external service APIs for support.
 
         * Checks that the neutron port binding-extended API is available
-        * Checks that the 3.44 volume attachments API is available
 
         :raises: MigrationPreCheckError if any checks fail
         """
-        LOG.debug('Making sure cinder and neutron are new enough for '
-                  'cross-cell resize.')
+        LOG.debug('Making sure neutron is new enough for cross-cell resize.')
         # Check that the port binding-extended API extension is available in
         # neutron because if it's not we can just fail fast.
         if not self.network_api.supports_port_binding_extension(self.context):
@@ -291,21 +289,17 @@ class CrossCellMigrationTask(base.TaskBase):
                          "not found.") %
                 neutron_constants.PORT_BINDING_EXTENDED)
 
-        # Check that Cinder API 3.44 is available otherwise we can't use the
-        # volume attachments API.
-        try:
-            cinder.is_microversion_supported(self.context, '3.44')
-        except exception.CinderAPIVersionNotAvailable as ex:
-            raise exception.MigrationPreCheckError(
-                reason=ex.format_message())
-
     def _execute(self):
         """Execute high-level orchestration of the cross-cell resize"""
         # We are committed to a cross-cell move at this point so update the
-        # migration record to reflect that.
+        # migration record to reflect that. If we fail after this we are not
+        # going to go back and try to run the MigrationTask to do a same-cell
+        # migration, so we set the cross_cell_move flag early for audit/debug
+        # in case something fails later and the operator wants to know if this
+        # was a cross-cell or same-cell move operation.
         self.migration.cross_cell_move = True
         self.migration.save()
-        # Make sure neutron and cinder APIs we need are available.
+        # Make sure neutron APIs we need are available.
         self._perform_external_api_checks()
 
         # Before preparing the target host create the instance record data
