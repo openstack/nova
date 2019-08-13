@@ -87,7 +87,8 @@ class BuildRequest(base.NovaObject):
         # field being set, so when hydrating it back here, we should get the
         # right value but in case we don't have it, let's suppose that the
         # instance is not deleted, which is the default value for that field.
-        self.instance.obj_set_defaults('deleted')
+        # NOTE(mriedem): Same for the "hidden" field.
+        self.instance.obj_set_defaults('deleted', 'hidden')
         # NOTE(alaski): Set some fields on instance that are needed by the api,
         # not lazy-loadable, and don't change.
         self.instance.disable_terminate = False

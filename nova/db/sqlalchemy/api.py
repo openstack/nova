@@ -2048,8 +2048,10 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
 
     |   ['project_id', 'user_id', 'image_ref',
     |    'vm_state', 'instance_type_id', 'uuid',
-    |    'metadata', 'host', 'system_metadata', 'locked']
+    |    'metadata', 'host', 'system_metadata', 'locked', 'hidden']
 
+    Hidden instances will *not* be returned by default, unless there's a
+    filter that says otherwise.
 
     A third type of filter (also using exact matching), filters
     based on instance metadata tags when supplied under a special
@@ -2211,12 +2213,16 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
         else:
             filters['user_id'] = context.user_id
 
+    if 'hidden' not in filters:
+        # Filter out hidden instances by default.
+        filters['hidden'] = False
+
     # Filters for exact matches that we can do along with the SQL query...
     # For other filters that don't match this, we will do regexp matching
     exact_match_filter_names = ['project_id', 'user_id', 'image_ref',
                                 'vm_state', 'instance_type_id', 'uuid',
                                 'metadata', 'host', 'task_state',
-                                'system_metadata', 'locked']
+                                'system_metadata', 'locked', 'hidden']
 
     # Filter the query
     query_prefix = _exact_instance_filter(query_prefix,

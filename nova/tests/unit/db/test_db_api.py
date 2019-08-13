@@ -962,6 +962,19 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
                               filters={},
                               sort_keys=keys)
 
+    def test_instance_get_all_by_filters_sort_hidden(self):
+        """Tests the default filtering behavior of the hidden column."""
+        # Create a hidden instance record.
+        self.create_instance_with_args(hidden=True)
+        # Get instances which by default will filter out the hidden instance.
+        instances = sqlalchemy_api.instance_get_all_by_filters_sort(
+            self.context, filters={}, limit=10)
+        self.assertEqual(0, len(instances))
+        # Now explicitly filter for hidden instances.
+        instances = sqlalchemy_api.instance_get_all_by_filters_sort(
+            self.context, filters={'hidden': True}, limit=10)
+        self.assertEqual(1, len(instances))
+
 
 class ProcessSortParamTestCase(test.TestCase):
 

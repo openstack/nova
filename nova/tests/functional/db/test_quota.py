@@ -126,6 +126,19 @@ class QuotaTestCase(test.NoDBTestCase):
             # Logged a warning about falling back to legacy count.
             mock_warn_log.assert_called_once()
 
+        # Create a duplicate of the cell1 instance in cell2 except hidden.
+        with context.target_cell(ctxt, mapping2) as cctxt:
+            instance = objects.Instance(context=cctxt,
+                                        project_id='fake-project',
+                                        user_id='fake-user',
+                                        uuid=instance_uuids[0],
+                                        hidden=True)
+            instance.create()
+        # The duplicate hidden instance should not be counted.
+        count = quota._server_group_count_members_by_user(
+            ctxt, group, instance.user_id)
+        self.assertEqual(2, count['user']['server_group_members'])
+
     def test_instances_cores_ram_count(self):
         ctxt = context.RequestContext('fake-user', 'fake-project')
         mapping1 = objects.CellMapping(context=ctxt,

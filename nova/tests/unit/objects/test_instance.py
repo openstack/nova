@@ -21,6 +21,7 @@ from oslo_db import exception as db_exc
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
+from oslo_versionedobjects import base as ovo_base
 
 from nova.compute import task_states
 from nova.compute import vm_states
@@ -1520,6 +1521,19 @@ class _TestInstanceObject(object):
         inst1.obj_reset_changes()
         inst1 = inst1.obj_clone()
         self.assertEqual(len(inst1.obj_what_changed()), 0)
+
+    def test_obj_make_compatible(self):
+        inst_obj = objects.Instance(
+            # trusted_certs were added in 2.4
+            trusted_certs=objects.TrustedCerts(ids=[uuids.cert1]),
+            # hidden was added in 2.6
+            hidden=True)
+        versions = ovo_base.obj_tree_get_versions('Instance')
+        data = lambda x: x['nova_object.data']
+        primitive = data(inst_obj.obj_to_primitive(
+            target_version='2.5', version_manifest=versions))
+        self.assertIn('trusted_certs', primitive)
+        self.assertNotIn('hidden', primitive)
 
 
 class TestInstanceObject(test_objects._LocalTest,

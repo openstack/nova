@@ -352,6 +352,8 @@ class Instance(BASE, NovaBase, models.SoftDeleteMixin):
     # Records whether an instance has been deleted from disk
     cleaned = Column(Integer, default=0)
 
+    hidden = Column(Boolean, default=False)
+
 
 class InstanceInfoCache(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a cache of information about an instance
