@@ -4359,28 +4359,14 @@ class ComputeManager(manager.Manager):
                       migration.uuid, migration.source_node, instance=instance)
             return False
 
-        if len(orig_alloc) > 1:
-            # NOTE(danms): This may change later if we have other allocations
-            # against other providers that need to be held by the migration
-            # as well. Perhaps something like shared storage resources that
-            # will actually be duplicated during a resize type operation.
-            LOG.error('Migration %(mig)s has allocations against '
-                      'more than one provider %(rps)s. This should not be '
-                      'possible, but reverting it anyway.',
-                      {'mig': migration.uuid,
-                       'rps': ','.join(orig_alloc.keys())},
-                      instance=instance)
-
-        # We only have a claim against one provider, it is the source node
-        cn_uuid = list(orig_alloc.keys())[0]
-
-        # FIXME(danms): This method is flawed in that it asssumes allocations
-        # against only one provider. So, this may overwite allocations against
-        # a shared provider, if we had one.
-        LOG.info('Swapping old allocation on %(node)s held by migration '
+        LOG.info('Swapping old allocation on %(rp_uuids)s held by migration '
                  '%(mig)s for instance',
-                 {'node': cn_uuid, 'mig': migration.uuid},
+                 {'rp_uuids': orig_alloc.keys(), 'mig': migration.uuid},
                  instance=instance)
+        # FIXME(gibi): This method is flawed in that it assumes every
+        # allocation held by the migration uuid are against the destination
+        # compute RP tree. So it might overwrite allocation against a
+        # shared provider if we had one.
         # TODO(cdent): Should we be doing anything with return values here?
         self.reportclient.move_allocations(context, migration.uuid,
                                            instance.uuid)
