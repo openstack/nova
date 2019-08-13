@@ -62,13 +62,15 @@ class BuildRequestTestCase(test.NoDBTestCase):
             expected = getattr(expected_req, key)
             db_value = getattr(req_obj, key)
             if key == 'instance':
-                objects.base.obj_equal_prims(expected, db_value)
+                self.assertTrue(objects.base.obj_equal_prims(expected,
+                                                             db_value))
                 continue
             elif key in ('block_device_mappings', 'tags'):
                 self.assertEqual(1, len(db_value))
                 # Can't compare list objects directly, just compare the single
                 # item they contain.
-                objects.base.obj_equal_prims(expected[0], db_value[0])
+                self.assertTrue(objects.base.obj_equal_prims(expected[0],
+                                                             db_value[0]))
                 continue
             self.assertEqual(expected, db_value)
 
@@ -221,8 +223,8 @@ class BuildRequestListTestCase(test.NoDBTestCase):
         self.assertEqual(2, len(req_list))
         for i in range(len(req_list)):
             self.assertEqual(reqs[i].instance_uuid, req_list[i].instance_uuid)
-            objects.base.obj_equal_prims(reqs[i].instance,
-                                         req_list[i].instance)
+            self.assertTrue(objects.base.obj_equal_prims(reqs[i].instance,
+                                                         req_list[i].instance))
 
     def test_get_all_filter_by_project_id(self):
         reqs = [self._create_req(), self._create_req(project_id='filter')]
@@ -232,8 +234,8 @@ class BuildRequestListTestCase(test.NoDBTestCase):
         self.assertEqual(1, len(req_list))
         self.assertEqual(reqs[0].project_id, req_list[0].project_id)
         self.assertEqual(reqs[0].instance_uuid, req_list[0].instance_uuid)
-        objects.base.obj_equal_prims(reqs[0].instance,
-                                     req_list[0].instance)
+        self.assertTrue(objects.base.obj_equal_prims(reqs[0].instance,
+                                                     req_list[0].instance))
 
     def test_get_all_bypass_project_id_filter_as_admin(self):
         reqs = [self._create_req(), self._create_req(project_id='filter')]
@@ -245,8 +247,8 @@ class BuildRequestListTestCase(test.NoDBTestCase):
         for i in range(len(req_list)):
             self.assertEqual(reqs[i].project_id, req_list[i].project_id)
             self.assertEqual(reqs[i].instance_uuid, req_list[i].instance_uuid)
-            objects.base.obj_equal_prims(reqs[i].instance,
-                                         req_list[i].instance)
+            self.assertTrue(objects.base.obj_equal_prims(reqs[i].instance,
+                                                         req_list[i].instance))
 
     def test_get_by_filters(self):
         reqs = [self._create_req(), self._create_req()]
@@ -258,8 +260,8 @@ class BuildRequestListTestCase(test.NoDBTestCase):
         self.assertEqual(2, len(req_list))
         for i in range(len(req_list)):
             self.assertEqual(reqs[i].instance_uuid, req_list[i].instance_uuid)
-            objects.base.obj_equal_prims(reqs[i].instance,
-                                         req_list[i].instance)
+            self.assertTrue(objects.base.obj_equal_prims(reqs[i].instance,
+                                                         req_list[i].instance))
 
     def test_get_by_filters_limit_0(self):
         self._create_req()
@@ -302,8 +304,8 @@ class BuildRequestListTestCase(test.NoDBTestCase):
         self.assertIsInstance(req_list, objects.BuildRequestList)
         self.assertEqual(1, len(req_list))
         self.assertEqual(reqs[1].instance_uuid, req_list[0].instance_uuid)
-        objects.base.obj_equal_prims(reqs[1].instance,
-                                     req_list[0].instance)
+        self.assertTrue(objects.base.obj_equal_prims(reqs[1].instance,
+                                                     req_list[0].instance))
 
     def test_get_by_filters_exact_match_list(self):
         instance_find = fake_instance.fake_instance_obj(
@@ -322,8 +324,8 @@ class BuildRequestListTestCase(test.NoDBTestCase):
         self.assertIsInstance(req_list, objects.BuildRequestList)
         self.assertEqual(1, len(req_list))
         self.assertEqual(reqs[1].instance_uuid, req_list[0].instance_uuid)
-        objects.base.obj_equal_prims(reqs[1].instance,
-                                     req_list[0].instance)
+        self.assertTrue(objects.base.obj_equal_prims(reqs[1].instance,
+                                                     req_list[0].instance))
 
     def test_get_by_filters_exact_match_metadata(self):
         instance_find = fake_instance.fake_instance_obj(
@@ -342,8 +344,8 @@ class BuildRequestListTestCase(test.NoDBTestCase):
         self.assertIsInstance(req_list, objects.BuildRequestList)
         self.assertEqual(1, len(req_list))
         self.assertEqual(reqs[1].instance_uuid, req_list[0].instance_uuid)
-        objects.base.obj_equal_prims(reqs[1].instance,
-                                     req_list[0].instance)
+        self.assertTrue(objects.base.obj_equal_prims(reqs[1].instance,
+                                                     req_list[0].instance))
 
     def test_get_by_filters_exact_match_metadata_list(self):
         instance_find = fake_instance.fake_instance_obj(
@@ -364,8 +366,8 @@ class BuildRequestListTestCase(test.NoDBTestCase):
         self.assertIsInstance(req_list, objects.BuildRequestList)
         self.assertEqual(1, len(req_list))
         self.assertEqual(reqs[1].instance_uuid, req_list[0].instance_uuid)
-        objects.base.obj_equal_prims(reqs[1].instance,
-                                     req_list[0].instance)
+        self.assertTrue(objects.base.obj_equal_prims(reqs[1].instance,
+                                                     req_list[0].instance))
 
     def test_get_by_filters_regex_match_one(self):
         instance_find = fake_instance.fake_instance_obj(
@@ -384,8 +386,8 @@ class BuildRequestListTestCase(test.NoDBTestCase):
         self.assertIsInstance(req_list, objects.BuildRequestList)
         self.assertEqual(1, len(req_list))
         self.assertEqual(reqs[1].instance_uuid, req_list[0].instance_uuid)
-        objects.base.obj_equal_prims(reqs[1].instance,
-                                     req_list[0].instance)
+        self.assertTrue(objects.base.obj_equal_prims(reqs[1].instance,
+                                                     req_list[0].instance))
 
     def test_get_by_filters_regex_match_both(self):
         instance_find = fake_instance.fake_instance_obj(
@@ -406,8 +408,8 @@ class BuildRequestListTestCase(test.NoDBTestCase):
         self.assertEqual(2, len(req_list))
         for i in range(len(req_list)):
             self.assertEqual(reqs[i].instance_uuid, req_list[i].instance_uuid)
-            objects.base.obj_equal_prims(reqs[i].instance,
-                                         req_list[i].instance)
+            self.assertTrue(objects.base.obj_equal_prims(reqs[i].instance,
+                                                         req_list[i].instance))
 
     def test_get_by_filters_sort_asc(self):
         instance_1024 = fake_instance.fake_instance_obj(
@@ -426,10 +428,12 @@ class BuildRequestListTestCase(test.NoDBTestCase):
         self.assertIsInstance(req_list, objects.BuildRequestList)
         self.assertEqual(2, len(req_list))
         self.assertEqual(req_first.instance_uuid, req_list[0].instance_uuid)
-        objects.base.obj_equal_prims(req_first.instance, req_list[0].instance)
+        self.assertTrue(objects.base.obj_equal_prims(req_first.instance,
+                                                     req_list[0].instance))
 
         self.assertEqual(req_second.instance_uuid, req_list[1].instance_uuid)
-        objects.base.obj_equal_prims(req_second.instance, req_list[1].instance)
+        self.assertTrue(objects.base.obj_equal_prims(req_second.instance,
+                                                     req_list[1].instance))
 
     def test_get_by_filters_sort_desc(self):
         instance_1024 = fake_instance.fake_instance_obj(
@@ -448,10 +452,12 @@ class BuildRequestListTestCase(test.NoDBTestCase):
         self.assertIsInstance(req_list, objects.BuildRequestList)
         self.assertEqual(2, len(req_list))
         self.assertEqual(req_first.instance_uuid, req_list[0].instance_uuid)
-        objects.base.obj_equal_prims(req_first.instance, req_list[0].instance)
+        self.assertTrue(objects.base.obj_equal_prims(req_first.instance,
+                                                     req_list[0].instance))
 
         self.assertEqual(req_second.instance_uuid, req_list[1].instance_uuid)
-        objects.base.obj_equal_prims(req_second.instance, req_list[1].instance)
+        self.assertTrue(objects.base.obj_equal_prims(req_second.instance,
+                                                     req_list[1].instance))
 
     def test_get_by_filters_sort_build_req_id(self):
         # Create instance objects this way so that there is no 'id' set.
@@ -471,10 +477,12 @@ class BuildRequestListTestCase(test.NoDBTestCase):
         self.assertIsInstance(req_list, objects.BuildRequestList)
         self.assertEqual(2, len(req_list))
         self.assertEqual(req_first.instance_uuid, req_list[0].instance_uuid)
-        objects.base.obj_equal_prims(req_first.instance, req_list[0].instance)
+        self.assertTrue(objects.base.obj_equal_prims(req_first.instance,
+                                                     req_list[0].instance))
 
         self.assertEqual(req_second.instance_uuid, req_list[1].instance_uuid)
-        objects.base.obj_equal_prims(req_second.instance, req_list[1].instance)
+        self.assertTrue(objects.base.obj_equal_prims(req_second.instance,
+                                                     req_list[1].instance))
 
     def test_get_by_filters_multiple_sort_keys(self):
         instance_first = fake_instance.fake_instance_obj(
@@ -498,13 +506,16 @@ class BuildRequestListTestCase(test.NoDBTestCase):
         self.assertIsInstance(req_list, objects.BuildRequestList)
         self.assertEqual(3, len(req_list))
         self.assertEqual(req_first.instance_uuid, req_list[0].instance_uuid)
-        objects.base.obj_equal_prims(req_first.instance, req_list[0].instance)
+        self.assertTrue(objects.base.obj_equal_prims(req_first.instance,
+                                                     req_list[0].instance))
 
         self.assertEqual(req_second.instance_uuid, req_list[1].instance_uuid)
-        objects.base.obj_equal_prims(req_second.instance, req_list[1].instance)
+        self.assertTrue(objects.base.obj_equal_prims(req_second.instance,
+                                                     req_list[1].instance))
 
         self.assertEqual(req_third.instance_uuid, req_list[2].instance_uuid)
-        objects.base.obj_equal_prims(req_third.instance, req_list[2].instance)
+        self.assertTrue(objects.base.obj_equal_prims(req_third.instance,
+                                                     req_list[2].instance))
 
     def test_get_by_filters_marker(self):
         instance = fake_instance.fake_instance_obj(
@@ -526,8 +537,8 @@ class BuildRequestListTestCase(test.NoDBTestCase):
         # The returned build request should be the last one in the reqs list
         # since the marker is the 2nd item in the list (of 3).
         self.assertEqual(expected_req.instance_uuid, req.instance_uuid)
-        objects.base.obj_equal_prims(expected_req.instance,
-                                     req.instance)
+        self.assertTrue(objects.base.obj_equal_prims(expected_req.instance,
+                                                     req.instance))
 
     def test_get_by_filters_marker_not_found(self):
         self._create_req()
@@ -549,8 +560,8 @@ class BuildRequestListTestCase(test.NoDBTestCase):
         self.assertEqual(2, len(req_list))
         for i, req in enumerate(reqs[:2]):
             self.assertEqual(req.instance_uuid, req_list[i].instance_uuid)
-            objects.base.obj_equal_prims(req.instance,
-                                         req_list[i].instance)
+            self.assertTrue(objects.base.obj_equal_prims(req.instance,
+                                                         req_list[i].instance))
 
     def test_get_by_filters_marker_limit(self):
         instance = fake_instance.fake_instance_obj(
@@ -570,8 +581,8 @@ class BuildRequestListTestCase(test.NoDBTestCase):
         self.assertEqual(2, len(req_list))
         for i, req in enumerate(reqs[2:]):
             self.assertEqual(req.instance_uuid, req_list[i].instance_uuid)
-            objects.base.obj_equal_prims(req.instance,
-                                         req_list[i].instance)
+            self.assertTrue(objects.base.obj_equal_prims(req.instance,
+                                                         req_list[i].instance))
 
     def test_get_by_filters_marker_overlimit(self):
         instance = fake_instance.fake_instance_obj(
@@ -591,8 +602,8 @@ class BuildRequestListTestCase(test.NoDBTestCase):
         self.assertEqual(2, len(req_list))
         for i, req in enumerate(reqs[2:]):
             self.assertEqual(req.instance_uuid, req_list[i].instance_uuid)
-            objects.base.obj_equal_prims(req.instance,
-                                         req_list[i].instance)
+            self.assertTrue(objects.base.obj_equal_prims(req.instance,
+                                                         req_list[i].instance))
 
     def test_get_by_filters_bails_on_empty_list_check(self):
         instance1 = fake_instance.fake_instance_obj(
