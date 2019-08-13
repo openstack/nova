@@ -12,7 +12,9 @@
 
 import copy
 
+import mock
 from oslo_utils.fixture import uuidsentinel as uuids
+import six
 
 from nova.compute import utils as compute_utils
 from nova.conductor.tasks import cross_cell_migrate
@@ -365,3 +367,103 @@ class TargetDBSetupTaskTestCase(
         self.assertRaises(exception.InstanceNotFound,
                           objects.Instance.get_by_uuid,
                           read_deleted_ctxt, target_cell_instance.uuid)
+
+
+class CrossCellMigrationTaskTestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        super(CrossCellMigrationTaskTestCase, self).setUp()
+        source_context = nova_context.get_context()
+        host_selection = objects.Selection(cell_uuid=uuids.cell_uuid)
+        migration = objects.Migration(id=1, cross_cell_move=False)
+        self.task = cross_cell_migrate.CrossCellMigrationTask(
+            source_context,
+            mock.sentinel.instance,
+            mock.sentinel.flavor,
+            mock.sentinel.request_spec,
+            migration,
+            mock.sentinel.compute_rpcapi,
+            host_selection,
+            mock.sentinel.alternate_hosts)
+
+    def test_execute_and_rollback(self):
+        """Basic test to just hit execute and rollback."""
+        # Mock out the things that execute calls
+        with test.nested(
+            mock.patch.object(self.task.migration, 'save'),
+            mock.patch.object(self.task, '_perform_external_api_checks'),
+        ) as (
+            mock_migration_save, mock_perform_external_api_checks,
+        ):
+            self.task.execute()
+        # Assert the calls
+        self.assertTrue(self.task.migration.cross_cell_move,
+                        'Migration.cross_cell_move should be True.')
+        mock_migration_save.assert_called_once_with()
+        mock_perform_external_api_checks.assert_called_once_with()
+        # Now rollback the completed sub-tasks
+        self.task.rollback()
+
+    @mock.patch('nova.volume.cinder.is_microversion_supported',
+                return_value=None)
+    def test_perform_external_api_checks_ok(self, mock_cinder_mv_check):
+        """Tests the happy path scenario where both cinder and neutron APIs
+        are new enough for what we need.
+        """
+        with mock.patch.object(
+                self.task.network_api, 'supports_port_binding_extension',
+                return_value=True) as mock_neutron_check:
+            self.task._perform_external_api_checks()
+        mock_neutron_check.assert_called_once_with(self.task.context)
+        mock_cinder_mv_check.assert_called_once_with(self.task.context, '3.44')
+
+    @mock.patch('nova.volume.cinder.is_microversion_supported',
+                return_value=None)
+    def test_perform_external_api_checks_old_neutron(
+            self, mock_cinder_mv_check):
+        """Tests the case that neutron API is old."""
+        with mock.patch.object(
+                self.task.network_api, 'supports_port_binding_extension',
+                return_value=False):
+            ex = self.assertRaises(exception.MigrationPreCheckError,
+                                   self.task._perform_external_api_checks)
+            self.assertIn('Required networking service API extension',
+                          six.text_type(ex))
+
+    @mock.patch('nova.volume.cinder.is_microversion_supported',
+                side_effect=exception.CinderAPIVersionNotAvailable(
+                    version='3.44'))
+    def test_perform_external_api_checks_old_cinder(
+            self, mock_cinder_mv_check):
+        """Tests the case that cinder API is old."""
+        with mock.patch.object(
+                self.task.network_api, 'supports_port_binding_extension',
+                return_value=True):
+            ex = self.assertRaises(exception.MigrationPreCheckError,
+                                   self.task._perform_external_api_checks)
+            self.assertIn('Cinder API version', six.text_type(ex))
+
+    @mock.patch('nova.conductor.tasks.cross_cell_migrate.LOG.exception')
+    def test_rollback_idempotent(self, mock_log_exception):
+        """Tests that the rollback routine hits all completed tasks even if
+        one or more of them fail their own rollback routine.
+        """
+        # Mock out some completed tasks
+        for x in range(3):
+            task = mock.Mock()
+            # The 2nd task will fail its rollback.
+            if x == 1:
+                task.rollback.side_effect = test.TestingException('sub-task')
+            self.task._completed_tasks[str(x)] = task
+        # Run execute but mock _execute to fail somehow.
+        with mock.patch.object(self.task, '_execute',
+                               side_effect=test.TestingException('main task')):
+            # The TestingException from the main task should be raised.
+            ex = self.assertRaises(test.TestingException, self.task.execute)
+            self.assertEqual('main task', six.text_type(ex))
+        # And all three sub-task rollbacks should have been called.
+        for subtask in self.task._completed_tasks.values():
+            subtask.rollback.assert_called_once_with()
+        # The 2nd task rollback should have raised and been logged.
+        mock_log_exception.assert_called_once()
+        self.assertEqual('1', mock_log_exception.call_args[0][1])
