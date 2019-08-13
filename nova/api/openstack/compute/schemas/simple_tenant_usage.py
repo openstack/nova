@@ -25,8 +25,8 @@ index_query = {
     },
     # NOTE(gmann): This is kept True to keep backward compatibility.
     # As of now Schema validation stripped out the additional parameters and
-    # does not raise 400. In the future, we may block the additional parameters
-    # by bump in Microversion.
+    # does not raise 400. In microversion 2.75, we have blocked the additional
+    # parameters.
     'additionalProperties': True
 }
 
@@ -38,8 +38,8 @@ show_query = {
     },
     # NOTE(gmann): This is kept True to keep backward compatibility.
     # As of now Schema validation stripped out the additional parameters and
-    # does not raise 400. In the future, we may block the additional parameters
-    # by bump in Microversion.
+    # does not raise 400. In microversion 2.75, we have blocked the additional
+    # parameters.
     'additionalProperties': True
 }
 
@@ -50,3 +50,9 @@ index_query_v240['properties'].update(
 show_query_v240 = copy.deepcopy(show_query)
 show_query_v240['properties'].update(
     parameter_types.pagination_parameters)
+
+index_query_275 = copy.deepcopy(index_query_v240)
+index_query_275['additionalProperties'] = False
+
+show_query_275 = copy.deepcopy(show_query_v240)
+show_query_275['additionalProperties'] = False

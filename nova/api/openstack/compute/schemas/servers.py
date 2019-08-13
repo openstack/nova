@@ -625,6 +625,8 @@ query_params_v21 = {
     # For backward-compatible additionalProperties is set to be True here.
     # And we will either strip the extra params out or raise HTTP 400
     # according to the params' value in the later process.
+    # This has been changed to False in microversion 2.75. From
+    # microversion 2.75, no additional unknown parameter will be allowed.
     'additionalProperties': True,
     # Prevent internal-attributes that are started with underscore from
     # being striped out in schema validation, and raise HTTP 400 in API.
@@ -659,3 +661,22 @@ query_params_v273['properties'].update({
     'sort_key': multi_params(VALID_SORT_KEYS_V273),
     'locked': parameter_types.common_query_param,
 })
+
+# Microversion 2.75 makes query schema to disallow any invalid or unknown
+# query parameters (filter or sort keys).
+# *****Schema updates for microversion 2.75 start here*******
+query_params_v275 = copy.deepcopy(query_params_v273)
+# 1. Update sort_keys to allow only valid sort keys:
+# NOTE(gmann): Remove the ignored sort keys now because 'additionalProperties'
+# is Flase for query schema. Starting from miceoversion 2.75, API will
+# raise 400 for any not-allowed sort keys instead of ignoring them.
+VALID_SORT_KEYS_V275 = copy.deepcopy(VALID_SORT_KEYS_V273)
+VALID_SORT_KEYS_V275['enum'] = list(
+            set(VALID_SORT_KEYS_V273["enum"]) - set(
+            SERVER_LIST_IGNORE_SORT_KEY_V273))
+query_params_v275['properties'].update({
+    'sort_key': multi_params(VALID_SORT_KEYS_V275),
+})
+# 2. Make 'additionalProperties' False.
+query_params_v275['additionalProperties'] = False
+# *****Schema updates for microversion 2.75 end here*******

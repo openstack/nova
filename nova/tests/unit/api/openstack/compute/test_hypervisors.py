@@ -1387,3 +1387,53 @@ class HypervisorsTestV253(HypervisorsTestV252):
                 uuids.hyper1)
         self.assertRaises(exception.ValidationError,
                           self.controller.show, req, uuids.hyper1)
+
+
+class HypervisorsTestV275(HypervisorsTestV253):
+    api_version = '2.75'
+
+    def _test_servers_with_no_server(self, func, version=None, **kwargs):
+        """Tests GET APIs return 'servers' field in response even
+           no servers on hypervisors.
+        """
+        with mock.patch.object(self.controller.host_api,
+                               'instance_get_all_by_host',
+                               return_value=[]):
+            req = fakes.HTTPRequest.blank('/os-hypervisors?with_servers=1',
+                                          use_admin_context=True,
+                                          version=version or self.api_version)
+            result = func(req, **kwargs)
+        return result
+
+    def test_list_servers_with_no_server_old_version(self):
+        result = self._test_servers_with_no_server(self.controller.index,
+                                                   version='2.74')
+        for hyper in result['hypervisors']:
+            self.assertNotIn('servers', hyper)
+
+    def test_list_detail_servers_with_no_server_old_version(self):
+        result = self._test_servers_with_no_server(self.controller.detail,
+                                                   version='2.74')
+        for hyper in result['hypervisors']:
+            self.assertNotIn('servers', hyper)
+
+    def test_show_servers_with_no_server_old_version(self):
+        result = self._test_servers_with_no_server(self.controller.show,
+                                                   version='2.74',
+                                                   id=uuids.hyper1)
+        self.assertNotIn('servers', result['hypervisor'])
+
+    def test_servers_with_no_server(self):
+        result = self._test_servers_with_no_server(self.controller.index)
+        for hyper in result['hypervisors']:
+            self.assertEqual(0, len(hyper['servers']))
+
+    def test_list_detail_servers_with_empty_server_list(self):
+        result = self._test_servers_with_no_server(self.controller.detail)
+        for hyper in result['hypervisors']:
+            self.assertEqual(0, len(hyper['servers']))
+
+    def test_show_servers_with_empty_server_list(self):
+        result = self._test_servers_with_no_server(self.controller.show,
+                                                   id=uuids.hyper1)
+        self.assertEqual(0, len(result['hypervisor']['servers']))

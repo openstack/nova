@@ -3074,6 +3074,8 @@ flavor_swap:
     The size of a dedicated swap disk that will be allocated, in
     MiB. If 0 (the default), no dedicated swap disk will be created.
     Currently, the empty string ('') is used to represent 0.
+    As of microversion 2.75 default return value of swap is 0
+    instead of empty string.
   in: body
   required: true
   type: integer
@@ -3519,6 +3521,20 @@ host_status_body_in:
   in: body
   required: false
   type: string
+host_status_update_rebuild:
+  description: |
+    The host status. Values where next value in list can override the previous:
+    - ``UP`` if nova-compute up.
+    - ``UNKNOWN`` if nova-compute not reported by servicegroup driver.
+    - ``DOWN`` if nova-compute forced down.
+    - ``MAINTENANCE`` if nova-compute is disabled.
+    - Empty string indicates there is no host for server.
+    This attribute appears in the response only if the policy permits.
+    By default, only administrators can get this parameter.
+  in: body
+  required: false
+  type: string
+  min_version: 2.75
 host_zone:
   description: |
     The available zone of the host.
@@ -3650,8 +3666,10 @@ hypervisor_os_diagnostics:
 hypervisor_servers:
   description: |
     A list of ``server`` objects.
+    This field has become mandatory in microversion 2.75. If no servers is on hypervisor
+    then empty list is returned.
   in: body
-  required: false
+  required: true
   type: array
   min_version: 2.53
 hypervisor_servers_name:
@@ -4140,6 +4158,13 @@ key_name_resp:
   in: body
   required: true
   type: string
+key_name_resp_update:
+  description: |
+    The name of associated key pair, if any.
+  in: body
+  required: true
+  type: string
+  min_version: 2.75
 key_pairs: &key_pairs
   description: |
     The number of allowed key pairs for each user.
@@ -4730,6 +4755,13 @@ name_server_group:
   in: body
   required: true
   type: string
+name_update_rebuild:
+  description: |
+    The security group name.
+  in: body
+  required: true
+  type: string
+  min_version: 2.75
 namespace:
   description: |
     A URL pointing to the namespace for this extension.
@@ -4970,6 +5002,13 @@ OS-EXT-AZ:availability_zone_optional:
   in: body
   required: false
   type: string
+OS-EXT-AZ:availability_zone_update_rebuild:
+  description: |
+    The availability zone name.
+  in: body
+  required: true
+  type: string
+  min_version: 2.75
 OS-EXT-SRV-ATTR:host:
   description: |
     The name of the compute host on which this instance is running.
@@ -4977,6 +5016,14 @@ OS-EXT-SRV-ATTR:host:
   in: body
   required: true
   type: string
+OS-EXT-SRV-ATTR:host_update_rebuild:
+  description: |
+    The name of the compute host on which this instance is running.
+    Appears in the response for administrative users only.
+  in: body
+  required: true
+  type: string
+  min_version: 2.75
 OS-EXT-SRV-ATTR:hypervisor_hostname:
   description: |
     The hypervisor host name provided by the Nova virt driver. For the Ironic driver,
@@ -4984,6 +5031,14 @@ OS-EXT-SRV-ATTR:hypervisor_hostname:
   in: body
   required: true
   type: string
+OS-EXT-SRV-ATTR:hypervisor_hostname_update_rebuild:
+  description: |
+    The hypervisor host name provided by the Nova virt driver. For the Ironic driver,
+    it is the Ironic node uuid. Appears in the response for administrative users only.
+  in: body
+  required: true
+  type: string
+  min_version: 2.75
 OS-EXT-SRV-ATTR:instance_name:
   description: |
     The instance name. The Compute API generates the instance name from the instance
@@ -4991,6 +5046,14 @@ OS-EXT-SRV-ATTR:instance_name:
   in: body
   required: true
   type: string
+OS-EXT-SRV-ATTR:instance_name_update_rebuild:
+  description: |
+    The instance name. The Compute API generates the instance name from the instance
+    name template. Appears in the response for administrative users only.
+  in: body
+  required: true
+  type: string
+  min_version: 2.75
 OS-EXT-STS:power_state:
   description: |
     The power state of the instance. This is an enum value that is mapped as::
@@ -5004,18 +5067,46 @@ OS-EXT-STS:power_state:
   in: body
   required: true
   type: integer
+OS-EXT-STS:power_state_update_rebuild:
+  description: |
+    The power state of the instance. This is an enum value that is mapped as::
+
+      0: NOSTATE
+      1: RUNNING
+      3: PAUSED
+      4: SHUTDOWN
+      6: CRASHED
+      7: SUSPENDED
+  in: body
+  required: true
+  type: integer
+  min_version: 2.75
 OS-EXT-STS:task_state:
   description: |
     The task state of the instance.
   in: body
   required: true
   type: string
+OS-EXT-STS:task_state_update_rebuild:
+  description: |
+    The task state of the instance.
+  in: body
+  required: true
+  type: string
+  min_version: 2.75
 OS-EXT-STS:vm_state:
   description: |
     The VM state.
   in: body
   required: true
   type: string
+OS-EXT-STS:vm_state_update_rebuild:
+  description: |
+    The VM state.
+  in: body
+  required: true
+  type: string
+  min_version: 2.75
 os-extended-volumes:volumes_attached:
   description: |
     The attached volumes, if any.
@@ -5032,12 +5123,36 @@ os-extended-volumes:volumes_attached.delete_on_termination:
   required: true
   type: boolean
   min_version: 2.3
+os-extended-volumes:volumes_attached.delete_on_termination_update_rebuild:
+  description: |
+    A flag indicating if the attached volume will be deleted
+    when the server is deleted. By default this is False and
+    can only be set when creating a volume while creating a
+    server, which is commonly referred to as boot from volume.
+  in: body
+  required: true
+  type: boolean
+  min_version: 2.75
 os-extended-volumes:volumes_attached.id:
   description: |
     The attached volume ID.
   in: body
   required: true
   type: string
+os-extended-volumes:volumes_attached.id_update_rebuild:
+  description: |
+    The attached volume ID.
+  in: body
+  required: true
+  type: string
+  min_version: 2.75
+os-extended-volumes:volumes_attached_update_rebuild:
+  description: |
+    The attached volumes, if any.
+  in: body
+  required: true
+  type: array
+  min_version: 2.75
 os-getConsoleOutput:
   description: |
     The action to get console output of the server.
@@ -5151,6 +5266,24 @@ OS-SRV-USG:launched_at:
   in: body
   required: true
   type: string
+OS-SRV-USG:launched_at_update_rebuild:
+  description: |
+    The date and time when the server was launched.
+
+    The date and time stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_:
+
+    ::
+
+      CCYY-MM-DDThh:mm:ss±hh:mm
+
+    For example, ``2015-08-27T09:49:58-05:00``.
+
+    The ``hh±:mm`` value, if included, is the time zone as an offset from UTC.
+    If the ``deleted_at`` date and time stamp is not set, its value is ``null``.
+  in: body
+  required: true
+  type: string
+  min_version: 2.75
 OS-SRV-USG:terminated_at:
   description: |
     The date and time when the server was deleted.
@@ -5167,6 +5300,23 @@ OS-SRV-USG:terminated_at:
   in: body
   required: true
   type: string
+OS-SRV-USG:terminated_at_update_rebuild:
+  description: |
+    The date and time when the server was deleted.
+
+    The date and time stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_:
+
+    ::
+
+      CCYY-MM-DDThh:mm:ss±hh:mm
+
+    For example, ``2015-08-27T09:49:58-05:00``.
+    The ``±hh:mm`` value, if included, is the time zone as an offset from UTC.
+    If the ``deleted_at`` date and time stamp is not set, its value is ``null``.
+  in: body
+  required: true
+  type: string
+  min_version: 2.75
 os-start:
   description: |
     The action to start a stopped server.
@@ -5852,6 +6002,13 @@ security_groups_obj:
   in: body
   required: true
   type: array
+security_groups_obj_update_rebuild:
+  description: |
+    One or more security groups objects.
+  in: body
+  required: true
+  type: array
+  min_version: 2.75
 security_groups_quota:
   description: |
     The number of allowed security groups for each tenant.
@@ -6002,6 +6159,14 @@ server_hostname:
     The hostname set on the instance when it is booted.
     By default, it appears in the response for administrative users only.
   min_version: 2.3
+server_hostname_update_rebuild:
+  in: body
+  required: false
+  type: string
+  description: |
+    The hostname set on the instance when it is booted.
+    By default, it appears in the response for administrative users only.
+  min_version: 2.75
 # This is the hypervisor_hostname in a POST (create instance) request body.
 server_hypervisor_hostname_create:
   description: |
@@ -6032,6 +6197,14 @@ server_kernel_id:
     The UUID of the kernel image when using an AMI. Will be null if not.
     By default, it appears in the response for administrative users only.
   min_version: 2.3
+server_kernel_id_update_rebuild:
+  in: body
+  required: false
+  type: string
+  description: |
+    The UUID of the kernel image when using an AMI. Will be null if not.
+    By default, it appears in the response for administrative users only.
+  min_version: 2.75
 server_launch_index:
   in: body
   required: false
@@ -6041,6 +6214,15 @@ server_launch_index:
     sequence in which the servers were launched.
     By default, it appears in the response for administrative users only.
   min_version: 2.3
+server_launch_index_update_rebuild:
+  in: body
+  required: false
+  type: integer
+  description: |
+    When servers are launched via multiple create, this is the
+    sequence in which the servers were launched.
+    By default, it appears in the response for administrative users only.
+  min_version: 2.75
 server_links:
   description: |
     Links pertaining to the server. See `API Guide / Links and
@@ -6070,6 +6252,14 @@ server_ramdisk_id:
     The UUID of the ramdisk image when using an AMI. Will be null if not.
     By default, it appears in the response for administrative users only.
   min_version: 2.3
+server_ramdisk_id_update_rebuild:
+  in: body
+  required: false
+  type: string
+  description: |
+    The UUID of the ramdisk image when using an AMI. Will be null if not.
+    By default, it appears in the response for administrative users only.
+  min_version: 2.75
 server_reservation_id:
   in: body
   required: false
@@ -6080,6 +6270,16 @@ server_reservation_id:
     create, that will all have the same reservation_id.
     By default, it appears in the response for administrative users only.
   min_version: 2.3
+server_reservation_id_update_rebuild:
+  in: body
+  required: false
+  type: string
+  description: |
+    The reservation id for the server. This is an id that can
+    be useful in tracking groups of servers created with multiple
+    create, that will all have the same reservation_id.
+    By default, it appears in the response for administrative users only.
+  min_version: 2.75
 server_root_device_name:
   in: body
   required: false
@@ -6088,6 +6288,14 @@ server_root_device_name:
     The root device name for the instance
     By default, it appears in the response for administrative users only.
   min_version: 2.3
+server_root_device_name_update_rebuild:
+  in: body
+  required: false
+  type: string
+  description: |
+    The root device name for the instance
+    By default, it appears in the response for administrative users only.
+  min_version: 2.75
 server_status:
   description: |
     The server status.
@@ -6169,6 +6377,14 @@ server_user_data:
     The user_data the instance was created with.
     By default, it appears in the response for administrative users only.
   min_version: 2.3
+server_user_data_update:
+  in: body
+  required: false
+  type: string
+  description: |
+    The user_data the instance was created with.
+    By default, it appears in the response for administrative users only.
+  min_version: 2.75
 server_uuid:
   description: |
     The UUID of the server instance to which the API dispatches the event.  You must

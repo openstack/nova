@@ -634,10 +634,31 @@ Response
   - trusted_image_certificates: server_trusted_image_certificates_resp
   - server_groups: server_groups_2_71
   - locked_reason: locked_reason_resp
+  - OS-EXT-AZ:availability_zone: OS-EXT-AZ:availability_zone_update_rebuild
+  - OS-EXT-SRV-ATTR:host: OS-EXT-SRV-ATTR:host_update_rebuild
+  - OS-EXT-SRV-ATTR:hypervisor_hostname: OS-EXT-SRV-ATTR:hypervisor_hostname_update_rebuild
+  - OS-EXT-SRV-ATTR:instance_name: OS-EXT-SRV-ATTR:instance_name_update_rebuild
+  - OS-EXT-STS:power_state: OS-EXT-STS:power_state_update_rebuild
+  - OS-EXT-STS:task_state: OS-EXT-STS:task_state_update_rebuild
+  - OS-EXT-STS:vm_state: OS-EXT-STS:vm_state_update_rebuild
+  - OS-EXT-SRV-ATTR:hostname: server_hostname_update_rebuild
+  - OS-EXT-SRV-ATTR:reservation_id: server_reservation_id_update_rebuild
+  - OS-EXT-SRV-ATTR:launch_index: server_launch_index_update_rebuild
+  - OS-EXT-SRV-ATTR:kernel_id: server_kernel_id_update_rebuild
+  - OS-EXT-SRV-ATTR:ramdisk_id: server_ramdisk_id_update_rebuild
+  - OS-EXT-SRV-ATTR:root_device_name: server_root_device_name_update_rebuild
+  - os-extended-volumes:volumes_attached: os-extended-volumes:volumes_attached_update_rebuild
+  - os-extended-volumes:volumes_attached.id: os-extended-volumes:volumes_attached.id_update_rebuild
+  - os-extended-volumes:volumes_attached.delete_on_termination: os-extended-volumes:volumes_attached.delete_on_termination_update_rebuild
+  - OS-SRV-USG:launched_at: OS-SRV-USG:launched_at_update_rebuild
+  - OS-SRV-USG:terminated_at: OS-SRV-USG:terminated_at_update_rebuild
+  - security_groups: security_groups_obj_update_rebuild
+  - security_group.name: name_update_rebuild
+  - host_status: host_status_update_rebuild
 
-**Example Rebuild Server (rebuild Action) (v2.73)**
+**Example Rebuild Server (rebuild Action) (v2.75)**
 
-.. literalinclude:: ../../doc/api_samples/servers/v2.73/server-action-rebuild-resp.json
+.. literalinclude:: ../../doc/api_samples/servers/v2.75/server-action-rebuild-resp.json
    :language: javascript
 
 Remove (Disassociate) Floating Ip (removeFloatingIp Action) (DEPRECATED)

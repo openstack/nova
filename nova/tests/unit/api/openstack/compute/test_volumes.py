@@ -26,6 +26,7 @@ from six.moves import urllib
 import webob
 from webob import exc
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute import assisted_volume_snapshots \
         as assisted_snaps_v21
@@ -419,6 +420,8 @@ class VolumeApiTestV21(test.NoDBTestCase):
 
 class VolumeAttachTestsV21(test.NoDBTestCase):
     validation_error = exception.ValidationError
+    microversion = '2.1'
+    _prefix = '/servers/id/os-volume_attachments'
 
     def setUp(self):
         super(VolumeAttachTestsV21, self).setUp()
@@ -436,11 +439,14 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
             }}
         self.attachments = volumes_v21.VolumeAttachmentController()
 
-        self.req = fakes.HTTPRequest.blank(
-                  '/v2/servers/id/os-volume_attachments/uuid')
+        self.req = self._build_request('/uuid')
         self.req.body = jsonutils.dump_as_bytes({})
         self.req.headers['content-type'] = 'application/json'
         self.req.environ['nova.context'] = self.context
+
+    def _build_request(self, url=''):
+        return fakes.HTTPRequest.blank(
+            self._prefix + url, version=self.microversion)
 
     def test_show(self):
         result = self.attachments.show(self.req, FAKE_UUID, FAKE_UUID_A)
@@ -638,10 +644,12 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
                                     'device': '/dev/fake'}}
         self.assertRaises(webob.exc.HTTPConflict, self.attachments.create,
                           self.req, FAKE_UUID, body=body)
+        supports_multiattach = api_version_request.is_supported(
+            self.req, '2.60')
         mock_attach_volume.assert_called_once_with(
             self.req.environ['nova.context'],
             test.MatchType(objects.Instance), FAKE_UUID_A, '/dev/fake',
-            supports_multiattach=False, tag=None)
+            supports_multiattach=supports_multiattach, tag=None)
 
     def test_attach_volume_bad_id(self):
         self.stub_out('nova.compute.api.API.attach_volume',
@@ -701,7 +709,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
                                      'device': '/dev/fake'}}
 
-        req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments')
+        req = self._build_request()
         req.method = 'POST'
         req.body = jsonutils.dump_as_bytes({})
         req.headers['content-type'] = 'application/json'
@@ -796,8 +804,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
              'id': FAKE_UUID_B})
 
     def _test_list_with_invalid_filter(self, url):
-        prefix = '/servers/id/os-volume_attachments'
-        req = fakes.HTTPRequest.blank(prefix + url)
+        req = self._build_request(url)
         self.assertRaises(exception.ValidationError,
                           self.attachments.index,
                           req,
@@ -833,8 +840,7 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
             'offset': 1
         }
         for param, value in params.items():
-            req = fakes.HTTPRequest.blank(
-                '/servers/id/os-volume_attachments' + '?%s=%s&%s=%s' %
+            req = self._build_request('?%s=%s&%s=%s' %
                 (param, value, param, value))
             self.attachments.index(req, FAKE_UUID)
 
@@ -843,8 +849,8 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
     def test_list_with_additional_filter(self, mock_get):
         fake_bdms = objects.BlockDeviceMappingList()
         mock_get.return_value = fake_bdms
-        req = fakes.HTTPRequest.blank(
-            '/servers/id/os-volume_attachments?limit=1&additional=something')
+        req = self._build_request(
+            '?limit=1&additional=something')
         self.attachments.index(req, FAKE_UUID)
 
 
@@ -955,6 +961,36 @@ class VolumeAttachTestsV260(test.NoDBTestCase):
         self.assertTrue(create_kwargs['supports_multiattach'])
         self.assertIn('Attaching multiattach volumes is not supported for '
                       'shelved-offloaded instances.', six.text_type(ex))
+
+
+class VolumeAttachTestsV2_75(VolumeAttachTestsV21):
+    microversion = '2.75'
+
+    def setUp(self):
+        super(VolumeAttachTestsV2_75, self).setUp()
+        self.expected_show = {'volumeAttachment':
+            {'device': '/dev/fake0',
+             'serverId': FAKE_UUID,
+             'id': FAKE_UUID_A,
+             'volumeId': FAKE_UUID_A,
+             'tag': None,
+            }}
+
+    @mock.patch.object(objects.BlockDeviceMappingList,
+                       'get_by_instance_uuid')
+    def test_list_with_additional_filter_old_version(self, mock_get):
+        fake_bdms = objects.BlockDeviceMappingList()
+        mock_get.return_value = fake_bdms
+        req = fakes.HTTPRequest.blank(
+            '/os-volumes?limit=1&offset=1&additional=something',
+            version='2.74')
+        self.attachments.index(req, FAKE_UUID)
+
+    def test_list_with_additional_filter(self):
+        req = self._build_request(
+            '?limit=1&additional=something')
+        self.assertRaises(self.validation_error, self.attachments.index,
+                          req, FAKE_UUID)
 
 
 class SwapVolumeMultiattachTestCase(test.NoDBTestCase):
@@ -1185,6 +1221,7 @@ class AssistedSnapshotCreateTestCaseV21(test.NoDBTestCase):
 
 class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
     assisted_snaps = assisted_snaps_v21
+    microversion = '2.1'
 
     def _check_status(self, expected_status, res, controller_method):
         self.assertEqual(expected_status, controller_method.wsgi_code)
@@ -1204,13 +1241,15 @@ class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
         }
         req = fakes.HTTPRequest.blank(
                 '/v2/fake/os-assisted-volume-snapshots?%s' %
-                urllib.parse.urlencode(params))
+                urllib.parse.urlencode(params),
+                version=self.microversion)
         req.method = 'DELETE'
         result = self.controller.delete(req, '5')
         self._check_status(204, result, self.controller.delete)
 
     def test_assisted_delete_missing_delete_info(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-assisted-volume-snapshots')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-assisted-volume-snapshots',
+                                      version=self.microversion)
         req.method = 'DELETE'
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.delete,
                 req, '5')
@@ -1223,7 +1262,8 @@ class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
         }
         req = fakes.HTTPRequest.blank(
                 '/v2/fake/os-assisted-volume-snapshots?%s' %
-                urllib.parse.urlencode(params))
+                urllib.parse.urlencode(params),
+                version=self.microversion)
         req.method = 'DELETE'
         with mock.patch.object(compute_api.API, 'volume_snapshot_delete',
                                side_effect=api_error):
@@ -1248,7 +1288,8 @@ class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
         }
         req = fakes.HTTPRequest.blank(
                 '/v2/fake/os-assisted-volume-snapshots?%s' %
-                urllib.parse.urlencode(params))
+                urllib.parse.urlencode(params),
+                version=self.microversion)
         req.method = 'DELETE'
         self.controller.delete(req, '5')
 
@@ -1259,7 +1300,8 @@ class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
         }
         req = fakes.HTTPRequest.blank(
                 '/v2/fake/os-assisted-volume-snapshots?%s' %
-                urllib.parse.urlencode(params))
+                urllib.parse.urlencode(params),
+                version=self.microversion)
         req.method = 'DELETE'
         self.controller.delete(req, '5')
 
@@ -1269,7 +1311,8 @@ class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
         }
         req = fakes.HTTPRequest.blank(
                 '/v2/fake/os-assisted-volume-snapshots?%s' %
-                urllib.parse.urlencode(params))
+                urllib.parse.urlencode(params),
+                version=self.microversion)
 
         req.method = 'DELETE'
         ex = self.assertRaises(webob.exc.HTTPBadRequest,
@@ -1277,6 +1320,29 @@ class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
         # This is the result of a KeyError but the only thing in the message
         # is the missing key.
         self.assertIn('volume_id', six.text_type(ex))
+
+
+class AssistedSnapshotDeleteTestCaseV275(AssistedSnapshotDeleteTestCaseV21):
+    assisted_snaps = assisted_snaps_v21
+    microversion = '2.75'
+
+    def test_delete_additional_query_parameters_old_version(self):
+        params = {
+            'delete_info': jsonutils.dumps({'volume_id': '1'}),
+            'additional': 123
+        }
+        req = fakes.HTTPRequest.blank(
+                '/v2/fake/os-assisted-volume-snapshots?%s' %
+                urllib.parse.urlencode(params),
+                version='2.74')
+        self.controller.delete(req, 1)
+
+    def test_delete_additional_query_parameters(self):
+        req = fakes.HTTPRequest.blank(
+                '/v2/fake/os-assisted-volume-snapshots?unknown=1',
+                version=self.microversion)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.delete, req, 1)
 
 
 class TestAssistedVolumeSnapshotsPolicyEnforcementV21(test.NoDBTestCase):

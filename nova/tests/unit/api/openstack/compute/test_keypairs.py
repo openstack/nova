@@ -605,3 +605,43 @@ class KeypairsTestV235(test.TestCase):
         mock_kp_get.assert_called_once_with(
             req.environ['nova.context'], 'fake_user',
             limit=None, marker=None)
+
+
+class KeypairsTestV275(test.TestCase):
+    def setUp(self):
+        super(KeypairsTestV275, self).setUp()
+        self.controller = keypairs_v21.KeypairController()
+
+    @mock.patch("nova.db.api.key_pair_get_all_by_user")
+    @mock.patch('nova.objects.KeyPair.get_by_name')
+    def test_keypair_list_additional_param_old_version(self, mock_get_by_name,
+                                                       mock_kp_get):
+        req = fakes.HTTPRequest.blank(
+            '/os-keypairs?unknown=3',
+            version='2.74', use_admin_context=True)
+        self.controller.index(req)
+        self.controller.show(req, 1)
+        with mock.patch.object(self.controller.api,
+                               'delete_key_pair'):
+            self.controller.delete(req, 1)
+
+    def test_keypair_list_additional_param(self):
+        req = fakes.HTTPRequest.blank(
+            '/os-keypairs?unknown=3',
+            version='2.75', use_admin_context=True)
+        self.assertRaises(exception.ValidationError, self.controller.index,
+                          req)
+
+    def test_keypair_show_additional_param(self):
+        req = fakes.HTTPRequest.blank(
+            '/os-keypairs?unknown=3',
+            version='2.75', use_admin_context=True)
+        self.assertRaises(exception.ValidationError, self.controller.show,
+                          req, 1)
+
+    def test_keypair_delete_additional_param(self):
+        req = fakes.HTTPRequest.blank(
+            '/os-keypairs?unknown=3',
+            version='2.75', use_admin_context=True)
+        self.assertRaises(exception.ValidationError, self.controller.delete,
+                          req, 1)

@@ -188,6 +188,14 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              in request body to ``POST /servers``. Allow users to specify which
              host/node they want their servers to land on and still be
              validated by the scheduler.
+    * 2.75 - Multiple API cleanup listed below:
+             - 400 for unknown param for query param and for request body.
+             - Making server representation always consistent among GET, PUT
+               and Rebuild serevr APIs response.
+             - Change the default return value of swap field from the empty
+               string to 0 (integer) in flavor APIs.
+             - Return ``servers`` field always in the response of GET
+               hypervisors API even there are no servers on hypervisor.
 """
 
 # The minimum and maximum versions of the API supported
@@ -196,7 +204,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.74"
+_MAX_API_VERSION = "2.75"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which are related to network, images and baremetal

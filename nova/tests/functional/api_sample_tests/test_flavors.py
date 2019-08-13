@@ -125,3 +125,11 @@ class FlavorsSampleJsonTest2_61(FlavorsSampleJsonTest):
         new_flavor.create()
         self.flavor_show_id = new_flavor_id
         self.subs = {'flavorid': new_flavor_id}
+
+
+class FlavorsSampleJsonTest2_75(FlavorsSampleJsonTest2_61):
+    microversion = '2.75'
+    scenarios = [('v2_75', {'api_major_version': 'v2.1'})]
+
+    def test_flavors_list(self):
+        pass

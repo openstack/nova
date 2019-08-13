@@ -11,6 +11,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
 from nova.api.validation import parameter_types
 
 
@@ -20,5 +22,10 @@ limits_query_schema = {
         'tenant_id': parameter_types.common_query_param,
     },
     # For backward compatible changes
+    # In microversion 2.75, we have blocked the additional
+    # parameters.
     'additionalProperties': True
 }
+
+limits_query_schema_275 = copy.deepcopy(limits_query_schema)
+limits_query_schema_275['additionalProperties'] = False

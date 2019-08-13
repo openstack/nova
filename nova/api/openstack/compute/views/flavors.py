@@ -70,6 +70,9 @@ class ViewBuilder(common.ViewBuilder):
         if include_extra_specs:
             flavor_dict['flavor']['extra_specs'] = flavor.extra_specs
 
+        if api_version_request.is_supported(request, '2.75'):
+            flavor_dict['flavor']['swap'] = flavor["swap"] or 0
+
         return flavor_dict
 
     def index(self, request, flavors):

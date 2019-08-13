@@ -85,7 +85,10 @@ query_schema = {
     },
     # NOTE(gmann): This is kept True to keep backward compatibility.
     # As of now Schema validation stripped out the additional parameters and
-    # does not raise 400. In the future, we may block the additional parameters
-    # by bump in Microversion.
+    # does not raise 400. In microversion 2.75, we have blocked the additional
+    # parameters.
     'additionalProperties': True
 }
+
+query_schema_275 = copy.deepcopy(query_schema)
+query_schema_275['additionalProperties'] = False

@@ -619,7 +619,7 @@ class FlavorsTestV21(test.TestCase):
             '/flavors/detail', expected)
 
     def _test_list_flavors_with_allowed_filter(
-        self, url, expected=None):
+        self, url, expected=None, req=None):
         controller_list = self.controller.index
         if 'detail' in url:
             controller_list = self.controller.detail
@@ -647,7 +647,7 @@ class FlavorsTestV21(test.TestCase):
         if 'detail' in url and self.expect_extra_specs:
             expected_resp[0]['extra_specs'] = (
                 fakes.FLAVORS['2'].extra_specs)
-        req = self._build_request(url + '&limit=1&marker=1')
+        req = req or self._build_request(url + '&limit=1&marker=1')
         result = controller_list(req)
         self.assertEqual(expected_resp, result['flavors'])
 
@@ -789,6 +789,110 @@ class FlavorsTestV2_61(FlavorsTestV2_55):
     """Run the same tests as we would for v2.55 but with a extra_specs."""
     microversion = '2.61'
     expect_extra_specs = True
+
+
+class FlavorsTestV2_75(FlavorsTestV2_61):
+    microversion = '2.75'
+
+    FLAVOR_WITH_NO_SWAP = objects.Flavor(
+        id=1,
+        name='flavor 1',
+        memory_mb=256,
+        vcpus=1,
+        root_gb=10,
+        ephemeral_gb=20,
+        flavorid='1',
+        rxtx_factor=1.0,
+        vcpu_weight=None,
+        disabled=False,
+        is_public=True,
+        swap=0,
+        description=None,
+        extra_specs={"key1": "value1", "key2": "value2"}
+    )
+
+    def test_list_flavors_with_additional_filter_old_version(self):
+        req = self.fake_request.blank(
+            '/fake/flavors?limit=1&marker=1&additional=something',
+            version='2.74')
+        self._test_list_flavors_with_allowed_filter(
+            '/fake/flavors?limit=1&marker=1&additional=something', req=req)
+
+    def test_list_detail_flavors_with_additional_filter_old_version(self):
+        expected = {
+            "ram": fakes.FLAVORS['2'].memory_mb,
+            "disk": fakes.FLAVORS['2'].root_gb,
+            "vcpus": fakes.FLAVORS['2'].vcpus,
+            "os-flavor-access:is_public": True,
+            "rxtx_factor": '',
+            "OS-FLV-EXT-DATA:ephemeral": fakes.FLAVORS['2'].ephemeral_gb,
+            "OS-FLV-DISABLED:disabled": fakes.FLAVORS['2'].disabled,
+            "swap": fakes.FLAVORS['2'].swap
+        }
+        req = self.fake_request.blank(
+            '/fake/flavors?limit=1&marker=1&additional=something',
+            version='2.74')
+        self._test_list_flavors_with_allowed_filter(
+            '/fake/flavors/detail?limit=1&marker=1&additional=something',
+            expected, req=req)
+
+    def _test_list_flavors_with_additional_filter(self, url):
+        controller_list = self.controller.index
+        if 'detail' in url:
+            controller_list = self.controller.detail
+        req = self._build_request(url)
+        self.assertRaises(exception.ValidationError,
+                          controller_list, req)
+
+    def test_list_flavors_with_additional_filter(self):
+        self._test_list_flavors_with_additional_filter(
+            '/flavors?limit=1&marker=1&additional=something')
+
+    def test_list_detail_flavors_with_additional_filter(self):
+        self._test_list_flavors_with_additional_filter(
+            '/flavors/detail?limit=1&marker=1&additional=something')
+
+    @mock.patch('nova.objects.FlavorList.get_all')
+    def test_list_flavor_detail_default_swap_value_old_version(self, mock_get):
+        mock_get.return_value = objects.FlavorList(
+            objects=[self.FLAVOR_WITH_NO_SWAP])
+        req = self.fake_request.blank(
+            '/fake/flavors/detail?limit=1',
+            version='2.74')
+        response = self.controller.detail(req)
+        response_list = response["flavors"]
+        self.assertEqual(response_list[0]['swap'], "")
+
+    @mock.patch('nova.objects.Flavor.get_by_flavor_id')
+    def test_show_flavor_default_swap_value_old_version(self, mock_get):
+        mock_get.return_value = self.FLAVOR_WITH_NO_SWAP
+        req = self.fake_request.blank(
+            '/fake/flavors/detail?limit=1',
+            version='2.74')
+        response = self.controller.show(req, 1)
+        response_list = response["flavor"]
+        self.assertEqual(response_list['swap'], "")
+
+    @mock.patch('nova.objects.FlavorList.get_all')
+    def test_list_flavor_detail_default_swap_value(self, mock_get):
+        mock_get.return_value = objects.FlavorList(
+            objects=[self.FLAVOR_WITH_NO_SWAP])
+        req = self.fake_request.blank(
+            '/fake/flavors/detail?limit=1',
+            version=self.microversion)
+        response = self.controller.detail(req)
+        response_list = response["flavors"]
+        self.assertEqual(response_list[0]['swap'], 0)
+
+    @mock.patch('nova.objects.Flavor.get_by_flavor_id')
+    def test_show_flavor_default_swap_value(self, mock_get):
+        mock_get.return_value = self.FLAVOR_WITH_NO_SWAP
+        req = self.fake_request.blank(
+            '/fake/flavors/detail?limit=1',
+            version=self.microversion)
+        response = self.controller.show(req, 1)
+        response_list = response["flavor"]
+        self.assertEqual(response_list['swap'], 0)
 
 
 class DisabledFlavorsWithRealDBTestV21(test.TestCase):

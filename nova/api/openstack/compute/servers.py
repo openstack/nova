@@ -108,7 +108,8 @@ class ServersController(wsgi.Controller):
         self.network_api = network_api.API()
 
     @wsgi.expected_errors((400, 403))
-    @validation.query_schema(schema_servers.query_params_v273, '2.73')
+    @validation.query_schema(schema_servers.query_params_v275, '2.75')
+    @validation.query_schema(schema_servers.query_params_v273, '2.73', '2.74')
     @validation.query_schema(schema_servers.query_params_v266, '2.66', '2.72')
     @validation.query_schema(schema_servers.query_params_v226, '2.26', '2.65')
     @validation.query_schema(schema_servers.query_params_v21, '2.1', '2.25')
@@ -123,7 +124,8 @@ class ServersController(wsgi.Controller):
         return servers
 
     @wsgi.expected_errors((400, 403))
-    @validation.query_schema(schema_servers.query_params_v273, '2.73')
+    @validation.query_schema(schema_servers.query_params_v275, '2.75')
+    @validation.query_schema(schema_servers.query_params_v273, '2.73', '2.74')
     @validation.query_schema(schema_servers.query_params_v266, '2.66', '2.72')
     @validation.query_schema(schema_servers.query_params_v226, '2.26', '2.65')
     @validation.query_schema(schema_servers.query_params_v21, '2.1', '2.25')
@@ -828,19 +830,38 @@ class ServersController(wsgi.Controller):
         try:
             instance = self.compute_api.update_instance(ctxt, instance,
                                                         update_dict)
+
+            # NOTE(gmann): Starting from microversion 2.75, PUT and Rebuild
+            # API response will show all attributes like GET /servers API.
+            show_all_attributes = api_version_request.is_supported(
+                req, min_version='2.75')
+            extend_address = show_all_attributes
+            show_AZ = show_all_attributes
+            show_config_drive = show_all_attributes
+            show_keypair = show_all_attributes
+            show_srv_usg = show_all_attributes
+            show_sec_grp = show_all_attributes
+            show_extended_status = show_all_attributes
+            show_extended_volumes = show_all_attributes
+            # NOTE(gmann): Below attributes need to be added in response
+            # if respective policy allows.So setting these as None
+            # to perform the policy check in view builder.
+            show_extended_attr = None if show_all_attributes else False
+            show_host_status = None if show_all_attributes else False
+
             return self._view_builder.show(
-                                      req, instance,
-                                      extend_address=False,
-                                      show_AZ=False,
-                                      show_config_drive=False,
-                                      show_extended_attr=False,
-                                      show_host_status=False,
-                                      show_keypair=False,
-                                      show_srv_usg=False,
-                                      show_sec_grp=False,
-                                      show_extended_status=False,
-                                      show_extended_volumes=False,
-                                      show_server_groups=show_server_groups)
+                req, instance,
+                extend_address=extend_address,
+                show_AZ=show_AZ,
+                show_config_drive=show_config_drive,
+                show_extended_attr=show_extended_attr,
+                show_host_status=show_host_status,
+                show_keypair=show_keypair,
+                show_srv_usg=show_srv_usg,
+                show_sec_grp=show_sec_grp,
+                show_extended_status=show_extended_status,
+                show_extended_volumes=show_extended_volumes,
+                show_server_groups=show_server_groups)
         except exception.InstanceNotFound:
             msg = _("Instance could not be found")
             raise exc.HTTPNotFound(explanation=msg)
@@ -1118,17 +1139,40 @@ class ServersController(wsgi.Controller):
         show_server_groups = api_version_request.is_supported(
                            req, min_version='2.71')
 
-        view = self._view_builder.show(req, instance, extend_address=False,
-                                       show_AZ=False,
-                                       show_config_drive=False,
-                                       show_extended_attr=False,
-                                       show_host_status=False,
-                                       show_keypair=show_keypair,
-                                       show_srv_usg=False,
-                                       show_sec_grp=False,
-                                       show_extended_status=False,
-                                       show_extended_volumes=False,
-                                       show_server_groups=show_server_groups)
+        # NOTE(gmann): Starting from microversion 2.75, PUT and Rebuild
+        # API response will show all attributes like GET /servers API.
+        show_all_attributes = api_version_request.is_supported(
+            req, min_version='2.75')
+        extend_address = show_all_attributes
+        show_AZ = show_all_attributes
+        show_config_drive = show_all_attributes
+        show_srv_usg = show_all_attributes
+        show_sec_grp = show_all_attributes
+        show_extended_status = show_all_attributes
+        show_extended_volumes = show_all_attributes
+        # NOTE(gmann): Below attributes need to be added in response
+        # if respective policy allows.So setting these as None
+        # to perform the policy check in view builder.
+        show_extended_attr = None if show_all_attributes else False
+        show_host_status = None if show_all_attributes else False
+
+        view = self._view_builder.show(
+            req, instance,
+            extend_address=extend_address,
+            show_AZ=show_AZ,
+            show_config_drive=show_config_drive,
+            show_extended_attr=show_extended_attr,
+            show_host_status=show_host_status,
+            show_keypair=show_keypair,
+            show_srv_usg=show_srv_usg,
+            show_sec_grp=show_sec_grp,
+            show_extended_status=show_extended_status,
+            show_extended_volumes=show_extended_volumes,
+            show_server_groups=show_server_groups,
+            # NOTE(gmann): user_data has been added in response (by code at
+            # the end of this API method) since microversion 2.57 so tell
+            # view builder not to include it.
+            show_user_data=False)
 
         # Add on the admin_password attribute since the view doesn't do it
         # unless instance passwords are disabled

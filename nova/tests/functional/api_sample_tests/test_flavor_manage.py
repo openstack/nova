@@ -46,3 +46,8 @@ class FlavorManageSampleJsonTests2_55(FlavorManageSampleJsonTests):
     def test_update_flavor_description(self):
         response = self._do_put("flavors/1", "flavor-update-req", {})
         self._verify_response("flavor-update-resp", {}, response, 200)
+
+
+class FlavorManageSampleJsonTests2_75(FlavorManageSampleJsonTests2_55):
+    microversion = '2.75'
+    scenarios = [('v2_75', {'api_major_version': 'v2.1'})]

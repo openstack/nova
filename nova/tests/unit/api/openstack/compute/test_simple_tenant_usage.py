@@ -454,6 +454,38 @@ class SimpleTenantUsageTestV40(SimpleTenantUsageTestV21):
         self._test_show_duplicate_query_parameters_validation(params)
 
 
+class SimpleTenantUsageTestV2_75(SimpleTenantUsageTestV40):
+    version = '2.75'
+
+    def test_index_additional_query_param_old_version(self):
+        req = fakes.HTTPRequest.blank('?start=%s&end=%s&additional=1' %
+                (START.isoformat(), STOP.isoformat()),
+                version='2.74')
+        res = self.controller.index(req)
+        self.assertIn('tenant_usages', res)
+
+    def test_index_additional_query_parameters(self):
+        req = fakes.HTTPRequest.blank('?start=%s&end=%s&additional=1' %
+                (START.isoformat(), STOP.isoformat()),
+                version=self.version)
+        self.assertRaises(exception.ValidationError, self.controller.index,
+                          req)
+
+    def test_show_additional_query_param_old_version(self):
+        req = fakes.HTTPRequest.blank('?start=%s&end=%s&additional=1' %
+                (START.isoformat(), STOP.isoformat()),
+                version='2.74')
+        res = self.controller.show(req, 1)
+        self.assertIn('tenant_usage', res)
+
+    def test_show_additional_query_parameters(self):
+        req = fakes.HTTPRequest.blank('?start=%s&end=%s&additional=1' %
+                (START.isoformat(), STOP.isoformat()),
+                version=self.version)
+        self.assertRaises(exception.ValidationError, self.controller.show,
+                          req, 1)
+
+
 class SimpleTenantUsageLimitsTestV21(test.TestCase):
     version = '2.1'
 
