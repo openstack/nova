@@ -51,16 +51,38 @@ def _fake_exists_all_used(path):
     return ORIG_EXISTS(path)
 
 
-def _fake_detect_nbd_devices_none(self):
+def _fake_detect_nbd_devices_none():
     return []
 
 
-def _fake_detect_nbd_devices(self):
+def _fake_detect_nbd_devices():
     return ['nbd0', 'nbd1']
 
 
 def _fake_noop(*args, **kwargs):
     return
+
+
+class NbdTestCaseNoStub(test.NoDBTestCase):
+
+    @mock.patch('os.listdir')
+    def test_detect_nbd_devices(self, list_dir_mock):
+        list_dir_mock.return_value = _fake_detect_nbd_devices()
+        result = nbd.NbdMount._detect_nbd_devices()
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(list_dir_mock.return_value), len(result))
+        for path in list_dir_mock.return_value:
+            self.assertIn(path, result)
+
+    @mock.patch('os.listdir')
+    def test_detect_nbd_devices_empty(self, list_dir_mock):
+        list_dir_mock.return_value = [
+            "nbdz", "fake0", "not-nbd1"]
+        result = nbd.NbdMount._detect_nbd_devices()
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, list)
+        self.assertEqual(0, len(result))
 
 
 class NbdTestCase(test.NoDBTestCase):
@@ -272,7 +294,7 @@ class NbdTestCase(test.NoDBTestCase):
         # they cannot choose the same nbd number (see bug 1207422)
 
         tempdir = self.useFixture(fixtures.TempDir()).path
-        free_devices = _fake_detect_nbd_devices(None)[:]
+        free_devices = _fake_detect_nbd_devices()[:]
         chosen_devices = []
 
         def fake_find_unused(self):
