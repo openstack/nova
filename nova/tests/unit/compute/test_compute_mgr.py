@@ -7586,6 +7586,78 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         do_revert_resize()
         do_finish_revert_resize()
 
+    @mock.patch.object(objects.Instance, 'drop_migration_context')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_finish_revert_resize_network_migrate_finish')
+    @mock.patch('nova.scheduler.utils.'
+                'fill_provider_mapping_based_on_allocation')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocations_for_consumer')
+    @mock.patch('nova.compute.manager.ComputeManager._revert_allocation')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_set_instance_info')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_notify_about_instance_usage')
+    @mock.patch.object(compute_utils, 'notify_about_instance_action')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    def test_finish_revert_resize_recalc_group_rp_mapping(
+            self, mock_get_bdms, mock_notify_action, mock_notify_usage,
+            mock_set_instance_info, mock_instance_save, mock_revert_allocation,
+            mock_get_allocations, mock_fill_provider_mapping,
+            mock_network_migrate_finish, mock_drop_migration_context):
+
+        mock_get_bdms.return_value = objects.BlockDeviceMappingList()
+        request_spec = objects.RequestSpec()
+        mock_get_allocations.return_value = mock.sentinel.allocation
+
+        with mock.patch.object(
+                self.compute.network_api, 'get_instance_nw_info'):
+            self.compute.finish_revert_resize(
+                self.context, self.instance, self.migration, request_spec)
+
+        mock_get_allocations.assert_called_once_with(
+            self.context, self.instance.uuid)
+        mock_fill_provider_mapping.assert_called_once_with(
+            self.context, self.compute.reportclient, request_spec,
+            mock.sentinel.allocation)
+
+    @mock.patch.object(objects.Instance, 'drop_migration_context')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_finish_revert_resize_network_migrate_finish')
+    @mock.patch('nova.scheduler.utils.'
+                'fill_provider_mapping_based_on_allocation')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocations_for_consumer')
+    @mock.patch('nova.compute.manager.ComputeManager._revert_allocation')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_set_instance_info')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_notify_about_instance_usage')
+    @mock.patch.object(compute_utils, 'notify_about_instance_action')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    def test_finish_revert_resize_recalc_group_rp_mapping_missing_request_spec(
+            self, mock_get_bdms, mock_notify_action, mock_notify_usage,
+            mock_set_instance_info, mock_instance_save, mock_revert_allocation,
+            mock_get_allocations, mock_fill_provider_mapping,
+            mock_network_migrate_finish, mock_drop_migration_context):
+
+        mock_get_bdms.return_value = objects.BlockDeviceMappingList()
+        mock_get_allocations.return_value = mock.sentinel.allocation
+
+        with mock.patch.object(
+                self.compute.network_api, 'get_instance_nw_info'):
+            # This is the case when the compute is pinned to use older than
+            # RPC version 5.2
+            self.compute.finish_revert_resize(
+                self.context, self.instance, self.migration, request_spec=None)
+
+        mock_get_allocations.assert_not_called()
+        mock_fill_provider_mapping.assert_not_called()
+        mock_network_migrate_finish.assert_called_once_with(
+            self.context, self.instance, self.migration, None)
+
     def test_confirm_resize_deletes_allocations(self):
         @mock.patch('nova.objects.Instance.get_by_uuid')
         @mock.patch('nova.objects.Migration.get_by_id')

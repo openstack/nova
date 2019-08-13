@@ -93,6 +93,7 @@ from nova import rpc
 from nova import safe_utils
 from nova.scheduler.client import query
 from nova.scheduler.client import report
+from nova.scheduler import utils as scheduler_utils
 from nova import utils
 from nova.virt import block_device as driver_block_device
 from nova.virt import configdrive
@@ -4293,7 +4294,27 @@ class ComputeManager(manager.Manager):
                            'migration_uuid': migration.uuid})
                 raise
 
-            provider_mappings = self._get_request_group_mapping(request_spec)
+            if request_spec:
+                # TODO(gibi): the _revert_allocation() call above already
+                # fetched the original allocation of the instance so we could
+                # avoid this second call to placement
+                # NOTE(gibi): We need to re-calculate the resource provider -
+                # port mapping as we have to have the neutron ports allocate
+                # from the source compute after revert.
+                allocs = self.reportclient.get_allocations_for_consumer(
+                    context, instance.uuid)
+                scheduler_utils.fill_provider_mapping_based_on_allocation(
+                    context, self.reportclient, request_spec, allocs)
+                provider_mappings = self._get_request_group_mapping(
+                    request_spec)
+            else:
+                # NOTE(gibi): The compute RPC is pinned to be older than 5.2
+                # and therefore request_spec is not sent. We cannot calculate
+                # the provider mappings. If the instance has ports with
+                # resource request then the port update will fail in
+                # _update_port_binding_for_instance() called via
+                # _finish_revert_resize_network_migrate_finish() below.
+                provider_mappings = None
 
             self.network_api.setup_networks_on_host(context, instance,
                                                     migration.source_compute)

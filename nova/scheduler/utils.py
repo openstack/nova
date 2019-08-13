@@ -1146,6 +1146,33 @@ def fill_provider_mapping(
     ar = jsonutils.loads(host_selection.allocation_request)
     allocs = ar['allocations']
 
+    fill_provider_mapping_based_on_allocation(
+        context, report_client, request_spec, allocs)
+
+
+def fill_provider_mapping_based_on_allocation(
+        context, report_client, request_spec, allocation):
+    """Fills out the request group - resource provider mapping in the
+    request spec based on the current allocation of the instance.
+
+    The fill_provider_mapping() variant is expected to be called in every
+    scenario when a Selection object is available from the scheduler. However
+    in case of revert operations such Selection does not exists. In this case
+    the mapping is calculated based on the allocation of the source host the
+    move operation is reverting to.
+
+    :param context: The security context
+    :param report_client: SchedulerReportClient instance to be used to
+        communicate with placement
+    :param request_spec: The RequestSpec object associated with the
+        operation
+    :param allocation: allocation dict of the instance, keyed by RP UUID.
+    """
+
+    # Exit early if this request spec does not require mappings.
+    if not request_spec.maps_requested_resources:
+        return
+
     # NOTE(gibi): Getting traits from placement for each instance in a
     # instance multi-create scenario is unnecessarily expensive. But
     # instance multi-create cannot be used with pre-created neutron ports
@@ -1158,9 +1185,9 @@ def fill_provider_mapping(
     provider_traits = {
         rp_uuid: report_client.get_provider_traits(
             context, rp_uuid).traits
-        for rp_uuid in allocs}
-    # NOTE(gibi): The allocs dict is in the format of the PUT /allocations
+        for rp_uuid in allocation}
+    # NOTE(gibi): The allocation dict is in the format of the PUT /allocations
     # and that format can change. The current format can be detected from
-    # host_selection.allocation_request_version
+    # allocation_request_version key of the Selection object.
     request_spec.map_requested_resources_to_providers(
-        allocs, provider_traits)
+        allocation, provider_traits)
