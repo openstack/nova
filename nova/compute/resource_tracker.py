@@ -112,6 +112,10 @@ class ResourceTracker(object):
         # and value of this sub-dict is a set of Resource obj
         self.assigned_resources = collections.defaultdict(
             lambda: collections.defaultdict(set))
+        # Set of ids for providers identified in provider config files that
+        # are not found on the provider tree. These are tracked to facilitate
+        # smarter logging.
+        self.absent_providers = set()
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, fair=True)
     def instance_claim(self, context, instance, nodename, allocations,
@@ -1698,6 +1702,136 @@ class ResourceTracker(object):
             if key in updates:
                 usage[key] = updates[key]
         return usage
+
+    def _merge_provider_configs(self, provider_configs, provider_tree):
+        """Takes a provider tree and merges any provider configs. Any
+        providers in the update that are not present in the tree are logged
+        and ignored. Providers identified by both $COMPUTE_NODE and explicit
+        UUID/NAME will only be updated with the additional inventories and
+        traits in the explicit provider config entry.
+
+        :param provider_configs: The provider configs to merge
+        :param provider_tree: The provider tree to be updated in place
+        """
+        processed_providers = {}
+        for uuid_or_name, provider_data in provider_configs.items():
+            additional_traits = provider_data.get(
+                "traits", {}).get("additional", [])
+            additional_inventories = provider_data.get(
+                "inventories", {}).get("additional", [])
+
+            # This is just used to make log entries more useful
+            source_file_name = provider_data['__source_file']
+
+            # In most cases this will contain a single provider except in
+            # the case of UUID=$COMPUTE_NODE, it may contain multiple.
+            providers_to_update = self._get_providers_to_update(
+                uuid_or_name, provider_tree, source_file_name)
+
+            for provider in providers_to_update:
+                # $COMPUTE_NODE is used to define a "default" rule to apply
+                # to all your compute nodes, but then override it for
+                # specific ones.
+                #
+                # If this is for UUID=$COMPUTE_NODE, check if provider is also
+                # explicitly identified. If it is, skip updating it with the
+                # $COMPUTE_NODE entry data.
+                if uuid_or_name == "$COMPUTE_NODE":
+                    if any(_pid in provider_configs
+                           for _pid in [provider.name, provider.uuid]):
+                        continue
+
+                # for each provider specified by name or uuid check that
+                # we have not already processed it to prevent duplicate
+                # declarations of the same provider.
+                current_uuid = provider.uuid
+                if current_uuid in processed_providers:
+                    raise ValueError(_(
+                        "Provider config '%(source_file_name)s' conflicts "
+                        "with provider config '%(processed_providers)s'. "
+                        "The same provider is specified using both name "
+                        "'%(uuid_or_name)s' and uuid '%(current_uuid)s'.") % {
+                            'source_file_name': source_file_name,
+                            'processed_providers':
+                                processed_providers[current_uuid],
+                            'uuid_or_name': uuid_or_name,
+                            'current_uuid': current_uuid
+                        }
+                    )
+                processed_providers[current_uuid] = source_file_name
+
+                if additional_traits:
+                    intersect = set(provider.traits) & set(additional_traits)
+                    if intersect:
+                        invalid = ','.join(intersect)
+                        raise ValueError(_(
+                            "Provider config '%(source_file_name)s' attempts "
+                            "to define a trait that is owned by the "
+                            "virt driver or specified via the placment api. "
+                            "Invalid traits '%(invalid)s' must be removed "
+                            "from '%(source_file_name)s'.") % {
+                                'source_file_name': source_file_name,
+                                'invalid': invalid
+                            }
+                        )
+                    provider_tree.add_traits(provider.uuid, *additional_traits)
+
+                if additional_inventories:
+                    merged_inventory = provider.inventory
+                    intersect = (merged_inventory.keys() &
+                                 {rc for inv_dict in additional_inventories
+                                  for rc in inv_dict})
+                    if intersect:
+                        raise ValueError(_(
+                            "Provider config '%(source_file_name)s' attempts "
+                            "to define an inventory that is owned by the "
+                            "virt driver. Invalid inventories '%(invalid)s' "
+                            "must be removed from '%(source_file_name)s'.") % {
+                                'source_file_name': source_file_name,
+                                'invalid': ','.join(intersect)
+                            }
+                        )
+                    for inventory in additional_inventories:
+                        merged_inventory.update(inventory)
+
+                    provider_tree.update_inventory(
+                        provider.uuid, merged_inventory)
+
+    def _get_providers_to_update(self, uuid_or_name, provider_tree,
+                                 source_file):
+        """Identifies the providers to be updated.
+        Intended only to be consumed by _merge_provider_configs()
+
+        :param provider: Provider config data
+        :param provider_tree: Provider tree to get providers from
+        :param source_file: Provider config file containing the inventories
+
+        :returns: list of ProviderData
+        """
+        # $COMPUTE_NODE is used to define a "default" rule to apply
+        # to all your compute nodes, but then override it for
+        # specific ones.
+        if uuid_or_name == "$COMPUTE_NODE":
+            return [root.data() for root in provider_tree.roots
+                    if os_traits.COMPUTE_NODE in root.traits]
+
+        try:
+            providers_to_update = [provider_tree.data(uuid_or_name)]
+            # Remove the provider from absent provider list if present
+            # so we can re-warn if the provider disappears again later
+            self.absent_providers.discard(uuid_or_name)
+        except ValueError:
+            providers_to_update = []
+            if uuid_or_name not in self.absent_providers:
+                LOG.warning(
+                    "Provider '%(uuid_or_name)s' specified in provider "
+                    "config file '%(source_file)s' does not exist in the "
+                    "ProviderTree and will be ignored.",
+                    {"uuid_or_name": uuid_or_name,
+                     "source_file": source_file})
+                self.absent_providers.add(uuid_or_name)
+
+        return providers_to_update
 
     def build_failed(self, nodename):
         """Increments the failed_builds stats for the given node."""

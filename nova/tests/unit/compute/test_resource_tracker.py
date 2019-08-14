@@ -3916,3 +3916,220 @@ class ResourceTrackerTestCase(test.NoDBTestCase):
 
         self.assertRaises(AssertionError, _test_explict_unfair)
         self.assertRaises(AssertionError, _test_implicit_unfair)
+
+
+class ProviderConfigTestCases(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self._setup_rt()
+        self.p_tree = self._setup_ptree(_COMPUTE_NODE_FIXTURES[0])
+
+    @staticmethod
+    def _get_provider_config(uuid=uuids.cn1):
+        return {"__source_file": "test_provider_config.yaml",
+                "identification": {
+                    "uuid": uuid
+                },
+                "inventories": {
+                    "additional": [
+                        {
+                            orc.normalize_name(uuid): {
+                                "total": 100,
+                                "reserved": 0,
+                                "min_unit": 1,
+                                "max_unit": 10,
+                                "step_size": 1,
+                                "allocation_ratio": 1
+                            }
+                        }
+                    ]
+                },
+                "traits": {
+                    "additional": [os_traits.normalize_name(uuid)]
+                }}
+
+    def test_merge_provider_configs(self):
+        """Test tratis and inventories from provider configs are
+        correctly merged into provider tree via _merge_provider_configs()
+        """
+        # get both an explicit and a uuid=$COMPUTE_NODE provider config
+        provider = self._get_provider_config()
+        cn_provider = self._get_provider_config(uuid="$COMPUTE_NODE")
+
+        # ensure uuids.cn1 provider has COMPUTE_NODE trait
+        self.p_tree.add_traits(uuids.cn1, os_traits.COMPUTE_NODE)
+
+        # test that only the explicit traits and inventories are merged
+        self.rt._merge_provider_configs({"$COMPUTE_NODE": cn_provider,
+                                         uuids.cn1: provider}, self.p_tree)
+
+        expected_traits = {os_traits.COMPUTE_NODE,
+                           *provider['traits']['additional']}
+        actual_traits = self.p_tree.data(uuids.cn1).traits
+        self.assertEqual(expected_traits, actual_traits)
+
+        expected_inventory = provider['inventories']['additional'][0]
+        actual_inventory = self.p_tree.data(uuids.cn1).inventory
+        self.assertEqual(expected_inventory, actual_inventory)
+
+    def test_merge_provider_configs_dup_providers_exception(self):
+        """If _get_providers_to_update() returned two providers with the same
+        uuid, make sure exception will be raised.
+        """
+        provider = self._get_provider_config(uuid=uuids.cn1)
+
+        mock_gptu = mock.MagicMock()
+
+        # create duplicated providers for raising exception
+        mock_gptu.return_value = self.rt._get_providers_to_update(
+            uuids.cn1, self.p_tree, "test_provider_config.yaml"
+        ) * 2
+        self.rt._get_providers_to_update = mock_gptu
+
+        # it does not matter what to pass in
+        actual = self.assertRaises(
+            ValueError,
+            self.rt._merge_provider_configs, {uuids.cn1: provider}, self.p_tree
+        )
+
+        expected = ("Provider config 'test_provider_config.yaml' conflicts "
+                    "with provider config 'test_provider_config.yaml'. "
+                    "The same provider is specified using both name '" +
+                    uuids.cn1 + "' and uuid '" + uuids.cn1 + "'.")
+        self.assertEqual(expected, str(actual))
+
+    def test_merge_provider_configs_additional_traits_exception(self):
+        """If traits from provider config are duplicated with traits
+        from virt driver or placement api, make sure exception will be raised.
+        """
+        ex_trait = "EXCEPTION_TRAIT"
+        provider = self._get_provider_config(uuid=uuids.cn1)
+
+        # add the same trait in p_tree and provider config
+        # for raising exception
+        self.p_tree.add_traits(uuids.cn1, ex_trait)
+        provider["traits"]["additional"].append(ex_trait)
+
+        expected = ("Provider config 'test_provider_config.yaml' attempts to "
+                    "define a trait that is owned by the virt driver or "
+                    "specified via the placment api. Invalid traits '" +
+                    ex_trait + "' must be removed from "
+                    "'test_provider_config.yaml'.")
+
+        actual = self.assertRaises(
+            ValueError,
+            self.rt._merge_provider_configs, {uuids.cn1: provider}, self.p_tree
+        )
+
+        self.assertEqual(expected, str(actual))
+
+    def test_merge_provider_configs_additional_inventories_exception(self):
+        """If inventories from provider config are already in provider tree,
+        make sure exception will be raised.
+        """
+        ex_key = 'EXCEPTION_INVENTORY'
+        ex_inventory = {ex_key: {
+                            'allocation_ratio': 1,
+                            'max_unit': 10,
+                            'min_unit': 1,
+                            'reserved': 0,
+                            'step_size': 1,
+                            'total': 100}
+                        }
+        provider = self._get_provider_config(uuid=uuids.cn1)
+
+        # add the same inventory in p_tree and provider config
+        # for raising exception
+        self.p_tree.update_inventory(uuids.cn1, ex_inventory)
+        provider["inventories"]["additional"].append(ex_inventory)
+
+        actual = self.assertRaises(
+            ValueError,
+            self.rt._merge_provider_configs, {uuids.cn1: provider}, self.p_tree
+        )
+
+        expected = ("Provider config 'test_provider_config.yaml' attempts to "
+                    "define an inventory that is owned by the virt driver. "
+                    "Invalid inventories '" + ex_key +
+                    "' must be removed from 'test_provider_config.yaml'.")
+
+        self.assertEqual(expected, str(actual))
+
+    def test__get_providers_to_update(self):
+        """Test specified provider will be found from provide tree.
+        """
+        provider = self._get_provider_config(uuid=uuids.cp1)
+
+        # add a new child provider with uuid from provider config
+        self.p_tree.new_child(uuids.cp1, uuids.cn1, uuid=uuids.cp1)
+
+        # test that only the child is found
+        results = [
+            provider.uuid for provider
+            in self.rt._get_providers_to_update(
+                uuids.cp1, self.p_tree, provider['__source_file'])]
+
+        self.assertEqual([uuids.cp1], results)
+
+    def test__get_providers_to_update_roots(self):
+        """Test _get_provider_config can correctly process $COMPUTE_NODE and
+        only return roots.
+        """
+        provider = self._get_provider_config(uuid="$compute_node")
+
+        # add some new roots with COMPUTE_NODE trait
+        cn_uuids = [self.p_tree.new_root(uuid, uuid)
+                    for uuid in [uuids.cn2, uuids.cn3, uuids.cn4]]
+        for cn_uuid in cn_uuids:
+            self.p_tree.add_traits(cn_uuid, os_traits.COMPUTE_NODE)
+
+        # add some children to each root
+        for cn_uuid in cn_uuids:
+            for i in range(3):
+                self.p_tree.new_child(cn_uuid + str(i), cn_uuid)
+
+        # test that only COMPUTE_NODE roots are found
+        results = [provider.uuid for provider
+                   in self.rt._get_providers_to_update(
+                "$COMPUTE_NODE", self.p_tree, provider['__source_file'])]
+
+        self.assertEqual(cn_uuids, results)
+
+    @mock.patch.object(resource_tracker, 'LOG')
+    def test__get_providers_to_update_not_in_tree(self, mock_log):
+        """If provider from provider config is not in provider tree,
+        make sure correct warning log will be recorded.
+        """
+        provider = self._get_provider_config(uuid=uuids.unknown)
+        expected_log_call = [
+            "Provider '%(uuid_or_name)s' specified in provider "
+            "config file '%(source_file)s' does not exist in "
+            "the ProviderTree and will be ignored.",
+            {"uuid_or_name": uuids.unknown,
+             "source_file": provider['__source_file']}]
+
+        # missing provider is only logged once when called twice
+        result = self.rt._get_providers_to_update(
+            uuids.unknown, self.p_tree, provider['__source_file'])
+        self.rt._get_providers_to_update(
+            uuids.unknown, self.p_tree, provider['__source_file'])
+        mock_log.warning.assert_called_once_with(*expected_log_call)
+        self.assertIn(uuids.unknown, self.rt.absent_providers)
+        self.assertEqual(result, [])
+
+        # returning provider is removed from absent providers and not logged
+        mock_log.warning.reset_mock()
+        self.p_tree.new_root(name=uuids.unknown, uuid=uuids.unknown)
+        result = self.rt._get_providers_to_update(
+            uuids.unknown, self.p_tree, provider['__source_file'])
+        mock_log.warning.assert_not_called()
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].uuid, uuids.unknown)
+
+        # missing again provider is logged when called again
+        self.p_tree.remove(uuids.unknown)
+        result = self.rt._get_providers_to_update(
+            uuids.unknown, self.p_tree, provider['__source_file'])
+        mock_log.warning.assert_called_once_with(*expected_log_call)
+        self.assertIn(uuids.unknown, self.rt.absent_providers)
+        self.assertEqual(result, [])
