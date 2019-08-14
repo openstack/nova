@@ -3524,11 +3524,13 @@ host_status_body_in:
 host_status_update_rebuild:
   description: |
     The host status. Values where next value in list can override the previous:
+
     - ``UP`` if nova-compute up.
     - ``UNKNOWN`` if nova-compute not reported by servicegroup driver.
     - ``DOWN`` if nova-compute forced down.
     - ``MAINTENANCE`` if nova-compute is disabled.
     - Empty string indicates there is no host for server.
+
     This attribute appears in the response only if the policy permits.
     By default, only administrators can get this parameter.
   in: body
