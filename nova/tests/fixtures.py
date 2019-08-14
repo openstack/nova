@@ -30,6 +30,7 @@ import futurist
 from keystoneauth1 import adapter as ksa_adap
 import mock
 from neutronclient.common import exceptions as neutron_client_exc
+from openstack import service_description
 import os_resource_classes as orc
 from oslo_concurrency import lockutils
 from oslo_config import cfg
@@ -2138,5 +2139,16 @@ class OpenStackSDKFixture(fixtures.Fixture):
     # https://storyboard.openstack.org/#!/story/2005475 is resolved.
     def setUp(self):
         super(OpenStackSDKFixture, self).setUp()
-        self.useFixture(fixtures.MockPatch(
-            'keystoneauth1.adapter.Adapter.get_api_major_version'))
+        real_make_proxy = service_description.ServiceDescription._make_proxy
+        _stub_service_types = {'placement'}
+
+        def fake_make_proxy(self, instance):
+            if self.service_type in _stub_service_types:
+                return instance.config.get_session_client(
+                    self.service_type,
+                    allow_version_hack=True,
+                )
+            return real_make_proxy(self, instance)
+        self.useFixture(fixtures.MockPatchObject(
+            service_description.ServiceDescription, '_make_proxy',
+            fake_make_proxy))
