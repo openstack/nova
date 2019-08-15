@@ -433,17 +433,17 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
         self.assertEqual(set(xenapi_fake.get_all('VBD')), set([vbd0, vbd2]))
 
     @mock.patch.object(objects.Instance, 'name',
-                       new_callable=mock.PropertyMock(return_value='foo'))
+                       new=mock.PropertyMock(return_value='foo'))
     @mock.patch.object(vm_utils, 'lookup', return_value=True)
-    def test_instance_exists(self, mock_lookup, mock_name):
+    def test_instance_exists(self, mock_lookup):
         instance = objects.Instance(uuid=uuids.instance)
         self.assertTrue(self.conn.instance_exists(instance))
         mock_lookup.assert_called_once_with(mock.ANY, 'foo')
 
     @mock.patch.object(objects.Instance, 'name',
-                       new_callable=mock.PropertyMock(return_value='bar'))
+                       new=mock.PropertyMock(return_value='bar'))
     @mock.patch.object(vm_utils, 'lookup', return_value=None)
-    def test_instance_not_exists(self, mock_lookup, mock_name):
+    def test_instance_not_exists(self, mock_lookup):
         instance = objects.Instance(uuid=uuids.instance)
         self.assertFalse(self.conn.instance_exists(instance))
         mock_lookup.assert_called_once_with(mock.ANY, 'bar')
