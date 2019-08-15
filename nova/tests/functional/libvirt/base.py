@@ -15,6 +15,7 @@
 
 import copy
 import fixtures
+import io
 import mock
 
 from nova.objects import fields as obj_fields
@@ -45,7 +46,20 @@ class ServersTestBase(base.ServersTestBase):
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
         self.useFixture(func_fixtures.PlacementFixture())
 
-        self.stub_out('nova.privsep.utils.supports_direct_io', lambda _: True)
+        self.useFixture(fixtures.MockPatch(
+            'nova.virt.libvirt.LibvirtDriver._create_image'))
+        self.useFixture(fixtures.MockPatch(
+            'nova.virt.libvirt.LibvirtDriver._get_local_gb_info',
+            return_value={'total': 128, 'used': 44, 'free': 84}))
+        self.useFixture(fixtures.MockPatch(
+            'nova.virt.libvirt.driver.libvirt_utils.is_valid_hostname',
+            return_value=True))
+        self.useFixture(fixtures.MockPatch(
+            'nova.virt.libvirt.driver.libvirt_utils.file_open',
+            side_effect=[io.BytesIO(b''), io.BytesIO(b'')]))
+        self.useFixture(fixtures.MockPatch(
+            'nova.privsep.utils.supports_direct_io',
+            return_value=True))
 
         # Mock the 'get_connection' function, as we're going to need to provide
         # custom capabilities for each test

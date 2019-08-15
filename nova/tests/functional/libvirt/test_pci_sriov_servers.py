@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import io
-
 import fixtures
 import mock
 from oslo_config import cfg
@@ -50,17 +48,6 @@ class _PCIServersTestBase(base.ServersTestBase):
             'nova.scheduler.filters.pci_passthrough_filter'
             '.PciPassthroughFilter.host_passes',
             side_effect=host_pass_mock)).mock
-        self.useFixture(fixtures.MockPatch(
-            'nova.virt.libvirt.LibvirtDriver._get_local_gb_info',
-            return_value={'total': 128,
-                          'used': 44,
-                          'free': 84}))
-        self.useFixture(fixtures.MockPatch(
-            'nova.virt.libvirt.driver.libvirt_utils.is_valid_hostname',
-            return_value=True))
-        self.useFixture(fixtures.MockPatch(
-            'nova.virt.libvirt.driver.libvirt_utils.file_open',
-            side_effect=[io.BytesIO(b''), io.BytesIO(b'')]))
 
     def _setup_scheduler_service(self):
         # Enable the 'NUMATopologyFilter', 'PciPassthroughFilter'
@@ -139,8 +126,7 @@ class SRIOVServersTest(_PCIServersTestBase):
         },
     )]
 
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
-    def test_create_server_with_VF(self, img_mock):
+    def test_create_server_with_VF(self):
 
         host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
                                              cpu_cores=2, cpu_threads=2,
@@ -155,8 +141,7 @@ class SRIOVServersTest(_PCIServersTestBase):
 
         self._run_build_test(flavor_id)
 
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
-    def test_create_server_with_PF(self, img_mock):
+    def test_create_server_with_PF(self):
 
         host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
                                              cpu_cores=2, cpu_threads=2,
@@ -171,8 +156,7 @@ class SRIOVServersTest(_PCIServersTestBase):
 
         self._run_build_test(flavor_id)
 
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
-    def test_create_server_with_PF_no_VF(self, img_mock):
+    def test_create_server_with_PF_no_VF(self):
 
         host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
                                              cpu_cores=2, cpu_threads=2,
@@ -192,8 +176,7 @@ class SRIOVServersTest(_PCIServersTestBase):
         self._run_build_test(flavor_id_pfs)
         self._run_build_test(flavor_id_vfs, end_status='ERROR')
 
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
-    def test_create_server_with_VF_no_PF(self, img_mock):
+    def test_create_server_with_VF_no_PF(self):
 
         host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
                                              cpu_cores=2, cpu_threads=2,
@@ -307,8 +290,7 @@ class PCIServersTest(_PCIServersTestBase):
         }
     )]
 
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
-    def test_create_server_with_pci_dev_and_numa(self, img_mock):
+    def test_create_server_with_pci_dev_and_numa(self):
         """Verifies that an instance can be booted with cpu pinning and with an
            assigned pci device.
         """
@@ -329,8 +311,7 @@ class PCIServersTest(_PCIServersTestBase):
 
         self._run_build_test(flavor_id)
 
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
-    def test_create_server_with_pci_dev_and_numa_fails(self, img_mock):
+    def test_create_server_with_pci_dev_and_numa_fails(self):
         """This test ensures that it is not possible to allocated CPU and
            memory resources from one NUMA node and a PCI device from another.
         """
@@ -376,8 +357,7 @@ class PCIServersWithNUMAPoliciesTest(_PCIServersTestBase):
         }
     )]
 
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
-    def test_create_server_with_pci_dev_and_numa(self, img_mock):
+    def test_create_server_with_pci_dev_and_numa(self):
         """Validate behavior of 'preferred' PCI NUMA policy.
 
         This test ensures that it *is* possible to allocate CPU and memory
