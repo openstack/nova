@@ -68,6 +68,7 @@ from nova.network.security_group import security_group_base
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
+from nova.objects import external_event as external_event_obj
 from nova.objects import fields as fields_obj
 from nova.objects import keypair as keypair_obj
 from nova.objects import quotas as quotas_obj
@@ -4711,6 +4712,22 @@ class API(base.Base):
                 objects.InstanceAction.action_start(
                     cell_context, event.instance_uuid,
                     instance_actions.EXTEND_VOLUME, want_result=False)
+            elif event.name == 'power-update':
+                host = hosts_by_instance[event.instance_uuid][0]
+                cell_context = cell_contexts_by_host[host]
+                if event.tag == external_event_obj.POWER_ON:
+                    inst_action = instance_actions.START
+                elif event.tag == external_event_obj.POWER_OFF:
+                    inst_action = instance_actions.STOP
+                else:
+                    LOG.warning("Invalid power state %s. Cannot process "
+                                "the event %s. Skipping it.", event.tag,
+                                event)
+                    continue
+                objects.InstanceAction.action_start(
+                    cell_context, event.instance_uuid, inst_action,
+                    want_result=False)
+
             for host in hosts_by_instance[event.instance_uuid]:
                 events_by_host[host].append(event)
 

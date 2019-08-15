@@ -1076,7 +1076,7 @@ object_data = {
     'InstanceActionEventList': '1.1-13d92fb953030cdbfee56481756e02be',
     'InstanceActionList': '1.1-a2b2fb6006b47c27076d3a1d48baa759',
     'InstanceDeviceMetadata': '1.0-74d78dd36aa32d26d2769a1b57caf186',
-    'InstanceExternalEvent': '1.2-23eb6ba79cde5cd06d3445f845ba4589',
+    'InstanceExternalEvent': '1.3-e47782874cca95bb96e566286e9d1e23',
     'InstanceFault': '1.2-7ef01f16f1084ad1304a513d6d410a38',
     'InstanceFaultList': '1.2-6bb72de2872fe49ded5eb937a93f2451',
     'InstanceGroup': '1.11-852ac511d30913ee88f3c3a869a8f30a',

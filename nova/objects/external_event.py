@@ -26,9 +26,16 @@ EVENT_NAMES = [
 
     # Volume was extended for this instance, tag is volume_id
     'volume-extended',
+
+    # Power state has changed for this instance
+    'power-update',
 ]
 
 EVENT_STATUSES = ['failed', 'completed', 'in-progress']
+
+# Possible tag values for the power-update event.
+POWER_ON = 'POWER_ON'
+POWER_OFF = 'POWER_OFF'
 
 
 @obj_base.NovaObjectRegistry.register
@@ -37,7 +44,8 @@ class InstanceExternalEvent(obj_base.NovaObject):
     #              Supports network-changed and vif-plugged
     # Version 1.1: adds network-vif-deleted event
     # Version 1.2: adds volume-extended event
-    VERSION = '1.2'
+    # Version 1.3: adds power-update event
+    VERSION = '1.3'
 
     fields = {
         'instance_uuid': fields.UUIDField(),

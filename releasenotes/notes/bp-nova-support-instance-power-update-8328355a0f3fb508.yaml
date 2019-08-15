@@ -1,0 +1,20 @@
+---
+features:
+  - |
+    It is now possible to signal and perform an update of an instance's power
+    state as of the 2.76 microversion using the ``power-update`` external
+    event. Currently it is only supported in the ironic driver and through
+    this event Ironic will send all "power-on to power-off" and
+    "power-off to power-on" type power state changes on a physical instance
+    to nova which will update its database accordingly. This way nova will
+    not be able to enforce an incorrect power state on the physical instance
+    during the periodic ``_sync_power_states`` task. The changes to the power
+    state of an instance caused by this event can be viewed through
+    ``GET /servers/{server_id}/os-instance-actions`` and
+    ``GET /servers/{server_id}/os-instance-actions/{request_id}``.
+upgrade:
+  - |
+    Until all the ``nova-compute`` services that run the ironic driver are
+    upgraded to the Train code that handles the ``power-update`` callbacks from
+    ironic, the ``[nova]/send_power_notifications`` config option can be kept
+    disabled in ironic.

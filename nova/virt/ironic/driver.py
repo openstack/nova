@@ -45,6 +45,7 @@ from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.objects import external_event as external_event_obj
 from nova.objects import fields as obj_fields
 from nova import servicegroup
 from nova import utils
@@ -1473,6 +1474,26 @@ class IronicDriver(virt_driver.ComputeDriver):
         timer.start(interval=CONF.ironic.api_retry_interval).wait()
         LOG.info('Successfully powered on Ironic node %s',
                  node.uuid, instance=instance)
+
+    def power_update_event(self, instance, target_power_state):
+        """Update power, vm and task states of the specified instance in
+        the nova DB.
+        """
+        LOG.info('Power update called for instance with '
+                 'target power state %s.', target_power_state,
+                 instance=instance)
+        if target_power_state == external_event_obj.POWER_ON:
+            instance.power_state = power_state.RUNNING
+            instance.vm_state = vm_states.ACTIVE
+            instance.task_state = None
+            expected_task_state = task_states.POWERING_ON
+        else:
+            # It's POWER_OFF
+            instance.power_state = power_state.SHUTDOWN
+            instance.vm_state = vm_states.STOPPED
+            instance.task_state = None
+            expected_task_state = task_states.POWERING_OFF
+        instance.save(expected_task_state=expected_task_state)
 
     def trigger_crash_dump(self, instance):
         """Trigger crash dump mechanism on the given instance.

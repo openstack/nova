@@ -26,6 +26,7 @@ from testtools import matchers
 from tooz import hashring as hash_ring
 
 from nova.api.metadata import base as instance_metadata
+from nova.api.openstack import common
 from nova import block_device
 from nova.compute import power_state as nova_states
 from nova.compute import provider_tree
@@ -1863,6 +1864,20 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.driver.reboot(self.ctx, instance, None, 'SOFT')
         mock_sp.assert_has_calls([mock.call(node.uuid, 'reboot', soft=True),
                                   mock.call(node.uuid, 'reboot')])
+
+    @mock.patch.object(objects.Instance, 'save')
+    def test_power_update_event(self, mock_save):
+        instance = fake_instance.fake_instance_obj(
+            self.ctx, node=self.instance_uuid,
+            power_state=nova_states.RUNNING,
+            vm_state=vm_states.ACTIVE,
+            task_state=task_states.POWERING_OFF)
+        self.driver.power_update_event(instance, common.POWER_OFF)
+        self.assertEqual(nova_states.SHUTDOWN, instance.power_state)
+        self.assertEqual(vm_states.STOPPED, instance.vm_state)
+        self.assertIsNone(instance.task_state)
+        mock_save.assert_called_once_with(
+            expected_task_state=task_states.POWERING_OFF)
 
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
     @mock.patch.object(ironic_driver.IronicDriver,

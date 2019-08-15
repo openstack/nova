@@ -7,11 +7,11 @@
 .. warning::
    This is an ``admin`` level service API only designed to be used by
    other OpenStack services. The point of this API is to coordinate
-   between Nova and Neutron, Nova and Cinder (and potentially future
-   services) on activities they both need to be involved in,
+   between Nova and Neutron, Nova and Cinder, Nova and Ironic (and potentially
+   future services) on activities they both need to be involved in,
    such as network hotplugging.
 
-   Unless you are writing Neutron or Cinder code you **should not**
+   Unless you are writing Neutron, Cinder or Ironic code you **should not**
    be using this API.
 
 Creates one or more external events. The API dispatches each event to a

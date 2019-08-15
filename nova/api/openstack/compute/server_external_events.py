@@ -28,6 +28,9 @@ from nova.policies import server_external_events as see_policies
 LOG = logging.getLogger(__name__)
 
 
+TAG_REQUIRED = ('volume-extended', 'power-update')
+
+
 class ServerExternalEventsController(wsgi.Controller):
 
     def __init__(self):
@@ -36,7 +39,7 @@ class ServerExternalEventsController(wsgi.Controller):
 
     @staticmethod
     def _is_event_tag_present_when_required(event):
-        if event.name == 'volume-extended' and event.tag is None:
+        if event.name in TAG_REQUIRED and event.tag is None:
             return False
         return True
 
@@ -65,7 +68,8 @@ class ServerExternalEventsController(wsgi.Controller):
     @wsgi.expected_errors((403, 404))
     @wsgi.response(200)
     @validation.schema(server_external_events.create, '2.0', '2.50')
-    @validation.schema(server_external_events.create_v251, '2.51')
+    @validation.schema(server_external_events.create_v251, '2.51', '2.75')
+    @validation.schema(server_external_events.create_v276, '2.76')
     def create(self, req, body):
         """Creates a new instance event."""
         context = req.environ['nova.context']

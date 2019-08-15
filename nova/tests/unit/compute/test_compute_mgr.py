@@ -2980,6 +2980,135 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
         do_test()
 
+    def test_power_update(self):
+        instance = objects.Instance(self.context)
+        instance.uuid = uuids.instance
+        instance.id = 1
+        instance.vm_state = vm_states.STOPPED
+        instance.task_state = None
+        instance.power_state = power_state.SHUTDOWN
+        instance.host = self.compute.host
+        with test.nested(
+            mock.patch.object(nova.compute.utils,
+                              'notify_about_instance_action'),
+            mock.patch.object(self.compute, '_notify_about_instance_usage'),
+            mock.patch.object(self.compute.driver, 'power_update_event'),
+            mock.patch.object(objects.Instance, 'save'),
+            mock.patch.object(manager, 'LOG')
+        ) as (
+            mock_instance_notify, mock_instance_usage, mock_event, mock_save,
+            mock_log
+        ):
+            self.compute.power_update(self.context, instance, "POWER_ON")
+            calls = [mock.call(self.context, instance, self.compute.host,
+                               action=fields.NotificationAction.POWER_ON,
+                               phase=fields.NotificationPhase.START),
+                     mock.call(self.context, instance, self.compute.host,
+                               action=fields.NotificationAction.POWER_ON,
+                               phase=fields.NotificationPhase.END)]
+            mock_instance_notify.assert_has_calls(calls)
+            calls = [mock.call(self.context, instance, "power_on.start"),
+                     mock.call(self.context, instance, "power_on.end")]
+            mock_instance_usage.assert_has_calls(calls)
+            mock_event.assert_called_once_with(instance, 'POWER_ON')
+            mock_save.assert_called_once_with(
+                expected_task_state=[None])
+            self.assertEqual(2, mock_log.debug.call_count)
+            self.assertIn('Trying to', mock_log.debug.call_args[0][0])
+
+    def test_power_update_not_implemented(self):
+        instance = objects.Instance(self.context)
+        instance.uuid = uuids.instance
+        instance.id = 1
+        instance.vm_state = vm_states.STOPPED
+        instance.task_state = None
+        instance.power_state = power_state.SHUTDOWN
+        instance.host = self.compute.host
+        with test.nested(
+            mock.patch.object(nova.compute.utils,
+                              'notify_about_instance_action'),
+            mock.patch.object(self.compute, '_notify_about_instance_usage'),
+            mock.patch.object(self.compute.driver, 'power_update_event',
+                              side_effect=NotImplementedError()),
+            mock.patch.object(instance, 'save'),
+            mock.patch.object(nova.compute.utils,
+                              'add_instance_fault_from_exc'),
+        ) as (
+            mock_instance_notify, mock_instance_usage, mock_event,
+            mock_save, mock_fault
+        ):
+            self.assertRaises(NotImplementedError,
+                self.compute.power_update, self.context, instance, "POWER_ON")
+            self.assertIsNone(instance.task_state)
+            self.assertEqual(2, mock_save.call_count)
+            # second save is done by revert_task_state
+            mock_save.assert_has_calls(
+                [mock.call(expected_task_state=[None]), mock.call()])
+            mock_instance_notify.assert_called_once_with(
+                self.context, instance, self.compute.host,
+                action=fields.NotificationAction.POWER_ON,
+                phase=fields.NotificationPhase.START)
+            mock_instance_usage.assert_called_once_with(
+                self.context, instance, "power_on.start")
+            mock_fault.assert_called_once_with(
+                self.context, instance, mock.ANY, mock.ANY)
+
+    def test_external_instance_event_power_update_invalid_state(self):
+        instance = objects.Instance(self.context)
+        instance.uuid = uuids.instance1
+        instance.id = 1
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = task_states.POWERING_OFF
+        instance.power_state = power_state.RUNNING
+        instance.host = 'host1'
+        instance.migration_context = None
+        with test.nested(
+            mock.patch.object(nova.compute.utils,
+                              'notify_about_instance_action'),
+            mock.patch.object(self.compute, '_notify_about_instance_usage'),
+            mock.patch.object(self.compute.driver, 'power_update_event'),
+            mock.patch.object(objects.Instance, 'save'),
+            mock.patch.object(manager, 'LOG')
+        ) as (
+            mock_instance_notify, mock_instance_usage, mock_event, mock_save,
+            mock_log
+        ):
+            self.compute.power_update(self.context, instance, "POWER_ON")
+            mock_instance_notify.assert_not_called()
+            mock_instance_usage.assert_not_called()
+            mock_event.assert_not_called()
+            mock_save.assert_not_called()
+            self.assertEqual(1, mock_log.info.call_count)
+            self.assertIn('is a no-op', mock_log.info.call_args[0][0])
+
+    def test_external_instance_event_power_update_unexpected_task_state(self):
+        instance = objects.Instance(self.context)
+        instance.uuid = uuids.instance1
+        instance.id = 1
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = None
+        instance.power_state = power_state.RUNNING
+        instance.host = 'host1'
+        instance.migration_context = None
+        with test.nested(
+            mock.patch.object(nova.compute.utils,
+                              'notify_about_instance_action'),
+            mock.patch.object(self.compute, '_notify_about_instance_usage'),
+            mock.patch.object(self.compute.driver, 'power_update_event'),
+            mock.patch.object(objects.Instance, 'save',
+                side_effect=exception.UnexpectedTaskStateError("blah")),
+            mock.patch.object(manager, 'LOG')
+        ) as (
+            mock_instance_notify, mock_instance_usage, mock_event, mock_save,
+            mock_log
+        ):
+            self.compute.power_update(self.context, instance, "POWER_OFF")
+            mock_instance_notify.assert_not_called()
+            mock_instance_usage.assert_not_called()
+            mock_event.assert_not_called()
+            self.assertEqual(1, mock_log.info.call_count)
+            self.assertIn('possibly preempted', mock_log.info.call_args[0][0])
+
     def test_extend_volume(self):
         inst_obj = objects.Instance(id=3, uuid=uuids.instance)
         connection_info = {'foo': 'bar'}
@@ -3066,7 +3195,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             objects.Instance(id=1, uuid=uuids.instance_1),
             objects.Instance(id=2, uuid=uuids.instance_2),
             objects.Instance(id=3, uuid=uuids.instance_3),
-            objects.Instance(id=4, uuid=uuids.instance_4)]
+            objects.Instance(id=4, uuid=uuids.instance_4),
+            objects.Instance(id=4, uuid=uuids.instance_5)]
         events = [
             objects.InstanceExternalEvent(name='network-changed',
                                           tag='tag1',
@@ -3079,15 +3209,20 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                           tag='tag3'),
             objects.InstanceExternalEvent(name='volume-extended',
                                           instance_uuid=uuids.instance_4,
-                                          tag='tag4')]
+                                          tag='tag4'),
+            objects.InstanceExternalEvent(name='power-update',
+                                          instance_uuid=uuids.instance_5,
+                                          tag='POWER_ON')]
 
+        @mock.patch.object(self.compute, 'power_update')
         @mock.patch.object(self.compute,
                            'extend_volume')
         @mock.patch.object(self.compute, '_process_instance_vif_deleted_event')
         @mock.patch.object(self.compute.network_api, 'get_instance_nw_info')
         @mock.patch.object(self.compute, '_process_instance_event')
         def do_test(_process_instance_event, get_instance_nw_info,
-                    _process_instance_vif_deleted_event, extend_volume):
+                    _process_instance_vif_deleted_event, extend_volume,
+                    power_update):
             self.compute.external_instance_event(self.context,
                                                  instances, events)
             get_instance_nw_info.assert_called_once_with(self.context,
@@ -3099,6 +3234,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 self.context, instances[2], events[2].tag)
             extend_volume.assert_called_once_with(
                 self.context, instances[3], events[3].tag)
+            power_update.assert_called_once_with(
+                self.context, instances[4], events[4].tag)
+
         do_test()
 
     def test_external_instance_event_with_exception(self):
