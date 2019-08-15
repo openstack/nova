@@ -28,7 +28,14 @@ def get_test_validation(**kw):
 
 
 def get_test_node(fields=None, **kw):
-    node = {'uuid': kw.get('uuid', 'eeeeeeee-dddd-cccc-bbbb-aaaaaaaaaaaa'),
+    # TODO(dustinc): Once the usages of id/uuid, maintenance/is_maintenance,
+    #  and portgroup/port_group are normalized, the duplicates can be removed
+    _id = kw.get('id') or kw.get('uuid',
+                                 'eeeeeeee-dddd-cccc-bbbb-aaaaaaaaaaaa')
+    _instance_id = kw.get('instance_id') or kw.get('instance_uuid')
+    _is_maintenance = kw.get('is_maintenance') or kw.get('maintenance', False)
+    node = {'uuid': _id,
+            'id': _id,
             'chassis_uuid': kw.get('chassis_uuid'),
             'power_state': kw.get('power_state',
                                   ironic_states.NOSTATE),
@@ -39,13 +46,15 @@ def get_test_node(fields=None, **kw):
             'target_provision_state': kw.get('target_provision_state',
                                              ironic_states.NOSTATE),
             'last_error': kw.get('last_error'),
-            'instance_uuid': kw.get('instance_uuid'),
+            'instance_uuid': _instance_id,
+            'instance_id': _instance_id,
             'instance_info': kw.get('instance_info'),
             'driver': kw.get('driver', 'fake'),
             'driver_info': kw.get('driver_info', {}),
             'properties': kw.get('properties', {}),
             'reservation': kw.get('reservation'),
-            'maintenance': kw.get('maintenance', False),
+            'maintenance': _is_maintenance,
+            'is_maintenance': _is_maintenance,
             'network_interface': kw.get('network_interface'),
             'resource_class': kw.get('resource_class'),
             'traits': kw.get('traits', []),
@@ -58,21 +67,37 @@ def get_test_node(fields=None, **kw):
 
 
 def get_test_port(**kw):
+    # TODO(dustinc): Once the usages of id/uuid, maintenance/is_maintenance,
+    #  and portgroup/port_group are normalized, the duplicates can be removed
+    _id = kw.get('id') or kw.get('uuid',
+                                 'gggggggg-uuuu-qqqq-ffff-llllllllllll')
+    _node_id = kw.get('node_uuid') or kw.get('node_id', get_test_node().id)
+    _port_group_id = kw.get('port_group_id') or kw.get('portgroup_uuid')
     return type('port', (object,),
-               {'uuid': kw.get('uuid', 'gggggggg-uuuu-qqqq-ffff-llllllllllll'),
-                'node_uuid': kw.get('node_uuid', get_test_node().uuid),
+               {'uuid': _id,
+                'id': _id,
+                'node_uuid': _node_id,
+                'node_id': _node_id,
                 'address': kw.get('address', 'FF:FF:FF:FF:FF:FF'),
                 'extra': kw.get('extra', {}),
                 'internal_info': kw.get('internal_info', {}),
-                'portgroup_uuid': kw.get('portgroup_uuid'),
+                'portgroup_uuid': _port_group_id,
+                'port_group_id': _port_group_id,
                 'created_at': kw.get('created_at'),
                 'updated_at': kw.get('updated_at')})()
 
 
 def get_test_portgroup(**kw):
+    # TODO(dustinc): Once the usages of id/uuid, maintenance/is_maintenance,
+    #  and portgroup/port_group are normalized, the duplicates can be removed
+    _id = kw.get('id') or kw.get('uuid',
+                                 'deaffeed-1234-5678-9012-fedcbafedcba')
+    _node_id = kw.get('node_id') or kw.get('node_uuid', get_test_node().id)
     return type('portgroup', (object,),
-               {'uuid': kw.get('uuid', 'deaffeed-1234-5678-9012-fedcbafedcba'),
-                'node_uuid': kw.get('node_uuid', get_test_node().uuid),
+               {'uuid': _id,
+                'id': _id,
+                'node_uuid': _node_id,
+                'node_id': _node_id,
                 'address': kw.get('address', 'EE:EE:EE:EE:EE:EE'),
                 'extra': kw.get('extra', {}),
                 'internal_info': kw.get('internal_info', {}),
@@ -104,9 +129,16 @@ def get_test_vif(**kw):
 
 
 def get_test_volume_connector(**kw):
+    # TODO(dustinc): Once the usages of id/uuid, maintenance/is_maintenance,
+    #  and portgroup/port_group are normalized, the duplicates can be removed
+    _id = kw.get('id') or kw.get('uuid',
+                                 'hhhhhhhh-qqqq-uuuu-mmmm-bbbbbbbbbbbb')
+    _node_id = kw.get('node_id') or kw.get('node_uuid', get_test_node().id)
     return type('volume_connector', (object,),
-               {'uuid': kw.get('uuid', 'hhhhhhhh-qqqq-uuuu-mmmm-bbbbbbbbbbbb'),
-                'node_uuid': kw.get('node_uuid', get_test_node().uuid),
+               {'uuid': _id,
+                'id': _id,
+                'node_uuid': _node_id,
+                'node_id': _node_id,
                 'type': kw.get('type', 'iqn'),
                 'connector_id': kw.get('connector_id', 'iqn.test'),
                 'extra': kw.get('extra', {}),
@@ -115,9 +147,16 @@ def get_test_volume_connector(**kw):
 
 
 def get_test_volume_target(**kw):
+    # TODO(dustinc): Once the usages of id/uuid, maintenance/is_maintenance,
+    #  and portgroup/port_group are normalized, the duplicates can be removed
+    _id = kw.get('id') or kw.get('uuid',
+                                 'aaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee')
+    _node_id = kw.get('node_id') or kw.get('node_uuid', get_test_node().id)
     return type('volume_target', (object,),
-                {'uuid': kw.get('uuid', 'aaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'),
-                 'node_uuid': kw.get('node_uuid', get_test_node().uuid),
+                {'uuid': _id,
+                 'id': _id,
+                 'node_uuid': _node_id,
+                 'node_id': _node_id,
                  'volume_type': kw.get('volume_type', 'iscsi'),
                  'properties': kw.get('properties', {}),
                  'boot_index': kw.get('boot_index', 0),

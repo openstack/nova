@@ -25,6 +25,7 @@ import shutil
 import tempfile
 import time
 
+from openstack import exceptions as sdk_exc
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_service import loopingcall
@@ -197,20 +198,35 @@ class IronicDriver(virt_driver.ComputeDriver):
         self.servicegroup_api = servicegroup.API()
 
         self.ironicclient = client_wrapper.IronicClientWrapper()
+        self._ironic_connection = None
 
         # This is needed for the instance flavor migration in Pike, and should
         # be removed in Queens. Since this will run several times in the life
         # of the driver, track the instances that have already been migrated.
         self._migrated_instance_uuids = set()
 
-    def _get_node(self, node_uuid):
+    @property
+    def ironic_connection(self):
+        if self._ironic_connection is None:
+            # Ask get_sdk_adapter to raise ServiceUnavailable if the baremetal
+            # service isn't ready yet. Consumers of ironic_connection are set
+            # up to handle this and raise VirtDriverNotReady as appropriate.
+            self._ironic_connection = utils.get_sdk_adapter(
+                'baremetal', check_service=True)
+        return self._ironic_connection
+
+    def _get_node(self, node_id):
         """Get a node by its UUID.
 
            Some methods pass in variables named nodename, but are
            actually UUID's.
         """
-        return self.ironicclient.call('node.get', node_uuid,
-                                      fields=_NODE_FIELDS)
+        node = self.ironic_connection.get_node(node_id, fields=_NODE_FIELDS)
+        # TODO(dustinc): Make consumers use the right fields and remove this
+        node.uuid = node.id
+        node.instance_uuid = node.instance_id
+        node.maintenance = node.is_maintenance
+        return node
 
     def _validate_instance_and_node(self, instance):
         """Get the node associated with the instance.
@@ -698,7 +714,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             # nodename is the ironic node's UUID.
             self._get_node(nodename)
             return True
-        except ironic.exc.NotFound:
+        except sdk_exc.ResourceNotFound:
             return False
 
     def _refresh_hash_ring(self, ctxt):
