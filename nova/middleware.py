@@ -15,7 +15,7 @@
 from oslo_middleware import cors
 
 
-def set_middleware_defaults():
+def set_defaults():
     """Update default configuration options for oslo.middleware."""
     cors.set_defaults(
         allow_headers=['X-Auth-Token',
