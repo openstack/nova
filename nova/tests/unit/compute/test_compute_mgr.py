@@ -322,7 +322,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         self.compute.update_available_resource(self.context, startup=True)
         get_db_nodes.assert_called_once_with(self.context, use_slave=True,
                                              startup=True)
-        update_mock.has_calls(
+        self.assertEqual(len(avail_nodes_l), update_mock.call_count)
+        update_mock.assert_has_calls(
             [mock.call(self.context, node, startup=True)
              for node in avail_nodes_l]
         )
@@ -566,7 +567,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         final_result = 'meow'
         rp_mapping = {}
 
-        expected_sleep_times = [1, 2, 4, 8, 16, 30, 30, 30]
+        expected_sleep_times = [mock.call(t) for t in
+                                (1, 2, 4, 8, 16, 30, 30)]
 
         with mock.patch.object(
                 self.compute.network_api, 'allocate_for_instance',
@@ -577,7 +579,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                                        is_vpn,
                                                        rp_mapping)
 
-        mock_sleep.has_calls(expected_sleep_times)
+        self.assertEqual(7, mock_sleep.call_count)
+        mock_sleep.assert_has_calls(expected_sleep_times)
         self.assertEqual(final_result, res)
         # Ensure save is not called in while allocating networks, the instance
         # is saved after the allocation.
