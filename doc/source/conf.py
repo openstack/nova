@@ -43,6 +43,7 @@ extensions = [
     'ext.feature_matrix',
     'sphinxcontrib.actdiag',
     'sphinxcontrib.seqdiag',
+    'sphinxcontrib.rsvgconverter',
 ]
 
 # openstackdocstheme options
@@ -123,10 +124,12 @@ html_extra_path = ['_extra']
 # (source start file, target name, title, author, documentclass
 # [howto/manual]).
 latex_documents = [
-    ('index', 'Nova.tex', u'Nova Documentation',
+    ('index', 'doc-nova.tex', u'Nova Documentation',
      u'OpenStack Foundation', 'manual'),
 ]
 
+# Allow deeper levels of nesting for \begin...\end stanzas
+latex_elements = {'maxlistdepth': 10}
 
 # -- Options for openstackdocstheme -------------------------------------------
 
