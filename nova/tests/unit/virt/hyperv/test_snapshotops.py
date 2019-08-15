@@ -101,12 +101,15 @@ class SnapshotOpsTestCase(test_base.HyperVBaseTestCase):
         else:
             mock_save_glance_image.assert_called_once_with(
                 self.context, mock.sentinel.IMAGE_ID, dest_vhd_path)
-        self._snapshotops._pathutils.copyfile.has_calls(expected)
+        self.assertEqual(len(expected),
+                         self._snapshotops._pathutils.copyfile.call_count)
+        self._snapshotops._pathutils.copyfile.assert_has_calls(expected)
+        self.assertEqual(2, mock_update.call_count)
         expected_update = [
             mock.call(task_state=task_states.IMAGE_PENDING_UPLOAD),
             mock.call(task_state=task_states.IMAGE_UPLOADING,
                       expected_state=task_states.IMAGE_PENDING_UPLOAD)]
-        mock_update.has_calls(expected_update)
+        mock_update.assert_has_calls(expected_update)
         self._snapshotops._vmutils.remove_vm_snapshot.assert_called_once_with(
             fake_snapshot_path)
         self._snapshotops._pathutils.rmtree.assert_called_once_with(
