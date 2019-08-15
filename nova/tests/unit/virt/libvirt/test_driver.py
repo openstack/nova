@@ -14370,19 +14370,20 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         expected_xml = [
             ('<hostdev mode="subsystem" type="pci" managed="yes">\n'
              '  <source>\n'
-             '    <address bus="0x00" domain="0x0000" \
-                   function="0x0" slot="0x00"/>\n'
+             '    <address bus="0x00" domain="0x0000" '
+             'function="0x0" slot="0x00"/>\n'
              '  </source>\n'
              '</hostdev>\n'),
             ('<hostdev mode="subsystem" type="pci" managed="yes">\n'
              '  <source>\n'
-             '    <address bus="0x00" domain="0x0000" \
-                   function="0x1" slot="0x00"/>\n'
+             '    <address bus="0x00" domain="0x0000" '
+             'function="0x1" slot="0x00"/>\n'
              '  </source>\n'
              '</hostdev>\n')
         ]
 
-        mock_detachDeviceFlags.has_calls([
+        self.assertEqual(2, mock_detachDeviceFlags.call_count)
+        mock_detachDeviceFlags.assert_has_calls([
             mock.call(expected_xml[0], flags=1),
             mock.call(expected_xml[1], flags=1)
         ])

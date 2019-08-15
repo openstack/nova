@@ -2624,13 +2624,19 @@ class IronicDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(cw.IronicClientWrapper, 'call')
     def test_prepare_for_spawn(self, mock_call):
         node = ironic_utils.get_test_node(driver='fake')
+        mock_call.side_effect = [node, None]
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    node=node.uuid)
         self.driver.prepare_for_spawn(instance)
         expected_patch = [{'path': '/instance_uuid', 'op': 'add',
                            'value': instance.uuid}]
-        mock_call.has_calls(
-            [mock.call('node.get', node.uuid, mock.ANY),
+        self.assertEqual(2, mock_call.call_count)
+        mock_call.assert_has_calls(
+            [mock.call('node.get', node.uuid,
+                       fields=('uuid', 'power_state', 'target_power_state',
+                               'provision_state', 'target_provision_state',
+                               'last_error', 'maintenance', 'properties',
+                               'instance_uuid', 'traits', 'resource_class')),
              mock.call('node.update', node.uuid,
                       expected_patch, retry_on_conflict=False)])
 
@@ -2642,9 +2648,9 @@ class IronicDriverTestCase(test.NoDBTestCase):
         expected_patch = [{'path': '/instance_uuid', 'op': 'add',
                            'value': instance.uuid}]
         self.driver._set_instance_uuid(node, instance)
-        mock_call.has_calls(
-             [mock.call('node.update', node.uuid,
-                      expected_patch, retry_on_conflict=False)])
+        mock_call.assert_called_once_with('node.update', node.uuid,
+                                          expected_patch,
+                                          retry_on_conflict=False)
 
     def test_prepare_for_spawn_invalid_instance(self):
         instance = fake_instance.fake_instance_obj(self.ctx,
@@ -2691,9 +2697,10 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_vol.assert_called_once_with(instance)
         mock_unvif.assert_called_once_with(node, instance, None)
         mock_stop_fw.assert_called_once_with(instance, None)
-        expected_patch = [{'path': '/instance_uuid', 'op': 'remove'}]
-        mock_call.has_calls(
-            [mock.call('node.update', node.uuid, expected_patch)])
+        expected_patch = [{'path': '/instance_info', 'op': 'remove'},
+                          {'path': '/instance_uuid', 'op': 'remove'}]
+        mock_call.assert_called_once_with('node.update', node.uuid,
+                                          expected_patch)
 
     @mock.patch.object(ironic_driver.IronicDriver, '_stop_firewall')
     @mock.patch.object(ironic_driver.IronicDriver, '_unplug_vifs')
