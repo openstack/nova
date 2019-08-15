@@ -53,36 +53,6 @@ def get_cache_fname(image_id):
     return hashlib.sha1(image_id.encode('utf-8')).hexdigest()
 
 
-def get_info_filename(base_path):
-    """Construct a filename for storing additional information about a base
-    image.
-
-    Returns a filename.
-    """
-
-    base_file = os.path.basename(base_path)
-    return (CONF.libvirt.image_info_filename_pattern
-            % {'image': base_file})
-
-
-def is_valid_info_file(path):
-    """Test if a given path matches the pattern for info files."""
-
-    if six.PY2:
-        digest_size = hashlib.sha1().digestsize * 2
-    else:
-        digest_size = hashlib.sha1().digest_size * 2
-    regexp = (CONF.libvirt.image_info_filename_pattern
-              % {'image': ('([0-9a-f]{%(digest_size)d}|'
-                           '[0-9a-f]{%(digest_size)d}_sm|'
-                           '[0-9a-f]{%(digest_size)d}_[0-9]+)'
-                           % {'digest_size': digest_size})})
-    m = re.match(regexp, path)
-    if m:
-        return True
-    return False
-
-
 class ImageCacheManager(imagecache.ImageCacheManager):
     def __init__(self):
         super(ImageCacheManager, self).__init__()
@@ -130,29 +100,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         else:
             digest_size = hashlib.sha1().digest_size * 2
         for ent in os.listdir(base_dir):
-            path = os.path.join(base_dir, ent)
-            if is_valid_info_file(path):
-                # TODO(mdbooth): In Newton we ignore these files, because if
-                # we're on shared storage they may be in use by a pre-Newton
-                # compute host. However, we have already removed all uses of
-                # these files in Newton, so once we can be sure that all
-                # compute hosts are running at least Newton (i.e. in  Ocata),
-                # we can be sure that nothing is using info files any more.
-                # Therefore in Ocata, we should update this to simply delete
-                # these files here, i.e.:
-                #   os.unlink(path)
-                #
-                # This will obsolete the code to cleanup these files in
-                # _remove_old_enough_file, so when updating this code to
-                # delete immediately, the cleanup code in
-                # _remove_old_enough_file can be removed.
-                #
-                # This cleanup code will delete all info files the first
-                # time it runs in Ocata, which means we can delete this
-                # block entirely in P.
-                pass
-
-            elif len(ent) == digest_size:
+            if len(ent) == digest_size:
                 self._store_image(base_dir, ent, original=True)
 
             elif len(ent) > digest_size + 2 and ent[digest_size] == '_':
@@ -261,20 +209,6 @@ class ImageCacheManager(imagecache.ImageCacheManager):
             LOG.info('Removing base or swap file: %s', base_file)
             try:
                 os.remove(base_file)
-
-                # TODO(mdbooth): We have removed all uses of info files in
-                # Newton and we no longer create them, but they may still
-                # exist from before we upgraded, and they may still be
-                # created by older compute hosts if we're on shared storage.
-                # While there may still be pre-Newton computes writing here,
-                # the only safe place to delete info files is here,
-                # when deleting the cache entry. Once we can be sure that
-                # all computes are running at least Newton (i.e. in Ocata),
-                # we can delete these files unconditionally during the
-                # periodic task, which will make this code obsolete.
-                signature = get_info_filename(base_file)
-                if os.path.exists(signature):
-                    os.remove(signature)
             except OSError as e:
                 LOG.error('Failed to remove %(base_file)s, '
                           'error was %(error)s',

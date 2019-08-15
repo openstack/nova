@@ -96,7 +96,6 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
     def test_list_base_images(self):
         listing = ['00000001',
                    'ephemeral_0_20_None',
-                   '17d1b00b81642842e514494a78e804e9a511637c_5368709120.info',
                    '00000004',
                    'swap_1000']
         images = ['e97222e91fc4241f49a7f520d1dcf446751129b3_sm',
@@ -302,14 +301,11 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         self.assertEqual([base_file1, base_file2, base_file3], res)
 
     @contextlib.contextmanager
-    def _make_base_file(self, lock=True, info=False):
+    def _make_base_file(self, lock=True):
         """Make a base file for testing."""
 
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)
-            self.flags(image_info_filename_pattern=('$instances_path/'
-                                                    '%(image)s.info'),
-                       group='libvirt')
             fname = os.path.join(tmpdir, 'aaa')
 
             base_file = open(fname, 'w')
@@ -325,27 +321,13 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                 lock_file.close()
 
             base_file = open(fname, 'r')
-
-            # TODO(mdbooth): Info files are no longer created by Newton,
-            # but we must test that we continue to handle them correctly as
-            # they may still be around from before the upgrade, and they may
-            # be created by pre-Newton computes if we're on shared storage.
-            # Once we can be sure that all computes are running at least
-            # Newton (i.e. in Ocata), we can be sure that nothing is
-            # creating info files any more, and we can delete the tests for
-            # them.
-            if info:
-                # We're only checking for deletion, so contents are irrelevant
-                open(imagecache.get_info_filename(fname), 'w').close()
-
             base_file.close()
             yield fname
 
     def test_remove_base_file(self):
-        with self._make_base_file(info=True) as fname:
+        with self._make_base_file() as fname:
             image_cache_manager = imagecache.ImageCacheManager()
             image_cache_manager._remove_base_file(fname)
-            info_fname = imagecache.get_info_filename(fname)
 
             lock_name = 'nova-' + os.path.split(fname)[-1]
             lock_dir = os.path.join(CONF.instances_path, 'locks')
@@ -353,7 +335,6 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
             # Files are initially too new to delete
             self.assertTrue(os.path.exists(fname))
-            self.assertTrue(os.path.exists(info_fname))
             self.assertTrue(os.path.exists(lock_file))
 
             # Old files get cleaned up though
@@ -363,27 +344,20 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             self.assertFalse(os.path.exists(fname))
             self.assertFalse(os.path.exists(lock_file))
 
-            # TODO(mdbooth): Remove test for deletion of info file in Ocata
-            # (see comment in _make_base_file)
-            self.assertFalse(os.path.exists(info_fname))
-
     def test_remove_base_file_original(self):
-        with self._make_base_file(info=True) as fname:
+        with self._make_base_file() as fname:
             image_cache_manager = imagecache.ImageCacheManager()
             image_cache_manager.originals = [fname]
             image_cache_manager._remove_base_file(fname)
-            info_fname = imagecache.get_info_filename(fname)
 
             # Files are initially too new to delete
             self.assertTrue(os.path.exists(fname))
-            self.assertTrue(os.path.exists(info_fname))
 
             # This file should stay longer than a resized image
             os.utime(fname, (-1, time.time() - 3601))
             image_cache_manager._remove_base_file(fname)
 
             self.assertTrue(os.path.exists(fname))
-            self.assertTrue(os.path.exists(info_fname))
 
             # Originals don't stay forever though
             os.utime(fname, (-1, time.time() - 3600 * 25))
@@ -391,18 +365,11 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
             self.assertFalse(os.path.exists(fname))
 
-            # TODO(mdbooth): Remove test for deletion of info file in Ocata
-            # (see comment in _make_base_file)
-            self.assertFalse(os.path.exists(info_fname))
-
     def test_remove_base_file_dne(self):
         # This test is solely to execute the "does not exist" code path. We
         # don't expect the method being tested to do anything in this case.
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)
-            self.flags(image_info_filename_pattern=('$instances_path/'
-                                                    '%(image)s.info'),
-                       group='libvirt')
 
             fname = os.path.join(tmpdir, 'aaa')
             image_cache_manager = imagecache.ImageCacheManager()
@@ -412,9 +379,6 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         with intercept_log_messages() as stream:
             with utils.tempdir() as tmpdir:
                 self.flags(instances_path=tmpdir)
-                self.flags(image_info_filename_pattern=('$instances_path/'
-                                                        '%(image)s.info'),
-                           group='libvirt')
 
                 fname = os.path.join(tmpdir, 'aaa')
 
@@ -481,15 +445,12 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                         '/instance_path/_base',
                         '/instance_path/instance-1/disk',
                         '/instance_path/instance-2/disk',
-                        '/instance_path/instance-3/disk',
-                        '/instance_path/_base/%s.info' % hashed_42]:
+                        '/instance_path/instance-3/disk']:
                 return True
 
             for p in base_file_list:
                 if path == fq_path(p):
                     return True
-                if path == fq_path(p) + '.info':
-                    return False
 
             if path in ['/instance_path/_base/%s_sm' % i for i in [hashed_1,
                                                                    hashed_21,
@@ -617,23 +578,6 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         image_cache_manager = imagecache.ImageCacheManager()
         image_cache_manager.update(None, [])
 
-    def test_is_valid_info_file(self):
-        hashed = 'e97222e91fc4241f49a7f520d1dcf446751129b3'
-
-        self.flags(instances_path='/tmp/no/such/dir/name/please')
-        self.flags(image_info_filename_pattern=('$instances_path/_base/'
-                                                '%(image)s.info'),
-                   group='libvirt')
-        base_filename = os.path.join(CONF.instances_path, '_base', hashed)
-
-        is_valid_info_file = imagecache.is_valid_info_file
-        self.assertFalse(is_valid_info_file('banana'))
-        self.assertFalse(is_valid_info_file(
-                os.path.join(CONF.instances_path, '_base', '00000001')))
-        self.assertFalse(is_valid_info_file(base_filename))
-        self.assertFalse(is_valid_info_file(base_filename + '.sha1'))
-        self.assertTrue(is_valid_info_file(base_filename + '.info'))
-
     @mock.patch('nova.objects.InstanceList.get_by_filters')
     def test_run_image_cache_manager_pass(self, mock_instance_list):
 
@@ -685,8 +629,6 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
     def test_age_and_verify_swap_images(self, mock_utime, mock_remove,
             mock_getmtime, mock_exist, mock_lock):
         base_dir = '/tmp_age_test'
-        self.flags(image_info_filename_pattern=base_dir + '/%(image)s.info',
-                   group='libvirt')
 
         image_cache_manager = imagecache.ImageCacheManager()
         expected_remove = set()
