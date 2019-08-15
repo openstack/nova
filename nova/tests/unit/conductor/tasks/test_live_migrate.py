@@ -678,8 +678,9 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             self.task.instance.pci_requests = instance_pci_reqs
             self.task._check_can_migrate_pci("Src", "Dst")
             # in case we managed to get away without rasing, check mocks
-            mock_supp_port_binding_ext.called_once_with(self.context)
             if instance_pci_reqs:
+                mock_supp_port_binding_ext.assert_called_once_with(
+                    self.context)
                 self.assertTrue(mock_supp_vif_related_pci_alloc.called)
 
         # instance has no PCI requests

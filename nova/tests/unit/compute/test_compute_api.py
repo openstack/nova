@@ -5205,7 +5205,8 @@ class _ComputeAPIUnitTestMixIn(object):
         mock_rec_action.assert_called_once_with(self.context,
                                     instance,
                                     instance_actions.LIVE_MIGRATION_CANCEL)
-        mock_lm_abort.called_once_with(self.context, instance, migration.id)
+        mock_lm_abort.assert_called_once_with(self.context, instance,
+                                              migration.id)
 
     @mock.patch('nova.compute.api.API._record_action_start')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'live_migration_abort')
@@ -5232,7 +5233,8 @@ class _ComputeAPIUnitTestMixIn(object):
                                                 support_abort_in_queue=True)
             mock_rec_action.assert_called_once_with(
                 self.context, instance, instance_actions.LIVE_MIGRATION_CANCEL)
-            mock_lm_abort.called_once_with(self.context, instance, migration)
+            mock_lm_abort.assert_called_once_with(self.context, instance,
+                                                  migration.id)
             mock_get_migration.reset_mock()
             mock_rec_action.reset_mock()
             mock_lm_abort.reset_mock()
