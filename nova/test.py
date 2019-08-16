@@ -586,8 +586,8 @@ class TestCase(testtools.TestCase):
             error.difference = difference
             raise error
 
-    def assertXmlEqual(self, expected, observed):
-        self.assertThat(observed, matchers.XMLMatches(expected))
+    def assertXmlEqual(self, expected, observed, **options):
+        self.assertThat(observed, matchers.XMLMatches(expected, **options))
 
     def assertPublicAPISignatures(self, baseinst, inst):
         def get_public_apis(inst):
