@@ -266,7 +266,7 @@ class ServersTest(ServersTestBase):
                           self.api.post_server, post)
 
         # With an invalid imageRef, this throws 500.
-        server[self._image_ref_parameter] = self.get_invalid_image()
+        server[self._image_ref_parameter] = uuids.fake
         # TODO(justinsb): Check whatever the spec says should be thrown here
         self.assertRaises(client.OpenStackApiException,
                           self.api.post_server, post)

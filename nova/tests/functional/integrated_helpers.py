@@ -25,7 +25,6 @@ import time
 
 import os_traits
 from oslo_log import log as logging
-from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.compute import instance_actions
 from nova.compute import utils as compute_utils
@@ -315,9 +314,6 @@ class _IntegratedTestBase(test.TestCase):
          for flavor in flavors]
         return (generate_new_element(flavor_names, 'flavor'),
                 int(generate_new_element(flavor_ids, '', True)))
-
-    def get_invalid_image(self):
-        return uuids.fake
 
     def _build_minimal_create_server_request(self, name=None, image_uuid=None,
                                              flavor_id=None, networks=None,
