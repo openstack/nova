@@ -67,17 +67,12 @@ class SharedStorageProviderUsageTestCase(
         self.assertNotIn("DISK_GB",
                          self._get_provider_inventory(self.host_uuid))
 
-        server_req_body = {
-            'server': {
-                'imageRef': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
-                'flavorRef': '1',
-                'name': 'test_shared_storage_rp_configuration_with_cn_rp',
-                'networks': 'none'
-            }
-        }
         # create server
-        server = self.api.post_server(server_req_body)
-        self._wait_for_state_change(server, 'ACTIVE')
+        self._create_server(
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id=1,
+            networks='none',
+        )
 
         # get shared_rp and cn_rp usages
         shared_rp_usages = self._get_provider_usages(shared_RP['uuid'])
@@ -125,17 +120,11 @@ class SharedStorageProviderUsageTestCase(
         self.assertNotIn("DISK_GB",
                          self._get_provider_inventory(self.host_uuid))
 
-        server_req_body = {
-            'server': {
-                'imageRef': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
-                'flavorRef': '1',
-                'name': 'test_shared_storage_rp_configuration_with_cn_rp',
-                'networks': 'none'
-            }
-        }
-        # create server
-        server = self.api.post_server(server_req_body)
-        self._wait_for_state_change(server, 'ACTIVE')
+        server = self._create_server(
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id=1,
+            networks='none'
+        )
 
         rebuild_image_ref = (
             nova.tests.unit.image.fake.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID)
@@ -187,18 +176,14 @@ class SharedStorageProviderUsageTestCase(
         # RP as soon as a shared RP with DISK_GB is created in the compute tree
         self.assertNotIn("DISK_GB",
                          self._get_provider_inventory(self.host_uuid))
-        org_image_id = '155d900f-4e14-4e4c-a73d-069cbf4541e6'
-        server_req_body = {
-            'server': {
-                'imageRef': org_image_id,
-                'flavorRef': '1',
-                'name': 'test_shared_storage_rp_configuration_with_cn_rp',
-                'networks': 'none'
-            }
-        }
+
         # create server
-        server = self.api.post_server(server_req_body)
-        self._wait_for_state_change(server, 'ACTIVE')
+        org_image_id = '155d900f-4e14-4e4c-a73d-069cbf4541e6'
+        server = self._create_server(
+            image_uuid=org_image_id,
+            flavor_id=1,
+            networks='none',
+        )
 
         rebuild_image_ref = (
             nova.tests.unit.image.fake.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID)

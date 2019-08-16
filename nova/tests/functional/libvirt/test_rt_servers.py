@@ -60,9 +60,6 @@ class RealTimeServersTest(base.ServersTestBase):
             'hw:cpu_realtime': 'yes',
             'hw:cpu_policy': 'dedicated',
             'hw:cpu_realtime_mask': '^1'})
-        server = self._build_server(flavor_id=flavor_id)
-        created = self.api.post_server({'server': server})
+        server = self._create_server(flavor_id=flavor_id)
 
-        instance = self._wait_for_state_change(created, 'ACTIVE')
-
-        self._delete_server(instance)
+        self._delete_server(server)

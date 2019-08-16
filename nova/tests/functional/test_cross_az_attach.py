@@ -141,7 +141,5 @@ class CrossAZAttachTestCase(test.TestCase,
         a noop if there are no volumes in the server create request.
         """
         self.flags(cross_az_attach=False, group='cinder')
-        server = self._build_server(az=self.az)
-        server = self.api.post_server({'server': server})
-        server = self._wait_for_state_change(server, 'ACTIVE')
+        server = self._create_server(az=self.az)
         self.assertEqual(self.az, server['OS-EXT-AZ:availability_zone'])

@@ -73,11 +73,9 @@ class TestAvailabilityZoneScheduling(
 
     def _create_server(self, name):
         # Create a server, it doesn't matter which host it ends up in.
-        server_body = self._build_server(
+        server = super(TestAvailabilityZoneScheduling, self)._create_server(
             flavor_id=self.flavor1,
-            networks='none')
-        server = self.api.post_server({'server': server_body})
-        server = self._wait_for_state_change(server, 'ACTIVE')
+            networks='none',)
         original_host = server['OS-EXT-SRV-ATTR:host']
         # Assert the server has the AZ set (not None or 'nova').
         expected_zone = 'zone1' if original_host == 'host1' else 'zone2'

@@ -29,8 +29,8 @@ class InterfaceFullstack(test_servers.ServersTestBase):
 
     def test_detach_interface_negative_invalid_state(self):
         # Create server with network
-        created_server = self.api.post_server({'server': self._build_server(
-            networks=[{'uuid': '3cb9bc59-5699-4588-a4b1-b87f96708bc6'}])})
+        created_server = self._create_server(
+            networks=[{'uuid': '3cb9bc59-5699-4588-a4b1-b87f96708bc6'}])
         created_server_id = created_server['id']
         found_server = self._wait_for_state_change(created_server, 'ACTIVE')
 

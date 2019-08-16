@@ -124,15 +124,13 @@ class VPMEMTestBase(integrated_helpers.LibvirtProviderUsageBaseTestCase):
 
         return compute
 
-    def _create_server(self, flavor_id, hostname):
-        server_req = self._build_server(
+    def _create_server(self, flavor_id, hostname, expected_state):
+        return super(VPMEMTestBase, self)._create_server(
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             flavor_id=flavor_id,
-            networks='none')
-        server_req['availability_zone'] = 'nova:%s' % hostname
-        LOG.info('booting on %s', hostname)
-        created_server = self.api.post_server({'server': server_req})
-        return created_server
+            networks='none',
+            az='nova:%s' % hostname,
+            expected_state=expected_state)
 
     def _delete_server(self, server):
         self.api.delete_server(server['id'])
@@ -157,24 +155,25 @@ class VPMEMTests(VPMEMTestBase):
         cn1_uuid = self._get_provider_uuid_by_host(self.compute1.host)
 
         # Boot two servers with pmem
-        server1 = self._create_server(self.flavor, self.compute1.host)
-        self._wait_for_state_change(server1, 'ACTIVE')
+        server1 = self._create_server(self.flavor, self.compute1.host,
+                                      expected_state='ACTIVE')
         self._check_vpmem_allocations({'CUSTOM_PMEM_NAMESPACE_SMALL': 1},
                                       server1['id'], cn1_uuid)
-        server2 = self._create_server(self.flavor, self.compute1.host)
-        self._wait_for_state_change(server2, 'ACTIVE')
+
+        server2 = self._create_server(self.flavor, self.compute1.host,
+                                      expected_state='ACTIVE')
         self._check_vpmem_allocations({'CUSTOM_PMEM_NAMESPACE_SMALL': 1},
                                       server2['id'], cn1_uuid)
 
         # 'SMALL' VPMEM resource has used up
-        server3 = self._create_server(self.flavor, self.compute1.host)
-        self._wait_for_state_change(server3, 'ERROR')
+        server3 = self._create_server(self.flavor, self.compute1.host,
+                                      expected_state='ERROR')
 
         # Delete server2, one 'SMALL' VPMEM will be released
         self._delete_server(server2)
         self._wait_until_deleted(server2)
-        server3 = self._create_server(self.flavor, self.compute1.host)
-        self._wait_for_state_change(server3, 'ACTIVE')
+        server3 = self._create_server(self.flavor, self.compute1.host,
+                                      expected_state='ACTIVE')
         self._check_vpmem_allocations({'CUSTOM_PMEM_NAMESPACE_SMALL': 1},
                                       server3['id'], cn1_uuid)
 
@@ -222,8 +221,8 @@ class VPMEMResizeTests(VPMEMTestBase):
         cn2_uuid = self._get_provider_uuid_by_host(self.compute2.host)
 
         # Boot one server with pmem, then resize the server
-        server = self._create_server(self.flavor1, self.compute1.host)
-        self._wait_for_state_change(server, 'ACTIVE')
+        server = self._create_server(self.flavor1, self.compute1.host,
+                                     expected_state='ACTIVE')
         self._check_vpmem_allocations({'CUSTOM_PMEM_NAMESPACE_SMALL': 1},
                                       server['id'], cn1_uuid)
 
@@ -257,8 +256,8 @@ class VPMEMResizeTests(VPMEMTestBase):
         cn1_uuid = self._get_provider_uuid_by_host(self.compute1.host)
 
         # Boot one server with pmem, then resize the server
-        server = self._create_server(self.flavor1, self.compute1.host)
-        self._wait_for_state_change(server, 'ACTIVE')
+        server = self._create_server(self.flavor1, self.compute1.host,
+                                     expected_state='ACTIVE')
         self._check_vpmem_allocations({'CUSTOM_PMEM_NAMESPACE_SMALL': 1},
                                       server['id'], cn1_uuid)
 

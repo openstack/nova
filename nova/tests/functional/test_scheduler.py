@@ -50,18 +50,12 @@ class MultiCellSchedulerTestCase(test.TestCase,
         self.addCleanup(fake_image.FakeImageService_reset)
 
     def _test_create_and_migrate(self, expected_status, az=None):
-        server = self._build_server(az=az)
-        post = {'server': server}
-        # If forcing the server onto a host we have to use the admin API.
-        api = self.admin_api if az else self.api
-        created_server = api.post_server(post)
+        server = self._create_server(az=az)
 
-        # Wait for it to finish being created
-        found_server = self._wait_for_state_change(created_server, 'ACTIVE')
         return self.admin_api.api_post(
-            '/servers/%s/action' % found_server['id'],
+            '/servers/%s/action' % server['id'],
             {'migrate': None},
-            check_response_status=[expected_status]), found_server
+            check_response_status=[expected_status]), server
 
     def test_migrate_between_cells(self):
         """Verify that migrating between cells is not allowed.
