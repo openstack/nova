@@ -19,12 +19,14 @@ import os.path
 import tempfile
 
 import eventlet
+import fixtures
 from keystoneauth1 import adapter as ks_adapter
 from keystoneauth1 import exceptions as ks_exc
 from keystoneauth1.identity import base as ks_identity
 from keystoneauth1 import session as ks_session
 import mock
 import netaddr
+from openstack import exceptions as sdk_exc
 from oslo_config import cfg
 from oslo_context import context as common_context
 from oslo_context import fixture as context_fixture
@@ -1305,41 +1307,69 @@ class TestGetAuthAndSession(test.NoDBTestCase):
 
 class TestGetSDKAdapter(test.NoDBTestCase):
     """Tests for nova.utils.get_sdk_adapter"""
-    @mock.patch('nova.utils._get_conf_group')
-    @mock.patch('nova.utils._get_auth_and_session')
-    @mock.patch('nova.utils.connection.Connection')
-    @mock.patch('nova.utils.CONF')
-    def test_get_sdk_adapter(self, mock_conf, mock_connection,
-                             mock_get_auth_sess, mock_get_confgrp):
-        service_type = 'test_service'
-        mock_conn = mock.Mock()
-        mock_proxy = mock.Mock()
-        setattr(mock_conn, service_type, mock_proxy)
-        mock_connection.return_value = mock_conn
-        mock_session = mock.Mock()
-        mock_get_auth_sess.return_value = (None, mock_session)
-        mock_get_confgrp.return_value = mock_confgrp = mock.Mock()
 
-        actual = utils.get_sdk_adapter(service_type)
+    def setUp(self):
+        super(TestGetSDKAdapter, self).setUp()
 
-        self.assertEqual(actual, mock_proxy)
-        mock_get_confgrp.assert_called_once_with(service_type)
-        mock_get_auth_sess.assert_called_once_with(mock_confgrp)
-        mock_connection.assert_called_once_with(
-            session=mock_session, oslo_conf=mock_conf,
-            service_types={'test_service'})
+        self.mock_get_confgrp = self.useFixture(fixtures.MockPatch(
+            'nova.utils._get_conf_group')).mock
 
-    @mock.patch('nova.utils._get_conf_group')
-    @mock.patch('nova.utils._get_auth_and_session')
-    @mock.patch('nova.utils.connection.Connection')
-    def test_get_sdk_adapter_fail(self, mock_connection, mock_get_auth_sess,
-                                  mock_get_confgrp):
-        service_type = 'test_service'
-        mock_get_confgrp.side_effect = \
-            exception.ConfGroupForServiceTypeNotFound(stype=service_type)
+        self.mock_get_auth_sess = self.useFixture(fixtures.MockPatch(
+            'nova.utils._get_auth_and_session')).mock
+        self.mock_get_auth_sess.return_value = (None, mock.sentinel.session)
+
+        self.service_type = 'test_service'
+        self.mock_connection = self.useFixture(fixtures.MockPatch(
+            'nova.utils.connection.Connection')).mock
+        self.mock_connection.return_value = mock.Mock(
+            test_service=mock.sentinel.proxy)
+
+        # We need to stub the CONF global in nova.utils to assert that the
+        # Connection constructor picks it up.
+        self.mock_conf = self.useFixture(fixtures.MockPatch(
+            'nova.utils.CONF')).mock
+
+    def test_get_sdk_adapter(self):
+        actual = utils.get_sdk_adapter(self.service_type)
+
+        self.assertEqual(actual, mock.sentinel.proxy)
+        self.mock_get_confgrp.assert_called_once_with(self.service_type)
+        self.mock_get_auth_sess.assert_called_once_with(
+            self.mock_get_confgrp.return_value)
+        self.mock_connection.assert_called_once_with(
+            session=mock.sentinel.session, oslo_conf=self.mock_conf,
+            service_types={'test_service'}, strict_proxies=False)
+
+    def test_get_sdk_adapter_strict(self):
+        actual = utils.get_sdk_adapter(self.service_type, check_service=True)
+
+        self.assertEqual(actual, mock.sentinel.proxy)
+        self.mock_get_confgrp.assert_called_once_with(self.service_type)
+        self.mock_get_auth_sess.assert_called_once_with(
+            self.mock_get_confgrp.return_value)
+        self.mock_connection.assert_called_once_with(
+            session=mock.sentinel.session, oslo_conf=self.mock_conf,
+            service_types={'test_service'}, strict_proxies=True)
+
+    def test_get_sdk_adapter_conf_group_fail(self):
+        self.mock_get_confgrp.side_effect = (
+            exception.ConfGroupForServiceTypeNotFound(stype=self.service_type))
 
         self.assertRaises(exception.ConfGroupForServiceTypeNotFound,
-                          utils.get_sdk_adapter, service_type)
-        mock_get_confgrp.assert_called_once_with(service_type)
-        mock_connection.assert_not_called()
-        mock_get_auth_sess.assert_not_called()
+                          utils.get_sdk_adapter, self.service_type)
+        self.mock_get_confgrp.assert_called_once_with(self.service_type)
+        self.mock_connection.assert_not_called()
+        self.mock_get_auth_sess.assert_not_called()
+
+    def test_get_sdk_adapter_strict_fail(self):
+        self.mock_connection.side_effect = sdk_exc.ServiceDiscoveryException()
+
+        self.assertRaises(
+            exception.ServiceUnavailable,
+            utils.get_sdk_adapter, self.service_type, check_service=True)
+        self.mock_get_confgrp.assert_called_once_with(self.service_type)
+        self.mock_get_auth_sess.assert_called_once_with(
+            self.mock_get_confgrp.return_value)
+        self.mock_connection.assert_called_once_with(
+            session=mock.sentinel.session, oslo_conf=self.mock_conf,
+            service_types={'test_service'}, strict_proxies=True)

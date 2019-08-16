@@ -34,6 +34,7 @@ from keystoneauth1 import exceptions as ks_exc
 from keystoneauth1 import loading as ks_loading
 import netaddr
 from openstack import connection
+from openstack import exceptions as sdk_exc
 import os_resource_classes as orc
 from os_service_types import service_types
 from oslo_concurrency import lockutils
@@ -52,7 +53,7 @@ from six.moves import range
 
 import nova.conf
 from nova import exception
-from nova.i18n import _LE, _LW
+from nova.i18n import _, _LE, _LW
 import nova.network
 from nova import safe_utils
 
@@ -1009,7 +1010,7 @@ def get_ksa_adapter(service_type, ksa_auth=None, ksa_session=None,
         min_version=min_version, max_version=max_version, raise_exc=False)
 
 
-def get_sdk_adapter(service_type):
+def get_sdk_adapter(service_type, check_service=False):
     """Construct an openstacksdk-brokered Adapter for a given service type.
 
     We expect to find a conf group whose name corresponds to the service_type's
@@ -1018,14 +1019,23 @@ def get_sdk_adapter(service_type):
 
     :param service_type: String name of the service type for which the Adapter
                          is to be constructed.
+    :param check_service: If True, we will query the endpoint to make sure the
+            service is alive, raising ServiceUnavailable if it is not.
     :return: An openstack.proxy.Proxy object for the specified service_type.
     :raise: ConfGroupForServiceTypeNotFound If no conf group name could be
             found for the specified service_type.
+    :raise: ServiceUnavailable if check_service is True and the service is down
     """
     confgrp = _get_conf_group(service_type)
-    _, sess = _get_auth_and_session(confgrp)
-    conn = connection.Connection(
-        session=sess, oslo_conf=CONF, service_types={service_type})
+    sess = _get_auth_and_session(confgrp)[1]
+    try:
+        conn = connection.Connection(
+            session=sess, oslo_conf=CONF, service_types={service_type},
+            strict_proxies=check_service)
+    except sdk_exc.ServiceDiscoveryException as e:
+        raise exception.ServiceUnavailable(
+            _("The %(service_type)s service is unavailable: %(error)s") %
+            {'service_type': service_type, 'error': six.text_type(e)})
     return getattr(conn, service_type)
 
 
