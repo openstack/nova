@@ -76,7 +76,7 @@ access their instances through VNC clients.
 The VNC console connection works as follows:
 
 #. A user connects to the API and gets an ``access_url`` such as,
-   ``http://ip:port/?token=xyz``.
+   ``http://ip:port/?path=%3Ftoken%3Dxyz``.
 
 #. The user pastes the URL in a browser or uses it as a client parameter.
 
