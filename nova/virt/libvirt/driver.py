@@ -54,6 +54,7 @@ from os_brick.encryptors import luks as luks_encryptor
 from os_brick import exception as brick_exception
 from os_brick.initiator import connector
 import os_resource_classes as orc
+import os_traits as ot
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_serialization import base64
@@ -9661,6 +9662,16 @@ class LibvirtDriver(driver.ComputeDriver):
                            nova.privsep.fs.FS_FORMAT_XFS]
 
     def _get_cpu_traits(self):
+        """Get CPU-related traits to be set and unset on the host's resource
+        provider.
+
+        :return: A dict of trait names mapped to boolean values or None.
+        """
+        traits = self._get_cpu_feature_traits() or {}
+        traits[ot.HW_CPU_X86_AMD_SEV] = self._host.supports_amd_sev
+        return traits
+
+    def _get_cpu_feature_traits(self):
         """Get CPU traits of VMs based on guest CPU model config:
         1. if mode is 'host-model' or 'host-passthrough', use host's
         CPU features.
