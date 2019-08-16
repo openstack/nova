@@ -4428,6 +4428,27 @@ class ComputeManager(manager.Manager):
         instance.system_metadata['old_vm_state'] = vm_state
         instance.save()
 
+        if not isinstance(request_spec, objects.RequestSpec):
+            # Prior to compute RPC API 5.1 conductor would pass a legacy dict
+            # version of the request spec to compute and since Stein compute
+            # could be sending that back to conductor on reschedule, so if we
+            # got a dict convert it to an object.
+            # TODO(mriedem): We can drop this compat code when we only support
+            # compute RPC API >=6.0.
+            request_spec = objects.RequestSpec.from_primitives(
+                context, request_spec, filter_properties)
+            # We don't have to set the new flavor on the request spec because
+            # if we got here it was due to a reschedule from the compute and
+            # the request spec would already have the new flavor in it from the
+            # else block below.
+
+        request_group_resource_providers_mapping = \
+            self._get_request_group_mapping(request_spec)
+
+        if request_group_resource_providers_mapping:
+            self._update_pci_request_spec_with_allocated_interface_name(
+                context, instance, request_group_resource_providers_mapping)
+
         limits = filter_properties.get('limits', {})
         with self.rt.resize_claim(context, instance, instance_type, node,
                                   migration, image_meta=image,
@@ -4505,6 +4526,13 @@ class ComputeManager(manager.Manager):
                                   instance_type, filter_properties,
                                   node, migration, request_spec,
                                   clean_shutdown)
+            except exception.BuildAbortException:
+                # NOTE(gibi): We failed
+                # _update_pci_request_spec_with_allocated_interface_name so
+                # there is no reason to re-schedule. Just revert the allocation
+                # and fail the migration.
+                with excutils.save_and_reraise_exception():
+                    self._revert_allocation(context, instance, migration)
             except Exception:
                 # Since we hit a failure, we're either rescheduling or dead
                 # and either way we need to cleanup any allocations created
