@@ -14,8 +14,8 @@
 #    under the License.
 
 import mock
-
 import os_traits as ost
+
 
 from nova import conf
 from nova import test

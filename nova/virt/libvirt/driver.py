@@ -6815,14 +6815,13 @@ class LibvirtDriver(driver.ComputeDriver):
         provider_tree.update_inventory(nodename, result)
 
         traits = self._get_cpu_traits()
-        if traits is not None:
-            # _get_cpu_traits returns a dict of trait names mapped to boolean
-            # values. Add traits equal to True to provider tree, remove
-            # those False traits from provider tree.
-            traits_to_add = [t for t in traits if traits[t]]
-            traits_to_remove = set(traits) - set(traits_to_add)
-            provider_tree.add_traits(nodename, *traits_to_add)
-            provider_tree.remove_traits(nodename, *traits_to_remove)
+        # _get_cpu_traits returns a dict of trait names mapped to boolean
+        # values. Add traits equal to True to provider tree, remove
+        # those False traits from provider tree.
+        traits_to_add = [t for t in traits if traits[t]]
+        traits_to_remove = set(traits) - set(traits_to_add)
+        provider_tree.add_traits(nodename, *traits_to_add)
+        provider_tree.remove_traits(nodename, *traits_to_remove)
 
         # Now that we updated the ProviderTree, we want to store it locally
         # so that spawn() or other methods can access it thru a getter
@@ -9667,7 +9666,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         :return: A dict of trait names mapped to boolean values or None.
         """
-        traits = self._get_cpu_feature_traits() or {}
+        traits = self._get_cpu_feature_traits()
         traits[ot.HW_CPU_X86_AMD_SEV] = self._host.supports_amd_sev
         return traits
 
@@ -9688,7 +9687,7 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.info('The current libvirt hypervisor %(virt_type)s '
                      'does not support reporting CPU traits.',
                      {'virt_type': CONF.libvirt.virt_type})
-            return
+            return {}
 
         caps = deepcopy(self._host.get_capabilities())
         if cpu.mode in ('host-model', 'host-passthrough'):

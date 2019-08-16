@@ -21759,7 +21759,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                           self._test_detach_mediated_devices, exc)
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_cpu_feature_traits',
-                       new=mock.Mock(return_value=None))
+                       new=mock.Mock(return_value={}))
     def test_cpu_traits_sev_no_feature_traits(self):
         for support in (False, True):
             self.drvr._host._supports_amd_sev = support
@@ -21978,7 +21978,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.flags(cpu_mode='none',
                    virt_type='lxc',
                    group='libvirt')
-        self.assertIsNone(self.drvr._get_cpu_feature_traits())
+        self.assertEqual({}, self.drvr._get_cpu_feature_traits())
 
     @mock.patch('nova.virt.libvirt.host.libvirt.Connection.getCapabilities')
     @mock.patch('nova.virt.libvirt.host.libvirt.Connection.baselineCPU')
