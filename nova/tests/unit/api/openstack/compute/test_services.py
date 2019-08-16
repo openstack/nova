@@ -195,6 +195,12 @@ class ServicesTestV21(test.TestCase):
         self.stub_out('nova.db.api.service_update',
                       fake_db_service_update(fake_services_list))
 
+        # NOTE(gibi): enable / disable a compute service tries to call
+        # the compute service via RPC to update placement. However in these
+        # tests the compute services are faked. So stub out the RPC call to
+        # avoid waiting for the RPC timeout.
+        self.stub_out("nova.compute.rpcapi.ComputeAPI.set_host_enabled",
+                      lambda *args, **kwargs: None)
         self.req = fakes.HTTPRequest.blank('')
         self.useFixture(fixtures.SingleCellSimple())
 
