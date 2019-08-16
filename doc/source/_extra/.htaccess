@@ -41,7 +41,6 @@ redirectmatch 301 ^/nova/([^/]+)/man/nova-scheduler.html$ /nova/$1/cli/nova-sche
 redirectmatch 301 ^/nova/([^/]+)/man/nova-serialproxy.html$ /nova/$1/cli/nova-serialproxy.html
 redirectmatch 301 ^/nova/([^/]+)/man/nova-spicehtml5proxy.html$ /nova/$1/cli/nova-spicehtml5proxy.html
 redirectmatch 301 ^/nova/([^/]+)/man/nova-status.html$ /nova/$1/cli/nova-status.html
-redirectmatch 301 ^/nova/([^/]+)/man/nova-xvpvncproxy.html$ /nova/$1/cli/nova-xvpvncproxy.html
 redirectmatch 301 ^/nova/([^/]+)/notifications.html$ /nova/$1/reference/notifications.html
 redirectmatch 301 ^/nova/([^/]+)/placement.html$ /nova/$1/user/placement.html
 redirectmatch 301 ^/nova/([^/]+)/placement_dev.html$ /nova/$1/contributor/placement.html

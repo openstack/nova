@@ -5284,7 +5284,7 @@ os-getVNCConsole:
   type: object
 os-getVNCConsole-type:
   description: |
-    The type of VNC console. The valid values are ``novnc`` and ``xvpvnc``.
+    The type of VNC console. The only valid value is ``novnc``.
   in: body
   required: true
   type: string
@@ -5833,7 +5833,7 @@ remote_console_protocol:
   type: string
 remote_console_type:
   description: |
-    The type of remote console. The valid values are ``novnc``, ``xvpvnc``,
+    The type of remote console. The valid values are ``novnc``,
     ``rdp-html5``, ``spice-html5``, ``serial``, and ``webmks``. The type
     ``webmks`` is added since Microversion ``2.8``.
   in: body

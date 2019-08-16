@@ -75,14 +75,3 @@ are documented for completeness and debugging if something goes wrong.
    :maxdepth: 1
 
    nova-rootwrap
-
-Deprecated Services
--------------------
-
-The following services are deprecated in nova. They should not be used in new
-deployments, but are documented for existing ones.
-
-.. toctree::
-   :maxdepth: 1
-
-   nova-xvpvncproxy

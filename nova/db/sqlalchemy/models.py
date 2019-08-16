@@ -985,6 +985,7 @@ class DNSDomain(BASE, NovaBase, models.SoftDeleteMixin):
     project_id = Column(String(255))
 
 
+# TODO(stephenfin): Remove in V or later
 class ConsolePool(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents pool of consoles on the same physical node."""
     __tablename__ = 'console_pools'

@@ -175,9 +175,6 @@ Gets a VNC console for a server.
 
 Specify the ``os-getVNCConsole`` action in the request body.
 
-The supported connection types are ``novnc``, ``xvpvnc``. Such as connect
-with ``novnc``, set ``type`` parameter to ``novnc``.
-
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404),

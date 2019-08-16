@@ -1,0 +1,15 @@
+---
+upgrade:
+  - |
+    The ``nova-xvpvncproxy`` service has been deprecated since the 19.0.0 Stein
+    release and has now been removed. The following configuration options have
+    also been removed:
+
+    * ``[vnc] xvpvncproxy_base_url``
+    * ``[vnc] xvpvncproxy_host``
+    * ``[vnc] xvpvncproxy_port``
+    * ``[xvp] console_xvp_conf_template``
+    * ``[xvp] console_xvp_conf``
+    * ``[xvp] console_xvp_log``
+    * ``[xvp] console_xvp_multiplex_port``
+    * ``[xvp] console_xvp_pid``

@@ -11,12 +11,11 @@
 #    under the License.
 
 """
-:mod:`nova.console` -- Console Proxy to set up VM console access
-      (i.e. with xvp)
-=====================================================
+:mod:`nova.console` -- Wrappers around console proxies
+======================================================
 
 .. automodule:: nova.console
    :platform: Unix
-   :synopsis: Wrapper around console proxies such as xvp to set up
-              multitenant VM console access
+   :synopsis: Wrapper around console proxies such as noVNC to set up
+              multi-tenant VM console access.
 """
