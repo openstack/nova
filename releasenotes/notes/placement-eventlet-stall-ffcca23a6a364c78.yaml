@@ -1,0 +1,34 @@
+---
+issues:
+  - |
+    In Stein the Placement service is available either as part of Nova, or
+    independently packaged from its own project. This is to allow easier
+    migration from one to another. See the `upgrade notes`_ for more
+    information.
+
+    When using the Placement packaged from Nova, some deployment strategies can
+    lead to the service stalling with error messages similar to::
+
+        Traceback (most recent call last):
+          File "/usr/lib/python2.7/site-packages/eventlet/hubs/hub.py", line 460, in fire_timers
+            timer()
+          File "/usr/lib/python2.7/site-packages/eventlet/hubs/timer.py", line 59, in __call__
+            cb(*args, **kw)
+          File "/usr/lib/python2.7/site-packages/eventlet/semaphore.py", line 147, in _do_acquire
+            waiter.switch()
+        error: cannot switch to a different thread
+
+    The reasons this is happening are discussed in bug 1829062_. There are
+    three workarounds available:
+
+    * In the environment of the web server running the placement service, set
+      ``OS_NOVA_DISABLE_EVENTLET_PATCHING=yes`` so that eventlet does not
+      conflict with thread handling in the web server.
+
+    * Turn off threading in the web server. For example, if using ``mod_wsgi``
+      or ``uwsgi``, set ``threads=1`` in their respective configurations.
+
+    * Switch to using the extracted placement. It does not suffer from eventlet.
+
+    .. _upgrade notes: https://docs.openstack.org/placement/latest/upgrade/to-stein.html
+    .. _1829062: https://bugs.launchpad.net/nova/+bug/1829062
