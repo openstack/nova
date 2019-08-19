@@ -63,7 +63,7 @@ class BaseProxyTestCase(test.NoDBTestCase):
                    mock_exists):
         baseproxy.proxy('0.0.0.0', '6080')
         mock_log.assert_called_once_with(baseproxy.CONF, 'nova')
-        mock_gmr.mock_assert_called_once_with(version)
+        mock_gmr.assert_called_once_with(version, conf=baseproxy.CONF)
         mock_init.assert_called_once_with(
             listen_host='0.0.0.0', listen_port='6080', source_is_ipv6=False,
             cert='self.pem', key=None, ssl_only=False,
