@@ -266,7 +266,7 @@ base_create_v232['properties']['server'][
 # to keep the above mentioned behavior while merging the extension schema code
 # into server schema file. Below is the ref code where BDM tag was originally
 # got added for 2.32 microversion *only*.
-# Ref- https://github.com/openstack/nova/blob/
+# Ref- https://opendev.org/openstack/nova/src/commit/
 #      9882a60e69a5ab8da314a199a56defc05098b743/nova/api/
 #      openstack/compute/block_device_mapping.py#L71
 base_create_v233 = copy.deepcopy(base_create_v219)

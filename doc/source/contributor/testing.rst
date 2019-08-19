@@ -79,7 +79,7 @@ The correct level of unit test coverage is very subjective, and as such we are
 not aiming for a particular percentage of coverage, rather we are aiming for
 good coverage.
 Generally, every code change should have a related unit test:
-https://github.com/openstack/nova/blob/master/HACKING.rst#creating-unit-tests
+https://opendev.org/openstack/nova/src/branch/master/HACKING.rst#creating-unit-tests
 
 Integration tests
 -----------------
@@ -116,4 +116,4 @@ Interoperability tests
 
 The DefCore committee maintains a list that contains a subset of Tempest tests.
 These are used to verify if a particular Nova deployment's API responds as
-expected. For more details, see: https://github.com/openstack/defcore
+expected. For more details, see: https://opendev.org/openstack/interop

@@ -97,7 +97,7 @@ that target. For example:
 The `novajoin`__ project provides a dynamic vendordata service to manage host
 instantiation in an IPA server.
 
-__ https://github.com/openstack/novajoin
+__ https://opendev.org/x/novajoin
 
 Deployment considerations
 ~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -110,7 +110,7 @@ class TestSerialConsoleLiveMigrate(test.TestCase):
         is then enabled and VNC + SPICE are disabled.
 
         The error will be raised at
-            https://github.com/openstack/nova/blob/
+            https://opendev.org/openstack/nova/src/commit/
             4f33047d07f5a11b208c344fe206aba01cd8e6fe/
             nova/virt/libvirt/driver.py#L5842-L5852
         """
