@@ -98,9 +98,8 @@ class ServiceFixture(fixtures.Fixture):
 
         # NOTE(mikal): we don't have root to manipulate iptables, so just
         # zero that bit out.
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.network.linux_net.IptablesManager._apply',
-            lambda _: None))
+        self.useFixture(fixtures.MockPatch(
+            'nova.network.linux_net.IptablesManager._apply'))
 
         with mock.patch('nova.context.get_admin_context',
                         return_value=self.ctxt):

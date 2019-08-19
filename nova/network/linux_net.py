@@ -1577,15 +1577,8 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
         if not nova.privsep.linux_net.device_exists(dev):
             bridge = CONF.linuxnet_ovs_integration_bridge
 
-            try:
-                nova.privsep.linux_net.ovs_plug(CONF.ovs_vsctl_timeout,
-                                                bridge, dev, mac_address)
-            except Exception as e:
-                LOG.error('Unable to execute ovs-plug. Exception: '
-                          '%(exception)s',
-                          {'exception': e})
-                raise exception.OvsConfigurationFailure(inner_exception=e)
-
+            nova.privsep.linux_net.ovs_plug(CONF.ovs_vsctl_timeout,
+                                            bridge, dev, mac_address)
             nova.privsep.linux_net.set_device_macaddr(
                 dev, mac_address)
             nova.privsep.linux_net.set_device_mtu(dev, network.get('mtu'))
@@ -1612,13 +1605,8 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
     def unplug(self, network):
         dev = self.get_dev(network)
         bridge = CONF.linuxnet_ovs_integration_bridge
-        try:
-            nova.privsep.linux_net.ovs_unplug(CONF.ovs_vsctl_timeout,
-                                              bridge, dev)
-        except Exception as e:
-            LOG.error('Unable to execute ovs-unplug. Exception: %(exception)s',
-                      {'exception': e})
-            raise exception.OvsConfigurationFailure(inner_exception=e)
+
+        nova.privsep.linux_net.ovs_unplug(CONF.ovs_vsctl_timeout, bridge, dev)
 
         return dev
 

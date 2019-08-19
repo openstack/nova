@@ -25,6 +25,7 @@ from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils import excutils
 
+from nova import exception
 import nova.privsep.linux_net
 
 
@@ -380,15 +381,21 @@ def start_ra(conf_path, pid_path):
 
 @nova.privsep.sys_admin_pctxt.entrypoint
 def ovs_plug(timeout, bridge, dev, mac_address):
-    processutils.execute('ovs-vsctl', '--timeout=%s' % timeout,
-                         '--', '--may-exist', 'add-port', bridge, dev,
-                         '--', 'set', 'Interface', dev, 'type=internal',
-                         '--', 'set', 'Interface', dev,
-                         'external-ids:iface-id=%s' % dev,
-                         '--', 'set', 'Interface', dev,
-                         'external-ids:iface-status=active',
-                         '--', 'set', 'Interface', dev,
-                         'external-ids:attached-mac=%s' % mac_address)
+    cmd = ['ovs-vsctl', '--timeout=%s' % timeout,
+           '--', '--may-exist', 'add-port', bridge, dev,
+           '--', 'set', 'Interface', dev, 'type=internal',
+           '--', 'set', 'Interface', dev,
+           'external-ids:iface-id=%s' % dev,
+           '--', 'set', 'Interface', dev,
+           'external-ids:iface-status=active',
+           '--', 'set', 'Interface', dev,
+           'external-ids:attached-mac=%s' % mac_address]
+    try:
+        processutils.execute(*cmd)
+    except Exception as e:
+        LOG.error('Unable to execute %(cmd)s. Exception: %(exception)s',
+                  {'cmd': cmd, 'exception': e})
+        raise exception.OVSConfigurationFailure(inner_exception=e)
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
@@ -402,5 +409,11 @@ def ovs_drop_nondhcp(bridge, mac_address):
 
 @nova.privsep.sys_admin_pctxt.entrypoint
 def ovs_unplug(timeout, bridge, dev):
-    processutils.execute('ovs-vsctl', '--timeout=%s' % timeout,
-                         '--', '--if-exists', 'del-port', bridge, dev)
+    cmd = ['ovs-vsctl', '--timeout=%s' % timeout,
+           '--', '--if-exists', 'del-port', bridge, dev]
+    try:
+        processutils.execute(*cmd)
+    except Exception as e:
+        LOG.error('Unable to execute %(cmd)s. Exception: %(exception)s',
+                  {'cmd': cmd, 'exception': e})
+        raise exception.OVSConfigurationFailure(inner_exception=e)

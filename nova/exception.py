@@ -857,7 +857,7 @@ class VifDetailsMissingMacvtapParameters(Invalid):
                 " correct.")
 
 
-class OvsConfigurationFailure(NovaException):
+class OVSConfigurationFailure(NovaException):
     msg_fmt = _("OVS configuration failed with: %(inner_exception)s.")
 
 
