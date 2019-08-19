@@ -2602,15 +2602,16 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._vmops.attach_interface(self._context, self._instance,
                                      self._image_meta, self._network_values)
         mock_get_vm_ref.assert_called_once_with(self._session, self._instance)
-        mock_get_attach_port_index(self._session, 'fake-ref')
+        mock_get_attach_port_index.assert_called_once_with(self._session,
+                                                           'fake-ref')
         mock_get_network_attach_config_spec.assert_called_once_with(
             self._session.vim.client.factory, vif_info, 1,
             extra_specs.vif_limits)
         mock_reconfigure_vm.assert_called_once_with(self._session,
                                                     'fake-ref',
                                                     'fake-attach-spec')
-        _network_api.update_instance_vnic_index(mock.ANY,
-            self._instance, self._network_values, 1)
+        _network_api.update_instance_vnic_index.assert_called_once_with(
+            mock.ANY, self._instance, self._network_values, 1)
 
     @mock.patch.object(vif, 'get_network_device', return_value='device')
     @mock.patch.object(vm_util, 'reconfigure_vm')
@@ -2631,14 +2632,15 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             self._vmops.detach_interface(self._context, self._instance,
                                          self._network_values)
         mock_get_vm_ref.assert_called_once_with(self._session, self._instance)
-        mock_get_detach_port_index(self._session, 'fake-ref')
+        mock_get_detach_port_index.assert_called_once_with(self._session,
+                                                           'fake-ref', None)
         mock_get_network_detach_config_spec.assert_called_once_with(
             self._session.vim.client.factory, 'device', 1)
         mock_reconfigure_vm.assert_called_once_with(self._session,
                                                     'fake-ref',
                                                     'fake-detach-spec')
-        _network_api.update_instance_vnic_index(mock.ANY,
-            self._instance, self._network_values, None)
+        _network_api.update_instance_vnic_index.assert_called_once_with(
+            mock.ANY, self._instance, self._network_values, None)
 
     @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake-ref')
     def test_get_mks_console(self, mock_get_vm_ref):
@@ -2709,12 +2711,13 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                      self._image_meta,
                                      self._network_values)
         mock_get_vm_ref.assert_called_once_with(self._session, self._instance)
-        mock_get_attach_port_index(self._session, 'fake-ref')
+        mock_get_attach_port_index.assert_called_once_with(self._session,
+                                                           'fake-ref')
         mock_get_network_attach_config_spec.assert_called_once_with(
             self._session.vim.client.factory, vif_info, 1,
             extra_specs.vif_limits)
         mock_reconfigure_vm.assert_called_once_with(self._session,
                                                     'fake-ref',
                                                     'fake-attach-spec')
-        _network_api.update_instance_vnic_index(mock.ANY,
-            self._instance, self._network_values, 1)
+        _network_api.update_instance_vnic_index.assert_called_once_with(
+            mock.ANY, self._instance, self._network_values, 1)
