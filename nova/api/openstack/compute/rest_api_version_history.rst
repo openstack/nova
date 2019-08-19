@@ -959,21 +959,24 @@ it can be specified by administrators only.
 2.75
 ----
 
-Multiple API cleanups is done in API microversion 2.75:
+Multiple API cleanups are done in API microversion 2.75:
 
-* 400 for unknown param for query param and for request body.
+* 400 error response for an unknown parameter in the querystring or request
+  body.
 
-* Making server representation always consistent among GET, PUT
-  and Rebuild serevr APIs response. ``PUT /servers/{server_id}``
-  and ``POST /servers/{server_id}/action {rebuild}`` API response
-  is modified to add all the missing fields which are return
+* Make the server representation consistent among GET, PUT
+  and rebuild server API responses. ``PUT /servers/{server_id}``
+  and ``POST /servers/{server_id}/action {rebuild}`` API responses are
+  modified to add all the missing fields which are returned
   by ``GET /servers/{server_id}``.
 
-* Change the default return value of swap field from the empty
+* Change the default return value of the ``swap`` field from the empty
   string to 0 (integer) in flavor APIs.
 
-* Return ``servers`` field always in the response of GET
-  hypervisors API even there are no servers on hypervisor.
+* Always return the ``servers`` field in the response of the
+  ``GET /os-hypervisors``, ``GET /os-hypervisors/detail`` and
+  ``GET /os-hypervisors/{hypervisor_id}`` APIs even when there are no servers
+  on a hypervisor.
 
 2.76
 ----
