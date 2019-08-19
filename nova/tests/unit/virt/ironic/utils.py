@@ -150,8 +150,8 @@ def get_test_image_meta(**kw):
 
 class FakeVolumeTargetClient(object):
 
-    def create(self, node_uuid, driver_volume_type, target_properties,
-               boot_index):
+    def create(self, node_uuid, volume_type, properties, boot_index,
+               volume_id):
         pass
 
     def delete(self, volume_target_id):
@@ -160,7 +160,9 @@ class FakeVolumeTargetClient(object):
 
 class FakePortClient(object):
 
-    def list(self, address=None, node=None):
+    def list(self, address=None, limit=None, marker=None, sort_key=None,
+             sort_dir=None, detail=False, fields=None, node=None,
+             portgroup=None):
         pass
 
     def get(self, port_uuid):
@@ -172,13 +174,17 @@ class FakePortClient(object):
 
 class FakePortgroupClient(object):
 
-    def list(self, node=None, detail=False):
+    def list(self, node=None, address=None, limit=None, marker=None,
+             sort_key=None, sort_dir=None, detail=False, fields=None):
         pass
 
 
 class FakeNodeClient(object):
 
-    def list(self, detail=False):
+    def list(self, associated=None, maintenance=None, marker=None, limit=None,
+             detail=False, sort_key=None, sort_dir=None, fields=None,
+             provision_state=None, driver=None, resource_class=None,
+             chassis=None):
         return []
 
     def get(self, node_uuid, fields=None):
@@ -193,7 +199,9 @@ class FakeNodeClient(object):
     def set_power_state(self, node_uuid, target, soft=False, timeout=None):
         pass
 
-    def set_provision_state(self, node_uuid, target):
+    def set_provision_state(self, node_uuid, state, configdrive=None,
+                            cleansteps=None, rescue_password=None,
+                            os_ironic_api_version=None):
         pass
 
     def update(self, node_uuid, patch):

@@ -92,7 +92,7 @@ oslo.upgradecheck==0.1.1
 oslo.utils==3.37.0
 oslo.versionedobjects==1.35.0
 oslo.vmware==2.17.0
-oslotest==3.2.0
+oslotest==3.8.0
 osprofiler==1.4.0
 ovs==2.10.0
 ovsdbapp==0.15.0

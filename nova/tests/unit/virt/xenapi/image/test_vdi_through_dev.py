@@ -92,20 +92,19 @@ class TestUploadToGlanceAsRawTgz(test.NoDBTestCase):
                               return_value=('readfile', 'writefile')),
             mock.patch.object(store, '_get_virtual_size',
                               return_value='324'),
-            mock.patch.object(producer, 'get_metadata',
-                              return_value='metadata'),
-                mock.patch.object(glance, 'UpdateGlanceImage',
-                                  return_value=consumer),
+            mock.patch.object(glance, 'UpdateGlanceImage',
+                              return_value=consumer),
             mock.patch.object(vdi_through_dev, 'TarGzProducer',
                               return_value=producer),
             mock.patch.object(vdi_through_dev.eventlet, 'GreenPool',
                               return_value=pool)
-        ) as (mock_create_pipe, mock_virtual_size, mock_metadata,
+        ) as (mock_create_pipe, mock_virtual_size,
               mock_upload, mock_TarGzProducer, mock_greenpool):
+            producer.get_metadata.return_value = "metadata"
 
             store._perform_upload('devpath')
 
-            mock_metadata.assert_called_once_with()
+            producer.get_metadata.assert_called_once_with()
             mock_virtual_size.assert_called_once_with()
             mock_create_pipe.assert_called_once_with()
             mock_TarGzProducer.assert_called_once_with(

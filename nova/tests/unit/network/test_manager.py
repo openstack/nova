@@ -697,7 +697,7 @@ class FlatNetworkTestCase(test.TestCase):
 
         # Verify we removed the fixed IP that was added after the first quota
         # check passed.
-        disassociate.assert_called_once_with(self.context)
+        disassociate.assert_called_once_with()
 
     @mock.patch('nova.objects.fixed_ip.FixedIP.associate_pool')
     @mock.patch('nova.objects.instance.Instance.get_by_uuid')
@@ -794,7 +794,7 @@ class FlatNetworkTestCase(test.TestCase):
                 mock.call(instance.uuid, '')
             ])
 
-        mock_fixedip_disassociate.assert_called_once_with(self.context)
+        mock_fixedip_disassociate.assert_called_once_with()
 
     @mock.patch('nova.objects.instance.Instance.get_by_uuid')
     @mock.patch('nova.objects.virtual_interface.VirtualInterface'

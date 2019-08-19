@@ -523,7 +523,8 @@ class TestPowerVMDriver(test.NoDBTestCase):
                                                  'net_info')
         mock_tf.return_value.add.assert_called_once_with(
             mock_unplug_vifs.return_value)
-        mock_tf_run.assert_called_once_with(mock_tf.return_value, mock_inst)
+        mock_tf_run.assert_called_once_with(mock_tf.return_value,
+                                            instance=mock_inst)
 
         # InstanceNotFound should pass
         mock_tf_run.side_effect = exception.InstanceNotFound(instance_id='1')

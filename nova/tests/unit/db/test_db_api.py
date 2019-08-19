@@ -9247,7 +9247,7 @@ class TestDBInstanceTags(test.TestCase):
         db.instance_tag_set(self.context, uuid, [tag1, tag2])
 
         # Check insert() was called to insert 'tag1' and 'tag2'
-        mock_insert.assert_called_once_with()
+        mock_insert.assert_called_once_with(None)
 
         mock_insert.reset_mock()
         db.instance_tag_set(self.context, uuid, [tag1])

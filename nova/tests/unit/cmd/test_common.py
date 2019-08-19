@@ -17,6 +17,8 @@
     Unit tests for the common functions used by different CLI interfaces.
 """
 
+import sys
+
 import fixtures
 import mock
 from six.moves import StringIO
@@ -68,31 +70,30 @@ class TestCmdCommon(test.NoDBTestCase):
         self.assertNotIn('_private', method_names)
         self.assertNotIn('foo', method_names)
 
-    @mock.patch.object(cmd_common, 'print')
     @mock.patch.object(cmd_common, 'CONF')
-    def test_print_bash_completion_no_query_category(self, mock_CONF,
-                                                     mock_print):
+    def test_print_bash_completion_no_query_category(self, mock_CONF):
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', StringIO()))
         mock_CONF.category.query_category = None
         categories = {'foo': mock.sentinel.foo, 'bar': mock.sentinel.bar}
 
         cmd_common.print_bash_completion(categories)
 
-        mock_print.assert_called_once_with(' '.join(categories.keys()))
+        self.assertEqual(' '.join(categories.keys()) + '\n',
+                         sys.stdout.getvalue())
 
-    @mock.patch.object(cmd_common, 'print')
     @mock.patch.object(cmd_common, 'CONF')
-    def test_print_bash_completion_mismatch(self, mock_CONF, mock_print):
+    def test_print_bash_completion_mismatch(self, mock_CONF):
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', StringIO()))
         mock_CONF.category.query_category = 'bar'
         categories = {'foo': mock.sentinel.foo}
 
         cmd_common.print_bash_completion(categories)
-        self.assertFalse(mock_print.called)
+        self.assertEqual('', sys.stdout.getvalue())
 
     @mock.patch.object(cmd_common, 'methods_of')
-    @mock.patch.object(cmd_common, 'print')
     @mock.patch.object(cmd_common, 'CONF')
-    def test_print_bash_completion(self, mock_CONF, mock_print,
-                                   mock_method_of):
+    def test_print_bash_completion(self, mock_CONF, mock_method_of):
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', StringIO()))
         mock_CONF.category.query_category = 'foo'
         actions = [('f1', mock.sentinel.f1), ('f2', mock.sentinel.f2)]
         mock_method_of.return_value = actions
@@ -103,7 +104,8 @@ class TestCmdCommon(test.NoDBTestCase):
 
         mock_fn.assert_called_once_with()
         mock_method_of.assert_called_once_with(mock_fn.return_value)
-        mock_print.assert_called_once_with(' '.join([k for k, v in actions]))
+        self.assertEqual(' '.join([k for k, v in actions]) + '\n',
+                         sys.stdout.getvalue())
 
     @mock.patch.object(cmd_common, 'validate_args')
     @mock.patch.object(cmd_common, 'CONF')

@@ -868,7 +868,7 @@ class NetworkManager(manager.Manager):
                               instance=instance)
                     address = str(fip.address)
 
-                cleanup.append(functools.partial(fip.disassociate, context))
+                cleanup.append(fip.disassociate)
 
                 # NOTE(melwitt): We recheck the quota after creating the object
                 # to prevent users from allocating more resources than their

@@ -110,7 +110,7 @@ class ServerMigrationsTestsV21(test.NoDBTestCase):
             self.controller._force_complete(self.req, '1', '1',
                                             body={'force_complete': None})
             live_migrate_force_complete.assert_called_once_with(
-                self.context, compute_api_get(), '1')
+                self.context, compute_api_get.return_value, '1')
         _do_test()
 
     def _test_force_complete_failed_with_exception(self, fake_exc,
@@ -284,7 +284,7 @@ class ServerMigrationsTestsV224(ServerMigrationsTestsV21):
         def _do_test(mock_get, mock_abort):
             self.controller.delete(self.req, 'server-id', 'migration-id')
             mock_abort.assert_called_once_with(self.context,
-                                               mock_get(),
+                                               mock_get.return_value,
                                                'migration-id',
                                                support_abort_in_queue=False)
         _do_test()

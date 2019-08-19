@@ -4915,17 +4915,17 @@ class ConsumerGenerationConflictTest(
                     {'code': 'placement.concurrent_update',
                      'detail': 'consumer generation conflict'}]}))
 
-        def fake_put(_self, url, *args, **kwargs):
+        self.adapter_put_call_count = 0
+
+        def fake_put(_self, url, **kwargs):
+            self.adapter_put_call_count += 1
             migration_uuid = self.get_migration_uuid_for_instance(server['id'])
             if url == '/allocations/%s' % migration_uuid:
                 return rsp
             else:
-                return orig_put(_self, url, *args, **kwargs)
+                return orig_put(_self, url, **kwargs)
 
-        with mock.patch('keystoneauth1.adapter.Adapter.put',
-                        autospec=True) as mock_put:
-            mock_put.side_effect = fake_put
-
+        with mock.patch('keystoneauth1.adapter.Adapter.put', new=fake_put):
             post = {
                 'os-migrateLive': {
                     'host': dest_hostname,
@@ -4951,7 +4951,7 @@ class ConsumerGenerationConflictTest(
                 'instance.live_migration_post.end')
 
         # 1 claim on destination, 1 normal delete on dest that fails,
-        self.assertEqual(2, mock_put.call_count)
+        self.assertEqual(2, self.adapter_put_call_count)
 
         # As the cleanup on the source host failed Nova leaks the allocation
         # held by the migration.

@@ -1396,7 +1396,7 @@ class MetadataHandlerTestCase(test.TestCase):
         # with X-Metadata-Provider
         proxy_lb_id = 'edge-x'
 
-        mock_client = mock_get_client()
+        mock_client = mock_get_client.return_value
         mock_client.list_ports.return_value = {
             'ports': [{'device_id': 'a-b-c-d', 'tenant_id': 'test'}]}
         mock_client.list_subnets.return_value = {
@@ -1417,7 +1417,7 @@ class MetadataHandlerTestCase(test.TestCase):
         # with X-Metadata-Provider
         proxy_lb_id = 'edge-x'
 
-        mock_client = mock_get_client()
+        mock_client = mock_get_client.return_value
         mock_client.list_ports.return_value = {
             'ports': [{'device_id': 'a-b-c-d', 'tenant_id': 'test'}]}
         mock_client.list_subnets.return_value = {
@@ -1478,7 +1478,7 @@ class MetadataHandlerTestCase(test.TestCase):
                 return {'ports':
                         []}
 
-        mock_client = mock_get_client()
+        mock_client = mock_get_client.return_value
         mock_client.list_ports.side_effect = fake_list_ports
         mock_client.list_subnets.return_value = {
             'subnets': [{'network_id': 'f-f-f-f'}]}
@@ -1511,7 +1511,7 @@ class MetadataHandlerTestCase(test.TestCase):
             encodeutils.to_utf8(proxy_lb_id),
             hashlib.sha256).hexdigest()
 
-        mock_client = mock_get_client()
+        mock_client = mock_get_client.return_value
         mock_client.list_ports.return_value = {
             'ports': [{'device_id': 'a-b-c-d', 'tenant_id': 'test'}]}
         mock_client.list_subnets.return_value = {
@@ -1541,7 +1541,7 @@ class MetadataHandlerTestCase(test.TestCase):
         # with X-Metadata-Provider
         proxy_lb_id = 'edge-x'
 
-        mock_client = mock_get_client()
+        mock_client = mock_get_client.return_value
         mock_client.list_ports.return_value = {
             'ports': [{'device_id': 'a-b-c-d', 'tenant_id': 'test'}]}
         mock_client.list_subnets.return_value = {
@@ -1575,7 +1575,7 @@ class MetadataHandlerTestCase(test.TestCase):
             encodeutils.to_utf8(proxy_lb_id),
             hashlib.sha256).hexdigest()
 
-        mock_client = mock_get_client()
+        mock_client = mock_get_client.return_value
         mock_client.list_ports.return_value = {
             'ports': [{'device_id': 'a-b-c-d', 'tenant_id': 'test'}]}
         mock_client.list_subnets.return_value = {

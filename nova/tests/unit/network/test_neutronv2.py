@@ -3515,7 +3515,7 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         }
         test_ext_list = {'extensions': []}
 
-        mock_client = mock_get_client()
+        mock_client = mock_get_client.return_value
         mock_client.show_port.return_value = test_port
         mock_client.list_extensions.return_value = test_ext_list
         result = self.api._get_port_vnic_info(
@@ -4149,7 +4149,7 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
                                         mock_refresh_extensions):
         api = neutronapi.API()
         api.extensions = set([constants.VNIC_INDEX_EXT])
-        mock_client = mock_get_client()
+        mock_client = mock_get_client.return_value
         mock_client.update_port.return_value = 'port'
 
         instance = {'project_id': '9d049e4b60b64716978ab415e6fbd5c0',

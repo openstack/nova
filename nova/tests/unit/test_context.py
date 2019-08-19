@@ -411,8 +411,9 @@ class ContextTestCase(test.NoDBTestCase):
         mock_get_inst.side_effect = [mock.sentinel.instances,
                                      test.TestingException()]
 
+        filters = {'deleted': False}
         results = context.scatter_gather_cells(
-            ctxt, mappings, 30, objects.InstanceList.get_by_filters)
+            ctxt, mappings, 30, objects.InstanceList.get_by_filters, filters)
         self.assertEqual(2, len(results))
         self.assertIn(mock.sentinel.instances, results.values())
         self.assertIsInstance(results[mapping1.uuid], Exception)
@@ -425,7 +426,7 @@ class ContextTestCase(test.NoDBTestCase):
                                      exception.NotFound()]
 
         results = context.scatter_gather_cells(
-            ctxt, mappings, 30, objects.InstanceList.get_by_filters)
+            ctxt, mappings, 30, objects.InstanceList.get_by_filters, filters)
         self.assertEqual(2, len(results))
         self.assertIn(mock.sentinel.instances, results.values())
         self.assertIsInstance(results[mapping1.uuid], exception.NovaException)

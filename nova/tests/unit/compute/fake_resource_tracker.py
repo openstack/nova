@@ -28,5 +28,7 @@ class FakeResourceTracker(resource_tracker.ResourceTracker):
 
 class RTMockMixin(object):
     def _mock_rt(self, **kwargs):
+        if 'spec_set' in kwargs:
+            kwargs.update({'autospec': False})
         return self.useFixture(fixtures.MockPatchObject(
             self.compute, 'rt', **kwargs)).mock

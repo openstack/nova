@@ -68,8 +68,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
     def setUp(self, mock_init_agg, mock_init_inst):
         super(SchedulerManagerTestCase, self).setUp()
         self.flags(driver=self.driver_plugin_name, group='scheduler')
-        with mock.patch.object(host_manager.HostManager, '_init_aggregates'):
-            self.manager = self.manager_cls()
+        self.manager = self.manager_cls()
         self.context = context.RequestContext('fake_user', 'fake_project')
         self.topic = 'fake_topic'
         self.fake_args = (1, 2, 3)

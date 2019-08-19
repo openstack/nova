@@ -989,7 +989,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
             mock_get_configdrive_path.assert_has_calls(
                 expected_get_configdrive_path_calls)
             mock_ConfigDriveBuilder.assert_called_with(
-                instance_md=mock_InstanceMetadata())
+                instance_md=mock_InstanceMetadata.return_value)
             mock_make_drive = mock_ConfigDriveBuilder().__enter__().make_drive
             mock_make_drive.assert_called_once_with(path_iso)
             if not CONF.hyperv.config_drive_cdrom:

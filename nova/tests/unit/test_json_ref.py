@@ -55,7 +55,7 @@ class TestJsonRef(test.NoDBTestCase):
         d = copy.deepcopy(input)
 
     @mock.patch('oslo_serialization.jsonutils.load')
-    @mock.patch('nova.tests.json_ref.open')
+    @mock.patch('six.moves.builtins.open', new_callable=mock.mock_open())
     def test_resolve_ref(self, mock_open, mock_json_load):
         mock_json_load.return_value = {'baz': 13}
 
@@ -70,7 +70,7 @@ class TestJsonRef(test.NoDBTestCase):
         mock_open.assert_called_once_with('some/base/path/another.json', 'r+b')
 
     @mock.patch('oslo_serialization.jsonutils.load')
-    @mock.patch('nova.tests.json_ref.open')
+    @mock.patch('six.moves.builtins.open', new_callable=mock.mock_open())
     def test_resolve_ref_recursively(self, mock_open, mock_json_load):
         mock_json_load.side_effect = [
             # this is the content of direct_ref.json
@@ -94,7 +94,7 @@ class TestJsonRef(test.NoDBTestCase):
                                   'r+b')
 
     @mock.patch('oslo_serialization.jsonutils.load')
-    @mock.patch('nova.tests.json_ref.open')
+    @mock.patch('six.moves.builtins.open', new_callable=mock.mock_open())
     def test_resolve_ref_with_override(self, mock_open, mock_json_load):
         mock_json_load.return_value = {'baz': 13,
                                        'boo': 42}
@@ -112,7 +112,7 @@ class TestJsonRef(test.NoDBTestCase):
         mock_open.assert_called_once_with('some/base/path/another.json', 'r+b')
 
     @mock.patch('oslo_serialization.jsonutils.load')
-    @mock.patch('nova.tests.json_ref.open')
+    @mock.patch('six.moves.builtins.open', new_callable=mock.mock_open())
     def test_resolve_ref_with_nested_override(self, mock_open, mock_json_load):
         mock_json_load.return_value = {'baz': 13,
                                        'boo': {'a': 1,
@@ -134,7 +134,7 @@ class TestJsonRef(test.NoDBTestCase):
         mock_open.assert_called_once_with('some/base/path/another.json', 'r+b')
 
     @mock.patch('oslo_serialization.jsonutils.load')
-    @mock.patch('nova.tests.json_ref.open')
+    @mock.patch('six.moves.builtins.open', new_callable=mock.mock_open())
     def test_resolve_ref_with_override_having_refs(self, mock_open,
                                                    mock_json_load):
         mock_json_load.side_effect = [

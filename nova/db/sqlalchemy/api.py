@@ -5818,7 +5818,7 @@ def instance_tag_set(context, instance_uuid, tags):
     if to_add:
         data = [
             {'resource_id': instance_uuid, 'tag': tag} for tag in to_add]
-        context.session.execute(models.Tag.__table__.insert(), data)
+        context.session.execute(models.Tag.__table__.insert(None), data)
 
     return context.session.query(models.Tag).filter_by(
         resource_id=instance_uuid).all()
