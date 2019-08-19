@@ -17072,7 +17072,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertFalse(drvr.is_supported_fs_format(fs))
 
     @mock.patch("nova.objects.instance.Instance.image_meta",
-                new_callable=mock.PropertyMock())
+                new_callable=mock.PropertyMock)
     @mock.patch("nova.virt.libvirt.driver.LibvirtDriver.attach_interface")
     @mock.patch('nova.virt.libvirt.guest.Guest.get_interfaces')
     @mock.patch('nova.virt.libvirt.host.Host.write_instance_config')
@@ -17089,6 +17089,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         net_info = network_model.NetworkInfo()
         mock_get_interfaces.return_type = []
+        mock_image_meta.return_value = mock.sentinel.image_meta
         drvr.post_live_migration_at_destination(mock.ANY, instance, net_info)
         # Assert that we don't try to write anything to the destination node
         # since the source live migrated with the VIR_MIGRATE_PERSIST_DEST flag
@@ -17104,7 +17105,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_get_interfaces.return_type = [vif]
         drvr.post_live_migration_at_destination(mock.ANY, instance, net_info)
         mock_attach.assert_called_once_with(mock.ANY, instance,
-                                            mock_image_meta, vif_direct)
+                                            mock.sentinel.image_meta,
+                                            vif_direct)
 
     def test_create_propagates_exceptions(self):
         self.flags(virt_type='lxc', group='libvirt')
