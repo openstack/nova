@@ -2042,6 +2042,15 @@ config_drive_resp:
   in: body
   required: true
   type: string
+config_drive_resp_rebuild:
+  description: |
+    Indicates whether or not a config drive was used for this server.
+    The value is ``True`` or an empty string. An empty string stands for
+    ``False``.
+  in: body
+  required: true
+  type: string
+  min_version: 2.75
 configure_project_cloudpipe:
   description: |
     VPN IP and Port information to configure the cloudpipe instance..
