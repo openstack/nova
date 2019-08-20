@@ -1284,12 +1284,6 @@ The allocation ratio configuration is used both during reporting of compute
 node `resource provider inventory`_ to the placement service and during
 scheduling.
 
-The `AggregateCoreFilter`_, `AggregateDiskFilter`_ and `AggregateRamFilter`_
-filters allow overriding per-compute allocation ratios by setting an allocation
-ratio value using host aggregate metadata. This provides a convenient way to
-manage a group of compute hosts with similar allocation ratios while leaving
-the configuration settings alone.
-
 .. _bug-1804125:
 
 .. note:: Regarding the `AggregateCoreFilter`_, `AggregateDiskFilter`_ and
