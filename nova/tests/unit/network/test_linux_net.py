@@ -373,7 +373,13 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                       get_associated)
 
     @mock.patch.object(linux_net.iptables_manager.ipv4['nat'], 'add_rule')
-    def _test_add_snat_rule(self, expected, is_external, mock_add_rule):
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
+    def _test_add_snat_rule(self, expected, is_external,
+                            mock_iptables_set_rules, mock_iptables_get_rules,
+                            mock_add_rule):
 
         def verify_add_rule(chain, rule):
             self.assertEqual('snat', chain)
@@ -415,7 +421,13 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
 
     @mock.patch.object(fileutils, 'ensure_tree')
     @mock.patch.object(os, 'chmod')
-    def test_update_dhcp_for_nw00(self, mock_chmod, mock_ensure_tree):
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
+    def test_update_dhcp_for_nw00(self, mock_iptables_set_rules,
+                                  mock_iptables_get_rules, mock_chmod,
+                                  mock_ensure_tree):
         with mock.patch.object(self.driver, 'write_to_file') \
                 as mock_write_to_file:
             self.flags(use_single_default_gateway=True)
@@ -428,7 +440,13 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
 
     @mock.patch.object(fileutils, 'ensure_tree')
     @mock.patch.object(os, 'chmod')
-    def test_update_dhcp_for_nw01(self, mock_chmod, mock_ensure_tree):
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
+    def test_update_dhcp_for_nw01(self, mock_iptables_set_rules,
+                                  mock_iptables_get_rules, mock_chmod,
+                                  mock_ensure_tree):
         with mock.patch.object(self.driver, 'write_to_file') \
                 as mock_write_to_file:
             self.flags(use_single_default_gateway=True)
@@ -594,9 +612,14 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
     @mock.patch('nova.privsep.linux_net.routes_show',
                 return_value=('fake', 0))
     @mock.patch('nova.privsep.linux_net.lookup_ip', return_value=('', ''))
-    def test_linux_bridge_driver_plug(self, mock_lookup_ip, mock_routes_show,
-                                      mock_enabled, mock_add_bridge,
-                                      mock_add_rule):
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
+    def test_linux_bridge_driver_plug(
+            self, mock_iptables_set_rules, mock_iptables_get_rules,
+            mock_lookup_ip, mock_routes_show, mock_enabled, mock_add_bridge,
+            mock_add_rule):
         """Makes sure plug doesn't drop FORWARD by default.
 
         Ensures bug 890195 doesn't reappear.
@@ -644,7 +667,12 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
 
     @mock.patch.object(linux_net.LinuxBridgeInterfaceDriver,
                       'ensure_vlan_bridge')
-    def test_vlan_override(self, mock_ensure_vlan_bridge):
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
+    def test_vlan_override(self, mock_iptables_set_rules,
+                           mock_iptables_get_rules, mock_ensure_vlan_bridge):
         """Makes sure vlan_interface flag overrides network bridge_interface.
 
         Allows heterogeneous networks a la bug 833426
@@ -675,7 +703,12 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.assertEqual(3, mock_ensure_vlan_bridge.call_count)
 
     @mock.patch.object(linux_net.LinuxBridgeInterfaceDriver, 'ensure_bridge')
-    def test_flat_override(self, mock_ensure_bridge):
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
+    def test_flat_override(self, mock_iptables_set_rules,
+                           mock_iptables_get_rules, mock_ensure_bridge):
         """Makes sure flat_interface flag overrides network bridge_interface.
 
         Allows heterogeneous networks a la bug 833426
@@ -707,7 +740,13 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
     @mock.patch('os.chmod')
     @mock.patch.object(linux_net, '_add_dhcp_mangle_rule')
     @mock.patch.object(linux_net, '_execute')
-    def _test_dnsmasq_execute(self, mock_execute, mock_add_dhcp_mangle_rule,
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
+    def _test_dnsmasq_execute(self, mock_iptables_set_rules,
+                              mock_iptables_get_rules, mock_execute,
+                              mock_add_dhcp_mangle_rule,
                               mock_chmod, mock_write_to_file,
                               mock_dnsmasq_pid_for, extra_expected=None):
         network_ref = {'id': 'fake',
@@ -775,7 +814,12 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
     def test_dnsmasq_execute(self):
         self._test_dnsmasq_execute()
 
-    def test_dnsmasq_execute_dns_servers(self):
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
+    def test_dnsmasq_execute_dns_servers(self, mock_iptables_set_rules,
+                                         mock_iptables_get_rules):
         self.flags(dns_server=['1.1.1.1', '2.2.2.2'])
         expected = [
             '--no-resolv',
@@ -793,15 +837,14 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self._test_dnsmasq_execute(extra_expected=expected)
 
     @mock.patch('nova.privsep.linux_net.modify_ebtables')
-    def test_isolated_host(self, mock_modify_ebtables):
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
+    def test_isolated_host(self, mock_iptables_set_rules,
+                           mock_iptables_get_rules, mock_modify_ebtables):
         self.flags(fake_network=False,
                    share_dhcp_address=True)
-        executes = []
-
-        def fake_execute(*args, **kwargs):
-            executes.append(args)
-            return "", ""
-
         driver = linux_net.LinuxBridgeInterfaceDriver()
 
         def fake_ensure(bridge, interface, network, gateway):
@@ -810,7 +853,6 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.stub_out('nova.network.linux_net.iptables_manager',
                       linux_net.IptablesManager())
         self.stub_out('nova.network.linux_net.binary_name', 'test')
-        self.stub_out('nova.utils.execute', fake_execute)
         self.stub_out(
             'nova.network.linux_net.LinuxBridgeInterfaceDriver.ensure_bridge',
             fake_ensure)
@@ -823,13 +865,12 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                    'bridge_interface': iface}
         driver.plug(network, 'fakemac')
 
-        expected = [
-            ('iptables-save', '-c'),
-            ('iptables-restore', '-c'),
-            ('ip6tables-save', '-c'),
-            ('ip6tables-restore', '-c'),
-        ]
-        self.assertEqual(expected, executes)
+        mock_iptables_get_rules.assert_has_calls([
+            mock.call(ipv4=True),
+            mock.call(ipv4=False)])
+        mock_iptables_set_rules.assert_has_calls([
+            mock.call(mock.ANY, ipv4=True),
+            mock.call(mock.ANY, ipv4=False)])
         mock_modify_ebtables.assert_has_calls([
             mock.call('filter',
                       ['INPUT', '-p', 'ARP', '-i', iface, '--arp-ip-dst',
@@ -1084,7 +1125,12 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             self.assertFalse(manager.iptables_apply_deferred)
 
     @mock.patch.object(linux_net.iptables_manager.ipv4['filter'], 'add_rule')
-    def _test_add_metadata_accept_rule(self, expected, mock_add_rule):
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
+    def _test_add_metadata_accept_rule(self, expected, mock_iptables_set_rules,
+                                       mock_iptables_get_rules, mock_add_rule):
         def verify_add_rule(chain, rule):
             self.assertEqual('INPUT', chain)
             self.assertEqual(expected, rule)
@@ -1094,7 +1140,14 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         mock_add_rule.assert_called_once()
 
     @mock.patch.object(linux_net.iptables_manager.ipv6['filter'], 'add_rule')
-    def _test_add_metadata_accept_ipv6_rule(self, expected, mock_add_rule):
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
+    def _test_add_metadata_accept_ipv6_rule(self, expected,
+                                            mock_iptables_set_rules,
+                                            mock_iptables_get_rules,
+                                            mock_add_rule):
         def verify_add_rule(chain, rule):
             self.assertEqual('INPUT', chain)
             self.assertEqual(expected, rule)
@@ -1132,7 +1185,14 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self._test_add_metadata_accept_ipv6_rule(expected)
 
     @mock.patch.object(linux_net.iptables_manager.ipv4['nat'], 'add_rule')
-    def _test_add_metadata_forward_rule(self, expected, mock_add_rule):
+    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
+                return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
+                return_value=('', ''))
+    def _test_add_metadata_forward_rule(self, expected,
+                                        mock_iptables_set_rules,
+                                        mock_iptables_get_rules,
+                                        mock_add_rule):
         def verify_add_rule(chain, rule):
             self.assertEqual('PREROUTING', chain)
             self.assertEqual(expected, rule)
