@@ -1477,14 +1477,25 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 vm_state=vm_states.ACTIVE,
                 host=self.compute.host,
                 task_state=task_states.MIGRATING)
+        migration = objects.Migration(source_compute='fake-host1', id=39,
+                                      dest_compute='fake-host2')
         with test.nested(
             mock.patch.object(instance, 'save'),
             mock.patch('nova.objects.Instance.get_network_info',
-                       return_value=network_model.NetworkInfo())
-        ) as (save, get_nw_info):
+                       return_value=network_model.NetworkInfo()),
+            mock.patch.object(objects.Migration, 'get_by_instance_and_status',
+                              return_value=migration),
+            mock.patch.object(self.compute, 'live_migration_abort'),
+            mock.patch.object(self.compute, '_set_migration_status')
+        ) as (save, get_nw_info, mock_get_status, mock_abort, mock_set_migr):
             self.compute._init_instance(self.context, instance)
             save.assert_called_once_with(expected_task_state=['migrating'])
             get_nw_info.assert_called_once_with()
+            mock_get_status.assert_called_with(self.context, instance.uuid,
+                                               'running')
+            mock_abort.assert_called_with(self.context, instance,
+                                          migration.id)
+            mock_set_migr.assert_called_with(migration, 'error')
         self.assertIsNone(instance.task_state)
         self.assertEqual(vm_states.ACTIVE, instance.vm_state)
 
