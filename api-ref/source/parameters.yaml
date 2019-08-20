@@ -2042,7 +2042,7 @@ config_drive_resp:
   in: body
   required: true
   type: string
-config_drive_resp_rebuild:
+config_drive_resp_update_rebuild:
   description: |
     Indicates whether or not a config drive was used for this server.
     The value is ``True`` or an empty string. An empty string stands for
