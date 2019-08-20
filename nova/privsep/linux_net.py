@@ -340,3 +340,11 @@ def _restart_dnsmasq_inner(flag_file, network_ref, config_file, pid_path,
         cmd.append('--addn-hosts=%s' % hosts_path)
 
     processutils.execute(*cmd)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def start_ra(conf_path, pid_path):
+    cmd = ['radvd',
+           '-C', '%s' % conf_path,
+           '-p', '%s' % pid_path]
+    processutils.execute(*cmd)

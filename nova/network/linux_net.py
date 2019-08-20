@@ -1060,11 +1060,8 @@ interface %s
         else:
             LOG.debug('Pid %d is stale, relaunching radvd', pid)
 
-    cmd = ['radvd',
-           '-C', '%s' % _ra_file(dev, 'conf'),
-           '-p', '%s' % _ra_file(dev, 'pid')]
-
-    _execute(*cmd, run_as_root=True)
+    nova.privsep.linux_net.start_ra(_ra_file(dev, 'conf'),
+                                    _ra_file(dev, 'pid'))
 
 
 def _host_lease(fixedip):
