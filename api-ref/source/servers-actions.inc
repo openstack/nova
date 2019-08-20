@@ -634,7 +634,7 @@ Response
   - trusted_image_certificates: server_trusted_image_certificates_resp
   - server_groups: server_groups_2_71
   - locked_reason: locked_reason_resp
-  - config_drive: config_drive_resp_rebuild
+  - config_drive: config_drive_resp_update_rebuild
   - OS-EXT-AZ:availability_zone: OS-EXT-AZ:availability_zone_update_rebuild
   - OS-EXT-SRV-ATTR:host: OS-EXT-SRV-ATTR:host_update_rebuild
   - OS-EXT-SRV-ATTR:hypervisor_hostname: OS-EXT-SRV-ATTR:hypervisor_hostname_update_rebuild
