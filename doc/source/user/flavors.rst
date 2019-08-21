@@ -376,9 +376,10 @@ Random-number generator
 .. _extra-specs-performance-monitoring-unit:
 
 Performance Monitoring Unit (vPMU)
-  If nova is deployed with the libvirt virt driver and ``[libvirt]/virt_type``
-  is set to ``qemu`` or ``kvm``, a vPMU can be enabled or disabled for an
-  instance using the ``hw:pmu`` extra_spec or the ``hw_pmu`` image property.
+  If nova is deployed with the libvirt virt driver and
+  :oslo.config:option:`libvirt.virt_type` is set to ``qemu`` or ``kvm``, a
+  vPMU can be enabled or disabled for an instance using the ``hw:pmu``
+  extra_spec or the ``hw_pmu`` image property.
   The supported values are ``True`` or ``False``. If the vPMU is not
   explicitly enabled or disabled via the flavor or image, its presence is left
   to QEMU to decide.
