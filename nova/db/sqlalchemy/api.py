@@ -5482,7 +5482,7 @@ def _archive_if_instance_deleted(table, shadow_table, instances, conn,
         return 0
 
 
-def _archive_deleted_rows_for_table(tablename, max_rows, before):
+def _archive_deleted_rows_for_table(metadata, tablename, max_rows, before):
     """Move up to max_rows rows from one tables to the corresponding
     shadow table.
 
@@ -5491,10 +5491,7 @@ def _archive_deleted_rows_for_table(tablename, max_rows, before):
         - number of rows archived
         - list of UUIDs of instances that were archived
     """
-    engine = get_engine()
-    conn = engine.connect()
-    metadata = MetaData()
-    metadata.bind = engine
+    conn = metadata.bind.connect()
     # NOTE(tdurakov): table metadata should be received
     # from models, not db tables. Default value specified by SoftDeleteMixin
     # is known only by models, not DB layer.
@@ -5607,7 +5604,7 @@ def archive_deleted_rows(max_rows=None, before=None):
             continue
         rows_archived, _deleted_instance_uuids = (
             _archive_deleted_rows_for_table(
-                tablename,
+                meta, tablename,
                 max_rows=max_rows - total_rows_archived,
                 before=before))
         total_rows_archived += rows_archived

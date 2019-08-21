@@ -8407,6 +8407,7 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def setUp(self):
         super(ArchiveTestCase, self).setUp()
         self.engine = get_engine()
+        self.metadata = MetaData(self.engine)
         self.conn = self.engine.connect()
         self.instance_id_mappings = models.InstanceIdMapping.__table__
         self.shadow_instance_id_mappings = sqlalchemyutils.get_table(
@@ -8667,7 +8668,9 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         # Verify we have 0 in shadow
         self.assertEqual(len(rows), 0)
         # Archive 2 rows
-        sqlalchemy_api._archive_deleted_rows_for_table(tablename, max_rows=2,
+        sqlalchemy_api._archive_deleted_rows_for_table(self.metadata,
+                                                       tablename,
+                                                       max_rows=2,
                                                        before=None)
         # Verify we have 4 left in main
         rows = self.conn.execute(qmt).fetchall()
@@ -8676,7 +8679,9 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         rows = self.conn.execute(qst).fetchall()
         self.assertEqual(len(rows), 2)
         # Archive 2 more rows
-        sqlalchemy_api._archive_deleted_rows_for_table(tablename, max_rows=2,
+        sqlalchemy_api._archive_deleted_rows_for_table(self.metadata,
+                                                       tablename,
+                                                       max_rows=2,
                                                        before=None)
         # Verify we have 2 left in main
         rows = self.conn.execute(qmt).fetchall()
@@ -8685,7 +8690,9 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         rows = self.conn.execute(qst).fetchall()
         self.assertEqual(len(rows), 4)
         # Try to archive more, but there are no deleted rows left.
-        sqlalchemy_api._archive_deleted_rows_for_table(tablename, max_rows=2,
+        sqlalchemy_api._archive_deleted_rows_for_table(self.metadata,
+                                                       tablename,
+                                                       max_rows=2,
                                                        before=None)
         # Verify we still have 2 left in main
         rows = self.conn.execute(qmt).fetchall()
@@ -8779,17 +8786,20 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         result = self.conn.execute(ins_stmt)
         result.inserted_primary_key[0]
         # The first try to archive console_pools should fail, due to FK.
-        num = sqlalchemy_api._archive_deleted_rows_for_table("console_pools",
+        num = sqlalchemy_api._archive_deleted_rows_for_table(self.metadata,
+                                                             "console_pools",
                                                              max_rows=None,
                                                              before=None)
         self.assertEqual(num[0], 0)
         # Then archiving consoles should work.
-        num = sqlalchemy_api._archive_deleted_rows_for_table("consoles",
+        num = sqlalchemy_api._archive_deleted_rows_for_table(self.metadata,
+                                                             "consoles",
                                                              max_rows=None,
                                                              before=None)
         self.assertEqual(num[0], 1)
         # Then archiving console_pools should work.
-        num = sqlalchemy_api._archive_deleted_rows_for_table("console_pools",
+        num = sqlalchemy_api._archive_deleted_rows_for_table(self.metadata,
+                                                             "console_pools",
                                                              max_rows=None,
                                                              before=None)
         self.assertEqual(num[0], 1)
@@ -8811,17 +8821,20 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                                    deleted=0)
         self.conn.execute(ins_stmt)
         # The first try to archive instances should fail, due to FK.
-        num = sqlalchemy_api._archive_deleted_rows_for_table("instances",
+        num = sqlalchemy_api._archive_deleted_rows_for_table(self.metadata,
+                                                             "instances",
                                                              max_rows=None,
                                                              before=None)
         self.assertEqual(0, num[0])
         # Then archiving migrations should work.
-        num = sqlalchemy_api._archive_deleted_rows_for_table("migrations",
+        num = sqlalchemy_api._archive_deleted_rows_for_table(self.metadata,
+                                                             "migrations",
                                                              max_rows=None,
                                                              before=None)
         self.assertEqual(1, num[0])
         # Then archiving instances should work.
-        num = sqlalchemy_api._archive_deleted_rows_for_table("instances",
+        num = sqlalchemy_api._archive_deleted_rows_for_table(self.metadata,
+                                                             "instances",
                                                              max_rows=None,
                                                              before=None)
         self.assertEqual(1, num[0])
