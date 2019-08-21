@@ -1036,6 +1036,11 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
             self.assertColumnExists(
                 engine, '%sinstances' % prefix, 'hidden')
 
+    def _check_400(self, engine, data):
+        # NOTE(mriedem): This is a dummy migration that just does a consistency
+        # check. The actual test for 400 is in TestServicesUUIDCheck.
+        pass
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_fixtures.OpportunisticDBTestMixin,

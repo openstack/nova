@@ -20,6 +20,7 @@ from migrate.versioning import api as versioning_api
 import mock
 from oslo_db.sqlalchemy import utils as db_utils
 from oslo_utils.fixture import uuidsentinel
+import six
 import sqlalchemy
 
 from nova import context
@@ -445,3 +446,50 @@ class TestNewtonCellsCheck(test.NoDBTestCase):
 
     def test_upgrade_new_deploy(self):
         self.migration.upgrade(self.engine)
+
+
+class TestServicesUUIDCheck(test.TestCase):
+    """Tests the 400_enforce_service_uuid blocker migration."""
+    def setUp(self):
+        super(TestServicesUUIDCheck, self).setUp()
+        self.useFixture(nova_fixtures.DatabaseAtVersion(398))
+        self.context = context.get_admin_context()
+        self.migration = importlib.import_module(
+            'nova.db.sqlalchemy.migrate_repo.versions.'
+            '400_enforce_service_uuid')
+        self.engine = db_api.get_engine()
+
+    def test_upgrade_unmigrated_deleted_service(self):
+        """Tests to make sure the 400 migration filters out deleted services"""
+        services = db_utils.get_table(self.engine, 'services')
+        service = {
+            'host': 'fake-host',
+            'binary': 'nova-compute',
+            'topic': 'compute',
+            'report_count': 514,
+            'version': 16,
+            'uuid': None,
+            'deleted': 1
+        }
+        services.insert().execute(service)
+        self.migration.upgrade(self.engine)
+
+    def test_upgrade_unmigrated_service_validation_error(self):
+        """Tests that the migration raises ValidationError when an unmigrated
+        non-deleted service record is found.
+        """
+        services = db_utils.get_table(self.engine, 'services')
+        service = {
+            'host': 'fake-host',
+            'binary': 'nova-compute',
+            'topic': 'compute',
+            'report_count': 514,
+            'version': 16,
+            'uuid': None,
+            'deleted': 0
+        }
+        services.insert().execute(service)
+        ex = self.assertRaises(exception.ValidationError,
+                               self.migration.upgrade, self.engine)
+        self.assertIn('There are still 1 unmigrated records in the '
+                      'services table.', six.text_type(ex))
