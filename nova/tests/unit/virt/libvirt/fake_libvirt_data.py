@@ -65,330 +65,330 @@ CAPABILITIES_HOST_TEMPLATE = '''
 # other non-x86 architectures, so these test assertions on apply to
 # x86.
 CAPABILITIES_GUEST = {
-        'i686': '''
-  <guest>
-    <os_type>hvm</os_type>
-    <arch name='i686'>
-      <wordsize>32</wordsize>
-      <emulator>/usr/bin/qemu-system-i386</emulator>
-      <machine maxCpus='255'>pc-i440fx-2.11</machine>
-      <machine canonical='pc-i440fx-2.11' maxCpus='255'>pc</machine>
-      <machine maxCpus='1'>isapc</machine>
-      <machine maxCpus='255'>pc-1.1</machine>
-      <machine maxCpus='255'>pc-1.2</machine>
-      <machine maxCpus='255'>pc-1.3</machine>
-      <machine maxCpus='255'>pc-i440fx-2.8</machine>
-      <machine maxCpus='255'>pc-1.0</machine>
-      <machine maxCpus='255'>pc-i440fx-2.9</machine>
-      <machine maxCpus='255'>pc-i440fx-2.6</machine>
-      <machine maxCpus='255'>pc-i440fx-2.7</machine>
-      <machine maxCpus='128'>xenfv</machine>
-      <machine maxCpus='255'>pc-i440fx-2.3</machine>
-      <machine maxCpus='255'>pc-i440fx-2.4</machine>
-      <machine maxCpus='255'>pc-i440fx-2.5</machine>
-      <machine maxCpus='255'>pc-i440fx-2.1</machine>
-      <machine maxCpus='255'>pc-i440fx-2.2</machine>
-      <machine maxCpus='255'>pc-i440fx-2.0</machine>
-      <machine maxCpus='288'>pc-q35-2.11</machine>
-      <machine maxCpus='288'>q35</machine>
-      <machine maxCpus='1'>xenpv</machine>
-      <machine maxCpus='288'>pc-q35-2.10</machine>
-      <machine maxCpus='255'>pc-i440fx-1.7</machine>
-      <machine maxCpus='288'>pc-q35-2.9</machine>
-      <machine maxCpus='255'>pc-0.15</machine>
-      <machine maxCpus='255'>pc-i440fx-1.5</machine>
-      <machine maxCpus='255'>pc-q35-2.7</machine>
-      <machine maxCpus='255'>pc-i440fx-1.6</machine>
-      <machine maxCpus='288'>pc-q35-2.8</machine>
-      <machine maxCpus='255'>pc-0.13</machine>
-      <machine maxCpus='255'>pc-0.14</machine>
-      <machine maxCpus='255'>pc-q35-2.4</machine>
-      <machine maxCpus='255'>pc-q35-2.5</machine>
-      <machine maxCpus='255'>pc-q35-2.6</machine>
-      <machine maxCpus='255'>pc-i440fx-1.4</machine>
-      <machine maxCpus='255'>pc-i440fx-2.10</machine>
-      <machine maxCpus='255'>pc-0.11</machine>
-      <machine maxCpus='255'>pc-0.12</machine>
-      <machine maxCpus='255'>pc-0.10</machine>
-      <domain type='qemu'/>
-      <domain type='kvm'>
-        <emulator>/usr/bin/qemu-kvm</emulator>
-        <machine maxCpus='255'>pc-i440fx-2.11</machine>
-        <machine canonical='pc-i440fx-2.11' maxCpus='255'>pc</machine>
-        <machine maxCpus='1'>isapc</machine>
-        <machine maxCpus='255'>pc-1.1</machine>
-        <machine maxCpus='255'>pc-1.2</machine>
-        <machine maxCpus='255'>pc-1.3</machine>
-        <machine maxCpus='255'>pc-i440fx-2.8</machine>
-        <machine maxCpus='255'>pc-1.0</machine>
-        <machine maxCpus='255'>pc-i440fx-2.9</machine>
-        <machine maxCpus='255'>pc-i440fx-2.6</machine>
-        <machine maxCpus='255'>pc-i440fx-2.7</machine>
-        <machine maxCpus='128'>xenfv</machine>
-        <machine maxCpus='255'>pc-i440fx-2.3</machine>
-        <machine maxCpus='255'>pc-i440fx-2.4</machine>
-        <machine maxCpus='255'>pc-i440fx-2.5</machine>
-        <machine maxCpus='255'>pc-i440fx-2.1</machine>
-        <machine maxCpus='255'>pc-i440fx-2.2</machine>
-        <machine maxCpus='255'>pc-i440fx-2.0</machine>
-        <machine maxCpus='288'>pc-q35-2.11</machine>
-        <machine maxCpus='288'>q35</machine>
-        <machine maxCpus='1'>xenpv</machine>
-        <machine maxCpus='288'>pc-q35-2.10</machine>
-        <machine maxCpus='255'>pc-i440fx-1.7</machine>
-        <machine maxCpus='288'>pc-q35-2.9</machine>
-        <machine maxCpus='255'>pc-0.15</machine>
-        <machine maxCpus='255'>pc-i440fx-1.5</machine>
-        <machine maxCpus='255'>pc-q35-2.7</machine>
-        <machine maxCpus='255'>pc-i440fx-1.6</machine>
-        <machine maxCpus='288'>pc-q35-2.8</machine>
-        <machine maxCpus='255'>pc-0.13</machine>
-        <machine maxCpus='255'>pc-0.14</machine>
-        <machine maxCpus='255'>pc-q35-2.4</machine>
-        <machine maxCpus='255'>pc-q35-2.5</machine>
-        <machine maxCpus='255'>pc-q35-2.6</machine>
-        <machine maxCpus='255'>pc-i440fx-1.4</machine>
-        <machine maxCpus='255'>pc-i440fx-2.10</machine>
-        <machine maxCpus='255'>pc-0.11</machine>
-        <machine maxCpus='255'>pc-0.12</machine>
-        <machine maxCpus='255'>pc-0.10</machine>
-      </domain>
-    </arch>
-    <features>
-      <cpuselection/>
-      <deviceboot/>
-      <disksnapshot default='on' toggle='no'/>
-      <acpi default='on' toggle='yes'/>
-      <apic default='on' toggle='no'/>
-      <pae/>
-      <nonpae/>
-    </features>
-  </guest>''',
+    'i686': '''
+        <guest>
+           <os_type>hvm</os_type>
+           <arch name='i686'>
+             <wordsize>32</wordsize>
+             <emulator>/usr/bin/qemu-system-i386</emulator>
+             <machine maxCpus='255'>pc-i440fx-2.11</machine>
+             <machine canonical='pc-i440fx-2.11' maxCpus='255'>pc</machine>
+             <machine maxCpus='1'>isapc</machine>
+             <machine maxCpus='255'>pc-1.1</machine>
+             <machine maxCpus='255'>pc-1.2</machine>
+             <machine maxCpus='255'>pc-1.3</machine>
+             <machine maxCpus='255'>pc-i440fx-2.8</machine>
+             <machine maxCpus='255'>pc-1.0</machine>
+             <machine maxCpus='255'>pc-i440fx-2.9</machine>
+             <machine maxCpus='255'>pc-i440fx-2.6</machine>
+             <machine maxCpus='255'>pc-i440fx-2.7</machine>
+             <machine maxCpus='128'>xenfv</machine>
+             <machine maxCpus='255'>pc-i440fx-2.3</machine>
+             <machine maxCpus='255'>pc-i440fx-2.4</machine>
+             <machine maxCpus='255'>pc-i440fx-2.5</machine>
+             <machine maxCpus='255'>pc-i440fx-2.1</machine>
+             <machine maxCpus='255'>pc-i440fx-2.2</machine>
+             <machine maxCpus='255'>pc-i440fx-2.0</machine>
+             <machine maxCpus='288'>pc-q35-2.11</machine>
+             <machine maxCpus='288'>q35</machine>
+             <machine maxCpus='1'>xenpv</machine>
+             <machine maxCpus='288'>pc-q35-2.10</machine>
+             <machine maxCpus='255'>pc-i440fx-1.7</machine>
+             <machine maxCpus='288'>pc-q35-2.9</machine>
+             <machine maxCpus='255'>pc-0.15</machine>
+             <machine maxCpus='255'>pc-i440fx-1.5</machine>
+             <machine maxCpus='255'>pc-q35-2.7</machine>
+             <machine maxCpus='255'>pc-i440fx-1.6</machine>
+             <machine maxCpus='288'>pc-q35-2.8</machine>
+             <machine maxCpus='255'>pc-0.13</machine>
+             <machine maxCpus='255'>pc-0.14</machine>
+             <machine maxCpus='255'>pc-q35-2.4</machine>
+             <machine maxCpus='255'>pc-q35-2.5</machine>
+             <machine maxCpus='255'>pc-q35-2.6</machine>
+             <machine maxCpus='255'>pc-i440fx-1.4</machine>
+             <machine maxCpus='255'>pc-i440fx-2.10</machine>
+             <machine maxCpus='255'>pc-0.11</machine>
+             <machine maxCpus='255'>pc-0.12</machine>
+             <machine maxCpus='255'>pc-0.10</machine>
+             <domain type='qemu'/>
+             <domain type='kvm'>
+               <emulator>/usr/bin/qemu-kvm</emulator>
+               <machine maxCpus='255'>pc-i440fx-2.11</machine>
+               <machine canonical='pc-i440fx-2.11' maxCpus='255'>pc</machine>
+               <machine maxCpus='1'>isapc</machine>
+               <machine maxCpus='255'>pc-1.1</machine>
+               <machine maxCpus='255'>pc-1.2</machine>
+               <machine maxCpus='255'>pc-1.3</machine>
+               <machine maxCpus='255'>pc-i440fx-2.8</machine>
+               <machine maxCpus='255'>pc-1.0</machine>
+               <machine maxCpus='255'>pc-i440fx-2.9</machine>
+               <machine maxCpus='255'>pc-i440fx-2.6</machine>
+               <machine maxCpus='255'>pc-i440fx-2.7</machine>
+               <machine maxCpus='128'>xenfv</machine>
+               <machine maxCpus='255'>pc-i440fx-2.3</machine>
+               <machine maxCpus='255'>pc-i440fx-2.4</machine>
+               <machine maxCpus='255'>pc-i440fx-2.5</machine>
+               <machine maxCpus='255'>pc-i440fx-2.1</machine>
+               <machine maxCpus='255'>pc-i440fx-2.2</machine>
+               <machine maxCpus='255'>pc-i440fx-2.0</machine>
+               <machine maxCpus='288'>pc-q35-2.11</machine>
+               <machine maxCpus='288'>q35</machine>
+               <machine maxCpus='1'>xenpv</machine>
+               <machine maxCpus='288'>pc-q35-2.10</machine>
+               <machine maxCpus='255'>pc-i440fx-1.7</machine>
+               <machine maxCpus='288'>pc-q35-2.9</machine>
+               <machine maxCpus='255'>pc-0.15</machine>
+               <machine maxCpus='255'>pc-i440fx-1.5</machine>
+               <machine maxCpus='255'>pc-q35-2.7</machine>
+               <machine maxCpus='255'>pc-i440fx-1.6</machine>
+               <machine maxCpus='288'>pc-q35-2.8</machine>
+               <machine maxCpus='255'>pc-0.13</machine>
+               <machine maxCpus='255'>pc-0.14</machine>
+               <machine maxCpus='255'>pc-q35-2.4</machine>
+               <machine maxCpus='255'>pc-q35-2.5</machine>
+               <machine maxCpus='255'>pc-q35-2.6</machine>
+               <machine maxCpus='255'>pc-i440fx-1.4</machine>
+               <machine maxCpus='255'>pc-i440fx-2.10</machine>
+               <machine maxCpus='255'>pc-0.11</machine>
+               <machine maxCpus='255'>pc-0.12</machine>
+               <machine maxCpus='255'>pc-0.10</machine>
+             </domain>
+           </arch>
+           <features>
+             <cpuselection/>
+             <deviceboot/>
+             <disksnapshot default='on' toggle='no'/>
+             <acpi default='on' toggle='yes'/>
+             <apic default='on' toggle='no'/>
+             <pae/>
+             <nonpae/>
+           </features>
+         </guest>''',
 
-        'x86_64': '''
-  <guest>
-    <os_type>hvm</os_type>
-    <arch name='x86_64'>
-      <wordsize>64</wordsize>
-      <emulator>/usr/bin/qemu-system-x86_64</emulator>
-      <machine maxCpus='255'>pc-i440fx-2.11</machine>
-      <machine canonical='pc-i440fx-2.11' maxCpus='255'>pc</machine>
-      <machine maxCpus='1'>isapc</machine>
-      <machine maxCpus='255'>pc-1.1</machine>
-      <machine maxCpus='255'>pc-1.2</machine>
-      <machine maxCpus='255'>pc-1.3</machine>
-      <machine maxCpus='255'>pc-i440fx-2.8</machine>
-      <machine maxCpus='255'>pc-1.0</machine>
-      <machine maxCpus='255'>pc-i440fx-2.9</machine>
-      <machine maxCpus='255'>pc-i440fx-2.6</machine>
-      <machine maxCpus='255'>pc-i440fx-2.7</machine>
-      <machine maxCpus='128'>xenfv</machine>
-      <machine maxCpus='255'>pc-i440fx-2.3</machine>
-      <machine maxCpus='255'>pc-i440fx-2.4</machine>
-      <machine maxCpus='255'>pc-i440fx-2.5</machine>
-      <machine maxCpus='255'>pc-i440fx-2.1</machine>
-      <machine maxCpus='255'>pc-i440fx-2.2</machine>
-      <machine maxCpus='255'>pc-i440fx-2.0</machine>
-      <machine maxCpus='288'>pc-q35-2.11</machine>
-      <machine canonical='pc-q35-2.11' maxCpus='288'>q35</machine>
-      <machine maxCpus='1'>xenpv</machine>
-      <machine maxCpus='288'>pc-q35-2.10</machine>
-      <machine maxCpus='255'>pc-i440fx-1.7</machine>
-      <machine maxCpus='288'>pc-q35-2.9</machine>
-      <machine maxCpus='255'>pc-0.15</machine>
-      <machine maxCpus='255'>pc-i440fx-1.5</machine>
-      <machine maxCpus='255'>pc-q35-2.7</machine>
-      <machine maxCpus='255'>pc-i440fx-1.6</machine>
-      <machine maxCpus='288'>pc-q35-2.8</machine>
-      <machine maxCpus='255'>pc-0.13</machine>
-      <machine maxCpus='255'>pc-0.14</machine>
-      <machine maxCpus='255'>pc-q35-2.4</machine>
-      <machine maxCpus='255'>pc-q35-2.5</machine>
-      <machine maxCpus='255'>pc-q35-2.6</machine>
-      <machine maxCpus='255'>pc-i440fx-1.4</machine>
-      <machine maxCpus='255'>pc-i440fx-2.10</machine>
-      <machine maxCpus='255'>pc-0.11</machine>
-      <machine maxCpus='255'>pc-0.12</machine>
-      <machine maxCpus='255'>pc-0.10</machine>
-      <domain type='qemu'/>
-      <domain type='kvm'>
-        <emulator>/usr/bin/qemu-kvm</emulator>
-        <machine maxCpus='255'>pc-i440fx-2.11</machine>
-        <machine canonical='pc-i440fx-2.11' maxCpus='255'>pc</machine>
-        <machine maxCpus='1'>isapc</machine>
-        <machine maxCpus='255'>pc-1.1</machine>
-        <machine maxCpus='255'>pc-1.2</machine>
-        <machine maxCpus='255'>pc-1.3</machine>
-        <machine maxCpus='255'>pc-i440fx-2.8</machine>
-        <machine maxCpus='255'>pc-1.0</machine>
-        <machine maxCpus='255'>pc-i440fx-2.9</machine>
-        <machine maxCpus='255'>pc-i440fx-2.6</machine>
-        <machine maxCpus='255'>pc-i440fx-2.7</machine>
-        <machine maxCpus='128'>xenfv</machine>
-        <machine maxCpus='255'>pc-i440fx-2.3</machine>
-        <machine maxCpus='255'>pc-i440fx-2.4</machine>
-        <machine maxCpus='255'>pc-i440fx-2.5</machine>
-        <machine maxCpus='255'>pc-i440fx-2.1</machine>
-        <machine maxCpus='255'>pc-i440fx-2.2</machine>
-        <machine maxCpus='255'>pc-i440fx-2.0</machine>
-        <machine maxCpus='288'>pc-q35-2.11</machine>
-        <machine canonical='pc-q35-2.11' maxCpus='288'>q35</machine>
-        <machine maxCpus='1'>xenpv</machine>
-        <machine maxCpus='288'>pc-q35-2.10</machine>
-        <machine maxCpus='255'>pc-i440fx-1.7</machine>
-        <machine maxCpus='288'>pc-q35-2.9</machine>
-        <machine maxCpus='255'>pc-0.15</machine>
-        <machine maxCpus='255'>pc-i440fx-1.5</machine>
-        <machine maxCpus='255'>pc-q35-2.7</machine>
-        <machine maxCpus='255'>pc-i440fx-1.6</machine>
-        <machine maxCpus='288'>pc-q35-2.8</machine>
-        <machine maxCpus='255'>pc-0.13</machine>
-        <machine maxCpus='255'>pc-0.14</machine>
-        <machine maxCpus='255'>pc-q35-2.4</machine>
-        <machine maxCpus='255'>pc-q35-2.5</machine>
-        <machine maxCpus='255'>pc-q35-2.6</machine>
-        <machine maxCpus='255'>pc-i440fx-1.4</machine>
-        <machine maxCpus='255'>pc-i440fx-2.10</machine>
-        <machine maxCpus='255'>pc-0.11</machine>
-        <machine maxCpus='255'>pc-0.12</machine>
-        <machine maxCpus='255'>pc-0.10</machine>
-      </domain>
-    </arch>
-    <features>
-      <cpuselection/>
-      <deviceboot/>
-      <disksnapshot default='on' toggle='no'/>
-      <acpi default='on' toggle='yes'/>
-      <apic default='on' toggle='no'/>
-    </features>
-  </guest>''',
+    'x86_64': '''
+        <guest>
+          <os_type>hvm</os_type>
+          <arch name='x86_64'>
+            <wordsize>64</wordsize>
+            <emulator>/usr/bin/qemu-system-x86_64</emulator>
+            <machine maxCpus='255'>pc-i440fx-2.11</machine>
+            <machine canonical='pc-i440fx-2.11' maxCpus='255'>pc</machine>
+            <machine maxCpus='1'>isapc</machine>
+            <machine maxCpus='255'>pc-1.1</machine>
+            <machine maxCpus='255'>pc-1.2</machine>
+            <machine maxCpus='255'>pc-1.3</machine>
+            <machine maxCpus='255'>pc-i440fx-2.8</machine>
+            <machine maxCpus='255'>pc-1.0</machine>
+            <machine maxCpus='255'>pc-i440fx-2.9</machine>
+            <machine maxCpus='255'>pc-i440fx-2.6</machine>
+            <machine maxCpus='255'>pc-i440fx-2.7</machine>
+            <machine maxCpus='128'>xenfv</machine>
+            <machine maxCpus='255'>pc-i440fx-2.3</machine>
+            <machine maxCpus='255'>pc-i440fx-2.4</machine>
+            <machine maxCpus='255'>pc-i440fx-2.5</machine>
+            <machine maxCpus='255'>pc-i440fx-2.1</machine>
+            <machine maxCpus='255'>pc-i440fx-2.2</machine>
+            <machine maxCpus='255'>pc-i440fx-2.0</machine>
+            <machine maxCpus='288'>pc-q35-2.11</machine>
+            <machine canonical='pc-q35-2.11' maxCpus='288'>q35</machine>
+            <machine maxCpus='1'>xenpv</machine>
+            <machine maxCpus='288'>pc-q35-2.10</machine>
+            <machine maxCpus='255'>pc-i440fx-1.7</machine>
+            <machine maxCpus='288'>pc-q35-2.9</machine>
+            <machine maxCpus='255'>pc-0.15</machine>
+            <machine maxCpus='255'>pc-i440fx-1.5</machine>
+            <machine maxCpus='255'>pc-q35-2.7</machine>
+            <machine maxCpus='255'>pc-i440fx-1.6</machine>
+            <machine maxCpus='288'>pc-q35-2.8</machine>
+            <machine maxCpus='255'>pc-0.13</machine>
+            <machine maxCpus='255'>pc-0.14</machine>
+            <machine maxCpus='255'>pc-q35-2.4</machine>
+            <machine maxCpus='255'>pc-q35-2.5</machine>
+            <machine maxCpus='255'>pc-q35-2.6</machine>
+            <machine maxCpus='255'>pc-i440fx-1.4</machine>
+            <machine maxCpus='255'>pc-i440fx-2.10</machine>
+            <machine maxCpus='255'>pc-0.11</machine>
+            <machine maxCpus='255'>pc-0.12</machine>
+            <machine maxCpus='255'>pc-0.10</machine>
+            <domain type='qemu'/>
+            <domain type='kvm'>
+              <emulator>/usr/bin/qemu-kvm</emulator>
+              <machine maxCpus='255'>pc-i440fx-2.11</machine>
+              <machine canonical='pc-i440fx-2.11' maxCpus='255'>pc</machine>
+              <machine maxCpus='1'>isapc</machine>
+              <machine maxCpus='255'>pc-1.1</machine>
+              <machine maxCpus='255'>pc-1.2</machine>
+              <machine maxCpus='255'>pc-1.3</machine>
+              <machine maxCpus='255'>pc-i440fx-2.8</machine>
+              <machine maxCpus='255'>pc-1.0</machine>
+              <machine maxCpus='255'>pc-i440fx-2.9</machine>
+              <machine maxCpus='255'>pc-i440fx-2.6</machine>
+              <machine maxCpus='255'>pc-i440fx-2.7</machine>
+              <machine maxCpus='128'>xenfv</machine>
+              <machine maxCpus='255'>pc-i440fx-2.3</machine>
+              <machine maxCpus='255'>pc-i440fx-2.4</machine>
+              <machine maxCpus='255'>pc-i440fx-2.5</machine>
+              <machine maxCpus='255'>pc-i440fx-2.1</machine>
+              <machine maxCpus='255'>pc-i440fx-2.2</machine>
+              <machine maxCpus='255'>pc-i440fx-2.0</machine>
+              <machine maxCpus='288'>pc-q35-2.11</machine>
+              <machine canonical='pc-q35-2.11' maxCpus='288'>q35</machine>
+              <machine maxCpus='1'>xenpv</machine>
+              <machine maxCpus='288'>pc-q35-2.10</machine>
+              <machine maxCpus='255'>pc-i440fx-1.7</machine>
+              <machine maxCpus='288'>pc-q35-2.9</machine>
+              <machine maxCpus='255'>pc-0.15</machine>
+              <machine maxCpus='255'>pc-i440fx-1.5</machine>
+              <machine maxCpus='255'>pc-q35-2.7</machine>
+              <machine maxCpus='255'>pc-i440fx-1.6</machine>
+              <machine maxCpus='288'>pc-q35-2.8</machine>
+              <machine maxCpus='255'>pc-0.13</machine>
+              <machine maxCpus='255'>pc-0.14</machine>
+              <machine maxCpus='255'>pc-q35-2.4</machine>
+              <machine maxCpus='255'>pc-q35-2.5</machine>
+              <machine maxCpus='255'>pc-q35-2.6</machine>
+              <machine maxCpus='255'>pc-i440fx-1.4</machine>
+              <machine maxCpus='255'>pc-i440fx-2.10</machine>
+              <machine maxCpus='255'>pc-0.11</machine>
+              <machine maxCpus='255'>pc-0.12</machine>
+              <machine maxCpus='255'>pc-0.10</machine>
+            </domain>
+          </arch>
+          <features>
+            <cpuselection/>
+            <deviceboot/>
+            <disksnapshot default='on' toggle='no'/>
+            <acpi default='on' toggle='yes'/>
+            <apic default='on' toggle='no'/>
+          </features>
+        </guest>''',
 
-        'armv7l': '''
-  <guest>
-    <os_type>hvm</os_type>
-    <arch name='armv7l'>
-      <wordsize>32</wordsize>
-      <emulator>/usr/bin/qemu-system-arm</emulator>
-      <machine>integratorcp</machine>
-      <machine>vexpress-a9</machine>
-      <machine>syborg</machine>
-      <machine>musicpal</machine>
-      <machine>mainstone</machine>
-      <machine>n800</machine>
-      <machine>n810</machine>
-      <machine>n900</machine>
-      <machine>cheetah</machine>
-      <machine>sx1</machine>
-      <machine>sx1-v1</machine>
-      <machine>beagle</machine>
-      <machine>beaglexm</machine>
-      <machine>tosa</machine>
-      <machine>akita</machine>
-      <machine>spitz</machine>
-      <machine>borzoi</machine>
-      <machine>terrier</machine>
-      <machine>connex</machine>
-      <machine>verdex</machine>
-      <machine>lm3s811evb</machine>
-      <machine>lm3s6965evb</machine>
-      <machine>realview-eb</machine>
-      <machine>realview-eb-mpcore</machine>
-      <machine>realview-pb-a8</machine>
-      <machine>realview-pbx-a9</machine>
-      <machine>versatilepb</machine>
-      <machine>versatileab</machine>
-      <domain type='qemu'>
-      </domain>
-    </arch>
-    <features>
-      <deviceboot/>
-    </features>
-  </guest>''',
+    'armv7l': '''
+        <guest>
+          <os_type>hvm</os_type>
+          <arch name='armv7l'>
+            <wordsize>32</wordsize>
+            <emulator>/usr/bin/qemu-system-arm</emulator>
+            <machine>integratorcp</machine>
+            <machine>vexpress-a9</machine>
+            <machine>syborg</machine>
+            <machine>musicpal</machine>
+            <machine>mainstone</machine>
+            <machine>n800</machine>
+            <machine>n810</machine>
+            <machine>n900</machine>
+            <machine>cheetah</machine>
+            <machine>sx1</machine>
+            <machine>sx1-v1</machine>
+            <machine>beagle</machine>
+            <machine>beaglexm</machine>
+            <machine>tosa</machine>
+            <machine>akita</machine>
+            <machine>spitz</machine>
+            <machine>borzoi</machine>
+            <machine>terrier</machine>
+            <machine>connex</machine>
+            <machine>verdex</machine>
+            <machine>lm3s811evb</machine>
+            <machine>lm3s6965evb</machine>
+            <machine>realview-eb</machine>
+            <machine>realview-eb-mpcore</machine>
+            <machine>realview-pb-a8</machine>
+            <machine>realview-pbx-a9</machine>
+            <machine>versatilepb</machine>
+            <machine>versatileab</machine>
+            <domain type='qemu'>
+            </domain>
+          </arch>
+          <features>
+            <deviceboot/>
+          </features>
+        </guest>''',
 
-        'mips': '''
-  <guest>
-    <os_type>hvm</os_type>
-    <arch name='mips'>
-      <wordsize>32</wordsize>
-      <emulator>/usr/bin/qemu-system-mips</emulator>
-      <machine>malta</machine>
-      <machine>mipssim</machine>
-      <machine>magnum</machine>
-      <machine>pica61</machine>
-      <machine>mips</machine>
-      <domain type='qemu'>
-      </domain>
-    </arch>
-    <features>
-      <deviceboot/>
-    </features>
-  </guest>''',
+    'mips': '''
+        <guest>
+          <os_type>hvm</os_type>
+          <arch name='mips'>
+            <wordsize>32</wordsize>
+            <emulator>/usr/bin/qemu-system-mips</emulator>
+            <machine>malta</machine>
+            <machine>mipssim</machine>
+            <machine>magnum</machine>
+            <machine>pica61</machine>
+            <machine>mips</machine>
+            <domain type='qemu'>
+            </domain>
+          </arch>
+          <features>
+            <deviceboot/>
+          </features>
+        </guest>''',
 
-        'mipsel': '''
-  <guest>
-    <os_type>hvm</os_type>
-    <arch name='mipsel'>
-      <wordsize>32</wordsize>
-      <emulator>/usr/bin/qemu-system-mipsel</emulator>
-      <machine>malta</machine>
-      <machine>mipssim</machine>
-      <machine>magnum</machine>
-      <machine>pica61</machine>
-      <machine>mips</machine>
-      <domain type='qemu'>
-      </domain>
-    </arch>
-    <features>
-      <deviceboot/>
-    </features>
-  </guest>''',
+    'mipsel': '''
+        <guest>
+          <os_type>hvm</os_type>
+          <arch name='mipsel'>
+            <wordsize>32</wordsize>
+            <emulator>/usr/bin/qemu-system-mipsel</emulator>
+            <machine>malta</machine>
+            <machine>mipssim</machine>
+            <machine>magnum</machine>
+            <machine>pica61</machine>
+            <machine>mips</machine>
+            <domain type='qemu'>
+            </domain>
+          </arch>
+          <features>
+            <deviceboot/>
+          </features>
+        </guest>''',
 
-        'sparc': '''
-  <guest>
-    <os_type>hvm</os_type>
-    <arch name='sparc'>
-      <wordsize>32</wordsize>
-      <emulator>/usr/bin/qemu-system-sparc</emulator>
-      <machine>SS-5</machine>
-      <machine>leon3_generic</machine>
-      <machine>SS-10</machine>
-      <machine>SS-600MP</machine>
-      <machine>SS-20</machine>
-      <machine>Voyager</machine>
-      <machine>LX</machine>
-      <machine>SS-4</machine>
-      <machine>SPARCClassic</machine>
-      <machine>SPARCbook</machine>
-      <machine>SS-1000</machine>
-      <machine>SS-2000</machine>
-      <machine>SS-2</machine>
-      <domain type='qemu'>
-      </domain>
-    </arch>
-  </guest>''',
+    'sparc': '''
+        <guest>
+          <os_type>hvm</os_type>
+          <arch name='sparc'>
+            <wordsize>32</wordsize>
+            <emulator>/usr/bin/qemu-system-sparc</emulator>
+            <machine>SS-5</machine>
+            <machine>leon3_generic</machine>
+            <machine>SS-10</machine>
+            <machine>SS-600MP</machine>
+            <machine>SS-20</machine>
+            <machine>Voyager</machine>
+            <machine>LX</machine>
+            <machine>SS-4</machine>
+            <machine>SPARCClassic</machine>
+            <machine>SPARCbook</machine>
+            <machine>SS-1000</machine>
+            <machine>SS-2000</machine>
+            <machine>SS-2</machine>
+            <domain type='qemu'>
+            </domain>
+          </arch>
+        </guest>''',
 
-        'ppc': '''
-  <guest>
-    <os_type>hvm</os_type>
-    <arch name='ppc'>
-      <wordsize>32</wordsize>
-      <emulator>/usr/bin/qemu-system-ppc</emulator>
-      <machine>g3beige</machine>
-      <machine>virtex-ml507</machine>
-      <machine>mpc8544ds</machine>
-      <machine>bamboo-0.13</machine>
-      <machine>bamboo-0.12</machine>
-      <machine>ref405ep</machine>
-      <machine>taihu</machine>
-      <machine>mac99</machine>
-      <machine>prep</machine>
-      <domain type='qemu'>
-      </domain>
-    </arch>
-    <features>
-      <deviceboot/>
-    </features>
-  </guest>'''
+    'ppc': '''
+        <guest>
+          <os_type>hvm</os_type>
+          <arch name='ppc'>
+            <wordsize>32</wordsize>
+            <emulator>/usr/bin/qemu-system-ppc</emulator>
+            <machine>g3beige</machine>
+            <machine>virtex-ml507</machine>
+            <machine>mpc8544ds</machine>
+            <machine>bamboo-0.13</machine>
+            <machine>bamboo-0.12</machine>
+            <machine>ref405ep</machine>
+            <machine>taihu</machine>
+            <machine>mac99</machine>
+            <machine>prep</machine>
+            <domain type='qemu'>
+            </domain>
+          </arch>
+          <features>
+            <deviceboot/>
+          </features>
+        </guest>'''
 }
 
 CAPABILITIES_TEMPLATE = (
