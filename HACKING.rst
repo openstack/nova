@@ -73,6 +73,7 @@ Nova Specific Commandments
 - [N362] Imports for privsep modules should be specific. Use "import nova.privsep.path",
   not "from nova.privsep import path". This ensures callers know that the method they're
   calling is using priviledge escalation.
+- [N363] Disallow ``(not_a_tuple)`` because you meant ``(a_tuple_of_one,)``.
 
 Creating Unit Tests
 -------------------
