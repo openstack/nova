@@ -23,6 +23,7 @@ import sys
 
 from oslo_log import log as logging
 from oslo_utils import encodeutils
+from oslo_utils import importutils
 import six
 from six.moves import http_cookies as Cookie
 import six.moves.urllib.parse as urlparse
@@ -34,6 +35,9 @@ from nova import context
 from nova import exception
 from nova.i18n import _
 from nova import objects
+
+# Location of WebSockifyServer class in websockify v0.9.0
+websockifyserver = importutils.try_import('websockify.websockifyserver')
 
 LOG = logging.getLogger(__name__)
 
@@ -284,7 +288,16 @@ class NovaProxyRequestHandler(NovaProxyRequestHandlerBase,
         return self._compute_rpcapi
 
     def socket(self, *args, **kwargs):
-        return websockify.WebSocketServer.socket(*args, **kwargs)
+        # TODO(melwitt): The try_import and if-else condition can be removed
+        # when we get to the point where we're requiring at least websockify
+        # v.0.9.0 in our lower-constraints.
+        if websockifyserver is not None:
+            # In websockify v0.9.0, the 'socket' method moved to the
+            # websockify.websockifyserver.WebSockifyServer class.
+            return websockifyserver.WebSockifyServer.socket(*args, **kwargs)
+        else:
+            # Fall back to the websockify <= v0.8.0 'socket' method location.
+            return websockify.WebSocketServer.socket(*args, **kwargs)
 
 
 class NovaWebSocketProxy(websockify.WebSocketProxy):
