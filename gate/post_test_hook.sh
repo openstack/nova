@@ -43,10 +43,17 @@ cell_conf=$(conductor_conf 1)
 # take precedence.
 conf="--config-file $NOVA_CONF --config-file $cell_conf"
 
+# This needs to go before 'set -e' because otherwise the intermediate runs of
+# 'nova-manage db archive_deleted_rows' returning 1 (normal and expected) would
+# cause this script to exit and fail.
 archive_deleted_rows $conf
-purge_db
 
 set -e
+
+# This needs to go after 'set -e' because otherwise a failure to purge the
+# database would not cause this script to exit and fail.
+purge_db
+
 # We need to get the admin credentials to run the OSC CLIs for Placement.
 set +x
 source $BASE/devstack/openrc admin
