@@ -991,3 +991,31 @@ class HackingTestCase(test.NoDBTestCase):
         self._assert_has_no_errors(
             code, checks.nonexistent_assertion_methods_and_attributes,
             filename="nova/tests/unit/test_context.py")
+
+    def test_useless_assertion(self):
+        code = """
+                   self.assertIsNone(None, status)
+                   self.assertTrue(True, flag)
+                   self.assertTrue(10, count)
+                   self.assertTrue('active', status)
+                   self.assertTrue("building", status)
+               """
+        errors = [(x + 1, 0, 'N365') for x in range(5)]
+        # Check errors in 'nova/tests' directory.
+        self._assert_has_errors(
+            code, checks.useless_assertion,
+            expected_errors=errors, filename="nova/tests/unit/test_context.py")
+        # Check no errors in other than 'nova/tests' directory.
+        self._assert_has_no_errors(
+            code, checks.nonexistent_assertion_methods_and_attributes,
+            filename="nova/compute/api.py")
+        code = """
+                   self.assertIsNone(None_test_var, "Fails")
+                   self.assertTrue(True_test_var, 'Fails')
+                   self.assertTrue(var2, "Fails")
+                   self.assertTrue(test_class.is_active('active'), 'Fails')
+                   self.assertTrue(check_status("building"), 'Fails')
+               """
+        self._assert_has_no_errors(
+            code, checks.useless_assertion,
+            filename="nova/tests/unit/test_context.py")

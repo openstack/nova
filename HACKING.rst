@@ -75,6 +75,7 @@ Nova Specific Commandments
   calling is using priviledge escalation.
 - [N363] Disallow ``(not_a_tuple)`` because you meant ``(a_tuple_of_one,)``.
 - [N364] Check non-existent mock assertion methods and attributes.
+- [N365] Check misuse of assertTrue/assertIsNone.
 
 Creating Unit Tests
 -------------------
