@@ -1195,6 +1195,13 @@ class DomainSnapshot(object):
         del self._domain._snapshots[self._name]
 
 
+class Secret(object):
+    """A stub Secret class. Not currently returned by any test, but required to
+    exist for introspection.
+    """
+    pass
+
+
 class Connection(object):
     def __init__(self, uri=None, readonly=False, version=FAKE_LIBVIRT_VERSION,
                  hv_version=FAKE_QEMU_VERSION, host_info=None, pci_info=None,
@@ -1557,6 +1564,8 @@ virDomain = Domain
 virNodeDevice = NodeDevice
 
 virConnect = Connection
+virSecret = Secret
+virNWFilter = NWFilter
 
 
 class FakeLibvirtFixture(fixtures.Fixture):
