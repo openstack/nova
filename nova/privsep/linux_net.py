@@ -348,3 +348,22 @@ def start_ra(conf_path, pid_path):
            '-C', '%s' % conf_path,
            '-p', '%s' % pid_path]
     processutils.execute(*cmd)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def ovs_plug(timeout, bridge, dev, mac_address):
+    processutils.execute('ovs-vsctl', '--timeout=%s' % timeout,
+                         '--', '--may-exist', 'add-port', bridge, dev,
+                         '--', 'set', 'Interface', dev, 'type=internal',
+                         '--', 'set', 'Interface', dev,
+                         'external-ids:iface-id=%s' % dev,
+                         '--', 'set', 'Interface', dev,
+                         'external-ids:iface-status=active',
+                         '--', 'set', 'Interface', dev,
+                         'external-ids:attached-mac=%s' % mac_address)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def ovs_unplug(timeout, bridge, dev):
+    processutils.execute('ovs-vsctl', '--timeout=%s' % timeout,
+                         '--', '--if-exists', 'del-port', bridge, dev)

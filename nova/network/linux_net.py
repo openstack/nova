@@ -1178,16 +1178,6 @@ def _ra_pid_for(dev):
             return int(f.read())
 
 
-def _ovs_vsctl(args):
-    full_args = ['ovs-vsctl', '--timeout=%s' % CONF.ovs_vsctl_timeout] + args
-    try:
-        return utils.execute(*full_args, run_as_root=True)
-    except Exception as e:
-        LOG.error("Unable to execute %(cmd)s. Exception: %(exception)s",
-                  {'cmd': full_args, 'exception': e})
-        raise exception.OvsConfigurationFailure(inner_exception=e)
-
-
 def delete_bridge_dev(dev):
     """Delete a network bridge."""
     if nova.privsep.linux_net.device_exists(dev):
@@ -1596,14 +1586,16 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
         dev = self.get_dev(network)
         if not nova.privsep.linux_net.device_exists(dev):
             bridge = CONF.linuxnet_ovs_integration_bridge
-            _ovs_vsctl(['--', '--may-exist', 'add-port', bridge, dev,
-                        '--', 'set', 'Interface', dev, 'type=internal',
-                        '--', 'set', 'Interface', dev,
-                        'external-ids:iface-id=%s' % dev,
-                        '--', 'set', 'Interface', dev,
-                        'external-ids:iface-status=active',
-                        '--', 'set', 'Interface', dev,
-                        'external-ids:attached-mac=%s' % mac_address])
+
+            try:
+                nova.privsep.linux_net.ovs_plug(CONF.ovs_vsctl_timeout,
+                                                bridge, dev, mac_address)
+            except Exception as e:
+                LOG.error('Unable to execute ovs-plug. Exception: '
+                          '%(exception)s',
+                          {'exception': e})
+                raise exception.OvsConfigurationFailure(inner_exception=e)
+
             nova.privsep.linux_net.set_device_macaddr(
                 dev, mac_address)
             nova.privsep.linux_net.set_device_mtu(dev, network.get('mtu'))
@@ -1633,7 +1625,14 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
     def unplug(self, network):
         dev = self.get_dev(network)
         bridge = CONF.linuxnet_ovs_integration_bridge
-        _ovs_vsctl(['--', '--if-exists', 'del-port', bridge, dev])
+        try:
+            nova.privsep.linux_net.ovs_unplug(CONF.ovs_vsctl_timeout,
+                                              bridge, dev)
+        except Exception as e:
+            LOG.error('Unable to execute ovs-unplug. Exception: %(exception)s',
+                      {'exception': e})
+            raise exception.OvsConfigurationFailure(inner_exception=e)
+
         return dev
 
     def get_dev(self, network):

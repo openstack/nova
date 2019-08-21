@@ -34,7 +34,6 @@ from nova.network import driver
 from nova.network import linux_net
 from nova import objects
 from nova import test
-from nova import utils
 
 
 CONF = nova.conf.CONF
@@ -642,20 +641,14 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                      "share_address": False}, "fakemac")
         self.assertEqual(2, mock_add_rule.call_count)
 
-    @mock.patch('nova.privsep.linux_net.device_exists')
-    @mock.patch.object(utils, 'execute')
-    def test_linux_ovs_driver_plug_exception(self, mock_execute,
+    @mock.patch('nova.privsep.linux_net.device_exists',
+                return_value=False)
+    @mock.patch(
+        'nova.privsep.linux_net.ovs_plug',
+        side_effect=processutils.ProcessExecutionError('specific_error'))
+    def test_linux_ovs_driver_plug_exception(self, mock_plug,
                                              mock_device_exists):
         self.flags(fake_network=False)
-
-        def fake_execute(*args, **kwargs):
-            raise processutils.ProcessExecutionError('specific_error')
-
-        def fake_device_exists(*args, **kwargs):
-            return False
-
-        mock_execute.side_effect = fake_execute
-        mock_device_exists.side_effect = fake_device_exists
 
         driver = linux_net.LinuxOVSInterfaceDriver()
 
@@ -668,7 +661,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                        re.DOTALL))
         self.assertIsInstance(exc.kwargs['inner_exception'],
                               processutils.ProcessExecutionError)
-        mock_execute.assert_called_once()
+        mock_plug.assert_called_once()
         mock_device_exists.assert_called_once()
 
     @mock.patch.object(linux_net.LinuxBridgeInterfaceDriver,
