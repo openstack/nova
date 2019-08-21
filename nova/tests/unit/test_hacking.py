@@ -913,3 +913,81 @@ class HackingTestCase(test.NoDBTestCase):
                             or foo in (method_call_should_this_work()):
                """
         self._assert_has_no_errors(code, checks.did_you_mean_tuple)
+
+    def test_nonexistent_assertion_methods_and_attributes(self):
+        code = """
+                   mock_sample.called_once()
+                   mock_sample.called_once_with(a, "TEST")
+                   mock_sample.has_calls([mock.call(x), mock.call(y)])
+                   mock_sample.mock_assert_called()
+                   mock_sample.mock_assert_called_once()
+                   mock_sample.mock_assert_called_with(a, "xxxx")
+                   mock_sample.mock_assert_called_once_with(a, b)
+                   mock_sample.mock_assert_any_call(1, 2, instance=instance)
+                   sample.mock_assert_has_calls([mock.call(x), mock.call(y)])
+                   mock_sample.mock_assert_not_called()
+                   mock_sample.asser_called()
+                   mock_sample.asser_called_once()
+                   mock_sample.asser_called_with(a, "xxxx")
+                   mock_sample.asser_called_once_with(a, b)
+                   mock_sample.asser_any_call(1, 2, instance=instance)
+                   mock_sample.asser_has_calls([mock.call(x), mock.call(y)])
+                   mock_sample.asser_not_called()
+                   mock_sample.asset_called()
+                   mock_sample.asset_called_once()
+                   mock_sample.asset_called_with(a, "xxxx")
+                   mock_sample.asset_called_once_with(a, b)
+                   mock_sample.asset_any_call(1, 2, instance=instance)
+                   mock_sample.asset_has_calls([mock.call(x), mock.call(y)])
+                   mock_sample.asset_not_called()
+                   mock_sample.asssert_called()
+                   mock_sample.asssert_called_once()
+                   mock_sample.asssert_called_with(a, "xxxx")
+                   mock_sample.asssert_called_once_with(a, b)
+                   mock_sample.asssert_any_call(1, 2, instance=instance)
+                   mock_sample.asssert_has_calls([mock.call(x), mock.call(y)])
+                   mock_sample.asssert_not_called()
+                   mock_sample.assset_called()
+                   mock_sample.assset_called_once()
+                   mock_sample.assset_called_with(a, "xxxx")
+                   mock_sample.assset_called_once_with(a, b)
+                   mock_sample.assset_any_call(1, 2, instance=instance)
+                   mock_sample.assset_has_calls([mock.call(x), mock.call(y)])
+                   mock_sample.assset_not_called()
+                   mock_sample.retrun_value = 100
+                   sample.call_method(mock_sample.retrun_value, 100)
+                   mock.Mock(retrun_value=100)
+               """
+        errors = [(x + 1, 0, 'N364') for x in range(41)]
+        # Check errors in 'nova/tests' directory.
+        self._assert_has_errors(
+            code, checks.nonexistent_assertion_methods_and_attributes,
+            expected_errors=errors, filename="nova/tests/unit/test_context.py")
+        # Check no errors in other than 'nova/tests' directory.
+        self._assert_has_no_errors(
+            code, checks.nonexistent_assertion_methods_and_attributes,
+            filename="nova/compute/api.py")
+
+        code = """
+                   mock_sample.assert_called()
+                   mock_sample.assert_called_once()
+                   mock_sample.assert_called_with(a, "xxxx")
+                   mock_sample.assert_called_once_with(a, b)
+                   mock_sample.assert_any_call(1, 2, instance=instance)
+                   mock_sample.assert_has_calls([mock.call(x), mock.call(y)])
+                   mock_sample.assert_not_called()
+                   mock_sample.return_value = 100
+                   sample.call_method(mock_sample.return_value, 100)
+                   mock.Mock(return_value=100)
+
+                   sample.has_other_calls([1, 2, 3, 4])
+                   sample.get_called_once("TEST")
+                   sample.check_called_once_with("TEST")
+                   mock_assert_method.assert_called()
+                   test.asset_has_all(test)
+                   test_retrun_value = 99
+                   test.retrun_values = 100
+               """
+        self._assert_has_no_errors(
+            code, checks.nonexistent_assertion_methods_and_attributes,
+            filename="nova/tests/unit/test_context.py")
