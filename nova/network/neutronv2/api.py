@@ -174,28 +174,19 @@ def get_client(context, admin=False):
                        auth=auth_plugin,
                        global_request_id=context.global_id)
 
-    if CONF.neutron.url:
-        # TODO(efried): Remove in Rocky
-        client_args = dict(client_args,
-                           endpoint_override=CONF.neutron.url,
-                           # NOTE(efried): The legacy behavior was to default
-                           # region_name in the conf.
-                           region_name=CONF.neutron.region_name or 'RegionOne')
-    else:
-        # The new way
-        # NOTE(efried): We build an adapter
-        #               to pull conf options
-        #               to pass to neutronclient
-        #               which uses them to build an Adapter.
-        # This should be unwound at some point.
-        adap = utils.get_ksa_adapter(
-            'network', ksa_auth=auth_plugin, ksa_session=session)
-        client_args = dict(client_args,
-                           service_type=adap.service_type,
-                           service_name=adap.service_name,
-                           interface=adap.interface,
-                           region_name=adap.region_name,
-                           endpoint_override=adap.endpoint_override)
+    # NOTE(efried): We build an adapter
+    #               to pull conf options
+    #               to pass to neutronclient
+    #               which uses them to build an Adapter.
+    # This should be unwound at some point.
+    adap = utils.get_ksa_adapter(
+        'network', ksa_auth=auth_plugin, ksa_session=session)
+    client_args = dict(client_args,
+                       service_type=adap.service_type,
+                       service_name=adap.service_name,
+                       interface=adap.interface,
+                       region_name=adap.region_name,
+                       endpoint_override=adap.endpoint_override)
 
     return ClientWrapper(clientv20.Client(**client_args),
                          admin=admin or context.is_admin)

@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    The ``[neutron]/url`` configuration option, which was deprecated in the
+    17.0.0 Queens release, has now been removed. The same functionality is
+    available via the ``[neutron]/endpoint_override`` option.

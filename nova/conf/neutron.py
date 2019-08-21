@@ -30,25 +30,6 @@ Configuration options for neutron (network connectivity as a service).
 """)
 
 neutron_opts = [
-    cfg.URIOpt('url',
-        sample_default='http://127.0.0.1:9696',
-        deprecated_for_removal=True,
-        deprecated_since='17.0.0',
-        deprecated_reason='Endpoint lookup uses the service catalog via '
-                          'common keystoneauth1 Adapter configuration '
-                          'options. In the current release, "url" will '
-                          'override this behavior, but will be ignored and/or '
-                          'removed in a future release. To achieve the same '
-                          'result, use the endpoint_override option instead.',
-        help="""
-This option specifies the URL for connecting to Neutron.
-
-Possible values:
-
-* Any valid URL that points to the Neutron API service is appropriate here.
-  This typically matches the URL returned for the 'network' service type
-  from the Keystone service catalog.
-"""),
     cfg.StrOpt('ovs_bridge',
          default='br-int',
          help="""
@@ -147,10 +128,6 @@ ALL_OPTS = (neutron_opts + metadata_proxy_opts)
 def register_opts(conf):
     conf.register_group(neutron_group)
     conf.register_opts(ALL_OPTS, group=neutron_group)
-    # NOTE(efried): We don't pass `url` as a deprecated opt because that would
-    # make CONF.neutron.url indistinguishable from
-    # CONF.neutron.endpoint_override in the code, and we need to be able to use
-    # the former to trigger the legacy behavior.
     confutils.register_ksa_opts(conf, neutron_group, DEFAULT_SERVICE_TYPE)
 
 
