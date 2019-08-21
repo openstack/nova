@@ -117,8 +117,8 @@ class _ComputeAPIUnitTestMixIn(object):
                  }
         if updates:
             flavor.update(updates)
-        return objects.Flavor._from_db_object(self.context, objects.Flavor(),
-                                              flavor)
+        return objects.Flavor._from_db_object(
+            self.context, objects.Flavor(extra_specs={}), flavor)
 
     def _create_instance_obj(self, params=None, flavor=None):
         """Create a test instance."""
@@ -6212,15 +6212,66 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
                              cells)
 
     @mock.patch('nova.pci.request.get_pci_requests_from_flavor')
+    def test_pmu_image_and_flavor_conflict(self, mock_request):
+        """Tests that calling _validate_flavor_image_nostatus()
+        with an image that conflicts with the flavor raises but no
+        exception is raised if there is no conflict.
+        """
+        image = {'id': uuids.image_id, 'status': 'foo',
+                 'properties': {'hw_pmu': False}}
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=512, root_gb=1, extra_specs={'hw:pmu': "true"})
+        self.assertRaises(
+            exception.ImagePMUConflict,
+            self.compute_api._validate_flavor_image_nostatus,
+            self.context, image, flavor, None)
+
+    @mock.patch('nova.pci.request.get_pci_requests_from_flavor')
+    def test_pmu_image_and_flavor_same_value(self, mock_request):
+        # assert that if both the image and flavor are set to the same value
+        # no exception is raised and the function returns nothing.
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=512, root_gb=1, extra_specs={'hw:pmu': "true"})
+
+        image = {'id': uuids.image_id, 'status': 'foo',
+                 'properties': {'hw_pmu': True}}
+        self.assertIsNone(self.compute_api._validate_flavor_image_nostatus(
+            self.context, image, flavor, None))
+
+    @mock.patch('nova.pci.request.get_pci_requests_from_flavor')
+    def test_pmu_image_only(self, mock_request):
+        # assert that if only the image metadata is set then it is valid
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=512, root_gb=1, extra_specs={})
+
+        # ensure string to bool conversion works for image metadata
+        # property by using "yes".
+        image = {'id': uuids.image_id, 'status': 'foo',
+                 'properties': {'hw_pmu': "yes"}}
+        self.assertIsNone(self.compute_api._validate_flavor_image_nostatus(
+            self.context, image, flavor, None))
+
+    @mock.patch('nova.pci.request.get_pci_requests_from_flavor')
+    def test_pmu_flavor_only(self, mock_request):
+        # assert that if only the flavor extra_spec is set then it is valid
+        # and test the string to bool conversion of "on" works.
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=512, root_gb=1, extra_specs={'hw:pmu': "on"})
+
+        image = {'id': uuids.image_id, 'status': 'foo', 'properties': {}}
+        self.assertIsNone(self.compute_api._validate_flavor_image_nostatus(
+            self.context, image, flavor, None))
+
+    @mock.patch('nova.pci.request.get_pci_requests_from_flavor')
     def test_pci_validated(self, mock_request):
         """Tests that calling _validate_flavor_image_nostatus() with
         validate_pci=True results in get_pci_requests_from_flavor() being
         called.
         """
-        image = dict(id=uuids.image_id, status='foo')
+        image = {'id': uuids.image_id, 'status': 'foo'}
         flavor = self._create_flavor()
-        self.compute_api._validate_flavor_image_nostatus(self.context,
-            image, flavor, root_bdm=None, validate_pci=True)
+        self.compute_api._validate_flavor_image_nostatus(
+            self.context, image, flavor, root_bdm=None, validate_pci=True)
         mock_request.assert_called_once_with(flavor)
 
     def test_validate_and_build_base_options_translate_neutron_secgroup(self):

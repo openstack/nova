@@ -2193,6 +2193,22 @@ class LibvirtConfigGuestFeatureTest(LibvirtConfigBaseTest):
             <vendor_id state="on" value="1234567890ab"/>
           </hyperv>""")
 
+    def test_feature_pmu(self):
+        # NOTE(sean-k-moonmey): LibvirtConfigGuestFeaturePMU uses
+        # bool_from_string internally so assert that boolean and
+        # string inputs work. This does not need to be exhaustive
+        # as bool_from_string is tested in oslo so we just try
+        # some common values.
+
+        for val in ("true", "on", "1", "yes", True):
+            obj = config.LibvirtConfigGuestFeaturePMU(val)
+            xml = obj.to_xml()
+            self.assertXmlEqual(xml, "<pmu state='on'/>")
+        for val in ("false", "off", "0", "no", False):
+            obj = config.LibvirtConfigGuestFeaturePMU(val)
+            xml = obj.to_xml()
+            self.assertXmlEqual(xml, "<pmu state='off'/>")
+
 
 class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
 

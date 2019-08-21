@@ -676,6 +676,13 @@ class API(base.Base):
         """
         image_meta = _get_image_meta_obj(image)
 
+        # validate PMU extra spec and image metadata
+        flavor_pmu = instance_type.extra_specs.get('hw:pmu')
+        image_pmu = image_meta.properties.get('hw_pmu')
+        if (flavor_pmu is not None and image_pmu is not None and
+                image_pmu != strutils.bool_from_string(flavor_pmu)):
+            raise exception.ImagePMUConflict()
+
         # Only validate values of flavor/image so the return results of
         # following 'get' functions are not used.
         hardware.get_number_of_serial_ports(instance_type, image_meta)

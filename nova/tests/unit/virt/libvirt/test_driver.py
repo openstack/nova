@@ -51,6 +51,7 @@ from oslo_service import loopingcall
 from oslo_utils import fileutils
 from oslo_utils import fixture as utils_fixture
 from oslo_utils.fixture import uuidsentinel as uuids
+from oslo_utils import strutils
 from oslo_utils import units
 from oslo_utils import uuidutils
 from oslo_utils import versionutils
@@ -6092,6 +6093,105 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertFalse(
             any(isinstance(feature, vconfig.LibvirtConfigGuestFeatureKvmHidden)
                            for feature in cfg.features))
+
+    def test_get_guest_config_with_pmu(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        for virt_type in ('qemu', 'kvm'):
+            self.flags(virt_type=virt_type, group='libvirt')
+
+            for state in ("true", "false"):
+                # assert that values set in flavor are reflected in
+                # the xml generated.
+                flavor = fake_flavor.fake_flavor_obj(self.context,
+                    extra_specs={"hw:pmu": state},
+                    expected_attrs={"extra_specs"})
+                image_meta = objects.ImageMeta.from_dict({
+                    "disk_format": "raw"})
+
+                instance_ref.flavor = flavor
+                disk_info = blockinfo.get_disk_info(
+                    CONF.libvirt.virt_type, instance_ref, image_meta)
+                cfg = drvr._get_guest_config(
+                    instance_ref, [], image_meta, disk_info)
+                self.assertTrue(any(isinstance(
+                    feature, vconfig.LibvirtConfigGuestFeaturePMU) and
+                    feature.state == strutils.bool_from_string(state)
+                    for feature in cfg.features))
+
+                # assert that values set in image are reflected in
+                # the xml generated.
+                instance_ref.flavor.extra_specs.pop('hw:pmu')
+                image_meta = objects.ImageMeta.from_dict({
+                    "disk_format": "raw",
+                    "properties": {"hw_pmu": state}})
+
+                disk_info = blockinfo.get_disk_info(
+                    CONF.libvirt.virt_type, instance_ref, image_meta)
+                cfg = drvr._get_guest_config(
+                    instance_ref, [], image_meta, disk_info)
+                self.assertTrue(any(isinstance(
+                    feature, vconfig.LibvirtConfigGuestFeaturePMU) and
+                    feature.state == strutils.bool_from_string(state)
+                    for feature in cfg.features))
+
+    def test_get_guest_config_with_pmu_unset(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        for virt_type in ('qemu', 'kvm'):
+            self.flags(virt_type=virt_type, group='libvirt')
+
+            # assert that if not set in image or flavor no pmu feature object
+            # is created.
+            flavor = fake_flavor.fake_flavor_obj(
+                self.context, extra_specs={}, expected_attrs={"extra_specs"})
+            image_meta = objects.ImageMeta.from_dict({"disk_format": "raw"})
+
+            instance_ref.flavor = flavor
+            disk_info = blockinfo.get_disk_info(
+                CONF.libvirt.virt_type, instance_ref, image_meta)
+            cfg = drvr._get_guest_config(
+                instance_ref, [], image_meta, disk_info)
+            self.assertFalse(
+                any(isinstance(feature, vconfig.LibvirtConfigGuestFeaturePMU)
+                    for feature in cfg.features))
+
+    def test_get_guest_config_with_pmu_non_qemu_kvm(self):
+        # assert that for virt_types other then qemu and kvm
+        # the xml the element is not generated.
+        self.flags(virt_type='lxc', group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+
+        for state in ("true", "false"):
+            flavor = fake_flavor.fake_flavor_obj(self.context,
+                extra_specs={"hw:pmu": state},
+                expected_attrs={"extra_specs"})
+            image_meta = objects.ImageMeta.from_dict({
+                "disk_format": "raw"})
+
+            instance_ref.flavor = flavor
+            disk_info = blockinfo.get_disk_info(
+                CONF.libvirt.virt_type, instance_ref, image_meta)
+            cfg = drvr._get_guest_config(
+                instance_ref, [], image_meta, disk_info)
+            self.assertFalse(
+                any(isinstance(feature, vconfig.LibvirtConfigGuestFeaturePMU)
+                for feature in cfg.features))
+
+            # assert that values set in image are also ignored.
+            instance_ref.flavor.extra_specs.pop('hw:pmu')
+            image_meta = objects.ImageMeta.from_dict({
+                "disk_format": "raw",
+                "properties": {"hw_pmu": state}})
+
+            disk_info = blockinfo.get_disk_info(
+                CONF.libvirt.virt_type, instance_ref, image_meta)
+            cfg = drvr._get_guest_config(
+                instance_ref, [], image_meta, disk_info)
+            self.assertFalse(
+                any(isinstance(feature, vconfig.LibvirtConfigGuestFeaturePMU)
+                    for feature in cfg.features))
 
     def _test_get_guest_config_disk_cachemodes(self, images_type):
         # Verify that the configured cachemodes are propagated to the device

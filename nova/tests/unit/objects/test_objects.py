@@ -1069,7 +1069,7 @@ object_data = {
     'HyperVLiveMigrateData': '1.4-e265780e6acfa631476c8170e8d6fce0',
     'IDEDeviceBus': '1.0-29d4c9f27ac44197f01b6ac1b7e16502',
     'ImageMeta': '1.8-642d1b2eb3e880a367f37d72dd76162d',
-    'ImageMetaProps': '1.22-b1c9ea78c43e8d7989a7d1f0f34d149a',
+    'ImageMetaProps': '1.23-ed659d0bb5dfb3b2c2c717850c732abc',
     'Instance': '2.6-5fefbcb483703c85e4d328b887c8af33',
     'InstanceAction': '1.2-9a5abc87fdd3af46f45731960651efb5',
     'InstanceActionEvent': '1.3-c749e1b3589e7117c81cb2aa6ac438d5',

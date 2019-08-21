@@ -4775,8 +4775,22 @@ class LibvirtDriver(driver.ComputeDriver):
 
             guest.features.append(hv)
 
-        if (virt_type in ("qemu", "kvm") and hide_hypervisor_id):
-            guest.features.append(vconfig.LibvirtConfigGuestFeatureKvmHidden())
+        if virt_type in ("qemu", "kvm"):
+            if hide_hypervisor_id:
+                guest.features.append(
+                    vconfig.LibvirtConfigGuestFeatureKvmHidden())
+
+            # NOTE(sean-k-mooney): we validate that the image and flavor
+            # cannot have conflicting values in the compute API
+            # so we just use the values directly. If it is not set in
+            # either the flavor or image pmu will be none and we should
+            # not generate the element to allow qemu to decide if a vPMU
+            # should be provided for backwards compatibility.
+            pmu = (flavor.extra_specs.get('hw:pmu') or
+                   image_meta.properties.get('hw_pmu'))
+            if pmu is not None:
+                guest.features.append(
+                    vconfig.LibvirtConfigGuestFeaturePMU(pmu))
 
     def _check_number_of_serial_console(self, num_ports):
         virt_type = CONF.libvirt.virt_type

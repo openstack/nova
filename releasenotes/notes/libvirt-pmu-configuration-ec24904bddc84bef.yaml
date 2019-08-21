@@ -1,0 +1,12 @@
+---
+features:
+  - |
+    The libvirt driver has been extended to support user configurable
+    performance monitoring unit (vPMU) virtualization.
+    This is particularly useful for real-time workloads.
+    A pair of boolean flavor extra spec and image metadata properties
+    ``hw:pmu`` and ``hw_pmu`` have been added to control the emulation
+    of the vPMU. By default the behavior of vPMU emulation has
+    not been changed. To take advantage of this new feature, the operator
+    or tenant will need to update their flavors or images to define the
+    new property.

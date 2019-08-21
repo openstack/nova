@@ -26,6 +26,7 @@ helpers for populating up config object instances.
 import time
 
 from lxml import etree
+from oslo_utils import strutils
 from oslo_utils import units
 import six
 
@@ -2347,6 +2348,22 @@ class LibvirtConfigGuestFeatureKvmHidden(LibvirtConfigGuestFeature):
 
         root.append(etree.Element("hidden", state="on"))
 
+        return root
+
+
+class LibvirtConfigGuestFeaturePMU(LibvirtConfigGuestFeature):
+
+    def __init__(self, state, **kwargs):
+        super(LibvirtConfigGuestFeaturePMU, self).__init__("pmu", **kwargs)
+        # NOTE(sean-k-mooney): bool_from_string is needed to handle the raw
+        # flavor exta_sepc value. bool_from_string internally checks if the
+        # value is already a bool and returns it. As such it's safe to use
+        # with the image metadata property too, so we call it unconditionally.
+        self.state = strutils.bool_from_string(state)
+
+    def format_dom(self):
+        root = super(LibvirtConfigGuestFeaturePMU, self).format_dom()
+        root.attrib['state'] = "on" if self.state else "off"
         return root
 
 
