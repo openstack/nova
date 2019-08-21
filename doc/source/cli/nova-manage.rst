@@ -99,6 +99,8 @@ Nova Database
            :oslo.config:option:`api_database.connection`.
        * - 4
          - Invalid value for ``--before``.
+       * - 255
+         - An unexpected error occurred.
 
     If automating, this should be run continuously while the result is 1,
     stopping at 0, or use the ``--until-complete`` option.
@@ -266,6 +268,8 @@ Nova Cells v2
     If ``--max-count`` is not specified, all instances in the cell will be
     mapped in batches of 50. If you have a large number of instances, consider
     specifying a custom value and run the command until it exits with 0.
+
+    .. todo document return codes since 1 is used for flow control
 
 ``nova-manage cell_v2 map_cell_and_hosts [--name <cell_name>] [--transport-url <transport_url>] [--verbose]``
     Create a cell mapping to the database connection and message queue
@@ -483,6 +487,7 @@ Placement
         $ openstack port unset <port_uuid> --binding-profile allocation
 
     * 127: Invalid input.
+    * 255: An unexpected error occurred.
 
 ``nova-manage placement sync_aggregates [--verbose]``
     Mirrors compute host aggregates to resource provider aggregates
@@ -508,6 +513,7 @@ Placement
     * 4: Host mappings not found for one or more host aggregate members
     * 5: Compute node records not found for one or more hosts
     * 6: Resource provider not found by uuid for a given host
+    * 255: An unexpected error occurred.
 
 
 See Also

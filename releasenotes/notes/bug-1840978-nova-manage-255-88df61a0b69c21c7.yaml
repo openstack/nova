@@ -1,0 +1,10 @@
+---
+upgrade:
+  - |
+    The ``nova-manage`` set of commands would previously exit with return
+    code 1 due to any unexpected error. However, some commands, such as
+    ``nova-manage db archive_deleted_rows``,
+    ``nova-manage cell_v2 map_instances`` and
+    ``nova-manage placement heal_allocations`` use return code 1 for flow
+    control with automation. As a result, the unexpected error return code
+    has been changed from 1 to 255 for all ``nova-manage`` commands.
