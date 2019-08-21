@@ -1,0 +1,11 @@
+---
+deprecations:
+  - |
+    The ``AggregateCoreFilter``, ``AggregateRamFilter`` and
+    ``AggregateDiskFilter`` are now deprecated.
+    They will be removed in a future release and should no longer be used.
+    Their functionality has been replaced with a placement native approach
+    by combining host aggregate mirroring added in Rocky and initial allocation
+    ratios added in Stein. See the `scheduler documentation`_ for details.
+
+    .. _`scheduler documentation`: https://docs.openstack.org/nova/latest/admin/configuration/schedulers.html

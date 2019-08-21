@@ -152,6 +152,20 @@ The following sections describe the available compute filters.
 AggregateCoreFilter
 -------------------
 
+.. deprecated:: 20.0.0
+
+  ``AggregateCoreFilter`` is deprecated since the 20.0.0 Train release.
+  As of the introduction of the placement service in Ocata, the behavior
+  of this filter :ref:`has changed <bug-1804125>` and no longer should be used.
+  In the 18.0.0 Rocky release nova `automatically mirrors`_ host aggregates
+  to placement aggregates.
+  In the 19.0.0 Stein release initial allocation ratios support was added
+  which allows management of the allocation ratios via the placement API in
+  addition to the existing capability to manage allocation ratios via the nova
+  config. See `Allocation ratios`_ for details.
+
+.. _`automatically mirrors`: https://specs.openstack.org/openstack/nova-specs/specs/rocky/implemented/placement-mirror-host-aggregates.html
+
 Filters host by CPU core numbers with a per-aggregate ``cpu_allocation_ratio``
 value. If the per-aggregate value is not found, the value falls back to the
 global setting.  If the host is in more than one aggregate and more than one
@@ -162,6 +176,18 @@ Note the ``cpu_allocation_ratio`` :ref:`bug 1804125 <bug-1804125>` restriction.
 
 AggregateDiskFilter
 -------------------
+
+.. deprecated:: 20.0.0
+
+  ``AggregateDiskFilter`` is deprecated since the 20.0.0 Train release.
+  As of the introduction of the placement service in Ocata, the behavior
+  of this filter :ref:`has changed <bug-1804125>` and no longer should be used.
+  In the 18.0.0 Rocky release nova `automatically mirrors`_ host aggregates
+  to placement aggregates.
+  In the 19.0.0 Stein release initial allocation ratios support was added
+  which allows management of the allocation ratios via the placement API in
+  addition to the existing capability to manage allocation ratios via the nova
+  config. See `Allocation ratios`_ for details.
 
 Filters host by disk allocation with a per-aggregate ``disk_allocation_ratio``
 value. If the per-aggregate value is not found, the value falls back to the
@@ -296,6 +322,18 @@ used.  For information about how to use this filter, see
 
 AggregateRamFilter
 ------------------
+
+.. deprecated:: 20.0.0
+
+  ``AggregateRamFilter`` is deprecated since the 20.0.0 Train release.
+  As of the introduction of the placement service in Ocata, the behavior
+  of this filter :ref:`has changed <bug-1804125>` and no longer should be used.
+  In the 18.0.0 Rocky release nova `automatically mirrors`_ host aggregates
+  to placement aggregates.
+  In the 19.0.0 Stein release initial allocation ratios support was added
+  which allows management of the allocation ratios via the placement API in
+  addition to the existing capability to manage allocation ratios via the nova
+  config. See `Allocation ratios`_ for details.
 
 Filters host by RAM allocation of instances with a per-aggregate
 ``ram_allocation_ratio`` value. If the per-aggregate value is not found, the

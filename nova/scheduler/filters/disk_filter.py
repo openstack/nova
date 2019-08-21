@@ -22,13 +22,22 @@ LOG = logging.getLogger(__name__)
 
 
 class AggregateDiskFilter(filters.BaseHostFilter):
-    """AggregateDiskFilter with per-aggregate disk allocation ratio flag.
+    """DEPRECATED: AggregateDiskFilter with per-aggregate disk allocation ratio
 
     Fall back to global disk_allocation_ratio if no per-aggregate setting
     found.
     """
 
     RUN_ON_REBUILD = False
+
+    def __init__(self):
+        super(AggregateDiskFilter, self).__init__()
+        LOG.warning('The AggregateDiskFilter is deprecated since the 20.0.0 '
+                    'Train release. DISK_GB filtering is performed natively '
+                    'using the Placement service when using the '
+                    'filter_scheduler driver. Operators should define disk '
+                    'allocation ratios either per host in the nova.conf '
+                    'or via the placement API.')
 
     def _get_disk_allocation_ratio(self, host_state, spec_obj):
         aggregate_vals = utils.aggregate_values_from_key(
