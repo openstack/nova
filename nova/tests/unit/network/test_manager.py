@@ -951,11 +951,16 @@ class VlanNetworkTestCase(test.TestCase):
                 return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.iptables_set_rules',
                 return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.bridge_setfd')
+    @mock.patch('nova.privsep.linux_net.bridge_disable_stp')
+    @mock.patch('nova.privsep.linux_net.bridge_add_interface',
+                return_value=('', ''))
     def test_vpn_allocate_fixed_ip(
-            self, mock_iptables_set_rules, mock_iptables_get_rules,
-            mock_forwarding_enable, mock_forwarding_check,
-            mock_address_command, mock_change_ip, mock_lookup_ip,
-            mock_routes_show, mock_enabled, mock_add_bridge):
+            self, mock_bridge_add_interface, mock_bridge_disable_stp,
+            mock_bridge_setfd, mock_iptables_set_rules,
+            mock_iptables_get_rules, mock_forwarding_enable,
+            mock_forwarding_check, mock_address_command, mock_change_ip,
+            mock_lookup_ip, mock_routes_show, mock_enabled, mock_add_bridge):
         self.mox.StubOutWithMock(db, 'fixed_ip_associate')
         self.mox.StubOutWithMock(db, 'fixed_ip_update')
         self.mox.StubOutWithMock(db,
@@ -1001,11 +1006,16 @@ class VlanNetworkTestCase(test.TestCase):
                 return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.iptables_set_rules',
                 return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.bridge_setfd')
+    @mock.patch('nova.privsep.linux_net.bridge_disable_stp')
+    @mock.patch('nova.privsep.linux_net.bridge_add_interface',
+                return_value=('', ''))
     def test_allocate_fixed_ip(
-            self, mock_iptables_set_rules, mock_iptables_get_rules,
-            mock_forwarding_enable, mock_forwarding_check,
-            mock_address_command, mock_change_ip, mock_lookup_ip,
-            mock_routes_show, mock_enabled, mock_add_bridge):
+            self, mock_bridge_add_interface, mock_bridge_disable_stp,
+            mock_bridge_setfd, mock_iptables_set_rules,
+            mock_iptables_get_rules, mock_forwarding_enable,
+            mock_forwarding_check, mock_address_command, mock_change_ip,
+            mock_lookup_ip, mock_routes_show, mock_enabled, mock_add_bridge):
         self.stubs.Set(self.network,
                 '_do_trigger_security_group_members_refresh_for_instance',
                 lambda *a, **kw: None)
@@ -1736,11 +1746,16 @@ class VlanNetworkTestCase(test.TestCase):
                 return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.iptables_set_rules',
                 return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.bridge_setfd')
+    @mock.patch('nova.privsep.linux_net.bridge_disable_stp')
+    @mock.patch('nova.privsep.linux_net.bridge_add_interface',
+                return_value=('', ''))
     def test_add_fixed_ip_instance_without_vpn_requested_networks(
-            self, mock_iptables_set_rules, mock_iptables_get_rules,
-            mock_forwarding_enable, mock_forwarding_check,
-            mock_address_command, mock_change_ip, mock_lookup_ip,
-            mock_routes_show, mock_enabled, mock_add_bridge):
+            self, mock_bridge_add_interface, mock_bridge_disable_stp,
+            mock_bridge_setfd, mock_iptables_set_rules,
+            mock_iptables_get_rules, mock_forwarding_enable,
+            mock_forwarding_check, mock_address_command, mock_change_ip,
+            mock_lookup_ip, mock_routes_show, mock_enabled, mock_add_bridge):
         self.stubs.Set(self.network,
                 '_do_trigger_security_group_members_refresh_for_instance',
                 lambda *a, **kw: None)
@@ -2916,10 +2931,16 @@ class AllocateTestCase(test.TestCase):
                 return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.iptables_set_rules',
                 return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.bridge_setfd')
+    @mock.patch('nova.privsep.linux_net.bridge_disable_stp')
+    @mock.patch('nova.privsep.linux_net.bridge_add_interface',
+                return_value=('', ''))
     def test_allocate_for_instance(
-            self, mock_iptables_set_rules, mock_iptables_get_rules,
-            mock_add_vlan, mock_modify_ebtables, mock_forwarding_enable,
-            mock_forwarding_check, mock_clean_conntrack, mock_address_command,
+            self, mock_bridge_add_interface, mock_bridge_disable_stp,
+            mock_bridge_setfd, mock_iptables_set_rules,
+            mock_iptables_get_rules, mock_add_vlan, mock_modify_ebtables,
+            mock_forwarding_enable, mock_forwarding_check,
+            mock_clean_conntrack, mock_address_command,
             mock_change_ip, mock_lookup_ip, mock_routes_show, mock_unbind,
             mock_bind, mock_set_macaddr, mock_set_enabled, mock_set_mtu,
             mock_add_bridge):
@@ -3002,9 +3023,14 @@ class AllocateTestCase(test.TestCase):
                 return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.iptables_set_rules',
                 return_value=('', ''))
+    @mock.patch('nova.privsep.linux_net.bridge_setfd')
+    @mock.patch('nova.privsep.linux_net.bridge_disable_stp')
+    @mock.patch('nova.privsep.linux_net.bridge_add_interface',
+                return_value=('', ''))
     def test_allocate_for_instance_with_mac(
-            self, mock_iptables_set_rules, mock_iptables_get_rules,
-            mock_add_vlan, mock_forwarding_enable,
+            self, mock_bridge_add_interface, mock_bridge_disable_stp,
+            mock_bridge_setfd, mock_iptables_set_rules,
+            mock_iptables_get_rules, mock_add_vlan, mock_forwarding_enable,
             mock_forwarding_check, mock_address_command,
             mock_change_ip, mock_lookup_ip, mock_routes_show,
             mock_set_addr, mock_enabled, mock_set_mtu, mock_add_bridge):

@@ -1149,7 +1149,14 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
                 return_value=('', ''))
     @mock.patch('nova.privsep.linux_net.iptables_set_rules',
                 return_value=('', ''))
-    def test_spawn_vlanmanager(self, mock_iptables_set_rules,
+    @mock.patch('nova.privsep.linux_net.bridge_setfd')
+    @mock.patch('nova.privsep.linux_net.bridge_disable_stp')
+    @mock.patch('nova.privsep.linux_net.bridge_add_interface',
+                return_value=('', ''))
+    def test_spawn_vlanmanager(self, mock_bridge_add_interface,
+                               mock_bridge_disable_stp,
+                               mock_bridge_setfd,
+                               mock_iptables_set_rules,
                                mock_iptables_get_rules,
                                mock_add_vlan, mock_forwarding_enable,
                                mock_forwarding_check,

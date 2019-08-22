@@ -1356,16 +1356,15 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                 msg = _('Failed to add bridge: %s') % err
                 raise exception.NovaException(msg)
 
-            _execute('brctl', 'setfd', bridge, 0, run_as_root=True)
-            # _execute('brctl setageing %s 10' % bridge, run_as_root=True)
-            _execute('brctl', 'stp', bridge, 'off', run_as_root=True)
+            nova.privsep.linux_net.bridge_setfd(bridge)
+            nova.privsep.linux_net.bridge_disable_stp(bridge)
             nova.privsep.linux_net.set_device_enabled(bridge)
 
         if interface:
             LOG.debug('Adding interface %(interface)s to bridge %(bridge)s',
                       {'interface': interface, 'bridge': bridge})
-            out, err = _execute('brctl', 'addif', bridge, interface,
-                                check_exit_code=False, run_as_root=True)
+            out, err = nova.privsep.linux_net.bridge_add_interface(
+                           bridge, interface)
             if (err and err != "device %s is already a member of a bridge; "
                      "can't enslave it to bridge %s.\n" % (interface, bridge)):
                 msg = _('Failed to add interface: %s') % err
