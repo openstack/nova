@@ -506,13 +506,6 @@ class HostInfo(object):
         self.numa_topology = numa_topology
         self.disabled_cpus_list = cpu_disabled or []
 
-
-class NUMAHostInfo(HostInfo):
-    """A NUMA-by-default variant of HostInfo."""
-
-    def __init__(self, **kwargs):
-        super(NUMAHostInfo, self).__init__(**kwargs)
-
         if not self.numa_topology:
             topology = NUMATopology(self.cpu_nodes, self.cpu_sockets,
                                     self.cpu_cores, self.cpu_threads,

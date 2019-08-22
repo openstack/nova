@@ -128,9 +128,9 @@ class SRIOVServersTest(_PCIServersTestBase):
 
     def test_create_server_with_VF(self):
 
-        host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
-                                             cpu_cores=2, cpu_threads=2,
-                                             kB_mem=15740000)
+        host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
+                                         cpu_cores=2, cpu_threads=2,
+                                         kB_mem=15740000)
         pci_info = fakelibvirt.HostPCIDevicesInfo()
         fake_connection = self._get_connection(host_info, pci_info)
         self.mock_conn.return_value = fake_connection
@@ -143,9 +143,9 @@ class SRIOVServersTest(_PCIServersTestBase):
 
     def test_create_server_with_PF(self):
 
-        host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
-                                             cpu_cores=2, cpu_threads=2,
-                                             kB_mem=15740000)
+        host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
+                                         cpu_cores=2, cpu_threads=2,
+                                         kB_mem=15740000)
         pci_info = fakelibvirt.HostPCIDevicesInfo()
         fake_connection = self._get_connection(host_info, pci_info)
         self.mock_conn.return_value = fake_connection
@@ -158,9 +158,9 @@ class SRIOVServersTest(_PCIServersTestBase):
 
     def test_create_server_with_PF_no_VF(self):
 
-        host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
-                                             cpu_cores=2, cpu_threads=2,
-                                             kB_mem=15740000)
+        host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
+                                         cpu_cores=2, cpu_threads=2,
+                                         kB_mem=15740000)
         pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=4)
         fake_connection = self._get_connection(host_info, pci_info)
         self.mock_conn.return_value = fake_connection
@@ -178,9 +178,9 @@ class SRIOVServersTest(_PCIServersTestBase):
 
     def test_create_server_with_VF_no_PF(self):
 
-        host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
-                                             cpu_cores=2, cpu_threads=2,
-                                             kB_mem=15740000)
+        host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
+                                         cpu_cores=2, cpu_threads=2,
+                                         kB_mem=15740000)
         pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=4)
         fake_connection = self._get_connection(host_info, pci_info)
         self.mock_conn.return_value = fake_connection
@@ -231,9 +231,9 @@ class GetServerDiagnosticsServerWithVfTestV21(_PCIServersTestBase):
 
     def test_get_server_diagnostics_server_with_VF(self):
 
-        host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
-                                             cpu_cores=2, cpu_threads=2,
-                                             kB_mem=15740000)
+        host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
+                                         cpu_cores=2, cpu_threads=2,
+                                         kB_mem=15740000)
         pci_info = fakelibvirt.HostPCIDevicesInfo()
         fake_connection = self._get_connection(host_info, pci_info)
         self.mock_conn.return_value = fake_connection
@@ -295,9 +295,9 @@ class PCIServersTest(_PCIServersTestBase):
            assigned pci device.
         """
 
-        host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
-                                             cpu_cores=2, cpu_threads=2,
-                                             kB_mem=15740000)
+        host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
+                                         cpu_cores=2, cpu_threads=2,
+                                         kB_mem=15740000)
         pci_info = fakelibvirt.HostPCIDevicesInfo(num_pci=1, numa_node=1)
         fake_connection = self._get_connection(host_info, pci_info)
         self.mock_conn.return_value = fake_connection
@@ -316,9 +316,9 @@ class PCIServersTest(_PCIServersTestBase):
            memory resources from one NUMA node and a PCI device from another.
         """
 
-        host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
-                                             cpu_cores=2, cpu_threads=2,
-                                             kB_mem=15740000)
+        host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
+                                         cpu_cores=2, cpu_threads=2,
+                                         kB_mem=15740000)
         pci_info = fakelibvirt.HostPCIDevicesInfo(num_pci=1, numa_node=0)
         fake_connection = self._get_connection(host_info, pci_info)
         self.mock_conn.return_value = fake_connection
@@ -365,9 +365,9 @@ class PCIServersWithNUMAPoliciesTest(_PCIServersTestBase):
         NUMA policies are in use.
         """
 
-        host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
-                                             cpu_cores=2, cpu_threads=2,
-                                             kB_mem=15740000)
+        host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
+                                         cpu_cores=2, cpu_threads=2,
+                                         kB_mem=15740000)
         pci_info = fakelibvirt.HostPCIDevicesInfo(num_pci=1, numa_node=0)
         fake_connection = self._get_connection(host_info, pci_info)
         self.mock_conn.return_value = fake_connection

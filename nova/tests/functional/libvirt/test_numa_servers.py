@@ -92,9 +92,9 @@ class NUMAServersTest(NUMAServersTestBase):
 
     def test_create_server_with_numa_topology(self):
 
-        host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
-                                             cpu_cores=2, cpu_threads=2,
-                                             kB_mem=15740000)
+        host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
+                                         cpu_cores=2, cpu_threads=2,
+                                         kB_mem=15740000)
         fake_connection = self._get_connection(host_info=host_info)
         self.mock_conn.return_value = fake_connection
 
@@ -106,9 +106,9 @@ class NUMAServersTest(NUMAServersTestBase):
 
     def test_create_server_with_pinning(self):
 
-        host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=1, cpu_sockets=1,
-                                             cpu_cores=5, cpu_threads=2,
-                                             kB_mem=15740000)
+        host_info = fakelibvirt.HostInfo(cpu_nodes=1, cpu_sockets=1,
+                                         cpu_cores=5, cpu_threads=2,
+                                         kB_mem=15740000)
         fake_connection = self._get_connection(host_info=host_info)
         self.mock_conn.return_value = fake_connection
 
@@ -128,8 +128,8 @@ class NUMAServersTest(NUMAServersTestBase):
 
     def test_create_server_with_numa_fails(self):
 
-        host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=1, cpu_sockets=1,
-                                             cpu_cores=2, kB_mem=15740000)
+        host_info = fakelibvirt.HostInfo(cpu_nodes=1, cpu_sockets=1,
+                                         cpu_cores=2, kB_mem=15740000)
         fake_connection = self._get_connection(host_info=host_info)
         self.mock_conn.return_value = fake_connection
 
@@ -159,9 +159,9 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         self.neutron = self.useFixture(base.LibvirtNeutronFixture(self))
 
     def _test_create_server_with_networks(self, flavor_id, networks):
-        host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
-                                             cpu_cores=2, cpu_threads=2,
-                                             kB_mem=15740000)
+        host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
+                                         cpu_cores=2, cpu_threads=2,
+                                         kB_mem=15740000)
         fake_connection = self._get_connection(host_info=host_info)
         self.mock_conn.return_value = fake_connection
 
@@ -300,9 +300,9 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         self.assertIn('NoValidHost', six.text_type(ex))
 
     def test_cold_migrate_with_physnet(self):
-        host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
-                                             cpu_cores=2, cpu_threads=2,
-                                             kB_mem=15740000)
+        host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
+                                         cpu_cores=2, cpu_threads=2,
+                                         kB_mem=15740000)
 
         # Start services
         self.computes = {}
@@ -366,14 +366,14 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
     def test_cold_migrate_with_physnet_fails(self):
         host_infos = [
             # host 1 has room on both nodes
-            fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
-                                     cpu_cores=2, cpu_threads=2,
-                                     kB_mem=15740000),
+            fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
+                                 cpu_cores=2, cpu_threads=2,
+                                 kB_mem=15740000),
             # host 2 has no second node, where the desired physnet is
             # reported to be attached
-            fakelibvirt.NUMAHostInfo(cpu_nodes=1, cpu_sockets=1,
-                                     cpu_cores=1, cpu_threads=1,
-                                     kB_mem=15740000),
+            fakelibvirt.HostInfo(cpu_nodes=1, cpu_sockets=1,
+                                 cpu_cores=1, cpu_threads=1,
+                                 kB_mem=15740000),
         ]
 
         # Start services
