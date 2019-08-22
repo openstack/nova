@@ -125,6 +125,9 @@ mock_assert_method_re = re.compile(
     r"(asser|asset|asssert|assset)_(called(_(once|with|once_with))?"
     r"|any_call|has_calls|not_called))\(")
 mock_attribute_re = re.compile(r"[\.\(](retrun_value)[,=\s]")
+# Regex for useless assertions
+useless_assertion_re = re.compile(
+    r"\.((assertIsNone)\(None|(assertTrue)\((True|\d+|'.+'|\".+\")),")
 
 
 class BaseASTChecker(ast.NodeVisitor):
@@ -942,6 +945,28 @@ def nonexistent_assertion_methods_and_attributes(logical_line, filename):
             yield (0, msg % match.group(1))
 
 
+def useless_assertion(logical_line, filename):
+    """Check useless assertions in tests.
+
+    The following assertions are useless.
+
+    - assertIsNone(None, ...)
+    - assertTrue(True, ...)
+    - assertTrue(2, ...)   # Constant number
+    - assertTrue('Constant string', ...)
+    - assertTrue("Constant string", ...)
+
+    They are usually misuses of assertIsNone or assertTrue.
+
+    N365
+    """
+    msg = "N365: Misuse of %s."
+    if 'nova/tests/' in filename:
+        match = useless_assertion_re.search(logical_line)
+        if match:
+            yield (0, msg % (match.group(2) or match.group(3)))
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -989,3 +1014,4 @@ def factory(register):
     register(privsep_imports_not_aliased)
     register(did_you_mean_tuple)
     register(nonexistent_assertion_methods_and_attributes)
+    register(useless_assertion)
