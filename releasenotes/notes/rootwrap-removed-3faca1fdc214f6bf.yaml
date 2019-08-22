@@ -1,0 +1,6 @@
+---
+security:
+  - |
+    The transition from rootwrap (or sudo) to privsep has been completed for
+    nova. The only case where rootwrap is still used is to start privsep
+    helpers. All other rootwrap configurations for nova may now be removed.
