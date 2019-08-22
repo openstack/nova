@@ -16,7 +16,6 @@
 import calendar
 import datetime
 import os
-import re
 
 import mock
 import netifaces
@@ -648,24 +647,17 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.privsep.linux_net.device_exists',
                 return_value=False)
-    @mock.patch(
-        'nova.privsep.linux_net.ovs_plug',
-        side_effect=processutils.ProcessExecutionError('specific_error'))
+    @mock.patch('nova.privsep.linux_net.ovs_plug',
+                side_effect=exception.OVSConfigurationFailure('foo'))
     def test_linux_ovs_driver_plug_exception(self, mock_plug,
                                              mock_device_exists):
         self.flags(fake_network=False)
 
         driver = linux_net.LinuxOVSInterfaceDriver()
 
-        exc = self.assertRaises(exception.OvsConfigurationFailure,
-                                driver.plug,
-                                {'uuid': 'fake_network_uuid'}, 'fake_mac')
-        self.assertRegex(
-            str(exc),
-            re.compile("OVS configuration failed with: .*specific_error.*",
-                       re.DOTALL))
-        self.assertIsInstance(exc.kwargs['inner_exception'],
-                              processutils.ProcessExecutionError)
+        self.assertRaises(exception.OVSConfigurationFailure,
+                          driver.plug, {'uuid': 'fake_network_uuid'},
+                          'fake_mac')
         mock_plug.assert_called_once()
         mock_device_exists.assert_called_once()
 
