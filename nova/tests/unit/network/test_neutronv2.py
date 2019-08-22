@@ -162,16 +162,17 @@ class TestNeutronClient(test.NoDBTestCase):
         self.assertEqual('eo', cl.httpclient.endpoint_override)
 
     def test_withtoken(self):
-        self.flags(url='http://anyhost/', group='neutron')
+        self.flags(endpoint_override='http://anyhost/', group='neutron')
         self.flags(timeout=30, group='neutron')
+        # Will use the token rather than load auth from config.
         my_context = context.RequestContext('userid',
                                             uuids.my_tenant,
                                             auth_token='token')
         cl = neutronapi.get_client(my_context)
 
-        self.assertEqual(CONF.neutron.url, cl.httpclient.endpoint_override)
-        # Specifying 'url' defaults 'region_name'
-        self.assertEqual('RegionOne', cl.httpclient.region_name)
+        self.assertEqual(CONF.neutron.endpoint_override,
+                         cl.httpclient.endpoint_override)
+        self.assertEqual(CONF.neutron.region_name, cl.httpclient.region_name)
         self.assertEqual(my_context.auth_token, cl.httpclient.auth.auth_token)
         self.assertEqual(CONF.neutron.timeout, cl.httpclient.session.timeout)
 
@@ -228,21 +229,23 @@ class TestNeutronClient(test.NoDBTestCase):
         self.assertIsInstance(exc.format_message(), six.text_type)
 
     def test_withtoken_context_is_admin(self):
-        self.flags(url='http://anyhost/', group='neutron')
+        self.flags(endpoint_override='http://anyhost/', group='neutron')
         self.flags(timeout=30, group='neutron')
+        # No auth_token set but is_admin will load auth from config.
         my_context = context.RequestContext('userid',
                                             uuids.my_tenant,
-                                            auth_token='token',
                                             is_admin=True)
-        cl = neutronapi.get_client(my_context)
+        with mock.patch.object(neutronapi, '_load_auth_plugin') as mock_auth:
+            cl = neutronapi.get_client(my_context)
 
-        self.assertEqual(CONF.neutron.url, cl.httpclient.endpoint_override)
-        self.assertEqual(my_context.auth_token,
+        self.assertEqual(CONF.neutron.endpoint_override,
+                         cl.httpclient.endpoint_override)
+        self.assertEqual(mock_auth.return_value.auth_token,
                          cl.httpclient.auth.auth_token)
         self.assertEqual(CONF.neutron.timeout, cl.httpclient.session.timeout)
 
     def test_withouttoken_keystone_connection_error(self):
-        self.flags(url='http://anyhost/', group='neutron')
+        self.flags(endpoint_override='http://anyhost/', group='neutron')
         my_context = context.RequestContext('userid', uuids.my_tenant)
         self.assertRaises(NEUTRON_CLIENT_EXCEPTION,
                           neutronapi.get_client,
@@ -251,7 +254,7 @@ class TestNeutronClient(test.NoDBTestCase):
     @mock.patch('nova.network.neutronv2.api._ADMIN_AUTH')
     @mock.patch.object(client.Client, "list_networks", new=mock.Mock())
     def test_reuse_admin_token(self, m):
-        self.flags(url='http://anyhost/', group='neutron')
+        self.flags(endpoint_override='http://anyhost/', group='neutron')
         my_context = context.RequestContext('userid', uuids.my_tenant,
                                             auth_token='token')
 
@@ -6832,7 +6835,7 @@ class TestNeutronClientForAdminScenarios(test.NoDBTestCase):
         token_resp = V2Token(token_id=token_value)
         req_mock.post(auth_url + '/tokens', json=token_resp)
 
-        self.flags(url='http://anyhost/', group='neutron')
+        self.flags(endpoint_override='http://anyhost/', group='neutron')
         self.flags(auth_type='v2password', group='neutron')
         self.flags(auth_url=auth_url, group='neutron')
         self.flags(timeout=30, group='neutron')
@@ -6885,7 +6888,7 @@ class TestNeutronClientForAdminScenarios(test.NoDBTestCase):
             token_value,
             context_client.httpclient.auth.get_token(neutronapi._SESSION))
         self.assertEqual(
-            CONF.neutron.url,
+            CONF.neutron.endpoint_override,
             context_client.httpclient.get_endpoint())
 
     def test_get_client_for_admin(self):
