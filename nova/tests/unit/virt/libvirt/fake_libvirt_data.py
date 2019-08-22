@@ -13,6 +13,255 @@
 from nova.objects.fields import Architecture
 
 
+CAPABILITIES_HOST_TEMPLATE = '''
+  <host>
+    <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+    <cpu>
+      <arch>x86_64</arch>
+      <model>Penryn</model>
+      <vendor>Intel</vendor>
+      <topology sockets='%(sockets)s' cores='%(cores)s' threads='%(threads)s'/>
+      <feature name='xtpr'/>
+      <feature name='tm2'/>
+      <feature name='est'/>
+      <feature name='vmx'/>
+      <feature name='ds_cpl'/>
+      <feature name='monitor'/>
+      <feature name='pbe'/>
+      <feature name='tm'/>
+      <feature name='ht'/>
+      <feature name='ss'/>
+      <feature name='acpi'/>
+      <feature name='ds'/>
+      <feature name='vme'/>
+    </cpu>
+    <migration_features>
+      <live/>
+      <uri_transports>
+        <uri_transport>tcp</uri_transport>
+      </uri_transports>
+    </migration_features>
+    %(topology)s
+    <secmodel>
+      <model>apparmor</model>
+      <doi>0</doi>
+    </secmodel>
+  </host>'''
+
+CAPABILITIES_GUEST = {
+        'i686': '''
+  <guest>
+    <os_type>hvm</os_type>
+    <arch name='i686'>
+      <wordsize>32</wordsize>
+      <emulator>/usr/bin/qemu</emulator>
+      <machine>pc-0.14</machine>
+      <machine canonical='pc-0.14'>pc</machine>
+      <machine>pc-0.13</machine>
+      <machine>pc-0.12</machine>
+      <machine>pc-0.11</machine>
+      <machine>pc-0.10</machine>
+      <machine>isapc</machine>
+      <domain type='qemu'>
+      </domain>
+      <domain type='kvm'>
+        <emulator>/usr/bin/kvm</emulator>
+        <machine>pc-0.14</machine>
+        <machine canonical='pc-0.14'>pc</machine>
+        <machine>pc-0.13</machine>
+        <machine>pc-0.12</machine>
+        <machine>pc-0.11</machine>
+        <machine>pc-0.10</machine>
+        <machine>isapc</machine>
+      </domain>
+    </arch>
+    <features>
+      <cpuselection/>
+      <deviceboot/>
+      <pae/>
+      <nonpae/>
+      <acpi default='on' toggle='yes'/>
+      <apic default='on' toggle='no'/>
+    </features>
+  </guest>''',
+
+        'x86_64': '''
+  <guest>
+    <os_type>hvm</os_type>
+    <arch name='x86_64'>
+      <wordsize>64</wordsize>
+      <emulator>/usr/bin/qemu-system-x86_64</emulator>
+      <machine>pc-0.14</machine>
+      <machine canonical='pc-0.14'>pc</machine>
+      <machine>pc-0.13</machine>
+      <machine>pc-0.12</machine>
+      <machine>pc-0.11</machine>
+      <machine>pc-0.10</machine>
+      <machine>isapc</machine>
+      <domain type='qemu'>
+      </domain>
+      <domain type='kvm'>
+        <emulator>/usr/bin/kvm</emulator>
+        <machine>pc-0.14</machine>
+        <machine canonical='pc-0.14'>pc</machine>
+        <machine>pc-0.13</machine>
+        <machine>pc-0.12</machine>
+        <machine>pc-0.11</machine>
+        <machine>pc-0.10</machine>
+        <machine>isapc</machine>
+      </domain>
+    </arch>
+    <features>
+      <cpuselection/>
+      <deviceboot/>
+      <acpi default='on' toggle='yes'/>
+      <apic default='on' toggle='no'/>
+    </features>
+  </guest>''',
+
+        'armv7l': '''
+  <guest>
+    <os_type>hvm</os_type>
+    <arch name='armv7l'>
+      <wordsize>32</wordsize>
+      <emulator>/usr/bin/qemu-system-arm</emulator>
+      <machine>integratorcp</machine>
+      <machine>vexpress-a9</machine>
+      <machine>syborg</machine>
+      <machine>musicpal</machine>
+      <machine>mainstone</machine>
+      <machine>n800</machine>
+      <machine>n810</machine>
+      <machine>n900</machine>
+      <machine>cheetah</machine>
+      <machine>sx1</machine>
+      <machine>sx1-v1</machine>
+      <machine>beagle</machine>
+      <machine>beaglexm</machine>
+      <machine>tosa</machine>
+      <machine>akita</machine>
+      <machine>spitz</machine>
+      <machine>borzoi</machine>
+      <machine>terrier</machine>
+      <machine>connex</machine>
+      <machine>verdex</machine>
+      <machine>lm3s811evb</machine>
+      <machine>lm3s6965evb</machine>
+      <machine>realview-eb</machine>
+      <machine>realview-eb-mpcore</machine>
+      <machine>realview-pb-a8</machine>
+      <machine>realview-pbx-a9</machine>
+      <machine>versatilepb</machine>
+      <machine>versatileab</machine>
+      <domain type='qemu'>
+      </domain>
+    </arch>
+    <features>
+      <deviceboot/>
+    </features>
+  </guest>''',
+
+        'mips': '''
+  <guest>
+    <os_type>hvm</os_type>
+    <arch name='mips'>
+      <wordsize>32</wordsize>
+      <emulator>/usr/bin/qemu-system-mips</emulator>
+      <machine>malta</machine>
+      <machine>mipssim</machine>
+      <machine>magnum</machine>
+      <machine>pica61</machine>
+      <machine>mips</machine>
+      <domain type='qemu'>
+      </domain>
+    </arch>
+    <features>
+      <deviceboot/>
+    </features>
+  </guest>''',
+
+        'mipsel': '''
+  <guest>
+    <os_type>hvm</os_type>
+    <arch name='mipsel'>
+      <wordsize>32</wordsize>
+      <emulator>/usr/bin/qemu-system-mipsel</emulator>
+      <machine>malta</machine>
+      <machine>mipssim</machine>
+      <machine>magnum</machine>
+      <machine>pica61</machine>
+      <machine>mips</machine>
+      <domain type='qemu'>
+      </domain>
+    </arch>
+    <features>
+      <deviceboot/>
+    </features>
+  </guest>''',
+
+        'sparc': '''
+  <guest>
+    <os_type>hvm</os_type>
+    <arch name='sparc'>
+      <wordsize>32</wordsize>
+      <emulator>/usr/bin/qemu-system-sparc</emulator>
+      <machine>SS-5</machine>
+      <machine>leon3_generic</machine>
+      <machine>SS-10</machine>
+      <machine>SS-600MP</machine>
+      <machine>SS-20</machine>
+      <machine>Voyager</machine>
+      <machine>LX</machine>
+      <machine>SS-4</machine>
+      <machine>SPARCClassic</machine>
+      <machine>SPARCbook</machine>
+      <machine>SS-1000</machine>
+      <machine>SS-2000</machine>
+      <machine>SS-2</machine>
+      <domain type='qemu'>
+      </domain>
+    </arch>
+  </guest>''',
+
+        'ppc': '''
+  <guest>
+    <os_type>hvm</os_type>
+    <arch name='ppc'>
+      <wordsize>32</wordsize>
+      <emulator>/usr/bin/qemu-system-ppc</emulator>
+      <machine>g3beige</machine>
+      <machine>virtex-ml507</machine>
+      <machine>mpc8544ds</machine>
+      <machine canonical='bamboo-0.13'>bamboo</machine>
+      <machine>bamboo-0.13</machine>
+      <machine>bamboo-0.12</machine>
+      <machine>ref405ep</machine>
+      <machine>taihu</machine>
+      <machine>mac99</machine>
+      <machine>prep</machine>
+      <domain type='qemu'>
+      </domain>
+    </arch>
+    <features>
+      <deviceboot/>
+    </features>
+  </guest>'''
+}
+
+CAPABILITIES_TEMPLATE = (
+    "<capabilities>\n" +
+    CAPABILITIES_HOST_TEMPLATE +
+    CAPABILITIES_GUEST['i686'] +
+    CAPABILITIES_GUEST['x86_64'] +
+    CAPABILITIES_GUEST['armv7l'] +
+    CAPABILITIES_GUEST['mips'] +
+    CAPABILITIES_GUEST['mipsel'] +
+    CAPABILITIES_GUEST['sparc'] +
+    CAPABILITIES_GUEST['ppc'] +
+    "</capabilities>\n"
+)
+
+
 DOMCAPABILITIES_SPARC = """
 <domainCapabilities>
   <path>/usr/bin/qemu-system-sparc</path>
