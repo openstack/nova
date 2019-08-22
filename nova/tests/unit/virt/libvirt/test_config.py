@@ -111,22 +111,6 @@ class LibvirtConfigCapsTest(LibvirtConfigBaseTest):
               </cells>
             </topology>
           </host>
-          <guest>
-            <os_type>hvm</os_type>
-            <arch name='x86_64'>
-              <emulator>/usr/bin/qemu-system-x86_64</emulator>
-              <domain type="qemu" />
-              <domain type="kvm">
-                <emulator>/usr/bin/qemu-kvm</emulator>
-              </domain>
-            </arch>
-          </guest>
-          <guest>
-            <os_type>hvm</os_type>
-            <arch name='i686'>
-              <emulator>/usr/bin/qemu-system-i386</emulator>
-            </arch>
-          </guest>
         </capabilities>"""
 
         obj = config.LibvirtConfigCaps()
@@ -134,17 +118,6 @@ class LibvirtConfigCapsTest(LibvirtConfigBaseTest):
 
         self.assertIsInstance(obj.host, config.LibvirtConfigCapsHost)
         self.assertEqual(obj.host.uuid, "c7a5fdbd-edaf-9455-926a-d65c16db1809")
-        self.assertEqual(2, len(obj.guests))
-        for guest in obj.guests:
-            self.assertIsInstance(guest, config.LibvirtConfigCapsGuest)
-            self.assertEqual('hvm', guest.ostype)
-
-        self.assertEqual('x86_64', obj.guests[0].arch)
-        self.assertEqual('i686', obj.guests[1].arch)
-        self.assertEqual('/usr/bin/qemu-system-x86_64', obj.guests[0].emulator)
-        self.assertNotIn('qemu', obj.guests[0].domemulator)
-        self.assertEqual('/usr/bin/qemu-kvm', obj.guests[0].domemulator['kvm'])
-        self.assertEqual('/usr/bin/qemu-system-i386', obj.guests[1].emulator)
 
         xmlout = obj.to_xml()
 
@@ -171,6 +144,95 @@ class LibvirtConfigCapsTest(LibvirtConfigBaseTest):
         obj.parse_str(xmlin)
         self.assertEqual(128, obj.memory)
         self.assertEqual(0, len(obj.cpus))
+
+    def test_config_guest(self):
+        xmlin = """
+        <capabilities>
+          <guest>
+            <os_type>hvm</os_type>
+            <arch name='x86_64'>
+              <emulator>/usr/bin/qemu-system-x86_64</emulator>
+              <machine maxCpus='255'>pc-i440fx-2.11</machine>
+              <machine canonical='pc-i440fx-2.11' maxCpus='255'>pc</machine>
+              <machine maxCpus='1'>isapc</machine>
+              <machine maxCpus='255'>pc-1.1</machine>
+              <machine maxCpus='255'>pc-i440fx-2.0</machine>
+              <machine maxCpus='288'>pc-q35-2.11</machine>
+              <machine canonical='pc-q35-2.11' maxCpus='288'>q35</machine>
+              <machine maxCpus='1'>xenpv</machine>
+              <machine maxCpus='288'>pc-q35-2.10</machine>
+              <domain type="qemu" />
+              <domain type="kvm">
+                <emulator>/usr/bin/qemu-kvm</emulator>
+                <machine maxCpus='255'>pc-i440fx-2.11</machine>
+                <machine canonical='pc-i440fx-2.11' maxCpus='255'>pc</machine>
+                <machine maxCpus='1'>isapc</machine>
+                <machine maxCpus='255'>pc-1.1</machine>
+                <machine maxCpus='255'>pc-i440fx-2.0</machine>
+                <machine maxCpus='288'>pc-q35-2.11</machine>
+                <machine canonical='pc-q35-2.11' maxCpus='288'>q35</machine>
+                <machine maxCpus='1'>xenpv</machine>
+                <machine maxCpus='288'>pc-q35-2.10</machine>
+              </domain>
+            </arch>
+          </guest>
+          <guest>
+            <os_type>hvm</os_type>
+            <arch name='i686'>
+              <emulator>/usr/bin/qemu-system-i386</emulator>
+              <machine maxCpus='255'>pc-i440fx-2.11</machine>
+              <machine canonical='pc-i440fx-2.11' maxCpus='255'>pc</machine>
+              <machine maxCpus='1'>isapc</machine>
+              <machine maxCpus='255'>pc-1.1</machine>
+              <machine maxCpus='255'>pc-i440fx-2.0</machine>
+              <machine maxCpus='288'>pc-q35-2.11</machine>
+              <machine canonical='pc-q35-2.11' maxCpus='288'>q35</machine>
+              <machine maxCpus='1'>xenpv</machine>
+              <machine maxCpus='288'>pc-q35-2.10</machine>
+              <domain type="qemu" />
+              <domain type="kvm">
+                <emulator>/usr/bin/qemu-kvm</emulator>
+                <machine maxCpus='255'>pc-i440fx-2.11</machine>
+                <machine canonical='pc-i440fx-2.11' maxCpus='255'>pc</machine>
+                <machine maxCpus='1'>isapc</machine>
+                <machine maxCpus='255'>pc-1.1</machine>
+                <machine maxCpus='255'>pc-i440fx-2.0</machine>
+                <machine maxCpus='288'>pc-q35-2.11</machine>
+                <machine canonical='pc-q35-2.11' maxCpus='288'>q35</machine>
+                <machine maxCpus='1'>xenpv</machine>
+                <machine maxCpus='288'>pc-q35-2.10</machine>
+              </domain>
+            </arch>
+          </guest>
+        </capabilities>"""
+        obj = config.LibvirtConfigCaps()
+        obj.parse_str(xmlin)
+
+        self.assertEqual(2, len(obj.guests))
+        for guest in obj.guests:
+            self.assertIsInstance(guest, config.LibvirtConfigCapsGuest)
+            self.assertEqual('hvm', guest.ostype)
+
+        self.assertEqual('x86_64', obj.guests[0].arch)
+        self.assertEqual('i686', obj.guests[1].arch)
+
+        guest = obj.guests[0]
+        self.assertIn('qemu', guest.domains)
+        self.assertIn('kvm', guest.domains)
+        self.assertEqual('qemu', guest.default_domain.domtype)
+        self.assertEqual('/usr/bin/qemu-system-x86_64',
+                         guest.default_domain.emulator)
+        self.assertEqual(guest.default_domain, guest.domains['qemu'])
+        for domtype, domain in guest.domains.items():
+            self.assertEqual(7, len(domain.machines))
+            self.assertIn('pc-i440fx-2.0', domain.machines)
+            self.assertIn('xenpv', domain.machines)
+            self.assertEqual(2, len(domain.aliases))
+            self.assertIn('pc', domain.aliases)
+            self.assertIn('q35', domain.aliases)
+
+        xmlout = obj.to_xml()
+        self.assertXmlEqual(xmlin, xmlout, allow_mixed_nodes=True)
 
 
 class LibvirtConfigGuestTimerTest(LibvirtConfigBaseTest):

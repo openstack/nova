@@ -25,6 +25,7 @@ helpers for populating up config object instances.
 
 import time
 
+from collections import OrderedDict
 from lxml import etree
 from oslo_utils import strutils
 from oslo_utils import units
@@ -391,43 +392,54 @@ class LibvirtConfigCapsGuest(LibvirtConfigObject):
 
         self.arch = None
         self.ostype = None
-        self.domtype = list()
-
-        # Track <emulator> values, which we need in order to be able
-        # to call virConnectGetDomainCapabilities() - typically
-        # something like '/usr/bin/qemu-system-i386'.
-        #
-        # Firstly we track the default for any <domain> child without
-        # its own <emulator> sub-child:
-        self.emulator = None
-        #
-        # Also per-<domain> overrides for the default in self.emulator.
-        # The dict maps domain types such as 'kvm' to the emulator
-        # path for that domain type.  Note that these overrides come
-        # from <emulator> elements under each <domain>; there is no
-        # <domemulator> element.
-        self.domemulator = dict()
+        # Map domain types such as 'qemu' and 'kvm' to
+        # LibvirtConfigCapsGuestDomain instances.
+        self.domains = OrderedDict()
+        self.default_domain = None
 
     def parse_dom(self, xmldoc):
         super(LibvirtConfigCapsGuest, self).parse_dom(xmldoc)
 
-        for c in xmldoc:
-            if c.tag == "os_type":
-                self.ostype = c.text
-            elif c.tag == "arch":
-                self.arch = c.get("name")
-                for ac in c:
-                    if ac.tag == "domain":
-                        self.parse_domain(ac)
-                    elif ac.tag == "emulator":
-                        self.emulator = ac.text
+        for child in xmldoc:
+            if child.tag == "os_type":
+                self.ostype = child.text
+            elif child.tag == "arch":
+                self.parse_arch(child)
 
-    def parse_domain(self, domxml):
-        domtype = domxml.get("type")
-        self.domtype.append(domtype)
-        for dc in domxml:
-            if dc.tag == "emulator":
-                self.domemulator[domtype] = dc.text
+    def parse_arch(self, xmldoc):
+        self.arch = xmldoc.get("name")
+        # NOTE(aspiers): The data relating to each <domain> element
+        # under <arch> (such as <emulator> and many <machine>
+        # elements) is structured in a slightly odd way.  There is one
+        # "default" domain such as
+        #
+        #   <domain type='qemu'/>
+        #
+        # which has no child elements, and all its data is provided in
+        # sibling elements.  Then others such as
+        #
+        #   <domain type='kvm'>
+        #
+        # will have their <emulator> and <machine> elements as
+        # children.  So we need to handle the two cases separately.
+        self.default_domain = LibvirtConfigCapsGuestDomain()
+        for child in xmldoc:
+            if child.tag == "domain":
+                if list(child):
+                    # This domain has children, so create a new instance,
+                    # parse it, and register it in the dict of domains.
+                    domain = LibvirtConfigCapsGuestDomain()
+                    domain.parse_dom(child)
+                    self.domains[domain.domtype] = domain
+                else:
+                    # This is the childless <domain/> element for the
+                    # default domain
+                    self.default_domain.parse_domain(child)
+                    self.domains[self.default_domain.domtype] = \
+                        self.default_domain
+            else:
+                # Sibling element of the default domain
+                self.default_domain.parse_child(child)
 
     def format_dom(self):
         caps = super(LibvirtConfigCapsGuest, self).format_dom()
@@ -435,19 +447,81 @@ class LibvirtConfigCapsGuest(LibvirtConfigObject):
         if self.ostype is not None:
             caps.append(self._text_node("os_type", self.ostype))
         if self.arch:
-            arch = etree.Element("arch", name=self.arch)
-            if self.emulator is not None:
-                arch.append(self._text_node("emulator", self.emulator))
-            for dt in self.domtype:
-                dte = etree.Element("domain")
-                dte.set("type", dt)
-                if dt in self.domemulator:
-                    dte.append(self._text_node("emulator",
-                                               self.domemulator[dt]))
-                arch.append(dte)
+            arch = self.format_arch()
             caps.append(arch)
 
         return caps
+
+    def format_arch(self):
+        arch = etree.Element("arch", name=self.arch)
+
+        for c in self.default_domain.format_dom():
+            arch.append(c)
+        arch.append(self._new_node("domain", type=self.default_domain.domtype))
+
+        for domtype, domain in self.domains.items():
+            if domtype == self.default_domain.domtype:
+                # We've already added this domain at the top level
+                continue
+            arch.append(domain.format_dom())
+
+        return arch
+
+
+class LibvirtConfigCapsGuestDomain(LibvirtConfigObject):
+    def __init__(self, **kwargs):
+        super(LibvirtConfigCapsGuestDomain, self).__init__(
+            root_name="domain", **kwargs)
+
+        self.domtype = None
+
+        # Track <emulator> values, which we need in order to be able
+        # to call virConnectGetDomainCapabilities() - typically
+        # something like '/usr/bin/qemu-system-i386'.
+        self.emulator = None
+
+        self.machines = {}
+        self.aliases = {}
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigCapsGuestDomain, self).parse_dom(xmldoc)
+
+        self.parse_domain(xmldoc)
+
+        for c in xmldoc:
+            self.parse_child(c)
+
+    def parse_child(self, xmldoc):
+        if xmldoc.tag == "emulator":
+            self.emulator = xmldoc.text
+        elif xmldoc.tag == "machine":
+            self.parse_machine(xmldoc)
+
+    def parse_domain(self, xmldoc):
+        self.domtype = xmldoc.get("type")
+        if self.domtype is None:
+            raise exception.InvalidInput(
+                "Didn't find domain type in %s", xmldoc)
+
+    def parse_machine(self, xmldoc):
+        if 'canonical' in xmldoc.attrib:
+            self.aliases[xmldoc.text] = xmldoc.attrib
+        else:
+            self.machines[xmldoc.text] = xmldoc.attrib
+
+    def format_dom(self):
+        domain = super(LibvirtConfigCapsGuestDomain, self).format_dom()
+
+        if self.domtype is not None:
+            domain.set("type", self.domtype)
+        if self.emulator is not None:
+            domain.append(self._text_node("emulator", self.emulator))
+        for mach_type, machine in self.machines.items():
+            domain.append(self._text_node("machine", mach_type, **machine))
+        for alias, machine in self.aliases.items():
+            domain.append(self._text_node("machine", alias, **machine))
+
+        return domain
 
 
 class LibvirtConfigGuestTimer(LibvirtConfigObject):
