@@ -1120,15 +1120,6 @@ def _host_dhcp_opts(vif_id=None, gateway=None):
     return ','.join(values)
 
 
-def _execute(*cmd, **kwargs):
-    """Wrapper around utils._execute for fake_network."""
-    if CONF.fake_network:
-        LOG.debug('FAKE NET: %s', ' '.join(map(str, cmd)))
-        return 'fake', 0
-    else:
-        return utils.execute(*cmd, **kwargs)
-
-
 def _dhcp_file(dev, kind):
     """Return path to a pid, leases, hosts or conf file for a bridge/device."""
     fileutils.ensure_tree(CONF.networks_path)
