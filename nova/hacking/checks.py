@@ -115,6 +115,17 @@ privsep_import_re = re.compile(
 # Close paren
 disguised_as_tuple_re = re.compile(r''' in \((['"]?)[a-zA-Z0-9_.]+\1\)''')
 
+# NOTE(takashin): The patterns of nox-existent mock assertion methods and
+# attributes do not cover all cases. If you find a new pattern,
+# add the pattern in the following regex patterns.
+mock_assert_method_re = re.compile(
+    r"\.((called_once(_with)*|has_calls)|"
+    r"mock_assert_(called(_(once|with|once_with))?"
+    r"|any_call|has_calls|not_called)|"
+    r"(asser|asset|asssert|assset)_(called(_(once|with|once_with))?"
+    r"|any_call|has_calls|not_called))\(")
+mock_attribute_re = re.compile(r"[\.\(](retrun_value)[,=\s]")
+
 
 class BaseASTChecker(ast.NodeVisitor):
     """Provides a simple framework for writing AST-based checks.
@@ -898,6 +909,39 @@ def did_you_mean_tuple(logical_line):
                   "certainly meant ``in (a_tuple_of_one,)``.")
 
 
+def nonexistent_assertion_methods_and_attributes(logical_line, filename):
+    """Check non-existent mock assertion methods and attributes.
+
+    The following assertion methods do not exist.
+
+    - called_once()
+    - called_once_with()
+    - has_calls()
+    - mock_assert_*()
+
+    The following typos were found in the past cases.
+
+    - asser_*
+    - asset_*
+    - assset_*
+    - asssert_*
+    - retrun_value
+
+    N364
+    """
+    msg = ("N364: Non existent mock assertion method or attribute (%s) is "
+           "used. Check a typo or whether the assertion method should begin "
+           "with 'assert_'.")
+    if 'nova/tests/' in filename:
+        match = mock_assert_method_re.search(logical_line)
+        if match:
+            yield (0, msg % match.group(1))
+
+        match = mock_attribute_re.search(logical_line)
+        if match:
+            yield (0, msg % match.group(1))
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -944,3 +988,4 @@ def factory(register):
     register(assert_regexpmatches)
     register(privsep_imports_not_aliased)
     register(did_you_mean_tuple)
+    register(nonexistent_assertion_methods_and_attributes)
