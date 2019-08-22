@@ -1024,7 +1024,8 @@ def get_sdk_adapter(service_type):
     """
     confgrp = _get_conf_group(service_type)
     _, sess = _get_auth_and_session(confgrp)
-    conn = connection.Connection(session=sess, oslo_conf=CONF)
+    conn = connection.Connection(
+        session=sess, oslo_conf=CONF, service_types={service_type})
     return getattr(conn, service_type)
 
 

@@ -1325,8 +1325,9 @@ class TestGetSDKAdapter(test.NoDBTestCase):
         self.assertEqual(actual, mock_proxy)
         mock_get_confgrp.assert_called_once_with(service_type)
         mock_get_auth_sess.assert_called_once_with(mock_confgrp)
-        mock_connection.assert_called_once_with(session=mock_session,
-                                                oslo_conf=mock_conf)
+        mock_connection.assert_called_once_with(
+            session=mock_session, oslo_conf=mock_conf,
+            service_types={'test_service'})
 
     @mock.patch('nova.utils._get_conf_group')
     @mock.patch('nova.utils._get_auth_and_session')
