@@ -2483,10 +2483,10 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
                 </hugepages>
               </memoryBacking>
               <memtune>
-                <hard_limit units="K">496</hard_limit>
-                <soft_limit units="K">672</soft_limit>
-                <swap_hard_limit units="K">1638</swap_hard_limit>
-                <min_guarantee units="K">2970</min_guarantee>
+                <hard_limit unit="KiB">496</hard_limit>
+                <soft_limit unit="KiB">672</soft_limit>
+                <swap_hard_limit unit="KiB">1638</swap_hard_limit>
+                <min_guarantee unit="KiB">2970</min_guarantee>
               </memtune>
               <numatune>
                 <memory mode="preferred" nodeset="0-3,8"/>
@@ -3459,10 +3459,10 @@ class LibvirtConfigGuestMemoryTuneTest(LibvirtConfigBaseTest):
         xml = obj.to_xml()
         self.assertXmlEqual(xml, """
           <memtune>
-            <hard_limit units="K">28</hard_limit>
-            <soft_limit units="K">6</soft_limit>
-            <swap_hard_limit units="K">140</swap_hard_limit>
-            <min_guarantee units="K">270</min_guarantee>
+            <hard_limit unit="KiB">28</hard_limit>
+            <soft_limit unit="KiB">6</soft_limit>
+            <swap_hard_limit unit="KiB">140</swap_hard_limit>
+            <min_guarantee unit="KiB">270</min_guarantee>
           </memtune>""")
 
 
