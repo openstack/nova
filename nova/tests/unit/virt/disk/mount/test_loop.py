@@ -38,8 +38,6 @@ class LoopTestCase(test.NoDBTestCase):
     def test_get_dev(self, mock_loopremove, mock_loopsetup):
         tempdir = self.useFixture(fixtures.TempDir()).path
         mount = loop.LoopMount(self.file, tempdir)
-        self.useFixture(fixtures.MonkeyPatch('nova.utils.execute',
-                                             _fake_noop))
 
         # No error logged, device consumed
         self.assertTrue(mount.get_dev())

@@ -181,18 +181,6 @@ class TestDiskImage(test.NoDBTestCase):
 
 
 class TestVirtDisk(test.NoDBTestCase):
-    def setUp(self):
-        super(TestVirtDisk, self).setUp()
-
-        # TODO(mikal): this can probably be removed post privsep cleanup.
-        self.executes = []
-
-        def fake_execute(*cmd, **kwargs):
-            self.executes.append(cmd)
-            return None, None
-
-        self.stub_out('nova.utils.execute', fake_execute)
-
     def test_lxc_setup_container(self):
         image = '/tmp/fake-image'
         container_dir = '/mnt/fake_rootfs/'

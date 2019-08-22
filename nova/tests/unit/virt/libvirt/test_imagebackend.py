@@ -1095,7 +1095,8 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
                 mock.patch.object(self.dmcrypt, 'create_volume', mock.Mock()),
                 mock.patch.object(self.dmcrypt, 'delete_volume', mock.Mock()),
                 mock.patch.object(self.dmcrypt, 'list_volumes', mock.Mock()),
-                mock.patch.object(self.utils, 'execute', mock.Mock())):
+                mock.patch('oslo_concurrency.processutils.execute',
+                           mock.Mock())):
             fn = mock.Mock()
             self.lvm.create_volume.side_effect = RuntimeError()
 
@@ -1132,7 +1133,8 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
                 mock.patch.object(self.dmcrypt, 'create_volume', mock.Mock()),
                 mock.patch.object(self.dmcrypt, 'delete_volume', mock.Mock()),
                 mock.patch.object(self.dmcrypt, 'list_volumes', mock.Mock()),
-                mock.patch.object(self.utils, 'execute', mock.Mock())):
+                mock.patch('oslo_concurrency.processutils.execute',
+                           mock.Mock())):
             fn = mock.Mock()
             self.dmcrypt.create_volume.side_effect = RuntimeError()
 
@@ -1174,7 +1176,8 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
                 mock.patch.object(self.dmcrypt, 'create_volume', mock.Mock()),
                 mock.patch.object(self.dmcrypt, 'delete_volume', mock.Mock()),
                 mock.patch.object(self.dmcrypt, 'list_volumes', mock.Mock()),
-                mock.patch.object(self.utils, 'execute', mock.Mock())):
+                mock.patch('oslo_concurrency.processutils.execute',
+                           mock.Mock())):
             fn = mock.Mock()
             fn.side_effect = RuntimeError()
 
@@ -1216,7 +1219,8 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
                 mock.patch.object(self.dmcrypt, 'create_volume', mock.Mock()),
                 mock.patch.object(self.dmcrypt, 'delete_volume', mock.Mock()),
                 mock.patch.object(self.dmcrypt, 'list_volumes', mock.Mock()),
-                mock.patch.object(self.utils, 'execute', mock.Mock())):
+                mock.patch('oslo_concurrency.processutils.execute',
+                           mock.Mock())):
             fn = mock.Mock()
             fn.side_effect = RuntimeError()
 

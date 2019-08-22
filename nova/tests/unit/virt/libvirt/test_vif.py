@@ -505,13 +505,6 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         # os_vif.initialize is typically done in nova-compute startup
         os_vif.initialize()
         self.setup_os_vif_objects()
-        self.executes = []
-
-        def fake_execute(*cmd, **kwargs):
-            self.executes.append(cmd)
-            return None, None
-
-        self.stub_out('nova.utils.execute', fake_execute)
 
     def _get_node(self, xml):
         doc = etree.fromstring(xml)

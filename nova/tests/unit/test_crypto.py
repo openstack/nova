@@ -74,12 +74,12 @@ e6fCXWECgYEAqgpGvva5kJ1ISgNwnJbwiNw0sOT9BMOsdNZBElf0kJIIy6FMPvap
             with open(sshkey, 'w') as f:
                 f.write(ssh_private_key)
             try:
-                dec, _err = utils.execute('openssl',
-                                          'rsautl',
-                                          '-decrypt',
-                                          '-inkey', sshkey,
-                                          process_input=text,
-                                          binary=True)
+                dec, _err = processutils.execute('openssl',
+                                                 'rsautl',
+                                                 '-decrypt',
+                                                 '-inkey', sshkey,
+                                                 process_input=text,
+                                                 binary=True)
                 return dec
             except processutils.ProcessExecutionError as exc:
                 raise exception.DecryptionFailure(reason=exc.stderr)

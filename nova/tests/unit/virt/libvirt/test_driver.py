@@ -13563,7 +13563,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         disk_info['mapping'].pop('disk.local')
 
         with test.nested(
-            mock.patch.object(utils, 'execute'),
+            mock.patch('oslo_concurrency.processutils.execute'),
             mock.patch.object(drvr, 'get_info'),
             mock.patch.object(drvr, '_create_domain_and_network'),
             mock.patch.object(imagebackend.Image, 'verify_base_size'),
@@ -16581,7 +16581,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch.object(os, 'unlink')
     @mock.patch.object(os.path, 'exists')
-    @mock.patch.object(utils, 'execute')
+    @mock.patch('oslo_concurrency.processutils.execute')
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'get_host_ip_addr',
                        return_value='foo')
     def test_shared_storage_detection_easy(self, mock_get, mock_exec,
