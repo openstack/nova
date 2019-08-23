@@ -40,7 +40,7 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_instance_device_metadata
 from nova.tests.unit.objects import test_instance_fault
 from nova.tests.unit.objects import test_instance_info_cache
-from nova.tests.unit.objects import test_instance_numa_topology
+from nova.tests.unit.objects import test_instance_numa
 from nova.tests.unit.objects import test_instance_pci_requests
 from nova.tests.unit.objects import test_migration_context as test_mig_ctxt
 from nova.tests.unit.objects import test_objects
@@ -151,8 +151,7 @@ class _TestInstanceObject(object):
                          'extra.migration_context', 'extra.keypairs',
                          'extra.device_metadata', 'extra.trusted_certs'])
 
-        fake_topology = (test_instance_numa_topology.
-                         fake_db_topology['numa_topology'])
+        fake_topology = test_instance_numa.fake_db_topology['numa_topology']
         fake_requests = jsonutils.dumps(test_instance_pci_requests.
                                         fake_pci_requests)
         fake_devices_metadata = \
@@ -1046,7 +1045,7 @@ class _TestInstanceObject(object):
     def test_create_with_extras(self):
         inst = objects.Instance(context=self.context,
             uuid=self.fake_instance['uuid'],
-            numa_topology=test_instance_numa_topology.fake_obj_numa_topology,
+            numa_topology=test_instance_numa.fake_obj_numa_topology,
             pci_requests=objects.InstancePCIRequests(
                 requests=[
                     objects.InstancePCIRequest(count=123,
@@ -1373,7 +1372,7 @@ class _TestInstanceObject(object):
                                                  {"migration_context": None})
 
     def test_mutated_migration_context(self):
-        numa_topology = (test_instance_numa_topology.
+        numa_topology = (test_instance_numa.
                             fake_obj_numa_topology.obj_clone())
         numa_topology.cells[0].memory = 1024
         numa_topology.cells[1].memory = 1024
@@ -1416,8 +1415,7 @@ class _TestInstanceObject(object):
                 self.assertNotIn(attr, inst)
 
     def test_clear_numa_topology(self):
-        numa_topology = (test_instance_numa_topology.
-                            fake_obj_numa_topology.obj_clone())
+        numa_topology = test_instance_numa.fake_obj_numa_topology.obj_clone()
         numa_topology.cells[0].id = 42
         numa_topology.cells[1].id = 43
 

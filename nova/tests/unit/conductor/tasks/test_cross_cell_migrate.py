@@ -30,7 +30,7 @@ from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_compute_node
 from nova.tests.unit.objects import test_instance_device_metadata
-from nova.tests.unit.objects import test_instance_numa_topology
+from nova.tests.unit.objects import test_instance_numa
 from nova.tests.unit.objects import test_instance_pci_requests
 from nova.tests.unit.objects import test_keypair
 from nova.tests.unit.objects import test_migration
@@ -107,7 +107,7 @@ class TargetDBSetupTaskTestCase(
             objects.InstancePCIRequest(
                 **test_instance_pci_requests.fake_pci_requests[0])])
         inst.numa_topology = objects.InstanceNUMATopology(
-            cells=test_instance_numa_topology.fake_obj_numa_topology.cells)
+            cells=test_instance_numa.fake_obj_numa_topology.cells)
         inst.trusted_certs = objects.TrustedCerts(ids=[uuids.cert])
         inst.vcpu_model = test_vcpu_model.fake_vcpumodel
         inst.keypairs = objects.KeyPairList(objects=[

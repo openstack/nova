@@ -16,7 +16,7 @@ from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import exception
 from nova import objects
-from nova.tests.unit.objects import test_instance_numa_topology
+from nova.tests.unit.objects import test_instance_numa
 from nova.tests.unit.objects import test_objects
 
 
@@ -26,7 +26,7 @@ fake_migration_context_obj = objects.MigrationContext()
 fake_migration_context_obj.instance_uuid = fake_instance_uuid
 fake_migration_context_obj.migration_id = 42
 fake_migration_context_obj.new_numa_topology = (
-    test_instance_numa_topology.fake_obj_numa_topology.obj_clone())
+    test_instance_numa.fake_obj_numa_topology.obj_clone())
 fake_migration_context_obj.old_numa_topology = None
 fake_migration_context_obj.new_pci_devices = objects.PciDeviceList()
 fake_migration_context_obj.old_pci_devices = None

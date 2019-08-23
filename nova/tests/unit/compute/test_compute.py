@@ -81,7 +81,7 @@ from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_diagnostics
 from nova.tests.unit.objects import test_flavor
-from nova.tests.unit.objects import test_instance_numa_topology
+from nova.tests.unit.objects import test_instance_numa
 from nova.tests.unit.objects import test_migration
 from nova.tests.unit import utils as test_utils
 from nova import utils
@@ -5642,9 +5642,8 @@ class ComputeTestCase(BaseTestCase,
         self._test_confirm_resize(power_on=False)
 
     def test_confirm_resize_with_migration_context(self):
-        numa_topology = (
-            test_instance_numa_topology.get_fake_obj_numa_topology(
-                self.context))
+        numa_topology = test_instance_numa.get_fake_obj_numa_topology(
+            self.context)
         self._test_confirm_resize(power_on=True, numa_topology=numa_topology)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -5965,9 +5964,8 @@ class ComputeTestCase(BaseTestCase,
                                         remove_old_vm_state=True)
 
     def test_finish_revert_resize_migration_context(self):
-        numa_topology = (
-            test_instance_numa_topology.get_fake_obj_numa_topology(
-                self.context))
+        numa_topology = test_instance_numa.get_fake_obj_numa_topology(
+            self.context)
         self._test_finish_revert_resize(power_on=True,
                                         numa_topology=numa_topology)
 
@@ -13066,9 +13064,8 @@ class EvacuateHostTestCase(BaseTestCase):
         migration.save.assert_called_once_with()
 
     def test_rebuild_numa_migration_context_honoured(self):
-        numa_topology = (
-            test_instance_numa_topology.get_fake_obj_numa_topology(
-                self.context))
+        numa_topology = test_instance_numa.get_fake_obj_numa_topology(
+            self.context)
 
         # NOTE(ndipanov): Make sure that we pass the topology from the context
         def fake_spawn(context, instance, image_meta, injected_files,

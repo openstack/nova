@@ -128,7 +128,7 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
         self.assertEqual(limits.cpu_allocation_ratio, 21)
         self.assertEqual(limits.ram_allocation_ratio, 1.3)
 
-    @mock.patch('nova.objects.instance_numa_topology.InstanceNUMACell'
+    @mock.patch('nova.objects.instance_numa.InstanceNUMACell'
                 '.cpu_pinning_requested',
                 return_value=True)
     def _do_test_numa_topology_filter_cpu_policy(
