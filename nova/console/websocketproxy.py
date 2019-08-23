@@ -18,6 +18,7 @@ Websocket proxy that is compatible with OpenStack Nova.
 Leverages websockify.py by Joel Martin
 '''
 
+import copy
 import socket
 import sys
 
@@ -220,7 +221,10 @@ class NovaProxyRequestHandlerBase(object):
                 detail = _("Origin header protocol does not match this host.")
                 raise exception.ValidationError(detail=detail)
 
-        self.msg(_('connect info: %s'), str(connect_info))
+        sanitized_info = copy.copy(connect_info)
+        sanitized_info.token = '***'
+        self.msg(_('connect info: %s'), sanitized_info)
+
         host = connect_info.host
         port = connect_info.port
 
