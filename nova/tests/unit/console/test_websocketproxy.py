@@ -109,6 +109,9 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         check_token.assert_called_with(mock.ANY, token="123-456-789")
         self.wh.socket.assert_called_with('node1', 10000, connect=True)
         self.wh.do_proxy.assert_called_with('<socket>')
+        # ensure that token is masked when logged
+        connection_info = self.wh.msg.mock_calls[0][1][1]
+        self.assertEqual('***', connection_info['token'])
 
     @mock.patch('nova.consoleauth.rpcapi.ConsoleAuthAPI.check_token')
     def test_new_websocket_client_ipv6_url(self, check_token):

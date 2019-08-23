@@ -88,6 +88,17 @@ class ConsoleauthTestCase(test.NoDBTestCase):
         self.stub_out(self.rpcapi + 'validate_console_port',
                       fake_validate_console_port)
 
+    @mock.patch('nova.consoleauth.manager.LOG.info')
+    def test_authorize_does_not_log_token_secrete(self, mock_info):
+        self.manager_api.authorize_console(
+            self.context, 'secret', 'novnc', '127.0.0.1', '8080', 'host',
+            self.instance_uuid)
+
+        mock_info.assert_called_once_with(
+            'Received Token: %(token_dict)s', test.MatchType(dict))
+        self.assertEqual(
+            '***', mock_info.mock_calls[0][1][1]['token_dict']['token'])
+
     @mock.patch('nova.objects.instance.Instance.get_by_uuid')
     def test_multiple_tokens_for_instance(self, mock_get):
         mock_get.return_value = None
@@ -139,8 +150,9 @@ class ConsoleauthTestCase(test.NoDBTestCase):
             mock_delete.assert_called_once_with(
                 self.instance_uuid.encode('UTF-8'))
 
+    @mock.patch('nova.consoleauth.manager.LOG.info')
     @mock.patch('nova.objects.instance.Instance.get_by_uuid')
-    def test_wrong_token_has_port(self, mock_get):
+    def test_wrong_token_has_port(self, mock_get, mock_log):
         mock_get.return_value = None
 
         token = u'mytok'
@@ -151,6 +163,13 @@ class ConsoleauthTestCase(test.NoDBTestCase):
                                         '127.0.0.1', '8080', 'host',
                                         instance_uuid=self.instance_uuid)
         self.assertIsNone(self.manager_api.check_token(self.context, token))
+        mock_log.assert_has_calls([
+            mock.call(
+                'Received Token: %(token_dict)s', mock.ANY),
+            mock.call(
+                'Checking that token is known: %(token_valid)s',
+                {'token_valid': True}),
+        ])
 
     def test_delete_expired_tokens(self):
         self.useFixture(test.TimeOverride())
