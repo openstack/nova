@@ -295,6 +295,9 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         validate.assert_called_with(mock.ANY, "123-456-789")
         self.wh.socket.assert_called_with('node1', 10000, connect=True)
         self.wh.do_proxy.assert_called_with('<socket>')
+        # ensure that token is masked when logged
+        connection_info = self.wh.msg.mock_calls[0][1][1]
+        self.assertEqual('***', connection_info['token'])
 
     @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandlerBase.'
                 '_check_console_port')
