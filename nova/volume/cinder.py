@@ -507,7 +507,14 @@ class API(object):
             raise exception.InvalidVolume(reason=msg)
 
     def check_availability_zone(self, context, volume, instance=None):
-        """Ensure that the availability zone is the same."""
+        """Ensure that the availability zone is the same.
+
+        :param context: the nova request context
+        :param volume: the volume attached to the instance
+        :param instance: nova.objects.instance.Instance object
+        :raises: InvalidVolume if the instance availability zone does not
+            equal the volume's availability zone
+        """
 
         # TODO(walter-boring): move this check to Cinder as part of
         # the reserve call.
