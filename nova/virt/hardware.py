@@ -2005,33 +2005,3 @@ def instance_topology_from_instance(instance):
                     emulator_threads_policy=emulator_threads_policy)
 
     return instance_numa_topology
-
-
-# TODO(ndipanov): Remove when all code paths are using objects
-def host_topology_and_format_from_host(host):
-    """Extract numa topology from myriad host representations.
-
-    Until the RPC version is bumped to 5.x, a host may be represented
-    as a dict, a db object, an actual ComputeNode object, or an
-    instance of HostState class. Identify the type received and return
-    either an instance of objects.NUMATopology if host's NUMA topology
-    is available, else None.
-
-    :returns: A two-tuple. The first element is either an instance of
-              objects.NUMATopology or None. The second element is a
-              boolean set to True if topology was in JSON format.
-    """
-    was_json = False
-    try:
-        host_numa_topology = host.get('numa_topology')
-    except AttributeError:
-        host_numa_topology = host.numa_topology
-
-    if host_numa_topology is not None and isinstance(
-            host_numa_topology, six.string_types):
-        was_json = True
-
-        host_numa_topology = (objects.NUMATopology.obj_from_db_obj(
-            host_numa_topology))
-
-    return host_numa_topology, was_json

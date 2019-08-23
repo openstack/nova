@@ -29,8 +29,7 @@ class NUMATopologyFilter(filters.BaseHostFilter):
         """Check that the host_state provided satisfies any available
         CPU policy requirements.
         """
-        host_topology, _ = hardware.host_topology_and_format_from_host(
-            host_state)
+        host_topology = host_state.numa_topology
         # NOTE(stephenfin): There can be conflicts between the policy
         # specified by the image and that specified by the instance, but this
         # is not the place to resolve these. We do this during scheduling.
@@ -72,8 +71,7 @@ class NUMATopologyFilter(filters.BaseHostFilter):
         extra_specs = spec_obj.flavor.extra_specs
         image_props = spec_obj.image.properties
         requested_topology = spec_obj.numa_topology
-        host_topology, _fmt = hardware.host_topology_and_format_from_host(
-                host_state)
+        host_topology = host_state.numa_topology
         pci_requests = spec_obj.pci_requests
 
         network_metadata = None
