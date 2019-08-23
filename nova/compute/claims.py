@@ -63,7 +63,6 @@ class Claim(NopClaim):
         # Stash a copy of the instance at the current point of time
         self.instance = instance.obj_clone()
         self.nodename = nodename
-        self._numa_topology_loaded = False
         self.tracker = tracker
         self._pci_requests = pci_requests
         self.context = context
@@ -74,11 +73,7 @@ class Claim(NopClaim):
 
     @property
     def numa_topology(self):
-        if self._numa_topology_loaded:
-            return self._numa_topology
-        else:
-            self._numa_topology = self.instance.numa_topology
-            return self._numa_topology
+        return self.instance.numa_topology
 
     def abort(self):
         """Compute operation requiring claimed resources has failed or
