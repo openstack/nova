@@ -2145,6 +2145,8 @@ class OpenStackSDKFixture(fixtures.Fixture):
     # https://storyboard.openstack.org/#!/story/2005475 is resolved.
     def setUp(self):
         super(OpenStackSDKFixture, self).setUp()
+        self.useFixture(fixtures.MockPatch(
+            'openstack.proxy.Proxy.get_endpoint'))
         real_make_proxy = service_description.ServiceDescription._make_proxy
         _stub_service_types = {'placement'}
 
