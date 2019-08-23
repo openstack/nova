@@ -3558,9 +3558,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         with test.nested(
                 mock.patch.object(drvr, "_get_host_numa_topology",
-                                  return_value=host_topology)):
-            guest_numa_config = drvr._get_guest_numa_config(instance_topology,
-                flavor={}, allowed_cpus=[1, 2, 3, 4, 5, 6], image_meta={})
+                                  return_value=host_topology),
+                mock.patch.object(hardware, 'get_vcpu_pin_set',
+                                  return_value=[1, 2, 3, 4, 5, 6])):
+            guest_numa_config = drvr._get_guest_numa_config(
+                instance_topology, flavor={}, image_meta={})
             self.assertEqual(2, guest_numa_config.numatune.memnodes[2].cellid)
             self.assertEqual([16],
                 guest_numa_config.numatune.memnodes[2].nodeset)
