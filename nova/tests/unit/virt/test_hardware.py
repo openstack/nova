@@ -16,14 +16,9 @@ import collections
 import copy
 
 import mock
-from oslo_serialization import jsonutils
-from oslo_utils.fixture import uuidsentinel as uuids
-import six
 
-from nova import context
 from nova import exception
 from nova import objects
-from nova.objects import base as base_obj
 from nova.objects import fields
 from nova.pci import stats
 from nova import test
@@ -2065,144 +2060,6 @@ class NumberOfSerialPortsTest(test.NoDBTestCase):
         self.assertRaises(exception.ImageSerialPortNumberExceedFlavorValue,
                           hw.get_number_of_serial_ports,
                           flavor, image_meta)
-
-
-class HelperMethodsTestCase(test.NoDBTestCase):
-    def setUp(self):
-        super(HelperMethodsTestCase, self).setUp()
-        self.hosttopo = objects.NUMATopology(cells=[
-            objects.NUMACell(id=0, cpuset=set([0, 1]), memory=512,
-                             memory_usage=0, cpu_usage=0, mempages=[
-                             objects.NUMAPagesTopology(
-                                 size_kb=4, total=524288, used=0)],
-                             siblings=[set([0]), set([1])],
-                             pinned_cpus=set([])),
-            objects.NUMACell(id=1, cpuset=set([2, 3]), memory=512,
-                             memory_usage=0, cpu_usage=0, mempages=[
-                                 objects.NUMAPagesTopology(
-                                     size_kb=4, total=524288, used=0)],
-                             siblings=[set([2]), set([3])],
-                             pinned_cpus=set([])),
-        ])
-        self.instancetopo = objects.InstanceNUMATopology(
-            instance_uuid=uuids.instance,
-            cells=[
-                objects.InstanceNUMACell(
-                    id=0, cpuset=set([0, 1]), memory=256, pagesize=2048,
-                    cpu_pinning={0: 0, 1: 1},
-                    cpu_topology=None),
-                objects.InstanceNUMACell(
-                    id=1, cpuset=set([2]), memory=256, pagesize=2048,
-                    cpu_pinning={2: 3},
-                    cpu_topology=None),
-        ])
-        self.context = context.RequestContext('fake-user',
-                                              'fake-project')
-
-    def _check_usage(self, host_usage):
-        self.assertEqual(2, host_usage.cells[0].cpu_usage)
-        self.assertEqual(256, host_usage.cells[0].memory_usage)
-        self.assertEqual(1, host_usage.cells[1].cpu_usage)
-        self.assertEqual(256, host_usage.cells[1].memory_usage)
-
-    def test_dicts_json(self):
-        host = {'numa_topology': self.hosttopo._to_json()}
-        instance = {'numa_topology': self.instancetopo._to_json()}
-
-        res = hw.get_host_numa_usage_from_instance(host, instance)
-        self.assertIsInstance(res, six.string_types)
-        self._check_usage(objects.NUMATopology.obj_from_db_obj(res))
-
-    def test_dicts_instance_json(self):
-        host = {'numa_topology': self.hosttopo}
-        instance = {'numa_topology': self.instancetopo._to_json()}
-
-        res = hw.get_host_numa_usage_from_instance(host, instance)
-        self.assertIsInstance(res, objects.NUMATopology)
-        self._check_usage(res)
-
-    def test_dicts_host_json(self):
-        host = {'numa_topology': self.hosttopo._to_json()}
-        instance = {'numa_topology': self.instancetopo}
-
-        res = hw.get_host_numa_usage_from_instance(host, instance)
-        self.assertIsInstance(res, six.string_types)
-        self._check_usage(objects.NUMATopology.obj_from_db_obj(res))
-
-    def test_object_host_instance_json(self):
-        host = objects.ComputeNode(numa_topology=self.hosttopo._to_json())
-        instance = {'numa_topology': self.instancetopo._to_json()}
-
-        res = hw.get_host_numa_usage_from_instance(host, instance)
-        self.assertIsInstance(res, six.string_types)
-        self._check_usage(objects.NUMATopology.obj_from_db_obj(res))
-
-    def test_object_host_instance(self):
-        host = objects.ComputeNode(numa_topology=self.hosttopo._to_json())
-        instance = {'numa_topology': self.instancetopo}
-
-        res = hw.get_host_numa_usage_from_instance(host, instance)
-        self.assertIsInstance(res, six.string_types)
-        self._check_usage(objects.NUMATopology.obj_from_db_obj(res))
-
-    def test_instance_with_fetch(self):
-        host = objects.ComputeNode(numa_topology=self.hosttopo._to_json())
-        fake_uuid = uuids.fake
-        instance = {'uuid': fake_uuid}
-
-        with mock.patch.object(objects.InstanceNUMATopology,
-                'get_by_instance_uuid', return_value=None) as get_mock:
-            res = hw.get_host_numa_usage_from_instance(host, instance)
-            self.assertIsInstance(res, six.string_types)
-            self.assertTrue(get_mock.called)
-
-    def test_object_instance_with_load(self):
-        host = objects.ComputeNode(numa_topology=self.hosttopo._to_json())
-        fake_uuid = uuids.fake
-        instance = objects.Instance(context=self.context, uuid=fake_uuid)
-
-        with mock.patch.object(objects.InstanceNUMATopology,
-                'get_by_instance_uuid', return_value=None) as get_mock:
-            res = hw.get_host_numa_usage_from_instance(host, instance)
-            self.assertIsInstance(res, six.string_types)
-            self.assertTrue(get_mock.called)
-
-    def test_instance_serialized_by_build_request_spec(self):
-        host = objects.ComputeNode(numa_topology=self.hosttopo._to_json())
-        fake_uuid = uuids.fake
-        instance = objects.Instance(context=self.context, id=1, uuid=fake_uuid,
-                numa_topology=self.instancetopo)
-        # NOTE (ndipanov): This emulates scheduler.utils.build_request_spec
-        # We can remove this test once we no longer use that method.
-        instance_raw = jsonutils.to_primitive(
-                base_obj.obj_to_primitive(instance))
-        res = hw.get_host_numa_usage_from_instance(host, instance_raw)
-        self.assertIsInstance(res, six.string_types)
-        self._check_usage(objects.NUMATopology.obj_from_db_obj(res))
-
-    def test_attr_host(self):
-        class Host(object):
-            def __init__(obj):
-                obj.numa_topology = self.hosttopo._to_json()
-
-        host = Host()
-        instance = {'numa_topology': self.instancetopo._to_json()}
-
-        res = hw.get_host_numa_usage_from_instance(host, instance)
-        self.assertIsInstance(res, six.string_types)
-        self._check_usage(objects.NUMATopology.obj_from_db_obj(res))
-
-    def test_dict_numa_topology_to_obj(self):
-        fake_uuid = uuids.fake
-        instance = objects.Instance(context=self.context, id=1, uuid=fake_uuid,
-                                    numa_topology=self.instancetopo)
-        instance_dict = base_obj.obj_to_primitive(instance)
-        instance_numa_topo = hw.instance_topology_from_instance(instance_dict)
-        for expected_cell, actual_cell in zip(self.instancetopo.cells,
-                                              instance_numa_topo.cells):
-            for k in expected_cell.fields:
-                self.assertEqual(getattr(expected_cell, k),
-                                 getattr(actual_cell, k))
 
 
 class VirtMemoryPagesTestCase(test.NoDBTestCase):

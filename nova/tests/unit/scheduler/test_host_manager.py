@@ -24,7 +24,6 @@ import mock
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import versionutils
-import six
 
 import nova
 from nova.compute import task_states
@@ -1448,11 +1447,10 @@ class HostStateTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.utils.synchronized',
                 side_effect=lambda a: lambda f: lambda *args: f(*args))
-    @mock.patch('nova.virt.hardware.get_host_numa_usage_from_instance')
+    @mock.patch('nova.virt.hardware.numa_usage_from_instances')
     @mock.patch('nova.objects.Instance')
     @mock.patch('nova.virt.hardware.numa_fit_instance_to_host')
-    @mock.patch('nova.virt.hardware.host_topology_and_format_from_host')
-    def test_stat_consumption_from_instance(self, host_topo_mock,
+    def test_stat_consumption_from_instance(self,
                                             numa_fit_mock,
                                             instance_init_mock,
                                             numa_usage_mock,
@@ -1461,7 +1459,6 @@ class HostStateTestCase(test.NoDBTestCase):
             cells=[objects.InstanceNUMACell()])
         fake_host_numa_topology = mock.Mock()
         fake_instance = objects.Instance(numa_topology=fake_numa_topology)
-        host_topo_mock.return_value = (fake_host_numa_topology, True)
         numa_usage_mock.return_value = fake_host_numa_topology
         numa_fit_mock.return_value = fake_numa_topology
         instance_init_mock.return_value = fake_instance
@@ -1472,6 +1469,7 @@ class HostStateTestCase(test.NoDBTestCase):
             numa_topology=fake_numa_topology,
             pci_requests=objects.InstancePCIRequests(requests=[]))
         host = host_manager.HostState("fakehost", "fakenode", uuids.cell)
+        host.numa_topology = fake_host_numa_topology
 
         self.assertIsNone(host.updated)
         host.consume_from_request(spec_obj)
@@ -1479,29 +1477,27 @@ class HostStateTestCase(test.NoDBTestCase):
                                               fake_numa_topology,
                                               limits=None, pci_requests=None,
                                               pci_stats=None)
-        numa_usage_mock.assert_called_once_with(host, fake_instance)
+        numa_usage_mock.assert_called_once_with(fake_host_numa_topology,
+                                                [fake_numa_topology])
         sync_mock.assert_called_once_with(("fakehost", "fakenode"))
         self.assertEqual(fake_host_numa_topology, host.numa_topology)
         self.assertIsNotNone(host.updated)
 
-        second_numa_topology = objects.InstanceNUMATopology(
-            cells=[objects.InstanceNUMACell()])
+        numa_fit_mock.reset_mock()
+        numa_usage_mock.reset_mock()
+
         spec_obj = objects.RequestSpec(
             instance_uuid=uuids.instance,
             flavor=objects.Flavor(root_gb=0, ephemeral_gb=0, memory_mb=0,
                                   vcpus=0),
-            numa_topology=second_numa_topology,
+            numa_topology=None,
             pci_requests=objects.InstancePCIRequests(requests=[]))
-        second_host_numa_topology = mock.Mock()
-        numa_usage_mock.return_value = second_host_numa_topology
-        numa_fit_mock.return_value = second_numa_topology
 
         host.consume_from_request(spec_obj)
+        numa_fit_mock.assert_not_called()
+        numa_usage_mock.assert_not_called()
         self.assertEqual(2, host.num_instances)
         self.assertEqual(2, host.num_io_ops)
-        self.assertEqual(2, numa_usage_mock.call_count)
-        self.assertEqual(((host, fake_instance),), numa_usage_mock.call_args)
-        self.assertEqual(second_host_numa_topology, host.numa_topology)
         self.assertIsNotNone(host.updated)
 
     def test_stat_consumption_from_instance_pci(self):
@@ -1608,7 +1604,7 @@ class HostStateTestCase(test.NoDBTestCase):
         self.assertEqual('source2', host.metrics.to_list()[1]['source'])
         self.assertEqual({'0': 10, '1': 43},
                          host.metrics[1].numa_membw_values)
-        self.assertIsInstance(host.numa_topology, six.string_types)
+        self.assertIsInstance(host.numa_topology, objects.NUMATopology)
 
     def test_stat_consumption_from_compute_node_not_ready(self):
         compute = objects.ComputeNode(free_ram_mb=100,
