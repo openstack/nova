@@ -1376,8 +1376,9 @@ class NUMATopologyTest(test.NoDBTestCase):
                                      pagesize=2048),
         ])
 
-        hostusage = hw.numa_usage_from_instances(
-            hosttopo, [instance1, instance2, instance3])
+        hostusage = hw.numa_usage_from_instance_numa(hosttopo, instance1)
+        hostusage = hw.numa_usage_from_instance_numa(hostusage, instance2)
+        hostusage = hw.numa_usage_from_instance_numa(hostusage, instance3)
 
         self.assertEqual(len(hosttopo), len(hostusage))
 
@@ -1446,8 +1447,10 @@ class NUMATopologyTest(test.NoDBTestCase):
             objects.InstanceNUMACell(id=0, cpuset=set([0, 1]), memory=16,
                                      pagesize=2048),
         ])
-        hostusage = hw.numa_usage_from_instances(
-            hosttopo, [instance1, instance2, instance3])
+
+        hostusage = hw.numa_usage_from_instance_numa(hosttopo, instance1)
+        hostusage = hw.numa_usage_from_instance_numa(hostusage, instance2)
+        hostusage = hw.numa_usage_from_instance_numa(hostusage, instance3)
 
         # instance1, instance2 are consuming 96MiB smallpages which
         # means 96*1024/4 = 24576, plus 32 pages already used.
@@ -1494,8 +1497,8 @@ class NUMATopologyTest(test.NoDBTestCase):
                                         size_kb=4, total=512, used=0)]),
         ])
 
-        hostusage = hw.numa_usage_from_instances(
-            hosttopo, [instance1, instance2])
+        hostusage = hw.numa_usage_from_instance_numa(hosttopo, instance1)
+        hostusage = hw.numa_usage_from_instance_numa(hostusage, instance2)
 
         self.assertEqual(len(hosttopo), len(hostusage))
 
@@ -1553,8 +1556,8 @@ class NUMATopologyTest(test.NoDBTestCase):
             objects.InstanceNUMACell(id=1, cpuset=set([3]), memory=256),
             objects.InstanceNUMACell(id=2, cpuset=set([4]), memory=256)])
 
-        hostusage = hw.numa_usage_from_instances(
-                hosttopo, [instance1])
+        hostusage = hw.numa_usage_from_instance_numa(hosttopo, instance1)
+
         self.assertIsInstance(hostusage.cells[0], objects.NUMACell)
         self.assertEqual(hostusage.cells[0].cpu_usage, 5)
         self.assertEqual(hostusage.cells[0].memory_usage, 1024)
@@ -1568,8 +1571,9 @@ class NUMATopologyTest(test.NoDBTestCase):
         self.assertEqual(hostusage.cells[2].memory_usage, 256)
 
         # Test freeing of resources
-        hostusage = hw.numa_usage_from_instances(
-                hostusage, [instance1], free=True)
+        hostusage = hw.numa_usage_from_instance_numa(hostusage, instance1,
+                                                     free=True)
+
         self.assertEqual(hostusage.cells[0].cpu_usage, 2)
         self.assertEqual(hostusage.cells[0].memory_usage, 512)
 
@@ -1627,8 +1631,8 @@ class NUMATopologyTest(test.NoDBTestCase):
             {'node': 0, 'size': 2048, 'count': 128},
             {'node': 1, 'size': 1048576, 'count': 1}])
         hosttopo, instance1 = self._topo_usage_reserved_page_size()
-        hostusage = hw.numa_usage_from_instances(
-            hosttopo, [instance1])
+
+        hostusage = hw.numa_usage_from_instance_numa(hosttopo, instance1)
 
         self.assertEqual(hostusage.cells[0].mempages[0].size_kb, 2048)
         self.assertEqual(hostusage.cells[0].mempages[0].total, 512)
@@ -1674,59 +1678,14 @@ class NUMATopologyTest(test.NoDBTestCase):
             objects.InstanceNUMACell(id=2, cpuset=set([2]), memory=256),
         ])
 
-        hostusage = hw.numa_usage_from_instances(
-                None, [instance1])
+        hostusage = hw.numa_usage_from_instance_numa(None, instance1)
         self.assertIsNone(hostusage)
 
-        hostusage = hw.numa_usage_from_instances(
-                hosttopo, [])
+        hostusage = hw.numa_usage_from_instance_numa(hosttopo, None)
         self.assertEqual(hostusage.cells[0].cpu_usage, 0)
         self.assertEqual(hostusage.cells[0].memory_usage, 0)
         self.assertEqual(hostusage.cells[1].cpu_usage, 0)
         self.assertEqual(hostusage.cells[1].memory_usage, 0)
-
-        hostusage = hw.numa_usage_from_instances(
-                hosttopo, None)
-        self.assertEqual(hostusage.cells[0].cpu_usage, 0)
-        self.assertEqual(hostusage.cells[0].memory_usage, 0)
-        self.assertEqual(hostusage.cells[1].cpu_usage, 0)
-        self.assertEqual(hostusage.cells[1].memory_usage, 0)
-
-    # Test the case where we have an instance with numa topology
-    # and one without
-    def test_topo_usage_mixed(self):
-        hosttopo = objects.NUMATopology(cells=[
-            objects.NUMACell(id=0, cpuset=set([0, 1]), memory=512,
-                             cpu_usage=0, memory_usage=0, mempages=[
-                                 objects.NUMAPagesTopology(
-                                     size_kb=4, total=512, used=0)],
-                             siblings=[set([0]), set([1])],
-                             pinned_cpus=set([])),
-            objects.NUMACell(id=1, cpuset=set([2, 3]), memory=512,
-                             cpu_usage=0, memory_usage=0, mempages=[
-                                 objects.NUMAPagesTopology(
-                                     size_kb=4, total=512, used=0)],
-                             siblings=[set([2]), set([3])],
-                             pinned_cpus=set([])),
-        ])
-        instance1_topo = objects.InstanceNUMATopology(cells=[
-            objects.InstanceNUMACell(id=0, cpuset=set([0, 1]), memory=256),
-            objects.InstanceNUMACell(id=1, cpuset=set([2]), memory=128),
-        ])
-        instance2_topo = None
-
-        hostusage = hw.numa_usage_from_instances(hosttopo, [instance1_topo])
-        self.assertEqual(hostusage.cells[0].cpu_usage, 2)
-        self.assertEqual(hostusage.cells[0].memory_usage, 256)
-        self.assertEqual(hostusage.cells[1].cpu_usage, 1)
-        self.assertEqual(hostusage.cells[1].memory_usage, 128)
-
-        # This is like processing an instance with no numa_topology
-        hostusage = hw.numa_usage_from_instances(hostusage, instance2_topo)
-        self.assertEqual(hostusage.cells[0].cpu_usage, 2)
-        self.assertEqual(hostusage.cells[0].memory_usage, 256)
-        self.assertEqual(hostusage.cells[1].cpu_usage, 1)
-        self.assertEqual(hostusage.cells[1].memory_usage, 128)
 
     def test_topo_usage_with_network_metadata(self):
         r"""Validate behavior with network_metadata.
@@ -1748,7 +1707,7 @@ class NUMATopologyTest(test.NoDBTestCase):
                 mempages=[], pinned_cpus=set([])),
             ])
 
-        new_topo = hw.numa_usage_from_instances(topo, [])
+        new_topo = hw.numa_usage_from_instance_numa(topo, None)
         self.assertIn('network_metadata', new_topo.cells[0])
         self.assertNotIn('network_metadata', new_topo.cells[1])
 
@@ -1889,8 +1848,8 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
         fitted_instance1 = hw.numa_fit_instance_to_host(
                 self.host, self.instance1)
         self.assertIsInstance(fitted_instance1, objects.InstanceNUMATopology)
-        self.host = hw.numa_usage_from_instances(self.host,
-                [fitted_instance1])
+        self.host = hw.numa_usage_from_instance_numa(
+                self.host, fitted_instance1)
         fitted_instance2 = hw.numa_fit_instance_to_host(
                 self.host, self.instance3)
         self.assertIsInstance(fitted_instance2, objects.InstanceNUMATopology)
@@ -1911,8 +1870,8 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
                 self.host, self.instance1, self.limits)
         self.assertIsInstance(fitted_instance1, objects.InstanceNUMATopology)
         self.assertEqual(1, fitted_instance1.cells[0].id)
-        self.host = hw.numa_usage_from_instances(self.host,
-                [fitted_instance1])
+        self.host = hw.numa_usage_from_instance_numa(
+                self.host, fitted_instance1)
         fitted_instance2 = hw.numa_fit_instance_to_host(
                 self.host, self.instance2, self.limits)
         self.assertIsNone(fitted_instance2)
@@ -1922,8 +1881,8 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
                 self.host, self.instance1, self.limits)
         self.assertIsInstance(fitted_instance1, objects.InstanceNUMATopology)
         self.assertEqual(1, fitted_instance1.cells[0].id)
-        self.host = hw.numa_usage_from_instances(self.host,
-                [fitted_instance1])
+        self.host = hw.numa_usage_from_instance_numa(
+                self.host, fitted_instance1)
         fitted_instance2 = hw.numa_fit_instance_to_host(
                 self.host, self.instance3, self.limits)
         self.assertIsInstance(fitted_instance2, objects.InstanceNUMATopology)
@@ -2873,8 +2832,8 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
                     cpu_pinning={0: 1, 1: 2},
                     cpu_policy=fields.CPUAllocationPolicy.DEDICATED)])
 
-        host_pin = hw.numa_usage_from_instances(
-                host_pin, [inst_pin_1, inst_pin_2])
+        host_pin = hw.numa_usage_from_instance_numa(host_pin, inst_pin_1)
+        host_pin = hw.numa_usage_from_instance_numa(host_pin, inst_pin_2)
         self.assertEqual(set([0, 1, 2, 3]),
                          host_pin.cells[0].pinned_cpus)
 
@@ -2896,8 +2855,10 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
                 cpuset=set([0, 1]), memory=1024, id=0,
                 cpu_pinning={0: 0, 1: 3},
                 cpu_policy=fields.CPUAllocationPolicy.DEDICATED)])
-        host_pin = hw.numa_usage_from_instances(
-                host_pin, [inst_pin_1, inst_pin_2], free=True)
+        host_pin = hw.numa_usage_from_instance_numa(host_pin, inst_pin_1,
+                                                    free=True)
+        host_pin = hw.numa_usage_from_instance_numa(host_pin, inst_pin_2,
+                                                    free=True)
         self.assertEqual(set(), host_pin.cells[0].pinned_cpus)
 
     def test_host_usage_from_instances_fail(self):
@@ -2921,9 +2882,9 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
                     cpu_pinning={0: 0, 1: 2},
                     cpu_policy=fields.CPUAllocationPolicy.DEDICATED)])
 
+        host_pin = hw.numa_usage_from_instance_numa(host_pin, inst_pin_1)
         self.assertRaises(exception.CPUPinningInvalid,
-                hw.numa_usage_from_instances, host_pin,
-                [inst_pin_1, inst_pin_2])
+                hw.numa_usage_from_instance_numa, host_pin, inst_pin_2)
 
     def test_host_usage_from_instances_isolate(self):
         host_pin = objects.NUMATopology(
@@ -2942,7 +2903,7 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
                     cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE
                     )])
 
-        new_cell = hw.numa_usage_from_instances(host_pin, [inst_pin_1])
+        new_cell = hw.numa_usage_from_instance_numa(host_pin, inst_pin_1)
         self.assertEqual(host_pin.cells[0].cpuset,
                          new_cell.cells[0].pinned_cpus)
         self.assertEqual(new_cell.cells[0].cpu_usage, 4)
@@ -2964,9 +2925,8 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
                     cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE
                     )])
 
-        new_cell = hw.numa_usage_from_instances(host_pin,
-                                                [inst_pin_1],
-                                                free=True)
+        new_cell = hw.numa_usage_from_instance_numa(host_pin, inst_pin_1,
+                                                   free=True)
         self.assertEqual(set([]), new_cell.cells[0].pinned_cpus)
         self.assertEqual(new_cell.cells[0].cpu_usage, 0)
 
@@ -2988,7 +2948,7 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
                 cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE
             )])
 
-        new_cell = hw.numa_usage_from_instances(host_pin, [inst_pin])
+        new_cell = hw.numa_usage_from_instance_numa(host_pin, inst_pin)
         self.assertEqual(inst_pin.cells[0].cpuset,
                          new_cell.cells[0].pinned_cpus)
         self.assertEqual(new_cell.cells[0].cpu_usage, 3)
@@ -3011,9 +2971,8 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
                     cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE
                 )])
 
-        new_cell = hw.numa_usage_from_instances(host_pin,
-                                                [inst_pin],
-                                                free=True)
+        new_cell = hw.numa_usage_from_instance_numa(host_pin, inst_pin,
+                                                    free=True)
         self.assertEqual(set([3]), new_cell.cells[0].pinned_cpus)
         self.assertEqual(new_cell.cells[0].cpu_usage, 1)
 
@@ -3221,8 +3180,8 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
                 cpu_pinning={0: 0},
                 cpuset_reserved=set([1]))])
 
-        host_topo = hw.numa_usage_from_instances(
-            host_topo, [inst_topo])
+        host_topo = hw.numa_usage_from_instance_numa(host_topo, inst_topo)
+
         self.assertEqual(2, host_topo.cells[0].cpu_usage)
         self.assertEqual(set([0, 1]), host_topo.cells[0].pinned_cpus)
         self.assertEqual(0, host_topo.cells[1].cpu_usage)
@@ -3249,8 +3208,9 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
                 cpu_pinning={0: 2},
                 cpuset_reserved=set([3]))])
 
-        host_topo = hw.numa_usage_from_instances(
-            host_topo, [inst_topo1, inst_topo2])
+        host_topo = hw.numa_usage_from_instance_numa(host_topo, inst_topo1)
+        host_topo = hw.numa_usage_from_instance_numa(host_topo, inst_topo2)
+
         self.assertEqual(2, host_topo.cells[0].cpu_usage)
         self.assertEqual(set([0, 1]), host_topo.cells[0].pinned_cpus)
 

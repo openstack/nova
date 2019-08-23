@@ -1092,8 +1092,8 @@ class ResourceTracker(object):
             free = sign == -1
 
             # ...and reserialize once we save it back
-            cn.numa_topology = hardware.numa_usage_from_instances(
-                host_numa_topology, [instance_numa_topology], free)._to_json()
+            cn.numa_topology = hardware.numa_usage_from_instance_numa(
+                host_numa_topology, instance_numa_topology, free)._to_json()
 
     def _get_migration_context_resource(self, resource, instance,
                                         prefix='new_'):

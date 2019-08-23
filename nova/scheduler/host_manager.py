@@ -302,8 +302,8 @@ class HostState(object):
                 limits=self.limits.get('numa_topology'),
                 pci_requests=pci_requests, pci_stats=self.pci_stats)
 
-            self.numa_topology = hardware.numa_usage_from_instances(
-                self.numa_topology, [spec_obj.numa_topology])
+            self.numa_topology = hardware.numa_usage_from_instance_numa(
+                self.numa_topology, spec_obj.numa_topology)
 
         # ...and the PCI usage
         if pci_requests:

@@ -1822,27 +1822,27 @@ def numa_get_reserved_huge_pages():
     return bucket
 
 
-def _get_smallest_pagesize(hostcell):
-    """Returns the smallest available page size based o hostcell"""
-    avail_pagesize = [page.size_kb for page in hostcell.mempages]
+def _get_smallest_pagesize(host_cell):
+    """Returns the smallest available page size based on hostcell"""
+    avail_pagesize = [page.size_kb for page in host_cell.mempages]
     avail_pagesize.sort()
     return avail_pagesize[0]
 
 
-def _numa_pagesize_usage_from_cell(hostcell, instancecell, sign):
-    if 'pagesize' in instancecell and instancecell.pagesize:
-        pagesize = instancecell.pagesize
+def _numa_pagesize_usage_from_cell(host_cell, instance_cell, sign):
+    if 'pagesize' in instance_cell and instance_cell.pagesize:
+        pagesize = instance_cell.pagesize
     else:
-        pagesize = _get_smallest_pagesize(hostcell)
+        pagesize = _get_smallest_pagesize(host_cell)
 
     topo = []
-    for pages in hostcell.mempages:
+    for pages in host_cell.mempages:
         if pages.size_kb == pagesize:
             topo.append(objects.NUMAPagesTopology(
                 size_kb=pages.size_kb,
                 total=pages.total,
                 used=max(0, pages.used +
-                         instancecell.memory * units.Ki /
+                         instance_cell.memory * units.Ki /
                          pages.size_kb * sign),
                 reserved=pages.reserved if 'reserved' in pages else 0))
         else:
@@ -1850,83 +1850,82 @@ def _numa_pagesize_usage_from_cell(hostcell, instancecell, sign):
     return topo
 
 
-def numa_usage_from_instances(host, instances, free=False):
-    """Get host topology usage.
+def numa_usage_from_instance_numa(host_topology, instance_topology,
+                                  free=False):
+    """Update the host topology usage.
 
-    Sum the usage from all provided instances to report the overall
-    host topology usage.
+    Update the host NUMA topology based on usage by the provided instance NUMA
+    topology.
 
-    :param host: objects.NUMATopology with usage information
-    :param instances: list of objects.InstanceNUMATopology
-    :param free: decrease, rather than increase, host usage
+    :param host_topology: objects.NUMATopology to update usage information
+    :param instance_topology: objects.InstanceNUMATopology from which to
+        retrieve usage information.
+    :param free: If true, decrease, rather than increase, host usage based on
+        instance usage.
 
-    :returns: objects.NUMATopology including usage information
+    :returns: Updated objects.NUMATopology for host
     """
-    if host is None:
-        return
+    if not host_topology or not instance_topology:
+        return host_topology
 
-    instances = instances or []
     cells = []
     sign = -1 if free else 1
-    for hostcell in host.cells:
-        memory_usage = hostcell.memory_usage
-        cpu_usage = hostcell.cpu_usage
+    for host_cell in host_topology.cells:
+        memory_usage = host_cell.memory_usage
+        cpu_usage = host_cell.cpu_usage
 
-        newcell = objects.NUMACell(
-            id=hostcell.id, cpuset=hostcell.cpuset, memory=hostcell.memory,
-            cpu_usage=0, memory_usage=0, mempages=hostcell.mempages,
-            pinned_cpus=hostcell.pinned_cpus, siblings=hostcell.siblings)
+        new_cell = objects.NUMACell(
+            id=host_cell.id, cpuset=host_cell.cpuset, memory=host_cell.memory,
+            cpu_usage=0, memory_usage=0, mempages=host_cell.mempages,
+            pinned_cpus=host_cell.pinned_cpus, siblings=host_cell.siblings)
 
-        if 'network_metadata' in hostcell:
-            newcell.network_metadata = hostcell.network_metadata
+        if 'network_metadata' in host_cell:
+            new_cell.network_metadata = host_cell.network_metadata
 
-        for instance in instances:
-            for cellid, instancecell in enumerate(instance.cells):
-                if instancecell.id != hostcell.id:
-                    continue
+        for cellid, instance_cell in enumerate(instance_topology.cells):
+            if instance_cell.id != host_cell.id:
+                continue
 
-                memory_usage = memory_usage + sign * instancecell.memory
-                cpu_usage_diff = len(instancecell.cpuset)
-                if (instancecell.cpu_thread_policy ==
-                        fields.CPUThreadAllocationPolicy.ISOLATE and
-                        hostcell.siblings):
-                    cpu_usage_diff *= max(map(len, hostcell.siblings))
-                cpu_usage += sign * cpu_usage_diff
+            memory_usage = memory_usage + sign * instance_cell.memory
+            cpu_usage_diff = len(instance_cell.cpuset)
+            if (instance_cell.cpu_thread_policy ==
+                    fields.CPUThreadAllocationPolicy.ISOLATE and
+                    host_cell.siblings):
+                cpu_usage_diff *= max(map(len, host_cell.siblings))
+            cpu_usage += sign * cpu_usage_diff
 
-                if (cellid == 0 and
-                    instance.emulator_threads_isolated):
-                    # The emulator threads policy when defined
-                    # with 'isolate' makes the instance to consume
-                    # an additional pCPU as overhead. That pCPU is
-                    # mapped on the host NUMA node related to the
-                    # guest NUMA node 0.
-                    cpu_usage += sign * len(instancecell.cpuset_reserved)
+            if cellid == 0 and instance_topology.emulator_threads_isolated:
+                # The emulator threads policy when defined with 'isolate' makes
+                # the instance to consume an additional pCPU as overhead. That
+                # pCPU is mapped on the host NUMA node related to the guest
+                # NUMA node 0.
+                cpu_usage += sign * len(instance_cell.cpuset_reserved)
 
-                # Compute mempages usage
-                newcell.mempages = _numa_pagesize_usage_from_cell(
-                    newcell, instancecell, sign)
+            # Compute mempages usage
+            new_cell.mempages = _numa_pagesize_usage_from_cell(
+                new_cell, instance_cell, sign)
 
-                if instance.cpu_pinning_requested:
-                    pinned_cpus = set(instancecell.cpu_pinning.values())
+            if instance_topology.cpu_pinning_requested:
+                pinned_cpus = set(instance_cell.cpu_pinning.values())
 
-                    if instancecell.cpuset_reserved:
-                        pinned_cpus |= instancecell.cpuset_reserved
+                if instance_cell.cpuset_reserved:
+                    pinned_cpus |= instance_cell.cpuset_reserved
 
-                    if free:
-                        if (instancecell.cpu_thread_policy ==
-                                fields.CPUThreadAllocationPolicy.ISOLATE):
-                            newcell.unpin_cpus_with_siblings(pinned_cpus)
-                        else:
-                            newcell.unpin_cpus(pinned_cpus)
+                if free:
+                    if (instance_cell.cpu_thread_policy ==
+                            fields.CPUThreadAllocationPolicy.ISOLATE):
+                        new_cell.unpin_cpus_with_siblings(pinned_cpus)
                     else:
-                        if (instancecell.cpu_thread_policy ==
-                                fields.CPUThreadAllocationPolicy.ISOLATE):
-                            newcell.pin_cpus_with_siblings(pinned_cpus)
-                        else:
-                            newcell.pin_cpus(pinned_cpus)
+                        new_cell.unpin_cpus(pinned_cpus)
+                else:
+                    if (instance_cell.cpu_thread_policy ==
+                            fields.CPUThreadAllocationPolicy.ISOLATE):
+                        new_cell.pin_cpus_with_siblings(pinned_cpus)
+                    else:
+                        new_cell.pin_cpus(pinned_cpus)
 
-        newcell.cpu_usage = max(0, cpu_usage)
-        newcell.memory_usage = max(0, memory_usage)
-        cells.append(newcell)
+        new_cell.cpu_usage = max(0, cpu_usage)
+        new_cell.memory_usage = max(0, memory_usage)
+        cells.append(new_cell)
 
     return objects.NUMATopology(cells=cells)
