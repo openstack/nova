@@ -5845,6 +5845,57 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
                               self.context, instance,
                               '172.24.5.15', '10.1.0.9')
 
+    @mock.patch('nova.network.neutronv2.api.get_client')
+    @mock.patch('nova.network.neutronv2.api.LOG.warning')
+    @mock.patch('nova.network.base_api.update_instance_cache_with_nw_info')
+    def test_associate_floating_ip_refresh_error_trap(self, mock_update_cache,
+                                                      mock_log_warning,
+                                                      mock_get_client):
+        """Tests that when _update_inst_info_cache_for_disassociated_fip
+        raises an exception, associate_floating_ip traps and logs it but
+        does not re-raise.
+        """
+        ctxt = context.get_context()
+        instance = fake_instance.fake_instance_obj(ctxt)
+        floating_addr = '172.24.5.15'
+        fixed_addr = '10.1.0.9'
+        fip = {'id': uuids.floating_ip_id, 'port_id': uuids.old_port_id}
+        # Setup the mocks.
+        with test.nested(
+            mock.patch.object(self.api, '_get_port_id_by_fixed_address',
+                              return_value=uuids.new_port_id),
+            mock.patch.object(self.api, '_get_floating_ip_by_address',
+                              return_value=fip),
+            mock.patch.object(self.api,
+                              '_update_inst_info_cache_for_disassociated_fip',
+                              side_effect=exception.PortNotFound(
+                                  port_id=uuids.old_port_id))
+        ) as (
+            _get_port_id_by_fixed_address,
+            _get_floating_ip_by_address,
+            _update_inst_info_cache_for_disassociated_fip
+        ):
+            # Run the code.
+            self.api.associate_floating_ip(
+                ctxt, instance, floating_addr, fixed_addr)
+        # Assert the calls.
+        mock_get_client.assert_called_once_with(ctxt)
+        mock_client = mock_get_client.return_value
+        _get_port_id_by_fixed_address.assert_called_once_with(
+            mock_client, instance, fixed_addr)
+        _get_floating_ip_by_address.assert_called_once_with(
+            mock_client, floating_addr)
+        mock_client.update_floatingip.assert_called_once_with(
+            uuids.floating_ip_id, test.MatchType(dict))
+        _update_inst_info_cache_for_disassociated_fip.assert_called_once_with(
+            ctxt, instance, mock_client, fip)
+        mock_log_warning.assert_called_once()
+        self.assertIn('An error occurred while trying to refresh the '
+                      'network info cache for an instance associated '
+                      'with port', mock_log_warning.call_args[0][0])
+        mock_update_cache.assert_called_once_with(  # from @refresh_cache
+            self.api, ctxt, instance, nw_info=None)
+
     @mock.patch('nova.network.neutronv2.api._get_ksa_client',
                 new_callable=mock.NonCallableMock)  # asserts not called
     def test_migrate_instance_start_no_binding_ext(self, get_client_mock):
