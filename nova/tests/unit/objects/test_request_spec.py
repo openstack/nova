@@ -152,15 +152,14 @@ class _TestRequestSpecObject(object):
             user_id=fakes.FAKE_USER_ID,
             availability_zone='nova',
             pci_requests=None,
-            numa_topology={'cells': [{'id': 1, 'cpuset': ['1'], 'memory': 8192,
-                                      'pagesize': None, 'cpu_topology': None,
-                                      'cpu_pinning_raw': None}]})
+            numa_topology=fake_request_spec.INSTANCE_NUMA_TOPOLOGY,
+        )
         spec = objects.RequestSpec()
 
         spec._from_instance(instance)
         self.assertIsInstance(spec.numa_topology, objects.InstanceNUMATopology)
         cells = spec.numa_topology.cells
-        self.assertEqual(1, len(cells))
+        self.assertEqual(2, len(cells))
         self.assertIsInstance(cells[0], objects.InstanceNUMACell)
 
     def test_from_flavor_as_object(self):

@@ -18,18 +18,15 @@ import itertools
 import math
 
 from oslo_log import log as logging
-from oslo_serialization import jsonutils
 from oslo_utils import strutils
 from oslo_utils import units
 import six
 
 import nova.conf
-from nova import context
 from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova.objects import fields
-from nova.objects import instance as obj_instance
 
 
 CONF = nova.conf.CONF
@@ -1933,75 +1930,3 @@ def numa_usage_from_instances(host, instances, free=False):
         cells.append(newcell)
 
     return objects.NUMATopology(cells=cells)
-
-
-# TODO(ndipanov): Remove when all code paths are using objects
-def instance_topology_from_instance(instance):
-    """Extract numa topology from myriad instance representations.
-
-    Until the RPC version is bumped to 5.x, an instance may be
-    represented as a dict, a db object, or an actual Instance object.
-    Identify the type received and return either an instance of
-    objects.InstanceNUMATopology if the instance's NUMA topology is
-    available, else None.
-
-    :param host: nova.objects.ComputeNode instance, or a db object or
-                 dict
-
-    :returns: An instance of objects.NUMATopology or None
-    """
-    if isinstance(instance, obj_instance.Instance):
-        # NOTE (ndipanov): This may cause a lazy-load of the attribute
-        instance_numa_topology = instance.numa_topology
-    else:
-        if 'numa_topology' in instance:
-            instance_numa_topology = instance['numa_topology']
-        elif 'uuid' in instance:
-            try:
-                instance_numa_topology = (
-                    objects.InstanceNUMATopology.get_by_instance_uuid(
-                            context.get_admin_context(), instance['uuid'])
-                    )
-            except exception.NumaTopologyNotFound:
-                instance_numa_topology = None
-        else:
-            instance_numa_topology = None
-
-    if instance_numa_topology:
-        if isinstance(instance_numa_topology, six.string_types):
-            instance_numa_topology = (
-                objects.InstanceNUMATopology.obj_from_primitive(
-                    jsonutils.loads(instance_numa_topology)))
-
-        elif isinstance(instance_numa_topology, dict):
-            # NOTE (ndipanov): A horrible hack so that we can use
-            # this in the scheduler, since the
-            # InstanceNUMATopology object is serialized raw using
-            # the obj_base.obj_to_primitive, (which is buggy and
-            # will give us a dict with a list of InstanceNUMACell
-            # objects), and then passed to jsonutils.to_primitive,
-            # which will make a dict out of those objects. All of
-            # this is done by scheduler.utils.build_request_spec
-            # called in the conductor.
-            #
-            # Remove when request_spec is a proper object itself!
-            dict_cells = instance_numa_topology.get('cells')
-            if dict_cells:
-                cells = [objects.InstanceNUMACell(
-                    id=cell['id'],
-                    cpuset=set(cell['cpuset']),
-                    memory=cell['memory'],
-                    pagesize=cell.get('pagesize'),
-                    cpu_topology=cell.get('cpu_topology'),
-                    cpu_pinning=cell.get('cpu_pinning_raw'),
-                    cpu_policy=cell.get('cpu_policy'),
-                    cpu_thread_policy=cell.get('cpu_thread_policy'),
-                    cpuset_reserved=cell.get('cpuset_reserved'))
-                         for cell in dict_cells]
-                emulator_threads_policy = instance_numa_topology.get(
-                    'emulator_threads_policy')
-                instance_numa_topology = objects.InstanceNUMATopology(
-                    cells=cells,
-                    emulator_threads_policy=emulator_threads_policy)
-
-    return instance_numa_topology
