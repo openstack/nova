@@ -211,15 +211,13 @@
       tempest_black_regex: ^tempest.scenario.test_network
       devstack_local_conf:
         post-config:
-          $NOVA_CONF:
+          $NOVA_CPU_CONF:
             compute:
               # Switch off the provider association refresh, which should
               # reduce the number of placement calls in steady state. Added in
               # Stein.
-              # TODO(efried): Due to bug #1802143, nova-cpu.conf gets
-              # overwritten after post-config|$NOVA_CPU_CONF gets effected, so
-              # use $NOVA_CONF instead for now.
               resource_provider_association_refresh: 0
+          $NOVA_CONF:
             quota:
               # Added in Train.
               count_usage_from_placement: True
