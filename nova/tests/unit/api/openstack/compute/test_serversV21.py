@@ -6108,6 +6108,12 @@ class ServersControllerCreateTest(test.TestCase):
                           self.controller.create,
                           self.req, body=self.body)
 
+    def test_create_instance_invalid_availability_zone_as_int(self):
+        self.body['server']['availability_zone'] = 123
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create,
+                          self.req, body=self.body)
+
     @mock.patch.object(compute_api.API, 'create',
                        side_effect=exception.FixedIpNotFoundForAddress(
                         address='dummy'))
