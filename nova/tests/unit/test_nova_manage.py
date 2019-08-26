@@ -2920,7 +2920,7 @@ class TestNovaManageMain(test.NoDBTestCase):
         with mock.patch.object(manage.cmd_common, 'get_action_fn',
                                side_effect=test.TestingException('oops')):
             mock_conf.post_mortem = False
-            self.assertEqual(1, manage.main())
+            self.assertEqual(255, manage.main())
             # assert the traceback is dumped to stdout
             output = self.output.getvalue()
             self.assertIn('An error has occurred', output)
@@ -2934,5 +2934,5 @@ class TestNovaManageMain(test.NoDBTestCase):
         with mock.patch.object(manage.cmd_common, 'get_action_fn',
                                side_effect=test.TestingException('oops')):
             mock_conf.post_mortem = True
-            self.assertEqual(1, manage.main())
+            self.assertEqual(255, manage.main())
             self.assertTrue(mock_pm.called)
