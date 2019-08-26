@@ -8,7 +8,7 @@ Nova Style Commandments
 Nova Specific Commandments
 ---------------------------
 
-- ``nova.db`` imports are not allowed in ``nova/virt/*``
+- [N307] ``nova.db`` imports are not allowed in ``nova/virt/*``
 - [N309] no db session in public API methods (disabled)
   This enforces a guideline defined in ``oslo.db.sqlalchemy.session``
 - [N310] timeutils.utcnow() wrapper must be used instead of direct calls to
@@ -28,16 +28,12 @@ Nova Specific Commandments
 - [N319] Validate that debug level logs are not translated.
 - [N320] Setting CONF.* attributes directly in tests is forbidden. Use
   self.flags(option=value) instead.
-- [N321] Validate that LOG messages, except debug ones, have translations
 - [N322] Method's default argument shouldn't be mutable
 - [N323] Ensure that the _() function is explicitly imported to ensure proper translations.
 - [N324] Ensure that jsonutils.%(fun)s must be used instead of json.%(fun)s
 - [N325] str() and unicode() cannot be used on an exception.  Remove use or use six.text_type()
 - [N326] Translated messages cannot be concatenated.  String should be included in translated message.
 - [N327] Do not use xrange(). xrange() is not compatible with Python 3. Use range() or six.moves.range() instead.
-- [N328] Validate that LOG.info messages use _LI.
-- [N329] Validate that LOG.exception messages use _LE.
-- [N330] Validate that LOG.warning and LOG.warn messages use _LW.
 - [N332] Check that the api_version decorator is the first decorator on a method
 - [N334] Change assertTrue/False(A in/not in B, message) to the more specific
   assertIn/NotIn(A, B, message)
