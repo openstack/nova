@@ -2622,4 +2622,9 @@ def main():
             pdb.post_mortem()
         else:
             print(_("An error has occurred:\n%s") % traceback.format_exc())
+        # FIXME(mriedem): Some commands, like archive_deleted_rows, return 1
+        # for providing flow control to the caller, e.g. continue while rc=1
+        # until you get rc=0. If we fail in some unexpected way and return 1
+        # here, automation tools could continue indefinitely. This should
+        # probably be 255 instead.
         return 1

@@ -80,6 +80,29 @@ Nova Database
     for the purge, then run ``nova-manage db purge --before <date>`` manually
     after archiving is complete.
 
+    **Return Codes**
+
+    .. list-table::
+       :widths: 20 80
+       :header-rows: 1
+
+       * - Return code
+         - Description
+       * - 0
+         - Nothing was archived.
+       * - 1
+         - Some number of rows were archived.
+       * - 2
+         - Invalid value for ``--max_rows``.
+       * - 3
+         - No connection to the API database could be established using
+           :oslo.config:option:`api_database.connection`.
+       * - 4
+         - Invalid value for ``--before``.
+
+    If automating, this should be run continuously while the result is 1,
+    stopping at 0, or use the ``--until-complete`` option.
+
 ``nova-manage db purge [--all] [--before <date>] [--verbose] [--all-cells]``
     Delete rows from shadow tables. Specifying ``--all`` will delete all data from
     all shadow tables. Specifying ``--before`` will delete data from all shadow tables
