@@ -788,7 +788,10 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         def removed_column(element):
             # Define a whitelist of columns that would be removed from the
             # DB at a later release.
-            column_whitelist = {'instances': ['internal_id']}
+            # NOTE(Luyao) The vpmems column was added to the schema in train,
+            # and removed from the model in train.
+            column_whitelist = {'instances': ['internal_id'],
+                                'instance_extra': ['vpmems']}
 
             if element[0] != 'remove_column':
                 return False
@@ -1047,6 +1050,10 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
                 engine, '%smigrations' % prefix, 'user_id')
             self.assertColumnExists(
                 engine, '%smigrations' % prefix, 'project_id')
+
+    def _check_402(self, engine, data):
+        self.assertColumnExists(engine, 'instance_extra', 'resources')
+        self.assertColumnExists(engine, 'shadow_instance_extra', 'resources')
 
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
