@@ -1569,18 +1569,13 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
     def _destroy_instance_without_vm_ref(self,
                                          task_state=None):
 
-        def fake_vm_ref_from_name(session, vm_name):
-            return 'fake-ref'
-
         self._create_instance()
         with test.nested(
-             mock.patch.object(vm_util, 'get_vm_ref_from_name',
-                               fake_vm_ref_from_name),
              mock.patch.object(self.conn._session,
                                '_call_method'),
              mock.patch.object(self.conn._vmops,
                                '_destroy_instance')
-        ) as (mock_get, mock_call, mock_destroy):
+        ) as (mock_call, mock_destroy):
             self.instance.task_state = task_state
             self.conn.destroy(self.context, self.instance,
                               self.network_info,

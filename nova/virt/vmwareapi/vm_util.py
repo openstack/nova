@@ -138,14 +138,6 @@ def vm_ref_cache_from_instance(func):
     return wrapper
 
 
-def vm_ref_cache_from_name(func):
-    @functools.wraps(func)
-    def wrapper(session, name):
-        id = name
-        return _vm_ref_cache(id, func, session, name)
-    return wrapper
-
-
 # the config key which stores the VNC port
 VNC_CONFIG_KEY = 'config.extraConfig["RemoteDisplay.vnc.port"]'
 
@@ -1141,12 +1133,6 @@ def _get_vm_ref_from_name(session, vm_name):
                 "VirtualMachine", ["name"])
     return _get_object_from_results(session, vms, vm_name,
                                     _get_object_for_value)
-
-
-@vm_ref_cache_from_name
-def get_vm_ref_from_name(session, vm_name):
-    return (_get_vm_ref_from_vm_uuid(session, vm_name) or
-            _get_vm_ref_from_name(session, vm_name))
 
 
 def _get_vm_ref_from_vm_uuid(session, instance_uuid):
