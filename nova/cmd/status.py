@@ -31,7 +31,6 @@ import pkg_resources
 import six
 from sqlalchemy import func as sqlfunc
 from sqlalchemy import MetaData, Table, and_, select
-from sqlalchemy.sql import false
 
 from nova.cmd import common as cmd_common
 import nova.conf
@@ -317,15 +316,6 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         # Either there were no ironic compute nodes or all instances for
         # those nodes are already migrated, so there is nothing to do.
         return upgradecheck.Result(upgradecheck.Code.SUCCESS)
-
-    def _get_min_service_version(self, context, binary):
-        meta = MetaData(bind=db_session.get_engine(context=context))
-        services = Table('services', meta, autoload=True)
-        return select([sqlfunc.min(services.c.version)]).select_from(
-            services).where(and_(
-                services.c.binary == binary,
-                services.c.deleted == 0,
-                services.c.forced_down == false())).scalar()
 
     def _check_cinder(self):
         """Checks to see that the cinder API is available at a given minimum
