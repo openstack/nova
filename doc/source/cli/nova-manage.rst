@@ -257,19 +257,33 @@ Nova Cells v2
 ``nova-manage cell_v2 map_instances --cell_uuid <cell_uuid> [--max-count <max_count>] [--reset]``
     Map instances to the provided cell. Instances in the nova database will
     be queried from oldest to newest and mapped to the provided cell. A
-    max_count can be set on the number of instance to map in a single run.
+    ``--max-count`` can be set on the number of instance to map in a single run.
     Repeated runs of the command will start from where the last run finished
-    so it is not necessary to increase max-count to finish. A reset option
-    can be passed which will reset the marker, thus making the command start
-    from the beginning as opposed to the default behavior of starting from
-    where the last run finished. Returns 0 if all instances have been mapped,
-    and 1 if there are still instances to be mapped.
+    so it is not necessary to increase ``--max-count`` to finish. A ``--reset``
+    option can be passed which will reset the marker, thus making the command
+    start from the beginning as opposed to the default behavior of starting from
+    where the last run finished.
 
     If ``--max-count`` is not specified, all instances in the cell will be
     mapped in batches of 50. If you have a large number of instances, consider
     specifying a custom value and run the command until it exits with 0.
 
-    .. todo document return codes since 1 is used for flow control
+    **Return Codes**
+
+    .. list-table::
+       :widths: 20 80
+       :header-rows: 1
+
+       * - Return code
+         - Description
+       * - 0
+         - All instances have been mapped.
+       * - 1
+         - There are still instances to be mapped.
+       * - 127
+         - Invalid value for ``--max-count``.
+       * - 255
+         - An unexpected error occurred.
 
 ``nova-manage cell_v2 map_cell_and_hosts [--name <cell_name>] [--transport-url <transport_url>] [--verbose]``
     Create a cell mapping to the database connection and message queue
