@@ -1579,6 +1579,63 @@ class MetadataHandlerTestCase(test.TestCase):
                      'X-Metadata-Provider-Signature': signature})
         self.assertEqual(403, response.status_int)
 
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_metadata_lb_net_not_found(self, mock_get_client):
+
+        self.flags(service_metadata_proxy=True, group='neutron')
+
+        # with X-Metadata-Provider
+        proxy_lb_id = 'edge-x'
+        mock_client = mock_get_client.return_value
+        mock_client.list_ports.return_value = {
+            'ports': [{'device_id': 'a-b-c-d', 'tenant_id': 'test'}]}
+        mock_client.list_subnets.return_value = {
+            'subnets': []}
+
+        response = fake_request(
+            self, self.mdinst,
+            relpath="/2009-04-04/user-data",
+            address="192.192.192.2",
+            fake_get_metadata_by_instance_id=self._fake_x_get_metadata,
+            headers={'X-Forwarded-For': '192.192.192.2',
+                     'X-Metadata-Provider': proxy_lb_id})
+        self.assertEqual(400, response.status_int)
+
+    def _test_metadata_lb_incorrect_port_count(self, mock_get_client, ports):
+
+        self.flags(service_metadata_proxy=True, group='neutron')
+
+        # with X-Metadata-Provider
+        proxy_lb_id = 'edge-x'
+        mock_client = mock_get_client.return_value
+        mock_client.list_ports.return_value = {'ports': ports}
+        mock_client.list_ports.return_value = {
+            'ports': [{'device_id': 'a-b-c-d', 'tenant_id': 'test'},
+                      {'device_id': 'x-y-z', 'tenant_id': 'test'}]}
+        mock_client.list_subnets.return_value = {
+            'subnets': [{'network_id': 'f-f-f-f'}]}
+
+        response = fake_request(
+            self, self.mdinst,
+            relpath="/2009-04-04/user-data",
+            address="192.192.192.2",
+            fake_get_metadata_by_instance_id=self._fake_x_get_metadata,
+            headers={'X-Forwarded-For': '192.192.192.2',
+                     'X-Metadata-Provider': proxy_lb_id})
+        self.assertEqual(400, response.status_int)
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_metadata_lb_too_many_ports(self, mock_get_client):
+        self._test_metadata_lb_incorrect_port_count(
+            mock_get_client,
+            [{'device_id': 'a-b-c-d', 'tenant_id': 'test'},
+             {'device_id': 'x-y-z', 'tenant_id': 'test'}])
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_metadata_no_ports_found(self, mock_get_client):
+        self._test_metadata_lb_incorrect_port_count(
+            mock_get_client, [])
+
     @mock.patch.object(context, 'get_admin_context')
     @mock.patch('nova.network.neutron.API')
     def test_get_metadata_by_address(self, mock_net_api, mock_get_context):
