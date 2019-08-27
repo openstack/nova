@@ -433,10 +433,10 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
 
         placement = self.useFixture(func_fixtures.PlacementFixture())
         self.placement_api = placement.api
-        api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
+        self.api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
 
-        self.admin_api = api_fixture.admin_api
+        self.admin_api = self.api_fixture.admin_api
         self.admin_api.microversion = self.microversion
         self.api = self.admin_api
 

@@ -4284,7 +4284,8 @@ class ComputeManager(manager.Manager):
             instance.save()
 
             try:
-                self._revert_allocation(context, instance, migration)
+                source_allocations = self._revert_allocation(
+                    context, instance, migration)
             except exception.AllocationMoveFailed:
                 LOG.error('Reverting allocation in placement for migration '
                           '%(migration_uuid)s failed. The instance '
@@ -4295,16 +4296,12 @@ class ComputeManager(manager.Manager):
                 raise
 
             if request_spec:
-                # TODO(gibi): the _revert_allocation() call above already
-                # fetched the original allocation of the instance so we could
-                # avoid this second call to placement
                 # NOTE(gibi): We need to re-calculate the resource provider -
                 # port mapping as we have to have the neutron ports allocate
                 # from the source compute after revert.
-                allocs = self.reportclient.get_allocations_for_consumer(
-                    context, instance.uuid)
                 scheduler_utils.fill_provider_mapping_based_on_allocation(
-                    context, self.reportclient, request_spec, allocs)
+                    context, self.reportclient, request_spec,
+                    source_allocations)
                 provider_mappings = self._get_request_group_mapping(
                     request_spec)
             else:
@@ -4391,7 +4388,7 @@ class ComputeManager(manager.Manager):
         # TODO(cdent): Should we be doing anything with return values here?
         self.reportclient.move_allocations(context, migration.uuid,
                                            instance.uuid)
-        return True
+        return orig_alloc
 
     def _prep_resize(self, context, image, instance, instance_type,
                      filter_properties, node, migration, request_spec,
