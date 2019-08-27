@@ -859,10 +859,24 @@ interval_opts = [
         help="""
 Number of seconds to wait between runs of the image cache manager.
 
+Note that when using shared storage for the ``[DEFAULT]/instances_path``
+configuration option across multiple nova-compute services, this periodic
+could process a large number of instances. Similarly, using a compute driver
+that manages a cluster (like vmwareapi.VMwareVCDriver) could result in
+processing a large number of instances. Therefore you may need to adjust the
+time interval for the anticipated load, or only run on one nova-compute
+service within a shared storage aggregate.
+
 Possible values:
-* 0: run at the default rate.
+
+* 0: run at the default interval of 60 seconds (not recommended)
 * -1: disable
 * Any other value
+
+Related options:
+
+* ``[DEFAULT]/compute_driver``
+* ``[DEFAULT]/instances_path``
 """),
     cfg.IntOpt('bandwidth_poll_interval',
         default=600,
