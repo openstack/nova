@@ -58,9 +58,20 @@ class NUMAServersTestBase(base.ServersTestBase):
 
 class NUMAServersTest(NUMAServersTestBase):
 
-    def _run_build_test(self, flavor_id, end_status='ACTIVE'):
+    def _run_build_test(self, flavor_id, end_status='ACTIVE',
+                        expected_usage=None):
 
-        self.compute = self.start_service('compute', host='test_compute0')
+        # NOTE(bhagyashris): Always use host as 'compute1' so that it's
+        # possible to get resource provider information for verifying
+        # compute usages. This host name 'compute1' is hard coded in
+        # Connection class in fakelibvirt.py.
+        # TODO(stephenfin): Remove the hardcoded limit, possibly overridding
+        # 'start_service' to make sure there isn't a mismatch
+        self.compute = self.start_service('compute', host='compute1')
+
+        compute_rp_uuid = self.placement_api.get(
+            '/resource_providers?name=compute1').body[
+            'resource_providers'][0]['uuid']
 
         # Create server
         good_server = self._build_server(flavor_id)
@@ -86,6 +97,12 @@ class NUMAServersTest(NUMAServersTestBase):
 
         found_server = self._wait_for_state_change(found_server, 'BUILD')
 
+        if expected_usage:
+            compute_usage = self.placement_api.get(
+                '/resource_providers/%s/usages' % compute_rp_uuid).body[
+                'usages']
+            self.assertEqual(expected_usage, compute_usage)
+
         self.assertEqual(end_status, found_server['status'])
         self.addCleanup(self._delete_server, created_server_id)
         return created_server
@@ -101,8 +118,9 @@ class NUMAServersTest(NUMAServersTestBase):
         # Create a flavor
         extra_spec = {'hw:numa_nodes': '2'}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
+        expected_usage = {'DISK_GB': 20, 'MEMORY_MB': 2048, 'VCPU': 2}
 
-        self._run_build_test(flavor_id)
+        self._run_build_test(flavor_id, expected_usage=expected_usage)
 
     def test_create_server_with_pinning(self):
 
@@ -118,8 +136,9 @@ class NUMAServersTest(NUMAServersTestBase):
             'hw:cpu_thread_policy': 'prefer',
         }
         flavor_id = self._create_flavor(vcpu=5, extra_spec=extra_spec)
+        expected_usage = {'DISK_GB': 20, 'MEMORY_MB': 2048, 'VCPU': 5}
 
-        server = self._run_build_test(flavor_id)
+        server = self._run_build_test(flavor_id, expected_usage=expected_usage)
 
         ctx = nova_context.get_admin_context()
         inst = objects.Instance.get_by_uuid(ctx, server['id'])
