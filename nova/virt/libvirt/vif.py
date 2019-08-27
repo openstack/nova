@@ -124,10 +124,6 @@ class LibvirtGenericVIFDriver(object):
             return vif['devname']
         return ("nic" + vif['id'])[:network_model.NIC_NAME_LEN]
 
-    def get_vif_devname_with_prefix(self, vif, prefix):
-        devname = self.get_vif_devname(vif)
-        return prefix + devname[3:]
-
     def get_base_config(self, instance, mac, image_meta,
                         inst_type, virt_type, vnic_type, host):
         # TODO(sahid): We should rewrite it. This method handles too
