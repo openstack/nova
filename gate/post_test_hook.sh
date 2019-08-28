@@ -5,7 +5,7 @@ MANAGE="/usr/local/bin/nova-manage"
 function archive_deleted_rows {
     # NOTE(danms): Run this a few times to make sure that we end
     # up with nothing more to archive
-    if ! $MANAGE $* db archive_deleted_rows --verbose --before "$(date -d yesterday)" 2>&1 | grep 'Nothing was archived'; then
+    if ! $MANAGE db archive_deleted_rows --verbose --before "$(date -d yesterday)" 2>&1 | grep 'Nothing was archived'; then
         echo "Archiving yesterday data should have done nothing"
         return 1
     fi
@@ -14,9 +14,9 @@ function archive_deleted_rows {
             # This is just a test wrinkle to make sure we're covering the
             # non-all-cells (cell0) case, as we're not passing in the cell1
             # config.
-            $MANAGE $* db archive_deleted_rows --verbose --max_rows 50 --before "$(date -d tomorrow)"
+            $MANAGE db archive_deleted_rows --verbose --max_rows 50 --before "$(date -d tomorrow)"
         else
-            $MANAGE $* db archive_deleted_rows --verbose --max_rows 1000 --before "$(date -d tomorrow)" --all-cells
+            $MANAGE db archive_deleted_rows --verbose --max_rows 1000 --before "$(date -d tomorrow)" --all-cells
         fi
         RET=$?
         if [[ $RET -gt 1 ]]; then
