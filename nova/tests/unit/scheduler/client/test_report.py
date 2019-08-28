@@ -2058,27 +2058,31 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             'allocation_requests': mock.sentinel.alloc_reqs,
             'provider_summaries': mock.sentinel.p_sums,
         }
-        resources = scheduler_utils.ResourceRequest.from_extra_specs({
-            'resources:VCPU': '1',
-            'resources:MEMORY_MB': '1024',
-            'trait:HW_CPU_X86_AVX': 'required',
-            'trait:CUSTOM_TRAIT1': 'required',
-            'trait:CUSTOM_TRAIT2': 'preferred',
-            'trait:CUSTOM_TRAIT3': 'forbidden',
-            'trait:CUSTOM_TRAIT4': 'forbidden',
-            'resources1:DISK_GB': '30',
-            'trait1:STORAGE_DISK_SSD': 'required',
-            'resources2:VGPU': '2',
-            'trait2:HW_GPU_RESOLUTION_W2560H1600': 'required',
-            'trait2:HW_GPU_API_VULKAN': 'required',
-            'resources3:SRIOV_NET_VF': '1',
-            'resources3:CUSTOM_NET_EGRESS_BYTES_SEC': '125000',
-            'group_policy': 'isolate',
-            # These are ignored because misspelled, bad value, etc.
-            'resources02:CUSTOM_WIDGET': '123',
-            'trait:HW_NIC_OFFLOAD_LRO': 'preferred',
-            'group_policy3': 'none',
-        })
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
+            extra_specs={
+                'resources:VCPU': '1',
+                'resources:MEMORY_MB': '1024',
+                'trait:HW_CPU_X86_AVX': 'required',
+                'trait:CUSTOM_TRAIT1': 'required',
+                'trait:CUSTOM_TRAIT2': 'preferred',
+                'trait:CUSTOM_TRAIT3': 'forbidden',
+                'trait:CUSTOM_TRAIT4': 'forbidden',
+                'resources1:DISK_GB': '30',
+                'trait1:STORAGE_DISK_SSD': 'required',
+                'resources2:VGPU': '2',
+                'trait2:HW_GPU_RESOLUTION_W2560H1600': 'required',
+                'trait2:HW_GPU_API_VULKAN': 'required',
+                'resources3:SRIOV_NET_VF': '1',
+                'resources3:CUSTOM_NET_EGRESS_BYTES_SEC': '125000',
+                'group_policy': 'isolate',
+                # These are ignored because misspelled, bad value, etc.
+                'resources02:CUSTOM_WIDGET': '123',
+                'trait:HW_NIC_OFFLOAD_LRO': 'preferred',
+                'group_policy3': 'none',
+            })
+        req_spec = objects.RequestSpec(flavor=flavor, is_bfv=False)
+        resources = scheduler_utils.ResourceRequest(req_spec)
         resources.get_request_group(None).aggregates = [
             ['agg1', 'agg2', 'agg3'], ['agg1', 'agg2']]
         expected_path = '/allocation_candidates'
@@ -2123,12 +2127,16 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             'allocation_requests': mock.sentinel.alloc_reqs,
             'provider_summaries': mock.sentinel.p_sums,
         }
-        resources = scheduler_utils.ResourceRequest.from_extra_specs({
-            'resources:VCPU': '1',
-            'resources:MEMORY_MB': '1024',
-            'resources1:DISK_GB': '30',
-            'group_policy': 'bogus',
-        })
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
+            extra_specs={
+                'resources:VCPU': '1',
+                'resources:MEMORY_MB': '1024',
+                'resources1:DISK_GB': '30',
+                'group_policy': 'bogus',
+            })
+        req_spec = objects.RequestSpec(flavor=flavor, is_bfv=False)
+        resources = scheduler_utils.ResourceRequest(req_spec)
         expected_path = '/allocation_candidates'
         expected_query = [
             ('limit', '42'),
@@ -2161,14 +2169,18 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         resp_mock = mock.Mock(status_code=404)
         self.ks_adap_mock.get.return_value = resp_mock
         expected_path = '/allocation_candidates'
-        expected_query = {'resources': ['MEMORY_MB:1024'],
-                          'limit': ['100']}
+        expected_query = {
+            'resources': ['DISK_GB:15,MEMORY_MB:1024,VCPU:1'],
+            'limit': ['100']
+        }
 
         # Make sure we're also honoring the configured limit
         self.flags(max_placement_results=100, group='scheduler')
 
-        resources = scheduler_utils.ResourceRequest.from_extra_specs(
-            {'resources:MEMORY_MB': '1024'})
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0)
+        req_spec = objects.RequestSpec(flavor=flavor, is_bfv=False)
+        resources = scheduler_utils.ResourceRequest(req_spec)
 
         res = self.client.get_allocation_candidates(self.context, resources)
 

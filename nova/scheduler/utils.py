@@ -54,7 +54,32 @@ class ResourceRequest(object):
     XS_KEYPAT = re.compile(r"^(%s)([1-9][0-9]*)?:(.*)$" %
                            '|'.join((XS_RES_PREFIX, XS_TRAIT_PREFIX)))
 
-    def __init__(self):
+    def __init__(self, request_spec):
+        """Create a new instance of ResourceRequest from a RequestSpec.
+
+        Examines the flavor, flavor extra specs, and (optional) image metadata
+        of the provided ``request_spec``.
+
+        For extra specs, items of the following form are examined:
+
+        - ``resources:$RESOURCE_CLASS``: $AMOUNT
+        - ``resources$N:$RESOURCE_CLASS``: $AMOUNT
+        - ``trait:$TRAIT_NAME``: "required"
+        - ``trait$N:$TRAIT_NAME``: "required"
+
+        .. note::
+
+            This does *not* yet handle ``member_of[$N]``.
+
+        For image metadata, traits are extracted from the ``traits_required``
+        property, if present.
+
+        For the flavor, ``VCPU``, ``MEMORY_MB`` and ``DISK_GB`` are calculated
+        from Flavor properties, though these are only used if they aren't
+        overridden by flavor extra specs.
+
+        :param request_spec: An instance of ``objects.RequestSpec``.
+        """
         # { ident: RequestGroup }
         self._rg_by_id = {}
         self._group_policy = None
@@ -62,9 +87,75 @@ class ResourceRequest(object):
         # set to None to indicate "no limit".
         self._limit = CONF.scheduler.max_placement_results
 
-    def __str__(self):
-        return ', '.join(sorted(
-            list(str(rg) for rg in list(self._rg_by_id.values()))))
+        # TODO(efried): Handle member_of[$N], which will need to be reconciled
+        # with destination.aggregates handling in resources_from_request_spec
+
+        # Parse the flavor extra specs
+        self._process_extra_specs(request_spec.flavor)
+
+        self.numbered_groups_from_flavor = self.get_num_of_numbered_groups()
+
+        # Now parse the (optional) image metadata
+        image = request_spec.image if 'image' in request_spec else None
+        self._process_image_meta(image)
+
+        # Finally, parse the flavor itself, though we'll only use these fields
+        # if they don't conflict with something already provided by the flavor
+        # extra specs. These are all added to the unnumbered request group.
+        merged_resources = self.merged_resources()
+
+        if orc.VCPU not in merged_resources:
+            self._add_resource(None, orc.VCPU, request_spec.vcpus)
+
+        if orc.MEMORY_MB not in merged_resources:
+            self._add_resource(None, orc.MEMORY_MB, request_spec.memory_mb)
+
+        if orc.DISK_GB not in merged_resources:
+            disk = request_spec.ephemeral_gb
+            disk += compute_utils.convert_mb_to_ceil_gb(request_spec.swap)
+            if 'is_bfv' not in request_spec or not request_spec.is_bfv:
+                disk += request_spec.root_gb
+
+            if disk:
+                self._add_resource(None, orc.DISK_GB, disk)
+
+        self.strip_zeros()
+
+    def _process_extra_specs(self, flavor):
+        if 'extra_specs' not in flavor:
+            return
+
+        for key, val in flavor.extra_specs.items():
+            if key == 'group_policy':
+                self._add_group_policy(val)
+                continue
+
+            match = self.XS_KEYPAT.match(key)
+            if not match:
+                continue
+
+            # 'prefix' is 'resources' or 'trait'
+            # 'suffix' is $N or None
+            # 'name' is either the resource class name or the trait name.
+            prefix, suffix, name = match.groups()
+
+            # Process "resources[$N]"
+            if prefix == self.XS_RES_PREFIX:
+                self._add_resource(suffix, name, val)
+
+            # Process "trait[$N]"
+            elif prefix == self.XS_TRAIT_PREFIX:
+                self._add_trait(suffix, name, val)
+
+    def _process_image_meta(self, image):
+        if not image or 'properties' not in image:
+            return
+
+        for trait in image.properties.get('traits_required', []):
+            # required traits from the image are always added to the
+            # unnumbered request group, granular request groups are not
+            # supported in image traits
+            self._add_trait(None, trait, "required")
 
     @property
     def group_policy(self):
@@ -140,81 +231,6 @@ class ResourceRequest(object):
             return
         self._group_policy = policy
 
-    @classmethod
-    def from_extra_specs(cls, extra_specs, req=None):
-        """Processes resources and traits in numbered groupings in extra_specs.
-
-        Examines extra_specs for items of the following forms:
-            "resources:$RESOURCE_CLASS": $AMOUNT
-            "resources$N:$RESOURCE_CLASS": $AMOUNT
-            "trait:$TRAIT_NAME": "required"
-            "trait$N:$TRAIT_NAME": "required"
-
-        Does *not* yet handle member_of[$N].
-
-        :param extra_specs: The flavor extra_specs dict.
-        :param req: the ResourceRequest object to add the requirements to or
-               None to create a new ResourceRequest
-        :return: A ResourceRequest object representing the resources and
-                 required traits in the extra_specs.
-        """
-        # TODO(efried): Handle member_of[$N], which will need to be reconciled
-        # with destination.aggregates handling in resources_from_request_spec
-
-        if req is not None:
-            ret = req
-        else:
-            ret = cls()
-
-        for key, val in extra_specs.items():
-            if key == 'group_policy':
-                ret._add_group_policy(val)
-                continue
-
-            match = cls.XS_KEYPAT.match(key)
-            if not match:
-                continue
-
-            # 'prefix' is 'resources' or 'trait'
-            # 'suffix' is $N or None
-            # 'name' is either the resource class name or the trait name.
-            prefix, suffix, name = match.groups()
-
-            # Process "resources[$N]"
-            if prefix == cls.XS_RES_PREFIX:
-                ret._add_resource(suffix, name, val)
-
-            # Process "trait[$N]"
-            elif prefix == cls.XS_TRAIT_PREFIX:
-                ret._add_trait(suffix, name, val)
-
-        return ret
-
-    @classmethod
-    def from_image_props(cls, image_meta_props, req=None):
-        """Processes image properties and adds trait requirements to the
-           ResourceRequest
-
-        :param image_meta_props: The ImageMetaProps object.
-        :param req: the ResourceRequest object to add the requirements to or
-               None to create a new ResourceRequest
-        :return: A ResourceRequest object representing the required traits on
-                the image.
-        """
-        if req is not None:
-            ret = req
-        else:
-            ret = cls()
-
-        if 'traits_required' in image_meta_props:
-            for trait in image_meta_props.traits_required:
-                # required traits from the image are always added to the
-                # unnumbered request group, granular request groups are not
-                # supported in image traits
-                ret._add_trait(None, trait, "required")
-
-        return ret
-
     def resource_groups(self):
         for rg in self._rg_by_id.values():
             yield rg.resources
@@ -223,33 +239,18 @@ class ResourceRequest(object):
         return len([ident for ident in self._rg_by_id.keys()
                     if ident is not None])
 
-    def merged_resources(self, flavor_resources=None):
+    def merged_resources(self):
         """Returns a merge of {resource_class: amount} for all resource groups.
 
         Amounts of the same resource class from different groups are added
         together.
 
-        :param flavor_resources: A flat dict of {resource_class: amount}.  If
-                                 specified, the resources therein are folded
-                                 into the return dict, such that any resource
-                                 in flavor_resources is included only if that
-                                 resource class does not exist elsewhere in the
-                                 merged ResourceRequest.
         :return: A dict of the form {resource_class: amount}
         """
         ret = collections.defaultdict(lambda: 0)
         for resource_dict in self.resource_groups():
             for resource_class, amount in resource_dict.items():
                 ret[resource_class] += amount
-        if flavor_resources:
-            for resource_class, amount in flavor_resources.items():
-                # If it's in there - even if zero - ignore the one from the
-                # flavor.
-                if resource_class not in ret:
-                    ret[resource_class] = amount
-            # Now strip zeros.  This has to be done after the above - we can't
-            # use strip_zeros :(
-            ret = {rc: amt for rc, amt in ret.items() if amt}
         return dict(ret)
 
     def _clean_empties(self):
@@ -329,6 +330,10 @@ class ResourceRequest(object):
             traits = traits.union(rr.required_traits)
         return traits
 
+    def __str__(self):
+        return ', '.join(sorted(
+            list(str(rg) for rg in list(self._rg_by_id.values()))))
+
 
 def build_request_spec(image, instances, instance_type=None):
     """Build a request_spec for the scheduler.
@@ -396,25 +401,17 @@ def resources_from_flavor(instance, flavor):
     """
     is_bfv = compute_utils.is_volume_backed_instance(instance._context,
                                                      instance)
-    swap_in_gb = compute_utils.convert_mb_to_ceil_gb(flavor.swap)
-    disk = ((0 if is_bfv else flavor.root_gb) +
-            swap_in_gb + flavor.ephemeral_gb)
+    # create a fake RequestSpec as a wrapper to the caller
+    req_spec = objects.RequestSpec(flavor=flavor, is_bfv=is_bfv)
 
-    resources = {
-        orc.VCPU: flavor.vcpus,
-        orc.MEMORY_MB: flavor.memory_mb,
-        orc.DISK_GB: disk,
-    }
-    if "extra_specs" in flavor:
-        # TODO(efried): This method is currently only used from places that
-        # assume the compute node is the only resource provider.  So for now,
-        # we just merge together all the resources specified in the flavor and
-        # pass them along.  This will need to be adjusted when nested and/or
-        # shared RPs are in play.
-        rreq = ResourceRequest.from_extra_specs(flavor.extra_specs)
-        resources = rreq.merged_resources(flavor_resources=resources)
+    # TODO(efried): This method is currently only used from places that
+    # assume the compute node is the only resource provider.  So for now, we
+    # just merge together all the resources specified in the flavor and pass
+    # them along.  This will need to be adjusted when nested and/or shared RPs
+    # are in play.
+    res_req = ResourceRequest(req_spec)
 
-    return resources
+    return res_req.merged_resources()
 
 
 def resources_from_request_spec(ctxt, spec_obj, host_manager):
@@ -428,63 +425,7 @@ def resources_from_request_spec(ctxt, spec_obj, host_manager):
     :return: A ResourceRequest object.
     :raises NoValidHost: If the specified host/node is not found in the DB.
     """
-    spec_resources = {
-        orc.VCPU: spec_obj.vcpus,
-        orc.MEMORY_MB: spec_obj.memory_mb,
-    }
-
-    requested_disk_mb = ((1024 * spec_obj.ephemeral_gb) +
-                         spec_obj.swap)
-
-    if 'is_bfv' not in spec_obj or not spec_obj.is_bfv:
-        # Either this is not a BFV instance, or we are not sure,
-        # so ask for root_gb allocation
-        requested_disk_mb += (1024 * spec_obj.root_gb)
-
-    # NOTE(sbauza): Disk request is expressed in MB but we count
-    # resources in GB. Since there could be a remainder of the division
-    # by 1024, we need to ceil the result to the next bigger Gb so we
-    # can be sure there would be enough disk space in the destination
-    # to sustain the request.
-    # FIXME(sbauza): All of that could be using math.ceil() but since
-    # we support both py2 and py3, let's fake it until we only support
-    # py3.
-    requested_disk_gb = requested_disk_mb // 1024
-    if requested_disk_mb % 1024 != 0:
-        # Let's ask for a bit more space since we count in GB
-        requested_disk_gb += 1
-    # NOTE(sbauza): Some flavors provide zero size for disk values, we need
-    # to avoid asking for disk usage.
-    if requested_disk_gb != 0:
-        spec_resources[orc.DISK_GB] = requested_disk_gb
-
-    # Process extra_specs
-    if "extra_specs" in spec_obj.flavor:
-        res_req = ResourceRequest.from_extra_specs(spec_obj.flavor.extra_specs)
-        # If any of the three standard resources above was explicitly given in
-        # the extra_specs - in any group - we need to replace it, or delete it
-        # if it was given as zero.  We'll do this by grabbing a merged version
-        # of the ResourceRequest resources and removing matching items from the
-        # spec_resources.
-        spec_resources = {rclass: amt for rclass, amt in spec_resources.items()
-                          if rclass not in res_req.merged_resources()}
-        # Now we don't need (or want) any remaining zero entries - remove them.
-        res_req.strip_zeros()
-
-        numbered_groups_from_flavor = res_req.get_num_of_numbered_groups()
-    else:
-        # Start with an empty one
-        res_req = ResourceRequest()
-        numbered_groups_from_flavor = 0
-
-    # Process any image properties
-    if 'image' in spec_obj and 'properties' in spec_obj.image:
-        res_req = ResourceRequest.from_image_props(spec_obj.image.properties,
-                                                   req=res_req)
-
-    # Add the (remaining) items from the spec_resources to the sharing group
-    for rclass, amount in spec_resources.items():
-        res_req.get_request_group(None).resources[rclass] = amount
+    res_req = ResourceRequest(spec_obj)
 
     requested_resources = (spec_obj.requested_resources
                            if 'requested_resources' in spec_obj and
@@ -574,7 +515,7 @@ def resources_from_request_spec(ctxt, spec_obj, host_manager):
             "group to be satisfied from a separate resource provider then "
             "use 'group_policy': 'isolate'.")
 
-        if numbered_groups_from_flavor <= 1:
+        if res_req.numbered_groups_from_flavor <= 1:
             LOG.info(
                 "At least one numbered request group is defined outside of "
                 "the flavor (e.g. in a port that has a QoS minimum bandwidth "

@@ -1019,9 +1019,12 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
 
     def test_alloc_cands_smoke(self):
         """Simple call to get_allocation_candidates for version checking."""
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0)
+        req_spec = objects.RequestSpec(flavor=flavor, is_bfv=False)
         with self._interceptor():
             self.client.get_allocation_candidates(
-                self.context, utils.ResourceRequest())
+                self.context, utils.ResourceRequest(req_spec))
 
     def _set_up_provider_tree(self):
         r"""Create two compute nodes in placement ("this" one, and another one)
@@ -1145,7 +1148,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
             # care to check.
             for k, expected in pdict.items():
                 # For inventories, we're only validating totals
-                if k is 'inventory':
+                if k == 'inventory':
                     self.assertEqual(
                         set(expected), set(actual_data.inventory),
                         "Mismatched inventory keys for provider %s" % uuid)
