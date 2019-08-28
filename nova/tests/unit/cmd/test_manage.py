@@ -377,16 +377,21 @@ class NeutronV2NetworkCommandsTestCase(test.NoDBTestCase):
         self.assertEqual(2, self.commands.modify('192.168.0.1'))
 
 
-class DBCommandsTestCase(test.NoDBTestCase):
+class DbCommandsTestCase(test.NoDBTestCase):
     USES_DB_SELF = True
 
     def setUp(self):
-        super(DBCommandsTestCase, self).setUp()
+        super(DbCommandsTestCase, self).setUp()
         self.output = StringIO()
         self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
         self.commands = manage.DbCommands()
         self.useFixture(nova_fixtures.Database())
         self.useFixture(nova_fixtures.Database(database='api'))
+
+    def test_online_migrations_unique(self):
+        names = [m.__name__ for m in self.commands.online_migrations]
+        self.assertEqual(len(set(names)), len(names),
+                         'Online migrations must have a unique name')
 
     def test_archive_deleted_rows_negative(self):
         self.assertEqual(2, self.commands.archive_deleted_rows(-1))

@@ -383,6 +383,7 @@ class DbCommands(object):
     # remains. If found is nonzero and done is zero, some records are
     # not migratable (or don't need migrating), but all migrations that can
     # complete have finished.
+    # NOTE(stephenfin): These names must be unique
     online_migrations = (
         # Added in Pike
         # TODO(mriedem): Remove this in the U release.
