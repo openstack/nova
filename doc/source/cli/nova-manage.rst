@@ -62,7 +62,7 @@ Nova Database
     Returns exit code 0 if the database schema was synced successfully, or 1 if
     cell0 cannot be accessed.
 
-``nova-manage db archive_deleted_rows [--max_rows <number>] [--verbose] [--until-complete] [--before <date>] [--purge]``
+``nova-manage db archive_deleted_rows [--max_rows <number>] [--verbose] [--until-complete] [--before <date>] [--purge] [--all-cells]``
     Move deleted rows from production tables to shadow tables. Note that the
     corresponding rows in the ``instance_mappings``, ``request_specs`` and
     ``instance_group_member`` tables of the API database are purged when
@@ -78,7 +78,8 @@ Nova Database
     tables related to those instances. Specifying ``--purge`` will cause a
     *full* DB purge to be completed after archival. If a date range is desired
     for the purge, then run ``nova-manage db purge --before <date>`` manually
-    after archiving is complete.
+    after archiving is complete. Specifying ``--all-cells`` will
+    cause the process to run against all cell databases.
 
     **Return Codes**
 

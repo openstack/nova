@@ -5569,14 +5569,15 @@ def _archive_deleted_rows_for_table(metadata, tablename, max_rows, before):
     return rows_archived, deleted_instance_uuids
 
 
-def archive_deleted_rows(max_rows=None, before=None):
+def archive_deleted_rows(context=None, max_rows=None, before=None):
     """Move up to max_rows rows from production tables to the corresponding
     shadow tables.
 
+    :param context: nova.context.RequestContext for database access
     :param max_rows: Maximum number of rows to archive (required)
     :param before: optional datetime which when specified filters the records
         to only archive those records deleted before the given date
-    :returns: 2-item tuple:
+    :returns: 3-item tuple:
 
         - dict that maps table name to number of rows archived from that table,
           for example::
@@ -5587,11 +5588,12 @@ def archive_deleted_rows(max_rows=None, before=None):
                 'pci_devices': 2,
             }
         - list of UUIDs of instances that were archived
+        - total number of rows that were archived
     """
     table_to_rows_archived = {}
     deleted_instance_uuids = []
     total_rows_archived = 0
-    meta = MetaData(get_engine(use_slave=True))
+    meta = MetaData(get_engine(use_slave=True, context=context))
     meta.reflect()
     # Reverse sort the tables so we get the leaf nodes first for processing.
     for table in reversed(meta.sorted_tables):
@@ -5615,7 +5617,7 @@ def archive_deleted_rows(max_rows=None, before=None):
             table_to_rows_archived[tablename] = rows_archived
         if total_rows_archived >= max_rows:
             break
-    return table_to_rows_archived, deleted_instance_uuids
+    return table_to_rows_archived, deleted_instance_uuids, total_rows_archived
 
 
 def _purgeable_tables(metadata):

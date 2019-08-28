@@ -8580,7 +8580,7 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(len(rows), 6)
         # Make sure 'before' comparison is for < not <=, nothing deleted
         before_date = dateutil_parser.parse('2017-01-01', fuzzy=True)
-        _, uuids = db.archive_deleted_rows(max_rows=1, before=before_date)
+        _, uuids, _ = db.archive_deleted_rows(max_rows=1, before=before_date)
         self.assertEqual([], uuids)
 
         # Archive rows deleted before 2017-01-02

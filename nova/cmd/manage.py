@@ -414,17 +414,19 @@ class DbCommands(object):
         pass
 
     @staticmethod
-    def _print_dict(dct, dict_property="Property", dict_value='Value'):
+    def _print_dict(dct, dict_property="Property", dict_value='Value',
+                    sort_key=None):
         """Print a `dict` as a table of two columns.
 
         :param dct: `dict` to print
         :param dict_property: name of the first column
         :param wrap: wrapping for the second column
         :param dict_value: header label for the value (second) column
+        :param sort_key: key used for sorting the dict
         """
         pt = prettytable.PrettyTable([dict_property, dict_value])
         pt.align = 'l'
-        for k, v in sorted(dct.items()):
+        for k, v in sorted(dct.items(), key=sort_key):
             # convert dict to str to check length
             if isinstance(v, dict):
                 v = six.text_type(v)
@@ -495,9 +497,11 @@ Error: %s""") % six.text_type(e))
                 'max_rows as a batch size for each iteration.'))
     @args('--purge', action='store_true', dest='purge', default=False,
           help='Purge all data from shadow tables after archive completes')
+    @args('--all-cells', action='store_true', dest='all_cells',
+          default=False, help='Run command across all cells.')
     def archive_deleted_rows(self, max_rows=1000, verbose=False,
                              until_complete=False, purge=False,
-                             before=None):
+                             before=None, all_cells=False):
         """Move deleted rows from production tables to shadow tables.
 
         Returns 0 if nothing was archived, 1 if some number of rows were
@@ -520,7 +524,7 @@ Error: %s""") % six.text_type(e))
             # NOTE(tssurya): This check has been added to validate if the API
             # DB is reachable or not as this is essential for purging the
             # related API database records of the deleted instances.
-            objects.CellMappingList.get_all(ctxt)
+            cell_mappings = objects.CellMappingList.get_all(ctxt)
         except db_exc.CantStartEngineError:
             print(_('Failed to connect to API DB so aborting this archival '
                     'attempt. Please check your config file to make sure that '
@@ -538,58 +542,145 @@ Error: %s""") % six.text_type(e))
             before_date = None
 
         table_to_rows_archived = {}
-        deleted_instance_uuids = []
         if until_complete and verbose:
             sys.stdout.write(_('Archiving') + '..')  # noqa
-        while True:
-            try:
-                run, deleted_instance_uuids = db.archive_deleted_rows(
-                                                max_rows, before=before_date)
-            except KeyboardInterrupt:
-                run = {}
-                if until_complete and verbose:
-                    print('.' + _('stopped'))  # noqa
+
+        interrupt = False
+
+        if all_cells:
+            # Sort first by cell name, then by table:
+            # +--------------------------------+-------------------------+
+            # | Table                          | Number of Rows Archived |
+            # +--------------------------------+-------------------------+
+            # | cell0.block_device_mapping     | 1                       |
+            # | cell1.block_device_mapping     | 1                       |
+            # | cell1.instance_actions         | 2                       |
+            # | cell1.instance_actions_events  | 2                       |
+            # | cell2.block_device_mapping     | 1                       |
+            # | cell2.instance_actions         | 2                       |
+            # | cell2.instance_actions_events  | 2                       |
+            # ...
+            def sort_func(item):
+                cell_name, table = item[0].split('.')
+                return cell_name, table
+            print_sort_func = sort_func
+        else:
+            cell_mappings = [None]
+            print_sort_func = None
+        total_rows_archived = 0
+        for cell_mapping in cell_mappings:
+            # NOTE(Kevin_Zheng): No need to calculate limit for each
+            # cell if until_complete=True.
+            # We need not adjust max rows to avoid exceeding a specified total
+            # limit because with until_complete=True, we have no total limit.
+            if until_complete:
+                max_rows_to_archive = max_rows
+            elif max_rows > total_rows_archived:
+                # We reduce the max rows to archive based on what we've
+                # archived so far to avoid potentially exceeding the specified
+                # total limit.
+                max_rows_to_archive = max_rows - total_rows_archived
+            else:
+                break
+            # If all_cells=False, cell_mapping is None
+            with context.target_cell(ctxt, cell_mapping) as cctxt:
+                cell_name = cell_mapping.name if cell_mapping else None
+                try:
+                    rows_archived = self._do_archive(
+                        table_to_rows_archived,
+                        cctxt,
+                        max_rows_to_archive,
+                        until_complete,
+                        verbose,
+                        before_date,
+                        cell_name)
+                except KeyboardInterrupt:
+                    interrupt = True
                     break
-            for k, v in run.items():
-                table_to_rows_archived.setdefault(k, 0)
-                table_to_rows_archived[k] += v
-            if deleted_instance_uuids:
-                table_to_rows_archived.setdefault('instance_mappings', 0)
-                table_to_rows_archived.setdefault('request_specs', 0)
-                table_to_rows_archived.setdefault('instance_group_member', 0)
-                deleted_mappings = objects.InstanceMappingList.destroy_bulk(
-                                            ctxt, deleted_instance_uuids)
-                table_to_rows_archived['instance_mappings'] += deleted_mappings
-                deleted_specs = objects.RequestSpec.destroy_bulk(
-                                            ctxt, deleted_instance_uuids)
-                table_to_rows_archived['request_specs'] += deleted_specs
-                deleted_group_members = (
-                    objects.InstanceGroup.destroy_members_bulk(
-                        ctxt, deleted_instance_uuids))
-                table_to_rows_archived['instance_group_member'] += (
-                    deleted_group_members)
-            if not until_complete:
-                break
-            elif not run:
-                if verbose:
-                    print('.' + _('complete'))  # noqa
-                break
-            if verbose:
-                sys.stdout.write('.')
+                # TODO(melwitt): Handle skip/warn for unreachable cells. Note
+                # that cell_mappings = [None] if not --all-cells
+                total_rows_archived += rows_archived
+
+        if until_complete and verbose:
+            if interrupt:
+                print('.' + _('stopped'))  # noqa
+            else:
+                print('.' + _('complete'))  # noqa
+
         if verbose:
             if table_to_rows_archived:
                 self._print_dict(table_to_rows_archived, _('Table'),
-                                 dict_value=_('Number of Rows Archived'))
+                                 dict_value=_('Number of Rows Archived'),
+                                 sort_key=print_sort_func)
             else:
                 print(_('Nothing was archived.'))
 
         if table_to_rows_archived and purge:
             if verbose:
                 print(_('Rows were archived, running purge...'))
-            self.purge(purge_all=True, verbose=verbose)
+            self.purge(purge_all=True, verbose=verbose, all_cells=all_cells)
 
         # NOTE(danms): Return nonzero if we archived something
         return int(bool(table_to_rows_archived))
+
+    def _do_archive(self, table_to_rows_archived, cctxt, max_rows,
+                    until_complete, verbose, before_date, cell_name):
+        """Helper function for archiving deleted rows for a cell.
+
+        This will archive deleted rows for a cell database and remove the
+        associated API database records for deleted instances.
+
+        :param table_to_rows_archived: Dict tracking the number of rows
+            archived by <cell_name>.<table name>. Example:
+            {'cell0.instances': 2,
+             'cell1.instances': 5}
+        :param cctxt: Cell-targeted nova.context.RequestContext if archiving
+            across all cells
+        :param max_rows: Maximum number of deleted rows to archive
+        :param until_complete: Whether to run continuously until all deleted
+            rows are archived
+        :param verbose: Whether to print how many rows were archived per table
+        :param before_date: Archive rows that were deleted before this date
+        :param cell_name: Name of the cell or None if not archiving across all
+            cells
+        """
+        ctxt = context.get_admin_context()
+        while True:
+            run, deleted_instance_uuids, total_rows_archived = \
+                db.archive_deleted_rows(cctxt, max_rows, before=before_date)
+            for table_name, rows_archived in run.items():
+                if cell_name:
+                    table_name = cell_name + '.' + table_name
+                table_to_rows_archived.setdefault(table_name, 0)
+                table_to_rows_archived[table_name] += rows_archived
+            if deleted_instance_uuids:
+                table_to_rows_archived.setdefault(
+                    'API_DB.instance_mappings', 0)
+                table_to_rows_archived.setdefault(
+                    'API_DB.request_specs', 0)
+                table_to_rows_archived.setdefault(
+                    'API_DB.instance_group_member', 0)
+                deleted_mappings = objects.InstanceMappingList.destroy_bulk(
+                            ctxt, deleted_instance_uuids)
+                table_to_rows_archived[
+                    'API_DB.instance_mappings'] += deleted_mappings
+                deleted_specs = objects.RequestSpec.destroy_bulk(
+                    ctxt, deleted_instance_uuids)
+                table_to_rows_archived[
+                    'API_DB.request_specs'] += deleted_specs
+                deleted_group_members = (
+                    objects.InstanceGroup.destroy_members_bulk(
+                        ctxt, deleted_instance_uuids))
+                table_to_rows_archived[
+                    'API_DB.instance_group_member'] += deleted_group_members
+            # If we're not archiving until there is nothing more to archive, we
+            # have reached max_rows in this cell DB or there was nothing to
+            # archive.
+            if not until_complete or not run:
+                break
+            if verbose:
+                sys.stdout.write('.')
+        return total_rows_archived
 
     @args('--before', metavar='<before>', dest='before',
           help='If specified, purge rows from shadow tables that are older '
