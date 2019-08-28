@@ -6233,18 +6233,49 @@ class ComputeManager(manager.Manager):
         the cinder v2 flow, call cinder to terminate the connection.
         """
         try:
+            # NOTE(mriedem): If the BDM was just passed directly we would not
+            # need to do this DB query, but this is an RPC interface so
+            # changing that requires some care.
             bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
                     context, volume_id, instance.uuid)
-            driver_bdm = driver_block_device.convert_volume(bdm)
-            driver_bdm.driver_detach(context, instance,
-                                     self.volume_api, self.driver)
-            if bdm.attachment_id is None:
-                # cinder v2 api flow
-                connector = self.driver.get_volume_connector(instance)
-                self.volume_api.terminate_connection(context, volume_id,
-                                                     connector)
+            # NOTE(mriedem): Normally we would pass delete_attachment=True to
+            # _remove_volume_connection to delete a v3 style volume attachment,
+            # but this method is RPC called from _rollback_live_migration which
+            # already deletes the attachment, so because of that tight coupling
+            # we cannot simply delete a v3 style attachment here without
+            # needing to do some behavior modification of that
+            # _rollback_live_migration flow which gets messy.
+            self._remove_volume_connection(context, bdm, instance)
         except exception.NotFound:
             pass
+
+    def _remove_volume_connection(self, context, bdm, instance,
+                                  delete_attachment=False):
+        """Remove the volume connection on this host
+
+        Detach the volume from this instance on this host.
+
+        :param context: nova auth request context
+        :param bdm: BlockDeviceMapping object for a volume attached to the
+            instance
+        :param instance: Instance object with a volume attached represented
+            by ``bdm``
+        :param delete_attachment: If ``bdm.attachment_id`` is not None the
+            attachment was made as a cinder v3 style attachment and if True,
+            then deletes the volume attachment, otherwise just terminates
+            the connection for a cinder legacy style connection.
+        """
+        driver_bdm = driver_block_device.convert_volume(bdm)
+        driver_bdm.driver_detach(context, instance,
+                                 self.volume_api, self.driver)
+        if bdm.attachment_id is None:
+            # cinder v2 api flow
+            connector = self.driver.get_volume_connector(instance)
+            self.volume_api.terminate_connection(context, bdm.volume_id,
+                                                 connector)
+        elif delete_attachment:
+            # cinder v3 api flow
+            self.volume_api.attachment_delete(context, bdm.attachment_id)
 
     def _deallocate_port_for_instance(self, context, instance, port_id,
                                       raise_on_failure=False):
