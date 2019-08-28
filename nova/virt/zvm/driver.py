@@ -141,7 +141,7 @@ class ZVMDriver(driver.ComputeDriver):
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, allocations, network_info=None,
-              block_device_info=None):
+              block_device_info=None, power_on=True):
 
         LOG.info("Spawning new instance %s on zVM hypervisor",
                  instance.name, instance=instance)

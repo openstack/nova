@@ -3199,7 +3199,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, allocations, network_info=None,
-              block_device_info=None):
+              block_device_info=None, power_on=True):
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,
                                             image_meta,
@@ -3228,7 +3228,8 @@ class LibvirtDriver(driver.ComputeDriver):
             context, xml, instance, network_info,
             block_device_info=block_device_info,
             post_xml_callback=gen_confdrive,
-            destroy_disks_on_failure=True)
+            destroy_disks_on_failure=True,
+            power_on=power_on)
         LOG.debug("Guest created on hypervisor", instance=instance)
 
         def _wait_for_boot():
@@ -3239,8 +3240,11 @@ class LibvirtDriver(driver.ComputeDriver):
                 LOG.info("Instance spawned successfully.", instance=instance)
                 raise loopingcall.LoopingCallDone()
 
-        timer = loopingcall.FixedIntervalLoopingCall(_wait_for_boot)
-        timer.start(interval=0.5).wait()
+        if power_on:
+            timer = loopingcall.FixedIntervalLoopingCall(_wait_for_boot)
+            timer.start(interval=0.5).wait()
+        else:
+            LOG.info("Instance spawned successfully.", instance=instance)
 
     def _get_console_output_file(self, instance, console_log):
         bytes_to_read = MAX_CONSOLE_BYTES
