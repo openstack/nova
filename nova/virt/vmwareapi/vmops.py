@@ -1845,10 +1845,6 @@ class VMwareVMOps(object):
         """Check that the cache folder exists."""
         self._create_folder_if_missing(ds_name, ds_ref, self._base_folder)
 
-    def check_temp_folder(self, ds_name, ds_ref):
-        """Check that the temp folder exists."""
-        self._create_folder_if_missing(ds_name, ds_ref, self._tmp_folder)
-
     def inject_network_info(self, instance, network_info):
         """inject network info for specified instance."""
         # Set the machine.id parameter of the instance to inject
