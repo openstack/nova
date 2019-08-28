@@ -325,6 +325,7 @@ class _TestRequestSpecObject(object):
     def test_from_components(self):
         ctxt = context.RequestContext('fake-user', 'fake-project')
         destination = objects.Destination(host='foo')
+        self.assertFalse(destination.allow_cross_cell_move)
         instance = fake_instance.fake_instance_obj(ctxt)
         image = {'id': uuids.image_id, 'properties': {'mappings': []},
                  'status': 'fake-status', 'location': 'far-away'}
@@ -344,6 +345,7 @@ class _TestRequestSpecObject(object):
         # just making sure that the context is set by the method
         self.assertEqual(ctxt, spec._context)
         self.assertEqual(destination, spec.requested_destination)
+        self.assertFalse(spec.requested_destination.allow_cross_cell_move)
 
     @mock.patch('nova.objects.RequestSpec._populate_group_info')
     def test_from_components_with_instance_group(self, mock_pgi):
@@ -896,10 +898,18 @@ class _TestRequestSpecObject(object):
         destination.require_aggregates(['baz'])
         self.assertEqual(['foo,bar', 'baz'], destination.aggregates)
 
-    def test_destination_1dotoh(self):
-        destination = objects.Destination(aggregates=['foo'])
-        primitive = destination.obj_to_primitive(target_version='1.0')
-        self.assertNotIn('aggregates', primitive['nova_object.data'])
+    def test_destination_obj_make_compatible(self):
+        destination = objects.Destination(
+            aggregates=['foo'], host='fake-host', allow_cross_cell_move=False)
+        primitive = destination.obj_to_primitive(
+            target_version='1.2')['nova_object.data']
+        self.assertIn('aggregates', primitive)
+        self.assertNotIn('allow_cross_cell_move', primitive)
+
+        primitive = destination.obj_to_primitive(
+            target_version='1.0')['nova_object.data']
+        self.assertNotIn('aggregates', primitive)
+        self.assertEqual('fake-host', primitive['host'])
 
     def test_create_raises_on_unchanged_object(self):
         ctxt = context.RequestContext(uuids.user_id, uuids.project_id)
