@@ -4932,8 +4932,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         @mock.patch.object(dmcrypt, 'delete_volume')
         @mock.patch.object(conn._host, '_get_domain', return_value=dom)
-        @mock.patch.object(libvirt_driver.disk_api, 'get_allocated_disk_size')
-        def detach_encrypted_volumes(block_device_info, mock_get_alloc_size,
+        def detach_encrypted_volumes(block_device_info,
                                      mock_get_domain, mock_delete_volume):
             conn._detach_encrypted_volumes(instance, block_device_info)
 
