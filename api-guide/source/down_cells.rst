@@ -130,8 +130,7 @@ behavior are described below:
                        "disk": 1,
                        "ephemeral": 0,
                        "extra_specs": {
-                           "hw:cpu_policy": "dedicated",
-                           "hw:mem_page_size": "2048"
+                           "hw:numa_nodes": "1"
                        },
                        "original_name": "m1.tiny.specs",
                        "ram": 512,
@@ -266,8 +265,7 @@ behavior are described below:
                      "disk": 1,
                      "ephemeral": 0,
                      "extra_specs": {
-                         "hw:cpu_policy": "dedicated",
-                         "hw:mem_page_size": "2048"
+                         "hw:numa_nodes": "1"
                      },
                      "original_name": "m1.tiny.specs",
                      "ram": 512,

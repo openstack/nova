@@ -143,8 +143,7 @@
             "rxtx_factor": 1.0,
             "description": null,
             "extra_specs": {
-                "hw:mem_page_size": "2048",
-                "hw:cpu_policy": "dedicated"
+                "hw:numa_nodes": "1"
             }
         },
         {
