@@ -211,6 +211,15 @@ class CinderApiTestCase(test.NoDBTestCase):
                           self.api.create, self.ctx, 1, '', '')
 
     @mock.patch('nova.volume.cinder.cinderclient')
+    def test_create_failed_not_found(self, mock_cinderclient):
+        mock_cinderclient.return_value.volumes.create.side_effect = (
+            cinder_exception.NotFound(404, 'Volume type can not be found.'))
+
+        ex = self.assertRaises(exception.NotFound,
+                               self.api.create, self.ctx, 1, '', '')
+        self.assertEqual('Volume type can not be found.', six.text_type(ex))
+
+    @mock.patch('nova.volume.cinder.cinderclient')
     def test_create_over_quota_failed(self, mock_cinderclient):
         mock_cinderclient.return_value.volumes.create.side_effect = (
             cinder_exception.OverLimit(413))
@@ -991,6 +1000,16 @@ class CinderApiTestCase(test.NoDBTestCase):
             keystone_exception.NotFound,
             exception.VolumeNotFound)
 
+    def test_translate_create_exception_keystone_not_found(self):
+        self._do_translate_create_exception_test(
+            keystone_exception.NotFound,
+            exception.NotFound)
+
+    def test_translate_create_exception_volume_not_found(self):
+        self._do_translate_create_exception_test(
+            cinder_exception.NotFound('Volume type could not be found'),
+            exception.NotFound)
+
     def _do_translate_cinder_exception_test(self, raised_exc, expected_exc):
         self._do_translate_exception_test(raised_exc, expected_exc,
                                           cinder.translate_cinder_exception)
@@ -998,6 +1017,10 @@ class CinderApiTestCase(test.NoDBTestCase):
     def _do_translate_mixed_exception_test(self, raised_exc, expected_exc):
         self._do_translate_exception_test(raised_exc, expected_exc,
                                           cinder.translate_mixed_exceptions)
+
+    def _do_translate_create_exception_test(self, raised_exc, expected_exc):
+        self._do_translate_exception_test(raised_exc, expected_exc,
+                                          cinder.translate_create_exception)
 
     def _do_translate_exception_test(self, raised_exc, expected_exc, wrapper):
         my_func = mock.Mock()
