@@ -155,7 +155,7 @@ choice.
 Footnotes
 ---------
 
-.. [1] https://github.com/openstack/nova/blob/fbe6f77bc/nova/objects/image_meta.py#L225
+.. [1] https://opendev.org/openstack/nova/src/commit/fbe6f77bc1cb41f5d6cfc24ece54d3413f997aab/nova/objects/image_meta.py#L225
 .. [2] https://review.opendev.org/#/c/440580/
 .. [3] https://docs.openstack.org/nova/latest/user/flavors.html#extra-specs
-.. [4] https://github.com/openstack/nova/blob/fbe6f77bc/nova/api/openstack/compute/schemas/scheduler_hints.py
+.. [4] https://opendev.org/openstack/nova/src/commit/fbe6f77bc1cb41f5d6cfc24ece54d3413f997aab/nova/api/openstack/compute/schemas/scheduler_hints.py

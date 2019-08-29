@@ -63,7 +63,7 @@ Set this value if affected by an increased network latency causing
 repeated characters when typing in a remote console.
 """),
     # NOTE(takashin): 'serial_port_service_uri' can be non URI format.
-    # See https://github.com/openstack/vmware-vspc/blob/master/README.rst
+    # See https://opendev.org/x/vmware-vspc/src/branch/master/README.rst
     cfg.StrOpt('serial_port_service_uri',
                help="""
 Identifies the remote system where the serial port traffic will

@@ -14,7 +14,7 @@ The v2.1 API framework is under ``nova/api`` and each API is implemented in
 ``nova/api/openstack/compute``.
 
 Note that any change to the Nova API to be merged will first require a
-spec be approved first. See `here <https://github.com/openstack/nova-specs>`_
+spec be approved first. See `here <https://opendev.org/openstack/nova-specs>`_
 for the appropriate repository. For guidance on the design of the API
 please refer to the `OpenStack API WG
 <https://wiki.openstack.org/wiki/API_Working_Group>`_

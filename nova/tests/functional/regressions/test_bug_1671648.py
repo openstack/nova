@@ -83,8 +83,9 @@ class TestRetryBetweenComputeNodeBuilds(test.TestCase):
         # We can't stub nova.compute.claims.Claims.__init__ because there is
         # a race where nova.compute.claims.NopClaim will be used instead,
         # see for details:
-        #   https://github.com/openstack/nova/blob/bb02d11/nova/compute/
-        #   resource_tracker.py#L121-L130
+        #   https://opendev.org/openstack/nova/src/commit/
+        #   bb02d1110a9529217a5e9b1e1fe8ca25873cac59/
+        #   nova/compute/resource_tracker.py#L121-L130
         real_instance_claim =\
                 nova.compute.resource_tracker.ResourceTracker.instance_claim
 
