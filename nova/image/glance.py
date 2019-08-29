@@ -656,22 +656,6 @@ class GlanceImageServiceV2(object):
         return True
 
 
-def _extract_query_params(params):
-    _params = {}
-    accepted_params = ('filters', 'marker', 'limit',
-                       'page_size', 'sort_key', 'sort_dir')
-    for param in accepted_params:
-        if params.get(param):
-            _params[param] = params.get(param)
-
-    # ensure filters is a dict
-    _params.setdefault('filters', {})
-    # NOTE(vish): don't filter out private images
-    _params['filters'].setdefault('is_public', 'none')
-
-    return _params
-
-
 def _extract_query_params_v2(params):
     _params = {}
     accepted_params = ('filters', 'marker', 'limit',
