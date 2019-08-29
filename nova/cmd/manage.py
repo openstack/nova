@@ -1765,6 +1765,10 @@ class CellV2Commands(object):
         * The host has instances.
 
         Returns 0 if the host is deleted successfully.
+
+        NOTE: The scheduler caches host-to-cell mapping information so when
+        deleting a host the scheduler may need to be restarted or sent the
+        SIGHUP signal.
         """
         ctxt = context.get_admin_context()
         # Find the CellMapping given the uuid.

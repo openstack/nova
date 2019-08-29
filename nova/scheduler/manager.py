@@ -85,6 +85,9 @@ class SchedulerManager(manager.Manager):
         # and enabled cells caches in the host manager. So every time an
         # existing cell is disabled or enabled or a new cell is created, a
         # SIGHUP signal has to be sent to the scheduler for proper scheduling.
+        # NOTE(mriedem): Similarly there is a host-to-cell cache which should
+        # be reset if a host is deleted from a cell and "discovered" in another
+        # cell.
         self.driver.host_manager.refresh_cells_caches()
 
     @messaging.expected_exceptions(exception.NoValidHost)
