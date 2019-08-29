@@ -13,6 +13,7 @@
 
 from eventlet import tpool
 import mock
+from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.compute import task_states
@@ -48,6 +49,53 @@ CEPH_MON_DUMP = r"""dumped monmap epoch 1
         0,
         1,
         2]}
+"""
+
+
+# max_avail stats are tweaked for testing
+CEPH_DF = """
+{
+    "stats": {
+        "total_bytes": 25757220864,
+        "total_used_bytes": 274190336,
+        "total_avail_bytes": 25483030528
+    },
+    "pools": [
+        {
+            "name": "images",
+            "id": 1,
+            "stats": {
+                "kb_used": 12419,
+                "bytes_used": 12716067,
+                "percent_used": 0.05,
+                "max_avail": 24195168123,
+                "objects": 6
+            }
+        },
+        {
+            "name": "rbd",
+            "id": 2,
+            "stats": {
+                "kb_used": 0,
+                "bytes_used": 0,
+                "percent_used": 0.00,
+                "max_avail": 24195168456,
+                "objects": 0
+            }
+        },
+        {
+            "name": "volumes",
+            "id": 3,
+            "stats": {
+                "kb_used": 0,
+                "bytes_used": 0,
+                "percent_used": 0.00,
+                "max_avail": 24195168789,
+                "objects": 0
+            }
+        }
+    ]
+}
 """
 
 
@@ -564,3 +612,19 @@ class RbdTestCase(test.NoDBTestCase):
         proxy.list_snaps.return_value = [{'name': self.snap_name}, ]
         self.driver.rollback_to_snap(self.volume_name, self.snap_name)
         proxy.rollback_to_snap.assert_called_once_with(self.snap_name)
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_get_pool_info(self, mock_execute):
+        mock_execute.return_value = (CEPH_DF, '')
+        ceph_df_json = jsonutils.loads(CEPH_DF)
+        expected = {'total': ceph_df_json['stats']['total_bytes'],
+                    'free': ceph_df_json['pools'][1]['stats']['max_avail'],
+                    'used': ceph_df_json['pools'][1]['stats']['bytes_used']}
+        self.assertDictEqual(expected, self.driver.get_pool_info())
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_get_pool_info_not_found(self, mock_execute):
+        # Make the pool something other than self.rbd_pool so it won't be found
+        ceph_df_not_found = CEPH_DF.replace('rbd', 'vms')
+        mock_execute.return_value = (ceph_df_not_found, '')
+        self.assertRaises(exception.NotFound, self.driver.get_pool_info)
