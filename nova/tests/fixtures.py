@@ -880,15 +880,6 @@ class WarningsFixture(fixtures.Fixture):
             category=DeprecationWarning,
             module='migrate.versioning.script.py')
 
-        # TODO(takashin): Change (or remove) this warning once
-        # a service description for placement service is added in openstacksdk.
-        warnings.filterwarnings(
-            'ignore',
-            message='Service placement has no discoverable version. '
-                    'The resulting Proxy object will only have direct '
-                    'passthrough REST capabilities.',
-            module='openstack.service_description')
-
         self.addCleanup(warnings.resetwarnings)
 
 
