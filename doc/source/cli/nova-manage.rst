@@ -485,24 +485,40 @@ Placement
     :oslo.config:group:`placement` configuration options are set. Placement API
     >= 1.28 is required.
 
-    Return codes:
+    **Return Codes**
 
-    * 0: Command completed successfully and allocations were created.
-    * 1: ``--max-count`` was reached and there are more instances to process.
-    * 2: Unable to find a compute node record for a given instance.
-    * 3: Unable to create (or update) allocations for an instance against its
-      compute node resource provider.
-    * 4: Command completed successfully but no allocations were created.
-    * 5: Unable to query ports from neutron
-    * 6: Unable to update ports in neutron
-    * 7: Cannot roll back neutron port updates. Manual steps needed. The error
-      message will indicate which neutron ports need to be changed to clean up
-      ``binding:profile`` of the port::
+    .. list-table::
+       :widths: 20 80
+       :header-rows: 1
 
-        $ openstack port unset <port_uuid> --binding-profile allocation
+       * - Return code
+         - Description
+       * - 0
+         - Command completed successfully and allocations were created.
+       * - 1
+         - ``--max-count`` was reached and there are more instances to process.
+       * - 2
+         - Unable to find a compute node record for a given instance.
+       * - 3
+         - Unable to create (or update) allocations for an instance against its
+           compute node resource provider.
+       * - 4
+         - Command completed successfully but no allocations were created.
+       * - 5
+         - Unable to query ports from neutron
+       * - 6
+         - Unable to update ports in neutron
+       * - 7
+         - Cannot roll back neutron port updates. Manual steps needed. The
+           error message will indicate which neutron ports need to be changed
+           to clean up ``binding:profile`` of the port::
 
-    * 127: Invalid input.
-    * 255: An unexpected error occurred.
+             $ openstack port unset <port_uuid> --binding-profile allocation
+
+       * - 127
+         - Invalid input.
+       * - 255
+         - An unexpected error occurred.
 
 ``nova-manage placement sync_aggregates [--verbose]``
     Mirrors compute host aggregates to resource provider aggregates
