@@ -988,26 +988,6 @@ class MigrationMonitorTestCase(test.NoDBTestCase):
         self.assertFalse(migration.should_trigger_timeout_action(
             self.instance, 4500, 9000, "running"))
 
-    def test_live_migration_postcopy_switch(self):
-        # Migration progress is not fast enough
-        self.assertTrue(migration.should_switch_to_postcopy(
-                2, 100, 105, "running"))
-
-    def test_live_migration_postcopy_switch_already_switched(self):
-        # Migration already running in postcopy mode
-        self.assertFalse(migration.should_switch_to_postcopy(
-                2, 100, 105, "running (post-copy)"))
-
-    def test_live_migration_postcopy_switch_too_soon(self):
-        # First memory iteration not completed yet
-        self.assertFalse(migration.should_switch_to_postcopy(
-                1, 100, 105, "running"))
-
-    def test_live_migration_postcopy_switch_fast_progress(self):
-        # Migration progress is good
-        self.assertFalse(migration.should_switch_to_postcopy(
-                2, 100, 155, "running"))
-
     @mock.patch.object(libvirt_guest.Guest,
                        "migrate_configure_max_downtime")
     def test_live_migration_update_downtime_no_steps(self, mock_dt):
