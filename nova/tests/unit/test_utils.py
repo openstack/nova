@@ -1329,27 +1329,30 @@ class TestGetSDKAdapter(test.NoDBTestCase):
         self.mock_conf = self.useFixture(fixtures.MockPatch(
             'nova.utils.CONF')).mock
 
-    def test_get_sdk_adapter(self):
-        actual = utils.get_sdk_adapter(self.service_type)
+    def _test_get_sdk_adapter(self, strict=False):
+        actual = utils.get_sdk_adapter(self.service_type, check_service=strict)
 
-        self.assertEqual(actual, mock.sentinel.proxy)
         self.mock_get_confgrp.assert_called_once_with(self.service_type)
         self.mock_get_auth_sess.assert_called_once_with(
             self.mock_get_confgrp.return_value)
         self.mock_connection.assert_called_once_with(
             session=mock.sentinel.session, oslo_conf=self.mock_conf,
-            service_types={'test_service'}, strict_proxies=False)
+            service_types={'test_service'}, strict_proxies=strict)
+
+        return actual
+
+    def test_get_sdk_adapter(self):
+        self.assertEqual(self._test_get_sdk_adapter(), mock.sentinel.proxy)
 
     def test_get_sdk_adapter_strict(self):
-        actual = utils.get_sdk_adapter(self.service_type, check_service=True)
+        self.assertEqual(
+            self._test_get_sdk_adapter(strict=True), mock.sentinel.proxy)
 
-        self.assertEqual(actual, mock.sentinel.proxy)
-        self.mock_get_confgrp.assert_called_once_with(self.service_type)
-        self.mock_get_auth_sess.assert_called_once_with(
-            self.mock_get_confgrp.return_value)
-        self.mock_connection.assert_called_once_with(
-            session=mock.sentinel.session, oslo_conf=self.mock_conf,
-            service_types={'test_service'}, strict_proxies=True)
+    def test_get_sdk_adapter_strict_fail(self):
+        self.mock_connection.side_effect = sdk_exc.ServiceDiscoveryException()
+        self.assertRaises(
+            exception.ServiceUnavailable,
+            self._test_get_sdk_adapter, strict=True)
 
     def test_get_sdk_adapter_conf_group_fail(self):
         self.mock_get_confgrp.side_effect = (
@@ -1360,16 +1363,3 @@ class TestGetSDKAdapter(test.NoDBTestCase):
         self.mock_get_confgrp.assert_called_once_with(self.service_type)
         self.mock_connection.assert_not_called()
         self.mock_get_auth_sess.assert_not_called()
-
-    def test_get_sdk_adapter_strict_fail(self):
-        self.mock_connection.side_effect = sdk_exc.ServiceDiscoveryException()
-
-        self.assertRaises(
-            exception.ServiceUnavailable,
-            utils.get_sdk_adapter, self.service_type, check_service=True)
-        self.mock_get_confgrp.assert_called_once_with(self.service_type)
-        self.mock_get_auth_sess.assert_called_once_with(
-            self.mock_get_confgrp.return_value)
-        self.mock_connection.assert_called_once_with(
-            session=mock.sentinel.session, oslo_conf=self.mock_conf,
-            service_types={'test_service'}, strict_proxies=True)
