@@ -197,6 +197,9 @@ Change to that directory and view the profile using the pstats
 
     python3 -m pstats ef044142-f3b8-409d-9af6-c60cea39b273.prof
 
+.. note:: The major version of python used to analyze the profile data must be
+          the same as the version used to run the process being profiled.
+
 Sort stats by their cumulative time::
 
     ef044142-f3b8-409d-9af6-c60cea39b273.prof% sort cumtime
@@ -231,6 +234,79 @@ From this we can make a couple of useful inferences about ``get_by_host``:
 
 Several other sort modes can be used. List those that are available by entering
 ``sort`` without arguments.
+
+Caveats
+=======
+
+Real world use indicates that the eventlet profiler is not perfect. There are
+situations where it will not always track switches between greenlets as well as
+it could. This can result in profile data that does not make sense or random
+slowdowns in the system being profiled. There is no one size fits all solution
+to these issues; profiling eventlet services is more an art than science.
+However, this section tries to provide a (hopefully) growing body of advice on
+what to do to work around problems.
+
+General Advice
+--------------
+
+* Try to profile chunks of code that operate mostly within one module or class
+  and do not have many collaborators. The more convoluted the path through
+  the code, the more confused the profiler gets.
+
+* Similarly, where possible avoid profiling code that will trigger many
+  greenlet context switches; either specific spawns, or multiple types of I/O.
+  Instead, narrow the focus of the profiler.
+
+* If possible, avoid RPC.
+
+In nova-compute
+---------------
+
+The creation of this caveat section was inspired by issues experienced while
+profiling ``nova-compute``. The ``nova-compute`` process is not allowed to
+speak with a database server directly. Instead communication is mediated
+through the conductor, communication happening via ``oslo.versionedobjects``
+and remote calls. Profiling methods such as ``_update_available_resources`` in
+the ResourceTracker, which needs information from the database, results in
+profile data that can be analyzed but is incorrect and misleading.
+
+This can be worked around by temporarily changing ``nova-compute`` to allow it
+to speak to the database directly:
+
+.. code-block:: diff
+
+    diff --git a/nova/cmd/compute.py b/nova/cmd/compute.py
+    index 01fd20de2e..655d503158 100644
+    --- a/nova/cmd/compute.py
+    +++ b/nova/cmd/compute.py
+    @@ -50,8 +50,10 @@ def main():
+
+         gmr.TextGuruMeditation.setup_autorun(version, conf=CONF)
+
+    -    cmd_common.block_db_access('nova-compute')
+    -    objects_base.NovaObject.indirection_api = conductor_rpcapi.ConductorAPI()
+    +    # Temporarily allow access to the database. You must update the config file
+    +    # used by this process to set [database]/connection to the cell1 database.
+    +    # cmd_common.block_db_access('nova-compute')
+    +    # objects_base.NovaObject.indirection_api = conductor_rpcapi.ConductorAPI()
+         objects.Service.enable_min_version_cache()
+         server = service.Service.create(binary='nova-compute',
+                                         topic=compute_rpcapi.RPC_TOPIC)
+
+The configuration file used by the ``nova-compute`` process must also be
+updated to ensure that it contains a setting for the relevant database:
+
+.. code-block:: ini
+
+    [database]
+    connection = mysql+pymysql://root:secret@127.0.0.1/nova_cell1?charset=utf8
+
+In a single node devstack setup ``nova_cell1`` is the right choice. The
+connection string will vary in other setups.
+
+Once these changes are made, along with the profiler changes indicated in the
+example above, ``nova-compute`` can be restarted and with luck some useful
+profiling data will emerge.
 
 .. _eventlet: https://eventlet.net/
 .. _cProfile: https://docs.python.org/3/library/profile.html
