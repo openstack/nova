@@ -10,9 +10,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
+
 from nova import context
 from nova import objects
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.functional.api import client as api_client
 from nova.tests.functional import integrated_helpers
 from nova.tests.functional import test_servers
 
@@ -145,3 +148,17 @@ class BootFromVolumeTest(integrated_helpers.InstanceHelperMixin,
         self._verify_instance_flavor_not_zero(server_id)
         # Check that request spec has not been saved with 0 root_gb
         self._verify_request_spec_flavor_not_zero(server_id)
+
+    def test_max_local_block_devices_0_force_bfv(self):
+        """Tests that when the API is configured with max_local_block_devices=0
+        a user cannot boot from image, they must boot from volume.
+        """
+        self.flags(max_local_block_devices=0)
+        server = self._build_minimal_create_server_request(
+            self.admin_api, 'test_max_local_block_devices_0_force_bfv')
+        ex = self.assertRaises(api_client.OpenStackApiException,
+                               self.admin_api.post_server,
+                               {'server': server})
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn('You specified more local devices than the limit allows',
+                      six.text_type(ex))

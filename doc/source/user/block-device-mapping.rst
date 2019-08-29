@@ -220,3 +220,21 @@ mapping is valid before accepting a boot request.
 .. [3] This is a feature that the EC2 API offers as well and has been in Nova
    for a long time, although it has been broken in several releases. More info
    can be found on `this bug <https://launchpad.net/bugs/1370250>`
+
+
+FAQs
+----
+
+1. Is it possible to configure nova to automatically use cinder to back all
+   root disks with volumes?
+
+   No, there is nothing automatic within nova that converts a
+   non-boot-from-volume request to convert the image to a root volume.
+   Several ideas have been discussed over time which are captured in the
+   spec for `volume-backed flavors`_. However, if you wish to force users
+   to always create volume-backed servers, you can configure the API service
+   by setting :oslo.config:option:`max_local_block_devices` to 0. This will
+   result in any non-boot-from-volume server create request to fail with a
+   400 response.
+
+.. _volume-backed flavors: https://review.opendev.org/511965/

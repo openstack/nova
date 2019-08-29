@@ -82,21 +82,20 @@ Possible values:
 Maximum number of devices that will result in a local image being
 created on the hypervisor node.
 
-A negative number means unlimited. Setting max_local_block_devices
+A negative number means unlimited. Setting ``max_local_block_devices``
 to 0 means that any request that attempts to create a local disk
 will fail. This option is meant to limit the number of local discs
-(so root local disc that is the result of --image being used, and
-any other ephemeral and swap disks). 0 does not mean that images
-will be automatically converted to volumes and boot instances from
-volumes - it just means that all requests that attempt to create a
-local disk will fail.
+(so root local disc that is the result of ``imageRef`` being used when
+creating a server, and any other ephemeral and swap disks). 0 does not
+mean that images will be automatically converted to volumes and boot
+instances from volumes - it just means that all requests that attempt
+to create a local disk will fail.
 
 Possible values:
 
 * 0: Creating a local disk is not allowed.
 * Negative number: Allows unlimited number of local discs.
 * Positive number: Allows only these many number of local discs.
-                       (Default value is 3).
 """),
     cfg.ListOpt('compute_monitors',
         default=[],
