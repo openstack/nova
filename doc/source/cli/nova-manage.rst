@@ -535,16 +535,30 @@ Placement
 
     .. versionadded:: Rocky
 
-    Return codes:
+    **Return Codes**
 
-    * 0: Successful run
-    * 1: A host was found with more than one matching compute node record
-    * 2: An unexpected error occurred while working with the placement API
-    * 3: Failed updating provider aggregates in placement
-    * 4: Host mappings not found for one or more host aggregate members
-    * 5: Compute node records not found for one or more hosts
-    * 6: Resource provider not found by uuid for a given host
-    * 255: An unexpected error occurred.
+    .. list-table::
+       :widths: 20 80
+       :header-rows: 1
+
+       * - Return code
+         - Description
+       * - 0
+         - Successful run
+       * - 1
+         - A host was found with more than one matching compute node record
+       * - 2
+         - An unexpected error occurred while working with the placement API
+       * - 3
+         - Failed updating provider aggregates in placement
+       * - 4
+         - Host mappings not found for one or more host aggregate members
+       * - 5
+         - Compute node records not found for one or more hosts
+       * - 6
+         - Resource provider not found by uuid for a given host
+       * - 255
+         - An unexpected error occurred.
 
 
 See Also
