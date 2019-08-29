@@ -63,7 +63,7 @@ netaddr==0.7.18
 netifaces==0.10.4
 networkx==1.11
 numpy==1.14.2
-openstacksdk==0.34.0
+openstacksdk==0.35.0
 os-brick==2.6.1
 os-client-config==1.29.0
 os-resource-classes==0.1.0
