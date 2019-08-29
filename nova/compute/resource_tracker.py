@@ -580,8 +580,12 @@ class ResourceTracker(object):
         cn = objects.ComputeNode(context)
         cn.host = self.host
         self._copy_resources(cn, resources)
-        self.compute_nodes[nodename] = cn
         cn.create()
+        # Only map the ComputeNode into compute_nodes if create() was OK
+        # because if create() fails, on the next run through here nodename
+        # would be in compute_nodes and we won't try to create again (because
+        # of the logic above).
+        self.compute_nodes[nodename] = cn
         LOG.info('Compute node record created for '
                  '%(host)s:%(node)s with uuid: %(uuid)s',
                  {'host': self.host, 'node': nodename, 'uuid': cn.uuid})
