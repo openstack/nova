@@ -14,7 +14,6 @@ from oslo_log import log as logging
 
 from nova import context
 from nova.db import api as db_api
-from nova import exception
 from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
@@ -90,30 +89,25 @@ class PeriodicNodeRecreateTestCase(test.TestCase,
         # Now stub the driver again to report node2 as being back and run
         # the periodic task.
         compute.manager.driver._nodes = ['node1', 'node2']
+        LOG.info('Running update_available_resource which should bring back '
+                 'node2.')
         compute.manager.update_available_resource(ctxt)
-        # FIXME(mriedem): This is bug 1839560 where the ResourceTracker fails
-        # to create a ComputeNode for node2 because of conflicting UUIDs.
+        # The DBDuplicateEntry error should have been handled and resulted in
+        # updating the (soft) deleted record to no longer be deleted.
         log = self.stdlog.logger.output
-        self.assertIn('Error updating resources for node node2', log)
-        self.assertIn('DBDuplicateEntry', log)
-        # Should still only have one reported hypervisor (node1).
-        hypervisors = self.api.api_get('/os-hypervisors').body['hypervisors']
-        self.assertEqual(1, len(hypervisors), hypervisors)
-        # Test the workaround for bug 1839560 by archiving the deleted node2
-        # compute_nodes table record which will allow the periodic to create a
-        # new entry for node2. We can remove this when the bug is fixed.
-        LOG.info('Archiving the database.')
-        archived = db_api.archive_deleted_rows(1000)[0]
-        self.assertIn('compute_nodes', archived)
-        self.assertEqual(1, archived['compute_nodes'])
-        with utils.temporary_mutation(ctxt, read_deleted='yes'):
-            self.assertRaises(exception.ComputeHostNotFound,
-                              objects.ComputeNode.get_by_host_and_nodename,
-                              ctxt, 'node1', 'node2')
-        # Now run the periodic again and we should have a new ComputeNode for
-        # node2.
-        LOG.info('Running update_available_resource which should create a new '
-                 'ComputeNode record for node2.')
-        compute.manager.update_available_resource(ctxt)
+        self.assertNotIn('DBDuplicateEntry', log)
+        # Should have two reported hypervisors again.
         hypervisors = self.api.api_get('/os-hypervisors').body['hypervisors']
         self.assertEqual(2, len(hypervisors), hypervisors)
+        # Now that the node2 record was un-soft-deleted, archiving should not
+        # remove any compute_nodes.
+        LOG.info('Archiving the database.')
+        archived = db_api.archive_deleted_rows(1000)[0]
+        self.assertNotIn('compute_nodes', archived)
+        cn2 = objects.ComputeNode.get_by_host_and_nodename(
+            ctxt, 'node1', 'node2')
+        self.assertFalse(cn2.deleted)
+        self.assertIsNone(cn2.deleted_at)
+        # The node2 id and uuid should not have changed in the DB.
+        self.assertEqual(cn.id, cn2.id)
+        self.assertEqual(cn.uuid, cn2.uuid)
