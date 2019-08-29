@@ -357,13 +357,16 @@ class UnsupportedDbRegexpTestCase(DbTestCase):
                           self.context, {'display_name': '%test%'},
                           marker=uuidsentinel.uuid1)
 
-    def test_instance_get_all_uuids_by_host(self, mock_get_regexp):
+    def test_instance_get_all_uuids_by_hosts(self, mock_get_regexp):
         test1 = self.create_instance_with_args(display_name='test1')
         test2 = self.create_instance_with_args(display_name='test2')
         test3 = self.create_instance_with_args(display_name='test3')
         uuids = [i.uuid for i in (test1, test2, test3)]
-        found_uuids = db.instance_get_all_uuids_by_host(self.context,
-                                                        test1.host)
+        results = db.instance_get_all_uuids_by_hosts(self.context,
+                                                         [test1.host])
+        self.assertEqual(1, len(results))
+        self.assertIn(test1.host, results)
+        found_uuids = results[test1.host]
         self.assertEqual(sorted(uuids), sorted(found_uuids))
 
     def _assert_equals_inst_order(self, correct_order, filters,
@@ -821,21 +824,33 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
         self.assertNotIn('info_cache', instance)
         self.assertNotIn('security_groups', instance)
 
-    def test_instance_get_all_uuids_by_host(self):
+    def test_instance_get_all_uuids_by_hosts(self):
         ctxt = context.get_admin_context()
         self.create_instance_with_args()
         self.create_instance_with_args()
         self.create_instance_with_args(host='host2')
 
         @sqlalchemy_api.pick_context_manager_reader
-        def test(context):
-            return sqlalchemy_api._instance_get_all_uuids_by_host(
-                context, 'host1')
+        def test1(context):
+            return sqlalchemy_api._instance_get_all_uuids_by_hosts(
+                context, ['host1'])
 
-        result = test(ctxt)
+        @sqlalchemy_api.pick_context_manager_reader
+        def test2(context):
+            return sqlalchemy_api._instance_get_all_uuids_by_hosts(
+                context, ['host1', 'host2'])
+
+        result = test1(ctxt)
+
+        self.assertEqual(1, len(result))
+        self.assertEqual(2, len(result['host1']))
+        self.assertEqual(six.text_type, type(result['host1'][0]))
+
+        result = test2(ctxt)
 
         self.assertEqual(2, len(result))
-        self.assertEqual(six.text_type, type(result[0]))
+        self.assertEqual(2, len(result['host1']))
+        self.assertEqual(1, len(result['host2']))
 
     @mock.patch('oslo_utils.uuidutils.generate_uuid')
     def test_instance_get_active_by_window_joined_paging(self, mock_uuids):

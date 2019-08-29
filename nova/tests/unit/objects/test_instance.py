@@ -1913,14 +1913,38 @@ class _TestInstanceListObject(object):
         self.assertEqual(2, len(instances))
         self.assertEqual([1, 2], [x.id for x in instances])
 
-    @mock.patch('nova.db.api.instance_get_all_uuids_by_host')
+    @mock.patch('nova.db.api.instance_get_all_uuids_by_hosts')
+    def test_get_uuids_by_host_no_match(self, mock_get_all):
+        mock_get_all.return_value = {}
+        actual_uuids = objects.InstanceList.get_uuids_by_host(
+            self.context, 'b')
+        self.assertEqual([], actual_uuids)
+        mock_get_all.assert_called_once_with(self.context, ['b'])
+
+    @mock.patch('nova.db.api.instance_get_all_uuids_by_hosts')
     def test_get_uuids_by_host(self, mock_get_all):
         fake_instances = [uuids.inst1, uuids.inst2]
-        mock_get_all.return_value = fake_instances
+        mock_get_all.return_value = {
+            'b': fake_instances
+        }
         actual_uuids = objects.InstanceList.get_uuids_by_host(
             self.context, 'b')
         self.assertEqual(fake_instances, actual_uuids)
-        mock_get_all.assert_called_once_with(self.context, 'b')
+        mock_get_all.assert_called_once_with(self.context, ['b'])
+
+    @mock.patch('nova.db.api.instance_get_all_uuids_by_hosts')
+    def test_get_uuids_by_hosts(self, mock_get_all):
+        fake_instances_a = [uuids.inst1, uuids.inst2]
+        fake_instances_b = [uuids.inst3, uuids.inst4]
+        fake_instances = {
+            'a': fake_instances_a,
+            'b': fake_instances_b
+        }
+        mock_get_all.return_value = fake_instances
+        actual_uuids = objects.InstanceList.get_uuids_by_hosts(
+            self.context, ['a', 'b'])
+        self.assertEqual(fake_instances, actual_uuids)
+        mock_get_all.assert_called_once_with(self.context, ['a', 'b'])
 
 
 class TestInstanceListObject(test_objects._LocalTest,
