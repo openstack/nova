@@ -1319,6 +1319,29 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
         num_hosts2 = len(list(host_states2))
         self.assertEqual(0, num_hosts2)
 
+    @mock.patch('nova.scheduler.host_manager.HostManager.'
+                '_get_computes_for_cells',
+                return_value=(mock.sentinel.compute_nodes,
+                              mock.sentinel.services))
+    @mock.patch('nova.scheduler.host_manager.HostManager._get_host_states')
+    def test_get_host_states_by_uuids_allow_cross_cell_move(
+            self, mock_get_host_states, mock_get_computes):
+        """Tests that get_host_states_by_uuids will not restrict to a given
+        cell if allow_cross_cell_move=True in the request spec.
+        """
+        ctxt = nova_context.get_admin_context()
+        compute_uuids = [uuids.compute_node_uuid]
+        spec_obj = objects.RequestSpec(
+            requested_destination=objects.Destination(
+                cell=objects.CellMapping(uuid=uuids.cell1),
+                allow_cross_cell_move=True))
+        self.host_manager.get_host_states_by_uuids(
+            ctxt, compute_uuids, spec_obj)
+        mock_get_computes.assert_called_once_with(
+            ctxt, self.host_manager.enabled_cells, compute_uuids=compute_uuids)
+        mock_get_host_states.assert_called_once_with(
+            ctxt, mock.sentinel.compute_nodes, mock.sentinel.services)
+
 
 class HostStateTestCase(test.NoDBTestCase):
     """Test case for HostState class."""

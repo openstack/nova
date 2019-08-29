@@ -755,9 +755,12 @@ class HostManager(object):
 
         if not self.cells:
             LOG.warning("No cells were found")
+        # Restrict to a single cell if and only if the request spec has a
+        # requested cell and allow_cross_cell_move=False.
         if (spec_obj and 'requested_destination' in spec_obj and
                 spec_obj.requested_destination and
-                'cell' in spec_obj.requested_destination):
+                'cell' in spec_obj.requested_destination and
+                not spec_obj.requested_destination.allow_cross_cell_move):
             only_cell = spec_obj.requested_destination.cell
         else:
             only_cell = None
