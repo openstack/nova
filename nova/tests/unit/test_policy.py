@@ -297,6 +297,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:servers:index:get_all_tenants",
 "os_compute_api:servers:allow_all_filters",
 "os_compute_api:servers:show:host_status",
+"os_compute_api:servers:show:host_status:unknown-only",
 "os_compute_api:servers:migrations:force_complete",
 "os_compute_api:servers:migrations:delete",
 "os_compute_api:os-admin-actions:reset_network",

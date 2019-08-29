@@ -29,6 +29,7 @@ from nova import context as nova_context
 from nova import exception
 from nova.network.security_group import openstack_driver
 from nova import objects
+from nova.objects import fields
 from nova.objects import virtual_interface
 from nova.policies import extended_server_attributes as esa_policies
 from nova.policies import flavor_extra_specs as fes_policies
@@ -184,6 +185,34 @@ class ViewBuilder(common.ViewBuilder):
                                                              context, instance)
         return ret
 
+    @staticmethod
+    def _get_host_status_unknown_only(context):
+        # We will use the unknown_only variable to tell us what host status we
+        # can show, if any:
+        #   * unknown_only = False means we can show any host status.
+        #   * unknown_only = True means that we can only show host
+        #     status: UNKNOWN. If the host status is anything other than
+        #     UNKNOWN, we will not include the host_status field in the
+        #     response.
+        #   * unknown_only = None means we cannot show host status at all and
+        #     we will not include the host_status field in the response.
+        unknown_only = None
+        # Check show:host_status policy first because if it passes, we know we
+        # can show any host status and need not check the more restrictive
+        # show:host_status:unknown-only policy.
+        if context.can(
+                servers_policies.SERVERS % 'show:host_status',
+                fatal=False):
+            unknown_only = False
+        # If we are not allowed to show any/all host status, check if we can at
+        # least show only the host status: UNKNOWN.
+        elif context.can(
+                servers_policies.SERVERS %
+                'show:host_status:unknown-only',
+                fatal=False):
+            unknown_only = True
+        return unknown_only
+
     def show(self, request, instance, extend_address=True,
              show_extra_specs=None, show_AZ=True, show_config_drive=True,
              show_extended_attr=None, show_host_status=None,
@@ -330,12 +359,21 @@ class ViewBuilder(common.ViewBuilder):
                                           add_delete_on_termination)
         if (api_version_request.is_supported(request, min_version='2.16')):
             if show_host_status is None:
-                show_host_status = context.can(
-                    servers_policies.SERVERS % 'show:host_status', fatal=False)
-            if show_host_status:
-                host_status = self.compute_api.get_instance_host_status(
-                                  instance)
-                server["server"]['host_status'] = host_status
+                unknown_only = self._get_host_status_unknown_only(context)
+                # If we're not allowed by policy to show host status at all,
+                # don't bother requesting instance host status from the compute
+                # API.
+                if unknown_only is not None:
+                    host_status = self.compute_api.get_instance_host_status(
+                                      instance)
+                    # If we are allowed to show host status of some kind, set
+                    # the host status field only if:
+                    #   * unknown_only = False, meaning we can show any status
+                    # OR
+                    #   * if unknown_only = True and host_status == UNKNOWN
+                    if (not unknown_only or
+                            host_status == fields.HostStatus.UNKNOWN):
+                        server["server"]['host_status'] = host_status
 
         if api_version_request.is_supported(request, min_version="2.9"):
             server["server"]["locked"] = (True if instance["locked_by"]
@@ -402,10 +440,13 @@ class ViewBuilder(common.ViewBuilder):
                                        bdms=bdms,
                                        cell_down_support=cell_down_support)
 
-        if (api_version_request.is_supported(request, min_version='2.16') and
-                context.can(servers_policies.SERVERS % 'show:host_status',
-                            fatal=False)):
-            self._add_host_status(list(servers_dict["servers"]), instances)
+        if api_version_request.is_supported(request, min_version='2.16'):
+            unknown_only = self._get_host_status_unknown_only(context)
+            # If we're not allowed by policy to show host status at all, don't
+            # bother requesting instance host status from the compute API.
+            if unknown_only is not None:
+                self._add_host_status(list(servers_dict["servers"]), instances,
+                                      unknown_only=unknown_only)
 
         self._add_security_grps(request, list(servers_dict["servers"]),
                                 instances)
@@ -575,7 +616,7 @@ class ViewBuilder(common.ViewBuilder):
 
         return fault_dict
 
-    def _add_host_status(self, servers, instances):
+    def _add_host_status(self, servers, instances, unknown_only=False):
         """Adds the ``host_status`` field to the list of servers
 
         This method takes care to filter instances from down cells since they
@@ -585,6 +626,7 @@ class ViewBuilder(common.ViewBuilder):
             body; this list is modified by reference by updating the server
             dicts within the list
         :param instances: list of Instance objects
+        :param unknown_only: whether to show only UNKNOWN host status
         """
         # Filter out instances from down cells which do not have a host field.
         instances = [instance for instance in instances if 'host' in instance]
@@ -594,7 +636,12 @@ class ViewBuilder(common.ViewBuilder):
             # Filter out anything that is not in the resulting dict because
             # we had to filter the list of instances above for down cells.
             if server['id'] in host_statuses:
-                server['host_status'] = host_statuses[server['id']]
+                host_status = host_statuses[server['id']]
+                if unknown_only and host_status != fields.HostStatus.UNKNOWN:
+                    # Filter servers that are not allowed by policy to see
+                    # host_status values other than UNKNOWN.
+                    continue
+                server['host_status'] = host_status
 
     def _add_security_grps(self, req, servers, instances,
                            create_request=False):
