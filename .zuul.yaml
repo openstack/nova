@@ -251,8 +251,9 @@
     parent: nova-dsvm-multinode-base
     description: |
       Multi-node grenade job which runs gate/live_migration/hooks tests.
-      In other words, this tests live migration with mixed-version compute
-      services which is important for things like rolling upgrade support.
+      In other words, this tests live and cold migration and resize with
+      mixed-version compute services which is important for things like
+      rolling upgrade support.
       The former names for this job were "nova-grenade-live-migration" and
       "legacy-grenade-dsvm-neutron-multinode-live-migration".
     run: playbooks/legacy/nova-grenade-multinode/run.yaml
