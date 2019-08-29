@@ -3232,9 +3232,10 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         # instance and has allocations for it.
         rc.delete_allocation_for_instance.assert_not_called()
 
+    @mock.patch('nova.compute.resource_tracker.LOG.warning')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     def test_remove_deleted_instances_allocations_unknown_instance(
-            self, mock_inst_get):
+            self, mock_inst_get, mock_log_warning):
         """Tests the case that an instance is found with allocations for
         this host/node but is not in the dict of tracked instances. The
         allocations are not removed for the instance since we don't know
@@ -3269,6 +3270,56 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         # testing the current behavior but in the future when we get smart
         # and figure things out, this should actually be an error.
         rc.delete_allocation_for_instance.assert_not_called()
+        # Assert the expected warning was logged.
+        mock_log_warning.assert_called_once()
+        self.assertIn("Instance %s is not being actively managed by "
+                      "this compute host but has allocations "
+                      "referencing this compute host",
+                      mock_log_warning.call_args[0][0])
+
+    @mock.patch('nova.compute.resource_tracker.LOG.debug')
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    def test_remove_deleted_instances_allocations_state_transition_instance(
+            self, mock_inst_get, mock_log_debug):
+        """Tests the case that an instance is found with allocations for
+        this host/node but is not in the dict of tracked instances but the
+        instance.task_state is not None so we do not log a warning nor remove
+        allocations since we want to let the operation play out.
+        """
+        instance = copy.deepcopy(_INSTANCE_FIXTURES[0])
+        instance.task_state = task_states.SPAWNING
+        mock_inst_get.return_value = instance
+        rc = self.rt.reportclient
+        # No tracked instances on this node.
+        # But there is an allocation for an instance on this node.
+        allocs = report.ProviderAllocInfo(
+            allocations={
+                instance.uuid: {
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 2048,
+                        'DISK_GB': 20
+                    }
+                }
+            }
+        )
+        rc.get_allocations_for_resource_provider = mock.MagicMock(
+            return_value=allocs)
+        rc.delete_allocation_for_instance = mock.MagicMock()
+        cn = self.rt.compute_nodes[_NODENAME]
+        ctx = mock.MagicMock()
+        # Call the method.
+        self.rt._remove_deleted_instances_allocations(
+            ctx, cn, [], {})
+        # We don't delete the allocation because the instance is on this host
+        # but is transitioning task states.
+        rc.delete_allocation_for_instance.assert_not_called()
+        # Assert the expected debug message was logged.
+        mock_log_debug.assert_called_once()
+        self.assertIn('Instance with task_state "%s" is not being '
+                      'actively managed by this compute host but has '
+                      'allocations referencing this compute node',
+                      mock_log_debug.call_args[0][0])
 
     def test_remove_deleted_instances_allocations_retrieval_fail(self):
         """When the report client errs or otherwise retrieves no allocations,
