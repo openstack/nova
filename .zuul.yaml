@@ -128,25 +128,7 @@
       Config drive is forced on all instances.
     run: playbooks/legacy/nova-live-migration/run.yaml
     post-run: playbooks/legacy/nova-live-migration/post.yaml
-    irrelevant-files: &live-migration-irrelevant-files
-      # We define our own irrelevant-files because we need to run
-      # this if there are changes to nova/tests/live_migration/.
-      # TODO(mriedem): Move the nova/tests/live_migration/ scripts to gate/
-      # so this job can use the standard dsvm-irrelevant-files.
-      - ^api-.*$
-      - ^(test-|)requirements.txt$
-      - ^.*\.rst$
-      - ^.git.*$
-      - ^doc/.*$
-      - ^nova/hacking/.*$
-      - ^nova/locale/.*$
-      - ^nova/tests/(?!live_migration/).*$
-      - ^nova/test.py$
-      - ^releasenotes/.*$
-      - ^setup.cfg$
-      - ^tests-py3.txt$
-      - ^tools/.*$
-      - ^tox.ini$
+    irrelevant-files: *dsvm-irrelevant-files
 
 - job:
     name: nova-lvm
@@ -268,7 +250,7 @@
     name: nova-grenade-live-migration
     parent: nova-dsvm-multinode-base
     description: |
-      Multi-node grenade job which runs nova/tests/live_migration/hooks tests.
+      Multi-node grenade job which runs gate/live_migration/hooks tests.
       In other words, this tests live migration with mixed-version compute
       services which is important for things like rolling upgrade support.
       The former name for this job was
@@ -279,7 +261,7 @@
       - openstack/grenade
       - openstack/devstack-gate
       - openstack/nova
-    irrelevant-files: *live-migration-irrelevant-files
+    irrelevant-files: *dsvm-irrelevant-files
 
 - job:
     name: nova-multi-cell

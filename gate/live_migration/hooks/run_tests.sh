@@ -16,9 +16,9 @@ source $BASE/new/devstack/functions
 source $BASE/new/devstack/functions-common
 source $BASE/new/devstack/lib/nova
 source $WORKSPACE/devstack-gate/functions.sh
-source $BASE/new/nova/nova/tests/live_migration/hooks/utils.sh
-source $BASE/new/nova/nova/tests/live_migration/hooks/nfs.sh
-source $BASE/new/nova/nova/tests/live_migration/hooks/ceph.sh
+source $BASE/new/nova/gate/live_migration/hooks/utils.sh
+source $BASE/new/nova/gate/live_migration/hooks/nfs.sh
+source $BASE/new/nova/gate/live_migration/hooks/ceph.sh
 primary_node=$(cat /etc/nodepool/primary_node_private)
 SUBNODES=$(cat /etc/nodepool/sub_nodes_private)
 SERVICE_HOST=$primary_node
