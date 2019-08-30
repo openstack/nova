@@ -759,9 +759,8 @@ class Host(object):
         for guest in caps.guests:
             arch = guest.arch
             domain = guest.domains.get(virt_type, guest.default_domain)
-            machine_types = self._get_machine_types(arch, domain)
 
-            for machine_type in machine_types:
+            for machine_type in self._get_machine_types(arch, domain):
                 # It is expected that if there are multiple <guest>
                 # elements, each will have a different architecture;
                 # for example, on x86 hosts one <guest> will contain
