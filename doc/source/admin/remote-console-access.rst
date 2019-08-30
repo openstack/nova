@@ -105,6 +105,8 @@ The :program:`nova-novncproxy` service accepts the following options:
 - :oslo.config:option:`cert`
 - :oslo.config:option:`key`
 - :oslo.config:option:`web`
+- :oslo.config:option:`console.ssl_ciphers`
+- :oslo.config:option:`console.ssl_minimum_version`
 - :oslo.config:option:`vnc.novncproxy_host`
 - :oslo.config:option:`vnc.novncproxy_port`
 
@@ -326,6 +328,8 @@ The :program:`nova-spicehtml5proxy` service accepts the following options.
 - :oslo.config:option:`cert`
 - :oslo.config:option:`key`
 - :oslo.config:option:`web`
+- :oslo.config:option:`console.ssl_ciphers`
+- :oslo.config:option:`console.ssl_minimum_version`
 - :oslo.config:option:`spice.html5proxy_host`
 - :oslo.config:option:`spice.html5proxy_port`
 
@@ -407,6 +411,8 @@ The :program:`nova-serialproxy` service accepts the following options.
 - :oslo.config:option:`cert`
 - :oslo.config:option:`key`
 - :oslo.config:option:`web`
+- :oslo.config:option:`console.ssl_ciphers`
+- :oslo.config:option:`console.ssl_minimum_version`
 - :oslo.config:option:`serial_console.serialproxy_host`
 - :oslo.config:option:`serial_console.serialproxy_port`
 

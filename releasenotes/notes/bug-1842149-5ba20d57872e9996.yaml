@@ -1,0 +1,17 @@
+---
+other:
+  - |
+    A new pair of ``ssl_ciphers`` and ``ssl_minimum_version`` configuration
+    options have been introduced for use by the ``nova-novncproxy``,
+    ``nova-serialproxy``, and ``nova-spicehtml5proxy`` services.  These new
+    options allow one to configure the allowed TLS ciphers and minimum protocol
+    version to enforce for incoming client connections to the proxy services.
+
+    This aims to address the issues reported in `bug 1842149`_, where it
+    describes that the proxy services can inherit insecure TLS ciphers
+    and protocol versions from the compiled-in defaults of the OpenSSL
+    library on the underlying system.  The proxy services provided no way
+    to override such insecure defaults with current day generally accepted
+    secure TLS settings.
+
+    .. _bug 1842149: https://bugs.launchpad.net/nova/+bug/1842149
