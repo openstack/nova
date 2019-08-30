@@ -1925,6 +1925,19 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                                           power_state.NOSTATE,
                                                           use_slave=True)
 
+    def test_cleanup_running_deleted_instances_virt_driver_not_ready(self):
+        """Tests the scenario that the driver raises VirtDriverNotReady
+        when listing instances so the task returns early.
+        """
+        self.flags(running_deleted_instance_action='shutdown')
+        with mock.patch.object(self.compute, '_running_deleted_instances',
+                               side_effect=exception.VirtDriverNotReady) as ls:
+            # Mock the virt driver to make sure nothing calls it.
+            with mock.patch.object(self.compute, 'driver',
+                                   new_callable=mock.NonCallableMock):
+                self.compute._cleanup_running_deleted_instances(self.context)
+            ls.assert_called_once_with(test.MatchType(context.RequestContext))
+
     @mock.patch.object(virt_driver.ComputeDriver, 'delete_instance_files')
     @mock.patch.object(objects.InstanceList, 'get_by_filters')
     def test_run_pending_deletes(self, mock_get, mock_delete):

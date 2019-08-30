@@ -8389,7 +8389,17 @@ class ComputeManager(manager.Manager):
 
         # NOTE(sirp): admin contexts don't ordinarily return deleted records
         with utils.temporary_mutation(context, read_deleted="yes"):
-            for instance in self._running_deleted_instances(context):
+
+            try:
+                instances = self._running_deleted_instances(context)
+            except exception.VirtDriverNotReady:
+                # Since this task runs immediately on startup, if the
+                # hypervisor is not yet ready handle it gracefully.
+                LOG.debug('Unable to check for running deleted instances '
+                          'at this time since the hypervisor is not ready.')
+                return
+
+            for instance in instances:
                 if action == "log":
                     LOG.warning("Detected instance with name label "
                                 "'%s' which is marked as "
