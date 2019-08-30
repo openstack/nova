@@ -282,6 +282,12 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
         opt.value = CONF.vmware.console_delay_seconds * 1000000
         extra_config.append(opt)
 
+    if CONF.vmware.smbios_asset_tag:
+        opt = client_factory.create('ns0:OptionValue')
+        opt.key = 'smbios.assetTag'
+        opt.value = CONF.vmware.smbios_asset_tag
+        extra_config.append(opt)
+
     config_spec.extraConfig = extra_config
 
     # Set the VM to be 'managed' by 'OpenStack'
