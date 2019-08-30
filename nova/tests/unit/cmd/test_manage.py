@@ -3126,6 +3126,31 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                     'binding:profile': {}
                 }))
 
+    def test_update_ports_only_updates_binding_profile(self):
+        """Simple test to make sure that only the port's binding:profile is
+        updated based on the provided port dict's binding:profile and not
+        just the binding:profile allocation key or other fields on the port.
+        """
+        neutron = mock.Mock()
+        output = mock.Mock()
+        binding_profile = {
+            'allocation': uuidsentinel.rp_uuid,
+            'foo': 'bar'
+        }
+        ports_to_update = [{
+            'id': uuidsentinel.port_id,
+            'binding:profile': binding_profile,
+            'bar': 'baz'
+        }]
+        self.cli._update_ports(neutron, ports_to_update, output)
+        expected_update_body = {
+            'port': {
+                'binding:profile': binding_profile
+            }
+        }
+        neutron.update_port.assert_called_once_with(
+            uuidsentinel.port_id, body=expected_update_body)
+
 
 class TestNovaManageMain(test.NoDBTestCase):
     """Tests the nova-manage:main() setup code."""
