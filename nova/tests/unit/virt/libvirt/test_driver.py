@@ -8082,12 +8082,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     self.context, connection_info, instance, '/dev/vdc')
 
                 mock_get_domain.assert_called_with(instance)
-                mock_dom.detachDeviceFlags.assert_called_with(
-                    """<disk type="file" device="disk">
-  <source file="/path/to/fake-volume"/>
-  <target bus="virtio" dev="vdc"/>
-</disk>
-""", flags=flags)
+                call = mock_dom.detachDeviceFlags.mock_calls[0]
+                xml = """<disk type="file" device="disk">
+                            <source file="/path/to/fake-volume"/>
+                            <target bus="virtio" dev="vdc"/>
+                         </disk>"""
+                self.assertXmlEqual(xml, call.args[0])
+                self.assertEqual({"flags": flags}, call.kwargs)
                 mock_disconnect_volume.assert_called_with(
                     self.context, connection_info, instance, encryption=None)
 
@@ -10278,8 +10279,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             parser = etree.XMLParser(remove_blank_text=True)
             config = etree.fromstring(config, parser)
             target_xml = etree.fromstring(target_xml, parser)
-            self.assertEqual(etree.tostring(target_xml, encoding='unicode'),
-                             etree.tostring(config, encoding='unicode'))
+            self.assertXmlEqual(
+                etree.tostring(target_xml, encoding='unicode'),
+                etree.tostring(config, encoding='unicode'))
 
     def test_live_migration_uri(self):
         addresses = ('127.0.0.1', '127.0.0.1:4444', '[::1]:4444',
@@ -14697,10 +14699,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         ]
 
         self.assertEqual(2, mock_detachDeviceFlags.call_count)
-        mock_detachDeviceFlags.assert_has_calls([
-            mock.call(expected_xml[0], flags=1),
-            mock.call(expected_xml[1], flags=1)
-        ])
+        for index, call in enumerate(mock_detachDeviceFlags.mock_calls):
+            self.assertXmlEqual(expected_xml[index], call.args[0])
+            self.assertEqual({"flags": 1}, call.kwargs)
 
     def test_resume(self):
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
@@ -21042,10 +21043,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # NOTE(gcb): etree.tostring(node) returns an extra line with
         # some white spaces, need to strip it.
         actual_diska_xml = guest.get_disk('vda').to_xml()
-        self.assertEqual(diska_xml.strip(), actual_diska_xml.strip())
+        self.assertXmlEqual(diska_xml, actual_diska_xml)
 
         actual_diskb_xml = guest.get_disk('vdb').to_xml()
-        self.assertEqual(diskb_xml.strip(), actual_diskb_xml.strip())
+        self.assertXmlEqual(diskb_xml, actual_diskb_xml)
 
         self.assertIsNone(guest.get_disk('vdc'))
 
