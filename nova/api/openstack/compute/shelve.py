@@ -87,10 +87,9 @@ class ShelveController(wsgi.Controller):
 
         new_az = None
         unshelve_dict = body['unshelve']
-        if unshelve_dict and 'availability_zone' in unshelve_dict:
-            support_az = api_version_request.is_supported(req, '2.77')
-            if support_az:
-                new_az = unshelve_dict['availability_zone']
+        support_az = api_version_request.is_supported(req, '2.77')
+        if support_az and unshelve_dict:
+            new_az = unshelve_dict['availability_zone']
 
         # We could potentially move this check to conductor and avoid the
         # extra API call to neutron when we support move operations with ports

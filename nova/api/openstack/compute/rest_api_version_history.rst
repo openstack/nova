@@ -996,5 +996,6 @@ through ``GET /servers/{server_id}/os-instance-actions`` and
 
 2.77
 ----
+
 API microversion 2.77 adds support for specifying availability zone when
 unshelving a shelved offloaded server.
