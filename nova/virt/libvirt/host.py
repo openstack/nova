@@ -75,6 +75,8 @@ CONF = nova.conf.CONF
 HV_DRIVER_QEMU = "QEMU"
 HV_DRIVER_XEN = "Xen"
 
+SEV_KERNEL_PARAM_FILE = '/sys/module/kvm_amd/parameters/sev'
+
 
 class Host(object):
 
@@ -108,6 +110,11 @@ class Host(object):
         self._lifecycle_delay = 15
 
         self._initialized = False
+
+        # AMD SEV is conditional on support in the hardware, kernel,
+        # qemu, and libvirt.  This is determined on demand and
+        # memoized by the supports_amd_sev property below.
+        self._supports_amd_sev = None
 
     def _native_thread(self):
         """Receives async events coming in from libvirtd.
@@ -1148,3 +1155,52 @@ class Host(object):
                 return False
         except IOError:
             return False
+
+    def _kernel_supports_amd_sev(self):
+        if not os.path.exists(SEV_KERNEL_PARAM_FILE):
+            LOG.debug("%s does not exist", SEV_KERNEL_PARAM_FILE)
+            return False
+
+        with open(SEV_KERNEL_PARAM_FILE) as f:
+            contents = f.read()
+            LOG.debug("%s contains [%s]", SEV_KERNEL_PARAM_FILE, contents)
+            return contents == "1\n"
+
+    @property
+    def supports_amd_sev(self):
+        """Returns a boolean indicating whether AMD SEV (Secure Encrypted
+        Virtualization) is supported.  This is conditional on support
+        in the hardware, kernel, qemu, and libvirt.
+
+        The result is memoized, since it is not expected to change
+        during the lifetime of a running nova-compute service; if the
+        hypervisor stack is changed or reconfigured in a way which
+        would affect the support, nova-compute should be restarted
+        anyway.
+        """
+        if self._supports_amd_sev is None:
+            self._set_amd_sev_support()
+        return self._supports_amd_sev
+
+    def _set_amd_sev_support(self):
+        self._supports_amd_sev = False
+
+        if not self._kernel_supports_amd_sev():
+            LOG.info("kernel doesn't support AMD SEV")
+            self._supports_amd_sev = False
+            return
+
+        domain_caps = self.get_domain_capabilities()
+        for arch in domain_caps:
+            for machine_type in domain_caps[arch]:
+                LOG.debug("Checking SEV support for arch %s "
+                          "and machine type %s", arch, machine_type)
+                for feature in domain_caps[arch][machine_type].features:
+                    feature_is_sev = isinstance(
+                        feature, vconfig.LibvirtConfigDomainCapsFeatureSev)
+                    if (feature_is_sev and feature.supported):
+                        LOG.info("AMD SEV support detected")
+                        self._supports_amd_sev = True
+                        return
+
+        LOG.debug("No AMD SEV support detected for any (arch, machine_type)")

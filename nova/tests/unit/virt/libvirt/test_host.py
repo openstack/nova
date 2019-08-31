@@ -14,12 +14,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os
+
 import eventlet
 from eventlet import greenthread
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 import six
+from six.moves import builtins
 import testtools
 
 
@@ -1163,3 +1166,61 @@ cg /cgroup/memory cg opt1,opt2 0 0
     @mock.patch('six.moves.builtins.open', side_effect=IOError)
     def test_is_cpu_control_policy_capable_ioerror(self, mock_open):
         self.assertFalse(self.host.is_cpu_control_policy_capable())
+
+
+vc = fakelibvirt.virConnect
+
+
+class TestLibvirtSEV(test.NoDBTestCase):
+    """Libvirt host tests for AMD SEV support."""
+
+    def setUp(self):
+        super(TestLibvirtSEV, self).setUp()
+
+        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.host = host.Host("qemu:///system")
+
+
+class TestLibvirtSEVUnsupported(TestLibvirtSEV):
+    @mock.patch.object(os.path, 'exists', return_value=False)
+    def test_kernel_parameter_missing(self, fake_exists):
+        self.assertFalse(self.host._kernel_supports_amd_sev())
+        fake_exists.assert_called_once_with(
+            '/sys/module/kvm_amd/parameters/sev')
+
+    @mock.patch.object(os.path, 'exists', return_value=True)
+    @mock.patch.object(builtins, 'open', mock.mock_open(read_data="0\n"))
+    def test_kernel_parameter_zero(self, fake_exists):
+        self.assertFalse(self.host._kernel_supports_amd_sev())
+        fake_exists.assert_called_once_with(
+            '/sys/module/kvm_amd/parameters/sev')
+
+    @mock.patch.object(os.path, 'exists', return_value=True)
+    @mock.patch.object(builtins, 'open', mock.mock_open(read_data="1\n"))
+    def test_kernel_parameter_one(self, fake_exists):
+        self.assertTrue(self.host._kernel_supports_amd_sev())
+        fake_exists.assert_called_once_with(
+            '/sys/module/kvm_amd/parameters/sev')
+
+    @mock.patch.object(os.path, 'exists', return_value=True)
+    @mock.patch.object(builtins, 'open', mock.mock_open(read_data="1\n"))
+    def test_unsupported_without_feature(self, fake_exists):
+        self.assertFalse(self.host.supports_amd_sev)
+
+    @mock.patch.object(os.path, 'exists', return_value=True)
+    @mock.patch.object(builtins, 'open', mock.mock_open(read_data="1\n"))
+    @mock.patch.object(vc, '_domain_capability_features',
+        new=vc._domain_capability_features_with_SEV_unsupported)
+    def test_unsupported_with_feature(self, fake_exists):
+        self.assertFalse(self.host.supports_amd_sev)
+
+
+class TestLibvirtSEVSupported(TestLibvirtSEV):
+    """Libvirt driver tests for when AMD SEV support is present."""
+
+    @mock.patch.object(os.path, 'exists', return_value=True)
+    @mock.patch.object(builtins, 'open', mock.mock_open(read_data="1\n"))
+    @mock.patch.object(vc, '_domain_capability_features',
+                       new=vc._domain_capability_features_with_SEV)
+    def test_supported_with_feature(self, fake_exists):
+        self.assertTrue(self.host.supports_amd_sev)
