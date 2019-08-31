@@ -1,4 +1,4 @@
-# (c) Copyright 2015 - 2018  StorPool
+# (c) Copyright 2015 - 2019  StorPool
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -119,6 +119,7 @@ class LibvirtStorPoolVolumeDriverTestCase(
         c = libvirt_driver.get_config(ci, self.disk_info)
         self.assertEqual('block', c.source_type)
         self.assertEqual('/dev/storpool/something', c.source_path)
+        self.assertEqual('native', c.driver_io)
 
     @mock_storpool
     def test_storpool_attach_detach_extend(self):
