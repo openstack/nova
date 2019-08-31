@@ -43,7 +43,16 @@ echo '2. NFS testing is skipped due to setup failures with Ubuntu 16.04'
 #run_tempest  "NFS shared storage test" "live_migration"
 #nfs_teardown
 
-echo '3. test with Ceph for root + ephemeral disks'
+# The nova-grenade-multinode job also runs resize and cold migration tests
+# so we check for a grenade-only variable.
+if [[ -n "$GRENADE_NEW_BRANCH" ]]; then
+    echo '3. test cold migration and resize'
+    run_tempest "cold migration and resize test" "test_resize_server|test_cold_migration|test_revert_cold_migration"
+else
+    echo '3. cold migration and resize is skipped for non-grenade jobs'
+fi
+
+echo '4. test with Ceph for root + ephemeral disks'
 # Discover and set variables for the OS version so the devstack-plugin-ceph
 # scripts can find the correct repository to install the ceph packages.
 GetOSVersion
@@ -55,7 +64,7 @@ configure_and_start_nova
 run_tempest "Ceph nova&glance test" "^.*test_live_migration(?!.*(test_volume_backed_live_migration))"
 
 set +e
-#echo '4. test with Ceph for volumes and root + ephemeral disk'
+#echo '5. test with Ceph for volumes and root + ephemeral disk'
 
 #configure_and_start_cinder
 #run_tempest "Ceph nova&glance&cinder test" "live_migration"
