@@ -247,16 +247,16 @@
       - openstack/oslo.versionedobjects
 
 - job:
-    name: nova-grenade-live-migration
+    name: nova-grenade-multinode
     parent: nova-dsvm-multinode-base
     description: |
       Multi-node grenade job which runs gate/live_migration/hooks tests.
       In other words, this tests live migration with mixed-version compute
       services which is important for things like rolling upgrade support.
-      The former name for this job was
+      The former names for this job were "nova-grenade-live-migration" and
       "legacy-grenade-dsvm-neutron-multinode-live-migration".
-    run: playbooks/legacy/nova-grenade-live-migration/run.yaml
-    post-run: playbooks/legacy/nova-grenade-live-migration/post.yaml
+    run: playbooks/legacy/nova-grenade-multinode/run.yaml
+    post-run: playbooks/legacy/nova-grenade-multinode/post.yaml
     required-projects:
       - openstack/grenade
       - openstack/devstack-gate
@@ -362,7 +362,7 @@
               # code; we don't need to run this on all changes, nor do we run
               # it in the gate.
               - ^(?!nova/network/.*)(?!nova/virt/libvirt/vif.py).*$
-        - nova-grenade-live-migration
+        - nova-grenade-multinode
         - nova-live-migration
         - nova-lvm
         - nova-multi-cell
@@ -379,7 +379,7 @@
             irrelevant-files: *dsvm-irrelevant-files
     gate:
       jobs:
-        - nova-grenade-live-migration
+        - nova-grenade-multinode
         - nova-live-migration
         - nova-tox-functional
         - nova-tox-functional-py36
