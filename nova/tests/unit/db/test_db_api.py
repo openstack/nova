@@ -362,8 +362,8 @@ class UnsupportedDbRegexpTestCase(DbTestCase):
         test2 = self.create_instance_with_args(display_name='test2')
         test3 = self.create_instance_with_args(display_name='test3')
         uuids = [i.uuid for i in (test1, test2, test3)]
-        results = db.instance_get_all_uuids_by_hosts(self.context,
-                                                         [test1.host])
+        results = db.instance_get_all_uuids_by_hosts(
+            self.context, [test1.host])
         self.assertEqual(1, len(results))
         self.assertIn(test1.host, results)
         found_uuids = results[test1.host]

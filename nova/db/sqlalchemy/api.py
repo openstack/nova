@@ -2659,28 +2659,28 @@ def instance_get_all_by_host(context, host, columns_to_join=None):
 
 
 def _instance_get_all_uuids_by_hosts(context, hosts):
-    """Return a dict, keyed by hostname, of a list of the instance uuids on the
-    host for each supplied hostname.
-
-    Returns a dict, keyed by hostname, of a list of UUIDs, not Instance model
-    objects.
-    """
     itbl = models.Instance.__table__
     default_deleted_value = itbl.c.deleted.default.arg
     sel = sql.select([itbl.c.host, itbl.c.uuid])
     sel = sel.where(sql.and_(
             itbl.c.deleted == default_deleted_value,
-            itbl.c.host.in_(hosts)))
+            itbl.c.host.in_(sa.bindparam('hosts', expanding=True))))
 
     # group the instance UUIDs by hostname
     res = collections.defaultdict(list)
-    for rec in context.session.execute(sel).fetchall():
+    for rec in context.session.execute(sel, {'hosts': hosts}).fetchall():
         res[rec[0]].append(rec[1])
     return res
 
 
 @pick_context_manager_reader
 def instance_get_all_uuids_by_hosts(context, hosts):
+    """Return a dict, keyed by hostname, of a list of the instance uuids on the
+    host for each supplied hostname, not Instance model objects.
+
+    The dict is a defaultdict of list, thus inspecting the dict for a host not
+    in the dict will return an empty list not a KeyError.
+    """
     return _instance_get_all_uuids_by_hosts(context, hosts)
 
 

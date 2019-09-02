@@ -1430,8 +1430,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
 
     @base.remotable_classmethod
     def get_uuids_by_host(cls, context, host):
-        return db.instance_get_all_uuids_by_hosts(context, [host]).get(
-            host, [])
+        return db.instance_get_all_uuids_by_hosts(context, [host])[host]
 
     @base.remotable_classmethod
     def get_uuids_by_hosts(cls, context, hosts):
