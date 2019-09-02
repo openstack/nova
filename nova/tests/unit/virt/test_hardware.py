@@ -1302,6 +1302,16 @@ class NUMATopologyTest(test.NoDBTestCase):
                 },
                 "expect": exception.ImageCPUPinningForbidden,
             },
+            {
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048, extra_specs={
+                    "hw:pmem": '2GB'}),
+                "image": {},
+                "expect": objects.InstanceNUMATopology(cells=
+                    [
+                        objects.InstanceNUMACell(
+                            id=0, cpuset=set([0, 1, 2, 3]), memory=2048),
+                    ]),
+            },
         ]
 
         for testitem in testdata:

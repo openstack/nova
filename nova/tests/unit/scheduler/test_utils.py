@@ -945,6 +945,26 @@ class TestUtils(TestUtilsBase):
         rr = utils.ResourceRequest(rs)
         self.assertResourceRequestsEqual(expected, rr)
 
+    def test_resource_request_with_vpmems(self):
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
+            extra_specs={'hw:pmem': '4GB, 4GB,SMALL'})
+
+        expected = FakeResourceRequest()
+        expected._rg_by_id[None] = objects.RequestGroup(
+            use_same_provider=False,
+            resources={
+                'VCPU': 1,
+                'MEMORY_MB': 1024,
+                'DISK_GB': 15,
+                'CUSTOM_PMEM_NAMESPACE_4GB': 2,
+                'CUSTOM_PMEM_NAMESPACE_SMALL': 1
+            },
+        )
+        rs = objects.RequestSpec(flavor=flavor, is_bfv=False)
+        rr = utils.ResourceRequest(rs)
+        self.assertResourceRequestsEqual(expected, rr)
+
     def test_resource_request_add_group_inserts_the_group(self):
         flavor = objects.Flavor(
             vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0)

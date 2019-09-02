@@ -1683,8 +1683,9 @@ def numa_get_constraints(flavor, image_meta):
 
     nodes = _get_numa_node_count_constraint(flavor, image_meta)
     pagesize = _get_numa_pagesize_constraint(flavor, image_meta)
+    vpmems = get_vpmems(flavor)
 
-    if nodes or pagesize:
+    if nodes or pagesize or vpmems:
         nodes = nodes or 1
 
         cpu_list = _get_numa_cpu_constraint(flavor, image_meta)
@@ -2074,6 +2075,13 @@ def get_vpmems(flavor):
     :param flavor: a flavor object to read extra specs from
     :returns: a vpmem label list
     """
-    # TODO(Luyao) Return vpmem label list when the whole
-    # vpmem feature is supported.
-    return []
+    vpmems_info = flavor.get('extra_specs', {}).get('hw:pmem')
+    if not vpmems_info:
+        return []
+    vpmem_labels = vpmems_info.split(',')
+    formed_labels = []
+    for label in vpmem_labels:
+        formed_label = label.strip()
+        if formed_label:
+            formed_labels.append(formed_label)
+    return formed_labels
