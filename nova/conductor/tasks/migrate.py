@@ -237,59 +237,12 @@ class MigrationTask(base.TaskBase):
         # pop the first alternate from the list to use for the destination, and
         # pass the remaining alternates to the compute.
         if self.host_list is None:
-            selection_lists = self.query_client.select_destinations(
-                    self.context, self.request_spec, [self.instance.uuid],
-                    return_objects=True, return_alternates=True)
-            # Since there is only ever one instance to migrate per call, we
-            # just need the first returned element.
-            selection_list = selection_lists[0]
-            # The selected host is the first item in the list, with the
-            # alternates being the remainder of the list.
-            selection, self.host_list = selection_list[0], selection_list[1:]
-
-            scheduler_utils.fill_provider_mapping(
-                self.context, self.reportclient, self.request_spec, selection)
+            selection = self._schedule()
 
         else:
             # This is a reschedule that will use the supplied alternate hosts
-            # in the host_list as destinations. Since the resources on these
-            # alternates may have been consumed and might not be able to
-            # support the migrated instance, we need to first claim the
-            # resources to verify the host still has sufficient availabile
-            # resources.
-            elevated = self.context.elevated()
-            host_available = False
-            while self.host_list and not host_available:
-                selection = self.host_list.pop(0)
-                if selection.allocation_request:
-                    alloc_req = jsonutils.loads(selection.allocation_request)
-                else:
-                    alloc_req = None
-                if alloc_req:
-                    # If this call succeeds, the resources on the destination
-                    # host will be claimed by the instance.
-                    host_available = scheduler_utils.claim_resources(
-                            elevated, self.reportclient, self.request_spec,
-                            self.instance.uuid, alloc_req,
-                            selection.allocation_request_version)
-                    if host_available:
-                        scheduler_utils.fill_provider_mapping(
-                            self.context, self.reportclient, self.request_spec,
-                            selection)
-                else:
-                    # Some deployments use different schedulers that do not
-                    # use Placement, so they will not have an
-                    # allocation_request to claim with. For those cases,
-                    # there is no concept of claiming, so just assume that
-                    # the host is valid.
-                    host_available = True
-            # There are no more available hosts. Raise a MaxRetriesExceeded
-            # exception in that case.
-            if not host_available:
-                reason = ("Exhausted all hosts available for retrying build "
-                          "failures for instance %(instance_uuid)s." %
-                          {"instance_uuid": self.instance.uuid})
-                raise exception.MaxRetriesExceeded(reason=reason)
+            # in the host_list as destinations.
+            selection = self._reschedule()
 
         scheduler_utils.populate_filter_properties(legacy_props, selection)
         # context is not serializable
@@ -316,6 +269,62 @@ class MigrationTask(base.TaskBase):
             request_spec=self.request_spec, filter_properties=legacy_props,
             node=node, clean_shutdown=self.clean_shutdown,
             host_list=self.host_list)
+
+    def _schedule(self):
+        selection_lists = self.query_client.select_destinations(
+            self.context, self.request_spec, [self.instance.uuid],
+            return_objects=True, return_alternates=True)
+        # Since there is only ever one instance to migrate per call, we
+        # just need the first returned element.
+        selection_list = selection_lists[0]
+        # The selected host is the first item in the list, with the
+        # alternates being the remainder of the list.
+        selection, self.host_list = selection_list[0], selection_list[1:]
+
+        scheduler_utils.fill_provider_mapping(
+            self.context, self.reportclient, self.request_spec, selection)
+        return selection
+
+    def _reschedule(self):
+        # Since the resources on these alternates may have been consumed and
+        # might not be able to support the migrated instance, we need to first
+        # claim the resources to verify the host still has sufficient
+        # available resources.
+        elevated = self.context.elevated()
+        host_available = False
+        selection = None
+        while self.host_list and not host_available:
+            selection = self.host_list.pop(0)
+            if selection.allocation_request:
+                alloc_req = jsonutils.loads(selection.allocation_request)
+            else:
+                alloc_req = None
+            if alloc_req:
+                # If this call succeeds, the resources on the destination
+                # host will be claimed by the instance.
+                host_available = scheduler_utils.claim_resources(
+                    elevated, self.reportclient, self.request_spec,
+                    self.instance.uuid, alloc_req,
+                    selection.allocation_request_version)
+                if host_available:
+                    scheduler_utils.fill_provider_mapping(
+                        self.context, self.reportclient, self.request_spec,
+                        selection)
+            else:
+                # Some deployments use different schedulers that do not
+                # use Placement, so they will not have an
+                # allocation_request to claim with. For those cases,
+                # there is no concept of claiming, so just assume that
+                # the host is valid.
+                host_available = True
+        # There are no more available hosts. Raise a MaxRetriesExceeded
+        # exception in that case.
+        if not host_available:
+            reason = ("Exhausted all hosts available for retrying build "
+                      "failures for instance %(instance_uuid)s." %
+                      {"instance_uuid": self.instance.uuid})
+            raise exception.MaxRetriesExceeded(reason=reason)
+        return selection
 
     def rollback(self):
         if self._migration:
