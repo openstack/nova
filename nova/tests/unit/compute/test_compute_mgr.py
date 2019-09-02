@@ -7238,7 +7238,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 self.TestResizeError, self.compute.finish_resize,
                 context=self.context, disk_info=[], image=self.image,
                 instance=self.instance,
-                migration=self.migration
+                migration=self.migration,
+                request_spec=objects.RequestSpec()
             )
 
         # Assert that we set the migration to an error state
@@ -7255,7 +7256,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 self.TestResizeError, self.compute.finish_resize,
                 context=self.context, disk_info=[], image=self.image,
                 instance=self.instance,
-                migration=self.migration
+                migration=self.migration,
+                request_spec=objects.RequestSpec()
             )
 
         # Assert that we set the migration to an error state
@@ -7295,7 +7297,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 self.TestResizeError, self.compute.resize_instance,
                 context=self.context, instance=self.instance, image=self.image,
                 migration=self.migration,
-                instance_type='type', clean_shutdown=True)
+                instance_type='type', clean_shutdown=True,
+                request_spec=objects.RequestSpec())
 
         # Assert that we set the migration to an error state
         self.assertEqual("error", self.migration.status)
@@ -7314,7 +7317,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 self.TestResizeError, self.compute.resize_instance,
                 context=self.context, instance=self.instance, image=self.image,
                 migration=self.migration,
-                instance_type='type', clean_shutdown=True)
+                instance_type='type', clean_shutdown=True,
+                request_spec=objects.RequestSpec())
 
         # Assert that we did not set the migration to an error state
         self.assertEqual('post-migrating', self.migration.status)
@@ -7363,9 +7367,12 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             # Inform compute that instance uses non-shared or shared storage
             _is_instance_storage_shared.return_value = is_shared
 
+            request_spec = objects.RequestSpec()
+
             self.compute.revert_resize(context=self.context,
                                        migration=self.migration,
-                                       instance=self.instance)
+                                       instance=self.instance,
+                                       request_spec=request_spec)
 
             _is_instance_storage_shared.assert_called_once_with(
                 self.context, self.instance,
@@ -7377,7 +7384,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                                             mock.ANY, mock.ANY, not is_shared)
             mock_finish_revert.assert_called_once_with(
                     self.context, self.instance, self.migration,
-                    self.migration.source_compute)
+                    self.migration.source_compute, request_spec)
 
         do_test()
 
@@ -7436,9 +7443,11 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             self.migration.uuid = uuids.migration
             self.migration.source_compute = self.instance['host']
             self.migration.source_node = self.instance['host']
+            request_spec = objects.RequestSpec()
             self.compute.finish_revert_resize(context=self.context,
                                               migration=self.migration,
-                                              instance=self.instance)
+                                              instance=self.instance,
+                                              request_spec=request_spec)
             finish_revert_migration.assert_called_with(self.context,
                 self.instance, 'nw_info', self.migration, mock.ANY, mock.ANY)
             # Make sure the migration.dest_compute is not still set to the
@@ -7449,6 +7458,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         do_test()
 
     def test_finish_revert_resize_migration_context(self):
+        request_spec = objects.RequestSpec()
+
         @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                     'drop_move_claim')
         @mock.patch('nova.compute.rpcapi.ComputeAPI.finish_revert_resize')
@@ -7486,7 +7497,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
 
             self.compute.revert_resize(context=self.context,
                                        migration=self.migration,
-                                       instance=self.instance)
+                                       instance=self.instance,
+                                       request_spec=request_spec)
             mock_drop_move_claim.assert_called_once_with(self.context,
                 self.instance, self.instance.node)
             self.assertIsNotNone(self.instance.migration_context)
@@ -7545,7 +7557,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             self.migration.uuid = uuids.migration
             self.compute.finish_revert_resize(context=self.context,
                                               instance=self.instance,
-                                              migration=self.migration)
+                                              migration=self.migration,
+                                              request_spec=request_spec)
             self.assertIsNone(self.instance.migration_context)
             # We should only have one attachment_update/complete call for the
             # volume BDM that had an attachment.
@@ -9124,7 +9137,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             ex = self.assertRaises(
                 exception.InstanceFaultRollback, self.compute._prep_resize,
                 self.context, instance.image_meta, instance, instance.flavor,
-                filter_properties={}, node=instance.node, migration=migration)
+                filter_properties={}, node=instance.node, migration=migration,
+                request_spec=mock.sentinel)
         self.assertIsInstance(
             ex.inner_exception, exception.UnableToMigrateToSelf)
 

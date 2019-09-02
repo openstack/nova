@@ -519,7 +519,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='5.1')
+    target = messaging.Target(version='5.2')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -4148,7 +4148,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event(prefix='compute')
     @errors_out_migration
     @wrap_instance_fault
-    def revert_resize(self, context, instance, migration):
+    def revert_resize(self, context, instance, migration, request_spec=None):
         """Destroys the new instance on the destination machine.
 
         Reverts the model changes, and powers on the old instance on the
@@ -4201,7 +4201,7 @@ class ComputeManager(manager.Manager):
 
             # RPC cast back to the source host to finish the revert there.
             self.compute_rpcapi.finish_revert_resize(context, instance,
-                    migration, migration.source_compute)
+                    migration, migration.source_compute, request_spec)
 
     def _finish_revert_resize_network_migrate_finish(self, context, instance,
                                                      migration):
@@ -4251,7 +4251,8 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event(prefix='compute')
     @errors_out_migration
     @wrap_instance_fault
-    def finish_revert_resize(self, context, instance, migration):
+    def finish_revert_resize(
+            self, context, instance, migration, request_spec=None):
         """Finishes the second half of reverting a resize on the source host.
 
         Bring the original source instance state back (active/shutoff) and
@@ -4383,7 +4384,8 @@ class ComputeManager(manager.Manager):
         return True
 
     def _prep_resize(self, context, image, instance, instance_type,
-                     filter_properties, node, migration, clean_shutdown=True):
+                     filter_properties, node, migration, request_spec,
+                     clean_shutdown=True):
 
         if not filter_properties:
             filter_properties = {}
@@ -4424,7 +4426,7 @@ class ComputeManager(manager.Manager):
             # RPC cast to the source host to start the actual resize/migration.
             self.compute_rpcapi.resize_instance(
                     context, instance, claim.migration, image,
-                    instance_type, clean_shutdown)
+                    instance_type, request_spec, clean_shutdown)
 
     def _send_prep_resize_notifications(
             self, context, instance, phase, flavor):
@@ -4491,7 +4493,8 @@ class ComputeManager(manager.Manager):
             try:
                 self._prep_resize(context, image, instance,
                                   instance_type, filter_properties,
-                                  node, migration, clean_shutdown)
+                                  node, migration, request_spec,
+                                  clean_shutdown)
             except Exception:
                 # Since we hit a failure, we're either rescheduling or dead
                 # and either way we need to cleanup any allocations created
@@ -4583,7 +4586,8 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def resize_instance(self, context, instance, image,
-                        migration, instance_type, clean_shutdown):
+                        migration, instance_type, clean_shutdown,
+                        request_spec=None):
         """Starts the migration of a running instance to another host.
 
         This is initiated from the destination host's ``prep_resize`` routine
@@ -4591,13 +4595,14 @@ class ComputeManager(manager.Manager):
         """
         try:
             self._resize_instance(context, instance, image, migration,
-                                  instance_type, clean_shutdown)
+                                  instance_type, clean_shutdown, request_spec)
         except Exception:
             with excutils.save_and_reraise_exception():
                 self._revert_allocation(context, instance, migration)
 
     def _resize_instance(self, context, instance, image,
-                         migration, instance_type, clean_shutdown):
+                         migration, instance_type, clean_shutdown,
+                         request_spec):
         with self._error_out_instance_on_exception(context, instance), \
              errors_out_migration_ctxt(migration):
             network_info = self.network_api.get_instance_nw_info(context,
@@ -4643,7 +4648,8 @@ class ComputeManager(manager.Manager):
 
             # RPC cast to the destination host to finish the resize/migration.
             self.compute_rpcapi.finish_resize(context, instance,
-                    migration, image, disk_info, migration.dest_compute)
+                migration, image, disk_info, migration.dest_compute,
+                request_spec)
 
         self._send_resize_instance_notifications(
             context, instance, bdms, network_info,
@@ -4835,7 +4841,7 @@ class ComputeManager(manager.Manager):
     @errors_out_migration
     @wrap_instance_fault
     def finish_resize(self, context, disk_info, image, instance,
-                      migration):
+                      migration, request_spec=None):
         """Completes the migration process.
 
         Sets up the newly transferred disk and turns on the instance at its
@@ -5353,7 +5359,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def unshelve_instance(self, context, instance, image,
-                          filter_properties, node):
+                          filter_properties, node, request_spec=None):
         """Unshelve the instance.
 
         :param context: request context
@@ -5362,6 +5368,8 @@ class ComputeManager(manager.Manager):
             volume backed instance.
         :param filter_properties: dict containing limits, retry info etc.
         :param node: target compute node
+        :param request_spec: the RequestSpec object used to schedule the
+            instance
         """
         if filter_properties is None:
             filter_properties = {}

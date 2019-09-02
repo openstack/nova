@@ -3471,7 +3471,8 @@ class API(base.Base):
         # by compute.
         self.compute_rpcapi.revert_resize(context, instance,
                                           migration,
-                                          migration.dest_compute)
+                                          migration.dest_compute,
+                                          reqspec)
 
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.RESIZED])

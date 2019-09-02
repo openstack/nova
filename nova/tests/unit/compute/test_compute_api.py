@@ -1691,7 +1691,8 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_record_action.assert_called_once_with(self.context, fake_inst,
                                                        'revertResize')
             mock_revert_resize.assert_called_once_with(
-                self.context, fake_inst, fake_mig, 'compute-dest')
+                self.context, fake_inst, fake_mig, 'compute-dest',
+                mock_get_reqspec.return_value)
 
     def test_revert_resize(self):
         self._test_revert_resize()
