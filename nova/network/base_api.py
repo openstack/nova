@@ -258,6 +258,15 @@ class NetworkAPI(base.Base):
         """Template method, so a subclass can implement for neutron/network."""
         raise NotImplementedError()
 
+    def get_requested_resource_for_instance(self, context, instance_uuid):
+        """Collect resource requests from the ports associated to the instance
+
+        :param context: nova request context
+        :param instance_uuid: The UUID of the instance
+        :return: A list of RequestGroup objects
+        """
+        raise NotImplementedError()
+
     def validate_networks(self, context, requested_networks, num_instances):
         """validate the networks passed at the time of creating
         the server.

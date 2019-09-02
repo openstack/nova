@@ -5813,6 +5813,74 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
                 raise_exc=False,
                 global_request_id=self.context.global_id)])
 
+    @mock.patch('nova.network.neutronv2.api.get_client')
+    def test_get_requested_resource_for_instance_no_resource_request(
+            self, mock_get_client):
+        mock_client = mock_get_client.return_value
+
+        ports = {'ports': [
+            {
+                'id': uuids.port1,
+                'device_id': uuids.isnt1,
+            }
+        ]}
+        mock_client.list_ports.return_value = ports
+
+        request_groups = self.api.get_requested_resource_for_instance(
+            self.context, uuids.inst1)
+
+        mock_client.list_ports.assert_called_with(
+            device_id=uuids.inst1, fields=['id', 'resource_request'])
+        self.assertEqual([], request_groups)
+
+    @mock.patch('nova.network.neutronv2.api.get_client')
+    def test_get_requested_resource_for_instance_no_ports(
+            self, mock_get_client):
+        mock_client = mock_get_client.return_value
+
+        ports = {'ports': []}
+        mock_client.list_ports.return_value = ports
+
+        request_groups = self.api.get_requested_resource_for_instance(
+            self.context, uuids.inst1)
+
+        mock_client.list_ports.assert_called_with(
+            device_id=uuids.inst1, fields=['id', 'resource_request'])
+        self.assertEqual([], request_groups)
+
+    @mock.patch('nova.network.neutronv2.api.get_client')
+    def test_get_requested_resource_for_instance_with_multiple_ports(
+            self, mock_get_client):
+        mock_client = mock_get_client.return_value
+
+        ports = {'ports': [
+            {
+                'id': uuids.port1,
+                'device_id': uuids.isnt1,
+                'resource_request': {
+                    'resources': {'NET_BW_EGR_KILOBIT_PER_SEC': 10000}}
+            },
+            {
+                'id': uuids.port2,
+                'device_id': uuids.isnt1,
+                'resource_request': {}
+            },
+        ]}
+        mock_client.list_ports.return_value = ports
+
+        request_groups = self.api.get_requested_resource_for_instance(
+            self.context, uuids.inst1)
+
+        mock_client.list_ports.assert_called_with(
+            device_id=uuids.inst1, fields=['id', 'resource_request'])
+        self.assertEqual(1, len(request_groups))
+        self.assertEqual(
+            {'NET_BW_EGR_KILOBIT_PER_SEC': 10000},
+            request_groups[0].resources)
+        self.assertEqual(
+            uuids.port1,
+            request_groups[0].requester_id)
+
 
 class TestNeutronv2ModuleMethods(test.NoDBTestCase):
 
