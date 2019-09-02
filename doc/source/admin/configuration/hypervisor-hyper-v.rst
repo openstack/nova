@@ -52,7 +52,7 @@ following commands:
 .. code-block:: bat
 
    C:\>net stop w32time
-   C:\>w32tm /config /manualpeerlist:pool.ntp.org,0x8 /syncfromflags:MANUAL
+   C:\>w32tm /config "/manualpeerlist:pool.ntp.org,0x8" /syncfromflags:MANUAL
    C:\>net start w32time
 
 Keep in mind that the node will have to be time synchronized with the other
