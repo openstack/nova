@@ -1192,8 +1192,10 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
                 'user_id': uuids.user,
             },
         }
-        self.client.put('/allocations/' + uuids.cn_inst1, ret[uuids.cn_inst1])
-        self.client.put('/allocations/' + uuids.cn_inst2, ret[uuids.cn_inst2])
+        self.client.put('/allocations/' + uuids.cn_inst1, ret[uuids.cn_inst1],
+                        version='1.28')
+        self.client.put('/allocations/' + uuids.cn_inst2, ret[uuids.cn_inst2],
+                        version='1.28')
         # And on the other compute (with sharing)
         self.client.put(
             '/allocations/' + uuids.othercn_inst,
@@ -1204,7 +1206,8 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
                 'consumer_generation': None,
                 'project_id': uuids.proj,
                 'user_id': uuids.user,
-            })
+            },
+            version='1.28')
 
         return ret
 
