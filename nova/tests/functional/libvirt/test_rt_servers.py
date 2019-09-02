@@ -20,6 +20,8 @@ from nova.tests.unit.virt.libvirt import fakelibvirt
 
 class RealTimeServersTest(base.ServersTestBase):
 
+    ADDITIONAL_FILTERS = ['NUMATopologyFilter']
+
     def setUp(self):
         super(RealTimeServersTest, self).setUp()
         self.flags(sysinfo_serial='none', group='libvirt')
