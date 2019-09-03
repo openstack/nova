@@ -235,9 +235,17 @@ class IronicDriver(virt_driver.ComputeDriver):
         node, and return the node.
         """
         try:
-            return self.ironicclient.call('node.get_by_instance_uuid',
-                                          instance.uuid, fields=_NODE_FIELDS)
-        except ironic.exc.NotFound:
+            node = next(self.ironic_connection.nodes(
+                {"instance_id": instance.uuid, "fields": _NODE_FIELDS}))
+            # TODO(dustinc): Make consumers use the right fields and remove
+            if hasattr(node, "id"):
+                node.uuid = node.id
+            if hasattr(node, "instance_id"):
+                node.instance_uuid = node.instance_id
+            if hasattr(node, "is_maintenance"):
+                node.maintenance = node.is_maintenance
+            return node
+        except StopIteration:
             raise exception.InstanceNotFound(instance_id=instance.uuid)
 
     def _node_resources_unavailable(self, node_obj):
