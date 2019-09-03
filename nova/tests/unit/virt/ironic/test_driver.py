@@ -2563,28 +2563,24 @@ class IronicDriverTestCase(test.NoDBTestCase):
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    node=node.uuid)
         self.driver.prepare_for_spawn(instance)
-        expected_patch = [{'path': '/instance_uuid', 'op': 'add',
-                           'value': instance.uuid}]
         self.mock_conn.get_node.assert_called_once_with(
             node.uuid,
             fields=('uuid', 'power_state', 'target_power_state',
                     'provision_state', 'target_provision_state', 'last_error',
                     'maintenance', 'properties', 'instance_uuid', 'traits',
                     'resource_class'))
-        mock_call.assert_called_once_with(
-            'node.update', node.uuid, expected_patch, retry_on_conflict=False)
+        self.mock_conn.update_node.assert_called_once_with(
+            node, retry_on_conflict=False, instance_id=instance.uuid)
 
-    @mock.patch.object(cw.IronicClientWrapper, 'call')
-    def test__set_instance_uuid(self, mock_call):
+    def test__set_instance_id(self):
         node = ironic_utils.get_test_node(driver='fake')
         instance = fake_instance.fake_instance_obj(self.ctx,
-                                                   node=node.uuid)
-        expected_patch = [{'path': '/instance_uuid', 'op': 'add',
-                           'value': instance.uuid}]
-        self.driver._set_instance_uuid(node, instance)
-        mock_call.assert_called_once_with('node.update', node.uuid,
-                                          expected_patch,
-                                          retry_on_conflict=False)
+                                                   node=node.id)
+
+        self.driver._set_instance_id(node, instance)
+
+        self.mock_conn.update_node.assert_called_once_with(
+            node, retry_on_conflict=False, instance_id=instance.uuid)
 
     def test_prepare_for_spawn_invalid_instance(self):
         instance = fake_instance.fake_instance_obj(self.ctx,
@@ -2593,11 +2589,10 @@ class IronicDriverTestCase(test.NoDBTestCase):
                           self.driver.prepare_for_spawn,
                           instance)
 
-    @mock.patch.object(cw.IronicClientWrapper, 'call')
-    def test_prepare_for_spawn_conflict(self, mock_call):
+    def test_prepare_for_spawn_conflict(self):
         node = ironic_utils.get_test_node(driver='fake')
         self.mock_conn.get_node.return_value = node
-        mock_call.side_effect = ironic_exception.BadRequest
+        self.mock_conn.update_node.side_effect = sdk_exc.ConflictException
         instance = fake_instance.fake_instance_obj(self.ctx, node=node.id)
         self.assertRaises(exception.InstanceDeployFailure,
                           self.driver.prepare_for_spawn,
