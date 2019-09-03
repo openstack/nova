@@ -695,26 +695,6 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         self._test_compute_api('trigger_crash_dump', 'cast',
                 instance=self.fake_instance_obj, version='5.0')
 
-    def _test_simple_call(self, method, inargs, callargs, callret,
-                               calltype='call', can_send=False):
-        rpc = compute_rpcapi.ComputeAPI()
-        mock_client = mock.Mock()
-        rpc.router.client = mock.Mock()
-        rpc.router.client.return_value = mock_client
-
-        @mock.patch.object(compute_rpcapi, '_compute_host')
-        def _test(mock_ch):
-            mock_client.can_send_version.return_value = can_send
-            call = getattr(mock_client.prepare.return_value, calltype)
-            call.return_value = callret
-            ctxt = context.RequestContext()
-            result = getattr(rpc, method)(ctxt, **inargs)
-            call.assert_called_once_with(ctxt, method, **callargs)
-            rpc.router.client.assert_called_with(ctxt)
-            return result
-
-        return _test()
-
     @mock.patch('nova.compute.rpcapi.LOG')
     @mock.patch('nova.objects.Service.get_minimum_version')
     @mock.patch('nova.objects.service.get_minimum_version_all_cells')
