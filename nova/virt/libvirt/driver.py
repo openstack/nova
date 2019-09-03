@@ -6806,11 +6806,8 @@ class LibvirtDriver(driver.ComputeDriver):
         # types, only one type will be used for each of the physical GPUs.
         # If one of the pGPUs doesn't support this type, it won't be used.
         # TODO(sbauza): Use traits to make a better world.
-        inventories_dict = self._get_gpu_inventories()
-        if inventories_dict:
-            self._update_provider_tree_for_vgpu(
-                inventories_dict, provider_tree, nodename,
-                allocations=allocations)
+        self._update_provider_tree_for_vgpu(
+           provider_tree, nodename, allocations=allocations)
 
         provider_tree.update_inventory(nodename, result)
 
@@ -7110,8 +7107,8 @@ class LibvirtDriver(driver.ComputeDriver):
                         rp_uuid, root_node, consumer_uuid, alloc_data,
                         resources, pgpu_rps)
 
-    def _update_provider_tree_for_vgpu(self, inventories_dict, provider_tree,
-                                       nodename, allocations=None):
+    def _update_provider_tree_for_vgpu(self, provider_tree, nodename,
+                                       allocations=None):
         """Updates the provider tree for VGPU inventory.
 
         Before Stein, VGPU inventory and allocations were on the root compute
@@ -7120,17 +7117,6 @@ class LibvirtDriver(driver.ComputeDriver):
         "reshape" the tree if necessary on first start of this compute service
         in Stein.
 
-        :param inventories_dict: Dictionary of inventories for VGPU class
-            directly provided by _get_gpu_inventories() and which looks like:
-                {'pci_0000_84_00_0':
-                    {'total': $TOTAL,
-                     'min_unit': 1,
-                     'max_unit': $MAX_UNIT, # defaults to $TOTAL
-                     'step_size': 1,
-                     'reserved': 0,
-                     'allocation_ratio': 1.0,
-                    }
-                }
         :param provider_tree: The ProviderTree to update.
         :param nodename: The ComputeNode.hypervisor_hostname, also known as
             the name of the root node provider in the tree for this host.
@@ -7143,6 +7129,11 @@ class LibvirtDriver(driver.ComputeDriver):
         :raises: nova.exception.ReshapeFailed if the requested tree reshape
             fails for whatever reason.
         """
+        # First, check if this host actually has vGPU to reshape
+        inventories_dict = self._get_gpu_inventories()
+        if not inventories_dict:
+            return
+
         # Check to see if the root compute node provider in the tree for
         # this host already has VGPU inventory because if it does, and
         # we're not currently reshaping (allocations is None), we need
