@@ -1482,6 +1482,18 @@ class LibvirtConfigGuestInputTest(LibvirtConfigBaseTest):
         self.assertXmlEqual(xml, """
             <input type="tablet" bus="usb"/>""")
 
+    def test_config_input(self):
+        obj = config.LibvirtConfigGuestInput()
+        obj.type = "mouse"
+        obj.bus = "virtio"
+        obj.driver_iommu = True
+
+        xml = obj.to_xml()
+        self.assertXmlEqual("""
+            <input type="mouse" bus="virtio">
+              <driver iommu="on" />
+            </input>""", xml)
+
 
 class LibvirtConfigGuestGraphicsTest(LibvirtConfigBaseTest):
 
@@ -1817,21 +1829,47 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
         obj2.parse_str(xml)
         self.assertXmlEqual(xml, obj2.to_xml())
 
-    def test_config_driver_options(self):
+    def _get_virtio_interface(self):
         obj = config.LibvirtConfigGuestInterface()
         obj.net_type = "ethernet"
         obj.mac_addr = "DE:AD:BE:EF:CA:FE"
         obj.model = "virtio"
         obj.target_dev = "vnet0"
+        return obj
+
+    def test_config_driver_options(self):
+        obj = self._get_virtio_interface()
         obj.driver_name = "vhost"
         obj.vhost_queues = 4
+        obj.driver_iommu = True
 
         xml = obj.to_xml()
         self.assertXmlEqual(xml, """
             <interface type="ethernet">
               <mac address="DE:AD:BE:EF:CA:FE"/>
               <model type="virtio"/>
-              <driver name="vhost" queues="4"/>
+              <driver name="vhost" queues="4" iommu="on"/>
+              <target dev="vnet0"/>
+            </interface>""")
+
+        # parse the xml from the first object into a new object and make sure
+        # they are the same
+        obj2 = config.LibvirtConfigGuestInterface()
+        obj2.parse_str(xml)
+        self.assertXmlEqual(xml, obj2.to_xml())
+
+    def test_config_driver_iommu_option(self):
+        obj = self._get_virtio_interface()
+        # Check that the <driver> element is included even when there is
+        # no driver name or queues
+        obj.driver_iommu = True
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <interface type="ethernet">
+              <mac address="DE:AD:BE:EF:CA:FE"/>
+              <model type="virtio"/>
+              <driver iommu="on"/>
               <target dev="vnet0"/>
             </interface>""")
 
@@ -2274,6 +2312,23 @@ class LibvirtConfigGuestFeatureTest(LibvirtConfigBaseTest):
 
 class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
 
+    def test_launch_security(self):
+        # test that sev-specific bits are added to the xml
+
+        obj = config.LibvirtConfigGuestSEVLaunchSecurity()
+        obj.cbitpos = 47
+        obj.reduced_phys_bits = 1
+
+        xml = obj.to_xml()
+        launch_security_expected = """
+            <launchSecurity type="sev">
+              <policy>0x0033</policy>
+              <cbitpos>47</cbitpos>
+              <reducedPhysBits>1</reducedPhysBits>
+            </launchSecurity>"""
+
+        self.assertXmlEqual(launch_security_expected, xml)
+
     def test_config_lxc(self):
         obj = config.LibvirtConfigGuest()
         obj.virt_type = "lxc"
@@ -2532,6 +2587,11 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
 
         obj.add_device(disk)
 
+        launch_security = config.LibvirtConfigGuestSEVLaunchSecurity()
+        launch_security.cbitpos = 47
+        launch_security.reduced_phys_bits = 1
+        obj.launch_security = launch_security
+
         xml = obj.to_xml()
         self.assertXmlEqual(xml, """
             <domain type="kvm">
@@ -2591,6 +2651,11 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
                   <target bus="virtio" dev="/dev/vda"/>
                 </disk>
               </devices>
+              <launchSecurity type="sev">
+                <policy>0x0033</policy>
+                <cbitpos>47</cbitpos>
+                <reducedPhysBits>1</reducedPhysBits>
+              </launchSecurity>
             </domain>""")
 
     def test_config_uefi(self):
@@ -2918,6 +2983,39 @@ class LibvirtConfigGuestSnapshotTest(LibvirtConfigBaseTest):
                <disk name='vdb' snapshot='no'/>
               </disks>
             </domainsnapshot>""")
+
+    def test_config_file_iommu(self):
+        obj = config.LibvirtConfigGuestDisk()
+        obj.driver_iommu = True
+        obj.source_type = "file"
+        obj.source_path = "/tmp/hello.qcow2"
+        obj.target_dev = "/dev/sda"
+        obj.target_bus = "virtio"
+        obj.serial = "7a97c4a3-6f59-41d4-bf47-191d7f97f8e9"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual("""
+            <disk type="file" device="disk">
+              <driver iommu="on"/>
+              <source file="/tmp/hello.qcow2"/>
+              <target bus="virtio" dev="/dev/sda"/>
+              <serial>7a97c4a3-6f59-41d4-bf47-191d7f97f8e9</serial>
+            </disk>""", xml)
+
+    def test_config_file_iommu_parse(self):
+        xml = """
+            <disk type="file" device="disk">
+              <driver iommu="on"/>
+              <source file="/tmp/hello.qcow2"/>
+              <target bus="virtio" dev="/dev/sda"/>
+              <serial>7a97c4a3-6f59-41d4-bf47-191d7f97f8e9</serial>
+            </disk>"""
+        xmldoc = etree.fromstring(xml)
+
+        obj = config.LibvirtConfigGuestDisk()
+        obj.parse_dom(xmldoc)
+
+        self.assertTrue(obj.driver_iommu)
 
 
 class LibvirtConfigNodeDeviceTest(LibvirtConfigBaseTest):
@@ -3365,6 +3463,17 @@ class LibvirtConfigGuestRngTest(LibvirtConfigBaseTest):
     <backend model='random'>/dev/urandom</backend>
 </rng>""")
 
+    def test_config_rng_driver_iommu(self):
+        obj = config.LibvirtConfigGuestRng()
+        obj.driver_iommu = True
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <rng model='virtio'>
+                <backend model='random'/>
+                <driver iommu="on"/>
+            </rng>""")
+
 
 class LibvirtConfigGuestControllerTest(LibvirtConfigBaseTest):
 
@@ -3373,10 +3482,13 @@ class LibvirtConfigGuestControllerTest(LibvirtConfigBaseTest):
         obj.type = 'scsi'
         obj.index = 0
         obj.model = 'virtio-scsi'
+        obj.driver_iommu = True
 
         xml = obj.to_xml()
         self.assertXmlEqual(xml, """
-                <controller type='scsi' index='0' model='virtio-scsi'/>""")
+            <controller type='scsi' index='0' model='virtio-scsi'>
+              <driver iommu="on" />
+            </controller>""")
 
     def test_config_guest_usb_host_controller(self):
         obj = config.LibvirtConfigGuestUSBHostController()
@@ -3707,6 +3819,19 @@ class LibvirtConfigMemoryBalloonTest(LibvirtConfigBaseTest):
         xml = balloon.to_xml()
         expected_xml = """
         <memballoon model='fake_virtio' />"""
+
+        self.assertXmlEqual(expected_xml, xml)
+
+    def test_config_memory_balloon_driver_iommu(self):
+        balloon = config.LibvirtConfigMemoryBalloon()
+        balloon.model = 'fake_virtio'
+        balloon.driver_iommu = True
+
+        xml = balloon.to_xml()
+        expected_xml = """
+            <memballoon model='fake_virtio'>
+              <driver iommu="on" />
+            </memballoon>"""
 
         self.assertXmlEqual(expected_xml, xml)
 

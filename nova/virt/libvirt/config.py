@@ -889,6 +889,7 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         self.driver_cache = None
         self.driver_discard = None
         self.driver_io = None
+        self.driver_iommu = False
         self.source_path = None
         self.source_protocol = None
         self.source_name = None
@@ -988,10 +989,8 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
 
         dev.set("type", self.source_type)
         dev.set("device", self.source_device)
-        if (self.driver_name is not None or
-            self.driver_format is not None or
-            self.driver_cache is not None or
-                self.driver_discard is not None):
+        if any((self.driver_name, self.driver_format, self.driver_cache,
+                self.driver_discard, self.driver_iommu)):
             drv = etree.Element("driver")
             if self.driver_name is not None:
                 drv.set("name", self.driver_name)
@@ -1003,6 +1002,8 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
                 drv.set("discard", self.driver_discard)
             if self.driver_io is not None:
                 drv.set("io", self.driver_io)
+            if self.driver_iommu:
+                drv.set("iommu", "on")
             dev.append(drv)
 
         if self.source_type == "file":
@@ -1083,6 +1084,7 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
                 self.driver_cache = c.get('cache')
                 self.driver_discard = c.get('discard')
                 self.driver_io = c.get('io')
+                self.driver_iommu = c.get('iommu', '') == "on"
             elif c.tag == 'source':
                 if self.source_type == 'file':
                     self.source_path = c.get('file')
@@ -1554,6 +1556,7 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         self.filtername = None
         self.filterparams = []
         self.driver_name = None
+        self.driver_iommu = False
         self.vhostuser_mode = None
         self.vhostuser_path = None
         self.vhostuser_type = None
@@ -1581,12 +1584,17 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
             dev.append(etree.Element("model", type=self.model))
 
         drv_elem = None
-        if self.driver_name:
-            drv_elem = etree.Element("driver", name=self.driver_name)
-        if self.net_type == "vhostuser":
-            # For vhostuser interface we should not set the driver
-            # name.
+        if (self.driver_name or
+                self.driver_iommu or
+                self.net_type == "vhostuser"):
+
             drv_elem = etree.Element("driver")
+            if self.driver_name and self.net_type != "vhostuser":
+                # For vhostuser interface we should not set the driver name.
+                drv_elem.set("name", self.driver_name)
+            if self.driver_iommu:
+                drv_elem.set("iommu", "on")
+
         if drv_elem is not None:
             if self.vhost_queues is not None:
                 drv_elem.set('queues', str(self.vhost_queues))
@@ -1597,9 +1605,10 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
 
             if (drv_elem.get('name') or drv_elem.get('queues') or
                 drv_elem.get('rx_queue_size') or
-                drv_elem.get('tx_queue_size')):
+                drv_elem.get('tx_queue_size') or
+                drv_elem.get('iommu')):
                 # Append the driver element into the dom only if name
-                # or queues or tx/rx attributes are set.
+                # or queues or tx/rx or iommu attributes are set.
                 dev.append(drv_elem)
 
         if self.net_type == "ethernet":
@@ -1694,6 +1703,7 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
                 self.model = c.get('type')
             elif c.tag == 'driver':
                 self.driver_name = c.get('name')
+                self.driver_iommu = (c.get('iommu', '') == 'on')
                 self.vhost_queues = c.get('queues')
                 self.vhost_rx_queue_size = c.get('rx_queue_size')
                 self.vhost_tx_queue_size = c.get('tx_queue_size')
@@ -1782,12 +1792,15 @@ class LibvirtConfigGuestInput(LibvirtConfigGuestDevice):
 
         self.type = "tablet"
         self.bus = "usb"
+        self.driver_iommu = False
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestInput, self).format_dom()
 
         dev.set("type", self.type)
         dev.set("bus", self.bus)
+        if self.driver_iommu:
+            dev.append(etree.Element('driver', iommu="on"))
 
         return dev
 
@@ -1846,6 +1859,7 @@ class LibvirtConfigGuestVideo(LibvirtConfigGuestDevice):
         self.type = 'cirrus'
         self.vram = None
         self.heads = None
+        self.driver_iommu = False
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestVideo, self).format_dom()
@@ -1861,6 +1875,9 @@ class LibvirtConfigGuestVideo(LibvirtConfigGuestDevice):
 
         dev.append(model)
 
+        if self.driver_iommu:
+            dev.append(etree.Element("driver", iommu="on"))
+
         return dev
 
 
@@ -1871,12 +1888,15 @@ class LibvirtConfigMemoryBalloon(LibvirtConfigGuestDevice):
             **kwargs)
         self.model = None
         self.period = None
+        self.driver_iommu = False
 
     def format_dom(self):
         dev = super(LibvirtConfigMemoryBalloon, self).format_dom()
         dev.set('model', str(self.model))
         if self.period is not None:
             dev.append(etree.Element('stats', period=str(self.period)))
+        if self.driver_iommu:
+            dev.append(etree.Element('driver', iommu='on'))
         return dev
 
 
@@ -1889,6 +1909,7 @@ class LibvirtConfigGuestController(LibvirtConfigGuestDevice):
         self.type = None
         self.index = None
         self.model = None
+        self.driver_iommu = False
 
     def format_dom(self):
         controller = super(LibvirtConfigGuestController, self).format_dom()
@@ -1899,6 +1920,9 @@ class LibvirtConfigGuestController(LibvirtConfigGuestDevice):
 
         if self.model:
             controller.set("model", str(self.model))
+
+        if self.driver_iommu:
+            controller.append(etree.Element("driver", iommu="on"))
 
         return controller
 
@@ -2484,6 +2508,34 @@ class LibvirtConfigGuestFeatureHyperV(LibvirtConfigGuestFeature):
         return root
 
 
+class LibvirtConfigGuestSEVLaunchSecurity(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestSEVLaunchSecurity, self).__init__(
+            root_name='launchSecurity', **kwargs)
+
+        self.cbitpos = None
+        self.reduced_phys_bits = None
+
+    def format_dom(self):
+        root = super(LibvirtConfigGuestSEVLaunchSecurity, self).format_dom()
+
+        root.set('type', 'sev')
+        policy = etree.Element('policy')
+        policy.text = '0x0033'  # hardcoded default according to the spec
+        root.append(policy)
+
+        cbitpos = etree.Element('cbitpos')
+        cbitpos.text = str(self.cbitpos)
+        root.append(cbitpos)
+
+        reducedPhysBits = etree.Element('reducedPhysBits')
+        reducedPhysBits.text = str(self.reduced_phys_bits)
+        root.append(reducedPhysBits)
+
+        return root
+
+
 class LibvirtConfigGuest(LibvirtConfigObject):
 
     def __init__(self, **kwargs):
@@ -2520,6 +2572,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.metadata = []
         self.idmaps = []
         self.perf_events = []
+        self.launch_security = None
 
     def _format_basic_props(self, root):
         root.append(self._text_node("uuid", self.uuid))
@@ -2612,6 +2665,10 @@ class LibvirtConfigGuest(LibvirtConfigObject):
             perfs.append(event)
         root.append(perfs)
 
+    def _format_sev(self, root):
+        if self.launch_security is not None:
+            root.append(self.launch_security.format_dom())
+
     def format_dom(self):
         root = super(LibvirtConfigGuest, self).format_dom()
 
@@ -2639,6 +2696,8 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self._format_idmaps(root)
 
         self._format_perf_events(root)
+
+        self._format_sev(root)
 
         return root
 
@@ -2936,6 +2995,7 @@ class LibvirtConfigGuestRng(LibvirtConfigGuestDevice):
         self.backend = None
         self.rate_period = None
         self.rate_bytes = None
+        self.driver_iommu = False
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestRng, self).format_dom()
@@ -2952,6 +3012,9 @@ class LibvirtConfigGuestRng(LibvirtConfigGuestDevice):
             dev.append(rate)
 
         dev.append(backend)
+
+        if self.driver_iommu:
+            dev.append(etree.Element('driver', iommu="on"))
 
         return dev
 
