@@ -634,27 +634,47 @@ class IronicDriver(virt_driver.ComputeDriver):
         except exception.InstanceNotFound:
             return False
 
-    def _get_node_list(self, **kwargs):
-        """Helper function to return the list of nodes.
+    def _get_node_list(self, return_generator=False, **kwargs):
+        """Helper function to return a list or generator of nodes.
 
-        If unable to connect ironic server, an empty list is returned.
-
-        :returns: a list of raw node from ironic
+        :param return_generator: If True, returns a generator of nodes. This
+          generator will only have SDK attribute names.
+        :returns: a list or generator of raw nodes from ironic
         :raises: VirtDriverNotReady
-
         """
-        node_list = []
         try:
-            node_list = self.ironicclient.call("node.list", **kwargs)
-        except exception.NovaException as e:
-            LOG.error("Failed to get the list of nodes from the Ironic "
-                      "inventory. Error: %s", e)
+            # NOTE(dustinc): The generator returned by the SDK can only be
+            # interated once. Since there are cases where it needs to be
+            # iterated more than once, we should return it as a list. In the
+            # future it may be worth refactoring these other usages so it can
+            # be returned as a generator.
+            node_generator = self.ironic_connection.nodes(**kwargs)
+        except sdk_exc.InvalidResourceQuery as e:
+            LOG.error("Invalid parameters in the provided search query."
+                      "Error: %s", six.text_type(e))
             raise exception.VirtDriverNotReady()
         except Exception as e:
             LOG.error("An unknown error has occurred when trying to get the "
-                      "list of nodes from the Ironic inventory. Error: %s", e)
+                      "list of nodes from the Ironic inventory. Error: %s",
+                      six.text_type(e))
             raise exception.VirtDriverNotReady()
-        return node_list
+        if return_generator:
+            return node_generator
+        else:
+            node_list = []
+            # TODO(dustinc): Update all usages to use SDK attributes then stop
+            #  copying values to PythonClient attributes.
+            for node in node_generator:
+                # NOTE(dustinc): There are usages that filter out these fields
+                #  which forces us to check for the attributes.
+                if hasattr(node, "id"):
+                    node.uuid = node.id
+                if hasattr(node, "instance_id"):
+                    node.instance_uuid = node.instance_id
+                if hasattr(node, "is_maintenance"):
+                    node.maintenance = node.is_maintenance
+                node_list.append(node)
+            return node_list
 
     def list_instances(self):
         """Return the names of all the instances provisioned.
@@ -663,27 +683,21 @@ class IronicDriver(virt_driver.ComputeDriver):
         :raises: VirtDriverNotReady
 
         """
-        # NOTE(lucasagomes): limit == 0 is an indicator to continue
-        # pagination until there're no more values to be returned.
-        node_list = self._get_node_list(associated=True,
-                                        fields=['instance_uuid'], limit=0)
         context = nova_context.get_admin_context()
-        return [objects.Instance.get_by_uuid(context,
-                                             i.instance_uuid).name
-                for i in node_list]
+        return [objects.Instance.get_by_uuid(context, i.instance_id).name
+                for i in self._get_node_list(return_generator=True,
+                                             associated=True,
+                                             fields=['instance_id'])]
 
     def list_instance_uuids(self):
-        """Return the UUIDs of all the instances provisioned.
+        """Return the IDs of all the instances provisioned.
 
-        :returns: a list of instance UUIDs.
+        :returns: a list of instance IDs.
         :raises: VirtDriverNotReady
 
         """
-        # NOTE(lucasagomes): limit == 0 is an indicator to continue
-        # pagination until there're no more values to be returned.
-        node_list = self._get_node_list(associated=True,
-                                        fields=['instance_uuid'], limit=0)
-        return list(n.instance_uuid for n in node_list)
+        return [node.instance_id for node in self._get_node_list(
+            return_generator=True, associated=True, fields=['instance_id'])]
 
     def node_is_available(self, nodename):
         """Confirms a Nova hypervisor node exists in the Ironic inventory.
@@ -761,15 +775,13 @@ class IronicDriver(virt_driver.ComputeDriver):
                                             partitions=_HASH_RING_PARTITIONS)
 
     def _refresh_cache(self):
-        # NOTE(lucasagomes): limit == 0 is an indicator to continue
-        # pagination until there're no more values to be returned.
         ctxt = nova_context.get_admin_context()
         self._refresh_hash_ring(ctxt)
         instances = objects.InstanceList.get_uuids_by_host(ctxt, CONF.host)
         node_cache = {}
 
         def _get_node_list(**kwargs):
-            return self._get_node_list(fields=_NODE_FIELDS, limit=0, **kwargs)
+            return self._get_node_list(fields=_NODE_FIELDS, **kwargs)
 
         # NOTE(jroll) if partition_key is set, we need to limit nodes that
         # can be managed to nodes that have a matching conductor_group
