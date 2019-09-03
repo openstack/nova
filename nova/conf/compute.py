@@ -307,18 +307,41 @@ Related options:
 
 resource_tracker_opts = [
     cfg.StrOpt('vcpu_pin_set',
+        deprecated_for_removal=True,
+        deprecated_since='20.0.0',
+        deprecated_reason="""
+This option has been superseded by the ``[compute] cpu_dedicated_set`` and
+``[compute] cpu_shared_set`` options, which allow things like the co-existence
+of pinned and unpinned instances on the same host (for the libvirt driver).
+""",
         help="""
-Defines which physical CPUs (pCPUs) can be used by instance
-virtual CPUs (vCPUs).
+Mask of host CPUs that can be used for ``VCPU`` resources.
+
+The behavior of this option depends on the definition of the ``[compute]
+cpu_dedicated_set`` option and affects the behavior of the ``[compute]
+cpu_shared_set`` option.
+
+* If ``[compute] cpu_dedicated_set`` is defined, defining this option will
+  result in an error.
+
+* If ``[compute] cpu_dedicated_set`` is not defined, this option will be used
+  to determine inventory for ``VCPU`` resources and to limit the host CPUs
+  that both pinned and unpinned instances can be scheduled to, overriding the
+  ``[compute] cpu_shared_set`` option.
 
 Possible values:
 
 * A comma-separated list of physical CPU numbers that virtual CPUs can be
-  allocated to by default. Each element should be either a single CPU number,
-  a range of CPU numbers, or a caret followed by a CPU number to be
-  excluded from a previous range. For example::
+  allocated from. Each element should be either a single CPU number, a range of
+  CPU numbers, or a caret followed by a CPU number to be excluded from a
+  previous range. For example::
 
     vcpu_pin_set = "4-12,^8,15"
+
+Related options:
+
+* ``[compute] cpu_dedicated_set``
+* ``[compute] cpu_shared_set``
 """),
     cfg.MultiOpt('reserved_huge_pages',
         item_type=types.Dict(),
@@ -369,15 +392,26 @@ Possible values:
         default=0,
         min=0,
         help="""
-Number of physical CPUs to reserve for the host. The host resources usage is
-reported back to the scheduler continuously from nova-compute running on the
-compute node. To prevent the host CPU from being considered as available,
-this option is used to reserve random pCPU(s) for the host.
+Number of host CPUs to reserve for host processes.
+
+The host resources usage is reported back to the scheduler continuously from
+nova-compute running on the compute node. This value is used to determine the
+``reserved`` value reported to placement.
+
+This option cannot be set if the ``[compute] cpu_shared_set`` or ``[compute]
+cpu_dedicated_set`` config options have been defined. When these options are
+defined, any host CPUs not included in these values are considered reserved for
+the host.
 
 Possible values:
 
 * Any positive integer representing number of physical CPUs to reserve
   for the host.
+
+Related options:
+
+* ``[compute] cpu_shared_set``
+* ``[compute] cpu_dedicated_set``
 """),
 ]
 
@@ -388,9 +422,15 @@ allocation_ratio_opts = [
         help="""
 Virtual CPU to physical CPU allocation ratio.
 
-This option is used to influence the hosts selected by the Placement API. In
-addition, the ``AggregateCoreFilter`` will fall back to this configuration
-value if no per-aggregate setting is found.
+This option is used to influence the hosts selected by the Placement API by
+configuring the allocation ratio for ``VCPU`` inventory. In addition, the
+``AggregateCoreFilter`` (deprecated) will fall back to this configuration value
+if no per-aggregate setting is found.
+
+.. note::
+
+   This option does not affect ``PCPU`` inventory, which cannot be
+   overcommitted.
 
 .. note::
 
@@ -415,8 +455,9 @@ Related options:
         help="""
 Virtual RAM to physical RAM allocation ratio.
 
-This option is used to influence the hosts selected by the Placement API. In
-addition, the ``AggregateRamFilter`` will fall back to this configuration value
+This option is used to influence the hosts selected by the Placement API by
+configuring the allocation ratio for ``MEMORY_MB`` inventory. In addition, the
+``AggregateRamFilter`` (deprecated) will fall back to this configuration value
 if no per-aggregate setting is found.
 
 .. note::
@@ -442,9 +483,10 @@ Related options:
         help="""
 Virtual disk to physical disk allocation ratio.
 
-This option is used to influence the hosts selected by the Placement API. In
-addition, the ``AggregateDiskFilter`` will fall back to this configuration
-value if no per-aggregate setting is found.
+This option is used to influence the hosts selected by the Placement API by
+configuring the allocation ratio for ``DISK_GB`` inventory. In addition, the
+``AggregateDiskFilter`` (deprecated) will fall back to this configuration value
+if no per-aggregate setting is found.
 
 When configured, a ratio greater than 1.0 will result in over-subscription of
 the available physical disk, which can be useful for more efficiently packing
@@ -741,15 +783,75 @@ Possible values:
 """),
    cfg.StrOpt('cpu_shared_set',
         help="""
-Defines which physical CPUs (pCPUs) will be used for best-effort guest vCPU
-resources.
+Mask of host CPUs that can be used for ``VCPU`` resources and offloaded
+emulator threads.
 
-Currently only used by libvirt driver to place guest emulator threads when
-the flavor extra spec is set to ``hw:emulator_threads_policy=share``.
+The behavior of this option depends on the definition of the deprecated
+``vcpu_pin_set`` option.
 
-For example::
+* If ``vcpu_pin_set`` is not defined, ``[compute] cpu_shared_set`` will be be
+  used to provide ``VCPU`` inventory and to determine the host CPUs that
+  unpinned instances can be scheduled to. It will also be used to determine the
+  host CPUS that instance emulator threads should be offloaded to for instances
+  configured with the ``share`` emulator thread policy
+  (``hw:emulator_threads_policy=share``).
+
+* If ``vcpu_pin_set`` is defined, ``[compute] cpu_shared_set`` will only be
+  used to determine the host CPUs that instance emulator threads should be
+  offloaded to for instances configured with the ``share`` emulator thread
+  policy (``hw:emulator_threads_policy=share``). ``vcpu_pin_set`` will be used
+  to provide ``VCPU`` inventory and to determine the host CPUs that both pinned
+  and unpinned instances can be scheduled to.
+
+This behavior will be simplified in a future release when ``vcpu_pin_set`` is
+removed.
+
+Possible values:
+
+* A comma-separated list of physical CPU numbers that instance VCPUs can be
+  allocated from. Each element should be either a single CPU number, a range of
+  CPU numbers, or a caret followed by a CPU number to be excluded from a
+  previous range. For example::
 
     cpu_shared_set = "4-12,^8,15"
+
+Related options:
+
+* ``[compute] cpu_dedicated_set``: This is the counterpart option for defining
+  where ``PCPU`` resources should be allocated from.
+* ``vcpu_pin_set``: A legacy option whose definition may change the behavior of
+  this option.
+"""),
+   cfg.StrOpt('cpu_dedicated_set',
+        help="""
+Mask of host CPUs that can be used for ``PCPU`` resources.
+
+The behavior of this option affects the behavior of the deprecated
+``vcpu_pin_set`` option.
+
+* If this option is defined, defining ``vcpu_pin_set`` will result in an error.
+
+* If this option is not defined, ``vcpu_pin_set`` will be used to determine
+  inventory for ``VCPU`` resources and to limit the host CPUs that both pinned
+  and unpinned instances can be scheduled to.
+
+This behavior will be simplified in a future release when ``vcpu_pin_set`` is
+removed.
+
+Possible values:
+
+* A comma-separated list of physical CPU numbers that instance VCPUs can be
+  allocated from. Each element should be either a single CPU number, a range of
+  CPU numbers, or a caret followed by a CPU number to be excluded from a
+  previous range. For example::
+
+    cpu_dedicated_set = "4-12,^8,15"
+
+Related options:
+
+* ``[compute] cpu_shared_set``: This is the counterpart option for defining
+  where ``VCPU`` resources should be allocated from.
+* ``vcpu_pin_set``: A legacy option that this option partially replaces.
 """),
     cfg.BoolOpt('live_migration_wait_for_vif_plug',
         default=True,
