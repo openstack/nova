@@ -468,53 +468,32 @@ class HostMdevDevicesInfo(object):
 
 class HostInfo(object):
 
-    def __init__(self, arch=obj_fields.Architecture.X86_64, kB_mem=4096,
-                 cpus=2, cpu_mhz=800, cpu_nodes=1,
-                 cpu_sockets=1, cpu_cores=2,
-                 cpu_threads=1, cpu_model="Penryn",
-                 cpu_vendor="Intel", numa_topology='',
-                 cpu_disabled=None):
+    def __init__(self, cpu_nodes=1, cpu_sockets=1, cpu_cores=2, cpu_threads=1,
+                 kB_mem=4096):
         """Create a new Host Info object
 
-        :param arch: (string) indicating the CPU arch
-                     (eg 'i686' or whatever else uname -m might return)
-        :param kB_mem: (int) memory size in KBytes
-        :param cpus: (int) the number of active CPUs
-        :param cpu_mhz: (int) expected CPU frequency
         :param cpu_nodes: (int) the number of NUMA cell, 1 for unusual
                           NUMA topologies or uniform
         :param cpu_sockets: (int) number of CPU sockets per node if nodes > 1,
                             total number of CPU sockets otherwise
         :param cpu_cores: (int) number of cores per socket
         :param cpu_threads: (int) number of threads per core
-        :param cpu_model: CPU model
-        :param cpu_vendor: CPU vendor
-        :param numa_topology: Numa topology
-        :param cpu_disabled: List of disabled cpus
+        :param kB_mem: (int) memory size in KBytes
         """
 
-        self.arch = arch
+        self.arch = obj_fields.Architecture.X86_64
         self.kB_mem = kB_mem
-        self.cpus = cpus
-        self.cpu_mhz = cpu_mhz
+        self.cpus = cpu_nodes * cpu_sockets * cpu_cores * cpu_threads
+        self.cpu_mhz = 800
         self.cpu_nodes = cpu_nodes
         self.cpu_cores = cpu_cores
         self.cpu_threads = cpu_threads
         self.cpu_sockets = cpu_sockets
-        self.cpu_model = cpu_model
-        self.cpu_vendor = cpu_vendor
-        self.numa_topology = numa_topology
-        self.disabled_cpus_list = cpu_disabled or []
-
-        if not self.numa_topology:
-            topology = NUMATopology(self.cpu_nodes, self.cpu_sockets,
-                                    self.cpu_cores, self.cpu_threads,
-                                    self.kB_mem)
-            self.numa_topology = topology
-
-            # update number of active cpus
-            cpu_count = len(topology.cells) * len(topology.cells[0].cpus)
-            self.cpus = cpu_count - len(self.disabled_cpus_list)
+        self.cpu_model = "Penryn"
+        self.cpu_vendor = "Intel"
+        self.numa_topology = NUMATopology(self.cpu_nodes, self.cpu_sockets,
+                                          self.cpu_cores, self.cpu_threads,
+                                          self.kB_mem)
 
 
 class NUMATopology(vconfig.LibvirtConfigCapsNUMATopology):
@@ -1346,11 +1325,9 @@ class Connection(object):
         """Return calculated CPU map from HostInfo, by default showing 2
            online CPUs.
         """
-        active_cpus = self.host_info.cpus
-        total_cpus = active_cpus + len(self.host_info.disabled_cpus_list)
-        cpu_map = [True if cpu_num not in self.host_info.disabled_cpus_list
-                   else False for cpu_num in range(total_cpus)]
-        return (total_cpus, cpu_map, active_cpus)
+        total_cpus = self.host_info.cpus
+        cpu_map = [True for cpu_num in range(total_cpus)]
+        return (total_cpus, cpu_map, total_cpus)
 
     def getDomainCapabilities(self, emulatorbin, arch, machine_type,
                               virt_type, flags):
