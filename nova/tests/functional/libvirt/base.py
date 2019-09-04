@@ -14,12 +14,13 @@
 # under the License.
 
 import copy
-import fixtures
 import io
+
+import fixtures
 import mock
 
+from nova import conf
 from nova.objects import fields as obj_fields
-
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import test_servers as base
@@ -27,7 +28,12 @@ from nova.tests.unit.virt.libvirt import fake_imagebackend
 from nova.tests.unit.virt.libvirt import fakelibvirt
 
 
+CONF = conf.CONF
+
+
 class ServersTestBase(base.ServersTestBase):
+
+    ADDITIONAL_FILTERS = []
 
     def setUp(self):
         super(ServersTestBase, self).setUp()
@@ -79,6 +85,15 @@ class ServersTestBase(base.ServersTestBase):
         # to configure the host capabilities first. We instead start the
         # service in the test
         self.flags(compute_driver='libvirt.LibvirtDriver')
+
+    def _setup_scheduler_service(self):
+        enabled_filters = CONF.filter_scheduler.enabled_filters
+        enabled_filters += self.ADDITIONAL_FILTERS
+
+        self.flags(driver='filter_scheduler', group='scheduler')
+        self.flags(enabled_filters=enabled_filters, group='filter_scheduler')
+
+        return self.start_service('scheduler')
 
     def _get_connection(self, host_info, pci_info=None,
                         libvirt_version=fakelibvirt.FAKE_LIBVIRT_VERSION,

@@ -15,7 +15,6 @@
 
 import fixtures
 import mock
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
@@ -24,11 +23,12 @@ from nova.tests.functional.libvirt import base
 from nova.tests.unit.virt.libvirt import fakelibvirt
 
 
-CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
 class _PCIServersTestBase(base.ServersTestBase):
+
+    ADDITIONAL_FILTERS = ['NUMATopologyFilter', 'PciPassthroughFilter']
 
     def setUp(self):
         self.flags(passthrough_whitelist=self.PCI_PASSTHROUGH_WHITELIST,
@@ -48,16 +48,6 @@ class _PCIServersTestBase(base.ServersTestBase):
             'nova.scheduler.filters.pci_passthrough_filter'
             '.PciPassthroughFilter.host_passes',
             side_effect=host_pass_mock)).mock
-
-    def _setup_scheduler_service(self):
-        # Enable the 'NUMATopologyFilter', 'PciPassthroughFilter'
-        enabled_filters = CONF.filter_scheduler.enabled_filters + [
-            'NUMATopologyFilter', 'PciPassthroughFilter']
-
-        self.flags(driver='filter_scheduler', group='scheduler')
-        self.flags(enabled_filters=enabled_filters, group='filter_scheduler')
-
-        return self.start_service('scheduler')
 
     def _run_build_test(self, flavor_id, end_status='ACTIVE'):
 

@@ -33,6 +33,8 @@ LOG = logging.getLogger(__name__)
 
 class NUMAServersTestBase(base.ServersTestBase):
 
+    ADDITIONAL_FILTERS = ['NUMATopologyFilter']
+
     def setUp(self):
         super(NUMAServersTestBase, self).setUp()
 
@@ -46,14 +48,6 @@ class NUMAServersTestBase(base.ServersTestBase):
                         side_effect=host_pass_mock)
         self.mock_filter = _p.start()
         self.addCleanup(_p.stop)
-
-    def _setup_scheduler_service(self):
-        # Enable the 'NUMATopologyFilter'
-        self.flags(driver='filter_scheduler', group='scheduler')
-        self.flags(enabled_filters=CONF.filter_scheduler.enabled_filters +
-                                   ['NUMATopologyFilter'],
-                   group='filter_scheduler')
-        return self.start_service('scheduler')
 
 
 class NUMAServersTest(NUMAServersTestBase):
