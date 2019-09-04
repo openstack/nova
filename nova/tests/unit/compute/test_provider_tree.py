@@ -696,3 +696,33 @@ class TestProviderTree(test.NoDBTestCase):
         # Remove the last aggregate, and an unrelated one
         pt.remove_aggregates(cn.uuid, uuids.agg4, uuids.agg1)
         self.assertEqual(set([]), pt.data(cn.uuid).aggregates)
+
+    def test_update_resources_no_existing_rp(self):
+        pt = self._pt_with_cns()
+        self.assertRaises(
+            ValueError,
+            pt.update_resources,
+            uuids.non_existing_rp,
+            {},
+        )
+
+    def test_update_resources(self):
+        cn = self.compute_node1
+        pt = self._pt_with_cns()
+
+        cn_resources = {
+            "CUSTOM_RESOURCE_0": {
+                objects.Resource(provider_uuid=cn.uuid,
+                                 resource_class="CUSTOM_RESOURCE_0",
+                                 identifier="bar")},
+            "CUSTOM_RESOURCE_1": {
+                objects.Resource(provider_uuid=cn.uuid,
+                                 resource_class="CUSTOM_RESOURCE_1",
+                                 identifier="foo_1"),
+                objects.Resource(provider_uuid=cn.uuid,
+                                 resource_class="CUSTOM_RESOURCE_1",
+                                 identifier="foo_2")}}
+        # resources changed
+        self.assertTrue(pt.update_resources(cn.uuid, cn_resources))
+        # resources not changed
+        self.assertFalse(pt.update_resources(cn.uuid, cn_resources))
