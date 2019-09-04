@@ -342,6 +342,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # formats. If we are configured for those backends, then we
             # should not expose the corresponding support traits.
             "supports_image_type_qcow2": not requires_raw_image,
+            "supports_pcpus": True,
         }
         super(LibvirtDriver, self).__init__(virtapi)
 

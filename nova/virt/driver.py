@@ -170,6 +170,7 @@ class ComputeDriver(object):
         "supports_extend_volume": False,
         "supports_multiattach": False,
         "supports_trusted_certs": False,
+        "supports_pcpus": False,
 
         # Image type support flags
         "supports_image_type_aki": False,

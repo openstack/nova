@@ -70,6 +70,7 @@ from nova.tests.unit import fake_network_cache_model
 from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_instance_fault
 from nova.tests.unit.objects import test_instance_info_cache
+from nova.tests.unit.objects import test_instance_numa
 from nova import utils
 from nova.virt.block_device import DriverVolumeBlockDevice as driver_bdm_volume
 from nova.virt import driver as virt_driver
@@ -725,9 +726,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         @mock.patch.object(context, 'get_admin_context')
         @mock.patch.object(manager.ComputeManager,
                            '_destroy_evacuated_instances')
+        @mock.patch.object(manager.ComputeManager,
+                          '_validate_pinning_configuration')
         @mock.patch.object(manager.ComputeManager, '_init_instance')
         @mock.patch.object(self.compute, '_update_scheduler_instance_info')
         def _do_mock_calls(mock_update_scheduler, mock_inst_init,
+                           mock_validate_pinning,
                            mock_destroy, mock_admin_ctxt, mock_host_get,
                            mock_filter_off, mock_filter_on, mock_init_host,
                            defer_iptables_apply):
@@ -739,6 +743,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
             if defer_iptables_apply:
                 self.assertTrue(mock_filter_on.called)
+
+            mock_validate_pinning.assert_called_once_with(inst_list)
             mock_destroy.assert_called_once_with(self.context)
             mock_inst_init.assert_has_calls(
                 [mock.call(self.context, inst_list[0]),
@@ -749,7 +755,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 self.assertTrue(mock_filter_off.called)
             mock_init_host.assert_called_once_with(host=our_host)
             mock_host_get.assert_called_once_with(self.context, our_host,
-                                    expected_attrs=['info_cache', 'metadata'])
+                expected_attrs=['info_cache', 'metadata', 'numa_topology'])
 
             mock_update_scheduler.assert_called_once_with(
                 self.context, inst_list)
@@ -881,7 +887,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
         mock_init_host.assert_called_once_with(host=our_host)
         mock_host_get.assert_called_once_with(self.context, our_host,
-                                expected_attrs=['info_cache', 'metadata'])
+            expected_attrs=['info_cache', 'metadata', 'numa_topology'])
         mock_init_virt.assert_called_once_with()
         mock_temp_mut.assert_called_once_with(self.context, read_deleted='yes')
         mock_get_inst.assert_called_once_with(self.context)
@@ -923,6 +929,20 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_init_instance.assert_called_once_with(
             self.context, active_instance)
 
+    @mock.patch.object(objects.InstanceList, 'get_by_host',
+                       new=mock.Mock())
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_validate_pinning_configuration')
+    def test_init_host_pinning_configuration_validation_failure(self,
+            mock_validate_pinning):
+        """Test that we fail init_host if the pinning configuration check
+        fails.
+        """
+        mock_validate_pinning.side_effect = exception.InvalidConfiguration
+
+        self.assertRaises(exception.InvalidConfiguration,
+                          self.compute.init_host)
+
     def test_init_instance_with_binding_failed_vif_type(self):
         # this instance will plug a 'binding_failed' vif
         instance = fake_instance.fake_instance_obj(
@@ -947,6 +967,95 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         ) as (get_admin_context, get_nw_info, plug_vifs, set_error_state):
             self.compute._init_instance(self.context, instance)
             set_error_state.assert_called_once_with(self.context, instance)
+
+    def _test__validate_pinning_configuration(self, supports_pcpus=True):
+        instance_1 = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance_1)
+        instance_2 = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance_2)
+        instance_3 = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance_3)
+        instance_4 = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instnace_4)
+
+        instance_1.numa_topology = None
+
+        numa_wo_pinning = test_instance_numa.get_fake_obj_numa_topology(
+            self.context)
+        instance_2.numa_topology = numa_wo_pinning
+
+        numa_w_pinning = test_instance_numa.get_fake_obj_numa_topology(
+            self.context)
+        numa_w_pinning.cells[0].pin_vcpus((1, 10), (2, 11))
+        numa_w_pinning.cells[0].cpu_policy = (
+            fields.CPUAllocationPolicy.DEDICATED)
+        numa_w_pinning.cells[1].pin_vcpus((3, 0), (4, 1))
+        numa_w_pinning.cells[1].cpu_policy = (
+            fields.CPUAllocationPolicy.DEDICATED)
+        instance_3.numa_topology = numa_w_pinning
+
+        instance_4.deleted = True
+
+        instances = objects.InstanceList(objects=[
+            instance_1, instance_2, instance_3, instance_4])
+
+        with mock.patch.dict(self.compute.driver.capabilities,
+                             supports_pcpus=supports_pcpus):
+            self.compute._validate_pinning_configuration(instances)
+
+    def test__validate_pinning_configuration_invalid_unpinned_config(self):
+        """Test that configuring only 'cpu_dedicated_set' when there are
+        unpinned instances on the host results in an error.
+        """
+        self.flags(cpu_dedicated_set='0-7', group='compute')
+
+        ex = self.assertRaises(
+            exception.InvalidConfiguration,
+            self._test__validate_pinning_configuration)
+        self.assertIn('This host has unpinned instances but has no CPUs '
+                      'set aside for this purpose;',
+                      six.text_type(ex))
+
+    def test__validate_pinning_configuration_invalid_pinned_config(self):
+        """Test that configuring only 'cpu_shared_set' when there are pinned
+        instances on the host results in an error
+        """
+        self.flags(cpu_shared_set='0-7', group='compute')
+
+        ex = self.assertRaises(
+            exception.InvalidConfiguration,
+            self._test__validate_pinning_configuration)
+        self.assertIn('This host has pinned instances but has no CPUs '
+                      'set aside for this purpose;',
+                      six.text_type(ex))
+
+    @mock.patch.object(manager.LOG, 'warning')
+    def test__validate_pinning_configuration_warning(self, mock_log):
+        """Test that configuring 'cpu_dedicated_set' such that some pinned
+        cores of the instance are outside the range it specifies results in a
+        warning.
+        """
+        self.flags(cpu_shared_set='0-7', cpu_dedicated_set='8-15',
+                   group='compute')
+
+        self._test__validate_pinning_configuration()
+
+        self.assertEqual(1, mock_log.call_count)
+        self.assertIn('Instance is pinned to host CPUs %(cpus)s '
+                      'but one or more of these CPUs are not included in ',
+                      six.text_type(mock_log.call_args[0]))
+
+    def test__validate_pinning_configuration_no_config(self):
+        """Test that the entire check is skipped if there's no host
+        configuration.
+        """
+        self._test__validate_pinning_configuration()
+
+    def test__validate_pinning_configuration_not_supported(self):
+        """Test that the entire check is skipped if the driver doesn't even
+        support PCPUs.
+        """
+        self._test__validate_pinning_configuration(supports_pcpus=False)
 
     def test__get_power_state_InstanceNotFound(self):
         instance = fake_instance.fake_instance_obj(

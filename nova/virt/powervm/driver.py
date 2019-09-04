@@ -77,6 +77,7 @@ class PowerVMDriver(driver.ComputeDriver):
             'supports_extend_volume': True,
             'supports_multiattach': False,
             'supports_trusted_certs': False,
+            'supports_pcpus': False,
 
             # Supported image types
             "supports_image_type_aki": False,
