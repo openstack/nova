@@ -612,9 +612,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             self.assertRaises(exception.MigrationPreCheckError,
                               self.task._call_livem_checks_on_host, {})
 
-    @mock.patch('nova.conductor.tasks.live_migrate.'
-                'supports_extended_port_binding', return_value=True)
-    def test_call_livem_checks_on_host_bind_ports(self, mock_supports_ext):
+    def test_call_livem_checks_on_host_bind_ports(self):
         data = objects.LibvirtLiveMigrateData()
         bindings = {
             uuids.port1: {'host': 'dest-host'},

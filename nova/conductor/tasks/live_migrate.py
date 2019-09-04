@@ -32,19 +32,6 @@ LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
 
 
-def supports_extended_port_binding(context, host):
-    """Checks if the compute host service is new enough to support the neutron
-    port binding-extended details.
-
-    :param context: The user request context.
-    :param host: The nova-compute host to check.
-    :returns: True if the compute host is new enough to support extended
-              port binding information, False otherwise.
-    """
-    svc = objects.Service.get_by_host_and_binary(context, host, 'nova-compute')
-    return svc.version >= 35
-
-
 def supports_vif_related_pci_allocations(context, host):
     """Checks if the compute host service is new enough to support
     VIF related PCI allocation during live migration
@@ -344,12 +331,8 @@ class LiveMigrationTask(base.TaskBase):
                     "%s") % destination
             raise exception.MigrationPreCheckError(msg)
 
-        # Check to see that neutron supports the binding-extended API and
-        # check to see that both the source and destination compute hosts
-        # are new enough to support the new port binding flow.
-        if (self.network_api.supports_port_binding_extension(self.context) and
-                supports_extended_port_binding(self.context, self.source) and
-                supports_extended_port_binding(self.context, destination)):
+        # Check to see that neutron supports the binding-extended API.
+        if self.network_api.supports_port_binding_extension(self.context):
             if 'vifs' not in self.migrate_data:
                 # migrate data vifs were not constructed in dest compute
                 # during check_can_live_migrate_destination, construct a
