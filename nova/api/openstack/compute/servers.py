@@ -75,6 +75,7 @@ INVALID_FLAVOR_IMAGE_EXCEPTIONS = (
     exception.InvalidCPUAllocationPolicy,
     exception.InvalidCPUThreadAllocationPolicy,
     exception.InvalidEmulatorThreadsPolicy,
+    exception.InvalidMachineType,
     exception.InvalidNUMANodesNumber,
     exception.InvalidRequest,
     exception.MemoryPageSizeForbidden,

@@ -6140,6 +6140,15 @@ class ServersControllerCreateTest(test.TestCase):
                           self.controller.create,
                           self.req, body=self.body)
 
+    @mock.patch('nova.virt.hardware.get_mem_encryption_constraint',
+                side_effect=exception.InvalidMachineType(
+                    message="fake conflict reason"))
+    def test_create_instance_raise_invalid_machine_type(
+            self, mock_conflict):
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create,
+                          self.req, body=self.body)
+
     @mock.patch('nova.virt.hardware.numa_get_constraints',
                 side_effect=exception.ImageCPUPinningForbidden())
     def test_create_instance_raise_image_cpu_pinning_forbidden(
