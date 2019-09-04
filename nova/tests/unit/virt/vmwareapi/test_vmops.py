@@ -1098,7 +1098,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._vmops.migrate_disk_and_power_off(self._context,
                                                self._instance,
                                                None,
-                                               flavor)
+                                               flavor,
+                                               None)
 
         fake_get_vm_ref.assert_called_once_with(self._session,
                                                 self._instance)
@@ -1110,6 +1111,64 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                                'fake-ref', flavor, mock.ANY)
         fake_resize_disk.assert_called_once_with(self._instance, 'fake-ref',
                                                  vmdk, flavor)
+        calls = [mock.call(self._context, self._instance, step=i,
+                           total_steps=vmops.RESIZE_TOTAL_STEPS)
+                 for i in range(4)]
+        fake_progress.assert_has_calls(calls)
+
+    @mock.patch.object(vmops.VMwareVMOps, "_remove_ephemerals_and_swap")
+    @mock.patch.object(vm_util, 'get_vmdk_info')
+    @mock.patch.object(vmops.VMwareVMOps, "_resize_disk")
+    @mock.patch.object(vmops.VMwareVMOps, "_resize_vm")
+    @mock.patch.object(vm_util, 'power_off_instance')
+    @mock.patch.object(vmops.VMwareVMOps, "_update_instance_progress")
+    @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake-ref')
+    def test_migrate_disk_and_power_off_root_block_device(self,
+                                         fake_get_vm_ref, fake_progress,
+                                         fake_power_off, fake_resize_vm,
+                                         fake_resize_disk, fake_get_vmdk_info,
+                                         fake_remove_ephemerals_and_swap):
+        # shrinking the root-disk should be ignored
+        flavor_root_gb = self._instance.flavor.root_gb - 1
+
+        self._instance.image_ref = None
+        connection_info1 = {'data': 'fake-data1', 'serial': 'volume-fake-id1'}
+        connection_info2 = {'data': 'fake-data2', 'serial': 'volume-fake-id2'}
+        connection_info3 = {'data': 'fake-data3', 'serial': 'volume-fake-id3'}
+        bdm = [{'boot_index': 0,
+                'connection_info': connection_info1,
+                'disk_bus': constants.ADAPTER_TYPE_IDE},
+               {'boot_index': 1,
+                'connection_info': connection_info2,
+                'disk_bus': constants.DEFAULT_ADAPTER_TYPE},
+               {'boot_index': 2,
+                'connection_info': connection_info3,
+                'disk_bus': constants.ADAPTER_TYPE_LSILOGICSAS}]
+        bdi = {'block_device_mapping': bdm}
+
+        vmdk = vm_util.VmdkInfo('[fake] uuid/root.vmdk',
+                                'fake-adapter',
+                                'fake-disk',
+                                self._instance.flavor.root_gb * units.Gi,
+                                'fake-device')
+        fake_get_vmdk_info.return_value = vmdk
+        flavor = fake_flavor.fake_flavor_obj(self._context,
+                                             root_gb=flavor_root_gb)
+        self._vmops.migrate_disk_and_power_off(self._context,
+                                               self._instance,
+                                               None,
+                                               flavor,
+                                               bdi)
+
+        fake_get_vm_ref.assert_called_once_with(self._session,
+                                                self._instance)
+
+        fake_power_off.assert_called_once_with(self._session,
+                                               self._instance,
+                                               'fake-ref')
+        fake_resize_vm.assert_called_once_with(self._context, self._instance,
+                                               'fake-ref', flavor, mock.ANY)
+        fake_resize_disk.assert_not_called()
         calls = [mock.call(self._context, self._instance, step=i,
                            total_steps=vmops.RESIZE_TOTAL_STEPS)
                  for i in range(4)]

@@ -262,7 +262,8 @@ class VMwareVCDriver(driver.ComputeDriver):
         """
         # TODO(PhilDay): Add support for timeout (clean shutdown)
         return self._vmops.migrate_disk_and_power_off(context, instance,
-                                                      dest, flavor)
+                                                      dest, flavor,
+                                                      block_device_info)
 
     def confirm_migration(self, context, migration, instance, network_info):
         """Confirms a resize, destroying the source VM."""

@@ -1429,7 +1429,7 @@ class VMwareVMOps(object):
                           datastore, folder, vmdk.adapter_type)
 
     def migrate_disk_and_power_off(self, context, instance, dest,
-                                   flavor):
+                                   flavor, block_device_info):
         """Transfers the disk of a running instance in multiple phases, turning
         off the instance before the end.
         """
@@ -1437,10 +1437,20 @@ class VMwareVMOps(object):
         vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
                                      uuid=instance.uuid)
 
+        def _is_volume_backed(bdi):
+            # this contains anything with _valid_destination = 'volume',
+            # ephemerals have their own list
+            bdm = driver.block_device_info_get_mapping(bdi)
+            for disk in bdm:
+                if disk.get('boot_index') == 0:
+                    return True
+            return False
+
         # Checks if the migration needs a disk resize down.
-        if (flavor.root_gb < instance.flavor.root_gb or
+        if (not _is_volume_backed(block_device_info) and (
+            flavor.root_gb < instance.flavor.root_gb or
             (flavor.root_gb != 0 and
-             flavor.root_gb < vmdk.capacity_in_bytes / units.Gi)):
+             flavor.root_gb < vmdk.capacity_in_bytes / units.Gi))):
             reason = _("Unable to shrink disk.")
             raise exception.InstanceFaultRollback(
                 exception.ResizeError(reason=reason))
@@ -1466,7 +1476,8 @@ class VMwareVMOps(object):
                                        total_steps=RESIZE_TOTAL_STEPS)
 
         # 3.Reconfigure the disk properties
-        self._resize_disk(instance, vm_ref, vmdk, flavor)
+        if not _is_volume_backed(block_device_info):
+            self._resize_disk(instance, vm_ref, vmdk, flavor)
         self._update_instance_progress(context, instance,
                                        step=3,
                                        total_steps=RESIZE_TOTAL_STEPS)
