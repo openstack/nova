@@ -1125,9 +1125,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                         block_device_info=block_device_info)
 
         mock_info_get_mapping.assert_called_once_with(mock.ANY)
-        mock_get_res_pool_of_vm.assert_called_once_with(mock.ANY)
-        mock_relocate_vm.assert_called_once_with(mock.ANY, mock.ANY,
-            'fake_res_pool', mock.ANY)
         mock_attach_volume.assert_called_once_with(connection_info,
             self.instance, constants.DEFAULT_ADAPTER_TYPE)
 

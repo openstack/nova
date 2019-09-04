@@ -666,14 +666,8 @@ class VMwareVolumeOps(object):
         driver_type = connection_info['driver_volume_type']
         LOG.debug("Root volume attach. Driver type: %s", driver_type,
                   instance=instance)
-        if driver_type == constants.DISK_FORMAT_VMDK:
-            vm_ref = vm_util.get_vm_ref(self._session, instance)
-            data = connection_info['data']
-            # Get the volume ref
-            volume_ref = self._get_volume_ref(data)
-            # Pick the resource pool on which the instance resides. Move the
-            # volume to the datastore of the instance.
-            res_pool = self._get_res_pool_of_vm(vm_ref)
-            vm_util.relocate_vm(self._session, volume_ref, res_pool, datastore)
-
+        # NOTE(jkulik): Upstream moves the volume to the instance DS here. This
+        # would violate the differentiation between ephemeral and volume DS, so
+        # we don't do that. This comment should help us detect upstream changes
+        # to the function as merging should fail.
         self.attach_volume(connection_info, instance, adapter_type)
