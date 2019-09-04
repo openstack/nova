@@ -85,6 +85,8 @@ INVALID_FLAVOR_IMAGE_EXCEPTIONS = (
     exception.RealtimeMaskNotFoundOrInvalid,
 )
 
+MIN_COMPUTE_MOVE_BANDWIDTH = 39
+
 
 class ServersController(wsgi.Controller):
     """The Server API base controller class for the OpenStack API."""
@@ -940,14 +942,25 @@ class ServersController(wsgi.Controller):
         # We could potentially move this check to conductor and avoid the
         # extra API call to neutron when we support move operations with ports
         # having resource requests.
-        if (common.instance_has_port_with_resource_request(
-                    context, instance_id, self.network_api) and not
-                common.supports_port_resource_request_during_move(req)):
-            msg = _("The resize action on a server with ports having "
-                    "resource requests, like a port with a QoS minimum "
-                    "bandwidth policy, is not supported with this "
-                    "microversion")
-            raise exc.HTTPBadRequest(explanation=msg)
+        if common.instance_has_port_with_resource_request(
+                context, instance_id, self.network_api):
+            if not common.supports_port_resource_request_during_move(req):
+                msg = _("The resize action on a server with ports having "
+                        "resource requests, like a port with a QoS minimum "
+                        "bandwidth policy, is not supported with this "
+                        "microversion")
+                raise exc.HTTPBadRequest(explanation=msg)
+
+            # TODO(gibi): Remove when nova only supports compute newer than
+            # Train
+            source_service = objects.Service.get_by_host_and_binary(
+                context, instance.host, 'nova-compute')
+            if source_service.version < MIN_COMPUTE_MOVE_BANDWIDTH:
+                msg = _("The resize action on a server with ports having "
+                        "resource requests, like a port with a QoS "
+                        "minimum bandwidth policy, is not yet supported "
+                        "on the source compute")
+                raise exc.HTTPConflict(explanation=msg)
 
         try:
             self.compute_api.resize(context, instance, flavor_id, **kwargs)
