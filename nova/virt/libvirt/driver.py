@@ -4813,7 +4813,12 @@ class LibvirtDriver(driver.ComputeDriver):
             # mess up though, raise an exception
             raise exception.NUMATopologyUnsupported()
 
-        allowed_cpus = hardware.get_vcpu_pin_set()
+        # We only pin an instance to some host cores if the user has provided
+        # configuration to suggest we should.
+        shared_cpus = None
+        if CONF.vcpu_pin_set or CONF.compute.cpu_shared_set:
+            shared_cpus = self._get_vcpu_available()
+
         topology = self._get_host_numa_topology()
 
         # We have instance NUMA so translate it to the config class
@@ -4827,12 +4832,12 @@ class LibvirtDriver(driver.ComputeDriver):
             # TODO(ndipanov): Attempt to spread the instance
             # across NUMA nodes and expose the topology to the
             # instance as an optimisation
-            return GuestNumaConfig(allowed_cpus, None, None, None)
+            return GuestNumaConfig(shared_cpus, None, None, None)
 
         if not topology:
             # No NUMA topology defined for host - This will only happen with
             # some libvirt versions and certain platforms.
-            return GuestNumaConfig(allowed_cpus, None,
+            return GuestNumaConfig(shared_cpus, None,
                                    guest_cpu_numa_config, None)
 
         # Now get configuration from the numa_topology
@@ -6990,12 +6995,22 @@ class LibvirtDriver(driver.ComputeDriver):
             return
 
         cells = []
-        allowed_cpus = hardware.get_vcpu_pin_set()
-        online_cpus = self._host.get_online_cpus()
-        if allowed_cpus:
-            allowed_cpus &= online_cpus
-        else:
-            allowed_cpus = online_cpus
+
+        available_shared_cpus = self._get_vcpu_available()
+        available_dedicated_cpus = self._get_pcpu_available()
+
+        # NOTE(stephenfin): In an ideal world, if the operator had not
+        # configured this host to report PCPUs using the '[compute]
+        # cpu_dedicated_set' option, then we should not be able to used pinned
+        # instances on this host. However, that would force operators to update
+        # their configuration as part of the Stein -> Train upgrade or be
+        # unable to schedule instances on the host. As a result, we need to
+        # revert to legacy behavior and use 'vcpu_pin_set' for both VCPUs and
+        # PCPUs.
+        # TODO(stephenfin): Remove this in U
+        if not available_dedicated_cpus and not (
+                CONF.compute.cpu_shared_set and not CONF.vcpu_pin_set):
+            available_dedicated_cpus = available_shared_cpus
 
         def _get_reserved_memory_for_cell(self, cell_id, page_size):
             cell = self._reserved_hugepages.get(cell_id, {})
@@ -7042,14 +7057,19 @@ class LibvirtDriver(driver.ComputeDriver):
         tunnel_affinities = _get_tunnel_numa_affinity()
 
         for cell in topology.cells:
-            cpuset = set(cpu.id for cpu in cell.cpus)
+            cpus = set(cpu.id for cpu in cell.cpus)
+
+            cpuset = cpus & available_shared_cpus
+            pcpuset = cpus & available_dedicated_cpus
+
             siblings = sorted(map(set,
                                   set(tuple(cpu.siblings)
                                         if cpu.siblings else ()
                                       for cpu in cell.cpus)
                                   ))
-            cpuset &= allowed_cpus
-            siblings = [sib & allowed_cpus for sib in siblings]
+
+            cpus &= available_shared_cpus | available_dedicated_cpus
+            siblings = [sib & cpus for sib in siblings]
             # Filter out empty sibling sets that may be left
             siblings = [sib for sib in siblings if len(sib) > 0]
 
@@ -7066,15 +7086,19 @@ class LibvirtDriver(driver.ComputeDriver):
                 physnets=physnet_affinities[cell.id],
                 tunneled=tunnel_affinities[cell.id])
 
+            # NOTE(stephenfin): Note that we don't actually return any usage
+            # information here. This is because this is handled by the resource
+            # tracker via the 'update_available_resource' periodic task, which
+            # loops through all instances and calculated usage accordingly
             cell = objects.NUMACell(
                 id=cell.id,
                 cpuset=cpuset,
-                pcpuset=set(),  # TODO(stephenfin): Start setting this
+                pcpuset=pcpuset,
                 memory=cell.memory / units.Ki,
                 cpu_usage=0,
+                pinned_cpus=set(),
                 memory_usage=0,
                 siblings=siblings,
-                pinned_cpus=set([]),
                 mempages=mempages,
                 network_metadata=network_metadata)
             cells.append(cell)

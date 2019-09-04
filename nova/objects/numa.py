@@ -75,17 +75,19 @@ class NUMACell(base.NovaObject):
         return not (self == other)
 
     @property
-    def free_cpus(self):
-        return self.cpuset - self.pinned_cpus or set()
+    def free_pcpus(self):
+        """Return available dedicated CPUs."""
+        return self.pcpuset - self.pinned_cpus or set()
 
     @property
     def free_siblings(self):
-        return [sibling_set & self.free_cpus
-                for sibling_set in self.siblings]
+        """Return available dedicated CPUs in their sibling set form."""
+        return [sibling_set & self.free_pcpus for sibling_set in self.siblings]
 
     @property
-    def avail_cpus(self):
-        return len(self.free_cpus)
+    def avail_pcpus(self):
+        """Return number of available dedicated CPUs."""
+        return len(self.free_pcpus)
 
     @property
     def avail_memory(self):
@@ -97,23 +99,27 @@ class NUMACell(base.NovaObject):
         return any(len(sibling_set) > 1 for sibling_set in self.siblings)
 
     def pin_cpus(self, cpus):
-        if cpus - self.cpuset:
+        if cpus - self.pcpuset:
             raise exception.CPUPinningUnknown(requested=list(cpus),
-                                              available=list(self.cpuset))
+                                              available=list(self.pcpuset))
+
         if self.pinned_cpus & cpus:
+            available = list(self.pcpuset - self.pinned_cpus)
             raise exception.CPUPinningInvalid(requested=list(cpus),
-                                              available=list(self.cpuset -
-                                                             self.pinned_cpus))
+                                              available=available)
+
         self.pinned_cpus |= cpus
 
     def unpin_cpus(self, cpus):
-        if cpus - self.cpuset:
+        if cpus - self.pcpuset:
             raise exception.CPUUnpinningUnknown(requested=list(cpus),
-                                                available=list(self.cpuset))
+                                                available=list(self.pcpuset))
+
         if (self.pinned_cpus & cpus) != cpus:
             raise exception.CPUUnpinningInvalid(requested=list(cpus),
                                                 available=list(
                                                     self.pinned_cpus))
+
         self.pinned_cpus -= cpus
 
     def pin_cpus_with_siblings(self, cpus):

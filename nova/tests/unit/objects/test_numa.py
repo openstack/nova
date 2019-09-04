@@ -45,8 +45,8 @@ class _TestNUMACell(object):
     def test_free_cpus(self):
         cell_a = objects.NUMACell(
             id=0,
-            cpuset=set([1, 2]),
-            pcpuset=set(),
+            cpuset=set(),
+            pcpuset=set([1, 2]),
             memory=512,
             cpu_usage=2,
             memory_usage=256,
@@ -55,8 +55,8 @@ class _TestNUMACell(object):
             mempages=[])
         cell_b = objects.NUMACell(
             id=1,
-            cpuset=set([3, 4]),
-            pcpuset=set(),
+            cpuset=set(),
+            pcpuset=set([3, 4]),
             memory=512,
             cpu_usage=1,
             memory_usage=128,
@@ -64,14 +64,14 @@ class _TestNUMACell(object):
             siblings=[set([3]), set([4])],
             mempages=[])
 
-        self.assertEqual(set([2]), cell_a.free_cpus)
-        self.assertEqual(set([3, 4]), cell_b.free_cpus)
+        self.assertEqual(set([2]), cell_a.free_pcpus)
+        self.assertEqual(set([3, 4]), cell_b.free_pcpus)
 
     def test_pinning_logic(self):
         numacell = objects.NUMACell(
             id=0,
-            cpuset=set([1, 2, 3, 4]),
-            pcpuset=set(),
+            cpuset=set(),
+            pcpuset=set([1, 2, 3, 4]),
             memory=512,
             cpu_usage=2,
             memory_usage=256,
@@ -79,7 +79,7 @@ class _TestNUMACell(object):
             siblings=[set([1]), set([2]), set([3]), set([4])],
             mempages=[])
         numacell.pin_cpus(set([2, 3]))
-        self.assertEqual(set([4]), numacell.free_cpus)
+        self.assertEqual(set([4]), numacell.free_pcpus)
 
         expect_msg = exception.CPUPinningUnknown.msg_fmt % {
             'requested': r'\[1, 55\]', 'available': r'\[1, 2, 3, 4\]'}
@@ -99,13 +99,13 @@ class _TestNUMACell(object):
         self.assertRaises(exception.CPUUnpinningInvalid,
                           numacell.unpin_cpus, set([1, 4]))
         numacell.unpin_cpus(set([1, 2, 3]))
-        self.assertEqual(set([1, 2, 3, 4]), numacell.free_cpus)
+        self.assertEqual(set([1, 2, 3, 4]), numacell.free_pcpus)
 
     def test_pinning_with_siblings(self):
         numacell = objects.NUMACell(
             id=0,
-            cpuset=set([1, 2, 3, 4]),
-            pcpuset=set(),
+            cpuset=set(),
+            pcpuset=set([1, 2, 3, 4]),
             memory=512,
             cpu_usage=2,
             memory_usage=256,
@@ -114,9 +114,9 @@ class _TestNUMACell(object):
             mempages=[])
 
         numacell.pin_cpus_with_siblings(set([1, 2]))
-        self.assertEqual(set(), numacell.free_cpus)
+        self.assertEqual(set(), numacell.free_pcpus)
         numacell.unpin_cpus_with_siblings(set([1]))
-        self.assertEqual(set([1, 3]), numacell.free_cpus)
+        self.assertEqual(set([1, 3]), numacell.free_pcpus)
         self.assertRaises(exception.CPUUnpinningInvalid,
                           numacell.unpin_cpus_with_siblings,
                           set([3]))
@@ -126,15 +126,15 @@ class _TestNUMACell(object):
         self.assertRaises(exception.CPUUnpinningInvalid,
                           numacell.unpin_cpus_with_siblings,
                           set([3, 4]))
-        self.assertEqual(set([1, 3]), numacell.free_cpus)
+        self.assertEqual(set([1, 3]), numacell.free_pcpus)
         numacell.unpin_cpus_with_siblings(set([4]))
-        self.assertEqual(set([1, 2, 3, 4]), numacell.free_cpus)
+        self.assertEqual(set([1, 2, 3, 4]), numacell.free_pcpus)
 
     def test_pinning_with_siblings_no_host_siblings(self):
         numacell = objects.NUMACell(
             id=0,
-            cpuset=set([1, 2, 3, 4]),
-            pcpuset=set(),
+            cpuset=set(),
+            pcpuset=set([1, 2, 3, 4]),
             memory=512,
             cpu_usage=0,
             memory_usage=256,
