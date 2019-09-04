@@ -11,6 +11,7 @@
 #    under the License.
 
 import mock
+from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.compute import rpcapi as compute_rpcapi
@@ -219,6 +220,77 @@ class MigrationTaskTestCase(test.NoDBTestCase):
                                         task.instance, task._migration)
         mock_get_resources.assert_called_once_with(
             self.context, self.instance.uuid)
+
+    @mock.patch.object(scheduler_utils, 'fill_provider_mapping')
+    @mock.patch.object(scheduler_utils, 'claim_resources')
+    @mock.patch.object(context.RequestContext, 'elevated')
+    def test_execute_reschedule(
+            self, mock_elevated, mock_claim, mock_fill_provider_mapping):
+        report_client = report.SchedulerReportClient()
+        # setup task for re-schedule
+        alloc_req = {
+            "allocations": {
+                uuids.host1: {
+                    "resources": {
+                        "VCPU": 1,
+                        "MEMORY_MB": 1024,
+                        "DISK_GB": 100}}}}
+        alternate_selection = objects.Selection(
+            service_host="host1",
+            nodename="node1",
+            cell_uuid=uuids.cell1,
+            allocation_request=jsonutils.dumps(alloc_req),
+            allocation_request_version='1.19')
+        task = migrate.MigrationTask(
+            self.context, self.instance, self.flavor, self.request_spec,
+            self.clean_shutdown, compute_rpcapi.ComputeAPI(),
+            query.SchedulerQueryClient(), report_client,
+            host_list=[alternate_selection], network_api=self.mock_network_api)
+        mock_claim.return_value = True
+
+        actual_selection = task._reschedule()
+
+        self.assertIs(alternate_selection, actual_selection)
+        mock_claim.assert_called_once_with(
+            mock_elevated.return_value, report_client, self.request_spec,
+            self.instance.uuid, alloc_req, '1.19')
+        mock_fill_provider_mapping.assert_called_once_with(
+            self.context, report_client, self.request_spec,
+            alternate_selection)
+
+    @mock.patch.object(scheduler_utils, 'fill_provider_mapping')
+    @mock.patch.object(scheduler_utils, 'claim_resources')
+    @mock.patch.object(context.RequestContext, 'elevated')
+    def test_execute_reschedule_claim_fails_no_more_alternate(
+            self, mock_elevated, mock_claim, mock_fill_provider_mapping):
+        report_client = report.SchedulerReportClient()
+        # set up the task for re-schedule
+        alloc_req = {
+            "allocations": {
+                uuids.host1: {
+                    "resources": {
+                        "VCPU": 1,
+                        "MEMORY_MB": 1024,
+                        "DISK_GB": 100}}}}
+        alternate_selection = objects.Selection(
+            service_host="host1",
+            nodename="node1",
+            cell_uuid=uuids.cell1,
+            allocation_request=jsonutils.dumps(alloc_req),
+            allocation_request_version='1.19')
+        task = migrate.MigrationTask(
+            self.context, self.instance, self.flavor, self.request_spec,
+            self.clean_shutdown, compute_rpcapi.ComputeAPI(),
+            query.SchedulerQueryClient(), report_client,
+            host_list=[alternate_selection], network_api=self.mock_network_api)
+        mock_claim.return_value = False
+
+        self.assertRaises(exception.MaxRetriesExceeded, task._reschedule)
+
+        mock_claim.assert_called_once_with(
+            mock_elevated.return_value, report_client, self.request_spec,
+            self.instance.uuid, alloc_req, '1.19')
+        mock_fill_provider_mapping.assert_not_called()
 
 
 class MigrationTaskAllocationUtils(test.NoDBTestCase):
