@@ -205,6 +205,24 @@ def check_instance_lock(function):
     return inner
 
 
+def reject_sev_instances(operation):
+    """Decorator.  Raise OperationNotSupportedForSEV if instance has SEV
+    enabled.
+    """
+
+    def outer(f):
+        @six.wraps(f)
+        def inner(self, context, instance, *args, **kw):
+            if hardware.get_mem_encryption_constraint(instance.flavor,
+                                                      instance.image_meta):
+                raise exception.OperationNotSupportedForSEV(
+                    instance_uuid=instance.uuid,
+                    operation=operation)
+            return f(self, context, instance, *args, **kw)
+        return inner
+    return outer
+
+
 def _diff_dict(orig, new):
     """Return a dict describing how to change orig to new.  The keys
     correspond to values that have changed; the value will be a list
@@ -3785,6 +3803,7 @@ class API(base.Base):
         return self.compute_rpcapi.get_instance_diagnostics(context,
                                                             instance=instance)
 
+    @reject_sev_instances(instance_actions.SUSPEND)
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE])
     def suspend(self, context, instance):
@@ -4448,6 +4467,7 @@ class API(base.Base):
                                                      diff=diff)
         return _metadata
 
+    @reject_sev_instances(instance_actions.LIVE_MIGRATION)
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED])
     def live_migrate(self, context, instance, block_migration,

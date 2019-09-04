@@ -533,6 +533,12 @@ class UnableToMigrateToSelf(Invalid):
                 "to current host (%(host)s).")
 
 
+class OperationNotSupportedForSEV(NovaException):
+    msg_fmt = _("Operation '%(operation)s' not supported for SEV-enabled "
+                "instance (%(instance_uuid)s).")
+    code = 409
+
+
 class InvalidHypervisorType(Invalid):
     msg_fmt = _("The supplied hypervisor type of is invalid.")
 

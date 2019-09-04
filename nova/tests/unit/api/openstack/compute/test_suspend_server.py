@@ -13,10 +13,13 @@
 #    under the License.
 
 import mock
+import six
+import webob
 
 from nova.api.openstack.compute import suspend_server as \
     suspend_server_v21
 from nova import exception
+from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack.compute import admin_only_action_common
 from nova.tests.unit.api.openstack import fakes
@@ -38,6 +41,17 @@ class SuspendServerTestsV21(admin_only_action_common.CommonTests):
 
     def test_suspend_resume(self):
         self._test_actions(['_suspend', '_resume'])
+
+    @mock.patch('nova.virt.hardware.get_mem_encryption_constraint',
+                new=mock.Mock(return_value=True))
+    @mock.patch.object(objects.instance.Instance, 'image_meta')
+    def test_suspend_sev_rejected(self, mock_image):
+        instance = self._stub_instance_get()
+        ex = self.assertRaises(webob.exc.HTTPConflict,
+                               self.controller._suspend,
+                               self.req, fakes.FAKE_UUID, body={})
+        self.assertIn("Operation 'suspend' not supported for SEV-enabled "
+                      "instance (%s)" % instance.uuid, six.text_type(ex))
 
     def test_suspend_resume_with_non_existed_instance(self):
         self._test_actions_with_non_existed_instance(['_suspend', '_resume'])

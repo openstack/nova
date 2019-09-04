@@ -38,7 +38,8 @@ class SuspendServerController(wsgi.Controller):
                         target={'user_id': server.user_id,
                                 'project_id': server.project_id})
             self.compute_api.suspend(context, server)
-        except exception.InstanceIsLocked as e:
+        except (exception.OperationNotSupportedForSEV,
+                exception.InstanceIsLocked) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,

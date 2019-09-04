@@ -609,6 +609,20 @@ class MigrateServerTestsV268(MigrateServerTestsV256):
                            method_translations=method_translations,
                            args_map=args_map)
 
+    @mock.patch('nova.virt.hardware.get_mem_encryption_constraint',
+                new=mock.Mock(return_value=True))
+    @mock.patch.object(objects.instance.Instance, 'image_meta')
+    def test_live_migrate_sev_rejected(self, mock_image):
+        instance = self._stub_instance_get()
+        body = {'os-migrateLive': {'host': 'hostname',
+                                   'block_migration': 'auto'}}
+        ex = self.assertRaises(webob.exc.HTTPConflict,
+                               self.controller._migrate_live,
+                               self.req, fakes.FAKE_UUID, body=body)
+        self.assertIn("Operation 'live-migration' not supported for "
+                      "SEV-enabled instance (%s)" % instance.uuid,
+                      six.text_type(ex))
+
     def test_live_migrate_with_forced_host(self):
         body = {'os-migrateLive': {'host': 'hostname',
                                    'block_migration': 'auto',
