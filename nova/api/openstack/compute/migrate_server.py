@@ -27,9 +27,12 @@ from nova.compute import api as compute
 from nova import exception
 from nova.i18n import _
 from nova import network
+from nova import objects
 from nova.policies import migrate_server as ms_policies
 
 LOG = logging.getLogger(__name__)
+
+MIN_COMPUTE_MOVE_BANDWIDTH = 39
 
 
 class MigrateServerController(wsgi.Controller):
@@ -58,14 +61,25 @@ class MigrateServerController(wsgi.Controller):
         # We could potentially move this check to conductor and avoid the
         # extra API call to neutron when we support move operations with ports
         # having resource requests.
-        if (common.instance_has_port_with_resource_request(
-                    context, instance.uuid, self.network_api) and not
-                common.supports_port_resource_request_during_move(req)):
-            msg = _("The migrate action on a server with ports having "
-                    "resource requests, like a port with a QoS minimum "
-                    "bandwidth policy, is not supported with this "
-                    "microversion")
-            raise exc.HTTPBadRequest(explanation=msg)
+        if common.instance_has_port_with_resource_request(
+                context, instance.uuid, self.network_api):
+            if not common.supports_port_resource_request_during_move(req):
+                msg = _("The migrate action on a server with ports having "
+                        "resource requests, like a port with a QoS minimum "
+                        "bandwidth policy, is not supported with this "
+                        "microversion")
+                raise exc.HTTPBadRequest(explanation=msg)
+
+            # TODO(gibi): Remove when nova only supports compute newer than
+            # Train
+            source_service = objects.Service.get_by_host_and_binary(
+                context, instance.host, 'nova-compute')
+            if source_service.version < MIN_COMPUTE_MOVE_BANDWIDTH:
+                msg = _("The migrate action on a server with ports having "
+                        "resource requests, like a port with a QoS "
+                        "minimum bandwidth policy, is not yet supported "
+                        "on the source compute")
+                raise exc.HTTPConflict(explanation=msg)
 
         try:
             self.compute_api.resize(req.environ['nova.context'], instance,
