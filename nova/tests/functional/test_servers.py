@@ -3170,7 +3170,10 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         self.assertEqual(dest_hostname, inst_dest_host)
 
-    def _test_resize_reschedule_uses_host_lists(self, fails, num_alts=None):
+    @mock.patch.object(utils, 'fill_provider_mapping',
+                       wraps=utils.fill_provider_mapping)
+    def _test_resize_reschedule_uses_host_lists(self, mock_fill_provider_map,
+                                                fails, num_alts=None):
         """Test that when a resize attempt fails, the retry comes from the
         supplied host_list, and does not call the scheduler.
         """
@@ -3225,6 +3228,15 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         server_uuid = server["id"]
         data = {"resize": {"flavorRef": self.flavor2["id"]}}
         self.api.post_server_action(server_uuid, data)
+
+        # fill_provider_mapping should have been called once for the initial
+        # build, once for the resize scheduling to the primary host and then
+        # once per reschedule.
+        expected_fill_count = 2
+        if num_alts > 1:
+            expected_fill_count += self.num_fails - 1
+        self.assertGreaterEqual(mock_fill_provider_map.call_count,
+                                expected_fill_count)
 
         if num_alts < fails:
             # We will run out of alternates before populate_retry will

@@ -88,6 +88,9 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         sel_dest_mock.return_value = self.host_lists
         az_mock.return_value = 'myaz'
         gbf_mock.return_value = objects.MigrationList()
+        mock_get_resources = \
+            self.mock_network_api.get_requested_resource_for_instance
+        mock_get_resources.return_value = []
 
         if requested_destination:
             self.request_spec.requested_destination = objects.Destination(
@@ -112,7 +115,12 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         # place to find it via self.migration.
         cn_mock.side_effect = set_migration_uuid
 
-        task.execute()
+        selection = self.host_lists[0][0]
+        with mock.patch.object(scheduler_utils,
+                               'fill_provider_mapping') as fill_mock:
+            task.execute()
+            fill_mock.assert_called_once_with(
+                task.context, task.reportclient, task.request_spec, selection)
 
         self.ensure_network_metadata_mock.assert_called_once_with(
             self.instance)
@@ -122,7 +130,6 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         task.query_client.select_destinations.assert_called_once_with(
             self.context, self.request_spec, [self.instance.uuid],
             return_objects=True, return_alternates=True)
-        selection = self.host_lists[0][0]
         prep_resize_mock.assert_called_once_with(
             self.context, self.instance, self.request_spec.image,
             self.flavor, selection.service_host, task._migration,
@@ -151,6 +158,10 @@ class MigrationTaskTestCase(test.NoDBTestCase):
             self.assertIsNone(self.request_spec.retry)
             self.assertIn('cell', self.request_spec.requested_destination)
             self.assertIsNotNone(self.request_spec.requested_destination.cell)
+
+        mock_get_resources.assert_called_once_with(
+            self.context, self.instance.uuid)
+        self.assertEqual([], self.request_spec.requested_resources)
 
     def test_execute(self):
         self._test_execute()
@@ -182,6 +193,9 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         task = self._generate_task()
         gmv_mock.return_value = 23
         mock_gbf.return_value = objects.MigrationList()
+        mock_get_resources = \
+            self.mock_network_api.get_requested_resource_for_instance
+        mock_get_resources.return_value = []
 
         # We just need this hook point to set a uuid on the
         # migration before we use it for teardown
@@ -203,6 +217,8 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         self.assertEqual('error', task._migration.status)
         mock_ra.assert_called_once_with(task.context, task._source_cn,
                                         task.instance, task._migration)
+        mock_get_resources.assert_called_once_with(
+            self.context, self.instance.uuid)
 
 
 class MigrationTaskAllocationUtils(test.NoDBTestCase):
