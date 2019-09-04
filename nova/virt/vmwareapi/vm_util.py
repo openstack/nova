@@ -1633,23 +1633,6 @@ def get_swap(session, vm_ref):
             return device
 
 
-def _get_folder(session, parent_folder_ref, name):
-    # Get list of child entities for the parent folder
-    prop_val = session._call_method(vutil, 'get_object_property',
-                                    parent_folder_ref,
-                                    'childEntity')
-    if prop_val:
-        child_entities = prop_val.ManagedObjectReference
-
-        # Return if the child folder with input name is already present
-        for child_entity in child_entities:
-            if child_entity._type != 'Folder':
-                continue
-            child_entity_name = vim_util.get_entity_name(session, child_entity)
-            if child_entity_name == name:
-                return child_entity
-
-
 def create_folder(session, parent_folder_ref, name):
     """Creates a folder in vCenter
 

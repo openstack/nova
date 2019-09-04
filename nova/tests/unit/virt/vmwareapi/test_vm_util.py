@@ -22,7 +22,6 @@ from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
 from oslo_vmware.objects import datastore as ds_obj
 from oslo_vmware import pbm
-from oslo_vmware import vim_util as vutil
 
 from nova import exception
 from nova.network import model as network_model
@@ -1871,70 +1870,6 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                                                          'CreateFolder',
                                                          parent_folder,
                                                          name=child_name)
-
-    def test_get_folder_does_not_exist(self):
-        session = fake.FakeSession()
-        with mock.patch.object(session, '_call_method',
-                               return_value=None):
-            ret = vm_util._get_folder(session, 'fake-parent', 'fake-name')
-            self.assertIsNone(ret)
-            expected_invoke_api = [mock.call(vutil, 'get_object_property',
-                                             'fake-parent',
-                                             'childEntity')]
-            self.assertEqual(expected_invoke_api,
-                             session._call_method.mock_calls)
-
-    def test_get_folder_child_entry_not_folder(self):
-        child_entity = mock.Mock()
-        child_entity._type = 'NotFolder'
-        prop_val = mock.Mock()
-        prop_val.ManagedObjectReference = [child_entity]
-        session = fake.FakeSession()
-        with mock.patch.object(session, '_call_method',
-                               return_value=prop_val):
-            ret = vm_util._get_folder(session, 'fake-parent', 'fake-name')
-            self.assertIsNone(ret)
-            expected_invoke_api = [mock.call(vutil, 'get_object_property',
-                                             'fake-parent',
-                                             'childEntity')]
-            self.assertEqual(expected_invoke_api,
-                             session._call_method.mock_calls)
-
-    def test_get_folder_child_entry_not_matched(self):
-        child_entity = mock.Mock()
-        child_entity._type = 'Folder'
-        prop_val = mock.Mock()
-        prop_val.ManagedObjectReference = [child_entity]
-        session = fake.FakeSession()
-        with mock.patch.object(session, '_call_method',
-                               side_effect=[prop_val, 'fake-1-name']):
-            ret = vm_util._get_folder(session, 'fake-parent', 'fake-name')
-            self.assertIsNone(ret)
-            expected_invoke_api = [mock.call(vutil, 'get_object_property',
-                                             'fake-parent',
-                                             'childEntity'),
-                                   mock.call(vutil, 'get_object_property',
-                                             child_entity, 'name')]
-            self.assertEqual(expected_invoke_api,
-                             session._call_method.mock_calls)
-
-    def test_get_folder_child_entry_matched(self):
-        child_entity = mock.Mock()
-        child_entity._type = 'Folder'
-        prop_val = mock.Mock()
-        prop_val.ManagedObjectReference = [child_entity]
-        session = fake.FakeSession()
-        with mock.patch.object(session, '_call_method',
-                               side_effect=[prop_val, 'fake-name']):
-            ret = vm_util._get_folder(session, 'fake-parent', 'fake-name')
-            self.assertEqual(ret, child_entity)
-            expected_invoke_api = [mock.call(vutil, 'get_object_property',
-                                             'fake-parent',
-                                             'childEntity'),
-                                   mock.call(vutil, 'get_object_property',
-                                             child_entity, 'name')]
-            self.assertEqual(expected_invoke_api,
-                             session._call_method.mock_calls)
 
     def test_folder_path_ref_cache(self):
         path = 'OpenStack/Project (e2b86092bf064181ade43deb3188f8e4)'

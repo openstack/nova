@@ -20,7 +20,6 @@
 networking and storage of VMs, and compute hosts on which they run)."""
 
 import collections
-import copy
 import functools
 import re
 import string
@@ -1467,20 +1466,6 @@ class API(base.Base):
             bdm.volume_size = self._volume_size(instance_type, bdm)
             bdm.instance_uuid = instance.uuid
         return instance_block_device_mapping
-
-    def _create_block_device_mapping(self, block_device_mapping):
-        # Copy the block_device_mapping because this method can be called
-        # multiple times when more than one instance is booted in a single
-        # request. This avoids 'id' being set and triggering the object dupe
-        # detection
-        db_block_device_mapping = copy.deepcopy(block_device_mapping)
-        # Create the BlockDeviceMapping objects in the db.
-        for bdm in db_block_device_mapping:
-            # TODO(alaski): Why is this done?
-            if bdm.volume_size == 0:
-                continue
-
-            bdm.update_or_create()
 
     @staticmethod
     def _check_requested_volume_type(bdm, volume_type_id_or_name,

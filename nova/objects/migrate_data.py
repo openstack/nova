@@ -19,7 +19,6 @@ from oslo_serialization import jsonutils
 from oslo_utils import versionutils
 
 from nova import exception
-from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import fields
 
@@ -255,31 +254,6 @@ class LibvirtLiveMigrateData(LiveMigrateData):
                 del primitive['serial_listen_ports']
         if target_version < (1, 1) and 'target_connect_addr' in primitive:
             del primitive['target_connect_addr']
-
-    def _bdms_to_legacy(self, legacy):
-        if not self.obj_attr_is_set('bdms'):
-            return
-        legacy['volume'] = {}
-        for bdmi in self.bdms:
-            legacy['volume'][bdmi.serial] = {
-                'disk_info': bdmi.as_disk_info(),
-                'connection_info': bdmi.connection_info}
-
-    def _bdms_from_legacy(self, legacy_pre_result):
-        self.bdms = []
-        volume = legacy_pre_result.get('volume', {})
-        for serial in volume:
-            vol = volume[serial]
-            bdmi = objects.LibvirtLiveMigrateBDMInfo(serial=serial)
-            bdmi.connection_info = vol['connection_info']
-            bdmi.bus = vol['disk_info']['bus']
-            bdmi.dev = vol['disk_info']['dev']
-            bdmi.type = vol['disk_info']['type']
-            if 'format' in vol:
-                bdmi.format = vol['disk_info']['format']
-            if 'boot_index' in vol:
-                bdmi.boot_index = int(vol['disk_info']['boot_index'])
-            self.bdms.append(bdmi)
 
     def is_on_shared_storage(self):
         return self.is_shared_block_storage or self.is_shared_instance_path
