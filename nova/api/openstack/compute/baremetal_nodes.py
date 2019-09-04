@@ -78,14 +78,6 @@ def _no_ironic_proxy(cmd):
 class BareMetalNodeController(wsgi.Controller):
     """The Bare-Metal Node API controller for the OpenStack API."""
 
-    def _node_dict(self, node_ref):
-        d = {}
-        for f in node_fields:
-            d[f] = node_ref.get(f)
-        for f in node_ext_fields:
-            d[f] = node_ref.get(f)
-        return d
-
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((404, 501))
     def index(self, req):

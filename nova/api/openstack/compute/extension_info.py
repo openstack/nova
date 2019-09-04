@@ -852,13 +852,6 @@ EXTENSION_LIST_LEGACY_V2_COMPATIBLE = sorted(
 
 class ExtensionInfoController(wsgi.Controller):
 
-    def _add_vif_extension(self, all_extensions):
-        vif_extension_info = {'name': 'ExtendedVIFNet',
-                              'alias': 'OS-EXT-VIF-NET',
-                              'description': 'Adds network id parameter'
-                                  ' to the virtual interface list.'}
-        all_extensions.append(vif_extension_info)
-
     @wsgi.expected_errors(())
     def index(self, req):
         context = req.environ['nova.context']

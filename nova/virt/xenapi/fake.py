@@ -502,9 +502,6 @@ class Failure(Exception):
         except Exception:
             return "XenAPI Fake Failure: %s" % str(self.details)
 
-    def _details_map(self):
-        return {str(i): self.details[i] for i in range(len(self.details))}
-
 
 class SessionBase(object):
     """Base class for Fake Sessions."""

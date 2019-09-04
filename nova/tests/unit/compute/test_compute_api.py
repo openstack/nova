@@ -4391,11 +4391,10 @@ class _ComputeAPIUnitTestMixIn(object):
         @mock.patch.object(objects.Instance, 'create')
         @mock.patch.object(self.compute_api.security_group_api,
                 'ensure_default')
-        @mock.patch.object(self.compute_api, '_create_block_device_mapping')
         @mock.patch.object(objects.RequestSpec, 'from_components')
         def do_test(
-                mock_req_spec_from_components, _mock_create_bdm,
-                _mock_ensure_default, _mock_create, mock_check_num_inst_quota):
+                mock_req_spec_from_components, _mock_ensure_default,
+                _mock_create, mock_check_num_inst_quota):
             req_spec_mock = mock.MagicMock()
 
             mock_check_num_inst_quota.return_value = 1
@@ -4487,8 +4486,7 @@ class _ComputeAPIUnitTestMixIn(object):
                            'create_db_entry_for_new_instance')
         @mock.patch.object(self.compute_api,
                            '_bdm_validate_set_size_and_instance')
-        @mock.patch.object(self.compute_api, '_create_block_device_mapping')
-        def do_test(mock_cbdm, mock_bdm_v, mock_cdb, mock_sg, mock_cniq):
+        def do_test(mock_bdm_v, mock_cdb, mock_sg, mock_cniq):
             mock_cniq.return_value = 1
             self.compute_api._provision_instances(self.context,
                                                   mock.sentinel.flavor,
@@ -4610,8 +4608,6 @@ class _ComputeAPIUnitTestMixIn(object):
                 'ensure_default', new=mock.MagicMock())
         @mock.patch.object(self.compute_api, '_validate_bdm',
                 new=mock.MagicMock())
-        @mock.patch.object(self.compute_api, '_create_block_device_mapping',
-                new=mock.MagicMock())
         @mock.patch.object(objects.RequestSpec, 'from_components',
                 mock.MagicMock())
         @mock.patch('nova.objects.InstanceMapping')
@@ -4700,14 +4696,12 @@ class _ComputeAPIUnitTestMixIn(object):
         @mock.patch.object(objects, 'Instance')
         @mock.patch.object(self.compute_api.security_group_api,
                 'ensure_default')
-        @mock.patch.object(self.compute_api, '_create_block_device_mapping')
         @mock.patch.object(objects.RequestSpec, 'from_components')
         @mock.patch.object(objects, 'BuildRequest')
         @mock.patch.object(objects, 'InstanceMapping')
         def do_test(mock_inst_mapping, mock_build_req,
-                mock_req_spec_from_components, _mock_create_bdm,
-                _mock_ensure_default, mock_inst, mock_check_num_inst_quota,
-                mock_create_rs_br_im):
+                mock_req_spec_from_components, _mock_ensure_default,
+                mock_inst, mock_check_num_inst_quota, mock_create_rs_br_im):
 
             min_count = 1
             max_count = 2
@@ -4794,8 +4788,6 @@ class _ComputeAPIUnitTestMixIn(object):
         @mock.patch('nova.compute.utils.check_num_instances_quota')
         @mock.patch.object(self.compute_api, 'security_group_api')
         @mock.patch.object(compute_api, 'objects')
-        @mock.patch.object(self.compute_api, '_create_block_device_mapping',
-                           new=mock.MagicMock())
         @mock.patch.object(self.compute_api,
                            'create_db_entry_for_new_instance',
                            new=mock.MagicMock())
