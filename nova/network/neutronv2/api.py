@@ -2335,11 +2335,16 @@ class API(base_api.NetworkAPI):
         # the cache for that instance to avoid a window of time where multiple
         # servers in the API say they are using the same floating IP.
         if fip['port_id']:
-            # TODO(mriedem): Seems we should trap and log any errors from
+            # Trap and log any errors from
             # _update_inst_info_cache_for_disassociated_fip but not let them
             # raise back up to the caller since this refresh is best effort.
-            self._update_inst_info_cache_for_disassociated_fip(
-                context, instance, client, fip)
+            try:
+                self._update_inst_info_cache_for_disassociated_fip(
+                    context, instance, client, fip)
+            except Exception as e:
+                LOG.warning('An error occurred while trying to refresh the '
+                            'network info cache for an instance associated '
+                            'with port %s. Error: %s', fip['port_id'], e)
 
     def _update_inst_info_cache_for_disassociated_fip(self, context,
                                                       instance, client, fip):
