@@ -6592,16 +6592,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertTrue(usbhost_exists)
         self.assertTrue(keyboard_exists)
 
-    @mock.patch('nova.virt.libvirt.utils.get_arch')
-    def test_get_guest_config_machine_type_s390(self, mock_get_arch):
-
-        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
-        host_cpu_archs = (fields.Architecture.S390, fields.Architecture.S390X)
-        for host_cpu_arch in host_cpu_archs:
-            mock_get_arch.return_value = host_cpu_arch
-            os_mach_type = libvirt_utils.get_machine_type(image_meta)
-            self.assertEqual('s390-ccw-virtio', os_mach_type)
-
     def test_get_guest_config_machine_type_through_image_meta(self):
         self.flags(virt_type="kvm",
                    group='libvirt')
