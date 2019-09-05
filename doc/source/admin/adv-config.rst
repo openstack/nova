@@ -31,3 +31,4 @@ instance for these kind of workloads.
    virtual-gpu
    file-backed-memory
    port_with_resource_request
+   virtual-persistent-memory
