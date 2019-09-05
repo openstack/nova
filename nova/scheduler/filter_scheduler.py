@@ -173,10 +173,10 @@ class FilterScheduler(driver.Scheduler):
         if (instance_uuids is None or
                 not self.USES_ALLOCATION_CANDIDATES or
                 alloc_reqs_by_rp_uuid is None):
-            # We need to support the caching scheduler, which doesn't use the
-            # placement API (and has USES_ALLOCATION_CANDIDATE = False) and
-            # therefore we skip all the claiming logic for that scheduler
-            # driver. Also, if there was a problem communicating with the
+            # We still support external scheduler drivers that don't use the
+            # placement API (and set USES_ALLOCATION_CANDIDATE = False) and
+            # therefore we skip all the claiming logic for those scheduler
+            # drivers. Also, if there was a problem communicating with the
             # placement API, alloc_reqs_by_rp_uuid will be None, so we skip
             # claiming in that case as well. In the case where instance_uuids
             # is None, that indicates an older conductor, so we need to return
@@ -479,7 +479,8 @@ class FilterScheduler(driver.Scheduler):
         """Template method, so a subclass can implement caching."""
         # NOTE(jaypipes): provider_summaries being None is treated differently
         # from an empty dict. provider_summaries is None when we want to grab
-        # all compute nodes, for instance when using the caching scheduler.
+        # all compute nodes, for instance when using a scheduler driver that
+        # sets USES_ALLOCATION_CANDIDATES=False.
         # The provider_summaries variable will be an empty dict when the
         # Placement API found no providers that match the requested
         # constraints, which in turn makes compute_uuids an empty list and
