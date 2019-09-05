@@ -288,6 +288,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
         self.fake_policy = jsonutils.loads(fake_policy.policy_data)
 
         self.admin_only_rules = (
+"compute:server:topology:host:index",
 "network:attach_external_network",
 "os_compute_api:servers:create:forced_host",
 "compute:servers:create:requested_destination",
@@ -351,6 +352,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 )
 
         self.admin_or_owner_rules = (
+"compute:server:topology:index",
 "os_compute_api:servers:start",
 "os_compute_api:servers:stop",
 "os_compute_api:servers:trigger_crash_dump",

@@ -61,6 +61,7 @@ from nova.policies import server_groups
 from nova.policies import server_metadata
 from nova.policies import server_password
 from nova.policies import server_tags
+from nova.policies import server_topology
 from nova.policies import servers
 from nova.policies import servers_migrations
 from nova.policies import services
@@ -123,6 +124,7 @@ def list_rules():
         server_metadata.list_rules(),
         server_password.list_rules(),
         server_tags.list_rules(),
+        server_topology.list_rules(),
         servers.list_rules(),
         servers_migrations.list_rules(),
         services.list_rules(),

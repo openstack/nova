@@ -203,6 +203,8 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              ``GET /servers/{server_id}/os-instance-actions/{request_id}``.
     * 2.77 - Add support for specifying ``availability_zone`` to unshelve of a
              shelved offload server.
+    * 2.78 - Adds new API ``GET /servers/{server_id}/topology`` which shows
+             NUMA topology of a given server.
 """
 
 # The minimum and maximum versions of the API supported
@@ -211,7 +213,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.77"
+_MAX_API_VERSION = "2.78"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which are related to network, images and baremetal

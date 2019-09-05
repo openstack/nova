@@ -1,0 +1,21 @@
+---
+features:
+  - |
+    Microversion 2.78 adds a new ``topology`` sub-resource to the
+    servers API:
+
+    - ``GET /servers/{server_id}/topology``
+
+    This API provides information about the NUMA topology of a server,
+    including instance to host CPU pin mappings, if CPU pinning is used, and
+    pagesize information.
+
+    The information exposed by this API is admin or owner only by default,
+    controlled by rule:
+
+    - ``compute:server:topology:index``
+
+    And following fine control policy  use to keep host only information to
+    admin:
+
+    - ``compute:server:topology:host:index``

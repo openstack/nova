@@ -75,6 +75,7 @@ from nova.api.openstack.compute import server_metadata
 from nova.api.openstack.compute import server_migrations
 from nova.api.openstack.compute import server_password
 from nova.api.openstack.compute import server_tags
+from nova.api.openstack.compute import server_topology
 from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import services
 from nova.api.openstack.compute import shelve
@@ -316,6 +317,8 @@ server_security_groups_controller = functools.partial(_create_controller,
 server_tags_controller = functools.partial(_create_controller,
     server_tags.ServerTagsController, [])
 
+server_topology_controller = functools.partial(_create_controller,
+    server_topology.ServerTopologyController, [])
 
 server_volume_attachments_controller = functools.partial(_create_controller,
     volumes.VolumeAttachmentController, [])
@@ -831,6 +834,9 @@ ROUTE_LIST = (
         'GET': [server_tags_controller, 'show'],
         'PUT': [server_tags_controller, 'update'],
         'DELETE': [server_tags_controller, 'delete']
+    }),
+    ('/servers/{server_id}/topology', {
+        'GET': [server_topology_controller, 'index']
     }),
 )
 
