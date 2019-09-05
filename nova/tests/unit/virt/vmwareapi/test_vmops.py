@@ -786,7 +786,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 '[fake] uuid/root.vmdk')
             mock_attach_disk.assert_called_once_with(
                     'fake-ref', self._instance, 'fake-adapter', 'fake-disk',
-                    '[fake] uuid/root.vmdk')
+                    '[fake] uuid/root.vmdk',
+                    disk_io_limits=extra_specs.disk_io_limits)
             fake_remove_ephemerals_and_swap.assert_called_once_with('fake-ref')
             fake_resize_create_ephemerals_and_swap.assert_called_once_with(
                 'fake-ref', self._instance, None)
@@ -946,10 +947,11 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                                  'vm-ref', 'fake-spec')
 
     @mock.patch.object(vmops.VMwareVMOps, '_extend_virtual_disk')
+    @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(ds_util, 'disk_move')
     @mock.patch.object(ds_util, 'disk_copy')
     def test_resize_disk(self, fake_disk_copy, fake_disk_move,
-                         fake_extend):
+                         fake_get_extra_specs, fake_extend):
         datastore = ds_obj.Datastore(ref='fake-ref', name='fake')
         device = vmwareapi_fake.DataObject()
         backing = vmwareapi_fake.DataObject()
@@ -968,6 +970,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             mock_attach_disk = self._vmops._volumeops.attach_disk_to_vm
             mock_detach_disk = self._vmops._volumeops.detach_disk_from_vm
 
+            extra_specs = vm_util.ExtraSpecs()
+            fake_get_extra_specs.return_value = extra_specs
             flavor = fake_flavor.fake_flavor_obj(self._context,
                          root_gb=self._instance.flavor.root_gb + 1)
             self._vmops._resize_disk(self._instance, 'fake-ref', vmdk, flavor)
@@ -992,7 +996,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
             mock_attach_disk.assert_called_once_with(
                     'fake-ref', self._instance, 'fake-adapter', 'fake-disk',
-                    '[fake] uuid/root.vmdk')
+                    '[fake] uuid/root.vmdk',
+                    disk_io_limits=extra_specs.disk_io_limits)
 
     @mock.patch.object(vm_util, 'detach_devices_from_vm')
     @mock.patch.object(vm_util, 'get_swap')
