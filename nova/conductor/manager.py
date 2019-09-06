@@ -309,9 +309,8 @@ class ComputeTaskManager(base.Base):
         # it only provides filter_properties legacy dict back to the
         # conductor with no RequestSpec part of the payload for <Stein
         # computes.
-        # TODO(mriedem): We should be able to remove this in Train when we
-        # only support >=Stein computes and request_spec is passed back to
-        # conductor on reschedule.
+        # TODO(mriedem): We can remove this compat code for no request spec
+        # coming to conductor in ComputeTaskAPI RPC API version 2.0
         if not request_spec:
             # Make sure we hydrate a new RequestSpec object with the new flavor
             # and not the nested one from the instance
@@ -320,6 +319,19 @@ class ComputeTaskManager(base.Base):
                 flavor, instance.numa_topology, instance.pci_requests,
                 filter_properties, None, instance.availability_zone,
                 project_id=instance.project_id, user_id=instance.user_id)
+        elif not isinstance(request_spec, objects.RequestSpec):
+            # Prior to compute RPC API 5.1 conductor would pass a legacy dict
+            # version of the request spec to compute and Stein compute
+            # could be sending that back to conductor on reschedule, so if we
+            # got a dict convert it to an object.
+            # TODO(mriedem): We can drop this compat code when we only support
+            # compute RPC API >=6.0.
+            request_spec = objects.RequestSpec.from_primitives(
+                context, request_spec, filter_properties)
+            # We don't have to set the new flavor on the request spec because
+            # if we got here it was due to a reschedule from the compute and
+            # the request spec would already have the new flavor in it from the
+            # else block below.
         else:
             # NOTE(sbauza): Resizes means new flavor, so we need to update the
             # original RequestSpec object for make sure the scheduler verifies

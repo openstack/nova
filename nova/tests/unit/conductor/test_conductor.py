@@ -2888,6 +2888,37 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         # ...and persisted
         spec_save_mock.assert_called_once_with()
 
+    @mock.patch('nova.objects.RequestSpec.from_primitives')
+    @mock.patch.object(objects.RequestSpec, 'save')
+    def test_cold_migrate_reschedule_legacy_request_spec(
+            self, spec_save_mock, from_primitives_mock):
+        """Tests the scenario that compute RPC API is pinned to less than 5.1
+        so conductor passes a legacy dict request spec to compute and compute
+        sends it back to conductor on a reschedule during prep_resize so
+        conductor has to convert the legacy request spec dict to an object.
+        """
+        instance = objects.Instance(system_metadata={})
+        fake_spec = fake_request_spec.fake_spec_obj()
+        from_primitives_mock.return_value = fake_spec
+        legacy_spec = fake_spec.to_legacy_request_spec_dict()
+        flavor = fake_spec.flavor
+        filter_props = {}
+        clean_shutdown = True
+        host_list = mock.sentinel.host_list
+
+        with mock.patch.object(
+                self.conductor, '_build_cold_migrate_task') as build_task_mock:
+            self.conductor._cold_migrate(
+                self.context, instance, flavor, filter_props,
+                clean_shutdown, legacy_spec, host_list)
+        # Make sure the legacy request spec was converted.
+        from_primitives_mock.assert_called_once_with(
+            self.context, legacy_spec, filter_props)
+        build_task_mock.assert_called_once_with(
+            self.context, instance, flavor,
+            fake_spec, clean_shutdown, host_list)
+        spec_save_mock.assert_called_once_with()
+
     def test_resize_no_valid_host_error_msg(self):
         flavor = flavors.get_flavor_by_name('m1.tiny')
         flavor_new = flavors.get_flavor_by_name('m1.small')

@@ -769,6 +769,7 @@ class ComputeAPI(object):
                           block_migration=block_migration,
                           disk=disk, migrate_data=migrate_data)
 
+    # TODO(mriedem): Drop compat for request_spec being a legacy dict in v6.0.
     def prep_resize(self, ctxt, instance, image, instance_type, host,
                     migration, request_spec, filter_properties, node,
                     clean_shutdown, host_list):
