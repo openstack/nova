@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    By incorporating oslo fixes for `bug 1715374`_ and `bug 1794708`_, the
+    nova-compute service now handles ``SIGHUP`` properly.
+
+    .. _`bug 1794708`: https://bugs.launchpad.net/oslo.service/+bug/1794708
+    .. _`bug 1715374`: https://bugs.launchpad.net/nova/+bug/1715374
