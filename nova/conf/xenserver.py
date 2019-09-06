@@ -21,6 +21,12 @@ from oslo_utils import units
 xenserver_group = cfg.OptGroup('xenserver',
                                title='Xenserver Options',
                                help="""
+.. warning:: The xenapi driver is deprecated and may be removed in a future
+             release. The driver is not tested by the OpenStack project nor
+             does it have clear maintainer(s) and thus its quality can not be
+             ensured. If you are using the driver in production please let us
+             know in freenode IRC and/or the openstack-discuss mailing list.
+
 XenServer options are used when the compute_driver is set to use
 XenServer (compute_driver=xenapi.XenAPIDriver).
 

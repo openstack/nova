@@ -112,11 +112,12 @@ class XenAPIDriver(driver.ComputeDriver):
         return self._host_state
 
     def init_host(self, host):
-        # TODO(mriedem): Consider deprecating the driver if there is still no
-        # working 3rd party CI by the end of the Train release.
-        LOG.warning('The xenapi driver is not tested by the OpenStack '
-                    'project and thus its quality can not be ensured. The '
-                    'driver may be deprecated in the future.')
+        LOG.warning('The xenapi driver is deprecated and may be removed in a '
+                    'future release. The driver is not tested by the '
+                    'OpenStack project nor does it have clear maintainer(s) '
+                    'and thus its quality can not be ensured. If you are '
+                    'using the driver in production please let us know in '
+                    'freenode IRC and/or the openstack-discuss mailing list.')
 
         if CONF.xenserver.independent_compute:
             # Check various options are in the correct state:
