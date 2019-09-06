@@ -573,11 +573,11 @@ class VMwareVMOps(object):
                             tmp_image_ds_loc.parent,
                             vi.cache_image_folder)
 
-    def _get_vm_config_info(self, instance, image_info,
-                            extra_specs):
+    def _get_vm_config_info(self, instance, image_info, extra_specs):
         """Captures all relevant information from the spawn parameters."""
 
         if (instance.flavor.root_gb != 0 and
+                instance.image_ref and
                 image_info.file_size > instance.flavor.root_gb * units.Gi):
             reason = _("Image disk size greater than requested disk size")
             raise exception.InstanceUnacceptable(instance_id=instance.uuid,
