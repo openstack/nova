@@ -99,13 +99,14 @@ class NovaProxyRequestHandlerBase(object):
         # deployments due to DNS configuration and break VNC access completely
         return str(self.client_address[0])
 
-    def verify_origin_proto(self, connection_info, origin_proto):
-        access_url = connection_info.get('access_url')
-        if not access_url:
-            detail = _("No access_url in connection_info. "
-                        "Cannot validate protocol")
+    def verify_origin_proto(self, connect_info, origin_proto):
+        if 'access_url_base' not in connect_info:
+            detail = _("No access_url_base in connect_info. "
+                       "Cannot validate protocol")
             raise exception.ValidationError(detail=detail)
-        expected_protos = [urlparse.urlparse(access_url).scheme]
+
+        expected_protos = [
+            urlparse.urlparse(connect_info.access_url_base).scheme]
         # NOTE: For serial consoles the expected protocol could be ws or
         # wss which correspond to http and https respectively in terms of
         # security.
@@ -133,11 +134,11 @@ class NovaProxyRequestHandlerBase(object):
         # NOTE(PaulMurray) ConsoleAuthToken.validate validates the token.
         # We call the compute manager directly to check the console port
         # is correct.
-        connect_info = objects.ConsoleAuthToken.validate(ctxt, token).to_dict()
+        connect_info = objects.ConsoleAuthToken.validate(ctxt, token)
 
         valid_port = self._check_console_port(
-            ctxt, connect_info['instance_uuid'], connect_info['port'],
-            connect_info['console_type'])
+            ctxt, connect_info.instance_uuid, connect_info.port,
+            connect_info.console_type)
 
         if not valid_port:
             raise exception.InvalidToken(token='***')
@@ -220,8 +221,8 @@ class NovaProxyRequestHandlerBase(object):
                 raise exception.ValidationError(detail=detail)
 
         self.msg(_('connect info: %s'), str(connect_info))
-        host = connect_info['host']
-        port = int(connect_info['port'])
+        host = connect_info.host
+        port = connect_info.port
 
         # Connect to the target
         self.msg(_("connecting to: %(host)s:%(port)s") % {'host': host,
@@ -229,20 +230,21 @@ class NovaProxyRequestHandlerBase(object):
         tsock = self.socket(host, port, connect=True)
 
         # Handshake as necessary
-        if connect_info.get('internal_access_path'):
-            tsock.send(encodeutils.safe_encode(
-                "CONNECT %s HTTP/1.1\r\n\r\n" %
-                connect_info['internal_access_path']))
-            end_token = "\r\n\r\n"
-            while True:
-                data = tsock.recv(4096, socket.MSG_PEEK)
-                token_loc = data.find(end_token)
-                if token_loc != -1:
-                    if data.split("\r\n")[0].find("200") == -1:
-                        raise exception.InvalidConnectionInfo()
-                    # remove the response from recv buffer
-                    tsock.recv(token_loc + len(end_token))
-                    break
+        if 'internal_access_path' in connect_info:
+            path = connect_info.internal_access_path
+            if path:
+                tsock.send(encodeutils.safe_encode(
+                    'CONNECT %s HTTP/1.1\r\n\r\n' % path))
+                end_token = "\r\n\r\n"
+                while True:
+                    data = tsock.recv(4096, socket.MSG_PEEK)
+                    token_loc = data.find(end_token)
+                    if token_loc != -1:
+                        if data.split("\r\n")[0].find("200") == -1:
+                            raise exception.InvalidConnectionInfo()
+                        # remove the response from recv buffer
+                        tsock.recv(token_loc + len(end_token))
+                        break
 
         if self.server.security_proxy is not None:
             tenant_sock = TenantSock(self)

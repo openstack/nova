@@ -80,24 +80,6 @@ class ConsoleAuthToken(base.NovaTimestampObject, base.NovaObject):
         obj.obj_reset_changes()
         return obj
 
-    def to_dict(self):
-        """Convert to a dict representation."""
-        # NOTE(PaulMurray) For compatibility while there is code that
-        # expects the dict representation returned by consoleauth.
-        # TODO(PaulMurray) Remove this function when the code no
-        # longer expects the consoleauth dict representation
-        connect_info = {}
-        connect_info['token'] = self.token,
-        connect_info['instance_uuid'] = self.instance_uuid
-        connect_info['console_type'] = self.console_type
-        connect_info['host'] = self.host
-        connect_info['port'] = self.port
-        if 'internal_access_path' in self:
-            connect_info['internal_access_path'] = self.internal_access_path
-        if 'access_url_base' in self:
-            connect_info['access_url'] = self.access_url
-        return connect_info
-
     @base.remotable
     def authorize(self, ttl):
         """Authorise the console token and store in the database.
