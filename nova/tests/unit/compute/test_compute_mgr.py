@@ -5263,7 +5263,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 source_compute='fake-source',
                 dest_compute='fake-dest')
 
-        def fake_migrate_instance_finish(context, instance, migration):
+        def fake_migrate_instance_finish(
+                context, instance, migration, mapping):
             # NOTE(artom) This looks weird, but it's checking that the
             # temporaty_mutation() context manager did its job.
             self.assertEqual(migration.dest_compute, migration.source_compute)
@@ -5276,12 +5277,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                               side_effect=fake_migrate_instance_finish)
         ) as (mock_wait, mock_migrate_instance_finish):
             self.compute._finish_revert_resize_network_migrate_finish(
-                self.context, instance, migration)
+                self.context, instance, migration, mock.sentinel.mapping)
             mock_wait.assert_called_once_with(
                 instance, events, deadline=CONF.vif_plugging_timeout,
                 error_callback=self.compute._neutron_failed_migration_callback)
             mock_migrate_instance_finish.assert_called_once_with(
-                self.context, instance, migration)
+                self.context, instance, migration, mock.sentinel.mapping)
 
     def test_finish_revert_resize_network_migrate_finish_wait(self):
         """Test that we wait for bind-time events if we have a hybrid-plugged
@@ -7410,7 +7411,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
     def test_finish_revert_resize_network_calls_order(self):
         self.nw_info = None
 
-        def _migrate_instance_finish(context, instance, migration):
+        def _migrate_instance_finish(
+                context, instance, migration, provider_mappings):
             # The migration.dest_compute is temporarily set to source_compute.
             self.assertEqual(migration.source_compute, migration.dest_compute)
             self.nw_info = 'nw_info'
@@ -8459,7 +8461,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 self.context, self.instance,
                 {'source_compute': cn_old,
                  'dest_compute': self.compute.host,
-                 'migration_type': 'live-migration'})
+                 'migration_type': 'live-migration'},
+                provider_mappings=None)
             _get_instance_block_device_info.assert_called_once_with(
                 self.context, self.instance
             )

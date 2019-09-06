@@ -2774,11 +2774,12 @@ class API(base_api.NetworkAPI):
                           'Error: %s', vif['id'], dest_host, resp.status_code,
                           resp.text)
 
-    def migrate_instance_finish(self, context, instance, migration):
+    def migrate_instance_finish(
+            self, context, instance, migration, provider_mappings):
         """Finish migrating the network of an instance."""
-        self._update_port_binding_for_instance(context, instance,
-                                               migration['dest_compute'],
-                                               migration=migration)
+        self._update_port_binding_for_instance(
+            context, instance, migration['dest_compute'], migration=migration,
+            provider_mappings=provider_mappings)
 
     def add_network_to_project(self, context, project_id, network_uuid=None):
         """Force add a network to the project."""
@@ -3249,8 +3250,10 @@ class API(base_api.NetworkAPI):
                   migration.get('status') == 'reverted')
         return instance.migration_context.get_pci_mapping_for_migration(revert)
 
-    def _update_port_binding_for_instance(self, context, instance, host,
-                                          migration=None):
+    def _update_port_binding_for_instance(
+            self, context, instance, host, migration=None,
+            provider_mappings=None):
+
         neutron = get_client(context, admin=True)
         search_opts = {'device_id': instance.uuid,
                        'tenant_id': instance.project_id}
@@ -3269,9 +3272,6 @@ class API(base_api.NetworkAPI):
             vif_type = p.get('binding:vif_type')
             if (p.get(constants.BINDING_HOST_ID) != host or
                     vif_type in FAILED_VIF_TYPES):
-                # TODO(gibi): To support ports with resource request during
-                # server move operations we need to take care of 'allocation'
-                # key in the binding profile per binding.
 
                 updates[constants.BINDING_HOST_ID] = host
                 # If the host changed, the AZ could have also changed so we
@@ -3310,6 +3310,28 @@ class API(base_api.NetworkAPI):
                     raise exception.PortUpdateFailed(port_id=p['id'],
                         reason=_("Unable to correlate PCI slot %s") %
                                  pci_slot)
+
+            if p.get('resource_request'):
+                if not provider_mappings:
+                    # NOTE(gibi): This should not happen as the API level
+                    # minimum compute service version check ensures that the
+                    # compute services already send the RequestSpec during
+                    # the move operations between the source and the
+                    # destination and the dest compute calculates the
+                    # mapping based on that.
+                    raise exception.PortUpdateFailed(
+                        port_id=p['id'],
+                        reason=_("Provider mappings wasn't provided for the "
+                                 "port with resource request"))
+
+                # NOTE(gibi): In the resource provider mapping there can be
+                # more than one RP fulfilling a request group. But resource
+                # requests of a Neutron port is always mapped to a
+                # numbered request group that is always fulfilled by one
+                # resource provider. So we only pass that single RP UUID here.
+                binding_profile[constants.ALLOCATION] = \
+                    provider_mappings[p['id']][0]
+                updates[constants.BINDING_PROFILE] = binding_profile
 
             port_updates.append((p['id'], updates))
 

@@ -4866,7 +4866,7 @@ class ComputeTestCase(BaseTestCase,
             mock_setup.assert_called_once_with(self.context, instance,
                                                'fake-mini')
             mock_net_mig.assert_called_once_with(self.context,
-                test.MatchType(objects.Instance), migration)
+                test.MatchType(objects.Instance), migration, None)
             mock_get_nw.assert_called_once_with(self.context, instance)
             mock_notify.assert_has_calls([
                 mock.call(self.context, instance, 'finish_resize.start',

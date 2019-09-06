@@ -4203,8 +4203,8 @@ class ComputeManager(manager.Manager):
             self.compute_rpcapi.finish_revert_resize(context, instance,
                     migration, migration.source_compute, request_spec)
 
-    def _finish_revert_resize_network_migrate_finish(self, context, instance,
-                                                     migration):
+    def _finish_revert_resize_network_migrate_finish(
+            self, context, instance, migration, provider_mappings):
         """Causes port binding to be updated. In some Neutron or port
         configurations - see NetworkModel.get_bind_time_events() - we
         expect the vif-plugged event from Neutron immediately and wait for it.
@@ -4214,6 +4214,8 @@ class ComputeManager(manager.Manager):
         :param context: The request context.
         :param instance: The instance undergoing the revert resize.
         :param migration: The Migration object of the resize being reverted.
+        :param provider_mappings: a dict of list of resource provider uuids
+            keyed by port uuid
         :raises: eventlet.timeout.Timeout or
                  exception.VirtualInterfacePlugException.
         """
@@ -4238,9 +4240,8 @@ class ComputeManager(manager.Manager):
                 # the migration.dest_compute to source host at here.
                 with utils.temporary_mutation(
                         migration, dest_compute=migration.source_compute):
-                    self.network_api.migrate_instance_finish(context,
-                                                             instance,
-                                                             migration)
+                    self.network_api.migrate_instance_finish(
+                        context, instance, migration, provider_mappings)
         except eventlet.timeout.Timeout:
             with excutils.save_and_reraise_exception():
                 LOG.error('Timeout waiting for Neutron events: %s', events,
@@ -4292,10 +4293,12 @@ class ComputeManager(manager.Manager):
                            'migration_uuid': migration.uuid})
                 raise
 
+            provider_mappings = self._get_request_group_mapping(request_spec)
+
             self.network_api.setup_networks_on_host(context, instance,
                                                     migration.source_compute)
             self._finish_revert_resize_network_migrate_finish(
-                context, instance, migration)
+                context, instance, migration, provider_mappings)
             network_info = self.network_api.get_instance_nw_info(context,
                                                                  instance)
 
@@ -4746,7 +4749,7 @@ class ComputeManager(manager.Manager):
                         context, bdm.attachment_id)
 
     def _finish_resize(self, context, instance, migration, disk_info,
-                       image_meta, bdms):
+                       image_meta, bdms, request_spec):
         resize_instance = False  # indicates disks have been resized
         old_instance_type_id = migration['old_instance_type_id']
         new_instance_type_id = migration['new_instance_type_id']
@@ -4772,11 +4775,12 @@ class ComputeManager(manager.Manager):
         # NOTE(tr3buchet): setup networks on destination host
         self.network_api.setup_networks_on_host(context, instance,
                                                 migration.dest_compute)
+        provider_mappings = self._get_request_group_mapping(request_spec)
+
         # For neutron, migrate_instance_finish updates port bindings for this
         # host including any PCI devices claimed for SR-IOV ports.
-        self.network_api.migrate_instance_finish(context,
-                                                 instance,
-                                                 migration)
+        self.network_api.migrate_instance_finish(
+            context, instance, migration, provider_mappings)
 
         network_info = self.network_api.get_instance_nw_info(context, instance)
 
@@ -4850,7 +4854,7 @@ class ComputeManager(manager.Manager):
         """
         try:
             self._finish_resize_helper(context, disk_info, image, instance,
-                                       migration)
+                                       migration, request_spec)
         except Exception:
             with excutils.save_and_reraise_exception():
                 # At this point, resize_instance (which runs on the source) has
@@ -4871,7 +4875,7 @@ class ComputeManager(manager.Manager):
                     context, instance, migration)
 
     def _finish_resize_helper(self, context, disk_info, image, instance,
-                              migration):
+                              migration, request_spec):
         """Completes the migration process.
 
         The caller must revert the instance's allocations if the migration
@@ -4883,7 +4887,8 @@ class ComputeManager(manager.Manager):
         with self._error_out_instance_on_exception(context, instance):
             image_meta = objects.ImageMeta.from_dict(image)
             network_info = self._finish_resize(context, instance, migration,
-                                               disk_info, image_meta, bdms)
+                                               disk_info, image_meta, bdms,
+                                               request_spec)
 
         # TODO(melwitt): We should clean up instance console tokens here. The
         # instance is on a new host and will need to establish a new console
@@ -7242,9 +7247,9 @@ class ComputeManager(manager.Manager):
         migration = {'source_compute': instance.host,
                      'dest_compute': self.host,
                      'migration_type': 'live-migration'}
-        self.network_api.migrate_instance_finish(context,
-                                                 instance,
-                                                 migration)
+        # TODO(gibi): calculate and pass resource_provider_mapping
+        self.network_api.migrate_instance_finish(
+            context, instance, migration, provider_mappings=None)
 
         network_info = self.network_api.get_instance_nw_info(context, instance)
         self._notify_about_instance_usage(

@@ -343,8 +343,16 @@ class NetworkAPI(base.Base):
         """Start to migrate the network of an instance."""
         raise NotImplementedError()
 
-    def migrate_instance_finish(self, context, instance, migration):
-        """Finish migrating the network of an instance."""
+    def migrate_instance_finish(
+            self, context, instance, migration, provider_mappings):
+        """Finish migrating the network of an instance.
+
+        :param context: The request context.
+        :param instance: nova.objects.instance.Instance object.
+        :param migration: nova.objects.migration.Migration object.
+        :param provider_mappings: a dict of list of resource provider uuids
+            keyed by port uuid
+        """
         raise NotImplementedError()
 
     def setup_instance_network_on_host(self, context, instance, host,
