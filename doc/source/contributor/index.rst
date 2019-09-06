@@ -104,8 +104,6 @@ changes done to the API, as the impact can be very wide.
 Nova Major Subsystems
 =====================
 
-Major subsystems in nova have different needs; some of those are documented
-here. If you are contributing to one of these please read the subsystem guide
-before diving in.
-
-* :doc:`/user/conductor`
+Major subsystems in nova have different needs. If you are contributing to one
+of these please read the :ref:`reference guide <reference-internals>` before
+diving in.

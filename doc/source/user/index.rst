@@ -27,7 +27,8 @@ Architecture Overview
   to connect specific block devices to computes. This deserves its own deep
   dive.
 
-* :doc:`Conductor </user/conductor>`: TODO
+See the :ref:`reference guide <reference-internals>` for details about more
+internal subsystems.
 
 Deployment Considerations
 -------------------------

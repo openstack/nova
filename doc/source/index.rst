@@ -223,6 +223,7 @@ looking parts of our architecture. These are collected below.
    contributor/project-scope
    contributor/ptl-guide
    reference/api-microversion-history.rst
+   reference/conductor
    reference/gmr
    reference/i18n
    reference/live-migration
@@ -245,7 +246,6 @@ looking parts of our architecture. These are collected below.
    user/cells
    user/cellsv2-layout
    user/certificate-validation
-   user/conductor
    user/feature-classification
    user/filter-scheduler
    user/flavors
