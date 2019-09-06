@@ -300,11 +300,9 @@ class ComputeTaskManager(base.Base):
         else:
             raise NotImplementedError()
 
-    def _cold_migrate(self, context, instance, flavor, filter_properties,
-                      clean_shutdown, request_spec, host_list):
-        image = utils.get_image_from_system_metadata(
-            instance.system_metadata)
-
+    @staticmethod
+    def _get_request_spec_for_cold_migrate(context, instance, flavor,
+                                           filter_properties, request_spec):
         # NOTE(sbauza): If a reschedule occurs when prep_resize(), then
         # it only provides filter_properties legacy dict back to the
         # conductor with no RequestSpec part of the payload for <Stein
@@ -312,10 +310,12 @@ class ComputeTaskManager(base.Base):
         # TODO(mriedem): We can remove this compat code for no request spec
         # coming to conductor in ComputeTaskAPI RPC API version 2.0
         if not request_spec:
+            image_meta = utils.get_image_from_system_metadata(
+                instance.system_metadata)
             # Make sure we hydrate a new RequestSpec object with the new flavor
             # and not the nested one from the instance
             request_spec = objects.RequestSpec.from_components(
-                context, instance.uuid, image,
+                context, instance.uuid, image_meta,
                 flavor, instance.numa_topology, instance.pci_requests,
                 filter_properties, None, instance.availability_zone,
                 project_id=instance.project_id, user_id=instance.user_id)
@@ -337,6 +337,12 @@ class ComputeTaskManager(base.Base):
             # original RequestSpec object for make sure the scheduler verifies
             # the right one and not the original flavor
             request_spec.flavor = flavor
+        return request_spec
+
+    def _cold_migrate(self, context, instance, flavor, filter_properties,
+                      clean_shutdown, request_spec, host_list):
+        request_spec = self._get_request_spec_for_cold_migrate(
+            context, instance, flavor, filter_properties, request_spec)
 
         task = self._build_cold_migrate_task(context, instance, flavor,
                 request_spec, clean_shutdown, host_list)
