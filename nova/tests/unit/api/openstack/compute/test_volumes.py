@@ -1092,6 +1092,61 @@ class VolumeAttachTestsV279(VolumeAttachTestsV2_75):
         self.assertIn("Invalid input for field/attribute "
                       "delete_on_termination.", six.text_type(ex))
 
+    @mock.patch('nova.compute.api.API.attach_volume', return_value=None)
+    def test_attach_volume_v279(self, mock_attach_volume):
+        body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
+                                     'delete_on_termination': True}}
+        req = self._get_req(body)
+        result = self.attachments.create(req, FAKE_UUID, body=body)
+        self.assertTrue(result['volumeAttachment']['delete_on_termination'])
+        mock_attach_volume.assert_called_once_with(
+            req.environ['nova.context'], test.MatchType(objects.Instance),
+            FAKE_UUID_A, None, tag=None, supports_multiattach=True,
+            delete_on_termination=True)
+
+    def test_show_pre_v279(self):
+        """Before microversion 2.79, show a detail of a volume attachment
+        does not contain the 'delete_on_termination' field in the response
+        body.
+        """
+        req = self._get_req(body={}, microversion='2.78')
+        req.method = 'GET'
+        result = self.attachments.show(req, FAKE_UUID, FAKE_UUID_A)
+
+        self.assertNotIn('delete_on_termination', result['volumeAttachment'])
+
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
+    def test_list_pre_v279(self, mock_get_bdms):
+        """Before microversion 2.79, list of a volume attachment
+        does not contain the 'delete_on_termination' field in the response
+        body.
+        """
+        req = fakes.HTTPRequest.blank(
+            '/v2/servers/id/os-volume_attachments',
+            version="2.78")
+        req.body = jsonutils.dump_as_bytes({})
+        req.method = 'GET'
+        req.headers['content-type'] = 'application/json'
+
+        vol_bdm = objects.BlockDeviceMapping(
+            self.context,
+            id=1,
+            instance_uuid=FAKE_UUID,
+            volume_id=FAKE_UUID_A,
+            source_type='volume',
+            destination_type='volume',
+            delete_on_termination=True,
+            connection_info=None,
+            tag='fake-tag',
+            device_name='/dev/fake0',
+            attachment_id=uuids.attachment_id)
+        bdms = objects.BlockDeviceMappingList(objects=[vol_bdm])
+
+        mock_get_bdms.return_value = bdms
+        result = self.attachments.index(req, FAKE_UUID)
+
+        self.assertNotIn('delete_on_termination', result['volumeAttachments'])
+
 
 class SwapVolumeMultiattachTestCase(test.NoDBTestCase):
 
