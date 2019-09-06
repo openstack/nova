@@ -205,6 +205,12 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              shelved offload server.
     * 2.78 - Adds new API ``GET /servers/{server_id}/topology`` which shows
              NUMA topology of a given server.
+    * 2.79 - Adds support for specifying ``delete_on_termination`` field in the
+             request body to
+             ``POST /servers/{server_id}/os-volume_attachments`` and exposes
+             this via the response from
+             ``GET /servers/{server_id}/os-volume_attachments`` and
+             ``GET /servers/{server_id}/os-volume_attachments/{volume_id}``.
 """
 
 # The minimum and maximum versions of the API supported
@@ -213,7 +219,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.78"
+_MAX_API_VERSION = "2.79"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which are related to network, images and baremetal

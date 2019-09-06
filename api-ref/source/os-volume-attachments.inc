@@ -39,6 +39,7 @@ Response
   - serverId: server_id
   - volumeId: volumeId_resp
   - tag: device_tag_bdm_attachment_resp
+  - delete_on_termination: delete_on_termination_attachments_resp
 
 **Example List volume attachments for an instance: JSON response**
 
@@ -79,6 +80,7 @@ Request
   - volumeId: volumeId
   - device: device
   - tag: device_tag_bdm_attachment
+  - delete_on_termination: delete_on_termination_attachments_req
 
 **Example Attach a volume to an instance: JSON request**
 
@@ -88,6 +90,11 @@ Request
 **Example Attach a volume to an instance and tag it (v2.49): JSON request**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/v2.49/attach-volume-to-server-req.json
+   :language: javascript
+
+**Example Attach a volume to an instance with "delete_on_termination" (v2.79): JSON request**
+
+.. literalinclude:: ../../doc/api_samples/os-volumes/v2.79/attach-volume-to-server-req.json
    :language: javascript
 
 Response
@@ -101,6 +108,7 @@ Response
   - serverId: server_id
   - volumeId: volumeId_resp
   - tag: device_tag_bdm_attachment_resp
+  - delete_on_termination: delete_on_termination_attachments_resp
 
 **Example Attach a volume to an instance: JSON response**
 
@@ -110,6 +118,11 @@ Response
 **Example Attach a tagged volume to an instance (v2.70): JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/v2.70/attach-volume-to-server-resp.json
+   :language: javascript
+
+**Example Attach a volume with "delete_on_termination" (v2.79): JSON response**
+
+.. literalinclude:: ../../doc/api_samples/os-volumes/v2.79/attach-volume-to-server-resp.json
    :language: javascript
 
 Show a detail of a volume attachment
@@ -142,6 +155,7 @@ Response
   - serverId: server_id
   - volumeId: volumeId_resp
   - tag: device_tag_bdm_attachment_resp
+  - delete_on_termination: delete_on_termination_attachments_resp
 
 **Example Show a detail of a volume attachment: JSON response**
 

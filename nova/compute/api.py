@@ -3977,7 +3977,7 @@ class API(base.Base):
 
     def _create_volume_bdm(self, context, instance, device, volume,
                            disk_bus, device_type, is_local_creation=False,
-                           tag=None):
+                           tag=None, delete_on_termination=False):
         volume_id = volume['id']
         if is_local_creation:
             # when the creation is done locally we can't specify the device
@@ -3996,7 +3996,8 @@ class API(base.Base):
                 instance_uuid=instance.uuid, boot_index=None,
                 volume_id=volume_id,
                 device_name=None, guest_format=None,
-                disk_bus=disk_bus, device_type=device_type)
+                disk_bus=disk_bus, device_type=device_type,
+                delete_on_termination=delete_on_termination)
             volume_bdm.create()
         else:
             # NOTE(vish): This is done on the compute host because we want
@@ -4008,6 +4009,8 @@ class API(base.Base):
                 context, instance, device, volume_id, disk_bus=disk_bus,
                 device_type=device_type, tag=tag,
                 multiattach=volume['multiattach'])
+            volume_bdm.delete_on_termination = delete_on_termination
+            volume_bdm.save()
         return volume_bdm
 
     def _check_volume_already_attached_to_instance(self, context, instance,
@@ -4056,7 +4059,8 @@ class API(base.Base):
     # override it.
     def _attach_volume(self, context, instance, volume, device,
                        disk_bus, device_type, tag=None,
-                       supports_multiattach=False):
+                       supports_multiattach=False,
+                       delete_on_termination=False):
         """Attach an existing volume to an existing instance.
 
         This method is separated to make it possible for cells version
@@ -4064,7 +4068,8 @@ class API(base.Base):
         """
         volume_bdm = self._create_volume_bdm(
             context, instance, device, volume, disk_bus=disk_bus,
-            device_type=device_type, tag=tag)
+            device_type=device_type, tag=tag,
+            delete_on_termination=delete_on_termination)
         try:
             self._check_attach_and_reserve_volume(context, volume, instance,
                                                   volume_bdm,
@@ -4079,7 +4084,8 @@ class API(base.Base):
         return volume_bdm.device_name
 
     def _attach_volume_shelved_offloaded(self, context, instance, volume,
-                                         device, disk_bus, device_type):
+                                         device, disk_bus, device_type,
+                                         delete_on_termination):
         """Attach an existing volume to an instance in shelved offloaded state.
 
         Attaching a volume for an instance in shelved offloaded state requires
@@ -4109,7 +4115,8 @@ class API(base.Base):
 
         volume_bdm = self._create_volume_bdm(
             context, instance, device, volume, disk_bus=disk_bus,
-            device_type=device_type, is_local_creation=True)
+            device_type=device_type, is_local_creation=True,
+            delete_on_termination=delete_on_termination)
         try:
             self._check_attach_and_reserve_volume(context, volume, instance,
                                                   volume_bdm)
@@ -4131,7 +4138,8 @@ class API(base.Base):
                                     vm_states.SHELVED_OFFLOADED])
     def attach_volume(self, context, instance, volume_id, device=None,
                       disk_bus=None, device_type=None, tag=None,
-                      supports_multiattach=False):
+                      supports_multiattach=False,
+                      delete_on_termination=False):
         """Attach an existing volume to an existing instance."""
         # NOTE(vish): Fail fast if the device is not going to pass. This
         #             will need to be removed along with the test if we
@@ -4172,11 +4180,13 @@ class API(base.Base):
                                                          volume,
                                                          device,
                                                          disk_bus,
-                                                         device_type)
+                                                         device_type,
+                                                         delete_on_termination)
 
         return self._attach_volume(context, instance, volume, device,
                                    disk_bus, device_type, tag=tag,
-                                   supports_multiattach=supports_multiattach)
+                                   supports_multiattach=supports_multiattach,
+                                   delete_on_termination=delete_on_termination)
 
     # TODO(stephenfin): Fold this back in now that cells v1 no longer needs to
     # override it.

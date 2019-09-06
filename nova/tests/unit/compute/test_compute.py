@@ -10682,7 +10682,7 @@ class ComputeAPITestCase(BaseTestCase):
             volume = {'id': uuids.volume}
             self.compute_api._attach_volume_shelved_offloaded(
                     self.context, instance, volume,
-                    '/dev/vdb', 'ide', 'cdrom')
+                    '/dev/vdb', 'ide', 'cdrom', False)
             mock_attach_and_reserve.assert_called_once_with(self.context,
                                                             volume,
                                                             instance,
@@ -10722,7 +10722,7 @@ class ComputeAPITestCase(BaseTestCase):
             volume = {'id': uuids.volume}
             self.compute_api._attach_volume_shelved_offloaded(
                     self.context, instance, volume,
-                    '/dev/vdb', 'ide', 'cdrom')
+                    '/dev/vdb', 'ide', 'cdrom', False)
             mock_attach_and_reserve.assert_called_once_with(self.context,
                                                             volume,
                                                             instance,
