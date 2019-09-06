@@ -694,7 +694,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.stub_out('nova.volume.cinder.API.get', volume_api_get)
 
         expected_no_metadata = {'min_disk': 0, 'min_ram': 0, 'properties': {},
-                                'size': 0, 'status': 'active'}
+                                'size': 0, 'status': 'active', 'owner': None}
 
         block_device_mapping = [{
             'id': 1,

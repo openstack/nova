@@ -330,6 +330,10 @@ def _untranslate_volume_summary_view(context, vol):
     if hasattr(vol, 'migration_status'):
         d['migration_status'] = vol.migration_status
 
+    # cinder only exposes the value for volumes if the policy allows
+    if hasattr(vol, 'os-vol-tenant-attr:tenant_id'):
+        d['owner'] = getattr(vol, 'os-vol-tenant-attr:tenant_id')
+
     return d
 
 

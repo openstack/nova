@@ -692,4 +692,7 @@ def get_image_metadata_from_volume(volume):
     # available because the image backing the volume is not active,
     # then the compute API trying to reserve the volume should fail.
     image_meta['status'] = 'active'
+
+    # the owner might be missing if cinder policy disallows it
+    image_meta['owner'] = volume.get('owner', None)
     return image_meta

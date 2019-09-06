@@ -711,7 +711,7 @@ class GetBDMImageMetadataTestCase(test.NoDBTestCase):
 
         expected_meta = {
             'min_disk': 0, 'min_ram': 0, 'properties': {}, 'size': 0,
-            'status': 'active',
+            'status': 'active', 'owner': None,
         }
 
         def get_vol_data(*args, **kwargs):
