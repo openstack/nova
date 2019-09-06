@@ -6406,11 +6406,11 @@ server_topology_nodes_cpu_siblings:
   in: body
   required: false
   type: list
-server_topology_nodes_host_numa_node:
+server_topology_nodes_host_node:
   description: |
     The host NUMA node the virtual NUMA node is map to.
 
-    By default the ``host_numa_node`` field is only visible to users with the
+    By default the ``host_node`` field is only visible to users with the
     administrator role. You can change the default behavior via the policy
     rule::
 
