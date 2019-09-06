@@ -15609,7 +15609,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 ' virNodeNumOfDevices',
                 error_code=fakelibvirt.VIR_ERR_NO_SUPPORT)
 
-        with mock.patch.object(drvr._conn, 'listDevices',
+        with mock.patch.object(host.Host, '_list_devices',
                                side_effect=not_supported_exc):
             self.assertEqual('[]', drvr._get_pci_passthrough_devices())
 
@@ -15623,7 +15623,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'other exc',
             error_code=fakelibvirt.VIR_ERR_NO_DOMAIN)
 
-        with mock.patch.object(drvr._conn, 'listDevices',
+        with mock.patch.object(host.Host, '_list_devices',
                                side_effect=other_exc):
             self.assertRaises(fakelibvirt.libvirtError,
                               drvr._get_pci_passthrough_devices)
