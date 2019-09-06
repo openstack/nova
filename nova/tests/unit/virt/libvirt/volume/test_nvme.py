@@ -15,16 +15,22 @@ import mock
 from nova.tests.unit.virt.libvirt.volume import test_volume
 from nova.virt.libvirt.volume import nvme
 
-from os_brick.initiator import connector
+from os_brick import initiator
 
 
 class LibvirtNVMEVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
 
     @mock.patch('os.path.exists', return_value=True)
-    def test_libvirt_nvme_driver(self, exists):
-        libvirt_driver = nvme.LibvirtNVMEVolumeDriver(self.fake_host)
-        self.assertIsInstance(libvirt_driver.connector,
-                              connector.NVMeConnector)
+    @mock.patch('nova.utils.get_root_helper')
+    @mock.patch('os_brick.initiator.connector.InitiatorConnector.factory')
+    def test_libvirt_nvme_driver(self, mock_factory, mock_helper, exists):
+        self.flags(num_nvme_discover_tries=3, group='libvirt')
+        mock_helper.return_value = 'sudo'
+
+        nvme.LibvirtNVMEVolumeDriver(self.fake_host)
+        mock_factory.assert_called_once_with(
+            initiator.NVME, 'sudo',
+            device_scan_attempts=3)
 
     def test_libvirt_nvme_driver_connect(self):
         nvme_driver = nvme.LibvirtNVMEVolumeDriver(self.fake_host)
