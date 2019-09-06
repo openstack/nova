@@ -813,6 +813,7 @@ class ComputeAPI(object):
         client = self.router.client(ctxt)
         return client.can_send_version('5.2')
 
+    # TODO(mriedem): Drop compat for request_spec being a legacy dict in v6.0.
     def prep_resize(self, ctxt, instance, image, instance_type, host,
                     migration, request_spec, filter_properties, node,
                     clean_shutdown, host_list):
