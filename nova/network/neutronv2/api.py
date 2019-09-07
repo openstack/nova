@@ -3321,8 +3321,14 @@ class API(base_api.NetworkAPI):
                     # mapping based on that.
                     raise exception.PortUpdateFailed(
                         port_id=p['id'],
-                        reason=_("Provider mappings wasn't provided for the "
-                                 "port with resource request"))
+                        reason=_(
+                            "Provider mappings are not available to the "
+                            "compute service but are required for ports with "
+                            "a resource request. If compute RPC API versions "
+                            "are pinned for a rolling upgrade, you will need "
+                            "to retry this operation once the RPC version is "
+                            "unpinned and the nova-compute services are all "
+                            "upgraded."))
 
                 # NOTE(gibi): In the resource provider mapping there can be
                 # more than one RP fulfilling a request group. But resource
