@@ -234,19 +234,25 @@ class IronicDriver(virt_driver.ComputeDriver):
         Check with the Ironic service that this instance is associated with a
         node, and return the node.
         """
-        try:
-            node = next(self.ironic_connection.nodes(
-                {"instance_id": instance.uuid, "fields": _NODE_FIELDS}))
-            # TODO(dustinc): Make consumers use the right fields and remove
-            if hasattr(node, "id"):
-                node.uuid = node.id
-            if hasattr(node, "instance_id"):
-                node.instance_uuid = node.instance_id
-            if hasattr(node, "is_maintenance"):
-                node.maintenance = node.is_maintenance
-            return node
-        except StopIteration:
+        nodes = list(self.ironic_connection.nodes(
+            instance_id=instance.uuid, fields=_NODE_FIELDS))
+        if not nodes:
             raise exception.InstanceNotFound(instance_id=instance.uuid)
+        if len(nodes) > 1:
+            # This indicates a programming error so fail.
+            raise exception.NovaException(
+                _('Ironic returned more than one node for a query '
+                  'that can only return zero or one: %s') % nodes)
+
+        node = nodes[0]
+        # TODO(dustinc): Make consumers use the right fields and remove
+        if hasattr(node, "id"):
+            node.uuid = node.id
+        if hasattr(node, "instance_id"):
+            node.instance_uuid = node.instance_id
+        if hasattr(node, "is_maintenance"):
+            node.maintenance = node.is_maintenance
+        return node
 
     def _node_resources_unavailable(self, node_obj):
         """Determine whether the node's resources are in an acceptable state.
