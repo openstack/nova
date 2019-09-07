@@ -594,12 +594,21 @@ class IronicDriverTestCase(test.NoDBTestCase):
         response = self.driver.list_instances()
 
         self.mock_conn.nodes.assert_called_with(associated=True,
-                                                fields=['instance_id'])
+                                                fields=['instance_uuid'])
         expected_calls = [mock.call(mock.ANY, instances[0].uuid),
                           mock.call(mock.ANY, instances[1].uuid)]
         mock_inst_by_uuid.assert_has_calls(expected_calls)
         self.assertEqual(['instance-00000000', 'instance-00000001'],
                          sorted(response))
+
+    # NOTE(dustinc) This test ensures we use instance_uuid not instance_id in
+    # 'fields' when calling ironic.
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    def test_list_instances_uses_instance_uuid(self, mock_inst_by_uuid):
+        self.driver.list_instances()
+
+        self.mock_conn.nodes.assert_called_with(associated=True,
+                                                fields=['instance_uuid'])
 
     @mock.patch.object(objects.Instance, 'get_by_uuid')
     def test_list_instances_fail(self, mock_inst_by_uuid):
@@ -608,7 +617,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.assertRaises(exception.VirtDriverNotReady,
                           self.driver.list_instances)
         self.mock_conn.nodes.assert_called_with(associated=True,
-                                                fields=['instance_id'])
+                                                fields=['instance_uuid'])
         self.assertFalse(mock_inst_by_uuid.called)
 
     def test_list_instance_uuids(self):
@@ -616,16 +625,25 @@ class IronicDriverTestCase(test.NoDBTestCase):
         nodes = []
         for n in range(num_nodes):
             nodes.append(ironic_utils.get_test_node(
-                                      instance_uuid=uuidutils.generate_uuid(),
+                                      instance_id=uuidutils.generate_uuid(),
                                       fields=['instance_id']))
         self.mock_conn.nodes.return_value = iter(nodes)
 
         uuids = self.driver.list_instance_uuids()
 
         self.mock_conn.nodes.assert_called_with(associated=True,
-                                                fields=['instance_id'])
+                                                fields=['instance_uuid'])
         expected = [n.instance_id for n in nodes]
         self.assertEqual(sorted(expected), sorted(uuids))
+
+    # NOTE(dustinc) This test ensures we use instance_uuid not instance_id in
+    # 'fields' when calling ironic.
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    def test_list_instance_uuids_uses_instance_uuid(self, mock_inst_by_uuid):
+        self.driver.list_instance_uuids()
+
+        self.mock_conn.nodes.assert_called_with(associated=True,
+                                                fields=['instance_uuid'])
 
     @mock.patch.object(objects.InstanceList, 'get_uuids_by_host')
     @mock.patch.object(objects.ServiceList, 'get_all_computes_by_hv_type')

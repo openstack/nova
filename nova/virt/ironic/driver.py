@@ -688,11 +688,13 @@ class IronicDriver(virt_driver.ComputeDriver):
         :raises: VirtDriverNotReady
 
         """
+        # NOTE(dustinc): The SDK returns an object with instance_id,
+        #  but the Ironic API expects instance_uuid in query.
         context = nova_context.get_admin_context()
         return [objects.Instance.get_by_uuid(context, i.instance_id).name
                 for i in self._get_node_list(return_generator=True,
                                              associated=True,
-                                             fields=['instance_id'])]
+                                             fields=['instance_uuid'])]
 
     def list_instance_uuids(self):
         """Return the IDs of all the instances provisioned.
@@ -701,8 +703,10 @@ class IronicDriver(virt_driver.ComputeDriver):
         :raises: VirtDriverNotReady
 
         """
+        # NOTE(dustinc): The SDK returns an object with instance_id,
+        #  but the Ironic API expects instance_uuid in query.
         return [node.instance_id for node in self._get_node_list(
-            return_generator=True, associated=True, fields=['instance_id'])]
+            return_generator=True, associated=True, fields=['instance_uuid'])]
 
     def node_is_available(self, nodename):
         """Confirms a Nova hypervisor node exists in the Ironic inventory.
