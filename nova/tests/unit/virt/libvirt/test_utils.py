@@ -957,21 +957,38 @@ sunrpc /var/lib/nfs/rpc_pipefs rpc_pipefs rw,relatime 0 0
         self.assertEqual('/test/disk', disk_path)
         self.assertEqual('ploop', format)
 
-    def test_get_default_machine_type(self):
+    @mock.patch('nova.virt.libvirt.utils.get_arch')
+    def test_get_machine_type_from_fallbacks(self, mock_get_arch):
+        """Test hardcoded arch-specific fallbacks for default machine type"""
+        image_meta = objects.ImageMeta.from_dict({"disk_format": "raw"})
+        host_cpu_archs = {
+            obj_fields.Architecture.ARMV7: "virt",
+            obj_fields.Architecture.AARCH64: "virt",
+            obj_fields.Architecture.S390: "s390-ccw-virtio",
+            obj_fields.Architecture.S390X: "s390-ccw-virtio",
+            obj_fields.Architecture.I686: "pc",
+            obj_fields.Architecture.X86_64: "pc",
+        }
+        for arch, expected_mtype in host_cpu_archs.items():
+            mock_get_arch.return_value = arch
+            mtype = libvirt_utils.get_machine_type(image_meta)
+            self.assertEqual(expected_mtype, mtype)
+
+    def test_get_machine_type_from_conf(self):
         self.useFixture(nova_fixtures.ConfPatcher(
             group="libvirt", hw_machine_type=['x86_64=q35', 'i686=legacy']))
         self.assertEqual('q35',
                          libvirt_utils.get_default_machine_type('x86_64'))
 
-    def test_get_default_machine_type_empty(self):
+    def test_get_machine_type_no_conf_or_fallback(self):
         self.assertIsNone(libvirt_utils.get_default_machine_type('sparc'))
 
-    def test_get_default_machine_type_missing(self):
+    def test_get_machine_type_missing_conf_and_fallback(self):
         self.useFixture(nova_fixtures.ConfPatcher(
             group="libvirt", hw_machine_type=['x86_64=q35', 'i686=legacy']))
         self.assertIsNone(libvirt_utils.get_default_machine_type('sparc'))
 
-    def test_get_default_machine_type_invalid(self):
+    def test_get_machine_type_survives_invalid_conf(self):
         self.useFixture(nova_fixtures.ConfPatcher(
             group="libvirt", hw_machine_type=['x86_64=q35', 'foo']))
         self.assertEqual('q35',
