@@ -18,6 +18,7 @@ from oslo_utils import units
 
 from nova.objects import fields as obj_fields
 from nova import test
+from nova.tests.unit.virt.libvirt import fake_libvirt_data
 from nova.virt.libvirt import config
 
 
@@ -2509,83 +2510,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
             </domain>""")
 
     def test_config_kvm(self):
-        obj = config.LibvirtConfigGuest()
-        obj.virt_type = "kvm"
-        obj.memory = 100 * units.Mi
-        obj.vcpus = 2
-        obj.cpuset = set([0, 1, 3, 4, 5])
-
-        obj.cputune = config.LibvirtConfigGuestCPUTune()
-        obj.cputune.shares = 100
-        obj.cputune.quota = 50000
-        obj.cputune.period = 25000
-
-        obj.membacking = config.LibvirtConfigGuestMemoryBacking()
-        page1 = config.LibvirtConfigGuestMemoryBackingPage()
-        page1.size_kb = 2048
-        page1.nodeset = [0, 1, 2, 3, 5]
-        page2 = config.LibvirtConfigGuestMemoryBackingPage()
-        page2.size_kb = 1048576
-        page2.nodeset = [4]
-        obj.membacking.hugepages.append(page1)
-        obj.membacking.hugepages.append(page2)
-
-        obj.memtune = config.LibvirtConfigGuestMemoryTune()
-        obj.memtune.hard_limit = 496
-        obj.memtune.soft_limit = 672
-        obj.memtune.swap_hard_limit = 1638
-        obj.memtune.min_guarantee = 2970
-
-        obj.numatune = config.LibvirtConfigGuestNUMATune()
-
-        numamemory = config.LibvirtConfigGuestNUMATuneMemory()
-        numamemory.mode = "preferred"
-        numamemory.nodeset = [0, 1, 2, 3, 8]
-
-        obj.numatune.memory = numamemory
-
-        numamemnode0 = config.LibvirtConfigGuestNUMATuneMemNode()
-        numamemnode0.cellid = 0
-        numamemnode0.mode = "preferred"
-        numamemnode0.nodeset = [0, 1]
-
-        numamemnode1 = config.LibvirtConfigGuestNUMATuneMemNode()
-        numamemnode1.cellid = 1
-        numamemnode1.mode = "preferred"
-        numamemnode1.nodeset = [2, 3]
-
-        numamemnode2 = config.LibvirtConfigGuestNUMATuneMemNode()
-        numamemnode2.cellid = 2
-        numamemnode2.mode = "preferred"
-        numamemnode2.nodeset = [8]
-
-        obj.numatune.memnodes.extend([numamemnode0,
-                                      numamemnode1,
-                                      numamemnode2])
-
-        obj.name = "demo"
-        obj.uuid = "b38a3f43-4be2-4046-897f-b67c2f5e0147"
-        obj.os_type = "linux"
-        obj.os_boot_dev = ["hd", "cdrom", "fd"]
-        obj.os_smbios = config.LibvirtConfigGuestSMBIOS()
-        obj.features = [
-            config.LibvirtConfigGuestFeatureACPI(),
-            config.LibvirtConfigGuestFeatureAPIC(),
-            config.LibvirtConfigGuestFeaturePAE(),
-            config.LibvirtConfigGuestFeatureKvmHidden()
-        ]
-
-        obj.sysinfo = config.LibvirtConfigGuestSysinfo()
-        obj.sysinfo.bios_vendor = "Acme"
-        obj.sysinfo.system_version = "1.0.0"
-
-        disk = config.LibvirtConfigGuestDisk()
-        disk.source_type = "file"
-        disk.source_path = "/tmp/img"
-        disk.target_dev = "/dev/vda"
-        disk.target_bus = "virtio"
-
-        obj.add_device(disk)
+        obj = fake_libvirt_data.fake_kvm_guest()
 
         launch_security = config.LibvirtConfigGuestSEVLaunchSecurity()
         launch_security.cbitpos = 47
@@ -2593,70 +2518,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.launch_security = launch_security
 
         xml = obj.to_xml()
-        self.assertXmlEqual(xml, """
-            <domain type="kvm">
-              <uuid>b38a3f43-4be2-4046-897f-b67c2f5e0147</uuid>
-              <name>demo</name>
-              <memory>104857600</memory>
-              <memoryBacking>
-                <hugepages>
-                  <page size="2048" unit="KiB" nodeset="0-3,5"/>
-                  <page size="1048576" unit="KiB" nodeset="4"/>
-                </hugepages>
-              </memoryBacking>
-              <memtune>
-                <hard_limit unit="KiB">496</hard_limit>
-                <soft_limit unit="KiB">672</soft_limit>
-                <swap_hard_limit unit="KiB">1638</swap_hard_limit>
-                <min_guarantee unit="KiB">2970</min_guarantee>
-              </memtune>
-              <numatune>
-                <memory mode="preferred" nodeset="0-3,8"/>
-                <memnode cellid="0" mode="preferred" nodeset="0-1"/>
-                <memnode cellid="1" mode="preferred" nodeset="2-3"/>
-                <memnode cellid="2" mode="preferred" nodeset="8"/>
-              </numatune>
-              <vcpu cpuset="0-1,3-5">2</vcpu>
-              <sysinfo type='smbios'>
-                 <bios>
-                   <entry name="vendor">Acme</entry>
-                 </bios>
-                 <system>
-                   <entry name="version">1.0.0</entry>
-                 </system>
-              </sysinfo>
-              <os>
-                <type>linux</type>
-                <boot dev="hd"/>
-                <boot dev="cdrom"/>
-                <boot dev="fd"/>
-                <smbios mode="sysinfo"/>
-              </os>
-              <features>
-                <acpi/>
-                <apic/>
-                <pae/>
-                <kvm>
-                  <hidden state='on'/>
-                </kvm>
-              </features>
-              <cputune>
-                <shares>100</shares>
-                <quota>50000</quota>
-                <period>25000</period>
-              </cputune>
-              <devices>
-                <disk type="file" device="disk">
-                  <source file="/tmp/img"/>
-                  <target bus="virtio" dev="/dev/vda"/>
-                </disk>
-              </devices>
-              <launchSecurity type="sev">
-                <policy>0x0033</policy>
-                <cbitpos>47</cbitpos>
-                <reducedPhysBits>1</reducedPhysBits>
-              </launchSecurity>
-            </domain>""")
+        self.assertXmlEqual(fake_libvirt_data.FAKE_KVM_GUEST, xml)
 
     def test_config_uefi(self):
         obj = config.LibvirtConfigGuest()
