@@ -1153,9 +1153,17 @@ def get_mem_encryption_constraint(flavor, image_meta):
         2) the flavor and/or image request memory encryption, but the
            image is missing hw_firmware_type=uefi
 
+        3) the flavor and/or image request memory encryption, but the
+           machine type is set to a value which does not contain 'q35'
+
+    This is called from the API layer, so get_machine_type() cannot be
+    called since it relies on being run from the compute node in order
+    to retrieve CONF.libvirt.hw_machine_type.
+
     :param instance_type: Flavor object
     :param image: an ImageMeta object
     :raises: nova.exception.FlavorImageConflict
+    :raises: nova.exception.InvalidMachineType
     :returns: boolean indicating whether encryption of guest memory
     was requested
     """
@@ -1188,6 +1196,7 @@ def get_mem_encryption_constraint(flavor, image_meta):
                           image_meta.name)
 
     _check_mem_encryption_uses_uefi_image(requesters, image_meta)
+    _check_mem_encryption_machine_type(image_meta)
 
     LOG.debug("Memory encryption requested by %s", " and ".join(requesters))
     return True
@@ -1215,7 +1224,7 @@ def _check_for_mem_encryption_requirement_conflicts(
 
 
 def _check_mem_encryption_uses_uefi_image(requesters, image_meta):
-    if image_meta.properties.hw_firmware_type == 'uefi':
+    if image_meta.properties.get('hw_firmware_type') == 'uefi':
         return
 
     emsg = _(
@@ -1225,6 +1234,38 @@ def _check_mem_encryption_uses_uefi_image(requesters, image_meta):
     data = {'requesters': " and ".join(requesters),
             'image_name': image_meta.name}
     raise exception.FlavorImageConflict(emsg % data)
+
+
+def _check_mem_encryption_machine_type(image_meta):
+    # NOTE(aspiers): As explained in the SEV spec, SEV needs a q35
+    # machine type in order to bind all the virtio devices to the PCIe
+    # bridge so that they use virtio 1.0 and not virtio 0.9, since
+    # QEMU's iommu_platform feature was added in virtio 1.0 only:
+    #
+    # http://specs.openstack.org/openstack/nova-specs/specs/train/approved/amd-sev-libvirt-support.html
+    #
+    # So if the image explicitly requests a machine type which is not
+    # in the q35 family, raise an exception.
+    #
+    # Note that this check occurs at API-level, therefore we can't
+    # check here what value of CONF.libvirt.hw_machine_type may have
+    # been configured on the compute node.
+    mach_type = image_meta.properties.get('hw_machine_type')
+
+    # If hw_machine_type is not specified on the image and is not
+    # configured correctly on SEV compute nodes, then a separate check
+    # in the driver will catch that and potentially retry on other
+    # compute nodes.
+    if mach_type is None:
+        return
+
+    # Could be something like pc-q35-2.11 if a specific version of the
+    # machine type is required, so do substring matching.
+    if 'q35' not in mach_type:
+        raise exception.InvalidMachineType(
+            mtype=mach_type,
+            image_id=image_meta.id, image_name=image_meta.name,
+            reason=_("q35 type is required for SEV to work"))
 
 
 def _get_numa_pagesize_constraint(flavor, image_meta):

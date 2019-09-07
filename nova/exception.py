@@ -1977,6 +1977,11 @@ class InvalidHypervisorVirtType(Invalid):
                 "recognised")
 
 
+class InvalidMachineType(Invalid):
+    msg_fmt = _("Machine type '%(mtype)s' is not compatible with image "
+                "%(image_name)s (%(image_id)s): %(reason)s")
+
+
 class InvalidVirtualMachineMode(Invalid):
     msg_fmt = _("Virtual machine mode '%(vmmode)s' is not recognised")
 

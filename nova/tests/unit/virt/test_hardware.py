@@ -3798,32 +3798,50 @@ class MemEncryptionFlavorImageConflictTestCase(test.NoDBTestCase):
                 )
 
 
-class MemEncryptionRequestedWithoutUEFITestCase(test.NoDBTestCase):
+class MemEncryptionRequestedInvalidImagePropsTestCase(test.NoDBTestCase):
     flavor_name = 'm1.faketiny'
     image_name = 'fakecirros'
+    image_id = '7ec4448e-f3fd-44b1-b172-9a7980f0f29f'
 
-    def _test_encrypted_memory_support_no_uefi(self, extra_spec, image_prop,
-                                               requesters):
+    def _test_encrypted_memory_support_raises(self, enc_extra_spec,
+                                              enc_image_prop, image_props,
+                                              error_data):
         extra_specs = {}
-        if extra_spec:
-            extra_specs['hw:mem_encryption'] = extra_spec
+        if enc_extra_spec:
+            extra_specs['hw:mem_encryption'] = enc_extra_spec
         flavor = objects.Flavor(name=self.flavor_name, extra_specs=extra_specs)
+        if enc_image_prop:
+            image_props['hw_mem_encryption'] = enc_image_prop
         image_meta = fake_image_obj(
-            {'name': self.image_name}, {'hw_firmware_type': 'bios'},
-            {'hw_mem_encryption': True} if image_prop else {})
-        error = (
-            "Memory encryption requested by %(requesters)s but image "
-            "%(image_name)s doesn't have 'hw_firmware_type' property "
-            "set to 'uefi'"
-        )
-        exc = self.assertRaises(
-            exception.FlavorImageConflict,
-            hw.get_mem_encryption_constraint,
-            flavor, image_meta
-        )
+            {'id': self.image_id, 'name': self.image_name},
+            {}, image_props)
+        exc = self.assertRaises(self.expected_exception,
+                                hw.get_mem_encryption_constraint,
+                                flavor, image_meta)
+        self.assertEqual(self.expected_error % error_data, str(exc))
+
+
+class MemEncryptionRequestedWithoutUEFITestCase(
+        MemEncryptionRequestedInvalidImagePropsTestCase):
+    expected_exception = exception.FlavorImageConflict
+    expected_error = (
+        "Memory encryption requested by %(requesters)s but image "
+        "%(image_name)s doesn't have 'hw_firmware_type' property "
+        "set to 'uefi'"
+    )
+
+    def _test_encrypted_memory_support_no_uefi(self, enc_extra_spec,
+                                               enc_image_prop, requesters):
         error_data = {'requesters': requesters,
                       'image_name': self.image_name}
-        self.assertEqual(error % error_data, str(exc))
+        for image_props in ({},
+                            {'hw_machine_type': 'q35'},
+                            {'hw_firmware_type': 'bios'},
+                            {'hw_machine_type': 'q35',
+                             'hw_firmware_type': 'bios'}):
+            self._test_encrypted_memory_support_raises(enc_extra_spec,
+                                                       enc_image_prop,
+                                                       image_props, error_data)
 
     def test_flavor_requires_encrypted_memory_support_no_uefi(self):
         for extra_spec in ('1', 'true', 'True'):
@@ -3847,28 +3865,73 @@ class MemEncryptionRequestedWithoutUEFITestCase(test.NoDBTestCase):
                     % (self.flavor_name, self.image_name))
 
 
+class MemEncryptionRequestedWithInvalidMachineTypeTestCase(
+       MemEncryptionRequestedInvalidImagePropsTestCase):
+    expected_exception = exception.InvalidMachineType
+    expected_error = (
+        "Machine type '%(mtype)s' is not compatible with image %(image_name)s "
+        "(%(image_id)s): q35 type is required for SEV to work")
+
+    def _test_encrypted_memory_support_pc(self, enc_extra_spec,
+                                              enc_image_prop):
+        error_data = {'image_id': self.image_id,
+                      'image_name': self.image_name,
+                      'mtype': 'pc'}
+        image_props = {'hw_firmware_type': 'uefi',
+                       'hw_machine_type': 'pc'}
+        self._test_encrypted_memory_support_raises(enc_extra_spec,
+                                                   enc_image_prop,
+                                                   image_props, error_data)
+
+    def test_flavor_requires_encrypted_memory_support_pc(self):
+        for extra_spec in ('1', 'true', 'True'):
+            self._test_encrypted_memory_support_pc(extra_spec, None)
+
+    def test_image_requires_encrypted_memory_support_pc(self):
+        for image_prop in ('1', 'true', 'True'):
+            self._test_encrypted_memory_support_pc(None, image_prop)
+
+    def test_flavor_image_require_encrypted_memory_support_pc(self):
+        for extra_spec in ('1', 'true', 'True'):
+            for image_prop in ('1', 'true', 'True'):
+                self._test_encrypted_memory_support_pc(
+                    extra_spec, image_prop)
+
+
 class MemEncryptionRequiredTestCase(test.NoDBTestCase):
     flavor_name = "m1.faketiny"
     image_name = 'fakecirros'
+    image_id = '8a71a380-be23-47eb-9e72-9998586a0268'
 
     @mock.patch.object(hw, 'LOG')
     def _test_encrypted_memory_support_required(self, extra_specs,
                                                 image_props,
                                                 requesters, mock_log):
-        flavor = objects.Flavor(name=self.flavor_name, extra_specs=extra_specs)
-        image_meta = objects.ImageMeta(name=self.image_name,
-                                       properties=image_props)
+        image_props['hw_firmware_type'] = 'uefi'
 
-        self.assertTrue(hw.get_mem_encryption_constraint(flavor, image_meta))
-        mock_log.debug.assert_has_calls([
-            mock.call("Memory encryption requested by %s", requesters)
-        ])
+        def _test_get_mem_encryption_constraint():
+            flavor = objects.Flavor(name=self.flavor_name,
+                                    extra_specs=extra_specs)
+            image_meta = objects.ImageMeta.from_dict({
+                'id': self.image_id,
+                'name': self.image_name,
+                'properties': image_props})
+            self.assertTrue(hw.get_mem_encryption_constraint(flavor,
+                                                             image_meta))
+            mock_log.debug.assert_has_calls([
+                mock.call("Memory encryption requested by %s", requesters)
+            ])
+
+        _test_get_mem_encryption_constraint()
+        for mtype in ('q35', 'pc-q35-2.1'):
+            image_props['hw_machine_type'] = mtype
+            _test_get_mem_encryption_constraint()
 
     def test_require_encrypted_memory_support_extra_spec(self):
         for extra_spec in ('1', 'true', 'True'):
             self._test_encrypted_memory_support_required(
                 {'hw:mem_encryption': extra_spec},
-                objects.ImageMetaProps(hw_firmware_type='uefi'),
+                {},
                 "hw:mem_encryption extra spec in %s flavor" % self.flavor_name
             )
 
@@ -3876,9 +3939,7 @@ class MemEncryptionRequiredTestCase(test.NoDBTestCase):
         for image_prop in ('1', 'true', 'True'):
             self._test_encrypted_memory_support_required(
                 {},
-                objects.ImageMetaProps(
-                    hw_mem_encryption=image_prop,
-                    hw_firmware_type='uefi'),
+                {'hw_mem_encryption': image_prop},
                 "hw_mem_encryption property of image %s" % self.image_name
             )
 
@@ -3887,9 +3948,7 @@ class MemEncryptionRequiredTestCase(test.NoDBTestCase):
             for image_prop in ('1', 'true', 'True'):
                 self._test_encrypted_memory_support_required(
                     {'hw:mem_encryption': extra_spec},
-                    objects.ImageMetaProps(
-                        hw_mem_encryption=image_prop,
-                        hw_firmware_type='uefi'),
+                    {'hw_mem_encryption': image_prop},
                     "hw:mem_encryption extra spec in %s flavor and "
                     "hw_mem_encryption property of image %s" %
                     (self.flavor_name, self.image_name)

@@ -1317,7 +1317,9 @@ class TestEncryptedMemoryTranslation(TestUtilsBase):
                 'hw:mem_encryption extra spec',
                 {'hw:mem_encryption': extra_spec},
                 image=objects.ImageMeta(
+                    id='005249be-3c2f-4351-9df7-29bb13c21b14',
                     properties=objects.ImageMetaProps(
+                        hw_machine_type='q35',
                         hw_firmware_type='uefi'))
             )
 
@@ -1327,8 +1329,10 @@ class TestEncryptedMemoryTranslation(TestUtilsBase):
                 'hw_mem_encryption image property',
                 {},
                 image=objects.ImageMeta(
+                    id='005249be-3c2f-4351-9df7-29bb13c21b14',
                     name=self.image_name,
                     properties=objects.ImageMetaProps(
+                        hw_machine_type='q35',
                         hw_firmware_type='uefi',
                         hw_mem_encryption=image_prop))
             )
@@ -1341,8 +1345,10 @@ class TestEncryptedMemoryTranslation(TestUtilsBase):
                     'hw_mem_encryption image property',
                     {'hw:mem_encryption': extra_spec},
                     image=objects.ImageMeta(
+                        id='005249be-3c2f-4351-9df7-29bb13c21b14',
                         name=self.image_name,
                         properties=objects.ImageMetaProps(
+                            hw_machine_type='q35',
                             hw_firmware_type='uefi',
                             hw_mem_encryption=image_prop))
                 )
