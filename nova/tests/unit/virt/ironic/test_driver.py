@@ -243,6 +243,23 @@ class IronicDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.Instance, 'refresh')
     @mock.patch.object(ironic_driver.IronicDriver,
                        '_validate_instance_and_node')
+    def test__wait_for_active_from_error(self, fake_validate, fake_refresh):
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                uuid=uuidutils.generate_uuid(),
+                vm_state=vm_states.ERROR,
+                task_state=task_states.REBUILD_SPAWNING)
+        node = ironic_utils.get_test_node(
+                provision_state=ironic_states.ACTIVE)
+
+        fake_validate.return_value = node
+        self.assertRaises(loopingcall.LoopingCallDone,
+                self.driver._wait_for_active, instance)
+        fake_validate.assert_called_once_with(instance)
+        fake_refresh.assert_called_once_with()
+
+    @mock.patch.object(objects.Instance, 'refresh')
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_validate_instance_and_node')
     def test__wait_for_active_fail(self, fake_validate, fake_refresh):
         instance = fake_instance.fake_instance_obj(self.ctx,
                 uuid=uuidutils.generate_uuid())
@@ -275,7 +292,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self._wait_for_active_abort({'vm_state': vm_states.DELETED})
 
     def test__wait_for_active_abort_error(self):
-        self._wait_for_active_abort({'vm_state': vm_states.ERROR})
+        self._wait_for_active_abort({'task_state': task_states.SPAWNING,
+                                     'vm_state': vm_states.ERROR})
 
     @mock.patch.object(ironic_driver.IronicDriver,
                        '_validate_instance_and_node')

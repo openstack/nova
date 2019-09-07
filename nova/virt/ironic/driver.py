@@ -525,8 +525,10 @@ class IronicDriver(virt_driver.ComputeDriver):
     def _wait_for_active(self, instance):
         """Wait for the node to be marked as ACTIVE in Ironic."""
         instance.refresh()
-        if (instance.task_state == task_states.DELETING or
-            instance.vm_state in (vm_states.ERROR, vm_states.DELETED)):
+        # Ignore REBUILD_SPAWNING when rebuilding from ERROR state.
+        if (instance.task_state != task_states.REBUILD_SPAWNING and
+                (instance.task_state == task_states.DELETING or
+                 instance.vm_state in (vm_states.ERROR, vm_states.DELETED))):
             raise exception.InstanceDeployFailure(
                 _("Instance %s provisioning was aborted") % instance.uuid)
 
