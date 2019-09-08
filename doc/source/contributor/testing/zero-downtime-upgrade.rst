@@ -158,7 +158,7 @@ claims the virtual IP. You can check which node claimed the virtual IP using:
 Zero Downtime upgrade process
 ------------------------------
 
-General rolling upgrade process: :ref:minimal_downtime_upgrade.
+General rolling upgrade process: :ref:`minimal_downtime_upgrade`.
 
 
 Before Upgrade
