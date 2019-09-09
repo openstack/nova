@@ -60,7 +60,7 @@ class ServersTestBase(base.ServersTestBase):
             return_value=True))
         self.useFixture(fixtures.MockPatch(
             'nova.virt.libvirt.driver.libvirt_utils.file_open',
-            side_effect=[io.BytesIO(b''), io.BytesIO(b'')]))
+            side_effect=lambda *a, **k: io.BytesIO(b'')))
         self.useFixture(fixtures.MockPatch(
             'nova.privsep.utils.supports_direct_io',
             return_value=True))
