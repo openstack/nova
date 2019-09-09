@@ -850,7 +850,7 @@ Maximum number of guests with encrypted memory which can run
 concurrently on this compute host.
 
 For now this is only relevant for AMD machines which support SEV
-(Secure Encrypted Virtualisation).  Such machines have a limited
+(Secure Encrypted Virtualization).  Such machines have a limited
 number of slots in their memory controller for storing encryption
 keys.  Each running guest with encrypted memory will consume one of
 these slots.
@@ -870,20 +870,10 @@ limit.
 
 .. note::
 
-   When deciding whether to use the default of ``None`` or manually
-   impose a limit, operators should carefully weigh the benefits
-   vs. the risk.  The benefits are a) immediate convenience since
-   nothing needs to be done now, and b) convenience later when
-   upgrading compute hosts to future versions of Nova, since again
-   nothing will need to be done for the correct limit to be
-   automatically imposed.  However the risk is that until
-   auto-detection is implemented, users may be able to attempt to
-   launch guests with encrypted memory on hosts which have already
-   reached the maximum number of guests simultaneously running with
-   encrypted memory.  This risk may be mitigated by other limitations
-   which operators can impose, for example if the smallest RAM
-   footprint of any flavor imposes a maximum number of simultaneously
-   running guests which is less than or equal to the SEV limit.
+   It is recommended to read :ref:`the deployment documentation's
+   section on this option <num_memory_encrypted_guests>` before
+   deciding whether to configure this setting or leave it at the
+   default.
 
 Related options:
 

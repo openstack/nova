@@ -7,7 +7,7 @@ features:
     Virtualization) is supported, and it has certain minimum version
     requirements regarding the kernel, QEMU, and libvirt.
 
-    Memory encryption can be required either via flavor which has the
+    Memory encryption can be required either via a flavor which has the
     ``hw:mem_encryption`` extra spec set to ``True``, or via an image
     which has the ``hw_mem_encryption`` property set to ``True``.
     These do not inherently cause a preference for SEV-capable
@@ -22,7 +22,7 @@ features:
 
     In all cases, SEV instances can only be booted from images which
     have the ``hw_firmware_type`` property set to ``uefi``, and only
-    when the machine type is set to ``q35``.  This can be set per
+    when the machine type is set to ``q35``.  The latter can be set per
     image by setting the image property ``hw_machine_type=q35``, or
     per compute node by the operator via the ``hw_machine_type``
     configuration option in the ``[libvirt]`` section of
