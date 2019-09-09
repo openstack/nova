@@ -98,7 +98,7 @@ class ServersTestBase(base.ServersTestBase):
 
     def _get_connection(self, host_info, pci_info=None,
                         libvirt_version=fakelibvirt.FAKE_LIBVIRT_VERSION,
-                        mdev_info=None):
+                        mdev_info=None, hostname=None):
         # sanity check
         self.assertGreater(16, host_info.cpus,
             "Host.get_online_cpus is only accounting for 16 CPUs but you're "
@@ -110,7 +110,8 @@ class ServersTestBase(base.ServersTestBase):
             hv_version=fakelibvirt.FAKE_QEMU_VERSION,
             host_info=host_info,
             pci_info=pci_info,
-            mdev_info=mdev_info)
+            mdev_info=mdev_info,
+            hostname=hostname)
         return fake_connection
 
 
