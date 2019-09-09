@@ -899,7 +899,8 @@ class Destination(base.NovaObject):
         # cell field.
         'allow_cross_cell_move': fields.BooleanField(default=False),
         # NOTE(vrushali): These are forbidden aggregates passed to placement as
-        # query params to the allocation candidates API.
+        # query params to the allocation candidates API. Nova uses this field
+        # to implement the isolate_aggregates request filter.
         'forbidden_aggregates': fields.SetOfStringsField(nullable=True,
                                                          default=None),
     }
