@@ -5491,6 +5491,9 @@ class PortResourceRequestBasedSchedulingTestBase(
     CUSTOM_PHYSNET1 = 'CUSTOM_PHYSNET1'
     CUSTOM_PHYSNET2 = 'CUSTOM_PHYSNET2'
     CUSTOM_PHYSNET3 = 'CUSTOM_PHYSNET3'
+    PF1 = 'pf1'
+    PF2 = 'pf2'
+    PF3 = 'pf3'
 
     def setUp(self):
         # enable PciPassthroughFilter to support SRIOV before the base class
@@ -5652,7 +5655,8 @@ class PortResourceRequestBasedSchedulingTestBase(
         dev_rp_name_prefix = ("%s:NIC Switch agent:" % hostname)
 
         sriov_pf1_rp_uuid = getattr(uuids, sriov_agent_rp_uuid + 'PF1')
-        self.sriov_dev_rp_per_host[compute_rp_uuid]['pf1'] = sriov_pf1_rp_uuid
+        self.sriov_dev_rp_per_host[
+            compute_rp_uuid][self.PF1] = sriov_pf1_rp_uuid
 
         inventories = {
             orc.NET_BW_IGR_KILOBIT_PER_SEC: {"total": 100000},
@@ -5664,7 +5668,8 @@ class PortResourceRequestBasedSchedulingTestBase(
             device_rp_name=dev_rp_name_prefix + "%s-ens1" % hostname)
 
         sriov_pf2_rp_uuid = getattr(uuids, sriov_agent_rp_uuid + 'PF2')
-        self.sriov_dev_rp_per_host[compute_rp_uuid]['pf2'] = sriov_pf2_rp_uuid
+        self.sriov_dev_rp_per_host[
+            compute_rp_uuid][self.PF2] = sriov_pf2_rp_uuid
         inventories = {
             orc.NET_BW_IGR_KILOBIT_PER_SEC: {"total": 100000},
             orc.NET_BW_EGR_KILOBIT_PER_SEC: {"total": 100000},
@@ -5676,7 +5681,8 @@ class PortResourceRequestBasedSchedulingTestBase(
             device_rp_name=dev_rp_name_prefix + "%s-ens2" % hostname)
 
         sriov_pf3_rp_uuid = getattr(uuids, sriov_agent_rp_uuid + 'PF3')
-        self.sriov_dev_rp_per_host[compute_rp_uuid]['pf3'] = sriov_pf3_rp_uuid
+        self.sriov_dev_rp_per_host[
+            compute_rp_uuid][self.PF3] = sriov_pf3_rp_uuid
         inventories = {}
         traits = [self.CUSTOM_VNIC_TYPE_DIRECT, self.CUSTOM_PHYSNET2]
         self._create_pf_device_rp(
@@ -5982,7 +5988,7 @@ class PortResourceRequestBasedSchedulingTest(
             self.ovs_bridge_rp_per_host[self.compute1_rp_uuid]]['resources']
         sriov_allocations = allocations[
             self.sriov_dev_rp_per_host[
-                self.compute1_rp_uuid]['pf2']]['resources']
+                self.compute1_rp_uuid][self.PF2]]['resources']
 
         self.assertPortMatchesAllocation(ovs_port, ovs_allocations)
         self.assertPortMatchesAllocation(sriov_port, sriov_allocations)
@@ -5995,7 +6001,7 @@ class PortResourceRequestBasedSchedulingTest(
                          ovs_binding['allocation'])
         sriov_binding = sriov_port['binding:profile']
         self.assertEqual(
-            self.sriov_dev_rp_per_host[self.compute1_rp_uuid]['pf2'],
+            self.sriov_dev_rp_per_host[self.compute1_rp_uuid][self.PF2],
             sriov_binding['allocation'])
 
     def test_interface_detach_with_port_with_bandwidth_request(self):
@@ -6182,7 +6188,7 @@ class PortResourceRequestBasedSchedulingTest(
 
         sriov_allocations = allocations[
             self.sriov_dev_rp_per_host[
-                self.compute1_rp_uuid]['pf2']]['resources']
+                self.compute1_rp_uuid][self.PF2]]['resources']
         self.assertPortMatchesAllocation(
             sriov_port_with_res_req, sriov_allocations)
 
@@ -6191,7 +6197,7 @@ class PortResourceRequestBasedSchedulingTest(
         # request
         sriov_with_req_binding = sriov_port_with_res_req['binding:profile']
         self.assertEqual(
-            self.sriov_dev_rp_per_host[self.compute1_rp_uuid]['pf2'],
+            self.sriov_dev_rp_per_host[self.compute1_rp_uuid][self.PF2],
             sriov_with_req_binding['allocation'])
         # and the port without resource request does not have allocation
         sriov_binding = sriov_port['binding:profile']
@@ -6278,7 +6284,7 @@ class PortResourceRequestBasedSchedulingTest(
             allocations, self.compute1_rp_uuid, self.flavor)
 
         sriov_allocations = allocations[self.sriov_dev_rp_per_host[
-                self.compute1_rp_uuid]['pf2']]['resources']
+                self.compute1_rp_uuid][self.PF2]]['resources']
         self.assertPortMatchesAllocation(
             port, sriov_allocations)
 
@@ -6287,7 +6293,7 @@ class PortResourceRequestBasedSchedulingTest(
         # request
         port_binding = port['binding:profile']
         self.assertEqual(
-            self.sriov_dev_rp_per_host[self.compute1_rp_uuid]['pf2'],
+            self.sriov_dev_rp_per_host[self.compute1_rp_uuid][self.PF2],
             port_binding['allocation'])
 
         # We expect that the selected PCI device matches with the RP from
@@ -6365,7 +6371,7 @@ class ServerMoveWithPortResourceRequestTest(
             self.ovs_bridge_rp_per_host[compute_rp_uuid]]['resources']
         self.assertPortMatchesAllocation(qos_port, ovs_allocations)
         sriov_allocations = allocations[
-            self.sriov_dev_rp_per_host[compute_rp_uuid]['pf2']]['resources']
+            self.sriov_dev_rp_per_host[compute_rp_uuid][self.PF2]]['resources']
         self.assertPortMatchesAllocation(qos_sriov_port, sriov_allocations)
 
         # We expect that only the RP uuid of the networking RP having the port
@@ -6375,7 +6381,7 @@ class ServerMoveWithPortResourceRequestTest(
         self.assertEqual(self.ovs_bridge_rp_per_host[compute_rp_uuid],
                          qos_binding_profile['allocation'])
         qos_sriov_binding_profile = updated_qos_sriov_port['binding:profile']
-        self.assertEqual(self.sriov_dev_rp_per_host[compute_rp_uuid]['pf2'],
+        self.assertEqual(self.sriov_dev_rp_per_host[compute_rp_uuid][self.PF2],
                          qos_sriov_binding_profile['allocation'])
 
         # And we expect not to have any allocation set in the port binding for
@@ -6399,7 +6405,7 @@ class ServerMoveWithPortResourceRequestTest(
             self.assertPortMatchesAllocation(qos_port, ovs_allocations)
             sriov_allocations = migration_allocations[
                 self.sriov_dev_rp_per_host[
-                    source_compute_rp_uuid]['pf2']]['resources']
+                    source_compute_rp_uuid][self.PF2]]['resources']
             self.assertPortMatchesAllocation(qos_sriov_port, sriov_allocations)
 
     def _create_server_with_ports(self, *ports):
