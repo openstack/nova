@@ -292,6 +292,538 @@ class MigrationTaskTestCase(test.NoDBTestCase):
             self.instance.uuid, alloc_req, '1.19')
         mock_fill_provider_mapping.assert_not_called()
 
+    @mock.patch('nova.scheduler.utils.claim_resources')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'delete_allocation_for_instance')
+    @mock.patch('nova.objects.Service.get_by_host_and_binary')
+    def test_get_host_supporting_request_no_resource_request(
+            self, mock_get_service, mock_delete_allocation,
+            mock_claim_resources):
+        # no resource request so we expect the first host is simply returned
+        self.request_spec.requested_resources = []
+        task = self._generate_task()
+        resources = {
+            "resources": {
+                "VCPU": 1,
+                "MEMORY_MB": 1024,
+                "DISK_GB": 100}}
+
+        first = objects.Selection(
+            service_host="host1",
+            nodename="node1",
+            cell_uuid=uuids.cell1,
+            allocation_request=jsonutils.dumps(
+                {"allocations": {uuids.host1: resources}}),
+            allocation_request_version='1.19')
+        alternate = objects.Selection(
+            service_host="host2",
+            nodename="node2",
+            cell_uuid=uuids.cell1,
+            allocation_request=jsonutils.dumps(
+                {"allocations": {uuids.host2: resources}}),
+            allocation_request_version='1.19')
+        selection_list = [first, alternate]
+
+        selected, alternates = task._get_host_supporting_request(
+            selection_list)
+
+        self.assertEqual(first, selected)
+        self.assertEqual([alternate], alternates)
+        mock_get_service.assert_not_called()
+        # The first host was good and the scheduler made allocation on that
+        # host. So we don't expect any resource claim manipulation
+        mock_delete_allocation.assert_not_called()
+        mock_claim_resources.assert_not_called()
+
+    @mock.patch('nova.scheduler.utils.claim_resources')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'delete_allocation_for_instance')
+    @mock.patch('nova.objects.Service.get_by_host_and_binary')
+    def test_get_host_supporting_request_first_host_is_new(
+            self, mock_get_service, mock_delete_allocation,
+            mock_claim_resources):
+        self.request_spec.requested_resources = [
+            objects.RequestGroup()
+        ]
+        task = self._generate_task()
+        resources = {
+            "resources": {
+                "VCPU": 1,
+                "MEMORY_MB": 1024,
+                "DISK_GB": 100}}
+
+        first = objects.Selection(
+            service_host="host1",
+            nodename="node1",
+            cell_uuid=uuids.cell1,
+            allocation_request=jsonutils.dumps(
+                {"allocations": {uuids.host1: resources}}),
+            allocation_request_version='1.19')
+        alternate = objects.Selection(
+            service_host="host2",
+            nodename="node2",
+            cell_uuid=uuids.cell1,
+            allocation_request=jsonutils.dumps(
+                {"allocations": {uuids.host2: resources}}),
+            allocation_request_version='1.19')
+        selection_list = [first, alternate]
+
+        first_service = objects.Service(service_host='host1')
+        first_service.version = 39
+        mock_get_service.return_value = first_service
+
+        selected, alternates = task._get_host_supporting_request(
+            selection_list)
+
+        self.assertEqual(first, selected)
+        self.assertEqual([alternate], alternates)
+        mock_get_service.assert_called_once_with(
+            task.context, 'host1', 'nova-compute')
+        # The first host was good and the scheduler made allocation on that
+        # host. So we don't expect any resource claim manipulation
+        mock_delete_allocation.assert_not_called()
+        mock_claim_resources.assert_not_called()
+
+    @mock.patch('nova.scheduler.utils.claim_resources')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'delete_allocation_for_instance')
+    @mock.patch('nova.objects.Service.get_by_host_and_binary')
+    def test_get_host_supporting_request_first_host_is_old_no_alternates(
+            self, mock_get_service, mock_delete_allocation,
+            mock_claim_resources):
+        self.request_spec.requested_resources = [
+            objects.RequestGroup()
+        ]
+        task = self._generate_task()
+        resources = {
+            "resources": {
+                "VCPU": 1,
+                "MEMORY_MB": 1024,
+                "DISK_GB": 100}}
+
+        first = objects.Selection(
+            service_host="host1",
+            nodename="node1",
+            cell_uuid=uuids.cell1,
+            allocation_request=jsonutils.dumps(
+                {"allocations": {uuids.host1: resources}}),
+            allocation_request_version='1.19')
+        selection_list = [first]
+
+        first_service = objects.Service(service_host='host1')
+        first_service.version = 38
+        mock_get_service.return_value = first_service
+
+        self.assertRaises(
+            exception.MaxRetriesExceeded, task._get_host_supporting_request,
+            selection_list)
+
+        mock_get_service.assert_called_once_with(
+            task.context, 'host1', 'nova-compute')
+        mock_delete_allocation.assert_called_once_with(
+            task.context, self.instance.uuid)
+        mock_claim_resources.assert_not_called()
+
+    @mock.patch.object(migrate.LOG, 'debug')
+    @mock.patch('nova.scheduler.utils.claim_resources')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'delete_allocation_for_instance')
+    @mock.patch('nova.objects.Service.get_by_host_and_binary')
+    def test_get_host_supporting_request_first_host_is_old_second_good(
+            self, mock_get_service, mock_delete_allocation,
+            mock_claim_resources, mock_debug):
+
+        self.request_spec.requested_resources = [
+            objects.RequestGroup()
+        ]
+        task = self._generate_task()
+        resources = {
+            "resources": {
+                "VCPU": 1,
+                "MEMORY_MB": 1024,
+                "DISK_GB": 100}}
+
+        first = objects.Selection(
+            service_host="host1",
+            nodename="node1",
+            cell_uuid=uuids.cell1,
+            allocation_request=jsonutils.dumps(
+                {"allocations": {uuids.host1: resources}}),
+            allocation_request_version='1.19')
+        second = objects.Selection(
+            service_host="host2",
+            nodename="node2",
+            cell_uuid=uuids.cell1,
+            allocation_request=jsonutils.dumps(
+                {"allocations": {uuids.host2: resources}}),
+            allocation_request_version='1.19')
+        third = objects.Selection(
+            service_host="host3",
+            nodename="node3",
+            cell_uuid=uuids.cell1,
+            allocation_request=jsonutils.dumps(
+                {"allocations": {uuids.host3: resources}}),
+            allocation_request_version='1.19')
+        selection_list = [first, second, third]
+
+        first_service = objects.Service(service_host='host1')
+        first_service.version = 38
+        second_service = objects.Service(service_host='host2')
+        second_service.version = 39
+        mock_get_service.side_effect = [first_service, second_service]
+
+        selected, alternates = task._get_host_supporting_request(
+            selection_list)
+
+        self.assertEqual(second, selected)
+        self.assertEqual([third], alternates)
+        mock_get_service.assert_has_calls([
+            mock.call(task.context, 'host1', 'nova-compute'),
+            mock.call(task.context, 'host2', 'nova-compute'),
+        ])
+        mock_delete_allocation.assert_called_once_with(
+            task.context, self.instance.uuid)
+        mock_claim_resources.assert_called_once_with(
+            self.context, task.reportclient, task.request_spec,
+            self.instance.uuid, {"allocations": {uuids.host2: resources}},
+            '1.19')
+
+        mock_debug.assert_called_once_with(
+            'Scheduler returned host %(host)s as a possible migration target '
+            'but that host is not new enough to support the migration with '
+            'resource request %(request)s. Trying alternate hosts.',
+            {'host': 'host1',
+             'request': self.request_spec.requested_resources},
+            instance=self.instance)
+
+    @mock.patch.object(migrate.LOG, 'debug')
+    @mock.patch('nova.scheduler.utils.claim_resources')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'delete_allocation_for_instance')
+    @mock.patch('nova.objects.Service.get_by_host_and_binary')
+    def test_get_host_supporting_request_first_host_is_old_second_claim_fails(
+            self, mock_get_service, mock_delete_allocation,
+            mock_claim_resources, mock_debug):
+        self.request_spec.requested_resources = [
+            objects.RequestGroup()
+        ]
+        task = self._generate_task()
+        resources = {
+            "resources": {
+                "VCPU": 1,
+                "MEMORY_MB": 1024,
+                "DISK_GB": 100}}
+
+        first = objects.Selection(
+            service_host="host1",
+            nodename="node1",
+            cell_uuid=uuids.cell1,
+            allocation_request=jsonutils.dumps(
+                {"allocations": {uuids.host1: resources}}),
+            allocation_request_version='1.19')
+        second = objects.Selection(
+            service_host="host2",
+            nodename="node2",
+            cell_uuid=uuids.cell1,
+            allocation_request=jsonutils.dumps(
+                {"allocations": {uuids.host2: resources}}),
+            allocation_request_version='1.19')
+        third = objects.Selection(
+            service_host="host3",
+            nodename="node3",
+            cell_uuid=uuids.cell1,
+            allocation_request=jsonutils.dumps(
+                {"allocations": {uuids.host3: resources}}),
+            allocation_request_version='1.19')
+        fourth = objects.Selection(
+            service_host="host4",
+            nodename="node4",
+            cell_uuid=uuids.cell1,
+            allocation_request=jsonutils.dumps(
+                {"allocations": {uuids.host4: resources}}),
+            allocation_request_version='1.19')
+        selection_list = [first, second, third, fourth]
+
+        first_service = objects.Service(service_host='host1')
+        first_service.version = 38
+        second_service = objects.Service(service_host='host2')
+        second_service.version = 39
+        third_service = objects.Service(service_host='host3')
+        third_service.version = 39
+        mock_get_service.side_effect = [
+            first_service, second_service, third_service]
+        # not called for the first host but called for the second and third
+        # make the second claim fail to force the selection of the third
+        mock_claim_resources.side_effect = [False, True]
+
+        selected, alternates = task._get_host_supporting_request(
+            selection_list)
+
+        self.assertEqual(third, selected)
+        self.assertEqual([fourth], alternates)
+        mock_get_service.assert_has_calls([
+            mock.call(task.context, 'host1', 'nova-compute'),
+            mock.call(task.context, 'host2', 'nova-compute'),
+            mock.call(task.context, 'host3', 'nova-compute'),
+        ])
+        mock_delete_allocation.assert_called_once_with(
+            task.context, self.instance.uuid)
+        mock_claim_resources.assert_has_calls([
+            mock.call(
+                self.context, task.reportclient, task.request_spec,
+                self.instance.uuid,
+                {"allocations": {uuids.host2: resources}}, '1.19'),
+            mock.call(
+                self.context, task.reportclient, task.request_spec,
+                self.instance.uuid,
+                {"allocations": {uuids.host3: resources}}, '1.19'),
+        ])
+        mock_debug.assert_has_calls([
+            mock.call(
+                'Scheduler returned host %(host)s as a possible migration '
+                'target but that host is not new enough to support the '
+                'migration with resource request %(request)s. Trying '
+                'alternate hosts.',
+                {'host': 'host1',
+                 'request': self.request_spec.requested_resources},
+                instance=self.instance),
+            mock.call(
+                'Scheduler returned alternate host %(host)s as a possible '
+                'migration target but resource claim '
+                'failed on that host. Trying another alternate.',
+                {'host': 'host2'},
+                instance=self.instance),
+        ])
+
+    @mock.patch.object(migrate.LOG, 'debug')
+    @mock.patch('nova.scheduler.utils.claim_resources')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'delete_allocation_for_instance')
+    @mock.patch('nova.objects.Service.get_by_host_and_binary')
+    def test_get_host_supporting_request_both_first_and_second_too_old(
+            self, mock_get_service, mock_delete_allocation,
+            mock_claim_resources, mock_debug):
+        self.request_spec.requested_resources = [
+            objects.RequestGroup()
+        ]
+        task = self._generate_task()
+        resources = {
+            "resources": {
+                "VCPU": 1,
+                "MEMORY_MB": 1024,
+                "DISK_GB": 100}}
+
+        first = objects.Selection(
+            service_host="host1",
+            nodename="node1",
+            cell_uuid=uuids.cell1,
+            allocation_request=jsonutils.dumps(
+                {"allocations": {uuids.host1: resources}}),
+            allocation_request_version='1.19')
+        second = objects.Selection(
+            service_host="host2",
+            nodename="node2",
+            cell_uuid=uuids.cell1,
+            allocation_request=jsonutils.dumps(
+                {"allocations": {uuids.host2: resources}}),
+            allocation_request_version='1.19')
+        third = objects.Selection(
+            service_host="host3",
+            nodename="node3",
+            cell_uuid=uuids.cell1,
+            allocation_request=jsonutils.dumps(
+                {"allocations": {uuids.host3: resources}}),
+            allocation_request_version='1.19')
+        fourth = objects.Selection(
+            service_host="host4",
+            nodename="node4",
+            cell_uuid=uuids.cell1,
+            allocation_request=jsonutils.dumps(
+                {"allocations": {uuids.host4: resources}}),
+            allocation_request_version='1.19')
+        selection_list = [first, second, third, fourth]
+
+        first_service = objects.Service(service_host='host1')
+        first_service.version = 38
+        second_service = objects.Service(service_host='host2')
+        second_service.version = 38
+        third_service = objects.Service(service_host='host3')
+        third_service.version = 39
+        mock_get_service.side_effect = [
+            first_service, second_service, third_service]
+        # not called for the first and second hosts but called for the third
+        mock_claim_resources.side_effect = [True]
+
+        selected, alternates = task._get_host_supporting_request(
+            selection_list)
+
+        self.assertEqual(third, selected)
+        self.assertEqual([fourth], alternates)
+        mock_get_service.assert_has_calls([
+            mock.call(task.context, 'host1', 'nova-compute'),
+            mock.call(task.context, 'host2', 'nova-compute'),
+            mock.call(task.context, 'host3', 'nova-compute'),
+        ])
+        mock_delete_allocation.assert_called_once_with(
+            task.context, self.instance.uuid)
+        mock_claim_resources.assert_called_once_with(
+            self.context, task.reportclient, task.request_spec,
+            self.instance.uuid,
+            {"allocations": {uuids.host3: resources}}, '1.19')
+        mock_debug.assert_has_calls([
+            mock.call(
+                'Scheduler returned host %(host)s as a possible migration '
+                'target but that host is not new enough to support the '
+                'migration with resource request %(request)s. Trying '
+                'alternate hosts.',
+                {'host': 'host1',
+                 'request': self.request_spec.requested_resources},
+                instance=self.instance),
+            mock.call(
+                'Scheduler returned alternate host %(host)s as a possible '
+                'migration target but that host is not new enough to support '
+                'the migration with resource request %(request)s. Trying '
+                'another alternate.',
+                {'host': 'host2',
+                 'request': self.request_spec.requested_resources},
+                instance=self.instance),
+        ])
+
+    @mock.patch.object(migrate.LOG, 'debug')
+    @mock.patch('nova.scheduler.utils.fill_provider_mapping')
+    @mock.patch('nova.scheduler.utils.claim_resources')
+    @mock.patch('nova.objects.Service.get_by_host_and_binary')
+    def test_reschedule_old_compute_skipped(
+            self, mock_get_service, mock_claim_resources, mock_fill_mapping,
+            mock_debug):
+        self.request_spec.requested_resources = [
+            objects.RequestGroup()
+        ]
+        task = self._generate_task()
+        resources = {
+            "resources": {
+                "VCPU": 1,
+                "MEMORY_MB": 1024,
+                "DISK_GB": 100}}
+
+        first = objects.Selection(
+            service_host="host1",
+            nodename="node1",
+            cell_uuid=uuids.cell1,
+            allocation_request=jsonutils.dumps(
+                {"allocations": {uuids.host1: resources}}),
+            allocation_request_version='1.19')
+        second = objects.Selection(
+            service_host="host2",
+            nodename="node2",
+            cell_uuid=uuids.cell1,
+            allocation_request=jsonutils.dumps(
+                {"allocations": {uuids.host2: resources}}),
+            allocation_request_version='1.19')
+
+        first_service = objects.Service(service_host='host1')
+        first_service.version = 38
+        second_service = objects.Service(service_host='host2')
+        second_service.version = 39
+        mock_get_service.side_effect = [first_service, second_service]
+
+        # set up task for re-schedule
+        task.host_list = [first, second]
+
+        selected = task._reschedule()
+
+        self.assertEqual(second, selected)
+        self.assertEqual([], task.host_list)
+        mock_get_service.assert_has_calls([
+            mock.call(task.context, 'host1', 'nova-compute'),
+            mock.call(task.context, 'host2', 'nova-compute'),
+        ])
+        mock_claim_resources.assert_called_once_with(
+            self.context.elevated(), task.reportclient, task.request_spec,
+            self.instance.uuid,
+            {"allocations": {uuids.host2: resources}}, '1.19')
+        mock_fill_mapping.assert_called_once_with(
+            task.context, task.reportclient, task.request_spec, second)
+        mock_debug.assert_has_calls([
+            mock.call(
+                'Scheduler returned alternate host %(host)s as a possible '
+                'migration target for re-schedule but that host is not '
+                'new enough to support the migration with resource '
+                'request %(request)s. Trying another alternate.',
+                {'host': 'host1',
+                 'request': self.request_spec.requested_resources},
+                instance=self.instance),
+        ])
+
+    @mock.patch.object(migrate.LOG, 'debug')
+    @mock.patch('nova.scheduler.utils.fill_provider_mapping')
+    @mock.patch('nova.scheduler.utils.claim_resources')
+    @mock.patch('nova.objects.Service.get_by_host_and_binary')
+    def test_reschedule_old_computes_no_more_alternates(
+            self, mock_get_service, mock_claim_resources, mock_fill_mapping,
+            mock_debug):
+        self.request_spec.requested_resources = [
+            objects.RequestGroup()
+        ]
+        task = self._generate_task()
+        resources = {
+            "resources": {
+                "VCPU": 1,
+                "MEMORY_MB": 1024,
+                "DISK_GB": 100}}
+
+        first = objects.Selection(
+            service_host="host1",
+            nodename="node1",
+            cell_uuid=uuids.cell1,
+            allocation_request=jsonutils.dumps(
+                {"allocations": {uuids.host1: resources}}),
+            allocation_request_version='1.19')
+        second = objects.Selection(
+            service_host="host2",
+            nodename="node2",
+            cell_uuid=uuids.cell1,
+            allocation_request=jsonutils.dumps(
+                {"allocations": {uuids.host2: resources}}),
+            allocation_request_version='1.19')
+
+        first_service = objects.Service(service_host='host1')
+        first_service.version = 38
+        second_service = objects.Service(service_host='host2')
+        second_service.version = 38
+        mock_get_service.side_effect = [first_service, second_service]
+
+        # set up task for re-schedule
+        task.host_list = [first, second]
+
+        self.assertRaises(exception.MaxRetriesExceeded, task._reschedule)
+
+        self.assertEqual([], task.host_list)
+        mock_get_service.assert_has_calls([
+            mock.call(task.context, 'host1', 'nova-compute'),
+            mock.call(task.context, 'host2', 'nova-compute'),
+        ])
+        mock_claim_resources.assert_not_called()
+        mock_fill_mapping.assert_not_called()
+        mock_debug.assert_has_calls([
+            mock.call(
+                'Scheduler returned alternate host %(host)s as a possible '
+                'migration target for re-schedule but that host is not '
+                'new enough to support the migration with resource '
+                'request %(request)s. Trying another alternate.',
+                {'host': 'host1',
+                 'request': self.request_spec.requested_resources},
+                instance=self.instance),
+            mock.call(
+                'Scheduler returned alternate host %(host)s as a possible '
+                'migration target for re-schedule but that host is not '
+                'new enough to support the migration with resource '
+                'request %(request)s. Trying another alternate.',
+                {'host': 'host2',
+                 'request': self.request_spec.requested_resources},
+                instance=self.instance),
+        ])
+
 
 class MigrationTaskAllocationUtils(test.NoDBTestCase):
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
