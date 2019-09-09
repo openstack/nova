@@ -1485,9 +1485,6 @@ class NeutronFixture(fixtures.Fixture):
             lambda *args, **kwargs: network_model.NetworkInfo.hydrate(
                 NeutronFixture.nw_info))
         self.test.stub_out(
-            'nova.network.neutronv2.api.API.migrate_instance_finish',
-            lambda *args, **kwargs: None)
-        self.test.stub_out(
             'nova.network.security_group.neutron_driver.SecurityGroupAPI.'
             'get_instances_security_groups_bindings',
             lambda *args, **kwargs: {})

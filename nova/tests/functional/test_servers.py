@@ -5561,11 +5561,12 @@ class PortResourceRequestBasedSchedulingTestBase(
             self._resources_from_flavor(flavor),
             compute_allocations)
 
-    def _create_server(self, flavor, networks):
+    def _create_server(self, flavor, networks, host=None):
         server_req = self._build_minimal_create_server_request(
             self.api, 'bandwidth-aware-server',
             image_uuid='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
-            flavor_id=flavor['id'], networks=networks)
+            flavor_id=flavor['id'], networks=networks,
+            host=host)
         return self.api.post_server({'server': server_req})
 
     def _set_provider_inventories(self, rp_uuid, inventories):
@@ -6355,6 +6356,247 @@ class PortResourceRequestBasedSchedulingTest(
         self.assertEqual(
             fake.FakeDriverWithPciResources.PCI_ADDR_PF2_VF1,
             port_binding['pci_slot'])
+
+
+class HostNameWeigher(weights.BaseHostWeigher):
+    # Weigher to make the scheduler alternate host list deterministic
+    _weights = {'host1': 100, 'host2': 50, 'host3': 10}
+
+    def _weigh_object(self, host_state, weight_properties):
+        # Any undefined host gets no weight.
+        return self._weights.get(host_state.host, 0)
+
+
+class ServerMoveWithPortResourceRequestTest(
+        PortResourceRequestBasedSchedulingTestBase):
+
+    def setUp(self):
+        # Use our custom weigher defined above to make sure that we have
+        # a predictable host order in the alternate list returned by the
+        # scheduler for migration.
+        self.flags(weight_classes=[__name__ + '.HostNameWeigher'],
+                   group='filter_scheduler')
+        super(ServerMoveWithPortResourceRequestTest, self).setUp()
+
+        # The API actively rejecting the move operations with resource
+        # request so we have to turn off that check.
+        # TODO(gibi): Remove this when the move operations are supported and
+        # the API check is removed.
+        patcher = mock.patch(
+            'nova.api.openstack.common.'
+            'supports_port_resource_request_during_move',
+            return_value=True)
+        self.addCleanup(patcher.stop)
+        patcher.start()
+
+        self.compute2 = self._start_compute('host2')
+        self.compute2_rp_uuid = self._get_provider_uuid_by_host('host2')
+        self._create_networking_rp_tree(self.compute2_rp_uuid)
+        self.compute2_service_id = self.admin_api.get_services(
+            host='host2', binary='nova-compute')[0]['id']
+
+    def _check_allocation(
+            self, server, compute_rp_uuid, non_qos_port, qos_port,
+            migration_uuid=None, source_compute_rp_uuid=None):
+
+        updated_non_qos_port = self.neutron.show_port(
+            non_qos_port['id'])['port']
+        updated_qos_port = self.neutron.show_port(qos_port['id'])['port']
+
+        allocations = self.placement_api.get(
+            '/allocations/%s' % server['id']).body['allocations']
+
+        # We expect one set of allocations for the compute resources on the
+        # compute rp and one set for the networking resources on the ovs bridge
+        # rp due to the qos_port resource request
+        self.assertEqual(2, len(allocations))
+        self.assertComputeAllocationMatchesFlavor(
+            allocations, compute_rp_uuid, self.flavor)
+        network_allocations = allocations[
+            self.ovs_bridge_rp_per_host[compute_rp_uuid]]['resources']
+        self.assertPortMatchesAllocation(qos_port, network_allocations)
+
+        # We expect that only the RP uuid of the networking RP having the port
+        # allocation is sent in the port binding for the port having resource
+        # request
+        qos_binding_profile = updated_qos_port['binding:profile']
+        self.assertEqual(self.ovs_bridge_rp_per_host[compute_rp_uuid],
+                         qos_binding_profile['allocation'])
+
+        # And we expect not to have any allocation set in the port binding for
+        # the port that doesn't have resource request
+        self.assertNotIn('binding:profile', updated_non_qos_port)
+
+        if migration_uuid:
+            migration_allocations = self.placement_api.get(
+                '/allocations/%s' % migration_uuid).body['allocations']
+
+            # We expect one set of allocations for the compute resources on the
+            # compute rp and one set for the networking resources on the ovs
+            # bridge rp due to the qos_port resource request
+            self.assertEqual(2, len(migration_allocations))
+            self.assertComputeAllocationMatchesFlavor(
+                migration_allocations, source_compute_rp_uuid, self.flavor)
+            network_allocations = migration_allocations[
+                self.ovs_bridge_rp_per_host[
+                    source_compute_rp_uuid]]['resources']
+            self.assertPortMatchesAllocation(qos_port, network_allocations)
+
+    def _create_server_with_ports(self, non_qos_port, qos_port):
+        server = self._create_server(
+            flavor=self.flavor,
+            networks=[{'port': non_qos_port['id']},
+                      {'port': qos_port['id']}],
+            host='host1')
+        return self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+    def _delete_server_and_check_allocations(self, qos_port, server):
+        self._delete_and_check_allocations(server)
+
+        # assert that unbind removes the allocation from the binding of the
+        # port that got allocation during the bind
+        updated_qos_port = self.neutron.show_port(qos_port['id'])['port']
+        binding_profile = updated_qos_port['binding:profile']
+        self.assertNotIn('allocation', binding_profile)
+
+    def test_migrate_server_with_qos_port_old_dest_compute_no_alternate(self):
+        """Create a situation where the only migration target host returned
+        by the scheduler is too old and therefore the migration fails.
+        """
+        non_qos_port = self.neutron.port_1
+        qos_port = self.neutron.port_with_resource_request
+
+        server = self._create_server_with_ports(non_qos_port, qos_port)
+
+        # check that the server allocates from the current host properly
+        self._check_allocation(
+            server, self.compute1_rp_uuid, non_qos_port, qos_port)
+
+        orig_get_service = nova.objects.Service.get_by_host_and_binary
+
+        def fake_get_service(context, host, binary):
+            if host == 'host1':
+                return orig_get_service(context, host, binary)
+            if host == 'host2':
+                service = orig_get_service(context, host, binary)
+                service.version = 38
+                return service
+
+        with mock.patch(
+                'nova.objects.Service.get_by_host_and_binary',
+                side_effect=fake_get_service):
+
+            ex = self.assertRaises(
+                client.OpenStackApiException,
+                self.api.post_server_action, server['id'], {'migrate': None})
+
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn('No valid host was found.', six.text_type(ex))
+
+        # check that the server still allocates from the original host
+        self._check_allocation(
+            server, self.compute1_rp_uuid, non_qos_port, qos_port)
+
+        # but the migration allocation is gone
+        migration_uuid = self.get_migration_uuid_for_instance(server['id'])
+        migration_allocations = self.placement_api.get(
+            '/allocations/%s' % migration_uuid).body['allocations']
+        self.assertEqual({}, migration_allocations)
+
+        self._delete_server_and_check_allocations(qos_port, server)
+
+    def test_migrate_server_with_qos_port_old_dest_compute_alternate(self):
+        """Create a situation where the first migration target host returned
+        by the scheduler is too old and therefore the second host is selected
+        by the MigrationTask.
+        """
+        self._start_compute('host3')
+        compute3_rp_uuid = self._get_provider_uuid_by_host('host3')
+        self._create_networking_rp_tree(compute3_rp_uuid)
+
+        non_qos_port = self.neutron.port_1
+        qos_port = self.neutron.port_with_resource_request
+
+        server = self._create_server_with_ports(non_qos_port, qos_port)
+
+        # check that the server allocates from the current host properly
+        self._check_allocation(
+            server, self.compute1_rp_uuid, non_qos_port, qos_port)
+
+        orig_get_service = nova.objects.Service.get_by_host_and_binary
+
+        def fake_get_service(context, host, binary):
+            if host == 'host1':
+                return orig_get_service(context, host, binary)
+            if host == 'host2':
+                service = orig_get_service(context, host, binary)
+                service.version = 38
+                return service
+            if host == 'host3':
+                service = orig_get_service(context, host, binary)
+                service.version = 39
+                return service
+
+        with mock.patch(
+                'nova.objects.Service.get_by_host_and_binary',
+                side_effect=fake_get_service):
+
+            self.api.post_server_action(server['id'], {'migrate': None})
+
+        self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+
+        migration_uuid = self.get_migration_uuid_for_instance(server['id'])
+
+        # check that server allocates from host3
+        self._check_allocation(
+            server, compute3_rp_uuid, non_qos_port, qos_port,
+            migration_uuid, source_compute_rp_uuid=self.compute1_rp_uuid)
+
+        self.api.post_server_action(server['id'], {'confirmResize': None})
+        self._wait_for_migration_status(server, ['confirmed'])
+
+        # check that allocation is still OK
+        self._check_allocation(
+            server, compute3_rp_uuid, non_qos_port, qos_port)
+        # but the migration allocation is gone
+        migration_allocations = self.placement_api.get(
+            '/allocations/%s' % migration_uuid).body['allocations']
+        self.assertEqual({}, migration_allocations)
+
+        self._delete_server_and_check_allocations(qos_port, server)
+
+    def test_migrate_server_with_qos_port(self):
+        non_qos_port = self.neutron.port_1
+        qos_port = self.neutron.port_with_resource_request
+
+        server = self._create_server_with_ports(non_qos_port, qos_port)
+
+        # check that the server allocates from the current host properly
+        self._check_allocation(
+            server, self.compute1_rp_uuid, non_qos_port, qos_port)
+
+        self.api.post_server_action(server['id'], {'migrate': None})
+        self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+
+        migration_uuid = self.get_migration_uuid_for_instance(server['id'])
+
+        # check that server allocates from the new host properly
+        self._check_allocation(
+            server, self.compute2_rp_uuid, non_qos_port, qos_port,
+            migration_uuid, source_compute_rp_uuid=self.compute1_rp_uuid)
+
+        self.api.post_server_action(server['id'], {'confirmResize': None})
+        self._wait_for_migration_status(server, ['confirmed'])
+
+        # check that allocation is still OK
+        self._check_allocation(
+            server, self.compute2_rp_uuid, non_qos_port, qos_port)
+        # but the migration allocation is gone
+        migration_allocations = self.placement_api.get(
+            '/allocations/%s' % migration_uuid).body['allocations']
+        self.assertEqual({}, migration_allocations)
+
+        self._delete_server_and_check_allocations(qos_port, server)
 
 
 class PortResourceRequestReSchedulingTest(
