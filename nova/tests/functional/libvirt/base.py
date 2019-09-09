@@ -22,7 +22,6 @@ import mock
 from nova import conf
 from nova.objects import fields as obj_fields
 from nova.tests import fixtures as nova_fixtures
-from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import test_servers as base
 from nova.tests.unit.virt.libvirt import fake_imagebackend
 from nova.tests.unit.virt.libvirt import fakelibvirt
@@ -50,7 +49,6 @@ class ServersTestBase(base.ServersTestBase):
             'nova.virt.libvirt.guest.libvirt',
             fakelibvirt))
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
-        self.useFixture(func_fixtures.PlacementFixture())
 
         self.useFixture(fixtures.MockPatch(
             'nova.virt.libvirt.LibvirtDriver._create_image'))
