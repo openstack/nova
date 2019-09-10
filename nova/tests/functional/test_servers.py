@@ -1811,10 +1811,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             source_rp_uuid, dest_rp_uuid)
 
         # Confirm the resize and check the usages
-        post = {'confirmResize': None}
-        self.api.post_server_action(
-            server['id'], post, check_response_status=[204])
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._confirm_resize(server)
 
         # After confirming, we should have an allocation only on the
         # destination host
@@ -1889,10 +1886,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             server, self.flavor2, self.flavor3, rp_uuid)
 
         # Confirm the resize and check the usages
-        post = {'confirmResize': None}
-        self.api.post_server_action(
-            server['id'], post, check_response_status=[204])
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._confirm_resize(server)
 
         self._run_periodics()
 
@@ -2020,8 +2014,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             dest_rp_uuid, self.flavor2, volume_backed=False)
 
         # Now confirm the resize and check hypervisor usage again.
-        self.api.post_server_action(server['id'], {'confirmResize': None})
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._confirm_resize(server)
 
         # There should no resource usage for flavor1 on the source host.
         self.assert_hypervisor_usage(
@@ -3125,11 +3118,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self._wait_for_state_change(self.api, created_server, 'VERIFY_RESIZE')
 
         # Confirm the resize
-        post = {'confirmResize': None}
-        self.api.post_server_action(
-            created_server['id'], post, check_response_status=[204])
-        new_server = self._wait_for_state_change(self.api, created_server,
-                                                 'ACTIVE')
+        new_server = self._confirm_resize(created_server)
         inst_dest_host = new_server["OS-EXT-SRV-ATTR:host"]
 
         self.assertEqual(dest_hostname, inst_dest_host)
@@ -3300,10 +3289,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             server, self.flavor1, source_rp_uuid, dest_rp_uuid)
 
         # Confirm the move and check the usages
-        post = {'confirmResize': None}
-        self.api.post_server_action(
-            server['id'], post, check_response_status=[204])
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._confirm_resize(server)
 
         def _check_allocation():
             # the target host usage should be according to the flavor
@@ -3951,8 +3937,7 @@ class VolumeBackedServerTest(integrated_helpers.ProviderUsageBaseTestCase):
             self.admin_api, server, 'VERIFY_RESIZE')
         self.assertEqual('host2', server['OS-EXT-SRV-ATTR:host'])
         # Confirm the cold migration and check usage and the request spec.
-        self.api.post_server_action(server['id'], {'confirmResize': None})
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._confirm_resize(server)
         reqspec = objects.RequestSpec.get_by_instance_uuid(ctxt, server['id'])
         # Make sure it's set.
         self.assertTrue(reqspec.is_bfv)
@@ -6552,9 +6537,7 @@ class ServerMoveWithPortResourceRequestTest(
             server, compute3_rp_uuid, non_qos_port, qos_port,
             migration_uuid, source_compute_rp_uuid=self.compute1_rp_uuid)
 
-        self.api.post_server_action(server['id'], {'confirmResize': None})
-        self._wait_for_migration_status(server, ['confirmed'])
-
+        self._confirm_resize(server)
         # check that allocation is still OK
         self._check_allocation(
             server, compute3_rp_uuid, non_qos_port, qos_port)
@@ -6585,8 +6568,7 @@ class ServerMoveWithPortResourceRequestTest(
             server, self.compute2_rp_uuid, non_qos_port, qos_port,
             migration_uuid, source_compute_rp_uuid=self.compute1_rp_uuid)
 
-        self.api.post_server_action(server['id'], {'confirmResize': None})
-        self._wait_for_migration_status(server, ['confirmed'])
+        self._confirm_resize(server)
 
         # check that allocation is still OK
         self._check_allocation(

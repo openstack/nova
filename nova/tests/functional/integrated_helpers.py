@@ -27,6 +27,7 @@ import os_traits
 from oslo_log import log as logging
 from oslo_utils.fixture import uuidsentinel as uuids
 
+from nova.compute import instance_actions
 from nova.compute import utils as compute_utils
 import nova.conf
 from nova import context
@@ -309,12 +310,21 @@ class InstanceHelperMixin(object):
         """
         if api is None:
             api = self.api
-        completion_event = None
+        return self._wait_for_instance_action_event(
+            api, server, expected_action, event_name, event_result='error')
+
+    def _wait_for_instance_action_event(
+            self, api, server, action_name, event_name, event_result):
+        """Polls the instance action events for the given instance, action,
+        event, and event result until it finds the event.
+        """
+        actions = []
+        events = []
         for attempt in range(10):
             actions = api.get_instance_actions(server['id'])
-            # Look for the migrate action.
+            # The API returns the newest event first
             for action in actions:
-                if action['action'] == expected_action:
+                if action['action'] == action_name:
                     events = (
                         api.api_get(
                             '/servers/%s/os-instance-actions/%s' %
@@ -322,21 +332,18 @@ class InstanceHelperMixin(object):
                         ).body['instanceAction']['events'])
                     # Look for the action event being in error state.
                     for event in events:
+                        result = event['result']
                         if (event['event'] == event_name and
-                                event['result'] is not None and
-                                event['result'].lower() == 'error'):
-                            completion_event = event
-                            # Break out of the events loop.
-                            break
-                    if completion_event:
-                        # Break out of the actions loop.
-                        break
+                                result is not None and
+                                result.lower() == event_result.lower()):
+                            return event
             # We didn't find the completion event yet, so wait a bit.
             time.sleep(0.5)
 
-        if completion_event is None:
-            self.fail('Timed out waiting for %s failure event. Current '
-                      'instance actions: %s' % (event_name, actions))
+        self.fail(
+            'Timed out waiting for %s instance action event. Current instance '
+            'actions: %s. Events in the last matching action: %s'
+            % (event_name, actions, events))
 
     def _wait_for_migration_status(self, server, expected_statuses):
         """Waits for a migration record with the given statuses to be found
@@ -912,3 +919,11 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         # Account for reserved_host_cpus.
         expected_vcpu_usage = CONF.reserved_host_cpus + flavor['vcpus']
         self.assertEqual(expected_vcpu_usage, hypervisor['vcpus_used'])
+
+    def _confirm_resize(self, server):
+        self.api.post_server_action(server['id'], {'confirmResize': None})
+        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_instance_action_event(
+            self.api, server, instance_actions.CONFIRM_RESIZE,
+            'compute_confirm_resize', 'success')
+        return server
