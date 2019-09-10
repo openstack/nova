@@ -561,7 +561,7 @@ perform floating IP operations:
 
 For more information about how administrators can associate floating IPs with
 instances, see :python-openstackclient-doc:`ip floating
-<cli/command-objects/ip-floating.html>` in the *python-openstackclient* User
+<cli/command-objects/floating-ip.html>` in the *python-openstackclient* User
 Documentation.
 
 Automatically add floating IPs
