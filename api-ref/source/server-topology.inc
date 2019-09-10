@@ -42,7 +42,7 @@ not allow by policy, the corresponding key value will not exist in response.
   - nodes.vcpu_set: server_topology_nodes_vcpu_set
   - nodes.siblings: server_topology_nodes_cpu_siblings
   - nodes.memory_mb: server_topology_nodes_memory_mb
-  - nodes.host_numa_node: server_topology_nodes_host_numa_node
+  - nodes.host_node: server_topology_nodes_host_node
   - pagesize_kb: server_topology_pagesize_kb
 
 **Example Server topology (2.xx)**
