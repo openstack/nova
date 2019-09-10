@@ -41,9 +41,8 @@ XAPI
 XAPI is one of the toolstacks that could control a Xen based hypervisor.
 XAPI's role is similar to libvirt's in the KVM world.  The API provided by XAPI
 is called XenAPI.  To learn more about the provided interface, look at `XenAPI
-Object Model Overview <http://docs.vmd.citrix.com/XenServer/
-6.2.0/1.0/en_gb/sdk.html#object_model_overview>`_ for definitions of XAPI
-specific terms such as SR, VDI, VIF and PIF.
+Object Model Overview <https://xapi-project.github.io/xen-api/overview.html>`_
+for definitions of XAPI specific terms such as SR, VDI, VIF and PIF.
 
 OpenStack has a compute driver which talks to XAPI, therefore all XAPI managed
 servers could be used with OpenStack.

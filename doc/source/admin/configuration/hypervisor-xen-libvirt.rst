@@ -19,7 +19,7 @@ OpenStack CI Loop
 contains the most recent stability fixes to both Xen and libvirt.
 
 `Xen 4.5.1
-<http://www.xenproject.org/downloads/xen-archives/xen-45-series/xen-451.html>`_
+<https://xenproject.org/downloads/xen-project-archives/xen-project-4-5-series/xen-project-4-5-1/>`_
 (or newer) and `libvirt 1.2.15 <http://libvirt.org/sources/>`_ (or newer)
 contain the minimum required OpenStack improvements for Xen.  Although libvirt
 1.2.15 works with Xen, libvirt 1.3.2 or newer is recommended.  The necessary

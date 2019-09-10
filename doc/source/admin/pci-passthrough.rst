@@ -113,7 +113,7 @@ devices to be disabled and unmounted from the host, in order to be assignable
 by Hyper-V. The following can be read for more details: `Hyper-V PCI
 passthrough`__.
 
-.. __: https://blogs.technet.microsoft.com/heyscriptingguy/2016/07/14/passing-through-devices-to-hyper-v-vms-by-using-discrete-device-assignment/
+.. __: https://devblogs.microsoft.com/scripting/passing-through-devices-to-hyper-v-vms-by-using-discrete-device-assignment/
 
 Configure PCI devices (Compute)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
