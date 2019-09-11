@@ -7744,13 +7744,16 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         mock_report.delete_allocation_for_instance.assert_called_once_with(
             self.context, self.migration.uuid, consumer_type='migration')
 
-    def test_revert_allocation(self):
+    def test_revert_allocation_allocation_exists(self):
         """New-style migration-based allocation revert."""
 
+        @mock.patch('nova.compute.manager.LOG.info')
         @mock.patch.object(self.compute, 'reportclient')
-        def doit(mock_report):
-            cu = uuids.node
-            a = {cu: {'resources': {'DISK_GB': 1}}}
+        def doit(mock_report, mock_info):
+            a = {
+                uuids.node: {'resources': {'DISK_GB': 1}},
+                uuids.child_rp: {'resources': {'CUSTOM_FOO': 1}}
+            }
             mock_report.get_allocations_for_consumer.return_value = a
             self.migration.uuid = uuids.migration
 
@@ -7760,14 +7763,20 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             self.assertTrue(r)
             mock_report.move_allocations.assert_called_once_with(
                 mock.sentinel.ctx, self.migration.uuid, self.instance.uuid)
+            mock_info.assert_called_once_with(
+                'Swapping old allocation on %(rp_uuids)s held by migration '
+                '%(mig)s for instance',
+                {'rp_uuids': a.keys(), 'mig': self.migration.uuid},
+                instance=self.instance)
 
         doit()
 
-    def test_revert_allocation_old_style(self):
+    def test_revert_allocation_allocation_not_exist(self):
         """Test that we don't delete allocs for migration if none found."""
 
+        @mock.patch('nova.compute.manager.LOG.error')
         @mock.patch.object(self.compute, 'reportclient')
-        def doit(mock_report):
+        def doit(mock_report, mock_error):
             mock_report.get_allocations_for_consumer.return_value = {}
             self.migration.uuid = uuids.migration
 
@@ -7776,31 +7785,12 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
 
             self.assertFalse(r)
             self.assertFalse(mock_report.move_allocations.called)
-
-        doit()
-
-    def test_revert_allocation_new_style_unpossible(self):
-        """Test for the should-not-be-possible case of multiple old allocs.
-
-        This should not be a thing that can happen, but just verify that
-        we fall through and guess at one of them. There's not really much else
-        we can do.
-        """
-
-        @mock.patch.object(self.compute, 'reportclient')
-        def doit(mock_report):
-            a = {
-                uuids.node: {'resources': {'DISK_GB': 1}},
-                uuids.edon: {'resources': {'DISK_GB': 1}},
-            }
-            mock_report.get_allocations_for_consumer.return_value = a
-            self.migration.uuid = uuids.migration
-
-            r = self.compute._revert_allocation(mock.sentinel.ctx,
-                                                self.instance, self.migration)
-
-            self.assertTrue(r)
-            self.assertTrue(mock_report.move_allocations.called)
+            mock_error.assert_called_once_with(
+                'Did not find resource allocations for migration '
+                '%s on source node %s. Unable to revert source node '
+                'allocations back to the instance.',
+                self.migration.uuid, self.migration.source_node,
+                instance=self.instance)
 
         doit()
 
