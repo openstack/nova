@@ -93,6 +93,15 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
         self.useFixture(fixtures.EventReporterStub())
+        self.allocations = {
+            uuids.provider1: {
+                "generation": 0,
+                "resources": {
+                    "VCPU": 1,
+                    "MEMORY_MB": 512
+                }
+            }
+        }
 
     @mock.patch.object(manager.ComputeManager, '_get_power_state')
     @mock.patch.object(manager.ComputeManager, '_sync_instance_power_state')
@@ -4702,7 +4711,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                               injected_files, new_pass,
                                               orig_sys_metadata, bdms,
                                               recreate, on_shared_storage,
-                                              preserve_ephemeral, {}, {})
+                                              preserve_ephemeral, {}, {},
+                                              self.allocations)
 
             mock_notify_usage.assert_has_calls(
                 [mock.call(self.context, instance, "rebuild.start",
@@ -4798,7 +4808,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 orig_sys_metadata={}, bdms=objects.BlockDeviceMapping(),
                 evacuate=False, on_shared_storage=None,
                 preserve_ephemeral=False, migration=objects.Migration(),
-                request_spec=objects.RequestSpec())
+                request_spec=objects.RequestSpec(),
+                allocations=self.allocations)
         self.assertIn('Trusted image certificates provided on host',
                       six.text_type(ex))
 
@@ -5385,15 +5396,15 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     self.compute.driver)
         self.compute.rt = fake_rt
 
-        self.allocations = [{
-            "resource_provider": {
-                "uuid": uuids.rp1,
-            },
-            "resources": {
-                "VCPU": 1,
-                "MEMORY_MB": 512,
-            },
-        }]
+        self.allocations = {
+            uuids.provider1: {
+                "generation": 0,
+                "resources": {
+                    "VCPU": 1,
+                    "MEMORY_MB": 512
+                }
+            }
+        }
         self.mock_get_allocs = self.useFixture(
             fixtures.fixtures.MockPatchObject(
                 self.compute.reportclient,
@@ -6319,7 +6330,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self._instance_action_events(mock_start, mock_finish)
         self._assert_build_instance_update(mock_save, reschedule_update=True)
         mock_claim.assert_called_once_with(self.context, self.instance,
-            self.node, self.limits)
+            self.node, self.allocations, self.limits)
         mock_notify.assert_has_calls([
             mock.call(self.context, self.instance, 'create.start',
                 extra_usage_info= {'image_name': self.image.get('name')}),
@@ -6570,33 +6581,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                         self.resource_provider_mapping)])
         mock_prepspawn.assert_not_called()
         mock_failedspawn.assert_not_called()
-
-    @mock.patch.object(virt_driver.ComputeDriver, 'failed_spawn_cleanup')
-    @mock.patch.object(virt_driver.ComputeDriver, 'prepare_for_spawn')
-    @mock.patch('nova.network.model.NetworkInfoAsyncWrapper.wait')
-    @mock.patch.object(manager.ComputeManager, '_build_networks_for_instance')
-    @mock.patch('nova.objects.Instance.save')
-    def test_build_resources_aborts_on_failed_allocations_get(
-            self, mock_save, mock_bn, mock_net_wait, mock_prepspawn,
-            mock_failedspawn):
-        mock_bn.return_value = self.network_info
-        mock_save.return_value = self.instance
-        self.mock_get_allocs.side_effect = exception.NotFound()
-
-        try:
-            with self.compute._build_resources(
-                    self.context, self.instance, self.requested_networks,
-                    self.security_groups, self.image,
-                    self.block_device_mapping, self.resource_provider_mapping):
-                pass
-        except Exception as e:
-            self.assertIsInstance(e, exception.BuildAbortException)
-
-        self.mock_get_allocs.assert_called_once_with(self.context,
-                                                     self.instance.uuid)
-        mock_net_wait.assert_called_once_with(do_raise=False)
-        mock_prepspawn.assert_called_once_with(self.instance)
-        mock_failedspawn.assert_called_once_with(self.instance)
 
     @mock.patch.object(virt_driver.ComputeDriver, 'failed_spawn_cleanup')
     @mock.patch.object(virt_driver.ComputeDriver, 'prepare_for_spawn')

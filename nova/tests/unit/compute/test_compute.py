@@ -7925,7 +7925,7 @@ class ComputeTestCase(BaseTestCase,
         instance = self._create_fake_instance_obj()
         instance.vcpus = 1
 
-        self.compute.rt.instance_claim(admin_context, instance, NODENAME)
+        self.compute.rt.instance_claim(admin_context, instance, NODENAME, None)
         self.assertEqual(1, cn.vcpus_used)
 
         self.compute.terminate_instance(admin_context, instance, [])
@@ -7948,7 +7948,7 @@ class ComputeTestCase(BaseTestCase,
 
         self.assertEqual(0, cn.vcpus_used)
 
-        self.compute.rt.instance_claim(admin_context, instance, NODENAME)
+        self.compute.rt.instance_claim(admin_context, instance, NODENAME, None)
         self.compute._init_instance(admin_context, instance)
         self.assertEqual(1, cn.vcpus_used)
 
@@ -12806,6 +12806,7 @@ class EvacuateHostTestCase(BaseTestCase):
                 ctxt, self.inst, self.inst.host)
             mock_setup_instance_network_on_host.assert_called_once_with(
                 ctxt, self.inst, self.inst.host, migration)
+            self.mock_get_allocs.assert_called_once_with(ctxt, self.inst.uuid)
 
         _test_rebuild(vm_is_stopped=vm_states_is_stopped)
 

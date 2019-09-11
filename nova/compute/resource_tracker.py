@@ -153,7 +153,8 @@ class ResourceTracker(object):
         self.disk_allocation_ratio = CONF.disk_allocation_ratio
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
-    def instance_claim(self, context, instance, nodename, limits=None):
+    def instance_claim(self, context, instance, nodename, allocations,
+                       limits=None):
         """Indicate that some resources are needed for an upcoming compute
         instance build operation.
 
@@ -164,6 +165,7 @@ class ResourceTracker(object):
         :param instance: instance to reserve resources for.
         :type instance: nova.objects.instance.Instance object
         :param nodename: The Ironic nodename selected by the scheduler
+        :param allocations: The placement allocation records for the instance.
         :param limits: Dict of oversubscription limits for memory, disk,
                        and CPUs.
         :returns: A Claim ticket representing the reserved resources.  It can
@@ -223,24 +225,24 @@ class ResourceTracker(object):
         return claim
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
-    def rebuild_claim(self, context, instance, nodename, limits=None,
-                      image_meta=None, migration=None):
+    def rebuild_claim(self, context, instance, nodename, allocations,
+                      limits=None, image_meta=None, migration=None):
         """Create a claim for a rebuild operation."""
         instance_type = instance.flavor
         return self._move_claim(context, instance, instance_type, nodename,
-                                migration, move_type='evacuation',
+                                migration, allocations, move_type='evacuation',
                                 limits=limits, image_meta=image_meta)
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def resize_claim(self, context, instance, instance_type, nodename,
-                     migration, image_meta=None, limits=None):
+                     migration, allocations, image_meta=None, limits=None):
         """Create a claim for a resize or cold-migration move.
 
         Note that this code assumes ``instance.new_flavor`` is set when
         resizing with a new flavor.
         """
         return self._move_claim(context, instance, instance_type, nodename,
-                                migration, image_meta=image_meta,
+                                migration, allocations, image_meta=image_meta,
                                 limits=limits)
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
@@ -260,12 +262,15 @@ class ResourceTracker(object):
         # Flavor and image cannot change during a live migration.
         instance_type = instance.flavor
         image_meta = instance.image_meta
+        # TODO(Luyao) will pass allocations to live_migration_claim after the
+        # live migration change is done, now just set it None to _move_claim
         return self._move_claim(context, instance, instance_type, nodename,
-                                migration, move_type='live-migration',
+                                migration, None, move_type='live-migration',
                                 image_meta=image_meta, limits=limits)
 
     def _move_claim(self, context, instance, new_instance_type, nodename,
-                    migration, move_type=None, image_meta=None, limits=None):
+                    migration, allocations, move_type=None,
+                    image_meta=None, limits=None):
         """Indicate that resources are needed for a move to this host.
 
         Move can be either a migrate/resize, live-migrate or an
@@ -275,13 +280,14 @@ class ResourceTracker(object):
         :param instance: instance object to reserve resources for
         :param new_instance_type: new instance_type being resized to
         :param nodename: The Ironic nodename selected by the scheduler
-        :param image_meta: instance image metadata
-        :param move_type: move type - can be one of 'migration', 'resize',
-                         'live-migration', 'evacuate'
-        :param limits: Dict of oversubscription limits for memory, disk,
-        and CPUs
         :param migration: A migration object if one was already created
                           elsewhere for this operation (otherwise None)
+        :param allocations: the placement allocation records.
+        :param move_type: move type - can be one of 'migration', 'resize',
+                         'live-migration', 'evacuate'
+        :param image_meta: instance image metadata
+        :param limits: Dict of oversubscription limits for memory, disk,
+        and CPUs
         :returns: A Claim ticket representing the reserved resources.  This
         should be turned into finalize  a resource claim or free
         resources after the compute operation is finished.

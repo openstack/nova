@@ -310,7 +310,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         def fake_delete(self2, ctxt, image_id):
             self.deleted_image_id = image_id
 
-        def fake_claim(context, instance, node, limits):
+        def fake_claim(context, instance, node, allocations, limits):
             instance.host = self.compute.host
             requests = objects.InstancePCIRequests(requests=[])
             return claims.Claim(context, instance, test_compute.NODENAME,
@@ -420,7 +420,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
         tracking = {'last_state': instance.task_state}
 
-        def fake_claim(context, instance, node, limits):
+        def fake_claim(context, instance, node, allocations, limits):
             instance.host = self.compute.host
             requests = objects.InstancePCIRequests(requests=[])
             return claims.Claim(context, instance, test_compute.NODENAME,
@@ -468,7 +468,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                                                    self.compute.host)
         mock_instance_claim.assert_called_once_with(self.context, instance,
                                                     test_compute.NODENAME,
-                                                    limits)
+                                                    {}, limits)
         mock_spawn.assert_called_once_with(self.context, instance,
                 test.MatchType(objects.ImageMeta),
                 injected_files=[], admin_password=None,
@@ -513,7 +513,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
         tracking = {'last_state': instance.task_state}
 
-        def fake_claim(context, instance, node, limits):
+        def fake_claim(context, instance, node, allocations, limits):
             instance.host = self.compute.host
             instance.node = node
             requests = objects.InstancePCIRequests(requests=[])
@@ -555,7 +555,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                                                    self.compute.host)
         mock_instance_claim.assert_called_once_with(self.context, instance,
                                                     test_compute.NODENAME,
-                                                    limits)
+                                                    {}, limits)
         mock_spawn.assert_called_once_with(
             self.context, instance, test.MatchType(objects.ImageMeta),
             injected_files=[], admin_password=None,
