@@ -4888,7 +4888,7 @@ class LibvirtDriver(driver.ComputeDriver):
             self._add_rng_device(guest, flavor)
 
     def _get_guest_memory_backing_config(
-            self, inst_topology, numatune, flavor):
+            self, inst_topology, numatune, flavor, image_meta):
         wantsmempages = False
         if inst_topology:
             for cell in inst_topology.cells:
@@ -4928,6 +4928,10 @@ class LibvirtDriver(driver.ComputeDriver):
                     MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION,
                     MIN_QEMU_FILE_BACKED_DISCARD_VERSION):
                 membacking.discard = True
+        if self._sev_enabled(flavor, image_meta):
+            if not membacking:
+                membacking = vconfig.LibvirtConfigGuestMemoryBacking()
+            membacking.locked = True
 
         return membacking
 
@@ -5034,7 +5038,8 @@ class LibvirtDriver(driver.ComputeDriver):
         return True
 
     def _configure_guest_by_virt_type(self, guest, virt_type, caps, instance,
-                                      image_meta, flavor, root_device_name):
+                                      image_meta, flavor, root_device_name,
+                                      sev_enabled):
         if virt_type == "xen":
             if guest.os_type == fields.VMMode.HVM:
                 guest.os_loader = CONF.libvirt.xen_hvmloader_path
@@ -5367,7 +5372,7 @@ class LibvirtDriver(driver.ComputeDriver):
         guest.membacking = self._get_guest_memory_backing_config(
             instance.numa_topology,
             guest_numa_config.numatune,
-            flavor)
+            flavor, image_meta)
 
         guest.metadata.append(self._get_guest_config_meta(instance))
         guest.idmaps = self._get_guest_idmaps()
@@ -5399,9 +5404,11 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._get_guest_os_type(virt_type))
         caps = self._host.get_capabilities()
 
+        sev_enabled = self._sev_enabled(flavor, image_meta)
+
         self._configure_guest_by_virt_type(guest, virt_type, caps, instance,
                                            image_meta, flavor,
-                                           root_device_name)
+                                           root_device_name, sev_enabled)
         if virt_type not in ('lxc', 'uml'):
             self._conf_non_lxc_uml(virt_type, guest, root_device_name, rescue,
                     instance, inst_path, image_meta, disk_info)
@@ -5457,7 +5464,91 @@ class LibvirtDriver(driver.ComputeDriver):
         if mdevs:
             self._guest_add_mdevs(guest, mdevs)
 
+        if sev_enabled:
+            self._guest_configure_sev(guest, caps.host.cpu.arch,
+                                      guest.os_mach_type)
+
         return guest
+
+    def _sev_enabled(self, flavor, image_meta):
+        """To enable AMD SEV, the following should be true:
+
+        a) the supports_amd_sev instance variable in the host is
+           true,
+        b) the instance extra specs and/or image properties request
+           memory encryption to be enabled, and
+        c) there are no conflicts between extra specs, image properties
+           and machine type selection.
+
+        Most potential conflicts in c) should already be caught in the
+        API layer.  However there is still one remaining case which
+        needs to be handled here: when the image does not contain an
+        hw_machine_type property, the machine type will be chosen from
+        CONF.libvirt.hw_machine_type if configured, otherwise falling
+        back to the hardcoded value which is currently 'pc'.  If it
+        ends up being 'pc' or another value not in the q35 family, we
+        need to raise an exception.  So calculate the machine type and
+        pass it to be checked alongside the other sanity checks which
+        are run while determining whether SEV is selected.
+        """
+        if not self._host.supports_amd_sev:
+            return False
+
+        mach_type = libvirt_utils.get_machine_type(image_meta)
+        return hardware.get_mem_encryption_constraint(flavor, image_meta,
+                                                      mach_type)
+
+    def _guest_configure_sev(self, guest, arch, mach_type):
+        sev = self._find_sev_feature(arch, mach_type)
+        if sev is None:
+            # In theory this should never happen because it should
+            # only get called if SEV was requested, in which case the
+            # guest should only get scheduled on this host if it
+            # supports SEV, and SEV support is dependent on the
+            # presence of this <sev> feature.  That said, it's
+            # conceivable that something could get messed up along the
+            # way, e.g. a mismatch in the choice of machine type.  So
+            # make sure that if it ever does happen, we at least get a
+            # helpful error rather than something cryptic like
+            # "AttributeError: 'NoneType' object has no attribute 'cbitpos'
+            raise exception.MissingDomainCapabilityFeatureException(
+                feature='sev')
+
+        designer.set_driver_iommu_for_sev(guest)
+        self._guest_add_launch_security(guest, sev)
+
+    def _guest_add_launch_security(self, guest, sev):
+        launch_security = vconfig.LibvirtConfigGuestSEVLaunchSecurity()
+        launch_security.cbitpos = sev.cbitpos
+        launch_security.reduced_phys_bits = sev.reduced_phys_bits
+        guest.launch_security = launch_security
+
+    def _find_sev_feature(self, arch, mach_type):
+        """Search domain capabilities for the given arch and machine type
+        for the <sev> element under <features>, and return it if found.
+        """
+        domain_caps = self._host.get_domain_capabilities()
+        if arch not in domain_caps:
+            LOG.warning(
+                "Wanted to add SEV to config for guest with arch %(arch)s "
+                "but only had domain capabilities for: %(archs)s",
+                {'arch': arch, 'archs': ' '.join(domain_caps)})
+            return None
+
+        if mach_type not in domain_caps[arch]:
+            LOG.warning(
+                "Wanted to add SEV to config for guest with machine type "
+                "%(mtype)s but for arch %(arch)s only had domain capabilities "
+                "for machine types: %(mtypes)s",
+                {'mtype': mach_type, 'arch': arch,
+                 'mtypes': ' '.join(domain_caps[arch])})
+            return None
+
+        for feature in domain_caps[arch][mach_type].features:
+            if feature.root_name == 'sev':
+                return feature
+
+        return None
 
     def _guest_add_mdevs(self, guest, chosen_mdevs):
         for chosen_mdev in chosen_mdevs:

@@ -596,6 +596,9 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                 is_public=True, vcpu_weight=None,
                                 id=2, disabled=False, rxtx_factor=1.0)
 
+        if image_meta is None:
+            image_meta = objects.ImageMeta.from_dict({})
+
         conf = self._get_conf()
         hostimpl = host.Host("qemu:///system")
         with mock.patch.object(hostimpl, 'has_min_version',

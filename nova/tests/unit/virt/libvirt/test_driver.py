@@ -14,6 +14,7 @@
 #    under the License.
 
 import binascii
+from collections import defaultdict
 from collections import deque
 from collections import OrderedDict
 import contextlib
@@ -87,7 +88,7 @@ from nova.tests.unit import fake_diagnostics
 from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_network
-import nova.tests.unit.image.fake
+import nova.tests.unit.image.fake as fake_image
 from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_diagnostics
 from nova.tests.unit.objects import test_pci_device
@@ -105,10 +106,12 @@ from nova.virt.image import model as imgmodel
 from nova.virt import images
 from nova.virt.libvirt import blockinfo
 from nova.virt.libvirt import config as vconfig
+from nova.virt.libvirt import designer
 from nova.virt.libvirt import driver as libvirt_driver
 from nova.virt.libvirt import firewall
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
+from nova.virt.libvirt.host import SEV_KERNEL_PARAM_FILE
 from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import migration as libvirt_migrate
@@ -2531,11 +2534,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def _test_get_guest_memory_backing_config(
             self, host_topology, inst_topology, numatune):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        flavor = objects.Flavor(memory_mb=4096, vcpus=4, root_gb=496,
+                                ephemeral_gb=8128, swap=33550336, name='fake',
+                                extra_specs={})
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         with mock.patch.object(
                 drvr, "_get_host_numa_topology",
                 return_value=host_topology):
             return drvr._get_guest_memory_backing_config(
-                inst_topology, numatune, {})
+                inst_topology, numatune, flavor, image_meta)
 
     @mock.patch.object(host.Host,
                        'has_min_version', return_value=True)
@@ -2596,15 +2603,211 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsNone(result)
 
     def test_get_guest_memory_backing_config_realtime(self):
-        flavor = {"extra_specs": {
+        extra_specs = {
             "hw:cpu_realtime": "yes",
             "hw:cpu_policy": "dedicated"
-        }}
+        }
+        flavor = objects.Flavor(name='m1.small',
+                                memory_mb=6,
+                                vcpus=28,
+                                root_gb=496,
+                                ephemeral_gb=8128,
+                                swap=33550336,
+                                extra_specs=extra_specs)
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         membacking = drvr._get_guest_memory_backing_config(
-            None, None, flavor)
+            None, None, flavor, image_meta)
         self.assertTrue(membacking.locked)
         self.assertFalse(membacking.sharedpages)
+
+    def _test_sev_enabled(self, expected=None, host_sev_enabled=False,
+                          enc_extra_spec=None, enc_image_prop=None,
+                          hw_machine_type=None, hw_firmware_type=None):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr._host._supports_amd_sev = host_sev_enabled
+
+        extra_specs = {}
+        if enc_extra_spec is not None:
+            extra_specs['hw:mem_encryption'] = enc_extra_spec
+        flavor = objects.Flavor(name='m1.fake')
+        flavor.extra_specs = extra_specs
+
+        image_props = {}
+        if hw_machine_type is not None:
+            image_props['hw_machine_type'] = hw_machine_type
+        if hw_firmware_type is not None:
+            image_props['hw_firmware_type'] = hw_firmware_type
+        if enc_image_prop is not None:
+            image_props['hw_mem_encryption'] = enc_image_prop
+
+        image_meta = fake_image.fake_image_obj(
+            {'id': '150d530b-1c57-4367-b754-1f1b5237923d'},
+            {}, image_props)
+
+        enabled = drvr._sev_enabled(flavor, image_meta)
+
+        if expected is None:
+            self.fail("_test_sev_enabled called without an expected "
+                      "return value. Maybe you expected an exception?")
+
+        self.assertEqual(expected, enabled)
+
+    def test_sev_enabled_no_host_support(self):
+        self._test_sev_enabled(False)
+
+    def test_sev_enabled_host_support_no_flavor_image(self):
+        self._test_sev_enabled(False, host_sev_enabled=True)
+
+    def test_sev_enabled_no_host_support_flavor_requested(self):
+        self._test_sev_enabled(False, enc_extra_spec=True)
+
+    def test_sev_enabled_no_host_support_image_requested(self):
+        self._test_sev_enabled(False, enc_image_prop=True)
+
+    def test_sev_enabled_host_support_flavor_requested(self):
+        self._test_sev_enabled(True, host_sev_enabled=True,
+                               enc_extra_spec=True, hw_firmware_type='uefi',
+                               hw_machine_type='q35')
+
+    def test_sev_enabled_host_support_image_requested(self):
+        self._test_sev_enabled(True, host_sev_enabled=True,
+                               enc_image_prop=True, hw_firmware_type='uefi',
+                               hw_machine_type='q35')
+
+    # The cases where the flavor and image requests contradict each other
+    # are already covered by test_hardware.MemEncryptionConflictTestCase
+    # so we don't need to test them in great detail here.
+    def test_sev_enabled_host_extra_spec_image_conflict(self):
+        exc = self.assertRaises(exception.FlavorImageConflict,
+                                self._test_sev_enabled,
+                                host_sev_enabled=True, enc_extra_spec=False,
+                                enc_image_prop=True)
+        self.assertEqual(
+            "Flavor m1.fake has hw:mem_encryption extra spec explicitly set "
+            "to False, conflicting with image fake_image which has "
+            "hw_mem_encryption property explicitly set to True", str(exc))
+
+    def test_sev_enabled_host_extra_spec_no_uefi(self):
+        exc = self.assertRaises(exception.FlavorImageConflict,
+                                self._test_sev_enabled,
+                                host_sev_enabled=True, enc_extra_spec=True)
+        self.assertEqual(
+            "Memory encryption requested by hw:mem_encryption extra spec in "
+            "m1.fake flavor but image fake_image doesn't have "
+            "'hw_firmware_type' property set to 'uefi'", str(exc))
+
+    def test_sev_enabled_host_extra_spec_no_machine_type(self):
+        exc = self.assertRaises(exception.InvalidMachineType,
+                                self._test_sev_enabled,
+                                host_sev_enabled=True, enc_extra_spec=True,
+                                hw_firmware_type='uefi')
+        self.assertEqual(
+            "Machine type 'pc' is not compatible with image fake_image "
+            "(150d530b-1c57-4367-b754-1f1b5237923d): q35 type is required "
+            "for SEV to work", str(exc))
+
+    def test_sev_enabled_host_extra_spec_pc(self):
+        exc = self.assertRaises(exception.InvalidMachineType,
+                                self._test_sev_enabled,
+                                host_sev_enabled=True, enc_extra_spec=True,
+                                hw_firmware_type='uefi', hw_machine_type='pc')
+        self.assertEqual(
+            "Machine type 'pc' is not compatible with image fake_image "
+            "(150d530b-1c57-4367-b754-1f1b5237923d): q35 type is required "
+            "for SEV to work", str(exc))
+
+    def _setup_fake_domain_caps(self, fake_domain_caps):
+        sev_feature = vconfig.LibvirtConfigDomainCapsFeatureSev()
+        sev_feature.cbitpos = 47
+        sev_feature.reduced_phys_bits = 1
+        domain_caps = vconfig.LibvirtConfigDomainCaps()
+        domain_caps._features = vconfig.LibvirtConfigDomainCapsFeatures()
+        domain_caps._features.features = [sev_feature]
+        fake_domain_caps.return_value = defaultdict(
+            dict, {'x86_64': {'q35': domain_caps}})
+
+    @mock.patch.object(host.Host, 'get_domain_capabilities')
+    def test_find_sev_feature_missing_arch(self, fake_domain_caps):
+        self._setup_fake_domain_caps(fake_domain_caps)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.assertIsNone(drvr._find_sev_feature('arm1', 'q35'))
+
+    @mock.patch.object(host.Host, 'get_domain_capabilities')
+    def test_find_sev_feature_missing_mach_type(self, fake_domain_caps):
+        self._setup_fake_domain_caps(fake_domain_caps)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.assertIsNone(drvr._find_sev_feature('x86_64', 'g3beige'))
+
+    @mock.patch.object(host.Host, 'get_domain_capabilities')
+    def test_find_sev_feature(self, fake_domain_caps):
+        self._setup_fake_domain_caps(fake_domain_caps)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        feature = drvr._find_sev_feature('x86_64', 'q35')
+        self.assertIsInstance(feature,
+                              vconfig.LibvirtConfigDomainCapsFeatureSev)
+        self.assertEqual(47, feature.cbitpos)
+        self.assertEqual(1, feature.reduced_phys_bits)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       "_has_uefi_support", new=mock.Mock(return_value=True))
+    def _setup_sev_guest(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr._host._supports_amd_sev = True
+
+        ctxt = context.RequestContext(project_id=123,
+                                      project_name="aubergine",
+                                      user_id=456,
+                                      user_name="pie")
+
+        extra_specs = {
+            "hw:mem_encryption": True,
+        }
+        flavor = objects.Flavor(name='m1.small',
+                                memory_mb=6,
+                                vcpus=28,
+                                root_gb=496,
+                                ephemeral_gb=8128,
+                                swap=33550336,
+                                extra_specs=extra_specs)
+
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.flavor = flavor
+        image_meta = objects.ImageMeta.from_dict({
+            'id': 'd9c6aeee-8258-4bdb-bca4-39940461b182',
+            'name': 'fakeimage',
+            'disk_format': 'raw',
+            'properties': {'hw_firmware_type': 'uefi',
+                           'hw_machine_type': 'q35'}
+        })
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+
+        return drvr._get_guest_config(instance_ref,
+                                      _fake_network_info(self, 1),
+                                      image_meta, disk_info,
+                                      context=ctxt)
+
+    def test_get_guest_config_sev_no_feature(self):
+        self.assertRaises(exception.MissingDomainCapabilityFeatureException,
+                          self._setup_sev_guest)
+
+    @mock.patch.object(host.Host, 'get_domain_capabilities')
+    @mock.patch.object(designer, 'set_driver_iommu_for_sev')
+    def test_get_guest_config_sev(self, mock_designer, fake_domain_caps):
+        self._setup_fake_domain_caps(fake_domain_caps)
+        cfg = self._setup_sev_guest()
+
+        # SEV-related tag should be set
+        self.assertIsInstance(cfg.launch_security,
+                              vconfig.LibvirtConfigGuestSEVLaunchSecurity)
+        self.assertIsInstance(cfg.membacking,
+                              vconfig.LibvirtConfigGuestMemoryBacking)
+        self.assertTrue(cfg.membacking.locked)
+
+        mock_designer.assert_called_once_with(cfg)
 
     def test_get_guest_memory_backing_config_file_backed(self):
         self.flags(file_backed_memory=1024, group="libvirt")
@@ -5822,6 +6025,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(cfg.devices[5].rate_period, 2)
 
     @mock.patch('nova.virt.libvirt.driver.os.path.exists')
+    @test.patch_exists(SEV_KERNEL_PARAM_FILE, False)
     def test_get_guest_config_with_rng_backend(self, mock_path):
         self.flags(virt_type='kvm',
                    rng_dev_path='/dev/hw_rng',
@@ -6500,6 +6704,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                        "_get_guest_storage_config")
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_numa_support")
     @mock.patch('os.path.exists', return_value=True)
+    @test.patch_exists(SEV_KERNEL_PARAM_FILE, False)
     def test_get_guest_config_aarch64(self, mock_path_exists,
                                       mock_numa, mock_storage, mock_get_arch):
         def get_host_capabilities_stub(self):
@@ -6554,6 +6759,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                        "_get_guest_storage_config")
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_numa_support")
     @mock.patch('os.path.exists', return_value=True)
+    @test.patch_exists(SEV_KERNEL_PARAM_FILE, False)
     def test_get_guest_config_aarch64_with_graphics(self, mock_path_exists,
                                                     mock_numa, mock_storage,
                                                     mock_get_arch):
@@ -6592,25 +6798,32 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertTrue(usbhost_exists)
         self.assertTrue(keyboard_exists)
 
-    def test_get_guest_config_machine_type_through_image_meta(self):
-        self.flags(virt_type="kvm",
-                   group='libvirt')
+    def _get_guest_config_machine_type_through_image_meta(self, mach_type):
+        self.flags(virt_type="kvm", group='libvirt')
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
         image_meta = objects.ImageMeta.from_dict({
             "disk_format": "raw",
-            "properties": {"hw_machine_type":
-                           "fake_machine_type"}})
+            "properties": {"hw_machine_type": mach_type}})
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref,
                                             image_meta)
 
-        cfg = drvr._get_guest_config(instance_ref,
-                                     _fake_network_info(self, 1),
-                                     image_meta, disk_info)
+        return drvr._get_guest_config(instance_ref,
+                                      _fake_network_info(self, 1),
+                                      image_meta, disk_info)
+
+    def test_get_guest_config_machine_type_through_image_meta(self):
+        cfg = self._get_guest_config_machine_type_through_image_meta(
+            "fake_machine_type")
         self.assertEqual(cfg.os_mach_type, "fake_machine_type")
+
+    def test_get_guest_config_machine_type_through_image_meta_sev(self):
+        fake_q35 = "fake-q35-2.11"
+        cfg = self._get_guest_config_machine_type_through_image_meta(fake_q35)
+        self.assertEqual(cfg.os_mach_type, fake_q35)
 
     def test_get_guest_config_machine_type_from_config(self):
         self.flags(virt_type='kvm', group='libvirt')
