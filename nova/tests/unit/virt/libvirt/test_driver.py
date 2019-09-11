@@ -23741,8 +23741,7 @@ class TestLibvirtSEVSupported(TestLibvirtSEV):
 
     @test.patch_exists(SEV_KERNEL_PARAM_FILE, True)
     @test.patch_open(SEV_KERNEL_PARAM_FILE, "1\n")
-    @mock.patch.object(libvirt_driver.LOG, 'warning')
-    def test_get_mem_encrypted_slots_config_zero_supported(self, mock_log):
+    def test_get_mem_encrypted_slots_config_zero_supported(self):
         self.flags(num_memory_encrypted_guests=0, group='libvirt')
         self.driver._host._set_amd_sev_support()
         self.assertEqual(0, self.driver._get_memory_encrypted_slots())
