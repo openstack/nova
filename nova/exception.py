@@ -2523,3 +2523,12 @@ class UnableToRollbackPortUpdates(HealPortAllocationException):
 
 class AssignedResourceNotFound(NovaException):
     msg_fmt = _("Assigned resources not found: %(reason)s")
+
+
+class PMEMNamespaceConfigInvalid(NovaException):
+    msg_fmt = _("The pmem_namespaces configuration is invalid: %(reason)s, "
+                "please check your conf file. ")
+
+
+class GetPMEMNamespaceFailed(NovaException):
+    msg_fmt = _("Get PMEM namespaces on host failed: %(reason)s.")

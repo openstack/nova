@@ -83,3 +83,28 @@ class ResourceList(base.ObjectListBase, base.NovaObject):
         primitive = jsonutils.loads(db_extra['resources'])
         resources = cls.obj_from_primitive(primitive)
         return resources
+
+
+@base.NovaObjectRegistry.register
+class LibvirtVPMEMDevice(ResourceMetadata):
+    # Version 1.0: Initial version
+    VERSION = "1.0"
+
+    fields = {
+        # This is configured in file, used to generate resource class name
+        # CUSTOM_PMEM_NAMESPACE_$LABEL
+        'label': fields.StringField(),
+        # Backend pmem namespace's name
+        'name': fields.StringField(),
+        # Backend pmem namespace's size
+        'size': fields.IntegerField(),
+        # Backend device path
+        'devpath': fields.StringField(),
+        # Backend pmem namespace's alignment
+        'align': fields.IntegerField(),
+    }
+
+    def __hash__(self):
+        # Be sure all fields are set before using hash method
+        return hash((self.label, self.name, self.size,
+                     self.devpath, self.align))
