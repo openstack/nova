@@ -19246,10 +19246,12 @@ class TestUpdateProviderTree(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_vcpu_total',
                 return_value=vcpus)
     def _test_update_provider_tree(self, mock_vcpu, mock_mem, mock_disk,
-                                   mock_gpu_invs, gpu_invs=None):
+                                   mock_gpu_invs, gpu_invs=None, vpmems=None):
         if gpu_invs:
             self.flags(enabled_vgpu_types=['nvidia-11'], group='devices')
             mock_gpu_invs.return_value = gpu_invs
+        if vpmems:
+            self.driver._vpmems_by_rc = vpmems
         self.driver.update_provider_tree(self.pt,
                                          self.cn_rp['name'])
 
@@ -19312,6 +19314,59 @@ class TestUpdateProviderTree(test.NoDBTestCase):
             pgpu_inventory[orc.VGPU][
                 'max_unit'] = inventory_dict['max_unit']
             self.assertEqual(pgpu_inventory, pgpu_provider_data.inventory)
+
+    def test_update_provider_tree_for_vpmem(self):
+        rp_uuid = self.cn_rp['uuid']
+        vpmem_0 = objects.LibvirtVPMEMDevice(label='4GB', name='ns_0',
+                    size=4292870144, devpath='/dev/dax0.0', align=2097152)
+        vpmem_1 = objects.LibvirtVPMEMDevice(label='SMALL', name='ns_1',
+                    size=4292870144, devpath='/dev/dax0.1', align=2097152)
+        vpmem_2 = objects.LibvirtVPMEMDevice(label='4GB', name='ns_2',
+                    size=4292870144, devpath='/dev/dax0.2', align=2097152)
+        vpmems_by_rc = {
+            'CUSTOM_PMEM_NAMESPACE_4GB': [vpmem_0],
+            'CUSTOM_PMEM_NAMESPACE_SMALL': [vpmem_1, vpmem_2]
+        }
+
+        self._test_update_provider_tree(vpmems=vpmems_by_rc)
+        expected_inventory = self._get_inventory()
+        expected_resources = {}
+        expected_inventory["CUSTOM_PMEM_NAMESPACE_4GB"] = {
+            'total': 1,
+            'max_unit': 1,
+            'min_unit': 1,
+            'step_size': 1,
+            'allocation_ratio': 1.0,
+            'reserved': 0
+        }
+        expected_inventory["CUSTOM_PMEM_NAMESPACE_SMALL"] = {
+            'total': 2,
+            'max_unit': 2,
+            'min_unit': 1,
+            'step_size': 1,
+            'allocation_ratio': 1.0,
+            'reserved': 0
+        }
+        expected_resources["CUSTOM_PMEM_NAMESPACE_4GB"] = {
+            objects.Resource(
+                provider_uuid=rp_uuid,
+                resource_class="CUSTOM_PMEM_NAMESPACE_4GB",
+                identifier='ns_0', metadata=vpmem_0)
+        }
+        expected_resources["CUSTOM_PMEM_NAMESPACE_SMALL"] = {
+            objects.Resource(
+                provider_uuid=rp_uuid,
+                resource_class="CUSTOM_PMEM_NAMESPACE_SMALL",
+                identifier='ns_1', metadata=vpmem_1),
+            objects.Resource(
+                provider_uuid=rp_uuid,
+                resource_class="CUSTOM_PMEM_NAMESPACE_SMALL",
+                identifier='ns_2', metadata=vpmem_2)
+        }
+        self.assertEqual(expected_inventory,
+                         self.pt.data(self.cn_rp['uuid']).inventory)
+        self.assertEqual(expected_resources,
+                         self.pt.data(self.cn_rp['uuid']).resources)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_local_gb_info',
                 return_value={'total': disk_gb})

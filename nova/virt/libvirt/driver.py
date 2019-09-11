@@ -7038,6 +7038,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # otherwise.
         inv = provider_tree.data(nodename).inventory
         ratios = self._get_allocation_ratios(inv)
+        resources = collections.defaultdict(set)
         result = {
             orc.VCPU: {
                 'total': vcpus,
@@ -7093,7 +7094,11 @@ class LibvirtDriver(driver.ComputeDriver):
         self._update_provider_tree_for_vgpu(
            provider_tree, nodename, allocations=allocations)
 
+        self._update_provider_tree_for_vpmems(
+            provider_tree, nodename, result, resources)
+
         provider_tree.update_inventory(nodename, result)
+        provider_tree.update_resources(nodename, resources)
 
         traits = self._get_cpu_traits()
         # _get_cpu_traits returns a dict of trait names mapped to boolean
@@ -7107,6 +7112,27 @@ class LibvirtDriver(driver.ComputeDriver):
         # Now that we updated the ProviderTree, we want to store it locally
         # so that spawn() or other methods can access it thru a getter
         self.provider_tree = copy.deepcopy(provider_tree)
+
+    def _update_provider_tree_for_vpmems(self, provider_tree, nodename,
+                                         inventory, resources):
+        """Update resources and inventory for vpmems in provider tree."""
+        prov_data = provider_tree.data(nodename)
+        for rc, vpmems in self._vpmems_by_rc.items():
+            inventory[rc] = {
+                'total': len(vpmems),
+                'max_unit': len(vpmems),
+                'min_unit': 1,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+                'reserved': 0
+            }
+            for vpmem in vpmems:
+                resource_obj = objects.Resource(
+                    provider_uuid=prov_data.uuid,
+                    resource_class=rc,
+                    identifier=vpmem.name,
+                    metadata=vpmem)
+                resources[rc].add(resource_obj)
 
     def _get_memory_encrypted_slots(self):
         slots = CONF.libvirt.num_memory_encrypted_guests
