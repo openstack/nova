@@ -887,6 +887,28 @@ iface eth1 inet static
             [('network-vif-plugged', uuids.normal_vif)],
             network_info.get_plug_time_events(diff_host))
 
+    def test_has_port_with_allocation(self):
+        network_info = model.NetworkInfo([])
+        self.assertFalse(network_info.has_port_with_allocation())
+
+        network_info.append(
+            model.VIF(id=uuids.port_without_profile))
+        self.assertFalse(network_info.has_port_with_allocation())
+
+        network_info.append(
+            model.VIF(id=uuids.port_no_allocation, profile={'foo': 'bar'}))
+        self.assertFalse(network_info.has_port_with_allocation())
+
+        network_info.append(
+            model.VIF(
+                id=uuids.port_empty_alloc, profile={'allocation': None}))
+        self.assertFalse(network_info.has_port_with_allocation())
+
+        network_info.append(
+            model.VIF(
+                id=uuids.port_with_alloc, profile={'allocation': uuids.rp}))
+        self.assertTrue(network_info.has_port_with_allocation())
+
 
 class TestNetworkMetadata(test.NoDBTestCase):
     def setUp(self):

@@ -3459,16 +3459,24 @@ class API(base.Base):
         reqspec.flavor = instance.old_flavor
         reqspec.save()
 
-        # TODO(gibi): do not directly overwrite the
-        # RequestSpec.requested_resources as others like cyborg might added
-        # to things there already
-        # NOTE(gibi): We need to collect the requested resource again as it is
-        # intentionally not persisted in nova. Note that this needs to be
-        # done here as the nova API code directly calls revert on the
-        # dest compute service skipping the conductor.
-        port_res_req = self.network_api.get_requested_resource_for_instance(
-            context, instance.uuid)
-        reqspec.requested_resources = port_res_req
+        # NOTE(gibi): This is a performance optimization. If the network info
+        # cache does not have ports with allocations in the binding profile
+        # then we can skip reading port resource request from neutron below.
+        # If a port has resource request then that would have already caused
+        # that the finish_resize call put allocation in the binding profile
+        # during the resize.
+        if instance.get_network_info().has_port_with_allocation():
+            # TODO(gibi): do not directly overwrite the
+            # RequestSpec.requested_resources as others like cyborg might added
+            # to things there already
+            # NOTE(gibi): We need to collect the requested resource again as it
+            # is intentionally not persisted in nova. Note that this needs to
+            # be done here as the nova API code directly calls revert on the
+            # dest compute service skipping the conductor.
+            port_res_req = (
+                self.network_api.get_requested_resource_for_instance(
+                    context, instance.uuid))
+            reqspec.requested_resources = port_res_req
 
         instance.task_state = task_states.RESIZE_REVERTING
         instance.save(expected_task_state=[None])
