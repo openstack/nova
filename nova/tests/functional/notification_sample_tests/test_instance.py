@@ -299,6 +299,17 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         migration_id = migrations[0]['id']
         self.admin_api.force_complete_migration(server['id'], migration_id)
 
+        # Note that we wait for instance.live_migration_force_complete.end but
+        # by the time we check versioned notifications received we could have
+        # entered ComputeManager._post_live_migration which could emit up to
+        # four other notifications:
+        # - instance.live_migration_post.start
+        # - instance.live_migration_post_dest.start
+        # - instance.live_migration_post_dest.end
+        # - instance.live_migration_post.end
+        # We are not concerned about those in this test so that's why we stop
+        # once we get instance.live_migration_force_complete.end and assert
+        # we got at least 6 notifications.
         self._wait_for_notification(
             'instance.live_migration_force_complete.end')
 
@@ -308,8 +319,8 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         # 3. instance.live_migration_pre.end
         # 4. instance.live_migration_force_complete.start
         # 5. instance.live_migration_force_complete.end
-        self.assertEqual(6, len(fake_notifier.VERSIONED_NOTIFICATIONS),
-                         fake_notifier.VERSIONED_NOTIFICATIONS)
+        self.assertGreaterEqual(6, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                                fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-live_migration_force_complete-start',
             replacements={
