@@ -171,6 +171,8 @@ class MigrateServerController(wsgi.Controller):
                               "'%(ex)s'", {'ex': ex})
             else:
                 raise exc.HTTPBadRequest(explanation=ex.format_message())
+        except exception.OperationNotSupportedForSEV as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.ComputeHostNotFound as e:
