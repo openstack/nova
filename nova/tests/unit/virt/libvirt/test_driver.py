@@ -1292,6 +1292,70 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertRaises(exception.InternalError,
                           drvr._check_file_backed_memory_support)
 
+    def test__check_cpu_compatibility_start_ok(self):
+        self.flags(cpu_mode="custom",
+                   cpu_models=["Penryn"],
+                   group="libvirt")
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr.init_host("dummyhost")
+
+    def test__check_cpu_compatibility_none_models(self):
+        self.flags(cpu_mode="custom",
+                   cpu_models=[],
+                   group="libvirt")
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.assertRaises(exception.Invalid, drvr.init_host, "dummyhost")
+
+    def test__check_cpu_compatibility_none_mode(self):
+        self.flags(cpu_mode="none",
+                   cpu_models=["Penryn"],
+                   group="libvirt")
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.assertRaises(exception.Invalid, drvr.init_host, "dummyhost")
+
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.compareCPU')
+    def test__check_cpu_compatibility_advance_model(self, mocked_compare):
+        mocked_compare.side_effect = (2, 0)
+        self.flags(cpu_mode="custom",
+                   cpu_models=["qemu64", "Broadwell-noTSX"],
+                   group="libvirt")
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.assertRaises(exception.InvalidCPUInfo,
+                          drvr.init_host, "dummyhost")
+
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.compareCPU')
+    def test__check_cpu_compatibility_advance_flag(self, mocked_compare):
+        mocked_compare.side_effect = (2, 0)
+        self.flags(cpu_mode="custom",
+                   cpu_models=["qemu64"],
+                   cpu_model_extra_flags = ["avx", "avx2"],
+                   group="libvirt")
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.assertRaises(exception.InvalidCPUInfo,
+                          drvr.init_host, "dummyhost")
+
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.compareCPU')
+    def test__check_cpu_compatibility_wrong_flag(self, mocked_compare):
+        mocked_compare.side_effect = (2, 0)
+        self.flags(cpu_mode="custom",
+                   cpu_models=["Broadwell-noTSX"],
+                   cpu_model_extra_flags = ["a v x"],
+                   group="libvirt")
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.assertRaises(exception.InvalidCPUInfo,
+                          drvr.init_host, "dummyhost")
+
+    def test__check_cpu_compatibility_invalid_virt_type(self):
+        """Test getting CPU traits when using a virt_type that doesn't support
+        the feature, only kvm and qemu supports reporting CPU traits.
+        """
+        self.flags(cpu_mode='custom',
+                   cpu_models=['IvyBridge'],
+                   virt_type='lxc',
+                   group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.assertRaises(exception.Invalid, drvr.init_host, "dummyhost")
+
     def _do_test_parse_migration_flags(self, lm_expected=None,
                                        bm_expected=None):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -22435,17 +22499,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         mock_baseline.side_effect = mocked_baseline
 
         self.assertTraitsEqual([], self.drvr._get_cpu_feature_traits())
-
-    def test_cpu_traits_with_invalid_virt_type(self):
-        """Test getting CPU traits when using a virt_type that doesn't support
-        the feature, only kvm and qemu supports reporting CPU traits.
-        """
-        self.flags(cpu_mode='custom',
-                   cpu_models=['IvyBridge'],
-                   virt_type='lxc',
-                   group='libvirt'
-                   )
-        self.assertRaises(exception.Invalid, self.drvr._get_cpu_feature_traits)
 
     @mock.patch('nova.virt.libvirt.host.libvirt.Connection.getCapabilities')
     @mock.patch('nova.virt.libvirt.utils.cpu_features_to_traits')
