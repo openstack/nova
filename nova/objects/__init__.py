@@ -65,6 +65,7 @@ def register_all():
     __import__('nova.objects.request_spec')
     __import__('nova.objects.tag')
     __import__('nova.objects.quotas')
+    __import__('nova.objects.resource')
     __import__('nova.objects.security_group')
     __import__('nova.objects.security_group_rule')
     __import__('nova.objects.selection')

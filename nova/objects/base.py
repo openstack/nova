@@ -31,6 +31,23 @@ from nova.objects import fields as obj_fields
 from nova import utils
 
 
+def all_things_equal(obj_a, obj_b):
+    if obj_b is None:
+        return False
+
+    for name in obj_a.fields:
+        set_a = name in obj_a
+        set_b = name in obj_b
+        if set_a != set_b:
+            return False
+        elif not set_a:
+            continue
+
+        if getattr(obj_a, name) != getattr(obj_b, name):
+            return False
+    return True
+
+
 def get_attrname(name):
     """Return the mangled name of the attribute's underlying storage."""
     # FIXME(danms): This is just until we use o.vo's class properties

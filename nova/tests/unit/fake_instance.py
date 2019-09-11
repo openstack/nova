@@ -75,6 +75,7 @@ def fake_db_instance(**updates):
                   'vcpu_model': None,
                   'device_metadata': None,
                   'trusted_certs': None,
+                  'resources': None,
                  },
         'tags': [],
         'services': []
