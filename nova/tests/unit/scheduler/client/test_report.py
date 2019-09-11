@@ -2085,10 +2085,13 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         resources = scheduler_utils.ResourceRequest(req_spec)
         resources.get_request_group(None).aggregates = [
             ['agg1', 'agg2', 'agg3'], ['agg1', 'agg2']]
+        forbidden_aggs = set(['agg1', 'agg5', 'agg6'])
+        resources.get_request_group(None).forbidden_aggregates = forbidden_aggs
         expected_path = '/allocation_candidates'
         expected_query = [
             ('group_policy', 'isolate'),
             ('limit', '1000'),
+            ('member_of', '!in:agg1,agg5,agg6'),
             ('member_of', 'in:agg1,agg2'),
             ('member_of', 'in:agg1,agg2,agg3'),
             ('required', 'CUSTOM_TRAIT1,HW_CPU_X86_AVX,!CUSTOM_TRAIT3,'
@@ -2115,7 +2118,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         expected_url = '/allocation_candidates?%s' % parse.urlencode(
             expected_query)
         self.ks_adap_mock.get.assert_called_once_with(
-            expected_url, microversion='1.31',
+            expected_url, microversion='1.32',
             global_request_id=self.context.global_id)
         self.assertEqual(mock.sentinel.alloc_reqs, alloc_reqs)
         self.assertEqual(mock.sentinel.p_sums, p_sums)
@@ -2159,7 +2162,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             expected_query)
         self.assertEqual(mock.sentinel.alloc_reqs, alloc_reqs)
         self.ks_adap_mock.get.assert_called_once_with(
-            expected_url, microversion='1.31',
+            expected_url, microversion='1.32',
             global_request_id=self.context.global_id)
         self.assertEqual(mock.sentinel.p_sums, p_sums)
 
@@ -2185,7 +2188,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         res = self.client.get_allocation_candidates(self.context, resources)
 
         self.ks_adap_mock.get.assert_called_once_with(
-            mock.ANY, microversion='1.31',
+            mock.ANY, microversion='1.32',
             global_request_id=self.context.global_id)
         url = self.ks_adap_mock.get.call_args[0][0]
         split_url = parse.urlsplit(url)

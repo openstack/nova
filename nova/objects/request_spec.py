@@ -879,7 +879,8 @@ class Destination(base.NovaObject):
     # Version 1.1: Add cell field
     # Version 1.2: Add aggregates field
     # Version 1.3: Add allow_cross_cell_move field.
-    VERSION = '1.3'
+    # Version 1.4: Add forbidden_aggregates field
+    VERSION = '1.4'
 
     fields = {
         'host': fields.StringField(),
@@ -897,11 +898,18 @@ class Destination(base.NovaObject):
         # scheduler by default selects hosts from the cell specified in the
         # cell field.
         'allow_cross_cell_move': fields.BooleanField(default=False),
+        # NOTE(vrushali): These are forbidden aggregates passed to placement as
+        # query params to the allocation candidates API.
+        'forbidden_aggregates': fields.SetOfStringsField(nullable=True,
+                                                         default=None),
     }
 
     def obj_make_compatible(self, primitive, target_version):
         super(Destination, self).obj_make_compatible(primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 4):
+            if 'forbidden_aggregates' in primitive:
+                del primitive['forbidden_aggregates']
         if target_version < (1, 3) and 'allow_cross_cell_move' in primitive:
             del primitive['allow_cross_cell_move']
         if target_version < (1, 2):
@@ -935,6 +943,20 @@ class Destination(base.NovaObject):
         if self.aggregates is None:
             self.aggregates = []
         self.aggregates.append(','.join(aggregates))
+
+    def append_forbidden_aggregates(self, forbidden_aggregates):
+        """Add a set of aggregates to the forbidden aggregates.
+
+        This will take a set of forbidden aggregates that should be
+        ignored by the placement service.
+
+        :param forbidden_aggregates: A set of aggregates which should be
+                                    ignored by the placement service.
+
+        """
+        if self.forbidden_aggregates is None:
+            self.forbidden_aggregates = set([])
+        self.forbidden_aggregates |= forbidden_aggregates
 
 
 @base.NovaObjectRegistry.register
@@ -1013,7 +1035,8 @@ class RequestGroup(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: add requester_id and provider_uuids fields
     # Version 1.2: add in_tree field
-    VERSION = '1.2'
+    # Version 1.3: Add forbidden_aggregates field
+    VERSION = '1.3'
 
     fields = {
         'use_same_provider': fields.BooleanField(default=True),
@@ -1027,6 +1050,11 @@ class RequestGroup(base.NovaObject):
         # member of the aggregate aggregate_UUID1 and member of the aggregate
         # aggregate_UUID2 or aggregate_UUID3 .
         'aggregates': fields.ListOfListsOfStringsField(default=[]),
+        # The forbidden_aggregates field has a form of
+        #     set(['aggregate_UUID1', 'aggregate_UUID12', 'aggregate_UUID3'])
+        # meaning that the request should not be fulfilled from an RP
+        # belonging to any of the aggregates in forbidden_aggregates field.
+        'forbidden_aggregates': fields.SetOfStringsField(default=set()),
         # The entity the request is coming from (e.g. the Neutron port uuid)
         # which may not always be a UUID.
         'requester_id': fields.StringField(nullable=True, default=None),
@@ -1079,6 +1107,9 @@ class RequestGroup(base.NovaObject):
         super(RequestGroup, self).obj_make_compatible(
             primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 3):
+            if 'forbidden_aggregates' in primitive:
+                del primitive['forbidden_aggregates']
         if target_version < (1, 2):
             if 'in_tree' in primitive:
                 del primitive['in_tree']

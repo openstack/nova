@@ -304,6 +304,7 @@ class ResourceRequest(object):
             forbidden_traits = request_group.forbidden_traits
             aggregates = request_group.aggregates
             in_tree = request_group.in_tree
+            forbidden_aggregates = request_group.forbidden_aggregates
 
             resource_query = ",".join(
                 sorted("%s:%s" % (rc, amount)
@@ -327,6 +328,12 @@ class ResourceRequest(object):
                 qs_params.extend(sorted(aggs))
             if in_tree:
                 qs_params.append(('in_tree%s' % suffix, in_tree))
+            if forbidden_aggregates:
+                # member_ofN is a list of aggregate uuids. We need a
+                # tuple of ('member_ofN, '!in:uuid,uuid,...').
+                forbidden_aggs = '!in:' + ','.join(
+                    sorted(forbidden_aggregates))
+                qs_params.append(('member_of%s' % suffix, forbidden_aggs))
             return qs_params
 
         if self._limit is not None:
@@ -479,6 +486,9 @@ def resources_from_request_spec(ctxt, spec_obj, host_manager):
                 #     [['aggA', 'aggB'], ['aggC']]
                 grp.aggregates = [ored.split(',')
                                   for ored in destination.aggregates]
+            if destination.forbidden_aggregates:
+                grp = res_req.get_request_group(None)
+                grp.forbidden_aggregates |= destination.forbidden_aggregates
 
     if 'force_hosts' in spec_obj and spec_obj.force_hosts:
         # Prioritize the value from requested_destination just in case

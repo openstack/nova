@@ -921,6 +921,25 @@ class _TestRequestSpecObject(object):
         req_obj.create()
         req_obj.save()
 
+    def test_destination_forbidden_aggregates_default(self):
+        destination = objects.Destination()
+        self.assertIsNone(destination.forbidden_aggregates)
+
+    def test_destination_append_forbidden_aggregates(self):
+        destination = objects.Destination()
+        destination.append_forbidden_aggregates(set(['foo', 'bar']))
+        self.assertEqual(
+            set(['foo', 'bar']), destination.forbidden_aggregates)
+        destination.append_forbidden_aggregates(set(['bar', 'baz']))
+        self.assertEqual(
+            set(['foo', 'bar', 'baz']), destination.forbidden_aggregates)
+
+    def test_destination_delete_forbidden_aggregates(self):
+        destination = objects.Destination()
+        destination.append_forbidden_aggregates(set(['foo']))
+        primitive = destination.obj_to_primitive(target_version='1.0')
+        self.assertNotIn('forbidden_aggregates', primitive['nova_object.data'])
+
 
 class TestRequestSpecObject(test_objects._LocalTest,
                             _TestRequestSpecObject):
@@ -997,11 +1016,23 @@ class TestRequestGroupObject(test.NoDBTestCase):
     def test_compat_requester_and_provider(self):
         req_obj = objects.RequestGroup(
             requester_id=uuids.requester, provider_uuids=[uuids.rp1],
-            required_traits=set(['CUSTOM_PHYSNET_2']))
+            required_traits=set(['CUSTOM_PHYSNET_2']),
+            forbidden_aggregates=set(['agg3', 'agg4']))
         versions = ovo_base.obj_tree_get_versions('RequestGroup')
+        primitive = req_obj.obj_to_primitive(
+            target_version='1.3',
+            version_manifest=versions)['nova_object.data']
+        self.assertIn('forbidden_aggregates', primitive)
+        self.assertIn('in_tree', primitive)
+        self.assertIn('requester_id', primitive)
+        self.assertIn('provider_uuids', primitive)
+        self.assertIn('required_traits', primitive)
+        self.assertItemsEqual(
+                primitive['forbidden_aggregates'], set(['agg3', 'agg4']))
         primitive = req_obj.obj_to_primitive(
             target_version='1.2',
             version_manifest=versions)['nova_object.data']
+        self.assertNotIn('forbidden_aggregates', primitive)
         self.assertIn('in_tree', primitive)
         self.assertIn('requester_id', primitive)
         self.assertIn('provider_uuids', primitive)
@@ -1009,6 +1040,7 @@ class TestRequestGroupObject(test.NoDBTestCase):
         primitive = req_obj.obj_to_primitive(
             target_version='1.1',
             version_manifest=versions)['nova_object.data']
+        self.assertNotIn('forbidden_aggregates', primitive)
         self.assertNotIn('in_tree', primitive)
         self.assertIn('requester_id', primitive)
         self.assertIn('provider_uuids', primitive)
@@ -1016,10 +1048,45 @@ class TestRequestGroupObject(test.NoDBTestCase):
         primitive = req_obj.obj_to_primitive(
             target_version='1.0',
             version_manifest=versions)['nova_object.data']
+        self.assertNotIn('forbidden_aggregates', primitive)
         self.assertNotIn('in_tree', primitive)
         self.assertNotIn('requester_id', primitive)
         self.assertNotIn('provider_uuids', primitive)
         self.assertIn('required_traits', primitive)
+
+
+class TestDestinationObject(test.NoDBTestCase):
+    def setUp(self):
+        super(TestDestinationObject, self).setUp()
+        self.user_id = uuids.user_id
+        self.project_id = uuids.project_id
+        self.context = context.RequestContext(uuids.user_id, uuids.project_id)
+
+    def test_obj_make_compatible_destination(self):
+        values = {
+            'host': 'fake_host',
+            'node': 'fake_node',
+            'aggregates': ['agg1', 'agg2'],
+            'forbidden_aggregates': set(['agg3', 'agg4'])}
+        obj = objects.Destination(self.context, **values)
+        data = lambda x: x['nova_object.data']
+        obj_primitive = data(obj.obj_to_primitive(target_version='1.3'))
+        self.assertNotIn('forbidden_aggregates', obj_primitive)
+        self.assertIn('aggregates', obj_primitive)
+
+    def test_obj_make_compatible_destination_with_forbidden_aggregates(self):
+        values = {
+            'host': 'fake_host',
+            'node': 'fake_node',
+            'aggregates': ['agg1', 'agg2'],
+            'forbidden_aggregates': set(['agg3', 'agg4'])}
+        obj = objects.Destination(self.context, **values)
+        data = lambda x: x['nova_object.data']
+        obj_primitive = data(obj.obj_to_primitive(target_version='1.4'))
+        self.assertIn('forbidden_aggregates', obj_primitive)
+        self.assertItemsEqual(obj_primitive['forbidden_aggregates'],
+                              set(['agg3', 'agg4']))
+        self.assertIn('aggregates', obj_primitive)
 
 
 class TestMappingRequestGroupsToProviders(test.NoDBTestCase):
