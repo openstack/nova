@@ -9913,27 +9913,35 @@ class LibvirtDriver(driver.ComputeDriver):
                              caps.host.cpu.features | cpu.features]
             return libvirt_utils.cpu_features_to_traits(host_features)
 
+        def _resolve_features(cpu):
+            xml_str = cpu.to_xml()
+            features_xml = self._get_guest_baseline_cpu_features(xml_str)
+            feature_names = []
+            if features_xml:
+                cpu = vconfig.LibvirtConfigCPU()
+                cpu.parse_str(features_xml)
+                feature_names = [f.name for f in cpu.features]
+            return feature_names
+
+        features = set()
         # Choose a default CPU model when cpu_mode is not specified
         if cpu.mode is None:
             caps.host.cpu.model = libvirt_utils.get_cpu_model_from_arch(
                 caps.host.cpu.arch)
             caps.host.cpu.features = set()
+            features = features.union(_resolve_features(caps.host.cpu))
         else:
-            # For custom mode, set model to guest CPU model
-            caps.host.cpu.model = cpu.model
-            caps.host.cpu.features = set()
+            models = [self._get_cpu_model_mapping(model)
+                      for model in CONF.libvirt.cpu_models]
+            # For custom mode, iterate through cpu models
+            for model in models:
+                caps.host.cpu.model = model
+                caps.host.cpu.features = set()
+                features = features.union(_resolve_features(caps.host.cpu))
             # Account for features in cpu_model_extra_flags conf
-            for f in cpu.features:
-                caps.host.cpu.add_feature(
-                    vconfig.LibvirtConfigCPUFeature(name=f.name))
+            features = features.union([f.name for f in cpu.features])
 
-        xml_str = caps.host.cpu.to_xml()
-        features_xml = self._get_guest_baseline_cpu_features(xml_str)
-        feature_names = []
-        if features_xml:
-            cpu.parse_str(features_xml)
-            feature_names = [f.name for f in cpu.features]
-        return libvirt_utils.cpu_features_to_traits(feature_names)
+        return libvirt_utils.cpu_features_to_traits(features)
 
     def _get_guest_baseline_cpu_features(self, xml_str):
         """Calls libvirt's baselineCPU API to compute the biggest set of
