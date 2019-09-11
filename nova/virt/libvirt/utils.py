@@ -30,10 +30,12 @@ from oslo_utils import fileutils
 
 import nova.conf
 from nova.i18n import _
+from nova import objects
 from nova.objects import fields as obj_fields
 import nova.privsep.fs
 import nova.privsep.idmapshift
 import nova.privsep.libvirt
+from nova.scheduler import utils as scheduler_utils
 from nova import utils
 from nova.virt import images
 from nova.virt.libvirt import config as vconfig
@@ -81,6 +83,9 @@ CPU_TRAITS_MAPPING = {
     'vmx': os_traits.HW_CPU_X86_VMX,
     'xop': os_traits.HW_CPU_X86_XOP
 }
+
+# Reverse CPU_TRAITS_MAPPING
+TRAITS_CPU_MAPPING = {v: k for k, v in CPU_TRAITS_MAPPING.items()}
 
 
 def create_image(disk_format, path, size):
@@ -585,3 +590,13 @@ def mdev_uuid2name(mdev_uuid):
     mdev_<uuid_with_underscores>).
     """
     return "mdev_" + mdev_uuid.replace('-', '_')
+
+
+def get_flags_by_flavor_specs(flavor):
+    req_spec = objects.RequestSpec(flavor=flavor)
+    resource_request = scheduler_utils.ResourceRequest(req_spec)
+    required_traits = resource_request.all_required_traits
+
+    flags = [TRAITS_CPU_MAPPING.get(trait) for trait in required_traits]
+
+    return set(flags)

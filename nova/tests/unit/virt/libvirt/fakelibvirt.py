@@ -1344,6 +1344,67 @@ class Connection(object):
         raise Exception("fakelibvirt doesn't support getDomainCapabilities "
                         "for %s architecture" % arch)
 
+    def getCPUModelNames(self, arch):
+        mapping = {
+            'x86_64': [
+                '486',
+                'pentium',
+                'pentium2',
+                'pentium3',
+                'pentiumpro',
+                'coreduo',
+                'n270',
+                'core2duo',
+                'qemu32',
+                'kvm32',
+                'cpu64-rhel5',
+                'cpu64-rhel6',
+                'qemu64',
+                'kvm64',
+                'Conroe',
+                'Penryn',
+                'Nehalem',
+                'Nehalem-IBRS',
+                'Westmere',
+                'Westmere-IBRS',
+                'SandyBridge',
+                'SandyBridge-IBRS',
+                'IvyBridge',
+                'IvyBridge-IBRS',
+                'Haswell-noTSX',
+                'Haswell-noTSX-IBRS',
+                'Haswell',
+                'Haswell-IBRS',
+                'Broadwell-noTSX',
+                'Broadwell-noTSX-IBRS',
+                'Broadwell',
+                'Broadwell-IBRS',
+                'Skylake-Client',
+                'Skylake-Client-IBRS',
+                'Skylake-Server',
+                'Skylake-Server-IBRS',
+                'Cascadelake-Server',
+                'Icelake-Client',
+                'Icelake-Server',
+                'athlon',
+                'phenom',
+                'Opteron_G1',
+                'Opteron_G2',
+                'Opteron_G3',
+                'Opteron_G4',
+                'Opteron_G5',
+                'EPYC',
+                'EPYC-IBPB'],
+            'ppc64': [
+                'POWER6',
+                'POWER7',
+                'POWER8',
+                'POWER9',
+                'POWERPC_e5500',
+                'POWERPC_e6500']
+        }
+        return mapping.get(arch, [])
+
     # Features are kept separately so that the tests can patch this
     # class variable with alternate values.
     _domain_capability_features = '''  <features>

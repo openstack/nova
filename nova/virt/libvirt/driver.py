@@ -424,6 +424,12 @@ class LibvirtDriver(driver.ComputeDriver):
         # intended to be updatable directly
         self.provider_tree = None
 
+        # The CPU models in the configuration are case-insensitive, but the CPU
+        # model in the libvirt is case-sensitive, therefore create a mapping to
+        # map the lower case CPU model name to normal CPU model name.
+        self.cpu_models_mapping = {}
+        self.cpu_model_flag_mapping = {}
+
     def _get_volume_drivers(self):
         driver_registry = dict()
 
@@ -3958,9 +3964,17 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             mount.get_manager().host_down()
 
-    def _get_guest_cpu_model_config(self):
+    def _get_cpu_model_mapping(self, model):
+        if not self.cpu_models_mapping:
+            cpu_models = self._host.get_cpu_model_names()
+            for cpu_model in cpu_models:
+                self.cpu_models_mapping[cpu_model.lower()] = cpu_model
+        return self.cpu_models_mapping.get(model.lower())
+
+    def _get_guest_cpu_model_config(self, flavor=None):
         mode = CONF.libvirt.cpu_mode
-        model = CONF.libvirt.cpu_model
+        models = [self._get_cpu_model_mapping(model)
+                  for model in CONF.libvirt.cpu_models]
         extra_flags = set([flag.lower() for flag in
             CONF.libvirt.cpu_model_extra_flags])
 
@@ -3997,24 +4011,31 @@ class LibvirtDriver(driver.ComputeDriver):
                     "support selecting CPU models") % CONF.libvirt.virt_type
             raise exception.Invalid(msg)
 
-        if mode == "custom" and model is None:
-            msg = _("Config requested a custom CPU model, but no "
-                    "model name was provided")
+        if mode == "custom" and not models:
+            msg = _("Config requested custom CPU models, but no "
+                    "model names was provided")
             raise exception.Invalid(msg)
-        elif mode != "custom" and model is not None:
-            msg = _("A CPU model name should not be set when a "
+
+        if mode != "custom" and models:
+            msg = _("CPU model names should not be set when a "
                     "host CPU model is requested")
             raise exception.Invalid(msg)
 
-        LOG.debug("CPU mode '%(mode)s' model '%(model)s' was chosen, "
-                  "with extra flags: '%(extra_flags)s'",
-                  {'mode': mode,
-                   'model': (model or ""),
-                   'extra_flags': (extra_flags or "")})
-
         cpu = vconfig.LibvirtConfigGuestCPU()
         cpu.mode = mode
-        cpu.model = model
+        cpu.model = models[0] if models else None
+
+        # compare flavor trait and cpu models, select the first mathched model
+        if flavor and mode == "custom":
+            flags = libvirt_utils.get_flags_by_flavor_specs(flavor)
+            if flags:
+                cpu.model = self._match_cpu_model_by_flags(models, flags)
+
+        LOG.debug("CPU mode '%(mode)s' models '%(models)s' was chosen, "
+                  "with extra flags: '%(extra_flags)s'",
+                  {'mode': mode,
+                   'models': (cpu.model or ""),
+                   'extra_flags': (extra_flags or "")})
 
         # NOTE (kchamart): Currently there's no existing way to ask if a
         # given CPU model + CPU flags combination is supported by KVM &
@@ -4031,9 +4052,28 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return cpu
 
+    def _match_cpu_model_by_flags(self, models, flags):
+        for model in models:
+            if flags.issubset(self.cpu_model_flag_mapping.get(model, set([]))):
+                return model
+            cpu = vconfig.LibvirtConfigCPU()
+            cpu.arch = self._host.get_capabilities().host.cpu.arch
+            cpu.model = model
+            features_xml = self._get_guest_baseline_cpu_features(cpu.to_xml())
+            if features_xml:
+                cpu.parse_str(features_xml)
+                feature_names = [f.name for f in cpu.features]
+                self.cpu_model_flag_mapping[model] = feature_names
+                if flags.issubset(feature_names):
+                    return model
+
+        msg = ('No CPU model match traits, models: {models}, required '
+               'flags: {flags}'.format(models=models, flags=flags))
+        raise exception.InvalidCPUInfo(msg)
+
     def _get_guest_cpu_config(self, flavor, image_meta,
                               guest_cpu_numa_config, instance_numa_topology):
-        cpu = self._get_guest_cpu_model_config()
+        cpu = self._get_guest_cpu_model_config(flavor)
 
         if cpu is None:
             return None
@@ -9799,7 +9839,7 @@ class LibvirtDriver(driver.ComputeDriver):
         CPU features.
         2. if mode is None, choose a default CPU model based on CPU
         architecture.
-        3. if mode is 'custom', use cpu_model to generate CPU features.
+        3. if mode is 'custom', use cpu_models to generate CPU features.
         The code also accounts for cpu_model_extra_flags configuration when
         cpu_mode is 'host-model', 'host-passthrough' or 'custom', this
         ensures user specified CPU feature flags to be included.

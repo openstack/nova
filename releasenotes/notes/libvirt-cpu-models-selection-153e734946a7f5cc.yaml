@@ -1,0 +1,12 @@
+---
+features:
+  - |
+    It is now possible to specify an ordered list of CPU models in the
+    ``[libvirt] cpu_models`` config option. If ``[libvirt] cpu_mode``
+    is set to ``custom``, the libvirt driver will select the first
+    CPU model in this list that can provide the required feature
+    traits.
+upgrades:
+  - |
+    The ``[libvirt] cpu_model`` config option has been renamed to
+    ``[libvirt] cpu_models`` and now accepts a list of CPU models.
