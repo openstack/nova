@@ -12496,6 +12496,33 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         _test()
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_disconnect_volume')
+    @mock.patch.object(driver, 'block_device_info_get_mapping')
+    def test_post_live_migration_exception_swallowed(self, mock_get_bdm,
+                                                     mock_disconnect_volume):
+        vol_1_conn_info = {'data': {'volume_id': uuids.vol_1_id}}
+        vol_2_conn_info = {'data': {'volume_id': uuids.vol_2_id}}
+        mock_get_bdm.return_value = [{'connection_info': vol_1_conn_info},
+                                     {'connection_info': vol_2_conn_info}]
+
+        # Raise an exception with the first call to disconnect_volume
+        mock_disconnect_volume.side_effect = [test.TestingException, None]
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr.post_live_migration(mock.sentinel.ctxt, mock.sentinel.instance,
+                                 mock.sentinel.bdi)
+
+        # Assert disconnect_volume is called twice despite the exception
+        mock_disconnect_volume.assert_has_calls([
+            mock.call(mock.sentinel.ctxt, vol_1_conn_info,
+                      mock.sentinel.instance),
+            mock.call(mock.sentinel.ctxt, vol_2_conn_info,
+                      mock.sentinel.instance)])
+
+        # Assert that we log the failure to disconnect the first volume
+        self.assertIn("Ignoring exception while attempting to disconnect "
+                      "volume %s" % uuids.vol_1_id, self.stdlog.logger.output)
+
     @mock.patch('os.stat')
     @mock.patch('os.path.getsize')
     @mock.patch('nova.virt.disk.api.get_disk_info')
