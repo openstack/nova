@@ -212,6 +212,7 @@ _INSTANCE_FIXTURES = [
         old_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[1],
         new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[1],
         deleted = False,
+        resources = None,
     ),
     objects.Instance(
         id=2,
@@ -236,6 +237,7 @@ _INSTANCE_FIXTURES = [
         old_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2],
         new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2],
         deleted = False,
+        resources = None,
     ),
 ]
 
@@ -322,6 +324,7 @@ _MIGRATION_INSTANCE_FIXTURES = {
         flavor=_INSTANCE_TYPE_OBJ_FIXTURES[1],
         old_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[1],
         new_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[2],
+        resources = None,
     ),
     # dest-only
     'f6ed631a-8645-4b12-8e1e-2fff55795765': objects.Instance(
@@ -346,6 +349,7 @@ _MIGRATION_INSTANCE_FIXTURES = {
         flavor=_INSTANCE_TYPE_OBJ_FIXTURES[2],
         old_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[1],
         new_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[2],
+        resources=None,
     ),
     # source-and-dest
     'f4f0bfea-fe7e-4264-b598-01cb13ef1997': objects.Instance(
@@ -370,6 +374,7 @@ _MIGRATION_INSTANCE_FIXTURES = {
         flavor=_INSTANCE_TYPE_OBJ_FIXTURES[2],
         old_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[1],
         new_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[2],
+        resources=None,
     ),
     # dest-only-evac
     '077fb63a-bdc8-4330-90ef-f012082703dc': objects.Instance(
@@ -394,6 +399,7 @@ _MIGRATION_INSTANCE_FIXTURES = {
         flavor=_INSTANCE_TYPE_OBJ_FIXTURES[2],
         old_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[1],
         new_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[2],
+        resources=None,
     ),
 }
 
@@ -483,6 +489,16 @@ class BaseTestCase(test.NoDBTestCase):
                 }
             }
         }
+        self.compute = _COMPUTE_NODE_FIXTURES[0]
+        self.resource_0 = objects.Resource(provider_uuid=self.compute.uuid,
+                                           resource_class="CUSTOM_RESOURCE_0",
+                                           identifier="bar")
+        self.resource_1 = objects.Resource(provider_uuid=self.compute.uuid,
+                                           resource_class="CUSTOM_RESOURCE_1",
+                                           identifier="foo_1")
+        self.resource_2 = objects.Resource(provider_uuid=self.compute.uuid,
+                                           resource_class="CUSTOM_RESOURCE_1",
+                                           identifier="foo_2")
 
     def _setup_rt(self, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES):
         (self.rt, self.sched_client_mock, self.report_client_mock,
@@ -500,6 +516,9 @@ class BaseTestCase(test.NoDBTestCase):
         ptree = provider_tree.ProviderTree()
         ptree.new_root(compute.hypervisor_hostname, compute.uuid)
         ptree.update_traits = mock.Mock()
+        resources = {"CUSTOM_RESOURCE_0": {self.resource_0},
+                     "CUSTOM_RESOURCE_1": {self.resource_1, self.resource_2}}
+        ptree.update_resources(compute.uuid, resources)
 
         rc_mock = self.rt.reportclient
         gptaer_mock = rc_mock.get_provider_tree_and_ensure_root
@@ -582,7 +601,8 @@ class TestUpdateAvailableResources(BaseTestCase):
                                              'system_metadata',
                                              'numa_topology',
                                              'flavor',
-                                             'migration_context'])
+                                             'migration_context',
+                                             'resources'])
         get_cn_mock.assert_called_once_with(mock.ANY, _HOSTNAME,
                                             _NODENAME)
         migr_mock.assert_called_once_with(mock.ANY, _HOSTNAME,
@@ -1081,6 +1101,131 @@ class TestUpdateAvailableResources(BaseTestCase):
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  actual_resources))
         update_mock.assert_called_once()
+
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                new=mock.Mock(return_value=False))
+    @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
+                new=mock.Mock(return_value=objects.PciDeviceList()))
+    @mock.patch('nova.objects.MigrationContext.get_by_instance_uuid',
+                new=mock.Mock(return_value=None))
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
+    def test_populate_assigned_resources(self, mock_get_instances,
+                                         mock_get_instance,
+                                         mock_get_migrations,
+                                         mock_get_cn):
+        # when update_available_resources, rt.assigned_resources
+        # will be populated, resources assigned to tracked migrations
+        # and instances will be tracked in rt.assigned_resources.
+        self._setup_rt()
+
+        # one instance is in the middle of being "resized" to the same host,
+        # meaning there are two related resource allocations - one against
+        # the instance and one against the migration record
+        # here resource_1 and resource_2 are assigned to resizing inst
+        migr_obj = _MIGRATION_FIXTURES['source-and-dest']
+        inst_uuid = migr_obj.instance_uuid
+        resizing_inst = _MIGRATION_INSTANCE_FIXTURES[inst_uuid].obj_clone()
+        mig_ctxt = _MIGRATION_CONTEXT_FIXTURES[resizing_inst.uuid]
+        mig_ctxt.old_resources = objects.ResourceList(
+                objects=[self.resource_1])
+        mig_ctxt.new_resources = objects.ResourceList(
+                objects=[self.resource_2])
+        resizing_inst.migration_context = mig_ctxt
+        # the other instance is not being resized and only has the single
+        # resource allocation for itself
+        # here resource_0 is assigned to inst
+        inst = _INSTANCE_FIXTURES[0]
+        inst.resources = objects.ResourceList(objects=[self.resource_0])
+
+        mock_get_instances.return_value = [inst, resizing_inst]
+        mock_get_instance.return_value = resizing_inst
+        mock_get_migrations.return_value = [migr_obj]
+        mock_get_cn.return_value = self.compute
+
+        update_mock = self._update_available_resources()
+        update_mock.assert_called_once()
+        expected_assigned_resources = {self.compute.uuid: {
+                "CUSTOM_RESOURCE_0": {self.resource_0},
+                "CUSTOM_RESOURCE_1": {self.resource_1, self.resource_2}
+            }}
+        self.assertEqual(expected_assigned_resources,
+                         self.rt.assigned_resources)
+
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                new=mock.Mock(return_value=False))
+    @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
+                new=mock.Mock(return_value=objects.PciDeviceList()))
+    @mock.patch('nova.objects.MigrationContext.get_by_instance_uuid',
+                new=mock.Mock(return_value=None))
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
+    def test_check_resources_startup_success(self, mock_get_instances,
+                                             mock_get_instance,
+                                             mock_get_migrations,
+                                             mock_get_cn):
+        # When update_available_resources is running on startup,
+        # it will trigger this function to check if there are
+        # assigned resources not in provider tree. If so, the reason
+        # may be admin delete the resources on the host or delete some
+        # resource configurations in file.
+        self._setup_rt()
+        # there are three resources in provider tree
+        self.rt.provider_tree = self._setup_ptree(self.compute)
+        migr_obj = migr_obj = _MIGRATION_FIXTURES['source-and-dest']
+        inst_uuid = migr_obj.instance_uuid
+        resizing_inst = _MIGRATION_INSTANCE_FIXTURES[inst_uuid].obj_clone()
+        mig_ctxt = _MIGRATION_CONTEXT_FIXTURES[resizing_inst.uuid]
+        mig_ctxt.old_resources = objects.ResourceList(
+                objects=[self.resource_1])
+        mig_ctxt.new_resources = objects.ResourceList(
+                objects=[self.resource_2])
+        resizing_inst.migration_context = mig_ctxt
+        inst = _INSTANCE_FIXTURES[0]
+        inst.resources = objects.ResourceList(objects=[self.resource_0])
+
+        mock_get_instances.return_value = [inst, resizing_inst]
+        mock_get_instance.return_value = resizing_inst
+        mock_get_migrations.return_value = [migr_obj]
+        mock_get_cn.return_value = self.compute
+
+        # check_resources is only triggered when startup
+        update_mock = self._update_available_resources(startup=True)
+        update_mock.assert_called_once()
+
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                new=mock.Mock(return_value=False))
+    @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
+                new=mock.Mock(return_value=objects.PciDeviceList()))
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
+    def test_check_resources_startup_fail(self, mock_get_instances,
+                                          mock_get_migrations,
+                                          mock_get_cn):
+        # Similar to testcase test_check_resources_startup_success,
+        # and this one is for check_resources failed
+        resource = objects.Resource(provider_uuid=self.compute.uuid,
+                                    resource_class="CUSTOM_RESOURCE_0",
+                                    identifier="notfound")
+        self._setup_rt()
+        # there are three resources in provider tree
+        self.rt.provider_tree = self._setup_ptree(self.compute)
+
+        inst = _INSTANCE_FIXTURES[0]
+        inst.resources = objects.ResourceList(objects=[resource])
+
+        mock_get_instances.return_value = [inst]
+        mock_get_migrations.return_value = []
+        mock_get_cn.return_value = self.compute
+
+        # There are assigned resources not found in provider tree
+        self.assertRaises(exc.AssignedResourceNotFound,
+                          self._update_available_resources, startup=True)
 
 
 class TestInitComputeNode(BaseTestCase):
@@ -1879,6 +2024,7 @@ class TestInstanceClaim(BaseTestCase):
         self._setup_rt()
         cn = _COMPUTE_NODE_FIXTURES[0].obj_clone()
         self.rt.compute_nodes[_NODENAME] = cn
+        self.rt.provider_tree = self._setup_ptree(cn)
 
         # not using mock.sentinel.ctx because instance_claim calls #elevated
         self.ctx = mock.MagicMock()
@@ -1972,6 +2118,18 @@ class TestInstanceClaim(BaseTestCase):
         # called in a removed state
         pci_mock.return_value = objects.InstancePCIRequests(requests=[])
         check_bfv_mock.return_value = False
+        cn = self.rt.compute_nodes[_NODENAME]
+        allocations = {
+            cn.uuid: {
+                "generation": 0,
+                "resources": {
+                    "VCPU": 1,
+                    "MEMORY_MB": 512,
+                    "CUSTOM_RESOURCE_0": 1,
+                    "CUSTOM_RESOURCE_1": 2,
+                }
+            }
+        }
 
         expected = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         disk_used = self.instance.root_gb + self.instance.ephemeral_gb
@@ -1996,10 +2154,15 @@ class TestInstanceClaim(BaseTestCase):
         with mock.patch.object(self.rt, '_update') as update_mock:
             with mock.patch.object(self.instance, 'save'):
                 self.rt.instance_claim(self.ctx, self.instance, _NODENAME,
-                                       self.allocations, None)
+                                       allocations, None)
             cn = self.rt.compute_nodes[_NODENAME]
             update_mock.assert_called_once_with(self.elevated, cn)
             self.assertTrue(obj_base.obj_equal_prims(expected, cn))
+            # Verify that the assigned resources are tracked
+            for rc, amount in [("CUSTOM_RESOURCE_0", 1),
+                               ("CUSTOM_RESOURCE_1", 2)]:
+                self.assertEqual(amount,
+                                 len(self.rt.assigned_resources[cn.uuid][rc]))
 
         expected_updated = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
@@ -2020,6 +2183,9 @@ class TestInstanceClaim(BaseTestCase):
             self.rt.update_usage(self.ctx, self.instance, _NODENAME)
         cn = self.rt.compute_nodes[_NODENAME]
         self.assertTrue(obj_base.obj_equal_prims(expected_updated, cn))
+        # Verify that the resources are released
+        for rc in ["CUSTOM_RESOURCE_0", "CUSTOM_RESOURCE_1"]:
+            self.assertEqual(0, len(self.rt.assigned_resources[cn.uuid][rc]))
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
@@ -2116,6 +2282,89 @@ class TestInstanceClaim(BaseTestCase):
             update_mock.assert_called_once_with(self.elevated, cn)
             pci_stats_mock.assert_called_once_with([request])
             self.assertTrue(obj_base.obj_equal_prims(expected, cn))
+
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                new=mock.Mock(return_value=False))
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
+                new=mock.Mock(return_value=objects.InstancePCIRequests(
+                    requests=[])))
+    def test_claim_with_resources(self):
+        cn = self.rt.compute_nodes[_NODENAME]
+        allocations = {
+            cn.uuid: {
+                "generation": 0,
+                "resources": {
+                    "VCPU": 1,
+                    "MEMORY_MB": 512,
+                    "CUSTOM_RESOURCE_0": 1,
+                    "CUSTOM_RESOURCE_1": 2,
+                }
+            }
+        }
+        expected_resources_0 = {self.resource_0}
+        expected_resources_1 = {self.resource_1, self.resource_2}
+        with mock.patch.object(self.rt, '_update'):
+            with mock.patch.object(self.instance, 'save'):
+                self.rt.instance_claim(self.ctx, self.instance, _NODENAME,
+                                       allocations, None)
+
+        self.assertEqual((expected_resources_0 | expected_resources_1),
+                         set(self.instance.resources))
+
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                new=mock.Mock(return_value=False))
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
+                new=mock.Mock(return_value=objects.InstancePCIRequests(
+                    requests=[])))
+    def test_claim_with_resources_from_free(self):
+        cn = self.rt.compute_nodes[_NODENAME]
+        self.rt.assigned_resources = {
+            self.resource_1.provider_uuid: {
+                self.resource_1.resource_class: {self.resource_1}}}
+        allocations = {
+            cn.uuid: {
+                "generation": 0,
+                "resources": {
+                    "VCPU": 1,
+                    "MEMORY_MB": 512,
+                    "CUSTOM_RESOURCE_1": 1,
+                }
+            }
+        }
+        # resource_1 is assigned to other instances,
+        # so only resource_2 is available
+        expected_resources = {self.resource_2}
+        with mock.patch.object(self.rt, '_update'):
+            with mock.patch.object(self.instance, 'save'):
+                self.rt.instance_claim(self.ctx, self.instance, _NODENAME,
+                                       allocations, None)
+
+        self.assertEqual(expected_resources, set(self.instance.resources))
+
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                new=mock.Mock(return_value=False))
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
+                new=mock.Mock(return_value=objects.InstancePCIRequests(
+                    requests=[])))
+    def test_claim_failed_with_resources(self):
+        cn = self.rt.compute_nodes[_NODENAME]
+        # Only one "CUSTOM_RESOURCE_0" resource is available
+        allocations = {
+            cn.uuid: {
+                "generation": 0,
+                "resources": {
+                    "VCPU": 1,
+                    "MEMORY_MB": 512,
+                    "CUSTOM_RESOURCE_0": 2
+                }
+            }
+        }
+        with mock.patch.object(self.instance, 'save'):
+            self.assertRaises(exc.ComputeResourcesUnavailable,
+                              self.rt.instance_claim, self.ctx, self.instance,
+                              _NODENAME, allocations, None)
+        self.assertEqual(
+            0, len(self.rt.assigned_resources[cn.uuid]['CUSTOM_RESOURCE_0']))
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
@@ -2369,6 +2618,8 @@ class TestResize(BaseTestCase):
                    reserved_host_memory_mb=0)
         virt_resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
         self._setup_rt(virt_resources=virt_resources)
+        cn = _COMPUTE_NODE_FIXTURES[0].obj_clone()
+        self.rt.provider_tree = self._setup_ptree(cn)
 
         # not using mock.sentinel.ctx because resize_claim calls #elevated
         ctx = mock.MagicMock()
@@ -2381,10 +2632,19 @@ class TestResize(BaseTestCase):
         old_flavor = instance.flavor
         instance.new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
 
+        # allocations for create
+        allocations = {
+            cn.uuid: {
+                "generation": 0,
+                "resources": {
+                    "CUSTOM_RESOURCE_0": 1,
+                }
+            }
+        }
         # Build instance
         with mock.patch.object(instance, 'save'):
             self.rt.instance_claim(ctx, instance, _NODENAME,
-                                   self.allocations, None)
+                                   allocations, None)
 
         expected = compute_update_usage(expected, old_flavor, sign=1)
         expected.running_vms = 1
@@ -2393,10 +2653,26 @@ class TestResize(BaseTestCase):
             self.rt.compute_nodes[_NODENAME],
             ignore=['stats']
         ))
+        # Verify that resources are assigned and tracked
+        self.assertEqual(
+            1, len(self.rt.assigned_resources[cn.uuid]["CUSTOM_RESOURCE_0"]))
 
+        # allocation for resize
+        allocations = {
+            cn.uuid: {
+                "generation": 0,
+                "resources": {
+                    "CUSTOM_RESOURCE_1": 2,
+                }
+            }
+        }
         # This migration context is fine, it points to the first instance
         # fixture and indicates a source-and-dest resize.
         mig_context_obj = _MIGRATION_CONTEXT_FIXTURES[instance.uuid]
+        mig_context_obj.old_resources = objects.ResourceList(
+            objects=[self.resource_0])
+        mig_context_obj.new_resources = objects.ResourceList(
+            objects=[self.resource_1, self.resource_2])
         instance.migration_context = mig_context_obj
 
         migration = objects.Migration(
@@ -2424,7 +2700,7 @@ class TestResize(BaseTestCase):
             mock.patch('nova.objects.Instance.save'),
         ) as (create_mig_mock, ctxt_mock, inst_save_mock):
             self.rt.resize_claim(ctx, instance, new_flavor, _NODENAME,
-                                 None, self.allocations)
+                                 None, allocations)
 
         expected = compute_update_usage(expected, new_flavor, sign=1)
         self.assertTrue(obj_base.obj_equal_prims(
@@ -2432,6 +2708,12 @@ class TestResize(BaseTestCase):
             self.rt.compute_nodes[_NODENAME],
             ignore=['stats']
         ))
+        # Verify that resources are assigned and tracked
+        for rc, amount in [("CUSTOM_RESOURCE_0", 1),
+                           ("CUSTOM_RESOURCE_1", 2)]:
+            self.assertEqual(amount,
+                             len(self.rt.assigned_resources[cn.uuid][rc]))
+
         # Confirm or revert resize
         if revert:
             flavor = new_flavor
@@ -2449,6 +2731,24 @@ class TestResize(BaseTestCase):
             self.rt.compute_nodes[_NODENAME],
             ignore=['stats']
         ))
+        if revert:
+            # Verify that the new resources are released
+            self.assertEqual(
+                0, len(self.rt.assigned_resources[cn.uuid][
+                    "CUSTOM_RESOURCE_1"]))
+            # Old resources are not released
+            self.assertEqual(
+                1, len(self.rt.assigned_resources[cn.uuid][
+                    "CUSTOM_RESOURCE_0"]))
+        else:
+            # Verify that the old resources are released
+            self.assertEqual(
+                0, len(self.rt.assigned_resources[cn.uuid][
+                    "CUSTOM_RESOURCE_0"]))
+            # new resources are not released
+            self.assertEqual(
+                2, len(self.rt.assigned_resources[cn.uuid][
+                    "CUSTOM_RESOURCE_1"]))
 
     def test_instance_build_resize_revert(self):
         self._test_instance_build_resize(revert=True)
@@ -2819,6 +3119,7 @@ class TestRebuild(BaseTestCase):
             flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2],
             old_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2],
             new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2],
+            resources = None,
         )
 
         # not using mock.sentinel.ctx because resize_claim calls #elevated

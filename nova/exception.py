@@ -2519,3 +2519,7 @@ class UnableToRollbackPortUpdates(HealPortAllocationException):
                 "nova-manage.html#placement. If you re-run the script without "
                 "the manual fix then the missing allocation for these ports "
                 "will not be healed in placement.")
+
+
+class AssignedResourceNotFound(NovaException):
+    msg_fmt = _("Assigned resources not found: %(reason)s")
