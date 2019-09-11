@@ -243,6 +243,27 @@ class ResourceTracker(object):
                                 migration, image_meta=image_meta,
                                 limits=limits)
 
+    @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
+    def live_migration_claim(self, context, instance, nodename, migration,
+                             limits):
+        """Builds a MoveClaim for a live migration.
+
+        :param context: The request context.
+        :param instance: The instance being live migrated.
+        :param nodename: The nodename of the destination host.
+        :param migration: The Migration object associated with this live
+                          migration.
+        :param limits: A SchedulerLimits object from when the scheduler
+                       selected the destination host.
+        :returns: A MoveClaim for this live migration.
+        """
+        # Flavor and image cannot change during a live migration.
+        instance_type = instance.flavor
+        image_meta = instance.image_meta
+        return self._move_claim(context, instance, instance_type, nodename,
+                                migration, move_type='live-migration',
+                                image_meta=image_meta, limits=limits)
+
     def _move_claim(self, context, instance, new_instance_type, nodename,
                     migration, move_type=None, image_meta=None, limits=None):
         """Indicate that resources are needed for a move to this host.
@@ -295,12 +316,17 @@ class ResourceTracker(object):
                     new_pci_requests.requests.append(request)
         claim = claims.MoveClaim(context, instance, nodename,
                                  new_instance_type, image_meta, self, cn,
-                                 new_pci_requests,
-                                 limits=limits)
+                                 new_pci_requests, migration, limits=limits)
 
-        claim.migration = migration
         claimed_pci_devices_objs = []
-        if self.pci_tracker:
+        # TODO(artom) The second part of this condition should not be
+        # necessary, but since SRIOV live migration is currently handled
+        # elsewhere - see for example _claim_pci_for_instance_vifs() in the
+        # compute manager - we don't do any PCI claims if this is a live
+        # migration to avoid stepping on that code's toes. Ideally,
+        # MoveClaim/this method would be used for all live migration resource
+        # claims.
+        if self.pci_tracker and migration.migration_type != 'live-migration':
             # NOTE(jaypipes): ComputeNode.pci_device_pools is set below
             # in _update_usage_from_instance().
             claimed_pci_devices_objs = self.pci_tracker.claim_instance(
@@ -367,7 +393,11 @@ class ResourceTracker(object):
         migration.dest_compute = self.host
         migration.dest_node = nodename
         migration.dest_host = self.driver.get_host_ip_addr()
-        migration.status = 'pre-migrating'
+        # NOTE(artom) Migration objects for live migrations are created with
+        # status 'accepted' by the conductor in live_migrate_instance() and do
+        # not have a 'pre-migrating' status.
+        if migration.migration_type != 'live-migration':
+            migration.status = 'pre-migrating'
         migration.save()
 
     def _set_instance_host_and_node(self, instance, nodename):
