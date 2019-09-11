@@ -70,6 +70,7 @@ from nova.compute import vm_states
 import nova.conf
 from nova import context
 from nova.db import api as db
+from nova.db import constants as db_const
 from nova import exception
 from nova.network import model as network_model
 from nova import objects
@@ -23679,3 +23680,69 @@ class TestLibvirtMultiattach(test.NoDBTestCase):
     #     calls = [mock.call(lv_ver=libvirt_driver.MIN_LIBVIRT_MULTIATTACH),
     #              mock.call(hv_ver=(2, 10, 0))]
     #     has_min_version.assert_has_calls(calls)
+
+
+vc = fakelibvirt.virConnect
+
+
+class TestLibvirtSEV(test.NoDBTestCase):
+    """Libvirt driver tests for AMD SEV support."""
+
+    def setUp(self):
+        super(TestLibvirtSEV, self).setUp()
+        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+
+@mock.patch.object(os.path, 'exists', new=mock.Mock(return_value=False))
+class TestLibvirtSEVUnsupported(TestLibvirtSEV):
+    def test_get_mem_encrypted_slots_no_config(self):
+        self.driver._host._set_amd_sev_support()
+        self.assertEqual(0, self.driver._get_memory_encrypted_slots())
+
+    def test_get_mem_encrypted_slots_config_zero(self):
+        self.flags(num_memory_encrypted_guests=0, group='libvirt')
+        self.driver._host._set_amd_sev_support()
+        self.assertEqual(0, self.driver._get_memory_encrypted_slots())
+
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    def test_get_mem_encrypted_slots_config_non_zero_unsupported(
+            self, mock_log):
+        self.flags(num_memory_encrypted_guests=16, group='libvirt')
+        self.driver._host._set_amd_sev_support()
+        # Still zero without mocked SEV support
+        self.assertEqual(0, self.driver._get_memory_encrypted_slots())
+        mock_log.assert_called_with(
+            'Host is configured with libvirt.num_memory_encrypted_guests '
+            'set to %d, but is not SEV-capable.', 16)
+
+    def test_get_mem_encrypted_slots_unsupported(self):
+        self.driver._host._set_amd_sev_support()
+        self.assertEqual(0, self.driver._get_memory_encrypted_slots())
+
+
+@mock.patch.object(vc, '_domain_capability_features',
+                   new=vc._domain_capability_features_with_SEV)
+class TestLibvirtSEVSupported(TestLibvirtSEV):
+    """Libvirt driver tests for when AMD SEV support is present."""
+    @test.patch_exists(SEV_KERNEL_PARAM_FILE, True)
+    @test.patch_open(SEV_KERNEL_PARAM_FILE, "1\n")
+    def test_get_mem_encrypted_slots_unlimited(self):
+        self.driver._host._set_amd_sev_support()
+        self.assertEqual(db_const.MAX_INT,
+                         self.driver._get_memory_encrypted_slots())
+
+    @test.patch_exists(SEV_KERNEL_PARAM_FILE, True)
+    @test.patch_open(SEV_KERNEL_PARAM_FILE, "1\n")
+    def test_get_mem_encrypted_slots_config_non_zero_supported(self):
+        self.flags(num_memory_encrypted_guests=16, group='libvirt')
+        self.driver._host._set_amd_sev_support()
+        self.assertEqual(16, self.driver._get_memory_encrypted_slots())
+
+    @test.patch_exists(SEV_KERNEL_PARAM_FILE, True)
+    @test.patch_open(SEV_KERNEL_PARAM_FILE, "1\n")
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    def test_get_mem_encrypted_slots_config_zero_supported(self, mock_log):
+        self.flags(num_memory_encrypted_guests=0, group='libvirt')
+        self.driver._host._set_amd_sev_support()
+        self.assertEqual(0, self.driver._get_memory_encrypted_slots())

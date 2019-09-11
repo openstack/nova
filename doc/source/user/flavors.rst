@@ -538,6 +538,18 @@ NUMA topology
      greater than the available number of CPUs or memory respectively, an
      exception is raised.
 
+.. _extra-specs-memory-encryption:
+
+Hardware encryption of guest memory
+  If there are compute hosts which support encryption of guest memory
+  at the hardware level, this functionality can be requested via the
+  ``hw:mem_encryption`` extra spec parameter:
+
+  .. code-block:: console
+
+     $ openstack flavor set FLAVOR-NAME \
+         --property hw:mem_encryption=True
+
 .. _extra-specs-realtime-policy:
 
 CPU real-time policy

@@ -14,10 +14,12 @@
 #    under the License.
 
 import mock
+import os_resource_classes as orc
 import os_traits as ost
 
 
 from nova import conf
+from nova.db import constants as db_const
 from nova import test
 from nova.tests.functional.libvirt import integrated_helpers
 from nova.tests.unit.virt.libvirt import fakelibvirt
@@ -29,6 +31,23 @@ CONF = conf.CONF
 class LibvirtReportTraitsTestBase(
         integrated_helpers.LibvirtProviderUsageBaseTestCase):
     pass
+
+    def assertMemEncryptionSlotsEqual(self, slots):
+        inventory = self._get_provider_inventory(self.host_uuid)
+        if slots == 0:
+            self.assertNotIn(orc.MEM_ENCRYPTION_CONTEXT, inventory)
+        else:
+            self.assertEqual(
+                inventory[orc.MEM_ENCRYPTION_CONTEXT],
+                {
+                    'total': slots,
+                    'min_unit': 1,
+                    'max_unit': 1,
+                    'step_size': 1,
+                    'allocation_ratio': 1.0,
+                    'reserved': 0,
+                }
+            )
 
 
 class LibvirtReportTraitsTests(LibvirtReportTraitsTestBase):
@@ -77,6 +96,10 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
         Then test that if the SEV capability appears (again via
         mocking), after a restart of the compute service, the trait
         gets registered on the compute host.
+
+        Also test that on both occasions, the inventory of the
+        MEM_ENCRYPTION_CONTEXT resource class on the compute host
+        corresponds to the absence or presence of the SEV capability.
         """
         self.assertFalse(self.compute.driver._host.supports_amd_sev)
 
@@ -87,6 +110,8 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
 
         traits = self._get_provider_traits(self.host_uuid)
         self.assertNotIn(sev_trait, traits)
+
+        self.assertMemEncryptionSlotsEqual(0)
 
         # Now simulate the host gaining SEV functionality.  Here we
         # simulate a kernel update or reconfiguration which causes the
@@ -121,6 +146,8 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
             # Sanity check that we've still got the trait globally.
             self.assertIn(sev_trait, self._get_all_traits())
 
+            self.assertMemEncryptionSlotsEqual(db_const.MAX_INT)
+
 
 class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
     STUB_INIT_HOST = False
@@ -132,6 +159,7 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
         new=fakelibvirt.virConnect._domain_capability_features_with_SEV)
     def setUp(self):
         super(LibvirtReportSevTraitsTests, self).setUp()
+        self.flags(num_memory_encrypted_guests=16, group='libvirt')
         self.start_compute()
 
     def test_sev_trait_on_off(self):
@@ -143,6 +171,10 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
         Then test that if the SEV capability disappears (again via
         mocking), after a restart of the compute service, the trait
         gets removed from the compute host.
+
+        Also test that on both occasions, the inventory of the
+        MEM_ENCRYPTION_CONTEXT resource class on the compute host
+        corresponds to the absence or presence of the SEV capability.
         """
         self.assertTrue(self.compute.driver._host.supports_amd_sev)
 
@@ -153,6 +185,8 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
 
         traits = self._get_provider_traits(self.host_uuid)
         self.assertIn(sev_trait, traits)
+
+        self.assertMemEncryptionSlotsEqual(16)
 
         # Now simulate the host losing SEV functionality.  Here we
         # simulate a kernel downgrade or reconfiguration which causes
@@ -177,3 +211,5 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
 
             # Sanity check that we've still got the trait globally.
             self.assertIn(sev_trait, self._get_all_traits())
+
+            self.assertMemEncryptionSlotsEqual(0)

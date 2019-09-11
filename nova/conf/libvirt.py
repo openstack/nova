@@ -718,10 +718,11 @@ http://man7.org/linux/man-pages/man7/random.7.html.
                 help='For qemu or KVM guests, set this option to specify '
                      'a default machine type per host architecture. '
                      'You can find a list of supported machine types '
-                     'in your environment by checking the output of '
-                     'the "virsh capabilities" command. The format of the '
-                     'value for this config option is host-arch=machine-type. '
-                     'For example: x86_64=machinetype1,armv7l=machinetype2'),
+                     'in your environment by checking the output of the '
+                     ':command:`virsh capabilities` command. The format of '
+                     'the value for this config option is '
+                     '``host-arch=machine-type``. For example: '
+                     '``x86_64=machinetype1,armv7l=machinetype2``.'),
     cfg.StrOpt('sysinfo_serial',
                default='unique',
                choices=(
@@ -840,6 +841,57 @@ Related options:
 
 * ``virt_type`` must be set to ``kvm`` or ``qemu``.
 * ``ram_allocation_ratio`` must be set to 1.0.
+"""),
+    cfg.IntOpt('num_memory_encrypted_guests',
+               default=None,
+               min=0,
+               help="""
+Maximum number of guests with encrypted memory which can run
+concurrently on this compute host.
+
+For now this is only relevant for AMD machines which support SEV
+(Secure Encrypted Virtualisation).  Such machines have a limited
+number of slots in their memory controller for storing encryption
+keys.  Each running guest with encrypted memory will consume one of
+these slots.
+
+The option may be reused for other equivalent technologies in the
+future.  If the machine does not support memory encryption, the option
+will be ignored and inventory will be set to 0.
+
+If the machine does support memory encryption, *for now* a value of
+``None`` means an effectively unlimited inventory, i.e. no limit will
+be imposed by Nova on the number of SEV guests which can be launched,
+even though the underlying hardware will enforce its own limit.
+However it is expected that in the future, auto-detection of the
+inventory from the hardware will become possible, at which point
+``None`` will cause auto-detection to automatically impose the correct
+limit.
+
+.. note::
+
+   When deciding whether to use the default of ``None`` or manually
+   impose a limit, operators should carefully weigh the benefits
+   vs. the risk.  The benefits are a) immediate convenience since
+   nothing needs to be done now, and b) convenience later when
+   upgrading compute hosts to future versions of Nova, since again
+   nothing will need to be done for the correct limit to be
+   automatically imposed.  However the risk is that until
+   auto-detection is implemented, users may be able to attempt to
+   launch guests with encrypted memory on hosts which have already
+   reached the maximum number of guests simultaneously running with
+   encrypted memory.  This risk may be mitigated by other limitations
+   which operators can impose, for example if the smallest RAM
+   footprint of any flavor imposes a maximum number of simultaneously
+   running guests which is less than or equal to the SEV limit.
+
+Related options:
+
+* :oslo.config:option:`libvirt.virt_type` must be set to ``kvm``.
+
+* It's recommended to consider including ``x86_64=q35`` in
+  :oslo.config:option:`libvirt.hw_machine_type`; see
+  :ref:`deploying-sev-capable-infrastructure` for more on this.
 """),
 ]
 
