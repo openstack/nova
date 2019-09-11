@@ -864,6 +864,24 @@ class Domain(object):
                     })
             devices['hostdevs'] = hostdev_info
 
+            vpmem_info = []
+            vpmems = device_nodes.findall('./memory')
+            for vpmem in vpmems:
+                model = vpmem.get('model')
+                if model == 'nvdimm':
+                    source = vpmem.find('./source')
+                    target = vpmem.find('./target')
+                    path = source.find('./path').text
+                    alignsize = source.find('./alignsize').text
+                    size = target.find('./size').text
+                    node = target.find('./node').text
+                    vpmem_info.append({
+                        'path': path,
+                        'size': size,
+                        'alignsize': alignsize,
+                        'node': node})
+            devices['vpmems'] = vpmem_info
+
         definition['devices'] = devices
 
         return definition
@@ -1023,6 +1041,25 @@ class Domain(object):
     </hostdev>
             ''' % hostdev  # noqa
 
+        vpmems = ''
+        for vpmem in self._def['devices']['vpmems']:
+            vpmems += '''
+    <memory model='nvdimm' access='shared'>
+      <source>
+        <path>%(path)s</path>
+        <alignsize>%(alignsize)s</alignsize>
+        <pmem/>
+      </source>
+      <target>
+        <size>%(size)s</size>
+        <node>%(node)s</node>
+        <label>
+          <size>2097152</size>
+        </label>
+      </target>
+    </memory>
+            ''' % vpmem
+
         return '''<domain type='kvm'>
   <name>%(name)s</name>
   <uuid>%(uuid)s</uuid>
@@ -1079,6 +1116,7 @@ class Domain(object):
                function='0x0'/>
     </memballoon>
     %(hostdevs)s
+    %(vpmems)s
   </devices>
 </domain>''' % {'name': self._def['name'],
                 'uuid': self._def['uuid'],
@@ -1087,7 +1125,8 @@ class Domain(object):
                 'arch': self._def['os']['arch'],
                 'disks': disks,
                 'nics': nics,
-                'hostdevs': hostdevs}
+                'hostdevs': hostdevs,
+                'vpmems': vpmems}
 
     def managedSave(self, flags):
         self._connection._mark_not_running(self)

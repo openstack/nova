@@ -3758,3 +3758,26 @@ class LibvirtConfigSecretTest(LibvirtConfigBaseTest):
         </secret>"""
 
         self.assertXmlEqual(expected_xml, xml)
+
+
+class LibvirtConfigGuestVPMEMTest(LibvirtConfigBaseTest):
+    def test_config_vpmem(self):
+        obj = config.LibvirtConfigGuestVPMEM(
+                devpath='/dev/dax0.0', size_kb=4096 * units.Ki, align_kb=2048)
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+          <memory model='nvdimm' access="shared">
+            <source>
+                <path>/dev/dax0.0</path>
+                <alignsize>2048</alignsize>
+                <pmem/>
+            </source>
+            <target>
+                <size>4194304</size>
+                <node>0</node>
+                <label>
+                    <size>2048</size>
+                </label>
+            </target>
+          </memory>""")

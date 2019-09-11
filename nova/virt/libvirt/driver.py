@@ -1266,6 +1266,11 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def cleanup(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True, migrate_data=None, destroy_vifs=True):
+        # zero the data on backend pmem device
+        vpmems = self._get_vpmems(instance)
+        if vpmems:
+            self._cleanup_vpmems(vpmems)
+
         if destroy_vifs:
             self._unplug_vifs(instance, network_info, True)
 
@@ -1359,6 +1364,14 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._undefine_domain(instance)
 
+    def _cleanup_vpmems(self, vpmems):
+        for vpmem in vpmems:
+            try:
+                nova.privsep.libvirt.cleanup_vpmem(vpmem.devpath)
+            except Exception as e:
+                raise exception.VPMEMCleanupFailed(dev=vpmem.devpath,
+                                                   error=e)
+
     def _detach_encrypted_volumes(self, instance, block_device_info):
         """Detaches encrypted volumes attached to instance."""
         disks = self._get_instance_disk_info(instance, block_device_info)
@@ -1451,6 +1464,11 @@ class LibvirtDriver(driver.ComputeDriver):
     def _cleanup_resize(self, context, instance, network_info):
         inst_base = libvirt_utils.get_instance_path(instance)
         target = inst_base + '_resize'
+
+        # zero the data on backend old pmem device
+        vpmems = self._get_vpmems(instance, prefix='old')
+        if vpmems:
+            self._cleanup_vpmems(vpmems)
 
         # Deletion can fail over NFS, so retry the deletion as required.
         # Set maximum attempt as 5, most test can remove the directory
@@ -5534,6 +5552,7 @@ class LibvirtDriver(driver.ComputeDriver):
         flavor = instance.flavor
         inst_path = libvirt_utils.get_instance_path(instance)
         disk_mapping = disk_info['mapping']
+        vpmems = self._get_ordered_vpmems(instance, flavor)
 
         virt_type = CONF.libvirt.virt_type
         guest = vconfig.LibvirtConfigGuest()
@@ -5650,7 +5669,53 @@ class LibvirtDriver(driver.ComputeDriver):
             self._guest_configure_sev(guest, caps.host.cpu.arch,
                                       guest.os_mach_type)
 
+        if vpmems:
+            self._guest_add_vpmems(guest, vpmems)
+
         return guest
+
+    def _get_ordered_vpmems(self, instance, flavor):
+        ordered_vpmems = []
+        vpmems = self._get_vpmems(instance)
+        labels = hardware.get_vpmems(flavor)
+        for label in labels:
+            for vpmem in vpmems:
+                if vpmem.label == label:
+                    ordered_vpmems.append(vpmem)
+                    vpmems.remove(vpmem)
+                    break
+        return ordered_vpmems
+
+    def _get_vpmems(self, instance, prefix=None):
+        vpmems = []
+        resources = instance.resources
+        if prefix == 'old' and instance.migration_context:
+            if 'old_resources' in instance.migration_context:
+                resources = instance.migration_context.old_resources
+        if not resources:
+            return vpmems
+        for resource in resources:
+            rc = resource.resource_class
+            if rc.startswith("CUSTOM_PMEM_NAMESPACE_"):
+                vpmem = self._vpmems_by_name[resource.identifier]
+                vpmems.append(vpmem)
+        return vpmems
+
+    def _guest_add_vpmems(self, guest, vpmems):
+        guest.max_memory_size = guest.memory
+        guest.max_memory_slots = 0
+        for vpmem in vpmems:
+            size_kb = vpmem.size / units.Ki
+            align_kb = vpmem.align / units.Ki
+
+            vpmem_config = vconfig.LibvirtConfigGuestVPMEM(
+                devpath=vpmem.devpath, size_kb=size_kb, align_kb=align_kb)
+
+            # max memory size needs contain vpmem size
+            guest.max_memory_size += size_kb
+            # one vpmem will occupy one memory slot
+            guest.max_memory_slots += 1
+            guest.add_device(vpmem_config)
 
     def _sev_enabled(self, flavor, image_meta):
         """To enable AMD SEV, the following should be true:

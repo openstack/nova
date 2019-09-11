@@ -2546,6 +2546,8 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.uuid = None
         self.name = None
         self.memory = 500 * units.Mi
+        self.max_memory_size = None
+        self.max_memory_slots = 0
         self.membacking = None
         self.memtune = None
         self.numatune = None
@@ -2578,6 +2580,10 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         root.append(self._text_node("uuid", self.uuid))
         root.append(self._text_node("name", self.name))
         root.append(self._text_node("memory", self.memory))
+        if self.max_memory_size is not None:
+            max_memory = self._text_node("maxMemory", self.max_memory_size)
+            max_memory.set("slots", str(self.max_memory_slots))
+            root.append(max_memory)
         if self.membacking is not None:
             root.append(self.membacking.format_dom())
         if self.memtune is not None:
@@ -2752,6 +2758,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         #                            LibvirtConfigGuestUidMap
         #                            LibvirtConfigGuestGidMap
         #                            LibvirtConfigGuestCPU
+        #                            LibvirtConfigGuestVPMEM
         for c in xmldoc:
             if c.tag == 'devices':
                 for d in c:
@@ -2773,6 +2780,10 @@ class LibvirtConfigGuest(LibvirtConfigObject):
                         self.devices.append(obj)
                     elif d.tag == 'interface':
                         obj = LibvirtConfigGuestInterface()
+                        obj.parse_dom(d)
+                        self.devices.append(obj)
+                    elif d.tag == 'memory' and d.get('model') == 'nvdimm':
+                        obj = LibvirtConfigGuestVPMEM()
                         obj.parse_dom(d)
                         self.devices.append(obj)
             if c.tag == 'idmap':
@@ -3154,3 +3165,60 @@ class LibvirtConfigSecret(LibvirtConfigObject):
             usage.append(self._text_node('volume', str(self.usage_id)))
         root.append(usage)
         return root
+
+
+class LibvirtConfigGuestVPMEM(LibvirtConfigGuestDevice):
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestVPMEM, self).__init__(
+            root_name="memory", **kwargs)
+
+        self.model = "nvdimm"
+        self.access = "shared"
+        self.source_path = kwargs.get("devpath", "")
+        self.align_size = kwargs.get("align_kb", 0)
+        self.pmem = True
+
+        self.target_size = kwargs.get("size_kb", 0)
+        self.target_node = 0
+        self.label_size = 2 * units.Ki
+
+    def format_dom(self):
+        memory = super(LibvirtConfigGuestVPMEM, self).format_dom()
+
+        memory.set("model", self.model)
+        memory.set("access", self.access)
+
+        source = etree.Element("source")
+        source.append(self._text_node("path", self.source_path))
+        source.append(self._text_node("alignsize", self.align_size))
+        if self.pmem is True:
+            source.append(etree.Element("pmem"))
+
+        target = etree.Element("target")
+        target.append(self._text_node("size", self.target_size))
+        target.append(self._text_node("node", self.target_node))
+        label = etree.Element("label")
+        label.append(self._text_node("size", self.label_size))
+        target.append(label)
+
+        memory.append(source)
+        memory.append(target)
+
+        return memory
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigGuestVPMEM, self).parse_dom(xmldoc)
+        self.model = xmldoc.get("model")
+        self.access = xmldoc.get("access")
+
+        for c in xmldoc.getchildren():
+            if c.tag == "source":
+                for sub in c.getchildren():
+                    if sub.tag == "path":
+                        self.source_path = sub.text
+                    if sub.tag == "alignsize":
+                        self.align_size = sub.text
+            elif c.tag == "target":
+                for sub in c.getchildren():
+                    if sub.tag == "size":
+                        self.target_size = sub.text

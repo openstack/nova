@@ -2532,3 +2532,8 @@ class PMEMNamespaceConfigInvalid(NovaException):
 
 class GetPMEMNamespaceFailed(NovaException):
     msg_fmt = _("Get PMEM namespaces on host failed: %(reason)s.")
+
+
+class VPMEMCleanupFailed(NovaException):
+    msg_fmt = _("Failed to clean up the vpmem backend device %(dev)s: "
+                "%(error)s")
