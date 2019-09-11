@@ -86,6 +86,14 @@ class NUMAServersTest(NUMAServersTestBase):
         server_ids = [s['id'] for s in servers]
         self.assertIn(created_server_id, server_ids)
 
+        # Validate the quota usage
+        if end_status == 'ACTIVE':
+            quota_details = self.api.get_quota_detail()
+            expected_core_usages = expected_usage.get(
+                'VCPU', expected_usage.get('PCPU', 0))
+            self.assertEqual(expected_core_usages,
+                             quota_details['cores']['in_use'])
+
         # Validate that NUMATopologyFilter has been called
         self.assertTrue(self.mock_filter.called)
 
@@ -169,6 +177,41 @@ class NUMAServersTest(NUMAServersTestBase):
         inst = objects.Instance.get_by_uuid(ctx, server['id'])
         self.assertEqual(1, len(inst.numa_topology.cells))
         self.assertEqual(5, inst.numa_topology.cells[0].cpu_topology.cores)
+
+    def test_create_server_with_pinning_quota_fails(self):
+        """Create a pinned instance on a host with PCPUs but not enough quota.
+
+        This should fail because the quota request should fail.
+        """
+
+        host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
+                                         cpu_cores=2, cpu_threads=2,
+                                         kB_mem=15740000)
+        fake_connection = self._get_connection(host_info=host_info)
+        self.mock_conn.return_value = fake_connection
+
+        extra_spec = {
+            'hw:cpu_policy': 'dedicated',
+            'hw:cpu_thread_policy': 'prefer',
+        }
+        flavor_id = self._create_flavor(vcpu=2, extra_spec=extra_spec)
+
+        # Update the core quota less than we requested
+        self.api.update_quota({'cores': 1})
+
+        # NOTE(bhagyashris): Always use host as 'compute1' so that it's
+        # possible to get resource provider information for verifying
+        # compute usages. This host name 'compute1' is hard coded in
+        # Connection class in fakelibvirt.py.
+        # TODO(stephenfin): Remove the hardcoded limit, possibly overridding
+        # 'start_service' to make sure there isn't a mismatch
+        self.compute = self.start_service('compute', host='compute1')
+
+        post = {'server': self._build_server(flavor_id)}
+
+        ex = self.assertRaises(client.OpenStackApiException,
+            self.api.post_server, post)
+        self.assertEqual(403, ex.response.status_code)
 
     def test_resize_unpinned_to_pinned(self):
         """Create an unpinned instance and resize it to a flavor with pinning.
@@ -302,6 +345,13 @@ class NUMAServersTest(NUMAServersTestBase):
                 '/resource_providers/%s/usages' % compute_rp_uuid).body[
                     'usages']
             self.assertEqual(expected_usage, compute_usage)
+
+
+class NUMAServerTestWithCountingQuotaFromPlacement(NUMAServersTest):
+
+    def setUp(self):
+        self.flags(count_usage_from_placement=True, group='quota')
+        super(NUMAServersTest, self).setUp()
 
 
 class NUMAServersWithNetworksTest(NUMAServersTestBase):

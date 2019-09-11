@@ -4135,3 +4135,16 @@ class TestUsages(SchedulerReportClientTestCase):
         expected = {'project': {'cores': 0, 'ram': 0},
                     'user': {'cores': 0, 'ram': 0}}
         self.assertDictEqual(expected, counts)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.get')
+    def test_get_usages_count_with_pcpu(self, mock_get):
+        fake_responses = fake_requests.FakeResponse(
+            200,
+            content=jsonutils.dumps({'usages': {orc.VCPU: 2, orc.PCPU: 2}}))
+        mock_get.return_value = fake_responses
+        counts = self.client.get_usages_counts_for_quota(
+            self.context, 'fake-project', user_id='fake-user')
+        self.assertEqual(2, mock_get.call_count)
+        expected = {'project': {'cores': 4, 'ram': 0},
+                    'user': {'cores': 4, 'ram': 0}}
+        self.assertDictEqual(expected, counts)

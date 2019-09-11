@@ -2332,6 +2332,15 @@ class SchedulerReportClient(object):
         :raises: `exception.UsagesRetrievalFailed` if a placement API call
                  fails
         """
+        def _get_core_usages(usages):
+            """For backward-compatible with existing behavior, the quota limit
+            on flavor.vcpus. That included the shared and dedicated CPU. So
+            we need to count both the orc.VCPU and orc.PCPU at here.
+            """
+            vcpus = usages['usages'].get(orc.VCPU, 0)
+            pcpus = usages['usages'].get(orc.PCPU, 0)
+            return vcpus + pcpus
+
         total_counts = {'project': {}}
         # First query counts across all users of a project
         LOG.debug('Getting usages for project_id %s from placement',
@@ -2341,7 +2350,7 @@ class SchedulerReportClient(object):
             data = resp.json()
             # The response from placement will not contain a resource class if
             # there is no usage. We can consider a missing class to be 0 usage.
-            cores = data['usages'].get(orc.VCPU, 0)
+            cores = _get_core_usages(data)
             ram = data['usages'].get(orc.MEMORY_MB, 0)
             total_counts['project'] = {'cores': cores, 'ram': ram}
         else:
@@ -2353,7 +2362,7 @@ class SchedulerReportClient(object):
             resp = self._get_usages(context, project_id, user_id=user_id)
             if resp:
                 data = resp.json()
-                cores = data['usages'].get(orc.VCPU, 0)
+                cores = _get_core_usages(data)
                 ram = data['usages'].get(orc.MEMORY_MB, 0)
                 total_counts['user'] = {'cores': cores, 'ram': ram}
             else:
