@@ -597,6 +597,7 @@ def get_flags_by_flavor_specs(flavor):
     resource_request = scheduler_utils.ResourceRequest(req_spec)
     required_traits = resource_request.all_required_traits
 
-    flags = [TRAITS_CPU_MAPPING.get(trait) for trait in required_traits]
+    flags = [TRAITS_CPU_MAPPING[trait] for trait in required_traits
+             if trait in TRAITS_CPU_MAPPING]
 
     return set(flags)
