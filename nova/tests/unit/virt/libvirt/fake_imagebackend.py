@@ -180,6 +180,10 @@ class ImageBackendFixture(fixtures.Fixture):
 
             return disk
 
+        # Set the SUPPORTS_CLONE member variable to mimic the Image base
+        # class.
+        image_init.SUPPORTS_CLONE = False
+
         return image_init
 
     def _fake_cache(self, fetch_func, filename, size=None, *args, **kwargs):

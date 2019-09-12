@@ -94,7 +94,7 @@ class NUMAServersTest(NUMAServersTestBase):
         if expected_usage:
             compute_usage = self.placement_api.get(
                 '/resource_providers/%s/usages' % compute_rp_uuid).body[
-                'usages']
+                    'usages']
             self.assertEqual(expected_usage, compute_usage)
 
         self.assertEqual(end_status, found_server['status'])
@@ -102,6 +102,11 @@ class NUMAServersTest(NUMAServersTestBase):
         return created_server
 
     def test_create_server_with_numa_topology(self):
+        """Create a server with two NUMA nodes.
+
+        This should pass and result in a guest NUMA topology with two NUMA
+        nodes.
+        """
 
         host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
                                          cpu_cores=2, cpu_threads=2,
@@ -109,14 +114,40 @@ class NUMAServersTest(NUMAServersTestBase):
         fake_connection = self._get_connection(host_info=host_info)
         self.mock_conn.return_value = fake_connection
 
-        # Create a flavor
         extra_spec = {'hw:numa_nodes': '2'}
-        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        flavor_id = self._create_flavor(vcpu=2, extra_spec=extra_spec)
         expected_usage = {'DISK_GB': 20, 'MEMORY_MB': 2048, 'VCPU': 2}
 
-        self._run_build_test(flavor_id, expected_usage=expected_usage)
+        server = self._run_build_test(flavor_id, expected_usage=expected_usage)
+
+        ctx = nova_context.get_admin_context()
+        inst = objects.Instance.get_by_uuid(ctx, server['id'])
+        self.assertEqual(2, len(inst.numa_topology.cells))
+        self.assertNotIn('cpu_topology', inst.numa_topology.cells[0])
+        self.assertNotIn('cpu_topology', inst.numa_topology.cells[1])
+
+    def test_create_server_with_numa_fails(self):
+        """Create a two NUMA node instance on a host with only one node.
+
+        This should fail because each guest NUMA node must be placed on a
+        separate host NUMA node.
+        """
+
+        host_info = fakelibvirt.HostInfo(cpu_nodes=1, cpu_sockets=1,
+                                         cpu_cores=2, kB_mem=15740000)
+        fake_connection = self._get_connection(host_info=host_info)
+        self.mock_conn.return_value = fake_connection
+
+        extra_spec = {'hw:numa_nodes': '2'}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+
+        self._run_build_test(flavor_id, end_status='ERROR')
 
     def test_create_server_with_pinning(self):
+        """Create a server using the legacy 'hw:cpu_policy' extra spec.
+
+        This should pass and result in a guest NUMA topology with pinned CPUs.
+        """
 
         host_info = fakelibvirt.HostInfo(cpu_nodes=1, cpu_sockets=1,
                                          cpu_cores=5, cpu_threads=2,
@@ -139,18 +170,138 @@ class NUMAServersTest(NUMAServersTestBase):
         self.assertEqual(1, len(inst.numa_topology.cells))
         self.assertEqual(5, inst.numa_topology.cells[0].cpu_topology.cores)
 
-    def test_create_server_with_numa_fails(self):
+    def test_resize_unpinned_to_pinned(self):
+        """Create an unpinned instance and resize it to a flavor with pinning.
 
-        host_info = fakelibvirt.HostInfo(cpu_nodes=1, cpu_sockets=1,
-                                         cpu_cores=2, kB_mem=15740000)
-        fake_connection = self._get_connection(host_info=host_info)
-        self.mock_conn.return_value = fake_connection
+        This should pass and result in a guest NUMA topology with pinned CPUs.
+        """
 
-        # Create a flavor
-        extra_spec = {'hw:numa_nodes': '2'}
-        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
+                                         cpu_cores=2, cpu_threads=2,
+                                         kB_mem=15740000)
 
-        self._run_build_test(flavor_id, end_status='ERROR')
+        # Start services
+        self.computes = {}
+        self.compute_rp_uuids = {}
+        for host in ['test_compute0', 'test_compute1']:
+            fake_connection = self._get_connection(host_info=host_info)
+            fake_connection.getHostname = lambda: host
+
+            # This is fun. Firstly we need to do a global'ish mock so we can
+            # actually start the service.
+            with mock.patch('nova.virt.libvirt.host.Host.get_connection',
+                            return_value=fake_connection):
+                compute = self.start_service('compute', host=host)
+
+            # Once that's done, we need to do some tweaks to each individual
+            # compute "service" to make sure they return unique objects
+            compute.driver._host.get_connection = lambda: fake_connection
+            self.computes[host] = compute
+
+            # and save the UUIDs for the corresponding resource providers
+            self.compute_rp_uuids[host] = self.placement_api.get(
+                '/resource_providers?name=%s' % host).body[
+                'resource_providers'][0]['uuid']
+
+        # Create server
+        flavor_a_id = self._create_flavor(extra_spec={})
+        good_server = self._build_server(flavor_a_id)
+
+        post = {'server': good_server}
+
+        created_server = self.api.post_server(post)
+        server = self._wait_for_state_change(created_server, 'BUILD')
+
+        self.assertEqual('ACTIVE', server['status'])
+
+        original_host = server['OS-EXT-SRV-ATTR:host']
+
+        for host, compute_rp_uuid in self.compute_rp_uuids.items():
+            # TODO(stephenfin): Both of these should report PCPU when we
+            # support that
+            if host == original_host:  # the host with the instance
+                expected_usage = {'VCPU': 2, 'DISK_GB': 20,
+                                  'MEMORY_MB': 2048}
+            else:  # the other host
+                expected_usage = {'VCPU': 0, 'DISK_GB': 0,
+                                  'MEMORY_MB': 0}
+
+            compute_usage = self.placement_api.get(
+                '/resource_providers/%s/usages' % compute_rp_uuid).body[
+                    'usages']
+            self.assertEqual(expected_usage, compute_usage)
+
+        # We reset mock_filter because we want to ensure it's called as part of
+        # the *migration*
+        self.mock_filter.reset_mock()
+        self.assertEqual(0, len(self.mock_filter.call_args_list))
+
+        extra_spec = {'hw:cpu_policy': 'dedicated'}
+        flavor_b_id = self._create_flavor(extra_spec=extra_spec)
+
+        # TODO(stephenfin): The mock of 'migrate_disk_and_power_off' should
+        # probably be less...dumb
+        with mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
+                        '.migrate_disk_and_power_off', return_value='{}'):
+            post = {'resize': {'flavorRef': flavor_b_id}}
+            self.api.post_server_action(server['id'], post)
+
+        server = self._wait_for_state_change(server, 'VERIFY_RESIZE')
+
+        new_host = server['OS-EXT-SRV-ATTR:host']
+        self.assertNotEqual(original_host, new_host)
+
+        # We don't confirm the resize yet as we expect this to have landed and
+        # all we want to know is whether the filter was correct and the
+        # resource usage has been updated
+
+        for host, compute_rp_uuid in self.compute_rp_uuids.items():
+            # TODO(stephenfin): This should use PCPU when we support those
+            if host == original_host:
+                # the host that had the instance should still have allocations
+                # since the resize hasn't been confirmed
+                expected_usage = {'VCPU': 2, 'DISK_GB': 20,
+                                  'MEMORY_MB': 2048}
+            else:
+                # the other host should have the new allocations replete with
+                # PCPUs
+                expected_usage = {'VCPU': 2, 'DISK_GB': 20,
+                                  'MEMORY_MB': 2048}
+
+            compute_usage = self.placement_api.get(
+                '/resource_providers/%s/usages' % compute_rp_uuid).body[
+                    'usages']
+            self.assertEqual(expected_usage, compute_usage)
+
+        self.assertEqual(1, len(self.mock_filter.call_args_list))
+        args, kwargs = self.mock_filter.call_args_list[0]
+        self.assertEqual(2, len(args))
+        self.assertEqual({}, kwargs)
+
+        # Now confirm the resize and ensure our inventories update
+
+        post = {'confirmResize': None}
+        self.api.post_server_action(server['id'], post)
+
+        server = self._wait_for_state_change(server, 'ACTIVE')
+
+        for host, compute_rp_uuid in self.compute_rp_uuids.items():
+            # TODO(stephenfin): This should use PCPU when we support those
+            if host == original_host:
+                # the host that had the instance should no longer have
+                # alocations since the resize has been confirmed
+                expected_usage = {'VCPU': 0, 'DISK_GB': 0,
+                                  'MEMORY_MB': 0}
+            else:
+                # the other host should still have the new allocations replete
+                # with PCPUs
+                expected_usage = {'VCPU': 2, 'DISK_GB': 20,
+                                  'MEMORY_MB': 2048}
+
+            compute_usage = self.placement_api.get(
+                '/resource_providers/%s/usages' % compute_rp_uuid).body[
+                    'usages']
+            self.assertEqual(expected_usage, compute_usage)
 
 
 class NUMAServersWithNetworksTest(NUMAServersTestBase):
