@@ -1330,6 +1330,109 @@ class NUMATopologyTest(test.NoDBTestCase):
                             id=0, cpuset=set([0, 1, 2, 3]), memory=2048),
                     ]),
             },
+            {
+                # We request PCPUs explicitly
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
+                                         extra_specs={
+                    "resources:PCPU": "4",
+                }),
+                "image": {
+                    "properties": {}
+                },
+                "expect": objects.InstanceNUMATopology(
+                    cells=[
+                        objects.InstanceNUMACell(
+                            id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
+                            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                        )]),
+            },
+            {
+                # We request the HW_CPU_HYPERTHREADING trait explicitly
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
+                                         extra_specs={
+                    "resources:PCPU": "4",
+                    "trait:HW_CPU_HYPERTHREADING": "forbidden",
+                }),
+                "image": {
+                    "properties": {}
+                },
+                "expect": objects.InstanceNUMATopology(
+                    cells=[
+                        objects.InstanceNUMACell(
+                            id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
+                            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                            cpu_thread_policy=
+                                fields.CPUThreadAllocationPolicy.ISOLATE,
+                        )]),
+            },
+            {
+                # Requesting both implicit and explicit PCPUs
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
+                                         extra_specs={
+                    "hw:cpu_policy": fields.CPUAllocationPolicy.DEDICATED,
+                    "resources:PCPU": "4",
+                }),
+                "image": {"properties": {}},
+                "expect": exception.InvalidRequest,
+            },
+            {
+                # Requesting both PCPUs and VCPUs
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
+                                         extra_specs={
+                    "resources:PCPU": "2",
+                    "resources:VCPU": "2",
+                }),
+                "image": {"properties": {}},
+                "expect": exception.InvalidRequest,
+            },
+            {
+                # Mismatch between PCPU requests and flavor.vcpus
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
+                                         extra_specs={
+                    "resources:PCPU": "5",
+                }),
+                "image": {"properties": {}},
+                "expect": exception.InvalidRequest,
+            },
+            {
+                # Mismatch between PCPU requests and flavor.vcpus with
+                # 'isolate' emulator thread policy
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
+                                         extra_specs={
+                    "hw:emulator_threads_policy": "isolate",
+                    "resources:PCPU": "4",
+                }),
+                "image": {"properties": {}},
+                "expect": exception.InvalidRequest,
+            },
+            {
+                # Mismatch between implicit and explicit HW_CPU_HYPERTHREADING
+                # trait (flavor)
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
+                                         extra_specs={
+                    "hw:cpu_thread_policy":
+                        fields.CPUThreadAllocationPolicy.ISOLATE,
+                    "trait:HW_CPU_HYPERTHREADING": "required",
+                }),
+                "image": {"properties": {}},
+                "expect": exception.InvalidRequest,
+            },
+            {
+                # Mismatch between implicit and explicit HW_CPU_HYPERTHREADING
+                # trait (image)
+                "flavor": objects.Flavor(vcpus=4, name='foo', memory_mb=2048,
+                                         extra_specs={
+                    "hw:cpu_policy": fields.CPUAllocationPolicy.DEDICATED,
+                    "hw:cpu_thread_policy":
+                        fields.CPUThreadAllocationPolicy.ISOLATE,
+                }),
+                "image": {
+                    "properties": {
+                        "trait:HW_CPU_HYPERTHREADING": "required",
+                    }
+                },
+                "expect": exception.InvalidRequest,
+            },
         ]
 
         for testitem in testdata:

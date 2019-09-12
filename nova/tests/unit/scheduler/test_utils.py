@@ -919,6 +919,58 @@ class TestUtils(TestUtilsBase):
         )
         self.assertEqual(expected_querystring, rr.to_querystring())
 
+    def _test_resource_request_init_with_legacy_extra_specs(self):
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
+            extra_specs={
+                'hw:cpu_policy': 'dedicated',
+                'hw:cpu_thread_policy': 'isolate',
+                'hw:emulator_threads_policy': 'isolate',
+            })
+
+        return objects.RequestSpec(flavor=flavor, is_bfv=False)
+
+    def test_resource_request_init_with_legacy_extra_specs(self):
+        expected = FakeResourceRequest()
+        expected._rg_by_id[None] = objects.RequestGroup(
+            use_same_provider=False,
+            resources={
+                # we should have two PCPUs, one due to hw:cpu_policy and the
+                # other due to hw:cpu_thread_policy
+                'PCPU': 2,
+                'MEMORY_MB': 1024,
+                'DISK_GB': 15,
+            },
+            forbidden_traits={
+                # we should forbid hyperthreading due to hw:cpu_thread_policy
+                'HW_CPU_HYPERTHREADING',
+            },
+        )
+        rs = self._test_resource_request_init_with_legacy_extra_specs()
+        rr = utils.ResourceRequest(rs)
+        self.assertResourceRequestsEqual(expected, rr)
+        self.assertTrue(rr.cpu_pinning_requested)
+
+    def test_resource_request_init_with_legacy_extra_specs_no_translate(self):
+        expected = FakeResourceRequest()
+        expected._rg_by_id[None] = objects.RequestGroup(
+            use_same_provider=False,
+            resources={
+                # we should have a VCPU despite hw:cpu_policy because
+                # enable_pinning_translate=False
+                'VCPU': 1,
+                'MEMORY_MB': 1024,
+                'DISK_GB': 15,
+            },
+            # we should not require hyperthreading despite hw:cpu_thread_policy
+            # because enable_pinning_translate=False
+            forbidden_traits=set(),
+        )
+        rs = self._test_resource_request_init_with_legacy_extra_specs()
+        rr = utils.ResourceRequest(rs, enable_pinning_translate=False)
+        self.assertResourceRequestsEqual(expected, rr)
+        self.assertFalse(rr.cpu_pinning_requested)
+
     def test_resource_request_init_with_image_props(self):
         flavor = objects.Flavor(
             vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0)
@@ -944,6 +996,58 @@ class TestUtils(TestUtilsBase):
         rs = objects.RequestSpec(flavor=flavor, image=image, is_bfv=False)
         rr = utils.ResourceRequest(rs)
         self.assertResourceRequestsEqual(expected, rr)
+
+    def _test_resource_request_init_with_legacy_image_props(self):
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0)
+        image = objects.ImageMeta.from_dict({
+            'properties': {
+                'hw_cpu_policy': 'dedicated',
+                'hw_cpu_thread_policy': 'require',
+            },
+            'id': 'c8b1790e-a07d-4971-b137-44f2432936cd',
+        })
+        return objects.RequestSpec(flavor=flavor, image=image, is_bfv=False)
+
+    def test_resource_request_init_with_legacy_image_props(self):
+        expected = FakeResourceRequest()
+        expected._rg_by_id[None] = objects.RequestGroup(
+            use_same_provider=False,
+            resources={
+                # we should have a PCPU due to hw_cpu_policy
+                'PCPU': 1,
+                'MEMORY_MB': 1024,
+                'DISK_GB': 15,
+            },
+            required_traits={
+                # we should require hyperthreading due to hw_cpu_thread_policy
+                'HW_CPU_HYPERTHREADING',
+            },
+        )
+        rs = self._test_resource_request_init_with_legacy_image_props()
+        rr = utils.ResourceRequest(rs)
+        self.assertResourceRequestsEqual(expected, rr)
+        self.assertTrue(rr.cpu_pinning_requested)
+
+    def test_resource_request_init_with_legacy_image_props_no_translate(self):
+        expected = FakeResourceRequest()
+        expected._rg_by_id[None] = objects.RequestGroup(
+            use_same_provider=False,
+            resources={
+                # we should have a VCPU despite hw_cpu_policy because
+                # enable_pinning_translate=False
+                'VCPU': 1,
+                'MEMORY_MB': 1024,
+                'DISK_GB': 15,
+            },
+            # we should not require hyperthreading despite hw_cpu_thread_policy
+            # because enable_pinning_translate=False
+            required_traits=set(),
+        )
+        rs = self._test_resource_request_init_with_legacy_image_props()
+        rr = utils.ResourceRequest(rs, enable_pinning_translate=False)
+        self.assertResourceRequestsEqual(expected, rr)
+        self.assertFalse(rr.cpu_pinning_requested)
 
     def test_resource_request_init_is_bfv(self):
         flavor = objects.Flavor(

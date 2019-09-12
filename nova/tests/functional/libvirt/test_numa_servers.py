@@ -53,6 +53,7 @@ class NUMAServersTestBase(base.ServersTestBase):
 class NUMAServersTest(NUMAServersTestBase):
 
     def _run_build_test(self, flavor_id, end_status='ACTIVE',
+                        filter_called_on_error=True,
                         expected_usage=None):
 
         # NOTE(bhagyashris): Always use host as 'compute1' so that it's
@@ -87,15 +88,20 @@ class NUMAServersTest(NUMAServersTestBase):
         self.assertIn(created_server_id, server_ids)
 
         # Validate the quota usage
-        if end_status == 'ACTIVE':
+        if filter_called_on_error and end_status == 'ACTIVE':
             quota_details = self.api.get_quota_detail()
             expected_core_usages = expected_usage.get(
                 'VCPU', expected_usage.get('PCPU', 0))
             self.assertEqual(expected_core_usages,
                              quota_details['cores']['in_use'])
 
-        # Validate that NUMATopologyFilter has been called
-        self.assertTrue(self.mock_filter.called)
+        # Validate that NUMATopologyFilter has been called or not called,
+        # depending on whether this is expected to make it past placement or
+        # not (hint: if it's a lack of VCPU/PCPU resources, it won't)
+        if filter_called_on_error:
+            self.assertTrue(self.mock_filter.called)
+        else:
+            self.assertFalse(self.mock_filter.called)
 
         found_server = self._wait_for_state_change(found_server, 'BUILD')
 
@@ -151,11 +157,15 @@ class NUMAServersTest(NUMAServersTestBase):
 
         self._run_build_test(flavor_id, end_status='ERROR')
 
-    def test_create_server_with_pinning(self):
+    def test_create_server_with_legacy_pinning_policy(self):
         """Create a server using the legacy 'hw:cpu_policy' extra spec.
 
         This should pass and result in a guest NUMA topology with pinned CPUs.
         """
+
+        self.flags(cpu_dedicated_set='0-9', cpu_shared_set=None,
+                   group='compute')
+        self.flags(vcpu_pin_set=None)
 
         host_info = fakelibvirt.HostInfo(cpu_nodes=1, cpu_sockets=1,
                                          cpu_cores=5, cpu_threads=2,
@@ -163,13 +173,12 @@ class NUMAServersTest(NUMAServersTestBase):
         fake_connection = self._get_connection(host_info=host_info)
         self.mock_conn.return_value = fake_connection
 
-        # Create a flavor
         extra_spec = {
             'hw:cpu_policy': 'dedicated',
             'hw:cpu_thread_policy': 'prefer',
         }
         flavor_id = self._create_flavor(vcpu=5, extra_spec=extra_spec)
-        expected_usage = {'DISK_GB': 20, 'MEMORY_MB': 2048, 'VCPU': 5}
+        expected_usage = {'DISK_GB': 20, 'MEMORY_MB': 2048, 'PCPU': 5}
 
         server = self._run_build_test(flavor_id, expected_usage=expected_usage)
 
@@ -178,11 +187,65 @@ class NUMAServersTest(NUMAServersTestBase):
         self.assertEqual(1, len(inst.numa_topology.cells))
         self.assertEqual(5, inst.numa_topology.cells[0].cpu_topology.cores)
 
-    def test_create_server_with_pinning_quota_fails(self):
+    def test_create_server_with_legacy_pinning_policy_old_configuration(self):
+        """Create a server using the legacy extra spec and configuration.
+
+        This should pass and result in a guest NUMA topology with pinned CPUs,
+        though we'll still be consuming VCPUs (which would in theory be fixed
+        during a later reshape).
+        """
+
+        self.flags(cpu_dedicated_set=None, cpu_shared_set=None,
+                   group='compute')
+        self.flags(vcpu_pin_set='0-7')
+
+        host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
+                                         cpu_cores=2, cpu_threads=2,
+                                         kB_mem=15740000)
+        fake_connection = self._get_connection(host_info=host_info)
+        self.mock_conn.return_value = fake_connection
+
+        extra_spec = {
+            'hw:cpu_policy': 'dedicated',
+            'hw:cpu_thread_policy': 'prefer',
+        }
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        expected_usage = {'DISK_GB': 20, 'MEMORY_MB': 2048, 'VCPU': 2}
+
+        self._run_build_test(flavor_id, expected_usage=expected_usage)
+
+    def test_create_server_with_legacy_pinning_policy_fails(self):
+        """Create a pinned instance on a host with no PCPUs.
+
+        This should fail because we're translating the extra spec and the host
+        isn't reporting the PCPUs we need.
+        """
+
+        self.flags(cpu_shared_set='0-9', cpu_dedicated_set=None,
+                   group='compute')
+        self.flags(vcpu_pin_set=None)
+
+        host_info = fakelibvirt.HostInfo(cpu_nodes=1, cpu_sockets=1,
+                                         cpu_cores=5, cpu_threads=2,
+                                         kB_mem=15740000)
+        fake_connection = self._get_connection(host_info=host_info)
+        self.mock_conn.return_value = fake_connection
+
+        extra_spec = {
+            'hw:cpu_policy': 'dedicated',
+            'hw:cpu_thread_policy': 'prefer',
+        }
+        flavor_id = self._create_flavor(vcpu=5, extra_spec=extra_spec)
+        self._run_build_test(flavor_id, end_status='ERROR')
+
+    def test_create_server_with_legacy_pinning_policy_quota_fails(self):
         """Create a pinned instance on a host with PCPUs but not enough quota.
 
         This should fail because the quota request should fail.
         """
+        self.flags(cpu_dedicated_set='0-7', cpu_shared_set=None,
+                   group='compute')
+        self.flags(vcpu_pin_set=None)
 
         host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
                                          cpu_cores=2, cpu_threads=2,
@@ -213,11 +276,100 @@ class NUMAServersTest(NUMAServersTestBase):
             self.api.post_server, post)
         self.assertEqual(403, ex.response.status_code)
 
-    def test_resize_unpinned_to_pinned(self):
+    def test_create_server_with_pcpu(self):
+        """Create a server using an explicit 'resources:PCPU' request.
+
+        This should pass and result in a guest NUMA topology with pinned CPUs.
+        """
+
+        self.flags(cpu_dedicated_set='0-7', cpu_shared_set=None,
+                   group='compute')
+        self.flags(vcpu_pin_set=None)
+
+        host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
+                                         cpu_cores=2, cpu_threads=2,
+                                         kB_mem=15740000)
+        fake_connection = self._get_connection(host_info=host_info)
+        self.mock_conn.return_value = fake_connection
+
+        extra_spec = {'resources:PCPU': '2'}
+        flavor_id = self._create_flavor(vcpu=2, extra_spec=extra_spec)
+        expected_usage = {'DISK_GB': 20, 'MEMORY_MB': 2048, 'PCPU': 2}
+
+        server = self._run_build_test(flavor_id, expected_usage=expected_usage)
+
+        ctx = nova_context.get_admin_context()
+        inst = objects.Instance.get_by_uuid(ctx, server['id'])
+        self.assertEqual(1, len(inst.numa_topology.cells))
+        self.assertEqual(1, inst.numa_topology.cells[0].cpu_topology.cores)
+        self.assertEqual(2, inst.numa_topology.cells[0].cpu_topology.threads)
+
+    def test_create_server_with_pcpu_fails(self):
+        """Create a pinned instance on a host with no PCPUs.
+
+        This should fail because we're explicitly requesting PCPUs and the host
+        isn't reporting them.
+        """
+
+        self.flags(cpu_shared_set='0-9', cpu_dedicated_set=None,
+                   group='compute')
+        self.flags(vcpu_pin_set=None)
+
+        host_info = fakelibvirt.HostInfo(cpu_nodes=1, cpu_sockets=1,
+                                         cpu_cores=5, cpu_threads=2,
+                                         kB_mem=15740000)
+        fake_connection = self._get_connection(host_info=host_info)
+        self.mock_conn.return_value = fake_connection
+
+        extra_spec = {'resources:PCPU': 2}
+        flavor_id = self._create_flavor(vcpu=2, extra_spec=extra_spec)
+        self._run_build_test(flavor_id, end_status='ERROR',
+                             filter_called_on_error=False)
+
+    def test_create_server_with_pcpu_quota_fails(self):
+        """Create a pinned instance on a host with PCPUs but not enough quota.
+
+        This should fail because the quota request should fail.
+        """
+        self.flags(cpu_dedicated_set='0-7', cpu_shared_set=None,
+                   group='compute')
+        self.flags(vcpu_pin_set=None)
+
+        host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
+                                         cpu_cores=2, cpu_threads=2,
+                                         kB_mem=15740000)
+        fake_connection = self._get_connection(host_info=host_info)
+        self.mock_conn.return_value = fake_connection
+
+        extra_spec = {'resources:PCPU': '2'}
+        flavor_id = self._create_flavor(vcpu=2, extra_spec=extra_spec)
+
+        # Update the core quota less than we requested
+        self.api.update_quota({'cores': 1})
+
+        # NOTE(bhagyashris): Always use host as 'compute1' so that it's
+        # possible to get resource provider information for verifying
+        # compute usages. This host name 'compute1' is hard coded in
+        # Connection class in fakelibvirt.py.
+        # TODO(stephenfin): Remove the hardcoded limit, possibly overridding
+        # 'start_service' to make sure there isn't a mismatch
+        self.compute = self.start_service('compute', host='compute1')
+
+        post = {'server': self._build_server(flavor_id)}
+
+        ex = self.assertRaises(client.OpenStackApiException,
+            self.api.post_server, post)
+        self.assertEqual(403, ex.response.status_code)
+
+    def test_resize_vcpu_to_pcpu(self):
         """Create an unpinned instance and resize it to a flavor with pinning.
 
         This should pass and result in a guest NUMA topology with pinned CPUs.
         """
+
+        self.flags(cpu_dedicated_set='0-3', cpu_shared_set='4-7',
+                   group='compute')
+        self.flags(vcpu_pin_set=None)
 
         host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
                                          cpu_cores=2, cpu_threads=2,
@@ -260,13 +412,11 @@ class NUMAServersTest(NUMAServersTestBase):
         original_host = server['OS-EXT-SRV-ATTR:host']
 
         for host, compute_rp_uuid in self.compute_rp_uuids.items():
-            # TODO(stephenfin): Both of these should report PCPU when we
-            # support that
             if host == original_host:  # the host with the instance
-                expected_usage = {'VCPU': 2, 'DISK_GB': 20,
+                expected_usage = {'VCPU': 2, 'PCPU': 0, 'DISK_GB': 20,
                                   'MEMORY_MB': 2048}
             else:  # the other host
-                expected_usage = {'VCPU': 0, 'DISK_GB': 0,
+                expected_usage = {'VCPU': 0, 'PCPU': 0, 'DISK_GB': 0,
                                   'MEMORY_MB': 0}
 
             compute_usage = self.placement_api.get(
@@ -299,16 +449,15 @@ class NUMAServersTest(NUMAServersTestBase):
         # resource usage has been updated
 
         for host, compute_rp_uuid in self.compute_rp_uuids.items():
-            # TODO(stephenfin): This should use PCPU when we support those
             if host == original_host:
                 # the host that had the instance should still have allocations
                 # since the resize hasn't been confirmed
-                expected_usage = {'VCPU': 2, 'DISK_GB': 20,
+                expected_usage = {'VCPU': 2, 'PCPU': 0, 'DISK_GB': 20,
                                   'MEMORY_MB': 2048}
             else:
                 # the other host should have the new allocations replete with
                 # PCPUs
-                expected_usage = {'VCPU': 2, 'DISK_GB': 20,
+                expected_usage = {'VCPU': 0, 'PCPU': 2, 'DISK_GB': 20,
                                   'MEMORY_MB': 2048}
 
             compute_usage = self.placement_api.get(
@@ -329,16 +478,15 @@ class NUMAServersTest(NUMAServersTestBase):
         server = self._wait_for_state_change(server, 'ACTIVE')
 
         for host, compute_rp_uuid in self.compute_rp_uuids.items():
-            # TODO(stephenfin): This should use PCPU when we support those
             if host == original_host:
                 # the host that had the instance should no longer have
                 # alocations since the resize has been confirmed
-                expected_usage = {'VCPU': 0, 'DISK_GB': 0,
+                expected_usage = {'VCPU': 0, 'PCPU': 0, 'DISK_GB': 0,
                                   'MEMORY_MB': 0}
             else:
                 # the other host should still have the new allocations replete
                 # with PCPUs
-                expected_usage = {'VCPU': 2, 'DISK_GB': 20,
+                expected_usage = {'VCPU': 0, 'PCPU': 2, 'DISK_GB': 20,
                                   'MEMORY_MB': 2048}
 
             compute_usage = self.placement_api.get(

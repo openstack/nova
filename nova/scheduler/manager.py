@@ -151,18 +151,46 @@ class SchedulerManager(manager.Manager):
                 raise exception.NoValidHost(reason=e.message)
 
             resources = utils.resources_from_request_spec(
-                ctxt, spec_obj, self.driver.host_manager)
+                ctxt, spec_obj, self.driver.host_manager,
+                enable_pinning_translate=True)
             res = self.placement_client.get_allocation_candidates(ctxt,
                                                                   resources)
             if res is None:
                 # We have to handle the case that we failed to connect to the
                 # Placement service and the safe_connect decorator on
                 # get_allocation_candidates returns None.
-                alloc_reqs, provider_summaries, allocation_request_version = (
-                        None, None, None)
-            else:
-                (alloc_reqs, provider_summaries,
-                            allocation_request_version) = res
+                res = None, None, None
+
+            alloc_reqs, provider_summaries, allocation_request_version = res
+            alloc_reqs = alloc_reqs or []
+            provider_summaries = provider_summaries or {}
+
+            # if the user requested pinned CPUs, we make a second query to
+            # placement for allocation candidates using VCPUs instead of PCPUs.
+            # This is necessary because users might not have modified all (or
+            # any) of their compute nodes meaning said compute nodes will not
+            # be reporting PCPUs yet. This is okay to do because the
+            # NUMATopologyFilter (scheduler) or virt driver (compute node) will
+            # weed out hosts that are actually using new style configuration
+            # but simply don't have enough free PCPUs (or any PCPUs).
+            # TODO(stephenfin): Remove when we drop support for 'vcpu_pin_set'
+            if (resources.cpu_pinning_requested and
+                    not CONF.workarounds.disable_fallback_pcpu_query):
+                LOG.debug('Requesting fallback allocation candidates with '
+                          'VCPU instead of PCPU')
+                resources = utils.resources_from_request_spec(
+                    ctxt, spec_obj, self.driver.host_manager,
+                    enable_pinning_translate=False)
+                res = self.placement_client.get_allocation_candidates(
+                    ctxt, resources)
+                if res:
+                    # merge the allocation requests and provider summaries from
+                    # the two requests together
+                    alloc_reqs_fallback, provider_summaries_fallback, _ = res
+
+                    alloc_reqs.extend(alloc_reqs_fallback)
+                    provider_summaries.update(provider_summaries_fallback)
+
             if not alloc_reqs:
                 LOG.info("Got no allocation candidates from the Placement "
                          "API. This could be due to insufficient resources "

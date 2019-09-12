@@ -285,6 +285,8 @@ class PCIServersTest(_PCIServersTestBase):
            assigned pci device.
         """
 
+        self.flags(cpu_dedicated_set='0-7', group='compute')
+
         host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
                                          cpu_cores=2, cpu_threads=2,
                                          kB_mem=15740000)
@@ -305,6 +307,8 @@ class PCIServersTest(_PCIServersTestBase):
         """This test ensures that it is not possible to allocated CPU and
            memory resources from one NUMA node and a PCI device from another.
         """
+
+        self.flags(cpu_dedicated_set='0-7', group='compute')
 
         host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
                                          cpu_cores=2, cpu_threads=2,
@@ -354,6 +358,8 @@ class PCIServersWithNUMAPoliciesTest(_PCIServersTestBase):
         resources from one NUMA node and a PCI device from another *if* PCI
         NUMA policies are in use.
         """
+
+        self.flags(cpu_dedicated_set='0-7', group='compute')
 
         host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
                                          cpu_cores=2, cpu_threads=2,

@@ -88,10 +88,13 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         fake_spec = objects.RequestSpec()
         fake_spec.instance_uuid = uuids.instance
         fake_version = "9.42"
-        place_res = (fakes.ALLOC_REQS, mock.sentinel.p_sums, fake_version)
+        mock_p_sums = mock.Mock()
+        fake_alloc_reqs = fakes.get_fake_alloc_reqs()
+        place_res = (fake_alloc_reqs, mock_p_sums, fake_version)
         mock_get_ac.return_value = place_res
+        mock_rfrs.return_value.cpu_pinning_requested = False
         expected_alloc_reqs_by_rp_uuid = {
-            cn.uuid: [fakes.ALLOC_REQS[x]]
+            cn.uuid: [fake_alloc_reqs[x]]
             for x, cn in enumerate(fakes.COMPUTE_NODES)
         }
         with mock.patch.object(self.manager.driver, 'select_destinations'
@@ -102,7 +105,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
             select_destinations.assert_called_once_with(
                 self.context, fake_spec,
                 [fake_spec.instance_uuid], expected_alloc_reqs_by_rp_uuid,
-                mock.sentinel.p_sums, fake_version, False)
+                mock_p_sums, fake_version, False)
             mock_get_ac.assert_called_once_with(
                 self.context, mock_rfrs.return_value)
 
@@ -114,7 +117,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                     return_objects=True, return_alternates=True)
             select_destinations.assert_called_once_with(None, fake_spec,
                 [fake_spec.instance_uuid], expected_alloc_reqs_by_rp_uuid,
-                mock.sentinel.p_sums, fake_version, True)
+                mock_p_sums, fake_version, True)
 
     @mock.patch('nova.scheduler.request_filter.process_reqspec')
     @mock.patch('nova.scheduler.utils.resources_from_request_spec')
@@ -125,10 +128,13 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         fake_spec = objects.RequestSpec()
         fake_spec.instance_uuid = uuids.instance
         fake_version = "9.42"
-        place_res = (fakes.ALLOC_REQS, mock.sentinel.p_sums, fake_version)
+        mock_p_sums = mock.Mock()
+        fake_alloc_reqs = fakes.get_fake_alloc_reqs()
+        place_res = (fake_alloc_reqs, mock_p_sums, fake_version)
         mock_get_ac.return_value = place_res
+        mock_rfrs.return_value.cpu_pinning_requested = False
         expected_alloc_reqs_by_rp_uuid = {
-            cn.uuid: [fakes.ALLOC_REQS[x]]
+            cn.uuid: [fake_alloc_reqs[x]]
             for x, cn in enumerate(fakes.COMPUTE_NODES)
         }
         with mock.patch.object(self.manager.driver, 'select_destinations'
@@ -148,7 +154,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
             # driver should have been called with True for return_alternates.
             select_destinations.assert_called_once_with(None, fake_spec,
                     [fake_spec.instance_uuid], expected_alloc_reqs_by_rp_uuid,
-                    mock.sentinel.p_sums, fake_version, True)
+                    mock_p_sums, fake_version, True)
 
             # Now pass False for return objects, but keep return_alternates as
             # True. Verify that the manager converted the Selection object back
@@ -164,7 +170,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
             # return_alternates as False.
             select_destinations.assert_called_once_with(None, fake_spec,
                     [fake_spec.instance_uuid], expected_alloc_reqs_by_rp_uuid,
-                    mock.sentinel.p_sums, fake_version, False)
+                    mock_p_sums, fake_version, False)
 
     @mock.patch('nova.scheduler.request_filter.process_reqspec')
     @mock.patch('nova.scheduler.utils.resources_from_request_spec')
@@ -176,6 +182,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         fake_spec.instance_uuid = uuids.instance
         place_res = get_allocation_candidates_response
         mock_get_ac.return_value = place_res
+        mock_rfrs.return_value.cpu_pinning_requested = False
         with mock.patch.object(self.manager.driver, 'select_destinations'
                 ) as select_destinations:
             self.assertRaises(messaging.rpc.dispatcher.ExpectedException,
@@ -236,13 +243,17 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
     @mock.patch('nova.scheduler.utils.resources_from_request_spec')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get_allocation_candidates')
-    def test_select_destination_with_4_3_client(self, mock_get_ac, mock_rfrs,
-                                                mock_process):
+    def test_select_destination_with_4_3_client(
+            self, mock_get_ac, mock_rfrs, mock_process,
+            cpu_pinning_requested=False):
         fake_spec = objects.RequestSpec()
-        place_res = (fakes.ALLOC_REQS, mock.sentinel.p_sums, "42.0")
+        mock_p_sums = mock.Mock()
+        fake_alloc_reqs = fakes.get_fake_alloc_reqs()
+        place_res = (fake_alloc_reqs, mock_p_sums, "42.0")
         mock_get_ac.return_value = place_res
+        mock_rfrs.return_value.cpu_pinning_requested = cpu_pinning_requested
         expected_alloc_reqs_by_rp_uuid = {
-            cn.uuid: [fakes.ALLOC_REQS[x]]
+            cn.uuid: [fake_alloc_reqs[x]]
             for x, cn in enumerate(fakes.COMPUTE_NODES)
         }
         with mock.patch.object(self.manager.driver, 'select_destinations'
@@ -251,9 +262,77 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
             mock_process.assert_called_once_with(self.context, fake_spec)
             select_destinations.assert_called_once_with(self.context,
                 fake_spec, None, expected_alloc_reqs_by_rp_uuid,
-                mock.sentinel.p_sums, "42.0", False)
+                mock_p_sums, "42.0", False)
+            mock_rfrs.assert_called_once_with(
+                self.context, fake_spec, mock.ANY,
+                enable_pinning_translate=True)
             mock_get_ac.assert_called_once_with(
                 self.context, mock_rfrs.return_value)
+
+    @mock.patch('nova.scheduler.manager.LOG.debug')
+    @mock.patch('nova.scheduler.request_filter.process_reqspec')
+    @mock.patch('nova.scheduler.utils.resources_from_request_spec')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocation_candidates')
+    def test_select_destination_with_pcpu_fallback(
+            self, mock_get_ac, mock_rfrs, mock_process, mock_log):
+        """Check that we make a second request to placement if we've got a PCPU
+        request.
+        """
+        self.flags(disable_fallback_pcpu_query=False, group='workarounds')
+
+        # mock the result from placement. In reality, the two calls we expect
+        # would return two different results, but we don't care about that. All
+        # we want to check is that it _was_ called twice
+        fake_spec = objects.RequestSpec()
+        mock_p_sums = mock.Mock()
+        fake_alloc_reqs = fakes.get_fake_alloc_reqs()
+        place_res = (fake_alloc_reqs, mock_p_sums, "42.0")
+        mock_get_ac.return_value = place_res
+
+        pcpu_rreq = mock.Mock()
+        pcpu_rreq.cpu_pinning_requested = True
+        vcpu_rreq = mock.Mock()
+        mock_rfrs.side_effect = [pcpu_rreq, vcpu_rreq]
+
+        # as above, the two allocation requests against each compute node would
+        # be different in reality, and not all compute nodes might have two
+        # allocation requests, but that doesn't matter for this simple test
+        expected_alloc_reqs_by_rp_uuid = {
+            cn.uuid: [fake_alloc_reqs[x], fake_alloc_reqs[x]]
+            for x, cn in enumerate(fakes.COMPUTE_NODES)
+        }
+
+        with mock.patch.object(self.manager.driver, 'select_destinations'
+                ) as select_destinations:
+            self.manager.select_destinations(self.context, spec_obj=fake_spec)
+            select_destinations.assert_called_once_with(self.context,
+                fake_spec, None, expected_alloc_reqs_by_rp_uuid,
+                mock_p_sums, "42.0", False)
+
+        mock_process.assert_called_once_with(self.context, fake_spec)
+        mock_log.assert_called_with(
+            'Requesting fallback allocation candidates with VCPU instead of '
+            'PCPU')
+        mock_rfrs.assert_has_calls([
+            mock.call(self.context, fake_spec, mock.ANY,
+                      enable_pinning_translate=True),
+            mock.call(self.context, fake_spec, mock.ANY,
+                      enable_pinning_translate=False),
+        ])
+        mock_get_ac.assert_has_calls([
+            mock.call(self.context, pcpu_rreq),
+            mock.call(self.context, vcpu_rreq),
+        ])
+
+    def test_select_destination_with_pcpu_fallback_disabled(self):
+        """Check that we do not make a second request to placement if we've
+        been told not to, even though we've got a PCPU instance.
+        """
+        self.flags(disable_fallback_pcpu_query=True, group='workarounds')
+
+        self.test_select_destination_with_4_3_client(
+            cpu_pinning_requested=True)
 
     # TODO(sbauza): Remove that test once the API v4 is removed
     @mock.patch('nova.scheduler.request_filter.process_reqspec')
@@ -266,10 +345,13 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         fake_spec = objects.RequestSpec()
         fake_spec.instance_uuid = uuids.instance
         from_primitives.return_value = fake_spec
-        place_res = (fakes.ALLOC_REQS, mock.sentinel.p_sums, "42.0")
+        mock_p_sums = mock.Mock()
+        fake_alloc_reqs = fakes.get_fake_alloc_reqs()
+        place_res = (fake_alloc_reqs, mock_p_sums, "42.0")
         mock_get_ac.return_value = place_res
+        mock_rfrs.return_value.cpu_pinning_requested = False
         expected_alloc_reqs_by_rp_uuid = {
-            cn.uuid: [fakes.ALLOC_REQS[x]]
+            cn.uuid: [fake_alloc_reqs[x]]
             for x, cn in enumerate(fakes.COMPUTE_NODES)
         }
         with mock.patch.object(self.manager.driver, 'select_destinations'
@@ -282,7 +364,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
             select_destinations.assert_called_once_with(
                 self.context, fake_spec,
                 [fake_spec.instance_uuid], expected_alloc_reqs_by_rp_uuid,
-                mock.sentinel.p_sums, "42.0", False)
+                mock_p_sums, "42.0", False)
             mock_get_ac.assert_called_once_with(
                 self.context, mock_rfrs.return_value)
 
