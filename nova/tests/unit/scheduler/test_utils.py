@@ -57,17 +57,6 @@ class TestUtilsBase(test.NoDBTestCase):
 
 @ddt.ddt
 class TestUtils(TestUtilsBase):
-    @staticmethod
-    def _get_image_with_traits():
-        image_prop = {
-            'properties': {
-                'trait:CUSTOM_IMAGE_TRAIT1': 'required',
-                'trait:CUSTOM_IMAGE_TRAIT2': 'required',
-            },
-            'id': 'c8b1790e-a07d-4971-b137-44f2432936cd'
-        }
-        image = objects.ImageMeta.from_dict(image_prop)
-        return image
 
     def _test_resources_from_request_spec(self, expected, flavor, image=None):
         if image is None:
@@ -96,7 +85,13 @@ class TestUtils(TestUtilsBase):
         self._test_resources_from_request_spec(expected_resources, flavor)
 
     def test_resources_from_request_spec_flavor_and_image_traits(self):
-        image = self._get_image_with_traits()
+        image = objects.ImageMeta.from_dict({
+            'properties': {
+                'trait:CUSTOM_IMAGE_TRAIT1': 'required',
+                'trait:CUSTOM_IMAGE_TRAIT2': 'required',
+            },
+            'id': 'c8b1790e-a07d-4971-b137-44f2432936cd',
+        })
         flavor = objects.Flavor(vcpus=1,
                                 memory_mb=1024,
                                 root_gb=10,
