@@ -5,13 +5,15 @@ upgrade:
     in the following scenarios:
 
     1. Instance with non-network related PCI device.
+
     2. Instance with network related PCI device and either:
-        a. Neutron does not support extended port binding API.
-        b. Source or destination compute node does not support
-           libvirt-sriov-live-migration.
+
+       a. Neutron does not support extended port binding API.
+       b. Source or destination compute node does not support
+          libvirt-sriov-live-migration.
 
     Live migration will fail with a user friendly error.
 
-    .. note:: Previously, the operation would have failed with an obscure error.
-        Ending up with the instance still running on the source node or ending up
+    .. note:: Previously, the operation would have failed with an obscure error
+        resulting in the instance still running on the source node or ending up
         in an inoperable state.
