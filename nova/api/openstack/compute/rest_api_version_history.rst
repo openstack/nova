@@ -1012,8 +1012,11 @@ The default behavior is configurable using two new policies:
 * ``compute:server:topology:index``
 * ``compute:server:topology:host:index``
 
-2.79
-----
+.. Keep a reference for python-novaclient releasenotes
+.. _id71:
+
+2.79 (Maximum in Train)
+-----------------------
 
 API microversion 2.79 adds support for specifying the ``delete_on_termination``
 field in the request body when attaching a volume to a server, to support
