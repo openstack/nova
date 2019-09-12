@@ -5521,7 +5521,7 @@ class PortResourceRequestBasedSchedulingTestBase(
             self.flavor_with_group_policy['id'],
             {'extra_specs': {'group_policy': 'isolate'}})
 
-        self._create_networking_rp_tree(self.compute1_rp_uuid)
+        self._create_networking_rp_tree('host1', self.compute1_rp_uuid)
 
         # add extra ports and the related network to the neutron fixture
         # specifically for these tests. It cannot be added globally in the
@@ -5627,7 +5627,7 @@ class PortResourceRequestBasedSchedulingTestBase(
             device_rp_uuid,
             traits)
 
-    def _create_sriov_networking_rp_tree(self, compute_rp_uuid):
+    def _create_sriov_networking_rp_tree(self, hostname, compute_rp_uuid):
         # Create a matching RP tree in placement for the PCI devices added to
         # the passthrough_whitelist config during setUp() and PCI devices
         # present in the FakeDriverWithPciResources virt driver.
@@ -5640,16 +5640,16 @@ class PortResourceRequestBasedSchedulingTestBase(
         # physnet2 but it will not have bandwidth inventory.
         self.sriov_dev_rp_per_host[compute_rp_uuid] = {}
 
-        compute_name = compute_rp_uuid
         sriov_agent_rp_uuid = getattr(uuids, compute_rp_uuid + 'sriov agent')
         agent_rp_req = {
-            "name": "%s:NIC Switch agent" % compute_name,
+            "name": "%s:NIC Switch agent" % hostname,
             "uuid": sriov_agent_rp_uuid,
             "parent_provider_uuid": compute_rp_uuid
         }
         self.placement_api.post('/resource_providers',
                                 body=agent_rp_req,
                                 version='1.20')
+        dev_rp_name_prefix = ("%s:NIC Switch agent:" % hostname)
 
         sriov_pf1_rp_uuid = getattr(uuids, sriov_agent_rp_uuid + 'PF1')
         self.sriov_dev_rp_per_host[compute_rp_uuid]['pf1'] = sriov_pf1_rp_uuid
@@ -5661,7 +5661,7 @@ class PortResourceRequestBasedSchedulingTestBase(
         traits = [self.CUSTOM_VNIC_TYPE_DIRECT, self.CUSTOM_PHYSNET1]
         self._create_pf_device_rp(
             sriov_pf1_rp_uuid, sriov_agent_rp_uuid, inventories, traits,
-            device_rp_name="%s:NIC Switch agent:ens1" % compute_name)
+            device_rp_name=dev_rp_name_prefix + "%s-ens1" % hostname)
 
         sriov_pf2_rp_uuid = getattr(uuids, sriov_agent_rp_uuid + 'PF2')
         self.sriov_dev_rp_per_host[compute_rp_uuid]['pf2'] = sriov_pf2_rp_uuid
@@ -5673,7 +5673,7 @@ class PortResourceRequestBasedSchedulingTestBase(
                   self.CUSTOM_PHYSNET2]
         self._create_pf_device_rp(
             sriov_pf2_rp_uuid, sriov_agent_rp_uuid, inventories, traits,
-            device_rp_name="%s:NIC Switch agent:ens2" % compute_name)
+            device_rp_name=dev_rp_name_prefix + "%s-ens2" % hostname)
 
         sriov_pf3_rp_uuid = getattr(uuids, sriov_agent_rp_uuid + 'PF3')
         self.sriov_dev_rp_per_host[compute_rp_uuid]['pf3'] = sriov_pf3_rp_uuid
@@ -5681,12 +5681,12 @@ class PortResourceRequestBasedSchedulingTestBase(
         traits = [self.CUSTOM_VNIC_TYPE_DIRECT, self.CUSTOM_PHYSNET2]
         self._create_pf_device_rp(
             sriov_pf3_rp_uuid, sriov_agent_rp_uuid, inventories, traits,
-            device_rp_name="%s:NIC Switch agent:ens3" % compute_name)
+            device_rp_name=dev_rp_name_prefix + "%s-ens3" % hostname)
 
-    def _create_networking_rp_tree(self, compute_rp_uuid):
+    def _create_networking_rp_tree(self, hostname, compute_rp_uuid):
         # let's simulate what the neutron would do
         self._create_ovs_networking_rp_tree(compute_rp_uuid)
-        self._create_sriov_networking_rp_tree(compute_rp_uuid)
+        self._create_sriov_networking_rp_tree(hostname, compute_rp_uuid)
 
     def assertPortMatchesAllocation(self, port, allocations):
         port_request = port[constants.RESOURCE_REQUEST]['resources']
@@ -6376,7 +6376,7 @@ class ServerMoveWithPortResourceRequestTest(
 
         self.compute2 = self._start_compute('host2')
         self.compute2_rp_uuid = self._get_provider_uuid_by_host('host2')
-        self._create_networking_rp_tree(self.compute2_rp_uuid)
+        self._create_networking_rp_tree('host2', self.compute2_rp_uuid)
         self.compute2_service_id = self.admin_api.get_services(
             host='host2', binary='nova-compute')[0]['id']
 
@@ -6497,7 +6497,7 @@ class ServerMoveWithPortResourceRequestTest(
         """
         self._start_compute('host3')
         compute3_rp_uuid = self._get_provider_uuid_by_host('host3')
-        self._create_networking_rp_tree(compute3_rp_uuid)
+        self._create_networking_rp_tree('host3', compute3_rp_uuid)
 
         non_qos_port = self.neutron.port_1
         qos_port = self.neutron.port_with_resource_request
@@ -6621,7 +6621,7 @@ class ServerMoveWithPortResourceRequestTest(
     def test_migrate_server_with_qos_port_reschedule_success(self):
         self._start_compute('host3')
         compute3_rp_uuid = self._get_provider_uuid_by_host('host3')
-        self._create_networking_rp_tree(compute3_rp_uuid)
+        self._create_networking_rp_tree('host3', compute3_rp_uuid)
 
         non_qos_port = self.neutron.port_1
         qos_port = self.neutron.port_with_resource_request
@@ -6730,9 +6730,9 @@ class PortResourceRequestReSchedulingTest(
         super(PortResourceRequestReSchedulingTest, self).setUp()
         self.compute2 = self._start_compute('host2')
         self.compute2_rp_uuid = self._get_provider_uuid_by_host('host2')
-        self._create_networking_rp_tree(self.compute2_rp_uuid)
+        self._create_networking_rp_tree('host2', self.compute2_rp_uuid)
 
-    def _create_networking_rp_tree(self, compute_rp_uuid):
+    def _create_networking_rp_tree(self, hostname, compute_rp_uuid):
         # let's simulate what the neutron would do
         self._create_ovs_networking_rp_tree(compute_rp_uuid)
 
