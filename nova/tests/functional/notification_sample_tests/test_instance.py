@@ -319,7 +319,7 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         # 3. instance.live_migration_pre.end
         # 4. instance.live_migration_force_complete.start
         # 5. instance.live_migration_force_complete.end
-        self.assertGreaterEqual(6, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+        self.assertGreaterEqual(len(fake_notifier.VERSIONED_NOTIFICATIONS), 6,
                                 fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'instance-live_migration_force_complete-start',
