@@ -54,6 +54,8 @@ def fake_db_migration(**updates):
         'disk_processed': 23456,
         'disk_remaining': 211111,
         'cross_cell_move': False,
+        'user_id': None,
+        'project_id': None,
     }
 
     if updates:
@@ -110,6 +112,8 @@ class _TestMigrationObject(object):
         self.assertEqual(fake_migration['dest_compute'], mig.dest_compute)
         self.assertIn('uuid', mig)
         self.assertFalse(mig.cross_cell_move)
+        self.assertIn('user_id', mig)
+        self.assertIn('project_id', mig)
         mock_create.assert_called_once_with(ctxt,
                                             {'source_compute': 'foo',
                                              'migration_type': 'resize',
@@ -298,6 +302,10 @@ class _TestMigrationObject(object):
             source_compute='fake-host'                           # added in 1.0
         )
         data = lambda x: x['nova_object.data']
+        primitive = data(mig.obj_to_primitive(target_version='1.6'))
+        self.assertIn('cross_cell_move', primitive)
+        self.assertNotIn('user_id', primitive)
+        self.assertNotIn('project_id', primitive)
         primitive = data(mig.obj_to_primitive(target_version='1.5'))
         self.assertIn('uuid', primitive)
         self.assertNotIn('cross_cell_move', primitive)

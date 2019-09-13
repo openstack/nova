@@ -1041,6 +1041,13 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         # check. The actual test for 400 is in TestServicesUUIDCheck.
         pass
 
+    def _check_401(self, engine, data):
+        for prefix in ('', 'shadow_'):
+            self.assertColumnExists(
+                engine, '%smigrations' % prefix, 'user_id')
+            self.assertColumnExists(
+                engine, '%smigrations' % prefix, 'project_id')
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_fixtures.OpportunisticDBTestMixin,

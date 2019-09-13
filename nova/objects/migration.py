@@ -42,7 +42,8 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
     # Version 1.4: Added migration progress detail
     # Version 1.5: Added uuid
     # Version 1.6: Added cross_cell_move and get_by_uuid().
-    VERSION = '1.6'
+    # Version 1.7: Added user_id and project_id
+    VERSION = '1.7'
 
     fields = {
         'id': fields.IntegerField(),
@@ -67,6 +68,10 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
         'disk_processed': fields.IntegerField(nullable=True),
         'disk_remaining': fields.IntegerField(nullable=True),
         'cross_cell_move': fields.BooleanField(default=False),
+        # request context user id
+        'user_id': fields.StringField(nullable=True),
+        # request context project id
+        'project_id': fields.StringField(nullable=True),
         }
 
     @staticmethod
@@ -104,6 +109,11 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
                 del primitive['uuid']
         if target_version < (1, 6) and 'cross_cell_move' in primitive:
             del primitive['cross_cell_move']
+        if target_version < (1, 7):
+            if 'user_id' in primitive:
+                del primitive['user_id']
+            if 'project_id' in primitive:
+                del primitive['project_id']
 
     def obj_load_attr(self, attrname):
         if attrname == 'migration_type':

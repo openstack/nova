@@ -1123,7 +1123,8 @@ class MigrationTestCase(test.TestCase):
     def _create(self, status='migrating', source_compute='host1',
                 source_node='a', dest_compute='host2', dest_node='b',
                 system_metadata=None, migration_type=None, uuid=None,
-                created_at=None, updated_at=None):
+                created_at=None, updated_at=None, user_id=None,
+                project_id=None):
 
         values = {'host': source_compute}
         instance = db.instance_create(self.ctxt, values)
@@ -1139,6 +1140,10 @@ class MigrationTestCase(test.TestCase):
             values['created_at'] = created_at
         if updated_at:
             values['updated_at'] = updated_at
+        if user_id:
+            values['user_id'] = user_id
+        if project_id:
+            values['project_id'] = project_id
         db.migration_create(self.ctxt, values)
         return values
 
@@ -1291,6 +1296,54 @@ class MigrationTestCase(test.TestCase):
             self.assertEqual(1, len(instance_migrations))
             self.assertEqual(migration['instance_uuid'],
                              instance_migrations[0]['instance_uuid'])
+
+    def test_get_migrations_by_filters_user_id(self):
+        # Create two migrations with different user_id
+        user_id1 = "fake_user_id"
+        self._create(user_id=user_id1)
+        user_id2 = "other_fake_user_id"
+        self._create(user_id=user_id2)
+        # Filter on only the first user_id
+        filters = {"user_id": user_id1}
+        migrations = db.migration_get_all_by_filters(self.ctxt, filters)
+        # We should only get one migration back because we filtered on only
+        # one of the two different user_id
+        self.assertEqual(1, len(migrations))
+        for migration in migrations:
+            self.assertEqual(filters['user_id'], migration['user_id'])
+
+    def test_get_migrations_by_filters_project_id(self):
+        # Create two migrations with different project_id
+        project_id1 = "fake_project_id"
+        self._create(project_id=project_id1)
+        project_id2 = "other_fake_project_id"
+        self._create(project_id=project_id2)
+        # Filter on only the first project_id
+        filters = {"project_id": project_id1}
+        migrations = db.migration_get_all_by_filters(self.ctxt, filters)
+        # We should only get one migration back because we filtered on only
+        # one of the two different project_id
+        self.assertEqual(1, len(migrations))
+        for migration in migrations:
+            self.assertEqual(filters['project_id'], migration['project_id'])
+
+    def test_get_migrations_by_filters_user_id_and_project_id(self):
+        # Create two migrations with different user_id and project_id
+        user_id1 = "fake_user_id"
+        project_id1 = "fake_project_id"
+        self._create(user_id=user_id1, project_id=project_id1)
+        user_id2 = "other_fake_user_id"
+        project_id2 = "other_fake_project_id"
+        self._create(user_id=user_id2, project_id=project_id2)
+        # Filter on only the first user_id and project_id
+        filters = {"user_id": user_id1, "project_id": project_id1}
+        migrations = db.migration_get_all_by_filters(self.ctxt, filters)
+        # We should only get one migration back because we filtered on only
+        # one of the two different user_id and project_id
+        self.assertEqual(1, len(migrations))
+        for migration in migrations:
+            self.assertEqual(filters['user_id'], migration['user_id'])
+            self.assertEqual(filters['project_id'], migration['project_id'])
 
     def test_migration_get_unconfirmed_by_dest_compute(self):
         # Ensure no migrations are returned.

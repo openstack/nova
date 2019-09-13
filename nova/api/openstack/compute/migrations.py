@@ -62,6 +62,10 @@ class MigrationsController(wsgi.Controller):
             if 'memory_total' in obj:
                 for key in detail_keys:
                     del obj[key]
+            if 'user_id' in obj:
+                del obj['user_id']
+            if 'project_id' in obj:
+                del obj['project_id']
             # NOTE(Shaohe Feng) above version 2.23, add migration_type for all
             # kinds of migration, but we only add links just for in-progress
             # live-migration.
