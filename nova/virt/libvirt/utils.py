@@ -565,8 +565,12 @@ def get_default_machine_type(arch):
     # default machine type.  It is the recommended board, which is designed
     # to be used with virtual machines.  The 'virt' board is more flexible,
     # supports PCI, 'virtio', has decent RAM limits, etc.
+    #
     # NOTE(sean-k-mooney): Nova's default for x86 is still 'pc', so
     # use that, not 'q35', for x86_64 and i686.
+    #
+    # NOTE(aspiers): If you change this, don't forget to update the
+    # docs and metadata for hw_machine_type in glance.
     default_mtypes = {
         obj_fields.Architecture.ARMV7: "virt",
         obj_fields.Architecture.AARCH64: "virt",

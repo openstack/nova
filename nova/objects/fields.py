@@ -319,6 +319,8 @@ class CPUFeaturePolicy(BaseNovaEnum):
 
 class DiskBus(BaseNovaEnum):
 
+    # NOTE(aspiers): If you change this, don't forget to update the
+    # docs and metadata for hw_*_bus in glance.
     FDC = "fdc"
     IDE = "ide"
     SATA = "sata"
