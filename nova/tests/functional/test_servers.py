@@ -6618,6 +6618,102 @@ class ServerMoveWithPortResourceRequestTest(
 
         self._delete_server_and_check_allocations(qos_port, server)
 
+    def test_migrate_server_with_qos_port_reschedule_success(self):
+        self._start_compute('host3')
+        compute3_rp_uuid = self._get_provider_uuid_by_host('host3')
+        self._create_networking_rp_tree(compute3_rp_uuid)
+
+        non_qos_port = self.neutron.port_1
+        qos_port = self.neutron.port_with_resource_request
+
+        server = self._create_server_with_ports(non_qos_port, qos_port)
+
+        # check that the server allocates from the current host properly
+        self._check_allocation(
+            server, self.compute1_rp_uuid, non_qos_port, qos_port)
+
+        # Yes this isn't great in a functional test, but it's simple.
+        original_prep_resize = compute_manager.ComputeManager._prep_resize
+
+        prep_resize_calls = []
+
+        def fake_prep_resize(_self, *args, **kwargs):
+            # Make the first prep_resize fail and the rest passing through
+            # the original _prep_resize call
+            if not prep_resize_calls:
+                prep_resize_calls.append(_self.host)
+                raise test.TestingException('Simulated prep_resize failure.')
+            prep_resize_calls.append(_self.host)
+            original_prep_resize(_self, *args, **kwargs)
+
+        # The patched compute manager will raise from _prep_resize on the
+        # first host of the migration. Then the migration
+        # is reschedule on the other host where it will succeed
+        with mock.patch.object(
+                compute_manager.ComputeManager, '_prep_resize',
+                new=fake_prep_resize):
+            self.api.post_server_action(server['id'], {'migrate': None})
+            self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+
+        # ensure that resize is tried on two hosts, so we had a re-schedule
+        self.assertEqual(['host2', 'host3'], prep_resize_calls)
+
+        migration_uuid = self.get_migration_uuid_for_instance(server['id'])
+
+        # check that server allocates from the final host properly while
+        # the migration holds the allocation on the source host
+        self._check_allocation(
+            server, compute3_rp_uuid, non_qos_port, qos_port,
+            migration_uuid, source_compute_rp_uuid=self.compute1_rp_uuid)
+
+        self._confirm_resize(server)
+
+        # check that allocation is still OK
+        self._check_allocation(
+            server, compute3_rp_uuid, non_qos_port, qos_port)
+        # but the migration allocation is gone
+        migration_allocations = self.placement_api.get(
+            '/allocations/%s' % migration_uuid).body['allocations']
+        self.assertEqual({}, migration_allocations)
+
+        self._delete_server_and_check_allocations(qos_port, server)
+
+    def test_migrate_server_with_qos_port_reschedule_failure(self):
+        non_qos_port = self.neutron.port_1
+        qos_port = self.neutron.port_with_resource_request
+
+        server = self._create_server_with_ports(non_qos_port, qos_port)
+
+        # check that the server allocates from the current host properly
+        self._check_allocation(
+            server, self.compute1_rp_uuid, non_qos_port, qos_port)
+
+        # The patched compute manager on host2 will raise from _prep_resize.
+        # Then the migration is reschedule but there is no other host to
+        # choose from.
+        with mock.patch.object(
+                compute_manager.ComputeManager, '_prep_resize',
+                side_effect=test.TestingException(
+                    'Simulated prep_resize failure.')):
+            self.api.post_server_action(server['id'], {'migrate': None})
+            self._wait_for_server_parameter(
+                self.api, server,
+                {'OS-EXT-SRV-ATTR:host': 'host1',
+                 'status': 'ERROR'})
+            self._wait_for_migration_status(server, ['error'])
+
+        migration_uuid = self.get_migration_uuid_for_instance(server['id'])
+
+        # as the migration is failed we expect that the migration allocation
+        # is deleted
+        migration_allocations = self.placement_api.get(
+            '/allocations/%s' % migration_uuid).body['allocations']
+        self.assertEqual({}, migration_allocations)
+
+        # and the instance allocates from the source host
+        self._check_allocation(
+            server, self.compute1_rp_uuid, non_qos_port, qos_port)
+
 
 class PortResourceRequestReSchedulingTest(
         PortResourceRequestBasedSchedulingTestBase):
