@@ -5804,6 +5804,174 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         mock_update_cache.assert_called_once_with(  # from @refresh_cache
             self.api, ctxt, instance, nw_info=None)
 
+    @mock.patch('nova.network.base_api.update_instance_cache_with_nw_info')
+    def test_update_inst_info_cache_for_disassociated_fip_other_cell(
+            self, mock_update_cache):
+        """Tests a scenario where a floating IP is associated to an instance
+        in another cell from the one in which it's currently associated
+        and the network info cache on the original instance is refreshed.
+        """
+        ctxt = context.get_context()
+        mock_client = mock.Mock()
+        new_instance = fake_instance.fake_instance_obj(ctxt)
+        cctxt = context.get_context()
+        old_instance = fake_instance.fake_instance_obj(cctxt)
+        fip = {'id': uuids.floating_ip_id,
+               'port_id': uuids.old_port_id,
+               'floating_ip_address': '172.24.5.15'}
+        # Setup the mocks.
+        with test.nested(
+            mock.patch.object(self.api, '_show_port',
+                              return_value={
+                                  'device_id': old_instance.uuid}),
+            mock.patch.object(self.api, '_get_instance_by_uuid_using_api_db',
+                              return_value=old_instance)
+        ) as (
+            _show_port, _get_instance_by_uuid_using_api_db
+        ):
+            # Run the code.
+            self.api._update_inst_info_cache_for_disassociated_fip(
+                ctxt, new_instance, mock_client, fip)
+        # Assert the calls.
+        _show_port.assert_called_once_with(
+            ctxt, uuids.old_port_id, neutron_client=mock_client)
+        _get_instance_by_uuid_using_api_db.assert_called_once_with(
+            ctxt, old_instance.uuid)
+        mock_update_cache.assert_called_once_with(
+            self.api, cctxt, old_instance)
+
+    @mock.patch('nova.network.neutronv2.api.LOG.info')
+    @mock.patch('nova.network.base_api.update_instance_cache_with_nw_info')
+    def test_update_inst_info_cache_for_disassociated_fip_inst_not_found(
+            self, mock_update_cache, mock_log_info):
+        """Tests the case that a floating IP is re-associated to an instance
+        in another cell but the original instance cannot be found.
+        """
+        ctxt = context.get_context()
+        mock_client = mock.Mock()
+        new_instance = fake_instance.fake_instance_obj(ctxt)
+        fip = {'id': uuids.floating_ip_id,
+               'port_id': uuids.old_port_id,
+               'floating_ip_address': '172.24.5.15'}
+        # Setup the mocks.
+        with test.nested(
+            mock.patch.object(self.api, '_show_port',
+                              return_value={
+                                  'device_id': uuids.original_inst_uuid}),
+            mock.patch.object(self.api,
+                              '_get_instance_by_uuid_using_api_db',
+                              return_value=None)
+        ) as (
+            _show_port, _get_instance_by_uuid_using_api_db
+        ):
+            # Run the code.
+            self.api._update_inst_info_cache_for_disassociated_fip(
+                ctxt, new_instance, mock_client, fip)
+        # Assert the calls.
+        _show_port.assert_called_once_with(
+            ctxt, uuids.old_port_id, neutron_client=mock_client)
+        _get_instance_by_uuid_using_api_db.assert_called_once_with(
+            ctxt, uuids.original_inst_uuid)
+        mock_update_cache.assert_not_called()
+        self.assertEqual(2, mock_log_info.call_count)
+        self.assertIn('If the instance still exists, its info cache may '
+                      'be healed automatically.',
+                      mock_log_info.call_args[0][0])
+
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
+    def test_get_instance_by_uuid_using_api_db_current_cell(
+            self, mock_get_map, mock_get_inst):
+        """Tests that _get_instance_by_uuid_using_api_db finds the
+        instance in the cell currently targeted by the context.
+        """
+        ctxt = context.get_context()
+        instance = fake_instance.fake_instance_obj(ctxt)
+        mock_get_inst.return_value = instance
+        inst = self.api._get_instance_by_uuid_using_api_db(ctxt, instance.uuid)
+        self.assertIs(inst, instance)
+        mock_get_inst.assert_called_once_with(ctxt, instance.uuid)
+        mock_get_map.assert_not_called()
+
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
+    def test_get_instance_by_uuid_using_api_db_other_cell(
+            self, mock_get_map, mock_get_inst):
+        """Tests that _get_instance_by_uuid_using_api_db finds the
+        instance in another cell different from the currently targeted context.
+        """
+        ctxt = context.get_context()
+        instance = fake_instance.fake_instance_obj(ctxt)
+        mock_get_map.return_value = objects.InstanceMapping(
+            cell_mapping=objects.CellMapping(
+                uuid=uuids.cell_mapping_uuid,
+                database_connection=
+                self.cell_mappings['cell1'].database_connection,
+                transport_url='none://fake'))
+        # Mock get_by_uuid to not find the instance in the first call, but
+        # do find it in the second. Target the instance context as well so
+        # we can assert that we used a different context for the 2nd call.
+
+        def stub_inst_get_by_uuid(_context, instance_uuid, *args, **kwargs):
+            if not mock_get_map.called:
+                # First call, raise InstanceNotFound.
+                self.assertIs(_context, ctxt)
+                raise exception.InstanceNotFound(instance_id=instance_uuid)
+            # Else return the instance with a newly targeted context.
+            self.assertIsNot(_context, ctxt)
+            instance._context = _context
+            return instance
+        mock_get_inst.side_effect = stub_inst_get_by_uuid
+
+        inst = self.api._get_instance_by_uuid_using_api_db(ctxt, instance.uuid)
+        # The instance's internal context should still be targeted and not
+        # the original context.
+        self.assertIsNot(inst._context, ctxt)
+        self.assertIsNotNone(inst._context.db_connection)
+        mock_get_map.assert_called_once_with(ctxt, instance.uuid)
+        mock_get_inst.assert_has_calls([
+            mock.call(ctxt, instance.uuid),
+            mock.call(inst._context, instance.uuid)])
+
+    @mock.patch('nova.objects.Instance.get_by_uuid',
+                side_effect=exception.InstanceNotFound(instance_id=uuids.inst))
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
+    def test_get_instance_by_uuid_using_api_db_other_cell_never_found(
+            self, mock_get_map, mock_get_inst):
+        """Tests that _get_instance_by_uuid_using_api_db does not find the
+        instance in either the current cell or another cell.
+        """
+        ctxt = context.get_context()
+        instance = fake_instance.fake_instance_obj(ctxt, uuid=uuids.inst)
+        mock_get_map.return_value = objects.InstanceMapping(
+            cell_mapping=objects.CellMapping(
+                uuid=uuids.cell_mapping_uuid,
+                database_connection=
+                self.cell_mappings['cell1'].database_connection,
+                transport_url='none://fake'))
+        self.assertIsNone(
+            self.api._get_instance_by_uuid_using_api_db(ctxt, instance.uuid))
+        mock_get_map.assert_called_once_with(ctxt, instance.uuid)
+        mock_get_inst.assert_has_calls([
+            mock.call(ctxt, instance.uuid),
+            mock.call(test.MatchType(context.RequestContext), instance.uuid)])
+
+    @mock.patch('nova.objects.Instance.get_by_uuid',
+                side_effect=exception.InstanceNotFound(instance_id=uuids.inst))
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid',
+                side_effect=exception.InstanceMappingNotFound(uuid=uuids.inst))
+    def test_get_instance_by_uuid_using_api_db_other_cell_map_not_found(
+            self, mock_get_map, mock_get_inst):
+        """Tests that _get_instance_by_uuid_using_api_db does not find an
+        instance mapping for the instance.
+        """
+        ctxt = context.get_context()
+        instance = fake_instance.fake_instance_obj(ctxt, uuid=uuids.inst)
+        self.assertIsNone(
+            self.api._get_instance_by_uuid_using_api_db(ctxt, instance.uuid))
+        mock_get_inst.assert_called_once_with(ctxt, instance.uuid)
+        mock_get_map.assert_called_once_with(ctxt, instance.uuid)
+
     @mock.patch('nova.network.neutronv2.api._get_ksa_client',
                 new_callable=mock.NonCallableMock)  # asserts not called
     def test_migrate_instance_start_no_binding_ext(self, get_client_mock):
