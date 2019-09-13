@@ -13,6 +13,7 @@
 import ddt
 import mock
 import os_resource_classes as orc
+from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 import six
 
@@ -1205,6 +1206,88 @@ class TestUtils(TestUtilsBase):
             1.8,
             utils.get_weight_multiplier(host1, 'cpu_weight_multiplier', 1.0)
         )
+
+    @mock.patch('nova.scheduler.utils.'
+                'fill_provider_mapping_based_on_allocation')
+    def test_fill_provider_mapping_returns_early_if_nothing_to_do(
+            self, mock_fill_provider):
+        context = nova_context.RequestContext()
+        request_spec = objects.RequestSpec()
+        # set up the request that there is nothing to do
+        request_spec.requested_resources = []
+        report_client = mock.sentinel.report_client
+        selection = objects.Selection()
+
+        utils.fill_provider_mapping(
+            context, report_client, request_spec, selection)
+
+        mock_fill_provider.assert_not_called()
+
+    @mock.patch('nova.scheduler.utils.'
+                'fill_provider_mapping_based_on_allocation')
+    def test_fill_provider_mapping(self, mock_fill_provider):
+        context = nova_context.RequestContext()
+        request_spec = objects.RequestSpec()
+        request_spec.requested_resources = [objects.RequestGroup()]
+        report_client = mock.sentinel.report_client
+        allocs = {
+            uuids.rp_uuid: {
+                'resources': {
+                    'NET_BW_EGR_KILOBIT_PER_SEC': 1,
+                }
+            }
+        }
+        allocation_req = {'allocations': allocs}
+        selection = objects.Selection(
+            allocation_request=jsonutils.dumps(allocation_req))
+
+        utils.fill_provider_mapping(
+            context, report_client, request_spec, selection)
+
+        mock_fill_provider.assert_called_once_with(
+            context, report_client, request_spec, allocs)
+
+    @mock.patch.object(objects.RequestSpec,
+                       'map_requested_resources_to_providers')
+    def test_fill_provider_mapping_based_on_allocation_returns_early(
+            self, mock_map):
+        context = nova_context.RequestContext()
+        request_spec = objects.RequestSpec()
+        # set up the request that there is nothing to do
+        request_spec.requested_resources = []
+        report_client = mock.sentinel.report_client
+        allocation = mock.sentinel.allocation
+
+        utils.fill_provider_mapping_based_on_allocation(
+            context, report_client, request_spec, allocation)
+
+        mock_map.assert_not_called()
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient')
+    @mock.patch.object(objects.RequestSpec,
+                       'map_requested_resources_to_providers')
+    def test_fill_provider_mapping_based_on_allocation(
+            self, mock_map, mock_report_client):
+        context = nova_context.RequestContext()
+        request_spec = objects.RequestSpec()
+        # set up the request that there is nothing to do
+        request_spec.requested_resources = [objects.RequestGroup()]
+        allocation = {
+            uuids.rp_uuid: {
+                'resources': {
+                    'NET_BW_EGR_KILOBIT_PER_SEC': 1,
+                }
+            }
+        }
+        traits = ['CUSTOM_PHYSNET1', 'CUSTOM_VNIC_TYPE_NORMAL']
+        mock_report_client.get_provider_traits.return_value = report.TraitInfo(
+            traits=['CUSTOM_PHYSNET1', 'CUSTOM_VNIC_TYPE_NORMAL'],
+            generation=0)
+
+        utils.fill_provider_mapping_based_on_allocation(
+            context, mock_report_client, request_spec, allocation)
+
+        mock_map.assert_called_once_with(allocation, {uuids.rp_uuid: traits})
 
 
 class TestEncryptedMemoryTranslation(TestUtilsBase):

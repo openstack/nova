@@ -6580,6 +6580,44 @@ class ServerMoveWithPortResourceRequestTest(
 
         self._delete_server_and_check_allocations(qos_port, server)
 
+    def test_migrate_revert_with_qos_port(self):
+        non_qos_port = self.neutron.port_1
+        qos_port = self.neutron.port_with_resource_request
+
+        server = self._create_server_with_ports(non_qos_port, qos_port)
+
+        # check that the server allocates from the current host properly
+        self._check_allocation(
+            server, self.compute1_rp_uuid, non_qos_port, qos_port)
+
+        self.api.post_server_action(server['id'], {'migrate': None})
+        self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+
+        migration_uuid = self.get_migration_uuid_for_instance(server['id'])
+
+        # check that server allocates from the new host properly
+        self._check_allocation(
+            server, self.compute2_rp_uuid, non_qos_port, qos_port,
+            migration_uuid, source_compute_rp_uuid=self.compute1_rp_uuid)
+
+        self.api.post_server_action(server['id'], {'revertResize': None})
+        self._wait_for_state_change(self.api, server, 'ACTIVE')
+
+        # check that allocation is moved back to the source host
+        self._check_allocation(
+            server, self.compute1_rp_uuid, non_qos_port, qos_port)
+
+        # check that the target host allocation is cleaned up.
+        self.assertRequestMatchesUsage(
+            {'VCPU': 0, 'MEMORY_MB': 0, 'DISK_GB': 0,
+             'NET_BW_IGR_KILOBIT_PER_SEC': 0, 'NET_BW_EGR_KILOBIT_PER_SEC': 0},
+            self.compute2_rp_uuid)
+        migration_allocations = self.placement_api.get(
+            '/allocations/%s' % migration_uuid).body['allocations']
+        self.assertEqual({}, migration_allocations)
+
+        self._delete_server_and_check_allocations(qos_port, server)
+
 
 class PortResourceRequestReSchedulingTest(
         PortResourceRequestBasedSchedulingTestBase):

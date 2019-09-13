@@ -3459,6 +3459,17 @@ class API(base.Base):
         reqspec.flavor = instance.old_flavor
         reqspec.save()
 
+        # TODO(gibi): do not directly overwrite the
+        # RequestSpec.requested_resources as others like cyborg might added
+        # to things there already
+        # NOTE(gibi): We need to collect the requested resource again as it is
+        # intentionally not persisted in nova. Note that this is needs to be
+        # done here as the nova REST API code directly calls revert on the
+        # compute_api skipping the conductor.
+        port_res_req = self.network_api.get_requested_resource_for_instance(
+            context, instance.uuid)
+        reqspec.requested_resources = port_res_req
+
         instance.task_state = task_states.RESIZE_REVERTING
         instance.save(expected_task_state=[None])
 

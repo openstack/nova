@@ -1649,14 +1649,18 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_confirm_resize_with_migration_ref(self):
         self._test_confirm_resize(mig_ref_passed=True)
 
+    @mock.patch('nova.network.neutronv2.api.API.'
+                'get_requested_resource_for_instance',
+                return_value=mock.sentinel.res_req)
     @mock.patch('nova.availability_zones.get_host_availability_zone',
                 return_value='nova')
     @mock.patch('nova.objects.Quotas.check_deltas')
     @mock.patch('nova.objects.Migration.get_by_instance_and_status')
     @mock.patch('nova.context.RequestContext.elevated')
     @mock.patch('nova.objects.RequestSpec.get_by_instance_uuid')
-    def _test_revert_resize(self, mock_get_reqspec, mock_elevated,
-                            mock_get_migration, mock_check, mock_get_host_az):
+    def _test_revert_resize(
+            self, mock_get_reqspec, mock_elevated, mock_get_migration,
+            mock_check, mock_get_host_az, mock_get_requested_resources):
         params = dict(vm_state=vm_states.RESIZED)
         fake_inst = self._create_instance_obj(params=params)
         fake_inst.old_flavor = fake_inst.flavor
@@ -1696,19 +1700,26 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_revert_resize.assert_called_once_with(
                 self.context, fake_inst, fake_mig, 'compute-dest',
                 mock_get_reqspec.return_value)
+            mock_get_requested_resources.assert_called_once_with(
+                self.context, fake_inst.uuid)
+            self.assertEqual(
+                mock.sentinel.res_req,
+                mock_get_reqspec.return_value.requested_resources)
 
     def test_revert_resize(self):
         self._test_revert_resize()
 
+    @mock.patch('nova.network.neutronv2.api.API.'
+                'get_requested_resource_for_instance')
     @mock.patch('nova.availability_zones.get_host_availability_zone',
                 return_value='nova')
     @mock.patch('nova.objects.Quotas.check_deltas')
     @mock.patch('nova.objects.Migration.get_by_instance_and_status')
     @mock.patch('nova.context.RequestContext.elevated')
     @mock.patch('nova.objects.RequestSpec')
-    def test_revert_resize_concurrent_fail(self, mock_reqspec, mock_elevated,
-                                           mock_get_migration, mock_check,
-                                           mock_get_host_az):
+    def test_revert_resize_concurrent_fail(
+            self, mock_reqspec, mock_elevated, mock_get_migration, mock_check,
+            mock_get_host_az, mock_get_requested_resources):
         params = dict(vm_state=vm_states.RESIZED)
         fake_inst = self._create_instance_obj(params=params)
         fake_inst.old_flavor = fake_inst.flavor
