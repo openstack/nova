@@ -80,21 +80,22 @@ pygments_style = 'sphinx'
 # List of tuples 'sourcefile', 'target', u'title', u'Authors name', 'manual'
 
 _man_pages = [
+    ('nova-api', u'Cloud controller fabric'),
     ('nova-api-metadata', u'Cloud controller fabric'),
     ('nova-api-os-compute', u'Cloud controller fabric'),
-    ('nova-api', u'Cloud controller fabric'),
     ('nova-compute', u'Cloud controller fabric'),
+    ('nova-conductor', u'Cloud controller fabric'),
     ('nova-console', u'Cloud controller fabric'),
     ('nova-dhcpbridge', u'Cloud controller fabric'),
     ('nova-manage', u'Cloud controller fabric'),
     ('nova-network', u'Cloud controller fabric'),
     ('nova-novncproxy', u'Cloud controller fabric'),
-    ('nova-spicehtml5proxy', u'Cloud controller fabric'),
-    ('nova-serialproxy', u'Cloud controller fabric'),
     ('nova-rootwrap', u'Cloud controller fabric'),
     ('nova-scheduler', u'Cloud controller fabric'),
+    ('nova-serialproxy', u'Cloud controller fabric'),
+    ('nova-spicehtml5proxy', u'Cloud controller fabric'),
+    ('nova-status', u'Cloud controller fabric'),
     ('nova-xvpvncproxy', u'Cloud controller fabric'),
-    ('nova-conductor', u'Cloud controller fabric'),
 ]
 
 man_pages = [
