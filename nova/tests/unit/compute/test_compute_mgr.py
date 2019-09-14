@@ -9220,6 +9220,29 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         self.assertIsInstance(
             ex.inner_exception, exception.UnableToMigrateToSelf)
 
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.resize_instance')
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.resize_claim')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_get_request_group_mapping')
+    @mock.patch.object(objects.Instance, 'save')
+    def test_prep_resize_handles_legacy_request_spec(
+            self, mock_save, mock_get_mapping, mock_claim, mock_resize):
+        instance = fake_instance.fake_instance_obj(
+            self.context, host=self.compute.host,
+            expected_attrs=['system_metadata', 'flavor'])
+        request_spec = objects.RequestSpec(instance_uuid = instance.uuid)
+        mock_get_mapping.return_value = {}
+
+        self.compute._prep_resize(
+            self.context, instance.image_meta, instance, instance.flavor,
+            filter_properties={}, node=instance.node, migration=self.migration,
+            request_spec=request_spec.to_legacy_request_spec_dict())
+
+        # we expect that the legacy request spec is transformed to object
+        # before _prep_resize calls _get_request_group_mapping()
+        mock_get_mapping.assert_called_once_with(
+            test.MatchType(objects.RequestSpec))
+
     @mock.patch('nova.compute.utils.notify_usage_exists')
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_notify_about_instance_usage')
@@ -9263,6 +9286,92 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         # The instance.vm_state should remain unchanged
         # (_error_out_instance_on_exception will set to ACTIVE by default).
         self.assertEqual(vm_states.STOPPED, instance.vm_state)
+
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.resize_instance')
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.resize_claim')
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_update_pci_request_spec_with_allocated_interface_name')
+    @mock.patch('nova.compute.utils.notify_usage_exists')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_notify_about_instance_usage')
+    @mock.patch('nova.compute.utils.notify_about_resize_prep_instance')
+    def test_prep_resize_update_pci_request(
+            self, mock_notify, mock_notify_usage, mock_notify_exists,
+            mock_update_pci, mock_save, mock_claim, mock_resize):
+
+        instance = fake_instance.fake_instance_obj(
+            self.context, host=self.compute.host, vm_state=vm_states.STOPPED,
+            node='fake-node', expected_attrs=['system_metadata', 'flavor'])
+        instance.pci_requests = objects.InstancePCIRequests(requests=[])
+        request_spec = objects.RequestSpec()
+        request_spec.requested_resources = [
+            objects.RequestGroup(
+                requester_id=uuids.port_id, provider_uuids=[uuids.rp_uuid])]
+
+        self.compute.prep_resize(
+            self.context, instance.image_meta, instance, instance.flavor,
+            request_spec, filter_properties={}, node=instance.node,
+            clean_shutdown=True, migration=self.migration, host_list=[])
+
+        mock_update_pci.assert_called_once_with(
+            self.context, instance, {uuids.port_id: [uuids.rp_uuid]})
+        mock_save.assert_called_once_with()
+
+    @mock.patch('nova.compute.manager.ComputeManager._revert_allocation')
+    @mock.patch('nova.compute.utils.add_instance_fault_from_exc')
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.resize_instance')
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.resize_claim')
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_update_pci_request_spec_with_allocated_interface_name')
+    @mock.patch('nova.compute.utils.notify_usage_exists')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_notify_about_instance_usage')
+    @mock.patch('nova.compute.utils.notify_about_resize_prep_instance')
+    def test_prep_resize_update_pci_request_fails(
+            self, mock_notify, mock_notify_usage, mock_notify_exists,
+            mock_update_pci, mock_save, mock_claim, mock_resize, mock_fault,
+            mock_revert):
+
+        instance = fake_instance.fake_instance_obj(
+            self.context, host=self.compute.host, vm_state=vm_states.STOPPED,
+            node='fake-node', expected_attrs=['system_metadata', 'flavor'])
+        instance.pci_requests = objects.InstancePCIRequests(requests=[])
+        request_spec = objects.RequestSpec()
+        request_spec.requested_resources = [
+            objects.RequestGroup(
+                requester_id=uuids.port_id, provider_uuids=[uuids.rp_uuid])]
+        migration = mock.MagicMock(spec='nova.objects.Migration')
+        mock_update_pci.side_effect = exception.BuildAbortException(
+            instance_uuid=instance.uuid, reason="")
+
+        self.assertRaises(
+            exception.BuildAbortException, self.compute.prep_resize,
+            self.context, instance.image_meta, instance, instance.flavor,
+            request_spec, filter_properties={}, node=instance.node,
+            clean_shutdown=True, migration=migration, host_list=[])
+
+        mock_revert.assert_called_once_with(self.context, instance, migration)
+        mock_notify.assert_has_calls([
+            mock.call(
+                self.context, instance, 'fake-mini', 'start', instance.flavor),
+            mock.call(
+                self.context, instance, 'fake-mini', 'end', instance.flavor),
+        ])
+        mock_notify_usage.assert_has_calls([
+            mock.call(
+                self.context, instance, 'resize.prep.start',
+                extra_usage_info=None),
+            mock.call(
+                self.context, instance, 'resize.prep.end',
+                extra_usage_info={
+                    'new_instance_type_id': 1,
+                    'new_instance_type': 'flavor1'}),
+        ])
+        mock_notify_exists.assert_called_once_with(
+            self.compute.notifier, self.context, instance, 'fake-mini',
+            current_period=True)
 
     def test__claim_pci_for_instance_no_vifs(self):
         @mock.patch.object(self.compute, 'rt')
