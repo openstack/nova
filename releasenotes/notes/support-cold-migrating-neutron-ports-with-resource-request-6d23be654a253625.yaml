@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    Cold migration is now supported for servers with neutron ports having
+    resource requests. E.g. ports that have QoS minimum bandwidth rules
+    attached. Note that the migration is only supported if both the source and
+    the destination compute services are upgraded to Train and the
+    ``[upgrade_levels]/compute`` configuration does not prevent the computes
+    from using the latest RPC version.
