@@ -42,6 +42,7 @@ from nova import context
 from nova.db import api as db
 from nova import exception
 from nova.image import api as image_api
+from nova.network import model
 from nova.network.neutronv2 import api as neutron_api
 from nova.network.neutronv2 import constants
 from nova import objects
@@ -1663,6 +1664,8 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_check, mock_get_host_az, mock_get_requested_resources):
         params = dict(vm_state=vm_states.RESIZED)
         fake_inst = self._create_instance_obj(params=params)
+        fake_inst.info_cache.network_info = model.NetworkInfo([
+            model.VIF(id=uuids.port1, profile={'allocation': uuids.rp})])
         fake_inst.old_flavor = fake_inst.flavor
         fake_mig = objects.Migration._from_db_object(
                 self.context, objects.Migration(),
@@ -1722,6 +1725,7 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_get_host_az, mock_get_requested_resources):
         params = dict(vm_state=vm_states.RESIZED)
         fake_inst = self._create_instance_obj(params=params)
+        fake_inst.info_cache.network_info = model.NetworkInfo([])
         fake_inst.old_flavor = fake_inst.flavor
         fake_mig = objects.Migration._from_db_object(
                 self.context, objects.Migration(),
@@ -1746,6 +1750,7 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_get_migration.assert_called_once_with(
                 self.context, fake_inst['uuid'], 'finished')
             mock_inst_save.assert_called_once_with(expected_task_state=[None])
+            mock_get_requested_resources.assert_not_called()
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)

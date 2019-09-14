@@ -487,6 +487,9 @@ class VIF(Model):
         vif['network'] = Network.hydrate(vif['network'])
         return vif
 
+    def has_allocation(self):
+        return self['profile'] and bool(self['profile'].get('allocation'))
+
 
 def get_netmask(ip, subnet):
     """Returns the netmask appropriate for injection into a guest."""
@@ -539,6 +542,9 @@ class NetworkInfo(list):
         """
         return [('network-vif-plugged', vif['id'])
                 for vif in self if not vif.has_bind_time_event(migration)]
+
+    def has_port_with_allocation(self):
+        return any(vif.has_allocation() for vif in self)
 
 
 class NetworkInfoAsyncWrapper(NetworkInfo):
