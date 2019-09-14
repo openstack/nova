@@ -4295,23 +4295,8 @@ class ComputeManager(manager.Manager):
                            'migration_uuid': migration.uuid})
                 raise
 
-            if request_spec:
-                # NOTE(gibi): We need to re-calculate the resource provider -
-                # port mapping as we have to have the neutron ports allocate
-                # from the source compute after revert.
-                scheduler_utils.fill_provider_mapping_based_on_allocation(
-                    context, self.reportclient, request_spec,
-                    source_allocations)
-                provider_mappings = self._get_request_group_mapping(
-                    request_spec)
-            else:
-                # NOTE(gibi): The compute RPC is pinned to be older than 5.2
-                # and therefore request_spec is not sent. We cannot calculate
-                # the provider mappings. If the instance has ports with
-                # resource request then the port update will fail in
-                # _update_port_binding_for_instance() called via
-                # _finish_revert_resize_network_migrate_finish() below.
-                provider_mappings = None
+            provider_mappings = self._fill_provider_mapping_based_on_allocs(
+                context, source_allocations, request_spec)
 
             self.network_api.setup_networks_on_host(context, instance,
                                                     migration.source_compute)
@@ -4362,6 +4347,39 @@ class ComputeManager(manager.Manager):
             compute_utils.notify_about_instance_action(context, instance,
                 self.host, action=fields.NotificationAction.RESIZE_REVERT,
                     phase=fields.NotificationPhase.END, bdms=bdms)
+
+    def _fill_provider_mapping_based_on_allocs(
+            self, context, allocations, request_spec):
+        """Fills and returns the request group - resource provider mapping
+        based on the allocation passed in.
+
+        :param context: The security context
+        :param allocation: allocation dict keyed by RP UUID.
+        :param request_spec: The RequestSpec object associated with the
+            operation
+        :returns: None if the request_spec is None. Otherwise a mapping
+            between RequestGroup requester_id, currently Neutron port_id,
+            and a list of resource provider UUIDs providing resource for
+            that RequestGroup.
+        """
+        if request_spec:
+            # NOTE(gibi): We need to re-calculate the resource provider -
+            # port mapping as we have to have the neutron ports allocate
+            # from the source compute after revert.
+            scheduler_utils.fill_provider_mapping_based_on_allocation(
+                context, self.reportclient, request_spec, allocations)
+            provider_mappings = self._get_request_group_mapping(
+                request_spec)
+        else:
+            # NOTE(gibi): The compute RPC is pinned to be older than 5.2
+            # and therefore request_spec is not sent. We cannot calculate
+            # the provider mappings. If the instance has ports with
+            # resource request then the port update will fail in
+            # _update_port_binding_for_instance() called via
+            # _finish_revert_resize_network_migrate_finish() in
+            # finish_revert_resize.
+            provider_mappings = None
+        return provider_mappings
 
     def _revert_allocation(self, context, instance, migration):
         """Revert an allocation that is held by migration to our instance."""
