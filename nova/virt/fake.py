@@ -966,7 +966,7 @@ class FakeDriverWithPciResources(SmallFakeDriver):
                 'parent_addr': self.PCI_ADDR_PF1,
                 'numa_node': 0,
                 'label': 'fake-label',
-                "parent_ifname": "ens1",
+                "parent_ifname": self._host + "-ens1",
             },
             {
                 'address': self.PCI_ADDR_PF2,
@@ -987,7 +987,7 @@ class FakeDriverWithPciResources(SmallFakeDriver):
                 'parent_addr': self.PCI_ADDR_PF2,
                 'numa_node': 0,
                 'label': 'fake-label',
-                "parent_ifname": "ens2",
+                "parent_ifname": self._host + "-ens2",
             },
             {
                 'address': self.PCI_ADDR_PF3,
@@ -1008,7 +1008,7 @@ class FakeDriverWithPciResources(SmallFakeDriver):
                 'parent_addr': self.PCI_ADDR_PF3,
                 'numa_node': 0,
                 'label': 'fake-label',
-                "parent_ifname": "ens3",
+                "parent_ifname": self._host + "-ens3",
             },
         ])
         return host_status
