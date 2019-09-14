@@ -25,7 +25,11 @@ version of nova:
   shelve offload) servers with ports having resource request is not yet
   supported.
 
-As of 20.0.0 (Train), nova supports cold migrating servers with neutron ports
-having resource requests if both the source and destination compute services
-are upgraded to 20.0.0 (Train) and the ``[upgrade_levels]/compute``
-configuration does not prevent the computes from using the latest RPC version.
+As of 20.0.0 (Train), nova supports cold migrating and resizing servers with
+neutron ports having resource requests if both the source and destination
+compute services are upgraded to 20.0.0 (Train) and the
+``[upgrade_levels]/compute`` configuration does not prevent the computes from
+using the latest RPC version.
+
+See :nova-doc:`the admin guide <admin/port_with_resource_request.html>` for
+administrative details.

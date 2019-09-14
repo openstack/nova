@@ -5795,31 +5795,6 @@ class UnsupportedPortResourceRequestBasedSchedulingTest(
             "until microversion 2.72.",
             six.text_type(ex))
 
-    def test_resize_server_with_port_resource_request_old_microversion(self):
-        server = self._create_server(
-            flavor=self.flavor,
-            networks=[{'port': self.neutron.port_1['id']}])
-        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
-
-        # We need to simulate that the above server has a port that has
-        # resource request; we cannot boot with such a port but legacy servers
-        # can exist with such a port.
-        self._add_resource_request_to_a_bound_port(self.neutron.port_1['id'])
-
-        resize_req = {
-            'resize': {
-                'flavorRef': self.flavor['id']
-            }
-        }
-        ex = self.assertRaises(
-            client.OpenStackApiException,
-            self.api.post_server_action, server['id'], resize_req)
-
-        self.assertEqual(400, ex.response.status_code)
-        self.assertIn(
-            'The resize action on a server with ports having resource '
-            'requests', six.text_type(ex))
-
     def test_live_migrate_server_with_port_resource_request_old_microversion(
             self):
         server = self._create_server(
@@ -6348,9 +6323,22 @@ class ServerMoveWithPortResourceRequestTest(
         self.compute2_service_id = self.admin_api.get_services(
             host='host2', binary='nova-compute')[0]['id']
 
+        # create a bigger flavor to use in resize test
+        self.flavor_with_group_policy_bigger = self.admin_api.post_flavor(
+            {'flavor': {
+                'ram': self.flavor_with_group_policy['ram'],
+                'vcpus': self.flavor_with_group_policy['vcpus'],
+                'name': self.flavor_with_group_policy['name'] + '+',
+                'disk': self.flavor_with_group_policy['disk'] + 1,
+            }})
+        self.admin_api.post_extra_spec(
+            self.flavor_with_group_policy_bigger['id'],
+            {'extra_specs': {'group_policy': 'isolate'}})
+
     def _check_allocation(
             self, server, compute_rp_uuid, non_qos_port, qos_port,
-            qos_sriov_port, migration_uuid=None, source_compute_rp_uuid=None):
+            qos_sriov_port, flavor, migration_uuid=None,
+            source_compute_rp_uuid=None, new_flavor=None):
 
         updated_non_qos_port = self.neutron.show_port(
             non_qos_port['id'])['port']
@@ -6361,13 +6349,18 @@ class ServerMoveWithPortResourceRequestTest(
         allocations = self.placement_api.get(
             '/allocations/%s' % server['id']).body['allocations']
 
+        # if there is new_flavor then we either have an in progress resize or
+        # a confirmed resize. In both cases the instance allocation should be
+        # according to the new_flavor
+        current_flavor = (new_flavor if new_flavor else flavor)
+
         # We expect one set of allocations for the compute resources on the
         # compute rp and two sets for the networking resources one on the ovs
         # bridge rp due to the qos_port resource request and one one the
         # sriov pf2 due to qos_sriov_port resource request
         self.assertEqual(3, len(allocations))
         self.assertComputeAllocationMatchesFlavor(
-            allocations, compute_rp_uuid, self.flavor_with_group_policy)
+            allocations, compute_rp_uuid, current_flavor)
         ovs_allocations = allocations[
             self.ovs_bridge_rp_per_host[compute_rp_uuid]]['resources']
         self.assertPortMatchesAllocation(qos_port, ovs_allocations)
@@ -6399,8 +6392,7 @@ class ServerMoveWithPortResourceRequestTest(
             # the sriov pf2 due to qos_sriov_port resource request
             self.assertEqual(3, len(migration_allocations))
             self.assertComputeAllocationMatchesFlavor(
-                migration_allocations, source_compute_rp_uuid,
-                self.flavor_with_group_policy)
+                migration_allocations, source_compute_rp_uuid, flavor)
             ovs_allocations = migration_allocations[
                 self.ovs_bridge_rp_per_host[
                     source_compute_rp_uuid]]['resources']
@@ -6445,7 +6437,7 @@ class ServerMoveWithPortResourceRequestTest(
         # check that the server allocates from the current host properly
         self._check_allocation(
             server, self.compute1_rp_uuid, non_qos_normal_port,
-            qos_normal_port, qos_sriov_port)
+            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
 
         orig_get_service = nova.objects.Service.get_by_host_and_binary
 
@@ -6471,7 +6463,7 @@ class ServerMoveWithPortResourceRequestTest(
         # check that the server still allocates from the original host
         self._check_allocation(
             server, self.compute1_rp_uuid, non_qos_normal_port,
-            qos_normal_port, qos_sriov_port)
+            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
 
         # but the migration allocation is gone
         migration_uuid = self.get_migration_uuid_for_instance(server['id'])
@@ -6501,7 +6493,7 @@ class ServerMoveWithPortResourceRequestTest(
         # check that the server allocates from the current host properly
         self._check_allocation(
             server, self.compute1_rp_uuid, non_qos_normal_port,
-            qos_normal_port, qos_sriov_port)
+            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
 
         orig_get_service = nova.objects.Service.get_by_host_and_binary
 
@@ -6530,14 +6522,14 @@ class ServerMoveWithPortResourceRequestTest(
         # check that server allocates from host3
         self._check_allocation(
             server, compute3_rp_uuid, non_qos_normal_port, qos_normal_port,
-            qos_sriov_port, migration_uuid,
+            qos_sriov_port, self.flavor_with_group_policy, migration_uuid,
             source_compute_rp_uuid=self.compute1_rp_uuid)
 
         self._confirm_resize(server)
         # check that allocation is still OK
         self._check_allocation(
             server, compute3_rp_uuid, non_qos_normal_port,
-            qos_normal_port, qos_sriov_port)
+            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
         # but the migration allocation is gone
         migration_allocations = self.placement_api.get(
             '/allocations/%s' % migration_uuid).body['allocations']
@@ -6546,7 +6538,7 @@ class ServerMoveWithPortResourceRequestTest(
         self._delete_server_and_check_allocations(
             qos_normal_port, qos_sriov_port, server)
 
-    def test_migrate_server_with_qos_ports(self):
+    def _test_resize_or_migrate_server_with_qos_ports(self, new_flavor=None):
         non_qos_normal_port = self.neutron.port_1
         qos_normal_port = self.neutron.port_with_resource_request
         qos_sriov_port = self.neutron.port_with_sriov_resource_request
@@ -6557,9 +6549,14 @@ class ServerMoveWithPortResourceRequestTest(
         # check that the server allocates from the current host properly
         self._check_allocation(
             server, self.compute1_rp_uuid, non_qos_normal_port,
-            qos_normal_port, qos_sriov_port)
+            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
 
-        self.api.post_server_action(server['id'], {'migrate': None})
+        if new_flavor:
+            self.api_fixture.api.post_server_action(
+                server['id'], {'resize': {"flavorRef": new_flavor['id']}})
+        else:
+            self.api.post_server_action(server['id'], {'migrate': None})
+
         self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
 
         migration_uuid = self.get_migration_uuid_for_instance(server['id'])
@@ -6567,15 +6564,17 @@ class ServerMoveWithPortResourceRequestTest(
         # check that server allocates from the new host properly
         self._check_allocation(
             server, self.compute2_rp_uuid, non_qos_normal_port,
-            qos_normal_port, qos_sriov_port, migration_uuid,
-            source_compute_rp_uuid=self.compute1_rp_uuid)
+            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy,
+            migration_uuid, source_compute_rp_uuid=self.compute1_rp_uuid,
+            new_flavor=new_flavor)
 
         self._confirm_resize(server)
 
         # check that allocation is still OK
         self._check_allocation(
             server, self.compute2_rp_uuid, non_qos_normal_port,
-            qos_normal_port, qos_sriov_port)
+            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy,
+            new_flavor=new_flavor)
         migration_allocations = self.placement_api.get(
             '/allocations/%s' % migration_uuid).body['allocations']
         self.assertEqual({}, migration_allocations)
@@ -6583,7 +6582,14 @@ class ServerMoveWithPortResourceRequestTest(
         self._delete_server_and_check_allocations(
             qos_normal_port, qos_sriov_port, server)
 
-    def test_migrate_revert_with_qos_port(self):
+    def test_migrate_server_with_qos_ports(self):
+        self._test_resize_or_migrate_server_with_qos_ports()
+
+    def test_resize_server_with_qos_ports(self):
+        self._test_resize_or_migrate_server_with_qos_ports(
+            new_flavor=self.flavor_with_group_policy_bigger)
+
+    def _test_resize_or_migrate_revert_with_qos_ports(self, new_flavor=None):
         non_qos_port = self.neutron.port_1
         qos_port = self.neutron.port_with_resource_request
         qos_sriov_port = self.neutron.port_with_sriov_resource_request
@@ -6594,9 +6600,14 @@ class ServerMoveWithPortResourceRequestTest(
         # check that the server allocates from the current host properly
         self._check_allocation(
             server, self.compute1_rp_uuid, non_qos_port, qos_port,
-            qos_sriov_port)
+            qos_sriov_port, self.flavor_with_group_policy)
 
-        self.api.post_server_action(server['id'], {'migrate': None})
+        if new_flavor:
+            self.api_fixture.api.post_server_action(
+                server['id'], {'resize': {"flavorRef": new_flavor['id']}})
+        else:
+            self.api.post_server_action(server['id'], {'migrate': None})
+
         self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
 
         migration_uuid = self.get_migration_uuid_for_instance(server['id'])
@@ -6604,8 +6615,9 @@ class ServerMoveWithPortResourceRequestTest(
         # check that server allocates from the new host properly
         self._check_allocation(
             server, self.compute2_rp_uuid, non_qos_port, qos_port,
-            qos_sriov_port, migration_uuid,
-            source_compute_rp_uuid=self.compute1_rp_uuid)
+            qos_sriov_port, self.flavor_with_group_policy, migration_uuid,
+            source_compute_rp_uuid=self.compute1_rp_uuid,
+            new_flavor=new_flavor)
 
         self.api.post_server_action(server['id'], {'revertResize': None})
         self._wait_for_state_change(self.api, server, 'ACTIVE')
@@ -6613,7 +6625,7 @@ class ServerMoveWithPortResourceRequestTest(
         # check that allocation is moved back to the source host
         self._check_allocation(
             server, self.compute1_rp_uuid, non_qos_port, qos_port,
-            qos_sriov_port)
+            qos_sriov_port, self.flavor_with_group_policy)
 
         # check that the target host allocation is cleaned up.
         self.assertRequestMatchesUsage(
@@ -6627,7 +6639,15 @@ class ServerMoveWithPortResourceRequestTest(
         self._delete_server_and_check_allocations(
             qos_port, qos_sriov_port, server)
 
-    def test_migrate_server_with_qos_port_reschedule_success(self):
+    def test_migrate_revert_with_qos_ports(self):
+        self._test_resize_or_migrate_revert_with_qos_ports()
+
+    def test_resize_revert_with_qos_ports(self):
+        self._test_resize_or_migrate_revert_with_qos_ports(
+            new_flavor=self.flavor_with_group_policy_bigger)
+
+    def _test_resize_or_migrate_server_with_qos_port_reschedule_success(
+            self, new_flavor=None):
         self._start_compute('host3')
         compute3_rp_uuid = self._get_provider_uuid_by_host('host3')
         self._create_networking_rp_tree('host3', compute3_rp_uuid)
@@ -6642,7 +6662,7 @@ class ServerMoveWithPortResourceRequestTest(
         # check that the server allocates from the current host properly
         self._check_allocation(
             server, self.compute1_rp_uuid, non_qos_port, qos_port,
-            qos_sriov_port)
+            qos_sriov_port, self.flavor_with_group_policy)
 
         # Yes this isn't great in a functional test, but it's simple.
         original_prep_resize = compute_manager.ComputeManager._prep_resize
@@ -6664,7 +6684,11 @@ class ServerMoveWithPortResourceRequestTest(
         with mock.patch.object(
                 compute_manager.ComputeManager, '_prep_resize',
                 new=fake_prep_resize):
-            self.api.post_server_action(server['id'], {'migrate': None})
+            if new_flavor:
+                self.api_fixture.api.post_server_action(
+                    server['id'], {'resize': {"flavorRef": new_flavor['id']}})
+            else:
+                self.api.post_server_action(server['id'], {'migrate': None})
             self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
 
         # ensure that resize is tried on two hosts, so we had a re-schedule
@@ -6676,13 +6700,16 @@ class ServerMoveWithPortResourceRequestTest(
         # the migration holds the allocation on the source host
         self._check_allocation(
             server, compute3_rp_uuid, non_qos_port, qos_port, qos_sriov_port,
-            migration_uuid, source_compute_rp_uuid=self.compute1_rp_uuid)
+            self.flavor_with_group_policy, migration_uuid,
+            source_compute_rp_uuid=self.compute1_rp_uuid,
+            new_flavor=new_flavor)
 
         self._confirm_resize(server)
 
         # check that allocation is still OK
         self._check_allocation(
-            server, compute3_rp_uuid, non_qos_port, qos_port, qos_sriov_port)
+            server, compute3_rp_uuid, non_qos_port, qos_port, qos_sriov_port,
+            self.flavor_with_group_policy, new_flavor=new_flavor)
         migration_allocations = self.placement_api.get(
             '/allocations/%s' % migration_uuid).body['allocations']
         self.assertEqual({}, migration_allocations)
@@ -6690,7 +6717,15 @@ class ServerMoveWithPortResourceRequestTest(
         self._delete_server_and_check_allocations(
             qos_port, qos_sriov_port, server)
 
-    def test_migrate_server_with_qos_port_reschedule_failure(self):
+    def test_migrate_server_with_qos_port_reschedule_success(self):
+        self._test_resize_or_migrate_server_with_qos_port_reschedule_success()
+
+    def test_resize_server_with_qos_port_reschedule_success(self):
+        self._test_resize_or_migrate_server_with_qos_port_reschedule_success(
+            new_flavor=self.flavor_with_group_policy_bigger)
+
+    def _test_resize_or_migrate_server_with_qos_port_reschedule_failure(
+            self, new_flavor=None):
         non_qos_port = self.neutron.port_1
         qos_port = self.neutron.port_with_resource_request
         qos_sriov_port = self.neutron.port_with_sriov_resource_request
@@ -6701,7 +6736,7 @@ class ServerMoveWithPortResourceRequestTest(
         # check that the server allocates from the current host properly
         self._check_allocation(
             server, self.compute1_rp_uuid, non_qos_port, qos_port,
-            qos_sriov_port)
+            qos_sriov_port, self.flavor_with_group_policy)
 
         # The patched compute manager on host2 will raise from _prep_resize.
         # Then the migration is reschedule but there is no other host to
@@ -6710,7 +6745,11 @@ class ServerMoveWithPortResourceRequestTest(
                 compute_manager.ComputeManager, '_prep_resize',
                 side_effect=test.TestingException(
                     'Simulated prep_resize failure.')):
-            self.api.post_server_action(server['id'], {'migrate': None})
+            if new_flavor:
+                self.api_fixture.api.post_server_action(
+                    server['id'], {'resize': {"flavorRef": new_flavor['id']}})
+            else:
+                self.api.post_server_action(server['id'], {'migrate': None})
             self._wait_for_server_parameter(
                 self.api, server,
                 {'OS-EXT-SRV-ATTR:host': 'host1',
@@ -6728,7 +6767,14 @@ class ServerMoveWithPortResourceRequestTest(
         # and the instance allocates from the source host
         self._check_allocation(
             server, self.compute1_rp_uuid, non_qos_port, qos_port,
-            qos_sriov_port)
+            qos_sriov_port, self.flavor_with_group_policy)
+
+    def test_migrate_server_with_qos_port_reschedule_failure(self):
+        self._test_resize_or_migrate_server_with_qos_port_reschedule_failure()
+
+    def test_resize_server_with_qos_port_reschedule_failure(self):
+        self._test_resize_or_migrate_server_with_qos_port_reschedule_failure(
+            new_flavor=self.flavor_with_group_policy_bigger)
 
     def test_migrate_server_with_qos_port_pci_update_fail_not_reschedule(self):
         self._start_compute('host3')
@@ -6745,7 +6791,7 @@ class ServerMoveWithPortResourceRequestTest(
         # check that the server allocates from the current host properly
         self._check_allocation(
             server, self.compute1_rp_uuid, non_qos_port, qos_port,
-            qos_sriov_port)
+            qos_sriov_port, self.flavor_with_group_policy)
 
         # The patched compute manager on host2 will raise from
         # _update_pci_request_spec_with_allocated_interface_name which will
@@ -6790,7 +6836,7 @@ class ServerMoveWithPortResourceRequestTest(
         # and the instance allocates from the source host
         self._check_allocation(
             server, self.compute1_rp_uuid, non_qos_port, qos_port,
-            qos_sriov_port)
+            qos_sriov_port, self.flavor_with_group_policy)
 
 
 class PortResourceRequestReSchedulingTest(
