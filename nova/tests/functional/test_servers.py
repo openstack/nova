@@ -36,6 +36,7 @@ from nova.compute import instance_actions
 from nova.compute import manager as compute_manager
 from nova import context
 from nova import exception
+from nova.network.neutronv2 import api as neutronapi
 from nova.network.neutronv2 import constants
 from nova import objects
 from nova.objects import block_device as block_device_obj
@@ -5509,6 +5510,9 @@ class PortResourceRequestBasedSchedulingTestBase(
                 FakeDriverWithPciResourcesConfigFixture())
 
         super(PortResourceRequestBasedSchedulingTestBase, self).setUp()
+        # Make ComputeManager._allocate_network_async synchronous to detect
+        # errors in tests that involve rescheduling.
+        self.useFixture(nova_fixtures.SpawnIsSynchronousFixture())
         self.compute1 = self._start_compute('host1')
         self.compute1_rp_uuid = self._get_provider_uuid_by_host('host1')
         self.ovs_bridge_rp_per_host = {}
@@ -6937,15 +6941,17 @@ class PortResourceRequestReSchedulingTest(
         # First call is during boot, we want that to succeed normally. Then the
         # fake virt driver triggers a re-schedule. During that re-schedule the
         # fill is called again, and we simulate that call raises.
-        fill = nova.scheduler.utils.fill_provider_mapping
+        original_fill = nova.scheduler.utils.fill_provider_mapping
+
+        def stub_fill_provider_mapping(*args, **kwargs):
+            if not mock_fill.called:
+                return original_fill(*args, **kwargs)
+            raise exception.ResourceProviderTraitRetrievalFailed(
+                uuid=uuids.rp1)
 
         with mock.patch(
                 'nova.scheduler.utils.fill_provider_mapping',
-                side_effect=[
-                    fill,
-                    exception.ResourceProviderTraitRetrievalFailed(
-                        uuid=uuids.rp1)],
-                autospec=True):
+                side_effect=stub_fill_provider_mapping) as mock_fill:
             server = self._create_server(
                 flavor=self.flavor,
                 networks=[{'port': port['id']}])
@@ -6960,5 +6966,5 @@ class PortResourceRequestReSchedulingTest(
 
         # assert that unbind removes the allocation from the binding
         updated_port = self.neutron.show_port(port['id'])['port']
-        binding_profile = updated_port['binding:profile']
+        binding_profile = neutronapi.get_binding_profile(updated_port)
         self.assertNotIn('allocation', binding_profile)
