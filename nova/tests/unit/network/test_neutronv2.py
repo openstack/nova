@@ -4543,8 +4543,8 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
              constants.BINDING_PROFILE:
                  {'allocation': uuids.source_compute_rp},
              'resource_request': mock.sentinel.resource_request}]}
-        migration = {'status': 'confirmed',
-                     'migration_type': "migration"}
+        migration = objects.Migration(
+            status='confirmed', migration_type='migration')
         list_ports_mock = mock.Mock(return_value=fake_ports)
         get_client_mock.return_value.list_ports = list_ports_mock
 
@@ -4569,8 +4569,8 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
              constants.BINDING_PROFILE:
                  {'allocation': uuids.source_compute_rp},
              'resource_request': mock.sentinel.resource_request}]}
-        migration = {'status': 'confirmed',
-                     'migration_type': "migration"}
+        migration = objects.Migration(
+            status='confirmed', migration_type='migration')
         list_ports_mock = mock.Mock(return_value=fake_ports)
         get_client_mock.return_value.list_ports = list_ports_mock
 
@@ -4579,8 +4579,11 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
             self.api._update_port_binding_for_instance, self.context,
             instance, 'new-host', migration, provider_mappings=None)
         self.assertIn(
-            "Provider mappings wasn't provided for the port with resource "
-            "request", six.text_type(ex))
+            "Provider mappings are not available to the compute service but "
+            "are required for ports with a resource request. If compute RPC "
+            "API versions are pinned for a rolling upgrade, you will need to "
+            "retry this operation once the RPC version is unpinned and the "
+            "nova-compute services are all upgraded.", six.text_type(ex))
 
     def test_get_pci_mapping_for_migration(self):
         instance = fake_instance.fake_instance_obj(self.context)
