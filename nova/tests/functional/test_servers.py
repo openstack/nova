@@ -6448,12 +6448,14 @@ class ServerMoveWithPortResourceRequestTest(
         orig_get_service = nova.objects.Service.get_by_host_and_binary
 
         def fake_get_service(context, host, binary):
-            if host == 'host1':
-                return orig_get_service(context, host, binary)
+            # host2 is the only migration target, let's make it too old so the
+            # migration will fail
             if host == 'host2':
                 service = orig_get_service(context, host, binary)
                 service.version = 38
                 return service
+            else:
+                return orig_get_service(context, host, binary)
 
         with mock.patch(
                 'nova.objects.Service.get_by_host_and_binary',
@@ -6504,16 +6506,20 @@ class ServerMoveWithPortResourceRequestTest(
         orig_get_service = nova.objects.Service.get_by_host_and_binary
 
         def fake_get_service(context, host, binary):
-            if host == 'host1':
-                return orig_get_service(context, host, binary)
+            # host2 is the first migration target, let's make it too old so the
+            # migration will skip this host
             if host == 'host2':
                 service = orig_get_service(context, host, binary)
                 service.version = 38
                 return service
-            if host == 'host3':
+            # host3 is the second migration target, let's make it new enough so
+            # the migration task will choose this host
+            elif host == 'host3':
                 service = orig_get_service(context, host, binary)
                 service.version = 39
                 return service
+            else:
+                return orig_get_service(context, host, binary)
 
         with mock.patch(
                 'nova.objects.Service.get_by_host_and_binary',
@@ -6525,7 +6531,8 @@ class ServerMoveWithPortResourceRequestTest(
 
         migration_uuid = self.get_migration_uuid_for_instance(server['id'])
 
-        # check that server allocates from host3
+        # check that server allocates from host3 and the migration allocates
+        # from host1
         self._check_allocation(
             server, compute3_rp_uuid, non_qos_normal_port, qos_normal_port,
             qos_sriov_port, self.flavor_with_group_policy, migration_uuid,
