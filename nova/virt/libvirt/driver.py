@@ -7533,6 +7533,53 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return data
 
+    def post_claim_migrate_data(self, context, instance, migrate_data, claim):
+        migrate_data.dst_numa_info = self._get_live_migrate_numa_info(
+                claim.claimed_numa_topology, claim.instance_type,
+                claim.image_meta)
+        return migrate_data
+
+    def _get_live_migrate_numa_info(self, instance_numa_topology, flavor,
+                                    image_meta):
+        """Builds a LibvirtLiveMigrateNUMAInfo object to send to the source of
+        a live migration, containing information about how the instance is to
+        be pinned on the destination host.
+
+        :param instance_numa_topology: The InstanceNUMATopology as fitted to
+                                       the destination by the live migration
+                                       Claim.
+        :param flavor: The Flavor object for the instance.
+        :param image_meta: The ImageMeta object for the instance.
+        :returns: A LibvirtLiveMigrateNUMAInfo object indicating how to update
+                  the XML for the destination host.
+        """
+        info = objects.LibvirtLiveMigrateNUMAInfo()
+        cpu_set, guest_cpu_tune, guest_cpu_numa, guest_numa_tune = \
+            self._get_guest_numa_config(instance_numa_topology, flavor,
+                                        image_meta)
+        # NOTE(artom) These two should always be either None together, or
+        # truth-y together.
+        if guest_cpu_tune and guest_numa_tune:
+            info.cpu_pins = {}
+            for pin in guest_cpu_tune.vcpupin:
+                info.cpu_pins[str(pin.id)] = pin.cpuset
+
+            info.emulator_pins = guest_cpu_tune.emulatorpin.cpuset
+
+            if guest_cpu_tune.vcpusched:
+                # NOTE(artom) vcpusched is a list, but there's only ever one
+                # element in it (see _get_guest_numa_config under
+                # wants_realtime)
+                info.sched_vcpus = guest_cpu_tune.vcpusched[0].vcpus
+                info.sched_priority = guest_cpu_tune.vcpusched[0].priority
+
+            info.cell_pins = {}
+            for node in guest_numa_tune.memnodes:
+                info.cell_pins[str(node.cellid)] = set(node.nodeset)
+
+        LOG.debug('Built NUMA live migration info: %s', info)
+        return info
+
     def cleanup_live_migration_destination_check(self, context,
                                                  dest_check_data):
         """Do required cleanup on dest host after check_can_live_migrate calls

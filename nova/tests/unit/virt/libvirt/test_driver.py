@@ -2566,6 +2566,93 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.idmaps[1],
                               vconfig.LibvirtConfigGuestGIDMap)
 
+    def test_post_claim_migrate_data(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance = objects.Instance(**self.test_instance)
+        md = objects.LibvirtLiveMigrateData()
+        claim = mock.Mock(autospec=True)
+        claimed_numa_topology = objects.InstanceNUMATopology()
+        claim.claimed_numa_topology = claimed_numa_topology
+        claim.instance_type = instance.flavor
+        numa_info = objects.LibvirtLiveMigrateNUMAInfo()
+        with test.nested(
+            mock.patch.object(drvr, '_get_live_migrate_numa_info',
+                              return_value=numa_info),
+            mock.patch('nova.objects.Instance.image_meta',
+                       new_callable=mock.PropertyMock,
+                       return_value='fake-image-meta')
+        ) as (mock_get_lm_numa_info, mock_image_meta):
+            claim.image_meta = instance.image_meta
+            post_claim_md = drvr.post_claim_migrate_data(
+                self.context, instance, md, claim)
+            self.assertEqual(post_claim_md.dst_numa_info, numa_info)
+            mock_get_lm_numa_info.assert_called_with(
+                claimed_numa_topology, instance.flavor, 'fake-image-meta')
+
+    @mock.patch.object(hardware, 'get_vcpu_pin_set', new=mock.Mock())
+    def test_get_live_migrate_numa_info(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        vcpupin1 = vconfig.LibvirtConfigGuestCPUTuneVCPUPin()
+        vcpupin1.id = 0
+        vcpupin1.cpuset = set([0, 1])
+        vcpupin2 = vconfig.LibvirtConfigGuestCPUTuneVCPUPin()
+        vcpupin2.id = 1
+        vcpupin2.cpuset = set([2, 3])
+        emulatorpin = vconfig.LibvirtConfigGuestCPUTuneEmulatorPin()
+        emulatorpin.cpuset = set([4, 5])
+        guest_cpu_tune = vconfig.LibvirtConfigGuestCPUTune()
+        guest_cpu_tune.vcpupin = [vcpupin1, vcpupin2]
+        guest_cpu_tune.emulatorpin = emulatorpin
+        guest_cpu_tune.vcpusched = [
+            vconfig.LibvirtConfigGuestCPUTuneVCPUSched()]
+        guest_cpu_tune.vcpusched[0].vcpus = set([6, 7])
+        guest_cpu_tune.vcpusched[0].priority = 8
+
+        memnode1 = vconfig.LibvirtConfigGuestNUMATuneMemNode()
+        memnode1.cellid = 2
+        memnode1.nodeset = [6, 7]
+        memnode2 = vconfig.LibvirtConfigGuestNUMATuneMemNode()
+        memnode2.cellid = 3
+        memnode2.nodeset = [8, 9]
+        guest_numa_tune = vconfig.LibvirtConfigGuestNUMATune()
+        guest_numa_tune.memnodes = [memnode1, memnode2]
+
+        expected_numa_info = objects.LibvirtLiveMigrateNUMAInfo(
+            cpu_pins={'0': set([0, 1]), '1': set([2, 3])},
+            cell_pins={'2': set([6, 7]), '3': set([8, 9])},
+            emulator_pins=set([4, 5]),
+            sched_vcpus=set([7, 6]),
+            sched_priority=8)
+
+        # NOTE(artom) This is a
+        # (cpu_set, guest_cpu_tune, guest_cpu_numa, guest_numa_tune)
+        # tuple. See _get_guest_numa_config() docstring for full documenation.
+        # _get_live_migrate_numa_info() only cares about guest_cpu_tune for CPU
+        # pinning and emulator thread pinning, and guest_numa_tune for cell
+        # pinning; so only include those 2 in the tuple.
+        guest_numa_config = (None, guest_cpu_tune, None, guest_numa_tune)
+
+        with mock.patch.object(drvr, '_get_guest_numa_config',
+                               return_value=guest_numa_config):
+            self.assertEqual(
+                expected_numa_info.obj_to_primitive(),
+                drvr._get_live_migrate_numa_info(
+                    'fake-instance-numa-topology',
+                    'fake-flavor', 'fake-image-meta').obj_to_primitive())
+
+    @mock.patch.object(hardware, 'get_vcpu_pin_set')
+    def test_get_live_migrate_numa_info_empty(self, _):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        guest_numa_config = (None, None, None, None)
+        with mock.patch.object(drvr, '_get_guest_numa_config',
+                               return_value=guest_numa_config):
+            self.assertEqual(
+                objects.LibvirtLiveMigrateNUMAInfo().obj_to_primitive(),
+                drvr._get_live_migrate_numa_info(
+                    'fake-instance-numa-topology',
+                    'fake-flavor', 'fake-image-meta').obj_to_primitive())
+
     @mock.patch.object(
         host.Host, "is_cpu_control_policy_capable", return_value=True)
     def test_get_guest_config_numa_host_instance_fits(self, is_able):
