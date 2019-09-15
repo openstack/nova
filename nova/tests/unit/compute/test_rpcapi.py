@@ -425,6 +425,20 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 migrate_data=None, version='5.0',
                 call_monitor_timeout=60, timeout=1234)
 
+    def test_supports_numa_live_migration(self):
+        mock_client = mock.MagicMock()
+        rpcapi = compute_rpcapi.ComputeAPI()
+        rpcapi.router.client = mock.Mock()
+        rpcapi.router.client.return_value = mock_client
+
+        ctxt = context.RequestContext('fake_user', 'fake_project'),
+        mock_client.can_send_version.return_value = False
+        self.assertFalse(rpcapi.supports_numa_live_migration(ctxt))
+        mock_client.can_send_version.return_value = True
+        self.assertTrue(rpcapi.supports_numa_live_migration(ctxt))
+        mock_client.can_send_version.assert_has_calls(
+            [mock.call('5.3'), mock.call('5.3')])
+
     def test_check_can_live_migrate_destination(self):
         self.flags(long_rpc_timeout=1234)
         self._test_compute_api('check_can_live_migrate_destination', 'call',
@@ -432,8 +446,42 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                                destination='dest',
                                block_migration=False,
                                disk_over_commit=False,
-                               version='5.0', call_monitor_timeout=60,
+                               version='5.3', call_monitor_timeout=60,
+                               migration='migration',
+                               limits='limits',
                                timeout=1234)
+
+    def test_check_can_live_migrate_destination_backlevel(self):
+        mock_cctxt = mock.MagicMock()
+        mock_client = mock.MagicMock()
+        mock_client.can_send_version.return_value = False
+        mock_client.prepare.return_value = mock_cctxt
+
+        rpcapi = compute_rpcapi.ComputeAPI()
+        rpcapi.router.client = mock.Mock()
+        rpcapi.router.client.return_value = mock_client
+
+        ctxt = context.RequestContext('fake_user', 'fake_project'),
+        rpcapi.check_can_live_migrate_destination(
+            ctxt, instance=self.fake_instance_obj,
+            destination='dest',
+            block_migration=False,
+            disk_over_commit=False,
+            migration='migration',
+            limits='limits')
+
+        mock_client.prepare.assert_called_with(server='dest', version='5.0',
+                                               call_monitor_timeout=mock.ANY,
+                                               timeout=mock.ANY)
+        mock_cctxt.call.assert_called_once_with(
+            ctxt, 'check_can_live_migrate_destination',
+            instance=self.fake_instance_obj, block_migration=False,
+            disk_over_commit=False)
+
+    def test_drop_move_claim_at_destination(self):
+        self._test_compute_api('drop_move_claim_at_destination', 'call',
+                               instance=self.fake_instance_obj, host='host',
+                               version='5.3', _return_value=None)
 
     def test_prep_resize(self):
         self._test_compute_api('prep_resize', 'cast',

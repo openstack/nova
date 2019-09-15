@@ -520,7 +520,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='5.2')
+    target = messaging.Target(version='5.3')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -6500,11 +6500,23 @@ class ComputeManager(manager.Manager):
         """
         return self.driver.check_instance_shared_storage_remote(ctxt, data)
 
+    def _dest_can_numa_live_migrate(self, dest_check_data, migration):
+        # TODO(artom) If we have a libvirt driver we expect it to set
+        # dst_supports_numa_live_migration, but we have to remove it if we
+        # did not get a migration from the conductor, indicating that it
+        # cannot send RPC 5.3. This check can be removed in RPC 6.0.
+        if ('dst_supports_numa_live_migration' in dest_check_data and
+                dest_check_data.dst_supports_numa_live_migration and
+                not migration):
+            delattr(dest_check_data, 'dst_supports_numa_live_migration')
+        return dest_check_data
+
     @wrap_exception()
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def check_can_live_migrate_destination(self, ctxt, instance,
-                                           block_migration, disk_over_commit):
+                                           block_migration, disk_over_commit,
+                                           migration=None, limits=None):
         """Check if it is possible to execute live migration.
 
         This runs checks on the destination host, and then calls
@@ -6516,6 +6528,8 @@ class ComputeManager(manager.Manager):
                                 if None, calculate it in driver
         :param disk_over_commit: if true, allow disk over commit
                                  if None, ignore disk usage checking
+        :param migration: objects.Migration object for this live migration.
+        :param limits: objects.SchedulerLimits object for this live migration.
         :returns: a LiveMigrateData object (hypervisor-dependent)
         """
         src_compute_info = obj_base.obj_to_primitive(
@@ -6525,11 +6539,20 @@ class ComputeManager(manager.Manager):
         dest_check_data = self.driver.check_can_live_migrate_destination(ctxt,
             instance, src_compute_info, dst_compute_info,
             block_migration, disk_over_commit)
+        dest_check_data = self._dest_can_numa_live_migrate(dest_check_data,
+                                                           migration)
         LOG.debug('destination check data is %s', dest_check_data)
         try:
-            migrate_data = self.compute_rpcapi.\
-                                check_can_live_migrate_source(ctxt, instance,
-                                                              dest_check_data)
+            migrate_data = self.compute_rpcapi.check_can_live_migrate_source(
+                ctxt, instance, dest_check_data)
+            if ('src_supports_numa_live_migration' in migrate_data and
+                    migrate_data.src_supports_numa_live_migration):
+                migrate_data = self._live_migration_claim(
+                    ctxt, instance, migrate_data, migration, limits)
+            elif 'dst_supports_numa_live_migration' in dest_check_data:
+                LOG.info('Destination was ready for NUMA live migration, '
+                         'but source is either too old, or is set to an '
+                         'older upgrade level.', instance=instance)
             # Create migrate_data vifs
             migrate_data.vifs = \
                 migrate_data_obj.VIFMigrateData.create_skeleton_migrate_vifs(
@@ -6543,6 +6566,59 @@ class ComputeManager(manager.Manager):
             self.driver.cleanup_live_migration_destination_check(ctxt,
                     dest_check_data)
         return migrate_data
+
+    def _live_migration_claim(self, ctxt, instance, migrate_data,
+                              migration, limits):
+        """Runs on the destination and does a resources claim, if necessary.
+        Currently, only NUMA live migrations require it.
+
+        :param ctxt: Request context
+        :param instance: The Instance being live migrated
+        :param migrate_data: The MigrateData object for this live migration
+        :param migration: The Migration object for this live migration
+        :param limits: The SchedulerLimits object for this live migration
+        :returns: migrate_data with dst_numa_info set if necessary
+        """
+        try:
+            # NOTE(artom) We might have gotten here from _find_destination() in
+            # the conductor live migrate task. At that point,
+            # migration.dest_node is not set yet (nor should it be, we're still
+            # looking for a destination, after all). Therefore, we cannot use
+            # migration.dest_node here and must use self._get_nodename().
+            claim = self.rt.live_migration_claim(
+                ctxt, instance, self._get_nodename(instance), migration,
+                limits)
+            LOG.debug('Created live migration claim.', instance=instance)
+        except exception.ComputeResourcesUnavailable as e:
+            raise exception.MigrationPreCheckError(
+                reason=e.format_message())
+        return self.driver.post_claim_migrate_data(ctxt, instance,
+                                                   migrate_data, claim)
+
+    def _source_can_numa_live_migrate(self, ctxt, dest_check_data,
+                                      source_check_data):
+        # TODO(artom) Our virt driver may have told us that it supports NUMA
+        # live migration. However, the following other conditions must be met
+        # for a NUMA live migration to happen:
+        # 1. We got a True dst_supports_numa_live_migration in
+        #    dest_check_data, indicating that the dest virt driver supports
+        #    NUMA live migration and that the conductor can send RPC 5.3 and
+        #    that the destination compute manager can receive it.
+        # 2. Ourselves, the source, can send RPC 5.3. There's no
+        #    sentinel/parameter for this, so we just ask our rpcapi directly.
+        # If any of these are not met, we need to remove the
+        # src_supports_numa_live_migration flag from source_check_data to avoid
+        # incorrectly initiating a NUMA live migration.
+        # All of this can be removed in RPC 6.0/objects 2.0.
+        can_numa_live_migrate = (
+            'dst_supports_numa_live_migration' in dest_check_data and
+            dest_check_data.dst_supports_numa_live_migration and
+            self.compute_rpcapi.supports_numa_live_migration(ctxt))
+        if ('src_supports_numa_live_migration' in source_check_data and
+                source_check_data.src_supports_numa_live_migration and
+                not can_numa_live_migrate):
+            delattr(source_check_data, 'src_supports_numa_live_migration')
+        return source_check_data
 
     @wrap_exception()
     @wrap_instance_event(prefix='compute')
@@ -6568,6 +6644,8 @@ class ComputeManager(manager.Manager):
         result = self.driver.check_can_live_migrate_source(ctxt, instance,
                                                            dest_check_data,
                                                            block_device_info)
+        result = self._source_can_numa_live_migrate(ctxt, dest_check_data,
+                                                    result)
         LOG.debug('source check data is %s', result)
         return result
 
@@ -7207,6 +7285,15 @@ class ComputeManager(manager.Manager):
                 migrate_data)
 
         if do_cleanup:
+            # NOTE(artom) By this time post_live_migration_at_destination()
+            # will have applied the migration context and saved the instance,
+            # writing a new instance NUMA topology in the process (if the
+            # intance has one). Here on the source, some drivers will call
+            # instance.save() in their cleanup() method, which would clobber
+            # the new instance NUMA topology saved by the destination with the
+            # old fields in our instance object. To prevent this, refresh our
+            # instance.
+            instance.refresh()
             LOG.debug('Calling driver.cleanup from _post_live_migration',
                       instance=instance)
             self.driver.cleanup(ctxt, instance, unplug_nw_info,
@@ -7326,6 +7413,16 @@ class ComputeManager(manager.Manager):
             except exception.ComputeHostNotFound:
                 LOG.exception('Failed to get compute_info for %s', self.host)
             finally:
+                # NOTE(artom) We need to apply the migration context here
+                # regardless of whether the driver's
+                # post_live_migration_at_destination succeeded or not: the
+                # instance is on the destination, potentially with a new NUMA
+                # topology and resource usage. We need to persist that.
+                # NOTE(artom) Apply followed by drop looks weird, but apply
+                # just saves the new fields while drop actually removes the
+                # migration context from the instance.
+                instance.apply_migration_context()
+                instance.drop_migration_context()
                 instance.host = self.host
                 instance.power_state = current_power_state
                 instance.task_state = None
@@ -7396,8 +7493,26 @@ class ComputeManager(manager.Manager):
                       'rollback; compute driver did not provide migrate_data',
                       instance=instance)
 
+        # TODO(artom) drop_move_claim_at_destination() is new in RPC 5.3, only
+        # call it if we performed a NUMA-aware live migration (which implies us
+        # being able to send RPC 5.3). To check this, we can use the
+        # src_supports_numa_live_migration flag, as it will be set if and only
+        # if:
+        # - dst_supports_numa_live_migration made its way to the source
+        #   (meaning both dest and source are new and conductor can speak
+        #   RPC 5.3)
+        # - src_supports_numa_live_migration was set by the source driver and
+        #   passed the send-RPC-5.3 check.
+        # This check can be removed in RPC 6.0.
+        if ('src_supports_numa_live_migration' in migrate_data and
+                migrate_data.src_supports_numa_live_migration):
+            LOG.debug('Calling destination to drop move claim.',
+                      instance=instance)
+            self.compute_rpcapi.drop_move_claim_at_destination(context,
+                                                               instance, dest)
         instance.task_state = None
         instance.progress = 0
+        instance.drop_migration_context()
         instance.save(expected_task_state=[task_states.MIGRATING])
 
         # NOTE(tr3buchet): setup networks on source host (really it's re-setup
@@ -7484,6 +7599,19 @@ class ComputeManager(manager.Manager):
                 bdms=bdms)
 
         self._set_migration_status(migration, migration_status)
+
+    @wrap_exception()
+    @wrap_instance_fault
+    def drop_move_claim_at_destination(self, context, instance):
+        """Called by the source of a live migration during rollback to ask the
+        destination to drop the MoveClaim object that was created for the live
+        migration on the destination.
+        """
+        nodename = self._get_nodename(instance)
+        LOG.debug('Dropping live migration resource claim on destination '
+                  'node %s', nodename, instance=instance)
+        self.rt.drop_move_claim(
+            context, instance, nodename, instance_type=instance.flavor)
 
     @wrap_exception()
     @wrap_instance_event(prefix='compute')

@@ -7531,6 +7531,13 @@ class LibvirtDriver(driver.ComputeDriver):
             self._host.has_min_version(MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION,
                                        MIN_QEMU_FILE_BACKED_DISCARD_VERSION))
 
+        # TODO(artom) Set to indicate that the destination (us) can perform a
+        # NUMA-aware live migration. NUMA-aware live migration will become
+        # unconditionally supported in RPC 6.0, so this sentinel can be removed
+        # then.
+        if instance.numa_topology:
+            data.dst_supports_numa_live_migration = True
+
         return data
 
     def post_claim_migrate_data(self, context, instance, migrate_data, claim):
@@ -7664,6 +7671,13 @@ class LibvirtDriver(driver.ComputeDriver):
         # utility code to generate the correct XML is required, so we can
         # default to True here for all computes >= Queens.
         dest_check_data.src_supports_native_luks = True
+
+        # TODO(artom) Set to indicate that the source (us) can perform a
+        # NUMA-aware live migration. NUMA-aware live migration will become
+        # unconditionally supported in RPC 6.0, so this sentinel can be removed
+        # then.
+        if instance.numa_topology:
+            dest_check_data.src_supports_numa_live_migration = True
 
         return dest_check_data
 
