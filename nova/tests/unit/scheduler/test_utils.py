@@ -85,6 +85,25 @@ class TestUtils(TestUtilsBase):
         )
         self._test_resources_from_request_spec(expected_resources, flavor)
 
+    def test_resources_from_request_spec_flavor_req_traits(self):
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
+            extra_specs={'trait:CUSTOM_FLAVOR_TRAIT': 'required'})
+        expected_resources = FakeResourceRequest()
+        expected_resources._rg_by_id[None] = objects.RequestGroup(
+            use_same_provider=False,
+            resources={
+                'VCPU': 1,
+                'MEMORY_MB': 1024,
+                'DISK_GB': 15,
+            },
+            required_traits=set(['CUSTOM_FLAVOR_TRAIT'])
+        )
+        resources = self._test_resources_from_request_spec(
+            expected_resources, flavor)
+        expected_result = set(['CUSTOM_FLAVOR_TRAIT'])
+        self.assertEqual(expected_result, resources.all_required_traits)
+
     def test_resources_from_request_spec_flavor_and_image_traits(self):
         image = objects.ImageMeta.from_dict({
             'properties': {
