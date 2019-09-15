@@ -253,3 +253,9 @@ def get_pmem_namespaces():
     ndctl_cmd = ['ndctl', 'list', '-X']
     nss_info = processutils.execute(*ndctl_cmd)[0]
     return nss_info
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def cleanup_vpmem(devpath):
+    daxio_cmd = ['daxio', '-z', '-o', '%s' % devpath]
+    processutils.execute(*daxio_cmd)

@@ -902,7 +902,8 @@ def _create_test_instance():
         'host': 'fake-host',
         'task_state': None,
         'vm_state': None,
-        'trusted_certs': None
+        'trusted_certs': None,
+        'resources': None,
     }
 
 
@@ -14838,7 +14839,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                       mock_unplug_vifs):
         instance = fake_instance.fake_instance_obj(
             None, name='instancename', id=1,
-            uuid='875a8070-d0b9-4949-8b31-104d125c9a64')
+            uuid='875a8070-d0b9-4949-8b31-104d125c9a64',
+            expected_attrs=['resources'])
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr.destroy(self.context, instance, [], None, False)
@@ -18323,7 +18325,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
         drvr.firewall_driver = mock.Mock()
         drvr._disconnect_volume = mock.Mock()
-        fake_inst = {'name': 'foo'}
+        fake_inst = objects.Instance(**self.test_instance)
         fake_bdms = [{'connection_info': 'foo',
                      'mount_device': None}]
         with mock.patch('nova.virt.driver'
@@ -18336,7 +18338,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._undefine_domain')
     def test_cleanup_wants_vif_errors_ignored(self, undefine, unplug):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
-        fake_inst = {'name': 'foo'}
+        fake_inst = objects.Instance(**self.test_instance)
         with mock.patch.object(drvr._conn, 'lookupByUUIDString') as lookup:
             lookup.return_value = fake_inst
             # NOTE(danms): Make unplug cause us to bail early, since
@@ -19079,6 +19081,41 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 break
         else:
             assert False, "Unable to find any mediated device for the guest."
+
+    @mock.patch('nova.virt.hardware.get_vpmems')
+    def test_get_guest_config_with_vpmems(self, mock_get_vpmems_label):
+        vpmem_0 = objects.LibvirtVPMEMDevice(
+            label='4GB', name='ns_0', devpath='/dev/dax0.0',
+            size=4292870144, align=2097152)
+        vpmem_1 = objects.LibvirtVPMEMDevice(
+            label='16GB', name='ns_1', devpath='/dev/dax0.1',
+            size=17177772032, align=2097152)
+        resource_0 = objects.Resource(
+            provider_uuid=uuids.rp,
+            resource_class="CUSTOM_PMEM_NAMESPACE_4GB",
+            identifier='ns_0', metadata=vpmem_0)
+        resource_1 = objects.Resource(
+            provider_uuid=uuids.rp,
+            resource_class="CUSTOM_PMEM_NAMESPACE_16GB",
+            identifier='ns_1', metadata=vpmem_1)
+        resources = objects.ResourceList(objects=[resource_0, resource_1])
+
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.resources = resources
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr._vpmems_by_name = {"ns_0": vpmem_0, "ns_1": vpmem_1}
+
+        mock_get_vpmems_label.return_value = ['4GB', '16GB']
+        cfg = drvr._get_guest_config(instance_ref,
+                                     _fake_network_info(self, 1),
+                                     image_meta, {'mapping': {}})
+        vpmem_amount = 0
+        for device in cfg.devices:
+            if isinstance(device, vconfig.LibvirtConfigGuestVPMEM):
+                self.assertEqual("nvdimm", device.model)
+                vpmem_amount += 1
+        self.assertEqual(2, vpmem_amount)
 
 
 class TestGuestConfigSysinfoSerialOS(test.NoDBTestCase):
@@ -19831,7 +19868,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 
         # Attributes which we need to be set so they don't touch the db,
         # but it's not worth the effort to fake properly
-        for field in ['numa_topology', 'vcpu_model', 'trusted_certs']:
+        for field in ['numa_topology', 'vcpu_model', 'trusted_certs',
+                      'resources', 'migration_context']:
             setattr(instance, field, None)
 
         return instance
@@ -21899,7 +21937,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         drv = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance = objects.Instance(
             uuid=uuids.instance, id=1,
-            ephemeral_key_uuid=uuids.ephemeral_key_uuid)
+            ephemeral_key_uuid=uuids.ephemeral_key_uuid,
+            resources=None)
         instance.system_metadata = {}
         block_device_info = {'root_device_name': '/dev/vda',
                              'ephemerals': [],
@@ -24448,6 +24487,7 @@ class LibvirtPMEMNamespaceTests(test.NoDBTestCase):
     def setUp(self):
         super(LibvirtPMEMNamespaceTests, self).setUp()
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.context = context.get_admin_context()
         self.vpmem_0 = objects.LibvirtVPMEMDevice(
                 label='4GB',
                 name='ns_0', devpath='/dev/dax0.0',
@@ -24460,6 +24500,22 @@ class LibvirtPMEMNamespaceTests(test.NoDBTestCase):
                 label='SMALL',
                 name='ns_2', devpath='/dev/dax0.2',
                 size=17177772032, align=2097152)
+        self.resource_0 = objects.Resource(
+                provider_uuid=uuids.rp_uuid,
+                resource_class="CUSTOM_PMEM_NAMESPACE_4GB",
+                identifier='ns_0', metadata=self.vpmem_0)
+        self.resource_1 = objects.Resource(
+                provider_uuid=uuids.rp_uuid,
+                resource_class="CUSTOM_PMEM_NAMESPACE_SMALL",
+                identifier='ns_1', metadata=self.vpmem_1)
+        self.resource_2 = objects.Resource(
+                provider_uuid=uuids.rp_uuid,
+                resource_class="CUSTOM_PMEM_NAMESPACE_SMALL",
+                identifier='ns_2', metadata=self.vpmem_2)
+        self.resource_3 = objects.Resource(
+                provider_uuid=uuids.rp_uuid,
+                resource_class="CUSTOM_RESOURCE_0",
+                identifier='resource_0')
 
         self.pmem_namespaces = '''
             [{"dev":"namespace0.0",
@@ -24546,3 +24602,49 @@ class LibvirtPMEMNamespaceTests(test.NoDBTestCase):
         vpmem_conf = ["4GB:ns_0", "SMALL:ns_0"]
         self.assertRaises(exception.PMEMNamespaceConfigInvalid,
                           drvr._discover_vpmems, vpmem_conf)
+
+    @mock.patch('nova.virt.hardware.get_vpmems')
+    def test_get_ordered_vpmems(self, mock_labels):
+        # get orgered vpmems based on flavor extra_specs
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr._vpmems_by_name = {'ns_0': self.vpmem_0,
+                                'ns_1': self.vpmem_1,
+                                'ns_2': self.vpmem_2}
+        instance = fake_instance.fake_instance_obj(self.context)
+        instance.flavor = objects.Flavor(
+            name='m1.small', memory_mb=2048, vcpus=2, root_gb=10,
+            ephemeral_gb=20, swap=0, extra_specs={
+                'hw:pmem': 'SMALL,4GB,SMALL'})
+        mock_labels.return_value = ['SMALL', '4GB', 'SMALL']
+        # self.resource_3 is not vpmem resource
+        instance.resources = objects.ResourceList(objects=[
+            self.resource_0, self.resource_1,
+            self.resource_2, self.resource_3])
+        ordered_vpmems = drvr._get_ordered_vpmems(instance, instance.flavor)
+        # keep consistent with the order in flavor extra_specs
+        self.assertEqual('SMALL', ordered_vpmems[0].label)
+        self.assertEqual('4GB', ordered_vpmems[1].label)
+        self.assertEqual('SMALL', ordered_vpmems[2].label)
+        vpmems = drvr._get_vpmems(instance)
+        # this is not sorted, keep the same as instance.resources
+        self.assertEqual('4GB', vpmems[0].label)
+        self.assertEqual('SMALL', vpmems[1].label)
+        self.assertEqual('SMALL', vpmems[2].label)
+
+    @mock.patch('nova.privsep.libvirt.cleanup_vpmem')
+    def test_cleanup_vpmems(self, mock_cleanup_vpmem):
+        vpmems = [self.vpmem_0, self.vpmem_1, self.vpmem_2]
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr._cleanup_vpmems(vpmems)
+        mock_cleanup_vpmem.assert_has_calls([
+            mock.call(self.vpmem_0.devpath),
+            mock.call(self.vpmem_1.devpath),
+            mock.call(self.vpmem_2.devpath)])
+
+    @mock.patch('nova.privsep.libvirt.cleanup_vpmem')
+    def test_cleanup_vpmems_fail(self, mock_cleanup_vpmem):
+        mock_cleanup_vpmem.side_effect = Exception('Not known')
+        vpmems = [self.vpmem_0, self.vpmem_1, self.vpmem_2]
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.assertRaises(exception.VPMEMCleanupFailed,
+                          drvr._cleanup_vpmems, vpmems)

@@ -2066,3 +2066,14 @@ def numa_usage_from_instance_numa(host_topology, instance_topology,
         cells.append(new_cell)
 
     return objects.NUMATopology(cells=cells)
+
+
+def get_vpmems(flavor):
+    """Return vpmems related to input request.
+
+    :param flavor: a flavor object to read extra specs from
+    :returns: a vpmem label list
+    """
+    # TODO(Luyao) Return vpmem label list when the whole
+    # vpmem feature is supported.
+    return []
