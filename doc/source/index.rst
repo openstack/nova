@@ -239,6 +239,7 @@ looking parts of our architecture. These are collected below.
    reference/upgrade-checks
    reference/vm-states
    reference/scheduler-hints-vs-flavor-extra-specs
+   reference/isolate-aggregates
    user/index
    user/aggregates
    user/architecture

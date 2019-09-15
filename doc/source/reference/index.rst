@@ -35,6 +35,9 @@ The following is a dive into some of the internals in nova.
 .. todo:: Need something about versioned objects and how they fit in with
           conductor as an object backporter during upgrades.
 
+* :doc:`/reference/isolate-aggregates`: Describes how the placement filter
+  works in nova to isolate groups of hosts.
+
 Debugging
 =========
 
