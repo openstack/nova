@@ -90,6 +90,24 @@ IPV4Network = fields.IPV4Network
 IPV6Network = fields.IPV6Network
 
 
+class ResourceClass(fields.StringPattern):
+
+    PATTERN = r"^[A-Z0-9_]+$"
+    _REGEX = re.compile(PATTERN)
+
+    @staticmethod
+    def coerce(obj, attr, value):
+        if isinstance(value, six.string_types):
+            uppered = value.upper()
+            if ResourceClass._REGEX.match(uppered):
+                return uppered
+        raise ValueError(_("Malformed Resource Class %s") % value)
+
+
+class ResourceClassField(AutoTypedField):
+    AUTO_TYPE = ResourceClass()
+
+
 class SetOfStringsField(AutoTypedField):
     AUTO_TYPE = Set(fields.String())
 

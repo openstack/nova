@@ -145,11 +145,13 @@ class _TestInstanceObject(object):
         exp_cols.remove('keypairs')
         exp_cols.remove('device_metadata')
         exp_cols.remove('trusted_certs')
+        exp_cols.remove('resources')
         exp_cols = [exp_col for exp_col in exp_cols if 'flavor' not in exp_col]
         exp_cols.extend(['extra', 'extra.numa_topology', 'extra.pci_requests',
                          'extra.flavor', 'extra.vcpu_model',
                          'extra.migration_context', 'extra.keypairs',
-                         'extra.device_metadata', 'extra.trusted_certs'])
+                         'extra.device_metadata', 'extra.trusted_certs',
+                         'extra.resources'])
 
         fake_topology = test_instance_numa.fake_db_topology['numa_topology']
         fake_requests = jsonutils.dumps(test_instance_pci_requests.
@@ -169,6 +171,11 @@ class _TestInstanceObject(object):
             fake_keypairlist.obj_to_primitive())
         fake_trusted_certs = jsonutils.dumps(
             objects.TrustedCerts(ids=['123foo']).obj_to_primitive())
+        fake_resource = objects.Resource(
+            provider_uuid=uuids.rp, resource_class='CUSTOM_FOO',
+            identifier='foo')
+        fake_resources = jsonutils.dumps(objects.ResourceList(
+            objects=[fake_resource]).obj_to_primitive())
         fake_service = {'created_at': None, 'updated_at': None,
                         'deleted_at': None, 'deleted': False, 'id': 123,
                         'host': 'fake-host', 'binary': 'nova-compute',
@@ -188,6 +195,7 @@ class _TestInstanceObject(object):
                                  'migration_context': fake_mig_context,
                                  'keypairs': fake_keypairs,
                                  'trusted_certs': fake_trusted_certs,
+                                 'resources': fake_resources,
                                  })
 
         mock_get.return_value = fake_instance
@@ -203,6 +211,8 @@ class _TestInstanceObject(object):
         self.assertEqual(123, inst.services[0].id)
         self.assertEqual('foo', inst.keypairs[0].name)
         self.assertEqual(['123foo'], inst.trusted_certs.ids)
+        self.assertEqual(fake_resource.identifier,
+                         inst.resources[0].identifier)
 
         mock_get.assert_called_once_with(self.context, 'uuid',
             columns_to_join=exp_cols)
@@ -968,6 +978,7 @@ class _TestInstanceObject(object):
                     'pci_requests': None,
                     'device_metadata': None,
                     'trusted_certs': None,
+                    'resources': None,
                 }}
         fake_inst = fake_instance.fake_db_instance(**vals)
         mock_create.return_value = fake_inst
@@ -998,6 +1009,7 @@ class _TestInstanceObject(object):
                     'pci_requests': None,
                     'device_metadata': None,
                     'trusted_certs': None,
+                    'resources': None,
                 }}
         fake_inst = fake_instance.fake_db_instance(**vals)
         mock_create.return_value = fake_inst
@@ -1015,6 +1027,7 @@ class _TestInstanceObject(object):
                   'pci_requests': None,
                   'device_metadata': None,
                   'trusted_certs': None,
+                  'resources': None,
                   }
         mock_create.return_value = self.fake_instance
         inst = objects.Instance(context=self.context)
@@ -1052,6 +1065,9 @@ class _TestInstanceObject(object):
                                                spec=[])]),
             vcpu_model=test_vcpu_model.fake_vcpumodel,
             trusted_certs=objects.TrustedCerts(ids=['123foo']),
+            resources=objects.ResourceList(objects=[objects.Resource(
+                provider_uuid=uuids.rp, resource_class='CUSTOM_FOO',
+                identifier='foo')])
             )
         inst.create()
         self.assertIsNotNone(inst.numa_topology)
@@ -1069,6 +1085,7 @@ class _TestInstanceObject(object):
             self.context, inst.uuid)
         self.assertEqual('fake-model', vcpu_model.model)
         self.assertEqual(['123foo'], inst.trusted_certs.ids)
+        self.assertEqual('foo', inst.resources[0].identifier)
 
     def test_recreate_fails(self):
         inst = objects.Instance(context=self.context,
@@ -1107,6 +1124,7 @@ class _TestInstanceObject(object):
                                 'pci_requests': None,
                                 'device_metadata': None,
                                 'trusted_certs': None,
+                                'resources': None,
                             },
                             })
 
@@ -1348,7 +1366,8 @@ class _TestInstanceObject(object):
         inst.apply_migration_context()
         attrs_type = {'numa_topology': objects.InstanceNUMATopology,
                       'pci_requests': objects.InstancePCIRequests,
-                      'pci_devices': objects.PciDeviceList}
+                      'pci_devices': objects.PciDeviceList,
+                      'resources': objects.ResourceList}
 
         for attr_name in instance._MIGRATION_CONTEXT_ATTRS:
             value = getattr(inst, attr_name)
@@ -1379,14 +1398,17 @@ class _TestInstanceObject(object):
         pci_requests = objects.InstancePCIRequests(requests=[
             objects.InstancePCIRequest(count=1, spec=[])])
         pci_devices = pci_device.PciDeviceList()
+        resources = objects.ResourceList()
 
         inst = instance.Instance(context=self.context, uuid=uuids.instance,
                                  numa_topology=numa_topology,
                                  pci_requests=pci_requests,
-                                 pci_devices=pci_devices)
+                                 pci_devices=pci_devices,
+                                 resources=resources)
         expected_objs = {'numa_topology': numa_topology,
                          'pci_requests': pci_requests,
-                         'pci_devices': pci_devices}
+                         'pci_devices': pci_devices,
+                         'resources': resources}
         inst.migration_context = test_mig_ctxt.get_fake_migration_context_obj(
             self.context)
         with inst.mutated_migration_context():
@@ -1490,6 +1512,15 @@ class _TestInstanceObject(object):
         pci_devices = inst.pci_devices
         mock_get.assert_called_once_with(self.context, uuids.pci_devices)
         self.assertEqual(fake_pci_devices, pci_devices)
+
+    @mock.patch('nova.objects.ResourceList.get_by_instance_uuid')
+    def test_load_resources(self, mock_get):
+        fake_resources = objects.ResourceList()
+        mock_get.return_value = fake_resources
+        inst = objects.Instance(context=self.context, uuid=uuids.resources)
+        resources = inst.resources
+        mock_get.assert_called_once_with(self.context, uuids.resources)
+        self.assertEqual(fake_resources, resources)
 
     def test_get_with_extras(self):
         pci_requests = objects.InstancePCIRequests(requests=[

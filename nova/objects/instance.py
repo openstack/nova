@@ -56,10 +56,11 @@ _INSTANCE_OPTIONAL_NON_COLUMN_FIELDS = ['flavor', 'old_flavor',
 # These are fields that are optional and in instance_extra
 _INSTANCE_EXTRA_FIELDS = ['numa_topology', 'pci_requests',
                           'flavor', 'vcpu_model', 'migration_context',
-                          'keypairs', 'device_metadata', 'trusted_certs']
+                          'keypairs', 'device_metadata', 'trusted_certs',
+                          'resources']
 # These are fields that applied/drooped by migration_context
 _MIGRATION_CONTEXT_ATTRS = ['numa_topology', 'pci_requests',
-                            'pci_devices']
+                            'pci_devices', 'resources']
 
 # These are fields that can be specified as expected_attrs
 INSTANCE_OPTIONAL_ATTRS = (_INSTANCE_OPTIONAL_JOINED_FIELDS +
@@ -114,7 +115,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     # Version 2.4: Added trusted_certs
     # Version 2.5: Added hard_delete kwarg in destroy
     # Version 2.6: Added hidden
-    VERSION = '2.6'
+    # Version 2.7: Added resources
+    VERSION = '2.7'
 
     fields = {
         'id': fields.IntegerField(),
@@ -217,6 +219,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         'keypairs': fields.ObjectField('KeyPairList'),
         'trusted_certs': fields.ObjectField('TrustedCerts', nullable=True),
         'hidden': fields.BooleanField(default=False),
+        'resources': fields.ObjectField('ResourceList', nullable=True),
         }
 
     obj_extra_fields = ['name']
@@ -224,6 +227,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     def obj_make_compatible(self, primitive, target_version):
         super(Instance, self).obj_make_compatible(primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (2, 7) and 'resources' in primitive:
+            del primitive['resources']
         if target_version < (2, 6) and 'hidden' in primitive:
             del primitive['hidden']
         if target_version < (2, 4) and 'trusted_certs' in primitive:
@@ -487,6 +492,12 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                     db_inst['extra'].get('trusted_certs'))
             else:
                 instance.trusted_certs = None
+        if 'resources' in expected_attrs:
+            if have_extra:
+                instance._load_resources(
+                    db_inst['extra'].get('resources'))
+            else:
+                instance.resources = None
         if any([x in expected_attrs for x in ('flavor',
                                               'old_flavor',
                                               'new_flavor')]):
@@ -601,6 +612,13 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 trusted_certs.obj_to_primitive())
         else:
             updates['extra']['trusted_certs'] = None
+        resources = updates.pop('resources', None)
+        expected_attrs.append('resources')
+        if resources:
+            updates['extra']['resources'] = jsonutils.dumps(
+                resources.obj_to_primitive())
+        else:
+            updates['extra']['resources'] = None
         db_inst = db.instance_create(self._context, updates)
         self._from_db_object(self._context, self, db_inst, expected_attrs)
 
@@ -983,6 +1001,16 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             self.trusted_certs = objects.TrustedCerts.obj_from_primitive(
                 jsonutils.loads(db_trusted_certs))
 
+    def _load_resources(self, db_resources=_NO_DATA_SENTINEL):
+        if db_resources is None:
+            self.resources = None
+        elif db_resources is _NO_DATA_SENTINEL:
+            self.resources = objects.ResourceList.get_by_instance_uuid(
+                self._context, self.uuid)
+        else:
+            self.resources = objects.ResourceList.obj_from_primitive(
+                jsonutils.loads(db_resources))
+
     def apply_migration_context(self):
         if self.migration_context:
             self._set_migration_context_to_instance(prefix='new_')
@@ -1098,6 +1126,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             return self._load_keypairs()
         elif attrname == 'trusted_certs':
             return self._load_trusted_certs()
+        elif attrname == 'resources':
+            return self._load_resources()
         elif attrname == 'security_groups':
             self._load_security_groups()
         elif attrname == 'pci_devices':

@@ -34,6 +34,8 @@ fake_migration_context_obj.new_pci_requests = (
     objects.InstancePCIRequests(requests=[
         objects.InstancePCIRequest(count=123, spec=[])]))
 fake_migration_context_obj.old_pci_requests = None
+fake_migration_context_obj.new_resources = objects.ResourceList()
+fake_migration_context_obj.old_resources = None
 
 fake_db_context = {
     'created_at': None,
@@ -96,6 +98,10 @@ class _TestMigrationContext(object):
                                   mig_context.new_pci_requests.__class__)
             self.assertIsInstance(expected_mig_context.old_pci_requests,
                                   mig_context.old_pci_requests.__class__)
+            self.assertIsInstance(expected_mig_context. new_resources,
+                                  mig_context.new_resources.__class__)
+            self.assertIsInstance(expected_mig_context.old_resources,
+                                  mig_context.old_resources.__class__)
         else:
             self.assertIsNone(mig_context)
 
