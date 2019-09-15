@@ -109,6 +109,26 @@ class VIFMigrateData(obj_base.NovaObject):
         return vif_mig_data
 
 
+@obj_base.NovaObjectRegistry.register
+class LibvirtLiveMigrateNUMAInfo(obj_base.NovaObject):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        # NOTE(artom) We need a 1:many cardinality here, so DictOfIntegers with
+        # its 1:1 cardinality cannot work here. cpu_pins can have a single
+        # guest CPU pinned to multiple host CPUs.
+        'cpu_pins': fields.DictOfSetOfIntegersField(),
+        # NOTE(artom) Currently we never pin a guest cell to more than a single
+        # host cell, so cell_pins could be a DictOfIntegers, but
+        # DictOfSetOfIntegers is more future-proof.
+        'cell_pins': fields.DictOfSetOfIntegersField(),
+        'emulator_pins': fields.SetOfIntegersField(),
+        'sched_vcpus': fields.SetOfIntegersField(),
+        'sched_priority': fields.IntegerField(),
+    }
+
+
 @obj_base.NovaObjectRegistry.register_if(False)
 class LiveMigrateData(obj_base.NovaObject):
     # Version 1.0: Initial version
@@ -200,7 +220,9 @@ class LibvirtLiveMigrateData(LiveMigrateData):
     # Version 1.7: Added dst_wants_file_backed_memory
     # Version 1.8: Added file_backed_memory_discard
     # Version 1.9: Inherited vifs from LiveMigrateData
-    VERSION = '1.9'
+    # Version 1.10: Added dst_numa_info, src_supports_numa_live_migration, and
+    #               dst_supports_numa_live_migration fields
+    VERSION = '1.10'
 
     fields = {
         'filename': fields.StringField(),
@@ -224,12 +246,23 @@ class LibvirtLiveMigrateData(LiveMigrateData):
         # file_backed_memory_discard is ignored unless
         # dst_wants_file_backed_memory is set
         'file_backed_memory_discard': fields.BooleanField(),
+        # TODO(artom) (src|dst)_supports_numa_live_migration are only used as
+        # flags to indicate that the compute host is new enough to perform a
+        # NUMA-aware live migration. Remove in version 2.0.
+        'src_supports_numa_live_migration': fields.BooleanField(),
+        'dst_supports_numa_live_migration': fields.BooleanField(),
+        'dst_numa_info': fields.ObjectField('LibvirtLiveMigrateNUMAInfo'),
     }
 
     def obj_make_compatible(self, primitive, target_version):
         super(LibvirtLiveMigrateData, self).obj_make_compatible(
             primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if (target_version < (1, 10) and
+                'src_supports_numa_live_migration' in primitive):
+            del primitive['src_supports_numa_live_migration']
+        if target_version < (1, 10) and 'dst_numa_info' in primitive:
+            del primitive['dst_numa_info']
         if target_version < (1, 9) and 'vifs' in primitive:
             del primitive['vifs']
         if target_version < (1, 8):

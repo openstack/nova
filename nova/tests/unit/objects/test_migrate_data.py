@@ -68,6 +68,23 @@ class _TestLibvirtLiveMigrateData(object):
         expected_info['boot_index'] = '1'
         self.assertEqual(expected_info, obj.as_disk_info())
 
+    def test_numa_migrate_data(self):
+        data = lambda x: x['nova_object.data']
+        obj = migrate_data.LibvirtLiveMigrateNUMAInfo(
+            cpu_pins={'0': set([1])},
+            cell_pins={'2': set([3])},
+            emulator_pins=set([4]),
+            sched_vcpus=set([5]),
+            sched_priority=6)
+        manifest = ovo_base.obj_tree_get_versions(obj.obj_name())
+        primitive = data(obj.obj_to_primitive(target_version='1.0',
+                                              version_manifest=manifest))
+        self.assertEqual({'0': (1,)}, primitive['cpu_pins'])
+        self.assertEqual({'2': (3,)}, primitive['cell_pins'])
+        self.assertEqual((4,), primitive['emulator_pins'])
+        self.assertEqual((5,), primitive['sched_vcpus'])
+        self.assertEqual(6, primitive['sched_priority'])
+
     def test_obj_make_compatible(self):
         obj = migrate_data.LibvirtLiveMigrateData(
             src_supports_native_luks=True,
@@ -76,30 +93,46 @@ class _TestLibvirtLiveMigrateData(object):
             serial_listen_addr='127.0.0.1',
             target_connect_addr='127.0.0.1',
             dst_wants_file_backed_memory=False,
-            file_backed_memory_discard=False)
+            file_backed_memory_discard=False,
+            src_supports_numa_live_migraton=True,
+            dst_supports_numa_live_migraton=True,
+            dst_numa_info=migrate_data.LibvirtLiveMigrateNUMAInfo())
+        manifest = ovo_base.obj_tree_get_versions(obj.obj_name())
 
         data = lambda x: x['nova_object.data']
 
         primitive = data(obj.obj_to_primitive())
         self.assertIn('file_backed_memory_discard', primitive)
-        primitive = data(obj.obj_to_primitive(target_version='1.0'))
+        primitive = data(obj.obj_to_primitive(target_version='1.0',
+                                              version_manifest=manifest))
         self.assertNotIn('target_connect_addr', primitive)
         self.assertNotIn('supported_perf_events', primitive)
         self.assertNotIn('old_vol_attachment_ids', primitive)
         self.assertNotIn('src_supports_native_luks', primitive)
         self.assertNotIn('dst_wants_file_backed_memory', primitive)
-        primitive = data(obj.obj_to_primitive(target_version='1.1'))
+        primitive = data(obj.obj_to_primitive(target_version='1.1',
+                                              version_manifest=manifest))
         self.assertNotIn('serial_listen_ports', primitive)
-        primitive = data(obj.obj_to_primitive(target_version='1.2'))
+        primitive = data(obj.obj_to_primitive(target_version='1.2',
+                                              version_manifest=manifest))
         self.assertNotIn('supported_perf_events', primitive)
-        primitive = data(obj.obj_to_primitive(target_version='1.3'))
+        primitive = data(obj.obj_to_primitive(target_version='1.3',
+                                              version_manifest=manifest))
         self.assertNotIn('old_vol_attachment_ids', primitive)
-        primitive = data(obj.obj_to_primitive(target_version='1.4'))
+        primitive = data(obj.obj_to_primitive(target_version='1.4',
+                                              version_manifest=manifest))
         self.assertNotIn('src_supports_native_luks', primitive)
-        primitive = data(obj.obj_to_primitive(target_version='1.6'))
+        primitive = data(obj.obj_to_primitive(target_version='1.6',
+                                              version_manifest=manifest))
         self.assertNotIn('dst_wants_file_backed_memory', primitive)
-        primitive = data(obj.obj_to_primitive(target_version='1.7'))
+        primitive = data(obj.obj_to_primitive(target_version='1.7',
+                                              version_manifest=manifest))
         self.assertNotIn('file_backed_memory_discard', primitive)
+        primitive = data(obj.obj_to_primitive(target_version='1.9',
+                                              version_manifest=manifest))
+        self.assertNotIn('dst_numa_info', primitive)
+        self.assertNotIn('src_supports_numa_live_migration', primitive)
+        self.assertNotIn('dst_supports_numa_live_migration', primitive)
 
     def test_bdm_obj_make_compatible(self):
         obj = migrate_data.LibvirtLiveMigrateBDMInfo(
