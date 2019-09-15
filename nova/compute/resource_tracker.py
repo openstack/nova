@@ -151,6 +151,12 @@ class ResourceTracker(object):
         self.ram_allocation_ratio = CONF.ram_allocation_ratio
         self.cpu_allocation_ratio = CONF.cpu_allocation_ratio
         self.disk_allocation_ratio = CONF.disk_allocation_ratio
+        self.provider_tree = None
+        # Dict of assigned_resources, keyed by resource provider uuid
+        # the value is a dict again, keyed by resource class
+        # and value of this sub-dict is a set of Resource obj
+        self.assigned_resources = collections.defaultdict(
+            lambda: collections.defaultdict(set))
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def instance_claim(self, context, instance, nodename, allocations,
@@ -214,6 +220,9 @@ class ResourceTracker(object):
             # in _update_usage_from_instance().
             self.pci_tracker.claim_instance(context, pci_requests,
                                             instance_numa_topology)
+
+        claimed_resources = self._claim_resources(allocations)
+        instance.resources = claimed_resources
 
         # Mark resources in-use and update stats
         self._update_usage_from_instance(context, instance, nodename)
@@ -340,6 +349,9 @@ class ResourceTracker(object):
         claimed_pci_devices = objects.PciDeviceList(
                 objects=claimed_pci_devices_objs)
 
+        claimed_resources = self._claim_resources(allocations)
+        old_resources = instance.resources
+
         # TODO(jaypipes): Move claimed_numa_topology out of the Claim's
         # constructor flow so the Claim constructor only tests whether
         # resources can be claimed, not consume the resources directly.
@@ -351,7 +363,10 @@ class ResourceTracker(object):
             old_pci_devices=instance.pci_devices,
             new_pci_devices=claimed_pci_devices,
             old_pci_requests=instance.pci_requests,
-            new_pci_requests=new_pci_requests)
+            new_pci_requests=new_pci_requests,
+            old_resources=old_resources,
+            new_resources=claimed_resources)
+
         instance.migration_context = mig_context
         instance.save()
 
@@ -405,6 +420,120 @@ class ResourceTracker(object):
         if migration.migration_type != 'live-migration':
             migration.status = 'pre-migrating'
         migration.save()
+
+    def _claim_resources(self, allocations):
+        """Claim resources according to assigned resources from allocations
+        and available resources in provider tree
+        """
+        if not allocations:
+            return None
+        claimed_resources = []
+        for rp_uuid, alloc_dict in allocations.items():
+            try:
+                provider_data = self.provider_tree.data(rp_uuid)
+            except ValueError:
+                # If an instance is in evacuating, it will hold new and old
+                # allocations, but the provider UUIDs in old allocations won't
+                # exist in the current provider tree, so skip it.
+                LOG.debug("Skip claiming resources of provider %(rp_uuid)s, "
+                          "since the provider UUIDs are not in provider tree.",
+                          {'rp_uuid': rp_uuid})
+                continue
+            for rc, amount in alloc_dict['resources'].items():
+                if rc not in provider_data.resources:
+                    # This means we don't use provider_data.resources to
+                    # assign this kind of resource class, such as 'VCPU' for
+                    # now, otherwise the provider_data.resources will be
+                    # populated with this resource class when updating
+                    # provider tree.
+                    continue
+                assigned = self.assigned_resources[rp_uuid][rc]
+                free = provider_data.resources[rc] - assigned
+                if amount > len(free):
+                    reason = (_("Needed %(amount)d units of resource class "
+                                "%(rc)s, but %(avail)d are available.") %
+                                {'amount': amount,
+                                 'rc': rc,
+                                 'avail': len(free)})
+                    raise exception.ComputeResourcesUnavailable(reason=reason)
+                for i in range(amount):
+                    claimed_resources.append(free.pop())
+
+        if claimed_resources:
+            self._add_assigned_resources(claimed_resources)
+            return objects.ResourceList(objects=claimed_resources)
+
+    def _populate_assigned_resources(self, context, instance_by_uuid):
+        """Populate self.assigned_resources organized by resource class and
+        reource provider uuid, which is as following format:
+        {
+        $RP_UUID: {
+            $RESOURCE_CLASS: [objects.Resource, ...],
+            $RESOURCE_CLASS: [...]},
+        ...}
+        """
+        resources = []
+
+        # Get resources assigned to migrations
+        for mig in self.tracked_migrations.values():
+            mig_ctx = mig.instance.migration_context
+            if mig.source_compute == self.host and 'old_resources' in mig_ctx:
+                resources.extend(mig_ctx.old_resources or [])
+            if mig.dest_compute == self.host and 'new_resources' in mig_ctx:
+                resources.extend(mig_ctx.new_resources or [])
+
+        # Get resources assigned to instances
+        for uuid in self.tracked_instances:
+            resources.extend(instance_by_uuid[uuid].resources or [])
+
+        self.assigned_resources.clear()
+        self._add_assigned_resources(resources)
+
+    def _check_resources(self, context):
+        """Check if there are assigned resources not found in provider tree"""
+        notfound = set()
+        for rp_uuid in self.assigned_resources:
+            provider_data = self.provider_tree.data(rp_uuid)
+            for rc, assigned in self.assigned_resources[rp_uuid].items():
+                notfound |= (assigned - provider_data.resources[rc])
+
+        if not notfound:
+            return
+
+        # This only happens when assigned resources are removed
+        # from the configuration and the compute service is SIGHUP'd
+        # or restarted.
+        resources = [(res.identifier, res.resource_class) for res in notfound]
+        reason = _("The following resources are assigned to instances, "
+                   "but were not listed in the configuration: %s "
+                   "Please check if this will influence your instances, "
+                   "and restore your configuration if necessary") % resources
+        raise exception.AssignedResourceNotFound(reason=reason)
+
+    def _release_assigned_resources(self, resources):
+        """Remove resources from self.assigned_resources."""
+        if not resources:
+            return
+        for resource in resources:
+            rp_uuid = resource.provider_uuid
+            rc = resource.resource_class
+            try:
+                self.assigned_resources[rp_uuid][rc].remove(resource)
+            except KeyError:
+                LOG.warning("Release resource %(rc)s: %(id)s of provider "
+                            "%(rp_uuid)s, not tracked in "
+                            "ResourceTracker.assigned_resources.",
+                            {'rc': rc, 'id': resource.identifier,
+                             'rp_uuid': rp_uuid})
+
+    def _add_assigned_resources(self, resources):
+        """Add resources to self.assigned_resources"""
+        if not resources:
+            return
+        for resource in resources:
+            rp_uuid = resource.provider_uuid
+            rc = resource.resource_class
+            self.assigned_resources[rp_uuid][rc].add(resource)
 
     def _set_instance_host_and_node(self, instance, nodename):
         """Tag the instance as belonging to this host.  This should be done
@@ -490,6 +619,9 @@ class ResourceTracker(object):
             usage = self._get_usage_dict(
                     instance_type, instance, numa_topology=numa_topology)
             self._drop_pci_devices(instance, nodename, prefix)
+            resources = self._get_migration_context_resource(
+                'resources', instance, prefix=prefix)
+            self._release_assigned_resources(resources)
             self._update_usage(usage, nodename, sign=-1)
 
             ctxt = context.elevated()
@@ -785,7 +917,8 @@ class ResourceTracker(object):
             context, self.host, nodename,
             expected_attrs=['system_metadata',
                             'numa_topology',
-                            'flavor', 'migration_context'])
+                            'flavor', 'migration_context',
+                            'resources'])
 
         # Now calculate usage based on instance utilization:
         instance_by_uuid = self._update_usage_from_instances(
@@ -828,10 +961,18 @@ class ResourceTracker(object):
         # but it is. This should be changed in ComputeNode
         cn.metrics = jsonutils.dumps(metrics)
 
+        # Update assigned resources to self.assigned_resources
+        self._populate_assigned_resources(context, instance_by_uuid)
+
         # update the compute_node
         self._update(context, cn, startup=startup)
         LOG.debug('Compute_service record updated for %(host)s:%(node)s',
                   {'host': self.host, 'node': nodename})
+
+        # Check if there is any resource assigned but not found
+        # in provider tree
+        if startup:
+            self._check_resources(context)
 
     def _get_compute_node(self, context, nodename):
         """Returns compute node for the host and nodename."""
@@ -1061,6 +1202,8 @@ class ResourceTracker(object):
                     compute_node)
 
             prov_tree.update_inventory(nodename, inv_data)
+
+        self.provider_tree = prov_tree
 
         # Flush any changes. If we processed ReshapeNeeded above, allocs is not
         # None, and this will hit placement's POST /reshaper route.
@@ -1304,6 +1447,7 @@ class ResourceTracker(object):
 
         if is_removed_instance:
             self.tracked_instances.remove(uuid)
+            self._release_assigned_resources(instance.resources)
             sign = -1
 
         cn = self.compute_nodes[nodename]
