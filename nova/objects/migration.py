@@ -167,6 +167,12 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
                                               reason='already created')
         if 'uuid' not in self:
             self.uuid = uuidutils.generate_uuid()
+        # Record who is initiating the migration which is
+        # not necessarily the owner of the instance.
+        if 'user_id' not in self:
+            self.user_id = self._context.user_id
+        if 'project_id' not in self:
+            self.project_id = self._context.project_id
         updates = self.obj_get_changes()
         if 'migration_type' not in updates:
             raise exception.ObjectActionError(
