@@ -451,6 +451,38 @@ def _get_by_metadata_from_db(context, key=None, value=None):
     return query.all()
 
 
+@db_api.api_context_manager.reader
+def _get_non_matching_by_metadata_keys_from_db(context, ignored_keys,
+                                               key_prefix, value):
+    """Filter aggregates based on non matching metadata.
+
+    Find aggregates with at least one ${key_prefix}*[=${value}] metadata where
+    the metadata key are not in the ignored_keys list.
+
+    :return: Aggregates with any metadata entry:
+        - whose key starts with `key_prefix`; and
+        - whose value is `value` and
+        - whose key is *not* in the `ignored_keys` list.
+    """
+
+    if not key_prefix:
+        raise ValueError(_('key_prefix mandatory field.'))
+
+    query = context.session.query(api_models.Aggregate)
+    query = query.join("_metadata")
+    query = query.filter(api_models.AggregateMetadata.value == value)
+    query = query.filter(api_models.AggregateMetadata.key.like(
+        key_prefix + '%'))
+    if len(ignored_keys) > 0:
+        query = query.filter(~api_models.AggregateMetadata.key.in_(
+            ignored_keys))
+
+    query = query.options(contains_eager("_metadata"))
+    query = query.options(joinedload("_hosts"))
+
+    return query.all()
+
+
 @base.NovaObjectRegistry.register
 class AggregateList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
@@ -507,3 +539,41 @@ class AggregateList(base.ObjectListBase, base.NovaObject):
         db_aggregates = _get_by_metadata_from_db(context, key=key, value=value)
         return base.obj_make_list(context, cls(context), objects.Aggregate,
                                   db_aggregates)
+
+    @classmethod
+    def get_non_matching_by_metadata_keys(cls, context, ignored_keys,
+                                          key_prefix, value):
+        """Return aggregates that are not matching with metadata.
+
+        For example, we have aggregates with metadata as below:
+
+            'agg1' with trait:HW_CPU_X86_MMX="required"
+            'agg2' with trait:HW_CPU_X86_SGX="required"
+            'agg3' with trait:HW_CPU_X86_MMX="required"
+            'agg3' with trait:HW_CPU_X86_SGX="required"
+
+        Assume below request:
+
+            aggregate_obj.AggregateList.get_non_matching_by_metadata_keys(
+                self.context,
+                ['trait:HW_CPU_X86_MMX'],
+                'trait:',
+                value='required')
+
+        It will return 'agg2' and 'agg3' as aggregates that are not matching
+        with metadata.
+
+        :param context: The security context
+        :param ignored_keys: List of keys to match with the aggregate metadata
+                     keys that starts with key_prefix.
+        :param key_prefix: Only compares metadata keys that starts with the
+                           key_prefix
+        :param value: Value of metadata
+
+        :returns: List of aggregates that doesn't match metadata keys that
+                  starts with key_prefix with the supplied keys.
+        """
+        db_aggregates = _get_non_matching_by_metadata_keys_from_db(
+            context, ignored_keys, key_prefix, value)
+        return base.obj_make_list(context, objects.AggregateList(context),
+                                  objects.Aggregate, db_aggregates)
