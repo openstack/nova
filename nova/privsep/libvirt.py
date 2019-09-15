@@ -246,3 +246,10 @@ def unprivileged_umount(mnt_base):
     """Unmount volume"""
     umnt_cmd = ['umount', mnt_base]
     return processutils.execute(*umnt_cmd)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def get_pmem_namespaces():
+    ndctl_cmd = ['ndctl', 'list', '-X']
+    nss_info = processutils.execute(*ndctl_cmd)[0]
+    return nss_info

@@ -1150,7 +1150,9 @@ object_data = {
     'VirtualInterfaceList': '1.0-9750e2074437b3077e46359102779fc6',
     'VolumeUsage': '1.0-6c8190c46ce1469bb3286a1f21c2e475',
     'XenDeviceBus': '1.0-272a4f899b24e31e42b2b9a7ed7e9194',
-    'XenapiLiveMigrateData': '1.4-7dc9417e921b2953faa6751f18785f3f'
+    'XenapiLiveMigrateData': '1.4-7dc9417e921b2953faa6751f18785f3f',
+    # TODO(efried): re-alphabetize this
+    'LibvirtVPMEMDevice': '1.0-17ffaf47585199eeb9a2b83d6bde069f',
 }
 
 

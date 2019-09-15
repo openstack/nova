@@ -24386,3 +24386,108 @@ class TestLibvirtSEVSupported(TestLibvirtSEV):
         self.flags(num_memory_encrypted_guests=0, group='libvirt')
         self.driver._host._set_amd_sev_support()
         self.assertEqual(0, self.driver._get_memory_encrypted_slots())
+
+
+class LibvirtPMEMNamespaceTests(test.NoDBTestCase):
+
+    def setUp(self):
+        super(LibvirtPMEMNamespaceTests, self).setUp()
+        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.vpmem_0 = objects.LibvirtVPMEMDevice(
+                label='4GB',
+                name='ns_0', devpath='/dev/dax0.0',
+                size=4292870144, align=2097152)
+        self.vpmem_1 = objects.LibvirtVPMEMDevice(
+                label='SMALL',
+                name='ns_1', devpath='/dev/dax0.1',
+                size=17177772032, align=2097152)
+        self.vpmem_2 = objects.LibvirtVPMEMDevice(
+                label='SMALL',
+                name='ns_2', devpath='/dev/dax0.2',
+                size=17177772032, align=2097152)
+
+        self.pmem_namespaces = '''
+            [{"dev":"namespace0.0",
+            "mode":"devdax",
+            "map":"mem",
+            "size":4292870144,
+            "uuid":"24ffd5e4-2b39-4f28-88b3-d6dc1ec44863",
+            "daxregion":{"id": 0, "size": 4292870144,"align": 2097152,
+            "devices":[{"chardev":"dax0.0",
+            "size":4292870144}]},
+            "name":"ns_0",
+            "numa_node":0},
+            {"dev":"namespace0.1",
+            "mode":"devdax",
+            "map":"mem",
+            "size":17177772032,
+            "uuid":"ac64fe52-de38-465b-b32b-947a6773ac66",
+            "daxregion":{"id": 0, "size": 17177772032,"align": 2097152,
+            "devices":[{"chardev":"dax0.1",
+            "size":17177772032}]},
+            "name":"ns_1",
+            "numa_node":0},
+            {"dev":"namespace0.2",
+            "mode":"devdax",
+            "map":"mem",
+            "size":17177772032,
+            "uuid":"48189df5-2599-4001-8696-c260f7460381",
+            "daxregion":{"id": 0, "size": 17177772032,"align": 2097152,
+            "devices":[{"chardev":"dax0.2",
+            "size":17177772032}]},
+            "name":"ns_2",
+            "numa_node":0}]'''
+
+    @mock.patch('nova.virt.libvirt.host.Host.has_min_version',
+                new=mock.Mock(return_value=True))
+    @mock.patch('nova.privsep.libvirt.get_pmem_namespaces')
+    def test_discover_vpmems(self, mock_get):
+        mock_get.return_value = self.pmem_namespaces
+        vpmem_conf = ["4GB:ns_0", "SMALL:ns_1|ns_2"]
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        vpmems_by_name, vpmems_by_rc = drvr._discover_vpmems(
+                                            vpmem_conf=vpmem_conf)
+        expected_vpmems_by_name = {
+            'ns_0': self.vpmem_0,
+            'ns_1': self.vpmem_1,
+            'ns_2': self.vpmem_2}
+        expected_vpmems_by_rc = {
+            'CUSTOM_PMEM_NAMESPACE_4GB': [self.vpmem_0],
+            'CUSTOM_PMEM_NAMESPACE_SMALL': [self.vpmem_1, self.vpmem_2]
+        }
+        for name, vpmem in expected_vpmems_by_name.items():
+            self.assertEqual(vpmem.devpath, vpmems_by_name[name].devpath)
+            self.assertEqual(vpmem.size, vpmems_by_name[name].size)
+        for rc in expected_vpmems_by_rc.keys():
+            self.assertEqual(len(expected_vpmems_by_rc[rc]),
+                             len(vpmems_by_rc[rc]))
+
+    @mock.patch('nova.virt.libvirt.host.Host.has_min_version',
+                new=mock.Mock(return_value=True))
+    @mock.patch('nova.privsep.libvirt.get_pmem_namespaces')
+    def test_vpmems_not_on_host(self, mock_get):
+        mock_get.return_value = self.pmem_namespaces
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        vpmem_conf = ["4GB:ns_3"]
+        self.assertRaises(exception.PMEMNamespaceConfigInvalid,
+                          drvr._discover_vpmems, vpmem_conf)
+
+    @mock.patch('nova.virt.libvirt.host.Host.has_min_version',
+                new=mock.Mock(return_value=True))
+    @mock.patch('nova.privsep.libvirt.get_pmem_namespaces')
+    def test_vpmems_invalid_format(self, mock_get):
+        mock_get.return_value = self.pmem_namespaces
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        vpmem_conf = ["ns_0", "ns_1", "ns_2"]
+        self.assertRaises(exception.PMEMNamespaceConfigInvalid,
+                          drvr._discover_vpmems, vpmem_conf)
+
+    @mock.patch('nova.virt.libvirt.host.Host.has_min_version',
+                new=mock.Mock(return_value=True))
+    @mock.patch('nova.privsep.libvirt.get_pmem_namespaces')
+    def test_vpmems_duplicated_config(self, mock_get):
+        mock_get.return_value = self.pmem_namespaces
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        vpmem_conf = ["4GB:ns_0", "SMALL:ns_0"]
+        self.assertRaises(exception.PMEMNamespaceConfigInvalid,
+                          drvr._discover_vpmems, vpmem_conf)

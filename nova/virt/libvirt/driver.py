@@ -295,6 +295,10 @@ MIN_LIBVIRT_VIDEO_MODEL_VERSIONS = {
     fields.VideoModel.NONE: (4, 6, 0),
 }
 
+# Persistent Memory (PMEM/NVDIMM) Device Support
+MIN_LIBVIRT_PMEM_SUPPORT = (5, 0, 0)
+MIN_QEMU_PMEM_SUPPORT = (3, 1, 0)
+
 
 class LibvirtDriver(driver.ComputeDriver):
     def __init__(self, virtapi, read_only=False):
@@ -429,6 +433,92 @@ class LibvirtDriver(driver.ComputeDriver):
         # map the lower case CPU model name to normal CPU model name.
         self.cpu_models_mapping = {}
         self.cpu_model_flag_mapping = {}
+
+        self._vpmems_by_name, self._vpmems_by_rc = self._discover_vpmems()
+
+    def _discover_vpmems(self, vpmem_conf=None):
+        """Discover vpmems on host and configuration.
+
+        :param vpmem_conf: pmem namespaces configuration from CONF
+        :returns: a dict of vpmem keyed by name, and
+                  a dict of vpmem list keyed by resource class
+        :raises: exception.InvalidConfiguration if Libvirt or QEMU version
+                 does not meet requirement.
+        """
+        if not vpmem_conf:
+            return {}, {}
+
+        if not self._host.has_min_version(lv_ver=MIN_LIBVIRT_PMEM_SUPPORT,
+                                          hv_ver=MIN_QEMU_PMEM_SUPPORT):
+            raise exception.InvalidConfiguration(
+                _('Nova requires QEMU version %(qemu)s or greater '
+                  'and Libvirt version %(libvirt)s or greater '
+                  'for NVDIMM (Persistent Memory) support.') % {
+                'qemu': libvirt_utils.version_to_string(
+                    MIN_QEMU_PMEM_SUPPORT),
+                'libvirt': libvirt_utils.version_to_string(
+                    MIN_LIBVIRT_PMEM_SUPPORT)})
+
+        # vpmem keyed by name {name: objects.LibvirtVPMEMDevice,...}
+        vpmems_by_name = {}
+        # vpmem list keyed by resource class
+        # {'RC_0': [objects.LibvirtVPMEMDevice, ...], 'RC_1': [...]}
+        vpmems_by_rc = collections.defaultdict(list)
+
+        vpmems_host = self._get_vpmems_on_host()
+        for ns_conf in vpmem_conf:
+            try:
+                ns_label, ns_names = ns_conf.split(":", 1)
+            except ValueError:
+                reason = _("The configuration doesn't follow the format")
+                raise exception.PMEMNamespaceConfigInvalid(
+                        reason=reason)
+            ns_names = ns_names.split("|")
+            for ns_name in ns_names:
+                if ns_name not in vpmems_host:
+                    reason = _("The PMEM namespace %s isn't on host") % ns_name
+                    raise exception.PMEMNamespaceConfigInvalid(
+                            reason=reason)
+                if ns_name in vpmems_by_name:
+                    reason = (_("Duplicated PMEM namespace %s configured") %
+                                ns_name)
+                    raise exception.PMEMNamespaceConfigInvalid(
+                            reason=reason)
+                pmem_ns_updated = vpmems_host[ns_name]
+                pmem_ns_updated.label = ns_label
+                vpmems_by_name[ns_name] = pmem_ns_updated
+                rc = orc.normalize_name(
+                        "PMEM_NAMESPACE_%s" % ns_label)
+                vpmems_by_rc[rc].append(pmem_ns_updated)
+
+        return vpmems_by_name, vpmems_by_rc
+
+    def _get_vpmems_on_host(self):
+        """Get PMEM namespaces on host using ndctl utility."""
+        try:
+            output = nova.privsep.libvirt.get_pmem_namespaces()
+        except Exception as e:
+            reason = _("Get PMEM namespaces by ndctl utility, "
+                    "please ensure ndctl is installed: %s") % e
+            raise exception.GetPMEMNamespacesFailed(reason=reason)
+
+        if not output:
+            return {}
+        namespaces = jsonutils.loads(output)
+        vpmems_host = {}  # keyed by namespace name
+        for ns in namespaces:
+            # store namespace info parsed from ndctl utility return
+            if not ns.get('name'):
+                # The name is used to identify namespaces, it's optional
+                # config when creating namespace. If an namespace don't have
+                # name, it can not be used by Nova, we will skip it.
+                continue
+            vpmems_host[ns['name']] = objects.LibvirtVPMEMDevice(
+                name=ns['name'],
+                devpath= '/dev/' + ns['daxregion']['devices'][0]['chardev'],
+                size=ns['size'],
+                align=ns['daxregion']['align'])
+        return vpmems_host
 
     def _get_volume_drivers(self):
         driver_registry = dict()

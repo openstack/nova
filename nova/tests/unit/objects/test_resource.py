@@ -25,12 +25,28 @@ fake_resources = resource.ResourceList(objects=[
     resource.Resource(provider_uuid=uuids.rp, resource_class='CUSTOM_RESOURCE',
                       identifier='bar')])
 
+fake_vpmems = [
+    resource.LibvirtVPMEMDevice(
+            label='4GB', name='ns_0', devpath='/dev/dax0.0',
+            size=4292870144, align=2097152),
+    resource.LibvirtVPMEMDevice(
+            label='4GB', name='ns_1', devpath='/dev/dax0.0',
+            size=4292870144, align=2097152)]
+
 fake_instance_extras = {
     'resources': jsonutils.dumps(fake_resources.obj_to_primitive())
 }
 
 
 class TestResourceObject(test_objects._LocalTest):
+    def _create_resource(self, metadata=None):
+        fake_resource = resource.Resource(provider_uuid=uuids.rp,
+                                          resource_class='bar',
+                                          identifier='foo')
+        if metadata:
+            fake_resource.metadata = metadata
+        return fake_resource
+
     def _test_set_malformed_resource_class(self, rc):
         try:
             resource.Resource(provider_uuid=uuids.rp,
@@ -68,6 +84,22 @@ class TestResourceObject(test_objects._LocalTest):
 
     def test_not_equal_without_matadata(self):
         self.assertNotEqual(fake_resources[0], fake_resources[1])
+
+    def test_equal_with_vpmem_metadata(self):
+        resource_0 = self._create_resource(metadata=fake_vpmems[0])
+        resource_1 = self._create_resource(metadata=fake_vpmems[0])
+        self.assertEqual(resource_0, resource_1)
+
+    def test_not_equal_with_vpmem_metadata(self):
+        resource_0 = self._create_resource(metadata=fake_vpmems[0])
+        resource_1 = self._create_resource(metadata=fake_vpmems[1])
+        self.assertNotEqual(resource_0, resource_1)
+
+    def test_not_equal_with_and_without_metadata(self):
+        # one resource has metadata, another one has not metadata
+        resource_0 = self._create_resource(metadata=fake_vpmems[0])
+        resource_1 = self._create_resource()
+        self.assertNotEqual(resource_0, resource_1)
 
 
 class _TestResourceListObject(object):
