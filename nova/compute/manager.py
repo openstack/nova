@@ -2213,10 +2213,15 @@ class ComputeManager(manager.Manager):
             self._update_pci_request_spec_with_allocated_interface_name(
                 context, instance, request_group_resource_providers_mapping)
 
+        # TODO(Luyao) cut over to get_allocs_for_consumer
+        allocs = self.reportclient.get_allocations_for_consumer(
+                context, instance.uuid)
+
         try:
             scheduler_hints = self._get_scheduler_hints(filter_properties,
                                                         request_spec)
-            with self.rt.instance_claim(context, instance, node, limits):
+            with self.rt.instance_claim(context, instance, node, allocs,
+                                        limits):
                 # NOTE(russellb) It's important that this validation be done
                 # *after* the resource tracker instance claim, as that is where
                 # the host is set on the instance.
@@ -2240,7 +2245,6 @@ class ComputeManager(manager.Manager):
                             task_states.BLOCK_DEVICE_MAPPING)
                     block_device_info = resources['block_device_info']
                     network_info = resources['network_info']
-                    allocs = resources['allocations']
                     LOG.debug('Start spawning the instance on the hypervisor.',
                               instance=instance)
                     with timeutils.StopWatch() as timer:
@@ -2469,21 +2473,6 @@ class ComputeManager(manager.Manager):
             msg = _('Failure prepping block device.')
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=msg)
-
-        try:
-            resources['allocations'] = (
-                self.reportclient.get_allocations_for_consumer(context,
-                                                               instance.uuid))
-        except Exception:
-            LOG.exception('Failure retrieving placement allocations',
-                          instance=instance)
-            # Make sure the async call finishes
-            if network_info is not None:
-                network_info.wait(do_raise=False)
-            self.driver.failed_spawn_cleanup(instance)
-            msg = _('Failure retrieving placement allocations')
-            raise exception.BuildAbortException(instance_uuid=instance.uuid,
-                                                reason=msg)
 
         try:
             yield resources
@@ -3154,17 +3143,20 @@ class ComputeManager(manager.Manager):
             else:
                 scheduled_node = instance.node
 
+        allocs = self.reportclient.get_allocations_for_consumer(
+                    context, instance.uuid)
+
         with self._error_out_instance_on_exception(context, instance):
             try:
                 claim_ctxt = rebuild_claim(
-                    context, instance, scheduled_node,
+                    context, instance, scheduled_node, allocs,
                     limits=limits, image_meta=image_meta,
                     migration=migration)
                 self._do_rebuild_instance_with_claim(
                     claim_ctxt, context, instance, orig_image_ref,
                     image_meta, injected_files, new_pass, orig_sys_metadata,
                     bdms, evacuate, on_shared_storage, preserve_ephemeral,
-                    migration, request_spec)
+                    migration, request_spec, allocs)
             except (exception.ComputeResourcesUnavailable,
                     exception.RescheduledException) as e:
                 if isinstance(e, exception.ComputeResourcesUnavailable):
@@ -3239,7 +3231,7 @@ class ComputeManager(manager.Manager):
                              image_meta, injected_files, new_pass,
                              orig_sys_metadata, bdms, evacuate,
                              on_shared_storage, preserve_ephemeral,
-                             migration, request_spec):
+                             migration, request_spec, allocations):
         orig_vm_state = instance.vm_state
 
         if evacuate:
@@ -3334,9 +3326,6 @@ class ComputeManager(manager.Manager):
                                                                  instance)
         else:
             network_info = instance.get_network_info()
-
-        allocations = self.reportclient.get_allocations_for_consumer(
-            context, instance.uuid)
 
         if bdms is None:
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
@@ -4465,8 +4454,10 @@ class ComputeManager(manager.Manager):
                 context, instance, request_group_resource_providers_mapping)
 
         limits = filter_properties.get('limits', {})
+        allocs = self.reportclient.get_allocations_for_consumer(
+            context, instance.uuid)
         with self.rt.resize_claim(context, instance, instance_type, node,
-                                  migration, image_meta=image,
+                                  migration, allocs, image_meta=image,
                                   limits=limits) as claim:
             LOG.info('Migrating', instance=instance)
             # RPC cast to the source host to start the actual resize/migration.
@@ -5486,7 +5477,8 @@ class ComputeManager(manager.Manager):
                                                         self.host)
         network_info = self.network_api.get_instance_nw_info(context, instance)
         try:
-            with self.rt.instance_claim(context, instance, node, limits):
+            with self.rt.instance_claim(context, instance, node, allocations,
+                                        limits):
                 self.driver.spawn(context, instance, image_meta,
                                   injected_files=[],
                                   admin_password=None,

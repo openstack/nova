@@ -474,6 +474,15 @@ class BaseTestCase(test.NoDBTestCase):
                    reserved_host_disk_mb=0,
                    reserved_host_memory_mb=0,
                    reserved_host_cpus=0)
+        self.allocations = {
+            _COMPUTE_NODE_FIXTURES[0].uuid: {
+                "generation": 0,
+                "resources": {
+                    "VCPU": 1,
+                    "MEMORY_MB": 512
+                }
+            }
+        }
 
     def _setup_rt(self, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES):
         (self.rt, self.sched_client_mock, self.report_client_mock,
@@ -1906,7 +1915,7 @@ class TestInstanceClaim(BaseTestCase):
 
         with mock.patch.object(self.instance, 'save'):
             claim = self.rt.instance_claim(mock.sentinel.ctx, self.instance,
-                                           _NODENAME, None)
+                                           _NODENAME, self.allocations, None)
 
         self.assertEqual(self.rt.host, self.instance.host)
         self.assertEqual(self.rt.host, self.instance.launched_on)
@@ -1950,7 +1959,7 @@ class TestInstanceClaim(BaseTestCase):
         with mock.patch.object(self.rt, '_update') as update_mock:
             with mock.patch.object(self.instance, 'save'):
                 self.rt.instance_claim(self.ctx, self.instance, _NODENAME,
-                                       None)
+                                       self.allocations, None)
             cn = self.rt.compute_nodes[_NODENAME]
             update_mock.assert_called_once_with(self.elevated, cn)
             self.assertTrue(obj_base.obj_equal_prims(expected, cn))
@@ -1987,7 +1996,7 @@ class TestInstanceClaim(BaseTestCase):
         with mock.patch.object(self.rt, '_update') as update_mock:
             with mock.patch.object(self.instance, 'save'):
                 self.rt.instance_claim(self.ctx, self.instance, _NODENAME,
-                                       None)
+                                       self.allocations, None)
             cn = self.rt.compute_nodes[_NODENAME]
             update_mock.assert_called_once_with(self.elevated, cn)
             self.assertTrue(obj_base.obj_equal_prims(expected, cn))
@@ -2042,7 +2051,7 @@ class TestInstanceClaim(BaseTestCase):
         with mock.patch.object(self.rt, '_update') as update_mock:
             with mock.patch.object(self.instance, 'save'):
                 self.rt.instance_claim(self.ctx, self.instance, _NODENAME,
-                                       None)
+                                       self.allocations, None)
             cn = self.rt.compute_nodes[_NODENAME]
             update_mock.assert_called_once_with(self.elevated, cn)
             self.assertTrue(obj_base.obj_equal_prims(expected, cn))
@@ -2102,7 +2111,7 @@ class TestInstanceClaim(BaseTestCase):
         with mock.patch.object(self.rt, '_update') as update_mock:
             with mock.patch.object(self.instance, 'save'):
                 self.rt.instance_claim(self.ctx, self.instance, _NODENAME,
-                                       None)
+                                       self.allocations, None)
             cn = self.rt.compute_nodes[_NODENAME]
             update_mock.assert_called_once_with(self.elevated, cn)
             pci_stats_mock.assert_called_once_with([request])
@@ -2132,7 +2141,7 @@ class TestInstanceClaim(BaseTestCase):
                            return_value=self.instance)
         def _doit(mock_clone):
             with self.rt.instance_claim(self.ctx, self.instance, _NODENAME,
-                                        None):
+                                        self.allocations, None):
                 # Raise an exception. Just make sure below that the abort()
                 # method of the claim object was called (and the resulting
                 # resources reset to the pre-claimed amounts)
@@ -2165,7 +2174,7 @@ class TestInstanceClaim(BaseTestCase):
         @mock.patch.object(self.instance, 'save')
         def _claim(mock_save, mock_clone):
             return self.rt.instance_claim(self.ctx, self.instance, _NODENAME,
-                                          None)
+                                          self.allocations, None)
 
         cn = self.rt.compute_nodes[_NODENAME]
 
@@ -2215,7 +2224,7 @@ class TestInstanceClaim(BaseTestCase):
         with mock.patch.object(self.rt, '_update') as update_mock:
             with mock.patch.object(self.instance, 'save'):
                 self.rt.instance_claim(self.ctx, self.instance, _NODENAME,
-                                       limits)
+                                       self.allocations, limits)
             update_mock.assert_called_once_with(self.ctx.elevated(), cn)
             new_numa = cn.numa_topology
             new_numa = objects.NUMATopology.obj_from_db_obj(new_numa)
@@ -2304,7 +2313,7 @@ class TestResize(BaseTestCase):
             mock.patch('nova.objects.Instance.save'),
         ) as (create_mig_mock, ctxt_mock, inst_save_mock):
             claim = self.rt.resize_claim(ctx, instance, new_flavor, _NODENAME,
-                                         None)
+                                         None, self.allocations)
 
         create_mig_mock.assert_called_once_with(
                 ctx, instance, new_flavor, _NODENAME,
@@ -2374,7 +2383,8 @@ class TestResize(BaseTestCase):
 
         # Build instance
         with mock.patch.object(instance, 'save'):
-            self.rt.instance_claim(ctx, instance, _NODENAME, None)
+            self.rt.instance_claim(ctx, instance, _NODENAME,
+                                   self.allocations, None)
 
         expected = compute_update_usage(expected, old_flavor, sign=1)
         expected.running_vms = 1
@@ -2413,7 +2423,8 @@ class TestResize(BaseTestCase):
                        return_value=mig_context_obj),
             mock.patch('nova.objects.Instance.save'),
         ) as (create_mig_mock, ctxt_mock, inst_save_mock):
-            self.rt.resize_claim(ctx, instance, new_flavor, _NODENAME, None)
+            self.rt.resize_claim(ctx, instance, new_flavor, _NODENAME,
+                                 None, self.allocations)
 
         expected = compute_update_usage(expected, new_flavor, sign=1)
         self.assertTrue(obj_base.obj_equal_prims(
@@ -2543,7 +2554,8 @@ class TestResize(BaseTestCase):
                        return_value=mig_context_obj),
             mock.patch('nova.objects.Instance.save'),
         ) as (alloc_mock, create_mig_mock, ctxt_mock, inst_save_mock):
-            self.rt.resize_claim(ctx, instance, new_flavor, _NODENAME, None)
+            self.rt.resize_claim(ctx, instance, new_flavor, _NODENAME,
+                                 None, self.allocations)
 
         pci_claim_mock.assert_called_once_with(ctx, pci_req_mock.return_value,
                                                None)
@@ -2723,8 +2735,10 @@ class TestResize(BaseTestCase):
                        side_effect=[mig_context_obj1, mig_context_obj2]),
             mock.patch('nova.objects.Instance.save'),
         ) as (create_mig_mock, ctxt_mock, inst_save_mock):
-            self.rt.resize_claim(ctx, instance1, flavor1, _NODENAME, None)
-            self.rt.resize_claim(ctx, instance2, flavor2, _NODENAME, None)
+            self.rt.resize_claim(ctx, instance1, flavor1, _NODENAME,
+                                 None, self.allocations)
+            self.rt.resize_claim(ctx, instance2, flavor2, _NODENAME,
+                                 None, self.allocations)
         cn = self.rt.compute_nodes[_NODENAME]
         self.assertTrue(obj_base.obj_equal_prims(expected, cn))
         self.assertEqual(2, len(self.rt.tracked_migrations),
@@ -2814,7 +2828,7 @@ class TestRebuild(BaseTestCase):
             mock.patch('nova.objects.Migration.save'),
             mock.patch('nova.objects.Instance.save'),
         ) as (mig_save_mock, inst_save_mock):
-            self.rt.rebuild_claim(ctx, instance, _NODENAME,
+            self.rt.rebuild_claim(ctx, instance, _NODENAME, self.allocations,
                                   migration=migration)
 
         self.assertEqual(_HOSTNAME, migration.dest_compute)

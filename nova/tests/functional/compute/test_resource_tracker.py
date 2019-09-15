@@ -262,7 +262,7 @@ class IronicResourceTrackerTest(test_base.SchedulerReportClientTestBase):
         cn1_obj = self.COMPUTE_NODE_FIXTURES[uuids.cn1]
         cn1_nodename = cn1_obj.hypervisor_hostname
         inst = self.instances[uuids.instance1]
-        with self.rt.instance_claim(self.ctx, inst, cn1_nodename):
+        with self.rt.instance_claim(self.ctx, inst, cn1_nodename, {}):
             _assert_stats()
 
 
