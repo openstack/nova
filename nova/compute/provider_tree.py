@@ -41,7 +41,7 @@ _LOCK_NAME = 'provider-tree-lock'
 # doesn't make a moustache appear on my actual face.
 ProviderData = collections.namedtuple(
     'ProviderData', ['uuid', 'name', 'generation', 'parent_uuid', 'inventory',
-                     'traits', 'aggregates'])
+                     'traits', 'aggregates', 'resources'])
 
 
 class _Provider(object):
@@ -65,6 +65,9 @@ class _Provider(object):
         self.traits = set()
         # Set of aggregate UUIDs
         self.aggregates = set()
+        # dict of resource records, keyed by resource class
+        # the value is the set of objects.Resource
+        self.resources = {}
 
     @classmethod
     def from_dict(cls, pdict):
@@ -83,9 +86,10 @@ class _Provider(object):
         inventory = copy.deepcopy(self.inventory)
         traits = copy.copy(self.traits)
         aggregates = copy.copy(self.aggregates)
+        resources = copy.deepcopy(self.resources)
         return ProviderData(
             self.uuid, self.name, self.generation, self.parent_uuid,
-            inventory, traits, aggregates)
+            inventory, traits, aggregates, resources)
 
     def get_provider_uuids(self):
         """Returns a list, in top-down traversal order, of UUIDs of this
@@ -226,6 +230,19 @@ class _Provider(object):
                  absent.  Returns True if the aggregates parameter is empty.
         """
         return not bool(set(aggregates) - self.aggregates)
+
+    def have_resources_changed(self, new):
+        """Returns whether the resources have changed for the provider."""
+        return self.resources != new
+
+    def update_resources(self, resources):
+        """Update the stored resources for the provider. The method returns
+        whether the resources have changed.
+        """
+        if self.have_resources_changed(resources):
+            self.resources = copy.deepcopy(resources)
+            return True
+        return False
 
 
 class ProviderTree(object):
@@ -696,3 +713,17 @@ class ProviderTree(object):
             provider = self._find_with_lock(name_or_uuid)
             final_aggs = provider.aggregates - set(aggregates)
             provider.update_aggregates(final_aggs)
+
+    def update_resources(self, name_or_uuid, resources):
+        """Given a name or UUID of a provider and a dict of resources,
+        update the provider's resources.
+
+        :param name_or_uuid: The name or UUID of the provider whose resources
+                             are to be affected.
+        :param resources: A dict keyed by resource class, and the value is a
+                          set of objects.Resource instance.
+        :returns: True if the resources are updated else False
+        """
+        with self.lock:
+            provider = self._find_with_lock(name_or_uuid)
+            return provider.update_resources(resources)
