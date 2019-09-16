@@ -14,10 +14,7 @@ import time
 
 from oslo_utils.fixture import uuidsentinel as uuids
 
-from nova.scheduler.client import report
-
 import nova.conf
-from nova import context as nova_context
 from nova.scheduler import weights
 from nova import test
 from nova.tests import fixtures as nova_fixtures
@@ -73,9 +70,6 @@ class AggregateRequestFiltersTest(
         self._start_compute('host1')
         self._start_compute('host2')
 
-        self.context = nova_context.get_admin_context()
-        self.report_client = report.SchedulerReportClient()
-
         self.flavors = self.api.get_flavors()
 
         # Aggregate with only host1
@@ -120,15 +114,6 @@ class AggregateRequestFiltersTest(
         """
         agg = self.aggregates[agg]
         self.admin_api.add_host_to_aggregate(agg['id'], host)
-
-        host_uuid = self._get_provider_uuid_by_host(host)
-
-        # Make sure we have a view of the provider we're about to mess with
-        # FIXME(efried): This should be a thing we can do without internals
-        self.report_client._ensure_resource_provider(
-            self.context, host_uuid, name=host)
-        self.report_client.aggregate_add_host(self.context, agg['uuid'],
-                                              host_name=host)
 
     def _wait_for_state_change(self, server, from_status):
         for i in range(0, 50):
