@@ -124,6 +124,8 @@ class ResourceRequest(object):
 
         self._translate_memory_encryption(request_spec.flavor, image)
 
+        self._translate_vpmems_request(request_spec.flavor)
+
         self.strip_zeros()
 
     def _process_extra_specs(self, flavor):
@@ -178,6 +180,24 @@ class ResourceRequest(object):
         self._add_resource(None, orc.MEM_ENCRYPTION_CONTEXT, 1)
         LOG.debug("Added %s=1 to requested resources",
                   orc.MEM_ENCRYPTION_CONTEXT)
+
+    def _translate_vpmems_request(self, flavor):
+        """When the hw:pmem extra spec is present, require hosts which can
+        provide enough vpmem resources.
+        """
+        vpmem_labels = hw.get_vpmems(flavor)
+        if not vpmem_labels:
+            # No vpmems required
+            return
+        amount_by_rc = collections.defaultdict(int)
+        for vpmem_label in vpmem_labels:
+            resource_class = orc.normalize_name(
+                "PMEM_NAMESPACE_" + vpmem_label)
+            amount_by_rc[resource_class] += 1
+        for resource_class, amount in amount_by_rc.items():
+            self._add_resource(None, resource_class, amount)
+            LOG.debug("Added resource %s=%d to requested resources",
+                      resource_class, amount)
 
     @property
     def group_policy(self):
