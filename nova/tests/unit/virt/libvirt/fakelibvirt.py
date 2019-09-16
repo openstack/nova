@@ -1492,6 +1492,14 @@ class Connection(object):
 
         model_node = tree.find('./model')
         if model_node is not None:
+            # arch_node may not present, therefore query all cpu models.
+            if model_node.text not in self.getCPUModelNames('x86_64') and \
+                model_node.text not in self.getCPUModelNames('ppc64'):
+                raise make_libvirtError(
+                    libvirtError,
+                    "internal error: Unknown CPU model %s" % model_node.text,
+                    error_code = VIR_ERR_INTERNAL_ERROR,
+                    error_domain=VIR_FROM_QEMU)
             if model_node.text != self.host_info.cpu_model:
                 return VIR_CPU_COMPARE_INCOMPATIBLE
 

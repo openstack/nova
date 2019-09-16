@@ -787,7 +787,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # Use guest CPU model to check the compatibility between guest CPU and
         # configured extra_flags
         cpu = vconfig.LibvirtConfigGuestCPU()
-        cpu.model = self._host.get_capabilities().host.cpu.arch
+        cpu.model = self._host.get_capabilities().host.cpu.model
         for flag in set(x.lower() for x in CONF.libvirt.cpu_model_extra_flags):
             cpu.add_feature(vconfig.LibvirtConfigCPUFeature(flag))
             try:

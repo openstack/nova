@@ -1326,6 +1326,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertRaises(exception.InvalidCPUInfo,
                           drvr.init_host, "dummyhost")
 
+    def test__check_cpu_compatibility_with_flag(self):
+        self.flags(cpu_mode="custom",
+                   cpu_models=["Penryn"],
+                   cpu_model_extra_flags = ["aes"],
+                   group="libvirt")
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr.init_host("dummyhost")
+
     @mock.patch('nova.virt.libvirt.host.libvirt.Connection.compareCPU')
     def test__check_cpu_compatibility_advance_flag(self, mocked_compare):
         mocked_compare.side_effect = (2, 0)
