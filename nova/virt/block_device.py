@@ -276,7 +276,9 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
     _proxy_as_attr_inherited = set(['volume_size', 'volume_id', 'volume_type'])
     _update_on_save = {'disk_bus': None,
                        'device_name': 'mount_device',
-                       'device_type': None}
+                       'device_type': None,
+                       # needed for boot from volume for blank/image/snapshot
+                       'attachment_id': None}
 
     def _transform(self):
         if (not self._bdm_obj.source_type == self._valid_source or
@@ -356,6 +358,21 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
 
     def _create_volume(self, context, instance, volume_api, size,
                        wait_func=None, **create_kwargs):
+        """Create a volume and attachment record.
+
+        :param context: nova auth RequestContext
+        :param instance: Instance object to which the created volume will be
+            attached.
+        :param volume_api: nova.volume.cinder.API instance
+        :param size: The size of the volume to create in GiB.
+        :param wait_func: Optional callback function to wait for the volume to
+            reach some status before continuing with a signature of::
+
+                wait_func(context, volume_id)
+        :param create_kwargs: Additional optional parameters used to create the
+            volume. See nova.volume.cinder.API.create for keys.
+        :return: A two-item tuple of volume ID and attachment ID.
+        """
         av_zone = _get_volume_create_az_value(instance)
         name = create_kwargs.pop('name', '')
         description = create_kwargs.pop('description', '')
@@ -366,7 +383,15 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
         if wait_func:
             self._call_wait_func(context, wait_func, volume_api, vol['id'])
 
-        return vol
+        # Unconditionally create an attachment record for the volume so the
+        # attach/detach flows use the "new style" introduced in Queens. Note
+        # that nova required the Cinder Queens level APIs (3.44+) starting in
+        # Train.
+        attachment_id = (
+            volume_api.attachment_create(
+                context, vol['id'], instance.uuid)['id'])
+
+        return vol['id'], attachment_id
 
     def _do_detach(self, context, instance, volume_api, virt_driver,
                    attachment_id=None, destroy_bdm=False):
@@ -735,14 +760,9 @@ class DriverVolSnapshotBlockDevice(DriverVolumeBlockDevice):
         if not self.volume_id:
             snapshot = volume_api.get_snapshot(context,
                                                self.snapshot_id)
-            vol = self._create_volume(
+            self.volume_id, self.attachment_id = self._create_volume(
                 context, instance, volume_api, self.volume_size,
                 wait_func=wait_func, snapshot=snapshot)
-
-            self.volume_id = vol['id']
-
-            # TODO(mriedem): Create an attachment to reserve the volume and
-            # make us go down the new-style attach flow.
 
         # Call the volume attach now
         super(DriverVolSnapshotBlockDevice, self).attach(
@@ -757,14 +777,9 @@ class DriverVolImageBlockDevice(DriverVolumeBlockDevice):
     def attach(self, context, instance, volume_api,
                virt_driver, wait_func=None):
         if not self.volume_id:
-            vol = self._create_volume(
+            self.volume_id, self.attachment_id = self._create_volume(
                 context, instance, volume_api, self.volume_size,
                 wait_func=wait_func, image_id=self.image_id)
-
-            self.volume_id = vol['id']
-
-            # TODO(mriedem): Create an attachment to reserve the volume and
-            # make us go down the new-style attach flow.
 
         super(DriverVolImageBlockDevice, self).attach(
             context, instance, volume_api, virt_driver)
@@ -779,14 +794,9 @@ class DriverVolBlankBlockDevice(DriverVolumeBlockDevice):
                virt_driver, wait_func=None):
         if not self.volume_id:
             vol_name = instance.uuid + '-blank-vol'
-            vol = self._create_volume(
+            self.volume_id, self.attachment_id = self._create_volume(
                 context, instance, volume_api, self.volume_size,
                 wait_func=wait_func, name=vol_name)
-
-            self.volume_id = vol['id']
-
-            # TODO(mriedem): Create an attachment to reserve the volume and
-            # make us go down the new-style attach flow.
 
         super(DriverVolBlankBlockDevice, self).attach(
             context, instance, volume_api, virt_driver)
