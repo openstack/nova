@@ -28,6 +28,7 @@ the other libvirt related classes
 """
 
 from collections import defaultdict
+import inspect
 import operator
 import os
 import socket
@@ -110,11 +111,38 @@ class Host(object):
         self._lifecycle_delay = 15
 
         self._initialized = False
+        self._libvirt_proxy_classes = self._get_libvirt_proxy_classes(libvirt)
+        self._libvirt_proxy = self._wrap_libvirt_proxy(libvirt)
 
         # AMD SEV is conditional on support in the hardware, kernel,
         # qemu, and libvirt.  This is determined on demand and
         # memoized by the supports_amd_sev property below.
         self._supports_amd_sev = None
+
+    @staticmethod
+    def _get_libvirt_proxy_classes(libvirt_module):
+        """Return a tuple for tpool.Proxy's autowrap argument containing all
+        classes defined by the libvirt module except libvirtError.
+        """
+
+        # Get a list of (name, class) tuples of libvirt classes
+        classes = inspect.getmembers(libvirt_module, inspect.isclass)
+
+        # Return a list of just the classes, filtering out libvirtError because
+        # we don't need to proxy that
+        return tuple([cls[1] for cls in classes if cls[0] != 'libvirtError'])
+
+    def _wrap_libvirt_proxy(self, obj):
+        """Return an object wrapped in a tpool.Proxy using autowrap appropriate
+        for the libvirt module.
+        """
+
+        # libvirt is not pure python, so eventlet monkey patching doesn't work
+        # on it. Consequently long-running libvirt calls will not yield to
+        # eventlet's event loop, starving all other greenthreads until
+        # completion. eventlet's tpool.Proxy handles this situation for us by
+        # executing proxied calls in a native thread.
+        return tpool.Proxy(obj, autowrap=self._libvirt_proxy_classes)
 
     def _native_thread(self):
         """Receives async events coming in from libvirtd.
@@ -224,8 +252,7 @@ class Host(object):
             _("Can not handle authentication request for %d credentials")
             % len(creds))
 
-    @staticmethod
-    def _connect(uri, read_only):
+    def _connect(self, uri, read_only):
         auth = [[libvirt.VIR_CRED_AUTHNAME,
                  libvirt.VIR_CRED_ECHOPROMPT,
                  libvirt.VIR_CRED_REALM,
@@ -238,12 +265,7 @@ class Host(object):
         flags = 0
         if read_only:
             flags = libvirt.VIR_CONNECT_RO
-        # tpool.proxy_call creates a native thread. Due to limitations
-        # with eventlet locking we cannot use the logging API inside
-        # the called function.
-        return tpool.proxy_call(
-            (libvirt.virDomain, libvirt.virConnect),
-            libvirt.openAuth, uri, auth, flags)
+        return self._libvirt_proxy.openAuth(uri, auth, flags)
 
     def _queue_event(self, event):
         """Puts an event on the queue for dispatch.
@@ -607,7 +629,12 @@ class Host(object):
         flags = libvirt.VIR_CONNECT_LIST_DOMAINS_ACTIVE
         if not only_running:
             flags = flags | libvirt.VIR_CONNECT_LIST_DOMAINS_INACTIVE
-        alldoms = self.get_connection().listAllDomains(flags)
+
+        # listAllDomains() returns <list of virDomain>, not <virDomain>, so
+        # tpool.Proxy's autowrap won't catch it. We need to wrap the
+        # contents of the list we return.
+        alldoms = (self._wrap_libvirt_proxy(dom)
+                   for dom in self.get_connection().listAllDomains(flags))
 
         doms = []
         for dom in alldoms:

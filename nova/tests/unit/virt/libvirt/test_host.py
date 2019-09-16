@@ -18,6 +18,7 @@ import os
 
 import eventlet
 from eventlet import greenthread
+from eventlet import tpool
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
@@ -1227,3 +1228,56 @@ class TestLibvirtSEVSupported(TestLibvirtSEV):
                        new=vc._domain_capability_features_with_SEV)
     def test_supported_with_feature(self, fake_exists):
         self.assertTrue(self.host.supports_amd_sev)
+
+
+class LibvirtTpoolProxyTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super(LibvirtTpoolProxyTestCase, self).setUp()
+
+        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.host = host.Host("qemu:///system")
+
+        def _stub_xml(uuid):
+            return ("<domain>"
+                    "  <uuid>" + uuid + "</uuid>"
+                    "  <name>" + uuid + "</name>"
+                    "</domain>")
+
+        self.conn = self.host.get_connection()
+        self.conn.defineXML(_stub_xml(uuids.vm1)).create()
+        self.conn.defineXML(_stub_xml(uuids.vm2)).create()
+
+    def test_get_libvirt_proxy_classes(self):
+        proxy_classes = host.Host._get_libvirt_proxy_classes(host.libvirt)
+
+        # Assert the classes we're using currently
+        # NOTE(mdbooth): We're obviously asserting the wrong classes here
+        # because we're explicitly asserting the faked versions. This is a
+        # concession to avoid a test dependency on libvirt.
+        self.assertIn(fakelibvirt.virDomain, proxy_classes)
+        self.assertIn(fakelibvirt.virConnect, proxy_classes)
+        self.assertIn(fakelibvirt.virNodeDevice, proxy_classes)
+        self.assertIn(fakelibvirt.virSecret, proxy_classes)
+        self.assertIn(fakelibvirt.virNWFilter, proxy_classes)
+
+        # Assert that we filtered out libvirtError
+        self.assertNotIn(fakelibvirt.libvirtError, proxy_classes)
+
+    def test_tpool_get_connection(self):
+        # Test that Host.get_connection() returns a tpool.Proxy
+        self.assertIsInstance(self.conn, tpool.Proxy)
+
+    def test_tpool_instance_lookup(self):
+        # Test that domains returns by our libvirt connection are also proxied
+        dom = self.conn.lookupByUUIDString(uuids.vm1)
+        self.assertIsInstance(dom, tpool.Proxy)
+
+    def test_tpool_list_all_connections(self):
+        # Test that Host.list_all_connections() returns a list of proxied
+        # virDomain objects
+
+        domains = self.host.list_instance_domains()
+        self.assertEqual(2, len(domains))
+        for domain in domains:
+            self.assertIsInstance(domain, tpool.Proxy)
+            self.assertIn(domain.UUIDString(), (uuids.vm1, uuids.vm2))
