@@ -24,6 +24,7 @@ inline callbacks.
 import nova.monkey_patch  # noqa
 
 import abc
+import collections
 import copy
 import datetime
 import inspect
@@ -212,6 +213,9 @@ class TestCase(testtools.TestCase):
         self.useFixture(nova_fixtures.Timeout(
             os.environ.get('OS_TEST_TIMEOUT', 0),
             self.TIMEOUT_SCALING_FACTOR))
+
+        # How many of which service we've started. {$service-name: $count}
+        self._service_fixture_count = collections.defaultdict(int)
 
         self.useFixture(nova_fixtures.OpenStackSDKFixture())
 
@@ -434,6 +438,10 @@ class TestCase(testtools.TestCase):
             CONF.set_override(k, v, group)
 
     def start_service(self, name, host=None, **kwargs):
+        # Disallow starting multiple scheduler services
+        if name == 'scheduler' and self._service_fixture_count[name]:
+            raise TestingException("Duplicate start_service(%s)!" % name)
+
         cell = None
         # if the host is None then the CONF.host remains defaulted to
         # 'fake-mini' (originally done in ConfFixture)
@@ -458,6 +466,19 @@ class TestCase(testtools.TestCase):
                 self.host_mappings[hm.host] = hm
         svc = self.useFixture(
             nova_fixtures.ServiceFixture(name, host, cell=cell, **kwargs))
+
+        # Keep track of how many instances of this service are running.
+        self._service_fixture_count[name] += 1
+        real_stop = svc.service.stop
+
+        # Make sure stopping the service decrements the active count, so that
+        # start,stop,start doesn't trigger the "Duplicate start_service"
+        # exception.
+        def patch_stop(*a, **k):
+            self._service_fixture_count[name] -= 1
+            return real_stop(*a, **k)
+        self.useFixture(fixtures.MockPatchObject(
+            svc.service, 'stop', patch_stop))
 
         return svc.service
 
