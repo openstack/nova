@@ -1,0 +1,46 @@
+---
+features:
+  - |
+    With the libvirt driver, live migration now works correctly for instances
+    that have a NUMA topology. Previously, the instance was naively moved to
+    the destination host, without updating any of the underlying NUMA guest to
+    host mappings or the resource usage. With the new NUMA-aware live migration
+    feature, if the instance cannot fit on the destination the live migration
+    will be attempted on an alternate destination if the request is
+    setup to have alternates. If the instance can fit on the destination, the
+    NUMA guest to host mappings will be re-calculated to reflect its new
+    host, and its resource usage updated.
+upgrade:
+  - |
+    For the libvirt driver, the NUMA-aware live migration feature requires the
+    conductor, source compute, and destination compute to be upgraded to Train.
+    It also requires the conductor and source compute to be able to send RPC
+    5.3 - that is, their ``[upgrade_levels]/compute`` configuration option must
+    not be set to less than 5.3 or a release older than "train".
+
+    In other words, NUMA-aware live migration with the libvirt driver is not
+    supported until:
+
+    * All compute and conductor services are upgraded to Train code.
+    * The ``[upgrade_levels]/compute`` RPC API pin is removed (or set to
+      "auto") and services are restarted.
+
+    If any of these requirements are not met, live migration of instances with
+    a NUMA topology with the libvirt driver will revert to the legacy naive
+    behavior, in which the instance was simply moved over without updating its
+    NUMA guest to host mappings or its resource usage.
+
+    .. note:: The legacy naive behavior is dependent on the value of the
+              ``[workarounds]/enable_numa_live_migration`` option. Refer to the
+              Deprecations sections for more details.
+deprecations:
+  - |
+    With the introduction of the NUMA-aware live migration feature for the
+    libvirt driver, ``[workarounds]/enable_numa_live_migration`` is
+    deprecated. Once a cell has been fully upgraded to Train, its value is
+    ignored.
+
+    .. note:: Even in a cell fully upgraded to Train, RPC pinning via
+              ``[upgrade_levels]/compute`` can cause live migration of
+              instances with a NUMA topology to revert to the legacy naive
+              behavior. For more details refer to the Upgrade section.

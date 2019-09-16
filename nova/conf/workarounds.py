@@ -157,14 +157,25 @@ Related options:
     cfg.BoolOpt(
         'enable_numa_live_migration',
         default=False,
+        deprecated_for_removal=True,
+        deprecated_since='20.0.0',
+        deprecated_reason="""This option was added to mitigate known issues
+when live migrating instances with a NUMA topology with the libvirt driver.
+Those issues are resolved in Train. Clouds using the libvirt driver and fully
+upgraded to Train support NUMA-aware live migration. This option will be
+removed in a future release.
+""",
         help="""
 Enable live migration of instances with NUMA topologies.
 
-Live migration of instances with NUMA topologies is disabled by default
-when using the libvirt driver. This includes live migration of instances with
-CPU pinning or hugepages. CPU pinning and huge page information for such
-instances is not currently re-calculated, as noted in `bug #1289064`_.  This
-means that if instances were already present on the destination host, the
+Live migration of instances with NUMA topologies when using the libvirt driver
+is only supported in deployments that have been fully upgraded to Train. In
+previous versions, or in mixed Stein/Train deployments with a rolling upgrade
+in progress, live migration of instances with NUMA topologies is disabled by
+default when using the libvirt driver. This includes live migration of
+instances with CPU pinning or hugepages. CPU pinning and huge page information
+for such instances is not currently re-calculated, as noted in `bug #1289064`_.
+This means that if instances were already present on the destination host, the
 migrated instance could be placed on the same dedicated cores as these
 instances or use hugepages allocated for another instance. Alternately, if the
 host platforms were not homogeneous, the instance could be assigned to
