@@ -949,8 +949,7 @@ class ServersController(wsgi.Controller):
             if source_service.version < MIN_COMPUTE_MOVE_BANDWIDTH:
                 msg = _("The resize action on a server with ports having "
                         "resource requests, like a port with a QoS "
-                        "minimum bandwidth policy, is not yet supported "
-                        "on the source compute")
+                        "minimum bandwidth policy, is not yet supported.")
                 raise exc.HTTPConflict(explanation=msg)
 
         try:
