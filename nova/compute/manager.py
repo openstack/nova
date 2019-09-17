@@ -7136,6 +7136,58 @@ class ComputeManager(manager.Manager):
 
         return (do_cleanup, destroy_disks)
 
+    def _post_live_migration_remove_source_vol_connections(
+            self, context, instance, source_bdms):
+        """Disconnect volume connections from the source host during
+        _post_live_migration.
+
+        :param context: nova auth RequestContext
+        :param instance: Instance object being live migrated
+        :param source_bdms: BlockDeviceMappingList representing the attached
+            volumes with connection_info set for the source host
+        """
+        # Detaching volumes.
+        connector = self.driver.get_volume_connector(instance)
+        for bdm in source_bdms:
+            if bdm.is_volume:
+                # Detaching volumes is a call to an external API that can fail.
+                # If it does, we need to handle it gracefully so that the call
+                # to post_live_migration_at_destination - where we set instance
+                # host and task state - still happens. We need to rethink the
+                # current approach of setting instance host and task state
+                # AFTER a whole bunch of things that could fail in unhandled
+                # ways, but that is left as a TODO(artom).
+                try:
+                    if bdm.attachment_id is None:
+                        # Prior to cinder v3.44:
+                        # We don't want to actually mark the volume detached,
+                        # or delete the bdm, just remove the connection from
+                        # this host.
+                        #
+                        # remove the volume connection without detaching from
+                        # hypervisor because the instance is not running
+                        # anymore on the current host
+                        self.volume_api.terminate_connection(context,
+                                                             bdm.volume_id,
+                                                             connector)
+                    else:
+                        # cinder v3.44 api flow - delete the old attachment
+                        # for the source host
+                        self.volume_api.attachment_delete(context,
+                                                          bdm.attachment_id)
+
+                except Exception as e:
+                    if bdm.attachment_id is None:
+                        LOG.error('Connection for volume %s not terminated on '
+                                  'source host %s during post_live_migration: '
+                                  '%s', bdm.volume_id, self.host,
+                                  six.text_type(e), instance=instance)
+                    else:
+                        LOG.error('Volume attachment %s not deleted on source '
+                                  'host %s during post_live_migration: %s',
+                                  bdm.attachment_id, self.host,
+                                  six.text_type(e), instance=instance)
+
     @wrap_exception()
     @wrap_instance_fault
     def _post_live_migration(self, ctxt, instance, dest,
@@ -7167,47 +7219,9 @@ class ComputeManager(manager.Manager):
         self.driver.post_live_migration(ctxt, instance, block_device_info,
                                         migrate_data)
 
-        # Detaching volumes.
-        connector = self.driver.get_volume_connector(instance)
-        for bdm in source_bdms:
-            if bdm.is_volume:
-                # Detaching volumes is a call to an external API that can fail.
-                # If it does, we need to handle it gracefully so that the call
-                # to post_live_migration_at_destination - where we set instance
-                # host and task state - still happens. We need to rethink the
-                # current approach of setting instance host and task state
-                # AFTER a whole bunch of things that could fail in unhandled
-                # ways, but that is left as a TODO(artom).
-                try:
-                    if bdm.attachment_id is None:
-                        # Prior to cinder v3.44:
-                        # We don't want to actually mark the volume detached,
-                        # or delete the bdm, just remove the connection from
-                        # this host.
-                        #
-                        # remove the volume connection without detaching from
-                        # hypervisor because the instance is not running
-                        # anymore on the current host
-                        self.volume_api.terminate_connection(ctxt,
-                                                             bdm.volume_id,
-                                                             connector)
-                    else:
-                        # cinder v3.44 api flow - delete the old attachment
-                        # for the source host
-                        self.volume_api.attachment_delete(ctxt,
-                                                          bdm.attachment_id)
-
-                except Exception as e:
-                    if bdm.attachment_id is None:
-                        LOG.error('Connection for volume %s not terminated on '
-                                  'source host %s during post_live_migration: '
-                                   '%s', bdm.volume_id, self.host,
-                                   six.text_type(e), instance=instance)
-                    else:
-                        LOG.error('Volume attachment %s not deleted on source '
-                                  'host %s during post_live_migration: %s',
-                                  bdm.attachment_id, self.host,
-                                  six.text_type(e), instance=instance)
+        # Disconnect volumes from this (the source) host.
+        self._post_live_migration_remove_source_vol_connections(
+            ctxt, instance, source_bdms)
 
         # Releasing vlan.
         # (not necessary in current implementation?)

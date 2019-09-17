@@ -8907,50 +8907,17 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
              'volume_id': volume_id, 'device_name': '/dev/vdb',
              'instance_uuid': instance.uuid})
         vol_bdm.attachment_id = uuids.attachment
-        migrate_data = migrate_data_obj.LiveMigrateData()
-        migrate_data.migration = objects.Migration(uuid=uuids.migration,
-                                                   dest_node=instance.node,
-                                                   source_node='src')
         image_bdm.attachment_id = uuids.attachment3
 
-        @mock.patch('nova.compute.utils.notify_about_instance_action')
-        @mock.patch('nova.objects.ConsoleAuthToken.'
-                    'clean_console_auths_for_instance')
-        @mock.patch.object(migrate_data.migration, 'save',
-                           new=lambda: None)
-        @mock.patch.object(self.compute.reportclient,
-                           'get_allocations_for_consumer_by_provider')
-        @mock.patch.object(vol_bdm, 'save')
-        @mock.patch.object(self.compute, 'update_available_resource')
         @mock.patch.object(self.compute.volume_api, 'attachment_delete')
-        @mock.patch.object(self.compute, '_get_instance_block_device_info')
-        @mock.patch.object(self.compute, 'compute_rpcapi')
-        @mock.patch.object(self.compute, 'driver')
-        @mock.patch.object(self.compute, '_notify_about_instance_usage')
-        @mock.patch.object(self.compute, 'network_api')
-        def _test(mock_net_api, mock_notify, mock_driver,
-                  mock_rpc, mock_get_bdm_info, mock_attach_delete,
-                  mock_update_resource, mock_bdm_save, mock_ga,
-                  mock_clean, mock_notify_action):
-            self._mock_rt()
-
+        def _test(mock_attach_delete):
             bdms = objects.BlockDeviceMappingList(objects=[vol_bdm, image_bdm])
 
-            self.compute._post_live_migration(self.context,
-                                              instance,
-                                              dest_host,
-                                              migrate_data=migrate_data,
-                                              source_bdms=bdms)
+            self.compute._post_live_migration_remove_source_vol_connections(
+                self.context, instance, bdms)
 
             mock_attach_delete.assert_called_once_with(
                 self.context, uuids.attachment)
-            mock_clean.assert_called_once_with(self.context, instance.uuid)
-            mock_notify_action.assert_has_calls([
-                mock.call(self.context, instance, 'fake-mini',
-                          action='live_migration_post', phase='start'),
-                mock.call(self.context, instance, 'fake-mini',
-                          action='live_migration_post', phase='end')])
-            self.assertEqual(2, mock_notify_action.call_count)
 
         _test()
 
