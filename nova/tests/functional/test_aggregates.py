@@ -66,29 +66,8 @@ class AggregateRequestFiltersTest(
     compute_driver = 'fake.MediumFakeDriver'
 
     def setUp(self):
-        self.flags(compute_driver=self.compute_driver)
         super(AggregateRequestFiltersTest, self).setUp()
 
-        self.useFixture(policy_fixture.RealPolicyFixture())
-        self.useFixture(nova_fixtures.NeutronFixture(self))
-        self.useFixture(nova_fixtures.AllServicesCurrent())
-
-        placement = self.useFixture(func_fixtures.PlacementFixture())
-        self.placement_api = placement.api
-        api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
-            api_version='v2.1'))
-
-        self.admin_api = api_fixture.admin_api
-        self.admin_api.microversion = self.microversion
-        self.api = self.admin_api
-
-        # the image fake backend needed for image discovery
-        nova.tests.unit.image.fake.stub_out_image_service(self)
-
-        self.start_service('conductor')
-        self.scheduler_service = self.start_service('scheduler')
-
-        self.computes = {}
         self.aggregates = {}
 
         self._start_compute('host1')
