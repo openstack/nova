@@ -903,8 +903,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.volume_api.get_snapshot.assert_called_once_with(
             self.context, 'fake-snapshot-id-1')
         self.volume_api.create.assert_called_once_with(
-            self.context, 3, '', '', snapshot, availability_zone=None,
-            volume_type=None)
+            self.context, 3, '', '', availability_zone=None,
+            snapshot=snapshot, volume_type=None)
         wait_func.assert_called_once_with(self.context, 'fake-volume-id-2')
 
     def test_snapshot_attach_no_volume_cinder_cross_az_attach_false(self):
@@ -936,8 +936,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.volume_api.get_snapshot.assert_called_once_with(
             self.context, 'fake-snapshot-id-1')
         self.volume_api.create.assert_called_once_with(
-            self.context, 3, '', '', snapshot, availability_zone='test-az',
-            volume_type=None)
+            self.context, 3, '', '', availability_zone='test-az',
+            snapshot=snapshot, volume_type=None)
         wait_func.assert_called_once_with(self.context, 'fake-volume-id-2')
 
     def test_snapshot_attach_fail_volume(self):
@@ -976,8 +976,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
             vol_get_snap.assert_called_once_with(
                 self.context, 'fake-snapshot-id-1')
             vol_create.assert_called_once_with(
-                self.context, 3, '', '', snapshot, availability_zone=None,
-                volume_type=None)
+                self.context, 3, '', '', availability_zone=None,
+                snapshot=snapshot, volume_type=None)
             vol_delete.assert_called_once_with(self.context, volume['id'])
 
     def test_snapshot_attach_volume(self):
@@ -1486,8 +1486,9 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                             self.virt_driver)
 
             vol_create.assert_called_once_with(
-                self.context, test_bdm.volume_size, '', '', snapshot,
-                volume_type=expected_volume_type, availability_zone='test-az')
+                self.context, test_bdm.volume_size, '', '',
+                availability_zone='test-az', snapshot=snapshot,
+                volume_type=expected_volume_type)
             vol_attach.assert_called_once_with(
                 self.context, instance, self.volume_api, self.virt_driver)
             self.assertEqual('fake-volume-id-2', test_bdm.volume_id)
