@@ -10,9 +10,13 @@ End user guide
 
    launch-instances
    metadata
+   manage-ip-addresses
    certificate-validation
    resize
    reboot
+   availability-zones
+   block-device-mapping
+   /reference/api-microversion-history
 
 .. todo:: The rest of this document should probably move to the admin guide.
 

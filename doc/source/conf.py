@@ -130,7 +130,14 @@ latex_documents = [
 ]
 
 # Allow deeper levels of nesting for \begin...\end stanzas
-latex_elements = {'maxlistdepth': 10}
+latex_elements = {
+    'maxlistdepth': 10,
+    'extraclassoptions': 'openany,oneside',
+    'preamble': r'''
+\setcounter{tocdepth}{3}
+\setcounter{secnumdepth}{3}
+''',
+}
 
 # Disable use of xindy since that's another binary dependency that's not
 # available on all platforms

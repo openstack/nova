@@ -22,6 +22,26 @@ Configuration
    * :doc:`Sample Config File <sample-config>`: A sample config
      file with inline documentation.
 
+.. # NOTE(mriedem): This is the section where we hide things that we don't
+   # actually want in the table of contents but sphinx build would fail if
+   # they aren't in the toctree somewhere.
+.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+   # keep the document structure in the PDF doc.
+.. toctree::
+   :hidden:
+
+   config
+
+.. # NOTE(amotoki): Sample files are only available in HTML document.
+   # Inline sample files with literalinclude hit LaTeX processing error
+   # like TeX capacity exceeded and direct links are discouraged in PDF doc.
+.. only:: html
+
+   .. toctree::
+      :hidden:
+
+      sample-config
+
 Policy
 ------
 
@@ -39,10 +59,11 @@ permissions on REST API actions.
 .. # NOTE(mriedem): This is the section where we hide things that we don't
    # actually want in the table of contents but sphinx build would fail if
    # they aren't in the toctree somewhere.
+.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+   # keep the document structure in the PDF doc.
 .. toctree::
    :hidden:
 
-   config
    policy
 
 .. # NOTE(amotoki): Sample files are only available in HTML document.
@@ -53,5 +74,4 @@ permissions on REST API actions.
    .. toctree::
       :hidden:
 
-      sample-config
       sample-policy

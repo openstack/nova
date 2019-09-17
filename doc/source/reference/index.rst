@@ -38,11 +38,37 @@ The following is a dive into some of the internals in nova.
 * :doc:`/reference/isolate-aggregates`: Describes how the placement filter
   works in nova to isolate groups of hosts.
 
+.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+   # keep the document structure in the PDF doc.
+.. toctree::
+   :hidden:
+
+   rpc
+   scheduling
+   scheduler-hints-vs-flavor-extra-specs
+   live-migration
+   services
+   vm-states
+   threading
+   notifications
+   update-provider-tree
+   upgrade-checks
+   conductor
+   isolate-aggregates
+   api-microversion-history
+
 Debugging
 =========
 
 * :doc:`/reference/gmr`: Inspired by Amiga, a way to trigger a very
   comprehensive dump of a running service for deep debugging.
+
+.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+   # keep the document structure in the PDF doc.
+.. toctree::
+   :hidden:
+
+   gmr
 
 Forward Looking Plans
 =====================
@@ -62,8 +88,25 @@ these are a great place to start reading up on the current plans.
 * :doc:`/reference/scheduler-evolution`: Motivation behind the scheduler /
   placement evolution
 
+.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+   # keep the document structure in the PDF doc.
+.. toctree::
+   :hidden:
+
+   /user/cells
+   policy-enforcement
+   stable-api
+   scheduler-evolution
+
 Additional Information
 ======================
 
 * :doc:`/reference/glossary`: A quick reference guide to some of the terms you
   might encounter working on or using nova.
+
+.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+   # keep the document structure in the PDF doc.
+.. toctree::
+   :hidden:
+
+   glossary

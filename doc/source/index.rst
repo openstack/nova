@@ -49,6 +49,13 @@ For End Users
 As an end user of nova, you'll use nova to create and manage servers with
 either tools or the API directly.
 
+.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+   # keep the document structure in the PDF doc.
+.. toctree::
+   :hidden:
+
+   user/index
+
 Tools for using Nova
 --------------------
 
@@ -101,6 +108,13 @@ Architecture Overview
 * :doc:`Nova architecture </user/architecture>`: An overview of how all the parts in
   nova fit together.
 
+.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+   # keep the document structure in the PDF doc.
+.. toctree::
+   :hidden:
+
+   user/architecture
+
 Installation
 ------------
 
@@ -112,6 +126,8 @@ having installed :keystone-doc:`keystone <install/>`, :glance-doc:`glance
 :placement-doc:`placement <install/>`. Ensure that you follow their install
 guides first.
 
+.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+   # keep the document structure in the PDF doc.
 .. toctree::
    :maxdepth: 2
 
@@ -141,6 +157,16 @@ the defaults from the :doc:`install guide </install/index>` will be sufficient.
 * :doc:`Running nova-api on wsgi <user/wsgi>`: Considerations for using a real
   WSGI container instead of the baked-in eventlet web server.
 
+.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+   # keep the document structure in the PDF doc.
+.. toctree::
+   :hidden:
+
+   user/feature-classification
+   user/support-matrix
+   user/cellsv2-layout
+   user/wsgi
+
 Maintenance
 -----------
 
@@ -163,6 +189,18 @@ Once you are running nova, the following information is extremely useful.
   instances (either via metadata server or config drive) for your specific
   purposes.
 
+.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+   # keep the document structure in the PDF doc.
+.. toctree::
+   :hidden:
+
+   admin/index
+   user/flavors
+   user/upgrade
+   user/quotas
+   user/filter-scheduler
+   admin/vendordata
+
 Reference Material
 ------------------
 
@@ -171,98 +209,36 @@ Reference Material
 * :doc:`Configuration Guide <configuration/index>`: Information on configuring
   the system, including role-based access control policy rules.
 
-For Contributors
-================
-
-If you are new to Nova, this should help you start to understand what Nova
-actually does, and why.
-
-.. toctree::
-   :maxdepth: 1
-
-   contributor/index
-
-There are also a number of technical references on both current and future
-looking parts of our architecture. These are collected below.
-
-.. toctree::
-   :maxdepth: 1
-
-   reference/index
-
-
-.. # NOTE(mriedem): This is the section where we hide things that we don't
-   # actually want in the table of contents but sphinx build would fail if
-   # they aren't in the toctree somewhere. For example, we hide api/autoindex
-   # since that's already covered with modindex below.
+.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+   # keep the document structure in the PDF doc.
 .. toctree::
    :hidden:
 
-   admin/index
-   admin/configuration/index
    cli/index
    configuration/index
-   contributor/development-environment
-   contributor/api
-   contributor/api-2
-   contributor/api-ref-guideline
-   contributor/blueprints
-   contributor/code-review
-   contributor/documentation
-   contributor/evacuate-vs-rebuild.rst
-   contributor/microversions
-   contributor/policies.rst
-   contributor/releasenotes
-   contributor/testing
-   contributor/testing/libvirt-numa
-   contributor/testing/serial-console
-   contributor/testing/zero-downtime-upgrade
-   contributor/testing/down-cell
-   contributor/testing/eventlet-profiling
-   contributor/how-to-get-involved
-   contributor/process
-   contributor/project-scope
-   contributor/ptl-guide
-   reference/api-microversion-history.rst
-   reference/conductor
-   reference/glossary
-   reference/gmr
-   reference/i18n
-   reference/live-migration
-   reference/notifications
-   reference/policy-enforcement
-   reference/rpc
-   reference/scheduling
-   reference/scheduler-evolution
-   reference/services
-   reference/stable-api
-   reference/threading
-   reference/update-provider-tree
-   reference/upgrade-checks
-   reference/vm-states
-   reference/scheduler-hints-vs-flavor-extra-specs
-   reference/isolate-aggregates
-   user/index
-   user/architecture
-   user/availability-zones
-   user/block-device-mapping
-   user/cells
-   user/cellsv2-layout
-   user/certificate-validation
-   user/feature-classification
-   user/filter-scheduler
-   user/flavors
-   user/manage-ip-addresses
-   user/quotas
-   user/support-matrix
-   user/upgrade
-   user/wsgi
 
+For Contributors
+================
 
-Search
-======
+* :doc:`contributor/index`: If you are new to Nova, this should help you start
+  to understand what Nova actually does, and why.
+* :doc:`reference/index`: There are also a number of technical references on
+  both current and future looking parts of our architecture.
+  These are collected here.
 
-* :ref:`Nova document search <search>`: Search the contents of this document.
-* `OpenStack wide search <https://docs.openstack.org>`_: Search the wider
-  set of OpenStack documentation, including forums.
+.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+   # keep the document structure in the PDF doc.
+.. toctree::
+   :hidden:
 
+   contributor/index
+   reference/index
+
+.. only:: html
+
+   Search
+   ======
+
+   * :ref:`Nova document search <search>`: Search the contents of this document.
+   * `OpenStack wide search <https://docs.openstack.org>`_: Search the wider
+     set of OpenStack documentation, including forums.
