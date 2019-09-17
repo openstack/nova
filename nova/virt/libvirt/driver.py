@@ -8112,10 +8112,6 @@ class LibvirtDriver(driver.ComputeDriver):
         #             on the same filesystem: the source and dest IP are the
         #             same, or we create a file on the dest system via SSH
         #             and check whether the source system can also see it.
-        # NOTE (drwahl): Actually, there is a 3rd way: if images_type is rbd,
-        #                it will always be shared storage
-        if CONF.libvirt.images_type == 'rbd':
-            return True
         shared_storage = (dest == self.get_host_ip_addr())
         if not shared_storage:
             tmp_file = uuidutils.generate_uuid(dashed=False) + '.tmp'
