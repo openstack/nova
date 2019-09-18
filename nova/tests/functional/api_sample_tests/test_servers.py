@@ -726,12 +726,6 @@ class ServersActionsJsonTest(ServersSampleBase, _ServersActionsJsonTestMixin):
                                  'server-action-confirm-resize',
                                  code=204)
 
-
-class ServersActionsJsonTestNovaNet(
-        ServersSampleBase, _ServersActionsJsonTestMixin):
-    # TODO(gibi): fix the tests to work with neutron as nova net is deprecated
-    USE_NEUTRON = False
-
     def _wait_for_active_server(self, uuid):
         """Wait 10 seconds for the server to be ACTIVE, else fail.
 
@@ -774,8 +768,8 @@ class ServersActionsJsonTestNovaNet(
         }
         # This is gross, but we need to stub out the associate_floating_ip
         # call in the FloatingIPActionController since we don't have a real
-        # networking service backing this up, just the fake nova-network stubs.
-        self.stub_out('nova.network.api.API.associate_floating_ip',
+        # networking service backing this up, just the fake neutron stubs.
+        self.stub_out('nova.network.neutronv2.api.API.associate_floating_ip',
                       lambda *a, **k: None)
         self._test_server_action(uuid, 'addFloatingIp',
                                  'server-action-addfloatingip-req', subs)
@@ -788,14 +782,17 @@ class ServersActionsJsonTestNovaNet(
             "address": "172.16.10.7"
         }
 
-        self.stub_out('nova.network.api.API.get_floating_ip_by_address',
-                      lambda *a, **k: {'fixed_ip_id':
-                                       'a0c566f0-faab-406f-b77f-2b286dc6dd7e'})
         self.stub_out(
-            'nova.network.api.API.get_instance_id_by_floating_address',
+            'nova.network.neutronv2.api.API.get_floating_ip_by_address',
+            lambda *a, **k: {
+                'fixed_ip_id': 'a0c566f0-faab-406f-b77f-2b286dc6dd7e'})
+        self.stub_out(
+            'nova.network.neutronv2.api.API.'
+            'get_instance_id_by_floating_address',
             lambda *a, **k: server_uuid)
-        self.stub_out('nova.network.api.API.disassociate_floating_ip',
-                      lambda *a, **k: None)
+        self.stub_out(
+            'nova.network.neutronv2.api.API.disassociate_floating_ip',
+            lambda *a, **k: None)
 
         self._test_server_action(server_uuid, 'removeFloatingIp',
                                  'server-action-removefloatingip-req', subs)
