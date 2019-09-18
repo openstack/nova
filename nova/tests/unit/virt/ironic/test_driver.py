@@ -1919,9 +1919,10 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_sp.side_effect = [ironic_exception.BadRequest(), None]
 
         self._test_power_off(timeout=30)
-        mock_sp.assert_has_calls([mock.call(node.uuid, 'off', soft=True,
-                                            timeout=30).
-                                  mock.call(node.uuid, 'off')])
+        expected_calls = [mock.call(node.uuid, 'off', soft=True, timeout=30),
+                          mock.call(node.uuid, 'off')]
+        self.assertEqual(len(expected_calls), mock_sp.call_count)
+        mock_sp.assert_has_calls(expected_calls)
 
     @mock.patch.object(ironic_driver.IronicDriver,
                        '_validate_instance_and_node')
@@ -1931,9 +1932,10 @@ class IronicDriverTestCase(test.NoDBTestCase):
         fake_validate.side_effect = [node, node]
 
         self._test_power_off(timeout=30)
-        mock_sp.assert_has_calls([mock.call(node.uuid, 'off', soft=True,
-                                            timeout=30).
-                                  mock.call(node.uuid, 'off')])
+        expected_calls = [mock.call(node.uuid, 'off', soft=True, timeout=30),
+                          mock.call(node.uuid, 'off')]
+        self.assertEqual(len(expected_calls), mock_sp.call_count)
+        mock_sp.assert_has_calls(expected_calls)
 
     @mock.patch.object(FAKE_CLIENT.node, 'vif_attach')
     def test_plug_vifs_with_port(self, mock_vatt):
