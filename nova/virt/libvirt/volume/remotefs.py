@@ -155,7 +155,7 @@ class RemoteFilesystemDriver(object):
         """
 
     @abc.abstractmethod
-    def copy_file(self, src, dst, on_execute, on_completion):
+    def copy_file(self, src, dst, on_execute, on_completion, compression):
         """Copy file to/from remote host.
 
         Remote address must be specified in format:
@@ -167,6 +167,8 @@ class RemoteFilesystemDriver(object):
         :param dst: Destination path
         :param on_execute: Callback method to store pid of process in cache
         :param on_completion: Callback method to remove pid of process from
+        :param compression: If true, compress files when copying; drivers may
+            ignore this if compression is not supported
         """
 
 
