@@ -5332,7 +5332,7 @@ policy_name:
       instead of resulting in a build failure.
   in: body
   required: true
-  type: object
+  type: string
   min_version: 2.64
 policy_rules:
   description: |
