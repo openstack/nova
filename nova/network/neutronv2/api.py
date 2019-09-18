@@ -2393,22 +2393,42 @@ class API(base_api.NetworkAPI):
         except neutron_client_exc.Conflict as e:
             raise exception.FloatingIpAssociateFailed(six.text_type(e))
 
+        # If the floating IP was associated with another server, try to refresh
+        # the cache for that instance to avoid a window of time where multiple
+        # servers in the API say they are using the same floating IP.
         if fip['port_id']:
-            port = self._show_port(context, fip['port_id'],
-                                   neutron_client=client)
-            orig_instance_uuid = port['device_id']
+            # TODO(mriedem): Seems we should trap and log any errors from
+            # _update_inst_info_cache_for_disassociated_fip but not let them
+            # raise back up to the caller since this refresh is best effort.
+            self._update_inst_info_cache_for_disassociated_fip(
+                context, instance, client, fip)
 
-            msg_dict = dict(address=floating_address,
-                            instance_id=orig_instance_uuid)
-            LOG.info('re-assign floating IP %(address)s from '
-                     'instance %(instance_id)s', msg_dict,
-                     instance=instance)
-            orig_instance = objects.Instance.get_by_uuid(context,
-                                                         orig_instance_uuid)
+    def _update_inst_info_cache_for_disassociated_fip(self, context,
+                                                      instance, client, fip):
+        """Update the network info cache when a floating IP is re-assigned.
 
-            # purge cached nw info for the original instance
-            base_api.update_instance_cache_with_nw_info(self, context,
-                                                        orig_instance)
+        :param context: nova auth RequestContext
+        :param instance: The instance to which the floating IP is now assigned
+        :param client: ClientWrapper instance for using the Neutron API
+        :param fip: dict for the floating IP that was re-assigned where the
+                    the ``port_id`` value represents the port that was
+                    associated with another server.
+        """
+        port = self._show_port(context, fip['port_id'],
+                               neutron_client=client)
+        orig_instance_uuid = port['device_id']
+
+        msg_dict = dict(address=fip['floating_ip_address'],
+                        instance_id=orig_instance_uuid)
+        LOG.info('re-assign floating IP %(address)s from '
+                 'instance %(instance_id)s', msg_dict,
+                 instance=instance)
+        orig_instance = objects.Instance.get_by_uuid(context,
+                                                     orig_instance_uuid)
+
+        # purge cached nw info for the original instance
+        base_api.update_instance_cache_with_nw_info(self, context,
+                                                    orig_instance)
 
     def get_all(self, context):
         """Get all networks for client."""
