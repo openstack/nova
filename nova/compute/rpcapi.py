@@ -794,6 +794,8 @@ class ComputeAPI(object):
         return cctxt.call(ctxt, 'post_live_migration_at_destination',
             instance=instance, block_migration=block_migration)
 
+    # TODO(mriedem): Remove the unused block_migration argument in v6.0 of
+    # the compute RPC API.
     def pre_live_migration(self, ctxt, instance, block_migration, disk,
             host, migrate_data):
         version = '5.0'

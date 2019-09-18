@@ -6649,6 +6649,8 @@ class ComputeManager(manager.Manager):
         LOG.debug('source check data is %s', result)
         return result
 
+    # TODO(mriedem): Remove the block_migration argument in v6.0 of the compute
+    # RPC API.
     @wrap_exception()
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
