@@ -635,6 +635,13 @@ class Host(object):
 
         return online_cpus
 
+    @staticmethod
+    def _log_host_capabilities(xmlstr):
+        # NOTE(mriedem): This looks a bit weird but we do this so we can stub
+        # out this method in unit/functional test runs since the xml string is
+        # big and it can cause subunit parsing to fail (see bug 1813147).
+        LOG.info("Libvirt host capabilities %s", xmlstr)
+
     def get_capabilities(self):
         """Returns the host capabilities information
 
@@ -647,7 +654,7 @@ class Host(object):
         """
         if not self._caps:
             xmlstr = self.get_connection().getCapabilities()
-            LOG.info("Libvirt host capabilities %s", xmlstr)
+            self._log_host_capabilities(xmlstr)
             self._caps = vconfig.LibvirtConfigCaps()
             self._caps.parse_str(xmlstr)
             # NOTE(mriedem): Don't attempt to get baseline CPU features

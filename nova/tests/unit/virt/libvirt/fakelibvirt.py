@@ -1786,6 +1786,11 @@ class FakeLibvirtFixture(fixtures.Fixture):
             'nova.virt.libvirt.driver.LibvirtDriver'
             '._get_host_sysinfo_serial_os', return_value=uuids.machine_id))
 
+        # Stub out _log_host_capabilities since it logs a giant string at INFO
+        # and we don't want that to blow up the subunit parser in test runs.
+        self.useFixture(fixtures.MockPatch(
+            'nova.virt.libvirt.host.Host._log_host_capabilities'))
+
         disable_event_thread(self)
 
         if self.stub_os_vif:
