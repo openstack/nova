@@ -30,6 +30,7 @@ import six
 
 from nova.compute import utils as compute_utils
 import nova.conf
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova.network import base_api
@@ -2428,12 +2429,59 @@ class API(base_api.NetworkAPI):
         LOG.info('re-assign floating IP %(address)s from '
                  'instance %(instance_id)s', msg_dict,
                  instance=instance)
-        orig_instance = objects.Instance.get_by_uuid(context,
-                                                     orig_instance_uuid)
+        orig_instance = self._get_instance_by_uuid_using_api_db(
+            context, orig_instance_uuid)
+        if orig_instance:
+            # purge cached nw info for the original instance; pass the
+            # context from the instance in case we found it in another cell
+            base_api.update_instance_cache_with_nw_info(
+                self, orig_instance._context, orig_instance)
+        else:
+            # Leave a breadcrumb about not being able to refresh the
+            # the cache for the original instance.
+            LOG.info('Unable to refresh the network info cache for '
+                     'instance %s after disassociating floating IP %s. '
+                     'If the instance still exists, its info cache may '
+                     'be healed automatically.',
+                     orig_instance_uuid, fip['id'])
 
-        # purge cached nw info for the original instance
-        base_api.update_instance_cache_with_nw_info(self, context,
-                                                    orig_instance)
+    @staticmethod
+    def _get_instance_by_uuid_using_api_db(context, instance_uuid):
+        """Look up the instance by UUID
+
+        This method is meant to be used sparingly since it tries to find
+        the instance by UUID in the cell-targeted context. If the instance
+        is not found, this method will try to determine if it's not found
+        because it is deleted or if it is just in another cell. Therefore
+        it assumes to have access to the API database and should only be
+        called from methods that are used in the control plane services.
+
+        :param context: cell-targeted nova auth RequestContext
+        :param instance_uuid: UUID of the instance to find
+        :returns: Instance object if the instance was found, else None.
+        """
+        try:
+            return objects.Instance.get_by_uuid(context, instance_uuid)
+        except exception.InstanceNotFound:
+            # The instance could be deleted or it could be in another cell.
+            # To determine if its in another cell, check the instance
+            # mapping in the API DB.
+            try:
+                inst_map = objects.InstanceMapping.get_by_instance_uuid(
+                    context, instance_uuid)
+            except exception.InstanceMappingNotFound:
+                # The instance is gone so just return.
+                return
+
+            # We have the instance mapping, look up the instance in the
+            # cell the instance is in.
+            with nova_context.target_cell(
+                    context, inst_map.cell_mapping) as cctxt:
+                try:
+                    return objects.Instance.get_by_uuid(cctxt, instance_uuid)
+                except exception.InstanceNotFound:
+                    # Alright it's really gone.
+                    return
 
     def get_all(self, context):
         """Get all networks for client."""
