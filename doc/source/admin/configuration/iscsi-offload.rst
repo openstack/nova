@@ -69,5 +69,5 @@ iSCSI iface configuration
   to work. Some transports may require ``iface.ipaddress`` and
   ``iface.net_ifacename`` as well to bind correctly.
 
-  Detailed configuration instructions can be found at
-  http://www.open-iscsi.org/docs/README.
+  Detailed configuration instructions can be found at:
+  https://github.com/open-iscsi/open-iscsi/blob/master/README
