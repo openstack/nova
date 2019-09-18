@@ -16,6 +16,7 @@ from nova.tests.functional.api_sample_tests import api_sample_base
 
 
 class FloatingIPPoolsSampleTests(api_sample_base.ApiSampleTestBaseV21):
+    USE_NEUTRON = False
     sample_dir = "os-floating-ip-pools"
 
     def test_list_floatingippools(self):

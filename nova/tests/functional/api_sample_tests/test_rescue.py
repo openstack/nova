@@ -17,6 +17,7 @@ from nova.tests.functional.api_sample_tests import test_servers
 
 
 class RescueJsonTest(test_servers.ServersSampleBase):
+    USE_NEUTRON = False
     sample_dir = "os-rescue"
 
     def _rescue(self, uuid):

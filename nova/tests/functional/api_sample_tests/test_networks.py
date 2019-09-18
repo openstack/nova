@@ -40,6 +40,7 @@ def _fixtures_passthrough(method_name):
 
 
 class NetworksJsonTests(api_sample_base.ApiSampleTestBaseV21):
+    USE_NEUTRON = False
     ADMIN_API = True
     sample_dir = "os-networks"
 

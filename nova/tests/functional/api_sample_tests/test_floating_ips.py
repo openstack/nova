@@ -21,6 +21,7 @@ CONF = nova.conf.CONF
 
 
 class FloatingIpsTest(api_sample_base.ApiSampleTestBaseV21):
+    USE_NEUTRON = False
     sample_dir = "os-floating-ips"
 
     def setUp(self):
