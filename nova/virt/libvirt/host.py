@@ -647,15 +647,9 @@ class Host(object):
     def get_online_cpus(self):
         """Get the set of CPUs that are online on the host
 
-        Method is only used by NUMA code paths which check on
-        libvirt version >= 1.0.4. getCPUMap() was introduced in
-        libvirt 1.0.0.
-
         :returns: set of online CPUs, raises libvirtError on error
-
         """
-
-        (cpus, cpu_map, online) = self.get_connection().getCPUMap()
+        cpus, cpu_map, online = self.get_connection().getCPUMap()
 
         online_cpus = set()
         for cpu in range(cpus):
@@ -1038,10 +1032,6 @@ class Host(object):
         Note that the memory size is reported in MiB instead of KiB.
         """
         return self.get_connection().getInfo()
-
-    def get_cpu_count(self):
-        """Returns the total numbers of cpu in the host."""
-        return self._get_hardware_info()[2]
 
     def get_memory_mb_total(self):
         """Get the total memory size(MB) of physical computer.

@@ -8184,21 +8184,22 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_list.assert_called_with(only_guests=True, only_running=False)
 
     @mock.patch('nova.virt.libvirt.host.Host.get_online_cpus',
-                return_value=set([4, 5, 6]))
-    def test_get_pcpu_total(self, get_online_cpus):
+                return_value=set([0, 1, 2, 3]))
+    def test_get_pcpu_available(self, get_online_cpus):
         """Test what happens when the '[compute] cpu_dedicated_set' config
         option is set.
         """
         self.flags(vcpu_pin_set=None)
-        self.flags(cpu_dedicated_set='4-5', cpu_shared_set=None,
+        self.flags(cpu_dedicated_set='2-3', cpu_shared_set=None,
                    group='compute')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        pcpus = drvr._get_pcpu_total()
-        self.assertEqual(2, pcpus)
+        pcpus = drvr._get_pcpu_available()
+        self.assertEqual(set([2, 3]), pcpus)
 
     @mock.patch('nova.virt.libvirt.host.Host.get_online_cpus',
-                return_value=set([4, 5, 6]))
-    def test_get_pcpu_total__cpu_dedicated_set_unset(self, get_online_cpus):
+                return_value=set([0, 1, 2, 3]))
+    def test_get_pcpu_available__cpu_dedicated_set_unset(
+            self, get_online_cpus):
         """Test what happens when the '[compute] cpu_dedicated_set' config
         option is not set.
         """
@@ -8206,12 +8207,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.flags(cpu_dedicated_set=None, cpu_shared_set=None,
                    group='compute')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        pcpus = drvr._get_pcpu_total()
-        self.assertEqual(0, pcpus)
+        pcpus = drvr._get_pcpu_available()
+        self.assertEqual(set([]), pcpus)
 
     @mock.patch('nova.virt.libvirt.host.Host.get_online_cpus',
                 return_value=set([4, 5]))
-    def test_get_pcpu_total__cpu_dedicated_set_invalid(self, get_online_cpus):
+    def test_get_pcpu_available__cpu_dedicated_set_invalid(self,
+            get_online_cpus):
         """Test what happens when the '[compute] cpu_dedicated_set' config
         option is set but it's invalid.
         """
@@ -8219,11 +8221,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.flags(cpu_dedicated_set='4-6', cpu_shared_set=None,
                    group='compute')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.assertRaises(exception.Invalid, drvr._get_pcpu_total)
+        self.assertRaises(exception.Invalid, drvr._get_pcpu_available)
 
-    @mock.patch('nova.virt.libvirt.host.Host.get_cpu_count',
-                return_value=4)
-    def test_get_vcpu_total(self, get_cpu_count):
+    @mock.patch('nova.virt.libvirt.host.Host.get_online_cpus',
+                return_value=set([0, 1, 2, 3]))
+    def test_get_vcpu_available(self, get_online_cpus):
         """Test what happens when neither the '[compute] cpu_shared_set' or
         legacy 'vcpu_pin_set' config options are set.
         """
@@ -8231,12 +8233,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.flags(cpu_shared_set=None, cpu_dedicated_set=None,
                    group='compute')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        vcpus = drvr._get_vcpu_total()
-        self.assertEqual(4, vcpus)
+        vcpus = drvr._get_vcpu_available()
+        self.assertEqual(set([0, 1, 2, 3]), vcpus)
 
     @mock.patch('nova.virt.libvirt.host.Host.get_online_cpus',
-                return_value=set([4, 5, 6]))
-    def test_get_vcpu_total__with_cpu_shared_set(self, get_online_cpus):
+                return_value=set([4, 5, 6, 7]))
+    def test_get_vcpu_available__with_cpu_shared_set(self, get_online_cpus):
         """Test what happens when the '[compute] cpu_shared_set' config option
         is set.
         """
@@ -8244,12 +8246,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.flags(cpu_shared_set='4-5', cpu_dedicated_set=None,
                    group='compute')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        vcpus = drvr._get_vcpu_total()
-        self.assertEqual(2, vcpus)
+        vcpus = drvr._get_vcpu_available()
+        self.assertEqual(set([4, 5]), vcpus)
 
     @mock.patch('nova.virt.libvirt.host.Host.get_online_cpus',
-                return_value=set([4, 5, 6]))
-    def test_get_vcpu_total__with_vcpu_pin_set(self, get_online_cpus):
+                return_value=set([4, 5, 6, 7]))
+    def test_get_vcpu_available__with_vcpu_pin_set(self, get_online_cpus):
         """Test what happens when the legacy 'vcpu_pin_set' config option is
         set.
         """
@@ -8257,12 +8259,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.flags(cpu_shared_set=None, cpu_dedicated_set=None,
                    group='compute')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        vcpus = drvr._get_vcpu_total()
-        self.assertEqual(2, vcpus)
+        vcpus = drvr._get_vcpu_available()
+        self.assertEqual(set([4, 5]), vcpus)
 
     @mock.patch('nova.virt.libvirt.host.Host.get_online_cpus',
-                return_value=set([4, 5, 6]))
-    def test_get_vcpu_total__with_cpu_dedicated_set(self, get_online_cpus):
+                return_value=set([4, 5, 6, 7]))
+    def test_get_vcpu_available__with_cpu_dedicated_set(self, get_online_cpus):
         """Test what happens when the '[compute] cpu_dedicated_set' config
         option is set.
         """
@@ -8270,12 +8272,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.flags(cpu_shared_set=None, cpu_dedicated_set='4-5',
                    group='compute')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        vcpus = drvr._get_vcpu_total()
-        self.assertEqual(0, vcpus)
+        vcpus = drvr._get_vcpu_available()
+        self.assertEqual(set([]), vcpus)
 
     @mock.patch('nova.virt.libvirt.host.Host.get_online_cpus',
                 return_value=set([4, 5]))
-    def test_get_vcpu_total__cpu_shared_set_invalid(self, get_online_cpus):
+    def test_get_vcpu_available__cpu_shared_set_invalid(self, get_online_cpus):
         """Test what happens when the '[compute] cpu_shared_set' config option
         is set but it's invalid.
         """
@@ -8283,11 +8285,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.flags(cpu_shared_set='4-6', cpu_dedicated_set=None,
                    group='compute')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.assertRaises(exception.Invalid, drvr._get_vcpu_total)
+        self.assertRaises(exception.Invalid, drvr._get_vcpu_available)
 
     @mock.patch('nova.virt.libvirt.host.Host.get_online_cpus',
                 return_value=set([4, 5]))
-    def test_get_vcpu_total__vcpu_pin_set_invalid(self, get_online_cpus):
+    def test_get_vcpu_available__vcpu_pin_set_invalid(self, get_online_cpus):
         """Test what happens when the legacy 'vcpu_pin_set' config option is
         set but it's invalid.
         """
@@ -8295,7 +8297,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.flags(cpu_shared_set=None, cpu_dedicated_set=None,
                    group='compute')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.assertRaises(exception.Invalid, drvr._get_vcpu_total)
+        self.assertRaises(exception.Invalid, drvr._get_vcpu_available)
 
     @mock.patch.object(host.Host, "has_min_version", return_value=True)
     def test_quiesce(self, mock_has_min_version):
@@ -19445,11 +19447,11 @@ class HostStateTestCase(test.NoDBTestCase):
             self._host.get_memory_mb_total = _get_memory_mb_total
             self._host.get_memory_mb_used = _get_memory_mb_used
 
-        def _get_pcpu_total(self):
-            return 0
+        def _get_pcpu_available(self):
+            return set([0])
 
-        def _get_vcpu_total(self):
-            return 1
+        def _get_vcpu_available(self):
+            return set([1])
 
         def _get_vcpu_used(self):
             return 0
@@ -19597,10 +19599,10 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                 new=mock.Mock(return_value={'total': disk_gb}))
     @mock.patch('nova.virt.libvirt.host.Host.get_memory_mb_total',
                 new=mock.Mock(return_value=memory_mb))
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_pcpu_total',
-                new=mock.Mock(return_value=pcpus))
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_vcpu_total',
-                new=mock.Mock(return_value=vcpus))
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_pcpu_available',
+                new=mock.Mock(return_value=range(pcpus)))
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_vcpu_available',
+                new=mock.Mock(return_value=range(vcpus)))
     def _test_update_provider_tree(
             self, mock_gpu_invs, gpu_invs=None, vpmems=None):
         if gpu_invs:
@@ -19728,10 +19730,10 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                 new=mock.Mock(return_value={'total': disk_gb}))
     @mock.patch('nova.virt.libvirt.host.Host.get_memory_mb_total',
                 new=mock.Mock(return_value=memory_mb))
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_pcpu_total',
-                new=mock.Mock(return_value=pcpus))
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_vcpu_total',
-                new=mock.Mock(return_value=vcpus))
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_pcpu_available',
+                new=mock.Mock(return_value=range(pcpus)))
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_vcpu_available',
+                new=mock.Mock(return_value=range(vcpus)))
     # TODO(efried): Bug #1784020
     @unittest.expectedFailure
     def test_update_provider_tree_for_shared_disk_gb_resource(self):
@@ -19794,10 +19796,10 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                 new=mock.Mock(return_value={'total': disk_gb}))
     @mock.patch('nova.virt.libvirt.host.Host.get_memory_mb_total',
                 new=mock.Mock(return_value=memory_mb))
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_pcpu_total',
-                new=mock.Mock(return_value=pcpus))
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_vcpu_total',
-                new=mock.Mock(return_value=vcpus))
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_pcpu_available',
+                new=mock.Mock(return_value=range(pcpus)))
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_vcpu_available',
+                new=mock.Mock(return_value=range(vcpus)))
     def test_update_provider_tree_for_vgpu_reshape(
             self, mock_gpus, mock_get_devs, mock_get_mdev_info):
         """Tests the VGPU reshape scenario."""
@@ -19924,10 +19926,10 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                 new=mock.Mock(return_value={'total': disk_gb}))
     @mock.patch('nova.virt.libvirt.host.Host.get_memory_mb_total',
                 new=mock.Mock(return_value=memory_mb))
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_pcpu_total',
-                new=mock.Mock(return_value=pcpus))
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_vcpu_total',
-                new=mock.Mock(return_value=vcpus))
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_pcpu_available',
+                new=mock.Mock(return_value=range(pcpus)))
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_vcpu_available',
+                new=mock.Mock(return_value=range(vcpus)))
     def test_update_provider_tree_for_vgpu_reshape_fails(self, mock_gpus):
         """Tests the VGPU reshape failure scenario where VGPU allocations
         are not on the root compute node provider as expected.

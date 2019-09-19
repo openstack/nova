@@ -6248,13 +6248,13 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.resume()
         return guest
 
-    def _get_pcpu_total(self):
+    def _get_pcpu_available(self):
         """Get number of host cores to be used for PCPUs.
 
         :returns: The number of host cores to be used for PCPUs.
         """
         if not CONF.compute.cpu_dedicated_set:
-            return 0
+            return set()
 
         online_cpus = self._host.get_online_cpus()
         dedicated_cpus = hardware.get_cpu_dedicated_set()
@@ -6267,13 +6267,15 @@ class LibvirtDriver(driver.ComputeDriver):
                 'online': sorted(online_cpus),
                 'req': sorted(dedicated_cpus)})
 
-        return len(dedicated_cpus)
+        return dedicated_cpus
 
-    def _get_vcpu_total(self):
-        """Get number of host cores to be used for VCPUs.
+    def _get_vcpu_available(self):
+        """Get host cores to be used for VCPUs.
 
-        :returns: the number of cpu core instances can be used.
+        :returns: A list of host CPU cores that can be used for VCPUs.
         """
+        online_cpus = self._host.get_online_cpus()
+
         # NOTE(stephenfin): The use of the legacy 'vcpu_pin_set' option happens
         # if it's defined, regardless of whether '[compute] cpu_shared_set' is
         # also configured. This is legacy behavior required for upgrades that
@@ -6285,16 +6287,10 @@ class LibvirtDriver(driver.ComputeDriver):
         elif CONF.compute.cpu_shared_set:
             shared_cpus = hardware.get_cpu_shared_set()
         elif CONF.compute.cpu_dedicated_set:
-            return 0
+            return set()
         else:
-            try:
-                return self._host.get_cpu_count()
-            except libvirt.libvirtError:
-                LOG.warning("Cannot get the number of host CPUs because this "
-                            "function is not implemented for this platform.")
-                return 0
+            return online_cpus
 
-        online_cpus = self._host.get_online_cpus()
         if not shared_cpus.issubset(online_cpus):
             msg = _("Invalid '%(config_opt)s' config: one or "
                     "more of the configured CPUs is not online. Online "
@@ -6310,7 +6306,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 'online': sorted(online_cpus),
                 'req': sorted(shared_cpus)})
 
-        return len(shared_cpus)
+        return shared_cpus
 
     @staticmethod
     def _get_local_gb_info():
@@ -7197,8 +7193,8 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         disk_gb = int(self._get_local_gb_info()['total'])
         memory_mb = int(self._host.get_memory_mb_total())
-        vcpus = self._get_vcpu_total()
-        pcpus = self._get_pcpu_total()
+        vcpus = len(self._get_vcpu_available())
+        pcpus = len(self._get_pcpu_available())
         memory_enc_slots = self._get_memory_encrypted_slots()
 
         # NOTE(yikun): If the inv record does not exists, the allocation_ratio
@@ -7703,7 +7699,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # See: https://bugs.launchpad.net/nova/+bug/1215593
         data["supported_instances"] = self._get_instance_capabilities()
 
-        data["vcpus"] = self._get_vcpu_total()
+        data["vcpus"] = len(self._get_vcpu_available())
         data["memory_mb"] = self._host.get_memory_mb_total()
         data["local_gb"] = disk_info_dict['total']
         data["vcpus_used"] = self._get_vcpu_used()

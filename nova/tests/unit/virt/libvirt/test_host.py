@@ -912,11 +912,6 @@ class HostTestCase(test.NoDBTestCase):
         mock_find_secret.return_value = None
         self.host.delete_secret("rbd", "rbdvol")
 
-    def test_get_cpu_count(self):
-        with mock.patch.object(host.Host, "get_connection") as mock_conn:
-            mock_conn().getInfo.return_value = ['zero', 'one', 'two']
-            self.assertEqual('two', self.host.get_cpu_count())
-
     def test_get_memory_total(self):
         with mock.patch.object(host.Host, "get_connection") as mock_conn:
             mock_conn().getInfo.return_value = ['zero', 'one', 'two']
