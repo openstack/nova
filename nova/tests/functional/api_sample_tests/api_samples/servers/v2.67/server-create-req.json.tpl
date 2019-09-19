@@ -3,7 +3,7 @@
         "name" : "bfv-server-with-volume-type",
         "flavorRef" : "%(host)s/flavors/1",
         "networks" : [{
-            "uuid" : "ff608d40-75e9-48cb-b745-77bb55b5eaf2",
+            "uuid" : "3cb9bc59-5699-4588-a4b1-b87f96708bc6",
             "tag": "nic1"
         }],
         "block_device_mapping_v2": [{
