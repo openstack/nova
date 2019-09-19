@@ -7066,13 +7066,17 @@ class LibvirtDriver(driver.ComputeDriver):
                 physnets=physnet_affinities[cell.id],
                 tunneled=tunnel_affinities[cell.id])
 
-            cell = objects.NUMACell(id=cell.id, cpuset=cpuset,
-                                    memory=cell.memory / units.Ki,
-                                    cpu_usage=0, memory_usage=0,
-                                    siblings=siblings,
-                                    pinned_cpus=set([]),
-                                    mempages=mempages,
-                                    network_metadata=network_metadata)
+            cell = objects.NUMACell(
+                id=cell.id,
+                cpuset=cpuset,
+                pcpuset=set(),  # TODO(stephenfin): Start setting this
+                memory=cell.memory / units.Ki,
+                cpu_usage=0,
+                memory_usage=0,
+                siblings=siblings,
+                pinned_cpus=set([]),
+                mempages=mempages,
+                network_metadata=network_metadata)
             cells.append(cell)
 
         return objects.NUMATopology(cells=cells)

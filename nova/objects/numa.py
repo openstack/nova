@@ -44,11 +44,13 @@ class NUMACell(base.NovaObject):
     # Version 1.1: Added pinned_cpus and siblings fields
     # Version 1.2: Added mempages field
     # Version 1.3: Add network_metadata field
-    VERSION = '1.3'
+    # Version 1.4: Add pcpuset
+    VERSION = '1.4'
 
     fields = {
         'id': obj_fields.IntegerField(read_only=True),
         'cpuset': obj_fields.SetOfIntegersField(),
+        'pcpuset': obj_fields.SetOfIntegersField(),
         'memory': obj_fields.IntegerField(),
         'cpu_usage': obj_fields.IntegerField(default=0),
         'memory_usage': obj_fields.IntegerField(default=0),
@@ -61,6 +63,8 @@ class NUMACell(base.NovaObject):
     def obj_make_compatible(self, primitive, target_version):
         super(NUMACell, self).obj_make_compatible(primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 4):
+            primitive.pop('pcpuset', None)
         if target_version < (1, 3):
             primitive.pop('network_metadata', None)
 

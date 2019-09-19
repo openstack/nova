@@ -44,6 +44,7 @@ fake_numa_topology = objects.NUMATopology(cells=[
     objects.NUMACell(
         id=0,
         cpuset=set([1, 2]),
+        pcpuset=set(),
         memory=512,
         cpu_usage=0,
         memory_usage=0,
@@ -53,6 +54,7 @@ fake_numa_topology = objects.NUMATopology(cells=[
     objects.NUMACell(
         id=1,
         cpuset=set([3, 4]),
+        pcpuset=set(),
         memory=512,
         cpu_usage=0,
         memory_usage=0,

@@ -29,6 +29,7 @@ NUMA_TOPOLOGY = objects.NUMATopology(cells=[
     objects.NUMACell(
         id=0,
         cpuset=set([1, 2]),
+        pcpuset=set(),
         memory=512,
         cpu_usage=0,
         memory_usage=0,
@@ -40,6 +41,7 @@ NUMA_TOPOLOGY = objects.NUMATopology(cells=[
     objects.NUMACell(
         id=1,
         cpuset=set([3, 4]),
+        pcpuset=set(),
         memory=512,
         cpu_usage=0,
         memory_usage=0,
@@ -54,6 +56,7 @@ NUMA_TOPOLOGIES_W_HT = [
         objects.NUMACell(
             id=0,
             cpuset=set([1, 2, 5, 6]),
+            pcpuset=set(),
             memory=512,
             cpu_usage=0,
             memory_usage=0,
@@ -63,6 +66,7 @@ NUMA_TOPOLOGIES_W_HT = [
         objects.NUMACell(
             id=1,
             cpuset=set([3, 4, 7, 8]),
+            pcpuset=set(),
             memory=512,
             cpu_usage=0,
             memory_usage=0,
@@ -74,6 +78,7 @@ NUMA_TOPOLOGIES_W_HT = [
         objects.NUMACell(
             id=0,
             cpuset=set(),
+            pcpuset=set(),
             memory=512,
             cpu_usage=0,
             memory_usage=0,
@@ -83,6 +88,7 @@ NUMA_TOPOLOGIES_W_HT = [
         objects.NUMACell(
             id=1,
             cpuset=set([1, 2, 5, 6]),
+            pcpuset=set(),
             memory=512,
             cpu_usage=0,
             memory_usage=0,
@@ -92,6 +98,7 @@ NUMA_TOPOLOGIES_W_HT = [
         objects.NUMACell(
             id=2,
             cpuset=set([3, 4, 7, 8]),
+            pcpuset=set(),
             memory=512,
             cpu_usage=0,
             memory_usage=0,

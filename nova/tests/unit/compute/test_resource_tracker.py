@@ -170,6 +170,7 @@ _NUMA_HOST_TOPOLOGIES = {
         objects.NUMACell(
             id=0,
             cpuset=set([1, 2]),
+            pcpuset=set(),
             memory=_2MB,
             cpu_usage=0,
             memory_usage=0,
@@ -179,6 +180,7 @@ _NUMA_HOST_TOPOLOGIES = {
         objects.NUMACell(
             id=1,
             cpuset=set([3, 4]),
+            pcpuset=set(),
             memory=_2MB,
             cpu_usage=0,
             memory_usage=0,
@@ -2034,7 +2036,8 @@ class TestInstanceClaim(BaseTestCase):
         self.instance = _INSTANCE_FIXTURES[0].obj_clone()
 
     def assertEqualNUMAHostTopology(self, expected, got):
-        attrs = ('cpuset', 'memory', 'id', 'cpu_usage', 'memory_usage')
+        attrs = ('cpuset', 'pcpuset', 'memory', 'id', 'cpu_usage',
+                 'memory_usage')
         if None in (expected, got):
             if expected != got:
                 raise AssertionError("Topologies don't match. Expected: "
