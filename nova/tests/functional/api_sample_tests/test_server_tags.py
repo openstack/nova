@@ -20,7 +20,6 @@ TAG2 = 'tag2'
 
 
 class ServerTagsJsonTest(test_servers.ServersSampleBase):
-    USE_NEUTRON = False
     sample_dir = 'os-server-tags'
     microversion = '2.26'
     scenarios = [('v2_26', {'api_major_version': 'v2.1'})]
@@ -63,7 +62,6 @@ class ServerTagsJsonTest(test_servers.ServersSampleBase):
         response = self._do_get('servers/%s/tags/%s' % (uuid, TAG1))
         self.assertEqual(204, response.status_code)
 
-    # TODO(stephenfin): Migrate off of nova-network
     def test_server_tags_show_with_details_information(self):
         uuid = self._put_server_tags()
         response = self._do_get('servers/%s' % uuid)
