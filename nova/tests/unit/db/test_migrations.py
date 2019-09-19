@@ -1067,13 +1067,6 @@ class TestNovaMigrationsMySQL(NovaMigrationsCheckers,
                               testtools.TestCase):
     FIXTURE = test_fixtures.MySQLOpportunisticFixture
 
-    def setUp(self):
-        super(TestNovaMigrationsMySQL, self).setUp()
-        # TODO(mriedem): Revert this change before Train RC1 since this is a
-        # temporary measure to merge code post-feature-freeze in Train which
-        # continually keeps failing gate runs due to bug 1823251.
-        self.skipTest('Skip due to bug 1823251 but unskip before Train RC1.')
-
     def test_innodb_tables(self):
         with mock.patch.object(sa_migration, 'get_engine',
                                return_value=self.migrate_engine):
