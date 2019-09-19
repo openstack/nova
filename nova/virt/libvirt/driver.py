@@ -631,6 +631,8 @@ class LibvirtDriver(driver.ComputeDriver):
     def init_host(self, host):
         self._host.initialize()
 
+        self._check_cpu_set_configuration()
+
         self._do_quality_warnings()
 
         self._parse_migration_flags()
@@ -871,6 +873,70 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.warning('my_ip address (%(my_ip)s) was not found on '
                         'any of the interfaces: %(ifaces)s',
                         {'my_ip': CONF.my_ip, 'ifaces': ", ".join(ips)})
+
+    def _check_cpu_set_configuration(self):
+        # evaluate these now to force a quick fail if they're invalid
+        vcpu_pin_set = hardware.get_vcpu_pin_set() or set()
+        cpu_shared_set = hardware.get_cpu_shared_set() or set()
+        cpu_dedicated_set = hardware.get_cpu_dedicated_set() or set()
+
+        # TODO(stephenfin): Remove this in U once we remove the 'vcpu_pin_set'
+        # option
+        if not vcpu_pin_set:
+            if not (cpu_shared_set or cpu_dedicated_set):
+                return
+
+            if not cpu_dedicated_set.isdisjoint(cpu_shared_set):
+                msg = _(
+                    "The '[compute] cpu_dedicated_set' and '[compute] "
+                    "cpu_shared_set' configuration options must be "
+                    "disjoint.")
+                raise exception.InvalidConfiguration(msg)
+
+            if CONF.reserved_host_cpus:
+                msg = _(
+                    "The 'reserved_host_cpus' config option cannot be defined "
+                    "alongside the '[compute] cpu_shared_set' or '[compute] "
+                    "cpu_dedicated_set' options. Unset 'reserved_host_cpus'.")
+                raise exception.InvalidConfiguration(msg)
+
+            return
+
+        if cpu_dedicated_set:
+            # NOTE(stephenfin): This is a new option in Train so it can be
+            # an error
+            msg = _(
+                "The 'vcpu_pin_set' config option has been deprecated and "
+                "cannot be defined alongside '[compute] cpu_dedicated_set'. "
+                "Unset 'vcpu_pin_set'.")
+            raise exception.InvalidConfiguration(msg)
+
+        if cpu_shared_set:
+            LOG.warning(
+                "The '[compute] cpu_shared_set' and 'vcpu_pin_set' config "
+                "options have both been defined. While 'vcpu_pin_set' is "
+                "defined, it will continue to be used to configure the "
+                "specific host CPUs used for 'VCPU' inventory, while "
+                "'[compute] cpu_shared_set' will only be used for guest "
+                "emulator threads when 'hw:emulator_threads_policy=shared' "
+                "is defined in the flavor. This is legacy behavior and will "
+                "not be supported in a future release. "
+                "If you wish to define specific host CPUs to be used for "
+                "'VCPU' or 'PCPU' inventory, you must migrate the "
+                "'vcpu_pin_set' config option value to '[compute] "
+                "cpu_shared_set' and '[compute] cpu_dedicated_set', "
+                "respectively, and undefine 'vcpu_pin_set'.")
+        else:
+            LOG.warning(
+                "The 'vcpu_pin_set' config option has been deprecated and "
+                "will be removed in a future release. When defined, "
+                "'vcpu_pin_set' will be used to calculate 'VCPU' inventory "
+                "and schedule instances that have 'VCPU' allocations. "
+                "If you wish to define specific host CPUs to be used for "
+                "'VCPU' or 'PCPU' inventory, you must migrate the "
+                "'vcpu_pin_set' config option value to '[compute] "
+                "cpu_shared_set' and '[compute] cpu_dedicated_set', "
+                "respectively, and undefine 'vcpu_pin_set'.")
 
     def _prepare_migration_flags(self):
         migration_flags = 0
@@ -6182,33 +6248,69 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.resume()
         return guest
 
-    def _get_vcpu_total(self):
-        """Get available vcpu number of physical computer.
+    def _get_pcpu_total(self):
+        """Get number of host cores to be used for PCPUs.
 
-        :returns: the number of cpu core instances can be used.
-
+        :returns: The number of host cores to be used for PCPUs.
         """
-        try:
-            total_pcpus = self._host.get_cpu_count()
-        except libvirt.libvirtError:
-            LOG.warning("Cannot get the number of cpu, because this "
-                        "function is not implemented for this platform.")
+        if not CONF.compute.cpu_dedicated_set:
             return 0
 
-        if not CONF.vcpu_pin_set:
-            return total_pcpus
+        online_cpus = self._host.get_online_cpus()
+        dedicated_cpus = hardware.get_cpu_dedicated_set()
 
-        available_ids = hardware.get_vcpu_pin_set()
-        online_pcpus = self._host.get_online_cpus()
-        if not (available_ids <= online_pcpus):
-            msg = _("Invalid 'vcpu_pin_set' config: one or more of the "
-                    "requested CPUs is not online. Online cpuset(s): "
-                    "%(online)s, requested cpuset(s): %(req)s")
+        if not dedicated_cpus.issubset(online_cpus):
+            msg = _("Invalid '[compute] cpu_dedicated_set' config: one or "
+                    "more of the configured CPUs is not online. Online "
+                    "cpuset(s): %(online)s, configured cpuset(s): %(req)s")
             raise exception.Invalid(msg % {
-                'online': sorted(online_pcpus),
-                'req': sorted(available_ids)})
+                'online': sorted(online_cpus),
+                'req': sorted(dedicated_cpus)})
 
-        return len(available_ids)
+        return len(dedicated_cpus)
+
+    def _get_vcpu_total(self):
+        """Get number of host cores to be used for VCPUs.
+
+        :returns: the number of cpu core instances can be used.
+        """
+        # NOTE(stephenfin): The use of the legacy 'vcpu_pin_set' option happens
+        # if it's defined, regardless of whether '[compute] cpu_shared_set' is
+        # also configured. This is legacy behavior required for upgrades that
+        # should be removed in the future, when we can rely exclusively on
+        # '[compute] cpu_shared_set'.
+        if CONF.vcpu_pin_set:
+            # TODO(stephenfin): Remove this in U
+            shared_cpus = hardware.get_vcpu_pin_set()
+        elif CONF.compute.cpu_shared_set:
+            shared_cpus = hardware.get_cpu_shared_set()
+        elif CONF.compute.cpu_dedicated_set:
+            return 0
+        else:
+            try:
+                return self._host.get_cpu_count()
+            except libvirt.libvirtError:
+                LOG.warning("Cannot get the number of host CPUs because this "
+                            "function is not implemented for this platform.")
+                return 0
+
+        online_cpus = self._host.get_online_cpus()
+        if not shared_cpus.issubset(online_cpus):
+            msg = _("Invalid '%(config_opt)s' config: one or "
+                    "more of the configured CPUs is not online. Online "
+                    "cpuset(s): %(online)s, configured cpuset(s): %(req)s")
+
+            if CONF.vcpu_pin_set:
+                config_opt = 'vcpu_pin_set'
+            else:  # CONF.compute.cpu_shared_set
+                config_opt = '[compute] cpu_shared_set'
+
+            raise exception.Invalid(msg % {
+                'config_opt': config_opt,
+                'online': sorted(online_cpus),
+                'req': sorted(shared_cpus)})
+
+        return len(shared_cpus)
 
     @staticmethod
     def _get_local_gb_info():
@@ -7096,6 +7198,8 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_gb = int(self._get_local_gb_info()['total'])
         memory_mb = int(self._host.get_memory_mb_total())
         vcpus = self._get_vcpu_total()
+        pcpus = self._get_pcpu_total()
+        memory_enc_slots = self._get_memory_encrypted_slots()
 
         # NOTE(yikun): If the inv record does not exists, the allocation_ratio
         # will use the CONF.xxx_allocation_ratio value if xxx_allocation_ratio
@@ -7105,14 +7209,6 @@ class LibvirtDriver(driver.ComputeDriver):
         ratios = self._get_allocation_ratios(inv)
         resources = collections.defaultdict(set)
         result = {
-            orc.VCPU: {
-                'total': vcpus,
-                'min_unit': 1,
-                'max_unit': vcpus,
-                'step_size': 1,
-                'allocation_ratio': ratios[orc.VCPU],
-                'reserved': CONF.reserved_host_cpus,
-            },
             orc.MEMORY_MB: {
                 'total': memory_mb,
                 'min_unit': 1,
@@ -7123,8 +7219,29 @@ class LibvirtDriver(driver.ComputeDriver):
             },
         }
 
-        memory_enc_slots = self._get_memory_encrypted_slots()
-        if memory_enc_slots > 0:
+        # NOTE(stephenfin): We have to optionally report these since placement
+        # forbids reporting inventory with total=0
+        if vcpus:
+            result[orc.VCPU] = {
+                'total': vcpus,
+                'min_unit': 1,
+                'max_unit': vcpus,
+                'step_size': 1,
+                'allocation_ratio': ratios[orc.VCPU],
+                'reserved': CONF.reserved_host_cpus,
+            }
+
+        if pcpus:
+            result[orc.PCPU] = {
+                'total': pcpus,
+                'min_unit': 1,
+                'max_unit': pcpus,
+                'step_size': 1,
+                'allocation_ratio': 1,
+                'reserved': 0,
+            }
+
+        if memory_enc_slots:
             result[orc.MEM_ENCRYPTION_CONTEXT] = {
                 'total': memory_enc_slots,
                 'min_unit': 1,

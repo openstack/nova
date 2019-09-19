@@ -51,30 +51,48 @@ class InstanceInfoTests(test.NoDBTestCase):
         self.assertNotEqual(ii1, ii3)
 
 
-class CpuSetTestCase(test.NoDBTestCase):
+class CPUSetTestCase(test.NoDBTestCase):
     def test_get_vcpu_pin_set(self):
         self.flags(vcpu_pin_set="1-3,5,^2")
         cpuset_ids = hw.get_vcpu_pin_set()
         self.assertEqual(set([1, 3, 5]), cpuset_ids)
 
-    def test_get_cpu_shared_set(self):
-        self.flags(cpu_shared_set="0-5,6,^2", group='compute')
-        cpuset_ids = hw.get_cpu_shared_set()
-        self.assertEqual(set([0, 1, 3, 4, 5, 6]), cpuset_ids)
-
-    def test_parse_cpu_spec_none_returns_none(self):
+    def test_get_vcpu_pin_set__unset(self):
         self.flags(vcpu_pin_set=None)
         cpuset_ids = hw.get_vcpu_pin_set()
         self.assertIsNone(cpuset_ids)
 
-    def test_parse_cpu_shared_set_returns_none(self):
+    def test_get_vcpu_pin_set__invalid(self):
+        self.flags(vcpu_pin_set='0-1,^0,^1')
+        self.assertRaises(exception.Invalid, hw.get_vcpu_pin_set)
+
+    def test_get_cpu_shared_set(self):
+        self.flags(cpu_shared_set='0-5,6,^2', group='compute')
+        cpuset_ids = hw.get_cpu_shared_set()
+        self.assertEqual(set([0, 1, 3, 4, 5, 6]), cpuset_ids)
+
+    def test_get_cpu_shared_set__unset(self):
         self.flags(cpu_shared_set=None, group='compute')
         cpuset_ids = hw.get_cpu_shared_set()
         self.assertIsNone(cpuset_ids)
 
-    def test_parse_cpu_shared_set_error(self):
+    def test_get_cpu_shared_set__error(self):
         self.flags(cpu_shared_set="0-1,^0,^1", group='compute')
         self.assertRaises(exception.Invalid, hw.get_cpu_shared_set)
+
+    def test_get_cpu_dedicated_set(self):
+        self.flags(cpu_dedicated_set='0-5,6,^2', group='compute')
+        cpuset_ids = hw.get_cpu_dedicated_set()
+        self.assertEqual(set([0, 1, 3, 4, 5, 6]), cpuset_ids)
+
+    def test_get_cpu_dedicated_set__unset(self):
+        self.flags(cpu_dedicated_set=None, group='compute')
+        cpuset_ids = hw.get_cpu_dedicated_set()
+        self.assertIsNone(cpuset_ids)
+
+    def test_get_cpu_dedicated_set__error(self):
+        self.flags(cpu_dedicated_set="0-1,^0,^1", group='compute')
+        self.assertRaises(exception.Invalid, hw.get_cpu_dedicated_set)
 
     def test_parse_cpu_spec_valid_syntax_works(self):
         cpuset_ids = hw.parse_cpu_spec("1")

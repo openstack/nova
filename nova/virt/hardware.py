@@ -38,33 +38,51 @@ MEMPAGES_ANY = -3
 
 
 def get_vcpu_pin_set():
-    """Parse vcpu_pin_set config.
+    """Parse ``vcpu_pin_set`` config.
 
-    :returns: a set of pcpu ids can be used by instances
+    :returns: A set of host CPU IDs that can be used for VCPU and PCPU
+        allocations.
     """
     if not CONF.vcpu_pin_set:
         return None
 
     cpuset_ids = parse_cpu_spec(CONF.vcpu_pin_set)
     if not cpuset_ids:
-        raise exception.Invalid(_("No CPUs available after parsing %r") %
-                                CONF.vcpu_pin_set)
+        msg = _("No CPUs available after parsing 'vcpu_pin_set' config, %r")
+        raise exception.Invalid(msg % CONF.vcpu_pin_set)
     return cpuset_ids
 
 
-def get_cpu_shared_set():
-    """Parse cpu_shared_set config.
+def get_cpu_dedicated_set():
+    """Parse ``[compute] cpu_dedicated_set`` config.
 
-    :returns: a set of pcpu ids can be used for best effort workloads
+    :returns: A set of host CPU IDs that can be used for PCPU allocations.
+    """
+    if not CONF.compute.cpu_dedicated_set:
+        return None
+
+    cpu_ids = parse_cpu_spec(CONF.compute.cpu_dedicated_set)
+    if not cpu_ids:
+        msg = _("No CPUs available after parsing '[compute] "
+                "cpu_dedicated_set' config, %r")
+        raise exception.Invalid(msg % CONF.compute.cpu_dedicated_set)
+    return cpu_ids
+
+
+def get_cpu_shared_set():
+    """Parse ``[compute] cpu_shared_set`` config.
+
+    :returns: A set of host CPU IDs that can be used for emulator threads and,
+        optionally, for VCPU allocations.
     """
     if not CONF.compute.cpu_shared_set:
         return None
 
     shared_ids = parse_cpu_spec(CONF.compute.cpu_shared_set)
     if not shared_ids:
-        raise exception.Invalid(_("No CPUs available after parsing "
-                                  "cpu_shared_set config. %r ") %
-                                CONF.compute.cpu_shared_set)
+        msg = _("No CPUs available after parsing '[compute] cpu_shared_set' "
+                "config, %r")
+        raise exception.Invalid(msg % CONF.compute.cpu_shared_set)
     return shared_ids
 
 
