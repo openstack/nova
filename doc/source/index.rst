@@ -209,6 +209,7 @@ looking parts of our architecture. These are collected below.
    contributor/blueprints
    contributor/code-review
    contributor/documentation
+   contributor/evacuate-vs-rebuild.rst
    contributor/microversions
    contributor/policies.rst
    contributor/releasenotes

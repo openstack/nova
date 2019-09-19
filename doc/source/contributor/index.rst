@@ -107,3 +107,9 @@ Nova Major Subsystems
 Major subsystems in nova have different needs. If you are contributing to one
 of these please read the :ref:`reference guide <reference-internals>` before
 diving in.
+
+Move operations
+~~~~~~~~~~~~~~~
+
+* :doc:`/contributor/evacuate-vs-rebuild`: Describes the differences between
+  the often-confused evacuate and rebuild operations.
