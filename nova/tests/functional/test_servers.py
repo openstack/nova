@@ -6794,6 +6794,16 @@ class ServerMoveWithPortResourceRequestTest(
             new_flavor=self.flavor_with_group_policy_bigger)
 
     def test_migrate_server_with_qos_port_pci_update_fail_not_reschedule(self):
+        # Update the name of the network device RP of PF2 on host2 to something
+        # unexpected. This will cause
+        # _update_pci_request_spec_with_allocated_interface_name() to raise
+        # when the instance is migrated to the host2.
+        rsp = self.placement_api.put(
+            '/resource_providers/%s'
+            % self.sriov_dev_rp_per_host[self.compute2_rp_uuid][self.PF2],
+            {"name": "invalid-device-rp-name"})
+        self.assertEqual(200, rsp.status)
+
         self._start_compute('host3')
         compute3_rp_uuid = self._get_provider_uuid_by_host('host3')
         self._create_networking_rp_tree('host3', compute3_rp_uuid)
@@ -6810,24 +6820,19 @@ class ServerMoveWithPortResourceRequestTest(
             server, self.compute1_rp_uuid, non_qos_port, qos_port,
             qos_sriov_port, self.flavor_with_group_policy)
 
-        # The patched compute manager on host2 will raise from
+        # The compute manager on host2 will raise from
         # _update_pci_request_spec_with_allocated_interface_name which will
         # intentionally not trigger a re-schedule even if there is host3 as an
         # alternate.
-        with mock.patch.object(
-                self.computes['host2'].manager,
-                '_update_pci_request_spec_with_allocated_interface_name',
-                side_effect=exception.BuildAbortException(
-                    instance_uuid=server['id'], reason='Testing')):
-            self.api.post_server_action(server['id'], {'migrate': None})
-            server = self._wait_for_server_parameter(
-                self.api, server,
-                {'OS-EXT-SRV-ATTR:host': 'host1',
-                 # Note that we have to wait for the task_state to be reverted
-                 # to None since that happens after the fault is recorded.
-                 'OS-EXT-STS:task_state': None,
-                 'status': 'ERROR'})
-            self._wait_for_migration_status(server, ['error'])
+        self.api.post_server_action(server['id'], {'migrate': None})
+        server = self._wait_for_server_parameter(
+            self.api, server,
+            {'OS-EXT-SRV-ATTR:host': 'host1',
+             # Note that we have to wait for the task_state to be reverted
+             # to None since that happens after the fault is recorded.
+             'OS-EXT-STS:task_state': None,
+             'status': 'ERROR'})
+        self._wait_for_migration_status(server, ['error'])
 
         self.assertIn(
             'Build of instance %s aborted' % server['id'],
