@@ -99,6 +99,7 @@ from nova.virt import block_device as driver_block_device
 from nova.virt import configdrive
 from nova.virt import driver
 from nova.virt import event as virtevent
+from nova.virt import hardware
 from nova.virt import storage_users
 from nova.virt import virtapi
 from nova.volume import cinder
@@ -816,6 +817,63 @@ class ComputeManager(manager.Manager):
         self._clean_instance_console_tokens(context, instance)
         self._delete_scheduler_instance_info(context, instance.uuid)
 
+    def _validate_pinning_configuration(self, instances):
+        if not self.driver.capabilities.get('supports_pcpus', False):
+            return
+
+        for instance in instances:
+            # ignore deleted instances
+            if instance.deleted:
+                continue
+
+            # if this is an unpinned instance and the host only has
+            # 'cpu_dedicated_set' configured, we need to tell the operator to
+            # correct their configuration
+            if not (instance.numa_topology and
+                        instance.numa_topology.cpu_pinning_requested):
+
+                # we don't need to check 'vcpu_pin_set' since it can't coexist
+                # alongside 'cpu_dedicated_set'
+                if (CONF.compute.cpu_dedicated_set and
+                        not CONF.compute.cpu_shared_set):
+                    msg = _("This host has unpinned instances but has no CPUs "
+                            "set aside for this purpose; configure '[compute] "
+                            "cpu_shared_set' instead of, or in addition to, "
+                            "'[compute] cpu_dedicated_set'")
+                    raise exception.InvalidConfiguration(msg)
+
+                continue
+
+            # ditto for pinned instances if only 'cpu_shared_set' is configured
+            if (CONF.compute.cpu_shared_set and
+                    not CONF.compute.cpu_dedicated_set and
+                    not CONF.vcpu_pin_set):
+                msg = _("This host has pinned instances but has no CPUs "
+                        "set aside for this purpose; configure '[compute] "
+                        "cpu_dedicated_set' instead of, or in addition to, "
+                        "'[compute] cpu_shared_set'")
+                raise exception.InvalidConfiguration(msg)
+
+            # also check to make sure the operator hasn't accidentally
+            # dropped some cores that instances are currently using
+            available_dedicated_cpus = (hardware.get_vcpu_pin_set() or
+                                        hardware.get_cpu_dedicated_set())
+            pinned_cpus = instance.numa_topology.cpu_pinning
+            if available_dedicated_cpus and (
+                    pinned_cpus - available_dedicated_cpus):
+                # we can't raise an exception because of bug #1289064,
+                # which meant we didn't recalculate CPU pinning information
+                # when we live migrated a pinned instance
+                LOG.warning(
+                    "Instance is pinned to host CPUs %(cpus)s "
+                    "but one or more of these CPUs are not included in "
+                    "either '[compute] cpu_dedicated_set' or "
+                    "'vcpu_pin_set'; you should update these "
+                    "configuration options to include the missing CPUs "
+                    "or rebuild or cold migrate this instance.",
+                    {'cpus': list(pinned_cpus)},
+                    instance=instance)
+
     def _init_instance(self, context, instance):
         """Initialize this instance during service init."""
 
@@ -1255,12 +1313,15 @@ class ComputeManager(manager.Manager):
         self.driver.init_host(host=self.host)
         context = nova.context.get_admin_context()
         instances = objects.InstanceList.get_by_host(
-            context, self.host, expected_attrs=['info_cache', 'metadata'])
+            context, self.host,
+            expected_attrs=['info_cache', 'metadata', 'numa_topology'])
 
         if CONF.defer_iptables_apply:
             self.driver.filter_defer_apply_on()
 
         self.init_virt_events()
+
+        self._validate_pinning_configuration(instances)
 
         try:
             # checking that instance was not already evacuated to other host

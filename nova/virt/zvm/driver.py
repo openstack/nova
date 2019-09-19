@@ -46,6 +46,8 @@ DEFAULT_EPH_DISK_FMT = 'ext3'
 class ZVMDriver(driver.ComputeDriver):
     """z/VM implementation of ComputeDriver."""
     capabilities = {
+        "supports_pcpus": False,
+
         # Image type support flags
         "supports_image_type_aki": False,
         "supports_image_type_ami": False,
