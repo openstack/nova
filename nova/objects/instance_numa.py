@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import itertools
+
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
 
@@ -216,6 +218,13 @@ class InstanceNUMATopology(base.NovaObject,
         return cls(cells=[
             InstanceNUMACell._from_dict(cell_dict)
             for cell_dict in data_dict.get('cells', [])])
+
+    @property
+    def cpu_pinning(self):
+        """Return a set of all host CPUs this NUMATopology is pinned to."""
+        return set(itertools.chain.from_iterable([
+            cell.cpu_pinning.values() for cell in self.cells
+            if cell.cpu_pinning]))
 
     @property
     def cpu_pinning_requested(self):

@@ -137,6 +137,19 @@ class _TestInstanceNUMATopology(object):
         inst_cell.cpu_policy = fields.CPUAllocationPolicy.DEDICATED
         self.assertTrue(inst_cell.cpu_pinning_requested)
 
+    def test_cpu_pinning(self):
+        topo_obj = get_fake_obj_numa_topology(self.context)
+
+        self.assertEqual(set(), topo_obj.cpu_pinning)
+
+        topo_obj.cells[0].pin_vcpus((1, 10), (2, 11))
+
+        self.assertEqual(set([10, 11]), topo_obj.cpu_pinning)
+
+        topo_obj.cells[1].pin_vcpus((3, 0), (4, 1))
+
+        self.assertEqual(set([0, 1, 10, 11]), topo_obj.cpu_pinning)
+
     def test_cpu_pinning_requested(self):
         fake_topo_obj = copy.deepcopy(fake_obj_numa_topology)
         self.assertFalse(fake_topo_obj.cpu_pinning_requested)
