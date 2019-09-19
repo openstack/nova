@@ -16,7 +16,6 @@ from nova.tests.functional.api_sample_tests import test_servers
 
 
 class AvailabilityZoneJsonTest(test_servers.ServersSampleBase):
-    USE_NEUTRON = False
     ADMIN_API = True
     sample_dir = "os-availability-zone"
 
@@ -29,7 +28,6 @@ class AvailabilityZoneJsonTest(test_servers.ServersSampleBase):
         response = self._do_get('os-availability-zone')
         self._verify_response('availability-zone-list-resp', {}, response, 200)
 
-    # TODO(stephenfin): Migrate off of nova-network
     def test_availability_zone_detail(self):
         response = self._do_get('os-availability-zone/detail')
         self._verify_response('availability-zone-detail-resp', {}, response,
