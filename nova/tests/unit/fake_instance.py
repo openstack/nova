@@ -119,7 +119,6 @@ def fake_instance_obj(context, obj_instance_class=None, **updates):
                                 is_public=True,
                                 extra_specs={},
                                 projects=[])
-        flavor.obj_reset_changes()
     inst = obj_instance_class._from_db_object(context,
                obj_instance_class(), fake_db_instance(**updates),
                expected_attrs=expected_attrs)
@@ -141,7 +140,7 @@ def fake_instance_obj(context, obj_instance_class=None, **updates):
     inst.new_flavor = None
     inst.resources = None
     inst.migration_context = None
-    inst.obj_reset_changes()
+    inst.obj_reset_changes(recursive=True)
     return inst
 
 
