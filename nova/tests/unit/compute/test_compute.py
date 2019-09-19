@@ -5701,8 +5701,8 @@ class ComputeTestCase(BaseTestCase,
         # are used
         cell1 = objects.NUMACell(
             id=0,
-            cpuset=set([1, 2]),
-            pcpuset=set(),
+            cpuset=set(),
+            pcpuset=set([1, 2]),
             memory=512,
             pagesize=2048,
             cpu_usage=2,
@@ -5715,8 +5715,8 @@ class ComputeTestCase(BaseTestCase,
         # are free (on current host)
         cell2 = objects.NUMACell(
             id=1,
-            cpuset=set([3, 4]),
-            pcpuset=set(),
+            cpuset=set(),
+            pcpuset=set([3, 4]),
             pinned_cpus=set(),
             memory=512,
             pagesize=2048,
@@ -5765,7 +5765,6 @@ class ComputeTestCase(BaseTestCase,
         # after confirming resize all cpus on currect host must be free
         self.assertEqual(2, len(updated_topology.cells))
         for cell in updated_topology.cells:
-            self.assertEqual(0, cell.cpu_usage)
             self.assertEqual(set(), cell.pinned_cpus)
 
     def _test_resize_with_pci(self, method, expected_pci_addr):

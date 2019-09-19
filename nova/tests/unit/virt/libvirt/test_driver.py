@@ -2757,6 +2757,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(
         host.Host, "is_cpu_control_policy_capable", return_value=True)
     def test_get_guest_config_numa_host_instance_fits(self, is_able):
+        self.flags(cpu_shared_set=None, cpu_dedicated_set=None,
+                   group='compute')
         instance_ref = objects.Instance(**self.test_instance)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         flavor = objects.Flavor(memory_mb=1, vcpus=2, root_gb=496,
@@ -2779,7 +2781,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 mock.patch.object(host.Host, 'has_min_version',
                                   return_value=True),
                 mock.patch.object(host.Host, "get_capabilities",
-                                  return_value=caps)):
+                                  return_value=caps),
+                mock.patch.object(host.Host, 'get_online_cpus',
+                                  return_value=set([0, 1])),
+                ):
             cfg = drvr._get_guest_config(instance_ref, [],
                                          image_meta, disk_info)
             self.assertIsNone(cfg.cpuset)
@@ -2812,18 +2817,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         with test.nested(
                 mock.patch.object(host.Host, "get_capabilities",
                                   return_value=caps),
-                mock.patch.object(
-                    hardware, 'get_vcpu_pin_set', return_value=set([3])),
                 mock.patch.object(random, 'choice'),
                 mock.patch.object(drvr, '_has_numa_support',
                                   return_value=False)
-            ) as (get_host_cap_mock,
-                  get_vcpu_pin_set_mock, choice_mock,
-                  _has_numa_support_mock):
+            ) as (_, choice_mock, _):
             cfg = drvr._get_guest_config(instance_ref, [],
                                          image_meta, disk_info)
             self.assertFalse(choice_mock.called)
-            self.assertEqual(set([3]), cfg.cpuset)
+            self.assertIsNone(cfg.cpuset)
             self.assertEqual(0, len(cfg.cputune.vcpupin))
             self.assertIsNone(cfg.cpu.numa)
 
@@ -3197,6 +3198,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         host.Host, "is_cpu_control_policy_capable", return_value=True)
     def test_get_guest_config_numa_host_instance_pci_no_numa_info(
             self, is_able):
+        self.flags(cpu_shared_set='3', cpu_dedicated_set=None,
+                   group='compute')
+
         instance_ref = objects.Instance(**self.test_instance)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         flavor = objects.Flavor(memory_mb=1, vcpus=2, root_gb=496,
@@ -3228,12 +3232,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         with test.nested(
                 mock.patch.object(host.Host, 'has_min_version',
                                   return_value=True),
-                mock.patch.object(
-                    host.Host, "get_capabilities", return_value=caps),
-                mock.patch.object(
-                    hardware, 'get_vcpu_pin_set', return_value=set([3])),
+                mock.patch.object(host.Host, "get_capabilities",
+                                  return_value=caps),
                 mock.patch.object(host.Host, 'get_online_cpus',
-                                  return_value=set(range(8))),
+                                  return_value=set([3])),
                 mock.patch.object(pci_manager, "get_instance_pci_devs",
                                   return_value=[pci_device])):
             cfg = conn._get_guest_config(instance_ref, [],
@@ -3247,6 +3249,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(
         host.Host, "is_cpu_control_policy_capable", return_value=True)
     def test_get_guest_config_numa_host_instance_2pci_no_fit(self, is_able):
+        self.flags(cpu_shared_set='3', cpu_dedicated_set=None,
+                   group='compute')
         instance_ref = objects.Instance(**self.test_instance)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         flavor = objects.Flavor(memory_mb=4096, vcpus=4, root_gb=496,
@@ -3279,16 +3283,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         with test.nested(
                 mock.patch.object(
                     host.Host, "get_capabilities", return_value=caps),
-                mock.patch.object(
-                    hardware, 'get_vcpu_pin_set', return_value=set([3])),
+                mock.patch.object(host.Host, 'get_online_cpus',
+                                  return_value=set([3])),
                 mock.patch.object(random, 'choice'),
                 mock.patch.object(pci_manager, "get_instance_pci_devs",
                                   return_value=[pci_device, pci_device2]),
                 mock.patch.object(conn, '_has_numa_support',
                                   return_value=False)
-            ) as (get_host_cap_mock,
-                  get_vcpu_pin_set_mock, choice_mock, pci_mock,
-                  _has_numa_support_mock):
+            ) as (_, _, choice_mock, pci_mock, _):
             cfg = conn._get_guest_config(instance_ref, [],
                                          image_meta, disk_info)
             self.assertFalse(choice_mock.called)
@@ -3368,6 +3370,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         host.Host, "is_cpu_control_policy_capable", return_value=True)
     def test_get_guest_config_numa_host_instance_fit_w_cpu_pinset(
             self, is_able):
+        self.flags(cpu_shared_set='2-3', cpu_dedicated_set=None,
+                   group='compute')
+
         instance_ref = objects.Instance(**self.test_instance)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         flavor = objects.Flavor(memory_mb=1024, vcpus=2, root_gb=496,
@@ -3389,14 +3394,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         with test.nested(
                 mock.patch.object(host.Host, 'has_min_version',
                                   return_value=True),
-                mock.patch.object(host.Host, "get_capabilities",
+                mock.patch.object(host.Host, 'get_capabilities',
                                   return_value=caps),
-                mock.patch.object(
-                    hardware, 'get_vcpu_pin_set', return_value=set([2, 3])),
                 mock.patch.object(host.Host, 'get_online_cpus',
-                                  return_value=set(range(8)))
-                ) as (has_min_version_mock, get_host_cap_mock,
-                        get_vcpu_pin_set_mock, get_online_cpus_mock):
+                                  return_value=set([2, 3])),
+                ):
             cfg = drvr._get_guest_config(instance_ref, [],
                                          image_meta, disk_info)
             # NOTE(ndipanov): we make sure that pin_set was taken into account
@@ -3456,6 +3458,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(
         host.Host, "is_cpu_control_policy_capable", return_value=True)
     def test_get_guest_config_numa_host_instance_topo(self, is_able):
+        self.flags(cpu_shared_set='0-5', cpu_dedicated_set=None,
+                   group='compute')
+
         instance_topology = objects.InstanceNUMATopology(
                     cells=[objects.InstanceNUMACell(
                         id=1, cpuset=set([0, 1]), memory=1024, pagesize=None),
@@ -3489,9 +3494,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                   return_value=True),
                 mock.patch.object(host.Host, "get_capabilities",
                                   return_value=caps),
-                mock.patch.object(
-                    hardware, 'get_vcpu_pin_set',
-                    return_value=set([2, 3, 4, 5])),
                 mock.patch.object(host.Host, 'get_online_cpus',
                                   return_value=set(range(8))),
                 ):
@@ -3686,6 +3688,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 self.assertEqual("strict", memnode.mode)
 
     def test_get_guest_config_numa_host_mempages_shared(self):
+        self.flags(cpu_shared_set='2-5', cpu_dedicated_set=None,
+                   group='compute')
+
         instance_topology = objects.InstanceNUMATopology(
             cells=[
                 objects.InstanceNUMACell(
@@ -3724,11 +3729,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                   return_value=True),
                 mock.patch.object(host.Host, "get_capabilities",
                                   return_value=caps),
-                mock.patch.object(
-                    hardware, 'get_vcpu_pin_set',
-                    return_value=set([2, 3, 4, 5])),
                 mock.patch.object(host.Host, 'get_online_cpus',
-                                  return_value=set(range(8))),
+                                  return_value=set([2, 3, 4, 5])),
                 ):
             cfg = drvr._get_guest_config(instance_ref, [],
                                          image_meta, disk_info)
@@ -3759,13 +3761,20 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual(set([2, 3, 4, 5]), cfg.cputune.emulatorpin.cpuset)
 
     def test_get_guest_config_numa_host_instance_cpu_pinning_realtime(self):
+        self.flags(cpu_shared_set=None, cpu_dedicated_set='4-7',
+                   group='compute')
+
         instance_topology = objects.InstanceNUMATopology(
             cells=[
                 objects.InstanceNUMACell(
                     id=2, cpuset=set([0, 1]),
+                    cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                    cpu_pinning={0: 4, 1: 5},
                     memory=1024, pagesize=2048),
                 objects.InstanceNUMACell(
                     id=3, cpuset=set([2, 3]),
+                    cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                    cpu_pinning={2: 6, 3: 7},
                     memory=1024, pagesize=2048)])
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.numa_topology = instance_topology
@@ -3773,6 +3782,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         flavor = objects.Flavor(memory_mb=2048, vcpus=4, root_gb=496,
                                 ephemeral_gb=8128, swap=33550336, name='fake',
                                 extra_specs={
+                                    "hw:numa_nodes": "2",
                                     "hw:cpu_realtime": "yes",
                                     "hw:cpu_policy": "dedicated",
                                     "hw:cpu_realtime_mask": "^0-1"
@@ -3801,9 +3811,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                   return_value=True),
                 mock.patch.object(host.Host, "get_capabilities",
                                   return_value=caps),
-                mock.patch.object(
-                    hardware, 'get_vcpu_pin_set',
-                    return_value=set([4, 5, 6, 7])),
                 mock.patch.object(host.Host, 'get_online_cpus',
                                   return_value=set(range(8))),
                 ):
@@ -3835,12 +3842,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual(1, len(cfg.cputune.vcpusched))
             self.assertEqual("fifo", cfg.cputune.vcpusched[0].scheduler)
 
-            # Ensure vCPUs 0-1 are pinned on host CPUs 4-5 and 2-3 are
-            # set on host CPUs 6-7 according the realtime mask ^0-1
-            self.assertEqual(set([4, 5]), cfg.cputune.vcpupin[0].cpuset)
-            self.assertEqual(set([4, 5]), cfg.cputune.vcpupin[1].cpuset)
-            self.assertEqual(set([6, 7]), cfg.cputune.vcpupin[2].cpuset)
-            self.assertEqual(set([6, 7]), cfg.cputune.vcpupin[3].cpuset)
+            self.assertEqual(set([4]), cfg.cputune.vcpupin[0].cpuset)
+            self.assertEqual(set([5]), cfg.cputune.vcpupin[1].cpuset)
+            self.assertEqual(set([6]), cfg.cputune.vcpupin[2].cpuset)
+            self.assertEqual(set([7]), cfg.cputune.vcpupin[3].cpuset)
 
             # We ensure that emulator threads are pinned on host CPUs
             # 4-5 which are "normal" vCPUs
@@ -3851,6 +3856,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual(set([2, 3]), cfg.cputune.vcpusched[0].vcpus)
 
     def test_get_guest_config_numa_host_instance_isolated_emulthreads(self):
+        self.flags(cpu_shared_set=None, cpu_dedicated_set='4-8',
+                   group='compute')
+
         instance_topology = objects.InstanceNUMATopology(
             emulator_threads_policy=(
                 fields.CPUEmulatorThreadsPolicy.ISOLATE),
@@ -3889,9 +3897,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                   return_value=True),
                 mock.patch.object(host.Host, "get_capabilities",
                                   return_value=caps),
-                mock.patch.object(
-                    hardware, 'get_vcpu_pin_set',
-                    return_value=set([4, 5, 6, 7, 8])),
                 mock.patch.object(host.Host, 'get_online_cpus',
                                   return_value=set(range(10))),
                 ):
@@ -3906,7 +3911,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     def test_get_guest_config_numa_host_instance_shared_emulthreads_err(
             self):
-        self.flags(cpu_shared_set="48-50", group="compute")
+        self.flags(cpu_shared_set='48-50', cpu_dedicated_set='4-8',
+                   group='compute')
+
         instance_topology = objects.InstanceNUMATopology(
             emulator_threads_policy=(
                 fields.CPUEmulatorThreadsPolicy.SHARE),
@@ -3945,9 +3952,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                   return_value=True),
                 mock.patch.object(host.Host, "get_capabilities",
                                   return_value=caps),
-                mock.patch.object(
-                    hardware, 'get_vcpu_pin_set',
-                    return_value=set([4, 5, 6, 7, 8])),
                 mock.patch.object(host.Host, 'get_online_cpus',
                                   return_value=set(range(10))),
                 ):
@@ -3957,7 +3961,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     def test_get_guest_config_numa_host_instance_shared_emulator_threads(
             self):
-        self.flags(cpu_shared_set="48-50", group="compute")
+        self.flags(cpu_shared_set='0,1', cpu_dedicated_set='2-7',
+                   group='compute')
         instance_topology = objects.InstanceNUMATopology(
             emulator_threads_policy=(
                 fields.CPUEmulatorThreadsPolicy.SHARE),
@@ -3966,13 +3971,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     id=0, cpuset=set([0, 1]),
                     memory=1024, pagesize=2048,
                     cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
-                    cpu_pinning={0: 4, 1: 5},
+                    cpu_pinning={0: 2, 1: 3},
                     cpuset_reserved=set([6])),
                 objects.InstanceNUMACell(
                     id=1, cpuset=set([2, 3]),
                     memory=1024, pagesize=2048,
                     cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
-                    cpu_pinning={2: 7, 3: 8})])
+                    cpu_pinning={2: 4, 3: 5})])
 
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.numa_topology = instance_topology
@@ -3996,23 +4001,18 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                   return_value=True),
                 mock.patch.object(host.Host, "get_capabilities",
                                   return_value=caps),
-                mock.patch.object(
-                    hardware, 'get_vcpu_pin_set',
-                    return_value=set([4, 5, 6, 7, 8])),
                 mock.patch.object(host.Host, 'get_online_cpus',
-                                  return_value=set(list(range(10)) +
-                                                   [48, 50])),
+                                  return_value=set(range(8))),
                 ):
             cfg = drvr._get_guest_config(instance_ref, [],
                                          image_meta, disk_info)
 
-            # cpu_shared_set is configured with [48, 49, 50] but only
-            # [48, 50] are online.
-            self.assertEqual(set([48, 50]), cfg.cputune.emulatorpin.cpuset)
-            self.assertEqual(set([4]), cfg.cputune.vcpupin[0].cpuset)
-            self.assertEqual(set([5]), cfg.cputune.vcpupin[1].cpuset)
-            self.assertEqual(set([7]), cfg.cputune.vcpupin[2].cpuset)
-            self.assertEqual(set([8]), cfg.cputune.vcpupin[3].cpuset)
+            # emulator threads should be mapped to cores from 'cpu_shared_set'
+            self.assertEqual(set([0, 1]), cfg.cputune.emulatorpin.cpuset)
+            self.assertEqual(set([2]), cfg.cputune.vcpupin[0].cpuset)
+            self.assertEqual(set([3]), cfg.cputune.vcpupin[1].cpuset)
+            self.assertEqual(set([4]), cfg.cputune.vcpupin[2].cpuset)
+            self.assertEqual(set([5]), cfg.cputune.vcpupin[3].cpuset)
 
     def test_get_cpu_numa_config_from_instance(self):
         topology = objects.InstanceNUMATopology(cells=[
@@ -4073,7 +4073,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         with test.nested(
                 mock.patch.object(drvr, "_get_host_numa_topology",
                                   return_value=host_topology),
-                mock.patch.object(hardware, 'get_vcpu_pin_set',
+                mock.patch.object(hardware, "get_cpu_shared_set",
                                   return_value=[1, 2, 3, 4, 5, 6])):
             guest_numa_config = drvr._get_guest_numa_config(
                 instance_topology, flavor={}, image_meta={})
@@ -7207,11 +7207,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 'EPYC',
                 'EPYC-IBPB']
 
+        def fake_getCPUMap():
+            return (2, [True, True], 2)
+
         # Make sure the host arch is mocked as x86_64
         self.create_fake_libvirt_mock(getCapabilities=fake_getCapabilities,
                                       baselineCPU=fake_baselineCPU,
                                       getCPUModelNames=fake_getCPUModelNames,
-                                      getVersion=lambda: 1005001)
+                                      getVersion=lambda: 1005001,
+                                      getCPUMap=fake_getCPUMap)
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
@@ -13805,6 +13809,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 'EPYC',
                 'EPYC-IBPB']
 
+        def fake_getCPUMap():
+            return (2, [True, True], 2)
+
         # _fake_network_info must be called before create_fake_libvirt_mock(),
         # as _fake_network_info calls importutils.import_class() and
         # create_fake_libvirt_mock() mocks importutils.import_class().
@@ -13813,7 +13820,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                       getCapabilities=fake_getCapabilities,
                                       getCPUModelNames=fake_getCPUModelNames,
                                       getVersion=lambda: 1005001,
-                                      baselineCPU=fake_baselineCPU)
+                                      baselineCPU=fake_baselineCPU,
+                                      getCPUMap=fake_getCPUMap)
 
         instance = objects.Instance(**self.test_instance)
         instance.image_ref = uuids.image_ref
@@ -16604,9 +16612,62 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock.call('0000:04:11.7', False)
         ])
 
-    # TODO(stephenfin): This only has one caller. Flatten it and remove the
-    # 'mempages=False' branches or add the missing test
-    def _test_get_host_numa_topology(self, mempages):
+    @mock.patch.object(host.Host, 'has_min_version',
+                       new=mock.Mock(return_value=True))
+    def _test_get_host_numa_topology(self):
+        nodes = 4
+        sockets = 1
+        cores = 1
+        threads = 2
+        total_cores = nodes * sockets * cores * threads
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = fields.Architecture.X86_64
+        caps.host.topology = fakelibvirt.NUMATopology(
+            cpu_nodes=nodes, cpu_sockets=sockets, cpu_cores=cores,
+            cpu_threads=threads)
+        for i, cell in enumerate(caps.host.topology.cells):
+            cell.mempages = fakelibvirt.create_mempages(
+                [(4, 1024 * i), (2048, i)])
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        with test.nested(
+                mock.patch.object(host.Host, 'get_capabilities',
+                                  return_value=caps),
+                mock.patch.object(host.Host, 'get_online_cpus',
+                                  return_value=set(range(total_cores))),
+                ):
+            got_topo = drvr._get_host_numa_topology()
+
+            # there should be varying amounts of mempages for each cell
+            self.assertEqual(4, got_topo.cells[0].mempages[0].size_kb)
+            self.assertEqual(0, got_topo.cells[0].mempages[0].total)
+            self.assertEqual(2048, got_topo.cells[0].mempages[1].size_kb)
+            self.assertEqual(0, got_topo.cells[0].mempages[1].total)
+            self.assertEqual(4, got_topo.cells[1].mempages[0].size_kb)
+            self.assertEqual(1024, got_topo.cells[1].mempages[0].total)
+            self.assertEqual(2048, got_topo.cells[1].mempages[1].size_kb)
+            self.assertEqual(1, got_topo.cells[1].mempages[1].total)
+
+            # none of the topologies should have pinned CPUs yet
+            self.assertEqual(set([]), got_topo.cells[0].pinned_cpus)
+            self.assertEqual(set([]), got_topo.cells[1].pinned_cpus)
+            self.assertEqual(set([]), got_topo.cells[2].pinned_cpus)
+            self.assertEqual(set([]), got_topo.cells[3].pinned_cpus)
+
+            # return to caller for further checks
+            return got_topo
+
+    def test_get_host_numa_topology(self):
+        """Check that the host NUMA topology is generated correctly for a
+        fairly complex configuration.
+        """
+        self.flags(cpu_shared_set='0-1', cpu_dedicated_set='2-6',
+                   group='compute')
+        self.flags(vcpu_pin_set=None)
         self.flags(physnets=['foo', 'bar', 'baz'], group='neutron')
         # we need to call the below again to ensure the updated 'physnets'
         # value is read and the new groups created
@@ -16616,68 +16677,122 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.flags(numa_nodes=[3], group='neutron_physnet_bar')
         self.flags(numa_nodes=[1, 2, 3], group='neutron_physnet_baz')
 
-        caps = vconfig.LibvirtConfigCaps()
-        caps.host = vconfig.LibvirtConfigCapsHost()
-        caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = fields.Architecture.X86_64
-        caps.host.topology = fakelibvirt.NUMATopology()
-        if mempages:
-            for i, cell in enumerate(caps.host.topology.cells):
-                cell.mempages = fakelibvirt.create_mempages(
-                    [(4, 1024 * i), (2048, i)])
+        got_topo = self._test_get_host_numa_topology()
 
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        # only cores 0 and 1 are configured as shared using the
+        # 'cpu_shared_set' config option
+        self.assertEqual(set([0, 1]), got_topo.cells[0].cpuset)
+        self.assertEqual(set(), got_topo.cells[0].pcpuset)
+        self.assertEqual(set(), got_topo.cells[1].cpuset)
+        self.assertEqual(set([2, 3]), got_topo.cells[1].pcpuset)
+        self.assertEqual(set(), got_topo.cells[2].cpuset)
+        self.assertEqual(set([4, 5]), got_topo.cells[2].pcpuset)
+        self.assertEqual(set(), got_topo.cells[3].cpuset)
+        self.assertEqual(set([6]), got_topo.cells[3].pcpuset)
 
-        with test.nested(
-                mock.patch.object(host.Host, "get_capabilities",
-                                  return_value=caps),
-                mock.patch.object(
-                    hardware, 'get_vcpu_pin_set',
-                    return_value=set([0, 1, 3, 4, 5])),
-                mock.patch.object(host.Host, 'get_online_cpus',
-                                  return_value=set([0, 1, 2, 3, 6])),
-                ):
-            got_topo = drvr._get_host_numa_topology()
+        # all cells except the last one should have siblings
+        self.assertEqual([set([0, 1])], got_topo.cells[0].siblings)
+        self.assertEqual([set([2, 3])], got_topo.cells[1].siblings)
+        self.assertEqual([set([4, 5])], got_topo.cells[2].siblings)
+        self.assertEqual([set([6])], got_topo.cells[3].siblings)
 
-            if mempages:
-                # cells 0
-                self.assertEqual(4, got_topo.cells[0].mempages[0].size_kb)
-                self.assertEqual(0, got_topo.cells[0].mempages[0].total)
-                self.assertEqual(2048, got_topo.cells[0].mempages[1].size_kb)
-                self.assertEqual(0, got_topo.cells[0].mempages[1].total)
-                # cells 1
-                self.assertEqual(4, got_topo.cells[1].mempages[0].size_kb)
-                self.assertEqual(1024, got_topo.cells[1].mempages[0].total)
-                self.assertEqual(2048, got_topo.cells[1].mempages[1].size_kb)
-                self.assertEqual(1, got_topo.cells[1].mempages[1].total)
-            else:
-                self.assertEqual([], got_topo.cells[0].mempages)
-                self.assertEqual([], got_topo.cells[1].mempages)
+        self.assertEqual(set(),
+                         got_topo.cells[0].network_metadata.physnets)
+        self.assertEqual(set(['foo', 'baz']),
+                         got_topo.cells[1].network_metadata.physnets)
+        self.assertEqual(set(['baz']),
+                         got_topo.cells[2].network_metadata.physnets)
+        self.assertEqual(set(['bar', 'baz']),
+                         got_topo.cells[3].network_metadata.physnets)
 
-            self.assertEqual(set([]), got_topo.cells[0].pinned_cpus)
-            self.assertEqual(set([]), got_topo.cells[1].pinned_cpus)
-            self.assertEqual(set([]), got_topo.cells[2].pinned_cpus)
-            self.assertEqual(set([]), got_topo.cells[3].pinned_cpus)
-            self.assertEqual([set([0, 1])], got_topo.cells[0].siblings)
-            self.assertEqual([set([3])], got_topo.cells[1].siblings)
+        self.assertTrue(got_topo.cells[0].network_metadata.tunneled)
+        self.assertFalse(got_topo.cells[1].network_metadata.tunneled)
+        self.assertTrue(got_topo.cells[2].network_metadata.tunneled)
+        self.assertFalse(got_topo.cells[3].network_metadata.tunneled)
 
-            self.assertEqual(set(),
-                             got_topo.cells[0].network_metadata.physnets)
-            self.assertEqual(set(['foo', 'baz']),
-                             got_topo.cells[1].network_metadata.physnets)
-            self.assertEqual(set(['baz']),
-                             got_topo.cells[2].network_metadata.physnets)
-            self.assertEqual(set(['bar', 'baz']),
-                             got_topo.cells[3].network_metadata.physnets)
+    def test_get_host_numa_topology__vcpu_pin_set_fallback(self):
+        """Check that the host NUMA topology will fall back to using
+        'vcpu_pin_set' if 'cpu_dedicated_set' is not defined.
+        """
+        self.flags(cpu_shared_set='0-1', cpu_dedicated_set=None,
+                   group='compute')
+        self.flags(vcpu_pin_set='2-6')
 
-            self.assertTrue(got_topo.cells[0].network_metadata.tunneled)
-            self.assertFalse(got_topo.cells[1].network_metadata.tunneled)
-            self.assertTrue(got_topo.cells[2].network_metadata.tunneled)
-            self.assertFalse(got_topo.cells[3].network_metadata.tunneled)
+        got_topo = self._test_get_host_numa_topology()
 
-    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
-    def test_get_host_numa_topology(self, mock_version):
-        self._test_get_host_numa_topology(mempages=True)
+        # cores 0 and 1 are configured as shared using the 'cpu_shared_set'
+        # config option but because 'vcpu_pin_set' is configured this
+        # configuration is ignored. All the cores listed in 'vcpu_pin_set' are
+        # dual reported for upgrade reasons
+        self.assertEqual(set(), got_topo.cells[0].cpuset)
+        self.assertEqual(set(), got_topo.cells[0].pcpuset)
+        self.assertEqual(set([2, 3]), got_topo.cells[1].cpuset)
+        self.assertEqual(set([2, 3]), got_topo.cells[1].pcpuset)
+        self.assertEqual(set([4, 5]), got_topo.cells[2].cpuset)
+        self.assertEqual(set([4, 5]), got_topo.cells[2].pcpuset)
+        self.assertEqual(set([6]), got_topo.cells[3].cpuset)
+        self.assertEqual(set([6]), got_topo.cells[3].pcpuset)
+
+        # all cells except the first and last one should have siblings
+        self.assertEqual([], got_topo.cells[0].siblings)
+        self.assertEqual([set([2, 3])], got_topo.cells[1].siblings)
+        self.assertEqual([set([4, 5])], got_topo.cells[2].siblings)
+        self.assertEqual([set([6])], got_topo.cells[3].siblings)
+
+    def test_get_host_numa_topology__no_cpu_configuration(self):
+        """Check that the host NUMA topology will fall back to using
+        'vcpu_pin_set' if 'cpu_dedicated_set' is not defined.
+        """
+        self.flags(cpu_shared_set=None, cpu_dedicated_set=None,
+                   group='compute')
+        self.flags(vcpu_pin_set=None)
+
+        got_topo = self._test_get_host_numa_topology()
+
+        # there's no CPU configuration so every core is dual-reported for
+        # upgrade reasons
+        self.assertEqual(set([0, 1]), got_topo.cells[0].cpuset)
+        self.assertEqual(set([0, 1]), got_topo.cells[0].pcpuset)
+        self.assertEqual(set([2, 3]), got_topo.cells[1].cpuset)
+        self.assertEqual(set([2, 3]), got_topo.cells[1].pcpuset)
+        self.assertEqual(set([4, 5]), got_topo.cells[2].cpuset)
+        self.assertEqual(set([4, 5]), got_topo.cells[2].pcpuset)
+        self.assertEqual(set([6, 7]), got_topo.cells[3].cpuset)
+        self.assertEqual(set([6, 7]), got_topo.cells[3].pcpuset)
+
+        # all cells should have siblings
+        self.assertEqual([set([0, 1])], got_topo.cells[0].siblings)
+        self.assertEqual([set([2, 3])], got_topo.cells[1].siblings)
+        self.assertEqual([set([4, 5])], got_topo.cells[2].siblings)
+        self.assertEqual([set([6, 7])], got_topo.cells[3].siblings)
+
+    def test_get_host_numa_topology__only_shared_cpus(self):
+        """Check that the host NUMA topology does not use 'cpu_shared_set' if
+        'cpu_dedicated_set' is not defined.
+        """
+        self.flags(cpu_shared_set='0-6', cpu_dedicated_set=None,
+                   group='compute')
+        self.flags(vcpu_pin_set=None)
+
+        got_topo = self._test_get_host_numa_topology()
+
+        # only cores 0 and 1 are configured as shared using the
+        # 'cpu_shared_set' config option, but the rest are dual reported
+        # for upgrade reasons
+        self.assertEqual(set([0, 1]), got_topo.cells[0].cpuset)
+        self.assertEqual(set(), got_topo.cells[0].pcpuset)
+        self.assertEqual(set([2, 3]), got_topo.cells[1].cpuset)
+        self.assertEqual(set([]), got_topo.cells[1].pcpuset)
+        self.assertEqual(set([4, 5]), got_topo.cells[2].cpuset)
+        self.assertEqual(set([]), got_topo.cells[2].pcpuset)
+        self.assertEqual(set([6]), got_topo.cells[3].cpuset)
+        self.assertEqual(set([]), got_topo.cells[3].pcpuset)
+
+        # all cells except the lasat one should have siblings
+        self.assertEqual([set([0, 1])], got_topo.cells[0].siblings)
+        self.assertEqual([set([2, 3])], got_topo.cells[1].siblings)
+        self.assertEqual([set([4, 5])], got_topo.cells[2].siblings)
+        self.assertEqual([set([6])], got_topo.cells[3].siblings)
 
     def test_get_host_numa_topology_empty(self):
         caps = vconfig.LibvirtConfigCaps()
@@ -16713,6 +16828,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     def test_get_host_numa_topology_missing_network_metadata(self,
             mock_version):
+        self.flags(cpu_shared_set='0-5', cpu_dedicated_set=None,
+                   group='compute')
         self.flags(physnets=['bar'], group='neutron')
         # we need to call the below again to ensure the updated 'physnets'
         # value is read and the new groups created
@@ -16731,10 +16848,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         with test.nested(
                 mock.patch.object(host.Host, "get_capabilities",
                                   return_value=caps),
-                mock.patch.object(hardware, 'get_vcpu_pin_set',
-                                  return_value=set([0, 1, 3, 4, 5])),
                 mock.patch.object(host.Host, 'get_online_cpus',
-                                  return_value=set([0, 1, 2, 3, 6])),
+                                  return_value=set(range(6)))
                 ):
             self.assertRaisesRegex(
                 exception.InvalidNetworkNUMAAffinity,
@@ -16746,6 +16861,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     def _test_get_host_numa_topology_invalid_network_affinity(self,
             group_name, mock_version):
+        self.flags(cpu_shared_set='0-5', cpu_dedicated_set=None,
+                   group='compute')
         self.flags(physnets=['foo', 'bar'], group='neutron')
         # we need to call the below again to ensure the updated 'physnets'
         # value is read and the new groups created
@@ -16769,10 +16886,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         with test.nested(
                 mock.patch.object(host.Host, "get_capabilities",
                                   return_value=caps),
-                mock.patch.object(hardware, 'get_vcpu_pin_set',
-                                  return_value=set([0, 1, 3, 4, 5])),
                 mock.patch.object(host.Host, 'get_online_cpus',
-                                  return_value=set([0, 1, 2, 3, 6])),
+                                  return_value=set(range(6)))
                 ):
             self.assertRaisesRegex(
                 exception.InvalidNetworkNUMAAffinity,

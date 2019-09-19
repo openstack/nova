@@ -999,14 +999,14 @@ def _numa_fit_instance_cell_with_pinning(host_cell, instance_cell,
               or None if instance cannot be pinned to the given host
     """
     required_cpus = len(instance_cell.cpuset) + num_cpu_reserved
-    if host_cell.avail_cpus < required_cpus:
+    if host_cell.avail_pcpus < required_cpus:
         LOG.debug('Not enough available CPUs to schedule instance. '
                   'Oversubscription is not possible with pinned instances. '
                   'Required: %(required)d (%(vcpus)d + %(num_cpu_reserved)d), '
                   'actual: %(actual)d',
                   {'required': required_cpus,
                    'vcpus': len(instance_cell.cpuset),
-                   'actual': host_cell.avail_cpus,
+                   'actual': host_cell.avail_pcpus,
                    'num_cpu_reserved': num_cpu_reserved})
         return
 
@@ -1102,14 +1102,40 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None,
                            'actual': host_cell.memory})
                 return
 
-    if len(instance_cell.cpuset) + cpuset_reserved > len(host_cell.cpuset):
-        LOG.debug('Not enough host cell CPUs to fit instance cell. Required: '
-                  '%(required)d + %(cpuset_reserved)d as overhead, '
-                  'actual: %(actual)d',
-                  {'required': len(instance_cell.cpuset),
-                   'actual': len(host_cell.cpuset),
-                   'cpuset_reserved': cpuset_reserved})
-        return
+    # The 'pcpuset' field is only set by newer compute nodes, so if it's
+    # not present then we've received this object from a pre-Train compute
+    # node and need to query against the 'cpuset' field instead until the
+    # compute node has been upgraded and starts reporting things properly.
+    # TODO(stephenfin): Remove in U
+    if 'pcpuset' not in host_cell:
+        host_cell.pcpuset = host_cell.cpuset
+
+    # NOTE(stephenfin): As with memory, do not allow an instance to overcommit
+    # against itself on any NUMA cell
+    if instance_cell.cpu_pinning_requested:
+        # TODO(stephenfin): Is 'cpuset_reserved' present if consuming emulator
+        # threads from shared CPU pools? If so, we don't want to add this here
+        required_cpus = len(instance_cell.cpuset) + cpuset_reserved
+        if required_cpus > len(host_cell.pcpuset):
+            LOG.debug('Not enough host cell CPUs to fit instance cell; '
+                      'required: %(required)d + %(cpuset_reserved)d as '
+                      'overhead, actual: %(actual)d', {
+                          'required': len(instance_cell.cpuset),
+                          'actual': len(host_cell.pcpuset),
+                          'cpuset_reserved': cpuset_reserved
+                      })
+            return
+    else:
+        required_cpus = len(instance_cell.cpuset) + cpuset_reserved
+        if required_cpus > len(host_cell.cpuset):
+            LOG.debug('Not enough host cell CPUs to fit instance cell; '
+                      'required: %(required)d + %(cpuset_reserved)d as '
+                      'overhead, actual: %(actual)d', {
+                          'required': len(instance_cell.cpuset),
+                          'actual': len(host_cell.cpuset),
+                          'cpuset_reserved': cpuset_reserved
+                      })
+            return
 
     if instance_cell.cpu_pinning_requested:
         LOG.debug('Pinning has been requested')
@@ -2026,14 +2052,28 @@ def numa_usage_from_instance_numa(host_topology, instance_topology,
 
     cells = []
     sign = -1 if free else 1
+
     for host_cell in host_topology.cells:
         memory_usage = host_cell.memory_usage
-        cpu_usage = host_cell.cpu_usage
+        shared_cpus_usage = host_cell.cpu_usage
+
+        # The 'pcpuset' field is only set by newer compute nodes, so if it's
+        # not present then we've received this object from a pre-Train compute
+        # node and need to dual-report all CPUS listed therein as both
+        # dedicated and shared until the compute node has been upgraded and
+        # starts reporting things properly.
+        # TODO(stephenfin): Remove in U
+        if 'pcpuset' not in host_cell:
+            shared_cpus = host_cell.cpuset
+            dedicated_cpus = host_cell.cpuset
+        else:
+            shared_cpus = host_cell.cpuset
+            dedicated_cpus = host_cell.pcpuset
 
         new_cell = objects.NUMACell(
             id=host_cell.id,
-            cpuset=host_cell.cpuset,
-            pcpuset=set(),  # TODO(stephenfin): Start setting this
+            cpuset=shared_cpus,
+            pcpuset=dedicated_cpus,
             memory=host_cell.memory,
             cpu_usage=0,
             memory_usage=0,
@@ -2048,46 +2088,36 @@ def numa_usage_from_instance_numa(host_topology, instance_topology,
             if instance_cell.id != host_cell.id:
                 continue
 
-            memory_usage = memory_usage + sign * instance_cell.memory
-            cpu_usage_diff = len(instance_cell.cpuset)
-            if (instance_cell.cpu_thread_policy ==
-                    fields.CPUThreadAllocationPolicy.ISOLATE and
-                    host_cell.siblings):
-                cpu_usage_diff *= max(map(len, host_cell.siblings))
-            cpu_usage += sign * cpu_usage_diff
-
-            if cellid == 0 and instance_topology.emulator_threads_isolated:
-                # The emulator threads policy when defined with 'isolate' makes
-                # the instance to consume an additional pCPU as overhead. That
-                # pCPU is mapped on the host NUMA node related to the guest
-                # NUMA node 0.
-                cpu_usage += sign * len(instance_cell.cpuset_reserved)
-
-            # Compute mempages usage
             new_cell.mempages = _numa_pagesize_usage_from_cell(
                 new_cell, instance_cell, sign)
 
-            if instance_topology.cpu_pinning_requested:
-                pinned_cpus = set(instance_cell.cpu_pinning.values())
+            memory_usage = memory_usage + sign * instance_cell.memory
 
-                if instance_cell.cpuset_reserved:
-                    pinned_cpus |= instance_cell.cpuset_reserved
+            if not instance_cell.cpu_pinning_requested:
+                shared_cpus_usage += sign * len(instance_cell.cpuset)
+                continue
 
-                if free:
-                    if (instance_cell.cpu_thread_policy ==
-                            fields.CPUThreadAllocationPolicy.ISOLATE):
-                        new_cell.unpin_cpus_with_siblings(pinned_cpus)
-                    else:
-                        new_cell.unpin_cpus(pinned_cpus)
+            pinned_cpus = set(instance_cell.cpu_pinning.values())
+            if instance_cell.cpuset_reserved:
+                pinned_cpus |= instance_cell.cpuset_reserved
+
+            if free:
+                if (instance_cell.cpu_thread_policy ==
+                        fields.CPUThreadAllocationPolicy.ISOLATE):
+                    new_cell.unpin_cpus_with_siblings(pinned_cpus)
                 else:
-                    if (instance_cell.cpu_thread_policy ==
-                            fields.CPUThreadAllocationPolicy.ISOLATE):
-                        new_cell.pin_cpus_with_siblings(pinned_cpus)
-                    else:
-                        new_cell.pin_cpus(pinned_cpus)
+                    new_cell.unpin_cpus(pinned_cpus)
+            else:
+                if (instance_cell.cpu_thread_policy ==
+                        fields.CPUThreadAllocationPolicy.ISOLATE):
+                    new_cell.pin_cpus_with_siblings(pinned_cpus)
+                else:
+                    new_cell.pin_cpus(pinned_cpus)
 
-        new_cell.cpu_usage = max(0, cpu_usage)
+        # NOTE(stephenfin): We don't need to set 'pinned_cpus' here since that
+        # was done in the above '(un)pin_cpus(_with_siblings)' functions
         new_cell.memory_usage = max(0, memory_usage)
+        new_cell.cpu_usage = max(0, shared_cpus_usage)
         cells.append(new_cell)
 
     return objects.NUMATopology(cells=cells)

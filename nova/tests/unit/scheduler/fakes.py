@@ -28,8 +28,8 @@ from nova.scheduler import host_manager
 NUMA_TOPOLOGY = objects.NUMATopology(cells=[
     objects.NUMACell(
         id=0,
-        cpuset=set([1, 2]),
-        pcpuset=set(),
+        cpuset=set([0, 1]),
+        pcpuset=set([2, 3]),
         memory=512,
         cpu_usage=0,
         memory_usage=0,
@@ -37,11 +37,11 @@ NUMA_TOPOLOGY = objects.NUMATopology(cells=[
         mempages=[
             objects.NUMAPagesTopology(size_kb=16, total=387184, used=0),
             objects.NUMAPagesTopology(size_kb=2048, total=512, used=0)],
-        siblings=[set([0]), set([1])]),
+        siblings=[set([0]), set([1]), set([2]), set([3])]),
     objects.NUMACell(
         id=1,
-        cpuset=set([3, 4]),
-        pcpuset=set(),
+        cpuset=set([4, 5]),
+        pcpuset=set([6, 7]),
         memory=512,
         cpu_usage=0,
         memory_usage=0,
@@ -49,14 +49,14 @@ NUMA_TOPOLOGY = objects.NUMATopology(cells=[
         mempages=[
             objects.NUMAPagesTopology(size_kb=4, total=1548736, used=0),
             objects.NUMAPagesTopology(size_kb=2048, total=512, used=0)],
-        siblings=[set([2]), set([3])])])
+        siblings=[set([4]), set([5]), set([6]), set([7])])])
 
 NUMA_TOPOLOGIES_W_HT = [
     objects.NUMATopology(cells=[
         objects.NUMACell(
             id=0,
-            cpuset=set([1, 2, 5, 6]),
-            pcpuset=set(),
+            cpuset=set(),
+            pcpuset=set([1, 2, 5, 6]),
             memory=512,
             cpu_usage=0,
             memory_usage=0,
@@ -65,8 +65,8 @@ NUMA_TOPOLOGIES_W_HT = [
             siblings=[set([1, 5]), set([2, 6])]),
         objects.NUMACell(
             id=1,
-            cpuset=set([3, 4, 7, 8]),
-            pcpuset=set(),
+            cpuset=set(),
+            pcpuset=set([3, 4, 7, 8]),
             memory=512,
             cpu_usage=0,
             memory_usage=0,
@@ -87,8 +87,8 @@ NUMA_TOPOLOGIES_W_HT = [
             siblings=[]),
         objects.NUMACell(
             id=1,
-            cpuset=set([1, 2, 5, 6]),
-            pcpuset=set(),
+            cpuset=set(),
+            pcpuset=set([1, 2, 5, 6]),
             memory=512,
             cpu_usage=0,
             memory_usage=0,
@@ -97,8 +97,8 @@ NUMA_TOPOLOGIES_W_HT = [
             siblings=[set([1, 5]), set([2, 6])]),
         objects.NUMACell(
             id=2,
-            cpuset=set([3, 4, 7, 8]),
-            pcpuset=set(),
+            cpuset=set(),
+            pcpuset=set([3, 4, 7, 8]),
             memory=512,
             cpu_usage=0,
             memory_usage=0,
