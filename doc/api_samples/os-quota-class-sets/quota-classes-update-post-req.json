@@ -11,7 +11,6 @@
         "injected_file_path_bytes": 255,
         "security_groups": 10,
         "security_group_rules": 20,
-        "key_pairs": 100,
-        "networks": 3
+        "key_pairs": 100
     }
 }

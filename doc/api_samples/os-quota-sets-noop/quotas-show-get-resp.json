@@ -10,7 +10,6 @@
         "instances": -1,
         "key_pairs": -1,
         "metadata_items": -1,
-        "networks": -1,
         "ram": -1,
         "security_group_rules": -1,
         "security_groups": -1,

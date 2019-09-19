@@ -14,7 +14,6 @@
         "security_group_rules": -1,
         "security_groups": -1,
         "server_groups": -1,
-        "server_group_members": -1,
-        "networks": -1
+        "server_group_members": -1
     }
 }
