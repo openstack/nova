@@ -18,7 +18,6 @@ Client side of the compute RPC API.
 from oslo_concurrency import lockutils
 from oslo_log import log as logging
 import oslo_messaging as messaging
-from oslo_serialization import jsonutils
 from oslo_utils import excutils
 
 import nova.conf
@@ -868,11 +867,6 @@ class ComputeAPI(object):
         # compute but that also requires plumbing changes through the resize
         # flow for other methods like resize_instance and finish_resize.
         image_p = objects_base.obj_to_primitive(image)
-        # FIXME(sbauza): Serialize/Unserialize the legacy dict because of
-        # oslo.messaging #1529084 to transform datetime values into strings.
-        # tl;dr: datetimes in dicts are not accepted as correct values by the
-        # rpc fake driver.
-        image_p = jsonutils.loads(jsonutils.dumps(image_p))
         msg_args = {'instance': instance,
                     'instance_type': instance_type,
                     'image': image_p,
