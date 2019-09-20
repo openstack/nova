@@ -46,6 +46,16 @@ In OpenStack, SMP CPUs are known as *cores*, NUMA cells or nodes are known as
 eight core system with Hyper-Threading would have four sockets, eight cores per
 socket and two threads per core, for a total of 64 CPUs.
 
+PCPU and VCPU
+-------------
+
+PCPU
+  Resource class representing an amount of dedicated CPUs for a single guest.
+
+VCPU
+  Resource class representing a unit of CPU resources for a single guest
+  approximating the processing power of a single physical processor.
+
 Customizing instance NUMA placement policies
 --------------------------------------------
 
@@ -78,11 +88,6 @@ instance has requested a specific NUMA topology, compute will try to pin the
 vCPUs of different NUMA cells on the instance to the corresponding NUMA cells
 on the host. It will also expose the NUMA topology of the instance to the
 guest OS.
-
-If you want compute to pin a particular vCPU as part of this process,
-set the ``vcpu_pin_set`` parameter in the ``nova.conf`` configuration
-file. For more information about the ``vcpu_pin_set`` parameter, see the
-:doc:`/configuration/config`.
 
 In all cases where NUMA awareness is used, the ``NUMATopologyFilter``
 filter must be enabled. Details on this filter are provided in
@@ -159,7 +164,9 @@ Customizing instance CPU pinning policies
 .. important::
 
    The functionality described below is currently only supported by the
-   libvirt/KVM driver. Hyper-V does not support CPU pinning.
+   libvirt/KVM driver and requires :ref:`some host configuration
+   <configure-libvirt-pinning>` for this to work. Hyper-V does not support CPU
+   pinning.
 
 .. note::
 
@@ -191,11 +198,20 @@ policy, run:
 
    $ openstack flavor set [FLAVOR_ID] --property hw:cpu_policy=dedicated
 
-.. caution::
+This works by ensuring ``PCPU`` allocations are used instead of ``VCPU``
+allocations. As such, it is also possible to request this resource type
+explicitly. To configure this, run:
 
-   Host aggregates should be used to separate pinned instances from unpinned
-   instances as the latter will not respect the resourcing requirements of
-   the former.
+.. code-block:: console
+
+   $ openstack flavor set [FLAVOR_ID] --property resources:PCPU=N
+
+where ``N`` is the number of vCPUs defined in the flavor.
+
+.. note::
+
+   It is not currently possible to request ``PCPU`` and ``VCPU`` resources in
+   the same instance.
 
 The ``shared`` CPU policy is used to specify that an instance **should not**
 use pinned CPUs. To configure a flavor to use the ``shared`` CPU policy, run:
@@ -250,7 +266,8 @@ Customizing instance CPU thread pinning policies
 .. important::
 
    The functionality described below requires the use of pinned instances and
-   is therefore currently only supported by the libvirt/KVM driver.
+   is therefore currently only supported by the libvirt/KVM driver and requires
+   :ref:`some host configuration <configure-libvirt-pinning>` for this to work.
    Hyper-V does not support CPU pinning.
 
 When running pinned instances on SMT hosts, it may also be necessary to
@@ -273,6 +290,16 @@ performance, you can request hosts **with** SMT.  To configure this, run:
      --property hw:cpu_policy=dedicated \
      --property hw:cpu_thread_policy=require
 
+This will ensure the instance gets scheduled to a host with SMT by requesting
+hosts that report the ``HW_CPU_HYPERTHREADING`` trait. It is also possible to
+request this trait explicitly. To configure this, run:
+
+.. code-block:: console
+
+   $ openstack flavor set [FLAVOR_ID] \
+     --property resources:PCPU=N \
+     --property trait:HW_CPU_HYPERTHREADING=required
+
 For other workloads where performance is impacted by contention for resources,
 you can request hosts **without** SMT. To configure this, run:
 
@@ -281,6 +308,16 @@ you can request hosts **without** SMT. To configure this, run:
    $ openstack flavor set [FLAVOR_ID] \
      --property hw:cpu_policy=dedicated \
      --property hw:cpu_thread_policy=isolate
+
+This will ensure the instance gets scheduled to a host with SMT by requesting
+hosts that **do not** report the ``HW_CPU_HYPERTHREADING`` trait. It is also
+possible to request this trait explicitly. To configure this, run:
+
+.. code-block:: console
+
+   $ openstack flavor set [FLAVOR_ID] \
+     --property resources:PCPU=N \
+     --property trait:HW_CPU_HYPERTHREADING=forbidden
 
 Finally, for workloads where performance is minimally impacted, you may use
 thread siblings if available and fallback to not using them if necessary. This
@@ -291,6 +328,8 @@ is the default, but it can be set explicitly:
    $ openstack flavor set [FLAVOR_ID] \
      --property hw:cpu_policy=dedicated \
      --property hw:cpu_thread_policy=prefer
+
+This does not utilize traits and, as such, there is no trait-based equivalent.
 
 .. note::
 
@@ -341,7 +380,8 @@ Customizing instance emulator thread pinning policies
 .. important::
 
    The functionality described below requires the use of pinned instances and
-   is therefore currently only supported by the libvirt/KVM driver.
+   is therefore currently only supported by the libvirt/KVM driver and requires
+   :ref:`some host configuration <configure-libvirt-pinning>` for this to work.
    Hyper-V does not support CPU pinning.
 
 In addition to the work of the guest OS and applications running in an
@@ -357,8 +397,9 @@ cores separate from those used by the instance. There are two policies:
 ``isolate`` and ``share``. The default is to run the emulator threads on the
 same core. The ``isolate`` emulator thread policy is used to specify that
 emulator threads for a given instance should be run on their own unique core,
-chosen from one of the host cores listed in :oslo.config:option:`vcpu_pin_set`.
-To configure a flavor to use the ``isolate`` emulator thread policy, run:
+chosen from one of the host cores listed in
+:oslo.config:option:`compute.cpu_dedicated_set`. To configure a flavor to use
+the ``isolate`` emulator thread policy, run:
 
 .. code-block:: console
 
@@ -480,6 +521,78 @@ topologies that might, for example, incur an additional licensing fees.
 
 For more information about image metadata, refer to the `Image metadata`_
 guide.
+
+.. _configure-libvirt-pinning:
+
+Configuring libvirt compute nodes for CPU pinning
+-------------------------------------------------
+
+.. versionchanged:: 20.0.0
+
+   Prior to 20.0.0 (Train), it was not necessary to explicitly configure hosts
+   for pinned instances. However, it was not possible to place pinned instances
+   on the same host as unpinned CPUs, which typically meant hosts had to be
+   grouped into host aggregates. If this was not done, unpinned instances would
+   continue floating across all enabled host CPUs, even those that some
+   instance CPUs were pinned to. Starting in 20.0.0, it is necessary to
+   explicitly identify the host cores that should be used for pinned instances.
+
+Nova treats host CPUs used for unpinned instances differently from those used
+by pinned instances. The former are tracked in placement using the ``VCPU``
+resource type and can be overallocated, while the latter are tracked using the
+``PCPU`` resource type. By default, nova will report all host CPUs as ``VCPU``
+inventory, however, this can be configured using the
+:oslo.config:option:`compute.cpu_shared_set` config option, to specify which
+host CPUs should be used for ``VCPU`` inventory, and the
+:oslo.config:option:`compute.cpu_dedicated_set` config option, to specify which
+host CPUs should be used for ``PCPU`` inventory.
+
+Consider a compute node with a total of 24 host physical CPU cores with
+hyperthreading enabled. The operator wishes to reserve 1 physical CPU core and
+its thread sibling for host processing (not for guest instance use).
+Furthermore, the operator wishes to use 8 host physical CPU cores and their
+thread siblings for dedicated guest CPU resources. The remaining 15 host
+physical CPU cores and their thread siblings will be used for shared guest vCPU
+usage, with an 8:1 allocation ratio for those physical processors used for
+shared guest CPU resources.
+
+The operator could configure ``nova.conf`` like so::
+
+    [DEFAULT]
+    cpu_allocation_ratio=8.0
+
+    [compute]
+    cpu_dedicated_set=2-17
+    cpu_shared_set=18-47
+
+The virt driver will construct a provider tree containing a single resource
+provider representing the compute node and report inventory of ``PCPU`` and
+``VCPU`` for this single provider accordingly::
+
+    COMPUTE NODE provider
+        PCPU:
+            total: 16
+            reserved: 0
+            min_unit: 1
+            max_unit: 16
+            step_size: 1
+            allocation_ratio: 1.0
+        VCPU:
+            total: 30
+            reserved: 0
+            min_unit: 1
+            max_unit: 30
+            step_size: 1
+            allocation_ratio: 8.0
+
+Instances using the ``dedicated`` CPU policy or an explicit ``PCPU`` resource
+request, ``PCPU`` inventory will be consumed. Instances using the ``shared``
+CPU policy, meanwhile, will consume ``VCPU`` inventory.
+
+.. note::
+
+   ``PCPU`` and ``VCPU`` allocations are currently combined to calculate the
+   value for the ``cores`` quota class.
 
 .. _configure-hyperv-numa:
 
