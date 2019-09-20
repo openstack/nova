@@ -540,6 +540,9 @@ class ResourceTracker(object):
         while the COMPUTE_RESOURCES_SEMAPHORE is held so the resource claim
         will not be lost if the audit process starts.
         """
+        # NOTE(mriedem): ComputeManager._nil_out_instance_obj_host_and_node is
+        # somewhat tightly coupled to the fields set in this method so if this
+        # method changes that method might need to be updated.
         instance.host = self.host
         instance.launched_on = self.host
         instance.node = nodename

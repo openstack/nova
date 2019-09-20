@@ -699,12 +699,15 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         instance = fake_instance.fake_instance_obj(self.context,
                                                    uuid=uuids.instance,
                                                    host='foo-host',
-                                                   node='foo-node')
+                                                   node='foo-node',
+                                                   launched_on='foo-host')
         self.assertIsNotNone(instance.host)
         self.assertIsNotNone(instance.node)
+        self.assertIsNotNone(instance.launched_on)
         self.compute._nil_out_instance_obj_host_and_node(instance)
         self.assertIsNone(instance.host)
         self.assertIsNone(instance.node)
+        self.assertIsNone(instance.launched_on)
 
     def test_init_host(self):
         our_host = self.compute.host

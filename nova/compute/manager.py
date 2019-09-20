@@ -601,6 +601,14 @@ class ComputeManager(manager.Manager):
         # to the database layer.
         instance.host = None
         instance.node = None
+        # ResourceTracker._set_instance_host_and_node also sets launched_on
+        # to the same value as host and is really only ever used by legacy
+        # nova-network code, but we should also null it out to avoid confusion
+        # if there is an instance in the database with no host set but
+        # launched_on is set. Note that we do not care about using launched_on
+        # as some kind of debug helper if diagnosing a build failure, that is
+        # what instance action events are for.
+        instance.launched_on = None
         # If the instance is not on a host, it's not in an aggregate and
         # therefore is not in an availability zone.
         instance.availability_zone = None
