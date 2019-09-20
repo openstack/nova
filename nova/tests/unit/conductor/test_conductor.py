@@ -2281,6 +2281,27 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.params['request_specs'][0].requested_resources = []
         self._do_schedule_and_build_instances_test(self.params)
 
+    def test_map_instance_to_cell_already_mapped(self):
+        """Tests a scenario where an instance is already mapped to a cell
+        during scheduling.
+        """
+        build_request = self.params['build_requests'][0]
+        instance = build_request.get_new_instance(self.ctxt)
+        # Simulate MQ split brain craziness by updating the instance mapping
+        # to point at cell0.
+        inst_mapping = objects.InstanceMapping.get_by_instance_uuid(
+            self.ctxt, instance.uuid)
+        inst_mapping.cell_mapping = self.cell_mappings['cell0']
+        inst_mapping.save()
+        cell1 = self.cell_mappings['cell1']
+        inst_mapping = self.conductor._map_instance_to_cell(
+            self.ctxt, instance, cell1)
+        # Assert that the instance mapping was updated to point at cell1 but
+        # also that an error was logged.
+        self.assertEqual(cell1.uuid, inst_mapping.cell_mapping.uuid)
+        self.assertIn('During scheduling instance is already mapped to '
+                      'another cell', self.stdlog.logger.output)
+
     @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
     def test_cleanup_build_artifacts(self, inst_map_get):
         """Simple test to ensure the order of operations in the cleanup method
@@ -2378,6 +2399,17 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             build_requests = objects.BuildRequestList.get_all(self.ctxt)
             instances = objects.InstanceList.get_all(self.ctxt)
 
+        # Verify instance mappings.
+        inst_mappings = objects.InstanceMappingList.get_by_cell_id(
+            self.ctxt, self.cell_mappings['cell0'].id)
+        # bare_br is the only instance that has a mapping from setUp.
+        self.assertEqual(1, len(inst_mappings))
+        # Since we did not setup instance mappings for the other fake build
+        # requests used in this test, we should see a message logged about
+        # there being no instance mappings.
+        self.assertIn('While burying instance in cell0, no instance mapping '
+                      'was found', self.stdlog.logger.output)
+
         self.assertEqual(0, len(build_requests))
         self.assertEqual(4, len(instances))
         inst_states = {inst.uuid: (inst.deleted, inst.vm_state)
@@ -2474,6 +2506,32 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         mock_create_tags.assert_called_once_with(
             test.MatchType(context.RequestContext), inst.uuid,
             self.params['tags'])
+
+    @mock.patch('nova.objects.Instance.create')
+    def test_bury_in_cell0_already_mapped(self, mock_inst_create):
+        """Tests a scenario where the instance mapping is already mapped to a
+        cell when we attempt to bury the instance in cell0.
+        """
+        build_request = self.params['build_requests'][0]
+        # Simulate MQ split brain craziness by updating the instance mapping
+        # to point at cell1.
+        inst_mapping = objects.InstanceMapping.get_by_instance_uuid(
+            self.ctxt, build_request.instance_uuid)
+        inst_mapping.cell_mapping = self.cell_mappings['cell1']
+        inst_mapping.save()
+        # Now attempt to bury the instance in cell0.
+        with mock.patch.object(inst_mapping, 'save') as mock_inst_map_save:
+            self.conductor._bury_in_cell0(
+                self.ctxt, self.params['request_specs'][0],
+                exc.NoValidHost(reason='idk'), build_requests=[build_request])
+        # We should have exited without creating the instance in cell0 nor
+        # should the instance mapping have been updated to point at cell0.
+        mock_inst_create.assert_not_called()
+        mock_inst_map_save.assert_not_called()
+        # And we should have logged an error.
+        self.assertIn('When attempting to bury instance in cell0, the '
+                      'instance is already mapped to cell',
+                      self.stdlog.logger.output)
 
     def test_reset(self):
         with mock.patch('nova.compute.rpcapi.ComputeAPI') as mock_rpc:
