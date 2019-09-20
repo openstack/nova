@@ -37,6 +37,7 @@ def create_request_body():
            }
 
 
+# TODO(stephenfin): Remove this test since it's nova-network only
 class InterfaceFullstack(integrated_helpers._IntegratedTestBase):
     """Tests for port interfaces command.
 
@@ -56,7 +57,7 @@ class InterfaceFullstack(integrated_helpers._IntegratedTestBase):
 
     """
     api_major_version = 'v2.1'
-    USE_NEUTRON = False
+    USE_NEUTRON = False  # nova-net only
     _image_ref_parameter = 'imageRef'
     _flavor_ref_parameter = 'flavorRef'
 

@@ -23,8 +23,9 @@ from nova.tests.functional.api_sample_tests import api_sample_base
 CONF = nova.conf.CONF
 
 
+# TODO(stephenfin): Remove the parts of this test that are nova-network only
 class TenantNetworksJsonTests(api_sample_base.ApiSampleTestBaseV21):
-    USE_NEUTRON = False
+    USE_NEUTRON = False  # partially nova-net only
     ADMIN_API = True
     sample_dir = "os-tenant-networks"
 
@@ -43,14 +44,17 @@ class TenantNetworksJsonTests(api_sample_base.ApiSampleTestBaseV21):
         self.stub_out("nova.quota.QuotaEngine.commit", fake)
         self.stub_out("nova.quota.QuotaEngine.rollback", fake)
 
+    # TODO(stephenfin): Rework this to work with neutron
     def test_list_networks(self):
         response = self._do_get('os-tenant-networks')
         self._verify_response('networks-list-res', {}, response, 200)
 
+    # TODO(stephenfin): Remove this API since it's nova-network only
     def test_create_network(self):
         response = self._do_post('os-tenant-networks', "networks-post-req", {})
         self._verify_response('networks-post-res', {}, response, 200)
 
+    # TODO(stephenfin): Remove this API since it's nova-network only
     def test_delete_network(self):
         response = self._do_post('os-tenant-networks', "networks-post-req", {})
         net = jsonutils.loads(response.content)

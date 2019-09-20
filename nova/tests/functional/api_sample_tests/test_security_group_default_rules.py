@@ -15,9 +15,10 @@
 from nova.tests.functional.api_sample_tests import api_sample_base
 
 
+# TODO(stephenfin): Remove this API since it's nova-network only
 class SecurityGroupDefaultRulesSampleJsonTest(
         api_sample_base.ApiSampleTestBaseV21):
-    USE_NEUTRON = False
+    USE_NEUTRON = False  # nova-net only
     ADMIN_API = True
     sample_dir = 'os-security-group-default-rules'
 

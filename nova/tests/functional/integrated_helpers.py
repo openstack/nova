@@ -79,6 +79,8 @@ class _IntegratedTestBase(test.TestCase):
     # Override this in subclasses which use the legacy nova-network service.
     # New tests should rely on Neutron and old ones migrated to use this since
     # nova-network is deprecated.
+    # TODO(stephenfin): Remove once we remove the few remaining
+    # nova-network-only APIs
     USE_NEUTRON = True
     # This indicates whether to include the project ID in the URL for API
     # requests through OSAPIFixture. Overridden by subclasses.
@@ -87,7 +89,6 @@ class _IntegratedTestBase(test.TestCase):
     def setUp(self):
         super(_IntegratedTestBase, self).setUp()
 
-        # TODO(mriedem): Fix the functional tests to work with Neutron.
         self.flags(use_neutron=self.USE_NEUTRON)
 
         # NOTE(mikal): this is used to stub away privsep helpers
