@@ -6635,38 +6635,6 @@ class ComputeTestCase(BaseTestCase,
                 'Migrating instance to desthost finished successfully.',
                 self.stdlog.logger.output)
 
-    def test_post_live_migration_terminate_volume_connections(self):
-        c = context.get_admin_context()
-        instance = self._create_fake_instance_obj({
-                                        'host': self.compute.host,
-                                        'state_description': 'migrating',
-                                        'state': power_state.PAUSED},
-                                        ctxt=c)
-
-        bdms = block_device_obj.block_device_make_list(c,
-                [fake_block_device.FakeDbBlockDeviceDict({
-                    'source_type': 'blank', 'guest_format': None,
-                    'destination_type': 'local'}),
-                 fake_block_device.FakeDbBlockDeviceDict({
-                    'source_type': 'volume', 'destination_type': 'volume',
-                    'volume_id': uuids.volume_id}),
-                 ])
-
-        with test.nested(
-            mock.patch.object(self.compute.driver, 'get_volume_connector'),
-            mock.patch.object(cinder.API, 'terminate_connection'),
-        ) as (
-            get_volume_connector,
-            terminate_connection,
-        ):
-            get_volume_connector.return_value = 'fake-connector'
-
-            self.compute._post_live_migration_remove_source_vol_connections(
-                c, instance, bdms)
-
-            terminate_connection.assert_called_once_with(
-                    c, uuids.volume_id, 'fake-connector')
-
     @mock.patch.object(objects.ComputeNode,
                        'get_by_host_and_nodename')
     @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
