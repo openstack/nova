@@ -19,20 +19,28 @@ features:
   - |
     A new configuration option, ``[compute] cpu_dedicated_set``, has been
     added. This can be used to configure the host CPUs that should be used for
-    ``PCPU`` inventory.
+    ``PCPU`` inventory. Refer to the help text of the ``[compute]
+    cpu_dedicated_set`` config option for more information.
+  - |
+    The ``[compute] cpu_shared_set`` configuration option will now be used to
+    configure the host CPUs that should be used for ``VCPU`` inventory,
+    replacing the deprecated ``vcpu_pin_set`` option. Refer to the help text of
+    the ``[compute] cpu_shared_set`` config option for more infomration.
   - |
     A new configuration option, ``[workarounds] disable_fallback_pcpu_query``,
     has been added. When creating or moving pinned instances, the scheduler will
     attempt to provide a ``PCPU``-based allocation, but can also fallback to a legacy
     ``VCPU``-based allocation. This fallback behavior is enabled by
     default to ensure it is possible to upgrade without having to modify compute
-    node configuration but it results in an additional request for allocation
+    node configuration, but it results in an additional request for allocation
     candidates from placement. This can have a slight performance impact and is
-    unnecessary on new or upgraded deployments where the compute nodes have been
+    unnecessary on new or upgraded deployments where all compute nodes have been
     correctly configured to report ``PCPU`` inventory. The ``[workarounds]
     disable_fallback_pcpu_query`` config option can be used to disable this
     fallback allocation candidate request, meaning only ``PCPU``-based
-    allocation candidates will be retrieved.
+    allocation candidates will be retrieved. Refer to the help text of the
+    ``[workarounds] disable_fallback_pcpu_query`` config option for more
+    information.
 deprecations:
   - |
     The ``vcpu_pin_set`` configuration option has been deprecated. You should
@@ -41,8 +49,17 @@ deprecations:
     text of these config options for more information.
 upgrade:
   - |
-    Previously, if ``vcpu_pin_set`` was not defined, the libvirt driver would
-    count all available host CPUs when calculating ``VCPU`` inventory,
-    regardless of whether those CPUs were online or not. The driver will now
-    only report the total number of online CPUs. This should result in fewer
-    build failures on hosts with offlined CPUs.
+    Previously, if the ``vcpu_pin_set`` configuration option was not defined,
+    the libvirt driver would count all available host CPUs when calculating
+    ``VCPU`` inventory, regardless of whether those CPUs were online or not.
+    The driver will now only report the total number of online CPUs. This
+    should result in fewer build failures on hosts with offlined CPUs.
+  - |
+    Previously, if an instance was using the ``isolate`` CPU thread policy on a
+    host with SMT (hyperthreading) enabled, the libvirt driver would fake a
+    non-SMT host by marking the thread sibling(s) for each host CPU used by the
+    instance as reserved and unusable. This is no longer the case. Instead,
+    instances using the policy will be scheduled only to hosts that do not
+    report the ``HW_CPU_HYPERTHREADING`` trait. If you have workloads that
+    require the ``isolate`` policy, you should configure some or all of your
+    hosts to disable SMT.
