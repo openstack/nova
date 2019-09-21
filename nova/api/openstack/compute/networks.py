@@ -14,15 +14,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import netaddr
 from webob import exc
 
 from nova.api.openstack.api_version_request \
     import MAX_PROXY_API_SUPPORT_VERSION
-from nova.api.openstack import common
-from nova.api.openstack.compute.schemas import networks as schema
 from nova.api.openstack import wsgi
-from nova.api import validation
 from nova import exception
 from nova.i18n import _
 from nova import network
@@ -93,22 +89,6 @@ class NetworkController(wsgi.Controller):
         return {'networks': result}
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @wsgi.response(202)
-    @wsgi.expected_errors((404, 501))
-    @wsgi.action("disassociate")
-    def _disassociate_host_and_project(self, req, id, body):
-        context = req.environ['nova.context']
-        context.can(net_policies.BASE_POLICY_NAME)
-
-        try:
-            self.network_api.associate(context, id, host=None, project=None)
-        except exception.NetworkNotFound:
-            msg = _("Network not found")
-            raise exc.HTTPNotFound(explanation=msg)
-        except NotImplementedError:
-            common.raise_feature_not_supported()
-
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(404)
     def show(self, req, id):
         context = req.environ['nova.context']
@@ -121,63 +101,19 @@ class NetworkController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
         return {'network': network_dict(context, network)}
 
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @wsgi.response(202)
-    @wsgi.expected_errors((404, 409))
+    @wsgi.expected_errors(410)
+    @wsgi.action("disassociate")
+    def _disassociate_host_and_project(self, req, id, body):
+        raise exc.HTTPGone()
+
+    @wsgi.expected_errors(410)
     def delete(self, req, id):
-        context = req.environ['nova.context']
-        context.can(net_policies.BASE_POLICY_NAME)
+        raise exc.HTTPGone()
 
-        try:
-            self.network_api.delete(context, id)
-        except exception.NetworkInUse as e:
-            raise exc.HTTPConflict(explanation=e.format_message())
-        except exception.NetworkNotFound:
-            msg = _("Network not found")
-            raise exc.HTTPNotFound(explanation=msg)
-
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @wsgi.expected_errors((400, 409, 501))
-    @validation.schema(schema.create)
+    @wsgi.expected_errors(410)
     def create(self, req, body):
-        context = req.environ['nova.context']
-        context.can(net_policies.BASE_POLICY_NAME)
+        raise exc.HTTPGone()
 
-        params = body["network"]
-
-        cidr = params.get("cidr") or params.get("cidr_v6")
-
-        params["num_networks"] = 1
-        params["network_size"] = netaddr.IPNetwork(cidr).size
-
-        try:
-            network = self.network_api.create(context, **params)[0]
-        except (exception.InvalidCidr,
-                exception.InvalidIntValue,
-                exception.InvalidAddress,
-                exception.NetworkNotCreated) as ex:
-            raise exc.HTTPBadRequest(explanation=ex.format_message)
-        except (exception.CidrConflict,
-                exception.DuplicateVlan) as ex:
-            raise exc.HTTPConflict(explanation=ex.format_message())
-        return {"network": network_dict(context, network)}
-
-    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @wsgi.response(202)
-    @wsgi.expected_errors((400, 501))
-    @validation.schema(schema.add_network_to_project)
+    @wsgi.expected_errors(410)
     def add(self, req, body):
-        context = req.environ['nova.context']
-        context.can(net_policies.BASE_POLICY_NAME)
-
-        network_id = body['id']
-        project_id = context.project_id
-
-        try:
-            self.network_api.add_network_to_project(
-                context, project_id, network_id)
-        except NotImplementedError:
-            common.raise_feature_not_supported()
-        except (exception.NoMoreNetworks,
-                exception.NetworkNotFoundForUUID) as e:
-            raise exc.HTTPBadRequest(explanation=e.format_message())
+        raise exc.HTTPGone()

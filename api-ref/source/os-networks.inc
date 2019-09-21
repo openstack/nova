@@ -1,27 +1,25 @@
 .. -*- rst -*-
-.. NOTE(sdague): These APIs are deprecated so do not update this
-   file even body, example or parameters are not complete.
 
-=====================================
+======================================
  Networks (os-networks)  (DEPRECATED)
-=====================================
+======================================
 
-.. warning:: The networks API was designed to work with
-             ``nova-network``. Some features are proxied to
-             ``neutron`` when appropriate, but as with all translation
-             proxies, this is far from perfect compatibility. These
-             APIs should be avoided in new applications in favor of
-             using ``neutron`` directly. These will fail with a 404
-             starting from microversion 2.36.
-             See: `Relevant Network APIs
-             <https://docs.openstack.org/api-ref/network/v2/#networks>`__.
+.. warning::
 
+   This API was designed to work with ``nova-network`` which was deprecated in
+   the 14.0.0 (Newton) release and removed in the 21.0.0 (Ussuri) release. Some
+   features are proxied to the Network service (neutron) when appropriate, but
+   as with all translation proxies, this is far from perfect compatibility.
+   These APIs should be avoided in new applications in favor of `using
+   neutron directly`__. These will fail with a 404 starting from microversion
+   2.36. They were removed in the 21.0.0 (Ussuri) release.
+
+__ https://docs.openstack.org/api-ref/network/v2/#networks
 
 Creates, lists, shows information for, and deletes networks.
 
 Adds network to a project, disassociates a network from a project, and
 disassociates a project from a network.
-
 
 Associates host with and disassociates host from a network.
 
@@ -60,7 +58,8 @@ these permissions through the ``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: badRequest(400), unauthorized(401), forbidden(403), conflict(409), NotImplemented(501)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+conflict(409), gone(410), notImplemented(501)
 
 Request
 -------
@@ -91,7 +90,8 @@ this operation. Cloud providers can change these permissions through the
 
 Normal response codes: 202
 
-Error response codes: badRequest(400), unauthorized(401), forbidden(403), NotImplemented(501)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+gone(410), notImplemented(501)
 
 Request
 -------
@@ -146,7 +146,8 @@ these permissions through the ``policy.json`` file.
 
 Normal response codes: 202
 
-Error response codes: unauthorized(401), forbidden(403), itemNotFound(404), conflict(409)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
+conflict(409), gone(410)
 
 Request
 -------
@@ -160,14 +161,10 @@ Response
 
 There is no body content for the response of a successful DELETE query.
 
-Associate Host (DEPRECATED)
-===========================
+Associate Host
+==============
 
 .. rest_method:: POST /os-networks/{network_id}/action
-
-.. warning::
-   This API is only available with ``nova-network`` which is
-   deprecated. It should be avoided in any new applications.
 
 Associates a network with a host.
 
@@ -179,7 +176,8 @@ permissions through the ``policy.json`` file.
 
 Normal response codes: 202
 
-Error response codes: unauthorized(401), forbidden(403), itemNotFound(404), NotImplemented(501)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
+gone(410), notImplemented(501)
 
 Request
 -------
@@ -199,14 +197,10 @@ Response
 
 There is no body content for the response of a successful POST query.
 
-Disassociate Network (DEPRECATED)
-=================================
+Disassociate Network
+====================
 
 .. rest_method:: POST /os-networks/{network_id}/action
-
-.. warning::
-   This API is only available with ``nova-network`` which is
-   deprecated. It should be avoided in any new applications.
 
 Disassociates a network from a project. You can then reuse the network.
 
@@ -218,7 +212,8 @@ these permissions through the ``policy.json`` file.
 
 Normal response codes: 202
 
-Error response codes: unauthorized(401), forbidden(403), itemNotFound(404), NotImplemented(501)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
+gone(410), notImplemented(501)
 
 Request
 -------
@@ -237,14 +232,10 @@ Response
 
 There is no body content for the response of a successful POST query.
 
-Disassociate Host (DEPRECATED)
-==============================
+Disassociate Host
+=================
 
 .. rest_method:: POST /os-networks/{network_id}/action
-
-.. warning::
-   This API is only available with ``nova-network`` which is
-   deprecated. It should be avoided in any new applications.
 
 Disassociates a host from a network.
 
@@ -256,7 +247,8 @@ these permissions through the ``policy.json`` file.
 
 Normal response codes: 202
 
-Error response codes: unauthorized(401), forbidden(403), itemNotFound(404), NotImplemented(501)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
+gone(410), notImplemented(501)
 
 Request
 -------
@@ -276,14 +268,10 @@ Response
 There is no body content for the response of a successful POST query.
 
 
-Disassociate Project (DEPRECATED)
-=================================
+Disassociate Project
+====================
 
 .. rest_method:: POST /os-networks/{network_id}/action
-
-.. warning::
-   This API is only available with ``nova-network`` which is
-   deprecated. It should be avoided in any new applications.
 
 Disassociates a project from a network.
 
@@ -295,7 +283,8 @@ these permissions through the ``policy.json`` file.
 
 Normal response codes: 202
 
-Error response codes: unauthorized(401), forbidden(403), itemNotFound(404), NotImplemented(501)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
+gone(410), notImplemented(501)
 
 Request
 -------

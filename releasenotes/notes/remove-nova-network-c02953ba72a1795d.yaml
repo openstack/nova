@@ -10,7 +10,16 @@ upgrade:
     * ``POST /os-security-group-default-rules``
     * ``GET /os-security-group-default-rules/{id}``
     * ``DELETE /os-security-group-default-rules/{id}``
+    * ``POST /os-networks``
+    * ``DELETE /os-networks``
+    * ``POST /os-networks/add``
+    * ``POST /os-networks/{id} (associate_host)``
+    * ``POST /os-networks/{id} (disassociate)``
+    * ``POST /os-networks/{id} (disassociate_host)``
+    * ``POST /os-networks/{id} (disassociate_project)``
 
     The following policies have also been removed.
 
     * ``os_compute_api:os-security-group-default-rules``
+    * ``os_compute_api:os-networks``
+    * ``os_compute_api:os-networks-associate``
