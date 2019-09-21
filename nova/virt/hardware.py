@@ -2220,6 +2220,8 @@ def numa_usage_from_instance_numa(host_topology, instance_topology,
             if instance_cell.cpuset_reserved:
                 pinned_cpus |= instance_cell.cpuset_reserved
 
+            # TODO(stephenfin): Remove the '_with_siblings' variants when we
+            # drop support for 'vcpu_pin_set' since they will then be no-ops
             if free:
                 if (instance_cell.cpu_thread_policy ==
                         fields.CPUThreadAllocationPolicy.ISOLATE):
