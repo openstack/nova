@@ -156,26 +156,27 @@ def _check_peer_list():
 class IronicDriver(virt_driver.ComputeDriver):
     """Hypervisor driver for Ironic - bare metal provisioning."""
 
-    capabilities = {"has_imagecache": False,
-                    "supports_evacuate": False,
-                    "supports_migrate_to_same_host": False,
-                    "supports_attach_interface": True,
-                    "supports_multiattach": False,
-                    "supports_trusted_certs": False,
-                    "supports_pcpus": False,
+    capabilities = {
+        "has_imagecache": False,
+        "supports_evacuate": False,
+        "supports_migrate_to_same_host": False,
+        "supports_attach_interface": True,
+        "supports_multiattach": False,
+        "supports_trusted_certs": False,
+        "supports_pcpus": False,
 
-                    # Image type support flags
-                    "supports_image_type_aki": False,
-                    "supports_image_type_ami": False,
-                    "supports_image_type_ari": False,
-                    "supports_image_type_iso": False,
-                    "supports_image_type_qcow2": True,
-                    "supports_image_type_raw": True,
-                    "supports_image_type_vdi": False,
-                    "supports_image_type_vhd": False,
-                    "supports_image_type_vhdx": False,
-                    "supports_image_type_vmdk": False,
-                    }
+        # Image type support flags
+        "supports_image_type_aki": False,
+        "supports_image_type_ami": False,
+        "supports_image_type_ari": False,
+        "supports_image_type_iso": False,
+        "supports_image_type_qcow2": True,
+        "supports_image_type_raw": True,
+        "supports_image_type_vdi": False,
+        "supports_image_type_vhd": False,
+        "supports_image_type_vhdx": False,
+        "supports_image_type_vmdk": False,
+    }
 
     # This driver is capable of rebalancing nodes between computes.
     rebalances_nodes = True
