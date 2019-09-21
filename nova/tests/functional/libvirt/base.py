@@ -64,17 +64,20 @@ class ServersTestBase(base.ServersTestBase):
         self.useFixture(fixtures.MockPatch(
             'nova.privsep.utils.supports_direct_io',
             return_value=True))
+        self.useFixture(fixtures.MockPatch(
+            'nova.virt.libvirt.host.Host.get_online_cpus',
+            return_value=set(range(16))))
 
         # Mock the 'get_connection' function, as we're going to need to provide
         # custom capabilities for each test
         _p = mock.patch('nova.virt.libvirt.host.Host.get_connection')
         self.mock_conn = _p.start()
         self.addCleanup(_p.stop)
-        # As above, mock the 'get_arch' function as we may need to provide
-        # different host architectures during some tests.
+
+        # Mock the 'get_arch' function as we may need to provide different host
+        # architectures during some tests. We default to x86_64
         _a = mock.patch('nova.virt.libvirt.utils.get_arch')
         self.mock_arch = _a.start()
-        # Default to X86_64
         self.mock_arch.return_value = obj_fields.Architecture.X86_64
         self.addCleanup(_a.stop)
 
@@ -96,6 +99,11 @@ class ServersTestBase(base.ServersTestBase):
     def _get_connection(self, host_info, pci_info=None,
                         libvirt_version=fakelibvirt.FAKE_LIBVIRT_VERSION,
                         mdev_info=None):
+        # sanity check
+        self.assertGreater(16, host_info.cpus,
+            "Host.get_online_cpus is only accounting for 16 CPUs but you're "
+            "requesting %d; change the mock or your test" % host_info.cpus)
+
         fake_connection = fakelibvirt.Connection(
             'qemu:///system',
             version=libvirt_version,

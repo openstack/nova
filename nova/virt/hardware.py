@@ -16,7 +16,10 @@ import collections
 import fractions
 import itertools
 import math
+import re
 
+import os_resource_classes as orc
+import os_traits
 from oslo_log import log as logging
 from oslo_utils import strutils
 from oslo_utils import units
@@ -1475,7 +1478,8 @@ def _get_numa_node_count_constraint(flavor, image_meta):
     return int(nodes) if nodes else nodes
 
 
-def _get_cpu_policy_constraint(flavor, image_meta):
+# NOTE(stephenfin): This must be public as it's used elsewhere
+def get_cpu_policy_constraint(flavor, image_meta):
     # type: (objects.Flavor, objects.ImageMeta) -> Optional[str]
     """Validate and return the requested CPU policy.
 
@@ -1511,12 +1515,13 @@ def _get_cpu_policy_constraint(flavor, image_meta):
     elif image_policy == fields.CPUAllocationPolicy.DEDICATED:
         cpu_policy = image_policy
     else:
-        cpu_policy = fields.CPUAllocationPolicy.SHARED
+        cpu_policy = None
 
     return cpu_policy
 
 
-def _get_cpu_thread_policy_constraint(flavor, image_meta):
+# NOTE(stephenfin): This must be public as it's used elsewhere
+def get_cpu_thread_policy_constraint(flavor, image_meta):
     # type: (objects.Flavor, objects.ImageMeta) -> Optional[str]
     """Validate and return the requested CPU thread policy.
 
@@ -1613,6 +1618,40 @@ def _get_numa_topology_manual(nodes, flavor, cpu_list, mem_list):
 def is_realtime_enabled(flavor):
     flavor_rt = flavor.get('extra_specs', {}).get("hw:cpu_realtime")
     return strutils.bool_from_string(flavor_rt)
+
+
+def _get_vcpu_pcpu_resources(flavor):
+    # type: (objects.Flavor) -> Tuple[bool, bool]
+    requested_vcpu = 0
+    requested_pcpu = 0
+
+    for key, val in flavor.get('extra_specs', {}).items():
+        if re.match('resources([1-9][0-9]*)?:%s' % orc.VCPU, key):
+            try:
+                requested_vcpu += int(val)
+            except ValueError:
+                # this is handled elsewhere
+                pass
+        if re.match('resources([1-9][0-9]*)?:%s' % orc.PCPU, key):
+            try:
+                requested_pcpu += int(val)
+            except ValueError:
+                # this is handled elsewhere
+                pass
+
+    return (requested_vcpu, requested_pcpu)
+
+
+def _get_hyperthreading_trait(flavor, image_meta):
+    # type: (objects.Flavor, objects.ImageMeta) -> Optional[str]
+    for key, val in flavor.get('extra_specs', {}).items():
+        if re.match('trait([1-9][0-9]*)?:%s' % os_traits.HW_CPU_HYPERTHREADING,
+                    key):
+            return val
+
+    if os_traits.HW_CPU_HYPERTHREADING in image_meta.properties.get(
+            'traits_required', []):
+        return 'required'
 
 
 def _get_realtime_constraint(flavor, image_meta):
@@ -1721,6 +1760,8 @@ def numa_get_constraints(flavor, image_meta):
              invalid value in image or flavor.
     :raises: exception.InvalidCPUThreadAllocationPolicy if policy is defined
              with invalid value in image or flavor.
+    :raises: exception.InvalidRequest if there is a conflict between explicitly
+             and implicitly requested resources of hyperthreading traits
     :returns: objects.InstanceNUMATopology, or None
     """
     numa_topology = None
@@ -1756,14 +1797,69 @@ def numa_get_constraints(flavor, image_meta):
         for c in numa_topology.cells:
             setattr(c, 'pagesize', pagesize)
 
-    cpu_policy = _get_cpu_policy_constraint(flavor, image_meta)
-    cpu_thread_policy = _get_cpu_thread_policy_constraint(flavor, image_meta)
+    cpu_policy = get_cpu_policy_constraint(flavor, image_meta)
+    cpu_thread_policy = get_cpu_thread_policy_constraint(flavor, image_meta)
     rt_mask = _get_realtime_constraint(flavor, image_meta)
     emu_threads_policy = get_emulator_thread_policy_constraint(flavor)
 
+    # handle explicit VCPU/PCPU resource requests and the HW_CPU_HYPERTHREADING
+    # trait
+
+    requested_vcpus, requested_pcpus = _get_vcpu_pcpu_resources(flavor)
+
+    if cpu_policy and (requested_vcpus or requested_pcpus):
+        # TODO(stephenfin): Make these custom exceptions
+        raise exception.InvalidRequest(
+            "It is not possible to use the 'resources:VCPU' or "
+            "'resources:PCPU' extra specs in combination with the "
+            "'hw:cpu_policy' extra spec or 'hw_cpu_policy' image metadata "
+            "property; use one or the other")
+
+    if requested_vcpus and requested_pcpus:
+        raise exception.InvalidRequest(
+            "It is not possible to specify both 'resources:VCPU' and "
+            "'resources:PCPU' extra specs; use one or the other")
+
+    if requested_pcpus:
+        if (emu_threads_policy == fields.CPUEmulatorThreadsPolicy.ISOLATE and
+                flavor.vcpus + 1 != requested_pcpus):
+            raise exception.InvalidRequest(
+                "You have requested 'hw:emulator_threads_policy=isolate' but "
+                "have not requested sufficient PCPUs to handle this policy; "
+                "you must allocate exactly flavor.vcpus + 1 PCPUs.")
+
+        if (emu_threads_policy != fields.CPUEmulatorThreadsPolicy.ISOLATE and
+                flavor.vcpus != requested_pcpus):
+            raise exception.InvalidRequest(
+                "There is a mismatch between the number of PCPUs requested "
+                "via 'resourcesNN:PCPU' and the flavor); you must allocate "
+                "exactly flavor.vcpus PCPUs")
+
+        cpu_policy = fields.CPUAllocationPolicy.DEDICATED
+
+    if requested_vcpus:
+        # NOTE(stephenfin): It would be nice if we could error out if
+        # flavor.vcpus != resources:PCPU, but that would be a breaking change.
+        # Better to wait until we remove flavor.vcpus or something
+        cpu_policy = fields.CPUAllocationPolicy.SHARED
+
+    hyperthreading_trait = _get_hyperthreading_trait(flavor, image_meta)
+
+    if cpu_thread_policy and hyperthreading_trait:
+        raise exception.InvalidRequest(
+            "It is not possible to use the 'trait:HW_CPU_HYPERTHREADING' "
+            "extra spec in combination with the 'hw:cpu_thread_policy' "
+            "extra spec or 'hw_cpu_thread_policy' image metadata property; "
+            "use one or the other")
+
+    if hyperthreading_trait == 'forbidden':
+        cpu_thread_policy = fields.CPUThreadAllocationPolicy.ISOLATE
+    elif hyperthreading_trait == 'required':
+        cpu_thread_policy = fields.CPUThreadAllocationPolicy.REQUIRE
+
     # sanity checks
 
-    if cpu_policy == fields.CPUAllocationPolicy.SHARED:
+    if cpu_policy in (fields.CPUAllocationPolicy.SHARED, None):
         if cpu_thread_policy:
             raise exception.CPUThreadPolicyConfigurationInvalid()
 

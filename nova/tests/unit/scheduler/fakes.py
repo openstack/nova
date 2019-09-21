@@ -25,6 +25,8 @@ from nova.scheduler import driver
 from nova.scheduler import host_manager
 
 
+# TODO(stephenfin): Rework these so they're functions instead of global
+# variables that can be mutated
 NUMA_TOPOLOGY = objects.NUMATopology(cells=[
     objects.NUMACell(
         id=0,
@@ -164,19 +166,22 @@ COMPUTE_NODES = [
             host='fake', hypervisor_hostname='fake-hyp'),
 ]
 
-ALLOC_REQS = [
-    {
-        'allocations': {
-            cn.uuid: {
-                'resources': {
-                    'VCPU': 1,
-                    'MEMORY_MB': 512,
-                    'DISK_GB': 512,
-                },
+
+def get_fake_alloc_reqs():
+    return [
+        {
+            'allocations': {
+                cn.uuid: {
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 512,
+                        'DISK_GB': 512,
+                    },
+                }
             }
-        }
-    } for cn in COMPUTE_NODES
-]
+        } for cn in COMPUTE_NODES
+    ]
+
 
 RESOURCE_PROVIDERS = [
     dict(

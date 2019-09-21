@@ -46,6 +46,8 @@ class RealTimeServersTest(base.ServersTestBase):
             self.api.post_server, {'server': server})
 
     def test_success(self):
+        self.flags(cpu_dedicated_set='0-7', group='compute')
+
         host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
                                          cpu_cores=2, cpu_threads=2,
                                          kB_mem=15740000)

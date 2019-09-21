@@ -222,6 +222,31 @@ Related options:
 * ``[libvirt]/images_type`` (rbd)
 * ``instances_path``
 """),
+
+    cfg.BoolOpt(
+        'disable_fallback_pcpu_query',
+        default=False,
+        deprecated_for_removal=True,
+        deprecated_since='20.0.0',
+        help="""
+Disable fallback request for VCPU allocations when using pinned instances.
+
+Starting in Train, compute nodes using the libvirt virt driver can report
+``PCPU`` inventory and will use this for pinned instances. The scheduler will
+automatically translate requests using the legacy CPU pinning-related flavor
+extra specs, ``hw:cpu_policy`` and ``hw:cpu_thread_policy``, their image
+metadata property equivalents, and the emulator threads pinning flavor extra
+spec, ``hw:emulator_threads_policy``, to new placement requests. However,
+compute nodes require additional configuration in order to report ``PCPU``
+inventory and this configuration may not be present immediately after an
+upgrade. To ensure pinned instances can be created without this additional
+configuration, the scheduler will make a second request to placement for
+old-style ``VCPU``-based allocations and fallback to these allocation
+candidates if necessary. This has a slight performance impact and is not
+necessary on new or upgraded deployments where the new configuration has been
+set on all hosts. By setting this option, the second lookup is disabled and the
+scheduler will only request ``PCPU``-based allocations.
+"""),
 ]
 
 
