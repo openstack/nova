@@ -208,7 +208,9 @@ class _IntegratedTestBase(test.TestCase):
     def _build_server(self, flavor_id, image=None):
         server = {}
         if image is None:
-            image = self.api.get_images()[0]
+            # TODO(stephenfin): We need to stop relying on this API
+            with utils.temporary_mutation(self.api, microversion='2.35'):
+                image = self.api.get_images()[0]
             LOG.debug("Image: %s", image)
 
             # We now have a valid imageId
