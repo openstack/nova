@@ -119,6 +119,8 @@ class Host(object):
         # memoized by the supports_amd_sev property below.
         self._supports_amd_sev = None
 
+        self._has_hyperthreading = None
+
     @staticmethod
     def _get_libvirt_proxy_classes(libvirt_module):
         """Return a tuple for tpool.Proxy's autowrap argument containing all
@@ -1187,6 +1189,26 @@ class Host(object):
                 return False
         except IOError:
             return False
+
+    @property
+    def has_hyperthreading(self):
+        """Determine if host CPU has SMT, a.k.a. HyperThreading.
+
+        :return: True if the host has SMT enabled, else False.
+        """
+        if self._has_hyperthreading is not None:
+            return self._has_hyperthreading
+
+        self._has_hyperthreading = False
+
+        # we don't use '/capabilities/host/cpu/topology' since libvirt doesn't
+        # guarantee the accuracy of this information
+        for cell in self.get_capabilities().host.topology.cells:
+            if any(len(cpu.siblings) > 1 for cpu in cell.cpus if cpu.siblings):
+                self._has_hyperthreading = True
+                break
+
+        return self._has_hyperthreading
 
     def _kernel_supports_amd_sev(self):
         if not os.path.exists(SEV_KERNEL_PARAM_FILE):

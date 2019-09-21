@@ -22918,11 +22918,21 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_cpu_feature_traits',
                        new=mock.Mock(return_value={}))
-    def test_cpu_traits_sev_no_feature_traits(self):
+    def test_cpu_traits__sev_support(self):
         for support in (False, True):
             self.drvr._host._supports_amd_sev = support
-            self.assertEqual({ot.HW_CPU_X86_AMD_SEV: support},
-                             self.drvr._get_cpu_traits())
+            traits = self.drvr._get_cpu_traits()
+            self.assertIn(ot.HW_CPU_X86_AMD_SEV, traits)
+            self.assertEqual(support, traits[ot.HW_CPU_X86_AMD_SEV])
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_cpu_feature_traits',
+                       new=mock.Mock(return_value={}))
+    def test_cpu_traits__hyperthreading_support(self):
+        for support in (False, True):
+            self.drvr._host._has_hyperthreading = support
+            traits = self.drvr._get_cpu_traits()
+            self.assertIn(ot.HW_CPU_HYPERTHREADING, traits)
+            self.assertEqual(support, traits[ot.HW_CPU_HYPERTHREADING])
 
     def test_cpu_traits_with_passthrough_mode(self):
         """Test getting CPU traits when cpu_mmode is 'host-passthrough', traits
