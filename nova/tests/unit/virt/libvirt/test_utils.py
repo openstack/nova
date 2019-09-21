@@ -19,6 +19,7 @@ import tempfile
 
 import ddt
 import mock
+import os_traits
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_utils import fileutils
@@ -1000,3 +1001,17 @@ sunrpc /var/lib/nfs/rpc_pipefs rpc_pipefs rw,relatime 0 0
         })
         os_mach_type = libvirt_utils.get_machine_type(image_meta)
         self.assertEqual('q35', os_mach_type)
+
+    def test_get_flags_by_flavor_specs(self):
+        flavor = objects.Flavor(
+            id=1, flavorid='fakeid-1', name='fake1.small', memory_mb=128,
+            vcpus=1, root_gb=1, ephemeral_gb=0, swap=0, rxtx_factor=0,
+            deleted=False, extra_specs={
+                'trait:%s' % os_traits.HW_CPU_X86_3DNOW: 'required',
+                'trait:%s' % os_traits.HW_CPU_X86_SSE2: 'required',
+                'trait:%s' % os_traits.HW_CPU_HYPERTHREADING: 'required',
+            })
+        traits = libvirt_utils.get_flags_by_flavor_specs(flavor)
+        # we shouldn't see the hyperthreading trait since that's a valid trait
+        # but not a CPU flag
+        self.assertEqual(set(['3dnow', 'sse2']), traits)
