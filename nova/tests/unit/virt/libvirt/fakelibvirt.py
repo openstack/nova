@@ -1223,7 +1223,7 @@ class Secret(object):
 class Connection(object):
     def __init__(self, uri=None, readonly=False, version=FAKE_LIBVIRT_VERSION,
                  hv_version=FAKE_QEMU_VERSION, host_info=None, pci_info=None,
-                 mdev_info=None):
+                 mdev_info=None, hostname=None):
         if not uri or uri == '':
             if allow_default_uri_connection:
                 uri = 'qemu:///session'
@@ -1261,6 +1261,7 @@ class Connection(object):
                                                        num_pfs=0,
                                                        num_vfs=0)
         self.mdev_info = mdev_info or []
+        self.hostname = hostname or 'compute1'
 
     def _add_filter(self, nwfilter):
         self._nwfilters[nwfilter._name] = nwfilter
@@ -1359,7 +1360,7 @@ class Connection(object):
         return self.fakeVersion
 
     def getHostname(self):
-        return 'compute1'
+        return self.hostname
 
     def domainEventRegisterAny(self, dom, eventid, callback, opaque):
         self._event_callbacks[eventid] = [callback, opaque]

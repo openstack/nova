@@ -379,8 +379,8 @@ class NUMAServersTest(NUMAServersTestBase):
         self.computes = {}
         self.compute_rp_uuids = {}
         for host in ['test_compute0', 'test_compute1']:
-            fake_connection = self._get_connection(host_info=host_info)
-            fake_connection.getHostname = lambda: host
+            fake_connection = self._get_connection(
+                host_info=host_info, hostname=host)
 
             # This is fun. Firstly we need to do a global'ish mock so we can
             # actually start the service.
@@ -669,8 +669,8 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         # Start services
         self.computes = {}
         for host in ['test_compute0', 'test_compute1']:
-            fake_connection = self._get_connection(host_info=host_info)
-            fake_connection.getHostname = lambda: host
+            fake_connection = self._get_connection(
+                host_info=host_info, hostname=host)
 
             # This is fun. Firstly we need to do a global'ish mock so we can
             # actually start the service.
@@ -742,8 +742,8 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         self.computes = {}
         for host in ['test_compute0', 'test_compute1']:
             host_info = host_infos.pop(0)
-            fake_connection = self._get_connection(host_info=host_info)
-            fake_connection.getHostname = lambda: host
+            fake_connection = self._get_connection(
+                host_info=host_info, hostname=host)
 
             # This is fun. Firstly we need to do a global'ish mock so we can
             # actually start the service.
