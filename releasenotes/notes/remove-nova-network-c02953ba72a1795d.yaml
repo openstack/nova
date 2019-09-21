@@ -1,0 +1,16 @@
+---
+upgrade:
+  - |
+    The *nova-network* feature has been deprecated since the 14.0.0 (Newton)
+    release and has now been removed. The remaining *nova-network* specific
+    REST APIs have been removed along with their related policy rules. Calling
+    these APIs will now result in a ``410 (Gone)`` error response.
+
+    * ``GET /os-security-group-default-rules``
+    * ``POST /os-security-group-default-rules``
+    * ``GET /os-security-group-default-rules/{id}``
+    * ``DELETE /os-security-group-default-rules/{id}``
+
+    The following policies have also been removed.
+
+    * ``os_compute_api:os-security-group-default-rules``
