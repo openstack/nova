@@ -366,8 +366,7 @@ class FakeLibvirtTests(test.NoDBTestCase):
                               conn.host_info.cpu_sockets,
                               conn.host_info.cpu_cores,
                               conn.host_info.cpu_threads)
-        self.assertEqual(conn.compareCPU(xml, 0),
-                         libvirt.VIR_CPU_COMPARE_INCOMPATIBLE)
+        self.assertRaises(libvirt.libvirtError, conn.compareCPU, xml, 0)
 
     def test_compareCPU_compatible_unspecified_model(self):
         conn = self.get_openAuth_curry_func()('qemu:///system')
