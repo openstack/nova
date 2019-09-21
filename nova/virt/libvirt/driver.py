@@ -435,7 +435,8 @@ class LibvirtDriver(driver.ComputeDriver):
         self.cpu_models_mapping = {}
         self.cpu_model_flag_mapping = {}
 
-        self._vpmems_by_name, self._vpmems_by_rc = self._discover_vpmems()
+        self._vpmems_by_name, self._vpmems_by_rc = self._discover_vpmems(
+                vpmem_conf=CONF.libvirt.pmem_namespaces)
 
     def _discover_vpmems(self, vpmem_conf=None):
         """Discover vpmems on host and configuration.

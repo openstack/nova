@@ -1335,6 +1335,32 @@ maximum number of retry attempts that can be made to discover the NVMe device.
 """),
 ]
 
+
+libvirt_pmem_opts = [
+    cfg.ListOpt('pmem_namespaces',
+                item_type=cfg.types.String(),
+                default=[],
+                help="""
+Configure persistent memory(pmem) namespaces.
+
+These namespaces must have been already created on the host. This config
+option is in the following format::
+
+    "$LABEL:$NSNAME[|$NSNAME][,$LABEL:$NSNAME[|$NSNAME]]"
+
+* ``$NSNAME`` is the name of the pmem namespace.
+* ``$LABEL`` represents one resource class, this is used to generate
+      the resource class name as ``CUSTOM_PMEM_NAMESPACE_$LABEL``.
+
+For example::
+
+    [libvirt]
+    pmem_namespaces=128G:ns0|ns1|ns2|ns3,262144MB:ns4|ns5,MEDIUM:ns6|ns7
+
+"""),
+]
+
+
 ALL_OPTS = list(itertools.chain(
     libvirt_general_opts,
     libvirt_imagebackend_opts,
@@ -1354,6 +1380,7 @@ ALL_OPTS = list(itertools.chain(
     libvirt_volume_vzstorage_opts,
     libvirt_virtio_queue_sizes,
     libvirt_volume_nvmeof_opts,
+    libvirt_pmem_opts,
 ))
 
 

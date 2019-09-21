@@ -1,0 +1,24 @@
+---
+features:
+  - |
+    The libvirt driver now supports booting instances with virtual persistent
+    memory (vPMEM), also called persistent memory (PMEM) namespaces.
+    To enable vPMEM support, the user should specify the PMEM namespaces
+    in the ``nova.conf`` by using the configuration option
+    ``[libvirt]/pmem_namespaces``. For example::
+
+      [libvirt]
+      # pmem_namespaces=$LABEL:$NSNAME[|$NSNAME][,$LABEL:$NSNAME[|$NSNAME]]
+      pmem_namespaces = 128G:ns0|ns1|ns2|ns3,262144MB:ns4|ns5,MEDIUM:ns6|ns7
+
+    Only PMEM namespaces listed in the configuration file can be used by
+    instances. To identify the available PMEM namespaces on the host or create
+    new namespaces, the ``ndctl`` utility can be used::
+
+      ndctl create-namespace -m devdax -s $SIZE -M mem -n $NSNAME
+
+    Nova will invoke this utility to identify available PMEM namespaces.
+    Then users can specify vPMEM resources in a flavor by adding flavor's
+    extra specs::
+
+      openstack flavor set --property hw:pmem=6GB,64GB <flavor-id>
