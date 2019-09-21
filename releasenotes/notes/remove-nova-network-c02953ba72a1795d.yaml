@@ -17,6 +17,8 @@ upgrade:
     * ``POST /os-networks/{id} (disassociate)``
     * ``POST /os-networks/{id} (disassociate_host)``
     * ``POST /os-networks/{id} (disassociate_project)``
+    * ``POST /os-tenant-networks``
+    * ``DELETE /os-tenant-networks``
 
     The following policies have also been removed.
 

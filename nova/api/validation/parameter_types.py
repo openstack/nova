@@ -250,13 +250,6 @@ non_negative_integer = {
     'pattern': '^[0-9]*$', 'minimum': 0, 'minLength': 1
 }
 
-# This only be used by nova-network specific APIs. It will be removed when
-# those API removed.
-positive_integer_with_empty_str = {
-    'type': ['integer', 'string'],
-    'pattern': '^[0-9]*$', 'minimum': 1,
-}
-
 hostname = {
     'type': 'string', 'minLength': 1, 'maxLength': 255,
     # NOTE: 'host' is defined in "services" table, and that

@@ -441,6 +441,12 @@ API endpoints as below::
     release. On deployments newer than this, some endpoints of the API will
     return HTTP 410 (Gone) regadless of the requested microversion.
 
+.. versionchanged:: 21.0.0
+
+    The ``os-tenant-networks`` API was partially removed in the 21.0.0 (Ussuri)
+    release. On deployments newer than this, some endpoints of the API will
+    return HTTP 410 (Gone) regadless of the requested microversion.
+
 2.37
 ----
 

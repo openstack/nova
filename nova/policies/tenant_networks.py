@@ -34,22 +34,10 @@ deprecated.""",
                 'method': 'GET',
                 'path': '/os-tenant-networks'
             },
-
-            {
-                'method': 'POST',
-                'path': '/os-tenant-networks'
-            },
-
             {
                 'method': 'GET',
                 'path': '/os-tenant-networks/{network_id}'
             },
-
-            {
-                'method': 'DELETE',
-                'path': '/os-tenant-networks/{network_id}'
-            }
-
         ]),
 ]
 
