@@ -71,7 +71,6 @@ class SimpleTenantUsageSampleJsonTest(test_servers.ServersSampleBase):
 
 
 class SimpleTenantUsageV240Test(test_servers.ServersSampleBase):
-    USE_NEUTRON = False
     sample_dir = 'os-simple-tenant-usage'
     microversion = '2.40'
     scenarios = [('v2_40', {'api_major_version': 'v2.1'})]

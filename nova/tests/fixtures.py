@@ -1637,6 +1637,24 @@ class NeutronFixture(fixtures.Fixture):
         # unlimited quota
         return {'quota': {'port': -1}}
 
+    def validate_auto_allocated_topology_requirements(self, project_id):
+        # from https://github.com/openstack/python-neutronclient/blob/6.14.0/
+        #  neutronclient/v2_0/client.py#L2009-L2011
+        return self.get_auto_allocated_topology(project_id, fields=['dry-run'])
+
+    def get_auto_allocated_topology(self, project_id, **_params):
+        # from https://github.com/openstack/neutron/blob/14.0.0/
+        #  neutron/services/auto_allocate/db.py#L134-L162
+        if _params == {'fields': ['dry-run']}:
+            return {'id': 'dry-run=pass', 'tenant_id': project_id}
+
+        return {
+            'auto_allocated_topology': {
+                'id': NeutronFixture.network_1['id'],
+                'tenant_id': project_id,
+            }
+        }
+
 
 class _NoopConductor(object):
     def __getattr__(self, key):
