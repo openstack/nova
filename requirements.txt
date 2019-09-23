@@ -3,7 +3,7 @@
 # process, which may cause wedges in the gate later.
 
 pbr!=2.1.0,>=2.0.0 # Apache-2.0
-SQLAlchemy!=1.1.5,!=1.1.6,!=1.1.7,!=1.1.8,>=1.0.10 # MIT
+SQLAlchemy>=1.2.19 # MIT
 decorator>=3.4.0 # BSD
 eventlet!=0.20.1,>=0.20.0 # MIT
 Jinja2>=2.10 # BSD License (3 clause)

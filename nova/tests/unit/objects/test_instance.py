@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
 import datetime
 import six
 
@@ -1946,7 +1947,7 @@ class _TestInstanceListObject(object):
 
     @mock.patch('nova.db.api.instance_get_all_uuids_by_hosts')
     def test_get_uuids_by_host_no_match(self, mock_get_all):
-        mock_get_all.return_value = {}
+        mock_get_all.return_value = collections.defaultdict(list)
         actual_uuids = objects.InstanceList.get_uuids_by_host(
             self.context, 'b')
         self.assertEqual([], actual_uuids)
