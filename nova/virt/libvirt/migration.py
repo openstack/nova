@@ -452,39 +452,6 @@ def should_trigger_timeout_action(instance, elapsed, completion_timeout,
     return False
 
 
-def should_switch_to_postcopy(memory_iteration, current_data_remaining,
-                              previous_data_remaining, migration_status):
-    """Determine if the migration should be switched to postcopy mode
-
-    :param memory_iteration: Number of memory iterations during the migration
-    :param current_data_remaining: amount of memory to be transferred
-    :param previous_data_remaining: previous memory to be transferred
-    :param migration_status: current status of the migration
-
-    Check the progress after the first memory iteration to determine if the
-    migration should be switched to post-copy mode
-
-    Avoid post-copy switch if already running in post-copy mode
-
-    :returns: True if migration should be switched to postcopy mode,
-    False otherwise
-    """
-    if (migration_status == 'running (post-copy)' or
-        previous_data_remaining <= 0):
-        return False
-
-    if memory_iteration > 1:
-        progress_percentage = round((previous_data_remaining -
-                                     current_data_remaining) *
-                                    100 / previous_data_remaining)
-        # If migration progress is less than 10% per iteration after the
-        # first memory page copying pass, the migration is switched to
-        # postcopy mode
-        if progress_percentage < 10:
-            return True
-    return False
-
-
 def update_downtime(guest, instance,
                     olddowntime,
                     downtime_steps, elapsed):
