@@ -1,9 +1,9 @@
 {
     "volumeAttachment": {
-        "device": "/dev/sdd",
-        "id": "a26887c6-c47b-4654-abb5-dfadf7d3f803",
-        "serverId": "a26887c6-c47b-4654-abb5-dfadf7d3f803",
+        "device": "/dev/sdb",
+        "id": "a07f71dc-8151-4e7d-a0cc-cd24a3f11113",
+        "serverId": "d989feee-002d-40f6-b47d-f0dbee48bbc1",
         "tag": "foo",
-        "volumeId": "a26887c6-c47b-4654-abb5-dfadf7d3f803"
+        "volumeId": "a07f71dc-8151-4e7d-a0cc-cd24a3f11113"
     }
 }

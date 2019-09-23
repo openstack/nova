@@ -1,16 +1,10 @@
 {
     "volumeAttachments": [
         {
-            "device": "/dev/sdd",
-            "id": "a26887c6-c47b-4654-abb5-dfadf7d3f803",
-            "serverId": "4d8c3732-a248-40ed-bebc-539a6ffd25c0",
-            "volumeId": "a26887c6-c47b-4654-abb5-dfadf7d3f803"
-        },
-        {
-            "device": "/dev/sdc",
-            "id": "a26887c6-c47b-4654-abb5-dfadf7d3f804",
-            "serverId": "4d8c3732-a248-40ed-bebc-539a6ffd25c0",
-            "volumeId": "a26887c6-c47b-4654-abb5-dfadf7d3f804"
+            "device": "/dev/sdb",
+            "id": "a07f71dc-8151-4e7d-a0cc-cd24a3f11113",
+            "serverId": "fd5bb1c4-de31-4071-8472-9410bc9155ec",
+            "volumeId": "a07f71dc-8151-4e7d-a0cc-cd24a3f11113"
         }
     ]
 }

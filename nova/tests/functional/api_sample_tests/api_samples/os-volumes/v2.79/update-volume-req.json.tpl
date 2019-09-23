@@ -1,5 +1,5 @@
 {
     "volumeAttachment": {
-        "volumeId": "%(volume_id)s"
+        "volumeId": "%(new_volume_id)s"
     }
 }

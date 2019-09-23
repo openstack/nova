@@ -15,16 +15,10 @@
 
 import datetime
 
-from oslo_utils.fixture import uuidsentinel as uuids
-
-from nova import context
-from nova import objects
 from nova.tests import fixtures
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.functional.api_sample_tests import test_servers
 from nova.tests.unit.api.openstack import fakes
-from nova.tests.unit import fake_block_device
-from nova.tests.unit import fake_instance
 
 
 class SnapshotsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
@@ -198,155 +192,57 @@ class VolumesSampleJsonTest(test_servers.ServersSampleBase):
 class VolumeAttachmentsSample(test_servers.ServersSampleBase):
     sample_dir = "os-volumes"
 
-    OLD_VOLUME_ID = 'a26887c6-c47b-4654-abb5-dfadf7d3f803'
-    NEW_VOLUME_ID = 'a26887c6-c47b-4654-abb5-dfadf7d3f805'
+    OLD_VOLUME_ID = fixtures.CinderFixture.SWAP_OLD_VOL
+    NEW_VOLUME_ID = fixtures.CinderFixture.SWAP_NEW_VOL
 
-    def _get_tags_per_volume(self):
-        """Allows subclasses to override which volumes have tags
-
-        :returns: dict, keyed by volume ID, to tag value; if a volume ID is
-            not found in the resulting dict it is assumed to not have a tag
-        """
-        return {}
-
-    # TODO(mriedem): There is really no good reason we should have to stub
-    # so much of this DB and compute service code when we can just use the
-    # CinderFixture. The stubs make these tests very brittle and potentially
-    # false regarding how the API/compute service interaction works.
-
-    def _stub_db_bdms_get_all_by_instance(self, server_id):
-
-        def fake_bdms_get_all_by_instance(context, instance_uuid,
-                                          use_slave=False):
-            bdms = [
-                fake_block_device.FakeDbBlockDeviceDict(
-                {'id': 1, 'volume_id': self.OLD_VOLUME_ID,
-                'instance_uuid': server_id, 'source_type': 'volume',
-                'destination_type': 'volume', 'device_name': '/dev/sdd'}),
-                fake_block_device.FakeDbBlockDeviceDict(
-                {'id': 2, 'volume_id': 'a26887c6-c47b-4654-abb5-dfadf7d3f804',
-                'instance_uuid': server_id, 'source_type': 'volume',
-                'destination_type': 'volume', 'device_name': '/dev/sdc'})
-            ]
-            tags_per_volume = self._get_tags_per_volume()
-            for bdm_dict in bdms:
-                bdm_dict['tag'] = tags_per_volume.get(bdm_dict['volume_id'])
-            return bdms
-
-        self.stub_out('nova.db.api.block_device_mapping_get_all_by_instance',
-                      fake_bdms_get_all_by_instance)
-
-    def fake_bdm_get_by_volume_and_instance(
-            self, ctxt, volume_id, instance_uuid, expected_attrs=None):
-        tag = self._get_tags_per_volume().get(self.OLD_VOLUME_ID)
-        return objects.BlockDeviceMapping._from_db_object(
-            ctxt, objects.BlockDeviceMapping(),
-            fake_block_device.FakeDbBlockDeviceDict(
-                {'id': 1, 'volume_id': self.OLD_VOLUME_ID,
-                 'instance_uuid': instance_uuid, 'source_type': 'volume',
-                 'destination_type': 'volume', 'device_name': '/dev/sdd',
-                 'tag': tag, 'delete_on_termination': False})
-        )
-
-    def _stub_compute_api_get(self):
-
-        def fake_compute_api_get(self, context, instance_id,
-                                 expected_attrs=None,
-                                 cell_down_support=False):
-            return fake_instance.fake_instance_obj(
-                    context, **{'uuid': instance_id})
-
-        self.stub_out('nova.compute.api.API.get', fake_compute_api_get)
+    def setUp(self):
+        super(VolumeAttachmentsSample, self).setUp()
+        self.useFixture(fixtures.CinderFixture(self))
+        self.server_id = self._post_server()
 
     def _get_vol_attachment_subs(self, subs):
         """Allows subclasses to override/supplement request/response subs"""
         return subs
 
     def test_attach_volume_to_server(self):
-        self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
-        self.stub_out('nova.volume.cinder.API.attachment_create',
-                      lambda *a, **k: {'id': uuids.volume})
-        device_name = '/dev/vdd'
-        bdm = objects.BlockDeviceMapping()
-        bdm['device_name'] = device_name
-        bdm['delete_on_termination'] = True
-        self.stub_out(
-            'nova.compute.manager.ComputeManager.reserve_block_device_name',
-            lambda *a, **k: bdm)
-        # 2.79+ will save the delete_on_termination value on the BDM after
-        # reserve_block_device_name "creates" the BDM.
-        self.stub_out('nova.objects.BlockDeviceMapping.save',
-                      lambda *a, **k: None)
-        self.stub_out(
-            'nova.compute.manager.ComputeManager.attach_volume',
-            lambda *a, **k: None)
-
-        volume = fakes.stub_volume_get(None, context.get_admin_context(),
-                                       'a26887c6-c47b-4654-abb5-dfadf7d3f803')
         subs = {
-            'volume_id': volume['id'],
-            'device': device_name
+            'volume_id': self.OLD_VOLUME_ID,
+            'device': '/dev/sdb'
         }
-        server_id = self._post_server()
         subs = self._get_vol_attachment_subs(subs)
         response = self._do_post('servers/%s/os-volume_attachments'
-                                 % server_id,
+                                 % self.server_id,
                                  'attach-volume-to-server-req', subs)
-
         self._verify_response('attach-volume-to-server-resp', subs,
                               response, 200)
+        return subs
 
     def test_list_volume_attachments(self):
-        server_id = self._post_server()
-        self._stub_db_bdms_get_all_by_instance(server_id)
-
+        subs = self.test_attach_volume_to_server()
         response = self._do_get('servers/%s/os-volume_attachments'
-                                % server_id)
-        subs = self._get_vol_attachment_subs({})
+                                % self.server_id)
         self._verify_response('list-volume-attachments-resp', subs,
                               response, 200)
 
     def test_volume_attachment_detail(self):
-        server_id = self._post_server()
-        self.stub_out(
-            'nova.objects.BlockDeviceMapping.get_by_volume_and_instance',
-            self.fake_bdm_get_by_volume_and_instance)
-        self._stub_compute_api_get()
+        subs = self.test_attach_volume_to_server()
         response = self._do_get('servers/%s/os-volume_attachments/%s'
-                                % (server_id, self.OLD_VOLUME_ID))
-        subs = self._get_vol_attachment_subs({})
+                                % (self.server_id, subs['volume_id']))
         self._verify_response('volume-attachment-detail-resp', subs,
                               response, 200)
 
     def test_volume_attachment_delete(self):
-        server_id = self._post_server()
-        self.stub_out(
-            'nova.objects.BlockDeviceMapping.get_by_volume_and_instance',
-            self.fake_bdm_get_by_volume_and_instance)
-        self._stub_compute_api_get()
-        self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
-        self.stub_out('nova.compute.api.API.detach_volume',
-                      lambda *a, **k: None)
+        subs = self.test_attach_volume_to_server()
         response = self._do_delete('servers/%s/os-volume_attachments/%s'
-                                   % (server_id, self.OLD_VOLUME_ID))
+                                   % (self.server_id, subs['volume_id']))
         self.assertEqual(202, response.status_code)
         self.assertEqual('', response.text)
 
     def test_volume_attachment_update(self):
-        self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
-        subs = {
-            'volume_id': self.NEW_VOLUME_ID
-        }
-        server_id = self._post_server()
-        self.stub_out(
-            'nova.objects.BlockDeviceMapping.get_by_volume_and_instance',
-            self.fake_bdm_get_by_volume_and_instance)
-        self._stub_compute_api_get()
-        self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
-        self.stub_out('nova.compute.api.API.swap_volume',
-                      lambda *a, **k: None)
+        subs = self.test_attach_volume_to_server()
+        subs['new_volume_id'] = self.NEW_VOLUME_ID
         response = self._do_put('servers/%s/os-volume_attachments/%s'
-                                % (server_id, self.OLD_VOLUME_ID),
+                                % (self.server_id, subs['volume_id']),
                                 'update-volume-req',
                                 subs)
         self.assertEqual(202, response.status_code)
@@ -360,7 +256,11 @@ class VolumeAttachmentsSampleV249(VolumeAttachmentsSample):
 
     def setUp(self):
         super(VolumeAttachmentsSampleV249, self).setUp()
-        self.useFixture(fixtures.CinderFixture(self))
+        # Stub out ComputeManager._delete_disk_metadata since the fake virt
+        # driver does not actually update the instance.device_metadata.devices
+        # list with the tagged bdm disk device metadata.
+        self.stub_out('nova.compute.manager.ComputeManager.'
+                      '_delete_disk_metadata', lambda *a, **kw: None)
 
     def _get_vol_attachment_subs(self, subs):
         return dict(subs, tag='foo')
@@ -370,12 +270,6 @@ class VolumeAttachmentsSampleV270(VolumeAttachmentsSampleV249):
     """2.70 adds the "tag" parameter to the response body"""
     microversion = '2.70'
     scenarios = [('v2_70', {'api_major_version': 'v2.1'})]
-
-    def _get_tags_per_volume(self):
-        return {
-            self.OLD_VOLUME_ID: 'foo',
-            self.NEW_VOLUME_ID: None
-        }
 
 
 class VolumeAttachmentsSampleV279(VolumeAttachmentsSampleV270):
