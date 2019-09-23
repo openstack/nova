@@ -83,8 +83,12 @@ clients. noVNC provides VNC support through a web browser.
 
   If using non-US key mappings, you need at least noVNC 1.0.0 for `a fix`__.
 
+  If using VMware ESX/ESXi hypervisors, you need at least noVNC 1.1.0 for
+  `a fix`__.
+
   __ https://bugs.launchpad.net/nova/+bug/1752896
   __ https://github.com/novnc/noVNC/commit/99feba6ba8fee5b3a2b2dc99dc25e9179c560d31
+  __ https://github.com/novnc/noVNC/commit/2c813a33fe6821f5af737327c50f388052fa963b
 
 Configuration
 ~~~~~~~~~~~~~
