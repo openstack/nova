@@ -219,8 +219,17 @@ class VolumeAttachmentsSample(test_servers.ServersSampleBase):
 
     def test_list_volume_attachments(self):
         subs = self.test_attach_volume_to_server()
+        # Attach another volume to the server so the response has multiple
+        # which is more interesting since it's a list of dicts.
+        body = {
+            'volumeAttachment': {
+                'volumeId': self.NEW_VOLUME_ID
+            }
+        }
+        self.api.post_server_volume(self.server_id, body)
         response = self._do_get('servers/%s/os-volume_attachments'
                                 % self.server_id)
+        subs['volume_id2'] = self.NEW_VOLUME_ID
         self._verify_response('list-volume-attachments-resp', subs,
                               response, 200)
 
