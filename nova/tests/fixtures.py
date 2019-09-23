@@ -1661,12 +1661,20 @@ class CinderFixture(fixtures.Fixture):
     # as part of volume image metadata
     IMAGE_WITH_TRAITS_BACKED_VOL = '6194fc02-c60e-4a01-a8e5-600798208b5f'
 
-    def __init__(self, test):
+    def __init__(self, test, az='nova'):
+        """Initialize this instance of the CinderFixture.
+
+        :param test: The TestCase using this fixture.
+        :param az: The availability zone to return in volume GET responses.
+            Defaults to "nova" since that is the default we would see
+            from Cinder's storage_availability_zone config option.
+        """
         super(CinderFixture, self).__init__()
         self.test = test
         self.swap_volume_instance_uuid = None
         self.swap_volume_instance_error_uuid = None
         self.attachment_error_id = None
+        self.az = az
         # A dict, keyed by volume id, to a dict, keyed by attachment id,
         # with keys:
         # - id: the attachment id
@@ -1755,6 +1763,9 @@ class CinderFixture(fixtures.Fixture):
                     'multiattach': volume_id == self.MULTIATTACH_VOL,
                     'size': 1
                 }
+
+            if 'availability_zone' not in volume:
+                volume['availability_zone'] = self.az
 
             # Check for our special image-backed volume.
             if volume_id in (self.IMAGE_BACKED_VOL,
