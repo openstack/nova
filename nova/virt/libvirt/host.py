@@ -1135,8 +1135,7 @@ class Host(object):
 
         :returns: a list of virNodeDevice instance
         """
-        # TODO(sbauza): Replace that call by a generic _list_devices("pci")
-        return self.get_connection().listDevices("pci", flags)
+        return self._list_devices("pci", flags=flags)
 
     def list_mdev_capable_devices(self, flags=0):
         """Lookup devices supporting mdev capabilities.
