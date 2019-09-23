@@ -18,9 +18,9 @@
 from oslo_log import log
 from oslo_utils import importutils
 
-from nova.common import config
 import nova.conf
 from nova.db.sqlalchemy import api as sqlalchemy_api
+from nova import middleware
 from nova import rpc
 from nova import version
 
@@ -49,7 +49,7 @@ def parse_args(argv, default_config_files=None, configure_db=True,
     rpc.set_defaults(control_exchange='nova')
     if profiler:
         profiler.set_defaults(CONF)
-    config.set_middleware_defaults()
+    middleware.set_defaults()
 
     CONF(argv[1:],
          project='nova',
