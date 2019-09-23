@@ -6894,16 +6894,34 @@ class ComputeManager(manager.Manager):
                                       migrate_data=migrate_data,
                                       source_bdms=source_bdms)
 
-    def _do_live_migration(self, context, dest, instance, block_migration,
-                           migration, migrate_data):
-        # NOTE(danms): We should enhance the RT to account for migrations
-        # and use the status field to denote when the accounting has been
-        # done on source/destination. For now, this is just here for status
-        # reporting
-        self._set_migration_status(migration, 'preparing')
-        source_bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                context, instance.uuid)
+    def _do_pre_live_migration_from_source(self, context, dest, instance,
+                                           block_migration, migration,
+                                           migrate_data, source_bdms):
+        """Prepares for pre-live-migration on the source host and calls dest
 
+        Will setup a callback networking event handler (if configured) and
+        then call the dest host's pre_live_migration method to prepare the
+        dest host for live migration (plugs vifs, connect volumes, etc).
+
+        _rollback_live_migration (on the source) will be called if
+        pre_live_migration (on the dest) fails.
+
+        :param context: nova auth request context for this operation
+        :param dest: name of the destination compute service host
+        :param instance: Instance object being live migrated
+        :param block_migration: If true, prepare for block migration.
+        :param migration: Migration object tracking this operation
+        :param migrate_data: MigrateData object for this operation populated
+            by the destination host compute driver as part of the
+            check_can_live_migrate_destination call.
+        :param source_bdms: BlockDeviceMappingList of BDMs currently attached
+            to the instance from the source host.
+        :returns: MigrateData object which is a modified version of the
+            ``migrate_data`` argument from the compute driver on the dest
+            host during the ``pre_live_migration`` call.
+        :raises: MigrationError if waiting for the network-vif-plugged event
+            timed out and is fatal.
+        """
         class _BreakWaitForInstanceEvent(Exception):
             """Used as a signal to stop waiting for the network-vif-plugged
             event when we discover that
@@ -6934,6 +6952,9 @@ class ComputeManager(manager.Manager):
                     instance, events, deadline=deadline,
                     error_callback=error_cb):
                 with timeutils.StopWatch() as timer:
+                    # TODO(mriedem): The "block_migration" parameter passed
+                    # here is not actually used in pre_live_migration but it
+                    # is not optional in the RPC interface either.
                     migrate_data = self.compute_rpcapi.pre_live_migration(
                         context, instance,
                         block_migration, disk, dest, migrate_data)
@@ -6988,6 +7009,21 @@ class ComputeManager(manager.Manager):
                 self._cleanup_pre_live_migration(
                     context, dest, instance, migration, migrate_data,
                     source_bdms)
+        return migrate_data
+
+    def _do_live_migration(self, context, dest, instance, block_migration,
+                           migration, migrate_data):
+        # NOTE(danms): We should enhance the RT to account for migrations
+        # and use the status field to denote when the accounting has been
+        # done on source/destination. For now, this is just here for status
+        # reporting
+        self._set_migration_status(migration, 'preparing')
+        source_bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance.uuid)
+
+        migrate_data = self._do_pre_live_migration_from_source(
+            context, dest, instance, block_migration, migration, migrate_data,
+            source_bdms)
 
         # Set migrate_data.migration because that is how _post_live_migration
         # and _rollback_live_migration get the migration object for cleanup.
