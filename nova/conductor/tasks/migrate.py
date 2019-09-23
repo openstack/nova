@@ -187,11 +187,14 @@ class MigrationTask(base.TaskBase):
 
     def _support_resource_request(self, selection):
         """Returns true if the host is new enough to support resource request
-        during migration.
+        during migration and that the RPC API version is not pinned during
+        rolling upgrade.
         """
         svc = objects.Service.get_by_host_and_binary(
             self.context, selection.service_host, 'nova-compute')
-        return svc.version >= 39
+        return (svc.version >= 39 and
+                self.compute_rpcapi.supports_resize_with_qos_port(
+                    self.context))
 
     # TODO(gibi): Remove this compat code when nova doesn't need to support
     # Train computes any more.
@@ -226,7 +229,8 @@ class MigrationTask(base.TaskBase):
         LOG.debug(
             'Scheduler returned host %(host)s as a possible migration target '
             'but that host is not new enough to support the migration with '
-            'resource request %(request)s. Trying alternate hosts.',
+            'resource request %(request)s or the compute RPC is pinned to '
+            'less than 5.2. Trying alternate hosts.',
             {'host': selection_list[0].service_host,
              'request': self.request_spec.requested_resources},
             instance=self.instance)
@@ -267,7 +271,8 @@ class MigrationTask(base.TaskBase):
                 LOG.debug(
                     'Scheduler returned alternate host %(host)s as a possible '
                     'migration target but that host is not new enough to '
-                    'support the migration with resource request %(request)s. '
+                    'support the migration with resource request %(request)s '
+                    'or the compute RPC is pinned to less than 5.2. '
                     'Trying another alternate.',
                     {'host': selection.service_host,
                      'request': self.request_spec.requested_resources},

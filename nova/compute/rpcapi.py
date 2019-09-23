@@ -806,6 +806,13 @@ class ComputeAPI(object):
                           block_migration=block_migration,
                           disk=disk, migrate_data=migrate_data)
 
+    def supports_resize_with_qos_port(self, ctxt):
+        """Returns whether we can send 5.2, needed for migrating and resizing
+        servers with ports having resource request.
+        """
+        client = self.router.client(ctxt)
+        return client.can_send_version('5.2')
+
     def prep_resize(self, ctxt, instance, image, instance_type, host,
                     migration, request_spec, filter_properties, node,
                     clean_shutdown, host_list):
