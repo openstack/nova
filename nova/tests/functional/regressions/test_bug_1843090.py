@@ -16,19 +16,10 @@ from oslo_serialization import jsonutils
 
 import nova.compute
 from nova import exception
-from nova.scheduler import weights
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_notifier
 from nova.tests.unit.image import fake as fake_image
-
-
-class HostNameWeigher(weights.BaseHostWeigher):
-    # Weigher to make the scheduler alternate host list deterministic
-    _weights = {'host1': 100, 'host2': 50, 'host3': 10}
-
-    def _weigh_object(self, host_state, weight_properties):
-        # Any undefined host gets no weight.
-        return self._weights.get(host_state.host, 0)
 
 
 class RequestSpecImageSerializationFixture(fixtures.Fixture):
@@ -61,10 +52,9 @@ class PinnedComputeRpcTests(integrated_helpers.ProviderUsageBaseTestCase):
     compute_driver = 'fake.MediumFakeDriver'
 
     def setUp(self):
-        # Use our custom weigher to make sure that we have
-        # a predictable host selection order during scheduling
-        self.flags(weight_classes=[__name__ + '.HostNameWeigher'],
-                   group='filter_scheduler')
+        # Use a custom weigher to make sure that we have a predictable host
+        # selection order during scheduling
+        self.useFixture(nova_fixtures.HostNameWeigherFixture())
 
         super(PinnedComputeRpcTests, self).setUp()
         fake_notifier.stub_notifier(self)

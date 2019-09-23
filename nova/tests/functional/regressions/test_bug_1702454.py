@@ -10,7 +10,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from nova.scheduler import weights
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
@@ -18,13 +17,6 @@ from nova.tests.functional import integrated_helpers
 from nova.tests.unit import cast_as_call
 from nova.tests.unit.image import fake as image_fake
 from nova.tests.unit import policy_fixture
-
-
-class HostNameWeigher(weights.BaseHostWeigher):
-    def _weigh_object(self, host_state, weight_properties):
-        """Arbitrary preferring host1 over host3 over host2."""
-        weights = {'host1': 100, 'host2': 1, 'host3': 50}
-        return weights.get(host_state.host, 0)
 
 
 class SchedulerOnlyChecksTargetTest(test.TestCase,
@@ -85,13 +77,13 @@ class SchedulerOnlyChecksTargetTest(test.TestCase,
         # Define a very basic scheduler that only verifies if host is down.
         self.flags(enabled_filters=['ComputeFilter'],
                    group='filter_scheduler')
-        # NOTE(sbauza): Use the above weigher so we are sure that
+        # NOTE(sbauza): Use the HostNameWeigherFixture so we are sure that
         # we prefer first host1 for the boot request and forget about any
         # other weigher.
         # Host2 should only be preferred over host3 if and only if that's the
         # only host we verify (as requested_destination does).
-        self.flags(weight_classes=[__name__ + '.HostNameWeigher'],
-                   group='filter_scheduler')
+        self.useFixture(nova_fixtures.HostNameWeigherFixture(
+            weights={'host1': 100, 'host2': 1, 'host3': 50}))
         self.start_service('scheduler')
 
         # Let's now start three compute nodes as we said above.

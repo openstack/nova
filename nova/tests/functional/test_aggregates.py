@@ -15,7 +15,6 @@ import time
 from oslo_utils.fixture import uuidsentinel as uuids
 
 import nova.conf
-from nova.scheduler import weights
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
@@ -370,23 +369,15 @@ class TenantAggregateFilterTest(AggregateRequestFiltersTest):
             self.assertEqual('host2', self._get_instance_host(server))
 
 
-class HostNameWeigher(weights.BaseHostWeigher):
-    def _weigh_object(self, host_state, weight_properties):
-        """Arbitrary preferring host1 over host2 over host3."""
-        weights = {'host1': 100, 'host2': 50, 'host3': 1}
-        return weights.get(host_state.host, 0)
-
-
 class AvailabilityZoneFilterTest(AggregateRequestFiltersTest):
     def setUp(self):
         # Default to enabling the filter
         self.flags(query_placement_for_availability_zone=True,
                    group='scheduler')
 
-        # Use our custom weigher defined above to make sure that we have
-        # a predictable scheduling sort order.
-        self.flags(weight_classes=[__name__ + '.HostNameWeigher'],
-                   group='filter_scheduler')
+        # Use custom weigher to make sure that we have a predictable
+        # scheduling sort order.
+        self.useFixture(nova_fixtures.HostNameWeigherFixture())
 
         # NOTE(danms): Do this before calling setUp() so that
         # the scheduler service that is started sees the new value
@@ -414,8 +405,7 @@ class IsolateAggregateFilterTest(AggregateRequestFiltersTest):
         # aggregate filter were not in place otherwise it's not deterministic
         # whether we're landing on host2 because of the filter or just by
         # chance.
-        self.flags(weight_classes=[__name__ + '.HostNameWeigher'],
-                   group='filter_scheduler')
+        self.useFixture(nova_fixtures.HostNameWeigherFixture())
 
         super(IsolateAggregateFilterTest, self).setUp()
         self.image_service = nova.tests.unit.image.fake.FakeImageService()
@@ -673,8 +663,7 @@ class TestAggregateFiltersTogether(AggregateRequestFiltersTest):
         # aggregate filter were not in place otherwise it's not deterministic
         # whether we're landing on host2 because of the filter or just by
         # chance.
-        self.flags(weight_classes=[__name__ + '.HostNameWeigher'],
-                   group='filter_scheduler')
+        self.useFixture(nova_fixtures.HostNameWeigherFixture())
 
         # NOTE(danms): Do this before calling setUp() so that
         # the scheduler service that is started sees the new value
@@ -923,8 +912,7 @@ class AggregateMultiTenancyIsolationColdMigrateTest(
         # Add a custom weigher which will weigh host1, which will be in the
         # admin project aggregate, higher than the other hosts which are in
         # the non-admin project aggregate.
-        self.flags(weight_classes=[__name__ + '.HostNameWeigher'],
-                   group='filter_scheduler')
+        self.useFixture(nova_fixtures.HostNameWeigherFixture())
         self.start_service('scheduler')
 
         for host in ('host1', 'host2', 'host3'):
@@ -947,9 +935,9 @@ class AggregateMultiTenancyIsolationColdMigrateTest(
             self.admin_api, 'tenant-aggregate')
 
         # Add two compute hosts to the tenant aggregate. We exclude host1
-        # since that is weighed higher in HostNameWeigher and we want to
-        # ensure the scheduler properly filters out host1 before we even get
-        # to weighing the selected hosts.
+        # since that is weighed higher due to HostNameWeigherFixture and we
+        # want to ensure the scheduler properly filters out host1 before we
+        # even get to weighing the selected hosts.
         for host in ('host2', 'host3'):
             self._add_host_to_aggregate(self.admin_api, tenant_aggregate, host)
 

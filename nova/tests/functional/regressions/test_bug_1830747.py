@@ -15,20 +15,11 @@ import mock
 from nova.conductor import api as conductor_api
 from nova import context as nova_context
 from nova import objects
-from nova.scheduler import weights
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit.image import fake as fake_image
-
-
-class HostNameWeigher(weights.BaseHostWeigher):
-    # Prefer host1 over host2.
-    weights = {'host1': 100, 'host2': 50}
-
-    def _weigh_object(self, host_state, weight_properties):
-        return self.weights.get(host_state.host, 0)
 
 
 class MissingReqSpecInstanceGroupUUIDTestCase(
@@ -71,10 +62,9 @@ class MissingReqSpecInstanceGroupUUIDTestCase(
             api_version='v2.1'))
         self.api = api_fixture.admin_api
         self.start_service('conductor')
-        # Use our custom weigher defined above to make sure that we have
-        # a predictable scheduling sort order.
-        self.flags(weight_classes=[__name__ + '.HostNameWeigher'],
-                   group='filter_scheduler')
+        # Use a custom weigher to make sure that we have a predictable
+        # scheduling sort order.
+        self.useFixture(nova_fixtures.HostNameWeigherFixture())
         self.start_service('scheduler')
         # Start two computes, one where the server will be created and another
         # where we'll cold migrate it.

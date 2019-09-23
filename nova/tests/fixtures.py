@@ -63,6 +63,7 @@ from nova.objects import service as service_obj
 import nova.privsep
 from nova import quota as nova_quota
 from nova import rpc
+from nova.scheduler import weights
 from nova import service
 from nova.tests.functional.api import client
 from nova.tests.unit import fake_requests
@@ -2147,3 +2148,52 @@ class OpenStackSDKFixture(fixtures.Fixture):
         self.useFixture(fixtures.MockPatchObject(
             service_description.ServiceDescription, '_make_proxy',
             fake_make_proxy))
+
+
+class HostNameWeigher(weights.BaseHostWeigher):
+    """Weigher to make the scheduler host selection deterministic.
+
+    Note that this weigher is supposed to be used via
+    HostNameWeigherFixture and will fail to instantiate if used without that
+    fixture.
+    """
+
+    def __init__(self):
+        self.weights = self.get_weights()
+
+    def get_weights(self):
+        raise NotImplemented()
+
+    def _weigh_object(self, host_state, weight_properties):
+        # Any unspecified host gets no weight.
+        return self.weights.get(host_state.host, 0)
+
+
+class HostNameWeigherFixture(fixtures.Fixture):
+    """Fixture to make the scheduler host selection deterministic.
+
+    Note that this fixture needs to be used before the scheduler service is
+    started as it changes the scheduler configuration.
+    """
+
+    def __init__(self, weights=None):
+        """Create the fixture
+        :param weights: A dict of weights keyed by host names. Defaulted to
+            {'host1': 100, 'host2': 50, 'host3': 10}"
+        """
+        if weights:
+            self.weights = weights
+        else:
+            # default weights good for most of the functional tests
+            self.weights = {'host1': 100, 'host2': 50, 'host3': 10}
+
+    def setUp(self):
+        super(HostNameWeigherFixture, self).setUp()
+        # Make sure that when the scheduler instantiate the HostNameWeigher it
+        # is initialized with the weights that is configured in this fixture
+        self.useFixture(fixtures.MockPatchObject(
+            HostNameWeigher, 'get_weights', return_value=self.weights))
+        # Make sure that the scheduler loads the HostNameWeigher and only that
+        self.useFixture(ConfPatcher(
+            weight_classes=[__name__ + '.HostNameWeigher'],
+            group='filter_scheduler'))
