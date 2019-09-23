@@ -1598,7 +1598,9 @@ class API(base.Base):
                     raise
                 except exception.InvalidInput as exc:
                     raise exception.InvalidVolume(reason=exc.format_message())
-                except Exception:
+                except Exception as e:
+                    LOG.info('Failed validating volume %s. Error: %s',
+                             volume_id, e)
                     raise exception.InvalidBDMVolume(id=volume_id)
             elif snapshot_id is not None:
                 try:
