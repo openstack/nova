@@ -1153,7 +1153,6 @@ class MigrationTestCase(test.TestCase):
             self.assertNotEqual('reverted', migration['status'])
             self.assertNotEqual('error', migration['status'])
             self.assertNotEqual('failed', migration['status'])
-            self.assertNotEqual('accepted', migration['status'])
             self.assertNotEqual('done', migration['status'])
             self.assertNotEqual('cancelled', migration['status'])
 
@@ -1169,7 +1168,7 @@ class MigrationTestCase(test.TestCase):
         migrations = db.migration_get_in_progress_by_host_and_node(self.ctxt,
                 'host1', 'a')
         # 2 as source + 1 as dest
-        self.assertEqual(3, len(migrations))
+        self.assertEqual(4, len(migrations))
         self._assert_in_progress(migrations)
 
     def test_in_progress_host1_nodeb(self):
@@ -1182,7 +1181,7 @@ class MigrationTestCase(test.TestCase):
         migrations = db.migration_get_in_progress_by_host_and_node(self.ctxt,
                 'host2', 'b')
         # 2 as dest, 1 as source
-        self.assertEqual(3, len(migrations))
+        self.assertEqual(4, len(migrations))
         self._assert_in_progress(migrations)
 
     def test_instance_join(self):
