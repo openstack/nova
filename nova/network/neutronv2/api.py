@@ -3361,22 +3361,28 @@ class API(base_api.NetworkAPI):
 
             if p.get('resource_request'):
                 if not provider_mappings:
+                    # TODO(gibi): Remove this check when compute RPC API is
+                    # bumped to 6.0
                     # NOTE(gibi): This should not happen as the API level
                     # minimum compute service version check ensures that the
                     # compute services already send the RequestSpec during
                     # the move operations between the source and the
                     # destination and the dest compute calculates the
                     # mapping based on that.
+                    LOG.warning(
+                        "Provider mappings are not available to the compute "
+                        "service but are required for ports with a resource "
+                        "request. If compute RPC API versions are pinned for "
+                        "a rolling upgrade, you will need to retry this "
+                        "operation once the RPC version is unpinned and the "
+                        "nova-compute services are all upgraded.",
+                        instance=instance)
                     raise exception.PortUpdateFailed(
                         port_id=p['id'],
                         reason=_(
                             "Provider mappings are not available to the "
                             "compute service but are required for ports with "
-                            "a resource request. If compute RPC API versions "
-                            "are pinned for a rolling upgrade, you will need "
-                            "to retry this operation once the RPC version is "
-                            "unpinned and the nova-compute services are all "
-                            "upgraded."))
+                            "a resource request."))
 
                 # NOTE(gibi): In the resource provider mapping there can be
                 # more than one RP fulfilling a request group. But resource
