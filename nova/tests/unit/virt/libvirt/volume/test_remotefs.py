@@ -171,6 +171,16 @@ class RemoteFSTestCase(test.NoDBTestCase):
     def test_remote_copy_file_ssh(self, mock_execute):
         remotefs.SshDriver().copy_file('1.2.3.4:/home/SpaceOdyssey',
                                        '/home/favourite', None, None, True)
+        mock_execute.assert_called_once_with('scp', '-C', '-r',
+                                             '1.2.3.4:/home/SpaceOdyssey',
+                                             '/home/favourite',
+                                             on_completion=None,
+                                             on_execute=None)
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_remote_copy_file_ssh__without_compression(self, mock_execute):
+        remotefs.SshDriver().copy_file('1.2.3.4:/home/SpaceOdyssey',
+                                       '/home/favourite', None, None, False)
         mock_execute.assert_called_once_with('scp', '-r',
                                              '1.2.3.4:/home/SpaceOdyssey',
                                              '/home/favourite',
