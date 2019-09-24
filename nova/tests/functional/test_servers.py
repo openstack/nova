@@ -6860,6 +6860,97 @@ class ServerMoveWithPortResourceRequestTest(
             server, self.compute1_rp_uuid, non_qos_port, qos_port,
             qos_sriov_port, self.flavor_with_group_policy)
 
+    def test_migrate_server_with_qos_port_pinned_compute_rpc(self):
+        # Pin the compute rpc version to 5.1 to test what happens if
+        # resize RPC is called without RequestSpec.
+        # It is OK to set this after the nova services has started in setUp()
+        # as no compute rpc call is made so far.
+        self.flags(compute='5.1', group='upgrade_levels')
+
+        non_qos_normal_port = self.neutron.port_1
+        qos_normal_port = self.neutron.port_with_resource_request
+
+        server = self._create_server_with_ports(
+            non_qos_normal_port, qos_normal_port)
+
+        self.api.post_server_action(server['id'], {'migrate': None})
+        # There are ports with resource request but the finish_resize is
+        # called without request_spec (as that is only added in 5.2 an we are
+        # pinned to 5.1) and therefore the request group - resource provider
+        # mapping cannot be calculated for these ports so the server goes to
+        # ERROR on the target host. This is bug 1844993.
+        server = self._wait_for_server_parameter(
+            self.api, server,
+            # Note that the server remains on the dest host after the
+            # failure as we are failing in finish_resize
+            {'OS-EXT-SRV-ATTR:host': 'host2',
+             'OS-EXT-STS:task_state': None,
+             'status': 'ERROR'})
+        self._wait_for_migration_status(server, ['error'])
+
+        self.assertIn(
+            'Provider mappings are not available to the compute service but '
+            'are required for ports with a resource request. If compute RPC '
+            'API versions are pinned for a rolling upgrade, you will need to '
+            'retry this operation once the RPC version is unpinned and the '
+            'nova-compute services are all upgraded',
+            self.stdlog.logger.output)
+
+        self.assertIn(
+            'Provider mappings are not available to the compute service but '
+            'are required for ports with a resource request.',
+            server['fault']['message'])
+
+        self._wait_for_action_fail_completion(
+            server, instance_actions.MIGRATE, 'compute_finish_resize',
+            self.admin_api)
+
+        # Note that we don't get error notification about the failed resize
+        fake_notifier.wait_for_versioned_notifications(
+            'instance.resize.end')
+        # Just a generic error notification
+        fake_notifier.wait_for_versioned_notifications(
+            'compute.exception')
+
+        migration_uuid = self.get_migration_uuid_for_instance(server['id'])
+
+        # The migration is failed the migration allocation on the source host
+        # is deleted
+        migration_allocations = self.placement_api.get(
+            '/allocations/%s' % migration_uuid).body['allocations']
+        self.assertEqual({}, migration_allocations)
+
+        # Note(gibi): inlined _check_allocation() as the current state of the
+        # port binding is complicated that cannot be handled with
+        # _check_allocation
+        updated_non_qos_port = self.neutron.show_port(
+            non_qos_normal_port['id'])['port']
+        updated_qos_port = self.neutron.show_port(
+            qos_normal_port['id'])['port']
+        allocations = self.placement_api.get(
+            '/allocations/%s' % server['id']).body['allocations']
+
+        # We expect one set of allocations for the compute resources on the
+        # compute rp and one set for the networking resources on the ovs
+        # bridge rp due to the qos_port resource request
+        # Note that the resource allocation is on the dest host...
+        self.assertEqual(2, len(allocations))
+        self.assertComputeAllocationMatchesFlavor(
+            allocations, self.compute2_rp_uuid, self.flavor_with_group_policy)
+        ovs_allocations = allocations[
+            self.ovs_bridge_rp_per_host[self.compute2_rp_uuid]]['resources']
+        self.assertPortMatchesAllocation(qos_normal_port, ovs_allocations)
+
+        # ... but the binding update failed so the allocation key in the
+        # binding:profile still points to the networking RP on the source host
+        # (host1). This is bug 1844993.
+        qos_binding_profile = updated_qos_port['binding:profile']
+        self.assertEqual(self.ovs_bridge_rp_per_host[self.compute1_rp_uuid],
+                         qos_binding_profile['allocation'])
+        # And we expect not to have any allocation set in the port binding for
+        # the port that doesn't have resource request
+        self.assertNotIn('binding:profile', updated_non_qos_port)
+
 
 class PortResourceRequestReSchedulingTest(
         PortResourceRequestBasedSchedulingTestBase):
