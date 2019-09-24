@@ -491,7 +491,8 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         mock_debug.assert_called_once_with(
             'Scheduler returned host %(host)s as a possible migration target '
             'but that host is not new enough to support the migration with '
-            'resource request %(request)s. Trying alternate hosts.',
+            'resource request %(request)s or the compute RPC is pinned to '
+            'less than 5.2. Trying alternate hosts.',
             {'host': 'host1',
              'request': self.request_spec.requested_resources},
             instance=self.instance)
@@ -582,8 +583,8 @@ class MigrationTaskTestCase(test.NoDBTestCase):
             mock.call(
                 'Scheduler returned host %(host)s as a possible migration '
                 'target but that host is not new enough to support the '
-                'migration with resource request %(request)s. Trying '
-                'alternate hosts.',
+                'migration with resource request %(request)s or the compute '
+                'RPC is pinned to less than 5.2. Trying alternate hosts.',
                 {'host': 'host1',
                  'request': self.request_spec.requested_resources},
                 instance=self.instance),
@@ -674,16 +675,17 @@ class MigrationTaskTestCase(test.NoDBTestCase):
             mock.call(
                 'Scheduler returned host %(host)s as a possible migration '
                 'target but that host is not new enough to support the '
-                'migration with resource request %(request)s. Trying '
-                'alternate hosts.',
+                'migration with resource request %(request)s or the compute '
+                'RPC is pinned to less than 5.2. Trying alternate hosts.',
                 {'host': 'host1',
                  'request': self.request_spec.requested_resources},
                 instance=self.instance),
             mock.call(
                 'Scheduler returned alternate host %(host)s as a possible '
                 'migration target but that host is not new enough to support '
-                'the migration with resource request %(request)s. Trying '
-                'another alternate.',
+                'the migration with resource request %(request)s or the '
+                'compute RPC is pinned to less than 5.2. Trying another '
+                'alternate.',
                 {'host': 'host2',
                  'request': self.request_spec.requested_resources},
                 instance=self.instance),
