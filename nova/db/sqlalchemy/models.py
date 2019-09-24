@@ -717,6 +717,8 @@ class SecurityGroupIngressRule(BASE, NovaBase, models.SoftDeleteMixin):
         'SecurityGroupIngressRule.deleted == 0)')
 
 
+# TODO(stephenfin): Remove this in the V release or later, once we're sure we
+# won't want it back (it's for nova-network, so we won't)
 class SecurityGroupIngressDefaultRule(BASE, NovaBase, models.SoftDeleteMixin):
     __tablename__ = 'security_group_default_rules'
     __table_args__ = ()
