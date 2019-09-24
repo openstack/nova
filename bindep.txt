@@ -8,6 +8,9 @@ gcc [platform:rpm test]
 # TODO(jaegerandi): Remove test once infra scripts are updated.
 gettext [doc test]
 graphviz [doc test]
+# libsrvg2 is needed for sphinxcontrib-svg2pdfconverter in docs builds.
+librsvg2-tools [doc platform:rpm]
+librsvg2-bin [doc platform:dpkg]
 language-pack-en [platform:ubuntu]
 libffi-dev [platform:dpkg test]
 libffi-devel [platform:rpm test]
