@@ -10,7 +10,7 @@ performance.
 .. include:: /common/numa-live-migration-warning.txt
 
 SMP, NUMA, and SMT
-~~~~~~~~~~~~~~~~~~
+------------------
 
 Symmetric multiprocessing (SMP)
   SMP is a design found in many modern multi-core systems. In an SMP system,
@@ -47,7 +47,7 @@ eight core system with Hyper-Threading would have four sockets, eight cores per
 socket and two threads per core, for a total of 64 CPUs.
 
 Customizing instance NUMA placement policies
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+--------------------------------------------
 
 .. important::
 
@@ -113,7 +113,7 @@ run:
 
 .. code-block:: console
 
-   $ openstack flavor set m1.large --property hw:numa_nodes=1
+   $ openstack flavor set [FLAVOR_ID] --property hw:numa_nodes=1
 
 Some workloads have very demanding requirements for memory access latency or
 bandwidth that exceed the memory bandwidth available from a single NUMA node.
@@ -124,7 +124,7 @@ nodes, run:
 
 .. code-block:: console
 
-   $ openstack flavor set m1.large --property hw:numa_nodes=2
+   $ openstack flavor set [FLAVOR_ID] --property hw:numa_nodes=2
 
 The allocation of instances vCPUs and memory from different host NUMA nodes can
 be configured. This allows for asymmetric allocation of vCPUs and memory, which
@@ -134,11 +134,13 @@ memory mapping between the two nodes, run:
 
 .. code-block:: console
 
-   $ openstack flavor set m1.large --property hw:numa_nodes=2
-   $ openstack flavor set m1.large \  # configure guest node 0
+   $ openstack flavor set [FLAVOR_ID] --property hw:numa_nodes=2
+   # configure guest node 0
+   $ openstack flavor set [FLAVOR_ID] \
      --property hw:numa_cpus.0=0,1 \
      --property hw:numa_mem.0=2048
-   $ openstack flavor set m1.large \  # configure guest node 1
+   # configure guest node 1
+   $ openstack flavor set [FLAVOR_ID] \
      --property hw:numa_cpus.1=2,3,4,5 \
      --property hw:numa_mem.1=4096
 
@@ -152,12 +154,19 @@ and ``hw:num_mem.N``, refer to the :ref:`NUMA
 topology <extra-specs-numa-topology>` guide.
 
 Customizing instance CPU pinning policies
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------------------------
 
 .. important::
 
    The functionality described below is currently only supported by the
    libvirt/KVM driver. Hyper-V does not support CPU pinning.
+
+.. note::
+
+   There is no correlation required between the NUMA topology exposed in the
+   instance and how the instance is actually pinned on the host. This is by
+   design. See this `invalid bug
+   <https://bugs.launchpad.net/nova/+bug/1466780>`_ for more information.
 
 By default, instance vCPU processes are not assigned to any particular host
 CPU, instead, they float across host CPUs like any other process. This allows
@@ -170,12 +179,17 @@ possible with the latency introduced by the default CPU policy. For such
 workloads, it is beneficial to control which host CPUs are bound to an
 instance's vCPUs. This process is known as pinning. No instance with pinned
 CPUs can use the CPUs of another pinned instance, thus preventing resource
-contention between instances. To configure a flavor to use pinned vCPUs, a
-use a dedicated CPU policy. To force this, run:
+contention between instances.
+
+CPU pinning policies can be used to determine whether an instance should be
+pinned or not. There are two policies: ``dedicated`` and ``shared`` (the
+default). The ``dedicated`` CPU policy is used to specify that an instance
+should use pinned CPUs. To configure a flavor to use the ``dedicated`` CPU
+policy, run:
 
 .. code-block:: console
 
-   $ openstack flavor set m1.large --property hw:cpu_policy=dedicated
+   $ openstack flavor set [FLAVOR_ID] --property hw:cpu_policy=dedicated
 
 .. caution::
 
@@ -183,43 +197,119 @@ use a dedicated CPU policy. To force this, run:
    instances as the latter will not respect the resourcing requirements of
    the former.
 
-When running workloads on SMT hosts, it is important to be aware of the impact
-that thread siblings can have. Thread siblings share a number of components
-and contention on these components can impact performance. To configure how
-to use threads, a CPU thread policy should be specified. For workloads where
-sharing benefits performance, use thread siblings. To force this, run:
+The ``shared`` CPU policy is used to specify that an instance **should not**
+use pinned CPUs. To configure a flavor to use the ``shared`` CPU policy, run:
 
 .. code-block:: console
 
-   $ openstack flavor set m1.large \
+   $ openstack flavor set [FLAVOR_ID] --property hw:cpu_policy=shared
+
+.. note::
+
+   For more information about the syntax for ``hw:cpu_policy``, refer to the
+   :doc:`/admin/flavors` guide.
+
+It is also possible to configure the CPU policy via image metadata. This can
+be useful when packaging applications that require real-time or near real-time
+behavior by ensuring instances created with a given image are always pinned
+regardless of flavor. To configure an image to use the ``dedicated`` CPU
+policy, run:
+
+.. code-block:: console
+
+   $ openstack image set [IMAGE_ID] --property hw_cpu_policy=dedicated
+
+Likewise, to configure an image to use the ``shared`` CPU policy, run:
+
+.. code-block:: console
+
+   $ openstack image set [IMAGE_ID] --property hw_cpu_policy=shared
+
+.. note::
+
+   For more information about image metadata, refer to the `Image metadata`_
+   guide.
+
+.. important::
+
+   Flavor-based policies take precedence over image-based policies. For
+   example, if a flavor specifies a CPU policy of ``dedicated`` then that
+   policy will be used. If the flavor specifies a CPU policy of
+   ``shared`` and the image specifies no policy or a policy of ``shared`` then
+   the ``shared`` policy will be used. However, the flavor specifies a CPU
+   policy of ``shared`` and the image specifies a policy of ``dedicated``, or
+   vice versa, an exception will be raised. This is by design. Image metadata
+   is often configurable by non-admin users, while flavors are only
+   configurable by admins. By setting a ``shared`` policy through flavor
+   extra-specs, administrators can prevent users configuring CPU policies in
+   images and impacting resource utilization.
+
+Customizing instance CPU thread pinning policies
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. important::
+
+   The functionality described below requires the use of pinned instances and
+   is therefore currently only supported by the libvirt/KVM driver.
+   Hyper-V does not support CPU pinning.
+
+When running pinned instances on SMT hosts, it may also be necessary to
+consider the impact that thread siblings can have on the instance workload. The
+presence of an SMT implementation like Intel Hyper-Threading can boost
+performance `by up to 30%`__ for some workloads.  However, thread siblings
+share a number of components and contention on these components can diminish
+performance for other workloads. For this reason, it is also possible to
+explicitly request hosts with or without SMT.
+
+__ https://software.intel.com/en-us/articles/how-to-determine-the-effectiveness-of-hyper-threading-technology-with-an-application
+
+To configure whether an instance should be placed on a host with SMT or not, a
+CPU thread policy may be specified. For workloads where sharing benefits
+performance, you can request hosts **with** SMT.  To configure this, run:
+
+.. code-block:: console
+
+   $ openstack flavor set [FLAVOR_ID] \
      --property hw:cpu_policy=dedicated \
      --property hw:cpu_thread_policy=require
 
 For other workloads where performance is impacted by contention for resources,
-use non-thread siblings or non-SMT hosts. To force this, run:
+you can request hosts **without** SMT. To configure this, run:
 
 .. code-block:: console
 
-   $ openstack flavor set m1.large \
+   $ openstack flavor set [FLAVOR_ID] \
      --property hw:cpu_policy=dedicated \
      --property hw:cpu_thread_policy=isolate
 
-Finally, for workloads where performance is minimally impacted, use thread
-siblings if available. This is the default, but it can be set explicitly:
+Finally, for workloads where performance is minimally impacted, you may use
+thread siblings if available and fallback to not using them if necessary. This
+is the default, but it can be set explicitly:
 
 .. code-block:: console
 
-   $ openstack flavor set m1.large \
+   $ openstack flavor set [FLAVOR_ID] \
      --property hw:cpu_policy=dedicated \
      --property hw:cpu_thread_policy=prefer
 
-For more information about the syntax for ``hw:cpu_policy`` and
-``hw:cpu_thread_policy``, refer to the :doc:`/admin/flavors` guide.
+.. note::
 
-Applications are frequently packaged as images. For applications that require
-real-time or near real-time behavior, configure image metadata to ensure
-created instances are always pinned regardless of flavor. To configure an
-image to use pinned vCPUs and avoid thread siblings, run:
+   For more information about the syntax for ``hw:cpu_thread_policy``, refer to
+   the :doc:`/admin/flavors` guide.
+
+As with CPU policies, it also possible to configure the CPU thread policy via
+image metadata. This can be useful when packaging applications that require
+real-time or near real-time behavior by ensuring instances created with a given
+image are always pinned regardless of flavor. To configure an image to use the
+``require`` CPU policy, run:
+
+.. code-block:: console
+
+   $ openstack image set [IMAGE_ID] \
+     --property hw_cpu_policy=dedicated \
+     --property hw_cpu_thread_policy=require
+
+Likewise, to configure an image to use the ``isolate`` CPU thread policy, run:
 
 .. code-block:: console
 
@@ -227,17 +317,13 @@ image to use pinned vCPUs and avoid thread siblings, run:
      --property hw_cpu_policy=dedicated \
      --property hw_cpu_thread_policy=isolate
 
-If the flavor specifies a CPU policy of ``dedicated`` then that policy will be
-used. If the flavor explicitly specifies a CPU policy of ``shared`` and the
-image specifies no policy or a policy of ``shared`` then the ``shared`` policy
-will be used, but if the image specifies a policy of ``dedicated`` an exception
-will be raised. By setting a ``shared`` policy through flavor extra-specs,
-administrators can prevent users configuring CPU policies in images and
-impacting resource utilization. To configure this policy, run:
+Finally, to configure an image to use the ``prefer`` CPU thread policy, run:
 
 .. code-block:: console
 
-   $ openstack flavor set m1.large --property hw:cpu_policy=shared
+   $ openstack image set [IMAGE_ID] \
+     --property hw_cpu_policy=dedicated \
+     --property hw_cpu_thread_policy=prefer
 
 If the flavor does not specify a CPU thread policy then the CPU thread policy
 specified by the image (if any) will be used. If both the flavor and image
@@ -246,59 +332,58 @@ an exception will be raised.
 
 .. note::
 
-   There is no correlation required between the NUMA topology exposed in the
-   instance and how the instance is actually pinned on the host. This is by
-   design. See this `invalid bug
-   <https://bugs.launchpad.net/nova/+bug/1466780>`_ for more information.
-
-For more information about image metadata, refer to the `Image metadata`_
-guide.
+   For more information about image metadata, refer to the `Image metadata`_
+   guide.
 
 Customizing instance emulator thread pinning policies
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-When guests need dedicated vCPU allocation, it may not be acceptable to allow
-emulator threads to steal time from real-time vCPUs.
+.. important::
 
-In order to achieve emulator thread pinning, configure the
-``hw:emulator_threads_policy`` flavor extra spec. Additionally,
-``hw:cpu_policy`` needs to be set to ``dedicated``. The default value for
-``hw:emulator_threads_policy`` is ``share``.
+   The functionality described below requires the use of pinned instances and
+   is therefore currently only supported by the libvirt/KVM driver.
+   Hyper-V does not support CPU pinning.
 
-If you want to tell nova to reserve a dedicated CPU per instance for emulator
-thread pinning, configure ``hw:emulator_threads_policy`` as ``isolate``.
+In addition to the work of the guest OS and applications running in an
+instance, there is a small amount of overhead associated with the underlying
+hypervisor. By default, these overhead tasks - known collectively as emulator
+threads - run on the same host CPUs as the instance itself and will result in a
+minor performance penalty for the instance. This is not usually an issue,
+however, for things like real-time instances, it may not be acceptable for
+emulator thread to steal time from instance CPUs.
+
+Emulator thread policies can be used to ensure emulator threads are run on
+cores separate from those used by the instance. There are two policies:
+``isolate`` and ``share``. The default is to run the emulator threads on the
+same core. The ``isolate`` emulator thread policy is used to specify that
+emulator threads for a given instance should be run on their own unique core,
+chosen from one of the host cores listed in :oslo.config:option:`vcpu_pin_set`.
+To configure a flavor to use the ``isolate`` emulator thread policy, run:
 
 .. code-block:: console
 
-   $ openstack flavor set m1.large \
+   $ openstack flavor set [FLAVOR_ID] \
      --property hw:cpu_policy=dedicated \
      --property hw:emulator_threads_policy=isolate
 
-An instance spawned with these settings will have a dedicated physical CPU
-which is chosen from the ``vcpu_pin_set`` in addition to the physical CPUs
-which are reserved for the vCPUs.
-
-If you want to tell nova to pin the emulator threads to a shared set of
-dedicated CPUs, configure ``hw:emulator_threads_policy`` as ``share``.
+The ``share`` policy is used to specify that emulator threads from a given
+instance should be run on the pool of host cores listed in
+:oslo.config:option:`compute.cpu_shared_set`. To configure a flavor to use the
+``share`` emulator thread policy, run:
 
 .. code-block:: console
 
-   $ openstack flavor set m1.large \
+   $ openstack flavor set [FLAVOR_ID] \
      --property hw:cpu_policy=dedicated \
      --property hw:emulator_threads_policy=share
 
-Additionally, set ``[compute]/cpu_shared_set`` in ``/etc/nova/nova.conf`` to
-the set of host CPUs that should be used for best-effort CPU resources.
+.. note::
 
-.. code-block:: console
-
-   # crudini --set /etc/nova/nova.conf compute cpu_shared_set 4,5,8-11
-
-For more information about the syntax for ``hw:emulator_threads_policy``,
-refer to the :doc:`/admin/flavors` guide.
+   For more information about the syntax for ``hw:emulator_threads_policy``,
+   refer to the :doc:`/admin/flavors` guide.
 
 Customizing instance CPU topologies
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------------------
 
 .. important::
 
@@ -328,13 +413,13 @@ sockets. To configure a flavor to use a maximum of two sockets, run:
 
 .. code-block:: console
 
-   $ openstack flavor set m1.large --property hw:cpu_sockets=2
+   $ openstack flavor set [FLAVOR_ID] --property hw:cpu_sockets=2
 
 Similarly, to configure a flavor to use one core and one thread, run:
 
 .. code-block:: console
 
-   $ openstack flavor set m1.large \
+   $ openstack flavor set [FLAVOR_ID] \
      --property hw:cpu_cores=1 \
      --property hw:cpu_threads=1
 
@@ -360,7 +445,7 @@ instance topology, run:
 
 .. code-block:: console
 
-   $ openstack flavor set m1.large --property hw:cpu_max_sockets=2
+   $ openstack flavor set [FLAVOR_ID] --property hw:cpu_max_sockets=2
 
 For more information about the syntax for ``hw:cpu_max_sockets``,
 ``hw:cpu_max_cores``, and ``hw:cpu_max_threads``, refer to the
@@ -399,7 +484,7 @@ guide.
 .. _configure-hyperv-numa:
 
 Configuring Hyper-V compute nodes for instance NUMA policies
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+------------------------------------------------------------
 
 Hyper-V is configured by default to allow instances to span multiple NUMA
 nodes, regardless if the instances have been configured to only span N NUMA
