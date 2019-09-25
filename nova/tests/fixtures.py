@@ -880,6 +880,14 @@ class WarningsFixture(fixtures.Fixture):
             category=DeprecationWarning,
             module='migrate.versioning.script.py')
 
+        # TODO(stephenfin): Remove once we bump our sqlalchemy-migrate version
+        # to whatever is released early in Ussuri and includes change
+        # I319785d7dd83ffe2c6e651a2494b073becc84684
+        warnings.filterwarnings(
+            'ignore', message='The Engine.contextual_connect.*',
+            category=sqla_exc.SADeprecationWarning,
+            module='migrate.changeset.databases.visitor')
+
         self.addCleanup(warnings.resetwarnings)
 
 
