@@ -212,9 +212,8 @@ def _is_drs_enabled(session, cluster):
     """Check if DRS is enabled on a given cluster"""
     drs_config = session._call_method(vutil, "get_object_property", cluster,
                                       "configuration.drsConfig")
-    if drs_config:
-        if hasattr(drs_config, "enabled"):
-            return drs_config["enabled"]
+    if drs_config and hasattr(drs_config, 'enabled'):
+        return drs_config.enabled
 
     return False
 
