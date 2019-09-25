@@ -563,8 +563,8 @@ CPU real-time policy
 
      Document the required steps to configure hosts and guests. There are a lot
      of things necessary, from isolating hosts and configuring the
-     ``vcpu_pin_set`` nova configuration option on the host, to choosing a
-     correctly configured guest image.
+     ``[compute] cpu_dedicated_set`` nova configuration option on the host, to
+     choosing a correctly configured guest image.
 
   .. important::
 
