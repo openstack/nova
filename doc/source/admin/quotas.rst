@@ -7,11 +7,6 @@ which are provided by the ``python-novaclient`` package, to update the Compute
 service quotas for a specific project or project user, as well as update the
 quota defaults for a new project.
 
-.. todo::
-
-   At some point, probably in Queens, we need to scrub this page and mention
-   the microversions that remove the proxy and network-related resource quotas.
-
 .. rubric:: Compute quota descriptions
 
 .. list-table::
@@ -22,34 +17,56 @@ quota defaults for a new project.
      - Description
    * - cores
      - Number of instance cores (VCPUs) allowed per project.
-   * - fixed-ips
-     - Number of fixed IP addresses allowed per project. This number
-       must be equal to or greater than the number of allowed
-       instances.
-   * - floating-ips
-     - Number of floating IP addresses allowed per project.
-   * - injected-file-content-bytes
-     - Number of content bytes allowed per injected file.
-   * - injected-file-path-bytes
-     - Length of injected file path.
-   * - injected-files
-     - Number of injected files allowed per project.
    * - instances
      - Number of instances allowed per project.
-   * - key-pairs
+   * - key_pairs
      - Number of key pairs allowed per user.
-   * - metadata-items
+   * - metadata_items
      - Number of metadata items allowed per instance.
    * - ram
      - Megabytes of instance ram allowed per project.
-   * - security-groups
-     - Number of security groups per project.
-   * - security-group-rules
-     - Number of security group rules per project.
-   * - server-groups
+   * - server_groups
      - Number of server groups per project.
-   * - server-group-members
+   * - server_group_members
      - Number of servers per server group.
+
+The following quotas were previously available but were removed in microversion
+2.36 as they proxied information available from the networking service.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 10 40
+
+   * - Quota name
+     - Description
+   * - fixed_ips
+     - Number of fixed IP addresses allowed per project. This number
+       must be equal to or greater than the number of allowed
+       instances.
+   * - floating_ips
+     - Number of floating IP addresses allowed per project.
+   * - networks
+     - Number of networks allowed per project (nova-network only).
+   * - security_groups
+     - Number of security groups per project.
+   * - security_group_rules
+     - Number of security group rules per project.
+
+Similarly, the following quotas were previously available but were removed in
+microversion 2.57 as the personality files feature was deprecated.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 10 40
+
+   * - Quota name
+     - Description
+   * - injected_files
+     - Number of injected files allowed per project.
+   * - injected_file_content_bytes
+     - Number of content bytes allowed per injected file.
+   * - injected_file_path_bytes
+     - Length of injected file path.
 
 View and update Compute quotas for a project
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
