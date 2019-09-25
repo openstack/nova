@@ -21,7 +21,6 @@ classes based on common operational needs / policies
 
 
 from nova.pci import utils as pci_utils
-from nova.virt.libvirt import config
 
 MIN_LIBVIRT_ETHERNET_SCRIPT_PATH_NONE = (1, 3, 3)
 
@@ -200,14 +199,6 @@ def set_vcpu_realtime_scheduler(conf, vcpus_rt, priority):
 
 
 def set_driver_iommu_for_sev(conf):
-    virtio_attrs = {
-        config.LibvirtConfigGuestDisk: 'target_bus',
-        config.LibvirtConfigGuestInterface: 'model',
-        config.LibvirtConfigGuestRng: 'device_model',
-        config.LibvirtConfigMemoryBalloon: 'model',
-    }
-
     for dev in conf.devices:
-        virtio_attr = virtio_attrs.get(dev.__class__)
-        if virtio_attr and getattr(dev, virtio_attr) == 'virtio':
+        if dev.uses_virtio:
             dev.driver_iommu = True
