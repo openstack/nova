@@ -875,6 +875,10 @@ class LibvirtConfigGuestDevice(LibvirtConfigObject):
     def __init__(self, **kwargs):
         super(LibvirtConfigGuestDevice, self).__init__(**kwargs)
 
+    @property
+    def uses_virtio(self):
+        return False
+
 
 class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
 
@@ -983,6 +987,10 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
 
         if len(iotune) > 0:
             dev.append(iotune)
+
+    @property
+    def uses_virtio(self):
+        return 'virtio' == self.target_bus
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestDisk, self).format_dom()
@@ -1573,6 +1581,10 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         self.device_addr = None
         self.mtu = None
 
+    @property
+    def uses_virtio(self):
+        return 'virtio' == self.model
+
     def format_dom(self):
         dev = super(LibvirtConfigGuestInterface, self).format_dom()
 
@@ -1889,6 +1901,10 @@ class LibvirtConfigMemoryBalloon(LibvirtConfigGuestDevice):
         self.model = None
         self.period = None
         self.driver_iommu = False
+
+    @property
+    def uses_virtio(self):
+        return 'virtio' == self.model
 
     def format_dom(self):
         dev = super(LibvirtConfigMemoryBalloon, self).format_dom()
@@ -3008,6 +3024,10 @@ class LibvirtConfigGuestRng(LibvirtConfigGuestDevice):
         self.rate_period = None
         self.rate_bytes = None
         self.driver_iommu = False
+
+    @property
+    def uses_virtio(self):
+        return 'virtio' == self.device_model
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestRng, self).format_dom()
