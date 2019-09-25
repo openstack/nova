@@ -4580,10 +4580,8 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
             instance, 'new-host', migration, provider_mappings=None)
         self.assertIn(
             "Provider mappings are not available to the compute service but "
-            "are required for ports with a resource request. If compute RPC "
-            "API versions are pinned for a rolling upgrade, you will need to "
-            "retry this operation once the RPC version is unpinned and the "
-            "nova-compute services are all upgraded.", six.text_type(ex))
+            "are required for ports with a resource request.",
+            six.text_type(ex))
 
     def test_get_pci_mapping_for_migration(self):
         instance = fake_instance.fake_instance_obj(self.context)
