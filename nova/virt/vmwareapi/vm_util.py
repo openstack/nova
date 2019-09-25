@@ -1189,14 +1189,23 @@ def get_stats_from_cluster(session, cluster):
     total_mem_mb = 0
     max_mem_mb_per_host = 0
     # Get the Host and Resource Pool Managed Object Refs
+    props = ["host", "resourcePool",
+             "configuration.dasConfig.admissionControlPolicy"]
     prop_dict = session._call_method(vutil,
                                      "get_object_properties_dict",
                                      cluster,
-                                     ["host"])
+                                     props)
     if prop_dict:
+        failover_hosts = []
+        key = 'configuration.dasConfig.admissionControlPolicy'
+        policy = prop_dict.get(key)
+        if policy and hasattr(policy, 'failoverHosts'):
+            failover_hosts = set(h.value for h in policy.failoverHosts)
+
         host_ret = prop_dict.get('host')
         if host_ret:
-            host_mors = host_ret.ManagedObjectReference
+            host_mors = [m for m in host_ret.ManagedObjectReference
+                            if m.value not in failover_hosts]
             result = session._call_method(vim_util,
                          "get_properties_for_a_collection_of_objects",
                          "HostSystem", host_mors,

@@ -56,7 +56,9 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                'vcpus': 2, 'memory_mb': 2048})
 
     def _test_get_stats_from_cluster(self, connection_state="connected",
-                                     maintenance_mode=False):
+                                     maintenance_mode=False,
+                                     failover_policy=None,
+                                     failover_hosts_filtered=0):
         ManagedObjectRefs = [fake.ManagedObjectReference("HostSystem",
                                                          "host1"),
                              fake.ManagedObjectReference("HostSystem",
@@ -64,6 +66,10 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         hosts = fake._convert_to_array_of_mor(ManagedObjectRefs)
         respool = fake.ManagedObjectReference("ResourcePool", "resgroup-11")
         prop_dict = {'host': hosts, 'resourcePool': respool}
+
+        if failover_policy:
+            k = 'configuration.dasConfig.admissionControlPolicy'
+            prop_dict[k] = failover_policy
 
         hardware = fake.DataObject()
         hardware.numCpuCores = 8
@@ -97,17 +103,19 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                             fake.Prop(name="summary.quickStats",
                                       val=quickstats_2)]
 
-        fake_objects = fake.FakeRetrieveResult()
-        fake_objects.add_object(fake.ObjectContent("prop_list_host1",
-                                                   prop_list_host_1))
-        fake_objects.add_object(fake.ObjectContent("prop_list_host1",
-                                                   prop_list_host_2))
+        fake_objects = {
+            'host1': fake.ObjectContent("prop_list_host1", prop_list_host_1),
+            'host2': fake.ObjectContent("prop_list_host1", prop_list_host_2)
+        }
 
         def fake_call_method(*args):
             if "get_object_properties_dict" in args:
                 return prop_dict
             elif "get_properties_for_a_collection_of_objects" in args:
-                return fake_objects
+                objects = fake.FakeRetrieveResult()
+                for moref in args[3]:
+                    objects.add_object(fake_objects[moref.value])
+                return objects
             else:
                 raise Exception('unexpected method call')
 
@@ -118,6 +126,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                 num_hosts = 2
             else:
                 num_hosts = 1
+            num_hosts -= failover_hosts_filtered
             expected_stats = {'cpu': {'vcpus': num_hosts * 16,
                                       'max_vcpus_per_host': 16},
                               'mem': {'total': num_hosts * 4096,
@@ -134,6 +143,36 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
     def test_get_stats_from_cluster_hosts_connected_and_maintenance(self):
         self._test_get_stats_from_cluster(maintenance_mode=True)
+
+    def test_get_stats_from_cluster_failover_host_matches(self):
+        policy = fake.DataObject('ClusterFailoverHostAdmissionControlPolicy')
+        # it looks like a moref, but it's called a FailoverHosts object
+        host = fake.DataObject('failoverHosts')
+        host.value = 'host1'
+        host._type = 'HostSystem'
+        policy.failoverHosts = [host]
+        self._test_get_stats_from_cluster(failover_policy=policy,
+                                          failover_hosts_filtered=1)
+
+    def test_get_stats_from_cluster_failover_host_no_matches(self):
+        policy = fake.DataObject('ClusterFailoverHostAdmissionControlPolicy')
+        # it looks like a moref, but it's called a FailoverHosts object
+        host = fake.DataObject('failoverHosts')
+        host.value = 'host3'
+        host._type = 'HostSystem'
+        policy.failoverHosts = [host]
+        self._test_get_stats_from_cluster(failover_policy=policy,
+                                          failover_hosts_filtered=0)
+
+    def test_get_stats_from_cluster_failover_resources_policy(self):
+        name = 'ClusterFailoverResourcesAdmissionControlPolicy'
+        policy = fake.DataObject(name)
+        policy.cpuFailoverResourcesPercent = 25
+        policy.memoryFailoverResourcesPercent = 25
+        policy.resourceReductionToToleratePercent = 100
+        policy.autoComputePercentages = True
+        self._test_get_stats_from_cluster(failover_policy=policy,
+                                          failover_hosts_filtered=0)
 
     def test_get_host_ref_no_hosts_in_cluster(self):
         self.assertRaises(exception.NoValidHost,

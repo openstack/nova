@@ -644,6 +644,16 @@ class ClusterComputeResource(ManagedObject):
         vm_list.ManagedObjectReference = []
         self.set("vm", vm_list)
 
+        configuration = DataObject()
+        drsConfig = DataObject()
+        drsConfig.enabled = True
+        configuration.drsConfig = drsConfig
+        self.set('configuration.drsConfig', drsConfig)
+        configuration.dasConfig = DataObject()
+        policy = None
+        configuration.dasConfig.admissionControlPolicy = policy
+        self.set("configuration.dasConfig.admissionControlPolicy", policy)
+
     def _add_root_resource_pool(self, r_pool):
         if r_pool:
             self.set("resourcePool", r_pool)
