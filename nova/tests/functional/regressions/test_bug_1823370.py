@@ -10,16 +10,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from nova.scheduler import weights
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
-
-# Prefer host1 over host2 over host3
-WEIGHT_MAP = {'host1': 100, 'host2': 50, 'host3': 25}
-
-
-class HostNameWeigher(weights.BaseHostWeigher):
-    def _weigh_object(self, host_state, weight_properties):
-        return WEIGHT_MAP.get(host_state.host, 0)
 
 
 class MultiCellEvacuateTestCase(integrated_helpers._IntegratedTestBase,
@@ -46,9 +38,8 @@ class MultiCellEvacuateTestCase(integrated_helpers._IntegratedTestBase,
     microversion = '2.11'  # Need at least 2.11 for the force-down API
 
     def setUp(self):
-        # Register our custom weigher for predictable scheduling results.
-        self.flags(weight_classes=[__name__ + '.HostNameWeigher'],
-                   group='filter_scheduler')
+        # Register a custom weigher for predictable scheduling results.
+        self.useFixture(nova_fixtures.HostNameWeigherFixture())
         super(MultiCellEvacuateTestCase, self).setUp()
 
     def _setup_compute_service(self):

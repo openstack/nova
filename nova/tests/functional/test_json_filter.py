@@ -13,20 +13,10 @@
 from oslo_serialization import jsonutils
 
 from nova import conf
-from nova.scheduler import weights
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
 
 CONF = conf.CONF
-
-
-class HostNameWeigher(weights.BaseHostWeigher):
-    # JsonFilterTestCase creates host1 and host2. Prefer host1 to make the
-    # tests deterministic.
-    _weights = {'host1': 100, 'host2': 50}
-
-    def _weigh_object(self, host_state, weight_properties):
-        # Any undefined host gets no weight.
-        return self._weights.get(host_state.host, 0)
 
 
 class JsonFilterTestCase(integrated_helpers.ProviderUsageBaseTestCase):
@@ -46,8 +36,7 @@ class JsonFilterTestCase(integrated_helpers.ProviderUsageBaseTestCase):
 
         # Use our custom weigher defined above to make sure that we have
         # a predictable scheduling sort order during server create.
-        self.flags(weight_classes=[__name__ + '.HostNameWeigher'],
-                   group='filter_scheduler')
+        self.useFixture(nova_fixtures.HostNameWeigherFixture())
 
         super(JsonFilterTestCase, self).setUp()
 

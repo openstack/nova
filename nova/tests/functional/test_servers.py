@@ -41,7 +41,6 @@ from nova.network.neutronv2 import constants
 from nova import objects
 from nova.objects import block_device as block_device_obj
 from nova.scheduler import utils
-from nova.scheduler import weights
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
@@ -58,17 +57,6 @@ from nova import volume
 CONF = cfg.CONF
 
 LOG = logging.getLogger(__name__)
-
-
-class AltHostWeigher(weights.BaseHostWeigher):
-    """Used in the alternate host tests to return a pre-determined list of
-    hosts.
-    """
-    def _weigh_object(self, host_state, weight_properties):
-        """Return a defined order of hosts."""
-        weights = {"selection": 999, "alt_host1": 888, "alt_host2": 777,
-                   "alt_host3": 666, "host1": 0, "host2": 0}
-        return weights.get(host_state.host, 0)
 
 
 class ServersTestBase(integrated_helpers._IntegratedTestBase):
@@ -3194,8 +3182,10 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
                  {"name": "alt_host3", "uuid": uuid_alt3},
                 ]
 
-        self.flags(weight_classes=[__name__ + '.AltHostWeigher'],
-                   group='filter_scheduler')
+        self.useFixture(nova_fixtures.HostNameWeigherFixture(
+            weights={
+                "selection": 999, "alt_host1": 888, "alt_host2": 777,
+                "alt_host3": 666, "host1": 0, "host2": 0}))
         self.scheduler_service.stop()
         self.scheduler_service = self.start_service('scheduler')
 
@@ -6308,15 +6298,6 @@ class PortResourceRequestBasedSchedulingTest(
             port_binding['pci_slot'])
 
 
-class HostNameWeigher(weights.BaseHostWeigher):
-    # Weigher to make the scheduler alternate host list deterministic
-    _weights = {'host1': 100, 'host2': 50, 'host3': 10}
-
-    def _weigh_object(self, host_state, weight_properties):
-        # Any undefined host gets no weight.
-        return self._weights.get(host_state.host, 0)
-
-
 class ServerMoveWithPortResourceRequestTest(
         PortResourceRequestBasedSchedulingTestBase):
 
@@ -6324,8 +6305,7 @@ class ServerMoveWithPortResourceRequestTest(
         # Use our custom weigher defined above to make sure that we have
         # a predictable host order in the alternate list returned by the
         # scheduler for migration.
-        self.flags(weight_classes=[__name__ + '.HostNameWeigher'],
-                   group='filter_scheduler')
+        self.useFixture(nova_fixtures.HostNameWeigherFixture())
         super(ServerMoveWithPortResourceRequestTest, self).setUp()
         self.compute2 = self._start_compute('host2')
         self.compute2_rp_uuid = self._get_provider_uuid_by_host('host2')
