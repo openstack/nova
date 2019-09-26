@@ -112,7 +112,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
     def test_get_ds_browser(self):
         cache = self._imagecache._ds_browser
         ds_browser = mock.Mock()
-        moref = fake.ManagedObjectReference('datastore-100')
+        moref = fake.ManagedObjectReference(value='datastore-100')
         self.assertIsNone(cache.get(moref.value))
         mock_get_method = mock.Mock(return_value=ds_browser)
         with mock.patch.object(vutil, 'get_object_property', mock_get_method):
@@ -136,7 +136,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             mock.patch.object(ds_util, 'get_sub_folders',
                               fake_get_sub_folders)
         ) as (_get_dynamic, _get_sub_folders):
-            fake_ds_ref = fake.ManagedObjectReference('fake-ds-ref')
+            fake_ds_ref = fake.ManagedObjectReference(value='fake-ds-ref')
             datastore = ds_obj.Datastore(name='ds', ref=fake_ds_ref)
             ds_path = datastore.build_path('base_folder')
             images = self._imagecache._list_datastore_images(

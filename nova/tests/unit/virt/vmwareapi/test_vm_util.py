@@ -55,12 +55,12 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
     def _test_get_stats_from_cluster(self, connection_state="connected",
                                      maintenance_mode=False):
-        ManagedObjectRefs = [fake.ManagedObjectReference("host1",
-                                                         "HostSystem"),
-                             fake.ManagedObjectReference("host2",
-                                                         "HostSystem")]
+        ManagedObjectRefs = [fake.ManagedObjectReference("HostSystem",
+                                                         "host1"),
+                             fake.ManagedObjectReference("HostSystem",
+                                                         "host2")]
         hosts = fake._convert_to_array_of_mor(ManagedObjectRefs)
-        respool = fake.ManagedObjectReference("resgroup-11", "ResourcePool")
+        respool = fake.ManagedObjectReference("ResourcePool", "resgroup-11")
         prop_dict = {'host': hosts, 'resourcePool': respool}
 
         hardware = fake.DataObject()
