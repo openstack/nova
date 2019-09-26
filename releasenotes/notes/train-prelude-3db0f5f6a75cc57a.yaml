@@ -1,0 +1,74 @@
+---
+prelude: |
+    The 20.0.0 release includes many new features and bug fixes. Please be
+    sure to read the upgrade section which describes the required actions to
+    upgrade your cloud from 19.0.0 (Stein) to 20.0.0 (Train).
+
+    There are a few major changes worth mentioning. This is not an exhaustive
+    list:
+
+    - The latest Compute API microversion supported for Train is v2.79. Details
+      on REST API microversions added since the 19.0.0 Stein release can be
+      found in the `REST API Version History`_ page.
+
+    - Live migration support for servers with a
+      `NUMA topology, pinned CPUs <https://docs.openstack.org/nova/latest/admin/cpu-topologies.html>`_
+      and/or `huge pages <https://docs.openstack.org/nova/latest/admin/huge-pages.html>`_,
+      when using the libvirt compute driver.
+
+    - Live migration support for servers with
+      `SR-IOV ports <https://docs.openstack.org/neutron/latest/admin/config-sriov>`_
+      attached when using the libvirt compute driver.
+
+    - Support for cold migrating and resizing servers with bandwidth-aware
+      `Quality of Service ports <https://docs.openstack.org/api-guide/compute/port_with_resource_request.html>`_
+      attached.
+
+    - Improvements to the scheduler for more intelligently filtering
+      `results from the Placement service <https://docs.openstack.org/nova/latest/admin/configuration/schedulers.html#prefiltering>`_.
+
+    - Improved multi-cell resilience with the ability to
+      `count quota usage <https://docs.openstack.org/nova/latest/user/quotas.html#quota-usage-from-placement>`_
+      using the Placement service and API database.
+
+    - A new framework supporting hardware-based encryption of guest memory
+      to protect users against attackers or rogue administrators snooping on
+      their workloads when using the libvirt compute driver. Currently only has
+      basic support for
+      `AMD SEV (Secure Encrypted Virtualization) <https://docs.openstack.org/nova/latest/admin/configuration/hypervisor-kvm.html#amd-sev-secure-encrypted-virtualization>`_.
+
+    - Improved `operational tooling <https://docs.openstack.org/nova/latest/cli/nova-manage.html>`_
+      for things like archiving the database and healing instance resource
+      allocations in Placement.
+
+    - Improved coordination with the baremetal service during external node
+      `power cycles <https://docs.openstack.org/ironic/latest/admin/power-sync.html>`_.
+
+    - Support for
+      `VPMEM (Virtual Persistent Memory) <https://docs.openstack.org/nova/latest/admin/virtual-persistent-memory.html>`_
+      when using the libvirt compute driver. This provides data persistence
+      across power cycles at a lower cost and with much larger capacities than
+      DRAM, especially benefitting HPC and memory databases such as redis,
+      rocksdb, oracle, SAP HANA, and Aerospike.
+
+    - It is now possible to place CPU pinned and unpinned servers on the same
+      compute host when using the libvirt compute driver. See the
+      `admin guide <https://docs.openstack.org/nova/latest/admin/cpu-topologies.html#configuring-libvirt-compute-nodes-for-cpu-pinning>`_
+      for details.
+
+    - Nova no longer includes Placement code. You must use the extracted
+      Placement service. See the `Placement extraction upgrade instructions`_
+      for details.
+
+    - The XenAPI virt driver is now deprecated and may be removed in a future
+      release as its quality can not be ensured due to lack of maintainers.
+
+    - The ``nova-consoleauth`` service has been removed as it was deprecated
+      since the 18.0.0 (Rocky) release.
+
+    - The deprecated ``Cells V1`` feature (not to be confused with `Cells V2`_)
+      has been removed.
+
+    .. _REST API Version History: https://docs.openstack.org/nova/latest/reference/api-microversion-history.html
+    .. _Placement extraction upgrade instructions: https://docs.openstack.org/placement/latest/upgrade/to-stein.html
+    .. _Cells V2: https://docs.openstack.org/nova/latest/user/cells.html
