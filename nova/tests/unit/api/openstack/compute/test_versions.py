@@ -141,14 +141,6 @@ class VersionsTestV21WithV2CompatibleWrapper(test.NoDBTestCase):
         ]
         self.assertEqual(expected, versions)
 
-    def test_get_version_list_302(self):
-        req = fakes.HTTPRequest.blank('/v2')
-        req.accept = "application/json"
-        res = req.get_response(self.wsgi_app)
-        self.assertEqual(302, res.status_int)
-        redirect_req = fakes.HTTPRequest.blank('/v2/')
-        self.assertEqual(redirect_req.url, res.location)
-
     def _test_get_version_2_detail(self, url, accept=None):
         if accept is None:
             accept = "application/json"
@@ -252,7 +244,7 @@ class VersionsTestV21WithV2CompatibleWrapper(test.NoDBTestCase):
         """Make sure multi choice responses do not have content-type
         application/atom+xml (should use default of json)
         """
-        req = fakes.HTTPRequest.blank('/servers')
+        req = fakes.HTTPRequest.blank('/servers', base_url='')
         req.accept = "application/atom+xml"
         res = req.get_response(self.wsgi_app)
         self.assertEqual(300, res.status_int)
@@ -447,14 +439,6 @@ class VersionsTestV21(test.NoDBTestCase):
     @property
     def wsgi_app(self):
         return fakes.wsgi_app_v21()
-
-    def test_get_version_list_302(self):
-        req = fakes.HTTPRequest.blank('/v2.1')
-        req.accept = "application/json"
-        res = req.get_response(self.wsgi_app)
-        self.assertEqual(302, res.status_int)
-        redirect_req = fakes.HTTPRequest.blank('/v2.1/')
-        self.assertEqual(redirect_req.url, res.location)
 
     def test_get_version_21_detail(self):
         req = fakes.HTTPRequest.blank('/v2.1/', base_url='')

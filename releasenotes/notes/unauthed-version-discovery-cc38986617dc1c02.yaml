@@ -1,0 +1,22 @@
+---
+upgrade:
+  - |
+    New paste pipelines and middleware have been created to allow API version
+    discovery to be performed without authentication or redirects. Because this
+    involves an ``api-paste.ini`` change, you will need to manually update your
+    ``api-paste.ini`` with the one from the release to get this functionality.
+fixes:
+  - |
+    When using the ``api-paste.ini`` from the release, version discovery
+    requests without a trailing slash will no longer receive a 302 redirect to
+    the corresponding URL with a trailing slash (e.g. a request for ``/v2.1``
+    will no longer redirect to ``/v2.1/``). Instead, such requests will respond
+    with the version discovery document regardless of the presence of the
+    trailing slash. See
+    `bug 1728732 <https://bugs.launchpad.net/nova/+bug/1728732>`_ for details.
+  - |
+    When using the ``api-paste.ini`` from the release, requests to the
+    versioned discovery endpoints (``/v2.1`` and ``/v2``) no longer require
+    authentication. When using the compute API through certain clients, such as
+    openstacksdk, this eliminates an unnecessary additional query. See
+    `bug 1845530 <https://bugs.launchpad.net/nova/+bug/1845530>`_ for details.

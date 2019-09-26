@@ -62,23 +62,32 @@ def fake_wsgi(self, req):
 
 def wsgi_app_v21(fake_auth_context=None, v2_compatible=False,
                  custom_routes=None):
+    # NOTE(efried): Keep this (roughly) in sync with api-paste.ini
+
+    def wrap(app, use_context=False):
+        if v2_compatible:
+            app = openstack_api.LegacyV2CompatibleWrapper(app)
+
+        if use_context:
+            if fake_auth_context is not None:
+                ctxt = fake_auth_context
+            else:
+                ctxt = context.RequestContext(
+                    'fake', FAKE_PROJECT_ID, auth_token=True)
+            app = api_auth.InjectContext(ctxt, app)
+
+        app = openstack_api.FaultWrapper(app)
+
+        return app
 
     inner_app_v21 = compute.APIRouterV21(custom_routes=custom_routes)
 
-    if v2_compatible:
-        inner_app_v21 = openstack_api.LegacyV2CompatibleWrapper(inner_app_v21)
-
-    if fake_auth_context is not None:
-        ctxt = fake_auth_context
-    else:
-        ctxt = context.RequestContext(
-                'fake', FAKE_PROJECT_ID, auth_token=True)
-    api_v21 = openstack_api.FaultWrapper(
-          api_auth.InjectContext(ctxt, inner_app_v21))
     mapper = urlmap.URLMap()
-    mapper['/v2'] = api_v21
-    mapper['/v2.1'] = api_v21
-    mapper['/'] = openstack_api.FaultWrapper(versions.Versions())
+    mapper['/'] = wrap(versions.Versions())
+    mapper['/v2'] = wrap(versions.VersionsV2())
+    mapper['/v2.1'] = wrap(versions.VersionsV2())
+    mapper['/v2/+'] = wrap(inner_app_v21, use_context=True)
+    mapper['/v2.1/+'] = wrap(inner_app_v21, use_context=True)
     return mapper
 
 

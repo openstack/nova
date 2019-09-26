@@ -67,9 +67,4 @@ class VersionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     @ddt.unpack
     def test_versions_get_versioned(self, url, tplname, subs):
         response = self._get(url)
-        # TODO(efried): This is bug 1845530 whereby we try to authenticate at
-        #  the versioned discovery endpoint.
-        self.assertEqual(401, response.status_code)
-        # TODO(efried): Uncomment when bug 1845530 is resolved
-        # self._verify_response(tplname, subs, response, 200,
-        #                       update_links=False)
+        self._verify_response(tplname, subs, response, 200, update_links=False)

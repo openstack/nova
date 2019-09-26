@@ -14,7 +14,6 @@
 #    under the License.
 
 from nova.api import openstack
-from nova.api.openstack import compute
 from nova.api.openstack import wsgi
 from nova.tests.functional.api import client
 from nova.tests.functional import test_servers
@@ -25,8 +24,7 @@ class LegacyV2CompatibleTestBase(test_servers.ServersTestBase):
 
     def setUp(self):
         super(LegacyV2CompatibleTestBase, self).setUp()
-        self._check_api_endpoint('/v2', [compute.APIRouterV21,
-                                         openstack.LegacyV2CompatibleWrapper])
+        self._check_api_endpoint('/v2', [openstack.LegacyV2CompatibleWrapper])
 
     def test_request_with_microversion_headers(self):
         self.api.microversion = '2.100'

@@ -114,3 +114,25 @@ class UrlmapTest(test.NoDBTestCase):
         self.assertEqual("application/json", res.content_type)
         body = jsonutils.loads(res.body)
         self.assertEqual('v2.1', body['version']['id'])
+
+    def test_script_name_path_info(self):
+        """Ensure URLMap preserves SCRIPT_NAME and PATH_INFO correctly."""
+        data = (
+            ('', '', ''),
+            ('/', '', '/'),
+            ('/v2', '/v2', ''),
+            ('/v2/', '/v2', '/'),
+            ('/v2.1', '/v2.1', ''),
+            ('/v2.1/', '/v2.1', '/'),
+            ('/v2/foo', '/v2', '/foo'),
+            ('/v2.1/foo', '/v2.1', '/foo'),
+            ('/bar/baz', '', '/bar/baz')
+        )
+        app = fakes.wsgi_app_v21()
+        for url, exp_script_name, exp_path_info in data:
+            req = fakes.HTTPRequest.blank(url)
+            req.get_response(app)
+            # The app uses /v2 as the base URL :(
+            exp_script_name = '/v2' + exp_script_name
+            self.assertEqual(exp_script_name, req.environ['SCRIPT_NAME'])
+            self.assertEqual(exp_path_info, req.environ['PATH_INFO'])
