@@ -47,6 +47,7 @@ from oslo_utils import timeutils
 from oslo_versionedobjects import fixture as ovo_fixture
 from oslotest import mock_fixture
 from oslotest import moxstubout
+from oslotest import timeout
 import six
 from six.moves import builtins
 import testtools
@@ -177,9 +178,9 @@ class TestCase(testtools.TestCase):
     def setUp(self):
         """Run before each test method to initialize test environment."""
         super(TestCase, self).setUp()
-        self.useFixture(nova_fixtures.Timeout(
-            os.environ.get('OS_TEST_TIMEOUT', 0),
-            self.TIMEOUT_SCALING_FACTOR))
+        # The Timeout fixture picks up env.OS_TEST_TIMEOUT, defaulting to 0.
+        self.useFixture(timeout.Timeout(
+            scaling_factor=self.TIMEOUT_SCALING_FACTOR))
 
         self.useFixture(nova_fixtures.OpenStackSDKFixture())
 
