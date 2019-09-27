@@ -18,7 +18,6 @@ import copy
 import socket
 
 import mock
-import six.moves.urllib.parse as urlparse
 
 import nova.conf
 from nova.console.securityproxy import base
@@ -48,7 +47,6 @@ class NovaProxyRequestHandlerDBTestCase(test.TestCase):
         self.wh.msg = mock.MagicMock()
         self.wh.do_proxy = mock.MagicMock()
         self.wh.headers = mock.MagicMock()
-        self.path = urlparse.urlencode({'path': '?token=123-456-789'})
 
     def _fake_console_db(self, **updates):
         console_db = copy.deepcopy(fake_ca.fake_token_dict)
@@ -98,7 +96,7 @@ class NovaProxyRequestHandlerDBTestCase(test.TestCase):
             tsock.recv.return_value = "HTTP/1.1 200 OK\r\n\r\n"
             self.wh.socket.return_value = tsock
 
-        self.wh.path = "http://127.0.0.1/?%s" % self.path
+        self.wh.path = "http://127.0.0.1/?token=123-456-789"
         self.wh.headers = self.fake_header
 
         if instance_not_found:
@@ -145,8 +143,6 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         self.wh.msg = mock.MagicMock()
         self.wh.do_proxy = mock.MagicMock()
         self.wh.headers = mock.MagicMock()
-        self.path = urlparse.urlencode({'path': '?token=123-456-789'})
-        self.path_invalid = urlparse.urlencode({'path': '?token=XXX'})
 
     fake_header = {
         'cookie': 'token="123-456-789"',
@@ -232,7 +228,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
             'access_url': 'https://example.net:6080'
         }
         self.wh.socket.return_value = '<socket>'
-        self.wh.path = "http://127.0.0.1/?%s" % self.path
+        self.wh.path = "http://127.0.0.1/?token=123-456-789"
         self.wh.headers = self.fake_header
 
         self.wh.new_websocket_client()
@@ -265,7 +261,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         validate.return_value = objects.ConsoleAuthToken(**params)
 
         self.wh.socket.return_value = '<socket>'
-        self.wh.path = "http://127.0.0.1/?%s" % self.path
+        self.wh.path = "http://127.0.0.1/?token=123-456-789"
         self.wh.headers = self.fake_header
 
         self.wh.new_websocket_client()
@@ -291,7 +287,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         validate.return_value = objects.ConsoleAuthToken(**params)
 
         self.wh.socket.return_value = '<socket>'
-        self.wh.path = "http://127.0.0.1/?%s" % self.path
+        self.wh.path = "http://127.0.0.1/?token=123-456-789"
         self.wh.headers = self.fake_header
 
         self.wh.new_websocket_client()
@@ -316,7 +312,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         validate.return_value = objects.ConsoleAuthToken(**params)
 
         self.wh.socket.return_value = '<socket>'
-        self.wh.path = "http://[2001:db8::1]/?%s" % self.path
+        self.wh.path = "http://[2001:db8::1]/?token=123-456-789"
         self.wh.headers = self.fake_header_ipv6
 
         self.wh.new_websocket_client()
@@ -329,7 +325,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
     def test_new_websocket_client_token_invalid(self, validate):
         validate.side_effect = exception.InvalidToken(token='XXX')
 
-        self.wh.path = "http://127.0.0.1/?%s" % self.path_invalid
+        self.wh.path = "http://127.0.0.1/?token=XXX"
         self.wh.headers = self.fake_header_bad_token
 
         self.assertRaises(exception.InvalidToken,
@@ -357,7 +353,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         tsock.recv.return_value = "HTTP/1.1 200 OK\r\n\r\n"
 
         self.wh.socket.return_value = tsock
-        self.wh.path = "http://127.0.0.1/?%s" % self.path
+        self.wh.path = "http://127.0.0.1/?token=123-456-789"
         self.wh.headers = self.fake_header
 
         self.wh.new_websocket_client()
@@ -390,7 +386,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         tsock.recv.return_value = "HTTP/1.1 500 Internal Server Error\r\n\r\n"
 
         self.wh.socket.return_value = tsock
-        self.wh.path = "http://127.0.0.1/?%s" % self.path
+        self.wh.path = "http://127.0.0.1/?token=123-456-789"
         self.wh.headers = self.fake_header
 
         self.assertRaises(exception.InvalidConnectionInfo,
@@ -422,7 +418,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
                                   HTTP_RESP]
 
         self.wh.socket.return_value = tsock
-        self.wh.path = "http://127.0.0.1/?%s" % self.path
+        self.wh.path = "http://127.0.0.1/?token=123-456-789"
         self.wh.headers = self.fake_header
 
         self.wh.new_websocket_client()
@@ -452,7 +448,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         validate.return_value = objects.ConsoleAuthToken(**params)
 
         self.wh.socket.return_value = '<socket>'
-        self.wh.path = "http://127.0.0.1/?%s" % self.path
+        self.wh.path = "http://127.0.0.1/?token=123-456-789"
         self.wh.headers = self.fake_header
 
         self.wh.new_websocket_client()
@@ -472,7 +468,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
             'console_type': 'novnc'
         }
         self.wh.socket.return_value = '<socket>'
-        self.wh.path = "ws://127.0.0.1/?%s" % self.path
+        self.wh.path = "ws://127.0.0.1/?token=123-456-789"
         self.wh.headers = self.fake_header
 
         self.assertRaises(exception.NovaException,
@@ -481,9 +477,10 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
     @mock.patch('socket.getfqdn')
     def test_address_string_doesnt_do_reverse_dns_lookup(self, getfqdn):
         request_mock = mock.MagicMock()
-        msg = 'GET /vnc.html?%s HTTP/1.1\r\n' % self.path
-        request_mock.makefile().readline.side_effect = [msg.encode('utf-8'),
-                                                        b'']
+        request_mock.makefile().readline.side_effect = [
+            b'GET /vnc.html?token=123-456-789 HTTP/1.1\r\n',
+            b''
+        ]
         server_mock = mock.MagicMock()
         client_address = ('8.8.8.8', 54321)
 
@@ -737,8 +734,7 @@ class NovaWebsocketSecurityProxyTestCase(test.NoDBTestCase):
         with mock.patch('websockify.ProxyRequestHandler'):
             self.wh = websocketproxy.NovaProxyRequestHandler()
         self.wh.server = self.server
-        path = urlparse.urlencode({'path': '?token=123-456-789'})
-        self.wh.path = "http://127.0.0.1/?%s" % path
+        self.wh.path = "http://127.0.0.1/?token=123-456-789"
         self.wh.socket = mock.MagicMock()
         self.wh.msg = mock.MagicMock()
         self.wh.do_proxy = mock.MagicMock()

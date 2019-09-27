@@ -30,7 +30,7 @@ from nova.tests import uuidsentinel
 class _TestConsoleAuthToken(object):
 
     @mock.patch('nova.db.api.console_auth_token_create')
-    def test_authorize(self, mock_create):
+    def _test_authorize(self, console_type, mock_create):
         # the expires time is calculated from the current time and
         # a ttl value in the object. Fix the current time so we can
         # test expires is calculated correctly as expected
@@ -41,10 +41,12 @@ class _TestConsoleAuthToken(object):
 
         db_dict = copy.deepcopy(fakes.fake_token_dict)
         db_dict['expires'] = expires
+        db_dict['console_type'] = console_type
         mock_create.return_value = db_dict
 
         create_dict = copy.deepcopy(fakes.fake_token_dict)
         create_dict['expires'] = expires
+        create_dict['console_type'] = console_type
         del create_dict['id']
         del create_dict['created_at']
         del create_dict['updated_at']
@@ -53,10 +55,11 @@ class _TestConsoleAuthToken(object):
         del expected['token_hash']
         del expected['expires']
         expected['token'] = fakes.fake_token
+        expected['console_type'] = console_type
 
         obj = token_obj.ConsoleAuthToken(
             context=self.context,
-            console_type=fakes.fake_token_dict['console_type'],
+            console_type=console_type,
             host=fakes.fake_token_dict['host'],
             port=fakes.fake_token_dict['port'],
             internal_access_path=fakes.fake_token_dict['internal_access_path'],
@@ -71,10 +74,22 @@ class _TestConsoleAuthToken(object):
         self.compare_obj(obj, expected)
 
         url = obj.access_url
-        path = urlparse.urlencode({'path': '?token=%s' % fakes.fake_token})
-        expected_url = '%s?%s' % (
-            fakes.fake_token_dict['access_url_base'], path)
+        if console_type != 'novnc':
+            expected_url = '%s?token=%s' % (
+                fakes.fake_token_dict['access_url_base'],
+                fakes.fake_token)
+        else:
+            path = urlparse.urlencode({'path': '?token=%s' % fakes.fake_token})
+            expected_url = '%s?%s' % (
+                fakes.fake_token_dict['access_url_base'],
+                path)
         self.assertEqual(expected_url, url)
+
+    def test_authorize(self):
+        self._test_authorize(fakes.fake_token_dict['console_type'])
+
+    def test_authorize_novnc(self):
+        self._test_authorize('novnc')
 
     @mock.patch('nova.db.api.console_auth_token_create')
     def test_authorize_duplicate_token(self, mock_create):
