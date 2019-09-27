@@ -8691,35 +8691,18 @@ class LibvirtDriver(driver.ComputeDriver):
                                 {'i_name': guest.name})
                 else:
                     raise
-            except exception.VolumeBDMPathNotFound as e:
+            except (exception.VolumeBDMPathNotFound,
+                    exception.DiskNotFound) as e:
+                if isinstance(e, exception.VolumeBDMPathNotFound):
+                    thing = 'backing volume block device'
+                elif isinstance(e, exception.DiskNotFound):
+                    thing = 'backing disk storage'
+
                 LOG.warning('Periodic task is updating the host stats, '
                             'it is trying to get disk info for %(i_name)s, '
-                            'but the backing volume block device was removed '
-                            'by concurrent operations such as resize. '
-                            'Error: %(error)s',
-                            {'i_name': guest.name, 'error': e})
-            except exception.DiskNotFound:
-                with excutils.save_and_reraise_exception() as err_ctxt:
-                    # If the instance is undergoing a task state transition,
-                    # like moving to another host or is being deleted, we
-                    # should ignore this instance and move on.
-                    if guest.uuid in local_instances:
-                        inst = local_instances[guest.uuid]
-                        # bug 1774249 indicated when instance is in RESIZED
-                        # state it might also can't find back disk
-                        if (inst.task_state is not None or
-                            inst.vm_state == vm_states.RESIZED):
-                            LOG.info('Periodic task is updating the host '
-                                     'stats; it is trying to get disk info '
-                                     'for %(i_name)s, but the backing disk '
-                                     'was removed by a concurrent operation '
-                                     '(task_state=%(task_state)s) and '
-                                     '(vm_state=%(vm_state)s)',
-                                     {'i_name': guest.name,
-                                      'task_state': inst.task_state,
-                                      'vm_state': inst.vm_state},
-                                     instance=inst)
-                            err_ctxt.reraise = False
+                            'but the %(thing)s was removed by a concurrent '
+                            'operation such as resize. Error: %(error)s',
+                            {'i_name': guest.name, 'thing': thing, 'error': e})
 
             # NOTE(gtt116): give other tasks a chance.
             greenthread.sleep(0)
