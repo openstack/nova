@@ -27,6 +27,7 @@ import ssl
 from urllib.parse import urlparse
 
 from oslo_log import log as logging
+from oslo_serialization import jsonutils
 from oslo_service import loopingcall
 from oslo_utils import excutils
 from oslo_utils import units
@@ -70,6 +71,8 @@ _FOLDER_PATH_REF_MAPPING = {}
 # that this is a rescue VM. This is in order to prevent
 # unnecessary communication with the backend.
 _VM_REFS_CACHE = {}
+
+_HOST_RESERVATIONS_DEFAULT_KEY = '__default__'
 
 
 class Limits(object):
@@ -1330,16 +1333,99 @@ def get_vm_state(session, instance):
     return constants.POWER_STATES[vm_state]
 
 
+def _get_host_reservations(host_reservations_map, host_moref, host_vcpus,
+                           host_memory_mb):
+    """Compute the number of vcpus and memory in MB reserved for the host from
+    the configured reservations or the default.
+
+    For every host, both vcpus and memory can be given as static number or in
+    percent, with static number taking priority.
+    """
+    reservations = {
+        'vcpus': 0,
+        'memory_mb': 0
+    }
+
+    default_key = _HOST_RESERVATIONS_DEFAULT_KEY
+    host_reservations = host_reservations_map.get(default_key, {})
+    group_reservations = host_reservations_map.get(host_moref.value, {})
+    for key in ['vcpus', 'vcpus_percent', 'memory_mb', 'memory_percent']:
+        if key in group_reservations:
+            host_reservations[key] = group_reservations[key]
+    if not host_reservations:
+        return reservations
+
+    # compute the number of vcpus
+    if host_reservations.get('vcpus') is not None:
+        vcpus = max(0, host_reservations['vcpus'])
+        reservations['vcpus'] = min(host_vcpus, vcpus)
+    elif host_reservations.get('vcpus_percent') is not None:
+        percent = max(0, min(100, host_reservations['vcpus_percent']))
+        # This will round down.
+        reservations['vcpus'] = host_vcpus * percent // 100
+
+    # compute the memory in MB
+    if host_reservations.get('memory_mb') is not None:
+        memory_mb = max(0, host_reservations['memory_mb'])
+        reservations['memory_mb'] = min(host_memory_mb, memory_mb)
+    elif host_reservations.get('memory_percent') is not None:
+        percent = max(0, min(100, host_reservations['memory_percent']))
+        # This will round down.
+        reservations['memory_mb'] = host_memory_mb * percent // 100
+
+    return reservations
+
+
+def _get_host_reservations_map(groups=None):
+    """return a mapping from hosts to reservations
+
+    Reservations are read from CONF.vmware.hostgroup_reservations_json_file,
+    which is mapping from hostgroup to reservation. We thus look up the
+    hostgroups we find in the mapping and create a mapping from each host in
+    that hostgroup to the reservation.
+    """
+    if groups is None:
+        groups = []
+
+    if not CONF.vmware.hostgroup_reservations_json_file:
+        return {}
+
+    with open(CONF.vmware.hostgroup_reservations_json_file, 'rb') as f:
+        reservations = jsonutils.load(f)
+
+    hrm = {}
+
+    default = reservations.get(_HOST_RESERVATIONS_DEFAULT_KEY)
+    if default is not None:
+        hrm[_HOST_RESERVATIONS_DEFAULT_KEY] = default
+
+    for group in groups:
+        if not hasattr(group, 'host'):
+            continue
+
+        if group.name not in reservations:
+            continue
+
+        for host_moref in group.host:
+            reservation = reservations[group.name]
+            hrm[host_moref.value] = reservation
+    return hrm
+
+
 def get_stats_from_cluster(session, cluster):
     """Get the aggregate resource stats of a cluster."""
     vcpus = 0
     max_vcpus_per_host = 0
+    reserved_vcpus = 0
     used_mem_mb = 0
     total_mem_mb = 0
     max_mem_mb_per_host = 0
+    reserved_memory_mb = 0
     # Get the Host and Resource Pool Managed Object Refs
     props = ["host", "resourcePool",
              "configuration.dasConfig.admissionControlPolicy"]
+    if CONF.vmware.hostgroup_reservations_json_file:
+        props.append("configurationEx")
     prop_dict = session._call_method(vutil,
                                      "get_object_properties_dict",
                                      cluster,
@@ -1350,6 +1436,9 @@ def get_stats_from_cluster(session, cluster):
         policy = prop_dict.get(key)
         if policy and hasattr(policy, 'failoverHosts'):
             failover_hosts = set(h.value for h in policy.failoverHosts)
+
+        group_ret = getattr(prop_dict.get('configurationEx'), 'group', None)
+        host_reservations_map = _get_host_reservations_map(group_ret)
 
         host_ret = prop_dict.get('host')
         if host_ret:
@@ -1373,16 +1462,25 @@ def get_stats_from_cluster(session, cluster):
                     # The overcommitment ratio is factored in by the scheduler
                     threads = hardware_summary.numCpuThreads
                     vcpus += threads
-                    max_vcpus_per_host = max(max_vcpus_per_host, threads)
                     used_mem_mb += stats_summary.overallMemoryUsage
                     mem_mb = hardware_summary.memorySize // units.Mi
                     total_mem_mb += mem_mb
-                    max_mem_mb_per_host = max(max_mem_mb_per_host, mem_mb)
+                    reserved = _get_host_reservations(
+                                        host_reservations_map, obj.obj,
+                                        threads, mem_mb)
+                    reserved_vcpus += reserved['vcpus']
+                    reserved_memory_mb += reserved['memory_mb']
+                    max_vcpus_per_host = max(max_vcpus_per_host,
+                                             threads - reserved['vcpus'])
+                    max_mem_mb_per_host = max(max_mem_mb_per_host,
+                                              mem_mb - reserved['memory_mb'])
     stats = {'cpu': {'vcpus': vcpus,
-                     'max_vcpus_per_host': max_vcpus_per_host},
+                     'max_vcpus_per_host': max_vcpus_per_host,
+                     'reserved_vcpus': reserved_vcpus},
              'mem': {'total': total_mem_mb,
                      'free': total_mem_mb - used_mem_mb,
-                     'max_mem_mb_per_host': max_mem_mb_per_host}}
+                     'max_mem_mb_per_host': max_mem_mb_per_host,
+                     'reserved_memory_mb': reserved_memory_mb}}
     return stats
 
 

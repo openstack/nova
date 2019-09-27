@@ -2160,14 +2160,22 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
     def test_get_available_resource(self):
         stats = self.conn.get_available_resource(self.node_name)
         self.assertEqual(32, stats['vcpus'])
+        self.assertEqual(CONF.reserved_host_cpus, stats['vcpus_reserved'])
         self.assertEqual(1024, stats['local_gb'])
         self.assertEqual(1024 - 500, stats['local_gb_used'])
         self.assertEqual(2048, stats['memory_mb'])
         self.assertEqual(1000, stats['memory_mb_used'])
+        self.assertEqual(CONF.reserved_host_memory_mb,
+                         stats['memory_mb_reserved'])
         self.assertEqual('VMware vCenter Server', stats['hypervisor_type'])
         self.assertEqual(5005000, stats['hypervisor_version'])
         self.assertEqual(self.node_name, stats['hypervisor_hostname'])
-        self.assertIsNone(stats['cpu_info'])
+        # TODO(xxxx): check cpu-info
+        # cpu_info = {'features': ['aes', 'avx'],
+        #            'vendor': 'Intel',
+        #            'topology': {'threads': 16, 'sockets': 2, 'cores': 8},
+        #            'model': 'Intel(R) Xeon(R) CPU E5-4650 v4 @ 2.20GHz'}
+        # self.assertEqual(jsonutils.loads(stats['cpu_info']), cpu_info)
         self.assertEqual(
                 [("i686", "vmware", "hvm"), ("x86_64", "vmware", "hvm")],
                 stats['supported_instances'])
@@ -2615,8 +2623,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         service = self._create_service(disabled=False, host='fake-mini')
         mock_service.return_value = service
 
-        fake_stats = {'cpu': {'vcpus': 4},
-                      'mem': {'total': '8194', 'free': '2048'}}
+        fake_stats = {'cpu': {'vcpus': 4, 'reserved_vcpus': 0},
+                      'mem': {'total': '8194', 'free': '2048',
+                              'reserved_memory_mb': 0}}
         with test.nested(
             mock.patch.object(vm_util, 'get_stats_from_cluster',
                               side_effect=[vexc.VimConnectionException('fake'),

@@ -766,15 +766,15 @@ class TestUpdateAvailableResources(BaseTestCase):
         get_cn_mock.assert_called_once_with(mock.ANY, uuids.cn1)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
-            'free_disk_gb': 5,  # 6GB avail - 1 GB reserved
-            'local_gb': 6,
-            'free_ram_mb': 0,  # 512MB avail - 512MB reserved
-            'memory_mb_used': 512,  # 0MB used + 512MB reserved
-            'vcpus_used': 1,
-            'local_gb_used': 1,  # 0GB used + 1 GB reserved
-            'memory_mb': 512,
+            'free_disk_gb': 5,  # local_gb
+            'local_gb': 5,  # 6GB avail - 1 GB reserved
+            'free_ram_mb': 0,  # memory_mb
+            'memory_mb_used': 0,  # 0MB used
+            'vcpus_used': 0,
+            'local_gb_used': 0,  # 0GB used
+            'memory_mb': 0,     # 512MB avail - 512MB reserved
             'current_workload': 0,
-            'vcpus': 4,
+            'vcpus': 3,     # 4 CPUs - 1 CPU reserved
             'running_vms': 0
         }
         _update_compute_node(expected_resources, **vals)
@@ -782,6 +782,52 @@ class TestUpdateAvailableResources(BaseTestCase):
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  actual_resources))
         update_mock.assert_called_once()
+
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
+                return_value=objects.InstancePCIRequests(requests=[]))
+    @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
+                return_value=objects.PciDeviceList())
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
+    @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
+    def test_no_instances_no_migrations_reserved_disk_ram_and_cpu_driver(
+            self, get_mock, migr_mock, get_cn_mock, pci_mock,
+            instance_pci_mock):
+        # Setup with config reservations and driver-returned reservations.
+        # Driver-returned reservations should include the config ones and thus
+        # overwrite the config ones.
+        self.flags(reserved_host_disk_mb=1024,
+                   reserved_host_memory_mb=512,
+                   reserved_host_cpus=1)
+        virt_resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
+        virt_resources.update(vcpus_reserved=2,
+                              memory_mb_reserved=128)
+        self._setup_rt(virt_resources=virt_resources)
+
+        get_mock.return_value = []
+        migr_mock.return_value = []
+        get_cn_mock.return_value = _COMPUTE_NODE_FIXTURES[0]
+
+        update_mock = self._update_available_resources()
+
+        get_cn_mock.assert_called_once_with(mock.ANY, uuids.cn1)
+        expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
+        vals = {
+            'free_disk_gb': 5,  # local_gb
+            'local_gb': 5,  # 6GB avail - 1 GB reserved
+            'free_ram_mb': 384,  # memory_mb
+            'memory_mb_used': 0,  # 0MB used
+            'vcpus_used': 0,
+            'local_gb_used': 0,  # 0GB used
+            'memory_mb': 384,   # 512MB avail - 128MB reserved
+            'current_workload': 0,
+            'vcpus': 2,     # 4 vcpus - 2 reserved
+            'running_vms': 0
+        }
+        _update_compute_node(expected_resources, **vals)
+        actual_resources = update_mock.call_args[0][1]
+        self.assertTrue(obj_base.obj_equal_prims(expected_resources,
+                                                 actual_resources))
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
@@ -4029,18 +4075,37 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         # NOTE(danms): The resource tracker _should_ report negative resources
         # for things like free_ram_mb if overcommit is being used. This test
         # ensures that we don't collapse negative values to zero.
+        # NOTE(jkulik): We've switched how this works at SAP; because we don't
+        # want limes to see the memory of a compute-node if it's actually
+        # reserved (as limes didn't care for free/used at the time). Therefore,
+        # we actually collaps reserved memory to 0 for reserved resources, but
+        # we don't do it for instance resources.
         self.flags(reserved_host_memory_mb=2048)
         self.flags(reserved_host_disk_mb=(11 * 1024))
         cn = objects.ComputeNode(memory_mb=1024, local_gb=10)
+        resources = {'hypervisor_hostname': 'foo', 'memory_mb': 1024,
+                     'local_gb': 10}
+        self.rt._copy_resources(cn, resources)
         self.rt.compute_nodes['foo'] = cn
 
         @mock.patch.object(self.rt, '_update_usage_from_instance')
-        def test(uufi):
-            self.rt._update_usage_from_instances('ctxt', [], 'foo')
+        @mock.patch('nova.objects.Service.get_minimum_version',
+                    return_value=22)
+        def test(version_mock, uufi):
+            def _update_usage(*args, **kwargs):
+                # simulate an instance with 512 MB memory and  1 GB disk using
+                # resources
+                cn.memory_mb_used += 512
+                cn.local_gb_used += 1
+                cn.free_ram_mb = cn.memory_mb - cn.memory_mb_used
+                cn.free_disk_gb = cn.local_gb - cn.local_gb_used
+            uufi.side_effect = _update_usage
+            self.rt._update_usage_from_instances('ctxt', [self.instance],
+                                                 'foo')
 
         test()
 
-        self.assertEqual(-1024, cn.free_ram_mb)
+        self.assertEqual(-512, cn.free_ram_mb)
         self.assertEqual(-1, cn.free_disk_gb)
 
     def test_delete_allocation_for_evacuated_instance(self):

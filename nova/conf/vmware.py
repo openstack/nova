@@ -116,6 +116,31 @@ is hot-created.
 For big VMs as determined by the `bigvm_mb` setting, this setting is not used.
 Big VMs always reserve all their memory.
 """),
+    cfg.StrOpt('hostgroup_reservations_json_file',
+        help="""
+Specifies the path to a JSON file containing vcpus and memory reservations per
+hostgroup. HVs found to be in a hostgroup specified in this dict will report
+the amount of vcpus/memory as reserved to the placement API. This enables us to
+specify different reservations for HANA-used HVs and for "normal" HVs. The
+special key `__default__` holds values applied if there is no specification for
+an HV's hostgroup. It defaults to 0.
+
+There are two ways to specify a hostgroup's values: as static numbers and as
+percent. Static numbers take precedence over percent if both are present.
+Additionally, values are inherited from the `__default__` group if not present
+for a group. To prohibt inheriting a value, explicitly set it to `null`.
+
+Example configuration could be:
+ {"__default__": {"memory_percent": 10, "vcpus": 10},
+  "hana_hosts": {"memory_mb": 16384, "vcpus": 5},
+  "normal_hosts": {"vcpus": null, "vcpus_percent": 2}}
+
+If there are cluster-wide reservations defined via `reserved_host_cpus` or
+`reserved_host_memory_mb`, they are added to the sum of the hostgroup-defined
+ones.
+
+NOTE: Percentage values will be rounded down to the next full vcpu/MB.
+"""),
 ]
 
 vmwareapi_opts = [

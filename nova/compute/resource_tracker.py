@@ -847,6 +847,20 @@ class ResourceTracker(object):
             if conf_alloc_ratio not in (0.0, None):
                 setattr(compute_node, attr, conf_alloc_ratio)
 
+        # apply the reservations so that limes's quota can see them
+        resources = copy.deepcopy(resources)
+        resources['vcpus'] = resources.get('vcpus', 0) - \
+                             resources.get('vcpus_reserved',
+                                           CONF.reserved_host_cpus)
+        resources['vcpus'] = max(resources['vcpus'], 0)
+        resources['memory_mb'] = resources.get('memory_mb', 0) - \
+                                 resources.get('memory_mb_reserved',
+                                               CONF.reserved_host_memory_mb)
+        resources['memory_mb'] = max(resources['memory_mb'], 0)
+        resources['local_gb'] = resources.get('local_gb', 0) - \
+                                CONF.reserved_host_disk_mb / 1024
+        resources['local_gb'] = max(resources['local_gb'], 0)
+
         # now copy rest to compute_node
         compute_node.update_from_virt_driver(resources)
 
@@ -1662,9 +1676,9 @@ class ResourceTracker(object):
 
         cn = self.compute_nodes[nodename]
         # set some initial values, reserve room for host/hypervisor:
-        cn.local_gb_used = CONF.reserved_host_disk_mb / 1024
-        cn.memory_mb_used = CONF.reserved_host_memory_mb
-        cn.vcpus_used = CONF.reserved_host_cpus
+        cn.local_gb_used = 0
+        cn.memory_mb_used = 0
+        cn.vcpus_used = 0
         cn.free_ram_mb = (cn.memory_mb - cn.memory_mb_used)
         cn.free_disk_gb = (cn.local_gb - cn.local_gb_used)
         cn.current_workload = 0

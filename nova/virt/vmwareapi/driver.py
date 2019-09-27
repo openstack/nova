@@ -374,6 +374,10 @@ class VMwareVCDriver(driver.ComputeDriver):
                'memory_mb_used': host_stats['host_memory_total'] -
                                  host_stats['host_memory_free'],
                'local_gb_used': host_stats['disk_used'],
+               'vcpus_reserved': CONF.reserved_host_cpus +
+                                 host_stats['vcpus_reserved'],
+               'memory_mb_reserved': CONF.reserved_host_memory_mb +
+                                     host_stats['host_memory_reserved'],
                'hypervisor_type': host_stats['hypervisor_type'],
                'hypervisor_version': host_stats['hypervisor_version'],
                'hypervisor_hostname': host_stats['hypervisor_hostname'],
@@ -476,18 +480,22 @@ class VMwareVCDriver(driver.ComputeDriver):
             }
         }
         if stats['cpu']['max_vcpus_per_host'] > 0:
+            reserved_vcpus = stats['cpu'].get('reserved_vcpus', 0)
+            reserved_vcpus += CONF.reserved_host_cpus
             result.update({orc.VCPU: {
                 'total': stats['cpu']['vcpus'],
-                'reserved': CONF.reserved_host_cpus,
+                'reserved': reserved_vcpus,
                 'min_unit': 1,
                 'max_unit': stats['cpu']['max_vcpus_per_host'],
                 'step_size': 1,
                 'allocation_ratio': ratios[orc.VCPU],
             }})
         if stats['mem']['max_mem_mb_per_host'] > 0:
+            reserved_memory_mb = stats['mem'].get('reserved_memory_mb', 0)
+            reserved_memory_mb += CONF.reserved_host_memory_mb
             result.update({orc.MEMORY_MB: {
                 'total': stats['mem']['total'],
-                'reserved': CONF.reserved_host_memory_mb,
+                'reserved': reserved_memory_mb,
                 'min_unit': 1,
                 'max_unit': stats['mem']['max_mem_mb_per_host'],
                 'step_size': 1,

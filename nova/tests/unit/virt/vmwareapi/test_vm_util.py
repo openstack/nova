@@ -13,8 +13,9 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
+import builtins
 import collections
+import io
 from unittest import mock
 
 from oslo_service import fixture as oslo_svc_fixture
@@ -61,7 +62,8 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
     def _test_get_stats_from_cluster(self, connection_state="connected",
                                      maintenance_mode=False,
                                      failover_policy=None,
-                                     failover_hosts_filtered=0):
+                                     failover_hosts_filtered=0,
+                                     expected_stats=None):
         ManagedObjectRefs = [fake.ManagedObjectReference("HostSystem",
                                                          "host1"),
                              fake.ManagedObjectReference("HostSystem",
@@ -107,8 +109,10 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                                       val=quickstats_2)]
 
         fake_objects = {
-            'host1': fake.ObjectContent("prop_list_host1", prop_list_host_1),
-            'host2': fake.ObjectContent("prop_list_host1", prop_list_host_2)
+            'host1':
+                fake.ObjectContent(ManagedObjectRefs[0], prop_list_host_1),
+            'host2':
+                fake.ObjectContent(ManagedObjectRefs[1], prop_list_host_2)
         }
 
         def fake_call_method(*args):
@@ -130,12 +134,15 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
             else:
                 num_hosts = 1
             num_hosts -= failover_hosts_filtered
-            expected_stats = {'cpu': {'vcpus': num_hosts * 16,
-                                      'max_vcpus_per_host': 16},
-                              'mem': {'total': num_hosts * 4096,
-                                      'free': num_hosts * 4096 -
-                                              num_hosts * 512,
-                                      'max_mem_mb_per_host': 4096}}
+            if expected_stats is None:
+                expected_stats = {'cpu': {'vcpus': num_hosts * 16,
+                                          'max_vcpus_per_host': 16,
+                                          'reserved_vcpus': 0},
+                                  'mem': {'total': num_hosts * 4096,
+                                          'free': num_hosts * 4096 -
+                                                  num_hosts * 512,
+                                          'max_mem_mb_per_host': 4096,
+                                          'reserved_memory_mb': 0}}
             self.assertEqual(expected_stats, result)
 
     def test_get_stats_from_cluster_hosts_connected_and_active(self):
@@ -177,10 +184,137 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         self._test_get_stats_from_cluster(failover_policy=policy,
                                           failover_hosts_filtered=0)
 
+    @mock.patch('nova.virt.vmwareapi.vm_util._get_host_reservations_map')
+    def test_get_stats_from_cluster_reservations(self, mock_map):
+        CONF.set_override('hostgroup_reservations_json_file', '/some/path',
+                          'vmware')
+        mock_map.return_value = {
+            "host1": {
+                'memory_mb': 256,
+                'vcpus': 4},
+            "host2": {
+                'memory_mb': 512,
+                'vcpus': 2}}
+
+        expected = {'cpu': {'vcpus': 2 * 16,
+                                  'max_vcpus_per_host': 14,  # by host2 counts
+                                  'reserved_vcpus': 4 + 2},  # both hosts
+                          'mem': {'total': 2 * 4096,
+                                  'free': 2 * 4096 -
+                                          2 * 512,
+                                  'max_mem_mb_per_host': 4096 - 256,    # host1
+                                  'reserved_memory_mb': 512 + 256}}     # both
+        self._test_get_stats_from_cluster(expected_stats=expected)
+
+    def test_get_host_reservations_empty(self):
+        host = fake.ManagedObjectReference('HostSystem', 'host1')
+        mapping = {}
+        result = vm_util._get_host_reservations(mapping, host, 32, 4096)
+        expected = {'vcpus': 0, 'memory_mb': 0}
+        self.assertEqual(expected, result)
+
+        mapping = {'host2': {'vcpus': 5}}
+        result = vm_util._get_host_reservations(mapping, host, 32, 4096)
+        expected = {'vcpus': 0, 'memory_mb': 0}
+        self.assertEqual(expected, result)
+
+    def test_get_host_reservations_with_default(self):
+        host = fake.ManagedObjectReference('HostSystem', 'host1')
+        mapping = {'__default__': {'vcpus': 2, 'memory_mb': 96}}
+        result = vm_util._get_host_reservations(mapping, host, 32, 4096)
+        expected = {'vcpus': 2, 'memory_mb': 96}
+        self.assertEqual(expected, result)
+
+    def test_get_host_reservations_with_some_default(self):
+        host = fake.ManagedObjectReference('HostSystem', 'host1')
+        mapping = {'__default__': {'vcpus': 2, 'memory_mb': 96},
+                   'host1': {'vcpus': 1}}
+        result = vm_util._get_host_reservations(mapping, host, 32, 4096)
+        expected = {'vcpus': 1, 'memory_mb': 96}
+        self.assertEqual(expected, result)
+
+        mapping = {'__default__': {'vcpus': 2, 'memory_mb': 96},
+                   'host1': {'memory_mb': 2048}}
+        result = vm_util._get_host_reservations(mapping, host, 32, 4096)
+        expected = {'vcpus': 2, 'memory_mb': 2048}
+        self.assertEqual(expected, result)
+
+    def test_get_host_reservations_priority(self):
+        host = fake.ManagedObjectReference('HostSystem', 'host1')
+        mapping = {'__default__': {'vcpus_percent': 10, 'memory_percent': 50},
+                   'host1': {'vcpus': 1}}
+        result = vm_util._get_host_reservations(mapping, host, 32, 4096)
+        expected = {'vcpus': 1, 'memory_mb': 2048}
+        self.assertEqual(expected, result)
+
+        mapping['host1']['memory_mb'] = 96
+        result = vm_util._get_host_reservations(mapping, host, 32, 4096)
+        expected = {'vcpus': 1, 'memory_mb': 96}
+        self.assertEqual(expected, result)
+
+    def test_get_host_reservations_override(self):
+        host = fake.ManagedObjectReference('HostSystem', 'host1')
+        mapping = {'__default__': {'vcpus': 5},
+                   'host1': {'vcpus_percent': 10}}
+        result = vm_util._get_host_reservations(mapping, host, 32, 4096)
+        expected = {'vcpus': 5, 'memory_mb': 0}
+        self.assertEqual(expected, result)
+
+        mapping['host1']['vcpus'] = None
+        result = vm_util._get_host_reservations(mapping, host, 32, 4096)
+        expected = {'vcpus': 3, 'memory_mb': 0}
+        self.assertEqual(expected, result)
+
     def test_get_host_ref_no_hosts_in_cluster(self):
         self.assertRaises(exception.NoValidHost,
                           vm_util.get_host_ref,
                           fake.FakeObjectRetrievalSession(""), 'fake_cluster')
+
+    def test_get_host_reservations_map_no_action(self):
+        self.assertEqual({}, vm_util._get_host_reservations_map())
+
+    @mock.patch.object(builtins, 'open')
+    def test_get_host_reservations_map_default_only(self, mock_open):
+        CONF.set_override('hostgroup_reservations_json_file', '/some/path',
+                          'vmware')
+        reservations = '{"__default__": {"vcpus": 2, "memory_mb": 512}, ' \
+                         '"foo": {"vcpus": 7}}'
+        response = io.BytesIO(reservations.encode('utf-8'))
+        mock_open.return_value = response
+        expected = {'__default__': {'vcpus': 2, 'memory_mb': 512}}
+        self.assertEqual(expected, vm_util._get_host_reservations_map())
+
+    @mock.patch.object(builtins, 'open')
+    def test_get_host_reservations_map(self, mock_open):
+        CONF.set_override('hostgroup_reservations_json_file', '/some/path',
+                          'vmware')
+        reservations = '{"__default__": {"vcpus": 2, "memory_mb": 512}, ' \
+                         '"foo": {"vcpus": 7, "vcpus_percent": 10, ' \
+                         '"memory_mb": 1024}}'
+        response = io.BytesIO(reservations.encode('utf-8'))
+        mock_open.return_value = response
+
+        class Group(object):
+            def __init__(self, name, host=None):
+                self.name = name
+                if host is not None:
+                    self.host = host
+
+        host1 = fake.ManagedObjectReference('HostSystem', 'host1')
+        host2 = fake.ManagedObjectReference('HostSystem', 'host2')
+        host3 = fake.ManagedObjectReference('HostSystem', 'host3')
+
+        groups = [
+            Group('vmgroup'),
+            Group('hostgroup1', host=[host1]),
+            Group('foo', host=[host2, host3])]
+
+        expected = {'__default__': {'vcpus': 2, 'memory_mb': 512},
+                    'host2': {'vcpus': 7, 'vcpus_percent': 10,
+                              'memory_mb': 1024},
+                    'host3': {'vcpus': 7, 'vcpus_percent': 10,
+                              'memory_mb': 1024}}
+        self.assertEqual(expected, vm_util._get_host_reservations_map(groups))
 
     def test_get_resize_spec(self):
         vcpus = 2
