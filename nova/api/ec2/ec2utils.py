@@ -19,7 +19,6 @@ import functools
 from oslo_utils import uuidutils
 
 from nova import cache_utils
-from nova import context
 from nova import exception
 from nova.network import model as network_model
 from nova import objects
@@ -67,6 +66,7 @@ def glance_id_to_id(context, glance_id):
     """Convert a glance id to an internal (db) id."""
     if not glance_id:
         return
+
     try:
         return objects.S3ImageMapping.get_by_uuid(context, glance_id).id
     except exception.NotFound:
@@ -79,11 +79,7 @@ def glance_id_to_ec2_id(context, glance_id, image_type='ami'):
     image_id = glance_id_to_id(context, glance_id)
     if image_id is None:
         return
-    return image_ec2_id(image_id, image_type=image_type)
 
-
-def image_ec2_id(image_id, image_type='ami'):
-    """Returns image ec2_id using id and three letter type."""
     template = image_type + '-%08x'
     return id_to_ec2_id(image_id, template=template)
 
@@ -108,13 +104,12 @@ def id_to_ec2_id(instance_id, template='i-%08x'):
     return template % int(instance_id)
 
 
-def id_to_ec2_inst_id(instance_id):
+def id_to_ec2_inst_id(context, instance_id):
     """Get or create an ec2 instance ID (i-[base 16 number]) from uuid."""
     if instance_id is None:
         return None
     elif uuidutils.is_uuid_like(instance_id):
-        ctxt = context.get_admin_context()
-        int_id = get_int_id_from_instance_uuid(ctxt, instance_id)
+        int_id = get_int_id_from_instance_uuid(context, instance_id)
         return id_to_ec2_id(int_id)
     else:
         return id_to_ec2_id(instance_id)
