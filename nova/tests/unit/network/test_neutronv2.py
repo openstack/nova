@@ -778,195 +778,6 @@ class TestNeutronv2(TestNeutronv2Base):
         self.addCleanup(self.mox.UnsetStubs)
         self.addCleanup(self.stubs.UnsetAll)
 
-    def test_build_network_info_model(self):
-        api = neutronapi.API()
-
-        fake_inst = objects.Instance()
-        fake_inst.project_id = uuids.fake
-        fake_inst.uuid = uuids.instance
-        fake_inst.info_cache = objects.InstanceInfoCache()
-        fake_inst.info_cache.network_info = model.NetworkInfo()
-        fake_ports = [
-            # admin_state_up=True and status='ACTIVE' thus vif.active=True
-            {'id': 'port1',
-             'network_id': 'net-id',
-             'admin_state_up': True,
-             'status': 'ACTIVE',
-             'fixed_ips': [{'ip_address': '1.1.1.1'}],
-             'mac_address': 'de:ad:be:ef:00:01',
-             'binding:vif_type': model.VIF_TYPE_BRIDGE,
-             'binding:vnic_type': model.VNIC_TYPE_NORMAL,
-             'binding:vif_details': {},
-             },
-            # admin_state_up=False and status='DOWN' thus vif.active=True
-            {'id': 'port2',
-             'network_id': 'net-id',
-             'admin_state_up': False,
-             'status': 'DOWN',
-             'fixed_ips': [{'ip_address': '1.1.1.1'}],
-             'mac_address': 'de:ad:be:ef:00:02',
-             'binding:vif_type': model.VIF_TYPE_BRIDGE,
-             'binding:vnic_type': model.VNIC_TYPE_NORMAL,
-             'binding:vif_details': {},
-             },
-            # admin_state_up=True and status='DOWN' thus vif.active=False
-             {'id': 'port0',
-             'network_id': 'net-id',
-             'admin_state_up': True,
-             'status': 'DOWN',
-             'fixed_ips': [{'ip_address': '1.1.1.1'}],
-             'mac_address': 'de:ad:be:ef:00:03',
-             'binding:vif_type': model.VIF_TYPE_BRIDGE,
-             'binding:vnic_type': model.VNIC_TYPE_NORMAL,
-             'binding:vif_details': {},
-             },
-            # admin_state_up=True and status='ACTIVE' thus vif.active=True
-            {'id': 'port3',
-             'network_id': 'net-id',
-             'admin_state_up': True,
-             'status': 'ACTIVE',
-             'fixed_ips': [{'ip_address': '1.1.1.1'}],
-             'mac_address': 'de:ad:be:ef:00:04',
-             'binding:vif_type': model.VIF_TYPE_HW_VEB,
-             'binding:vnic_type': model.VNIC_TYPE_DIRECT,
-             constants.BINDING_PROFILE: {'pci_vendor_info': '1137:0047',
-                                         'pci_slot': '0000:0a:00.1',
-                                         'physical_network': 'physnet1'},
-             'binding:vif_details': {model.VIF_DETAILS_PROFILEID: 'pfid'},
-             },
-            # admin_state_up=True and status='ACTIVE' thus vif.active=True
-            {'id': 'port4',
-             'network_id': 'net-id',
-             'admin_state_up': True,
-             'status': 'ACTIVE',
-             'fixed_ips': [{'ip_address': '1.1.1.1'}],
-             'mac_address': 'de:ad:be:ef:00:05',
-             'binding:vif_type': model.VIF_TYPE_802_QBH,
-             'binding:vnic_type': model.VNIC_TYPE_MACVTAP,
-             constants.BINDING_PROFILE: {'pci_vendor_info': '1137:0047',
-                                         'pci_slot': '0000:0a:00.2',
-                                         'physical_network': 'physnet1'},
-             'binding:vif_details': {model.VIF_DETAILS_PROFILEID: 'pfid'},
-             },
-            # admin_state_up=True and status='ACTIVE' thus vif.active=True
-            # This port has no binding:vnic_type to verify default is assumed
-            {'id': 'port5',
-             'network_id': 'net-id',
-             'admin_state_up': True,
-             'status': 'ACTIVE',
-             'fixed_ips': [{'ip_address': '1.1.1.1'}],
-             'mac_address': 'de:ad:be:ef:00:06',
-             'binding:vif_type': model.VIF_TYPE_BRIDGE,
-             # No binding:vnic_type
-             'binding:vif_details': {},
-             },
-            # This does not match the networks we provide below,
-            # so it should be ignored (and is here to verify that)
-            {'id': 'port6',
-             'network_id': 'other-net-id',
-             'admin_state_up': True,
-             'status': 'DOWN',
-             'binding:vnic_type': model.VNIC_TYPE_NORMAL,
-             },
-            ]
-        fake_subnets = [model.Subnet(cidr='1.0.0.0/8')]
-        fake_nets = [
-            {'id': 'net-id',
-             'name': 'foo',
-             'tenant_id': uuids.fake,
-             }
-            ]
-        neutronapi.get_client(mox.IgnoreArg(), admin=True).AndReturn(
-            self.moxed_client)
-        self.moxed_client.list_ports(
-            tenant_id=uuids.fake, device_id=uuids.instance).AndReturn(
-                {'ports': fake_ports})
-
-        self.mox.StubOutWithMock(api, '_get_floating_ips_by_fixed_and_port')
-        self.mox.StubOutWithMock(api, '_get_subnets_from_port')
-        requested_ports = [fake_ports[2], fake_ports[0], fake_ports[1],
-                           fake_ports[3], fake_ports[4], fake_ports[5]]
-        for requested_port in requested_ports:
-            api._get_floating_ips_by_fixed_and_port(
-                self.moxed_client, '1.1.1.1', requested_port['id']).AndReturn(
-                    [{'floating_ip_address': '10.0.0.1'}])
-        for requested_port in requested_ports:
-            api._get_subnets_from_port(self.context, requested_port,
-                                       self.moxed_client).AndReturn(
-                fake_subnets)
-
-        self.mox.StubOutWithMock(api, '_get_preexisting_port_ids')
-        api._get_preexisting_port_ids(fake_inst).AndReturn(['port5'])
-
-        neutronapi.get_client(mox.IgnoreArg(),
-                              admin=True).MultipleTimes().AndReturn(
-            self.moxed_client)
-        self.mox.StubOutWithMock(api, '_get_physnet_tunneled_info')
-        api._get_physnet_tunneled_info(
-            mox.IgnoreArg(), mox.IgnoreArg(),
-            mox.IgnoreArg()).MultipleTimes().AndReturn(
-                (None, False))
-
-        self.mox.ReplayAll()
-        fake_inst.info_cache = objects.InstanceInfoCache.new(
-            self.context, uuids.instance)
-        fake_inst.info_cache.network_info = model.NetworkInfo.hydrate([])
-        nw_infos = api._build_network_info_model(
-            self.context, fake_inst,
-            fake_nets,
-            [fake_ports[2]['id'],
-             fake_ports[0]['id'],
-             fake_ports[1]['id'],
-             fake_ports[3]['id'],
-             fake_ports[4]['id'],
-             fake_ports[5]['id']],
-            preexisting_port_ids=['port3'])
-
-        self.assertEqual(6, len(nw_infos))
-        index = 0
-        for nw_info in nw_infos:
-            self.assertEqual(requested_ports[index]['mac_address'],
-                             nw_info['address'])
-            self.assertEqual('tapport' + str(index), nw_info['devname'])
-            self.assertIsNone(nw_info['ovs_interfaceid'])
-            self.assertEqual(requested_ports[index]['binding:vif_type'],
-                             nw_info['type'])
-            if nw_info['type'] == model.VIF_TYPE_BRIDGE:
-                self.assertEqual('brqnet-id', nw_info['network']['bridge'])
-            self.assertEqual(requested_ports[index].get('binding:vnic_type',
-                                model.VNIC_TYPE_NORMAL), nw_info['vnic_type'])
-            self.assertEqual(requested_ports[index].get('binding:vif_details'),
-                             nw_info.get('details'))
-            self.assertEqual(
-                # If the requested port does not define a binding:profile, or
-                # has it set to None, we default to an empty dict to avoid
-                # NoneType errors.
-                requested_ports[index].get(
-                    constants.BINDING_PROFILE) or {},
-                nw_info.get('profile'))
-            index += 1
-
-        self.assertFalse(nw_infos[0]['active'])
-        self.assertTrue(nw_infos[1]['active'])
-        self.assertTrue(nw_infos[2]['active'])
-        self.assertTrue(nw_infos[3]['active'])
-        self.assertTrue(nw_infos[4]['active'])
-        self.assertTrue(nw_infos[5]['active'])
-
-        self.assertEqual('port0', nw_infos[0]['id'])
-        self.assertEqual('port1', nw_infos[1]['id'])
-        self.assertEqual('port2', nw_infos[2]['id'])
-        self.assertEqual('port3', nw_infos[3]['id'])
-        self.assertEqual('port4', nw_infos[4]['id'])
-        self.assertEqual('port5', nw_infos[5]['id'])
-
-        self.assertFalse(nw_infos[0]['preserve_on_delete'])
-        self.assertFalse(nw_infos[1]['preserve_on_delete'])
-        self.assertFalse(nw_infos[2]['preserve_on_delete'])
-        self.assertTrue(nw_infos[3]['preserve_on_delete'])
-        self.assertFalse(nw_infos[4]['preserve_on_delete'])
-        self.assertTrue(nw_infos[5]['preserve_on_delete'])
-
     @mock.patch('nova.network.neutronv2.api.API._nw_info_get_subnets')
     @mock.patch('nova.network.neutronv2.api.API._nw_info_get_ips')
     @mock.patch('nova.network.neutronv2.api.API._nw_info_build_network')
@@ -3599,6 +3410,202 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
 
     def test_nw_info_build_custom_lb_bridge(self):
         self._test_nw_info_build_custom_bridge(model.VIF_TYPE_BRIDGE)
+
+    @mock.patch.object(neutronapi.API, '_get_physnet_tunneled_info',
+                       return_value=(None, False))
+    @mock.patch.object(neutronapi.API, '_get_preexisting_port_ids',
+                       return_value=['port5'])
+    @mock.patch.object(neutronapi.API, '_get_subnets_from_port',
+                       return_value=[model.Subnet(cidr='1.0.0.0/8')])
+    @mock.patch.object(neutronapi.API, '_get_floating_ips_by_fixed_and_port',
+                       return_value=[{'floating_ip_address': '10.0.0.1'}])
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_build_network_info_model(self, mock_get_client,
+                                      mock_get_floating, mock_get_subnets,
+                                      mock_get_preexisting, mock_get_physnet):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_get_client.return_value = mocked_client
+        fake_inst = objects.Instance()
+        fake_inst.project_id = uuids.fake
+        fake_inst.uuid = uuids.instance
+        fake_inst.info_cache = objects.InstanceInfoCache()
+        fake_inst.info_cache.network_info = model.NetworkInfo()
+        fake_ports = [
+            # admin_state_up=True and status='ACTIVE' thus vif.active=True
+            {'id': 'port1',
+             'network_id': 'net-id',
+             'admin_state_up': True,
+             'status': 'ACTIVE',
+             'fixed_ips': [{'ip_address': '1.1.1.1'}],
+             'mac_address': 'de:ad:be:ef:00:01',
+             'binding:vif_type': model.VIF_TYPE_BRIDGE,
+             'binding:vnic_type': model.VNIC_TYPE_NORMAL,
+             'binding:vif_details': {},
+             },
+            # admin_state_up=False and status='DOWN' thus vif.active=True
+            {'id': 'port2',
+             'network_id': 'net-id',
+             'admin_state_up': False,
+             'status': 'DOWN',
+             'fixed_ips': [{'ip_address': '1.1.1.1'}],
+             'mac_address': 'de:ad:be:ef:00:02',
+             'binding:vif_type': model.VIF_TYPE_BRIDGE,
+             'binding:vnic_type': model.VNIC_TYPE_NORMAL,
+             'binding:vif_details': {},
+             },
+            # admin_state_up=True and status='DOWN' thus vif.active=False
+             {'id': 'port0',
+             'network_id': 'net-id',
+             'admin_state_up': True,
+             'status': 'DOWN',
+             'fixed_ips': [{'ip_address': '1.1.1.1'}],
+             'mac_address': 'de:ad:be:ef:00:03',
+             'binding:vif_type': model.VIF_TYPE_BRIDGE,
+             'binding:vnic_type': model.VNIC_TYPE_NORMAL,
+             'binding:vif_details': {},
+             },
+            # admin_state_up=True and status='ACTIVE' thus vif.active=True
+            {'id': 'port3',
+             'network_id': 'net-id',
+             'admin_state_up': True,
+             'status': 'ACTIVE',
+             'fixed_ips': [{'ip_address': '1.1.1.1'}],
+             'mac_address': 'de:ad:be:ef:00:04',
+             'binding:vif_type': model.VIF_TYPE_HW_VEB,
+             'binding:vnic_type': model.VNIC_TYPE_DIRECT,
+             constants.BINDING_PROFILE: {'pci_vendor_info': '1137:0047',
+                                         'pci_slot': '0000:0a:00.1',
+                                         'physical_network': 'physnet1'},
+             'binding:vif_details': {model.VIF_DETAILS_PROFILEID: 'pfid'},
+             },
+            # admin_state_up=True and status='ACTIVE' thus vif.active=True
+            {'id': 'port4',
+             'network_id': 'net-id',
+             'admin_state_up': True,
+             'status': 'ACTIVE',
+             'fixed_ips': [{'ip_address': '1.1.1.1'}],
+             'mac_address': 'de:ad:be:ef:00:05',
+             'binding:vif_type': model.VIF_TYPE_802_QBH,
+             'binding:vnic_type': model.VNIC_TYPE_MACVTAP,
+             constants.BINDING_PROFILE: {'pci_vendor_info': '1137:0047',
+                                         'pci_slot': '0000:0a:00.2',
+                                         'physical_network': 'physnet1'},
+             'binding:vif_details': {model.VIF_DETAILS_PROFILEID: 'pfid'},
+             },
+            # admin_state_up=True and status='ACTIVE' thus vif.active=True
+            # This port has no binding:vnic_type to verify default is assumed
+            {'id': 'port5',
+             'network_id': 'net-id',
+             'admin_state_up': True,
+             'status': 'ACTIVE',
+             'fixed_ips': [{'ip_address': '1.1.1.1'}],
+             'mac_address': 'de:ad:be:ef:00:06',
+             'binding:vif_type': model.VIF_TYPE_BRIDGE,
+             # No binding:vnic_type
+             'binding:vif_details': {},
+             },
+            # This does not match the networks we provide below,
+            # so it should be ignored (and is here to verify that)
+            {'id': 'port6',
+             'network_id': 'other-net-id',
+             'admin_state_up': True,
+             'status': 'DOWN',
+             'binding:vnic_type': model.VNIC_TYPE_NORMAL,
+             },
+            ]
+        fake_nets = [
+            {'id': 'net-id',
+             'name': 'foo',
+             'tenant_id': uuids.fake,
+             }
+            ]
+        mocked_client.list_ports.return_value = {'ports': fake_ports}
+
+        requested_ports = [fake_ports[2], fake_ports[0], fake_ports[1],
+                           fake_ports[3], fake_ports[4], fake_ports[5]]
+        expected_get_floating_calls = []
+        for requested_port in requested_ports:
+            expected_get_floating_calls.append(mock.call(mocked_client,
+                                                         '1.1.1.1',
+                                                         requested_port['id']))
+        expected_get_subnets_calls = []
+        for requested_port in requested_ports:
+            expected_get_subnets_calls.append(
+                mock.call(self.context, requested_port, mocked_client))
+
+        fake_inst.info_cache = objects.InstanceInfoCache.new(
+            self.context, uuids.instance)
+        fake_inst.info_cache.network_info = model.NetworkInfo.hydrate([])
+
+        nw_infos = self.api._build_network_info_model(
+            self.context, fake_inst,
+            fake_nets,
+            [fake_ports[2]['id'],
+             fake_ports[0]['id'],
+             fake_ports[1]['id'],
+             fake_ports[3]['id'],
+             fake_ports[4]['id'],
+             fake_ports[5]['id']],
+            preexisting_port_ids=['port3'])
+
+        self.assertEqual(6, len(nw_infos))
+        index = 0
+        for nw_info in nw_infos:
+            self.assertEqual(requested_ports[index]['mac_address'],
+                             nw_info['address'])
+            self.assertEqual('tapport' + str(index), nw_info['devname'])
+            self.assertIsNone(nw_info['ovs_interfaceid'])
+            self.assertEqual(requested_ports[index]['binding:vif_type'],
+                             nw_info['type'])
+            if nw_info['type'] == model.VIF_TYPE_BRIDGE:
+                self.assertEqual('brqnet-id', nw_info['network']['bridge'])
+            self.assertEqual(requested_ports[index].get('binding:vnic_type',
+                                model.VNIC_TYPE_NORMAL), nw_info['vnic_type'])
+            self.assertEqual(requested_ports[index].get('binding:vif_details'),
+                             nw_info.get('details'))
+            self.assertEqual(
+                # If the requested port does not define a binding:profile, or
+                # has it set to None, we default to an empty dict to avoid
+                # NoneType errors.
+                requested_ports[index].get(
+                    constants.BINDING_PROFILE) or {},
+                nw_info.get('profile'))
+            index += 1
+
+        self.assertFalse(nw_infos[0]['active'])
+        self.assertTrue(nw_infos[1]['active'])
+        self.assertTrue(nw_infos[2]['active'])
+        self.assertTrue(nw_infos[3]['active'])
+        self.assertTrue(nw_infos[4]['active'])
+        self.assertTrue(nw_infos[5]['active'])
+
+        self.assertEqual('port0', nw_infos[0]['id'])
+        self.assertEqual('port1', nw_infos[1]['id'])
+        self.assertEqual('port2', nw_infos[2]['id'])
+        self.assertEqual('port3', nw_infos[3]['id'])
+        self.assertEqual('port4', nw_infos[4]['id'])
+        self.assertEqual('port5', nw_infos[5]['id'])
+
+        self.assertFalse(nw_infos[0]['preserve_on_delete'])
+        self.assertFalse(nw_infos[1]['preserve_on_delete'])
+        self.assertFalse(nw_infos[2]['preserve_on_delete'])
+        self.assertTrue(nw_infos[3]['preserve_on_delete'])
+        self.assertFalse(nw_infos[4]['preserve_on_delete'])
+        self.assertTrue(nw_infos[5]['preserve_on_delete'])
+
+        mock_get_client.assert_has_calls([
+            mock.call(self.context, admin=True)] * 7, any_order=True)
+        mocked_client.list_ports.assert_called_once_with(
+            tenant_id=uuids.fake, device_id=uuids.instance)
+        mock_get_floating.assert_has_calls(expected_get_floating_calls)
+        self.assertEqual(len(expected_get_floating_calls),
+                         mock_get_floating.call_count)
+        mock_get_subnets.assert_has_calls(expected_get_subnets_calls)
+        self.assertEqual(len(expected_get_subnets_calls),
+                         mock_get_subnets.call_count)
+        mock_get_preexisting.assert_called_once_with(fake_inst)
+        mock_get_physnet.assert_has_calls([
+            mock.call(self.context, mocked_client, 'net-id')] * 6)
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_get_port_vnic_info_trusted(self, mock_get_client):
