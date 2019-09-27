@@ -286,6 +286,13 @@ class MigrationTask(base.TaskBase):
         raise exception.MaxRetriesExceeded(reason=reason)
 
     def _execute(self):
+        # NOTE(sbauza): Force_hosts/nodes needs to be reset if we want to make
+        # sure that the next destination is not forced to be the original host.
+        # This needs to be done before the populate_retry call otherwise
+        # retries will be disabled if the server was created with a forced
+        # host/node.
+        self.request_spec.reset_forced_destinations()
+
         # TODO(sbauza): Remove once all the scheduler.utils methods accept a
         # RequestSpec object in the signature.
         legacy_props = self.request_spec.to_legacy_filter_properties_dict()
@@ -297,11 +304,6 @@ class MigrationTask(base.TaskBase):
                         'host' in self.request_spec.requested_destination):
             scheduler_utils.populate_retry(legacy_props,
                                            self.instance.uuid)
-
-        # NOTE(sbauza): Force_hosts/nodes needs to be reset
-        # if we want to make sure that the next destination
-        # is not forced to be the original host
-        self.request_spec.reset_forced_destinations()
 
         port_res_req = self.network_api.get_requested_resource_for_instance(
             self.context, self.instance.uuid)

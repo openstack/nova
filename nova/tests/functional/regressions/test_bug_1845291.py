@@ -68,20 +68,11 @@ class ForcedHostMissingReScheduleTestCase(
 
             # We expect that the instance re-scheduled but successfully ended
             # up on the second destination host.
-            # FIXME(gibi): this is bug 1845291 as nova does not try to
-            # re-schedule. The forced host was not cleared from the
-            # RequestSpec before the MigrationTask populated the retry
-            # information for the re-scheduling.
-            # self._wait_for_server_parameter(
-            #     self.api, server,
-            #     {
-            #         'OS-EXT-STS:task_state': None,
-            #         'status': 'VERIFY_RESIZE'})
-            # Instead the server goes to ERROR state
             self._wait_for_server_parameter(
-                self.api, server, {'status': 'ERROR'})
+                 self.api, server,
+                 {
+                     'OS-EXT-STS:task_state': None,
+                     'status': 'VERIFY_RESIZE'})
 
         # we ensure that there was a failed and then a successful claim call
-        # FIXME(gibi): this is bug 1845291 as there was no second claim call
-        # self.assertEqual(2, len(claim_calls))
-        self.assertEqual(1, len(claim_calls))
+        self.assertEqual(2, len(claim_calls))
