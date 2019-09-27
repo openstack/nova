@@ -15,7 +15,6 @@
 # under the License.
 
 import copy
-import sys
 
 import fixtures as fx
 import futurist
@@ -26,6 +25,7 @@ from oslo_log import log as logging
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
+from oslotest import output
 import sqlalchemy
 import testtools
 
@@ -88,25 +88,6 @@ class TestConfFixture(testtools.TestCase):
         self._test_override()
 
 
-class TestOutputStream(testtools.TestCase):
-    """Ensure Output Stream capture works as expected.
-
-    This has the added benefit of providing a code example of how you
-    can manipulate the output stream in your own tests.
-    """
-    def test_output(self):
-        self.useFixture(fx.EnvironmentVariable('OS_STDOUT_CAPTURE', '1'))
-        self.useFixture(fx.EnvironmentVariable('OS_STDERR_CAPTURE', '1'))
-
-        out = self.useFixture(fixtures.OutputStreamCapture())
-        sys.stdout.write("foo")
-        sys.stderr.write("bar")
-        self.assertEqual("foo", out.stdout)
-        self.assertEqual("bar", out.stderr)
-        # TODO(sdague): nuke the out and err buffers so it doesn't
-        # make it to testr
-
-
 class TestLogging(testtools.TestCase):
     def test_default_logging(self):
         stdlog = self.useFixture(fixtures.StandardLogging())
@@ -150,7 +131,7 @@ class TestOSAPIFixture(testtools.TestCase):
     @mock.patch('nova.objects.Service.create')
     def test_responds_to_version(self, mock_service_create, mock_get):
         """Ensure the OSAPI server responds to calls sensibly."""
-        self.useFixture(fixtures.OutputStreamCapture())
+        self.useFixture(output.CaptureOutput())
         self.useFixture(fixtures.StandardLogging())
         self.useFixture(conf_fixture.ConfFixture())
         self.useFixture(fixtures.RPCFixture('nova.test'))
