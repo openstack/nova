@@ -191,7 +191,8 @@ class ServerGroupTestV21(test.NoDBTestCase):
             instance = objects.Instance(context=cctx,
                                         image_ref=uuidsentinel.fake_image_ref,
                                         node='node1', reservation_id='a',
-                                        host='host1', project_id='fake',
+                                        host='host1',
+                                        project_id=fakes.FAKE_PROJECT_ID,
                                         vm_state='fake',
                                         system_metadata={'key': 'value'})
             instance.create()
@@ -205,7 +206,7 @@ class ServerGroupTestV21(test.NoDBTestCase):
 
     def _create_instance_group(self, context, members):
         ig = objects.InstanceGroup(context=context, name='fake_name',
-                  user_id='fake_user', project_id='fake',
+                  user_id='fake_user', project_id=fakes.FAKE_PROJECT_ID,
                   members=members)
         ig.create()
         return ig.uuid
@@ -373,7 +374,7 @@ class ServerGroupTestV21(test.NoDBTestCase):
         self.assertEqual(expected, res_dict)
 
     def test_display_members(self):
-        ctx = context.RequestContext('fake_user', 'fake')
+        ctx = context.RequestContext('fake_user', fakes.FAKE_PROJECT_ID)
         (ig_uuid, instances, members) = self._create_groups_and_instances(ctx)
         res_dict = self.controller.show(self.req, ig_uuid)
         result_members = res_dict['server_group']['members']
@@ -386,7 +387,7 @@ class ServerGroupTestV21(test.NoDBTestCase):
                           self.controller.show, self.req, uuidsentinel.group)
 
     def test_display_active_members_only(self):
-        ctx = context.RequestContext('fake_user', 'fake')
+        ctx = context.RequestContext('fake_user', fakes.FAKE_PROJECT_ID)
         (ig_uuid, instances, members) = self._create_groups_and_instances(ctx)
 
         # delete an instance
@@ -407,7 +408,7 @@ class ServerGroupTestV21(test.NoDBTestCase):
         self.assertIn(instances[0].uuid, result_members)
 
     def test_display_members_rbac_default(self):
-        ctx = context.RequestContext('fake_user', 'fake')
+        ctx = context.RequestContext('fake_user', fakes.FAKE_PROJECT_ID)
         ig_uuid = self._create_groups_and_instances(ctx)[0]
 
         # test as admin
@@ -421,7 +422,7 @@ class ServerGroupTestV21(test.NoDBTestCase):
                           self.controller.show, self.foo_req, ig_uuid)
 
     def test_display_members_rbac_admin_only(self):
-        ctx = context.RequestContext('fake_user', 'fake')
+        ctx = context.RequestContext('fake_user', fakes.FAKE_PROJECT_ID)
         ig_uuid = self._create_groups_and_instances(ctx)[0]
 
         # override policy to restrict to admin
@@ -670,7 +671,7 @@ class ServerGroupTestV21(test.NoDBTestCase):
                           self.req, 'invalid')
 
     def test_delete_server_group_rbac_default(self):
-        ctx = context.RequestContext('fake_user', 'fake')
+        ctx = context.RequestContext('fake_user', fakes.FAKE_PROJECT_ID)
 
         # test as admin
         ig_uuid = self._create_groups_and_instances(ctx)[0]

@@ -43,8 +43,8 @@ class ImagesControllerTestV21(test.NoDBTestCase):
     """Test of the OpenStack API /images application controller w/Glance.
     """
     image_controller_class = images_v21.ImagesController
-    url_base = '/v2/fake'
-    bookmark_base = '/fake'
+    url_base = '/v2/%s' % fakes.FAKE_PROJECT_ID
+    bookmark_base = '/%s' % fakes.FAKE_PROJECT_ID
     http_request = fakes.HTTPRequestV21
 
     def setUp(self):

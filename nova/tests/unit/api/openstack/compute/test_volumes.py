@@ -159,7 +159,8 @@ class BootFromVolumeTest(test.TestCase):
                         delete_on_termination=False,
                         )]
                 ))
-        req = fakes.HTTPRequest.blank('/v2/fake/os-volumes_boot')
+        req = fakes.HTTPRequest.blank('/v2/%s/os-volumes_boot' %
+                                      fakes.FAKE_PROJECT_ID)
         req.method = 'POST'
         req.body = jsonutils.dump_as_bytes(body)
         req.headers['content-type'] = 'application/json'
@@ -187,7 +188,8 @@ class BootFromVolumeTest(test.TestCase):
                         delete_on_termination=False,
                         )]
                 ))
-        req = fakes.HTTPRequest.blank('/v2/fake/os-volumes_boot')
+        req = fakes.HTTPRequest.blank('/v2/%s/os-volumes_boot' %
+                                      fakes.FAKE_PROJECT_ID)
         req.method = 'POST'
         req.body = jsonutils.dump_as_bytes(body)
         req.headers['content-type'] = 'application/json'
@@ -205,7 +207,7 @@ class BootFromVolumeTest(test.TestCase):
 
 
 class VolumeApiTestV21(test.NoDBTestCase):
-    url_prefix = '/v2/fake'
+    url_prefix = '/v2/%s' % fakes.FAKE_PROJECT_ID
 
     def setUp(self):
         super(VolumeApiTestV21, self).setUp()
@@ -1183,7 +1185,8 @@ class CommonBadRequestTestCase(object):
         self.controller = self.controller_cls()
 
     def _bad_request_create(self, body):
-        req = fakes.HTTPRequest.blank('/v2/fake/' + self.resource)
+        req = fakes.HTTPRequest.blank('/v2/%s/%s' % (
+                fakes.FAKE_PROJECT_ID, self.resource))
         req.method = 'POST'
 
         kwargs = self.kwargs.copy()
@@ -1238,10 +1241,12 @@ class AssistedSnapshotCreateTestCaseV21(test.NoDBTestCase):
 
         self.controller = \
             self.assisted_snaps.AssistedVolumeSnapshotsController()
+        self.url = ('/v2/%s/os-assisted-volume-snapshots' %
+                    fakes.FAKE_PROJECT_ID)
 
     @mock.patch.object(compute_api.API, 'volume_snapshot_create')
     def test_assisted_create(self, mock_volume_snapshot_create):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-assisted-volume-snapshots')
+        req = fakes.HTTPRequest.blank(self.url)
         expected_create_info = {'type': 'qcow2',
                                 'new_file': 'new_file',
                                 'snapshot_id': 'snapshot_id'}
@@ -1255,14 +1260,14 @@ class AssistedSnapshotCreateTestCaseV21(test.NoDBTestCase):
             expected_create_info)
 
     def test_assisted_create_missing_create_info(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-assisted-volume-snapshots')
+        req = fakes.HTTPRequest.blank(self.url)
         body = {'snapshot': {'volume_id': '1'}}
         req.method = 'POST'
         self.assertRaises(self.bad_request, self.controller.create,
                 req, body=body)
 
     def test_assisted_create_with_unexpected_attr(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-assisted-volume-snapshots')
+        req = fakes.HTTPRequest.blank(self.url)
         body = {
             'snapshot': {
                 'volume_id': '1',
@@ -1281,7 +1286,7 @@ class AssistedSnapshotCreateTestCaseV21(test.NoDBTestCase):
     @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume',
                 side_effect=exception.VolumeBDMIsMultiAttach(volume_id='1'))
     def test_assisted_create_multiattach_fails(self, bdm_get_by_volume):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-assisted-volume-snapshots')
+        req = fakes.HTTPRequest.blank(self.url)
         body = {'snapshot':
                    {'volume_id': '1',
                     'create_info': {'type': 'qcow2',
@@ -1292,7 +1297,7 @@ class AssistedSnapshotCreateTestCaseV21(test.NoDBTestCase):
             webob.exc.HTTPBadRequest, self.controller.create, req, body=body)
 
     def _test_assisted_create_instance_conflict(self, api_error):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-assisted-volume-snapshots')
+        req = fakes.HTTPRequest.blank(self.url)
         body = {'snapshot':
                    {'volume_id': '1',
                     'create_info': {'type': 'qcow2',
@@ -1332,13 +1337,15 @@ class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
         self.mock_volume_snapshot_delete = self.useFixture(
             fixtures.MockPatchObject(compute_api.API,
                                      'volume_snapshot_delete')).mock
+        self.url = ('/v2/%s/os-assisted-volume-snapshots' %
+                    fakes.FAKE_PROJECT_ID)
 
     def test_assisted_delete(self):
         params = {
             'delete_info': jsonutils.dumps({'volume_id': '1'}),
         }
         req = fakes.HTTPRequest.blank(
-                '/v2/fake/os-assisted-volume-snapshots?%s' %
+                self.url + '?%s' %
                 urllib.parse.urlencode(params),
                 version=self.microversion)
         req.method = 'DELETE'
@@ -1346,7 +1353,7 @@ class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
         self._check_status(204, result, self.controller.delete)
 
     def test_assisted_delete_missing_delete_info(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-assisted-volume-snapshots',
+        req = fakes.HTTPRequest.blank(self.url,
                                       version=self.microversion)
         req.method = 'DELETE'
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.delete,
@@ -1359,7 +1366,7 @@ class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
             'delete_info': jsonutils.dumps({'volume_id': '1'}),
         }
         req = fakes.HTTPRequest.blank(
-                '/v2/fake/os-assisted-volume-snapshots?%s' %
+                self.url + '?%s' %
                 urllib.parse.urlencode(params),
                 version=self.microversion)
         req.method = 'DELETE'
@@ -1385,7 +1392,7 @@ class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
             'additional': 123
         }
         req = fakes.HTTPRequest.blank(
-                '/v2/fake/os-assisted-volume-snapshots?%s' %
+                self.url + '?%s' %
                 urllib.parse.urlencode(params),
                 version=self.microversion)
         req.method = 'DELETE'
@@ -1397,7 +1404,7 @@ class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
             'delete_info': jsonutils.dumps({'volume_id': '2'})
         }
         req = fakes.HTTPRequest.blank(
-                '/v2/fake/os-assisted-volume-snapshots?%s' %
+                self.url + '?%s' %
                 urllib.parse.urlencode(params),
                 version=self.microversion)
         req.method = 'DELETE'
@@ -1408,7 +1415,7 @@ class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
             'delete_info': jsonutils.dumps({'something_else': '1'}),
         }
         req = fakes.HTTPRequest.blank(
-                '/v2/fake/os-assisted-volume-snapshots?%s' %
+                self.url + '?%s' %
                 urllib.parse.urlencode(params),
                 version=self.microversion)
 
@@ -1430,14 +1437,14 @@ class AssistedSnapshotDeleteTestCaseV275(AssistedSnapshotDeleteTestCaseV21):
             'additional': 123
         }
         req = fakes.HTTPRequest.blank(
-                '/v2/fake/os-assisted-volume-snapshots?%s' %
+                self.url + '?%s' %
                 urllib.parse.urlencode(params),
                 version='2.74')
         self.controller.delete(req, 1)
 
     def test_delete_additional_query_parameters(self):
         req = fakes.HTTPRequest.blank(
-                '/v2/fake/os-assisted-volume-snapshots?unknown=1',
+                self.url + '?unknown=1',
                 version=self.microversion)
         self.assertRaises(exception.ValidationError,
                           self.controller.delete, req, 1)

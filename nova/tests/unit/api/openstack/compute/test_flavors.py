@@ -44,11 +44,11 @@ def return_flavor_not_found(context, flavor_id, read_deleted=None):
 
 
 class FlavorsTestV21(test.TestCase):
-    _prefix = "/v2/fake"
+    _prefix = "/v2/%s" % fakes.FAKE_PROJECT_ID
     Controller = flavors_v21.FlavorsController
     fake_request = fakes.HTTPRequestV21
-    _rspv = "v2/fake"
-    _fake = "/fake"
+    _rspv = "v2/%s" % fakes.FAKE_PROJECT_ID
+    _fake = "/%s" % fakes.FAKE_PROJECT_ID
     microversion = '2.1'
     # Flag to tell the test if a description should be expected in a response.
     expect_description = False
@@ -338,11 +338,13 @@ class FlavorsTestV21(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v2/fake/flavors/1",
+                        "href": ("http://localhost/v2/%s/flavors/1" %
+                                 fakes.FAKE_PROJECT_ID),
                     },
                     {
                         "rel": "bookmark",
-                        "href": "http://localhost/fake/flavors/1",
+                        "href": ("http://localhost/%s/flavors/1" %
+                                 fakes.FAKE_PROJECT_ID),
                     }
                 ]
            }
@@ -354,7 +356,8 @@ class FlavorsTestV21(test.TestCase):
         self.assertEqual(response_list, expected_flavors)
         self.assertEqual(response_links[0]['rel'], 'next')
         href_parts = urlparse.urlparse(response_links[0]['href'])
-        self.assertEqual('/v2/fake/flavors', href_parts.path)
+        self.assertEqual('/v2/%s/flavors' % fakes.FAKE_PROJECT_ID,
+                         href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
         self.assertThat({'limit': ['2'], 'marker': ['1']},
                         matchers.DictMatches(params))
@@ -813,10 +816,11 @@ class FlavorsTestV2_75(FlavorsTestV2_61):
 
     def test_list_flavors_with_additional_filter_old_version(self):
         req = self.fake_request.blank(
-            '/fake/flavors?limit=1&marker=1&additional=something',
-            version='2.74')
+            '/%s/flavors?limit=1&marker=1&additional=something' %
+            fakes.FAKE_PROJECT_ID, version='2.74')
         self._test_list_flavors_with_allowed_filter(
-            '/fake/flavors?limit=1&marker=1&additional=something', req=req)
+            '/%s/flavors?limit=1&marker=1&additional=something' %
+            fakes.FAKE_PROJECT_ID, req=req)
 
     def test_list_detail_flavors_with_additional_filter_old_version(self):
         expected = {
@@ -830,11 +834,11 @@ class FlavorsTestV2_75(FlavorsTestV2_61):
             "swap": fakes.FLAVORS['2'].swap
         }
         req = self.fake_request.blank(
-            '/fake/flavors?limit=1&marker=1&additional=something',
-            version='2.74')
+            '/%s/flavors?limit=1&marker=1&additional=something' %
+            fakes.FAKE_PROJECT_ID, version='2.74')
         self._test_list_flavors_with_allowed_filter(
-            '/fake/flavors/detail?limit=1&marker=1&additional=something',
-            expected, req=req)
+            '/%s/flavors/detail?limit=1&marker=1&additional=something' %
+            fakes.FAKE_PROJECT_ID, expected, req=req)
 
     def _test_list_flavors_with_additional_filter(self, url):
         controller_list = self.controller.index
@@ -857,7 +861,7 @@ class FlavorsTestV2_75(FlavorsTestV2_61):
         mock_get.return_value = objects.FlavorList(
             objects=[self.FLAVOR_WITH_NO_SWAP])
         req = self.fake_request.blank(
-            '/fake/flavors/detail?limit=1',
+            '/%s/flavors/detail?limit=1' % fakes.FAKE_PROJECT_ID,
             version='2.74')
         response = self.controller.detail(req)
         response_list = response["flavors"]
@@ -867,7 +871,7 @@ class FlavorsTestV2_75(FlavorsTestV2_61):
     def test_show_flavor_default_swap_value_old_version(self, mock_get):
         mock_get.return_value = self.FLAVOR_WITH_NO_SWAP
         req = self.fake_request.blank(
-            '/fake/flavors/detail?limit=1',
+            '/%s/flavors/detail?limit=1' % fakes.FAKE_PROJECT_ID,
             version='2.74')
         response = self.controller.show(req, 1)
         response_list = response["flavor"]
@@ -878,7 +882,7 @@ class FlavorsTestV2_75(FlavorsTestV2_61):
         mock_get.return_value = objects.FlavorList(
             objects=[self.FLAVOR_WITH_NO_SWAP])
         req = self.fake_request.blank(
-            '/fake/flavors/detail?limit=1',
+            '/%s/flavors/detail?limit=1' % fakes.FAKE_PROJECT_ID,
             version=self.microversion)
         response = self.controller.detail(req)
         response_list = response["flavors"]
@@ -888,7 +892,7 @@ class FlavorsTestV2_75(FlavorsTestV2_61):
     def test_show_flavor_default_swap_value(self, mock_get):
         mock_get.return_value = self.FLAVOR_WITH_NO_SWAP
         req = self.fake_request.blank(
-            '/fake/flavors/detail?limit=1',
+            '/%s/flavors/detail?limit=1' % fakes.FAKE_PROJECT_ID,
             version=self.microversion)
         response = self.controller.show(req, 1)
         response_list = response["flavor"]

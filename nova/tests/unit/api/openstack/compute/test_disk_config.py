@@ -37,6 +37,7 @@ API_DISK_CONFIG = 'OS-DCF:diskConfig'
 
 
 class DiskConfigTestCaseV21(test.TestCase):
+    project_id = fakes.FAKE_PROJECT_ID
 
     def setUp(self):
         super(DiskConfigTestCaseV21, self).setUp()
@@ -46,7 +47,7 @@ class DiskConfigTestCaseV21(test.TestCase):
         self._setup_fake_image_service()
         ctxt = nova_context.RequestContext(
             # These values match what is used in fakes.HTTPRequest.blank.
-            user_id='fake_user', project_id='fake')
+            user_id='fake_user', project_id=self.project_id)
         FAKE_INSTANCES = [
             fakes.stub_instance_obj(ctxt,
                                     uuid=MANUAL_INSTANCE_UUID,
@@ -132,19 +133,19 @@ class DiskConfigTestCaseV21(test.TestCase):
 
     def test_show_server(self):
         req = fakes.HTTPRequest.blank(
-            '/fake/servers/%s' % MANUAL_INSTANCE_UUID)
+            '/%s/servers/%s' % (self.project_id, MANUAL_INSTANCE_UUID))
         res = req.get_response(self.app)
         server_dict = jsonutils.loads(res.body)['server']
         self.assertDiskConfig(server_dict, 'MANUAL')
 
         req = fakes.HTTPRequest.blank(
-            '/fake/servers/%s' % AUTO_INSTANCE_UUID)
+            '/%s/servers/%s' % (self.project_id, AUTO_INSTANCE_UUID))
         res = req.get_response(self.app)
         server_dict = jsonutils.loads(res.body)['server']
         self.assertDiskConfig(server_dict, 'AUTO')
 
     def test_detail_servers(self):
-        req = fakes.HTTPRequest.blank('/fake/servers/detail')
+        req = fakes.HTTPRequest.blank('/%s/servers/detail' % self.project_id)
         res = req.get_response(self.app)
         server_dicts = jsonutils.loads(res.body)['servers']
 
@@ -156,19 +157,21 @@ class DiskConfigTestCaseV21(test.TestCase):
         self.flags(group='glance', api_servers=['http://localhost:9292'])
 
         req = fakes.HTTPRequest.blank(
-            '/fake/images/a440c04b-79fa-479c-bed1-0b816eaec379')
+            '/%s/images/a440c04b-79fa-479c-bed1-0b816eaec379' %
+            self.project_id)
         res = req.get_response(self.app)
         image_dict = jsonutils.loads(res.body)['image']
         self.assertDiskConfig(image_dict, 'MANUAL')
 
         req = fakes.HTTPRequest.blank(
-            '/fake/images/70a599e0-31e7-49b7-b260-868f441e862b')
+            '/%s/images/70a599e0-31e7-49b7-b260-868f441e862b' %
+            self.project_id)
         res = req.get_response(self.app)
         image_dict = jsonutils.loads(res.body)['image']
         self.assertDiskConfig(image_dict, 'AUTO')
 
     def test_detail_image(self):
-        req = fakes.HTTPRequest.blank('/fake/images/detail')
+        req = fakes.HTTPRequest.blank('/%s/images/detail' % self.project_id)
         res = req.get_response(self.app)
         image_dicts = jsonutils.loads(res.body)['images']
 
@@ -180,7 +183,7 @@ class DiskConfigTestCaseV21(test.TestCase):
                 self.assertDiskConfig(image_dict, expected)
 
     def test_create_server_override_auto(self):
-        req = fakes.HTTPRequest.blank('/fake/servers')
+        req = fakes.HTTPRequest.blank('/%s/servers' % self.project_id)
         req.method = 'POST'
         req.content_type = 'application/json'
         body = {'server': {
@@ -196,7 +199,7 @@ class DiskConfigTestCaseV21(test.TestCase):
         self.assertDiskConfig(server_dict, 'AUTO')
 
     def test_create_server_override_manual(self):
-        req = fakes.HTTPRequest.blank('/fake/servers')
+        req = fakes.HTTPRequest.blank('/%s/servers' % self.project_id)
         req.method = 'POST'
         req.content_type = 'application/json'
         body = {'server': {
@@ -215,7 +218,7 @@ class DiskConfigTestCaseV21(test.TestCase):
         """If user doesn't pass in diskConfig for server, use image metadata
         to specify AUTO or MANUAL.
         """
-        req = fakes.HTTPRequest.blank('/fake/servers')
+        req = fakes.HTTPRequest.blank('/%s/servers' % self.project_id)
         req.method = 'POST'
         req.content_type = 'application/json'
         body = {'server': {
@@ -229,7 +232,7 @@ class DiskConfigTestCaseV21(test.TestCase):
         server_dict = jsonutils.loads(res.body)['server']
         self.assertDiskConfig(server_dict, 'MANUAL')
 
-        req = fakes.HTTPRequest.blank('/fake/servers')
+        req = fakes.HTTPRequest.blank('/%s/servers' % self.project_id)
         req.method = 'POST'
         req.content_type = 'application/json'
         body = {'server': {
@@ -244,7 +247,7 @@ class DiskConfigTestCaseV21(test.TestCase):
         self.assertDiskConfig(server_dict, 'AUTO')
 
     def test_create_server_detect_from_image_disabled_goes_to_manual(self):
-        req = fakes.HTTPRequest.blank('/fake/servers')
+        req = fakes.HTTPRequest.blank('/%s/servers' % self.project_id)
         req.method = 'POST'
         req.content_type = 'application/json'
         body = {'server': {
@@ -259,7 +262,7 @@ class DiskConfigTestCaseV21(test.TestCase):
         self.assertDiskConfig(server_dict, 'MANUAL')
 
     def test_create_server_errors_when_disabled_and_auto(self):
-        req = fakes.HTTPRequest.blank('/fake/servers')
+        req = fakes.HTTPRequest.blank('/%s/servers' % self.project_id)
         req.method = 'POST'
         req.content_type = 'application/json'
         body = {'server': {
@@ -274,7 +277,7 @@ class DiskConfigTestCaseV21(test.TestCase):
         self.assertEqual(res.status_int, 400)
 
     def test_create_server_when_disabled_and_manual(self):
-        req = fakes.HTTPRequest.blank('/fake/servers')
+        req = fakes.HTTPRequest.blank('/%s/servers' % self.project_id)
         req.method = 'POST'
         req.content_type = 'application/json'
         body = {'server': {
@@ -293,7 +296,7 @@ class DiskConfigTestCaseV21(test.TestCase):
     def _test_update_server_disk_config(self, uuid, disk_config,
                                         get_instance_mock):
         req = fakes.HTTPRequest.blank(
-            '/fake/servers/%s' % uuid)
+            '/%s/servers/%s' % (self.project_id, uuid))
         req.method = 'PUT'
         req.content_type = 'application/json'
         body = {'server': {API_DISK_CONFIG: disk_config}}
@@ -318,7 +321,7 @@ class DiskConfigTestCaseV21(test.TestCase):
     def test_update_server_invalid_disk_config(self):
         # Return BadRequest if user passes an invalid diskConfig value.
         req = fakes.HTTPRequest.blank(
-            '/fake/servers/%s' % MANUAL_INSTANCE_UUID)
+            '/%s/servers/%s' % (self.project_id, MANUAL_INSTANCE_UUID))
         req.method = 'PUT'
         req.content_type = 'application/json'
         body = {'server': {API_DISK_CONFIG: 'server_test'}}
@@ -335,7 +338,7 @@ class DiskConfigTestCaseV21(test.TestCase):
     def _test_rebuild_server_disk_config(self, uuid, disk_config,
                                          get_instance_mock):
         req = fakes.HTTPRequest.blank(
-            '/fake/servers/%s/action' % uuid)
+            '/%s/servers/%s/action' % (self.project_id, uuid))
         req.method = 'POST'
         req.content_type = 'application/json'
         auto_disk_config = (disk_config == 'AUTO')
@@ -361,7 +364,7 @@ class DiskConfigTestCaseV21(test.TestCase):
         self._test_rebuild_server_disk_config(MANUAL_INSTANCE_UUID, 'MANUAL')
 
     def test_create_server_with_auto_disk_config(self):
-        req = fakes.HTTPRequest.blank('/fake/servers')
+        req = fakes.HTTPRequest.blank('/%s/servers' % self.project_id)
         req.method = 'POST'
         req.content_type = 'application/json'
         body = {'server': {
@@ -387,7 +390,7 @@ class DiskConfigTestCaseV21(test.TestCase):
     @mock.patch('nova.api.openstack.common.get_instance')
     def test_rebuild_server_with_auto_disk_config(self, get_instance_mock):
         req = fakes.HTTPRequest.blank(
-            '/fake/servers/%s/action' % AUTO_INSTANCE_UUID)
+            '/%s/servers/%s/action' % (self.project_id, AUTO_INSTANCE_UUID))
         req.method = 'POST'
         req.content_type = 'application/json'
         instance = fakes.stub_instance_obj(
@@ -414,7 +417,7 @@ class DiskConfigTestCaseV21(test.TestCase):
 
     def test_resize_server_with_auto_disk_config(self):
         req = fakes.HTTPRequest.blank(
-            '/fake/servers/%s/action' % AUTO_INSTANCE_UUID)
+            '/%s/servers/%s/action' % (self.project_id, AUTO_INSTANCE_UUID))
         req.method = 'POST'
         req.content_type = 'application/json'
         body = {"resize": {

@@ -138,14 +138,14 @@ class ExtendedIpsMacTestV21(test.TestCase):
         self.assertJsonEqual(ALL_IPS, results)
 
     def test_show(self):
-        url = '/v2/fake/servers/%s' % UUID3
+        url = '/v2/%s/servers/%s' % (fakes.FAKE_PROJECT_ID, UUID3)
         res = self._make_request(url)
 
         self.assertEqual(200, res.status_int)
         self.assertServerStates(self._get_server(res.body))
 
     def test_detail(self):
-        url = '/v2/fake/servers/detail'
+        url = '/v2/%s/servers/detail' % fakes.FAKE_PROJECT_ID
         res = self._make_request(url)
 
         self.assertEqual(200, res.status_int)

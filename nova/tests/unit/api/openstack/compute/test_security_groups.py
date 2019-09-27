@@ -311,7 +311,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self.stub_out('nova.db.api.security_group_get_by_project',
                       return_security_groups)
 
-        path = '/v2/fake/os-security-groups'
+        path = '/v2/%s/os-security-groups' % fakes.FAKE_PROJECT_ID
         if limited:
             path += '?offset=1&limit=1'
         req = fakes.HTTPRequest.blank(path, use_admin_context=True)
@@ -359,7 +359,8 @@ class TestSecurityGroupsV21(test.TestCase):
 
         self.assertEqual(res_dict, expected)
         mock_list.assert_called_once_with(self.req.environ['nova.context'],
-                                          project='fake', search_opts={})
+                                          project=fakes.FAKE_PROJECT_ID,
+                                          search_opts={})
 
     def test_get_security_group_list_all_tenants(self):
         all_groups = []
@@ -389,7 +390,7 @@ class TestSecurityGroupsV21(test.TestCase):
         self.stub_out('nova.db.api.security_group_get_by_project',
                       return_tenant_security_groups)
 
-        path = '/v2/fake/os-security-groups'
+        path = '/v2/%s/os-security-groups' % fakes.FAKE_PROJECT_ID
 
         req = fakes.HTTPRequest.blank(path, use_admin_context=True)
         res_dict = self.controller.index(req)
@@ -1350,7 +1351,7 @@ def fake_compute_create(*args, **kwargs):
 
 
 class SecurityGroupsOutputTestV21(test.TestCase):
-    base_url = '/v2/fake/servers'
+    base_url = '/v2/%s/servers' % fakes.FAKE_PROJECT_ID
     content_type = 'application/json'
 
     def setUp(self):

@@ -73,7 +73,8 @@ def wsgi_app_v21(fake_auth_context=None, v2_compatible=False,
     if fake_auth_context is not None:
         ctxt = fake_auth_context
     else:
-        ctxt = context.RequestContext('fake', 'fake', auth_token=True)
+        ctxt = context.RequestContext(
+                'fake', FAKE_PROJECT_ID, auth_token=True)
     api_v21 = openstack_api.FaultWrapper(
           api_auth.InjectContext(ctxt, inner_app_v21))
     mapper = urlmap.URLMap()
@@ -269,7 +270,7 @@ class HTTPRequest(os_wsgi.Request):
     def blank(cls, *args, **kwargs):
         defaults = {'base_url': 'http://localhost/v2'}
         use_admin_context = kwargs.pop('use_admin_context', False)
-        project_id = kwargs.pop('project_id', 'fake')
+        project_id = kwargs.pop('project_id', FAKE_PROJECT_ID)
         version = kwargs.pop('version', os_wsgi.DEFAULT_API_VERSION)
         defaults.update(kwargs)
         out = super(HTTPRequest, cls).blank(*args, **defaults)
