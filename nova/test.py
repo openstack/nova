@@ -303,6 +303,14 @@ class TestCase(testtools.TestCase):
         # Reset the compute RPC API globals (mostly the _ROUTER).
         compute_rpcapi.reset_globals()
 
+        # TODO(takashin): Remove MoxStubout fixture
+        # after removing tests which uses mox and are related to
+        # nova-network in the following files.
+        #
+        # - nova/tests/unit/api/openstack/compute/test_floating_ips.py
+        # - nova/tests/unit/api/openstack/compute/test_security_groups.py
+        # - nova/tests/unit/fake_network.py
+        # - nova/tests/unit/network/test_manager.py
         mox_fixture = self.useFixture(moxstubout.MoxStubout())
         self.mox = mox_fixture.mox
         self.stubs = mox_fixture.stubs
