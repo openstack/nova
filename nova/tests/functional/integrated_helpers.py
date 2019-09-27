@@ -929,3 +929,13 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
             self.api, server, instance_actions.CONFIRM_RESIZE,
             'compute_confirm_resize', 'success')
         return server
+
+    def get_unused_flavor_name_id(self):
+        flavors = self.api.get_flavors()
+        flavor_names = list()
+        flavor_ids = list()
+        [(flavor_names.append(flavor['name']),
+         flavor_ids.append(flavor['id']))
+         for flavor in flavors]
+        return (generate_new_element(flavor_names, 'flavor'),
+                int(generate_new_element(flavor_ids, '', True)))
