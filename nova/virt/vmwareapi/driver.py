@@ -584,18 +584,22 @@ class VMwareVCDriver(driver.ComputeDriver):
             }
         }
         if stats['cpu']['max_vcpus_per_host'] > 0:
+            reserved_vcpus = stats['cpu'].get('reserved_vcpus', 0)
+            reserved_vcpus += CONF.reserved_host_cpus
             result.update({orc.VCPU: {
                 'total': stats['cpu']['vcpus'],
-                'reserved': CONF.reserved_host_cpus,
+                'reserved': reserved_vcpus,
                 'min_unit': 1,
                 'max_unit': stats['cpu']['max_vcpus_per_host'],
                 'step_size': 1,
                 'allocation_ratio': ratios[orc.VCPU],
             }})
         if stats['mem']['max_mem_mb_per_host'] > 0:
+            reserved_memory_mb = stats['mem'].get('reserved_memory_mb', 0)
+            reserved_memory_mb += CONF.reserved_host_memory_mb
             result.update({orc.MEMORY_MB: {
                 'total': stats['mem']['total'],
-                'reserved': CONF.reserved_host_memory_mb,
+                'reserved': reserved_memory_mb,
                 'min_unit': 1,
                 'max_unit': stats['mem']['max_mem_mb_per_host'],
                 'step_size': 1,
