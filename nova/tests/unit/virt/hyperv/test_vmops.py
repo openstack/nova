@@ -1449,10 +1449,11 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         self._vmops._pathutils.get_instance_dir.assert_called_once_with(
             mock.sentinel.FAKE_VM_NAME,
             remote_server=mock.sentinel.FAKE_DEST_HOST)
-        mock_copy.has_calls(mock.call(mock.sentinel.FAKE_DVD_PATH1,
-                                      mock.sentinel.FAKE_DEST_PATH),
-                            mock.call(mock.sentinel.FAKE_DVD_PATH2,
-                                      mock.sentinel.FAKE_DEST_PATH))
+        self.assertEqual(2, mock_copy.call_count)
+        mock_copy.assert_has_calls([mock.call(mock.sentinel.FAKE_DVD_PATH1,
+                                              mock.sentinel.FAKE_DEST_PATH),
+                                    mock.call(mock.sentinel.FAKE_DVD_PATH2,
+                                              mock.sentinel.FAKE_DEST_PATH)])
 
     def test_plug_vifs(self):
         mock_instance = fake_instance.fake_instance_obj(self.context)

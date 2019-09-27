@@ -304,9 +304,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.compute.update_available_resource(self.context)
         get_db_nodes.assert_called_once_with(self.context, use_slave=True,
                                              startup=False)
-        update_mock.has_calls(
-            [mock.call(self.context, node) for node in avail_nodes_l]
-        )
+        self.assertEqual(len(avail_nodes_l), update_mock.call_count)
+        update_mock.assert_has_calls(
+            [mock.call(self.context, node) for node in avail_nodes_l])
 
         # First node in set should have been removed from DB
         for db_node in db_nodes:
@@ -547,7 +547,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         sec_groups = 'fake-sec-groups'
         final_result = 'meow'
 
-        expected_sleep_times = [1, 2, 4, 8, 16, 30, 30, 30]
+        expected_sleep_times = [mock.call(t) for t in
+                                (1, 2, 4, 8, 16, 30, 30)]
 
         with mock.patch.object(
                 self.compute.network_api, 'allocate_for_instance',
@@ -558,7 +559,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                        sec_groups,
                                                        is_vpn)
 
-        mock_sleep.has_calls(expected_sleep_times)
+        self.assertEqual(7, mock_sleep.call_count)
+        mock_sleep.assert_has_calls(expected_sleep_times)
         self.assertEqual(final_result, res)
         # Ensure save is not called in while allocating networks, the instance
         # is saved after the allocation.
