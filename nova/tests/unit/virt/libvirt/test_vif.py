@@ -1048,7 +1048,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                     'tap', run_as_root=True, check_exit_code=[0, 2, 254]),
                 mock.call('ip', 'link', 'set', 'tap-xxx-yyy-zzz', 'up',
                     run_as_root=True, check_exit_code=[0, 2, 254])])
-            mock_plug_contrail.called_once_with(
+            mock_plug_contrail.assert_called_once_with(
                 instance.project_id, instance.uuid, instance.display_name,
                 self.vif_vrouter['id'], self.vif_vrouter['network']['id'],
                 'NovaVMPort', self.vif_vrouter['devname'],
@@ -1071,7 +1071,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         mock_create_tap_dev.assert_called_once_with('tap-xxx-yyy-zzz',
                                                     multiqueue=True)
 
-        mock_plug_contrail.called_once_with(
+        mock_plug_contrail.assert_called_once_with(
                 instance.project_id, instance.uuid, instance.display_name,
                 self.vif_vrouter['id'], self.vif_vrouter['network']['id'],
                 'NovaVMPort', self.vif_vrouter['devname'],

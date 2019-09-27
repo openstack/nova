@@ -291,15 +291,15 @@ class GetNetNameByVfPciAddressTestCase(test.NoDBTestCase):
         self.mock_get_ifname.return_value = self.if_name
         net_name = utils.get_net_name_by_vf_pci_address(self.pci_address)
         self.assertEqual(ref_net_name, net_name)
-        self.mock_get_mac.called_once_with(self.pci_address)
-        self.mock_get_ifname.called_once_with(self.pci_address)
+        self.mock_get_mac.assert_called_once_with(self.pci_address)
+        self.mock_get_ifname.assert_called_once_with(self.pci_address)
 
     def test_wrong_mac(self):
         self.mock_get_mac.side_effect = (
             exception.PciDeviceNotFoundById(self.pci_address))
         net_name = utils.get_net_name_by_vf_pci_address(self.pci_address)
         self.assertIsNone(net_name)
-        self.mock_get_mac.called_once_with(self.pci_address)
+        self.mock_get_mac.assert_called_once_with(self.pci_address)
         self.mock_get_ifname.assert_not_called()
 
     def test_wrong_ifname(self):
@@ -308,5 +308,5 @@ class GetNetNameByVfPciAddressTestCase(test.NoDBTestCase):
             exception.PciDeviceNotFoundById(self.pci_address))
         net_name = utils.get_net_name_by_vf_pci_address(self.pci_address)
         self.assertIsNone(net_name)
-        self.mock_get_mac.called_once_with(self.pci_address)
-        self.mock_get_ifname.called_once_with(self.pci_address)
+        self.mock_get_mac.assert_called_once_with(self.pci_address)
+        self.mock_get_ifname.assert_called_once_with(self.pci_address)
