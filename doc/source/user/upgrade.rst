@@ -70,8 +70,11 @@ same time.
      including all the python dependencies.
 
    * Using the newly installed nova code, run the DB sync. First run
-     ``nova-manage api_db sync``, then ``nova-manage db sync``. In a multi-cell
-     environment, ``nova-manage db sync`` must currently be run in each cell.
+     ``nova-manage api_db sync``, then ``nova-manage db sync``. ``nova-manage
+     db sync`` should be run for all cell databases, including ``cell0``. If
+     necessary, the ``--config-file`` argument can be used to point to the
+     correct ``nova.conf`` file for the given cell.
+
      These schema change operations should have minimal or no effect on
      performance, and should not cause any operations to fail.
 
