@@ -36,8 +36,8 @@ If you are new to Nova, please read this first: :ref:`getting_involved`.
 Dates overview
 ==============
 
-For Train, please see:
-https://wiki.openstack.org/wiki/Nova/Train_Release_Schedule
+For Ussuri, please see:
+https://wiki.openstack.org/wiki/Nova/Ussuri_Release_Schedule
 
 .. note: Throughout this document any link which references the name of a
          release cycle in the link can usually be changed to the name of the
@@ -102,9 +102,9 @@ Why we have a Spec Freeze:
 
 By the freeze date, we expect all blueprints that will be approved for the
 cycle to be listed on launchpad and all relevant specs to be merged.
-For Train, blueprints can be found at
-https://blueprints.launchpad.net/nova/train and specs at
-https://specs.openstack.org/openstack/nova-specs/specs/train/index.html
+For Ussuri, blueprints can be found at
+https://blueprints.launchpad.net/nova/ussuri and specs at
+https://specs.openstack.org/openstack/nova-specs/specs/ussuri/index.html
 
 Starting with Liberty, we are keeping a backlog open for submission at all
 times.
@@ -124,59 +124,6 @@ in the appropriate place in the meeting agenda here (ideally make
 yourself available to discuss the blueprint, or alternatively make your
 case on the ML before the meeting):
 https://wiki.openstack.org/wiki/Meetings/Nova#Agenda_for_next_meeting
-
-Non-priority Feature Freeze
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This is a Nova specific process.
-
-This only applies to low priority blueprints in this list:
-https://blueprints.launchpad.net/nova/train
-
-We currently have a very finite amount of review bandwidth. In order to
-make code review time for the agreed community wide priorities, we have
-to not do some other things. In each cycle, milestones are used to bound
-when certain types of work will be active and reviewed and to avoid crushing
-the gate with too much code near the end of the cycle.
-
-For example, in the Liberty cycle, we reserved the liberty-3 milestone for
-priority features and bug fixes and did not merge any non-priority things
-during liberty-3. This meant that liberty-2 was the "Feature Freeze" for
-blueprints that were not a priority for the Liberty cycle.
-
-You can see the list of priorities for each release:
-http://specs.openstack.org/openstack/nova-specs/#priorities
-
-For things that are very close to merging, it's possible to request an
-exception for one week after the freeze date, given the patches get
-enough +2s from the core team to get the code merged. But we expect this
-list to be zero, if everything goes to plan (no massive gate failures,
-etc). For history of the process see:
-http://lists.openstack.org/pipermail/openstack-dev/2015-July/070920.html
-
-Exception process:
-
--  Please add request in here:
-   https://etherpad.openstack.org/p/train-nova-non-priority-feature-freeze
-   (ideally with core reviewers to sponsor your patch, normally the
-   folks who have already viewed those patches)
--  make sure you make your request before the end of the feature freeze
-   exception period
--  nova-drivers will meet to decide what gets an exception (for some history
-   see:
-   http://lists.openstack.org/pipermail/openstack-dev/2015-February/056208.html)
--  an initial list of exceptions (probably just a `PTL`_ compiled list at
-   that point) will be available for discussion during the next Nova meeting
--  the aim is to merge the code for all exceptions early in the following week
-
-Alternatives:
-
--  It was hoped to make this a continuous process using "slots" to
-   control what gets reviewed, but this was rejected by the community
-   when it was last discussed. There is hope this can be resurrected to
-   avoid the "lumpy" nature of this process.
--  Currently the runways/kanban ideas are blocked on us adopting
-   something like phabricator that could support such workflows
 
 String Freeze
 ~~~~~~~~~~~~~
@@ -382,8 +329,6 @@ blueprint-only features:
 For blueprint and spec features, do everything for blueprint-only
 features and also:
 
--  If it's a project or subteam priority, add it to:
-   https://etherpad.openstack.org/p/train-nova-subteam-tracking
 -  Ensure your spec is approved for the current release cycle.
 
 If your code is a project or subteam priority, the cores interested in
@@ -786,13 +731,9 @@ merge greater strength. In addition, having the subteam focus review efforts
 on a subset of patches should help concentrate the nova-core reviews they
 get, and increase the velocity of getting code merged.
 
-The first part is for subgroups to show they can do a great job of
-recommending patches. This is starting in here:
-https://etherpad.openstack.org/p/train-nova-subteam-tracking
-
-Ideally this would be done with gerrit user "tags" rather than an
-etherpad. There are some investigations by sdague in how feasible it
-would be to add tags to gerrit.
+Ideally this would be done with gerrit user "tags".
+There are some investigations by sdague in how feasible it would be to add
+tags to gerrit.
 
 Stop having to submit a spec for each release
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
