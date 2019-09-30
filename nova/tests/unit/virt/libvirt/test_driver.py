@@ -15822,8 +15822,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_domain.undefine.assert_called_once_with()
         mock_save.assert_called_once_with()
 
+    @mock.patch('nova.utils.get_image_from_system_metadata')
     @mock.patch.object(objects.Instance, 'save')
-    def test_destroy_removes_nvram(self, mock_save):
+    def test_destroy_removes_nvram_host_support_uefi(self,
+                                                     mock_save,
+                                                     mock_image):
         mock_domain = mock.Mock(fakelibvirt.virDomain)
         mock_domain.ID.return_value = 123
 
@@ -15835,15 +15838,47 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             state=power_state.SHUTDOWN, internal_id=-1))
 
         instance = objects.Instance(self.context, **self.test_instance)
+        mock_image.return_value = {"properties": {
+            "hw_firmware_type": "bios"}}
         drvr.destroy(self.context, instance, [])
 
         self.assertEqual(1, mock_domain.ID.call_count)
         mock_domain.destroy.assert_called_once_with()
-        # undefineFlags should now be called with 5 as uefi us supported
+        # NVRAM flag should not called only host support uefi
         mock_domain.undefineFlags.assert_called_once_with(
+            fakelibvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE
+        )
+        mock_domain.undefine.assert_not_called()
+        mock_save.assert_called_once_with()
+
+    @mock.patch('nova.utils.get_image_from_system_metadata')
+    @mock.patch.object(objects.Instance, 'save')
+    def test_destroy_removes_nvram_host_and_guest_support_uefi(self,
+                                                               mock_save,
+                                                               mock_image):
+        mock_domain = mock.Mock(fakelibvirt.virDomain)
+        mock_domain.ID.return_value = 123
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr._host._get_domain = mock.Mock(return_value=mock_domain)
+        drvr._has_uefi_support = mock.Mock(return_value=True)
+        drvr.delete_instance_files = mock.Mock(return_value=None)
+        drvr.get_info = mock.Mock(return_value=hardware.InstanceInfo(
+            state=power_state.SHUTDOWN, internal_id=-1))
+
+        instance = objects.Instance(self.context, **self.test_instance)
+        mock_image.return_value = {"properties": {
+            "hw_firmware_type": "uefi"}}
+        drvr.destroy(self.context, instance, [])
+
+        self.assertEqual(1, mock_domain.ID.call_count)
+        mock_domain.destroy.assert_called_once_with()
+        # undefineFlags should now be called with 5 as uefi supported
+        # by both host and guest
+        mock_domain.undefineFlags.assert_has_calls([mock.call(
             fakelibvirt.VIR_DOMAIN_UNDEFINE_MANAGED_SAVE |
             fakelibvirt.VIR_DOMAIN_UNDEFINE_NVRAM
-        )
+        )])
         mock_domain.undefine.assert_not_called()
         mock_save.assert_called_once_with()
 
@@ -18730,6 +18765,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def _test_swap_volume(self, mock_is_job_complete, source_type,
                           resize=False, fail=False):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        hw_firmware_type = image_meta.properties.get(
+            'hw_firmware_type')
 
         mock_dom = mock.MagicMock()
         guest = libvirt_guest.Guest(mock_dom)
@@ -18769,10 +18807,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock_conf = mock.MagicMock(source_type=source_type,
                                        source_path=dstfile)
             if not fail:
-                drvr._swap_volume(guest, srcfile, mock_conf, 1)
+                drvr._swap_volume(guest, srcfile, mock_conf, 1,
+                                  hw_firmware_type)
             else:
                 self.assertRaises(expected_exception, drvr._swap_volume, guest,
-                                  srcfile, mock_conf, 1)
+                                  srcfile, mock_conf, 1, hw_firmware_type)
 
             # Verify we read the original persistent config.
             expected_call_count = 1
@@ -18829,6 +18868,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                          swap_volume, disconnect_volume):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
         instance = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        hw_firmware_type = image_meta.properties.get(
+            'hw_firmware_type')
         old_connection_info = {'driver_volume_type': 'fake',
                                'serial': 'old-volume-id',
                                'data': {'device_path': '/fake-old-volume',
@@ -18861,7 +18903,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         connect_volume.assert_called_once_with(self.context,
                                                new_connection_info, instance)
 
-        swap_volume.assert_called_once_with(guest, 'vdb', conf, 1)
+        swap_volume.assert_called_once_with(guest, 'vdb',
+                                            conf, 1, hw_firmware_type)
         disconnect_volume.assert_called_once_with(self.context,
                                                   old_connection_info,
                                                   instance)
