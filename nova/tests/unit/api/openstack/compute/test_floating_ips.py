@@ -721,14 +721,16 @@ class FloatingIpTestV21(test.TestCase):
 
     def test_associate_floating_ip_bad_address_key(self):
         body = dict(addFloatingIp=dict(bad_address='10.10.10.11'))
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
+        req = fakes.HTTPRequest.blank(
+                '/v2/%s/servers/test_inst/action' % fakes.FAKE_PROJECT_ID)
         self.assertRaises(self.validation_error,
                           self.manager._add_floating_ip, req, 'test_inst',
                           body=body)
 
     def test_associate_floating_ip_bad_addfloatingip_key(self):
         body = dict(bad_addFloatingIp=dict(address='10.10.10.11'))
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
+        req = fakes.HTTPRequest.blank(
+                '/v2/%s/servers/test_inst/action' % fakes.FAKE_PROJECT_ID)
         self.assertRaises(self.validation_error,
                           self.manager._add_floating_ip, req, 'test_inst',
                           body=body)

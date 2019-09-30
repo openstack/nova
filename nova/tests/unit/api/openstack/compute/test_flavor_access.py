@@ -126,7 +126,7 @@ class FlavorAccessTestV21(test.NoDBTestCase):
     api_version = "2.1"
     FlavorAccessController = flavor_access_v21.FlavorAccessController
     FlavorActionController = flavor_access_v21.FlavorActionController
-    _prefix = "/v2/fake"
+    _prefix = "/v2/%s" % fakes.FAKE_PROJECT_ID
     validation_ex = exception.ValidationError
 
     def setUp(self):
@@ -139,8 +139,8 @@ class FlavorAccessTestV21(test.NoDBTestCase):
                       lambda ctx, project_id: True)
 
         self.req = FakeRequest()
-        self.req.environ = {"nova.context": context.RequestContext('fake_user',
-                                                                   'fake')}
+        self.req.environ = {"nova.context": context.RequestContext(
+            'fake_user', fakes.FAKE_PROJECT_ID)}
         self.stub_out('nova.objects.Flavor._flavor_get_by_flavor_id_from_db',
                       fake_get_flavor_by_flavor_id)
         self.stub_out('nova.objects.flavor._flavor_get_all_from_db',

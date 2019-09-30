@@ -25,14 +25,14 @@ from nova.tests.unit.api.openstack import fakes
 
 class CertificatesTestV21(test.NoDBTestCase):
     certificates = certificates_v21
-    url = '/v2/fake/os-certificates'
+    url = '/v2/%s/os-certificates' % fakes.FAKE_PROJECT_ID
     certificate_show_extension = 'os_compute_api:os-certificates:show'
     certificate_create_extension = \
         'os_compute_api:os-certificates:create'
 
     def setUp(self):
         super(CertificatesTestV21, self).setUp()
-        self.context = context.RequestContext('fake', 'fake')
+        self.context = context.RequestContext('fake', fakes.FAKE_PROJECT_ID)
         self.controller = self.certificates.CertificatesController()
         self.req = fakes.HTTPRequest.blank('')
 

@@ -682,7 +682,7 @@ class ServerGroupTestV21(test.NoDBTestCase):
         self.controller.delete(self.req, ig_uuid)
 
     def test_delete_server_group_rbac_admin_only(self):
-        ctx = context.RequestContext('fake_user', 'fake')
+        ctx = context.RequestContext('fake_user', fakes.FAKE_PROJECT_ID)
 
         # override policy to restrict to admin
         rule_name = sg_policies.POLICY_ROOT % 'delete'

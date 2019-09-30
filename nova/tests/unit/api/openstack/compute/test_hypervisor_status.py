@@ -41,8 +41,9 @@ class HypervisorStatusTestV21(test.NoDBTestCase):
             return_value=True)
 
     def _get_request(self):
-        return fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/detail',
-                                       use_admin_context=True)
+        return fakes.HTTPRequest.blank(
+                '/v2/%s/os-hypervisors/detail' % fakes.FAKE_PROJECT_ID,
+                use_admin_context=True)
 
     def test_view_hypervisor_service_status(self):
         self._prepare_extension()

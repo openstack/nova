@@ -25,7 +25,7 @@ project_id = uuidutils.generate_uuid(dashed=False)
 
 class CloudpipeTestV21(test.NoDBTestCase):
     cloudpipe = cloudpipe_v21
-    url = '/v2/fake/os-cloudpipe'
+    url = '/v2/%s/os-cloudpipe' % fakes.FAKE_PROJECT_ID
 
     def setUp(self):
         super(CloudpipeTestV21, self).setUp()

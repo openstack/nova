@@ -57,25 +57,29 @@ class TestSecurityGroupDefaultRulesNeutronV21(test.TestCase):
     def test_create_security_group_default_rule_not_implemented_neutron(self):
         sgr = security_group_default_rule_template()
         req = fakes.HTTPRequest.blank(
-            '/v2/fake/os-security-group-default-rules', use_admin_context=True)
+            '/v2/%s/os-security-group-default-rules' % fakes.FAKE_PROJECT_ID,
+            use_admin_context=True)
         self.assertRaises(webob.exc.HTTPNotImplemented, self.controller.create,
                           req, {'security_group_default_rule': sgr})
 
     def test_security_group_default_rules_list_not_implemented_neutron(self):
         req = fakes.HTTPRequest.blank(
-            '/v2/fake/os-security-group-default-rules', use_admin_context=True)
+            '/v2/%s/os-security-group-default-rules' % fakes.FAKE_PROJECT_ID,
+            use_admin_context=True)
         self.assertRaises(webob.exc.HTTPNotImplemented, self.controller.index,
                           req)
 
     def test_security_group_default_rules_show_not_implemented_neutron(self):
         req = fakes.HTTPRequest.blank(
-            '/v2/fake/os-security-group-default-rules', use_admin_context=True)
+            '/v2/%s/os-security-group-default-rules' % fakes.FAKE_PROJECT_ID,
+            use_admin_context=True)
         self.assertRaises(webob.exc.HTTPNotImplemented, self.controller.show,
                           req, '602ed77c-a076-4f9b-a617-f93b847b62c5')
 
     def test_security_group_default_rules_delete_not_implemented_neutron(self):
         req = fakes.HTTPRequest.blank(
-            '/v2/fake/os-security-group-default-rules', use_admin_context=True)
+            '/v2/%s/os-security-group-default-rules' % fakes.FAKE_PROJECT_ID,
+            use_admin_context=True)
         self.assertRaises(webob.exc.HTTPNotImplemented, self.controller.delete,
                           req, '602ed77c-a076-4f9b-a617-f93b847b62c5')
 
@@ -89,7 +93,7 @@ class TestSecurityGroupDefaultRulesV21(test.TestCase):
         self.flags(use_neutron=False)
         self.controller = self.controller_cls()
         self.req = fakes.HTTPRequest.blank(
-            '/v2/fake/os-security-group-default-rules')
+            '/v2/%s/os-security-group-default-rules' % fakes.FAKE_PROJECT_ID)
 
     def test_create_security_group_default_rule(self):
         sgr = security_group_default_rule_template()

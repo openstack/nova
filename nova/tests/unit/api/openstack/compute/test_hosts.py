@@ -111,7 +111,7 @@ def _create_instance_dict(**kwargs):
     inst['image_ref'] = 'cedef40a-ed67-4d10-800e-17455edce175'
     inst['reservation_id'] = 'r-fakeres'
     inst['user_id'] = kwargs.get('user_id', 'admin')
-    inst['project_id'] = kwargs.get('project_id', 'fake')
+    inst['project_id'] = kwargs.get('project_id', fakes.FAKE_PROJECT_ID)
     inst['instance_type_id'] = '1'
     if 'host' in kwargs:
         inst['host'] = kwargs.get('host')

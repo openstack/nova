@@ -19,6 +19,8 @@ from nova.tests.unit.api.openstack import fakes
 
 
 class APIVersionRequestTests(test.NoDBTestCase):
+    base_path = '/%s' % fakes.FAKE_PROJECT_ID
+
     def test_valid_version_strings(self):
         def _test_string(version, exp_major, exp_minor):
             v = api_version_request.APIVersionRequest(version)
@@ -126,7 +128,7 @@ class APIVersionRequestTests(test.NoDBTestCase):
                           api_version_request.APIVersionRequest().get_string)
 
     def test_is_supported_min_version(self):
-        req = fakes.HTTPRequest.blank('/fake', version='2.5')
+        req = fakes.HTTPRequest.blank(self.base_path, version='2.5')
 
         self.assertTrue(api_version_request.is_supported(
             req, min_version='2.4'))
@@ -136,7 +138,7 @@ class APIVersionRequestTests(test.NoDBTestCase):
             req, min_version='2.6'))
 
     def test_is_supported_max_version(self):
-        req = fakes.HTTPRequest.blank('/fake', version='2.5')
+        req = fakes.HTTPRequest.blank(self.base_path, version='2.5')
 
         self.assertFalse(api_version_request.is_supported(
             req, max_version='2.4'))
@@ -146,7 +148,7 @@ class APIVersionRequestTests(test.NoDBTestCase):
             req, max_version='2.6'))
 
     def test_is_supported_min_and_max_version(self):
-        req = fakes.HTTPRequest.blank('/fake', version='2.5')
+        req = fakes.HTTPRequest.blank(self.base_path, version='2.5')
 
         self.assertFalse(api_version_request.is_supported(
             req, min_version='2.3', max_version='2.4'))

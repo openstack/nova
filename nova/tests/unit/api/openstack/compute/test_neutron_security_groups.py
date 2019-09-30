@@ -165,8 +165,9 @@ class TestNeutronSecurityGroupsV21(
         self._create_port(
             network_id=net['network']['id'], security_groups=[sg['id']],
             device_id=test_security_groups.UUID_SERVER)
-        expected = [{'rules': [], 'tenant_id': 'fake', 'id': sg['id'],
-                    'name': 'test', 'description': 'test-description'}]
+        expected = [{'rules': [], 'tenant_id': fakes.FAKE_PROJECT_ID,
+                     'id': sg['id'], 'name': 'test',
+                     'description': 'test-description'}]
         req = fakes.HTTPRequest.blank(
                 '/v2/%s/servers/%s/os-security-groups'
                 % (fakes.FAKE_PROJECT_ID, test_security_groups.UUID_SERVER))
@@ -670,7 +671,8 @@ class MockClient(object):
         # add default security group
         if not len(self._fake_security_groups):
             ret = {'name': 'default', 'description': 'default',
-                   'tenant_id': 'fake_tenant', 'security_group_rules': [],
+                   'tenant_id': fakes.FAKE_PROJECT_ID,
+                   'security_group_rules': [],
                    'id': uuidutils.generate_uuid()}
             self._fake_security_groups[ret['id']] = ret
 
@@ -695,7 +697,7 @@ class MockClient(object):
             msg = 'Security Group name great than 255'
             raise n_exc.NeutronClientException(message=msg, status_code=401)
         ret = {'name': s.get('name'), 'description': s.get('description'),
-               'tenant_id': 'fake', 'security_group_rules': [],
+               'tenant_id': fakes.FAKE_PROJECT_ID, 'security_group_rules': [],
                'id': uuidutils.generate_uuid()}
 
         self._fake_security_groups[ret['id']] = ret
@@ -705,7 +707,7 @@ class MockClient(object):
         n = body.get('network')
         ret = {'status': 'ACTIVE', 'subnets': [], 'name': n.get('name'),
                'admin_state_up': n.get('admin_state_up', True),
-               'tenant_id': 'fake_tenant',
+               'tenant_id': fakes.FAKE_PROJECT_ID,
                'id': uuidutils.generate_uuid()}
         if 'port_security_enabled' in n:
             ret['port_security_enabled'] = n['port_security_enabled']
@@ -720,7 +722,7 @@ class MockClient(object):
             msg = 'Network %s not found' % s.get('network_id')
             raise n_exc.NeutronClientException(message=msg, status_code=404)
         ret = {'name': s.get('name'), 'network_id': s.get('network_id'),
-               'tenant_id': 'fake_tenant', 'cidr': s.get('cidr'),
+               'tenant_id': fakes.FAKE_PROJECT_ID, 'cidr': s.get('cidr'),
                'id': uuidutils.generate_uuid(), 'gateway_ip': '10.0.0.1'}
         net['subnets'].append(ret['id'])
         self._fake_networks[net['id']] = net

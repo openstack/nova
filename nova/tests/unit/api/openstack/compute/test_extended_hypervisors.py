@@ -63,8 +63,9 @@ class ExtendedHypervisorsTestV21(test.NoDBTestCase):
         self.controller = hypervisors_v21.HypervisorsController()
 
     def _get_request(self):
-        return fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/detail',
-                                       use_admin_context=True)
+        return fakes.HTTPRequest.blank(
+                '/v2/%s/os-hypervisors/detail' % fakes.FAKE_PROJECT_ID,
+                use_admin_context=True)
 
     def setUp(self):
         super(ExtendedHypervisorsTestV21, self).setUp()

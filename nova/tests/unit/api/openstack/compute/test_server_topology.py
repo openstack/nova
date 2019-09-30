@@ -32,7 +32,7 @@ class ServerTopologyTestV278(test.NoDBTestCase):
         super(ServerTopologyTestV278, self).setUp()
         self.uuid = uuids.instance
         self.req = fakes.HTTPRequest.blank(
-            '/v2/fake/servers/%s/topology' % self.uuid,
+            '/v2/%s/servers/%s/topology' % (fakes.FAKE_PROJECT_ID, self.uuid),
             version=self.api_version,
             use_admin_context=True)
         self.controller = server_topology.ServerTopologyController()
@@ -88,8 +88,8 @@ class ServerTopologyTestV278(test.NoDBTestCase):
 
     def test_hit_topology_before278(self):
         req = fakes.HTTPRequest.blank(
-                            '/v2/fake/servers/%s/topology' % self.uuid,
-                            version='2.77')
+            '/v2/%s/servers/%s/topology' % (fakes.FAKE_PROJECT_ID, self.uuid),
+            version='2.77')
         excep = self.assertRaises(exception.VersionNotFoundForAPIMethod,
                          self.controller.index,
                          req,

@@ -207,7 +207,7 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
 
 
 class ServersControllerCreateTestV21(test.TestCase):
-    base_url = '/v2/fake/'
+    base_url = '/v2/%s/' % fakes.FAKE_PROJECT_ID
 
     def setUp(self):
         """Shared implementation for tests below that create instance."""
