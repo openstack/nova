@@ -38,7 +38,6 @@ def fake_get_compute(context, host):
 
 class MigrateServerSamplesJsonTest(test_servers.ServersSampleBase):
     sample_dir = "os-migrate-server"
-    USE_NEUTRON = True
 
     def setUp(self):
         """setUp Method for MigrateServer api samples extension
@@ -153,7 +152,6 @@ class MigrateServerSamplesJsonTestV256(test_servers.ServersSampleBase):
     sample_dir = "os-migrate-server"
     microversion = '2.56'
     scenarios = [('v2_56', {'api_major_version': 'v2.1'})]
-    USE_NEUTRON = True
 
     def setUp(self):
         """setUp Method for MigrateServer api samples extension
@@ -193,7 +191,6 @@ class MigrateServerSamplesJsonTestV268(test_servers.ServersSampleBase):
     sample_dir = "os-migrate-server"
     microversion = '2.68'
     scenarios = [('v2_68', {'api_major_version': 'v2.1'})]
-    USE_NEUTRON = True
 
     def setUp(self):
         """setUp Method for MigrateServer api samples extension

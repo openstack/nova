@@ -82,7 +82,6 @@ def fake_get_rule(self, context, id):
 
 class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
     sample_dir = 'os-security-groups'
-    USE_NEUTRON = True
 
     def setUp(self):
         super(SecurityGroupsJsonTest, self).setUp()

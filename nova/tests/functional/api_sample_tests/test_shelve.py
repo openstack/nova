@@ -53,7 +53,6 @@ class UnshelveJson277Test(test_servers.ServersSampleBase):
     sample_dir = "os-shelve"
     microversion = '2.77'
     scenarios = [('v2_77', {'api_major_version': 'v2.1'})]
-    USE_NEUTRON = True
 
     def _test_server_action(self, uuid, template, action, subs=None):
         subs = subs or {}

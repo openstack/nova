@@ -69,8 +69,6 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
     _return_resv_id_parameter = 'return_reservation_id'
     _min_count_parameter = 'min_count'
 
-    USE_NEUTRON = True
-
     def setUp(self):
         self.computes = {}
         super(ServersTestBase, self).setUp()
