@@ -14,6 +14,7 @@ import fixtures
 from oslo_db import exception as oslo_db_exc
 
 from nova.compute import manager as compute_manager
+from nova import exception
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
@@ -93,3 +94,87 @@ class RescheduleBuildAvailabilityZoneUpCall(
         # Assert there is a fault injected on the server for the error we
         # expect.
         self.assertIn('CantStartEngineError', server['fault']['message'])
+
+
+class RescheduleMigrateAvailabilityZoneUpCall(
+        test.TestCase, integrated_helpers.InstanceHelperMixin):
+    """This is a regression test for the resize/cold migrate aspect of
+    bug 1781286 where the cell conductor does not have access to the API DB.
+    """
+    def setUp(self):
+        super(RescheduleMigrateAvailabilityZoneUpCall, self).setUp()
+        # Use the standard fixtures.
+        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.useFixture(func_fixtures.PlacementFixture())
+        fake_image.stub_out_image_service(self)
+        self.addCleanup(fake_image.FakeImageService_reset)
+        # Start controller services.
+        self.api = self.useFixture(nova_fixtures.OSAPIFixture(
+            api_version='v2.1')).admin_api
+        self.start_service('conductor')
+        self.start_service('scheduler')
+        # We need three hosts for this test, one is the initial host on which
+        # the server is built, and the others are for the migration where the
+        # first will fail and the second is an alternate.
+        self.start_service('compute', host='host1')
+        self.start_service('compute', host='host2')
+        self.start_service('compute', host='host3')
+        # Listen for notifications.
+        fake_notifier.stub_notifier(self)
+        self.addCleanup(fake_notifier.reset)
+
+    def test_migrate_reschedule_blocked_az_up_call(self):
+        # We need to stub out the call to get_host_availability_zone to blow
+        # up once we have gone to the compute service.
+        original_prep_resize = compute_manager.ComputeManager._prep_resize
+        self.rescheduled = None
+
+        def wrap_prep_resize(_self, *args, **kwargs):
+            # Poison the AZ query to blow up as if the cell conductor does not
+            # have access to the API DB.
+            self.agg_mock = self.useFixture(
+                fixtures.MockPatch(
+                    'nova.objects.AggregateList.get_by_host',
+                    side_effect=oslo_db_exc.CantStartEngineError)).mock
+            if self.rescheduled is None:
+                # Track the first host that we rescheduled from.
+                self.rescheduled = _self.host
+                # Trigger a reschedule.
+                raise exception.ComputeResourcesUnavailable(
+                    reason='test_migrate_reschedule_blocked_az_up_call')
+            return original_prep_resize(_self, *args, **kwargs)
+
+        self.stub_out('nova.compute.manager.ComputeManager._prep_resize',
+                      wrap_prep_resize)
+        server = self._build_minimal_create_server_request(
+            self.api, 'test_migrate_reschedule_blocked_az_up_call')
+        server = self.api.post_server({'server': server})
+        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        original_host = server['OS-EXT-SRV-ATTR:host']
+
+        # Now cold migrate the server to the other host.
+        self.api.post_server_action(server['id'], {'migrate': None})
+
+        # FIXME(mriedem): This is bug 1781286 where we reschedule from the
+        # first selected host to conductor which will try to get the AZ for the
+        # alternate host selection which will fail since it cannot access the
+        # API DB.
+        fake_notifier.wait_for_versioned_notifications(
+            'compute_task.migrate_server.error')
+        server = self._wait_for_server_parameter(
+            self.api, server, {'status': 'ERROR',
+                               'OS-EXT-SRV-ATTR:host': original_host,
+                               'OS-EXT-STS:task_state': None})
+        # Assert there is a fault injected on the server. This is a bit
+        # annoying in that we would expect to see CantStartEngineError but
+        # because of how ComputeManager._reschedule_resize_or_reraise works.
+        # the reschedule call to conductor is an RPC call so that exception
+        # comes back to compute which injects a fault but then re-raises the
+        # ComputeResourcesUnavailable exception which gets recorded as the most
+        # recent fault which is what shows up in the API. So instead we assert
+        # that the reschedule happened and assert the mocked method was called.
+        self.assertIn('Insufficient compute resources',
+                      server['fault']['message'])
+        self.assertIsNotNone(self.rescheduled)
+        self.agg_mock.assert_called_once()
