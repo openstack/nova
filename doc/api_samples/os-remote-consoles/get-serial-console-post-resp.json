@@ -1,6 +1,6 @@
 {
     "console": {
         "type": "serial",
-        "url": "ws://127.0.0.1:6083/?path=%3Ftoken%3D6ac46b4c-2705-4d8b-baa3-1b6f1b0c7dd3"
+        "url":"ws://127.0.0.1:6083/?token=f9906a48-b71e-4f18-baca-c987da3ebdb3"
     }
 }
