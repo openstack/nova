@@ -737,9 +737,19 @@ class ComputeTaskManager(base.Base):
                         context, instance, exc, legacy_request_spec,
                         requested_networks)
                     return
-            instance.availability_zone = (
-                availability_zones.get_host_availability_zone(context,
-                        host.service_host))
+
+            try:
+                instance.availability_zone = (
+                    availability_zones.get_host_availability_zone(context,
+                            host.service_host))
+            except Exception as exc:
+                # Put the instance into ERROR state, set task_state to None,
+                # inject a fault, etc.
+                self._cleanup_when_reschedule_fails(
+                    context, instance, exc, legacy_request_spec,
+                    requested_networks)
+                continue
+
             try:
                 # NOTE(danms): This saves the az change above, refreshes our
                 # instance, and tells us if it has been deleted underneath us
