@@ -5778,8 +5778,8 @@ class LibvirtDriver(driver.ComputeDriver):
         guest.max_memory_size = guest.memory
         guest.max_memory_slots = 0
         for vpmem in vpmems:
-            size_kb = vpmem.size / units.Ki
-            align_kb = vpmem.align / units.Ki
+            size_kb = vpmem.size // units.Ki
+            align_kb = vpmem.align // units.Ki
 
             vpmem_config = vconfig.LibvirtConfigGuestVPMEM(
                 devpath=vpmem.devpath, size_kb=size_kb, align_kb=align_kb)

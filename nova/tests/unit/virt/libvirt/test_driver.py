@@ -25207,3 +25207,45 @@ class LibvirtPMEMNamespaceTests(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         self.assertRaises(exception.VPMEMCleanupFailed,
                           drvr._cleanup_vpmems, vpmems)
+
+    def test_guest_add_vpmems_int_values(self):
+        """Ensures XML is generated with integer size/align values.
+
+        See bug #1845905.
+        """
+        guest = vconfig.LibvirtConfigGuest()
+        guest.virt_type = 'kvm'
+        guest.name = 'name'
+        guest.uuid = 'uuid'
+        guest.memory = 1024
+        vpmems = [self.vpmem_0]
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr._guest_add_vpmems(guest, vpmems)
+        expected = '''
+            <domain type="kvm">
+              <uuid>uuid</uuid>
+              <name>name</name>
+              <memory>1024</memory>
+              <maxMemory slots="1">4193280</maxMemory>
+              <vcpu>1</vcpu>
+              <os>
+                <type>None</type>
+              </os>
+              <devices>
+                <memory model="nvdimm" access="shared">
+                  <source>
+                    <path>/dev/dax0.0</path>
+                    <alignsize>2048</alignsize>
+                    <pmem/>
+                  </source>
+                  <target>
+                    <size>4192256</size>
+                    <node>0</node>
+                    <label>
+                      <size>2048</size>
+                    </label>
+                  </target>
+                </memory>
+              </devices>
+            </domain>'''
+        self.assertXmlEqual(expected, guest.to_xml())
