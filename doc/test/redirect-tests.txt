@@ -76,3 +76,4 @@
 /nova/latest/wsgi.html 301 /nova/latest/user/wsgi.html
 /nova/latest/admin/adv-config.html 301 /nova/latest/admin/index.html
 /nova/latest/admin/system-admin.html 301 /nova/latest/admin/index.html
+/nova/latest/admin/port_with_resource_request.html 301 /nova/latest/admin/ports-with-resource-requests.html
