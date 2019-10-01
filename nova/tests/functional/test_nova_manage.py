@@ -880,6 +880,25 @@ class TestNovaManagePlacementHealPortAllocations(
             self.output.getvalue())
         self.assertEqual(0, result)
 
+    def test_heal_port_allocation_dry_run(self):
+        server, ports = self._create_server_with_missing_port_alloc(
+            [self.neutron.port_1])
+
+        # let's trigger a heal
+        result = self.cli.heal_allocations(
+            verbose=True, max_count=2, dry_run=True)
+
+        self._assert_placement_not_updated(server)
+        self._assert_ports_not_updated(ports)
+
+        self.assertIn(
+            '[dry-run] Update allocations for instance',
+            self.output.getvalue())
+        # Note that we had a issues by printing defaultdicts directly to the
+        # user in the past. So let's assert it does not happen any more.
+        self.assertNotIn('defaultdict', self.output.getvalue())
+        self.assertEqual(4, result)
+
     def test_no_healing_is_needed(self):
         """Test that the instance has a port that has allocations
         so nothing to be healed.

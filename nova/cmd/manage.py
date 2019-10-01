@@ -38,6 +38,7 @@ from oslo_config import cfg
 from oslo_db import exception as db_exc
 from oslo_log import log as logging
 import oslo_messaging as messaging
+from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 from oslo_utils import importutils
 from oslo_utils import uuidutils
@@ -2168,16 +2169,19 @@ class PlacementCommands(object):
 
         if need_healing:
             if dry_run:
+                # json dump the allocation dict as it contains nested default
+                # dicts that is pretty hard to read in the verbose output
+                alloc = jsonutils.dumps(allocations)
                 if need_healing == _CREATE:
                     output(_('[dry-run] Create allocations for instance '
                              '%(instance)s: %(allocations)s') %
                            {'instance': instance.uuid,
-                            'allocations': allocations})
+                            'allocations': alloc})
                 elif need_healing == _UPDATE:
                     output(_('[dry-run] Update allocations for instance '
                              '%(instance)s: %(allocations)s') %
                            {'instance': instance.uuid,
-                            'allocations': allocations})
+                            'allocations': alloc})
             else:
                 # First update ports in neutron. If any of those operations
                 # fail, then roll back the successful part of it and fail the
