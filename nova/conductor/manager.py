@@ -745,17 +745,22 @@ class ComputeTaskManager(base.Base):
                         requested_networks)
                     return
 
-            try:
-                instance.availability_zone = (
-                    availability_zones.get_host_availability_zone(context,
-                            host.service_host))
-            except Exception as exc:
-                # Put the instance into ERROR state, set task_state to None,
-                # inject a fault, etc.
-                self._cleanup_when_reschedule_fails(
-                    context, instance, exc, legacy_request_spec,
-                    requested_networks)
-                continue
+            # The availability_zone field was added in v1.1 of the Selection
+            # object so make sure to handle the case where it is missing.
+            if 'availability_zone' in host:
+                instance.availability_zone = host.availability_zone
+            else:
+                try:
+                    instance.availability_zone = (
+                        availability_zones.get_host_availability_zone(context,
+                                host.service_host))
+                except Exception as exc:
+                    # Put the instance into ERROR state, set task_state to
+                    # None, inject a fault, etc.
+                    self._cleanup_when_reschedule_fails(
+                        context, instance, exc, legacy_request_spec,
+                        requested_networks)
+                    continue
 
             try:
                 # NOTE(danms): This saves the az change above, refreshes our
