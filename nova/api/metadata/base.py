@@ -25,7 +25,6 @@ from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 import six
 
-from nova.api.ec2 import ec2utils
 from nova.api.metadata import password
 from nova.api.metadata import vendordata_dynamic
 from nova.api.metadata import vendordata_json
@@ -174,8 +173,7 @@ class InstanceMetadata(object):
         else:
             self.network_metadata = network_metadata
 
-        self.ip_info = \
-                ec2utils.get_ip_info_for_instance_from_nw_info(network_info)
+        self.ip_info = netutils.get_ec2_ip_info(network_info)
 
         self.network_config = None
         cfg = netutils.get_injected_network_template(network_info)
