@@ -352,9 +352,14 @@ class MigrationTask(base.TaskBase):
 
         (host, node) = (selection.service_host, selection.nodename)
 
-        self.instance.availability_zone = (
-            availability_zones.get_host_availability_zone(
-                self.context, host))
+        # The availability_zone field was added in v1.1 of the Selection
+        # object so make sure to handle the case where it is missing.
+        if 'availability_zone' in selection:
+            self.instance.availability_zone = selection.availability_zone
+        else:
+            self.instance.availability_zone = (
+                availability_zones.get_host_availability_zone(
+                    self.context, host))
 
         LOG.debug("Calling prep_resize with selected host: %s; "
                   "Selected node: %s; Alternates: %s", host, node,
