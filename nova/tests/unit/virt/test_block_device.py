@@ -499,17 +499,16 @@ class TestDriverBlockDevice(test.NoDBTestCase):
             mock.patch.object(driver_bdm, '_get_volume', return_value=volume),
             mock.patch.object(self.virt_driver, 'get_volume_connector',
                               return_value=connector),
-            mock.patch('nova.utils.synchronized',
-                side_effect=lambda a: lambda f: lambda *args: f(*args)),
+            mock.patch('os_brick.initiator.utils.guard_connection'),
             mock.patch.object(self.volume_api, 'attachment_delete'),
-        ) as (mock_get_volume, mock_get_connector, mock_sync, vapi_attach_del):
+        ) as (mock_get_volume, mock_get_connector, mock_guard,
+              vapi_attach_del):
 
             driver_bdm.detach(elevated_context, instance,
                               self.volume_api, self.virt_driver,
                               attachment_id=attachment_id)
 
-            if include_shared_targets:
-                mock_sync.assert_called_once_with((uuids.service_uuid))
+            mock_guard.assert_called_once_with(volume)
             vapi_attach_del.assert_called_once_with(elevated_context,
                                                     attachment_id)
 

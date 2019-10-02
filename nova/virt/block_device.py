@@ -16,6 +16,7 @@ import functools
 import itertools
 
 from os_brick import encryptors
+from os_brick.initiator import utils as brick_utils
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
@@ -24,7 +25,6 @@ from oslo_utils import excutils
 from nova import block_device
 import nova.conf
 from nova import exception
-from nova import utils
 
 CONF = nova.conf.CONF
 
@@ -444,19 +444,10 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
     def detach(self, context, instance, volume_api, virt_driver,
                attachment_id=None, destroy_bdm=False):
         volume = self._get_volume(context, volume_api, self.volume_id)
-        # Check to see if we need to lock based on the shared_targets value.
-        # Default to False if the volume does not expose that value to maintain
-        # legacy behavior.
-        if volume.get('shared_targets', False):
-            # Lock the detach call using the provided service_uuid.
-            @utils.synchronized(volume['service_uuid'])
-            def _do_locked_detach(*args, **_kwargs):
-                self._do_detach(*args, **_kwargs)
-
-            _do_locked_detach(context, instance, volume_api, virt_driver,
-                              attachment_id, destroy_bdm)
-        else:
-            # We don't need to (or don't know if we need to) lock.
+        # Let OS-Brick handle high level locking that covers the local os-brick
+        # detach and the Cinder call to call unmap the volume.  Not all volume
+        # backends or hosts require locking.
+        with brick_utils.guard_connection(volume):
             self._do_detach(context, instance, volume_api, virt_driver,
                             attachment_id, destroy_bdm)
 
@@ -649,19 +640,10 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
         volume = self._get_volume(context, volume_api, self.volume_id)
         volume_api.check_availability_zone(context, volume,
                                            instance=instance)
-        # Check to see if we need to lock based on the shared_targets value.
-        # Default to False if the volume does not expose that value to maintain
-        # legacy behavior.
-        if volume.get('shared_targets', False):
-            # Lock the attach call using the provided service_uuid.
-            @utils.synchronized(volume['service_uuid'])
-            def _do_locked_attach(*args, **_kwargs):
-                self._do_attach(*args, **_kwargs)
-
-            _do_locked_attach(context, instance, volume, volume_api,
-                              virt_driver, do_driver_attach)
-        else:
-            # We don't need to (or don't know if we need to) lock.
+        # Let OS-Brick handle high level locking that covers the call to
+        # Cinder that exports & maps the volume, and for the local os-brick
+        # attach.  Not all volume backends or hosts require locking.
+        with brick_utils.guard_connection(volume):
             self._do_attach(context, instance, volume, volume_api,
                             virt_driver, do_driver_attach)
 
