@@ -220,20 +220,12 @@ class InstanceHelperMixin(object):
 class _IntegratedTestBase(test.TestCase):
     REQUIRES_LOCKING = True
     ADMIN_API = False
-    # Override this in subclasses which use the legacy nova-network service.
-    # New tests should rely on Neutron and old ones migrated to use this since
-    # nova-network is deprecated.
-    # TODO(stephenfin): Remove once we remove the few remaining
-    # nova-network-only APIs
-    USE_NEUTRON = True
     # This indicates whether to include the project ID in the URL for API
     # requests through OSAPIFixture. Overridden by subclasses.
     _use_project_id = False
 
     def setUp(self):
         super(_IntegratedTestBase, self).setUp()
-
-        self.flags(use_neutron=self.USE_NEUTRON)
 
         # NOTE(mikal): this is used to stub away privsep helpers
         def fake_noop(*args, **kwargs):
@@ -245,9 +237,7 @@ class _IntegratedTestBase(test.TestCase):
         self.useFixture(cast_as_call.CastAsCall(self))
         placement = self.useFixture(func_fixtures.PlacementFixture())
         self.placement_api = placement.api
-
-        if self.USE_NEUTRON:
-            self.neutron = self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.neutron = self.useFixture(nova_fixtures.NeutronFixture(self))
 
         self._setup_services()
 
@@ -265,13 +255,9 @@ class _IntegratedTestBase(test.TestCase):
         # which will result in us not doing the right thing.
         if 'cell1' in self.cell_mappings:
             self.flags(transport_url=self.cell_mappings['cell1'].transport_url)
+
         self.conductor = self.start_service('conductor')
-
-        if not self.USE_NEUTRON:
-            self.network = self.start_service('network',
-                                              manager=CONF.network_manager)
         self.scheduler = self._setup_scheduler_service()
-
         self.compute = self._setup_compute_service()
 
         self.api_fixture = self.useFixture(
