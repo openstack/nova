@@ -1340,7 +1340,7 @@ def get_stats_from_cluster(session, cluster):
         if policy and hasattr(policy, 'failoverHosts'):
             failover_hosts = set(h.value for h in policy.failoverHosts)
 
-        group_ret = prop_dict.get('configurationEx', {}).get('group')
+        group_ret = getattr(prop_dict.get('configurationEx'), 'group', None)
         host_reservations_map = _get_host_reservations_map(group_ret)
 
         host_ret = prop_dict.get('host')

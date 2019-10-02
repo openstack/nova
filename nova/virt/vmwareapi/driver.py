@@ -416,6 +416,10 @@ class VMwareVCDriver(driver.ComputeDriver):
                'memory_mb_used': host_stats['host_memory_total'] -
                                  host_stats['host_memory_free'],
                'local_gb_used': host_stats['disk_used'],
+               'vcpus_reserved': CONF.reserved_host_cpus +
+                                 host_stats['vcpus_reserved'],
+               'memory_mb_reserved': CONF.reserved_host_memory_mb +
+                                     host_stats['host_memory_reserved'],
                'hypervisor_type': host_stats['hypervisor_type'],
                'hypervisor_version': host_stats['hypervisor_version'],
                'hypervisor_hostname': host_stats['hypervisor_hostname'],

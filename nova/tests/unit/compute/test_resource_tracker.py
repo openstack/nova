@@ -765,6 +765,52 @@ class TestUpdateAvailableResources(BaseTestCase):
                                                  actual_resources))
         update_mock.assert_called_once()
 
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
+                return_value=objects.InstancePCIRequests(requests=[]))
+    @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
+                return_value=objects.PciDeviceList())
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
+    @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
+    def test_no_instances_no_migrations_reserved_disk_ram_and_cpu_driver(
+            self, get_mock, migr_mock, get_cn_mock, pci_mock,
+            instance_pci_mock):
+        # Setup with config reservations and driver-returned reservations.
+        # Driver-returned reservations should include the config ones and thus
+        # overwrite the config ones.
+        self.flags(reserved_host_disk_mb=1024,
+                   reserved_host_memory_mb=512,
+                   reserved_host_cpus=1)
+        virt_resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
+        virt_resources.update(vcpus_reserved=2,
+                              memory_mb_reserved=128)
+        self._setup_rt(virt_resources=virt_resources)
+
+        get_mock.return_value = []
+        migr_mock.return_value = []
+        get_cn_mock.return_value = _COMPUTE_NODE_FIXTURES[0]
+
+        update_mock = self._update_available_resources()
+
+        get_cn_mock.assert_called_once_with(mock.ANY, _HOSTNAME, _NODENAME)
+        expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
+        vals = {
+            'free_disk_gb': 5,  # 6GB avail - 1 GB reserved
+            'local_gb': 6,
+            'free_ram_mb': 384,  # 512MB avail - 128MB reserved
+            'memory_mb_used': 128,  # 0MB used + 128MB reserved
+            'vcpus_used': 2,
+            'local_gb_used': 1,  # 0GB used + 1 GB reserved
+            'memory_mb': 512,
+            'current_workload': 0,
+            'vcpus': 4,
+            'running_vms': 0
+        }
+        _update_compute_node(expected_resources, **vals)
+        actual_resources = update_mock.call_args[0][1]
+        self.assertTrue(obj_base.obj_equal_prims(expected_resources,
+                                                 actual_resources))
+
     @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
@@ -3665,7 +3711,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
 
         @mock.patch.object(self.rt, '_update_usage_from_instance')
         def test(uufi):
-            self.rt._update_usage_from_instances('ctxt', [], 'foo')
+            self.rt._update_usage_from_instances('ctxt', [], 'foo', {})
 
         test()
 
