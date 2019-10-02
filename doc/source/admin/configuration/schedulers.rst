@@ -125,7 +125,7 @@ request, described in the :ref:`weights` section.
 
 **Filtering**
 
-.. figure:: /figures/filteringWorkflow1.png
+.. figure:: /_static/images/filtering-workflow-1.png
 
 The ``available_filters`` configuration option in ``nova.conf``
 provides the Compute service with the list of the filters that are available
@@ -785,7 +785,7 @@ weight is given the highest priority.
 
 **Weighting hosts**
 
-.. figure:: /figures/nova-weighting-hosts.png
+.. figure:: /_static/images/nova-weighting-hosts.png
 
 Hosts are weighted based on the following options in the
 ``/etc/nova/nova.conf`` file:

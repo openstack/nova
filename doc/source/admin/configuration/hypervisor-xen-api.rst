@@ -123,7 +123,7 @@ XenAPI deployment architecture
 A basic OpenStack deployment on a XAPI-managed server, assuming that the
 network provider is neutron network, looks like this:
 
-.. figure:: /figures/xenserver_architecture.png
+.. figure:: /_static/images/xenserver_architecture.png
    :width: 100%
 
 Key things to note:

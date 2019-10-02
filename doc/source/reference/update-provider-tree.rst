@@ -233,6 +233,6 @@ There are various types of traits:
 This diagram may shed further light on how these traits relate to each
 other and how they are managed.
 
-.. figure:: /figures/traits-taxonomy.svg
+.. figure:: /_static/images/traits-taxonomy.svg
    :width: 800
    :alt: Venn diagram showing taxonomy of traits and capabilities
