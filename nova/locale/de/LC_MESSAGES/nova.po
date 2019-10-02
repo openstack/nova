@@ -11,15 +11,16 @@
 # matthew wagoner <zxkuqyb@gmail.com>, 2012
 # English translations for nova.
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
+# Andreas Jaeger <jaegerandi@gmail.com>, 2019. #zanata
 msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2019-03-22 03:06+0000\n"
+"POT-Creation-Date: 2019-10-01 18:30+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-09-25 11:17+0000\n"
+"PO-Revision-Date: 2019-09-27 09:37+0000\n"
 "Last-Translator: Andreas Jaeger <jaegerandi@gmail.com>\n"
 "Language: de\n"
 "Language-Team: German\n"
@@ -49,20 +50,6 @@ msgstr ""
 #, python-format
 msgid "%(cidr)s is not a valid IP network."
 msgstr "%(cidr)s ist kein gültiges IP-Netzwerk."
-
-#, python-format
-msgid ""
-"%(desc)r\n"
-"command: %(cmd)r\n"
-"exit code: %(code)r\n"
-"stdout: %(stdout)r\n"
-"stderr: %(stderr)r"
-msgstr ""
-"%(desc)r\n"
-"Kommando: %(cmd)r\n"
-"Abschlusscode: %(code)r\n"
-"Stdout: %(stdout)r\n"
-"Stderr: %(stderr)r"
 
 #, python-format
 msgid "%(field)s should not be part of the updates."
@@ -105,14 +92,6 @@ msgstr ""
 "Wert %(worker_name)s von %(workers)s ist ungültig; muss größer als 0 sein"
 
 #, python-format
-msgid "%r failed. Not Retrying."
-msgstr "%r fehlgeschlagen. Wird nicht wiederholt."
-
-#, python-format
-msgid "%r failed. Retrying."
-msgstr "%r fehlgeschlagen. Neuversuch."
-
-#, python-format
 msgid "%s does not support disk hotplug."
 msgstr "%s unterstützt kein Anschließen von Platten im laufenden Betrieb."
 
@@ -142,11 +121,6 @@ msgstr "Argument 'rxtx_factor' muss eine Gleitkommazahl zwischen 0 und %g sein"
 #, python-format
 msgid "/%s should be specified as single address(es) not in cidr format"
 msgstr "/%s sollte als Einzeladresse nicht im CIDR-Format angegeben werden"
-
-msgid "A CPU model name should not be set when a host CPU model is requested"
-msgstr ""
-"Es sollte kein CPU-Modellname festgelegt werden, wenn ein Host-CPU-Modell "
-"angefordert ist"
 
 #, python-format
 msgid "A NetworkModel is required in field %s"
@@ -242,9 +216,6 @@ msgstr "Aggregat %s unterstützt keine leeren, bezeichneten Verfügbarkeitszonen
 #, python-format
 msgid "Aggregate for host %(host)s count not be found."
 msgstr "Aggregat für Host %(host)s konnte nicht gefunden werden. "
-
-msgid "All hosts are already mapped to cell(s), exiting."
-msgstr "Alle Hosts sind bereits der Zelle/den Zellen zugeordnet. Wird beendet."
 
 #, python-format
 msgid "An invalid 'name' value was provided. The name must be: %(reason)s"
@@ -434,33 +405,6 @@ msgstr "CPU-Nummer %(cpuset)s ist keinem Knoten zugeordnet"
 msgid "CPU pinning is not supported by the host: %(reason)s"
 msgstr "CPU pinning wird nicht unterstützt vom Host: %(reason)s"
 
-#, python-format
-msgid "CPU set to pin %(requested)s must be a subset of free CPU set %(free)s"
-msgstr ""
-"CPU Set zu pin %(requested)s muss eine Teilmenge freier CPU Sets %(free)s "
-"sein"
-
-#, python-format
-msgid ""
-"CPU set to pin %(requested)s must be a subset of known CPU set %(cpuset)s"
-msgstr ""
-"CPU Set zu pin %(requested)s muss eine Teilmenge bekannter CPU Sets "
-"%(cpuset)s sein"
-
-#, python-format
-msgid ""
-"CPU set to unpin %(requested)s must be a subset of known CPU set %(cpuset)s"
-msgstr ""
-"CPU Set zu unpin %(requested)s muss eine Teilmenge bekannter CPU Sets "
-"%(cpuset)s sein"
-
-#, python-format
-msgid ""
-"CPU set to unpin %(requested)s must be a subset of pinned CPU set %(pinned)s"
-msgstr ""
-"CPU Set zu unpin %(requested)s muss eine Teilmenge der bereits gepinnten CPU "
-"Sets %(pinned)s sein"
-
 msgid "Can not add access to a public flavor."
 msgstr "Kann keinen Zugriff auf eine öffentliche Version herstellen. "
 
@@ -580,9 +524,6 @@ msgstr ""
 "Aggregat %(aggregate_id)s kann nicht aktualisiert werden. Ursache: "
 "%(reason)s."
 
-msgid "Cannot update cells configuration file."
-msgstr "Zellenkonfigurationsdatei kann nicht aktualisiert werden."
-
 #, python-format
 msgid ""
 "Cannot update metadata of aggregate %(aggregate_id)s. Reason: %(reason)s."
@@ -591,28 +532,8 @@ msgstr ""
 "Ursache: %(reason)s."
 
 #, python-format
-msgid "Cell %(cell_name)s doesn't exist."
-msgstr "Zelle %(cell_name)s ist nicht vorhanden."
-
-#, python-format
 msgid "Cell %(uuid)s has no mapping."
 msgstr "Zelle %(uuid)s hat keine Zuordnung."
-
-#, python-format
-msgid "Cell %s doesn't exist."
-msgstr "Zelle %s ist nicht vorhanden."
-
-#, python-format
-msgid "Cell is not known for instance %(instance_uuid)s"
-msgstr "Zelle ist nicht bekannt für Instanz %(instance_uuid)s"
-
-#, python-format
-msgid "Cell message has reached maximum hop count: %(hop_count)s"
-msgstr "Zellennachricht hat maximale Hopanzahl erreicht: %(hop_count)s"
-
-#, python-format
-msgid "Cell with name %(name)s already exists."
-msgstr "Zelle mit Name %(name)s ist bereits vorhanden."
 
 #, python-format
 msgid ""
@@ -654,11 +575,6 @@ msgid "Config drive format '%(format)s' is not supported."
 msgstr ""
 "Das Konfigurationslaufwerksformat '%(format)s' wird nicht unterstützt. "
 
-msgid "Config requested a custom CPU model, but no model name was provided"
-msgstr ""
-"Konfiguration hat ein benutzerdefiniertes CPU-Modell angefordert, aber es "
-"wurde kein Modellname angegeben"
-
 #, python-format
 msgid ""
 "Config requested an explicit CPU model, but the current libvirt hypervisor "
@@ -666,6 +582,9 @@ msgid ""
 msgstr ""
 "Config hat ein explizites CPU-Modell angefordert, aber der aktuelle libvirt-"
 "Hypervisor '%s' unterstützt nicht die Auswahl von CPU-Modellen"
+
+msgid "Configuration is Invalid."
+msgstr "Konfiguration ist ungültig."
 
 #, python-format
 msgid ""
@@ -903,10 +822,6 @@ msgid ""
 msgstr ""
 "ESX-SOAP-Server gab in der Antwort eine leere Portgruppe für das Hostsystem "
 "zurück"
-
-#, python-format
-msgid "Ec2 id %(ec2_id)s is unacceptable."
-msgstr "Ec2-ID %(ec2_id)s ist nicht zulässig."
 
 #, python-format
 msgid ""
@@ -1273,19 +1188,6 @@ msgstr ""
 "Versionszugriff nicht gefunden für Kombination aus %(flavor_id)s und "
 "%(project_id)s."
 
-msgid ""
-"Flavor id can only contain letters from A-Z (both cases), periods, dashes, "
-"underscores and spaces."
-msgstr ""
-"Versions-ID darf nur die Buchstaben A-Z (in Groß- und Kleinschreibung), "
-"Punkte, Gedankenstriche, Unterstriche und Leerzeichen enthalten."
-
-msgid ""
-"Flavor names can only contain printable characters and horizontal spaces."
-msgstr ""
-"Versionsnamen dürfen nur druckbare Zeichen und horizontale Leerstellen "
-"aufweisen"
-
 msgid "Flavor used by the instance could not be found."
 msgstr "Die von der Instanz verwendete Version konnte nicht gefunden werden. "
 
@@ -1391,11 +1293,6 @@ msgstr "Nicht eindeutiges Netz für Brücke %s gefunden"
 #, python-format
 msgid "Found non-unique network for name_label %s"
 msgstr "Nicht eindeutiges Netz für name_label %s gefunden"
-
-#, python-format
-msgid "Free %(type)s %(free).02f %(unit)s < requested %(requested)d %(unit)s"
-msgstr ""
-"Frei %(type)s %(free).02f %(unit)s < angefordert %(requested)d %(unit)s"
 
 msgid "Guest does not have a console available."
 msgstr "Für Gast ist keine Konsole verfügbar."
@@ -1547,10 +1444,6 @@ msgid ""
 msgstr ""
 "Inkompatible Einstellungen: Verschlüsselung für ephemeren Speicher wird nur "
 "unterstützt für LVM-Images. "
-
-#, python-format
-msgid "Inconsistency in cell routing: %(reason)s"
-msgstr "Inkonsistenz in Zellenrouting: %(reason)s"
 
 #, python-format
 msgid "Info cache for instance %(instance_uuid)s could not be found."
@@ -1758,12 +1651,6 @@ msgid "Invalid Regular Expression %s"
 msgstr "Ungültiger Regulärer Ausdruck %s"
 
 #, python-format
-msgid "Invalid broker_hosts value: %s. It should be in hostname:port format"
-msgstr ""
-"Ungültiger Wert für broker_hosts: %s. Er sollte das Format 'hostname:port' "
-"aufweisen"
-
-#, python-format
 msgid "Invalid characters in hostname '%(hostname)s'"
 msgstr "Ungültige Zeichen im Hostnamen '%(hostname)s'"
 
@@ -1879,14 +1766,6 @@ msgstr "Ungültiger Name"
 msgid "Invalid port range %(from_port)s:%(to_port)s. %(msg)s"
 msgstr "Ungültiger Portbereich %(from_port)s:%(to_port)s. %(msg)s"
 
-#, python-format
-msgid "Invalid port value: %s. It should be an integer"
-msgstr "Ungültiger Portwert: %s. Der Wert sollte eine Ganzzahl sein"
-
-#, python-format
-msgid "Invalid port value: %s. Should be an integer"
-msgstr "Ungültiger Portwert: %s. Der Wert sollte eine Ganzzahl sein"
-
 msgid "Invalid proxy request signature."
 msgstr "Ungültige Proxy-Anforderungssignatur."
 
@@ -1914,9 +1793,6 @@ msgstr "Ungültiger Status der Instanzdateien im gemeinsam genutzten Speicher"
 msgid "Invalid status value"
 msgstr "Ungültiger Status Wert"
 
-msgid "Invalid target_lun"
-msgstr "Ungültige target_lun"
-
 #, python-format
 msgid "Invalid timestamp for date %s"
 msgstr "Ungültiger Zeitstempel für Datum %s"
@@ -1930,28 +1806,12 @@ msgid "Invalid value for Config Drive option: %(option)s"
 msgstr "Ungültiger Wert für Konfigurationslaufwerkoption: %(option)s"
 
 #, python-format
-msgid ""
-"Invalid vcpu_pin_set config, one or more of the specified cpuset is not "
-"online. Online cpuset(s): %(online)s, requested cpuset(s): %(req)s"
-msgstr ""
-"Ungültige vcpu_pin_set config, eine oder mehrere der angegebenen cpuset sind "
-"nicht online. Online cpuset(s): %(online)s, angeforderte cpuset(s): %(req)s"
-
-msgid "Invalid vcpu_pin_set config, out of hypervisor cpu range."
-msgstr ""
-"Ungültige Konfiguration von vcpu_pin_set, außerhalb des Hypervisor-CPU-"
-"Bereichs."
-
-#, python-format
 msgid "Invalid virtual interface address %s in request"
 msgstr "Ungültige virtuelle Schnittstellenadresse %s in der Anforderung"
 
 #, python-format
 msgid "Invalid volume access mode: %(access_mode)s"
 msgstr "Ungültiger Datenträgerzugriffsmodus: %(access_mode)s"
-
-msgid "Invalid volume source data"
-msgstr "Ungültige Datenträgerquellendaten"
 
 #, python-format
 msgid "Invalid volume: %(reason)s"
@@ -2020,10 +1880,6 @@ msgstr "Link-Local-Adresse nicht gefunden: %s"
 msgid "Live migration %(id)s for server %(uuid)s is not in progress."
 msgstr ""
 "Die Livemigration %(id)s für den Server %(uuid)s ist nicht in Bearbeitung."
-
-#, python-format
-msgid "Malformed JSON: %(error)s"
-msgstr "Fehlerhaftes JSON: %(error)s"
 
 #, python-format
 msgid "Malformed message body: %(reason)s"
@@ -2327,25 +2183,12 @@ msgstr "Neuer Datenträger muss dieselbe Größe aufweisen oder größer sein."
 msgid "No Block Device Mapping with id %(id)s."
 msgstr "Keine Block-Geräte-Zuordnung mit ID %(id)s."
 
-#, python-format
-msgid "No CPUs available after parsing %r"
-msgstr "Keine CPUs verfügbar nach der Analyse von %r"
-
 msgid "No Unique Match Found."
 msgstr "Keine eindeutige Übereinstimmung gefunden."
-
-msgid "No access_url in connection_info. Cannot validate protocol"
-msgstr "Keine access_url in connection_info.  Kann Protokoll nicht validieren"
 
 #, python-format
 msgid "No agent-build associated with id %(id)s."
 msgstr "Kein Agenten-Build ist ID '%(id)s' zugeordnet."
-
-msgid "No cell given in routing path."
-msgstr "Keine Zelle im Routing-Pfad angegeben."
-
-msgid "No cells available matching scheduling criteria."
-msgstr "Keine Zellen verfügbar, die den Planungskriterien entsprechen."
 
 msgid "No compute host specified"
 msgstr "Kein Rechenhost angegeben "
@@ -2555,10 +2398,6 @@ msgstr ""
 "Nur dateibasierte SRs (ext/NFS) werden von dieser Funktion unterstützt. SR "
 "%(uuid)s weist den Typ %(type)s auf"
 
-#, python-format
-msgid "OpenSSL error: %s"
-msgstr "OpenSSL-Fehler: %s"
-
 msgid "Origin header does not match this host."
 msgstr "Ursprungsheader stimmt nicht mit diesem Host überein."
 
@@ -2646,11 +2485,6 @@ msgstr "Physisches Netz für Netz %(network_uuid)s fehlt"
 
 msgid "Please specify either fixed_range or uuid"
 msgstr "Geben Sie entweder fixed_range oder uuid an"
-
-#, python-format
-msgid "Plug vif failed because of unexpected vif_type=%s"
-msgstr ""
-"Verbindung von vif aufgrund von unerwartetem vif_type=%s fehlgeschlagen"
 
 #, python-format
 msgid "Policy doesn't allow %(action)s to be performed."
@@ -2806,12 +2640,6 @@ msgstr "Abweichung zwischen Anforderungshauptteil und URI"
 msgid "Request is too large."
 msgstr "Anforderung ist zu groß."
 
-msgid ""
-"Request must include either Timestamp or Expires, but cannot contain both"
-msgstr ""
-"Anforderung muss Zeitmarke oder Ablauf enthalten, darf aber nicht beides "
-"enthalten."
-
 #, python-format
 msgid "Request of image %(image_id)s got BadRequest response: %(response)s"
 msgstr ""
@@ -2898,10 +2726,6 @@ msgstr "Regel (%s) nicht gefunden"
 #, python-format
 msgid "Running batches of %i until complete"
 msgstr "%i-Batches werden ausgeführt, bis Ausführung abgeschlossen ist."
-
-#, python-format
-msgid "Running cmd (subprocess): %s"
-msgstr "Führe Kommando (subprocess) aus: %s"
 
 #, python-format
 msgid "Scheduler Host Filter %(filter_name)s could not be found."
@@ -3020,10 +2844,6 @@ msgstr "Service %(service_id)s konnte nicht gefunden werden."
 #, python-format
 msgid "Service %s not found."
 msgstr "Dienst %s nicht gefunden."
-
-#, python-format
-msgid "Service API method not found: %(detail)s"
-msgstr "Dienst-API-Methode nicht gefunden: %(detail)s"
 
 msgid "Service is unavailable at this time."
 msgstr "Service ist derzeit nicht verfügbar."
@@ -3146,16 +2966,6 @@ msgstr "Der DNS-Eintrag %(name)s ist in Domäne %(domain)s bereits vorhanden."
 #, python-format
 msgid "The PCI address %(address)s has an incorrect format."
 msgstr "Die PCI-Adresse %(address)s hat ein falsches Format."
-
-msgid ""
-"The above error may show that the database has not been created.\n"
-"Please create a database using 'nova-manage db sync' before running this "
-"command."
-msgstr ""
-"Der oben genannte Fehler gibt möglicherweise an, dass die Datenbank nicht "
-"erstellt wurde.\n"
-"Erstellen Sie eine Datenbank mithilfe von 'nova-manage db sync', bevor Sie "
-"diesen Befehl ausführen."
 
 msgid "The backlog must be more than 0"
 msgstr "Das Backlog muss größer 0 sein"
@@ -3586,10 +3396,6 @@ msgstr "Systemgruppe '%s' kann nicht aktualisiert werden"
 msgid "Unacceptable CPU info: %(reason)s"
 msgstr "Unzulässige CPU Information: %(reason)s"
 
-#, python-format
-msgid "Unacceptable attach status:%s for ec2 API."
-msgstr "Unzulässiger Anhängestatus:%s für ec2-API."
-
 msgid "Unacceptable parameters."
 msgstr "Inakzeptable Parameter."
 
@@ -3628,10 +3434,6 @@ msgstr "Unerwarteter vif_type=%s"
 msgid "Unknown"
 msgstr "Unbekannt"
 
-#, python-format
-msgid "Unknown %(cell_type)s when routing to %(target_cell)s"
-msgstr "%(cell_type)s bei Weiterleitung zu %(target_cell)s unbekannt"
-
 msgid "Unknown action"
 msgstr "Unbekannte Aktion"
 
@@ -3659,10 +3461,6 @@ msgstr "Unbekannter delete_info-Typ %s"
 #, python-format
 msgid "Unknown image_type=%s"
 msgstr "Unbekannter image_type=%s"
-
-#, python-format
-msgid "Unknown method '%(method)s' in compute API"
-msgstr "Unbekannte Methode '%(method)s' in Rechen-API"
 
 #, python-format
 msgid "Unknown quota resources %(unknown)s."
@@ -3946,15 +3744,8 @@ msgstr "Verbindungsinfo: %s"
 msgid "connecting to: %(host)s:%(port)s"
 msgstr "verbinden mit: %(host)s:%(port)s"
 
-#, python-format
-msgid "destination is %(target_cell)s but routing_path is %(routing_path)s"
-msgstr "Ziel ist '%(target_cell)s', aber 'routing_path' ist '%(routing_path)s'"
-
 msgid "direct_snapshot() is not implemented"
 msgstr "direct_snapshot() ist nicht implementiert"
-
-msgid "disk"
-msgstr "Festplatte"
 
 #, python-format
 msgid "disk type '%s' not supported"
@@ -3997,9 +3788,6 @@ msgstr "Hyperlink %s enthält Version nicht"
 
 msgid "id"
 msgstr "Kennung"
-
-msgid "id cannot contain leading and/or trailing whitespace(s)"
-msgstr "ID darf keine führenden und/oder abschließenden Leerzeichen enthalten"
 
 msgid "image already mounted"
 msgstr "Abbild bereits eingehängt"
@@ -4061,9 +3849,6 @@ msgid "max_count cannot be greater than 1 if an fixed_ip is specified."
 msgstr ""
 "max_count darf nicht größer als 1 sein, wenn eine fixed_ip angegeben ist."
 
-msgid "memory"
-msgstr "Speicher"
-
 msgid "min_count must be <= max_count"
 msgstr "'min_count' muss <= 'max_count' sein"
 
@@ -4111,18 +3896,6 @@ msgstr "Partitionssuche nicht unterstützt mit %s"
 
 msgid "pause not supported for vmwareapi"
 msgstr "'pause' nicht unterstützt für 'vmwareapi'"
-
-msgid ""
-"printable characters except !, ., @, with at least one non space character"
-msgstr ""
-"Druckbare Zeichen mit Ausnahme von !, ., @ mit mindestens einem Zeichen, das "
-"kein Leerzeichen ist."
-
-msgid ""
-"printable characters except !, ., @. Can not start or end with whitespace."
-msgstr ""
-"Druckbare Zeichen mit Ausnahme von !, ., @. Keine Leerzeichen davor oder "
-"danach zulässig."
 
 msgid "printable characters with at least one non space character"
 msgstr ""
@@ -4201,9 +3974,6 @@ msgstr ""
 "vSwitch mit Portgruppe %(bridge)s ist dem gewünschten physischen Adapter "
 "nicht zugeordnet. Erwarteter vSwitch ist %(expected)s, aber der zugeordnete "
 "ist %(actual)s."
-
-msgid "vcpu"
-msgstr "VCPU"
 
 msgid "version should be an integer"
 msgstr "Version sollte eine Ganzzahl sein"

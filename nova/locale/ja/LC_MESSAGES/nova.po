@@ -13,7 +13,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2019-03-22 03:06+0000\n"
+"POT-Creation-Date: 2019-10-01 18:30+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -47,20 +47,6 @@ msgstr ""
 #, python-format
 msgid "%(cidr)s is not a valid IP network."
 msgstr "%(cidr)s や有効な IP ネットワークではありません。"
-
-#, python-format
-msgid ""
-"%(desc)r\n"
-"command: %(cmd)r\n"
-"exit code: %(code)r\n"
-"stdout: %(stdout)r\n"
-"stderr: %(stderr)r"
-msgstr ""
-"%(desc)r\n"
-"コマンド: %(cmd)r\n"
-"終了コード: %(code)r\n"
-"stdout: %(stdout)r\n"
-"stderr: %(stderr)r"
 
 #, python-format
 msgid "%(field)s should not be part of the updates."
@@ -103,14 +89,6 @@ msgstr ""
 "せん"
 
 #, python-format
-msgid "%r failed. Not Retrying."
-msgstr "%r が失敗しました。再試行しません。"
-
-#, python-format
-msgid "%r failed. Retrying."
-msgstr "%r が失敗しました。再試行しています。"
-
-#, python-format
 msgid "%s does not support disk hotplug."
 msgstr "%s ではディスクのホットプラグはサポートされていません。"
 
@@ -142,9 +120,6 @@ msgstr ""
 msgid "/%s should be specified as single address(es) not in cidr format"
 msgstr ""
 "/%s は CIDR 形式で指定せずに、単一のアドレスとして指定する必要があります。"
-
-msgid "A CPU model name should not be set when a host CPU model is requested"
-msgstr "ホスト CPU モデルの要求時に CPU モデル名は設定できません"
 
 #, python-format
 msgid "A NetworkModel is required in field %s"
@@ -240,9 +215,6 @@ msgstr "アグリゲート %s は空の名前のアベイラビリティーゾ�
 #, fuzzy, python-format
 msgid "Aggregate for host %(host)s count not be found."
 msgstr "ホスト %(host)s カウントの総計が見つかりません。"
-
-msgid "All hosts are already mapped to cell(s), exiting."
-msgstr "すべてのホストが既にセルにマッピングされています。処理を終了します。"
 
 #, python-format
 msgid "An invalid 'name' value was provided. The name must be: %(reason)s"
@@ -535,9 +507,6 @@ msgstr ""
 msgid "Cannot update aggregate %(aggregate_id)s. Reason: %(reason)s."
 msgstr "アグリゲート %(aggregate_id)s を更新できません。理由: %(reason)s。"
 
-msgid "Cannot update cells configuration file."
-msgstr "セルの設定ファイルを更新できません。"
-
 #, python-format
 msgid ""
 "Cannot update metadata of aggregate %(aggregate_id)s. Reason: %(reason)s."
@@ -546,28 +515,8 @@ msgstr ""
 "%(reason)s。"
 
 #, python-format
-msgid "Cell %(cell_name)s doesn't exist."
-msgstr "セル %(cell_name)s は存在しません。"
-
-#, python-format
 msgid "Cell %(uuid)s has no mapping."
 msgstr "セル %(uuid)s にはマッピングがありません。"
-
-#, python-format
-msgid "Cell %s doesn't exist."
-msgstr "セル %s は存在しません。"
-
-#, python-format
-msgid "Cell is not known for instance %(instance_uuid)s"
-msgstr "セルはインスタンス %(instance_uuid)s で認識されていません"
-
-#, python-format
-msgid "Cell message has reached maximum hop count: %(hop_count)s"
-msgstr "セルメッセージが最大ホップ数 %(hop_count)s に達しました"
-
-#, python-format
-msgid "Cell with name %(name)s already exists."
-msgstr "名前が %(name)s のセルは既に存在します。"
 
 #, python-format
 msgid ""
@@ -605,10 +554,6 @@ msgstr "この時点では %(host)s のコンピュートサービスを使用�
 #, python-format
 msgid "Config drive format '%(format)s' is not supported."
 msgstr "コンフィグドライブ形式 %(format)s がサポートされません。"
-
-msgid "Config requested a custom CPU model, but no model name was provided"
-msgstr ""
-"設定でカスタム CPU モデルが要求されましたが、モデル名が指定されませんでした"
 
 #, python-format
 msgid ""
@@ -843,10 +788,6 @@ msgid ""
 "response"
 msgstr ""
 "ESX SOAP サーバーが返した応答で、そのホストシステムのポートグループが空でした"
-
-#, python-format
-msgid "Ec2 id %(ec2_id)s is unacceptable."
-msgstr "EC2 ID %(ec2_id)s は受け付けられません。"
 
 #, python-format
 msgid ""
@@ -1210,17 +1151,6 @@ msgstr ""
 "%(flavor_id)s / %(project_id)s の組み合わせに対応するフレーバーアクセスが見つ"
 "かりません。"
 
-msgid ""
-"Flavor id can only contain letters from A-Z (both cases), periods, dashes, "
-"underscores and spaces."
-msgstr ""
-"フレーバー ID に使用できるのは、A-Z の英字 (大文字および小文字)、ピリオド、"
-"ダッシュ、アンダースコアー、および空白のみです。"
-
-msgid ""
-"Flavor names can only contain printable characters and horizontal spaces."
-msgstr "フレーバー名には表示可能文字と空白文字のみを使用できます。"
-
 msgid "Flavor used by the instance could not be found."
 msgstr "インスタンスで使用されたフレーバーが見つかりませんでした"
 
@@ -1325,12 +1255,6 @@ msgstr "ブリッジ %s について一意でないネットワークが見つ�
 #, python-format
 msgid "Found non-unique network for name_label %s"
 msgstr "name_label %s について一意でないネットワークが見つかりました"
-
-#, python-format
-msgid "Free %(type)s %(free).02f %(unit)s < requested %(requested)d %(unit)s"
-msgstr ""
-"空き %(type)s %(free).02f %(unit)s が要求された %(requested)d %(unit)s より少"
-"ないです"
 
 msgid "Guest does not have a console available."
 msgstr "ゲストはコンソールを使用することはできません。"
@@ -1481,10 +1405,6 @@ msgid ""
 msgstr ""
 "設定に互換性がありません:  一時ストレージ暗号化は LVM イメージでのみサポート"
 "されています。"
-
-#, python-format
-msgid "Inconsistency in cell routing: %(reason)s"
-msgstr "セルルーティングの不整合: %(reason)s"
 
 #, python-format
 msgid "Info cache for instance %(instance_uuid)s could not be found."
@@ -1693,11 +1613,6 @@ msgid "Invalid Regular Expression %s"
 msgstr "正規表現 %s は無効です"
 
 #, python-format
-msgid "Invalid broker_hosts value: %s. It should be in hostname:port format"
-msgstr ""
-"broker_hosts 値 %s が無効です。hostname:port の形式でなければなりません"
-
-#, python-format
 msgid "Invalid characters in hostname '%(hostname)s'"
 msgstr "ホスト名 '%(hostname)s' に無効な文字があります"
 
@@ -1808,14 +1723,6 @@ msgstr "無効な名前"
 msgid "Invalid port range %(from_port)s:%(to_port)s. %(msg)s"
 msgstr "無効なポート範囲 %(from_port)s:%(to_port)s。 %(msg)s"
 
-#, python-format
-msgid "Invalid port value: %s. It should be an integer"
-msgstr "ポート値 %s が無効です。整数でなければなりません"
-
-#, python-format
-msgid "Invalid port value: %s. Should be an integer"
-msgstr "ポート値 %s が無効です。整数でなければなりません"
-
 msgid "Invalid proxy request signature."
 msgstr "無効なプロキシー要求シグニチャー"
 
@@ -1840,9 +1747,6 @@ msgstr "無効な開始時刻。開始時刻を終了時刻より後にするこ
 msgid "Invalid state of instance files on shared storage"
 msgstr "共有ストレージ上のインスタンスファイルの無効な状態"
 
-msgid "Invalid target_lun"
-msgstr "無効な target_lun"
-
 #, python-format
 msgid "Invalid timestamp for date %s"
 msgstr "日付 %s のタイムスタンプが無効です"
@@ -1856,27 +1760,12 @@ msgid "Invalid value for Config Drive option: %(option)s"
 msgstr "コンフィグドライブのオプション %(option)s の値が無効です"
 
 #, python-format
-msgid ""
-"Invalid vcpu_pin_set config, one or more of the specified cpuset is not "
-"online. Online cpuset(s): %(online)s, requested cpuset(s): %(req)s"
-msgstr ""
-"vcpu_pin_set の設定が無効です。指定された CPU セットのうち 1 つ以上がオンライ"
-"ン状態にありません。オンラインの CPU セット: %(online)s、リクエストされた "
-"CPU セット: %(req)s"
-
-msgid "Invalid vcpu_pin_set config, out of hypervisor cpu range."
-msgstr "vcpu_pin_set 設定が無効です。ハイパーバイザーの CPU の範囲外です。"
-
-#, python-format
 msgid "Invalid virtual interface address %s in request"
 msgstr "リクエストに無効な仮想インターフェースアドレス %s があります"
 
 #, python-format
 msgid "Invalid volume access mode: %(access_mode)s"
 msgstr "ボリュームアクセスモードが無効です: %(access_mode)s"
-
-msgid "Invalid volume source data"
-msgstr "無効なボリュームソースデータ"
 
 #, python-format
 msgid "Invalid volume: %(reason)s"
@@ -2252,26 +2141,12 @@ msgstr "新規ボリュームは同じサイズか、それ以上でなければ
 msgid "No Block Device Mapping with id %(id)s."
 msgstr "ID %(id)s を持つブロックデバイスマッピングがありません。"
 
-#, python-format
-msgid "No CPUs available after parsing %r"
-msgstr "%r の解釈を行ったところ、使用可能な CPU はありません"
-
 msgid "No Unique Match Found."
 msgstr "1 つだけ一致するデータが見つかりません。"
-
-msgid "No access_url in connection_info. Cannot validate protocol"
-msgstr ""
-"connection_info に access_url がありません。プロトコルを検証できません。"
 
 #, python-format
 msgid "No agent-build associated with id %(id)s."
 msgstr "ID %(id)s に関連付けられたエージェントビルドはありません。"
-
-msgid "No cell given in routing path."
-msgstr "ルーティングパスにセルが指定されていません。"
-
-msgid "No cells available matching scheduling criteria."
-msgstr "スケジューリング基準を満たす利用可能なセルがありません"
 
 msgid "No compute host specified"
 msgstr "コンピュートホストが指定されていません"
@@ -2472,10 +2347,6 @@ msgstr ""
 "この機能でサポートされるのは、ファイルベースの SR (ext/NFS) のみです。SR "
 "%(uuid)s のタイプは %(type)s です。"
 
-#, python-format
-msgid "OpenSSL error: %s"
-msgstr "OpenSSL エラー: %s"
-
 msgid "Origin header does not match this host."
 msgstr "オリジンヘッダーがこのホストに一致しません。"
 
@@ -2563,10 +2434,6 @@ msgstr "ネットワーク %(network_uuid)s に対応する物理ネットワー
 
 msgid "Please specify either fixed_range or uuid"
 msgstr "fixed_range または UUID のいずれかを指定してください"
-
-#, python-format
-msgid "Plug vif failed because of unexpected vif_type=%s"
-msgstr "想定しない vif_type=%s が原因で vif の接続に失敗しました"
 
 #, python-format
 msgid "Policy doesn't allow %(action)s to be performed."
@@ -2721,12 +2588,6 @@ msgstr "リクエスト本文と URI の不一致"
 msgid "Request is too large."
 msgstr "リクエストが大きすぎます。"
 
-msgid ""
-"Request must include either Timestamp or Expires, but cannot contain both"
-msgstr ""
-"リクエストにはタイムスタンプまたは有効期限のいずれかを含める必要があります"
-"が、両方を含めることはできません"
-
 #, python-format
 msgid "Request of image %(image_id)s got BadRequest response: %(response)s"
 msgstr ""
@@ -2811,10 +2672,6 @@ msgstr "ルール (%s) が見つかりません"
 #, python-format
 msgid "Running batches of %i until complete"
 msgstr "完了するまで %i のバッチを実行します"
-
-#, python-format
-msgid "Running cmd (subprocess): %s"
-msgstr "コマンド (subprocess) 実行: %s"
 
 #, python-format
 msgid "Scheduler Host Filter %(filter_name)s could not be found."
@@ -2930,10 +2787,6 @@ msgstr "サービス %(service_id)s が見つかりませんでした。"
 #, python-format
 msgid "Service %s not found."
 msgstr "サービス %s が見つかりません。"
-
-#, python-format
-msgid "Service API method not found: %(detail)s"
-msgstr "サービス API メソッドが見つかりません: %(detail)s"
 
 msgid "Service is unavailable at this time."
 msgstr "サービスが現在利用できません。"
@@ -3056,16 +2909,6 @@ msgstr "DNS エントリー %(name)s はドメイン %(domain)s 内に既に存�
 #, python-format
 msgid "The PCI address %(address)s has an incorrect format."
 msgstr "PCI アドレス %(address)s の形式が正しくありません。"
-
-msgid ""
-"The above error may show that the database has not been created.\n"
-"Please create a database using 'nova-manage db sync' before running this "
-"command."
-msgstr ""
-"上のエラーは、データベースが作成されなかったことを示している可能性がありま"
-"す。\n"
-"このコマンドを実行する前に、'nova-manage db sync' を使用してデータベースを作"
-"成してください。"
 
 msgid "The backlog must be more than 0"
 msgstr "バックログは 0 より大きい値である必要があります"
@@ -3480,10 +3323,6 @@ msgstr "システムグループ '%s' を更新できません"
 msgid "Unacceptable CPU info: %(reason)s"
 msgstr "指定できない CPU 情報: %(reason)s"
 
-#, python-format
-msgid "Unacceptable attach status:%s for ec2 API."
-msgstr "ec2 API では指定できない接続ステータス: %s。"
-
 msgid "Unacceptable parameters."
 msgstr "指定できないパラメーターです。"
 
@@ -3523,10 +3362,6 @@ msgstr "想定しない vif_type=%s"
 msgid "Unknown"
 msgstr "不明"
 
-#, python-format
-msgid "Unknown %(cell_type)s when routing to %(target_cell)s"
-msgstr "%(target_cell)s へのルーティングにおける不明な %(cell_type)s"
-
 msgid "Unknown action"
 msgstr "不明なアクション"
 
@@ -3550,10 +3385,6 @@ msgstr "不明な delete_info タイプ %s"
 #, python-format
 msgid "Unknown image_type=%s"
 msgstr "不明な image_type=%s"
-
-#, python-format
-msgid "Unknown method '%(method)s' in compute API"
-msgstr "コンピュート API 内の不明なメソッド '%(method)s'"
 
 #, python-format
 msgid "Unknown quota resources %(unknown)s."
@@ -3824,15 +3655,8 @@ msgstr "接続情報: %s"
 msgid "connecting to: %(host)s:%(port)s"
 msgstr "%(host)s:%(port)s に接続中です"
 
-#, python-format
-msgid "destination is %(target_cell)s but routing_path is %(routing_path)s"
-msgstr "宛先は %(target_cell)s ですが、routing_path は %(routing_path)s です"
-
 msgid "direct_snapshot() is not implemented"
 msgstr "direct_snapshot() が実装されていません"
-
-msgid "disk"
-msgstr "ディスク"
 
 #, python-format
 msgid "disk type '%s' not supported"
@@ -3875,9 +3699,6 @@ msgstr "href %s にバージョンが含まれていません"
 
 msgid "id"
 msgstr "ID"
-
-msgid "id cannot contain leading and/or trailing whitespace(s)"
-msgstr "ID の先頭や末尾に空白文字は使用できません"
 
 msgid "image already mounted"
 msgstr "イメージは既にマウントされています"
@@ -3940,9 +3761,6 @@ msgstr ""
 "fixed_ip が指定されている場合、max_count を 1 より大きくすることはできませ"
 "ん。"
 
-msgid "memory"
-msgstr "メモリー"
-
 msgid "min_count must be <= max_count"
 msgstr "min_count は max_count 以下でなければなりません"
 
@@ -3990,16 +3808,6 @@ msgstr "パーティションの検索は %s ではサポートされていま�
 
 msgid "pause not supported for vmwareapi"
 msgstr "vmwareapi では一時停止はサポートされていません"
-
-msgid ""
-"printable characters except !, ., @, with at least one non space character"
-msgstr ""
-"!、.、@ 以外の印刷可能な文字。1 つ以上のスペースではない文字が必要です。"
-
-msgid ""
-"printable characters except !, ., @. Can not start or end with whitespace."
-msgstr ""
-"!、.、@ 以外の印刷可能な文字。空白で開始または終了することはできません。"
 
 msgid "printable characters with at least one non space character"
 msgstr "1 つ以上のスペースではない文字を含む印刷可能な文字。"
@@ -4075,9 +3883,6 @@ msgstr ""
 "ポートグループ %(bridge)s を含む vSwitch が目的の物理アダプターに関連付けられ"
 "ていません。必要な vSwitch は %(expected)s ですが、関連付けられているのは "
 "%(actual)s です。"
-
-msgid "vcpu"
-msgstr "vCPU"
 
 msgid "version should be an integer"
 msgstr "バージョンは整数でなければなりません"

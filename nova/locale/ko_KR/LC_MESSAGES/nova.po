@@ -15,7 +15,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2019-03-22 03:06+0000\n"
+"POT-Creation-Date: 2019-10-01 18:30+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -48,20 +48,6 @@ msgstr ""
 #, python-format
 msgid "%(cidr)s is not a valid IP network."
 msgstr "%(cidr)s은(는) 올바른 IP 네트워크가 아닙니다."
-
-#, python-format
-msgid ""
-"%(desc)r\n"
-"command: %(cmd)r\n"
-"exit code: %(code)r\n"
-"stdout: %(stdout)r\n"
-"stderr: %(stderr)r"
-msgstr ""
-"%(desc)r\n"
-"명령: %(cmd)r\n"
-"종료 코드: %(code)r\n"
-"stdout: %(stdout)r\n"
-"stderr: %(stderr)r"
 
 #, python-format
 msgid "%(field)s should not be part of the updates."
@@ -102,14 +88,6 @@ msgstr ""
 "니다."
 
 #, python-format
-msgid "%r failed. Not Retrying."
-msgstr "%r에 실패했습니다. 재시도하지 않습니다. "
-
-#, python-format
-msgid "%r failed. Retrying."
-msgstr "%r 실패. 재시도 중입니다. "
-
-#, python-format
 msgid "%s does not support disk hotplug."
 msgstr "%s에서 디스크 hotplug를 지원하지 않습니다."
 
@@ -139,9 +117,6 @@ msgstr "'rxtx_factor' 인수는 0에서 %g 까지의 부동수여야 함 "
 #, python-format
 msgid "/%s should be specified as single address(es) not in cidr format"
 msgstr "/%s이(가) cidr 형식이 아니라 단일 주소로 지정되어야 함"
-
-msgid "A CPU model name should not be set when a host CPU model is requested"
-msgstr "호스트 CPU 모델이 요청될 때 CPU 모델 이름이 설정되지 않아야 함"
 
 #, python-format
 msgid "A NetworkModel is required in field %s"
@@ -239,9 +214,6 @@ msgstr "%s 집합에서 이름 지정된 비어 있는 가용 구역을 지원�
 #, python-format
 msgid "Aggregate for host %(host)s count not be found."
 msgstr "%(host)s 호스트에 대한 집합을 찾을 수 없습니다. "
-
-msgid "All hosts are already mapped to cell(s), exiting."
-msgstr "모든 호스트가 이미 셀에 맵핑되어 있어 종료합니다."
 
 #, python-format
 msgid "An invalid 'name' value was provided. The name must be: %(reason)s"
@@ -521,9 +493,6 @@ msgstr "전용이 아닌 CPU 고정 정책에서 실시간 정책을 설정할 �
 msgid "Cannot update aggregate %(aggregate_id)s. Reason: %(reason)s."
 msgstr "%(aggregate_id)s 집합을 업데이트할 수 없습니다. 이유: %(reason)s."
 
-msgid "Cannot update cells configuration file."
-msgstr "셀 구성 파일을 업데이트할 수 없습니다. "
-
 #, python-format
 msgid ""
 "Cannot update metadata of aggregate %(aggregate_id)s. Reason: %(reason)s."
@@ -531,28 +500,8 @@ msgstr ""
 "%(aggregate_id)s 집합 메타데이터를 업데이트할 수 없습니다. 이유: %(reason)s."
 
 #, python-format
-msgid "Cell %(cell_name)s doesn't exist."
-msgstr "%(cell_name)s 셀이 없습니다. "
-
-#, python-format
 msgid "Cell %(uuid)s has no mapping."
 msgstr "셀 %(uuid)s에 맵핑이 없습니다."
-
-#, python-format
-msgid "Cell %s doesn't exist."
-msgstr "%s 셀이 없습니다. "
-
-#, python-format
-msgid "Cell is not known for instance %(instance_uuid)s"
-msgstr "%(instance_uuid)s 인스턴스에 대한 셀을 알 수 없음"
-
-#, python-format
-msgid "Cell message has reached maximum hop count: %(hop_count)s"
-msgstr "셀 메시지가 최대 홉 계수에 도달함: %(hop_count)s"
-
-#, python-format
-msgid "Cell with name %(name)s already exists."
-msgstr "이름이 %(name)s인 셀이 이미 존재합니다. "
 
 #, python-format
 msgid ""
@@ -594,9 +543,6 @@ msgstr "%(host)s Compute 서비스를 지금 사용할 수 없습니다."
 #, python-format
 msgid "Config drive format '%(format)s' is not supported."
 msgstr "구성 드라이브 형식 '%(format)s'은(는) 지원되지 않습니다."
-
-msgid "Config requested a custom CPU model, but no model name was provided"
-msgstr "구성이 사용자 정의 CPU 모델을 요청했지만 모델 이름을 제공하지 않았음"
 
 #, python-format
 msgid ""
@@ -830,10 +776,6 @@ msgid ""
 "response"
 msgstr ""
 "ESX SOAP 서버가 응답에서 호스트 시스템에 대해 비어 있는 포트 그룹을 리턴함"
-
-#, python-format
-msgid "Ec2 id %(ec2_id)s is unacceptable."
-msgstr "Ec2 id %(ec2_id)s은(는) 허용할 수 없습니다. "
 
 #, python-format
 msgid ""
@@ -1207,18 +1149,6 @@ msgstr ""
 "%(flavor_id)s / %(project_id)s 조합에 대한 플레이버 액세스를 찾을 수 없습니"
 "다. "
 
-msgid ""
-"Flavor id can only contain letters from A-Z (both cases), periods, dashes, "
-"underscores and spaces."
-msgstr ""
-"플레이버 ID는 A-Z(대소문자) 문자, 마침표, 대시, 밑줄 및 공백만 포함할 수 있습"
-"니다."
-
-msgid ""
-"Flavor names can only contain printable characters and horizontal spaces."
-msgstr ""
-"플레이버 이름에는 인쇄할 수 있는 문자와 가로 간격만 포함할 수 있습니다."
-
 msgid "Flavor used by the instance could not be found."
 msgstr "인스턴스가 사용한 플레이버를 찾을 수 없습니다. "
 
@@ -1323,10 +1253,6 @@ msgstr "브릿지 %s에 대한 고유하지 않은 네트워크 발견"
 #, python-format
 msgid "Found non-unique network for name_label %s"
 msgstr "name_label %s에 대한 고유하지 않은 네트워크 발견"
-
-#, python-format
-msgid "Free %(type)s %(free).02f %(unit)s < requested %(requested)d %(unit)s"
-msgstr "여유 %(type)s %(free).02f %(unit)s < 요청된 %(requested)d %(unit)s"
 
 msgid "Guest agent is not enabled for the instance"
 msgstr "게스트 에이전트는 해당 인스터스에 활성화 되지 않습니다."
@@ -1474,10 +1400,6 @@ msgid ""
 "LVM images."
 msgstr ""
 "호환되지 않는 설정: ephemeral 스토리지 암호화가 LVM 이미지에만 지원됩니다."
-
-#, python-format
-msgid "Inconsistency in cell routing: %(reason)s"
-msgstr "셀 라우팅에 불일치: %(reason)s"
 
 #, python-format
 msgid "Info cache for instance %(instance_uuid)s could not be found."
@@ -1678,10 +1600,6 @@ msgid "Invalid Regular Expression %s"
 msgstr "올바르지 않은 정규식 %s"
 
 #, python-format
-msgid "Invalid broker_hosts value: %s. It should be in hostname:port format"
-msgstr "Invalid broker_hosts 값: %s. hostname:port 형식을 사용해야 함"
-
-#, python-format
 msgid "Invalid characters in hostname '%(hostname)s'"
 msgstr "호스트 이름 '%(hostname)s'의 올바르지 않은 문자"
 
@@ -1793,14 +1711,6 @@ msgstr "올바르지 않은 이름"
 msgid "Invalid port range %(from_port)s:%(to_port)s. %(msg)s"
 msgstr "올바르지 않은 포트 범위 %(from_port)s:%(to_port)s. %(msg)s"
 
-#, python-format
-msgid "Invalid port value: %s. It should be an integer"
-msgstr "올바르지 않은 포트 값: %s. 정수여야 함"
-
-#, python-format
-msgid "Invalid port value: %s. Should be an integer"
-msgstr "올바르지 않은 포트 값: %s. 정수여야 함"
-
 msgid "Invalid proxy request signature."
 msgstr "올바르지 않은 프록시 요청 서명입니다. "
 
@@ -1826,9 +1736,6 @@ msgstr ""
 msgid "Invalid state of instance files on shared storage"
 msgstr "공유 스토리지에서 인스턴스 파일의 올바르지 않은 상태"
 
-msgid "Invalid target_lun"
-msgstr "올바르지 않은 target_lun"
-
 #, python-format
 msgid "Invalid timestamp for date %s"
 msgstr "날짜 %s에 대한 올바르지 않은 시간소인"
@@ -1842,26 +1749,12 @@ msgid "Invalid value for Config Drive option: %(option)s"
 msgstr "구성 드라이브 옵션에 대해 올바르지 않은 값: %(option)s"
 
 #, python-format
-msgid ""
-"Invalid vcpu_pin_set config, one or more of the specified cpuset is not "
-"online. Online cpuset(s): %(online)s, requested cpuset(s): %(req)s"
-msgstr ""
-"올바르지 않은 vcpu_pin_set 구성, 지정된 cpuset 중 하나 이상이 온라인 상태가 "
-"아닙니다. 온라인 cpuset: %(online)s, 요청된 cpuset: %(req)s"
-
-msgid "Invalid vcpu_pin_set config, out of hypervisor cpu range."
-msgstr "올바르지 않은 vcpu_pin_set 구성, 하이퍼바이저 cpu 범위에서 벗어남."
-
-#, python-format
 msgid "Invalid virtual interface address %s in request"
 msgstr "요청에서 올바르지 않은 가상 인터페이스 주소 %s"
 
 #, python-format
 msgid "Invalid volume access mode: %(access_mode)s"
 msgstr "올바르지 않은 볼륨 접근 모드: %(access_mode)s"
-
-msgid "Invalid volume source data"
-msgstr "올바르지 않은 볼륨 소스 데이터"
 
 #, python-format
 msgid "Invalid volume: %(reason)s"
@@ -2229,27 +2122,12 @@ msgstr "새 볼륨은 동일한 크기이거나 이상이어야 합니다."
 msgid "No Block Device Mapping with id %(id)s."
 msgstr "ID가 %(id)s인 블록 디바이스 맵핑이 없습니다. "
 
-#, python-format
-msgid "No CPUs available after parsing %r"
-msgstr "%r 구문 분석한 후 사용 가능한 CPU가 없음"
-
 msgid "No Unique Match Found."
 msgstr "고유한 일치점을 찾지 못했습니다."
-
-msgid "No access_url in connection_info. Cannot validate protocol"
-msgstr ""
-"connection_info에 access_url이 없습니다. 프로토콜을 유효성 검증할 수 없습니"
-"다. "
 
 #, python-format
 msgid "No agent-build associated with id %(id)s."
 msgstr "ID %(id)s과(와) 연관된 에이전트 빌드가 없습니다. "
-
-msgid "No cell given in routing path."
-msgstr "라우팅 경로에 셀이 없습니다."
-
-msgid "No cells available matching scheduling criteria."
-msgstr "스케줄링 기준과 일치하는 셀을 사용할 수 없습니다. "
 
 msgid "No compute host specified"
 msgstr "지정된 계산 호스트가 없음"
@@ -2452,10 +2330,6 @@ msgstr ""
 "이 기능에서는 파일 기반 SR(ext/NFS)만 지원합니다. SR %(uuid)s이(가) %(type)s "
 "유형입니다."
 
-#, python-format
-msgid "OpenSSL error: %s"
-msgstr "OpenSSL 오류: %s"
-
 msgid "Origin header does not match this host."
 msgstr "원본 헤더가 이 호스트와 일치하지 않습니다."
 
@@ -2543,10 +2417,6 @@ msgstr "%(network_uuid)s 네트워크의 실제 네트워크가 누락됨"
 
 msgid "Please specify either fixed_range or uuid"
 msgstr "고정 범위 또는 UUID를 지정하십시오. "
-
-#, python-format
-msgid "Plug vif failed because of unexpected vif_type=%s"
-msgstr "예상치 않은 vif_type=%s(으)로 인해 vif 플러그 실패"
 
 #, python-format
 msgid "Policy doesn't allow %(action)s to be performed."
@@ -2712,12 +2582,6 @@ msgstr "요청 본문 및 URI 불일치"
 msgid "Request is too large."
 msgstr "요청이 너무 큽니다. "
 
-msgid ""
-"Request must include either Timestamp or Expires, but cannot contain both"
-msgstr ""
-"요청은 Timestamp 또는 Expires 중 하나를 포함해야 하지만, 둘 다 포함할 수는 없"
-"습니다. "
-
 #, python-format
 msgid "Request of image %(image_id)s got BadRequest response: %(response)s"
 msgstr "%(image_id)s 이미지 요청 결과 BadRequest 응답 발생: %(response)s"
@@ -2798,10 +2662,6 @@ msgstr "규칙(%s)을 찾을 수 없음"
 #, python-format
 msgid "Running batches of %i until complete"
 msgstr "완료될 때까지 %i 일괄처리 실행"
-
-#, python-format
-msgid "Running cmd (subprocess): %s"
-msgstr "cmd(하위 프로세스) 실행 중: %s"
 
 #, python-format
 msgid "Scheduler Host Filter %(filter_name)s could not be found."
@@ -2918,10 +2778,6 @@ msgstr "%(service_id)s 서비스를 찾을 수 없습니다. "
 msgid "Service %s not found."
 msgstr "%s 서비스를 찾을 수 없음"
 
-#, python-format
-msgid "Service API method not found: %(detail)s"
-msgstr "서비스 API 메소드를 찾을 수 없음: %(detail)s"
-
 msgid "Service is unavailable at this time."
 msgstr "지금 서비스를 사용할 수 없습니다."
 
@@ -3037,15 +2893,6 @@ msgstr "DNS 항목 %(name)s이(가) 이미 %(domain)s 도메인에 존재합니�
 #, python-format
 msgid "The PCI address %(address)s has an incorrect format."
 msgstr "PCI 주소 %(address)s에 올바르지 않은 형식이 있습니다."
-
-msgid ""
-"The above error may show that the database has not been created.\n"
-"Please create a database using 'nova-manage db sync' before running this "
-"command."
-msgstr ""
-"위의 오류는 데이터베이스가 작성되지 않았음을 표시할 수 있습니다.\n"
-"이 명령을 실행하기 전에 'nova-manage db sync'를 사용하여 데이터베이스를작성하"
-"십시오."
 
 msgid "The backlog must be more than 0"
 msgstr "백로그는 0보다 커야 함"
@@ -3470,10 +3317,6 @@ msgstr "시스템 그룹 '%s'을(를) 업데이트할 수 없음"
 msgid "Unacceptable CPU info: %(reason)s"
 msgstr "CPU 정보를 확인할 수 없습니다: %(reason)s"
 
-#, python-format
-msgid "Unacceptable attach status:%s for ec2 API."
-msgstr "ec2 API에 허용 불가능한 접속 상태 %s "
-
 msgid "Unacceptable parameters."
 msgstr "사용할 수 없는 매개변수입니다. "
 
@@ -3511,10 +3354,6 @@ msgstr "예기치 않은 vif_type=%s"
 msgid "Unknown"
 msgstr "알 수 없음"
 
-#, python-format
-msgid "Unknown %(cell_type)s when routing to %(target_cell)s"
-msgstr "%(target_cell)s(으)로 라우팅할 때 알 수 없는 %(cell_type)s "
-
 msgid "Unknown action"
 msgstr "알 수 없는 조치"
 
@@ -3538,10 +3377,6 @@ msgstr "알 수 없는 delete_info 유형: %s"
 #, python-format
 msgid "Unknown image_type=%s"
 msgstr "알 수 없는 image_type=%s"
-
-#, python-format
-msgid "Unknown method '%(method)s' in compute API"
-msgstr "계산 API의 알 수 없는 메소드 '%(method)s'"
 
 #, python-format
 msgid "Unknown quota resources %(unknown)s."
@@ -3817,15 +3652,8 @@ msgstr "연결 정보: %s"
 msgid "connecting to: %(host)s:%(port)s"
 msgstr "%(host)s:%(port)s에 연결 중"
 
-#, python-format
-msgid "destination is %(target_cell)s but routing_path is %(routing_path)s"
-msgstr "대상은 %(target_cell)s이지만 라우팅 경로는 %(routing_path)s임"
-
 msgid "direct_snapshot() is not implemented"
 msgstr "direct_snapshot()이 구현되지 않음"
-
-msgid "disk"
-msgstr "디스크"
 
 #, python-format
 msgid "disk type '%s' not supported"
@@ -3868,9 +3696,6 @@ msgstr "href %s에 버전이 없음"
 
 msgid "id"
 msgstr "ID"
-
-msgid "id cannot contain leading and/or trailing whitespace(s)"
-msgstr "id에는 선행 및/또는 후행 공백이 포함될 수 없음"
 
 msgid "image already mounted"
 msgstr "이미지가 이미 마운트되었음"
@@ -3929,9 +3754,6 @@ msgstr "최대 행은 <= %(max_value)d이어야 함"
 msgid "max_count cannot be greater than 1 if an fixed_ip is specified."
 msgstr "fixed_ip가 지정된 경우 max_count는 1 이하여야 합니다."
 
-msgid "memory"
-msgstr "메모리"
-
 msgid "min_count must be <= max_count"
 msgstr "min_count는 max_count 이하여야 함"
 
@@ -3977,16 +3799,6 @@ msgstr "파티션 검색이 %s에서 지원되지 않음"
 
 msgid "pause not supported for vmwareapi"
 msgstr "vmwareapi에 대한 일시정지는 지원되지 않음"
-
-msgid ""
-"printable characters except !, ., @, with at least one non space character"
-msgstr "공백이 아닌 문자가 하나 이상 포함된 !, ., @을 제외한 인쇄 가능한 문자"
-
-msgid ""
-"printable characters except !, ., @. Can not start or end with whitespace."
-msgstr ""
-"!, ., @을 제외한 인쇄 가능한 문자입니다. 공백으로 시작하거나 종료할 수 없습니"
-"다."
 
 msgid "printable characters with at least one non space character"
 msgstr "공백이 아닌 문자가 하나 이상 포함된 인쇄 가능한 문자"
@@ -4061,9 +3873,6 @@ msgid ""
 msgstr ""
 "포트 그룹 %(bridge)s이(가) 포함된 vSwitch가 예상된 실제 어댑터와 연관되지 않"
 "습니다. 예상 vSwitch는 %(expected)s이지만 연관된 것은 %(actual)s입니다."
-
-msgid "vcpu"
-msgstr "vcpu"
 
 msgid "version should be an integer"
 msgstr "버전은 정수여야 함"

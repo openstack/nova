@@ -12,7 +12,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2019-03-22 03:06+0000\n"
+"POT-Creation-Date: 2019-10-01 18:30+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -44,20 +44,6 @@ msgstr "%(binary)s 嘗試直接存取資料庫，但原則不容許這樣做"
 #, python-format
 msgid "%(cidr)s is not a valid IP network."
 msgstr "%(cidr)s 不是有效的 IP 網路。"
-
-#, python-format
-msgid ""
-"%(desc)r\n"
-"command: %(cmd)r\n"
-"exit code: %(code)r\n"
-"stdout: %(stdout)r\n"
-"stderr: %(stderr)r"
-msgstr ""
-"%(desc)r\n"
-"指令：%(cmd)r\n"
-"結束碼：%(code)r\n"
-"標準輸出：%(stdout)r\n"
-"標準錯誤：%(stderr)r"
 
 #, python-format
 msgid "%(field)s should not be part of the updates."
@@ -96,14 +82,6 @@ msgid "%(worker_name)s value of %(workers)s is invalid, must be greater than 0"
 msgstr "%(workers)s 的 %(worker_name)s 值無效，必須大於 0"
 
 #, python-format
-msgid "%r failed. Not Retrying."
-msgstr "%r 失敗。將不重試。"
-
-#, python-format
-msgid "%r failed. Retrying."
-msgstr "%r 失敗。正在重試。"
-
-#, python-format
 msgid "%s does not support disk hotplug."
 msgstr "%s 不支援磁碟熱插拔。"
 
@@ -133,9 +111,6 @@ msgstr "'rxtx_factor' 引數必須是介於 0 和 %g 之間的浮點數"
 #, python-format
 msgid "/%s should be specified as single address(es) not in cidr format"
 msgstr "/%s 應該指定為單一位址，而不是指定為 CIDR 格式"
-
-msgid "A CPU model name should not be set when a host CPU model is requested"
-msgstr "要求主機 CPU 型號時，不應該設定 CPU 型號名稱"
 
 #, python-format
 msgid "A NetworkModel is required in field %s"
@@ -222,9 +197,6 @@ msgstr "聚集 %s 不支援空白命名的可用區域"
 #, python-format
 msgid "Aggregate for host %(host)s count not be found."
 msgstr "找不到主機 %(host)s 計數的聚集。"
-
-msgid "All hosts are already mapped to cell(s), exiting."
-msgstr "所有主機均已對映至 Cell，正在結束。"
 
 #, python-format
 msgid "An invalid 'name' value was provided. The name must be: %(reason)s"
@@ -482,37 +454,14 @@ msgstr "無法在非專用 CPU 固定原則中設定即時原則"
 msgid "Cannot update aggregate %(aggregate_id)s. Reason: %(reason)s."
 msgstr "無法更新聚集 %(aggregate_id)s。原因：%(reason)s。"
 
-msgid "Cannot update cells configuration file."
-msgstr "無法更新 Cell 配置檔。"
-
 #, python-format
 msgid ""
 "Cannot update metadata of aggregate %(aggregate_id)s. Reason: %(reason)s."
 msgstr "無法更新聚集 %(aggregate_id)s 的 meta 資料。原因：%(reason)s。"
 
 #, python-format
-msgid "Cell %(cell_name)s doesn't exist."
-msgstr "Cell %(cell_name)s 不存在。"
-
-#, python-format
 msgid "Cell %(uuid)s has no mapping."
 msgstr "Cell %(uuid)s 沒有對映。"
-
-#, python-format
-msgid "Cell %s doesn't exist."
-msgstr "Cell %s 不存在。"
-
-#, python-format
-msgid "Cell is not known for instance %(instance_uuid)s"
-msgstr "實例 %(instance_uuid)s 不知道 Cell"
-
-#, python-format
-msgid "Cell message has reached maximum hop count: %(hop_count)s"
-msgstr "Cell 訊息已達到跳躍數上限：%(hop_count)s"
-
-#, python-format
-msgid "Cell with name %(name)s already exists."
-msgstr "名稱為 %(name)s 的 Cell 已存在。"
 
 #, python-format
 msgid ""
@@ -548,9 +497,6 @@ msgstr "此時無法使用 %(host)s 的計算服務。"
 #, python-format
 msgid "Config drive format '%(format)s' is not supported."
 msgstr "不支援配置磁碟機格式 '%(format)s'。"
-
-msgid "Config requested a custom CPU model, but no model name was provided"
-msgstr "配置已要求自訂 CPU 型號，但沒有提供型號名稱"
 
 #, python-format
 msgid ""
@@ -768,10 +714,6 @@ msgid ""
 "ESX SOAP server returned an empty port group for the host system in its "
 "response"
 msgstr "ESX SOAP 伺服器在其回應中傳回了主機系統的空白埠群組"
-
-#, python-format
-msgid "Ec2 id %(ec2_id)s is unacceptable."
-msgstr "無法接受 EC2 ID %(ec2_id)s。"
 
 #, python-format
 msgid ""
@@ -1098,15 +1040,6 @@ msgstr "特性 %(flavor_id)s 及專案%(project_id)s 組合已存在特性存取
 msgid "Flavor access not found for %(flavor_id)s / %(project_id)s combination."
 msgstr "找不到 %(flavor_id)s / %(project_id)s 組合的特性存取。"
 
-msgid ""
-"Flavor id can only contain letters from A-Z (both cases), periods, dashes, "
-"underscores and spaces."
-msgstr "特性 ID 只能包含下列字母：A-Z（大小寫）、句點、橫線、底線及空格。"
-
-msgid ""
-"Flavor names can only contain printable characters and horizontal spaces."
-msgstr "特性名稱只能包含可列印的字元及水平間距。"
-
 msgid "Flavor used by the instance could not be found."
 msgstr "找不到實例所使用的特性。"
 
@@ -1206,10 +1139,6 @@ msgstr "發現橋接器 %s 的網路不是唯一的"
 #, python-format
 msgid "Found non-unique network for name_label %s"
 msgstr "發現 name_label %s 的網路不是唯一的"
-
-#, python-format
-msgid "Free %(type)s %(free).02f %(unit)s < requested %(requested)d %(unit)s"
-msgstr "可用 %(type)s %(free).02f %(unit)s < 所要求的 %(requested)d %(unit)s"
 
 msgid "Guest does not have a console available."
 msgstr "訪客沒有主控台可用。"
@@ -1345,10 +1274,6 @@ msgid ""
 "Incompatible settings: ephemeral storage encryption is supported only for "
 "LVM images."
 msgstr "不相容的設定：只有 LVM 映像檔才支援暫時儲存體加密。"
-
-#, python-format
-msgid "Inconsistency in cell routing: %(reason)s"
-msgstr "Cell 遞送不一致：%(reason)s"
 
 #, python-format
 msgid "Info cache for instance %(instance_uuid)s could not be found."
@@ -1542,10 +1467,6 @@ msgid "Invalid Regular Expression %s"
 msgstr "無效的正規表示式 %s"
 
 #, python-format
-msgid "Invalid broker_hosts value: %s. It should be in hostname:port format"
-msgstr "broker_hosts 值 %s 無效。它應為 hostname:port 格式"
-
-#, python-format
 msgid "Invalid characters in hostname '%(hostname)s'"
 msgstr "主機名稱 '%(hostname)s' 中有無效字元"
 
@@ -1656,14 +1577,6 @@ msgstr "無效的名稱"
 msgid "Invalid port range %(from_port)s:%(to_port)s. %(msg)s"
 msgstr "無效的埠範圍 %(from_port)s:%(to_port)s。%(msg)s"
 
-#, python-format
-msgid "Invalid port value: %s. It should be an integer"
-msgstr "埠值 %s 無效。它應為整數"
-
-#, python-format
-msgid "Invalid port value: %s. Should be an integer"
-msgstr "埠值 %s 無效。應為整數"
-
 msgid "Invalid proxy request signature."
 msgstr "無效的 Proxy 要求簽章。"
 
@@ -1688,9 +1601,6 @@ msgstr "無效的開始時間。開始時間不能在結束時間之後。"
 msgid "Invalid state of instance files on shared storage"
 msgstr "共用儲存體上實例檔案的狀態無效"
 
-msgid "Invalid target_lun"
-msgstr "目標 LUN 無效"
-
 #, python-format
 msgid "Invalid timestamp for date %s"
 msgstr "日期 %s 的時間戳記無效"
@@ -1704,26 +1614,12 @@ msgid "Invalid value for Config Drive option: %(option)s"
 msgstr "「配置驅動」選項 %(option)s 的值無效"
 
 #, python-format
-msgid ""
-"Invalid vcpu_pin_set config, one or more of the specified cpuset is not "
-"online. Online cpuset(s): %(online)s, requested cpuset(s): %(req)s"
-msgstr ""
-"vcpu_pin_set 配置無效，一個以上的指定 CPU 集不在線上。線上 CPU 集："
-"%(online)s，所要求的 CPU 集：%(req)s"
-
-msgid "Invalid vcpu_pin_set config, out of hypervisor cpu range."
-msgstr "無效的 vcpu_pin_set 配置，因為超出 Hypervisor CPU 範圍。"
-
-#, python-format
 msgid "Invalid virtual interface address %s in request"
 msgstr "要求中的虛擬介面位址 %s 無效"
 
 #, python-format
 msgid "Invalid volume access mode: %(access_mode)s"
 msgstr "無效的磁區存取模式：%(access_mode)s"
-
-msgid "Invalid volume source data"
-msgstr "磁區來源資料無效"
 
 #, python-format
 msgid "Invalid volume: %(reason)s"
@@ -2064,25 +1960,12 @@ msgstr "新磁區必須具有相同大小或者更大。"
 msgid "No Block Device Mapping with id %(id)s."
 msgstr "沒有 ID 為 %(id)s 的區塊裝置對映。"
 
-#, python-format
-msgid "No CPUs available after parsing %r"
-msgstr "剖析 %r 之後沒有可用的 CPU"
-
 msgid "No Unique Match Found."
 msgstr "找不到唯一相符項。"
-
-msgid "No access_url in connection_info. Cannot validate protocol"
-msgstr "connection_info 中沒有 access_url。無法驗證通訊協定"
 
 #, python-format
 msgid "No agent-build associated with id %(id)s."
 msgstr "ID %(id)s 沒有相關聯的 agent-build。"
-
-msgid "No cell given in routing path."
-msgstr "遞送路徑中沒有給定 Cell。"
-
-msgid "No cells available matching scheduling criteria."
-msgstr "沒有與排程準則相符的可用 Cell。"
 
 msgid "No compute host specified"
 msgstr "未指定計算主機"
@@ -2278,10 +2161,6 @@ msgstr ""
 "此特性僅支援檔案型「儲存體儲存庫 (SR)」(ext/NFS)。「儲存體儲存庫 "
 "(SR)」%(uuid)s 的類型是%(type)s"
 
-#, python-format
-msgid "OpenSSL error: %s"
-msgstr "OpenSSL 錯誤：%s"
-
 msgid "Origin header does not match this host."
 msgstr "原始標頭與此主機不符。"
 
@@ -2368,10 +2247,6 @@ msgstr "遺漏了用於網路 %(network_uuid)s 的實體網路"
 
 msgid "Please specify either fixed_range or uuid"
 msgstr "請指定 fixed_range 或 UUID"
-
-#, python-format
-msgid "Plug vif failed because of unexpected vif_type=%s"
-msgstr "由於非預期的 vif_type %s，VIF 插拔失敗"
 
 #, python-format
 msgid "Policy doesn't allow %(action)s to be performed."
@@ -2518,10 +2393,6 @@ msgstr "要求內文與 URI 不符"
 msgid "Request is too large."
 msgstr "要求太大。"
 
-msgid ""
-"Request must include either Timestamp or Expires, but cannot contain both"
-msgstr "要求必須包含「時間戳記」或「到期」，但不能兩者都包含"
-
 #, python-format
 msgid "Request of image %(image_id)s got BadRequest response: %(response)s"
 msgstr "映像檔 %(image_id)s 的要求取得 BadRequest 回應：%(response)s"
@@ -2594,10 +2465,6 @@ msgstr "找不到規則 (%s)"
 #, python-format
 msgid "Running batches of %i until complete"
 msgstr "正在執行 %i 的各個批次，直到完成為止"
-
-#, python-format
-msgid "Running cmd (subprocess): %s"
-msgstr "正在執行 cmd（子程序）：%s"
 
 #, python-format
 msgid "Scheduler Host Filter %(filter_name)s could not be found."
@@ -2701,10 +2568,6 @@ msgstr "找不到服務 %(service_id)s。"
 #, python-format
 msgid "Service %s not found."
 msgstr "找不到服務 %s。"
-
-#, python-format
-msgid "Service API method not found: %(detail)s"
-msgstr "找不到服務 API 方法：%(detail)s"
 
 msgid "Service is unavailable at this time."
 msgstr "此時無法使用服務。"
@@ -2820,14 +2683,6 @@ msgstr "DNS 項目 %(name)s 已存在於網域 %(domain)s 中。"
 #, python-format
 msgid "The PCI address %(address)s has an incorrect format."
 msgstr "PCI 位址 %(address)s 的格式不正確。"
-
-msgid ""
-"The above error may show that the database has not been created.\n"
-"Please create a database using 'nova-manage db sync' before running this "
-"command."
-msgstr ""
-"上述錯誤可能會顯示尚未建立資料庫。\n"
-"請使用 'nova-manage db sync' 來建立資料庫，然後再執行此指令。"
 
 msgid "The backlog must be more than 0"
 msgstr "待辦事項必須大於 0"
@@ -3215,10 +3070,6 @@ msgstr "無法更新系統群組 '%s'"
 msgid "Unacceptable CPU info: %(reason)s"
 msgstr "無法接受的 CPU 資訊：%(reason)s"
 
-#, python-format
-msgid "Unacceptable attach status:%s for ec2 API."
-msgstr "不可接受的 ec2 API 連接狀態：%s。"
-
 msgid "Unacceptable parameters."
 msgstr "不可接受的參數值"
 
@@ -3257,10 +3108,6 @@ msgstr "非預期的 vif_type = %s"
 msgid "Unknown"
 msgstr "未知"
 
-#, python-format
-msgid "Unknown %(cell_type)s when routing to %(target_cell)s"
-msgstr "遞送至 %(target_cell)s 時 %(cell_type)s 不明"
-
 msgid "Unknown action"
 msgstr "不明動作"
 
@@ -3282,10 +3129,6 @@ msgstr "不明的 delete_info 類型 %s"
 #, python-format
 msgid "Unknown image_type=%s"
 msgstr "不明的 image_type = %s"
-
-#, python-format
-msgid "Unknown method '%(method)s' in compute API"
-msgstr "計算 API 中的方法 '%(method)s' 不明"
 
 #, python-format
 msgid "Unknown quota resources %(unknown)s."
@@ -3534,15 +3377,8 @@ msgstr "連接資訊：%s"
 msgid "connecting to: %(host)s:%(port)s"
 msgstr "正在連接至：%(host)s:%(port)s"
 
-#, python-format
-msgid "destination is %(target_cell)s but routing_path is %(routing_path)s"
-msgstr "目的地是 %(target_cell)s，但 routing_path 是 %(routing_path)s"
-
 msgid "direct_snapshot() is not implemented"
 msgstr "未實作 direct_snapshot()"
-
-msgid "disk"
-msgstr "磁碟"
 
 #, python-format
 msgid "disk type '%s' not supported"
@@ -3585,9 +3421,6 @@ msgstr "href %s 不包含版本"
 
 msgid "id"
 msgstr "ID"
-
-msgid "id cannot contain leading and/or trailing whitespace(s)"
-msgstr "ID 不能包含前導及/或尾端空格"
 
 msgid "image already mounted"
 msgstr "已裝載映像檔"
@@ -3646,9 +3479,6 @@ msgstr "列數上限必須小於或等於 %(max_value)d"
 msgid "max_count cannot be greater than 1 if an fixed_ip is specified."
 msgstr "如果指定了 fixed_ip，則 max_count 不得大於 1。"
 
-msgid "memory"
-msgstr "記憶體"
-
 msgid "min_count must be <= max_count"
 msgstr "min_count 必須 <= max_count"
 
@@ -3694,14 +3524,6 @@ msgstr "%s 不支援進行分割區搜尋"
 
 msgid "pause not supported for vmwareapi"
 msgstr "vmwareapi 不支援暫停"
-
-msgid ""
-"printable characters except !, ., @, with at least one non space character"
-msgstr "可列印字元預期 !、. 和 @，其中含有至少一個非空格字元"
-
-msgid ""
-"printable characters except !, ., @. Can not start or end with whitespace."
-msgstr "可列印字元預期 !、. 和 @。不能以空格開頭或結尾。"
 
 msgid "printable characters with at least one non space character"
 msgstr "含有至少一個非空格字元的可列印字元"
@@ -3772,9 +3594,6 @@ msgid ""
 msgstr ""
 "包含埠群組 %(bridge)s 的 vSwitch 未與需要的實體配接卡產生關聯。需要的 "
 "vSwitch 為 %(expected)s，但相關聯的 vSwitch 為 %(actual)s。"
-
-msgid "vcpu"
-msgstr "vcpu"
 
 msgid "version should be an integer"
 msgstr "版本應該是整數"
