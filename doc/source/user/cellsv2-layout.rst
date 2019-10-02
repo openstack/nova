@@ -319,6 +319,18 @@ service **must** be run as a standalone service, using the
 :program:`nova-api-metadata` service, in this case.
 
 
+Console proxies
+~~~~~~~~~~~~~~~
+
+`Starting from the Rocky release`__, console proxies must be run per cell
+because console token authorizations are stored in cell databases. This means
+that each console proxy server must have access to the
+:oslo.config:option:`database.connection` information for the cell database
+containing the instances for which it is proxying console access.
+
+.. __: https://specs.openstack.org/openstack/nova-specs/specs/rocky/implemented/convert-consoles-to-objects.html
+
+
 Operations Requiring upcalls
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
