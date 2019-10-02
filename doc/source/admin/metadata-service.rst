@@ -8,16 +8,6 @@ Metadata service
    end-user information about the metadata service and instance metadata in
    general, refer to the :ref:`user guide <metadata-service>`.
 
-.. note::
-
-   This section provides deployment information about the metadata service using
-   neutron. This functions very differently when deployed with the deprecated
-   :program:`nova-network` service.
-
-   For information about deploying the metadata service with the
-   :program:`nova-network` service, refer to the :ref:`nova-network
-   documentation <metadata-service-deploy>`
-
 The metadata service provides a way for instances to retrieve instance-specific
 data. Instances access the metadata service at ``http://169.254.169.254``. The
 metadata service supports two sets of APIs - an OpenStack metadata API and an

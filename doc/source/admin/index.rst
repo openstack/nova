@@ -148,7 +148,6 @@ Additional guides
    metadata-service
    migration
    migrate-instance-with-snapshot
-   networking-nova
    networking
    quotas
    security-groups

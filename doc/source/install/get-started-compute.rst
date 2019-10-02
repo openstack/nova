@@ -25,9 +25,8 @@ OpenStack Compute consists of the following areas and their components:
 
 ``nova-api-metadata`` service
   Accepts metadata requests from instances. The ``nova-api-metadata`` service
-  is generally used when you run in multi-host mode with ``nova-network``
-  installations. For details, see :ref:`metadata-service-deploy`
-  in the Compute Administrator Guide.
+  is used when running a multi-cell deployment. For more information, refer to
+  :ref:`cells-v2-layout-metadata-api`.
 
 ``nova-compute`` service
   A worker daemon that creates and terminates virtual machine instances through

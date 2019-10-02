@@ -175,11 +175,6 @@ on compute hosts rather than servers.
      This service runs on every compute node, and communicates with a
      hypervisor for managing compute resources on that node.
 
-   - **nova-network (deprecated)**
-
-     This service handles networking of virtual servers. It is no longer under
-     active development, and is being replaced by Neutron.
-
 -  **Services Actions**
 
    .. note::
