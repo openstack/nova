@@ -96,14 +96,6 @@ class ConsoleOutputExtensionTestV21(test.NoDBTestCase):
         output = self._get_console_output(length_dict={'length': '3'})
         self.assertEqual({'output': '2\n3\n4'}, output)
 
-    def test_get_console_output_filtered_characters(self):
-        self.stub_out('nova.compute.api.API.get_console_output',
-                      fake_get_console_output_all_characters)
-        output = self._get_console_output()
-        expect = (string.digits + string.ascii_letters +
-                  string.punctuation + ' \t\n')
-        self.assertEqual({'output': expect}, output)
-
     def test_get_text_console_no_instance(self):
         self.stub_out('nova.compute.api.API.get', fake_get_not_found)
         body = {'os-getConsoleOutput': {}}
