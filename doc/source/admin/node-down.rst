@@ -145,7 +145,7 @@ A disk crash, network loss, or power failure can affect several components in
 your cloud architecture. The worst disaster for a cloud is a power loss. A
 power loss affects these components:
 
-- A cloud controller (``nova-api``, ``nova-objectstore``, ``nova-network``)
+- A cloud controller (``nova-api``, ``nova-conductor``, ``nova-scheduler``)
 
 - A compute node (``nova-compute``)
 
@@ -177,9 +177,6 @@ After power resumes and all hardware components restart:
 
 - The iSCSI session from the cloud controller to the compute node no longer
   exists.
-
-- nova-network reapplies configurations on boot and, as a result, recreates
-  the iptables and ebtables from the cloud controller to the compute node.
 
 - Instances stop running.
 

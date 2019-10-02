@@ -194,11 +194,10 @@ As Glance moves to deprecate its v1 API, we need to translate calls
 from the old v1 API we expose, to Glance's v2 API.
 
 The next API to mention is the networking APIs, in particular the
-security groups API. If you are using nova-network, Nova is still the only
-way to perform these network operations.
-But if you use Neutron, security groups has a much richer Neutron API,
-and if you use both Nova API and Neutron API, the miss match can lead to
-some very unexpected results, in certain cases.
+security groups API. Most of these APIs exist from when ``nova-network``
+existed and the proxies were added during the transition. However, security
+groups has a much richer Neutron API, and if you use both Nova API and Neutron
+API, the mismatch can lead to some very unexpected results, in certain cases.
 
 Our intention is to avoid adding to the problems we already have in this area.
 

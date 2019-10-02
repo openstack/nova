@@ -12,8 +12,8 @@ that has no other defined security group. Unless you change the default, this
 security group denies all incoming traffic and allows only outgoing traffic to
 your instance.
 
-By default, security groups (and their quota) are managed by the
-:neutron-doc:`Neutron networking service </admin/archives/adv-features.html#security-groups>`.
+Security groups (and their quota) are managed by :neutron-doc:`Neutron, the
+networking service </admin/archives/adv-features.html#security-groups>`.
 
 Working with security groups
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -235,27 +235,3 @@ member of the cluster.
 
    The ``cluster`` rule allows SSH access from any other instance that uses the
    ``global_http`` group.
-
-
-nova-network configuration (deprecated)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-You can use the :oslo.config:option:`allow_same_net_traffic` option in the
-``/etc/nova/nova.conf`` file to globally control whether the rules apply to
-hosts which share a network. There are two possible values:
-
-``True`` (default)
-  Hosts on the same subnet are not filtered and are allowed to pass all types
-  of traffic between them. On a flat network, this allows all instances from
-  all projects unfiltered communication.  With VLAN networking, this allows
-  access between instances within the same project. You can also simulate this
-  setting by configuring the default security group to allow all traffic from
-  the subnet.
-
-``False``
-  Security groups are enforced for all connections.
-
-Additionally, the number of maximum rules per security group is controlled by
-the ``security_group_rules`` and the number of allowed security groups per
-project is controlled by the ``security_groups`` quota (see
-:doc:`/admin/quotas`).

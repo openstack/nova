@@ -22,18 +22,9 @@ The corresponding log file of each Compute service is stored in the
    * - ``nova-conductor.log``
      - ``openstack-nova-conductor``
      - ``nova-conductor``
-   * - ``nova-network.log`` [#a]_
-     - ``openstack-nova-network``
-     - ``nova-network``
    * - ``nova-manage.log``
      - ``nova-manage``
      - ``nova-manage``
    * - ``nova-scheduler.log``
      - ``openstack-nova-scheduler``
      - ``nova-scheduler``
-
-.. rubric:: Footnotes
-
-.. [#a] The ``nova`` network service (``openstack-nova-network``/
-         ``nova-network``) only runs in deployments that are not configured
-         to use the Networking service (``neutron``).

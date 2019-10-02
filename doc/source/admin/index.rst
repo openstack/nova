@@ -49,18 +49,6 @@ responsibilities of services and drivers are:
   Provides database-access support for compute nodes (thereby reducing security
   risks).
 
-``nova-network``
-  Manages floating and fixed IPs, DHCP, bridging and VLANs. Loads a Service
-  object which exposes the public methods on one of the subclasses of
-  NetworkManager. Different networking strategies are available by changing the
-  ``network_manager`` configuration option to ``FlatManager``,
-  ``FlatDHCPManager``, or ``VLANManager`` (defaults to ``VLANManager`` if
-  nothing is specified).
-
-  .. deprecated:: 14.0.0
-
-     ``nova-network`` was deprecated in the OpenStack Newton release.
-
 ``nova-scheduler``
   Dispatches requests for new virtual machines to the correct node.
 
@@ -72,8 +60,7 @@ responsibilities of services and drivers are:
 
    Some services have drivers that change how the service implements its core
    functionality. For example, the ``nova-compute`` service supports drivers
-   that let you choose which hypervisor type it can use. ``nova-network`` and
-   ``nova-scheduler`` also have drivers.
+   that let you choose which hypervisor type it can use.
 
 .. toctree::
    :maxdepth: 2

@@ -56,8 +56,7 @@ visible in the OpenStack dashboard and you can manage it as you would any other
 OpenStack VM. You can perform advanced vSphere operations in vCenter while you
 configure OpenStack resources such as VMs through the OpenStack dashboard.
 
-The figure does not show how networking fits into the architecture. Both
-``nova-network`` and the OpenStack Networking Service are supported. For
+The figure does not show how networking fits into the architecture. For
 details, see :ref:`vmware-networking`.
 
 Configuration overview
@@ -73,8 +72,7 @@ high-level steps:
 
 #. Load desired VMDK images into the Image service. See :ref:`vmware-images`.
 
-#. Configure networking with either ``nova-network`` or
-   the Networking service. See :ref:`vmware-networking`.
+#. Configure the Networking service (neutron). See :ref:`vmware-networking`.
 
 .. _vmware-prereqs:
 
@@ -110,8 +108,7 @@ Networking
 
 Security groups
   If you use the VMware driver with OpenStack Networking and the NSX plug-in,
-  security groups are supported. If you use ``nova-network``, security groups
-  are not supported.
+  security groups are supported.
 
   .. note::
 
@@ -937,37 +934,11 @@ section in the ``nova.conf`` file:
 Networking with VMware vSphere
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The VMware driver supports networking with the ``nova-network`` service or the
-Networking Service. Depending on your installation, complete these
-configuration steps before you provision VMs:
+The VMware driver supports networking with the Networking Service (neutron).
+Depending on your installation, complete these configuration steps before you
+provision VMs:
 
-#. **The nova-network service with the FlatManager or FlatDHCPManager**.
-   Create a port group with the same name as the ``flat_network_bridge`` value
-   in the ``nova.conf`` file. The default value is ``br100``.  If you specify
-   another value, the new value must be a valid Linux bridge identifier that
-   adheres to Linux bridge naming conventions.
-
-   All VM NICs are attached to this port group.
-
-   Ensure that the flat interface of the node that runs the ``nova-network``
-   service has a path to this network.
-
-   .. note::
-
-      When configuring the port binding for this port group in vCenter, specify
-      ``ephemeral`` for the port binding type. For more information, see
-      `Choosing a port binding type in ESX/ESXi <http://kb.vmware.com/
-      selfservice/microsites/search.do?language=en_US&amp;cmd=displayKC
-      &amp;externalId=1022312>`_ in the VMware Knowledge Base.
-
-#. **The nova-network service with the VlanManager**.
-   Set the ``vlan_interface`` configuration option to match the ESX host
-   interface that handles VLAN-tagged VM traffic.
-
-   OpenStack Compute automatically creates the corresponding port groups.
-
-#. If you are using the OpenStack Networking Service:
-   Before provisioning VMs, create a port group with the same name as the
+#. Before provisioning VMs, create a port group with the same name as the
    ``vmware.integration_bridge`` value in ``nova.conf`` (default is
    ``br-int``). All VM NICs are attached to this port group for management by
    the OpenStack Networking plug-in.
