@@ -584,7 +584,7 @@ class PrivateFlavorManageTestV21(test.TestCase):
             fakes.HTTPRequest.blank('', use_admin_context=True),
             body["flavor"]["id"])
         expected_flavor_access_body = {
-            "tenant_id": 'fake',
+            "tenant_id": fakes.FAKE_PROJECT_ID,
             "flavor_id": "%s" % body["flavor"]["id"]
         }
         self.assertNotIn(expected_flavor_access_body,

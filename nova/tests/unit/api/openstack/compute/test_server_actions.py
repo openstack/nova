@@ -63,6 +63,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.flags(group='glance', api_servers=['http://localhost:9292'])
         self.stub_out('nova.compute.api.API.get',
                       fakes.fake_compute_get(vm_state=vm_states.ACTIVE,
+                                             project_id=fakes.FAKE_PROJECT_ID,
                                              host='fake_host'))
         self.stub_out('nova.objects.Instance.save', lambda *a, **kw: None)
 
@@ -80,7 +81,8 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.addCleanup(mock_rpcapi.stop)
         # The project_id here matches what is used by default in
         # fake_compute_get which need to match for policy checks.
-        self.req = fakes.HTTPRequest.blank('', project_id='fake_project')
+        self.req = fakes.HTTPRequest.blank('',
+                                           project_id=fakes.FAKE_PROJECT_ID)
         self.context = self.req.environ['nova.context']
 
         self.image_api = image.API()
@@ -224,7 +226,8 @@ class ServerActionsControllerTestV21(test.TestCase):
     def test_reboot_soft_with_soft_in_progress_raises_conflict(self):
         body = dict(reboot=dict(type="SOFT"))
         self.stub_out('nova.compute.api.API.get',
-                      fakes.fake_compute_get(vm_state=vm_states.ACTIVE,
+                      fakes.fake_compute_get(project_id=fakes.FAKE_PROJECT_ID,
+                                             vm_state=vm_states.ACTIVE,
                                              task_state=task_states.REBOOTING))
         self.assertRaises(webob.exc.HTTPConflict,
                           self.controller._action_reboot,
@@ -233,7 +236,8 @@ class ServerActionsControllerTestV21(test.TestCase):
     def test_reboot_hard_with_soft_in_progress_does_not_raise(self):
         body = dict(reboot=dict(type="HARD"))
         self.stub_out('nova.compute.api.API.get',
-                      fakes.fake_compute_get(vm_state=vm_states.ACTIVE,
+                      fakes.fake_compute_get(project_id=fakes.FAKE_PROJECT_ID,
+                                             vm_state=vm_states.ACTIVE,
                                              task_state=task_states.REBOOTING))
         self.controller._action_reboot(self.req, FAKE_UUID, body=body)
 
@@ -241,6 +245,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         body = dict(reboot=dict(type="HARD"))
         self.stub_out('nova.compute.api.API.get',
                       fakes.fake_compute_get(
+                          project_id=fakes.FAKE_PROJECT_ID,
                           vm_state=vm_states.ACTIVE,
                           task_state=task_states.REBOOTING_HARD))
         self.controller._action_reboot(self.req, FAKE_UUID, body=body)
@@ -249,6 +254,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         body = dict(reboot=dict(type="SOFT"))
         self.stub_out('nova.compute.api.API.get',
                       fakes.fake_compute_get(
+                          project_id=fakes.FAKE_PROJECT_ID,
                           vm_state=vm_states.ACTIVE,
                           task_state=task_states.REBOOTING_HARD))
         self.assertRaises(webob.exc.HTTPConflict,
@@ -256,9 +262,11 @@ class ServerActionsControllerTestV21(test.TestCase):
                           self.req, FAKE_UUID, body=body)
 
     def _test_rebuild_preserve_ephemeral(self, value=None):
-        return_server = fakes.fake_compute_get(image_ref='2',
-                                               vm_state=vm_states.ACTIVE,
-                                               host='fake_host')
+        return_server = fakes.fake_compute_get(
+                project_id=fakes.FAKE_PROJECT_ID,
+                image_ref='2',
+                vm_state=vm_states.ACTIVE,
+                host='fake_host')
         self.stub_out('nova.compute.api.API.get', return_server)
 
         body = {
@@ -289,7 +297,9 @@ class ServerActionsControllerTestV21(test.TestCase):
         self._test_rebuild_preserve_ephemeral()
 
     def test_rebuild_accepted_minimum(self):
-        return_server = fakes.fake_compute_get(image_ref='2',
+        return_server = fakes.fake_compute_get(
+                project_id=fakes.FAKE_PROJECT_ID,
+                image_ref='2',
                 vm_state=vm_states.ACTIVE, host='fake_host')
         self.stub_out('nova.compute.api.API.get', return_server)
         self_href = 'http://localhost/v2/servers/%s' % FAKE_UUID
@@ -346,7 +356,9 @@ class ServerActionsControllerTestV21(test.TestCase):
         # is missing from response. See lp bug 921814
         self.flags(enable_instance_password=False, group='api')
 
-        return_server = fakes.fake_compute_get(image_ref='2',
+        return_server = fakes.fake_compute_get(
+                project_id=fakes.FAKE_PROJECT_ID,
+                image_ref='2',
                 vm_state=vm_states.ACTIVE, host='fake_host')
         self.stub_out('nova.compute.api.API.get', return_server)
         self_href = 'http://localhost/v2/servers/%s' % FAKE_UUID
@@ -388,7 +400,9 @@ class ServerActionsControllerTestV21(test.TestCase):
     def test_rebuild_accepted_with_metadata(self):
         metadata = {'new': 'metadata'}
 
-        return_server = fakes.fake_compute_get(metadata=metadata,
+        return_server = fakes.fake_compute_get(
+                project_id=fakes.FAKE_PROJECT_ID,
+                metadata=metadata,
                 vm_state=vm_states.ACTIVE, host='fake_host')
         self.stub_out('nova.compute.api.API.get', return_server)
 
@@ -442,7 +456,9 @@ class ServerActionsControllerTestV21(test.TestCase):
                           self.req, FAKE_UUID, body=body)
 
     def test_rebuild_admin_pass(self):
-        return_server = fakes.fake_compute_get(image_ref='2',
+        return_server = fakes.fake_compute_get(
+                project_id=fakes.FAKE_PROJECT_ID,
+                image_ref='2',
                 vm_state=vm_states.ACTIVE, host='fake_host')
         self.stub_out('nova.compute.api.API.get', return_server)
 
@@ -464,7 +480,9 @@ class ServerActionsControllerTestV21(test.TestCase):
         # is missing from response. See lp bug 921814
         self.flags(enable_instance_password=False, group='api')
 
-        return_server = fakes.fake_compute_get(image_ref='2',
+        return_server = fakes.fake_compute_get(
+                project_id=fakes.FAKE_PROJECT_ID,
+                image_ref='2',
                 vm_state=vm_states.ACTIVE, host='fake_host')
         self.stub_out('nova.compute.api.API.get', return_server)
 
@@ -983,7 +1001,8 @@ class ServerActionsControllerTestV21(test.TestCase):
                                image_root_device_name='/dev/vda',
                                image_block_device_mapping=str(bdm),
                                image_container_format='ami')
-        instance = fakes.fake_compute_get(image_ref=uuids.fake,
+        instance = fakes.fake_compute_get(project_id=fakes.FAKE_PROJECT_ID,
+                                          image_ref=uuids.fake,
                                           vm_state=vm_states.ACTIVE,
                                           root_device_name='/dev/vda',
                                           system_metadata=system_metadata)
@@ -1090,6 +1109,7 @@ class ServerActionsControllerTestV21(test.TestCase):
                       fake_block_device_mapping_get_all_by_instance)
 
         instance = fakes.fake_compute_get(
+            project_id=fakes.FAKE_PROJECT_ID,
             image_ref='',
             vm_state=vm_states.ACTIVE,
             root_device_name='/dev/vda',

@@ -112,7 +112,8 @@ class ServerMetaDataTestV21(test.TestCase):
     def _set_up_resources(self):
         self.controller = server_metadata_v21.ServerMetadataController()
         self.uuid = uuids.fake
-        self.url = '/fake/servers/%s/metadata' % self.uuid
+        self.url = '/%s/servers/%s/metadata' % (fakes.FAKE_PROJECT_ID,
+                                                self.uuid)
 
     def _get_request(self, param_url=''):
         return fakes.HTTPRequestV21.blank(self.url + param_url)
@@ -669,7 +670,8 @@ class BadStateServerMetaDataTestV21(test.TestCase):
     def _set_up_resources(self):
         self.controller = server_metadata_v21.ServerMetadataController()
         self.uuid = uuids.fake
-        self.url = '/fake/servers/%s/metadata' % self.uuid
+        self.url = '/%s/servers/%s/metadata' % (fakes.FAKE_PROJECT_ID,
+                                                self.uuid)
 
     def _get_request(self, param_url=''):
         return fakes.HTTPRequestV21.blank(self.url + param_url)

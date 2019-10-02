@@ -33,7 +33,7 @@ class FloatingIpPoolTestV21(test.NoDBTestCase):
     def setUp(self):
         super(FloatingIpPoolTestV21, self).setUp()
 
-        self.context = context.RequestContext('fake', 'fake')
+        self.context = context.RequestContext('fake', fakes.FAKE_PROJECT_ID)
         self.controller = self.floating_ip_pools.FloatingIPPoolsController()
         self.req = fakes.HTTPRequest.blank('')
 

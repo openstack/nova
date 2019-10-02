@@ -3696,7 +3696,7 @@ class ServersControllerRebuildTestV263(ControllerTest):
     def test_rebuild_server_with_trusted_certs_policy_failed(self):
         rule_name = "os_compute_api:servers:rebuild:trusted_certs"
         rules = {"os_compute_api:servers:rebuild": "@",
-                 rule_name: "project:fake"}
+                 rule_name: "project:%s" % fakes.FAKE_PROJECT_ID}
         self.policy.set_rules(rules)
         exc = self.assertRaises(exception.PolicyNotAuthorized,
                                 self._rebuild_server,
@@ -4169,7 +4169,7 @@ class ServersControllerCreateTest(test.TestCase):
                 'instance_type': inst_type,
                 'image_ref': inst.get('image_ref', def_image_ref),
                 'user_id': 'fake',
-                'project_id': 'fake',
+                'project_id': fakes.FAKE_PROJECT_ID,
                 'reservation_id': inst['reservation_id'],
                 "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
                 "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
@@ -5458,8 +5458,8 @@ class ServersControllerCreateTest(test.TestCase):
             else:
                 count['project'][res] = count['user'][res] = 0
         mock_count.return_value = count
-        mock_get_all_p.return_value = {'project_id': 'fake'}
-        mock_get_all_pu.return_value = {'project_id': 'fake',
+        mock_get_all_p.return_value = {'project_id': fakes.FAKE_PROJECT_ID}
+        mock_get_all_pu.return_value = {'project_id': fakes.FAKE_PROJECT_ID,
                                         'user_id': 'fake_user'}
         if resource in db_api.PER_PROJECT_QUOTAS:
             mock_get_all_p.return_value[resource] = quota
@@ -7217,7 +7217,7 @@ class ServersViewBuilderTest(test.TestCase):
             uuids.cell1: bdms[0],
             uuids.cell2: exception.BDMNotFound(id='fake')
         }
-        ctxt = context.RequestContext('fake', 'fake')
+        ctxt = context.RequestContext('fake', fakes.FAKE_PROJECT_ID)
         result = self.view_builder._get_instance_bdms_in_multiple_cells(
             ctxt, [self.instance.uuid])
         # will get the result from cell1
@@ -7771,7 +7771,7 @@ class ServersViewBuilderTestV269(ServersViewBuilderTest):
                 objects.Instance(
                     context=self.ctxt,
                     uuid=uuids.fake1,
-                    project_id='fake',
+                    project_id=fakes.FAKE_PROJECT_ID,
                     created_at=datetime.datetime(1955, 11, 5)
                 )
             ]
@@ -7875,7 +7875,7 @@ class ServersViewBuilderTestV269(ServersViewBuilderTest):
             {
                 'created': '1955-11-05T00:00:00Z',
                 'id': uuids.fake1,
-                'tenant_id': 'fake',
+                'tenant_id': fakes.FAKE_PROJECT_ID,
                 "status": "UNKNOWN",
                 "links": [
                     {
@@ -7900,7 +7900,7 @@ class ServersViewBuilderTestV269(ServersViewBuilderTest):
                 objects.Instance(
                     context=self.ctxt,
                     uuid=uuids.fake1,
-                    project_id='fake',
+                    project_id=fakes.FAKE_PROJECT_ID,
                     created_at=datetime.datetime(1955, 11, 5)
                 )
             ]

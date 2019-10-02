@@ -156,7 +156,8 @@ migrations_obj = base.obj_make_list(
 
 
 class FakeRequest(object):
-    environ = {"nova.context": context.RequestContext('fake_user', 'fake',
+    environ = {"nova.context": context.RequestContext('fake_user',
+                                                      fakes.FAKE_PROJECT_ID,
                                                       is_admin=True)}
     GET = {}
 

@@ -141,7 +141,7 @@ class BootFromVolumeTest(test.TestCase):
                       'access_ip_v6': 'fead::1234',
                       'image_ref': IMAGE_UUID,
                       'user_id': 'fake',
-                      'project_id': 'fake',
+                      'project_id': fakes.FAKE_PROJECT_ID,
                       'created_at': datetime.datetime(2010, 10, 10, 12, 0, 0),
                       'updated_at': datetime.datetime(2010, 11, 11, 11, 0, 0),
                       'progress': 0,

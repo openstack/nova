@@ -92,7 +92,7 @@ class InstanceActionsPolicyTestV21(test.NoDBTestCase):
         self.controller = self.instance_actions.InstanceActionsController()
 
     def _get_http_req(self, action):
-        fake_url = '/123/servers/12/%s' % action
+        fake_url = '/%s/servers/12/%s' % (fakes.FAKE_PROJECT_ID, action)
         return fakes.HTTPRequest.blank(fake_url)
 
     def _get_instance_other_project(self, req):
@@ -145,14 +145,14 @@ class InstanceActionsTestV21(test.NoDBTestCase):
         self.mock_get = get_patcher.start()
 
     def _get_http_req(self, action, use_admin_context=False):
-        fake_url = '/123/servers/12/%s' % action
+        fake_url = '/%s/servers/12/%s' % (fakes.FAKE_PROJECT_ID, action)
         return fakes.HTTPRequest.blank(fake_url,
                                        use_admin_context=use_admin_context,
                                        version=self.wsgi_api_version)
 
     def _get_http_req_with_version(self, action, use_admin_context=False,
                                    version="2.21"):
-        fake_url = '/123/servers/12/%s' % action
+        fake_url = '/%s/servers/12/%s' % (fakes.FAKE_PROJECT_ID, action)
         return fakes.HTTPRequest.blank(fake_url,
                                        use_admin_context=use_admin_context,
                                        version=version)

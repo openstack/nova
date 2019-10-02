@@ -560,7 +560,8 @@ class NetworksAssociateTestV21(test.NoDBTestCase):
 
     def test_network_associate_project_delete_fail(self):
         uuid = FAKE_NETWORKS[0]['uuid']
-        req = fakes.HTTPRequest.blank('/v2/1234/os-networks/%s/action' % uuid)
+        req = fakes.HTTPRequest.blank(
+                '/v2/%s/os-networks/%s/action' % (fakes.FAKE_PROJECT_ID, uuid))
         self.assertRaises(webob.exc.HTTPConflict,
                                     self.controller.delete, req, -1)
 

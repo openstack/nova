@@ -61,7 +61,7 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
     flavorextraspecs = flavorextraspecs_v21
 
     def _get_request(self, url, use_admin_context=False):
-        req_url = '/v2/fake/flavors/' + url
+        req_url = '/v2/%s/flavors/%s' % (fakes.FAKE_PROJECT_ID, url)
         return fakes.HTTPRequest.blank(req_url,
                                        use_admin_context=use_admin_context)
 

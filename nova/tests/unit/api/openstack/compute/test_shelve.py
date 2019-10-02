@@ -194,9 +194,9 @@ class UnshelveServerControllerTestV277(test.NoDBTestCase):
     def setUp(self):
         super(UnshelveServerControllerTestV277, self).setUp()
         self.controller = shelve_v21.ShelveController()
-        self.req = fakes.HTTPRequest.blank('/fake/servers/a/action',
-                                           use_admin_context=True,
-                                           version=self.wsgi_api_version)
+        self.req = fakes.HTTPRequest.blank(
+                '/%s/servers/a/action' % fakes.FAKE_PROJECT_ID,
+                use_admin_context=True, version=self.wsgi_api_version)
         # These tests don't care about ports with QoS bandwidth resources.
         self.stub_out('nova.api.openstack.common.'
                       'instance_has_port_with_resource_request',

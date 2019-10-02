@@ -176,6 +176,8 @@ class ServicesTestV21(test.TestCase):
     service_is_up_exc = webob.exc.HTTPInternalServerError
     bad_request = exception.ValidationError
     wsgi_api_version = os_wsgi.DEFAULT_API_VERSION
+    base_path = '/%s/services' % fakes.FAKE_PROJECT_ID
+    base_path_with_query = base_path + '?%s'
 
     def _set_up_controller(self):
         self.controller = services_v21.ServiceController()
@@ -208,7 +210,7 @@ class ServicesTestV21(test.TestCase):
         return services
 
     def test_services_list(self):
-        req = fakes.HTTPRequest.blank('/fake/services',
+        req = fakes.HTTPRequest.blank(self.base_path,
                                       use_admin_context=True)
         res_dict = self.controller.index(req)
 
@@ -249,7 +251,7 @@ class ServicesTestV21(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_services_list_with_host(self):
-        req = fakes.HTTPRequest.blank('/fake/services?host=host1',
+        req = fakes.HTTPRequest.blank(self.base_path_with_query % 'host=host1',
                                       use_admin_context=True)
         res_dict = self.controller.index(req)
 
@@ -274,8 +276,9 @@ class ServicesTestV21(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_services_list_with_service(self):
-        req = fakes.HTTPRequest.blank('/fake/services?binary=nova-compute',
-                                      use_admin_context=True)
+        req = fakes.HTTPRequest.blank(
+                self.base_path_with_query % 'binary=nova-compute',
+                use_admin_context=True)
         res_dict = self.controller.index(req)
 
         response = {'services': [
@@ -315,15 +318,16 @@ class ServicesTestV21(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_services_list_with_host_service(self):
-        url = '/fake/services?host=host1&binary=nova-compute'
+        url = self.base_path_with_query % 'host=host1&binary=nova-compute'
         self._test_services_list_with_param(url)
 
     def test_services_list_with_additional_filter(self):
-        url = '/fake/services?host=host1&binary=nova-compute&unknown=abc'
+        url = (self.base_path_with_query %
+               'host=host1&binary=nova-compute&unknown=abc')
         self._test_services_list_with_param(url)
 
     def test_services_list_with_unknown_filter(self):
-        url = '/fake/services?unknown=abc'
+        url = self.base_path_with_query % 'unknown=abc'
         req = fakes.HTTPRequest.blank(url, use_admin_context=True)
         res_dict = self.controller.index(req)
 
@@ -368,7 +372,7 @@ class ServicesTestV21(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_services_list_with_multiple_host_filter(self):
-        url = '/fake/services?host=host1&host=host2'
+        url = self.base_path_with_query % 'host=host1&host=host2'
         req = fakes.HTTPRequest.blank(url, use_admin_context=True)
         res_dict = self.controller.index(req)
 
@@ -394,7 +398,8 @@ class ServicesTestV21(test.TestCase):
         self.assertEqual(response, res_dict)
 
     def test_services_list_with_multiple_service_filter(self):
-        url = '/fake/services?binary=nova-compute&binary=nova-scheduler'
+        url = (self.base_path_with_query %
+               'binary=nova-compute&binary=nova-scheduler')
         req = fakes.HTTPRequest.blank(url, use_admin_context=True)
         res_dict = self.controller.index(req)
 
@@ -433,12 +438,12 @@ class ServicesTestV21(test.TestCase):
     def test_services_list_with_host_service_dummy(self):
         # This is for backward compatible, need remove it when
         # restriction to param is enabled.
-        url = '/fake/services?host=host1&binary=nova-compute&dummy=dummy'
+        url = (self.base_path_with_query %
+               'host=host1&binary=nova-compute&dummy=dummy')
         self._test_services_list_with_param(url)
 
     def test_services_detail(self):
-        req = fakes.HTTPRequest.blank('/fake/services',
-                                      use_admin_context=True)
+        req = fakes.HTTPRequest.blank(self.base_path, use_admin_context=True)
         res_dict = self.controller.index(req)
 
         response = {'services': [
@@ -478,7 +483,7 @@ class ServicesTestV21(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_service_detail_with_host(self):
-        req = fakes.HTTPRequest.blank('/fake/services?host=host1',
+        req = fakes.HTTPRequest.blank(self.base_path_with_query % 'host=host1',
                                       use_admin_context=True)
         res_dict = self.controller.index(req)
 
@@ -503,8 +508,9 @@ class ServicesTestV21(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_service_detail_with_service(self):
-        req = fakes.HTTPRequest.blank('/fake/services?binary=nova-compute',
-                                      use_admin_context=True)
+        req = fakes.HTTPRequest.blank(
+                self.base_path_with_query % 'binary=nova-compute',
+                use_admin_context=True)
         res_dict = self.controller.index(req)
 
         response = {'services': [
@@ -528,7 +534,7 @@ class ServicesTestV21(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_service_detail_with_host_service(self):
-        url = '/fake/services?host=host1&binary=nova-compute'
+        url = self.base_path_with_query % 'host=host1&binary=nova-compute'
         req = fakes.HTTPRequest.blank(url, use_admin_context=True)
         res_dict = self.controller.index(req)
 
@@ -545,7 +551,7 @@ class ServicesTestV21(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_services_detail_with_delete_extension(self):
-        req = fakes.HTTPRequest.blank('/fake/services',
+        req = fakes.HTTPRequest.blank(self.base_path,
                                       use_admin_context=True)
         res_dict = self.controller.index(req)
 
@@ -752,7 +758,7 @@ class ServicesTestV21(test.TestCase):
     # calling the API
     @mock.patch.object(db_driver.DbDriver, 'is_up', side_effect=KeyError)
     def test_services_with_exception(self, mock_is_up):
-        url = '/fake/services?host=host1&binary=nova-compute'
+        url = self.base_path_with_query % 'host=host1&binary=nova-compute'
         req = fakes.HTTPRequest.blank(url, use_admin_context=True)
         self.assertRaises(self.service_is_up_exc, self.controller.index, req)
 
@@ -761,7 +767,7 @@ class ServicesTestV211(ServicesTestV21):
     wsgi_api_version = '2.11'
 
     def test_services_list(self):
-        req = fakes.HTTPRequest.blank('/fake/services',
+        req = fakes.HTTPRequest.blank(self.base_path,
                                       use_admin_context=True,
                                       version=self.wsgi_api_version)
         res_dict = self.controller.index(req)
@@ -807,7 +813,7 @@ class ServicesTestV211(ServicesTestV21):
         self.assertEqual(res_dict, response)
 
     def test_services_list_with_host(self):
-        req = fakes.HTTPRequest.blank('/fake/services?host=host1',
+        req = fakes.HTTPRequest.blank(self.base_path_with_query % 'host=host1',
                                       use_admin_context=True,
                                       version=self.wsgi_api_version)
         res_dict = self.controller.index(req)
@@ -835,9 +841,9 @@ class ServicesTestV211(ServicesTestV21):
         self.assertEqual(res_dict, response)
 
     def test_services_list_with_service(self):
-        req = fakes.HTTPRequest.blank('/fake/services?binary=nova-compute',
-                                      version=self.wsgi_api_version,
-                                      use_admin_context=True)
+        req = fakes.HTTPRequest.blank(
+                self.base_path_with_query % 'binary=nova-compute',
+                version=self.wsgi_api_version, use_admin_context=True)
         res_dict = self.controller.index(req)
 
         response = {'services': [
@@ -863,7 +869,7 @@ class ServicesTestV211(ServicesTestV21):
         self.assertEqual(res_dict, response)
 
     def test_services_list_with_host_service(self):
-        url = '/fake/services?host=host1&binary=nova-compute'
+        url = self.base_path_with_query % 'host=host1&binary=nova-compute'
         req = fakes.HTTPRequest.blank(url, use_admin_context=True,
                                       version=self.wsgi_api_version)
         res_dict = self.controller.index(req)
@@ -882,7 +888,7 @@ class ServicesTestV211(ServicesTestV21):
         self.assertEqual(res_dict, response)
 
     def test_services_detail(self):
-        req = fakes.HTTPRequest.blank('/fake/services',
+        req = fakes.HTTPRequest.blank(self.base_path,
                                       use_admin_context=True,
                                       version=self.wsgi_api_version)
         res_dict = self.controller.index(req)
@@ -928,7 +934,7 @@ class ServicesTestV211(ServicesTestV21):
         self.assertEqual(res_dict, response)
 
     def test_service_detail_with_host(self):
-        req = fakes.HTTPRequest.blank('/fake/services?host=host1',
+        req = fakes.HTTPRequest.blank(self.base_path_with_query % 'host=host1',
                                       use_admin_context=True,
                                       version=self.wsgi_api_version)
         res_dict = self.controller.index(req)
@@ -956,9 +962,9 @@ class ServicesTestV211(ServicesTestV21):
         self.assertEqual(res_dict, response)
 
     def test_service_detail_with_service(self):
-        req = fakes.HTTPRequest.blank('/fake/services?binary=nova-compute',
-                                      version=self.wsgi_api_version,
-                                      use_admin_context=True)
+        req = fakes.HTTPRequest.blank(
+                self.base_path_with_query % 'binary=nova-compute',
+                version=self.wsgi_api_version, use_admin_context=True)
         res_dict = self.controller.index(req)
 
         response = {'services': [
@@ -984,7 +990,7 @@ class ServicesTestV211(ServicesTestV21):
         self.assertEqual(res_dict, response)
 
     def test_service_detail_with_host_service(self):
-        url = '/fake/services?host=host1&binary=nova-compute'
+        url = self.base_path_with_query % 'host=host1&binary=nova-compute'
         req = fakes.HTTPRequest.blank(url, use_admin_context=True,
                                       version=self.wsgi_api_version)
         res_dict = self.controller.index(req)
@@ -1003,7 +1009,7 @@ class ServicesTestV211(ServicesTestV21):
         self.assertEqual(res_dict, response)
 
     def test_services_detail_with_delete_extension(self):
-        req = fakes.HTTPRequest.blank('/fake/services',
+        req = fakes.HTTPRequest.blank(self.base_path,
                                       use_admin_context=True,
                                       version=self.wsgi_api_version)
         res_dict = self.controller.index(req)
@@ -1049,7 +1055,7 @@ class ServicesTestV211(ServicesTestV21):
         self.assertEqual(res_dict, response)
 
     def test_force_down_service(self):
-        req = fakes.HTTPRequest.blank('/fake/services',
+        req = fakes.HTTPRequest.blank(self.base_path,
                                       use_admin_context=True,
                                       version=self.wsgi_api_version)
         req_body = {"forced_down": True,
@@ -1066,7 +1072,7 @@ class ServicesTestV211(ServicesTestV21):
         self.assertEqual(response, res_dict)
 
     def test_force_down_service_with_string_forced_down(self):
-        req = fakes.HTTPRequest.blank('/fake/services',
+        req = fakes.HTTPRequest.blank(self.base_path,
                                       use_admin_context=True,
                                       version=self.wsgi_api_version)
         req_body = {"forced_down": "True",
@@ -1083,7 +1089,7 @@ class ServicesTestV211(ServicesTestV21):
         self.assertEqual(response, res_dict)
 
     def test_force_down_service_with_invalid_parameter(self):
-        req = fakes.HTTPRequest.blank('/fake/services',
+        req = fakes.HTTPRequest.blank(self.base_path,
                                       use_admin_context=True,
                                       version=self.wsgi_api_version)
         req_body = {"forced_down": "Invalid",
@@ -1092,7 +1098,7 @@ class ServicesTestV211(ServicesTestV21):
             self.controller.update, req, 'force-down', body=req_body)
 
     def test_update_forced_down_invalid_service(self):
-        req = fakes.HTTPRequest.blank('/fake/services',
+        req = fakes.HTTPRequest.blank(self.base_path,
                                       use_admin_context=True,
                                       version=self.wsgi_api_version)
         req_body = {"forced_down": True,
@@ -1337,13 +1343,15 @@ class ServicesTestV275(test.TestCase):
         self.controller = services_v21.ServiceController()
 
     def test_services_list_with_additional_filter_old_version(self):
-        url = '/fake/services?host=host1&binary=nova-compute&unknown=abc'
+        url = ('/%s/services?host=host1&binary=nova-compute&unknown=abc' %
+               fakes.FAKE_PROJECT_ID)
         req = fakes.HTTPRequest.blank(url, use_admin_context=True,
                                       version='2.74')
         self.controller.index(req)
 
     def test_services_list_with_additional_filter(self):
-        url = '/fake/services?host=host1&binary=nova-compute&unknown=abc'
+        url = ('/%s/services?host=host1&binary=nova-compute&unknown=abc' %
+               fakes.FAKE_PROJECT_ID)
         req = fakes.HTTPRequest.blank(url, use_admin_context=True,
                                       version=self.wsgi_api_version)
         self.assertRaises(exception.ValidationError,
