@@ -86,7 +86,6 @@ _man_pages = [
     ('nova-api-os-compute', u'Cloud controller fabric'),
     ('nova-compute', u'Cloud controller fabric'),
     ('nova-conductor', u'Cloud controller fabric'),
-    ('nova-dhcpbridge', u'Cloud controller fabric'),
     ('nova-manage', u'Cloud controller fabric'),
     ('nova-network', u'Cloud controller fabric'),
     ('nova-novncproxy', u'Cloud controller fabric'),
