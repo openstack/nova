@@ -81,11 +81,6 @@ class API(base_api.NetworkAPI):
             raise exception.NetworkInUse(network_id=network_uuid)
         return self.network_rpcapi.delete_network(context, network_uuid, None)
 
-    def disassociate(self, context, network_uuid):
-        network = self.get(context, network_uuid)
-        objects.Network.disassociate(context, network.id,
-                                     host=True, project=True)
-
     def get_fixed_ip(self, context, id):
         return objects.FixedIP.get_by_id(context, id)
 
@@ -331,30 +326,6 @@ class API(base_api.NetworkAPI):
         nw_info = self.network_rpcapi.remove_fixed_ip_from_instance(
             context, **args)
         return network_model.NetworkInfo.hydrate(nw_info)
-
-    def add_network_to_project(self, context, project_id, network_uuid=None):
-        """Force adds another network to a project."""
-        self.network_rpcapi.add_network_to_project(context, project_id,
-                network_uuid)
-
-    def associate(self, context, network_uuid, host=base_api.SENTINEL,
-                  project=base_api.SENTINEL):
-        """Associate or disassociate host or project to network."""
-        network = self.get(context, network_uuid)
-        if host is not base_api.SENTINEL:
-            if host is None:
-                objects.Network.disassociate(context, network.id,
-                                             host=True, project=False)
-            else:
-                network.host = host
-                network.save()
-        if project is not base_api.SENTINEL:
-            if project is None:
-                objects.Network.disassociate(context, network.id,
-                                             host=False, project=True)
-            else:
-                objects.Network.associate(context, project,
-                                          network_id=network.id, force=True)
 
     def _get_instance_nw_info(self, context, instance, **kwargs):
         """Returns all network info related to an instance."""

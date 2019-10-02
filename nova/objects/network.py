@@ -131,11 +131,13 @@ class Network(obj_base.NovaPersistentObject, obj_base.NovaObject,
         db_network = db.network_get_by_cidr(context, cidr)
         return cls._from_db_object(context, cls(), db_network)
 
+    # TODO(stephenfin): This is no longer used and can be removed
     @obj_base.remotable_classmethod
     def associate(cls, context, project_id, network_id=None, force=False):
         db.network_associate(context, project_id, network_id=network_id,
                              force=force)
 
+    # TODO(stephenfin): This is no longer used and can be removed
     @obj_base.remotable_classmethod
     def disassociate(cls, context, network_id, host=False, project=False):
         db.network_disassociate(context, network_id, host, project)

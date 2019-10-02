@@ -208,11 +208,6 @@ class NetworkAPI(object):
                           instance_id=instance_id, rxtx_factor=rxtx_factor,
                           host=host, address=address)
 
-    def add_network_to_project(self, ctxt, project_id, network_uuid):
-        return self.client.call(ctxt, 'add_network_to_project',
-                                project_id=project_id,
-                                network_uuid=network_uuid)
-
     def get_instance_nw_info(self, ctxt, instance_id, rxtx_factor, host,
                              project_id):
         cctxt = self.client.prepare(version='1.9')

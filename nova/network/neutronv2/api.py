@@ -2461,15 +2461,6 @@ class API(base_api.NetworkAPI):
         """Delete a network for client."""
         raise NotImplementedError()
 
-    def disassociate(self, context, network_uuid):
-        """Disassociate a network for client."""
-        raise NotImplementedError()
-
-    def associate(self, context, network_uuid, host=base_api.SENTINEL,
-                  project=base_api.SENTINEL):
-        """Associate a network for client."""
-        raise NotImplementedError()
-
     def get_fixed_ip(self, context, id):
         """Get a fixed IP from the id."""
         raise NotImplementedError()
@@ -2847,10 +2838,6 @@ class API(base_api.NetworkAPI):
         self._update_port_binding_for_instance(
             context, instance, migration.dest_compute, migration=migration,
             provider_mappings=provider_mappings)
-
-    def add_network_to_project(self, context, project_id, network_uuid=None):
-        """Force add a network to the project."""
-        raise NotImplementedError()
 
     def _nw_info_get_ips(self, client, port):
         network_IPs = []
