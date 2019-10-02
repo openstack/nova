@@ -45,7 +45,7 @@ class ServerDiagnosticsTestV21(test.NoDBTestCase):
 
     def _get_request(self):
         return fakes.HTTPRequest.blank(
-            '/v2/fake/servers/%s/diagnostics' % UUID,
+            '/v2/%s/servers/%s/diagnostics' % (fakes.FAKE_PROJECT_ID, UUID),
             version=self.api_version,
             headers = {os_wsgi.API_VERSION_REQUEST_HEADER:
                            'compute %s' % self.api_version})

@@ -62,7 +62,8 @@ class UrlmapTest(test.NoDBTestCase):
 
     def test_accept_content_type(self):
         # Test Accept header specifying JSON returns JSON content.
-        url = '/v2/fake/images/cedef40a-ed67-4d10-800e-17455edce175'
+        url = ('/v2/%s/images/cedef40a-ed67-4d10-800e-17455edce175' %
+               fakes.FAKE_PROJECT_ID)
         req = fakes.HTTPRequest.blank(url)
         req.accept = "application/xml;q=0.8, application/json"
         res = req.get_response(fakes.wsgi_app_v21())

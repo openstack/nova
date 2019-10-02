@@ -42,11 +42,6 @@ class ConfFixture(config_fixture.Config):
         self.conf.set_default('network_size', 8)
         self.conf.set_default('num_networks', 2)
         self.conf.set_default('periodic_enable', False)
-        # TODO(sdague): this makes our project_id match 'fake' as well.
-        # We should fix the tests to use real
-        # UUIDs then drop this work around.
-        self.conf.set_default('project_id_regex',
-                              '[0-9a-fk-]+', 'osapi_v21')
         self.conf.set_default('use_ipv6', True)
         self.conf.set_default('vlan_interface', 'eth0')
 

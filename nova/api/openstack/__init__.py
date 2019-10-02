@@ -166,11 +166,7 @@ class ProjectMapper(APIMapper):
         # NOTE(sdague): project_id parameter is only valid if its hex
         # or hex + dashes (note, integers are a subset of this). This
         # is required to hand our overlaping routes issues.
-        project_id_regex = '[0-9a-f-]+'
-        if CONF.osapi_v21.project_id_regex:
-            project_id_regex = CONF.osapi_v21.project_id_regex
-
-        return '{project_id:%s}' % project_id_regex
+        return '{project_id:[0-9a-f-]+}'
 
     def resource(self, member_name, collection_name, **kwargs):
         project_id_token = self._get_project_id_token()

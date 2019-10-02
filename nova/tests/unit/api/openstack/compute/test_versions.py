@@ -467,7 +467,9 @@ class VersionsTestV21(test.NoDBTestCase):
         self.assertEqual(expected, version)
 
     def test_get_version_21_versions_v21_detail(self):
-        req = fakes.HTTPRequest.blank('/v2.1/fake/versions/v2.1', base_url='')
+        req = fakes.HTTPRequest.blank(
+                '/v2.1/%s/versions/v2.1' % fakes.FAKE_PROJECT_ID,
+                base_url='')
         req.accept = "application/json"
         res = req.get_response(self.wsgi_app)
         self.assertEqual(200, res.status_int)
@@ -477,7 +479,9 @@ class VersionsTestV21(test.NoDBTestCase):
         self.assertEqual(expected, version)
 
     def test_get_version_21_versions_v20_detail(self):
-        req = fakes.HTTPRequest.blank('/v2.1/fake/versions/v2.0', base_url='')
+        req = fakes.HTTPRequest.blank(
+                '/v2.1/%s/versions/v2.0' % fakes.FAKE_PROJECT_ID,
+                base_url='')
         req.accept = "application/json"
         res = req.get_response(self.wsgi_app)
         self.assertEqual(200, res.status_int)

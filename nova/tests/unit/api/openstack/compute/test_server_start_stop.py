@@ -37,7 +37,8 @@ class ServerStartStopTestV21(test.TestCase):
         self.req = fakes.HTTPRequest.blank('')
         self.useFixture(nova_fixtures.SingleCellSimple())
         self.stub_out('nova.db.api.instance_get_by_uuid',
-                      fakes.fake_instance_get())
+                      fakes.fake_instance_get(
+                          project_id=fakes.FAKE_PROJECT_ID))
 
     def _setup_controller(self):
         self.controller = server_v21.ServersController()

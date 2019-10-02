@@ -61,7 +61,7 @@ def fake_create_without_swap(newflavor):
 class FlavorManageTestV21(test.NoDBTestCase):
     controller = flavormanage_v21.FlavorManageController()
     validation_error = exception.ValidationError
-    base_url = '/v2/fake/flavors'
+    base_url = '/v2/%s/flavors' % fakes.FAKE_PROJECT_ID
     microversion = '2.1'
 
     def setUp(self):
@@ -507,9 +507,8 @@ class FlavorManageTestV2_75(FlavorManageTestV2_61):
         flavor = self._create_flavor_success_case(self.request_body,
                                                 version='2.74')['flavor']
         mock_get.return_value = self.FLAVOR_WITH_NO_SWAP
-        req = fakes.HTTPRequest.blank(
-            '/fake/flavors',
-            version='2.74')
+        req = fakes.HTTPRequest.blank('/%s/flavors' % fakes.FAKE_PROJECT_ID,
+                                      version='2.74')
         req.method = 'PUT'
         response = self.controller._update(
             req, flavor['id'],
@@ -530,9 +529,8 @@ class FlavorManageTestV2_75(FlavorManageTestV2_61):
         del self.request_body['flavor']['swap']
         mock_get.return_value = self.FLAVOR_WITH_NO_SWAP
         flavor = self._create_flavor_success_case(self.request_body)['flavor']
-        req = fakes.HTTPRequest.blank(
-            '/fake/flavors',
-            version=self.microversion)
+        req = fakes.HTTPRequest.blank('/%s/flavors' % fakes.FAKE_PROJECT_ID,
+                                      version=self.microversion)
         response = self.controller._update(
             req, flavor['id'],
             body={'flavor': {'description': None}})['flavor']
@@ -541,7 +539,7 @@ class FlavorManageTestV2_75(FlavorManageTestV2_61):
 
 class PrivateFlavorManageTestV21(test.TestCase):
     controller = flavormanage_v21.FlavorManageController()
-    base_url = '/v2/fake/flavors'
+    base_url = '/v2/%s/flavors' % fakes.FAKE_PROJECT_ID
 
     def setUp(self):
         super(PrivateFlavorManageTestV21, self).setUp()

@@ -1,0 +1,4 @@
+---
+upgrade:
+  - The ``[osapi_v21]/project_id_regex`` configuration option which has been
+    deprecated since the Mitaka 13.0.0 release has now been removed.

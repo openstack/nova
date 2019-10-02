@@ -578,7 +578,7 @@ class UrlJoinTest(test.NoDBTestCase):
 
 
 class ViewBuilderLinkTest(test.NoDBTestCase):
-    project_id = "fake"
+    project_id = fakes.FAKE_PROJECT_ID
     api_version = "2.1"
 
     def setUp(self):
