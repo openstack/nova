@@ -1,0 +1,42 @@
+---
+issues:
+  - |
+    Operators should be aware that nova-api has a dependency on eventlet for
+    executing parallel queries across multiple cells and is monkey-patched
+    accordingly. When nova-api is running under uWSGI or mod_wsgi, the wsgi
+    app will pause after idle time. While the wsgi app is paused, rabbitmq
+    heartbeats will not be sent and log messages related to this can be seen
+    in the nova-api logs when the wsgi app resumes when new requests arrive to
+    the nova-api. These messages are not harmful. When the wsgi app resumes,
+    oslo.messaging will reconnect to rabbitmq and requests will be served
+    successfully.
+
+    There is one caveat, which is that the wsgi app configuration must be left
+    as the default ``threads=1`` or set explicitly to ``threads=1`` to ensure
+    that reconnection will work properly. When threads > 1, it is not
+    guaranteed that oslo.messaging will reconnect to rabbitmq when the wsgi app
+    resumes after pausing during idle time. Threads are used internally by
+    oslo.messaging for heartbeats and more, and it may fail in a variety of
+    ways if run under eventlet with an app that violates eventlet's threading
+    guarantees. When oslo.messaging does not reconnect to rabbitmq after a
+    wsgi app pause, RPC requests will fail with a ``MessagingTimeout`` error.
+    So, it is necessary to have the wsgi app configured with ``threads=1`` for
+    reconnection to work properly.
+
+    If running with ``threads=1`` is not an option in a particular environment,
+    there are two other workarounds:
+
+    * Use the eventlet wsgi server instead of uWSGI or mod_wsgi, or
+
+    * Disable eventlet monkey-patching using the environment variable
+      ``OS_NOVA_DISABLE_EVENTLET_PATCHING=yes``.
+
+      Note that disabling eventlet monkey-patching will cause queries across
+      multiple cells to be serialized instead of running in parallel and this
+      may be undesirable in a large deployment with multiple cells, for
+      performance reasons.
+
+    Please see the following related bugs for more details:
+
+    * https://bugs.launchpad.net/nova/+bug/1825584
+    * https://bugs.launchpad.net/nova/+bug/1829062
