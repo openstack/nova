@@ -683,6 +683,22 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 request_spec=self.fake_request_spec_obj,
                 version='5.2')
 
+    def test_cache_image(self):
+        self._test_compute_api('cache_images', 'call',
+                               host='host', image_ids=['image'],
+                               call_monitor_timeout=60, timeout=1800,
+                               version='5.4')
+
+    def test_cache_image_pinned(self):
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        rpcapi = compute_rpcapi.ComputeAPI()
+        rpcapi.router.client = mock.Mock()
+        mock_client = mock.MagicMock()
+        rpcapi.router.client.return_value = mock_client
+        mock_client.can_send_version.return_value = False
+        self.assertRaises(exception.NovaException,
+                          rpcapi.cache_images, ctxt, 'host', ['image'])
+
     def test_unshelve_instance_old_compute(self):
         ctxt = context.RequestContext('fake_user', 'fake_project')
         rpcapi = compute_rpcapi.ComputeAPI()

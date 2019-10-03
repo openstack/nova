@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 40
+SERVICE_VERSION = 41
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -161,6 +161,8 @@ SERVICE_VERSION_HISTORY = (
     # drop_move_claim_at_destination() method, and numa_live_migration
     # parameter to check_can_live_migrate_source()
     {'compute_rpc': '5.3'},
+    # Version 41: Add cache_images() to compute rpcapi (version 5.4)
+    {'compute_rpc': '5.4'},
 )
 
 

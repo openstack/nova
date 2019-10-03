@@ -370,6 +370,7 @@ class ComputeAPI(object):
         * 5.3 - Add migration and limits parameters to
                 check_can_live_migrate_destination(), and a new
                 drop_move_claim_at_destination() method
+        * 5.4 - Add cache_images() support
     '''
 
     VERSION_ALIASES = {
@@ -1234,3 +1235,17 @@ class ComputeAPI(object):
         cctxt = client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.cast(ctxt, "trigger_crash_dump", instance=instance)
+
+    def cache_images(self, ctxt, host, image_ids):
+        version = '5.4'
+        client = self.router.client(ctxt)
+        if not client.can_send_version(version):
+            raise exception.NovaException('Compute RPC version pin does not '
+                                          'allow cache_images() to be called')
+        # This is a potentially very long-running call, so we provide the
+        # two timeout values which enables the call monitor in oslo.messaging
+        # so that this can run for extended periods.
+        cctxt = client.prepare(server=host, version=version,
+                               call_monitor_timeout=CONF.rpc_response_timeout,
+                               timeout=CONF.long_rpc_timeout)
+        return cctxt.call(ctxt, 'cache_images', image_ids=image_ids)

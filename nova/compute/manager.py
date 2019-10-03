@@ -521,7 +521,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='5.3')
+    target = messaging.Target(version='5.4')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -9234,6 +9234,44 @@ class ComputeManager(manager.Manager):
                                  filters, expected_attrs=[], use_slave=True)
 
         self.driver.manage_image_cache(context, filtered_instances)
+
+    def cache_images(self, context, image_ids):
+        """Ask the virt driver to pre-cache a set of base images.
+
+        :param context: The RequestContext
+        :param image_ids: The image IDs to be cached
+        :return: A dict, keyed by image-id where the values are one of:
+                 'cached' if the image was downloaded,
+                 'existing' if the image was already in the cache,
+                 'unsupported' if the virt driver does not support caching,
+                 'error' if the virt driver raised an exception.
+        """
+
+        results = {}
+
+        LOG.info('Caching %i image(s) by request', len(image_ids))
+        for image_id in image_ids:
+            try:
+                cached = self.driver.cache_image(context, image_id)
+                if cached:
+                    results[image_id] = 'cached'
+                else:
+                    results[image_id] = 'existing'
+            except NotImplementedError:
+                LOG.warning('Virt driver does not support image pre-caching;'
+                            ' ignoring request')
+                # NOTE(danms): Yes, technically we could short-circuit here to
+                # avoid trying the rest of the images, but it's very cheap to
+                # just keep hitting the NotImplementedError to keep the logic
+                # clean.
+                results[image_id] = 'unsupported'
+            except Exception as e:
+                results[image_id] = 'error'
+                LOG.error('Failed to cache image %(image_id)s: %(err)s',
+                          {'image_id': image_id,
+                           'err': e})
+
+        return results
 
     @periodic_task.periodic_task(spacing=CONF.instance_delete_interval)
     def _run_pending_deletes(self, context):
