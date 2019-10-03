@@ -6,7 +6,7 @@
         "addresses": {
             "private": [
                 {
-                    "addr": "192.168.0.3",
+                    "addr": "192.168.1.30",
                     "version": 4
                 }
             ]
