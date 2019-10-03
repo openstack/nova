@@ -101,13 +101,60 @@ echo "Resource provider allocations were cleaned up properly."
 # Test "nova-manage placement heal_allocations" by creating a server, deleting
 # its allocations in placement, and then running heal_allocations and assert
 # the allocations were healed as expected.
+
+function get_binding_profile_value
+{
+    # Returns the value of the key in the binding profile if exsits or return
+    # empty.
+    local port=${1}
+    local key=${2}
+    local print_value='import sys, json; print(json.load(sys.stdin).get("binding_profile", {}).get("'${key}'", ""))'
+    openstack port show ${port} -f json -c binding_profile \
+    | /usr/bin/env python3 -c "${print_value}"
+}
+
+echo "Creating port with bandwidth request for heal_allocations testing"
+openstack network create net0 \
+    --provider-network-type vlan \
+    --provider-physical-network public \
+    --provider-segment 100
+
+openstack subnet create subnet0 \
+    --network net0 \
+    --subnet-range 10.0.4.0/24 \
+
+openstack network qos policy create qp0
+openstack network qos rule create qp0 \
+    --type minimum-bandwidth \
+    --min-kbps 1000 \
+    --egress
+
+openstack network qos rule create qp0 \
+    --type minimum-bandwidth \
+    --min-kbps 1000 \
+    --ingress
+
+openstack port create port-normal-qos \
+    --network net0 \
+    --vnic-type normal \
+    --qos-policy qp0
+
+# Let's make the binding:profile for this port contain some
+# (non-allocation-y) stuff and then later assert that this stuff is still
+# there after the heal.
+# Cf. https://review.opendev.org/#/c/637955/35/nova/cmd/manage.py@1896
+openstack port set port-normal-qos --binding-profile my_key=my_value
+
 image_id=$(openstack image list -f value -c ID | awk 'NR==1{print $1}')
 flavor_id=$(openstack flavor list -f value -c ID | awk 'NR==1{print $1}')
 network_id=$(openstack network list --no-share -f value -c ID | awk 'NR==1{print $1}')
 
 echo "Creating server for heal_allocations testing"
-openstack server create --image ${image_id} --flavor ${flavor_id} \
---nic net-id=${network_id} --wait heal-allocations-test
+# microversion 2.72 introduced the support for bandwidth aware ports
+openstack --os-compute-api-version 2.72 \
+server create --image ${image_id} --flavor ${flavor_id} \
+--nic net-id=${network_id} --nic port-id=port-normal-qos \
+--wait heal-allocations-test
 server_id=$(openstack server show heal-allocations-test -f value -c id)
 
 # Make sure there are allocations for the consumer.
@@ -118,14 +165,45 @@ if [[ "$allocations" == "" ]]; then
     exit 2
 fi
 
+# Make sure that the binding:profile.allocation key is updated
+rp_uuid=$(get_binding_profile_value port-normal-qos "allocation")
+if [[ "$rp_uuid" == "" ]]; then
+    echo "No allocation found for the bandwidth aware port."
+    exit 2
+fi
+
+# Make sure our extra key in the binding:profile is still there
+my_key=$(get_binding_profile_value port-normal-qos "my_key")
+if [[ "$my_key" == "" ]]; then
+    echo "During port binding the binding:profile was overwritten."
+    exit 2
+fi
+
 echo "Deleting allocations in placement for the server"
 openstack resource provider allocation delete ${server_id}
+
+echo "Deleting allocation key from the binding:profile of the bandwidth aware port"
+openstack port unset --binding-profile allocation port-normal-qos
 
 # Make sure the allocations are gone.
 allocations=$(openstack resource provider allocation show ${server_id} \
               -c resources -f value)
 if [[ "$allocations" != "" ]]; then
     echo "Server allocations were not deleted."
+    exit 2
+fi
+
+# Make sure that the binding:profile.allocation key is gone
+null_rp_uuid=$(get_binding_profile_value port-normal-qos "allocation")
+if [[ "$null_rp_uuid" != "" ]]; then
+    echo "Binding profile not updated for the bandwidth aware port."
+    exit 2
+fi
+
+# Make sure our extra key in the binding:profile is still there
+my_key=$(get_binding_profile_value port-normal-qos "my_key")
+if [[ "$my_key" == "" ]]; then
+    echo "During deletion of allocation key our extra key was also deleted from the binding:profile."
     exit 2
 fi
 
@@ -148,5 +226,27 @@ allocations=$(openstack resource provider allocation show ${server_id} \
               -c resources -f value)
 if [[ "$allocations" == "" ]]; then
     echo "Failed to heal allocations."
+    exit 2
+fi
+
+# Make sure that the allocations contains bandwidth as well
+bandwidth_allocations=$(echo "$allocations" |  grep NET_BW_EGR_KILOBIT_PER_SEC)
+if [[ "$bandwidth_allocations" == "" ]]; then
+    echo "Failed to heal port allocations."
+    exit 2
+fi
+
+# Make sure that the binding:profile.allocation key healed back
+healed_rp_uuid=$(get_binding_profile_value port-normal-qos "allocation")
+if [[ "$rp_uuid" != "$healed_rp_uuid" ]]; then
+    echo "The value of the allocation key of the bandwidth aware port does not match."
+    echo "expected: $rp_uuid; actual: $healed_rp_uuid."
+    exit 2
+fi
+
+# Make sure our extra key in the binding:profile is still there
+my_key=$(get_binding_profile_value port-normal-qos "allocation")
+if [[ "$my_key" == "" ]]; then
+    echo "During heal port allocation our extra key in the binding:profile was deleted."
     exit 2
 fi
