@@ -1,0 +1,21 @@
+---
+issues:
+  - |
+    The support for guest RAM encryption using AMD SEV (Secure Encrypted
+    Virtualization) added in Train is incompatible with a number of image
+    metadata options:
+
+    - ``hw_scsi_model=virtio-scsi`` and either ``hw_disk_bus=scsi`` or
+      ``hw_cdrom_bus=scsi``
+    - ``hw_video_model=virtio``
+    - ``hw_qemu_guest_agent=yes``
+
+    When used together, the guest kernel can malfunction with repeated warnings
+    like::
+
+        NMI watchdog: BUG: soft lockup - CPU#0 stuck for 22s! [system-udevd:272]
+
+    This will be resolved in a future patch release. For more information,
+    refer to `bug 1845986`__
+
+    __ https://bugs.launchpad.net/nova/+bug/1845986
