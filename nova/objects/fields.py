@@ -864,6 +864,7 @@ class NotificationAction(BaseNovaEnum):
     BUILD_INSTANCES = 'build_instances'
     MIGRATE_SERVER = 'migrate_server'
     REBUILD_SERVER = 'rebuild_server'
+    IMAGE_CACHE = 'cache_images'
 
     ALL = (UPDATE, EXCEPTION, DELETE, PAUSE, UNPAUSE, RESIZE, VOLUME_SWAP,
            SUSPEND, POWER_ON, REBOOT, SHUTDOWN, SNAPSHOT, INTERFACE_ATTACH,
@@ -877,7 +878,7 @@ class NotificationAction(BaseNovaEnum):
            REMOVE_HOST, ADD_MEMBER, UPDATE_METADATA, LOCK, UNLOCK,
            REBUILD_SCHEDULED, UPDATE_PROP, LIVE_MIGRATION_FORCE_COMPLETE,
            CONNECT, USAGE, BUILD_INSTANCES, MIGRATE_SERVER, REBUILD_SERVER,
-           SELECT_DESTINATIONS)
+           SELECT_DESTINATIONS, IMAGE_CACHE)
 
 
 # TODO(rlrossit): These should be changed over to be a StateMachine enum from

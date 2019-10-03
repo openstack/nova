@@ -3567,6 +3567,23 @@ class ConductorTaskRPCAPITestCase(_BaseTaskTestCase,
                 self.context, 'build_instances', **kw)
         _test()
 
+    def test_cache_images(self):
+        with mock.patch.object(self.conductor, 'client') as client:
+            self.conductor.cache_images(self.context, mock.sentinel.aggregate,
+                                        [mock.sentinel.image])
+            client.prepare.return_value.cast.assert_called_once_with(
+                self.context, 'cache_images',
+                aggregate=mock.sentinel.aggregate,
+                image_ids=[mock.sentinel.image])
+            client.prepare.assert_called_once_with(version='1.21')
+
+        with mock.patch.object(self.conductor.client, 'can_send_version') as v:
+            v.return_value = False
+            self.assertRaises(exc.NovaException,
+                              self.conductor.cache_images,
+                              self.context, mock.sentinel.aggregate,
+                              [mock.sentinel.image])
+
 
 class ConductorTaskAPITestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     """Compute task API Tests."""
@@ -3591,3 +3608,56 @@ class ConductorTaskAPITestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 self.context, inst_obj, {'host': 'destination'}, True, False,
                 None, 'block_migration', 'disk_over_commit', None,
                 request_spec=None)
+
+    def test_cache_images(self):
+        @mock.patch.object(self.conductor.conductor_compute_rpcapi,
+                           'cache_images')
+        @mock.patch.object(self.conductor.image_api, 'get')
+        def _test(mock_image, mock_cache):
+            self.conductor.cache_images(self.context,
+                                        mock.sentinel.aggregate,
+                                        [mock.sentinel.image1,
+                                         mock.sentinel.image2])
+            mock_image.assert_has_calls([mock.call(self.context,
+                                                mock.sentinel.image1),
+                                         mock.call(self.context,
+                                                   mock.sentinel.image2)])
+            mock_cache.assert_called_once_with(
+                self.context, mock.sentinel.aggregate,
+                [mock.sentinel.image1, mock.sentinel.image2])
+
+        _test()
+
+    def test_cache_images_fail(self):
+        @mock.patch.object(self.conductor.conductor_compute_rpcapi,
+                           'cache_images')
+        @mock.patch.object(self.conductor.image_api, 'get')
+        def _test(mock_image, mock_cache):
+            mock_image.side_effect = test.TestingException()
+            # We should expect to see non-NovaException errors
+            # raised directly so the API can 500 for them.
+            self.assertRaises(test.TestingException,
+                              self.conductor.cache_images,
+                              self.context,
+                              mock.sentinel.aggregate,
+                              [mock.sentinel.image1,
+                               mock.sentinel.image2])
+            mock_cache.assert_not_called()
+
+        _test()
+
+    def test_cache_images_missing(self):
+        @mock.patch.object(self.conductor.conductor_compute_rpcapi,
+                           'cache_images')
+        @mock.patch.object(self.conductor.image_api, 'get')
+        def _test(mock_image, mock_cache):
+            mock_image.side_effect = exc.ImageNotFound('foo')
+            self.assertRaises(exc.ImageNotFound,
+                              self.conductor.cache_images,
+                              self.context,
+                              mock.sentinel.aggregate,
+                              [mock.sentinel.image1,
+                               mock.sentinel.image2])
+            mock_cache.assert_not_called()
+
+        _test()

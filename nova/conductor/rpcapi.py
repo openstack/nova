@@ -20,6 +20,7 @@ from oslo_serialization import jsonutils
 from oslo_versionedobjects import base as ovo_base
 
 import nova.conf
+from nova import exception
 from nova.objects import base as objects_base
 from nova import profiler
 from nova import rpc
@@ -281,6 +282,7 @@ class ComputeTaskAPI(object):
            instance.
     1.20 - migrate_server() now gets a 'host_list' parameter that represents
            potential alternate hosts for retries within a cell.
+    1.21 - Added cache_images()
     """
 
     def __init__(self):
@@ -436,3 +438,12 @@ class ComputeTaskAPI(object):
             del kw['request_spec']
         cctxt = self.client.prepare(version=version)
         cctxt.cast(ctxt, 'rebuild_instance', **kw)
+
+    def cache_images(self, ctxt, aggregate, image_ids):
+        version = '1.21'
+        if not self.client.can_send_version(version):
+            raise exception.NovaException('Conductor RPC version pin does not '
+                                          'allow cache_images() to be called')
+        cctxt = self.client.prepare(version=version)
+        cctxt.cast(ctxt, 'cache_images', aggregate=aggregate,
+                   image_ids=image_ids)

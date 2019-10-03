@@ -71,7 +71,8 @@ class EventType(NotificationObject):
     #               NotificationActionField enum
     # Version 1.19: SELECT_DESTINATIONS is added to the NotificationActionField
     #               enum
-    VERSION = '1.19'
+    # Version 1.20: IMAGE_CACHE is added to the NotificationActionField enum
+    VERSION = '1.20'
 
     fields = {
         'object': fields.StringField(nullable=False),

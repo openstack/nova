@@ -1013,3 +1013,16 @@ class FakeDriverWithPciResources(SmallFakeDriver):
             },
         ])
         return host_status
+
+
+class FakeDriverWithCaching(FakeDriver):
+    def __init__(self, *a, **k):
+        super(FakeDriverWithCaching, self).__init__(*a, **k)
+        self.cached_images = set()
+
+    def cache_image(self, context, image_id):
+        if image_id in self.cached_images:
+            return False
+        else:
+            self.cached_images.add(image_id)
+            return True
