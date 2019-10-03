@@ -61,9 +61,17 @@ class ConsoleAuthToken(base.NovaTimestampObject, base.NovaObject):
         specific to this authorization.
         """
         if self.obj_attr_is_set('id'):
-            qparams = {'path': '?token=%s' % self.token}
-            return '%s?%s' % (self.access_url_base,
-                              urlparse.urlencode(qparams))
+            if self.console_type == 'novnc':
+                # NOTE(melwitt): As of noVNC v1.1.0, we must use the 'path'
+                # query parameter to pass the auth token within, as the
+                # top-level 'token' query parameter was removed. The 'path'
+                # parameter is supported in older noVNC versions, so it is
+                # backward compatible.
+                qparams = {'path': '?token=%s' % self.token}
+                return '%s?%s' % (self.access_url_base,
+                                  urlparse.urlencode(qparams))
+            else:
+                return '%s?token=%s' % (self.access_url_base, self.token)
 
     @staticmethod
     def _from_db_object(context, obj, db_obj):
