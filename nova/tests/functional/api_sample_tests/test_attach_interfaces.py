@@ -20,7 +20,9 @@ from nova.tests.functional.api_sample_tests import test_servers
 from nova.tests.unit import fake_network_cache_model
 
 
+# TODO(stephenfin): Rework to use neutron
 class AttachInterfacesSampleJsonTest(test_servers.ServersSampleBase):
+    USE_NEUTRON = False
     sample_dir = 'os-attach-interfaces'
 
     def setUp(self):
@@ -168,6 +170,7 @@ class AttachInterfacesSampleJsonTest(test_servers.ServersSampleBase):
 
 
 class AttachInterfacesSampleV249JsonTest(test_servers.ServersSampleBase):
+    USE_NEUTRON = False
     sample_dir = 'os-attach-interfaces'
     microversion = '2.49'
     scenarios = [('v2_49', {'api_major_version': 'v2.1'})]

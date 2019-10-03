@@ -76,11 +76,10 @@ def generate_new_element(items, prefix, numeric=False):
 class _IntegratedTestBase(test.TestCase):
     REQUIRES_LOCKING = True
     ADMIN_API = False
-    # Override this in subclasses which use the NeutronFixture. New tests
-    # should rely on Neutron since nova-network is deprecated. The default
-    # value of False here is only temporary while we update the existing
-    # functional tests to use Neutron.
-    USE_NEUTRON = False
+    # Override this in subclasses which use the legacy nova-network service.
+    # New tests should rely on Neutron and old ones migrated to use this since
+    # nova-network is deprecated.
+    USE_NEUTRON = True
 
     def setUp(self):
         super(_IntegratedTestBase, self).setUp()

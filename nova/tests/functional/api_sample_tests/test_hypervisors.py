@@ -101,6 +101,7 @@ class HypervisorsSampleJson228Tests(HypervisorsSampleJsonTests):
 
 
 class HypervisorsSampleJson233Tests(api_sample_base.ApiSampleTestBaseV21):
+    USE_NEUTRON = False
     ADMIN_API = True
     sample_dir = "os-hypervisors"
     microversion = '2.33'
@@ -118,6 +119,7 @@ class HypervisorsSampleJson233Tests(api_sample_base.ApiSampleTestBaseV21):
         response = self._do_get('os-hypervisors?limit=1&marker=1')
         self._verify_response('hypervisors-list-resp', {}, response, 200)
 
+    # TODO(stephenfin): Migrate off of nova-network
     def test_hypervisors_detail(self):
         subs = {
             'hypervisor_id': '2',

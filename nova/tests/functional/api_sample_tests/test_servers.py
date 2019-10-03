@@ -105,6 +105,7 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
 
 
 class ServersSampleJsonTest(ServersSampleBase):
+    USE_NEUTRON = False
     # This controls whether or not we use the common server API sample
     # for server post req/resp.
     use_common_server_post = True
@@ -114,6 +115,7 @@ class ServersSampleJsonTest(ServersSampleBase):
         return self._post_server(
             use_common_server_api_samples=self.use_common_server_post)
 
+    # TODO(stephenfin): Migrate off of nova-network
     def test_servers_get(self):
         self.stub_out(
             'nova.db.api.block_device_mapping_get_all_by_instance_uuids',
@@ -141,6 +143,7 @@ class ServersSampleJsonTest(ServersSampleBase):
         subs = {'id': uuid}
         self._verify_response('servers-list-resp', subs, response, 200)
 
+    # TODO(stephenfin): Migrate off of nova-network
     def test_servers_details(self):
         self.stub_out(
             'nova.db.api.block_device_mapping_get_all_by_instance_uuids',
@@ -202,6 +205,7 @@ class ServersSampleJson219Test(ServersSampleJsonTest):
 
 
 class ServersSampleJson232Test(ServersSampleBase):
+    USE_NEUTRON = False
     microversion = '2.32'
     sample_dir = 'servers'
     scenarios = [('v2_32', {'api_major_version': 'v2.1'})]
@@ -220,6 +224,7 @@ class ServersSampleJson237Test(ServersSampleBase):
 
 
 class ServersSampleJson242Test(ServersSampleBase):
+    USE_NEUTRON = False
     microversion = '2.42'
     sample_dir = 'servers'
     scenarios = [('v2_42', {'api_major_version': 'v2.1'})]
@@ -259,6 +264,7 @@ class ServersSampleJson252Test(ServersSampleJsonTest):
 
 
 class ServersSampleJson263Test(ServersSampleBase):
+    USE_NEUTRON = False
     microversion = '2.63'
     scenarios = [('v2_63', {'api_major_version': 'v2.1'})]
 
@@ -304,6 +310,7 @@ class ServersSampleJson263Test(ServersSampleBase):
         self._verify_response('server-action-rebuild-resp',
                               exp_resp, resp, 202)
 
+    # TODO(stephenfin): Migrate off of nova-network
     def test_servers_details(self):
         uuid = self._post_server(use_common_server_api_samples=False)
         response = self._do_get('servers/detail?limit=1')
@@ -311,6 +318,7 @@ class ServersSampleJson263Test(ServersSampleBase):
         subs['id'] = uuid
         self._verify_response('servers-details-resp', subs, response, 200)
 
+    # TODO(stephenfin): Migrate off of nova-network
     def test_server_get(self):
         uuid = self._post_server(use_common_server_api_samples=False)
         response = self._do_get('servers/%s' % uuid)
@@ -328,6 +336,7 @@ class ServersSampleJson263Test(ServersSampleBase):
 
 
 class ServersSampleJson266Test(ServersSampleBase):
+    USE_NEUTRON = False
     microversion = '2.66'
     scenarios = [('v2_66', {'api_major_version': 'v2.1'})]
 
@@ -356,6 +365,7 @@ class ServersSampleJson266Test(ServersSampleBase):
         self._verify_response(
             'servers-list-with-changes-before', subs, response, 200)
 
+    # TODO(stephenfin): Migrate off of nova-network
     def test_get_servers_detail_with_changes_before(self):
         uuid = self._post_server(use_common_server_api_samples=False)
         current_time = timeutils.parse_isotime(timeutils.utcnow().isoformat())
@@ -369,6 +379,7 @@ class ServersSampleJson266Test(ServersSampleBase):
 
 
 class ServersSampleJson267Test(ServersSampleBase):
+    USE_NEUTRON = False
     microversion = '2.67'
     scenarios = [('v2_67', {'api_major_version': 'v2.1'})]
 
@@ -428,6 +439,7 @@ class ServersSampleJson269Test(ServersSampleBase):
 
 
 class ServersSampleJson271Test(ServersSampleBase):
+    USE_NEUTRON = False
     microversion = '2.71'
     scenarios = [('v2_71', {'api_major_version': 'v2.1'})]
 
@@ -457,6 +469,7 @@ class ServersSampleJson271Test(ServersSampleBase):
             use_common_server_api_samples=False,
             extra_subs={'sg_uuid': self.sg_uuid})
 
+    # TODO(stephenfin): Migrate off of nova-network
     def test_servers_get_with_server_group(self):
         uuid = self._test_servers_post()
         response = self._do_get('servers/%s' % uuid)
@@ -521,6 +534,7 @@ class ServersSampleJson271Test(ServersSampleBase):
 
 
 class ServersSampleJson273Test(ServersSampleBase):
+    USE_NEUTRON = False
     microversion = '2.73'
     scenarios = [('v2_73', {'api_major_version': 'v2.1'})]
 
@@ -532,12 +546,14 @@ class ServersSampleJson273Test(ServersSampleBase):
             {"locked_reason": reason})
         return uuid
 
+    # TODO(stephenfin): Migrate off of nova-network
     def test_servers_details_with_locked_reason(self):
         uuid = self._post_server_and_lock()
         response = self._do_get('servers/detail')
         subs = {'id': uuid}
         self._verify_response('servers-details-resp', subs, response, 200)
 
+    # TODO(stephenfin): Migrate off of nova-network
     def test_server_get_with_locked_reason(self):
         uuid = self._post_server_and_lock()
         response = self._do_get('servers/%s' % uuid)
@@ -624,6 +640,7 @@ class ServersUpdateSampleJson247Test(ServersUpdateSampleJsonTest):
 
 
 class ServersSampleJson275Test(ServersUpdateSampleJsonTest):
+    USE_NEUTRON = False
     microversion = '2.75'
     scenarios = [('v2_75', {'api_major_version': 'v2.1'})]
 
@@ -674,7 +691,6 @@ class _ServersActionsJsonTestMixin(object):
 
 
 class ServersActionsJsonTest(ServersSampleBase, _ServersActionsJsonTestMixin):
-    USE_NEUTRON = True
 
     def test_server_reboot_hard(self):
         uuid = self._post_server()
@@ -896,6 +912,7 @@ class ServersActionsJson257Test(ServersActionsJson254Test):
 class ServersCreateImageJsonTest(ServersSampleBase,
                                  _ServersActionsJsonTestMixin):
     """Tests the createImage server action API against 2.1."""
+
     def test_server_create_image(self):
         uuid = self._post_server()
         resp = self._test_server_action(uuid, 'createImage',

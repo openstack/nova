@@ -17,6 +17,7 @@ from nova.tests.functional.api_sample_tests import api_sample_base
 
 
 class HostsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
+    USE_NEUTRON = False
     ADMIN_API = True
     sample_dir = "os-hosts"
 
@@ -41,6 +42,7 @@ class HostsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         response = self._do_get('os-hosts/%s' % self.compute.host)
         self._verify_response('host-get-resp', {}, response, 200)
 
+    # TODO(stephenfin): Migrate off of nova-network
     def test_hosts_list(self):
         response = self._do_get('os-hosts')
         self._verify_response('hosts-list-resp', {}, response, 200)
