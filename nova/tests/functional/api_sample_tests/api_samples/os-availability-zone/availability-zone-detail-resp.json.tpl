@@ -15,13 +15,6 @@
                         "available": true,
                         "updated_at": %(strtime_or_none)s
                     }
-                },
-                "network": {
-                    "nova-network": {
-                        "active": true,
-                        "available": true,
-                        "updated_at": %(strtime_or_none)s
-                    }
                 }
             },
             "zoneName": "internal",
