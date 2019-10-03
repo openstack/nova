@@ -8,7 +8,7 @@
         "port_uuid": "ce531f90-199f-48c0-816c-13e38010b442",
         "meta": {},
         "version": 4,
-        "label": "private-network",
+        "label": "private",
         "device_name": "tapce531f90-19"
     }
 }
