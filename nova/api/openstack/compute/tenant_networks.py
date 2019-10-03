@@ -97,21 +97,3 @@ class TenantNetworkController(wsgi.Controller):
     @wsgi.expected_errors(410)
     def create(self, req, body):
         raise exc.HTTPGone()
-
-
-def _network_count(context, project_id):
-    # NOTE(melwitt): This assumes a single cell.
-    ctx = nova_context.RequestContext(user_id=None, project_id=project_id)
-    ctx = ctx.elevated()
-    networks = nova.network.api.API().get_all(ctx)
-    return {'project': {'networks': len(networks)}}
-
-
-def _register_network_quota():
-    if CONF.enable_network_quota:
-        QUOTAS.register_resource(quota.CountableResource('networks',
-                                                          _network_count,
-                                                         'quota_networks'))
-
-
-_register_network_quota()

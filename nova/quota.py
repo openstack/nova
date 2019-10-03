@@ -546,7 +546,7 @@ class DbQuotaDriver(object):
         # together.
 
         # per project quota limits (quotas that have no concept of
-        # user-scoping: fixed_ips, networks, floating_ips)
+        # user-scoping: fixed_ips, floating_ips)
         project_quotas = objects.Quotas.get_all_by_project(context, project_id)
         # per user quotas, project quota limits (for quotas that have
         # user-scoping, limits for the project)
@@ -790,12 +790,6 @@ class BaseResource(object):
     @property
     def default(self):
         """Return the default value of the quota."""
-
-        # NOTE(mikal): special case for quota_networks, which is an API
-        # flag and not a quota flag
-        if self.flag == 'quota_networks':
-            return CONF[self.flag]
-
         return CONF.quota[self.flag] if self.flag else -1
 
 
@@ -888,11 +882,6 @@ class QuotaEngine(object):
             return self.__driver
         self.__driver = importutils.import_object(CONF.quota.driver)
         return self.__driver
-
-    def register_resource(self, resource):
-        """Register a resource."""
-
-        self._resources[resource.name] = resource
 
     def get_defaults(self, context):
         """Retrieve the default quotas.

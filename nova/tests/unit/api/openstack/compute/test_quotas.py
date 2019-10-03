@@ -22,7 +22,6 @@ from nova.db import api as db
 from nova import exception
 from nova import quota
 from nova import test
-from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit.api.openstack import fakes
 
 
@@ -283,18 +282,6 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
         self.assertEqual(202, self.get_delete_status_int(res))
         mock_destroy_all_by_project.assert_called_once_with(
             req.environ['nova.context'], 1234)
-
-    def test_update_network_quota_disabled(self):
-        self.flags(enable_network_quota=False)
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          self._get_http_request(),
-                          1234, body={'quota_set': {'networks': 1}})
-
-    def test_update_network_quota_enabled(self):
-        self.flags(enable_network_quota=True)
-        self.useFixture(nova_fixtures.RegisterNetworkQuota())
-        self.controller.update(self._get_http_request(),
-                               1234, body={'quota_set': {'networks': 1}})
 
     def test_duplicate_quota_filter(self):
         query_string = 'user_id=1&user_id=2'
@@ -585,10 +572,8 @@ class QuotaSetsTestV236(test.NoDBTestCase):
         self.stub_out('nova.api.openstack.identity.verify_project_id',
                       lambda ctx, project_id: True)
 
-        self.flags(enable_network_quota=True)
-        self.useFixture(nova_fixtures.RegisterNetworkQuota())
         self.old_req = fakes.HTTPRequest.blank('', version='2.1')
-        self.filtered_quotas = ['fixed_ips', 'floating_ips', 'networks',
+        self.filtered_quotas = ['fixed_ips', 'floating_ips',
             'security_group_rules', 'security_groups']
         self.quotas = {
             'cores': {'limit': 20},
@@ -600,7 +585,6 @@ class QuotaSetsTestV236(test.NoDBTestCase):
             'instances': {'limit': 10},
             'key_pairs': {'limit': 100},
             'metadata_items': {'limit': 128},
-            'networks': {'limit': 3},
             'ram': {'limit': 51200},
             'security_group_rules': {'limit': 20},
             'security_groups': {'limit': 10},
@@ -617,7 +601,6 @@ class QuotaSetsTestV236(test.NoDBTestCase):
             'instances': 10,
             'key_pairs': 100,
             'metadata_items': 128,
-            'networks': 3,
             'ram': 51200,
             'security_group_rules': 20,
             'security_groups': 10,

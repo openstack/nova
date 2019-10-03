@@ -1378,40 +1378,6 @@ Related options:
 ]
 
 
-quota_opts = [
-    cfg.BoolOpt('enable_network_quota',
-        deprecated_for_removal=True,
-        deprecated_since='14.0.0',
-        deprecated_reason="""
-CRUD operations on tenant networks are only available when using nova-network
-and nova-network is itself deprecated.""",
-        default=False,
-        help="""
-This option is used to enable or disable quota checking for tenant networks.
-
-Related options:
-
-* quota_networks
-"""),
-    cfg.IntOpt('quota_networks',
-        deprecated_for_removal=True,
-        deprecated_since='14.0.0',
-        deprecated_reason="""
-CRUD operations on tenant networks are only available when using nova-network
-and nova-network is itself deprecated.""",
-        default=3,
-        min=0,
-        help="""
-This option controls the number of private networks that can be created per
-project (or per tenant).
-
-Related options:
-
-* enable_network_quota
-"""),
-]
-
-
 service_opts = [
     cfg.StrOpt('network_manager',
         choices=[
@@ -1431,7 +1397,7 @@ nova-network is deprecated, as are any related configuration options.
 
 ALL_DEFAULT_OPTS = (linux_net_opts + network_opts + ldap_dns_opts +
                     rpcapi_opts + driver_opts + floating_ip_opts +
-                    ipv6_opts + quota_opts + service_opts)
+                    ipv6_opts + service_opts)
 
 
 def register_opts(conf):

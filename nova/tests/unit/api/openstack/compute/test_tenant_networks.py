@@ -22,7 +22,6 @@ from nova.api.openstack.compute import tenant_networks \
         as networks_v21
 from nova import exception
 from nova import test
-from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit.api.openstack import fakes
 
 CONF = cfg.CONF
@@ -71,8 +70,6 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         # os-tenant-networks only supports Neutron when listing networks or
         # showing details about a network, create and delete operations
         # result in a 503 and 500 response, respectively.
-        self.flags(enable_network_quota=True)
-        self.useFixture(nova_fixtures.RegisterNetworkQuota())
         self.controller = self.ctrlr()
         self.req = fakes.HTTPRequest.blank('')
         self.original_value = CONF.api.use_neutron_default_nets

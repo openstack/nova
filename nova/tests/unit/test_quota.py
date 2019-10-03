@@ -405,13 +405,6 @@ class QuotaEngineTestCase(test.TestCase):
         quota_obj = quota.QuotaEngine(quota_driver=FakeDriver)
         self.assertEqual(quota_obj._driver, FakeDriver)
 
-    def test_register_resource(self):
-        quota_obj = quota.QuotaEngine()
-        resource = quota.AbsoluteResource('test_resource')
-        quota_obj.register_resource(resource)
-
-        self.assertEqual(quota_obj._resources, dict(test_resource=resource))
-
     def _get_quota_engine(self, driver, resources=None):
         resources = resources or [
             quota.AbsoluteResource('test_resource4'),

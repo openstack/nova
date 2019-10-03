@@ -41,6 +41,8 @@ quota_resources = {
     'injected_file_path_bytes': common_quota,
     'server_groups': common_quota,
     'server_group_members': common_quota,
+    # NOTE(stephenfin): This will always be rejected since it was nova-network
+    # only, but we need to allow users to submit it at a minimum
     'networks': common_quota
 }
 

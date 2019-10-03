@@ -25,3 +25,21 @@ upgrade:
     * ``os_compute_api:os-security-group-default-rules``
     * ``os_compute_api:os-networks``
     * ``os_compute_api:os-networks-associate``
+  - |
+    The ``networks`` quota, which was only enabled if the
+    ``enabled_network_quota`` config option was enabled and only useful with
+    *nova-network*, is removed. It will not longer be present in the responses
+    for the APIs while attempts to update the quota will be rejected.
+
+    * ``GET /os-quota-sets``
+    * ``GET /os-quota-sets/{project_id}``
+    * ``GET /os-quota-sets/{project_id}/defaults``
+    * ``GET /os-quota-sets/{project_id}/detail``
+    * ``PUT /os-quota-sets/{project_id}``
+    * ``GET /os-quota-class-sets/{id}``
+    * ``PUT /os-quota-class-sets/{id}``
+
+    The following related config options have been removed.
+
+    * ``enable_network_quota``
+    * ``quota_networks``
