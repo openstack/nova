@@ -55,11 +55,10 @@ def _verify_list_fulfillment(context, instance_uuid):
 
 
 class VirtualInterfaceListMigrationTestCase(
-    integrated_helpers._IntegratedTestBase,
-    integrated_helpers.InstanceHelperMixin):
+        integrated_helpers._IntegratedTestBase,
+        integrated_helpers.InstanceHelperMixin):
 
     ADMIN_API = True
-    USE_NEUTRON = True
     api_major_version = 'v2.1'
 
     _image_ref_parameter = 'imageRef'

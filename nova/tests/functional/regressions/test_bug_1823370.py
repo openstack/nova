@@ -31,7 +31,6 @@ class MultiCellEvacuateTestCase(integrated_helpers._IntegratedTestBase,
     NUMBER_OF_CELLS = 2
     REQUIRES_LOCKING = False
     ADMIN_API = True
-    USE_NEUTRON = True
     _image_ref_parameter = 'imageRef'
     _flavor_ref_parameter = 'flavorRef'
     api_major_version = 'v2.1'

@@ -21,7 +21,6 @@ from nova.tests.functional import integrated_helpers
 class MultinicSampleJsonTest(integrated_helpers.InstanceHelperMixin,
                              api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    USE_NEUTRON = True
     sample_dir = "os-multinic"
 
     def setUp(self):

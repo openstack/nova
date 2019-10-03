@@ -24,7 +24,6 @@ class TestMultiattachVolumes(integrated_helpers._IntegratedTestBase,
     to represent a multiattach volume.
     """
     # These are all used in _IntegratedTestBase.
-    USE_NEUTRON = True
     api_major_version = 'v2.1'
     microversion = '2.60'
     _image_ref_parameter = 'imageRef'

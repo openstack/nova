@@ -1398,7 +1398,6 @@ class TestNovaManagePlacementSyncAggregates(
 
 class TestDBArchiveDeletedRows(integrated_helpers._IntegratedTestBase):
     """Functional tests for the "nova-manage db archive_deleted_rows" CLI."""
-    USE_NEUTRON = True
     api_major_version = 'v2.1'
     _image_ref_parameter = 'imageRef'
     _flavor_ref_parameter = 'flavorRef'

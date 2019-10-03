@@ -31,7 +31,6 @@ class ResizeEvacuateTestCase(integrated_helpers._IntegratedTestBase,
     # Set variables used in the parent class.
     REQUIRES_LOCKING = False
     ADMIN_API = True
-    USE_NEUTRON = True
     _image_ref_parameter = 'imageRef'
     _flavor_ref_parameter = 'flavorRef'
     api_major_version = 'v2.1'
