@@ -1650,6 +1650,25 @@ class NeutronFixture(fixtures.Fixture):
         else:
             return None
 
+    def _list_resource(self, resources, retrieve_all, **_params):
+        # If 'fields' is passed we need to strip that out since it will mess
+        # up the filtering as 'fields' is not a filter parameter.
+        _params.pop('fields', None)
+        result = []
+        for resource in resources.values():
+            for key, val in _params.items():
+                # params can be strings or lists/tuples and these need to be
+                # handled differently
+                if isinstance(val, list) or isinstance(val, tuple):
+                    if not any(resource.get(key) == v for v in val):
+                        break
+                else:
+                    if resource.get(key) != val:
+                        break
+            else:  # triggers if we didn't hit a break above
+                result.append(copy.deepcopy(resource))
+        return result
+
     def list_extensions(self, *args, **kwargs):
         return {
             'extensions': [
@@ -1674,27 +1693,18 @@ class NeutronFixture(fixtures.Fixture):
         if port_id in self._ports:
             del self._ports[port_id]
 
+    def list_ports(self, retrieve_all=True, **_params):
+        return {'ports': self._list_resource(
+            self._ports, retrieve_all, **_params)}
+
     def show_network(self, network_id, **_params):
         if network_id not in self._networks:
             raise neutron_client_exc.NetworkNotFoundClient()
         return {'network': copy.deepcopy(self._networks[network_id])}
 
     def list_networks(self, retrieve_all=True, **_params):
-        networks = self._networks.values()
-        if 'id' in _params:
-            networks = [x for x in networks if x['id'] in _params['id']]
-            _params.pop('id')
-        networks = [n for n in networks
-                    if all(n.get(opt) == _params[opt] for opt in _params)]
-        return {'networks': copy.deepcopy(networks)}
-
-    def list_ports(self, retrieve_all=True, **_params):
-        # If 'fields' is passed we need to strip that out since it will mess
-        # up the filtering as 'fields' is not a filter parameter.
-        _params.pop('fields', None)
-        ports = [p for p in self._ports.values()
-                 if all(p.get(opt) == _params[opt] for opt in _params)]
-        return {'ports': copy.deepcopy(ports)}
+        return {'networks': self._list_resource(
+            self._networks, retrieve_all, **_params)}
 
     def list_subnets(self, retrieve_all=True, **_params):
         # NOTE(gibi): The fixture does not support filtering for subnets
