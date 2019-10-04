@@ -408,23 +408,17 @@ class CrossCellMigrationTaskTestCase(test.NoDBTestCase):
         # Now rollback the completed sub-tasks
         self.task.rollback()
 
-    @mock.patch('nova.volume.cinder.is_microversion_supported',
-                return_value=None)
-    def test_perform_external_api_checks_ok(self, mock_cinder_mv_check):
-        """Tests the happy path scenario where both cinder and neutron APIs
-        are new enough for what we need.
+    def test_perform_external_api_checks_ok(self):
+        """Tests the happy path scenario where neutron APIs are new enough for
+        what we need.
         """
         with mock.patch.object(
                 self.task.network_api, 'supports_port_binding_extension',
                 return_value=True) as mock_neutron_check:
             self.task._perform_external_api_checks()
         mock_neutron_check.assert_called_once_with(self.task.context)
-        mock_cinder_mv_check.assert_called_once_with(self.task.context, '3.44')
 
-    @mock.patch('nova.volume.cinder.is_microversion_supported',
-                return_value=None)
-    def test_perform_external_api_checks_old_neutron(
-            self, mock_cinder_mv_check):
+    def test_perform_external_api_checks_old_neutron(self):
         """Tests the case that neutron API is old."""
         with mock.patch.object(
                 self.task.network_api, 'supports_port_binding_extension',
@@ -433,19 +427,6 @@ class CrossCellMigrationTaskTestCase(test.NoDBTestCase):
                                    self.task._perform_external_api_checks)
             self.assertIn('Required networking service API extension',
                           six.text_type(ex))
-
-    @mock.patch('nova.volume.cinder.is_microversion_supported',
-                side_effect=exception.CinderAPIVersionNotAvailable(
-                    version='3.44'))
-    def test_perform_external_api_checks_old_cinder(
-            self, mock_cinder_mv_check):
-        """Tests the case that cinder API is old."""
-        with mock.patch.object(
-                self.task.network_api, 'supports_port_binding_extension',
-                return_value=True):
-            ex = self.assertRaises(exception.MigrationPreCheckError,
-                                   self.task._perform_external_api_checks)
-            self.assertIn('Cinder API version', six.text_type(ex))
 
     @mock.patch('nova.conductor.tasks.cross_cell_migrate.LOG.exception')
     def test_rollback_idempotent(self, mock_log_exception):
