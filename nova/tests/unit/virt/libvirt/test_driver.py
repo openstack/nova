@@ -18128,7 +18128,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                      'destination_type': 'volume',
                      'volume_id': 'fake-image-id',
                      'device_name': '/dev/vdxx',
-                     'disk_bus': 'scsi'}))]
+                     'disk_bus': 'scsi',
+                     'attachment_id': None}))]
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr.default_device_names_for_instance(instance,
