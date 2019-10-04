@@ -1059,6 +1059,10 @@ class API(base.Base):
         port_resource_requests = base_options.pop('port_resource_requests')
         LOG.debug("Going to run %s instances...", num_instances)
         instances_to_build = []
+        # We could be iterating over several instances with several BDMs per
+        # instance and those BDMs could be using a lot of the same images so
+        # we want to cache the image API GET results for performance.
+        image_cache = {}  # dict of image dicts keyed by image id
         try:
             for i in range(num_instances):
                 # Create a uuid for the instance so we can store the
@@ -1112,7 +1116,7 @@ class API(base.Base):
                 block_device_mapping = (
                     self._bdm_validate_set_size_and_instance(context,
                         instance, instance_type, block_device_mapping,
-                        supports_multiattach))
+                        image_cache, supports_multiattach))
                 instance_tags = self._transform_tags(tags, instance.uuid)
 
                 build_request = objects.BuildRequest(context,
@@ -1468,17 +1472,28 @@ class API(base.Base):
     def _bdm_validate_set_size_and_instance(self, context, instance,
                                             instance_type,
                                             block_device_mapping,
+                                            image_cache,
                                             supports_multiattach=False):
         """Ensure the bdms are valid, then set size and associate with instance
 
         Because this method can be called multiple times when more than one
         instance is booted in a single request it makes a copy of the bdm list.
+
+        :param context: nova auth RequestContext
+        :param instance: Instance object
+        :param instance_type: Flavor object - used for swap and ephemeral BDMs
+        :param block_device_mapping: BlockDeviceMappingList object
+        :param image_cache: dict of image dicts keyed by id which is used as a
+            cache in case there are multiple BDMs in the same request using
+            the same image to avoid redundant GET calls to the image service
+        :param supports_multiattach: True if the request supports multiattach
+            volumes, False otherwise
         """
         LOG.debug("block_device_mapping %s", list(block_device_mapping),
                   instance_uuid=instance.uuid)
         self._validate_bdm(
             context, instance, instance_type, block_device_mapping,
-            supports_multiattach)
+            image_cache, supports_multiattach)
         instance_block_device_mapping = block_device_mapping.obj_clone()
         for bdm in instance_block_device_mapping:
             bdm.volume_size = self._volume_size(instance_type, bdm)
@@ -1516,7 +1531,20 @@ class API(base.Base):
             raise exception.VolumeTypeSupportNotYetAvailable()
 
     def _validate_bdm(self, context, instance, instance_type,
-                      block_device_mappings, supports_multiattach=False):
+                      block_device_mappings, image_cache,
+                      supports_multiattach=False):
+        """Validate requested block device mappings.
+
+        :param context: nova auth RequestContext
+        :param instance: Instance object
+        :param instance_type: Flavor object - used for swap and ephemeral BDMs
+        :param block_device_mappings: BlockDeviceMappingList object
+        :param image_cache: dict of image dicts keyed by id which is used as a
+            cache in case there are multiple BDMs in the same request using
+            the same image to avoid redundant GET calls to the image service
+        :param supports_multiattach: True if the request supports multiattach
+            volumes, False otherwise
+        """
         # Make sure that the boot indexes make sense.
         # Setting a negative value or None indicates that the device should not
         # be used for booting.
@@ -1568,9 +1596,14 @@ class API(base.Base):
             volume_id = bdm.volume_id
             image_id = bdm.image_id
             if image_id is not None:
-                if image_id != instance.get('image_ref'):
+                if (image_id != instance.get('image_ref') and
+                        image_id not in image_cache):
                     try:
-                        self._get_image(context, image_id)
+                        # Cache the results of the image GET so we do not make
+                        # the same request for the same image if processing
+                        # multiple BDMs or multiple servers with the same image
+                        image_cache[image_id] = self._get_image(
+                            context, image_id)
                     except Exception:
                         raise exception.InvalidBDMImage(id=image_id)
                 if (bdm.source_type == 'image' and

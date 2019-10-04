@@ -4722,8 +4722,7 @@ class ServersControllerCreateTest(test.TestCase):
         params = {'block_device_mapping_v2': self.bdm_v2}
         self._test_create(params, no_image=True)
 
-        mock_validate_bdm.assert_called_once_with(
-            mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY)
+        mock_validate_bdm.assert_called_once()
         mock_bdm_image_metadata.assert_called_once_with(
             mock.ANY, mock.ANY, False)
 
@@ -4958,11 +4957,7 @@ class ServersControllerCreateTest(test.TestCase):
 
         params = {'block_device_mapping_v2': bdm}
         self._test_create(params, no_image=True)
-        mock_validate_bdm.assert_called_once_with(mock.ANY,
-                                                  mock.ANY,
-                                                  mock.ANY,
-                                                  mock.ANY,
-                                                  mock.ANY)
+        mock_validate_bdm.assert_called_once()
 
     @mock.patch.object(compute_api.API, '_validate_bdm')
     def test_create_instance_bdm_missing_device_name(self, mock_validate_bdm):
@@ -4980,11 +4975,7 @@ class ServersControllerCreateTest(test.TestCase):
 
         params = {'block_device_mapping_v2': self.bdm_v2}
         self._test_create(params, no_image=True)
-        mock_validate_bdm.assert_called_once_with(mock.ANY,
-                                                  mock.ANY,
-                                                  mock.ANY,
-                                                  mock.ANY,
-                                                  mock.ANY)
+        mock_validate_bdm.assert_called_once()
 
     @mock.patch.object(
         block_device.BlockDeviceDict, '_validate',
@@ -5047,6 +5038,7 @@ class ServersControllerCreateTest(test.TestCase):
             test.MatchType(objects.Instance),
             test.MatchType(objects.Flavor),
             test.MatchType(objects.BlockDeviceMappingList),
+            {},
             False)
 
     def test_create_instance_with_volumes_enabled(self):

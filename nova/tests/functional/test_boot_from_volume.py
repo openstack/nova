@@ -187,7 +187,7 @@ class BootFromVolumeLargeRequestTest(test.TestCase,
         # The test cases will handle starting compute/conductor/scheduler
         # services if they need them.
 
-    def test_boot_from_volume_10_servers_255_volumes(self):
+    def test_boot_from_volume_10_servers_255_volumes_2_images(self):
         """Create 10 servers with 255 BDMs each using the same image for 200
         of the BDMs and another image for 55 other BDMs. This is a bit silly
         but it just shows that it's possible and there is no rate limiting
@@ -200,7 +200,7 @@ class BootFromVolumeLargeRequestTest(test.TestCase,
         image1 = images[0]['id']
         image2 = images[1]['id']
         server = self._build_minimal_create_server_request(
-            self.api, 'test_boot_from_volume_10_servers_255_volumes')
+            self.api, 'test_boot_from_volume_10_servers_255_volumes_2_images')
         server.pop('imageRef')
         server['min_count'] = 10
         bdms = []
@@ -222,9 +222,8 @@ class BootFromVolumeLargeRequestTest(test.TestCase,
         with mock.patch('nova.image.api.API.get',
                         wraps=self.image_service.show) as mock_image_get:
             self.api.post_server({'server': server})
-            # FIXME(mriedem): Bug 1846777: Assert that there was no caching of
-            # the GET /v2/images/{image_id} call. The expected count is:
-            # 2551 = 10 servers * 255 volumes + 1 root bdm check
-            expected_image_get_count = (server['min_count'] * len(bdms)) + 1
-            self.assertEqual(expected_image_get_count,
-                             mock_image_get.call_count)
+            # Assert that there was caching of the GET /v2/images/{image_id}
+            # calls. The expected total in this case is 3: one for validating
+            # the root BDM image, one for image1 and one for image2 during bdm
+            # validation - only the latter two cases use a cache.
+            self.assertEqual(3, mock_image_get.call_count)
