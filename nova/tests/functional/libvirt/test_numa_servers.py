@@ -372,32 +372,8 @@ class NUMAServersTest(NUMAServersTestBase):
                    group='compute')
         self.flags(vcpu_pin_set=None)
 
-        host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
-                                         cpu_cores=2, cpu_threads=2,
-                                         kB_mem=15740000)
-
         # Start services
-        self.computes = {}
-        self.compute_rp_uuids = {}
-        for host in ['test_compute0', 'test_compute1']:
-            fake_connection = self._get_connection(
-                host_info=host_info, hostname=host)
-
-            # This is fun. Firstly we need to do a global'ish mock so we can
-            # actually start the service.
-            with mock.patch('nova.virt.libvirt.host.Host.get_connection',
-                            return_value=fake_connection):
-                compute = self.start_service('compute', host=host)
-
-            # Once that's done, we need to do some tweaks to each individual
-            # compute "service" to make sure they return unique objects
-            compute.driver._host.get_connection = lambda: fake_connection
-            self.computes[host] = compute
-
-            # and save the UUIDs for the corresponding resource providers
-            self.compute_rp_uuids[host] = self.placement_api.get(
-                '/resource_providers?name=%s' % host).body[
-                'resource_providers'][0]['uuid']
+        self.start_computes(save_rp_uuids=True)
 
         # Create server
         flavor_a_id = self._create_flavor(extra_spec={})
@@ -542,27 +518,7 @@ class ReshapeForPCPUsTest(NUMAServersTestBase):
                                          kB_mem=15740000)
 
         # Start services
-        self.computes = {}
-        self.compute_rp_uuids = {}
-        for host in ['test_compute0', 'test_compute1']:
-            fake_connection = self._get_connection(
-                host_info=host_info, hostname=host)
-
-            # This is fun. Firstly we need to do a global'ish mock so we can
-            # actually start the service.
-            with mock.patch('nova.virt.libvirt.host.Host.get_connection',
-                            return_value=fake_connection):
-                compute = self.start_service('compute', host=host)
-
-            # Once that's done, we need to do some tweaks to each individual
-            # compute "service" to make sure they return unique objects
-            compute.driver._host.get_connection = lambda: fake_connection
-            self.computes[host] = compute
-
-            # and save the UUIDs for the corresponding resource providers
-            self.compute_rp_uuids[host] = self.placement_api.get(
-                '/resource_providers?name=%s' % host).body[
-                'resource_providers'][0]['uuid']
+        self.start_computes(save_rp_uuids=True)
 
         # ensure there is no PCPU inventory being reported
 
@@ -952,26 +908,9 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         self.assertIn('NoValidHost', six.text_type(ex))
 
     def test_cold_migrate_with_physnet(self):
-        host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
-                                         cpu_cores=2, cpu_threads=2,
-                                         kB_mem=15740000)
 
         # Start services
-        self.computes = {}
-        for host in ['test_compute0', 'test_compute1']:
-            fake_connection = self._get_connection(
-                host_info=host_info, hostname=host)
-
-            # This is fun. Firstly we need to do a global'ish mock so we can
-            # actually start the service.
-            with mock.patch('nova.virt.libvirt.host.Host.get_connection',
-                            return_value=fake_connection):
-                compute = self.start_service('compute', host=host)
-
-            # Once that's done, we need to do some tweaks to each individual
-            # compute "service" to make sure they return unique objects
-            compute.driver._host.get_connection = lambda: fake_connection
-            self.computes[host] = compute
+        self.start_computes(save_rp_uuids=True)
 
         # Create server
         extra_spec = {'hw:numa_nodes': '1'}
