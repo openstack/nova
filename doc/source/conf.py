@@ -132,6 +132,10 @@ latex_documents = [
 # Allow deeper levels of nesting for \begin...\end stanzas
 latex_elements = {'maxlistdepth': 10}
 
+# Disable use of xindy since that's another binary dependency that's not
+# available on all platforms
+latex_use_xindy = False
+
 # -- Options for openstackdocstheme -------------------------------------------
 
 # keep this ordered to keep mriedem happy
