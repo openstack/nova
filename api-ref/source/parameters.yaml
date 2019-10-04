@@ -6046,11 +6046,17 @@ security_groups_obj:
   in: body
   required: true
   type: array
+security_groups_obj_optional:
+  description: |
+    One or more security groups objects.
+  in: body
+  required: false
+  type: array
 security_groups_obj_update_rebuild:
   description: |
     One or more security groups objects.
   in: body
-  required: true
+  required: false
   type: array
   min_version: 2.75
 security_groups_quota:
