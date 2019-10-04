@@ -1913,8 +1913,6 @@ class SchedulerReportClient(object):
                      'text': r.text})
         return r.status_code == 204
 
-    # TODO(gibi): kill safe_connect
-    @safe_connect
     @retries
     def put_allocations(self, context, consumer_uuid, payload):
         """Creates allocation records for the supplied consumer UUID based on
@@ -1926,12 +1924,18 @@ class SchedulerReportClient(object):
             PUT /allocations/{consumer_uuid} API
         :returns: True if the allocations were created, False otherwise.
         :raises: Retry if the operation should be retried due to a concurrent
-                 resource provider update.
+            resource provider update.
         :raises: AllocationUpdateFailed if placement returns a consumer
-                                        generation conflict
+            generation conflict
+        :raises: PlacementAPIConnectFailure on failure to communicate with the
+            placement API
         """
 
-        r = self._put_allocations(context, consumer_uuid, payload)
+        try:
+            r = self._put_allocations(context, consumer_uuid, payload)
+        except ks_exc.ClientException:
+            raise exception.PlacementAPIConnectFailure()
+
         if r.status_code != 204:
             err = r.json()['errors'][0]
             # NOTE(jaypipes): Yes, it sucks doing string comparison like this

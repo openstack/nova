@@ -309,6 +309,12 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         log_msg = mock_warn.call_args[0][0]
         self.assertIn("Failed to save allocation for", log_msg)
 
+    def test_put_allocations_fail_connection_error(self):
+        self.ks_adap_mock.put.side_effect = ks_exc.EndpointNotFound()
+        self.assertRaises(
+            exception.PlacementAPIConnectFailure, self.client.put_allocations,
+            self.context, mock.sentinel.consumer, mock.sentinel.payload)
+
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put')
     def test_put_allocations_fail_due_to_consumer_generation_conflict(
             self, mock_put):
