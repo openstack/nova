@@ -11,6 +11,7 @@
 # under the License.
 
 import fixtures
+import mock
 from oslo_db import exception as oslo_db_exc
 
 from nova.compute import manager as compute_manager
@@ -56,6 +57,7 @@ class RescheduleBuildAvailabilityZoneUpCall(
         self.addCleanup(fake_notifier.reset)
 
     def test_server_create_reschedule_blocked_az_up_call(self):
+        self.flags(default_availability_zone='us-central')
         # We need to stub out the call to get_host_availability_zone to blow
         # up once we have gone to the compute service. With the way our
         # RPC/DB fixtures are setup it's non-trivial to try and separate a
@@ -78,22 +80,19 @@ class RescheduleBuildAvailabilityZoneUpCall(
         server = self._build_minimal_create_server_request(
             self.api, 'test_server_create_reschedule_blocked_az_up_call')
         server = self.api.post_server({'server': server})
-        # FIXME(mriedem): This is bug 1781286 where we reschedule from the
-        # first failed host to conductor which will try to get the AZ for the
-        # alternate host selection which will fail since it cannot access the
-        # API DB.
-        # Note that we have to wait for the notification before calling the API
-        # to avoid a race where instance.host is not None and the API tries to
-        # hit the AggregateList.get_by_host method we mocked to fail.
-        fake_notifier.wait_for_versioned_notifications(
-            'compute_task.build_instances.error')
-        server = self._wait_for_server_parameter(
-            self.api, server, {'status': 'ERROR',
-                               'OS-EXT-SRV-ATTR:host': None,
-                               'OS-EXT-STS:task_state': None})
-        # Assert there is a fault injected on the server for the error we
-        # expect.
-        self.assertIn('CantStartEngineError', server['fault']['message'])
+        # Because we poisoned AggregateList.get_by_host after hitting the
+        # compute service we have to wait for the notification that the build
+        # is complete and then stop the mock so we can use the API again.
+        fake_notifier.wait_for_versioned_notifications('instance.create.end')
+        # Note that we use stopall here because we actually called
+        # build_and_run_instance twice so we have more than one instance of
+        # the mock that needs to be stopped.
+        mock.patch.stopall()
+        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        # We should have rescheduled and the instance AZ should be set from the
+        # Selection object. Since neither compute host is in an AZ, the server
+        # is in the default AZ from config.
+        self.assertEqual('us-central', server['OS-EXT-AZ:availability_zone'])
 
 
 class RescheduleMigrateAvailabilityZoneUpCall(
