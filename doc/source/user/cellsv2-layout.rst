@@ -355,6 +355,8 @@ following:
 #. Attaching a volume and ``[cinder]/cross_az_attach=False``
 #. Instance reschedules during boot and resize (part 2)
 
+   .. note:: This has been resolved in the Ussuri release [#]_ [#]_.
+
 The first is simple: if you boot an instance, it gets scheduled to a
 compute node, fails, it would normally be re-scheduled to another
 node. That requires scheduler intervention and thus it will not work
@@ -403,3 +405,5 @@ the API DB.
 .. [#] https://blueprints.launchpad.net/nova/+spec/efficient-multi-cell-instance-list-and-sort
 .. [#] https://specs.openstack.org/openstack/nova-specs/specs/queens/approved/return-alternate-hosts.html
 .. [#] https://blueprints.launchpad.net/nova/+spec/live-migration-in-xapi-pool
+.. [#] https://review.opendev.org/686047/
+.. [#] https://review.opendev.org/686050/
