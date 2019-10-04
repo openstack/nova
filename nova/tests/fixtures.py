@@ -1229,21 +1229,44 @@ class NeutronFixture(fixtures.Fixture):
 
     # the default project_id in OsaAPIFixtures
     tenant_id = '6f70656e737461636b20342065766572'
+
     network_1 = {
+        'id': '3cb9bc59-5699-4588-a4b1-b87f96708bc6',
+        'name': 'private-network',
+        'description': '',
         'status': 'ACTIVE',
         'subnets': [],
-        'name': 'private-network',
         'admin_state_up': True,
         'tenant_id': tenant_id,
-        'id': '3cb9bc59-5699-4588-a4b1-b87f96708bc6',
+        'project_id': tenant_id,
         'shared': False,
+        'mtu': 1450,
+        'router:external': False,
+        'availability_zone_hints': [],
+        'availability_zones': [
+            'nova'
+        ],
+        'port_security_enabled': False,
+        'ipv4_address_scope': None,
+        'ipv6_address_scope': None,
+        'provider:network_type': 'vxlan',
+        'provider:physical_network': None,
+        'provider:segmentation_id': 24,
     }
+
     subnet_1 = {
+        'id': 'f8a6e8f8-c2ec-497c-9f23-da9616de54ef',
         'name': 'private-subnet',
+        'description': '',
+        'ip_version': 4,
+        'ipv6_address_mode': None,
+        'ipv6_ra_mode': None,
         'enable_dhcp': True,
         'network_id': network_1['id'],
         'tenant_id': tenant_id,
+        'project_id': tenant_id,
         'dns_nameservers': [],
+        'gateway_ip': '192.168.1.1',
         'allocation_pools': [
             {
                 'start': '192.168.1.1',
@@ -1251,15 +1274,36 @@ class NeutronFixture(fixtures.Fixture):
             }
         ],
         'host_routes': [],
-        'ip_version': 4,
-        'gateway_ip': '192.168.1.1',
         'cidr': '192.168.1.1/24',
-        'id': 'f8a6e8f8-c2ec-497c-9f23-da9616de54ef'
     }
-    network_1['subnets'] = [subnet_1['id']]
+    subnet_ipv6_1 = {
+        'id': 'f8fa37b7-c10a-44b8-a5fe-d2e65d40b403',
+        'name': 'ipv6-private-subnet',
+        'description': '',
+        'ip_version': 6,
+        'ipv6_address_mode': 'slaac',
+        'ipv6_ra_mode': 'slaac',
+        'enable_dhcp': True,
+        'network_id': network_1['id'],
+        'tenant_id': tenant_id,
+        'project_id': tenant_id,
+        'dns_nameservers': [],
+        'gateway_ip': 'fd37:44e8:ad06::1',
+        'allocation_pools': [
+            {
+                'start': 'fd37:44e8:ad06::2',
+                'end': 'fd37:44e8:ad06:0:ffff:ffff:ffff:ffff'
+            }
+        ],
+        'host_routes': [],
+        'cidr': 'fd37:44e8:ad06::/64',
+    }
+    network_1['subnets'] = [subnet_1['id'], subnet_ipv6_1['id']]
 
     port_1 = {
         'id': 'ce531f90-199f-48c0-816c-13e38010b442',
+        'name': '',  # yes, this what the neutron API returns
+        'description': '',
         'network_id': network_1['id'],
         'admin_state_up': True,
         'status': 'ACTIVE',
@@ -1273,11 +1317,19 @@ class NeutronFixture(fixtures.Fixture):
             }
         ],
         'tenant_id': tenant_id,
-        'binding:vif_type': 'ovs'
+        'project_id': tenant_id,
+        'device_id': '',
+        'binding:vnic_type': 'normal',
+        'binding:vif_type': 'ovs',
+        'port_security_enabled': False,
+        'security_groups': [
+        ],
     }
 
     port_2 = {
         'id': '88dae9fa-0dc6-49e3-8c29-3abc41e99ac9',
+        'name': '',
+        'description': '',
         'network_id': network_1['id'],
         'admin_state_up': True,
         'status': 'ACTIVE',
@@ -1289,11 +1341,19 @@ class NeutronFixture(fixtures.Fixture):
             }
         ],
         'tenant_id': tenant_id,
-        'binding:vif_type': 'ovs'
+        'project_id': tenant_id,
+        'device_id': '',
+        'binding:vnic_type': 'normal',
+        'binding:vif_type': 'ovs',
+        'port_security_enabled': False,
+        'security_groups': [
+        ],
     }
 
     port_with_resource_request = {
         'id': '2f2613ce-95a9-490a-b3c4-5f1c28c1f886',
+        'name': '',
+        'description': '',
         'network_id': network_1['id'],
         'admin_state_up': True,
         'status': 'ACTIVE',
@@ -1305,32 +1365,58 @@ class NeutronFixture(fixtures.Fixture):
             }
         ],
         'tenant_id': tenant_id,
-        neutron_constants.RESOURCE_REQUEST: {
+        'project_id': tenant_id,
+        'device_id': '',
+        'binding:vnic_type': 'normal',
+        'binding:vif_type': 'ovs',
+        'resource_request': {
             "resources": {
                     orc.NET_BW_IGR_KILOBIT_PER_SEC: 1000,
                     orc.NET_BW_EGR_KILOBIT_PER_SEC: 1000},
             "required": ["CUSTOM_PHYSNET2", "CUSTOM_VNIC_TYPE_NORMAL"]
-        }
+        },
+        'port_security_enabled': False,
+        'security_groups': [
+        ],
     }
 
     network_2 = {
+        'id': '1b70879f-fd00-411e-8ea9-143e7820e61d',
+        'name': 'private-network',
+        'description': '',
         'status': 'ACTIVE',
         'subnets': [],
-        'name': 'private-network',
         'admin_state_up': True,
         'tenant_id': tenant_id,
-        'id': '1b70879f-fd00-411e-8ea9-143e7820e61d',
+        'project_id': tenant_id,
         'shared': False,
+        'mtu': 1450,
+        'router:external': False,
+        'availability_zone_hints': [],
+        'availability_zones': [
+            'nova'
+        ],
+        'port_security_enabled': False,
+        'ipv4_address_scope': None,
+        'ipv6_address_scope': None,
+        'provider:network_type': 'vlan',
         'provider:physical_network': 'physnet2',
-        "provider:network_type": "vlan",
+        'provider:segmentation_id': 24,
     }
 
     subnet_2 = {
-        'name': 'private-subnet',
+        'id': 'c7ca1baf-f536-4849-89fe-9671318375ff',
+        'name': '',
+        'description': '',
+        'ip_version': 4,
+        'ipv6_address_mode': None,
+        'ipv6_ra_mode': None,
         'enable_dhcp': True,
         'network_id': network_2['id'],
         'tenant_id': tenant_id,
+        'project_id': tenant_id,
         'dns_nameservers': [],
+        'gateway_ip': '192.168.1.1',
         'allocation_pools': [
             {
                 'start': '192.168.13.1',
@@ -1338,15 +1424,14 @@ class NeutronFixture(fixtures.Fixture):
             }
         ],
         'host_routes': [],
-        'ip_version': 4,
-        'gateway_ip': '192.168.1.1',
         'cidr': '192.168.1.1/24',
-        'id': 'c7ca1baf-f536-4849-89fe-9671318375ff'
     }
     network_2['subnets'] = [subnet_2['id']]
 
     sriov_port = {
         'id': '5460ee0c-ffbb-4e45-8d58-37bfceabd084',
+        'name': '',
+        'description': '',
         'network_id': network_2['id'],
         'admin_state_up': True,
         'status': 'ACTIVE',
@@ -1358,12 +1443,17 @@ class NeutronFixture(fixtures.Fixture):
             }
         ],
         'tenant_id': tenant_id,
-        neutron_constants.RESOURCE_REQUEST: {},
+        'project_id': tenant_id,
+        'device_id': '',
+        'resource_request': {},
         'binding:vnic_type': 'direct',
+        'port_security_enabled': False,
     }
 
     port_with_sriov_resource_request = {
         'id': '7059503b-a648-40fd-a561-5ca769304bee',
+        'name': '',
+        'description': '',
         'network_id': network_2['id'],
         'admin_state_up': True,
         'status': 'ACTIVE',
@@ -1376,17 +1466,22 @@ class NeutronFixture(fixtures.Fixture):
             }
         ],
         'tenant_id': tenant_id,
-        neutron_constants.RESOURCE_REQUEST: {
+        'project_id': tenant_id,
+        'device_id': '',
+        'resource_request': {
             "resources": {
                 orc.NET_BW_IGR_KILOBIT_PER_SEC: 10000,
                 orc.NET_BW_EGR_KILOBIT_PER_SEC: 10000},
             "required": ["CUSTOM_PHYSNET2", "CUSTOM_VNIC_TYPE_DIRECT"]
         },
         'binding:vnic_type': 'direct',
+        'port_security_enabled': False,
     }
 
     port_macvtap_with_resource_request = {
         'id': 'cbb9707f-3559-4675-a973-4ea89c747f02',
+        'name': '',
+        'description': '',
         'network_id': network_2['id'],
         'admin_state_up': True,
         'status': 'ACTIVE',
@@ -1399,13 +1494,16 @@ class NeutronFixture(fixtures.Fixture):
             }
         ],
         'tenant_id': tenant_id,
-        neutron_constants.RESOURCE_REQUEST: {
+        'project_id': tenant_id,
+        'device_id': '',
+        'resource_request': {
             "resources": {
                 orc.NET_BW_IGR_KILOBIT_PER_SEC: 10000,
                 orc.NET_BW_EGR_KILOBIT_PER_SEC: 10000},
             "required": ["CUSTOM_PHYSNET2", "CUSTOM_VNIC_TYPE_MACVTAP"]
         },
         'binding:vnic_type': 'macvtap',
+        'port_security_enabled': False,
     }
 
     nw_info = [{
@@ -1482,7 +1580,8 @@ class NeutronFixture(fixtures.Fixture):
         # The fixture does not allow network update so we don't have to
         # deepcopy here
         self._subnets = {
-            self.subnet_1['id']: self.subnet_1
+            self.subnet_1['id']: self.subnet_1,
+            self.subnet_ipv6_1['id']: self.subnet_ipv6_1,
         }
 
     def setUp(self):
