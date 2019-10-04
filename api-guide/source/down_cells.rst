@@ -68,6 +68,7 @@ behavior are described below:
   - tenant_id: The tenant_id to which the server belongs to.
   - created: The time of server creation.
   - links: Links to the servers in question.
+  - security_groups: One or more security groups. (Optional)
 
   A sample response for a GET /servers/details request that includes
   one result each from an unreachable and a healthy part of the
@@ -79,9 +80,14 @@ behavior are described below:
          "servers": [
                {
                    "created": "2018-06-29T15:07:29Z",
+                   "id": "bcc6c6dd-3d0a-4633-9586-60878fd68edb",
                    "status": "UNKNOWN",
                    "tenant_id": "940f47b984034c7f8f9624ab28f5643c",
-                   "id": "bcc6c6dd-3d0a-4633-9586-60878fd68edb",
+                   "security_groups": [
+                       {
+                           "name": "default"
+                       }
+                   ],
                    "links": [
                        {
                            "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/servers/bcc6c6dd-3d0a-4633-9586-60878fd68edb",
