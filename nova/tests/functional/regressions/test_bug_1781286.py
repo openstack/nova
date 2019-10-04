@@ -124,6 +124,7 @@ class RescheduleMigrateAvailabilityZoneUpCall(
         self.addCleanup(fake_notifier.reset)
 
     def test_migrate_reschedule_blocked_az_up_call(self):
+        self.flags(default_availability_zone='us-central')
         # We need to stub out the call to get_host_availability_zone to blow
         # up once we have gone to the compute service.
         original_prep_resize = compute_manager.ComputeManager._prep_resize
@@ -154,26 +155,20 @@ class RescheduleMigrateAvailabilityZoneUpCall(
 
         # Now cold migrate the server to the other host.
         self.api.post_server_action(server['id'], {'migrate': None})
-
-        # FIXME(mriedem): This is bug 1781286 where we reschedule from the
-        # first selected host to conductor which will try to get the AZ for the
-        # alternate host selection which will fail since it cannot access the
-        # API DB.
+        # Because we poisoned AggregateList.get_by_host after hitting the
+        # compute service we have to wait for the notification that the resize
+        # is complete and then stop the mock so we can use the API again.
         fake_notifier.wait_for_versioned_notifications(
-            'compute_task.migrate_server.error')
-        server = self._wait_for_server_parameter(
-            self.api, server, {'status': 'ERROR',
-                               'OS-EXT-SRV-ATTR:host': original_host,
-                               'OS-EXT-STS:task_state': None})
-        # Assert there is a fault injected on the server. This is a bit
-        # annoying in that we would expect to see CantStartEngineError but
-        # because of how ComputeManager._reschedule_resize_or_reraise works.
-        # the reschedule call to conductor is an RPC call so that exception
-        # comes back to compute which injects a fault but then re-raises the
-        # ComputeResourcesUnavailable exception which gets recorded as the most
-        # recent fault which is what shows up in the API. So instead we assert
-        # that the reschedule happened and assert the mocked method was called.
-        self.assertIn('Insufficient compute resources',
-                      server['fault']['message'])
-        self.assertIsNotNone(self.rescheduled)
-        self.agg_mock.assert_called_once()
+            'instance.resize_finish.end')
+        # Note that we use stopall here because we actually called _prep_resize
+        # twice so we have more than one instance of the mock that needs to be
+        # stopped.
+        mock.patch.stopall()
+        server = self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+        final_host = server['OS-EXT-SRV-ATTR:host']
+        self.assertNotIn(final_host, [original_host, self.rescheduled])
+        # We should have rescheduled and the instance AZ should be set from the
+        # Selection object. Since neither compute host is in an AZ, the server
+        # is in the default AZ from config.
+        self.assertEqual('us-central', server['OS-EXT-AZ:availability_zone'])
+        self.agg_mock.assert_not_called()
