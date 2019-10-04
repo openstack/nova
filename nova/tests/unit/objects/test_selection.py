@@ -13,11 +13,13 @@
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 
+from nova import conf
 from nova import objects
 from nova.objects import numa
 from nova.scheduler import host_manager
 from nova.tests.unit.objects import test_objects
 
+CONF = conf.CONF
 
 fake_numa_limit1 = numa.NUMATopologyLimits(cpu_allocation_ratio=1.0,
         ram_allocation_ratio=1.0)
@@ -148,7 +150,47 @@ class _TestSelectionObject(object):
 
 class TestSelectionObject(test_objects._LocalTest,
                             _TestSelectionObject):
-    pass
+
+    # NOTE(mriedem): The tests below are for methods which are not remotable
+    # so they can go in the local-only test class rather than the mixin above.
+
+    def test_obj_make_compatible(self):
+        selection = objects.Selection(service_host='host1',
+                                      availability_zone='zone1')
+        primitive = selection.obj_to_primitive(
+            target_version='1.1')['nova_object.data']
+        self.assertIn('availability_zone', primitive)
+        primitive = selection.obj_to_primitive(
+            target_version='1.0')['nova_object.data']
+        self.assertNotIn('availability_zone', primitive)
+        self.assertIn('service_host', primitive)
+
+    def test_from_host_state_az_via_aggregate_metadata(self):
+        """Tests the scenario that the host is in multiple aggregates and
+        one has the availability_zone aggregate metadata key which is used
+        on the selection object.
+        """
+        host_state = host_manager.HostState('host', 'node', uuids.cell_uuid)
+        host_state.uuid = uuids.compute_node_uuid
+        host_state.limits = {}
+        host_state.aggregates = [
+            objects.Aggregate(metadata={'foo': 'bar'}),
+            objects.Aggregate(metadata={'availability_zone': 'zone1'})
+        ]
+        selection = objects.Selection.from_host_state(host_state)
+        self.assertEqual('zone1', selection.availability_zone)
+
+    def test_from_host_state_az_via_config(self):
+        """Tests the scenario that the host is not in an aggregate with the
+        availability_zone metadata key so the AZ comes from config.
+        """
+        host_state = host_manager.HostState('host', 'node', uuids.cell_uuid)
+        host_state.uuid = uuids.compute_node_uuid
+        host_state.limits = {}
+        host_state.aggregates = []
+        selection = objects.Selection.from_host_state(host_state)
+        self.assertEqual(CONF.default_availability_zone,
+                         selection.availability_zone)
 
 
 class TestRemoteSelectionObject(test_objects._RemoteTest,
