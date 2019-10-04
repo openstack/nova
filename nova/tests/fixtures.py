@@ -1499,10 +1499,12 @@ class NeutronFixture(fixtures.Fixture):
             'nova.network.neutronv2.api.API.remove_fixed_ip_from_instance',
             lambda *args, **kwargs: network_model.NetworkInfo.hydrate(
                 NeutronFixture.nw_info))
+        # TODO(stephenfin): This is a rubbish mock. We should instead mock the
+        # methods for the neutron client, like 'list_security_groups'
         self.test.stub_out(
             'nova.network.security_group.neutron_driver.SecurityGroupAPI.'
             'get_instances_security_groups_bindings',
-            lambda *args, **kwargs: {})
+            self.fake_get_instance_security_group_bindings)
 
         # Stub out port binding APIs which go through a KSA client Adapter
         # rather than python-neutronclient.
@@ -1531,6 +1533,13 @@ class NeutronFixture(fixtures.Fixture):
         # TODO(mriedem): Make this smarter by keeping track of our bindings
         # per port so we can reflect the status accurately.
         return fake_requests.FakeResponse(204)
+
+    @staticmethod
+    def fake_get_instance_security_group_bindings(
+            _, context, servers, detailed=False):
+        if detailed:
+            raise Exception('We do not support detailed view')
+        return {server['id']: [{'name': 'default'}] for server in servers}
 
     def _get_first_id_match(self, id, list):
         filtered_list = [p for p in list if p['id'] == id]

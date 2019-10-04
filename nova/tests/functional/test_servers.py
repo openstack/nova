@@ -1261,9 +1261,9 @@ class ServerTestV269(ServersTestBase):
                 # server is in the down cell.
                 self.assertEqual('UNKNOWN', server['status'])
                 self.assertIn(server['id'], self.down_cell_insts)
-                # the partial construct will have only 5 keys:
-                # created, tenant_id, status, id and links.
-                self.assertEqual(5, len(server))
+                # the partial construct will have only 6 keys:
+                # created, tenant_id, security_groups, status, id and links.
+                self.assertEqual(6, len(server))
             else:
                 # server in up cell
                 self.assertIn(server['id'], self.up_cell_insts)
@@ -1367,8 +1367,8 @@ class ServerTestV269(ServersTestBase):
                 if server['tenant_id'] != 'faker':
                     self.assertIn(server['id'], self.down_cell_insts)
                 # the partial construct will have only 5 keys:
-                # created, tenant_id, status, id and links
-                self.assertEqual(5, len(server))
+                # created, tenant_id, security_groups, status, id and links
+                self.assertEqual(6, len(server))
             else:
                 # server in up cell
                 if server['tenant_id'] != 'faker':
