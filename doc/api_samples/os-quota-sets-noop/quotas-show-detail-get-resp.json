@@ -46,11 +46,6 @@
             "limit": -1,
             "reserved": -1
         },
-        "networks": {
-            "in_use": -1,
-            "limit": -1,
-            "reserved": -1
-        },
         "ram": {
             "in_use": -1,
             "limit": -1,
