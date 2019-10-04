@@ -1246,13 +1246,84 @@ class NeutronFixture(fixtures.Fixture):
         'availability_zones': [
             'nova'
         ],
-        'port_security_enabled': False,
+        'port_security_enabled': True,
         'ipv4_address_scope': None,
         'ipv6_address_scope': None,
         'provider:network_type': 'vxlan',
         'provider:physical_network': None,
         'provider:segmentation_id': 24,
     }
+
+    security_group = {
+        'id': 'aec9df91-db1f-4e04-8ac6-e761d8461c53',
+        'name': 'default',
+        'description': 'Default security group',
+        'tenant_id': tenant_id,
+        'project_id': tenant_id,
+        'security_group_rules': [],  # setup later
+    }
+    security_group_rule_ip4_ingress = {
+        'id': 'e62268aa-1a17-4ff4-ae77-ab348bfe13a7',
+        'description': None,
+        'direction': 'ingress',
+        'ethertype': 'IPv4',
+        'protocol': None,
+        'port_range_min': None,
+        'port_range_max': None,
+        'remote_group_id': 'aec9df91-db1f-4e04-8ac6-e761d8461c53',
+        'remote_ip_prefix': None,
+        'security_group_id': 'aec9df91-db1f-4e04-8ac6-e761d8461c53',
+        'tenant_id': tenant_id,
+        'project_id': tenant_id,
+    }
+    security_group_rule_ip4_egress = {
+        'id': 'adf54daf-2ff9-4462-a0b0-f226abd1db28',
+        'description': None,
+        'direction': 'egress',
+        'ethertype': 'IPv4',
+        'protocol': None,
+        'port_range_min': None,
+        'port_range_max': None,
+        'remote_group_id': None,
+        'remote_ip_prefix': None,
+        'security_group_id': 'aec9df91-db1f-4e04-8ac6-e761d8461c53',
+        'tenant_id': tenant_id,
+        'project_id': tenant_id,
+    }
+    security_group_rule_ip6_ingress = {
+        'id': 'c4194b5c-3b50-4d35-9247-7850766aee2b',
+        'description': None,
+        'direction': 'ingress',
+        'ethertype': 'IPv6',
+        'protocol': None,
+        'port_range_min': None,
+        'port_range_max': None,
+        'remote_group_id': 'aec9df91-db1f-4e04-8ac6-e761d8461c53',
+        'remote_ip_prefix': None,
+        'security_group_id': 'aec9df91-db1f-4e04-8ac6-e761d8461c53',
+        'tenant_id': tenant_id,
+        'project_id': tenant_id,
+    }
+    security_group_rule_ip6_egress = {
+        'id': '16ce6a83-a1db-4d66-a10d-9481d493b072',
+        'description': None,
+        'direction': 'egress',
+        'ethertype': 'IPv6',
+        'protocol': None,
+        'port_range_min': None,
+        'port_range_max': None,
+        'remote_group_id': None,
+        'remote_ip_prefix': None,
+        'security_group_id': 'aec9df91-db1f-4e04-8ac6-e761d8461c53',
+        'tenant_id': tenant_id,
+        'project_id': tenant_id,
+    }
+    security_group['security_group_rules'] = [
+        security_group_rule_ip4_ingress['id'],
+        security_group_rule_ip4_egress['id'],
+        security_group_rule_ip6_ingress['id'],
+        security_group_rule_ip6_egress['id'],
+    ]
 
     subnet_1 = {
         'id': 'f8a6e8f8-c2ec-497c-9f23-da9616de54ef',
@@ -1321,8 +1392,9 @@ class NeutronFixture(fixtures.Fixture):
         'device_id': '',
         'binding:vnic_type': 'normal',
         'binding:vif_type': 'ovs',
-        'port_security_enabled': False,
+        'port_security_enabled': True,
         'security_groups': [
+            security_group['id'],
         ],
     }
 
@@ -1345,8 +1417,9 @@ class NeutronFixture(fixtures.Fixture):
         'device_id': '',
         'binding:vnic_type': 'normal',
         'binding:vif_type': 'ovs',
-        'port_security_enabled': False,
+        'port_security_enabled': True,
         'security_groups': [
+            security_group['id'],
         ],
     }
 
@@ -1375,11 +1448,14 @@ class NeutronFixture(fixtures.Fixture):
                     orc.NET_BW_EGR_KILOBIT_PER_SEC: 1000},
             "required": ["CUSTOM_PHYSNET2", "CUSTOM_VNIC_TYPE_NORMAL"]
         },
-        'port_security_enabled': False,
+        'port_security_enabled': True,
         'security_groups': [
+            security_group['id'],
         ],
     }
 
+    # network_2 does not have security groups enabled - that's okay since most
+    # of these ports are SR-IOV'y anyway
     network_2 = {
         'id': '1b70879f-fd00-411e-8ea9-143e7820e61d',
         # TODO(stephenfin): This would be more useful name due to things like
@@ -1574,16 +1650,17 @@ class NeutronFixture(fixtures.Fixture):
                 copy.deepcopy(self.port_with_resource_request)
         }
 
-        # The fixture does not allow network update so we don't have to
-        # deepcopy here
+        # The fixture does not allow network, subnet or security group updates
+        # so we don't have to deepcopy here
         self._networks = {
             self.network_1['id']: self.network_1
         }
-        # The fixture does not allow network update so we don't have to
-        # deepcopy here
         self._subnets = {
             self.subnet_1['id']: self.subnet_1,
             self.subnet_ipv6_1['id']: self.subnet_ipv6_1,
+        }
+        self._security_groups = {
+            self.security_group['id']: self.security_group,
         }
 
     def setUp(self):
@@ -1603,12 +1680,6 @@ class NeutronFixture(fixtures.Fixture):
             'nova.network.neutronv2.api.API.remove_fixed_ip_from_instance',
             lambda *args, **kwargs: network_model.NetworkInfo.hydrate(
                 self.nw_info))
-        # TODO(stephenfin): This is a rubbish mock. We should instead mock the
-        # methods for the neutron client, like 'list_security_groups'
-        self.test.stub_out(
-            'nova.network.security_group.neutron_driver.SecurityGroupAPI.'
-            'get_instances_security_groups_bindings',
-            self.fake_get_instance_security_group_bindings)
 
         # Stub out port binding APIs which go through a KSA client Adapter
         # rather than python-neutronclient.
@@ -1714,6 +1785,10 @@ class NeutronFixture(fixtures.Fixture):
 
     def list_floatingips(self, retrieve_all=True, **_params):
         return {'floatingips': []}
+
+    def list_security_groups(self, retrieve_all=True, **_params):
+        return {'security_groups': self._list_resource(
+            self._security_groups, retrieve_all, **_params)}
 
     def create_port(self, body=None):
         body = body or {'port': {}}
