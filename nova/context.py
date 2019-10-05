@@ -445,15 +445,14 @@ def scatter_gather_cells(context, cell_mappings, timeout, fn, *args, **kwargs):
         except exception.CellTimeout:
             # NOTE(melwitt): We'll fill in did_not_respond_sentinels at the
             # same time we kill/wait for the green threads.
-            pass
+            LOG.warning('Timed out waiting for response from cell %s',
+                        cell_uuid, exc_info=True)
 
     # Kill the green threads still pending and wait on those we know are done.
     for cell_uuid, greenthread in greenthreads:
         if cell_uuid not in results:
             greenthread.kill()
             results[cell_uuid] = did_not_respond_sentinel
-            LOG.warning('Timed out waiting for response from cell %s',
-                        cell_uuid)
         else:
             greenthread.wait()
 
