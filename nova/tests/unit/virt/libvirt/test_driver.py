@@ -1066,9 +1066,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         events = []
         if (drvr._conn_supports_start_paused and
-            utils.is_neutron() and
-            not vifs_already_plugged and
-            power_on and timeout):
+                not vifs_already_plugged and
+                power_on and timeout):
             events = drvr._get_neutron_events(network_info)
 
         return bool(events)
@@ -18295,9 +18294,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         test_create()
 
-        if events and utils.is_neutron() and CONF.vif_plugging_timeout:
+        if events and CONF.vif_plugging_timeout:
             self.assertEqual(events_passed_to_prepare, events)
-        elif utils.is_neutron() and CONF.vif_plugging_timeout and power_on:
+        elif CONF.vif_plugging_timeout and power_on:
             prepare.assert_has_calls([
                 mock.call(instance, 'network-vif-plugged', uuids.vif_1),
                 mock.call(instance, 'network-vif-plugged', uuids.vif_2)])
@@ -18310,66 +18309,43 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         else:
             self.assertEqual(0, prepare.call_count)
 
-    @mock.patch('nova.utils.is_neutron', new=mock.Mock(return_value=True))
     def test_create_with_network_events_passed_in(self):
         self._test_create_with_network_events(
             events=[('network-vif-plugged', uuids.fake_vif)])
 
-    @mock.patch('nova.utils.is_neutron', new=mock.Mock(return_value=False))
-    def test_create_with_network_events_passed_in_nova_net(self):
-        self._test_create_with_network_events(
-            events=[('network-vif-plugged', uuids.fake_vif)])
-
-    @mock.patch('nova.utils.is_neutron', new=mock.Mock(return_value=True))
     def test_create_with_network_events_passed_in_0_timeout(self):
         self.flags(vif_plugging_timeout=0)
         self._test_create_with_network_events(
             events=[('network-vif-plugged', uuids.fake_vif)])
 
-    @mock.patch('nova.utils.is_neutron', return_value=True)
-    def test_create_with_network_events_neutron(self, is_neutron):
+    def test_create_with_network_events_neutron(self):
         self._test_create_with_network_events()
 
-    @mock.patch('nova.utils.is_neutron', return_value=True)
-    def test_create_with_network_events_neutron_power_off(self,
-                                                          is_neutron):
+    def test_create_with_network_events_neutron_power_off(self):
         # Tests that we don't wait for events if we don't start the instance.
         self._test_create_with_network_events(power_on=False)
 
-    @mock.patch('nova.utils.is_neutron', return_value=True)
-    def test_create_with_network_events_neutron_nowait(self, is_neutron):
+    def test_create_with_network_events_neutron_nowait(self):
         self.flags(vif_plugging_timeout=0)
         self._test_create_with_network_events()
 
-    @mock.patch('nova.utils.is_neutron', return_value=True)
-    def test_create_with_network_events_neutron_failed_nonfatal_timeout(
-            self, is_neutron):
+    def test_create_with_network_events_neutron_failed_nonfatal_timeout(self):
         self.flags(vif_plugging_is_fatal=False)
         self._test_create_with_network_events(neutron_failure='timeout')
 
-    @mock.patch('nova.utils.is_neutron', return_value=True)
-    def test_create_with_network_events_neutron_failed_fatal_timeout(
-            self, is_neutron):
+    def test_create_with_network_events_neutron_failed_fatal_timeout(self):
         self.assertRaises(exception.VirtualInterfaceCreateException,
                           self._test_create_with_network_events,
                           neutron_failure='timeout')
 
-    @mock.patch('nova.utils.is_neutron', return_value=True)
-    def test_create_with_network_events_neutron_failed_nonfatal_error(
-            self, is_neutron):
+    def test_create_with_network_events_neutron_failed_nonfatal_error(self):
         self.flags(vif_plugging_is_fatal=False)
         self._test_create_with_network_events(neutron_failure='error')
 
-    @mock.patch('nova.utils.is_neutron', return_value=True)
-    def test_create_with_network_events_neutron_failed_fatal_error(
-            self, is_neutron):
+    def test_create_with_network_events_neutron_failed_fatal_error(self):
         self.assertRaises(exception.VirtualInterfaceCreateException,
                           self._test_create_with_network_events,
                           neutron_failure='error')
-
-    @mock.patch('nova.utils.is_neutron', return_value=False)
-    def test_create_with_network_events_non_neutron(self, is_neutron):
-        self._test_create_with_network_events()
 
     def test_create_with_other_error(self):
         drvr = libvirt_driver.LibvirtDriver(mock.MagicMock(), False)
