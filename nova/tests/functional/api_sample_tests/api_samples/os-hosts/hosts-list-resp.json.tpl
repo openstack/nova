@@ -12,11 +12,6 @@
         },
         {
             "host_name": "%(host_name)s",
-            "service": "network",
-            "zone": "internal"
-        },
-        {
-            "host_name": "%(host_name)s",
             "service": "scheduler",
             "zone": "internal"
         }

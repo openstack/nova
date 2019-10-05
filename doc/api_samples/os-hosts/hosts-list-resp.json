@@ -11,11 +11,6 @@
             "zone": "nova"
         },
         {
-            "host_name": "396a8a0a234f476eb05fb9fbc5802ba7",
-            "service": "network",
-            "zone": "internal"
-        },
-        {
             "host_name": "abffda96592c4eacaf4111c28fddee17",
             "service": "scheduler",
             "zone": "internal"
