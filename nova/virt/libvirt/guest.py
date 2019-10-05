@@ -40,7 +40,6 @@ import six
 from nova.compute import power_state
 from nova import exception
 from nova.i18n import _
-import nova.privsep.libvirt
 from nova.virt import hardware
 from nova.virt.libvirt import config as vconfig
 
@@ -193,17 +192,6 @@ class Guest(object):
     def resume(self):
         """Resumes a paused guest."""
         self._domain.resume()
-
-    def enable_hairpin(self):
-        """Enables hairpin mode for this guest."""
-        interfaces = self.get_interfaces()
-        try:
-            for interface in interfaces:
-                nova.privsep.libvirt.enable_hairpin(interface)
-        except Exception:
-            with excutils.save_and_reraise_exception():
-                LOG.error('Error enabling hairpin mode with XML: %s',
-                          self._encoded_xml, errors='ignore')
 
     def get_interfaces(self):
         """Returns a list of all network interfaces for this domain."""

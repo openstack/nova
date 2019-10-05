@@ -10561,7 +10561,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                         "<devices>{}</devices></domain>")
         disks_xml = ''
         for dsk in disks:
-            if dsk['type'] is not 'network':
+            if dsk['type'] != 'network':
                 disks_xml = ''.join([disks_xml,
                                 "<disk type='{type}'>"
                                 "<driver name='qemu' type='{driver}'/>"
@@ -17870,40 +17870,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           domain=fake_domain)
         self.assertTrue(self.log_error_called)
 
-    @mock.patch('nova.privsep.libvirt.enable_hairpin')
-    def test_create_domain_enable_hairpin_fails(self, mock_writefile):
-        """Tests that the xml is logged when enabling hairpin mode for the
-        domain fails.
-        """
-        # Guest.enable_hairpin is only called for nova-network.
-        # TODO(mikal): remove this test when nova-net goes away
-        self.flags(use_neutron=False)
-        fake_xml = "<test>this is a test</test>"
-        fake_domain = FakeVirtDomain(fake_xml)
-
-        mock_writefile.side_effect = IOError
-
-        def fake_get_interfaces(*args):
-            return ["dev"]
-
-        self.log_error_called = False
-
-        def fake_error(msg, *args, **kwargs):
-            self.log_error_called = True
-            self.assertIn(fake_xml, msg % args)
-
-        self.stub_out('nova.virt.libvirt.guest.LOG.error', fake_error)
-
-        self.create_fake_libvirt_mock()
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.stub_out(
-            'nova.virt.libvirt.guest.Guest.get_interfaces',
-            fake_get_interfaces)
-
-        self.assertRaises(IOError, drvr._create_domain, domain=fake_domain,
-                          power_on=False)
-        self.assertTrue(self.log_error_called)
-
     def test_get_vnc_console(self):
         instance = objects.Instance(**self.test_instance)
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
@@ -21005,9 +20971,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                              external_events)
             return mock.MagicMock()
 
-        def fake_enable_hairpin(self):
-            pass
-
         def fake_get_info(self, instance):
             if powered_on:
                 return hardware.InstanceInfo(state=power_state.RUNNING)
@@ -21029,8 +20992,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                       fw)
         self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.'
                       '_create_domain_and_network', fake_create_domain)
-        self.stub_out('nova.virt.libvirt.guest.Guest.enable_hairpin',
-                      fake_enable_hairpin)
         self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.get_info',
                       fake_get_info)
         self.stub_out('nova.utils.get_image_from_system_metadata',

@@ -76,18 +76,6 @@ class LibvirtTestCase(test.NoDBTestCase):
             'ploop', 'restore-descriptor', '-f', 'raw',
             '/img/dir', 'imagefile', check_exit_code=True)
 
-    def test_enable_hairping(self):
-        mock_open = mock.mock_open()
-        with mock.patch.object(six.moves.builtins, 'open',
-                               new=mock_open) as mock_open:
-            nova.privsep.libvirt.enable_hairpin('eth0')
-
-            handle = mock_open()
-            self.assertTrue(mock.call('/sys/class/net/eth0/brport/'
-                                      'hairpin_mode', 'w') in
-                            mock_open.mock_calls)
-            handle.write.assert_called_with('1')
-
     @mock.patch('oslo_concurrency.processutils.execute')
     def test_plug_infiniband_vif(self, mock_execute):
         nova.privsep.libvirt.plug_infiniband_vif('fakemac', 'devid', 'fabric',
