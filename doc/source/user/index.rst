@@ -8,6 +8,7 @@ End user guide
 .. toctree::
    :maxdepth: 1
 
+   availability-zones
    launch-instances
    metadata
    manage-ip-addresses
