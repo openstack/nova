@@ -1188,9 +1188,7 @@ def is_big_vm(memory_mb, flavor):
         return False
 
     # baremetal instances are not big
-    baremetal_match = ('quota:separate', 'true')
-    for spec in flavor.extra_specs.items():
-        if spec == baremetal_match:
-            return False
+    if 'capabilities:cpu_arch' in flavor.extra_specs:
+        return False
 
     return True

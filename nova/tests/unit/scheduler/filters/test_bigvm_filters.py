@@ -105,9 +105,10 @@ class TestBigVmClusterUtilizationFilter(test.NoDBTestCase):
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
     def test_baremetal_instance_passes(self):
+        extra_specs = {'capabilities:cpu_arch': 'x86_64'}
         spec_obj = objects.RequestSpec(
             flavor=objects.Flavor(memory_mb=CONF.bigvm_mb,
-                                  extra_specs={'quota:separate': 'true'}))
+                                  extra_specs=extra_specs))
         host = fakes.FakeHostState('host1', 'compute', {})
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
