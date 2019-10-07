@@ -385,12 +385,44 @@ class ContextTestCase(test.NoDBTestCase):
                                        exception.CellTimeout()]
 
         results = context.scatter_gather_cells(
-            ctxt, mappings, 30, objects.InstanceList.get_by_filters)
+            ctxt, mappings, 30, objects.InstanceList.get_by_filters, {})
         self.assertEqual(2, len(results))
         self.assertIn(mock.sentinel.instances, results.values())
         self.assertIn(context.did_not_respond_sentinel, results.values())
         mock_timeout.assert_called_once_with(30, exception.CellTimeout)
         self.assertTrue(mock_log_warning.called)
+
+    @mock.patch('nova.context.LOG.warning')
+    @mock.patch('eventlet.timeout.Timeout')
+    @mock.patch('eventlet.queue.LightQueue.get')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    def test_scatter_gather_cells_all_timeout(self, mock_get_inst,
+                                              mock_get_result, mock_timeout,
+                                              mock_log_warning):
+        """This is a regression test for bug 1847131.
+        test_scatter_gather_cells_timeout did not catch the issue because it
+        yields a result which sets the cell_uuid variable in scope before the
+        CellTimeout is processed and logged. In this test we only raise the
+        CellTimeout so cell_uuid will not be in scope for the log message.
+        """
+        # This is needed because we're mocking get_by_filters.
+        self.useFixture(nova_fixtures.SpawnIsSynchronousFixture())
+        ctxt = context.get_context()
+        mapping0 = objects.CellMapping(database_connection='fake://db0',
+                                       transport_url='none:///',
+                                       uuid=objects.CellMapping.CELL0_UUID)
+        mappings = objects.CellMappingList(objects=[mapping0])
+
+        # Simulate cell0 not responding.
+        mock_get_result.side_effect = exception.CellTimeout()
+
+        results = context.scatter_gather_cells(
+            ctxt, mappings, 30, objects.InstanceList.get_by_filters, {})
+        self.assertEqual(1, len(results))
+        self.assertIn(context.did_not_respond_sentinel, results.values())
+        mock_timeout.assert_called_once_with(30, exception.CellTimeout)
+        mock_log_warning.assert_called_once_with(
+            'Timed out waiting for response from cell', exc_info=True)
 
     @mock.patch('nova.context.LOG.exception')
     @mock.patch('nova.objects.InstanceList.get_by_filters')
