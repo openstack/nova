@@ -615,3 +615,29 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         compute_rpcapi.ComputeAPI()
         mock_allcells.assert_called_once_with(mock.ANY, ['nova-compute'])
         mock_minver.assert_not_called()
+
+    @mock.patch('nova.compute.rpcapi.LOG.error')
+    @mock.patch('nova.objects.Service.get_minimum_version')
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                side_effect=exception.DBNotAllowed(binary='nova-compute'))
+    def test_version_cap_all_cells_no_access(self, mock_allcells, mock_minver,
+                                             mock_log_error):
+        """Tests a scenario where nova-compute is configured with a connection
+        to the API database and fails trying to get the minium nova-compute
+        service version across all cells because nova-compute is configured to
+        not allow direct database access.
+        """
+        self.flags(connection='sqlite:///', group='api_database')
+        compute_rpcapi.LAST_VERSION = None
+        self.assertRaises(exception.DBNotAllowed,
+                          compute_rpcapi.ComputeAPI()._determine_version_cap,
+                          mock.Mock())
+        mock_allcells.assert_called_once_with(mock.ANY, ['nova-compute'])
+        mock_minver.assert_not_called()
+        # Make sure the expected error was logged.
+        mock_log_error.assert_called_once_with(
+            'This service is configured for access to the '
+            'API database but is not allowed to directly '
+            'access the database. You should run this '
+            'service without the [api_database]/connection '
+            'config option.')
