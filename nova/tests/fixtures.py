@@ -1460,26 +1460,29 @@ class NeutronFixture(fixtures.Fixture):
     def __init__(self, test):
         super(NeutronFixture, self).__init__()
         self.test = test
+
+        # TODO(stephenfin): This should probably happen in setUp
+
         # The fixture allows port update so we need to deepcopy the class
         # variables to avoid test case interference.
         self._ports = {
             # NOTE(gibi)The port_with_sriov_resource_request cannot be added
             # globally in this fixture as it adds a second network that makes
             # auto allocation based test to fail due to ambiguous networks.
-            NeutronFixture.port_1['id']: copy.deepcopy(NeutronFixture.port_1),
-            NeutronFixture.port_with_resource_request['id']:
-                copy.deepcopy(NeutronFixture.port_with_resource_request)
+            self.port_1['id']: copy.deepcopy(self.port_1),
+            self.port_with_resource_request['id']:
+                copy.deepcopy(self.port_with_resource_request)
         }
 
         # The fixture does not allow network update so we don't have to
         # deepcopy here
         self._networks = {
-            NeutronFixture.network_1['id']: NeutronFixture.network_1
+            self.network_1['id']: self.network_1
         }
         # The fixture does not allow network update so we don't have to
         # deepcopy here
         self._subnets = {
-            NeutronFixture.subnet_1['id']: NeutronFixture.subnet_1
+            self.subnet_1['id']: self.subnet_1
         }
 
     def setUp(self):
@@ -1494,11 +1497,11 @@ class NeutronFixture(fixtures.Fixture):
         self.test.stub_out(
             'nova.network.neutronv2.api.API.add_fixed_ip_to_instance',
             lambda *args, **kwargs: network_model.NetworkInfo.hydrate(
-                NeutronFixture.nw_info))
+                self.nw_info))
         self.test.stub_out(
             'nova.network.neutronv2.api.API.remove_fixed_ip_from_instance',
             lambda *args, **kwargs: network_model.NetworkInfo.hydrate(
-                NeutronFixture.nw_info))
+                self.nw_info))
         # TODO(stephenfin): This is a rubbish mock. We should instead mock the
         # methods for the neutron client, like 'list_security_groups'
         self.test.stub_out(
@@ -1605,14 +1608,14 @@ class NeutronFixture(fixtures.Fixture):
         # Note(gibi): Some of the test expects that a pre-defined port is
         # created. This is port_2. So if that port is not created yet then
         # that is the one created here.
-        if NeutronFixture.port_2['id'] not in self._ports:
-            new_port = copy.deepcopy(NeutronFixture.port_2)
+        if self.port_2['id'] not in self._ports:
+            new_port = copy.deepcopy(self.port_2)
         else:
             # If port_2 is already created then create a new port based on
             # the request body, the port_2 as a template, and assign new
             # port_id and mac_address for the new port
             new_port = copy.deepcopy(body)
-            new_port.update(copy.deepcopy(NeutronFixture.port_2))
+            new_port.update(copy.deepcopy(self.port_2))
             # we need truly random uuids instead of named sentinels as some
             # tests needs more than 3 ports
             new_port.update({
@@ -1650,7 +1653,7 @@ class NeutronFixture(fixtures.Fixture):
 
         return {
             'auto_allocated_topology': {
-                'id': NeutronFixture.network_1['id'],
+                'id': self.network_1['id'],
                 'tenant_id': project_id,
             }
         }
