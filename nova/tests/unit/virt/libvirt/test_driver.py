@@ -18498,6 +18498,19 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._unplug_vifs')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._undefine_domain')
+    def test_cleanup_pass_with_no_connection_info(self, undefine, unplug):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        drvr._disconnect_volume = mock.Mock()
+        fake_inst = objects.Instance(**self.test_instance)
+        fake_bdms = [{'connection_info': None}]
+        with mock.patch('nova.virt.driver'
+                        '.block_device_info_get_mapping',
+                        return_value=fake_bdms):
+            drvr.cleanup('ctxt', fake_inst, 'netinfo', destroy_disks=False)
+        self.assertFalse(drvr._disconnect_volume.called)
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._unplug_vifs')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._undefine_domain')
     def test_cleanup_pass_with_no_mount_device(self, undefine, unplug):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
         drvr._disconnect_volume = mock.Mock()

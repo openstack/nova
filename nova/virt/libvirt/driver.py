@@ -1308,6 +1308,11 @@ class LibvirtDriver(driver.ComputeDriver):
             block_device_info)
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
+            if not connection_info:
+                # if booting from a volume, creation could have failed meaning
+                # this would be unset
+                continue
+
             disk_dev = vol['mount_device']
             if disk_dev is not None:
                 disk_dev = disk_dev.rpartition("/")[2]
