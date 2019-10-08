@@ -126,30 +126,38 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
         # this is used to generate sample docs
         self.generate_samples = os.getenv('GENERATE_SAMPLES') is not None
 
-        # NOTE(mikal): this is used to stub away privsep helpers
-        def fake_noop(*args, **kwargs):
-            return '', ''
+        # TODO(stephenfin): Remove once we remove the few remaining
+        # nova-network-only APIs
+        if not self.USE_NEUTRON:
+            # NOTE(mikal): this is used to stub away privsep helpers
+            def fake_noop(*args, **kwargs):
+                return '', ''
 
-        def fake_true(*args, **kwargs):
-            return True
+            def fake_true(*args, **kwargs):
+                return True
 
-        self.stub_out('nova.privsep.linux_net.add_bridge', fake_noop)
-        self.stub_out('nova.privsep.linux_net.set_device_mtu', fake_noop)
-        self.stub_out('nova.privsep.linux_net.set_device_enabled', fake_noop)
-        self.stub_out('nova.privsep.linux_net.set_device_macaddr', fake_noop)
-        self.stub_out('nova.privsep.linux_net.routes_show', fake_noop)
-        self.stub_out('nova.privsep.linux_net.lookup_ip', fake_noop)
-        self.stub_out('nova.privsep.linux_net.change_ip', fake_noop)
-        self.stub_out('nova.privsep.linux_net.address_command_deprecated',
-                      fake_noop)
-        self.stub_out('nova.privsep.linux_net.ipv4_forwarding_check',
-                      fake_true)
-        self.stub_out('nova.privsep.linux_net._enable_ipv4_forwarding_inner',
-                      fake_noop)
-        self.stub_out('nova.privsep.linux_net.add_vlan', fake_noop)
-        self.stub_out('nova.privsep.linux_net.bridge_setfd', fake_noop)
-        self.stub_out('nova.privsep.linux_net.bridge_disable_stp', fake_noop)
-        self.stub_out('nova.privsep.linux_net.bridge_add_interface', fake_noop)
+            self.stub_out('nova.privsep.linux_net.add_bridge', fake_noop)
+            self.stub_out('nova.privsep.linux_net.set_device_mtu', fake_noop)
+            self.stub_out('nova.privsep.linux_net.set_device_enabled',
+                          fake_noop)
+            self.stub_out('nova.privsep.linux_net.set_device_macaddr',
+                          fake_noop)
+            self.stub_out('nova.privsep.linux_net.routes_show', fake_noop)
+            self.stub_out('nova.privsep.linux_net.lookup_ip', fake_noop)
+            self.stub_out('nova.privsep.linux_net.change_ip', fake_noop)
+            self.stub_out('nova.privsep.linux_net.address_command_deprecated',
+                          fake_noop)
+            self.stub_out('nova.privsep.linux_net.ipv4_forwarding_check',
+                          fake_true)
+            self.stub_out('nova.privsep.linux_net.'
+                          '_enable_ipv4_forwarding_inner',
+                          fake_noop)
+            self.stub_out('nova.privsep.linux_net.add_vlan', fake_noop)
+            self.stub_out('nova.privsep.linux_net.bridge_setfd', fake_noop)
+            self.stub_out('nova.privsep.linux_net.bridge_disable_stp',
+                          fake_noop)
+            self.stub_out('nova.privsep.linux_net.bridge_add_interface',
+                          fake_noop)
 
         if self.availability_zones:
             self.useFixture(
