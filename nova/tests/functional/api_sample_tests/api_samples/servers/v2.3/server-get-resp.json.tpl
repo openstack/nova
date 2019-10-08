@@ -6,7 +6,7 @@
             "private": [
                 {
                     "addr": "%(ip)s",
-                    "OS-EXT-IPS-MAC:mac_addr": "aa:bb:cc:dd:ee:ff",
+                    "OS-EXT-IPS-MAC:mac_addr": "00:0c:29:0d:11:74",
                     "OS-EXT-IPS:type": "fixed",
                     "version": 4
                 }

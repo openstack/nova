@@ -120,7 +120,8 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
         if not self.USE_NEUTRON:
             # self.network is only setup if USE_NEUTRON=False
             self.useFixture(test.SampleNetworks(host=self.network.host))
-        fake_network.stub_compute_with_ips(self)
+            fake_network.stub_compute_with_ips(self)
+
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
         # this is used to generate sample docs
         self.generate_samples = os.getenv('GENERATE_SAMPLES') is not None
