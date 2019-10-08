@@ -80,6 +80,9 @@ class _IntegratedTestBase(test.TestCase):
     # New tests should rely on Neutron and old ones migrated to use this since
     # nova-network is deprecated.
     USE_NEUTRON = True
+    # This indicates whether to include the project ID in the URL for API
+    # requests through OSAPIFixture. Overridden by subclasses.
+    _use_project_id = False
 
     def setUp(self):
         super(_IntegratedTestBase, self).setUp()
@@ -124,8 +127,11 @@ class _IntegratedTestBase(test.TestCase):
         self.scheduler = self._setup_scheduler_service()
 
         self.compute = self._setup_compute_service()
+
         self.api_fixture = self.useFixture(
-            nova_fixtures.OSAPIFixture(self.api_major_version))
+            nova_fixtures.OSAPIFixture(
+                api_version=self.api_major_version,
+                use_project_id_in_urls=self._use_project_id))
 
         # if the class needs to run as admin, make the api endpoint
         # the admin, otherwise it's safer to run as non admin user.

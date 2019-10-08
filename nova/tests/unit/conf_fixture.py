@@ -45,9 +45,6 @@ class ConfFixture(config_fixture.Config):
         self.conf.set_default('use_ipv6', True)
         self.conf.set_default('vlan_interface', 'eth0')
 
-        # api group
-        self.conf.set_default('auth_strategy', 'noauth2', group='api')
-
         # api_database group
         self.conf.set_default('connection', "sqlite://", group='api_database')
         self.conf.set_default('sqlite_synchronous', False,

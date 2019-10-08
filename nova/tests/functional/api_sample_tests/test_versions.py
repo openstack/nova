@@ -19,6 +19,7 @@ from nova.tests.functional.api_sample_tests import api_sample_base
 
 class VersionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     sample_dir = 'versions'
+    _use_project_id = False
     # NOTE(gmann): Setting empty scenario for 'version' API testing
     # as those does not send request on particular endpoint and running
     # its tests alone is enough.

@@ -63,18 +63,15 @@ class TestRequestLogMiddleware(testtools.TestCase):
         api = self.useFixture(fixtures.OSAPIFixture()).api
 
         resp = api.api_request('/', strip_version=True)
-        log1 = ('INFO [nova.api.openstack.requestlog] 127.0.0.1 '
-                '"GET /v2" status: 204 len: 0 microversion: - time:')
-        self.assertIn(log1, self.stdlog.logger.output)
 
         # the content length might vary, but the important part is
         # what we log is what we return to the user (which turns out
         # to excitingly not be the case with eventlet!)
         content_length = resp.headers['content-length']
 
-        log2 = ('INFO [nova.api.openstack.requestlog] 127.0.0.1 '
+        log1 = ('INFO [nova.api.openstack.requestlog] 127.0.0.1 '
                 '"GET /" status: 200 len: %s' % content_length)
-        self.assertIn(log2, self.stdlog.logger.output)
+        self.assertIn(log1, self.stdlog.logger.output)
 
     @mock.patch('nova.api.openstack.requestlog.RequestLog._should_emit')
     def test_logs_mv(self, emit):
