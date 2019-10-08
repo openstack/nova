@@ -1232,7 +1232,7 @@ class NeutronFixture(fixtures.Fixture):
 
     network_1 = {
         'id': '3cb9bc59-5699-4588-a4b1-b87f96708bc6',
-        'name': 'private-network',
+        'name': 'private',
         'description': '',
         'status': 'ACTIVE',
         'subnets': [],
@@ -1382,7 +1382,9 @@ class NeutronFixture(fixtures.Fixture):
 
     network_2 = {
         'id': '1b70879f-fd00-411e-8ea9-143e7820e61d',
-        'name': 'private-network',
+        # TODO(stephenfin): This would be more useful name due to things like
+        # https://bugs.launchpad.net/nova/+bug/1708316
+        'name': 'private',
         'description': '',
         'status': 'ACTIVE',
         'subnets': [],

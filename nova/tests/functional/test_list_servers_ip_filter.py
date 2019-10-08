@@ -115,4 +115,4 @@ class TestListServersIpFilter(test.TestCase):
                              self.neutron.port_2['fixed_ips'][0]['ip_address'],
                              servers))
         self.assertEqual(self.neutron.port_2['fixed_ips'][0]['ip_address'],
-                         servers[0]['addresses']['private-network'][0]['addr'])
+                         servers[0]['addresses']['private'][0]['addr'])

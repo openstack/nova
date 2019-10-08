@@ -649,7 +649,7 @@ class TestInstanceNotificationSample(
                      "port_uuid": "ce531f90-199f-48c0-816c-13e38010b442",
                      "meta": {},
                      "version": 4,
-                     "label": "private-network",
+                     "label": "private",
                      "device_name": "tapce531f90-19"
                  }}]
             },
@@ -702,7 +702,7 @@ class TestInstanceNotificationSample(
                  {'nova_object.namespace': 'nova',
                   'nova_object.name': 'BandwidthPayload',
                   'nova_object.data':
-                      {'network_name': 'private-network',
+                      {'network_name': 'private',
                        'out_bytes': 0,
                        'in_bytes': 0},
                   'nova_object.version': '1.0'}],

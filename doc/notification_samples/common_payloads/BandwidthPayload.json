@@ -1,6 +1,6 @@
 {
     "nova_object.data": {
-        "network_name": "private-network",
+        "network_name": "private",
         "out_bytes": 0,
         "in_bytes": 0
     },
