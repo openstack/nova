@@ -64,6 +64,7 @@ redirectmatch 301 ^/nova/([^/]+)/testing/serial-console.html$ /nova/$1/contribut
 redirectmatch 301 ^/nova/([^/]+)/testing/zero-downtime-upgrade.html$ /nova/$1/contributor/testing/zero-downtime-upgrade.html
 redirectmatch 301 ^/nova/([^/]+)/threading.html$ /nova/$1/reference/threading.html
 redirectmatch 301 ^/nova/([^/]+)/upgrade.html$ /nova/$1/user/upgrade.html
+redirectmatch 301 ^/nova/([^/]+)/user/aggregates.html$ /nova/$1/admin/aggregates.html
 redirectmatch 301 ^/nova/([^/]+)/user/cellsv2_layout.html$ /nova/$1/user/cellsv2-layout.html
 redirectmatch 301 ^/nova/([^/]+)/user/config-drive.html$ /nova/$1/user/metadata.html
 redirectmatch 301 ^/nova/([^/]+)/user/metadata-service.html$ /nova/$1/user/metadata.html
