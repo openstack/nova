@@ -1585,13 +1585,6 @@ class API(base.Base):
                     self._check_attach_and_reserve_volume(
                         context, volume, instance, bdm, supports_multiattach)
                     bdm.volume_size = volume.get('size')
-
-                    # NOTE(mnaser): If we end up reserving the volume, it will
-                    #               not have an attachment_id which is needed
-                    #               for cleanups.  This can be removed once
-                    #               all calls to reserve_volume are gone.
-                    if 'attachment_id' not in bdm:
-                        bdm.attachment_id = None
                 except (exception.CinderConnectionFailed,
                         exception.InvalidVolume,
                         exception.MultiattachNotSupportedOldMicroversion):
