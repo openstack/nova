@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api_sample_tests import test_servers
 
 
@@ -27,6 +28,8 @@ class ServersIpsJsonTest(test_servers.ServersSampleBase):
 
     def test_get_by_network(self):
         # Test getting a server's IP information by network id.
-        uuid = self._post_server()
-        response = self._do_get('servers/%s/ips/private' % uuid)
+        server_uuid = self._post_server()
+        network_label = nova_fixtures.NeutronFixture.network_1['name']
+        response = self._do_get('servers/%s/ips/%s' % (
+            server_uuid, network_label))
         self._verify_response('server-ips-network-resp', {}, response, 200)
