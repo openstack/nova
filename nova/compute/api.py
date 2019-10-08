@@ -104,7 +104,6 @@ AGGREGATE_ACTION_UPDATE_META = 'UpdateMeta'
 AGGREGATE_ACTION_DELETE = 'Delete'
 AGGREGATE_ACTION_ADD = 'Add'
 MIN_COMPUTE_ABORT_QUEUED_LIVE_MIGRATION = 34
-MIN_COMPUTE_VOLUME_TYPE = 36
 MIN_COMPUTE_SYNC_COMPUTE_STATUS_DISABLED = 38
 
 # FIXME(danms): Keep a global cache of the cells we find the
@@ -1505,16 +1504,6 @@ class API(base.Base):
             raise exception.VolumeTypeNotFound(
                 id_or_name=volume_type_id_or_name)
 
-    @staticmethod
-    def _check_compute_supports_volume_type(context):
-        # NOTE(brinzhang): Checking the minimum nova-compute service
-        # version across the deployment. Just make sure the volume
-        # type can be supported when the bdm.volume_type is requested.
-        min_compute_version = objects.service.get_minimum_version_all_cells(
-            context, ['nova-compute'])
-        if min_compute_version < MIN_COMPUTE_VOLUME_TYPE:
-            raise exception.VolumeTypeSupportNotYetAvailable()
-
     def _validate_bdm(self, context, instance, instance_type,
                       block_device_mappings, supports_multiattach=False):
         # Make sure that the boot indexes make sense.
@@ -1536,22 +1525,9 @@ class API(base.Base):
             raise exception.InvalidBDMBootSequence()
 
         volume_types = None
-        volume_type_is_supported = False
         for bdm in block_device_mappings:
             volume_type = bdm.volume_type
             if volume_type:
-                if not volume_type_is_supported:
-                    # The following method raises
-                    # VolumeTypeSupportNotYetAvailable if the minimum
-                    # nova-compute service version across the deployment is
-                    # not new enough to support creating volumes with a
-                    # specific type.
-                    self._check_compute_supports_volume_type(context)
-                    # Set the flag to avoid calling
-                    # _check_compute_supports_volume_type more than once in
-                    # this for loop.
-                    volume_type_is_supported = True
-
                 if not volume_types:
                     # In order to reduce the number of hit cinder APIs,
                     # initialize our cache of volume types.
