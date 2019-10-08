@@ -30,7 +30,13 @@ auth_opts = [
              "credential checking. 'noauth2' provides administrative "
              "credentials only if 'admin' is specified as the username."),
         ],
-        deprecated_group="DEFAULT",
+        deprecated_for_removal=True,
+        deprecated_since='21.0.0',
+        deprecated_reason="""
+The only non-default choice, ``noauth2``, is for internal development and
+testing purposes only and should not be used in deployments. This option and
+its middleware, NoAuthMiddleware[V2_18], will be removed in a future release.
+""",
         help="""
 Determine the strategy to use for authentication.
 """),

@@ -140,12 +140,23 @@ class TestPipeLineFactory(test.NoDBTestCase):
         self.assertEqual(app.name, pipeline.split()[-1])
         self.assertIsInstance(app, TestPipeLineFactory.FakeApp)
 
+    @mock.patch('oslo_log.versionutils.report_deprecated_feature',
+                new=mock.NonCallableMock())
     def test_pipeline_factory_v21(self):
+        fake_pipeline = 'test1 test2 test3'
+        CONF.set_override('auth_strategy', 'keystone', group='api')
+        app = nova.api.auth.pipeline_factory_v21(
+            TestPipeLineFactory.FakeLoader(), None, keystone=fake_pipeline)
+        self._test_pipeline(fake_pipeline, app)
+
+    @mock.patch('oslo_log.versionutils.report_deprecated_feature')
+    def test_pipeline_factory_v21_noauth2(self, mock_report_deprecated):
         fake_pipeline = 'test1 test2 test3'
         CONF.set_override('auth_strategy', 'noauth2', group='api')
         app = nova.api.auth.pipeline_factory_v21(
             TestPipeLineFactory.FakeLoader(), None, noauth2=fake_pipeline)
         self._test_pipeline(fake_pipeline, app)
+        self.assertTrue(mock_report_deprecated.called)
 
     @mock.patch('oslo_log.versionutils.report_deprecated_feature')
     def test_pipeline_factory_legacy_v2_deprecated(self,
