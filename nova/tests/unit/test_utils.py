@@ -21,7 +21,6 @@ import tempfile
 import eventlet
 import fixtures
 from keystoneauth1 import adapter as ks_adapter
-from keystoneauth1 import exceptions as ks_exc
 from keystoneauth1.identity import base as ks_identity
 from keystoneauth1 import session as ks_session
 import mock
@@ -1054,21 +1053,6 @@ class GetEndpointTestCase(test.NoDBTestCase):
         self.assertEqual('url', utils.get_endpoint(self.adap))
         self.adap.get_endpoint_data.assert_not_called()
         self.adap.get_endpoint.assert_called_once_with()
-
-    def test_nonimage_try_interfaces(self):
-        self.adap.get_endpoint.side_effect = (ks_exc.EndpointNotFound, 'url')
-        self.assertEqual('url', utils.get_endpoint(self.adap))
-        self.adap.get_endpoint_data.assert_not_called()
-        self.assertEqual(2, self.adap.get_endpoint.call_count)
-        self.assertEqual('admin', self.adap.interface)
-
-    def test_nonimage_try_interfaces_fail(self):
-        self.adap.get_endpoint.side_effect = ks_exc.EndpointNotFound
-        self.assertRaises(ks_exc.EndpointNotFound,
-                          utils.get_endpoint, self.adap)
-        self.adap.get_endpoint_data.assert_not_called()
-        self.assertEqual(3, self.adap.get_endpoint.call_count)
-        self.assertEqual('public', self.adap.interface)
 
 
 class RunOnceTests(test.NoDBTestCase):

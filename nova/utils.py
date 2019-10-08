@@ -30,7 +30,6 @@ import shutil
 import tempfile
 
 import eventlet
-from keystoneauth1 import exceptions as ks_exc
 from keystoneauth1 import loading as ks_loading
 import netaddr
 from openstack import connection
@@ -1066,30 +1065,7 @@ def get_endpoint(ksa_adapter):
             # ksa_adapter.auth is a _ContextAuthPlugin, which doesn't have
             # get_endpoint_data.  Fall through to using get_endpoint().
             pass
-    # TODO(efried): The remainder of this method reduces to
-    # TODO(efried):     return ksa_adapter.get_endpoint()
-    # TODO(efried): once bug #1709118 is fixed.
-    # NOTE(efried): Id9bd19cca68206fc64d23b0eaa95aa3e5b01b676 may also do the
-    #               trick, once it's in a ksa release.
-    # The EndpointNotFound exception happens when _ContextAuthPlugin is in play
-    # because its get_endpoint() method isn't yet set up to handle interface as
-    # a list.  (It could also happen with a real auth if the endpoint isn't
-    # there; but that's covered below.)
-    try:
-        return ksa_adapter.get_endpoint()
-    except ks_exc.EndpointNotFound:
-        pass
-
-    interfaces = list(ksa_adapter.interface)
-    for interface in interfaces:
-        ksa_adapter.interface = interface
-        try:
-            return ksa_adapter.get_endpoint()
-        except ks_exc.EndpointNotFound:
-            pass
-    raise ks_exc.EndpointNotFound(
-        "Could not find requested endpoint for any of the following "
-        "interfaces: %s" % interfaces)
+    return ksa_adapter.get_endpoint()
 
 
 def generate_hostid(host, project_id):
