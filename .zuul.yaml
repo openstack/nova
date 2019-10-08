@@ -58,7 +58,7 @@
     irrelevant-files: &functional-irrelevant-files
       - ^.*\.rst$
       - ^api-.*$
-      - ^doc/source/.*$
+      - ^doc/(source|test)/.*$
       - ^nova/locale/.*$
       - ^releasenotes/.*$
     vars:
