@@ -90,16 +90,16 @@ following command (on the host)::
 
 To unpack the message "Mitigation: Clear CPU buffers; SMT vulnerable":
 
-  - The ``Mitigation: Clear CPU buffers`` bit means, you have the "CPU
-    buffer clearing" mitigation enabled (which is mechanism to invoke a
-    flush of various exploitable CPU buffers by invoking a CPU
-    instruction called "VERW").
+- The ``Mitigation: Clear CPU buffers`` bit means, you have the "CPU
+  buffer clearing" mitigation enabled (which is mechanism to invoke a
+  flush of various exploitable CPU buffers by invoking a CPU
+  instruction called "VERW").
 
-  - The ``SMT vulnerable`` bit means, depending on your workload, you may
-    still be vulnerable to SMT-related problems.  You need to evaluate
-    whether your workloads need SMT (also called "Hyper-Threading") to
-    be disabled or not.  Refer to the guidance from your Linux
-    distribution and processor vendor.
+- The ``SMT vulnerable`` bit means, depending on your workload, you may
+  still be vulnerable to SMT-related problems.  You need to evaluate
+  whether your workloads need SMT (also called "Hyper-Threading") to
+  be disabled or not.  Refer to the guidance from your Linux
+  distribution and processor vendor.
 
 To see the other possible values for the sysfs file,
 ``/sys/devices/system/cpu/vulnerabilities/mds``, refer to the `MDS
