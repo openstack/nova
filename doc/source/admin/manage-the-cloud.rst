@@ -6,7 +6,7 @@ Manage the cloud
 
 .. toctree::
 
-   common/nova-show-usage-statistics-for-hosts-instances.rst
+   common/nova-show-usage-statistics-for-hosts-instances
 
 System administrators can use the :command:`openstack` to manage their clouds.
 

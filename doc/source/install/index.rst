@@ -4,8 +4,8 @@ Compute service
 
 .. toctree::
 
-   overview.rst
-   get-started-compute.rst
-   controller-install.rst
-   compute-install.rst
-   verify.rst
+   overview
+   get-started-compute
+   controller-install
+   compute-install
+   verify

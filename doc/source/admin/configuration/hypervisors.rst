@@ -8,17 +8,17 @@ Hypervisors
 .. toctree::
    :maxdepth: 1
 
-   hypervisor-basics.rst
-   hypervisor-kvm.rst
-   hypervisor-qemu.rst
-   hypervisor-xen-api.rst
-   hypervisor-xen-libvirt.rst
-   hypervisor-lxc.rst
-   hypervisor-vmware.rst
-   hypervisor-hyper-v.rst
-   hypervisor-virtuozzo.rst
-   hypervisor-powervm.rst
-   hypervisor-zvm.rst
+   hypervisor-basics
+   hypervisor-kvm
+   hypervisor-qemu
+   hypervisor-xen-api
+   hypervisor-xen-libvirt
+   hypervisor-lxc
+   hypervisor-vmware
+   hypervisor-hyper-v
+   hypervisor-virtuozzo
+   hypervisor-powervm
+   hypervisor-zvm
 
 OpenStack Compute supports many hypervisors, which might make it difficult for
 you to choose one. Most installations use only one hypervisor.  However, you

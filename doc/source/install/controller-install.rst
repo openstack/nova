@@ -7,6 +7,6 @@ and Red Hat Enterprise Linux and CentOS.
 
 .. toctree::
 
-   controller-install-ubuntu.rst
-   controller-install-obs.rst
-   controller-install-rdo.rst
+   controller-install-ubuntu
+   controller-install-obs
+   controller-install-rdo

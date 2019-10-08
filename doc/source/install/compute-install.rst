@@ -25,6 +25,6 @@ environment with additional compute nodes.
 .. toctree::
    :glob:
 
-   compute-install-ubuntu.rst
-   compute-install-rdo.rst
-   compute-install-obs.rst
+   compute-install-ubuntu
+   compute-install-rdo
+   compute-install-obs
