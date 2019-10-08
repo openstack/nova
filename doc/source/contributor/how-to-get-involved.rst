@@ -55,10 +55,6 @@ downvoted. There is also the :ref:`code-review`. Once you have some
 understanding, start reviewing patches. It's OK to ask people to explain things
 you don't understand. It's also OK to see some potential problems but put a +0.
 
-Another way is to look for a subteam you'd like to get involved with and review
-their patches. See:
-https://etherpad.openstack.org/p/train-nova-subteam-tracking
-
 Once you're ready to write code, take a look at some of the work already marked
 as low-hanging fruit:
 
@@ -215,15 +211,16 @@ really helps you:
 
 -  Doing more reviews, and seeing what other reviewers notice, will help
    you better understand what is expected of code that gets merged into
-   master
+   master.
 -  Having more non-core people do great reviews, leaves less review work
-   for the core reviewers to do, so we are able get more code merged
+   for the core reviewers to do, so we are able get more code merged.
 -  Empathy is one of the keys to a happy community. If you are used to
    doing code reviews, you will better understand the comments you get
    when people review your code. As you do more code reviews, and see
    what others notice, you will get a better idea of what people are
    looking for when then apply a +2 to your code.
--  TODO - needs more detail
+-  If you do quality reviews, you'll be noticed and it's more likely
+   you'll get reciprocal eyes on your reviews.
 
 What are the most useful types of code review comments? Well here are a
 few to the top ones:
@@ -264,7 +261,7 @@ reviews:
 -  Where do I start? What should I review?
 
    -  There are various tools, but a good place to start is:
-      https://etherpad.openstack.org/p/train-nova-subteam-tracking
+      https://etherpad.openstack.org/p/nova-runways-ussuri
    -  Depending on the time in the cycle, it's worth looking at
       NeedsCodeReview blueprints:
       https://blueprints.launchpad.net/nova/
@@ -326,7 +323,7 @@ becoming a member of nova-core.
 How to do great nova-spec reviews?
 ==================================
 
-https://specs.openstack.org/openstack/nova-specs/specs/train/template.html
+https://specs.openstack.org/openstack/nova-specs/specs/ussuri/template.html
 
 :doc:`/contributor/blueprints`.
 
