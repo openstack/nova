@@ -32,6 +32,7 @@ operating system, and exposes functionality over a web-based API.
    evacuate.rst
    flavors.rst
    huge-pages.rst
+   image-caching.rst
    live-migration-usage.rst
    manage-logs.rst
    manage-the-cloud.rst
