@@ -1,0 +1,18 @@
+---
+fixes:
+  - |
+    Long standing `bug 1694844`_ is now fixed where the following conditions
+    would lead to a 400 error response during server create:
+
+    * ``[cinder]/cross_az_attach=False``
+    * ``[DEFAULT]/default_schedule_zone=None``
+    * A server is created without an availability zone specified but with
+      pre-existing volume block device mappings
+
+    Before the bug was fixed, users would have to specify an availability zone
+    that matches the zone that the volume(s) were in. With the fix, the compute
+    API will implicitly create the server in the zone that the volume(s) are
+    in as long as the volume zone is not the same as the
+    ``[DEFAULT]/default_availability_zone`` value (defaults to ``nova``).
+
+    .. _bug 1694844: https://launchpad.net/bugs/1694844

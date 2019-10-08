@@ -1032,6 +1032,104 @@ class API(base.Base):
             except exception.ResourceProviderNotFound:
                 raise exception.ComputeHostNotFound(host=hypervisor_hostname)
 
+    def _get_volumes_for_bdms(self, context, bdms):
+        """Get the pre-existing volumes from cinder for the list of BDMs.
+
+        :param context: nova auth RequestContext
+        :param bdms: BlockDeviceMappingList which has zero or more BDMs with
+            a pre-existing volume_id specified.
+        :return: dict, keyed by volume id, of volume dicts
+        :raises: VolumeNotFound - if a given volume does not exist
+        :raises: CinderConnectionFailed - if there are problems communicating
+            with the cinder API
+        :raises: Forbidden - if the user token does not have authority to see
+            a volume
+        """
+        volumes = {}
+        for bdm in bdms:
+            if bdm.volume_id:
+                volumes[bdm.volume_id] = self.volume_api.get(
+                    context, bdm.volume_id)
+        return volumes
+
+    @staticmethod
+    def _validate_vol_az_for_create(instance_az, volumes):
+        """Performs cross_az_attach validation for the instance and volumes.
+
+        If [cinder]/cross_az_attach=True (default) this method is a no-op.
+
+        If [cinder]/cross_az_attach=False, this method will validate that:
+
+        1. All volumes are in the same availability zone.
+        2. The volume AZ matches the instance AZ. If the instance is being
+           created without a specific AZ (either via the user request or the
+           [DEFAULT]/default_schedule_zone option), and the volume AZ matches
+           [DEFAULT]/default_availability_zone for compute services, then the
+           method returns the volume AZ so it can be set in the RequestSpec as
+           if the user requested the zone explicitly.
+
+        :param instance_az: Availability zone for the instance. In this case
+            the host is not yet selected so the instance AZ value should come
+            from one of the following cases:
+
+            * The user requested availability zone.
+            * [DEFAULT]/default_schedule_zone (defaults to None) if the request
+              does not specify an AZ (see parse_availability_zone).
+        :param volumes: iterable of dicts of cinder volumes to be attached to
+            the server being created
+        :returns: None or volume AZ to set in the RequestSpec for the instance
+        :raises: MismatchVolumeAZException if the instance and volume AZ do
+            not match
+        """
+        if CONF.cinder.cross_az_attach:
+            return
+
+        if not volumes:
+            return
+
+        # First make sure that all of the volumes are in the same zone.
+        vol_zones = [vol['availability_zone'] for vol in volumes]
+        if len(set(vol_zones)) > 1:
+            msg = (_("Volumes are in different availability zones: %s")
+                   % ','.join(vol_zones))
+            raise exception.MismatchVolumeAZException(reason=msg)
+
+        volume_az = vol_zones[0]
+        # In this case the instance.host should not be set so the instance AZ
+        # value should come from instance.availability_zone which will be one
+        # of the following cases:
+        # * The user requested availability zone.
+        # * [DEFAULT]/default_schedule_zone (defaults to None) if the request
+        #   does not specify an AZ (see parse_availability_zone).
+
+        # If the instance is not being created with a specific AZ (the AZ is
+        # input via the API create request *or* [DEFAULT]/default_schedule_zone
+        # is not None), then check to see if we should use the default AZ
+        # (which by default matches the default AZ in Cinder, i.e. 'nova').
+        if instance_az is None:
+            # Check if the volume AZ is the same as our default AZ for compute
+            # hosts (nova) and if so, assume we are OK because the user did not
+            # request an AZ and will get the same default. If the volume AZ is
+            # not the same as our default, return the volume AZ so the caller
+            # can put it into the request spec so the instance is scheduled
+            # to the same zone as the volume. Note that we are paranoid about
+            # the default here since both nova and cinder's default backend AZ
+            # is "nova" and we do not want to pin the server to that AZ since
+            # it's special, i.e. just like we tell users in the docs to not
+            # specify availability_zone='nova' when creating a server since we
+            # might not be able to migrate it later.
+            if volume_az != CONF.default_availability_zone:
+                return volume_az  # indication to set in request spec
+            # The volume AZ is the same as the default nova AZ so we will be OK
+            return
+
+        if instance_az != volume_az:
+            msg = _("Server and volumes are not in the same availability "
+                    "zone. Server is in: %(instance_az)s. Volumes are in: "
+                    "%(volume_az)s") % {
+                'instance_az': instance_az, 'volume_az': volume_az}
+            raise exception.MismatchVolumeAZException(reason=msg)
+
     def _provision_instances(self, context, instance_type, min_count,
             max_count, base_options, boot_meta, security_groups,
             block_device_mapping, shutdown_terminate,
@@ -1057,12 +1155,23 @@ class API(base.Base):
                 security_groups)
         self.security_group_api.ensure_default(context)
         port_resource_requests = base_options.pop('port_resource_requests')
-        LOG.debug("Going to run %s instances...", num_instances)
         instances_to_build = []
         # We could be iterating over several instances with several BDMs per
         # instance and those BDMs could be using a lot of the same images so
         # we want to cache the image API GET results for performance.
         image_cache = {}  # dict of image dicts keyed by image id
+        # Before processing the list of instances get all of the requested
+        # pre-existing volumes so we can do some validation here rather than
+        # down in the bowels of _validate_bdm.
+        volumes = self._get_volumes_for_bdms(context, block_device_mapping)
+        volume_az = self._validate_vol_az_for_create(
+            base_options['availability_zone'], volumes.values())
+        if volume_az:
+            # This means the instance is not being created in a specific zone
+            # but needs to match the zone that the volumes are in so update
+            # base_options to match the volume zone.
+            base_options['availability_zone'] = volume_az
+        LOG.debug("Going to run %s instances...", num_instances)
         try:
             for i in range(num_instances):
                 # Create a uuid for the instance so we can store the
@@ -1116,7 +1225,7 @@ class API(base.Base):
                 block_device_mapping = (
                     self._bdm_validate_set_size_and_instance(context,
                         instance, instance_type, block_device_mapping,
-                        image_cache, supports_multiattach))
+                        image_cache, volumes, supports_multiattach))
                 instance_tags = self._transform_tags(tags, instance.uuid)
 
                 build_request = objects.BuildRequest(context,
@@ -1472,7 +1581,7 @@ class API(base.Base):
     def _bdm_validate_set_size_and_instance(self, context, instance,
                                             instance_type,
                                             block_device_mapping,
-                                            image_cache,
+                                            image_cache, volumes,
                                             supports_multiattach=False):
         """Ensure the bdms are valid, then set size and associate with instance
 
@@ -1486,6 +1595,7 @@ class API(base.Base):
         :param image_cache: dict of image dicts keyed by id which is used as a
             cache in case there are multiple BDMs in the same request using
             the same image to avoid redundant GET calls to the image service
+        :param volumes: dict, keyed by volume id, of volume dicts from cinder
         :param supports_multiattach: True if the request supports multiattach
             volumes, False otherwise
         """
@@ -1493,7 +1603,7 @@ class API(base.Base):
                   instance_uuid=instance.uuid)
         self._validate_bdm(
             context, instance, instance_type, block_device_mapping,
-            image_cache, supports_multiattach)
+            image_cache, volumes, supports_multiattach)
         instance_block_device_mapping = block_device_mapping.obj_clone()
         for bdm in instance_block_device_mapping:
             bdm.volume_size = self._volume_size(instance_type, bdm)
@@ -1531,7 +1641,7 @@ class API(base.Base):
             raise exception.VolumeTypeSupportNotYetAvailable()
 
     def _validate_bdm(self, context, instance, instance_type,
-                      block_device_mappings, image_cache,
+                      block_device_mappings, image_cache, volumes,
                       supports_multiattach=False):
         """Validate requested block device mappings.
 
@@ -1542,6 +1652,7 @@ class API(base.Base):
         :param image_cache: dict of image dicts keyed by id which is used as a
             cache in case there are multiple BDMs in the same request using
             the same image to avoid redundant GET calls to the image service
+        :param volumes: dict, keyed by volume id, of volume dicts from cinder
         :param supports_multiattach: True if the request supports multiattach
             volumes, False otherwise
         """
@@ -1614,9 +1725,12 @@ class API(base.Base):
                         "size specified"))
             elif volume_id is not None:
                 try:
-                    volume = self.volume_api.get(context, volume_id)
+                    volume = volumes[volume_id]
+                    # We do not validate the instance and volume AZ here
+                    # because that is done earlier by _provision_instances.
                     self._check_attach_and_reserve_volume(
-                        context, volume, instance, bdm, supports_multiattach)
+                        context, volume, instance, bdm, supports_multiattach,
+                        validate_az=False)
                     bdm.volume_size = volume.get('size')
 
                     # NOTE(mnaser): If we end up reserving the volume, it will
@@ -4107,10 +4221,26 @@ class API(base.Base):
             pass
 
     def _check_attach_and_reserve_volume(self, context, volume, instance,
-                                         bdm, supports_multiattach=False):
+                                         bdm, supports_multiattach=False,
+                                         validate_az=True):
+        """Perform checks against the instance and volume before attaching.
+
+        If validation succeeds, the bdm is updated with an attachment_id which
+        effectively reserves it during the attach process in cinder.
+
+        :param context: nova auth RequestContext
+        :param volume: volume dict from cinder
+        :param instance: Instance object
+        :param bdm: BlockDeviceMapping object
+        :param supports_multiattach: True if the request supports multiattach
+            volumes, i.e. microversion >= 2.60, False otherwise
+        :param validate_az: True if the instance and volume availability zones
+            should be validated for cross_az_attach, False to not validate AZ
+        """
         volume_id = volume['id']
-        self.volume_api.check_availability_zone(context, volume,
-                                                instance=instance)
+        if validate_az:
+            self.volume_api.check_availability_zone(context, volume,
+                                                    instance=instance)
         # If volume.multiattach=True and the microversion to
         # support multiattach is not used, fail the request.
         if volume['multiattach'] and not supports_multiattach:

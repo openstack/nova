@@ -133,6 +133,14 @@ With respect to availability zones, a server is restricted to a zone if:
    ``availability_zone`` with the ``POST /servers/{server_id}/action`` request
    using microversion 2.77 or greater.
 
+4. :oslo.config:option:`cinder.cross_az_attach` is False,
+   :oslo.config:option:`default_schedule_zone` is None,
+   the server is created without an explicit zone but with pre-existing volume
+   block device mappings. In that case the server will be created in the same
+   zone as the volume(s) if the volume zone is not the same as
+   :oslo.config:option:`default_availability_zone`. See `Resource affinity`_
+   for details.
+
 If the server was not created in a specific zone then it is free to be moved
 to other zones, i.e. the :ref:`AvailabilityZoneFilter <AvailabilityZoneFilter>`
 is a no-op.
@@ -174,7 +182,12 @@ a server to another zone could also break affinity with attached volumes.
     ``cross_az_attach=False`` is not widely used nor tested extensively and
     thus suffers from some known issues:
 
-    * `Bug 1694844 <https://bugs.launchpad.net/nova/+bug/1694844>`_
+    * `Bug 1694844 <https://bugs.launchpad.net/nova/+bug/1694844>`_. This is
+      fixed in the 21.0.0 (Ussuri) release by using the volume zone for the
+      server being created if the server is created without an explicit zone,
+      :oslo.config:option:`default_schedule_zone` is None, and the volume zone
+      does not match the value of
+      :oslo.config:option:`default_availability_zone`.
     * `Bug 1781421 <https://bugs.launchpad.net/nova/+bug/1781421>`_
 
 

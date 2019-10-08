@@ -55,6 +55,10 @@ Possible values:
 * Any string representing an existing availability zone name.
 * None, which means that the instance can move from one availability zone to
   another during its lifetime if it is moved from one compute node to another.
+
+Related options:
+
+* ``[cinder]/cross_az_attach``
 """),
 ]
 
