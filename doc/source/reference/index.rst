@@ -61,3 +61,9 @@ these are a great place to start reading up on the current plans.
 * :doc:`/reference/stable-api`: What stable api means to nova
 * :doc:`/reference/scheduler-evolution`: Motivation behind the scheduler /
   placement evolution
+
+Additional Information
+======================
+
+* :doc:`/reference/glossary`: A quick reference guide to some of the terms you
+  might encounter working on or using nova.

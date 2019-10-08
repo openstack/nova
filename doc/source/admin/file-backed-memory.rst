@@ -52,8 +52,8 @@ Qemu
 Memory overcommit
    File-backed memory is not compatible with memory overcommit.
    ``ram_allocation_ratio`` must be set to ``1.0`` in ``nova.conf``, and the
-   host must not be added to a host aggregate with ``ram_allocation_ratio``
-   set to anything but ``1.0``.
+   host must not be added to a :doc:`host aggregate </admin/aggregates>`
+   with ``ram_allocation_ratio`` set to anything but ``1.0``.
 
 Huge pages
    File-backed memory is not compatible with huge pages. Instances with huge
