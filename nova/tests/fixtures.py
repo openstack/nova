@@ -1714,17 +1714,16 @@ class NeutronFixture(fixtures.Fixture):
         return {'floatingips': []}
 
     def create_port(self, body=None):
+        body = body or {'port': {}}
         # Note(gibi): Some of the test expects that a pre-defined port is
         # created. This is port_2. So if that port is not created yet then
         # that is the one created here.
-        if self.port_2['id'] not in self._ports:
-            new_port = copy.deepcopy(self.port_2)
-        else:
+        new_port = copy.deepcopy(body['port'])
+        new_port.update(copy.deepcopy(self.port_2))
+        if self.port_2['id'] in self._ports:
             # If port_2 is already created then create a new port based on
             # the request body, the port_2 as a template, and assign new
             # port_id and mac_address for the new port
-            new_port = copy.deepcopy(body)
-            new_port.update(copy.deepcopy(self.port_2))
             # we need truly random uuids instead of named sentinels as some
             # tests needs more than 3 ports
             new_port.update({

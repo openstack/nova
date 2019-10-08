@@ -1225,7 +1225,7 @@ class TestNovaManagePlacementHealPortAllocations(
         rollback of the second port update to fail.
         """
         port2 = self.neutron.create_port()['port']
-        port3 = self.neutron.create_port(port2)['port']
+        port3 = self.neutron.create_port()['port']
         server, _ = self._create_server_with_missing_port_alloc(
             [self.neutron.port_1, port2, port3])
 
