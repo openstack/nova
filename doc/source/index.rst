@@ -99,6 +99,8 @@ Nova can be configured to emit notifications over RPC.
 * :ref:`Versioned Notifications <versioned_notification_samples>`: This
   provides the list of existing versioned notifications with sample payloads.
 
+Other end-user guides can be found under :doc:`/user/index`.
+
 For Operators
 =============
 
