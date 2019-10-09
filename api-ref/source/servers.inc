@@ -634,8 +634,6 @@ Response
   - os-extended-volumes:volumes_attached.delete_on_termination: os-extended-volumes:volumes_attached.delete_on_termination
   - OS-SRV-USG:launched_at: OS-SRV-USG:launched_at
   - OS-SRV-USG:terminated_at: OS-SRV-USG:terminated_at
-  - security_groups: security_groups_obj
-  - security_group.name: name
   - status: server_status
   - tenant_id: tenant_id_body
   - updated: updated
@@ -646,6 +644,8 @@ Response
   - fault.message: fault_message
   - fault.details: fault_details
   - progress: progress
+  - security_groups: security_groups_obj_optional
+  - security_group.name: name
   - servers_links: servers_links
   - OS-EXT-SRV-ATTR:hostname: server_hostname
   - OS-EXT-SRV-ATTR:reservation_id: server_reservation_id
@@ -758,8 +758,6 @@ Response
   - os-extended-volumes:volumes_attached.delete_on_termination: os-extended-volumes:volumes_attached.delete_on_termination
   - OS-SRV-USG:launched_at: OS-SRV-USG:launched_at
   - OS-SRV-USG:terminated_at: OS-SRV-USG:terminated_at
-  - security_groups: security_groups_obj
-  - security_group.name: name
   - status: server_status
   - tenant_id: tenant_id_body
   - updated: updated
@@ -770,6 +768,8 @@ Response
   - fault.message: fault_message
   - fault.details: fault_details
   - progress: progress
+  - security_groups: security_groups_obj_optional
+  - security_group.name: name
   - OS-EXT-SRV-ATTR:hostname: server_hostname
   - OS-EXT-SRV-ATTR:reservation_id: server_reservation_id
   - OS-EXT-SRV-ATTR:launch_index: server_launch_index
