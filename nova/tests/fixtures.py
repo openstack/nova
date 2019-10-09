@@ -184,6 +184,8 @@ class StandardLogging(fixtures.Fixture):
             # Don't log every single DB migration step
             std_logging.getLogger(
                 'migrate.versioning.api').setLevel(std_logging.WARNING)
+            # Or alembic for model comparisons.
+            std_logging.getLogger('alembic').setLevel(std_logging.WARNING)
 
         # At times we end up calling back into main() functions in
         # testing. This has the possibility of calling logging.setup
