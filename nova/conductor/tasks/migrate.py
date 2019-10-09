@@ -65,9 +65,9 @@ def replace_allocation_with_migration(context, instance, migration):
                   instance=instance)
         return None, None
 
-    # FIXME(danms): This method is flawed in that it asssumes allocations
-    # against only one provider. So, this may overwite allocations against
-    # a shared provider, if we had one.
+    # FIXME(gibi): This method is flawed in that it does not handle allocations
+    # against sharing providers in any special way. This leads to duplicate
+    # allocations against the sharing provider during migration.
     success = reportclient.move_allocations(context, instance.uuid,
                                             migration.uuid)
     if not success:
@@ -93,9 +93,9 @@ def revert_allocation_for_migration(context, source_cn, instance, migration):
 
     reportclient = report.SchedulerReportClient()
 
-    # FIXME(danms): This method is flawed in that it asssumes allocations
-    # against only one provider. So, this may overwite allocations against
-    # a shared provider, if we had one.
+    # FIXME(gibi): This method is flawed in that it does not handle allocations
+    # against sharing providers in any special way. This leads to duplicate
+    # allocations against the sharing provider during migration.
     success = reportclient.move_allocations(context, migration.uuid,
                                             instance.uuid)
     if not success:

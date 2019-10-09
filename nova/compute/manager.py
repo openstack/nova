@@ -4553,10 +4553,10 @@ class ComputeManager(manager.Manager):
                  '%(mig)s for instance',
                  {'rp_uuids': orig_alloc.keys(), 'mig': migration.uuid},
                  instance=instance)
-        # FIXME(gibi): This method is flawed in that it assumes every
-        # allocation held by the migration uuid are against the destination
-        # compute RP tree. So it might overwrite allocation against a
-        # shared provider if we had one.
+        # FIXME(gibi): This method is flawed in that it does not handle
+        # allocations against sharing providers in any special way. This leads
+        # to duplicate allocations against the sharing provider during
+        # migration.
         # TODO(cdent): Should we be doing anything with return values here?
         self.reportclient.move_allocations(context, migration.uuid,
                                            instance.uuid)
