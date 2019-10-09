@@ -4235,11 +4235,11 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertRaises(exception.CinderConnectionFailed,
                           self.compute_api._validate_bdm,
                           self.context,
-                          instance, instance_type, bdm)
+                          instance, instance_type, bdm, {})
         self.assertRaises(exception.CinderConnectionFailed,
                           self.compute_api._validate_bdm,
                           self.context,
-                          instance, instance_type, bdms)
+                          instance, instance_type, bdms, {})
 
     @mock.patch.object(cinder.API, 'get')
     @mock.patch.object(cinder.API, 'attachment_create',
@@ -4270,7 +4270,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertRaises(exception.InvalidVolume,
                           self.compute_api._validate_bdm,
                           self.context,
-                          instance, instance_type, bdms)
+                          instance, instance_type, bdms, {})
 
         mock_get.assert_called_once_with(self.context, volume_id)
         mock_attach_create.assert_called_once_with(
@@ -4286,7 +4286,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertRaises(exception.InvalidBDMBootSequence,
                           self.compute_api._validate_bdm,
                           self.context, objects.Instance(), objects.Flavor(),
-                          bdms)
+                          bdms, {})
 
     @mock.patch.object(objects.service, 'get_minimum_version_all_cells',
                        return_value=compute_api.MIN_COMPUTE_VOLUME_TYPE)
@@ -4336,7 +4336,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 get_all_vol_types, vol_type_supported, vol_type_requested):
 
             self.compute_api._validate_bdm(self.context, instance,
-                                           instance_type, bdms)
+                                           instance_type, bdms, {})
 
             vol_type_supported.assert_called_once_with(self.context)
             get_all_vol_types.assert_called_once_with(self.context)
@@ -4361,7 +4361,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertRaises(exception.InvalidBDM,
                           self.compute_api._validate_bdm,
                           self.context, instance, objects.Flavor(),
-                          bdms)
+                          bdms, {})
         self.assertEqual(0, mock_get_image.call_count)
         # then we test the case of instance.image_ref != bdm.image_id
         image_id = uuids.image_id
@@ -4374,7 +4374,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertRaises(exception.InvalidBDM,
                           self.compute_api._validate_bdm,
                           self.context, instance, objects.Flavor(),
-                          bdms)
+                          bdms, {})
         mock_get_image.assert_called_once_with(self.context, image_id)
 
     @mock.patch.object(objects.service, 'get_minimum_version_all_cells',
@@ -4605,7 +4605,7 @@ class _ComputeAPIUnitTestMixIn(object):
                         instance_tags, trusted_certs, False)
             validate_bdm.assert_has_calls([mock.call(
                 ctxt, test.MatchType(objects.Instance), flavor,
-                block_device_mappings, False)] * max_count)
+                block_device_mappings, {}, False)] * max_count)
 
             for rs, br, im in instances_to_build:
                 self.assertIsInstance(br.instance, objects.Instance)
@@ -5031,7 +5031,8 @@ class _ComputeAPIUnitTestMixIn(object):
 
         with mock.patch.object(self.compute_api, '_validate_bdm'):
             bdms = self.compute_api._bdm_validate_set_size_and_instance(
-                self.context, instance, instance_type, block_device_mapping)
+                self.context, instance, instance_type, block_device_mapping,
+                {})
 
         expected = [{'device_name': '/dev/sda1',
                      'source_type': 'snapshot', 'destination_type': 'volume',

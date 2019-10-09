@@ -1106,7 +1106,7 @@ class ComputeVolumeTestCase(BaseTestCase):
 
         # Make sure it passes at first
         self.compute_api._validate_bdm(self.context, instance,
-                                       instance_type, mappings)
+                                       instance_type, mappings, {})
         self.assertEqual(4, mappings[1].volume_size)
         self.assertEqual(6, mappings[2].volume_size)
 
@@ -1115,7 +1115,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertRaises(exception.InvalidBDMBootSequence,
                           self.compute_api._validate_bdm,
                           self.context, instance, instance_type,
-                          mappings)
+                          mappings, {})
         mappings[2].boot_index = 0
 
         # number of local block_devices
@@ -1123,7 +1123,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertRaises(exception.InvalidBDMLocalsLimit,
                           self.compute_api._validate_bdm,
                           self.context, instance, instance_type,
-                          mappings)
+                          mappings, {})
         ephemerals = [
             fake_block_device.FakeDbBlockDeviceDict({
                 'device_name': '/dev/vdb',
@@ -1152,7 +1152,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         mappings_ = mappings[:]
         mappings_.objects.extend(ephemerals)
         self.compute_api._validate_bdm(self.context, instance,
-                                       instance_type, mappings_)
+                                       instance_type, mappings_, {})
 
         # Ephemerals over the size limit
         ephemerals[0].volume_size = 3
@@ -1161,14 +1161,14 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertRaises(exception.InvalidBDMEphemeralSize,
                           self.compute_api._validate_bdm,
                           self.context, instance, instance_type,
-                          mappings_)
+                          mappings_, {})
 
         # Swap over the size limit
         mappings[0].volume_size = 3
         self.assertRaises(exception.InvalidBDMSwapSize,
                           self.compute_api._validate_bdm,
                           self.context, instance, instance_type,
-                          mappings)
+                          mappings, {})
         mappings[0].volume_size = 1
 
         additional_swap = [
@@ -1191,7 +1191,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertRaises(exception.InvalidBDMFormat,
                           self.compute_api._validate_bdm,
                           self.context, instance, instance_type,
-                          mappings_)
+                          mappings_, {})
 
         image_no_size = [
             fake_block_device.FakeDbBlockDeviceDict({
@@ -1210,7 +1210,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertRaises(exception.InvalidBDM,
                           self.compute_api._validate_bdm,
                           self.context, instance, instance_type,
-                          mappings_)
+                          mappings_, {})
 
         # blank device without a specified size fails
         blank_no_size = [
@@ -1229,7 +1229,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertRaises(exception.InvalidBDM,
                           self.compute_api._validate_bdm,
                           self.context, instance, instance_type,
-                          mappings_)
+                          mappings_, {})
 
     def test_validate_bdm_with_more_than_one_default(self):
         instance_type = {'swap': 1, 'ephemeral_gb': 1}
@@ -1263,7 +1263,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertRaises(exception.InvalidBDMEphemeralSize,
                           self.compute_api._validate_bdm,
                           self.context, self.instance,
-                          instance_type, all_mappings)
+                          instance_type, all_mappings, {})
 
     @mock.patch.object(cinder.API, 'get')
     @mock.patch.object(cinder.API, 'check_availability_zone')
@@ -1314,7 +1314,7 @@ class ComputeVolumeTestCase(BaseTestCase):
             self.assertRaises(exception.InvalidVolume,
                               self.compute_api._validate_bdm,
                               self.context, self.instance_object,
-                              instance_type, bdms)
+                              instance_type, bdms, {})
             mock_get.assert_called_with(self.context, volume_id)
 
     @mock.patch.object(cinder.API, 'get')
@@ -1338,7 +1338,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertRaises(exception.InvalidBDMVolume,
                           self.compute_api._validate_bdm,
                           self.context, self.instance,
-                          instance_type, bdms)
+                          instance_type, bdms, {})
 
     @mock.patch.object(cinder.API, 'get')
     @mock.patch.object(cinder.API, 'check_availability_zone')
@@ -1368,7 +1368,7 @@ class ComputeVolumeTestCase(BaseTestCase):
 
         mock_get.return_value = volume
         self.compute_api._validate_bdm(self.context, self.instance_object,
-                                       instance_type, bdms)
+                                       instance_type, bdms, {})
         mock_get.assert_called_once_with(self.context, volume_id)
         mock_check_av_zone.assert_called_once_with(
             self.context, volume, instance=self.instance_object)
