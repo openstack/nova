@@ -64,6 +64,7 @@
 /nova/latest/testing/zero-downtime-upgrade.html 301 /nova/latest/contributor/testing/zero-downtime-upgrade.html
 /nova/latest/threading.html 301 /nova/latest/reference/threading.html
 /nova/latest/upgrade.html 301 /nova/latest/user/upgrade.html
+/nova/latest/user/aggregates.html 301 /nova/latest/admin/aggregates.html
 /nova/latest/user/cellsv2_layout.html 301 /nova/latest/user/cellsv2-layout.html
 /nova/latest/user/config-drive.html 301 /nova/latest/user/metadata.html
 /nova/latest/user/metadata-service.html 301 /nova/latest/user/metadata.html
