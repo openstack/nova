@@ -19,7 +19,6 @@ Management class for live migration VM operations.
 
 from os_win import utilsfactory
 from oslo_log import log as logging
-from oslo_utils import excutils
 
 import nova.conf
 from nova import exception
@@ -78,10 +77,10 @@ class LiveMigrationOps(object):
                 dest,
                 migrate_disks=not shared_storage)
         except Exception:
-            with excutils.save_and_reraise_exception():
-                LOG.debug("Calling live migration recover_method "
-                          "for instance: %s", instance_name)
-                recover_method(context, instance_ref, dest, migrate_data)
+            LOG.exception("Live migration failed. Attempting rollback.",
+                          instance=instance_ref)
+            recover_method(context, instance_ref, dest, migrate_data)
+            return
 
         LOG.debug("Calling live migration post_method for instance: %s",
                   instance_name)
