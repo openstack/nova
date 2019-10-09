@@ -938,6 +938,19 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
             # Let's delete some stuff
             new_tree.remove(uuids.ssp)
             self.assertFalse(new_tree.exists('ssp'))
+
+            # Verify that placement communication failure raises through
+            with mock.patch.object(self.client, '_delete_provider',
+                                   side_effect=kse.EndpointNotFound):
+                self.assertRaises(
+                    kse.ClientException,
+                    self.client.update_from_provider_tree,
+                    self.context, new_tree)
+            # The provider didn't get deleted (this doesn't raise
+            # ResourceProviderNotFound)
+            self.client.get_provider_by_name(self.context, 'ssp')
+
+            # Continue removing stuff
             new_tree.remove('child1')
             self.assertFalse(new_tree.exists('child1'))
             # Removing a node removes its descendants too

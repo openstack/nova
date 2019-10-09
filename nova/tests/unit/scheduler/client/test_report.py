@@ -3219,6 +3219,19 @@ class TestAllocations(SchedulerReportClientTestCase):
         self.assertEqual(0, mock_log.info.call_count)
         self.assertEqual(1, mock_log.error.call_count)
 
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.delete',
+                new=mock.Mock(side_effect=ks_exc.EndpointNotFound()))
+    def test_delete_resource_provider_placement_exception(self):
+        """Ensure that a ksa exception in delete_resource_provider raises
+        through.
+        """
+        self.client._provider_tree.new_root(uuids.cn, uuids.cn, generation=1)
+        cn = objects.ComputeNode(uuid=uuids.cn, host="fake_host",
+                hypervisor_hostname="fake_hostname", )
+        self.assertRaises(
+            ks_exc.ClientException,
+            self.client.delete_resource_provider, self.context, cn)
+
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient.get")
     def test_get_allocations_for_resource_provider(self, mock_get):
         mock_get.return_value = fake_requests.FakeResponse(
