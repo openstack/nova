@@ -1,13 +1,13 @@
 .. -*- rst -*-
 
-======================
-Server Remote Consoles
-======================
+=================
+ Server Consoles
+=================
 
-Create server remote console.
+Manage server consoles.
 
-Create Remote Console
-=====================
+Create Console
+==============
 
 .. rest_method:: POST /servers/{server_id}/remote-consoles
 
@@ -55,4 +55,46 @@ Response
 **Example Get Remote VNC Console**
 
 .. literalinclude:: ../../doc/api_samples/os-remote-consoles/v2.6/create-vnc-console-resp.json
+   :language: javascript
+
+
+Show Console Connection Information
+===================================
+
+.. rest_method:: GET /os-console-auth-tokens/{console_token}
+
+Given the console authentication token for a server, shows the related
+connection information.
+
+This method used to be available only for the ``rdp-html5`` console type before
+microversion 2.31. Starting from microversion 2.31 it's available for all
+console types.
+
+Normal response codes: 200
+
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - console_token: console_token
+
+
+Response
+--------
+
+.. rest_parameters:: parameters.yaml
+
+  - console: console
+  - instance_uuid: instance_id_body
+  - host: console_host
+  - port: port_number
+  - internal_access_path: internal_access_path
+
+**Example Show Console Authentication Token**
+
+.. literalinclude:: ../../doc/api_samples/os-console-auth-tokens/get-console-connect-info-get-resp.json
    :language: javascript

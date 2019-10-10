@@ -11,7 +11,7 @@ Gets an `RDP <https://technet.microsoft.com/en-us/windowsserver/ee236407>`__ con
 .. warning::
 
    This action is deprecated in microversion 2.5 and superseded
-   by the API `Server Remote Consoles`_ in microversion 2.6.
+   by the API `Server Consoles`_ in microversion 2.6.
    The new API offers a unified API for different console types.
 
 The only supported connect type is ``rdp-html5``. The ``type`` parameter should
@@ -64,7 +64,7 @@ Gets a serial console for a server.
 .. warning::
 
    This action is deprecated in microversion 2.5 and superseded
-   by the API `Server Remote Consoles`_ in microversion 2.6.
+   by the API `Server Consoles`_ in microversion 2.6.
    The new API offers a unified API for different console types.
 
 Specify the ``os-getSerialConsole`` action in the request body.
@@ -117,7 +117,7 @@ Gets a SPICE console for a server.
 .. warning::
 
    This action is deprecated in microversion 2.5 and superseded
-   by the API `Server Remote Consoles`_ in microversion 2.6.
+   by the API `Server Consoles`_ in microversion 2.6.
    The new API offers a unified API for different console types.
 
 Specify the ``os-getSPICEConsole`` action in the request body.
@@ -170,7 +170,7 @@ Gets a VNC console for a server.
 .. warning::
 
    This action is deprecated in microversion 2.5 and superseded
-   by the API `Server Remote Consoles`_ in microversion 2.6.
+   by the API `Server Consoles`_ in microversion 2.6.
    The new API offers a unified API for different console types.
 
 Specify the ``os-getVNCConsole`` action in the request body.

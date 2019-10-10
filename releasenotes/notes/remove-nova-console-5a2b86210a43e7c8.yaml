@@ -1,0 +1,18 @@
+---
+upgrade:
+  - |
+    The following APIs have been removed. Calling these APIs will
+    now result in a ``410 HTTPGone`` error response:
+
+    * ``POST /servers/{server_id}/consoles``
+    * ``GET /servers/{server_id}/consoles``
+    * ``GET /servers/{server_id}/consoles/{console_id}``
+    * ``DELETE /servers/{server_id}/consoles/{console_id}``
+
+    In addition, the following policies are removed. These were related to the
+    removed APIs listed above and no longer had any effect:
+
+    * ``os_compute_api:os-consoles:index``
+    * ``os_compute_api:os-consoles:create``
+    * ``os_compute_api:os-consoles:delete``
+    * ``os_compute_api:os-consoles:show``
