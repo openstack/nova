@@ -81,7 +81,8 @@ class _IntegratedTestBase(test.TestCase):
         # TODO(mriedem): Fix the functional tests to work with Neutron.
         self.flags(use_neutron=self.USE_NEUTRON)
 
-        nova.tests.unit.image.fake.stub_out_image_service(self)
+        self.fake_image_service =\
+            nova.tests.unit.image.fake.stub_out_image_service(self)
 
         self.useFixture(cast_as_call.CastAsCall(self))
         self.useFixture(nova_fixtures.Database(database='placement'))

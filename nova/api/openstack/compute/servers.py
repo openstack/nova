@@ -979,6 +979,13 @@ class ServersController(wsgi.Controller):
                 exception.AutoDiskConfigDisabledByImage,
                 exception.CertificateValidationFailed) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
+        # NOTE(sean-k-mooney): due to the lack of the flavor and image
+        # properties validation I06fad233006c7bab14749a51ffa226c3801f951b in
+        # stable/rocky we explicitly catch the NUMA rebuild conflict instead of
+        # extending the INVALID_FLAVOR_IMAGE_EXCEPTIONS tuple which was
+        # introduced in the stein release.
+        except exception.ImageNUMATopologyRebuildConflict as error:
+            raise exc.HTTPBadRequest(explanation=error.format_message())
 
         instance = self._get_server(context, req, id, is_detail=True)
 

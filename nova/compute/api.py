@@ -3234,6 +3234,14 @@ class API(base.Base):
         self._checks_for_create_and_rebuild(context, image_id, image,
                 flavor, metadata, files_to_inject, root_bdm)
 
+        # NOTE(sean-k-mooney): When we rebuild with a new image we need to
+        # validate that the NUMA topology does not change as we do a NOOP claim
+        # in resource tracker. As such we cannot allow the resource usage or
+        # assignment to change as a result of a new image altering the
+        # numa constraints.
+        if orig_image_ref != image_href:
+            self._validate_numa_rebuild(instance, image, flavor)
+
         kernel_id, ramdisk_id = self._handle_kernel_and_ramdisk(
                 context, None, None, image)
 
@@ -3332,6 +3340,48 @@ class API(base.Base):
                 preserve_ephemeral=preserve_ephemeral, host=host,
                 request_spec=request_spec,
                 kwargs=kwargs)
+
+    @staticmethod
+    def _validate_numa_rebuild(instance, image, flavor):
+        """validates that the NUMA constraints do not change on rebuild.
+
+        :param instance: nova.objects.instance.Instance object
+        :param image: the new image the instance will be rebuilt with.
+        :param flavor: the flavor of the current instance.
+
+        :returns: True or raises on failure.
+        :raises: nova.exception.ImageNUMATopologyRebuildConflict
+        """
+
+        # NOTE(sean-k-mooney): currently it is not possible to express
+        # a PCI NUMA affinity policy via flavor or image but that will
+        # change in the future. we pull out the image metadata into
+        # separate variable to make future testing of this easier.
+        old_image_meta = instance.image_meta
+        new_image_meta = objects.ImageMeta.from_dict(image)
+        old_constraints = hardware.numa_get_constraints(flavor, old_image_meta)
+        new_constraints = hardware.numa_get_constraints(flavor, new_image_meta)
+
+        # early out for non NUMA instances
+        if old_constraints is None and new_constraints is None:
+            # return true for easy unit testing
+            return True
+
+        # if only one of the constrains are non-None (or 'set') then the
+        # constraints changed so raise an exception.
+        if old_constraints is None or new_constraints is None:
+            raise exception.ImageNUMATopologyRebuildConflict()
+
+        # otherwise since both the old a new constrains are non none compare
+        # them as dictionaries.
+        old = old_constraints.obj_to_primitive()
+        new = new_constraints.obj_to_primitive()
+        if old != new:
+            raise exception.ImageNUMATopologyRebuildConflict()
+        # TODO(sean-k-mooney): add PCI NUMA affinity policy check.
+
+        # return true for easy unit testing
+        return True
 
     @staticmethod
     def _check_quota_for_upsize(context, instance, current_flavor, new_flavor):

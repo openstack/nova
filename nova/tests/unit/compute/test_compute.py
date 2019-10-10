@@ -9037,7 +9037,12 @@ class ComputeAPITestCase(BaseTestCase):
 
         with mock.patch.object(self.compute_api.compute_task_api,
                                'rebuild_instance', fake_rpc_rebuild):
-            image_ref = instance["image_ref"] + '-new_image_ref'
+            # NOTE(sean-k-mooney): to enable
+            # I0322d872bdff68936033a6f5a54e8296a6fb3434 to be backported
+            # without I34ffaf285718059b55f90e812b57f1e11d566c6f we update the
+            # image ref to use uuids.new_image_ref to pass the UUIDField
+            # validation requirements
+            image_ref = uuids.new_image_ref
             password = "new_password"
 
             instance.vm_state = vm_state

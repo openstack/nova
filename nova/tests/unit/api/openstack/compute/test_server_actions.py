@@ -540,11 +540,22 @@ class ServerActionsControllerTestV21(test.TestCase):
     def test_rebuild_when_kernel_not_exists(self):
 
         def return_image_meta(*args, **kwargs):
+            # NOTE(sean-k-mooney): To enable
+            # I0322d872bdff68936033a6f5a54e8296a6fb3434 to be backported
+            # without I34ffaf285718059b55f90e812b57f1e11d566c6f we update the
+            # fake image data to use valid UUIDs
             image_meta_table = {
-                '2': {'id': 2, 'status': 'active', 'container_format': 'ari'},
-                '155d900f-4e14-4e4c-a73d-069cbf4541e6':
-                     {'id': 3, 'status': 'active', 'container_format': 'raw',
-                      'properties': {'kernel_id': 1, 'ramdisk_id': 2}},
+                uuids.ramdisk_image_id: {
+                    'id': uuids.ramdisk_image_id, 'status': 'active',
+                    'container_format': 'ari'},
+                '155d900f-4e14-4e4c-a73d-069cbf4541e6': {
+                    'id': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
+                    'status': 'active', 'container_format': 'raw',
+                    'properties': {
+                        'kernel_id': uuids.missing_image_id,
+                        'ramdisk_id': uuids.ramdisk_image_id,
+                    },
+                },
             }
             image_id = args[2]
             try:
@@ -582,12 +593,25 @@ class ServerActionsControllerTestV21(test.TestCase):
                     instance_meta[key] = instance[key]
 
         def return_image_meta(*args, **kwargs):
+            # NOTE(sean-k-mooney): To enable
+            # I0322d872bdff68936033a6f5a54e8296a6fb3434 to be backported
+            # without I34ffaf285718059b55f90e812b57f1e11d566c6f we update the
+            # fake image data to use valid UUIDs
             image_meta_table = {
-                '1': {'id': 1, 'status': 'active', 'container_format': 'aki'},
-                '2': {'id': 2, 'status': 'active', 'container_format': 'ari'},
-                '155d900f-4e14-4e4c-a73d-069cbf4541e6':
-                     {'id': 3, 'status': 'active', 'container_format': 'raw',
-                      'properties': {'kernel_id': 1, 'ramdisk_id': 2}},
+                uuids.kernel_image_id: {
+                    'id': uuids.kernel_image_id, 'status': 'active',
+                    'container_format': 'aki'},
+                uuids.ramdisk_image_id: {
+                    'id': uuids.ramdisk_image_id, 'status': 'active',
+                    'container_format': 'ari'},
+                '155d900f-4e14-4e4c-a73d-069cbf4541e6': {
+                    'id': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
+                    'status': 'active', 'container_format': 'raw',
+                    'properties': {
+                        'kernel_id': uuids.kernel_image_id,
+                        'ramdisk_id': uuids.ramdisk_image_id,
+                    },
+                },
             }
             image_id = args[2]
             try:
@@ -607,8 +631,8 @@ class ServerActionsControllerTestV21(test.TestCase):
             },
         }
         self.controller._action_rebuild(self.req, FAKE_UUID, body=body).obj
-        self.assertEqual(instance_meta['kernel_id'], '1')
-        self.assertEqual(instance_meta['ramdisk_id'], '2')
+        self.assertEqual(instance_meta['kernel_id'], uuids.kernel_image_id)
+        self.assertEqual(instance_meta['ramdisk_id'], uuids.ramdisk_image_id)
 
     @mock.patch.object(compute_api.API, 'rebuild')
     def test_rebuild_instance_raise_auto_disk_config_exc(self, mock_rebuild):
