@@ -55,8 +55,6 @@ class TestProfiler(test.NoDBTestCase):
             'nova.conductor.manager.ConductorManager',
             'nova.conductor.rpcapi.ComputeTaskAPI',
             'nova.conductor.rpcapi.ConductorAPI',
-            'nova.console.manager.ConsoleProxyManager',
-            'nova.console.rpcapi.ConsoleAPI',
             'nova.image.api.API',
             'nova.network.api.API',
             'nova.network.manager.FlatDHCPManager',

@@ -31,7 +31,6 @@
 /nova/latest/man/nova-cells.html 301 /nova/latest/cli/nova-cells.html
 /nova/latest/man/nova-compute.html 301 /nova/latest/cli/nova-compute.html
 /nova/latest/man/nova-conductor.html 301 /nova/latest/cli/nova-conductor.html
-/nova/latest/man/nova-console.html 301 /nova/latest/cli/nova-console.html
 /nova/latest/man/nova-dhcpbridge.html 301 /nova/latest/cli/nova-dhcpbridge.html
 /nova/latest/man/nova-manage.html 301 /nova/latest/cli/nova-manage.html
 /nova/latest/man/nova-network.html 301 /nova/latest/cli/nova-network.html

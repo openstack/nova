@@ -4487,40 +4487,6 @@ def migration_migrate_to_uuid(context, count):
 ##################
 
 
-@pick_context_manager_writer
-def console_pool_create(context, values):
-    pool = models.ConsolePool()
-    pool.update(values)
-    try:
-        pool.save(context.session)
-    except db_exc.DBDuplicateEntry:
-        raise exception.ConsolePoolExists(
-            host=values["host"],
-            console_type=values["console_type"],
-            compute_host=values["compute_host"],
-        )
-    return pool
-
-
-@pick_context_manager_reader
-def console_pool_get_by_host_type(context, compute_host, host,
-                                  console_type):
-
-    result = model_query(context, models.ConsolePool, read_deleted="no").\
-                   filter_by(host=host).\
-                   filter_by(console_type=console_type).\
-                   filter_by(compute_host=compute_host).\
-                   options(joinedload('consoles')).\
-                   first()
-
-    if not result:
-        raise exception.ConsolePoolNotFoundForHostType(
-                host=host, console_type=console_type,
-                compute_host=compute_host)
-
-    return result
-
-
 @pick_context_manager_reader
 def console_pool_get_all_by_host_type(context, host, console_type):
     return model_query(context, models.ConsolePool, read_deleted="no").\
@@ -4528,71 +4494,6 @@ def console_pool_get_all_by_host_type(context, host, console_type):
                    filter_by(console_type=console_type).\
                    options(joinedload('consoles')).\
                    all()
-
-
-##################
-
-
-@pick_context_manager_writer
-def console_create(context, values):
-    console = models.Console()
-    console.update(values)
-    console.save(context.session)
-    return console
-
-
-@pick_context_manager_writer
-def console_delete(context, console_id):
-    # NOTE(mdragon): consoles are meant to be transient.
-    context.session.query(models.Console).\
-        filter_by(id=console_id).\
-        delete()
-
-
-@pick_context_manager_reader
-def console_get_by_pool_instance(context, pool_id, instance_uuid):
-    result = model_query(context, models.Console, read_deleted="yes").\
-                   filter_by(pool_id=pool_id).\
-                   filter_by(instance_uuid=instance_uuid).\
-                   options(joinedload('pool')).\
-                   first()
-
-    if not result:
-        raise exception.ConsoleNotFoundInPoolForInstance(
-                pool_id=pool_id, instance_uuid=instance_uuid)
-
-    return result
-
-
-@pick_context_manager_reader
-def console_get_all_by_instance(context, instance_uuid, columns_to_join=None):
-    query = model_query(context, models.Console, read_deleted="yes").\
-                filter_by(instance_uuid=instance_uuid)
-    if columns_to_join:
-        for column in columns_to_join:
-            query = query.options(joinedload(column))
-    return query.all()
-
-
-@pick_context_manager_reader
-def console_get(context, console_id, instance_uuid=None):
-    query = model_query(context, models.Console, read_deleted="yes").\
-                    filter_by(id=console_id).\
-                    options(joinedload('pool'))
-
-    if instance_uuid is not None:
-        query = query.filter_by(instance_uuid=instance_uuid)
-
-    result = query.first()
-
-    if not result:
-        if instance_uuid:
-            raise exception.ConsoleNotFoundForInstance(
-                    instance_uuid=instance_uuid)
-        else:
-            raise exception.ConsoleNotFound(console_id=console_id)
-
-    return result
 
 
 ########################

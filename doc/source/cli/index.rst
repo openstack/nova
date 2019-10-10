@@ -87,5 +87,4 @@ deployments, but are documented for existing ones.
 
    nova-dhcpbridge
    nova-network
-   nova-console
    nova-xvpvncproxy

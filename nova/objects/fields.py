@@ -796,6 +796,8 @@ class NotificationSource(BaseNovaEnum):
     # TODO(stephenfin): Remove when 'NotificationPublisher' object version is
     # bumped to 3.0
     CELLS = 'nova-cells'
+    # TODO(stephenfin): Remove when 'NotificationPublisher' object version is
+    # bumped to 3.0
     CONSOLE = 'nova-console'
     METADATA = 'nova-metadata'
 
