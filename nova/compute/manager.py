@@ -653,7 +653,7 @@ class ComputeManager(manager.Manager):
             local_instances.append(instance)
         return local_instances
 
-    def _destroy_evacuated_instances(self, context):
+    def _destroy_evacuated_instances(self, context, node_cache):
         """Destroys evacuated instances.
 
         While nova-compute was down, the instances running on it could be
@@ -669,6 +669,8 @@ class ComputeManager(manager.Manager):
         hypervisor or not.
 
         :param context: The request context
+        :param node_cache: A dict of ComputeNode objects keyed by the UUID of
+            the compute node
         :return: A dict keyed by instance uuid mapped to Migration objects
             for instances that were migrated away from this host
         """
@@ -724,10 +726,9 @@ class ComputeManager(manager.Manager):
                                 network_info,
                                 bdi, destroy_disks)
 
-        # NOTE(gibi): We are called from init_host and at this point the
-        # compute_nodes of the resource tracker has not been populated yet so
-        # we cannot rely on the resource tracker here.
-        compute_nodes = {}
+        hostname_to_cn_uuid = {
+            cn.hypervisor_hostname: cn.uuid
+            for cn in node_cache.values()}
 
         for instance_uuid, migration in evacuations.items():
             try:
@@ -746,17 +747,12 @@ class ComputeManager(manager.Manager):
             LOG.info('Cleaning up allocations of the instance as it has been '
                      'evacuated from this host',
                      instance=instance)
-            if migration.source_node not in compute_nodes:
-                try:
-                    cn_uuid = objects.ComputeNode.get_by_host_and_nodename(
-                        context, self.host, migration.source_node).uuid
-                    compute_nodes[migration.source_node] = cn_uuid
-                except exception.ComputeHostNotFound:
-                    LOG.error("Failed to clean allocation of evacuated "
-                              "instance as the source node %s is not found",
-                              migration.source_node, instance=instance)
-                    continue
-            cn_uuid = compute_nodes[migration.source_node]
+            if migration.source_node not in hostname_to_cn_uuid:
+                LOG.error("Failed to clean allocation of evacuated "
+                          "instance as the source node %s is not found",
+                          migration.source_node, instance=instance)
+                continue
+            cn_uuid = hostname_to_cn_uuid[migration.source_node]
 
             # If the instance was deleted in the interim, assume its
             # allocations were properly cleaned up (either by its hosting
@@ -1290,6 +1286,36 @@ class ComputeManager(manager.Manager):
                          'service will only be synchronized by the '
                          '_sync_power_states periodic task.')
 
+    def _get_nodes(self, context):
+        """Queried the ComputeNode objects from the DB that are reported by the
+        hypervisor.
+
+        :param context: the request context
+        :return: a dict of ComputeNode objects keyed by the UUID of the given
+            node.
+        """
+        nodes_by_uuid = {}
+        try:
+            node_names = self.driver.get_available_nodes()
+        except exception.VirtDriverNotReady:
+            LOG.warning(
+                "Virt driver is not ready. If this is the first time this "
+                "service is starting on this host, then you can ignore this "
+                "warning.")
+            return {}
+
+        for node_name in node_names:
+            try:
+                node = objects.ComputeNode.get_by_host_and_nodename(
+                    context, self.host, node_name)
+                nodes_by_uuid[node.uuid] = node
+            except exception.ComputeHostNotFound:
+                LOG.warning(
+                    "Compute node %s not found in the database. If this is "
+                    "the first time this service is starting on this host, "
+                    "then you can ignore this warning.", node_name)
+        return nodes_by_uuid
+
     def init_host(self):
         """Initialization for a standalone compute service."""
 
@@ -1325,9 +1351,21 @@ class ComputeManager(manager.Manager):
 
         self._validate_pinning_configuration(instances)
 
+        # NOTE(gibi): At this point the compute_nodes of the resource tracker
+        # has not been populated yet so we cannot rely on the resource tracker
+        # here.
+        # NOTE(gibi): If ironic and vcenter virt driver slow start time
+        # becomes problematic here then we should consider adding a config
+        # option or a driver flag to tell us if we should thread
+        # _destroy_evacuated_instances and
+        # _error_out_instances_whose_build_was_interrupted out in the
+        # background on startup
+        nodes_by_uuid = self._get_nodes(context)
+
         try:
             # checking that instance was not already evacuated to other host
-            evacuated_instances = self._destroy_evacuated_instances(context)
+            evacuated_instances = self._destroy_evacuated_instances(
+                context, nodes_by_uuid)
 
             # Initialise instances on the host that are not evacuating
             for instance in instances:
@@ -1342,12 +1380,8 @@ class ComputeManager(manager.Manager):
             # handled by the above calls.
             already_handled = {instance.uuid for instance in instances}.union(
                 evacuated_instances)
-            # NOTE(gibi): If ironic and vcenter virt driver slow start time
-            # becomes problematic here then we should consider adding a config
-            # option or a driver flag to tell us if we should thread this out
-            # in the background on startup
             self._error_out_instances_whose_build_was_interrupted(
-                context, already_handled)
+                context, already_handled, nodes_by_uuid.keys())
 
         finally:
             if CONF.defer_iptables_apply:
@@ -1362,7 +1396,7 @@ class ComputeManager(manager.Manager):
                 self._update_scheduler_instance_info(context, instances)
 
     def _error_out_instances_whose_build_was_interrupted(
-            self, context, already_handled_instances):
+            self, context, already_handled_instances, node_uuids):
         """If there are instances in BUILDING state that are not
         assigned to this host but have allocations in placement towards
         this compute that means the nova-compute service was
@@ -1374,6 +1408,8 @@ class ComputeManager(manager.Manager):
         :param context: The request context
         :param already_handled_instances: The set of instance UUIDs that the
             host initialization process already handled in some way.
+        :param node_uuids: The list of compute node uuids handled by this
+            service
         """
 
         # Strategy:
@@ -1386,30 +1422,7 @@ class ComputeManager(manager.Manager):
         LOG.info(
             "Looking for unclaimed instances stuck in BUILDING status for "
             "nodes managed by this host")
-
-        try:
-            node_names = self.driver.get_available_nodes()
-        except exception.VirtDriverNotReady:
-            LOG.warning(
-                "Virt driver is not ready. Therefore unable to error out any "
-                "instances stuck in BUILDING state on this node. If this is "
-                "the first time this service is starting on this host, then "
-                "you can ignore this warning.")
-            return
-
-        for node_name in node_names:
-            try:
-                cn_uuid = objects.ComputeNode.get_by_host_and_nodename(
-                    context, self.host, node_name).uuid
-            except exception.ComputeHostNotFound:
-                LOG.warning(
-                    "Compute node %s not found in the database and therefore "
-                    "unable to error out any instances stuck in BUILDING "
-                    "state on this node. If this is the first time this "
-                    "service is starting on this host, then you can ignore "
-                    "this warning.", node_name)
-                continue
-
+        for cn_uuid in node_uuids:
             try:
                 f = self.reportclient.get_allocations_for_resource_provider
                 allocations = f(context, cn_uuid).allocations

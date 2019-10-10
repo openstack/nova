@@ -7740,11 +7740,17 @@ class ComputeTestCase(BaseTestCase,
         mock_get_inst.return_value = instances
         mock_get_blk.return_value = 'fake_bdi'
         mock_is_inst.return_value = True
+        node_cache = {
+            self.rt.compute_nodes[NODENAME].uuid:
+                objects.ComputeNode(
+                    uuid=self.rt.compute_nodes[NODENAME].uuid,
+                    hypervisor_hostname=NODENAME)
+        }
 
         with mock.patch.object(
                 self.compute.network_api, 'get_instance_nw_info',
                 return_value='fake_network_info') as mock_get_nw:
-            self.compute._destroy_evacuated_instances(fake_context)
+            self.compute._destroy_evacuated_instances(fake_context, node_cache)
 
         mock_get_filter.assert_called_once_with(fake_context,
                                          {'source_compute': self.compute.host,
@@ -7807,11 +7813,17 @@ class ComputeTestCase(BaseTestCase,
         mock_get_blk.return_value = 'fake-bdi'
         mock_check_local.return_value = {'filename': 'tmpfilename'}
         mock_check.return_value = False
+        node_cache = {
+            self.rt.compute_nodes[NODENAME].uuid:
+                objects.ComputeNode(
+                    uuid=self.rt.compute_nodes[NODENAME].uuid,
+                    hypervisor_hostname=NODENAME)
+        }
 
         with mock.patch.object(
                 self.compute.network_api, 'get_instance_nw_info',
                 return_value='fake_network_info') as mock_get_nw:
-            self.compute._destroy_evacuated_instances(fake_context)
+            self.compute._destroy_evacuated_instances(fake_context, node_cache)
 
         mock_get_drv.assert_called_once_with(fake_context)
         mock_get_nw.assert_called_once_with(fake_context, evacuated_instance)
@@ -7871,11 +7883,17 @@ class ComputeTestCase(BaseTestCase,
         mock_get_inst.return_value = instances
         mock_get_blk.return_value = 'fake_bdi'
         mock_check_local.side_effect = NotImplementedError
+        node_cache = {
+            self.rt.compute_nodes[NODENAME].uuid:
+                objects.ComputeNode(
+                    uuid=self.rt.compute_nodes[NODENAME].uuid,
+                    hypervisor_hostname=NODENAME)
+        }
 
         with mock.patch.object(
                 self.compute.network_api, 'get_instance_nw_info',
                 return_value='fake_network_info') as mock_get_nw:
-            self.compute._destroy_evacuated_instances(fake_context)
+            self.compute._destroy_evacuated_instances(fake_context, node_cache)
 
         mock_get_inst.assert_called_once_with(fake_context)
         mock_get_nw.assert_called_once_with(fake_context, evacuated_instance)
