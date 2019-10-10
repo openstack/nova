@@ -67,6 +67,7 @@ INVALID_FLAVOR_IMAGE_EXCEPTIONS = (
     exception.ImageNUMATopologyForbidden,
     exception.ImageNUMATopologyIncomplete,
     exception.ImageNUMATopologyMemoryOutOfRange,
+    exception.ImageNUMATopologyRebuildConflict,
     exception.ImagePMUConflict,
     exception.ImageSerialPortNumberExceedFlavorValue,
     exception.ImageSerialPortNumberInvalid,
