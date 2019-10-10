@@ -6251,6 +6251,123 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             self.assertEqual(['context-for-%s' % c for c in compute_api.CELLS],
                              cells)
 
+    def test__validate_numa_rebuild_non_numa(self):
+        """This test asserts that a rebuild of an instance without a NUMA
+        topology passes validation.
+        """
+        flavor = objects.Flavor(
+            id=42, vcpus=1, memory_mb=512, root_gb=1, extra_specs={})
+        instance = self._create_instance_obj(flavor=flavor)
+        # we use a dict instead of image metadata object as
+        # _validate_numa_rebuild constructs the object internally
+        image = {
+            'id': uuids.image_id, 'status': 'foo',
+            'properties': {}}
+        self.compute_api._validate_numa_rebuild(instance, image, flavor)
+
+    def test__validate_numa_rebuild_no_conflict(self):
+        """This test asserts that a rebuild of an instance without a change
+        in NUMA topology passes validation.
+        """
+        flavor = objects.Flavor(
+            id=42, vcpus=1, memory_mb=512, root_gb=1,
+            extra_specs={"hw:numa_nodes": 1})
+        instance = self._create_instance_obj(flavor=flavor)
+        # we use a dict instead of image metadata object as
+        # _validate_numa_rebuild constructs the object internally
+        image = {
+            'id': uuids.image_id, 'status': 'foo',
+            'properties': {}}
+        # The flavor creates a NUMA topology but the default image and the
+        # rebuild image do not have any image properties so there will
+        # be no conflict.
+        self.compute_api._validate_numa_rebuild(instance, image, flavor)
+
+    def test__validate_numa_rebuild_add_numa_toplogy(self):
+        """This test asserts that a rebuild of an instance with a new image
+        that requests a NUMA topology when the original instance did not
+        have a NUMA topology is invalid.
+        """
+
+        flavor = objects.Flavor(
+            id=42, vcpus=1, memory_mb=512, root_gb=1,
+            extra_specs={})
+        instance = self._create_instance_obj(flavor=flavor)
+        # we use a dict instead of image metadata object as
+        # _validate_numa_rebuild constructs the object internally
+        image = {
+            'id': uuids.image_id, 'status': 'foo',
+            'properties': {"hw_numa_nodes": 1}}
+        # The flavor and default image have no NUMA topology defined. The image
+        # used to rebuild requests a NUMA topology which is not allowed as it
+        # would alter the NUMA constrains.
+        self.assertRaises(
+            exception.ImageNUMATopologyRebuildConflict,
+            self.compute_api._validate_numa_rebuild, instance, image, flavor)
+
+    def test__validate_numa_rebuild_remove_numa_toplogy(self):
+        """This test asserts that a rebuild of an instance with a new image
+        that does not request a NUMA topology when the original image did
+        is invalid if it would alter the instances topology as a result.
+        """
+
+        flavor = objects.Flavor(
+            id=42, vcpus=1, memory_mb=512, root_gb=1,
+            extra_specs={})
+        instance = self._create_instance_obj(flavor=flavor)
+        # we use a dict instead of image metadata object as
+        # _validate_numa_rebuild constructs the object internally
+        old_image = {
+            'id': uuidutils.generate_uuid(), 'status': 'foo',
+            'properties': {"hw_numa_nodes": 1}}
+        old_image_meta = objects.ImageMeta.from_dict(old_image)
+        image = {
+            'id': uuidutils.generate_uuid(), 'status': 'foo',
+            'properties': {}}
+        with mock.patch(
+                'nova.objects.instance.Instance.image_meta',
+                new_callable=mock.PropertyMock(return_value=old_image_meta)):
+            # The old image has a NUMA topology defined but the new image
+            # used to rebuild does not. This would alter the NUMA constrains
+            # and therefor should raise.
+            self.assertRaises(
+                exception.ImageNUMATopologyRebuildConflict,
+                self.compute_api._validate_numa_rebuild, instance,
+                image, flavor)
+
+    def test__validate_numa_rebuild_alter_numa_toplogy(self):
+        """This test asserts that a rebuild of an instance with a new image
+        that requests a different NUMA topology than the original image
+        is invalid.
+        """
+
+        # NOTE(sean-k-mooney): we need to use 2 vcpus here or we will fail
+        # with a different exception ImageNUMATopologyAsymmetric when we
+        # construct the NUMA constrains as the rebuild image would result
+        # in an invalid topology.
+        flavor = objects.Flavor(
+            id=42, vcpus=2, memory_mb=512, root_gb=1,
+            extra_specs={})
+        instance = self._create_instance_obj(flavor=flavor)
+        # we use a dict instead of image metadata object as
+        # _validate_numa_rebuild constructs the object internally
+        old_image = {
+            'id': uuidutils.generate_uuid(), 'status': 'foo',
+            'properties': {"hw_numa_nodes": 1}}
+        old_image_meta = objects.ImageMeta.from_dict(old_image)
+        image = {
+            'id': uuidutils.generate_uuid(), 'status': 'foo',
+            'properties': {"hw_numa_nodes": 2}}
+        with mock.patch(
+                'nova.objects.instance.Instance.image_meta',
+                new_callable=mock.PropertyMock(return_value=old_image_meta)):
+            # the original image requested 1 NUMA node and the image used
+            # for rebuild requests 2 so assert an error is raised.
+            self.assertRaises(
+                exception.ImageNUMATopologyRebuildConflict,
+                self.compute_api._validate_numa_rebuild, instance,
+                image, flavor)
+
     @mock.patch('nova.pci.request.get_pci_requests_from_flavor')
     def test_pmu_image_and_flavor_conflict(self, mock_request):
         """Tests that calling _validate_flavor_image_nostatus()
