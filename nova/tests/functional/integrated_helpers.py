@@ -92,7 +92,8 @@ class _IntegratedTestBase(test.TestCase):
             return None
         self.stub_out('nova.privsep.linux_net.bind_ip', fake_noop)
 
-        nova.tests.unit.image.fake.stub_out_image_service(self)
+        self.fake_image_service =\
+            nova.tests.unit.image.fake.stub_out_image_service(self)
 
         self.useFixture(cast_as_call.CastAsCall(self))
         placement = self.useFixture(func_fixtures.PlacementFixture())
