@@ -5851,6 +5851,39 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                details={'ovs_hybrid_plug': True})],
             [])
 
+    @mock.patch('nova.compute.manager.LOG')
+    def test_cache_images_unsupported(self, mock_log):
+        r = self.compute.cache_images(self.context, ['an-image'])
+        self.assertEqual({'an-image': 'unsupported'}, r)
+        mock_log.warning.assert_called_once_with(
+            'Virt driver does not support image pre-caching; ignoring request')
+
+    def test_cache_image_existing(self):
+        with mock.patch.object(self.compute.driver, 'cache_image') as c:
+            c.return_value = False
+            r = self.compute.cache_images(self.context, ['an-image'])
+            self.assertEqual({'an-image': 'existing'}, r)
+
+    def test_cache_image_downloaded(self):
+        with mock.patch.object(self.compute.driver, 'cache_image') as c:
+            c.return_value = True
+            r = self.compute.cache_images(self.context, ['an-image'])
+            self.assertEqual({'an-image': 'cached'}, r)
+
+    def test_cache_image_failed(self):
+        with mock.patch.object(self.compute.driver, 'cache_image') as c:
+            c.side_effect = test.TestingException('foo')
+            r = self.compute.cache_images(self.context, ['an-image'])
+            self.assertEqual({'an-image': 'error'}, r)
+
+    def test_cache_images_multi(self):
+        with mock.patch.object(self.compute.driver, 'cache_image') as c:
+            c.side_effect = [True, False]
+            r = self.compute.cache_images(self.context, ['one-image',
+                                                         'two-image'])
+            self.assertEqual({'one-image': 'cached',
+                              'two-image': 'existing'}, r)
+
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def setUp(self):
