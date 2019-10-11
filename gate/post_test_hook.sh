@@ -116,3 +116,26 @@ if [[ "$allocations" == "" ]]; then
     echo "Failed to heal allocations."
     exit 2
 fi
+
+echo "Verifying online_data_migrations idempotence"
+# We will re-use the server created earlier for this test. (A server needs to
+# be present during the run of online_data_migrations and archiving).
+
+# Run the online data migrations before archiving.
+$MANAGE db online_data_migrations
+
+# We need to archive the deleted marker instance used by the
+# fill_virtual_interface_list online data migration in order to trigger
+# creation of a new deleted marker instance.
+set +e
+archive_deleted_rows $conf
+
+# Verify whether online data migrations run after archiving will succeed.
+# See for more details: https://bugs.launchpad.net/nova/+bug/1824435
+$MANAGE db online_data_migrations
+rc=$?
+set -e
+if [[ $rc -ne 2 ]]; then
+    echo "Expected return code 2 from online_data_migrations until bug 1824435 is fixed"
+    exit 2
+fi
