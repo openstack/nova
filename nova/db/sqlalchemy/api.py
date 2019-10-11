@@ -1753,7 +1753,7 @@ def instance_create(context, values):
     values - dict containing column values.
     """
 
-    security_group_ensure_default(context)
+    default_group = security_group_ensure_default(context)
 
     values = values.copy()
     values['metadata'] = _metadata_refs(
@@ -1782,21 +1782,19 @@ def instance_create(context, values):
     instance_ref['extra'].update(values.pop('extra', {}))
     instance_ref.update(values)
 
-    def _get_sec_group_models(security_groups):
-        models = []
-        default_group = _security_group_ensure_default(context)
-        if 'default' in security_groups:
-            models.append(default_group)
-            # Generate a new list, so we don't modify the original
-            security_groups = [x for x in security_groups if x != 'default']
-        if security_groups:
-            models.extend(_security_group_get_by_names(
-                context, security_groups))
-        return models
+    # Gather the security groups for the instance
+    sg_models = []
+    if 'default' in security_groups:
+        sg_models.append(default_group)
+        # Generate a new list, so we don't modify the original
+        security_groups = [x for x in security_groups if x != 'default']
+    if security_groups:
+        sg_models.extend(_security_group_get_by_names(
+            context, security_groups))
 
     if 'hostname' in values:
         _validate_unique_server_name(context, values['hostname'])
-    instance_ref.security_groups = _get_sec_group_models(security_groups)
+    instance_ref.security_groups = sg_models
     context.session.add(instance_ref)
 
     # create the instance uuid to ec2_id mapping entry for instance
