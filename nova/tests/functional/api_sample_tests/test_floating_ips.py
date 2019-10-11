@@ -155,7 +155,7 @@ class NeutronFixture(fixtures.NeutronFixture):
         if floatingip not in self._floatingips:
             raise Exception('This floating IP has not been added yet')
 
-        return {'floatingip': self._floatingips[floatingip]}
+        return {'floatingip': copy.deepcopy(self._floatingips[floatingip])}
 
     def list_floatingips(self, retrieve_all=True, **_params):
         return {'floatingips': copy.deepcopy(list(self._floatingips.values()))}
