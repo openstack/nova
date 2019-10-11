@@ -74,8 +74,7 @@ class DeletedServerAllocationRevertTest(
 
         def wrap_select_dests(*args, **kwargs):
             # Simulate concurrently deleting the server while scheduling.
-            self.api.delete_server(server['id'])
-            self._wait_until_deleted(server)
+            self._delete_server(server)
             return original_select_dests(*args, **kwargs)
 
         self.stub_out('nova.scheduler.client.query.SchedulerQueryClient.'
@@ -136,8 +135,7 @@ class DeletedServerAllocationRevertTest(
         original_prep_resize = compute_manager.ComputeManager._prep_resize
 
         def wrap_prep_resize(*args, **kwargs):
-            self.api.delete_server(server['id'])
-            self._wait_until_deleted(server)
+            self._delete_server(server)
             return original_prep_resize(*args, **kwargs)
 
         self.stub_out('nova.compute.manager.ComputeManager._prep_resize',

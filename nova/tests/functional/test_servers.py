@@ -75,11 +75,6 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
         self.computes = {}
         super(ServersTestBase, self).setUp()
 
-    def _delete_server(self, server):
-        # Delete the server
-        self.api.delete_server(server['id'])
-        self._wait_until_deleted(server)
-
     def _get_access_ips_params(self):
         return {self._access_ipv4_parameter: "172.19.0.2",
                 self._access_ipv6_parameter: "fe80::2"}
@@ -4783,8 +4778,7 @@ class ConsumerGenerationConflictTest(
                       'the allocation held by the migration is leaked.' %
                       (migrations[0]['uuid'], server['id']),
                       self.stdlog.logger.output)
-        self.api.delete_server(server['id'])
-        self._wait_until_deleted(server)
+        self._delete_server(server)
         fake_notifier.wait_for_versioned_notifications('instance.delete.end')
 
         allocations = self._get_allocations_by_server_uuid(
@@ -4832,8 +4826,7 @@ class ConsumerGenerationConflictTest(
                       'but the allocation held by the migration is leaked.' %
                       (migrations[0]['uuid'], server['id']),
                       self.stdlog.logger.output)
-        self.api.delete_server(server['id'])
-        self._wait_until_deleted(server)
+        self._delete_server(server)
         fake_notifier.wait_for_versioned_notifications('instance.delete.end')
 
         allocations = self._get_allocations_by_server_uuid(
@@ -4884,8 +4877,7 @@ class ConsumerGenerationConflictTest(
                       'but the allocation held by the migration is leaked.' %
                       (migrations[0]['uuid'], server['id']),
                       self.stdlog.logger.output)
-        self.api.delete_server(server['id'])
-        self._wait_until_deleted(server)
+        self._delete_server(server)
         fake_notifier.wait_for_versioned_notifications('instance.delete.end')
 
         allocations = self._get_allocations_by_server_uuid(
@@ -5021,8 +5013,7 @@ class ConsumerGenerationConflictTest(
                       (migration_uuid, server['id']),
                       self.stdlog.logger.output)
 
-        self.api.delete_server(server['id'])
-        self._wait_until_deleted(server)
+        self._delete_server(server)
         fake_notifier.wait_for_versioned_notifications('instance.delete.end')
 
         self.assertFlavorMatchesAllocation(self.flavor, migration_uuid,

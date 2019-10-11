@@ -608,8 +608,7 @@ class TestNovaManagePlacementHealAllocations(
         self._boot_and_assert_no_allocations(self.flavor, 'cell1')
         # and another that we'll delete
         server, _ = self._boot_and_assert_no_allocations(self.flavor, 'cell1')
-        self.api.delete_server(server['id'])
-        self._wait_until_deleted(server)
+        self._delete_server(server)
         result = self.cli.heal_allocations(verbose=True)
         self.assertEqual(0, result, self.output.getvalue())
         self.assertIn('Processed 1 instances.', self.output.getvalue())
@@ -1429,8 +1428,7 @@ class TestDBArchiveDeletedRows(integrated_helpers._IntegratedTestBase):
             2, len(self.api.get_server_group(group['id'])['members']))
         # Now delete one server and then we can archive.
         server = self.api.get_server(server['id'])
-        self.api.delete_server(server['id'])
-        self._wait_until_deleted(server)
+        self._delete_server(server)
         # Now archive.
         self.cli.archive_deleted_rows(verbose=True)
         # Assert only one instance_group_member record was deleted.
