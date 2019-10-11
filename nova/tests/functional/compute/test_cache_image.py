@@ -74,3 +74,12 @@ class ImageCacheTest(test.TestCase):
             'aggregate.cache_images.start')
         fake_notifier.wait_for_versioned_notifications(
             'aggregate.cache_images.end')
+
+        logtext = self.stdlog.logger.output
+
+        self.assertIn(
+            '3 cached, 0 existing, 0 errors, 0 unsupported, 1 skipped',
+            logtext)
+        self.assertNotIn(
+            'Image pre-cache operation for image an-image failed',
+            logtext)
