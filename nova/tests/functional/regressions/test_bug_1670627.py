@@ -98,9 +98,9 @@ class TestDeleteFromCell0CheckQuota(test.TestCase):
                   (server_id, server['OS-EXT-STS:vm_state'],
                    server['OS-EXT-STS:task_state']))
 
-    def _delete_server(self, server_id):
+    def _delete_server(self, server):
         try:
-            self.api.delete_server(server_id)
+            self.api.delete_server(server['id'])
         except client.OpenStackApiNotFoundException:
             pass
 
@@ -123,7 +123,7 @@ class TestDeleteFromCell0CheckQuota(test.TestCase):
             imageRef=self.image_id,
             flavorRef=self.flavor_id)
         server = self.api.post_server({'server': server})
-        self.addCleanup(self._delete_server, server['id'])
+        self.addCleanup(self._delete_server, server)
         self._wait_for_instance_status(server['id'], 'ERROR')
 
         # Check quota to see we've incremented usage by 1.
@@ -132,7 +132,7 @@ class TestDeleteFromCell0CheckQuota(test.TestCase):
                          current_usage['absolute']['totalInstancesUsed'])
 
         # Now delete the server and wait for it to be gone.
-        self._delete_server(server['id'])
+        self._delete_server(server)
         self._wait_for_instance_delete(server['id'])
 
         # Now check the quota again. Since the bug is fixed, ending usage

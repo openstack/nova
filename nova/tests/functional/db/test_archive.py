@@ -83,7 +83,7 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
         actions = self.api.get_instance_actions(server_id)
         self.assertTrue(len(actions),
                         'No instance actions for server: %s' % server_id)
-        self._delete_server(server_id)
+        self._delete_server(server)
         # Verify we have the soft deleted instance in the database.
         admin_context = context.get_admin_context(read_deleted='yes')
         # This will raise InstanceNotFound if it's not found.
@@ -118,7 +118,7 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
         actions = self.api.get_instance_actions(server_id)
         self.assertTrue(len(actions),
                         'No instance actions for server: %s' % server_id)
-        self._delete_server(server_id)
+        self._delete_server(server)
         # Verify we have the soft deleted instance in the database.
         admin_context = context.get_admin_context(read_deleted='yes')
         # This will raise InstanceNotFound if it's not found.
@@ -168,7 +168,7 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
     def test_archive_then_purge_all(self):
         server = self._create_server()
         server_id = server['id']
-        self._delete_server(server_id)
+        self._delete_server(server)
         results, deleted_ids, archived = db.archive_deleted_rows(max_rows=1000)
         self.assertEqual([server_id], deleted_ids)
 
@@ -194,7 +194,7 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
     def test_archive_then_purge_by_date(self):
         server = self._create_server()
         server_id = server['id']
-        self._delete_server(server_id)
+        self._delete_server(server)
         results, deleted_ids, archived = db.archive_deleted_rows(max_rows=1000)
         self.assertEqual([server_id], deleted_ids)
         self.assertEqual(sum(results.values()), archived)
@@ -229,7 +229,7 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
         """
         server = self._create_server()
         server_id = server['id']
-        self._delete_server(server_id)
+        self._delete_server(server)
         results, deleted_ids, archived = db.archive_deleted_rows(max_rows=1000)
         self.assertEqual([server_id], deleted_ids)
         date = dateutil_parser.parse('oct 21 2015', fuzzy=True)

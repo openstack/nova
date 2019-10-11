@@ -67,4 +67,4 @@ class RealTimeServersTest(base.ServersTestBase):
         instance = self._wait_for_state_change(instance, 'BUILD')
 
         self.assertEqual('ACTIVE', instance['status'])
-        self._delete_server(instance['id'])
+        self._delete_server(instance)

@@ -100,9 +100,9 @@ class TestLocalDeleteAttachedVolumes(test.TestCase):
                   (server_id, server['OS-EXT-STS:vm_state'],
                    server['OS-EXT-STS:task_state']))
 
-    def _delete_server(self, server_id):
+    def _delete_server(self, server):
         try:
-            self.api.delete_server(server_id)
+            self.api.delete_server(server['id'])
         except client.OpenStackApiNotFoundException:
             pass
 
@@ -135,7 +135,7 @@ class TestLocalDeleteAttachedVolumes(test.TestCase):
             networks='none')
         server = self.api.post_server({'server': server})
         server_id = server['id']
-        self.addCleanup(self._delete_server, server_id)
+        self.addCleanup(self._delete_server, server)
         self._wait_for_instance_status(server_id, 'ACTIVE')
 
         LOG.info('Shelve-offloading server %s', server_id)
@@ -160,7 +160,7 @@ class TestLocalDeleteAttachedVolumes(test.TestCase):
         # At this point the instance.host is no longer set, so deleting
         # the server will take the local delete path in the API.
         LOG.info('Deleting shelved-offloaded server %s.', server_id)
-        self._delete_server(server_id)
+        self._delete_server(server)
         # Now wait for the server to be gone.
         self._wait_for_instance_delete(server_id)
 

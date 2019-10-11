@@ -102,10 +102,10 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
         # Should be gone
         self.assertFalse(found_server)
 
-    def _delete_server(self, server_id):
+    def _delete_server(self, server):
         # Delete the server
-        self.api.delete_server(server_id)
-        self._wait_for_deletion(server_id)
+        self.api.delete_server(server['id'])
+        self._wait_for_deletion(server['id'])
 
     def _get_access_ips_params(self):
         return {self._access_ipv4_parameter: "172.19.0.2",
@@ -168,7 +168,7 @@ class ServersTest(ServersTestBase):
         found_server = self._wait_for_state_change(found_server, 'BUILD')
 
         self.assertEqual('ERROR', found_server['status'])
-        self._delete_server(created_server_id)
+        self._delete_server(created_server)
 
         # We should have no (persisted) build failures until we update
         # resources, after which we should have one
@@ -222,7 +222,7 @@ class ServersTest(ServersTestBase):
         found_server = self._wait_for_state_change(found_server, 'BUILD')
 
         self.assertEqual('ERROR', found_server['status'])
-        self._delete_server(created_server_id)
+        self._delete_server(created_server)
 
         return len(fails)
 
@@ -306,7 +306,7 @@ class ServersTest(ServersTestBase):
             self.assertIn("image", server)
             self.assertIn("flavor", server)
 
-        self._delete_server(created_server_id)
+        self._delete_server(found_server)
 
     def _force_reclaim(self):
         # Make sure that compute manager thinks the instance is
@@ -502,7 +502,7 @@ class ServersTest(ServersTestBase):
         self.assertFalse(found_server.get('metadata'))
 
         # Cleanup
-        self._delete_server(created_server_id)
+        self._delete_server(found_server)
 
     def test_server_metadata_actions_negative_invalid_state(self):
         # Create server with metadata
@@ -543,7 +543,7 @@ class ServersTest(ServersTestBase):
         self.assertEqual('SHELVED', found_server['status'])
 
         # Cleanup
-        self._delete_server(server_id)
+        self._delete_server(found_server)
 
     def test_create_and_rebuild_server(self):
         # Rebuild a server with metadata.
@@ -608,7 +608,7 @@ class ServersTest(ServersTestBase):
         self._verify_access_ips(found_server)
 
         # Cleanup
-        self._delete_server(created_server_id)
+        self._delete_server(found_server)
 
     def test_rename_server(self):
         # Test building and renaming a server.
@@ -628,7 +628,7 @@ class ServersTest(ServersTestBase):
         self.assertEqual(created_server['name'], 'new-name')
 
         # Cleanup
-        self._delete_server(server_id)
+        self._delete_server(created_server)
 
     def test_create_multiple_servers(self):
         # Creates multiple servers and checks for reservation_id.
@@ -664,9 +664,9 @@ class ServersTest(ServersTestBase):
         self.assertEqual(len(server_map), 2)
 
         # Cleanup
-        self._delete_server(created_server_id)
-        for server_id in server_map:
-            self._delete_server(server_id)
+        self._delete_server(created_server)
+        for server in server_map.values():
+            self._delete_server(server)
 
     def test_create_server_with_injected_files(self):
         # Creates a server with injected_files.
@@ -705,7 +705,7 @@ class ServersTest(ServersTestBase):
         self.assertEqual('ACTIVE', found_server['status'])
 
         # Cleanup
-        self._delete_server(created_server_id)
+        self._delete_server(found_server)
 
     def test_stop_start_servers_negative_invalid_state(self):
         # Create server
@@ -747,7 +747,7 @@ class ServersTest(ServersTestBase):
         self.assertEqual('SHUTOFF', found_server['status'])
 
         # Cleanup
-        self._delete_server(created_server_id)
+        self._delete_server(found_server)
 
     def test_revert_resized_server_negative_invalid_state(self):
         # Create server
@@ -770,7 +770,7 @@ class ServersTest(ServersTestBase):
         self.assertEqual('ACTIVE', found_server['status'])
 
         # Cleanup
-        self._delete_server(created_server_id)
+        self._delete_server(found_server)
 
     def test_resize_server_negative_invalid_state(self):
         # Avoid migration
@@ -802,7 +802,7 @@ class ServersTest(ServersTestBase):
         self.assertEqual('VERIFY_RESIZE', found_server['status'])
 
         # Cleanup
-        self._delete_server(created_server_id)
+        self._delete_server(found_server)
 
     def test_confirm_resized_server_negative_invalid_state(self):
         # Create server
@@ -825,7 +825,7 @@ class ServersTest(ServersTestBase):
         self.assertEqual('ACTIVE', found_server['status'])
 
         # Cleanup
-        self._delete_server(created_server_id)
+        self._delete_server(found_server)
 
     def test_resize_server_overquota(self):
         self.flags(cores=1, group='quota')
@@ -911,10 +911,9 @@ class ServersTestV219(ServersTestBase):
     def _create_server_and_verify(self, set_desc = True, expected_desc = None):
         # Creates a server with a description and verifies it is
         # in the GET responses.
-        created_server_id = self._create_server(set_desc,
-                                                expected_desc)[1]['id']
-        self._verify_server_description(created_server_id, expected_desc)
-        self._delete_server(created_server_id)
+        created_server = self._create_server(set_desc, expected_desc)[1]
+        self._verify_server_description(created_server['id'], expected_desc)
+        self._delete_server(created_server)
 
     def _update_server_and_verify(self, server_id, set_desc = True,
                                   expected_desc = None):
@@ -990,7 +989,8 @@ class ServersTestV219(ServersTestBase):
     def test_update_server_with_description(self):
         self.api.microversion = '2.19'
         # Create a server with an initial description
-        server_id = self._create_server(True, 'test desc 1')[1]['id']
+        server = self._create_server(True, 'test desc 1')[1]
+        server_id = server['id']
 
         # Update and get the server with a description
         self._update_server_and_verify(server_id, True, 'updated desc')
@@ -1004,7 +1004,7 @@ class ServersTestV219(ServersTestBase):
         self._update_server_and_verify(server_id, True, 'updated desc2')
 
         # Cleanup
-        self._delete_server(server_id)
+        self._delete_server(server)
 
     def test_rebuild_server_with_description(self):
         self.api.microversion = '2.19'
@@ -1026,12 +1026,13 @@ class ServersTestV219(ServersTestBase):
         self._rebuild_server_and_verify(server_id, True, 'updated desc2')
 
         # Cleanup
-        self._delete_server(server_id)
+        self._delete_server(server)
 
     def test_version_compatibility(self):
         # Create a server with microversion v2.19 and a description.
         self.api.microversion = '2.19'
-        server_id = self._create_server(True, 'test desc 1')[1]['id']
+        server = self._create_server(True, 'test desc 1')[1]
+        server_id = server['id']
         # Verify that the description is not included on V2.18 GETs
         self.api.microversion = '2.18'
         self._verify_server_description(server_id, desc_in_resp = False)
@@ -1043,17 +1044,17 @@ class ServersTestV219(ServersTestBase):
         self._rebuild_assertRaisesRegex(server_id, 'test rebuild 2.18')
 
         # Cleanup
-        self._delete_server(server_id)
+        self._delete_server(server)
 
         # Create a server on V2.18 and verify that the description
         # defaults to the name on a V2.19 GET
-        server_req, response = self._create_server(False)
-        server_id = response['id']
+        server_req, server = self._create_server(False)
+        server_id = server['id']
         self.api.microversion = '2.19'
         self._verify_server_description(server_id, server_req['name'])
 
         # Cleanup
-        self._delete_server(server_id)
+        self._delete_server(server)
 
         # Verify that creating a server with description on V2.18
         # results in a 400 error
@@ -1152,7 +1153,7 @@ class ServerTestV220(ServersTestBase):
                             (server_id, attachment_id))
             self.assertTrue(mock_clean_vols.called)
 
-        self._delete_server(server_id)
+        self._delete_server(found_server)
 
 
 class ServerTestV269(ServersTestBase):
@@ -6503,7 +6504,7 @@ class ServerMoveWithPortResourceRequestTest(
         return self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
 
     def _delete_server_and_check_allocations(
-            self, qos_port, qos_sriov_port, server):
+            self, server, qos_port, qos_sriov_port):
         self._delete_and_check_allocations(server)
 
         # assert that unbind removes the allocation from the binding of the
@@ -6568,7 +6569,7 @@ class ServerMoveWithPortResourceRequestTest(
         self.assertEqual({}, migration_allocations)
 
         self._delete_server_and_check_allocations(
-            qos_normal_port, qos_sriov_port, server)
+            server, qos_normal_port, qos_sriov_port)
 
     def test_migrate_server_with_qos_port_old_dest_compute_alternate(self):
         """Create a situation where the first migration target host returned
@@ -6636,7 +6637,7 @@ class ServerMoveWithPortResourceRequestTest(
         self.assertEqual({}, migration_allocations)
 
         self._delete_server_and_check_allocations(
-            qos_normal_port, qos_sriov_port, server)
+            server, qos_normal_port, qos_sriov_port)
 
     def _test_resize_or_migrate_server_with_qos_ports(self, new_flavor=None):
         non_qos_normal_port = self.neutron.port_1
@@ -6680,7 +6681,7 @@ class ServerMoveWithPortResourceRequestTest(
         self.assertEqual({}, migration_allocations)
 
         self._delete_server_and_check_allocations(
-            qos_normal_port, qos_sriov_port, server)
+            server, qos_normal_port, qos_sriov_port)
 
     def test_migrate_server_with_qos_ports(self):
         self._test_resize_or_migrate_server_with_qos_ports()
@@ -6737,7 +6738,7 @@ class ServerMoveWithPortResourceRequestTest(
         self.assertEqual({}, migration_allocations)
 
         self._delete_server_and_check_allocations(
-            qos_port, qos_sriov_port, server)
+            server, qos_port, qos_sriov_port)
 
     def test_migrate_revert_with_qos_ports(self):
         self._test_resize_or_migrate_revert_with_qos_ports()
@@ -6815,7 +6816,7 @@ class ServerMoveWithPortResourceRequestTest(
         self.assertEqual({}, migration_allocations)
 
         self._delete_server_and_check_allocations(
-            qos_port, qos_sriov_port, server)
+            server, qos_port, qos_sriov_port)
 
     def test_migrate_server_with_qos_port_reschedule_success(self):
         self._test_resize_or_migrate_server_with_qos_port_reschedule_success()
@@ -7172,7 +7173,7 @@ class ServerMoveWithPortResourceRequestTest(
             non_qos_normal_port, qos_normal_port, qos_sriov_port)
 
         self._delete_server_and_check_allocations(
-            qos_normal_port, qos_sriov_port, server)
+            server, qos_normal_port, qos_sriov_port)
 
     def test_evacuate_with_target_host_with_qos_port(self):
         self.test_evacuate_with_qos_port(host='host2')
@@ -7228,7 +7229,7 @@ class ServerMoveWithPortResourceRequestTest(
             qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
 
         self._delete_server_and_check_allocations(
-            qos_normal_port, qos_sriov_port, server)
+            server, qos_normal_port, qos_sriov_port)
 
     def test_evacuate_with_qos_port_pci_update_fail(self):
         # Update the name of the network device RP of PF2 on host2 to something

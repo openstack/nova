@@ -113,7 +113,7 @@ class NUMAServersTest(NUMAServersTestBase):
 
         self.assertEqual(end_status, found_server['status'])
 
-        self.addCleanup(self._delete_server, created_server_id)
+        self.addCleanup(self._delete_server, found_server)
         return created_server
 
     def test_create_server_with_numa_topology(self):
@@ -743,9 +743,9 @@ class ReshapeForPCPUsTest(NUMAServersTestBase):
             {'DISK_GB': 20, 'MEMORY_MB': 2048, 'PCPU': 2},
             allocations[compute_rp_uuid]['resources'])
 
-        self._delete_server(server1['id'])
-        self._delete_server(server2['id'])
-        self._delete_server(server3['id'])
+        self._delete_server(server1)
+        self._delete_server(server2)
+        self._delete_server(server3)
 
 
 class NUMAServersWithNetworksTest(NUMAServersTestBase):

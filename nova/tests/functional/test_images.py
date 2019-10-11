@@ -60,7 +60,7 @@ class ImagesTest(test_servers.ServersTestBase):
         self.assertFalse(found_image)
 
         # Cleanup
-        self._delete_server(server_id)
+        self._delete_server(found_server)
 
     def test_admin_snapshot_user_image_access_member(self):
         """Tests a scenario where a user in project A creates a server and

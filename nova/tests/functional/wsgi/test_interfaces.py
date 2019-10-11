@@ -144,4 +144,4 @@ class InterfaceFullstackWithNeutron(test_servers.ServersTestBase):
         self.assertEqual('SUSPENDED', found_server['status'])
 
         # Cleanup
-        self._delete_server(created_server_id)
+        self._delete_server(found_server)

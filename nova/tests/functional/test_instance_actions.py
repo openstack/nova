@@ -50,7 +50,7 @@ class InstanceActionsTestV2(test_servers.ServersTestBase):
 
     def test_get_instance_actions_deleted(self):
         server = self._create_server()
-        self._delete_server(server['id'])
+        self._delete_server(server)
         self.assertRaises(client.OpenStackApiNotFoundException,
                           self.api.get_instance_actions,
                           server['id'])
@@ -69,7 +69,7 @@ class InstanceActionsTestV221(InstanceActionsTestV21):
 
     def test_get_instance_actions_deleted(self):
         server = self._create_server()
-        self._delete_server(server['id'])
+        self._delete_server(server)
         actions = self.api.get_instance_actions(server['id'])
         self.assertEqual('delete', actions[0]['action'])
         self.assertEqual('create', actions[1]['action'])

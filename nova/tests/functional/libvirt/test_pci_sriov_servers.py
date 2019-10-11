@@ -80,7 +80,7 @@ class _PCIServersTestBase(base.ServersTestBase):
         found_server = self._wait_for_state_change(found_server, 'BUILD')
 
         self.assertEqual(end_status, found_server['status'])
-        self.addCleanup(self._delete_server, created_server_id)
+        self.addCleanup(self._delete_server, found_server)
         return created_server
 
 
