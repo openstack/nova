@@ -1660,7 +1660,7 @@ class ComputeTaskManager(base.Base):
             hosts_by_cell[hmap.cell_mapping.uuid].append(hostname)
 
         LOG.info('Preparing to request pre-caching of image(s) %(image_ids)s '
-                 'on %(hosts)i hosts across %(cells)s cells.',
+                 'on %(hosts)i hosts across %(cells)i cells.',
                  {'image_ids': ','.join(image_ids),
                   'hosts': len(aggregate.hosts),
                   'cells': len(hosts_by_cell)})
@@ -1688,6 +1688,8 @@ class ComputeTaskManager(base.Base):
         fetch_pool.waitall()
 
         clock.stop()
+        # FIXME(danms): Calculate some interesting statistics about the image
+        # download process to log for the admin.
         LOG.info('Image pre-cache operation for image(s) %(image_ids)s '
                  'completed in %(time).2f seconds',
                  {'image_ids': ','.join(image_ids),
