@@ -1582,6 +1582,22 @@ class ComputeDriver(object):
         """
         pass
 
+    def cache_image(self, context, image_id):
+        """Download an image into the cache.
+
+        Used by the compute manager in response to a request to pre-cache
+        an image on the compute node. If the driver implements an image cache,
+        it should implement this method as well and perform the same action
+        as it does during an on-demand base image fetch in response to a
+        spawn.
+
+        :returns: A boolean indicating whether or not the image was fetched.
+                  True if it was fetched, or False if it already exists in
+                  the cache.
+        :raises: An Exception on error
+        """
+        raise NotImplementedError()
+
     def add_to_aggregate(self, context, aggregate, host, **kwargs):
         """Add a compute host to an aggregate.
 

@@ -23533,6 +23533,61 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 </cpu>
 '''], 1)
 
+    @mock.patch('oslo_utils.fileutils.ensure_tree')
+    @mock.patch('os.path.isdir')
+    @mock.patch('os.path.exists')
+    @mock.patch('os.utime')
+    @mock.patch('nova.virt.images.fetch_to_raw')
+    def test_cache_image_uncached(self, mock_fetch, mock_utime, mock_exists,
+                                  mock_isdir, mock_et, first_time=False):
+        # NOTE(artom): This is not actually a path on the system, since we
+        # are fully mocked out and are just testing string formatting in this
+        # test.
+        self.flags(instances_path='/nova/instances')
+        self.flags(image_cache_subdirectory_name='cache')
+        expected_fn = os.path.join('/nova/instances/cache',
+                                   imagecache.get_cache_fname('an-image'))
+
+        mock_isdir.return_value = not first_time
+        mock_exists.return_value = False
+        self.assertTrue(self.drvr.cache_image(self.context, 'an-image'))
+        mock_fetch.assert_called_once_with(self.context, 'an-image',
+                                           expected_fn)
+        mock_utime.assert_not_called()
+        mock_exists.assert_called_once_with(expected_fn)
+        mock_isdir.assert_called_once_with('/nova/instances/cache')
+        if first_time:
+            mock_et.assert_called_once_with('/nova/instances/cache')
+        else:
+            mock_et.assert_not_called()
+
+    def test_cache_image_existing_first_time(self):
+        self.test_cache_image_uncached(first_time=True)
+
+    @mock.patch('oslo_utils.fileutils.ensure_tree')
+    @mock.patch('os.path.isdir')
+    @mock.patch('os.path.exists')
+    @mock.patch('nova.privsep.path.utime')
+    @mock.patch('nova.virt.images.fetch_to_raw')
+    def test_cache_image_existing(self, mock_fetch, mock_utime, mock_exists,
+                                  mock_isdir, mock_et):
+        # NOTE(artom): This is not actually a path on the system, since we
+        # are fully mocked out and are just testing string formatting in this
+        # test.
+        self.flags(instances_path='/nova/instances')
+        self.flags(image_cache_subdirectory_name='cache')
+        expected_fn = os.path.join('/nova/instances/cache',
+                                   imagecache.get_cache_fname('an-image'))
+
+        mock_isdir.return_value = True
+        mock_exists.return_value = True
+        self.assertFalse(self.drvr.cache_image(self.context, 'an-image'))
+        mock_utime.assert_called_once_with(expected_fn)
+        mock_fetch.assert_not_called()
+        mock_exists.assert_called_once_with(expected_fn)
+        mock_et.assert_not_called()
+        mock_isdir.assert_not_called()
+
 
 class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
     """Test for LibvirtDriver.get_all_volume_usage."""

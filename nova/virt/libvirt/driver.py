@@ -9643,6 +9643,41 @@ class LibvirtDriver(driver.ComputeDriver):
         except Exception:
             pass
 
+    def cache_image(self, context, image_id):
+        cache_dir = os.path.join(CONF.instances_path,
+                                 CONF.image_cache_subdirectory_name)
+        path = os.path.join(cache_dir,
+                            imagecache.get_cache_fname(image_id))
+        if os.path.exists(path):
+            LOG.info('Image %(image_id)s already cached; updating timestamp',
+                     {'image_id': image_id})
+            # NOTE(danms): The regular image cache routines use a wrapper
+            # (_update_utime_ignore_eacces()) around this to avoid failing
+            # on permissions (which may or may not be legit due to an NFS
+            # race). However, since this is best-effort, errors are swallowed
+            # by compute manager per-image, and we are compelled to report
+            # errors up our stack, we use the raw method here to avoid the
+            # silent ignore of the EACCESS.
+            nova.privsep.path.utime(path)
+            return False
+        else:
+            # NOTE(danms): In case we are running before the first boot, make
+            # sure the cache directory is created
+            if not os.path.isdir(cache_dir):
+                fileutils.ensure_tree(cache_dir)
+            LOG.info('Caching image %(image_id)s by request',
+                     {'image_id': image_id})
+            # NOTE(danms): The imagebackend code, as called via spawn() where
+            # images are normally cached, uses a lock on the root disk it is
+            # creating at the time, but relies on the
+            # compute_utils.disk_ops_semaphore for cache fetch mutual
+            # exclusion, which is grabbed in images.fetch() (which is called
+            # by images.fetch_to_raw() below). So, by calling fetch_to_raw(),
+            # we are sharing the same locking for the cache fetch as the
+            # rest of the code currently called only from spawn().
+            images.fetch_to_raw(context, image_id, path)
+            return True
+
     def _is_storage_shared_with(self, dest, inst_base):
         # NOTE (rmk): There are two methods of determining whether we are
         #             on the same filesystem: the source and dest IP are the
