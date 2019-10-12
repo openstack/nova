@@ -10251,7 +10251,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         compute_info = {'cpu_info': 'asdf', 'disk_available_least': 1}
 
         mock_cpu.side_effect = exception.InvalidCPUInfo(reason='foo')
-        self.assertRaises(exception.InvalidCPUInfo,
+        self.assertRaises(exception.MigrationPreCheckError,
                           drvr.check_can_live_migrate_destination,
                           self.context, instance_ref,
                           compute_info, compute_info, False)
@@ -10328,7 +10328,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         instance = objects.Instance(**self.test_instance)
         mock_compare.side_effect = fakelibvirt.libvirtError('cpu')
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.assertRaises(exception.MigrationPreCheckError,
+        self.assertRaises(exception.InvalidCPUInfo,
                           conn._compare_cpu, None,
                           jsonutils.dumps(_fake_cpu_info),
                           instance)
