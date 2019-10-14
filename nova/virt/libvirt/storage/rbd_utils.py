@@ -164,7 +164,7 @@ class RBDDriver(object):
             args.extend(['--conf', self.ceph_conf])
         return args
 
-    def get_mon_addrs(self):
+    def get_mon_addrs(self, strip_brackets=True):
         args = ['ceph', 'mon', 'dump', '--format=json'] + self.ceph_args()
         out, _ = processutils.execute(*args)
         lines = out.split('\n')
@@ -177,7 +177,9 @@ class RBDDriver(object):
         for addr in addrs:
             host_port = addr[:addr.rindex('/')]
             host, port = host_port.rsplit(':', 1)
-            hosts.append(host.strip('[]'))
+            if strip_brackets:
+                host = host.strip('[]')
+            hosts.append(host)
             ports.append(port)
         return hosts, ports
 

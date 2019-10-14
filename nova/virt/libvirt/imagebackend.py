@@ -989,7 +989,10 @@ class Rbd(Image):
                 CONF.libvirt.rbd_secret_uuid)
             secret = base64.b64encode(secretobj.value())
 
-        hosts, ports = self.driver.get_mon_addrs()
+        # Brackets are stripped from IPv6 addresses normally for libvirt XML,
+        # but the servers list is for libguestfs, which needs the brackets
+        # so the joined string is similar to '[::1]:6789'
+        hosts, ports = self.driver.get_mon_addrs(strip_brackets=False)
         servers = [str(':'.join(k)) for k in zip(hosts, ports)]
 
         return imgmodel.RBDImage(self.rbd_name,

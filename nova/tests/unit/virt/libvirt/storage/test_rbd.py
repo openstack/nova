@@ -239,6 +239,14 @@ class RbdTestCase(test.NoDBTestCase):
         ports = ['6789', '6790', '6791', '6792', '6791']
         self.assertEqual((hosts, ports), self.driver.get_mon_addrs())
 
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_get_mon_addrs_with_brackets(self, mock_execute):
+        mock_execute.return_value = (CEPH_MON_DUMP, '')
+        hosts = ['[::1]', '[::1]', '[::1]', '127.0.0.1', 'example.com']
+        ports = ['6789', '6790', '6791', '6792', '6791']
+        self.assertEqual((hosts, ports),
+                         self.driver.get_mon_addrs(strip_brackets=False))
+
     @mock.patch.object(rbd_utils.RBDDriver, '_connect_to_rados')
     def test_rbd_conf_features(self, mock_connect):
         self.mock_rbd.RBD_FEATURE_LAYERING = 1

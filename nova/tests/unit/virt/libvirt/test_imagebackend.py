@@ -1561,9 +1561,14 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         self.flags(rbd_secret_uuid="3306a5c4-8378-4b3c-aa1f-7b48d3a26172",
                    group='libvirt')
 
-        def get_mon_addrs():
-            hosts = ["server1", "server2"]
-            ports = ["1899", "1920"]
+        # image.get_model() should  always pass strip_brackets=False
+        # for building proper IPv6 address+ports for libguestfs
+        def get_mon_addrs(strip_brackets=True):
+            if strip_brackets:
+                hosts = ["server1", "server2", "::1"]
+            else:
+                hosts = ["server1", "server2", "[::1]"]
+            ports = ["1899", "1920", "1930"]
             return hosts, ports
         mock_mon_addrs.side_effect = get_mon_addrs
 
@@ -1574,7 +1579,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
             "FakePool",
             "FakeUser",
             b"MTIzNDU2Cg==",
-            ["server1:1899", "server2:1920"]),
+            ["server1:1899", "server2:1920", "[::1]:1930"]),
                          model)
 
     @mock.patch.object(rbd_utils.RBDDriver, 'flatten')
