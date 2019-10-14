@@ -288,6 +288,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
         self.fake_policy = jsonutils.loads(fake_policy.policy_data)
 
         self.admin_only_rules = (
+"compute:aggregates:images",
 "compute:server:topology:host:index",
 "network:attach_external_network",
 "os_compute_api:servers:create:forced_host",

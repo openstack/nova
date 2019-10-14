@@ -21,10 +21,12 @@ from webob import exc
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas import aggregate_images
 from nova.api.openstack.compute.schemas import aggregates
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute
+from nova.conductor import api as conductor
 from nova import exception
 from nova.i18n import _
 from nova.policies import aggregates as aggr_policies
@@ -39,6 +41,7 @@ class AggregateController(wsgi.Controller):
     def __init__(self):
         super(AggregateController, self).__init__()
         self.api = compute.AggregateAPI()
+        self.conductor_tasks = conductor.ComputeTaskAPI()
 
     @wsgi.expected_errors(())
     def index(self, req):
@@ -222,3 +225,30 @@ class AggregateController(wsgi.Controller):
                     key in aggregate.obj_extra_fields) and
                     (show_uuid or key != 'uuid')):
                 yield key, getattr(aggregate, key)
+
+    @wsgi.Controller.api_version('2.81')
+    @wsgi.response(202)
+    @wsgi.expected_errors((400, 404))
+    @validation.schema(aggregate_images.aggregate_images_v2_81)
+    def images(self, req, id, body):
+        """Allows image cache management requests."""
+        context = _get_context(req)
+        context.can(aggr_policies.NEW_POLICY_ROOT % 'images')
+
+        image_ids = []
+        for image_req in body.get('cache'):
+            image_ids.append(image_req['id'])
+
+        if image_ids != list(set(image_ids)):
+            raise exc.HTTPBadRequest(
+                explanation=_('Duplicate images in request'))
+
+        try:
+            aggregate = self.api.get_aggregate(context, id)
+        except exception.AggregateNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+
+        try:
+            self.conductor_tasks.cache_images(context, aggregate, image_ids)
+        except exception.NovaException as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())

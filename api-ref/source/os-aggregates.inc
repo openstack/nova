@@ -354,3 +354,36 @@ Response
 
 .. literalinclude:: ../../doc/api_samples/os-aggregates/v2.41/aggregates-metadata-post-resp.json
    :language: javascript
+
+Request Image Pre-caching for Aggregate
+=======================================
+
+.. rest_method:: POST /os-aggregates/{aggregate_id}/images
+
+Requests that a set of images be pre-cached on compute nodes within the referenced aggregate.
+
+This API is available starting with microversion 2.81.
+
+Normal response codes: 202
+
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - aggregate_id: aggregate_id
+  - cache: cache
+  - cache.id: image_id_body
+
+**Example Request Image pre-caching for Aggregate (v2.81): JSON request**
+
+.. literalinclude:: ../../doc/api_samples/os-aggregates/v2.81/aggregate-images-post-req.json
+   :language: javascript
+
+Response
+--------
+
+The response body is always empty.

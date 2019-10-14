@@ -19,6 +19,7 @@ from nova.policies import base
 
 
 POLICY_ROOT = 'os_compute_api:os-aggregates:%s'
+NEW_POLICY_ROOT = 'compute:aggregates:%s'
 
 
 aggregates_policies = [
@@ -100,6 +101,16 @@ aggregates_policies = [
             {
                 'path': '/os-aggregates/{aggregate_id}',
                 'method': 'GET'
+            }
+        ]),
+    policy.DocumentedRuleDefault(
+        NEW_POLICY_ROOT % 'images',
+        base.RULE_ADMIN_API,
+        "Request image caching for an aggregate",
+        [
+            {
+                'path': '/os-aggregates/{aggregate_id}/images',
+                'method': 'POST'
             }
         ]),
 ]

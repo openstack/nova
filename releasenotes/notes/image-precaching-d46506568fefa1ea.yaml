@@ -1,0 +1,15 @@
+---
+features:
+  - |
+    Image pre-caching on hosts by aggregate is now supported (where
+    supported by the underlying virt driver) as of microversion
+    2.81. A group of hosts within an aggregate can be compelled to
+    fetch and cache a list of images to reduce time-to-boot
+    latency. Adds the new API:
+
+    * ``POST /os-aggregates/{aggregate_id}/images``
+
+    which is controlled by the policy ``compute:aggregates:images`` rule.
+
+    See the `[image_cache]/precache_concurrency` config option
+    for more information about throttling this operation.

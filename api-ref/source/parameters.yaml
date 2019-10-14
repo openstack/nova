@@ -1997,6 +1997,11 @@ boot_index:
   in: body
   required: true
   type: integer
+cache:
+  description: A list of image objects to cache.
+  in: body
+  required: true
+  type: array
 certificate:
   description: |
     The certificate object.

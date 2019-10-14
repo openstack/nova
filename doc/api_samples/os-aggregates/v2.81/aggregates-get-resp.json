@@ -1,0 +1,16 @@
+{
+    "aggregate": {
+        "availability_zone": "london",
+        "created_at": "2019-10-11T14:19:07.366577",
+        "deleted": false,
+        "deleted_at": null,
+        "hosts": [],
+        "id": 1,
+        "metadata": {
+            "availability_zone": "london"
+        },
+        "name": "name",
+        "updated_at": null,
+        "uuid": "7c5ff84a-c901-4733-adf8-06875e265080"
+    }
+}

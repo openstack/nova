@@ -1048,3 +1048,9 @@ project, for example:
 * ``GET /os-migrations?user_id=ef9d34b4-45d0-4530-871b-3fb535988394``
 * ``GET /os-migrations?project_id=011ee9f4-8f16-4c38-8633-a254d420fd54``
 * ``GET /os-migrations?user_id=ef9d34b4-45d0-4530-871b-3fb535988394&project_id=011ee9f4-8f16-4c38-8633-a254d420fd54``
+
+2.81
+----
+
+Adds support for image cache management by aggregate by adding
+``POST /os-aggregates/{aggregate_id}/images``.
