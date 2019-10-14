@@ -12790,6 +12790,12 @@ class EvacuateHostTestCase(BaseTestCase):
             node = NODENAME
             limits = {}
 
+        @mock.patch(
+            'nova.compute.manager.ComputeManager._get_request_group_mapping',
+            return_value=mock.sentinel.mapping)
+        @mock.patch(
+            'nova.compute.manager.ComputeManager'
+            '._update_pci_request_spec_with_allocated_interface_name')
         @mock.patch('nova.compute.utils.notify_about_instance_action')
         @mock.patch('nova.compute.utils.notify_about_instance_rebuild')
         @mock.patch.object(network_api, 'setup_networks_on_host')
@@ -12797,7 +12803,8 @@ class EvacuateHostTestCase(BaseTestCase):
         @mock.patch('nova.context.RequestContext.elevated', return_value=ctxt)
         def _test_rebuild(mock_context, mock_setup_instance_network_on_host,
                           mock_setup_networks_on_host, mock_notify_rebuild,
-                          mock_notify_action, vm_is_stopped=False):
+                          mock_notify_action, mock_update_pci_req,
+                          mock_get_mapping, vm_is_stopped=False):
             orig_image_ref = None
             image_ref = None
             injected_files = None
@@ -12830,8 +12837,12 @@ class EvacuateHostTestCase(BaseTestCase):
             mock_setup_networks_on_host.assert_called_once_with(
                 ctxt, self.inst, self.inst.host)
             mock_setup_instance_network_on_host.assert_called_once_with(
-                ctxt, self.inst, self.inst.host, migration)
+                ctxt, self.inst, self.inst.host, migration,
+                provider_mappings=mock.sentinel.mapping)
             self.mock_get_allocs.assert_called_once_with(ctxt, self.inst.uuid)
+
+            mock_update_pci_req.assert_called_once_with(
+                ctxt, self.inst, mock.sentinel.mapping)
 
         _test_rebuild(vm_is_stopped=vm_states_is_stopped)
 

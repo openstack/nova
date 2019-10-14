@@ -1501,8 +1501,14 @@ class _BaseTaskTestCase(object):
             mock.patch.object(self.conductor_manager.compute_rpcapi,
                               'rebuild_instance'),
             mock.patch.object(self.conductor_manager.query_client,
-                              'select_destinations')
-        ) as (rebuild_mock, select_dest_mock):
+                              'select_destinations'),
+            mock.patch('nova.scheduler.utils.fill_provider_mapping',
+                       new_callable=mock.NonCallableMock),
+            mock.patch('nova.network.neutronv2.api.API.'
+                       'get_requested_resource_for_instance',
+                       new_callable=mock.NonCallableMock)
+        ) as (rebuild_mock, select_dest_mock, fill_provider_mock,
+              get_resources_mock):
             self.conductor_manager.rebuild_instance(context=self.context,
                                             instance=inst_obj,
                                             **rebuild_args)
@@ -1632,6 +1638,41 @@ class _BaseTaskTestCase(object):
         migration = objects.Migration.get_by_id(self.context, migration.id)
         self.assertEqual('error', migration.status)
 
+    def test_rebuild_instance_fill_provider_mapping_raises(self):
+        inst_obj = self._create_fake_instance_obj()
+        rebuild_args, _ = self._prepare_rebuild_args(
+            {'host': None, 'recreate': True})
+        fake_spec = objects.RequestSpec()
+        rebuild_args['request_spec'] = fake_spec
+
+        with test.nested(
+            mock.patch.object(self.conductor_manager.compute_rpcapi,
+                              'rebuild_instance'),
+            mock.patch.object(scheduler_utils, 'setup_instance_group',
+                              return_value=False),
+            mock.patch.object(self.conductor_manager.query_client,
+                              'select_destinations'),
+            mock.patch.object(scheduler_utils, 'set_vm_state_and_notify'),
+            mock.patch.object(scheduler_utils, 'fill_provider_mapping',
+                              side_effect=ValueError(
+                                  'No valid group - RP mapping is found'))
+        ) as (rebuild_mock, sig_mock,
+              select_dest_mock, set_vm_state_and_notify_mock,
+              fill_mapping_mock):
+
+            self.assertRaises(ValueError,
+                              self.conductor_manager.rebuild_instance,
+                              context=self.context, instance=inst_obj,
+                              **rebuild_args)
+            select_dest_mock.assert_called_once_with(self.context, fake_spec,
+                    [inst_obj.uuid], return_objects=True,
+                    return_alternates=False)
+            set_vm_state_and_notify_mock.assert_called_once_with(
+                self.context, inst_obj.uuid, 'compute_task', 'rebuild_server',
+                {'vm_state': vm_states.ERROR, 'task_state': None},
+                test.MatchType(ValueError), fake_spec)
+            self.assertFalse(rebuild_mock.called)
+
     def test_rebuild_instance_evacuate_migration_record(self):
         inst_obj = self._create_fake_instance_obj()
         migration = objects.Migration(context=self.context,
@@ -1681,7 +1722,13 @@ class _BaseTaskTestCase(object):
                               'select_destinations',
                               return_value=[[fake_selection]]),
             mock.patch.object(fake_spec, 'reset_forced_destinations'),
-        ) as (rebuild_mock, sig_mock, select_dest_mock, reset_fd):
+            mock.patch('nova.scheduler.utils.fill_provider_mapping'),
+            mock.patch(
+                'nova.network.neutronv2.api.API.'
+                'get_requested_resource_for_instance',
+                return_value=[])
+        ) as (rebuild_mock, sig_mock, select_dest_mock, reset_fd,
+              fill_rp_mapping_mock, get_req_res_mock):
             self.conductor_manager.rebuild_instance(context=self.context,
                                             instance=inst_obj,
                                             **rebuild_args)
@@ -1696,6 +1743,12 @@ class _BaseTaskTestCase(object):
             rebuild_mock.assert_called_once_with(self.context,
                                             instance=inst_obj,
                                             **compute_args)
+            get_req_res_mock.assert_called_once_with(
+                self.context, inst_obj.uuid)
+            fill_rp_mapping_mock.assert_called_once_with(
+                self.context, self.conductor_manager.report_client,
+                fake_spec, fake_selection)
+
         self.assertEqual('compute.instance.rebuild.scheduled',
                          fake_notifier.NOTIFICATIONS[0].event_type)
         mock_notify.assert_called_once_with(

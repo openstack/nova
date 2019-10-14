@@ -3396,6 +3396,16 @@ class ComputeManager(manager.Manager):
             allocations, rebuild_claim, scheduled_node, limits):
         """Helper to avoid deep nesting in the top-level method."""
 
+        request_group_resource_providers_mapping = None
+        if evacuate:
+            request_group_resource_providers_mapping = \
+                self._get_request_group_mapping(request_spec)
+
+            if request_group_resource_providers_mapping:
+                self._update_pci_request_spec_with_allocated_interface_name(
+                    context, instance,
+                    request_group_resource_providers_mapping)
+
         claim_context = rebuild_claim(
             context, instance, scheduled_node, allocations,
             limits=limits, image_meta=image_meta, migration=migration)
@@ -3404,7 +3414,8 @@ class ComputeManager(manager.Manager):
             self._do_rebuild_instance(
                 context, instance, orig_image_ref, image_meta, injected_files,
                 new_pass, orig_sys_metadata, bdms, evacuate, on_shared_storage,
-                preserve_ephemeral, migration, request_spec, allocations)
+                preserve_ephemeral, migration, request_spec, allocations,
+                request_group_resource_providers_mapping)
 
     @staticmethod
     def _get_image_name(image_meta):
@@ -3417,7 +3428,8 @@ class ComputeManager(manager.Manager):
                              image_meta, injected_files, new_pass,
                              orig_sys_metadata, bdms, evacuate,
                              on_shared_storage, preserve_ephemeral,
-                             migration, request_spec, allocations):
+                             migration, request_spec, allocations,
+                             request_group_resource_providers_mapping):
         orig_vm_state = instance.vm_state
 
         if evacuate:
@@ -3504,7 +3516,8 @@ class ComputeManager(manager.Manager):
             # TODO(cfriesen): this network_api call and the one above
             # are so similar, we should really try to unify them.
             self.network_api.setup_instance_network_on_host(
-                    context, instance, self.host, migration)
+                context, instance, self.host, migration,
+                provider_mappings=request_group_resource_providers_mapping)
             # TODO(mriedem): Consider decorating setup_instance_network_on_host
             # with @base_api.refresh_cache and then we wouldn't need this
             # explicit call to get_instance_nw_info.

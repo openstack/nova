@@ -5207,7 +5207,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                               orig_sys_metadata, bdms,
                                               recreate, on_shared_storage,
                                               preserve_ephemeral, {}, {},
-                                              self.allocations)
+                                              self.allocations,
+                                              mock.sentinel.mapping)
 
             mock_notify_usage.assert_has_calls(
                 [mock.call(self.context, instance, "rebuild.start",
@@ -5220,8 +5221,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.assertTrue(mock_notify_exists.called)
             mock_setup.assert_called_once_with(self.context, instance,
                                                mock.ANY)
-            mock_setup_inst.assert_called_once_with(self.context, instance,
-                                                    mock.ANY, mock.ANY)
+            mock_setup_inst.assert_called_once_with(
+                self.context, instance, mock.ANY, mock.ANY,
+                provider_mappings=mock.sentinel.mapping)
             mock_get_nw_info.assert_called_once_with(self.context, instance)
 
     def test_rebuild_default_impl(self):
@@ -5304,7 +5306,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 evacuate=False, on_shared_storage=None,
                 preserve_ephemeral=False, migration=objects.Migration(),
                 request_spec=objects.RequestSpec(),
-                allocations=self.allocations)
+                allocations=self.allocations,
+                request_group_resource_providers_mapping=mock.sentinel.mapping)
         self.assertIn('Trusted image certificates provided on host',
                       six.text_type(ex))
 

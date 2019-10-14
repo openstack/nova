@@ -355,8 +355,9 @@ class NetworkAPI(base.Base):
         """
         raise NotImplementedError()
 
-    def setup_instance_network_on_host(self, context, instance, host,
-                                       migration=None):
+    def setup_instance_network_on_host(
+            self, context, instance, host, migration=None,
+            provider_mappings=None):
         """Setup network for specified instance on host.
 
         :param context: The request context.
@@ -364,6 +365,8 @@ class NetworkAPI(base.Base):
         :param host: The host which network should be setup for instance.
         :param migration: The migration object if the instance is being
                           tracked with a migration.
+        :param provider_mappings: a dict of lists of resource provider uuids
+            keyed by port uuid
         """
         raise NotImplementedError()
 

@@ -1077,9 +1077,16 @@ class ComputeTaskManager(base.Base):
                     # if we want to make sure that the next destination
                     # is not forced to be the original host
                     request_spec.reset_forced_destinations()
-                    # TODO(gibi): We need to make sure that the
-                    # requested_resources field is re calculated based on
-                    # neutron ports.
+
+                    port_res_req = (
+                        self.network_api.get_requested_resource_for_instance(
+                            context, instance.uuid))
+                    # NOTE(gibi): When cyborg or other module wants to handle
+                    # similar non-nova resources then here we have to collect
+                    # all the external resource requests in a single list and
+                    # add them to the RequestSpec.
+                    request_spec.requested_resources = port_res_req
+
                 try:
                     # if this is a rebuild of instance on the same host with
                     # new image.
@@ -1091,6 +1098,7 @@ class ComputeTaskManager(base.Base):
                     request_spec.ensure_network_metadata(instance)
                     compute_utils.heal_reqspec_is_bfv(
                         context, request_spec, instance)
+
                     host_lists = self._schedule_instances(context,
                             request_spec, [instance.uuid],
                             return_alternates=False)
@@ -1098,9 +1106,19 @@ class ComputeTaskManager(base.Base):
                     selection = host_list[0]
                     host, node, limits = (selection.service_host,
                             selection.nodename, selection.limits)
+
+                    if recreate:
+                        scheduler_utils.fill_provider_mapping(
+                            context, self.report_client, request_spec,
+                            selection)
+
                 except (exception.NoValidHost,
                         exception.UnsupportedPolicyException,
-                        exception.AllocationUpdateFailed) as ex:
+                        exception.AllocationUpdateFailed,
+                        # the next two can come from fill_provider_mapping and
+                        # signals a software error.
+                        NotImplementedError,
+                        ValueError) as ex:
                     if migration:
                         migration.status = 'error'
                         migration.save()
