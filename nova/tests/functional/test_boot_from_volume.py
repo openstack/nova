@@ -196,9 +196,12 @@ class BootFromVolumeLargeRequestTest(test.TestCase,
         # We only care about API performance in this test case so stub out
         # conductor to not do anything.
         self.useFixture(nova_fixtures.NoopConductorFixture())
-        images = self.api.get_images()
-        image1 = images[0]['id']
-        image2 = images[1]['id']
+        # NOTE(gibi): Do not use 'c905cedb-7281-47e4-8a62-f26bc5fc4c77' image
+        # as that is defined with a separate kernel image, leading to one extra
+        # call to nova.image.api.API.get from compute.api
+        # _handle_kernel_and_ramdisk()
+        image1 = 'a2459075-d96c-40d5-893e-577ff92e721c'
+        image2 = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         server = self._build_minimal_create_server_request(
             self.api, 'test_boot_from_volume_10_servers_255_volumes_2_images')
         server.pop('imageRef')
