@@ -321,6 +321,11 @@ MIN_LIBVIRT_LUKS_VERSION = (2, 2, 0)
 MIN_QEMU_LUKS_VERSION = (2, 6, 0)
 
 
+# If the host has this libvirt version, then we skip the retry loop of
+# instance destroy() call, as libvirt itself increased the wait time
+# before the SIGKILL signal takes effect.
+MIN_LIBVIRT_BETTER_SIGKILL_HANDLING = (4, 7, 0)
+
 VGPU_RESOURCE_SEMAPHORE = "vgpu_resources"
 
 
@@ -934,18 +939,36 @@ class LibvirtDriver(driver.ComputeDriver):
                         # steal time from the cloud host. ie 15 wallclock
                         # seconds may have passed, but the VM might have only
                         # have a few seconds of scheduled run time.
-                        LOG.warning('Error from libvirt during destroy. '
-                                    'Code=%(errcode)s Error=%(e)s; '
-                                    'attempt %(attempt)d of 3',
-                                    {'errcode': errcode, 'e': e,
-                                     'attempt': attempt},
-                                    instance=instance)
+                        #
+                        # TODO(kchamart): Once MIN_LIBVIRT_VERSION
+                        # reaches v4.7.0, (a) rewrite the above note,
+                        # and (b) remove the following code that retries
+                        # _destroy() API call (which gives SIGKILL 30
+                        # seconds to take effect) -- because from v4.7.0
+                        # onwards, libvirt _automatically_ increases the
+                        # timeout to 30 seconds.  This was added in the
+                        # following libvirt commits:
+                        #
+                        #   - 9a4e4b942 (process: wait longer 5->30s on
+                        #     hard shutdown)
+                        #
+                        #   - be2ca0444 (process: wait longer on kill
+                        #     per assigned Hostdev)
                         with excutils.save_and_reraise_exception() as ctxt:
-                            # Try up to 3 times before giving up.
-                            if attempt < 3:
-                                ctxt.reraise = False
-                                self._destroy(instance, attempt + 1)
-                                return
+                            if not self._host.has_min_version(
+                                    MIN_LIBVIRT_BETTER_SIGKILL_HANDLING):
+                                LOG.warning('Error from libvirt during '
+                                            'destroy. Code=%(errcode)s '
+                                            'Error=%(e)s; attempt '
+                                            '%(attempt)d of 6 ',
+                                            {'errcode': errcode, 'e': e,
+                                             'attempt': attempt},
+                                            instance=instance)
+                                # Try up to 6 times before giving up.
+                                if attempt < 6:
+                                    ctxt.reraise = False
+                                    self._destroy(instance, attempt + 1)
+                                    return
 
                 if not is_okay:
                     with excutils.save_and_reraise_exception():
