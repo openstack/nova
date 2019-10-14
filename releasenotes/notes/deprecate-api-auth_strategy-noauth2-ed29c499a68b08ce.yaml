@@ -1,0 +1,7 @@
+---
+deprecations:
+  - |
+    The ``[api]auth_strategy`` conf option and the corresponding test-only
+    ``noauth2`` pipeline in ``api-paste.ini`` are deprecated and will be
+    removed in a future release. The only supported ``auth_strategy`` is
+    ``keystone``, the default.
