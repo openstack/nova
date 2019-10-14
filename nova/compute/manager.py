@@ -521,7 +521,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='5.4')
+    target = messaging.Target(version='5.5')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -4802,6 +4802,79 @@ class ComputeManager(manager.Manager):
         else:
             # not re-scheduling
             six.reraise(*exc_info)
+
+    @messaging.expected_exceptions(exception.MigrationPreCheckError)
+    @wrap_exception()
+    @wrap_instance_event(prefix='compute')
+    @wrap_instance_fault
+    def prep_snapshot_based_resize_at_dest(
+            self, ctxt, instance, flavor, nodename, migration, limits,
+            request_spec):
+        """Performs pre-cross-cell resize resource claim on the dest host.
+
+        This runs on the destination host in a cross-cell resize operation
+        before the resize is actually started.
+
+        Performs a resize_claim for resources that are not claimed in placement
+        like PCI devices and NUMA topology.
+
+        Note that this is different from same-cell prep_resize in that this:
+
+        * Does not RPC cast to the source compute, that is orchestrated from
+          conductor.
+        * This does not reschedule on failure, conductor handles that since
+          conductor is synchronously RPC calling this method. As such, the
+          reverts_task_state decorator is not used on this method.
+
+        :param ctxt: user auth request context
+        :param instance: the instance being resized
+        :param flavor: the flavor being resized to (unchanged for cold migrate)
+        :param nodename: Name of the target compute node
+        :param migration: nova.objects.Migration object for the operation
+        :param limits: nova.objects.SchedulerLimits object of resource limits
+        :param request_spec: nova.objects.RequestSpec object for the operation
+        :returns: nova.objects.MigrationContext; the migration context created
+            on the destination host during the resize_claim.
+        :raises: nova.exception.MigrationPreCheckError if the pre-check
+            validation fails for the given host selection
+        """
+        LOG.debug('Checking if we can cross-cell migrate instance to this '
+                  'host (%s).', self.host, instance=instance)
+        self._send_prep_resize_notifications(
+            ctxt, instance, fields.NotificationPhase.START, flavor)
+        # TODO(mriedem): _update_pci_request_spec_with_allocated_interface_name
+        # should be called here if the request spec has request group mappings,
+        # e.g. for things like QoS ports with resource requests. Do it outside
+        # the try/except so if it raises BuildAbortException we do not attempt
+        # to reschedule.
+        try:
+            # Get the allocations within the try/except block in case we get
+            # an error so MigrationPreCheckError is raised up.
+            allocations = self.reportclient.get_allocs_for_consumer(
+                ctxt, instance.uuid)['allocations']
+            # Claim resources on this target host using the new flavor which
+            # will create the MigrationContext object. Note that in the future
+            # if we want to do other validation here we should do it within
+            # the MoveClaim context so we can drop the claim if anything fails.
+            self.rt.resize_claim(
+                ctxt, instance, flavor, nodename, migration, allocations,
+                image_meta=instance.image_meta, limits=limits)
+        except Exception as ex:
+            err = six.text_type(ex)
+            LOG.warning(
+                'Cross-cell resize pre-checks failed for this host (%s). '
+                'Cleaning up. Failure: %s', self.host, err,
+                instance=instance, exc_info=True)
+            raise exception.MigrationPreCheckError(
+                reason=(_("Pre-checks failed on host '%(host)s'. "
+                          "Error: %(error)s") %
+                        {'host': self.host, 'error': err}))
+        finally:
+            self._send_prep_resize_notifications(
+                ctxt, instance, fields.NotificationPhase.END, flavor)
+
+        # ResourceTracker.resize_claim() sets instance.migration_context.
+        return instance.migration_context
 
     @wrap_exception()
     @reverts_task_state

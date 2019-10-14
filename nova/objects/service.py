@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 41
+SERVICE_VERSION = 42
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -163,6 +163,8 @@ SERVICE_VERSION_HISTORY = (
     {'compute_rpc': '5.3'},
     # Version 41: Add cache_images() to compute rpcapi (version 5.4)
     {'compute_rpc': '5.4'},
+    # Version 42: Compute RPC version 5.5; +prep_snapshot_based_resize_at_dest
+    {'compute_rpc': '5.5'},
 )
 
 

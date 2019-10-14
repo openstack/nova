@@ -371,6 +371,7 @@ class ComputeAPI(object):
                 check_can_live_migrate_destination(), and a new
                 drop_move_claim_at_destination() method
         * 5.4 - Add cache_images() support
+        * 5.5 - Add prep_snapshot_based_resize_at_dest()
     '''
 
     VERSION_ALIASES = {
@@ -844,6 +845,52 @@ class ComputeAPI(object):
             version = '5.0'
         cctxt = client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'prep_resize', **msg_args)
+
+    def prep_snapshot_based_resize_at_dest(
+            self, ctxt, instance, flavor, nodename, migration, limits,
+            request_spec, destination):
+        """Performs pre-cross-cell resize resource claim on the dest host.
+
+        This runs on the destination host in a cross-cell resize operation
+        before the resize is actually started.
+
+        Performs a resize_claim for resources that are not claimed in placement
+        like PCI devices and NUMA topology.
+
+        Note that this is different from same-cell prep_resize in that this:
+
+        * Does not RPC cast to the source compute, that is orchestrated from
+          conductor.
+        * This does not reschedule on failure, conductor handles that since
+          conductor is synchronously RPC calling this method.
+
+        :param ctxt: user auth request context
+        :param instance: the instance being resized
+        :param flavor: the flavor being resized to (unchanged for cold migrate)
+        :param nodename: Name of the target compute node
+        :param migration: nova.objects.Migration object for the operation
+        :param limits: nova.objects.SchedulerLimits object of resource limits
+        :param request_spec: nova.objects.RequestSpec object for the operation
+        :param destination: possible target host for the cross-cell resize
+        :returns: nova.objects.MigrationContext; the migration context created
+            on the destination host during the resize_claim.
+        :raises: nova.exception.MigrationPreCheckError if the pre-check
+            validation fails for the given host selection or the destination
+            compute service is too old for this method
+        :raises: oslo_messaging.exceptions.MessagingTimeout if the pre-check
+            RPC call times out
+        """
+        version = '5.5'
+        client = self.router.client(ctxt)
+        if not client.can_send_version(version):
+            raise exception.MigrationPreCheckError(reason=_('Compute too old'))
+        cctxt = client.prepare(server=destination, version=version,
+                               call_monitor_timeout=CONF.rpc_response_timeout,
+                               timeout=CONF.long_rpc_timeout)
+        return cctxt.call(ctxt, 'prep_snapshot_based_resize_at_dest',
+                          instance=instance, flavor=flavor, nodename=nodename,
+                          migration=migration, limits=limits,
+                          request_spec=request_spec)
 
     def reboot_instance(self, ctxt, instance, block_device_info,
                         reboot_type):
