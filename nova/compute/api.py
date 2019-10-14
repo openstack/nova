@@ -103,7 +103,7 @@ AGGREGATE_ACTION_UPDATE = 'Update'
 AGGREGATE_ACTION_UPDATE_META = 'UpdateMeta'
 AGGREGATE_ACTION_DELETE = 'Delete'
 AGGREGATE_ACTION_ADD = 'Add'
-MIN_COMPUTE_ABORT_QUEUED_LIVE_MIGRATION = 34
+
 MIN_COMPUTE_SYNC_COMPUTE_STATUS_DISABLED = 38
 
 # FIXME(danms): Keep a global cache of the cells we find the
@@ -4573,15 +4573,6 @@ class API(base.Base):
             # compute service hosting the instance is new enough to support
             # aborting a queued/preparing live migration, so we check the
             # service version here.
-            # TODO(Kevin_Zheng): This service version check can be removed in
-            # Stein (at the earliest) when the API only supports Rocky or
-            # newer computes.
-            if migration.status in queued_states:
-                service = objects.Service.get_by_compute_host(
-                    context, instance.host)
-                if service.version < MIN_COMPUTE_ABORT_QUEUED_LIVE_MIGRATION:
-                    raise exception.AbortQueuedLiveMigrationNotYetSupported(
-                        migration_id=migration_id, status=migration.status)
             allowed_states.extend(queued_states)
 
         if migration.status not in allowed_states:
