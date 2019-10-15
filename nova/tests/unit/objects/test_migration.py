@@ -139,8 +139,8 @@ class _TestMigrationObject(object):
         self.assertEqual(fake_migration['dest_compute'], mig.dest_compute)
         self.assertIn('uuid', mig)
         self.assertFalse(mig.cross_cell_move)
-        self.assertEqual('fake-user', mig['user_id'])
-        self.assertEqual('fake-project', mig['project_id'])
+        self.assertEqual('fake-user', mig.user_id)
+        self.assertEqual('fake-project', mig.project_id)
         mock_create.assert_called_once_with(ctxt,
                                             {'source_compute': 'foo',
                                              'migration_type': 'resize',
