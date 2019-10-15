@@ -39,6 +39,8 @@ Request
   - marker: migration_marker
   - changes-since: changes_since_migration
   - changes-before: changes_before_migration
+  - user_id: user_id_query_migrations
+  - project_id: project_id_query_migrations
 
 Response
 --------
@@ -62,19 +64,20 @@ Response
   - links: migration_links_2_23
   - uuid: migration_uuid
   - migrations_links: migration_next_links_2_59
+  - user_id: user_id_migration_2_80
+  - project_id: project_id_migration_2_80
 
 **Example List Migrations: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-migrations/migrations-get.json
    :language: javascript
 
-**Example List Migrations (v2.59):**
+**Example List Migrations (v2.80):**
 
-.. literalinclude:: ../../doc/api_samples/os-migrations/v2.59/migrations-get.json
+.. literalinclude:: ../../doc/api_samples/os-migrations/v2.80/migrations-get.json
    :language: javascript
 
-**Example List Migrations With Paging (v2.59):**
+**Example List Migrations With Paging (v2.80):**
 
-.. literalinclude:: ../../doc/api_samples/os-migrations/v2.59/migrations-get-with-limit.json
+.. literalinclude:: ../../doc/api_samples/os-migrations/v2.80/migrations-get-with-limit.json
    :language: javascript
-

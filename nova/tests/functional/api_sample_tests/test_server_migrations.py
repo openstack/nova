@@ -245,3 +245,64 @@ class ServerMigrationsSampleJsonTestV2_65(ServerMigrationsSampleJsonTestV2_24):
         uri = 'servers/%s/migrations/%s' % (self.uuid, self.migration.id)
         response = self._do_delete(uri)
         self.assertEqual(202, response.status_code)
+
+
+class ServerMigrationsSampleJsonTestV2_80(
+        ServerMigrationsSampleJsonTestV2_65):
+    microversion = '2.80'
+    scenarios = [('v2_80', {'api_major_version': 'v2.1'})]
+
+    UUID_1 = '4cfba335-03d8-49b2-8c52-e69043d1e8fe'
+    UUID_2 = '058fc419-a8a8-4e08-b62c-a9841ef9cd3f'
+
+    USER_ID = '8dbaa0f0-ab95-4ffe-8cb4-9c89d2ac9d24'
+    PROJECT_ID = '5f705771-3aa9-4f4c-8660-0d9522ffdbea'
+
+    fake_migrations = [
+        {
+            'source_node': 'node1',
+            'dest_node': 'node2',
+            'source_compute': 'compute1',
+            'dest_compute': 'compute2',
+            'dest_host': '1.2.3.4',
+            'status': 'running',
+            'instance_uuid': UUID_1,
+            'migration_type': 'live-migration',
+            'hidden': False,
+            'memory_total': 123456,
+            'memory_processed': 12345,
+            'memory_remaining': 111111,
+            'disk_total': 234567,
+            'disk_processed': 23456,
+            'disk_remaining': 211111,
+            'created_at': datetime.datetime(2016, 0o1, 29, 13, 42, 2),
+            'updated_at': datetime.datetime(2016, 0o1, 29, 13, 42, 2),
+            'deleted_at': None,
+            'deleted': False,
+            'user_id': USER_ID,
+            'project_id': PROJECT_ID
+        },
+        {
+            'source_node': 'node10',
+            'dest_node': 'node20',
+            'source_compute': 'compute10',
+            'dest_compute': 'compute20',
+            'dest_host': '5.6.7.8',
+            'status': 'migrating',
+            'instance_uuid': UUID_2,
+            'migration_type': 'resize',
+            'hidden': False,
+            'memory_total': 456789,
+            'memory_processed': 56789,
+            'memory_remaining': 400000,
+            'disk_total': 96789,
+            'disk_processed': 6789,
+            'disk_remaining': 90000,
+            'created_at': datetime.datetime(2016, 0o1, 22, 13, 42, 2),
+            'updated_at': datetime.datetime(2016, 0o1, 22, 13, 42, 2),
+            'deleted_at': None,
+            'deleted': False,
+            'user_id': USER_ID,
+            'project_id': PROJECT_ID
+        }
+    ]

@@ -1133,6 +1133,13 @@ progress_query_server:
   in: query
   required: false
   type: integer
+project_id_query_migrations:
+  description: |
+    Filter the migrations by the given project ID.
+  in: query
+  required: false
+  type: string
+  min_version: 2.80
 project_id_query_server:
   description: |
     Filter the list of servers by the given project ID.
@@ -1409,6 +1416,13 @@ usage_marker:
   required: false
   type: string
   min_version: 2.40
+user_id_query_migrations:
+  description: |
+    Filter the migrations by the given user ID.
+  in: query
+  required: false
+  type: string
+  min_version: 2.80
 user_id_query_quota:
   description: |
     ID of user to list the quotas for.
@@ -5697,6 +5711,14 @@ project_id:
   in: body
   required: false
   type: string
+project_id_migration_2_80:
+  description: |
+    The ID of the project which initiated the server migration. The value
+    may be ``null`` for older migration records.
+  in: body
+  required: true
+  type: string
+  min_version: 2.80
 project_id_server:
   description: |
     The ID of the project that this server belongs to.
@@ -7113,6 +7135,14 @@ user_id:
   in: body
   required: true
   type: string
+user_id_migration_2_80:
+  description: |
+    The ID of the user which initiated the server migration. The value
+    may be ``null`` for older migration records.
+  in: body
+  required: true
+  type: string
+  min_version: 2.80
 user_id_server_action:
   description: |
     The ID of the user which initiated the server action.

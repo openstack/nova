@@ -26,7 +26,7 @@ from nova.i18n import _
 from nova.policies import servers_migrations as sm_policies
 
 
-def output(migration, include_uuid=False):
+def output(migration, include_uuid=False, include_user_project=False):
     """Returns the desired output of the API from an object.
 
     From a Migrations's object this method returns the primitive
@@ -52,6 +52,9 @@ def output(migration, include_uuid=False):
     }
     if include_uuid:
         result['uuid'] = migration.uuid
+    if include_user_project:
+        result['user_id'] = migration.user_id
+        result['project_id'] = migration.project_id
     return result
 
 
@@ -101,8 +104,11 @@ class ServerMigrationsController(wsgi.Controller):
                 context, server_id, 'live-migration')
 
         include_uuid = api_version_request.is_supported(req, '2.59')
-        return {'migrations': [output(
-            migration, include_uuid) for migration in migrations]}
+
+        include_user_project = api_version_request.is_supported(req, '2.80')
+        return {'migrations': [
+            output(migration, include_uuid, include_user_project)
+            for migration in migrations]}
 
     @wsgi.Controller.api_version("2.23")
     @wsgi.expected_errors(404)
@@ -136,7 +142,10 @@ class ServerMigrationsController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
 
         include_uuid = api_version_request.is_supported(req, '2.59')
-        return {'migration': output(migration, include_uuid)}
+
+        include_user_project = api_version_request.is_supported(req, '2.80')
+        return {'migration': output(migration, include_uuid,
+                                    include_user_project)}
 
     @wsgi.Controller.api_version("2.24")
     @wsgi.response(202)

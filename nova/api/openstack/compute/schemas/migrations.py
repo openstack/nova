@@ -47,3 +47,11 @@ list_query_params_v266['properties'].update({
     'changes-before': parameter_types.single_param(
         {'type': 'string', 'format': 'date-time'}),
 })
+
+list_query_params_v280 = copy.deepcopy(list_query_params_v266)
+list_query_params_v280['properties'].update({
+    # The 2.80 microversion added support for filtering migrations
+    # by user_id and/or project_id
+    'user_id': parameter_types.single_param({'type': 'string'}),
+    'project_id': parameter_types.single_param({'type': 'string'}),
+})

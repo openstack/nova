@@ -368,6 +368,10 @@ class ServerMigrationsTestsV265(ServerMigrationsTestsV224):
         _do_test()
 
 
+class ServerMigrationsTestsV280(ServerMigrationsTestsV265):
+    wsgi_api_version = '2.80'
+
+
 class ServerMigrationsPolicyEnforcementV21(test.NoDBTestCase):
     wsgi_api_version = '2.22'
 

@@ -211,6 +211,12 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              this via the response from
              ``GET /servers/{server_id}/os-volume_attachments`` and
              ``GET /servers/{server_id}/os-volume_attachments/{volume_id}``.
+    * 2.80 - Adds support for optional query parameters ``user_id`` and
+             ``project_id`` to the ``GET /os-migrations`` API and exposes
+             ``user_id`` and ``project_id`` via the response from
+             ``GET /os-migrations``,
+             ``GET /servers/{server_id}/migrations``, and
+             ``GET /servers/{server_id}/migrations/{migration_id}``.
 """
 
 # The minimum and maximum versions of the API supported
@@ -219,7 +225,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.79"
+_MAX_API_VERSION = "2.80"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which are related to network, images and baremetal

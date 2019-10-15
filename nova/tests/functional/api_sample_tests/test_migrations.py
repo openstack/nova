@@ -315,3 +315,125 @@ class MigrationsSamplesJsonTestV2_66(MigrationsSamplesJsonTestV2_59):
         self._verify_response(
             'migrations-get-with-changes-before',
             {"instance_1": INSTANCE_UUID_1}, response, 200)
+
+
+class MigrationsSamplesJsonTestV2_80(MigrationsSamplesJsonTestV2_66):
+
+    microversion = '2.80'
+    scenarios = [('v2_80', {'api_major_version': 'v2.1'})]
+    USER_ID1 = "5c48ebaa-193f-4c5d-948a-f559cc92cd5e"
+    PROJECT_ID1 = "ef92ccff-00f3-46e4-b015-811110e36ee4"
+    USER_ID2 = "78348f0e-97ee-4d70-ad34-189692673ea2"
+    PROJECT_ID2 = "9842f0f7-1229-4355-afe7-15ebdbb8c3d8"
+
+    fake_migrations = [
+        # in-progress live-migration.
+        {
+            'source_node': 'node1',
+            'dest_node': 'node2',
+            'source_compute': 'compute1',
+            'dest_compute': 'compute2',
+            'dest_host': '1.2.3.4',
+            'status': 'running',
+            'instance_uuid': INSTANCE_UUID_1,
+            'old_instance_type_id': 1,
+            'new_instance_type_id': 1,
+            'migration_type': 'live-migration',
+            'hidden': False,
+            'created_at': datetime.datetime(2016, 0o1, 29, 11, 42, 2),
+            'updated_at': datetime.datetime(2016, 0o1, 29, 11, 42, 2),
+            'deleted_at': None,
+            'deleted': False,
+            'uuid': '12341d4b-346a-40d0-83c6-5f4f6892b650',
+            'cross_cell_move': False,
+            'user_id': USER_ID1,
+            'project_id': PROJECT_ID1
+        },
+        # non in-progress live-migration.
+        {
+            'source_node': 'node1',
+            'dest_node': 'node2',
+            'source_compute': 'compute1',
+            'dest_compute': 'compute2',
+            'dest_host': '1.2.3.4',
+            'status': 'error',
+            'instance_uuid': INSTANCE_UUID_1,
+            'old_instance_type_id': 1,
+            'new_instance_type_id': 1,
+            'migration_type': 'live-migration',
+            'hidden': False,
+            'created_at': datetime.datetime(2016, 0o1, 29, 12, 42, 2),
+            'updated_at': datetime.datetime(2016, 0o1, 29, 12, 42, 2),
+            'deleted_at': None,
+            'deleted': False,
+            'uuid': '22341d4b-346a-40d0-83c6-5f4f6892b650',
+            'cross_cell_move': False,
+            'user_id': USER_ID1,
+            'project_id': PROJECT_ID1
+        },
+        # non in-progress resize.
+        {
+            'source_node': 'node10',
+            'dest_node': 'node20',
+            'source_compute': 'compute10',
+            'dest_compute': 'compute20',
+            'dest_host': '5.6.7.8',
+            'status': 'error',
+            'instance_uuid': INSTANCE_UUID_2,
+            'old_instance_type_id': 5,
+            'new_instance_type_id': 6,
+            'migration_type': 'resize',
+            'hidden': False,
+            'created_at': datetime.datetime(2016, 0o6, 23, 13, 42, 2),
+            'updated_at': datetime.datetime(2016, 0o6, 23, 13, 42, 2),
+            'deleted_at': None,
+            'deleted': False,
+            'uuid': '32341d4b-346a-40d0-83c6-5f4f6892b650',
+            'cross_cell_move': False,
+            'user_id': USER_ID2,
+            'project_id': PROJECT_ID2
+        },
+        # in-progress resize.
+        {
+            'source_node': 'node10',
+            'dest_node': 'node20',
+            'source_compute': 'compute10',
+            'dest_compute': 'compute20',
+            'dest_host': '5.6.7.8',
+            'status': 'migrating',
+            'instance_uuid': INSTANCE_UUID_2,
+            'old_instance_type_id': 5,
+            'new_instance_type_id': 6,
+            'migration_type': 'resize',
+            'hidden': False,
+            'created_at': datetime.datetime(2016, 0o6, 23, 14, 42, 2),
+            'updated_at': datetime.datetime(2016, 0o6, 23, 14, 42, 2),
+            'deleted_at': None,
+            'deleted': False,
+            'uuid': '42341d4b-346a-40d0-83c6-5f4f6892b650',
+            'cross_cell_move': False,
+            'user_id': USER_ID2,
+            'project_id': PROJECT_ID2
+        }
+    ]
+
+    def test_get_migrations_with_user_id(self):
+        response = self._do_get('os-migrations?user_id=%s' % self.USER_ID1)
+        self.assertEqual(200, response.status_code)
+        self._verify_response('migrations-get-with-user-or-project-id',
+                              {"instance_1": INSTANCE_UUID_1}, response, 200)
+
+    def test_get_migrations_with_project_id(self):
+        response = self._do_get('os-migrations?project_id=%s'
+                                % self.PROJECT_ID1)
+        self.assertEqual(200, response.status_code)
+        self._verify_response('migrations-get-with-user-or-project-id',
+                              {"instance_1": INSTANCE_UUID_1}, response, 200)
+
+    def test_get_migrations_with_user_and_project_id(self):
+        response = self._do_get('os-migrations?user_id=%s&project_id=%s'
+                                % (self.USER_ID1, self.PROJECT_ID1))
+        self.assertEqual(200, response.status_code)
+        self._verify_response(
+            'migrations-get-with-user-or-project-id',
+            {"instance_1": INSTANCE_UUID_1}, response, 200)

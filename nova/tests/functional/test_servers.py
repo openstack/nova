@@ -1613,6 +1613,95 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
                       'volume-backed server', six.text_type(resp))
 
 
+class ServersTestV280(ServersTestBase):
+    api_major_version = 'v2.1'
+
+    def setUp(self):
+        super(ServersTestV280, self).setUp()
+        api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
+            api_version='v2.1'))
+        self.api = api_fixture.api
+        self.admin_api = api_fixture.admin_api
+
+        self.api.microversion = '2.80'
+        self.admin_api.microversion = '2.80'
+
+    def test_get_migrations_after_cold_migrate_server_in_same_project(
+            self):
+        # Create a server by non-admin
+        server = self.api.post_server({
+            'server': {
+                'flavorRef': 1,
+                'imageRef': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
+                'name': 'migrate-server-test',
+                'networks': 'none'
+            }})
+        server_id = server['id']
+
+        # Check it's there
+        found_server = self.api.get_server(server_id)
+        self.assertEqual(server_id, found_server['id'])
+
+        self.start_service('compute', host='host2')
+
+        post = {'migrate': {}}
+        self.admin_api.post_server_action(server_id, post)
+
+        # Get the migration records by admin
+        migrations = self.admin_api.get_migrations(
+            user_id=self.admin_api.auth_user)
+        self.assertEqual(1, len(migrations))
+        self.assertEqual(server_id, migrations[0]['instance_uuid'])
+
+        # Get the migration records by non-admin
+        migrations = self.admin_api.get_migrations(
+            user_id=self.api.auth_user)
+        self.assertEqual([], migrations)
+
+    def test_get_migrations_after_live_migrate_server_in_different_project(
+            self):
+        # Create a server by non-admin
+        server = self.api.post_server({
+            'server': {
+                'flavorRef': 1,
+                'imageRef': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
+                'name': 'migrate-server-test',
+                'networks': 'none'
+            }})
+        server_id = server['id']
+
+        # Check it's there
+        found_server = self.api.get_server(server_id)
+        self.assertEqual(server_id, found_server['id'])
+
+        server = self._wait_for_state_change(found_server, 'BUILD')
+
+        self.start_service('compute', host='host2')
+
+        project_id_1 = '4906260553374bf0a5d566543b320516'
+        project_id_2 = 'c850298c1b6b4796a8f197ac310b2469'
+        new_api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
+            api_version=self.api_major_version, project_id=project_id_1))
+        new_admin_api = new_api_fixture.admin_api
+        new_admin_api.microversion = '2.80'
+
+        post = {
+            'os-migrateLive': {
+                'host': 'host2',
+                'block_migration': True
+            }
+        }
+        new_admin_api.post_server_action(server_id, post)
+        # Get the migration records
+        migrations = new_admin_api.get_migrations(project_id=project_id_1)
+        self.assertEqual(1, len(migrations))
+        self.assertEqual(server_id, migrations[0]['instance_uuid'])
+
+        # Get the migration records by not exist project_id
+        migrations = new_admin_api.get_migrations(project_id=project_id_2)
+        self.assertEqual([], migrations)
+
+
 class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
     """Tests moving servers while checking the resource allocations and usages
 
