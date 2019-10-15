@@ -20,6 +20,7 @@ import oslo_messaging as messaging
 from nova import baserpc
 from nova.conductor import rpcapi
 import nova.conf
+from nova import image
 
 CONF = nova.conf.CONF
 
@@ -83,6 +84,7 @@ class ComputeTaskAPI(object):
 
     def __init__(self):
         self.conductor_compute_rpcapi = rpcapi.ComputeTaskAPI()
+        self.image_api = image.API()
 
     # TODO(stephenfin): Remove the 'reservations' parameter since we don't use
     # reservations anymore
@@ -155,3 +157,20 @@ class ComputeTaskAPI(object):
                 preserve_ephemeral=preserve_ephemeral,
                 host=host,
                 request_spec=request_spec)
+
+    def cache_images(self, context, aggregate, image_ids):
+        """Request images be pre-cached on hosts within an aggregate.
+
+        :param context: The RequestContext
+        :param aggregate: The objects.Aggregate representing the hosts to
+                          contact
+        :param image_ids: A list of image ID strings to send to the hosts
+        """
+        for image_id in image_ids:
+            # Validate that we can get the image by id before we go
+            # ask a bunch of hosts to do the same. We let this bubble
+            # up to the API, which catches NovaException for the 4xx and
+            # otherwise 500s if this fails in some unexpected way.
+            self.image_api.get(context, image_id)
+        self.conductor_compute_rpcapi.cache_images(context, aggregate,
+                                                   image_ids)

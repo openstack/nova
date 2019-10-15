@@ -16,6 +16,7 @@
 
 import contextlib
 import copy
+import eventlet
 import functools
 import sys
 
@@ -230,7 +231,7 @@ class ComputeTaskManager(base.Base):
     may involve coordinating activities on multiple compute nodes.
     """
 
-    target = messaging.Target(namespace='compute_task', version='1.20')
+    target = messaging.Target(namespace='compute_task', version='1.21')
 
     def __init__(self):
         super(ComputeTaskManager, self).__init__()
@@ -1629,3 +1630,70 @@ class ComputeTaskManager(base.Base):
                         pass
             return False
         return True
+
+    def cache_images(self, context, aggregate, image_ids):
+        """Cache a set of images on the set of hosts in an aggregate.
+
+        :param context: The RequestContext
+        :param aggregate: The Aggregate object from the request to constrain
+                          the host list
+        :param image_id: The IDs of the image to cache
+        """
+
+        # TODO(danms): Fix notification sample for IMAGE_CACHE action
+        compute_utils.notify_about_aggregate_action(
+            context, aggregate,
+            fields.NotificationAction.IMAGE_CACHE,
+            fields.NotificationPhase.START)
+
+        clock = timeutils.StopWatch()
+        threads = CONF.image_cache.precache_concurrency
+        fetch_pool = eventlet.GreenPool(size=threads)
+
+        hosts_by_cell = {}
+        cells_by_uuid = {}
+        # TODO(danms): Make this a much more efficient bulk query
+        for hostname in aggregate.hosts:
+            hmap = objects.HostMapping.get_by_host(context, hostname)
+            cells_by_uuid.setdefault(hmap.cell_mapping.uuid, hmap.cell_mapping)
+            hosts_by_cell.setdefault(hmap.cell_mapping.uuid, [])
+            hosts_by_cell[hmap.cell_mapping.uuid].append(hostname)
+
+        LOG.info('Preparing to request pre-caching of image(s) %(image_ids)s '
+                 'on %(hosts)i hosts across %(cells)s cells.',
+                 {'image_ids': ','.join(image_ids),
+                  'hosts': len(aggregate.hosts),
+                  'cells': len(hosts_by_cell)})
+        clock.start()
+
+        for cell_uuid, hosts in hosts_by_cell.items():
+            cell = cells_by_uuid[cell_uuid]
+            with nova_context.target_cell(context, cell) as target_ctxt:
+                for host in hosts:
+                    service = objects.Service.get_by_compute_host(target_ctxt,
+                                                                  host)
+                    if not self.servicegroup_api.service_is_up(service):
+                        LOG.info(
+                            'Skipping image pre-cache request to compute '
+                            '%(host)r because it is not up',
+                            {'host': host})
+                        continue
+
+                    fetch_pool.spawn_n(self.compute_rpcapi.cache_images,
+                                       target_ctxt,
+                                       host=host,
+                                       image_ids=image_ids)
+
+        # Wait until all those things finish
+        fetch_pool.waitall()
+
+        clock.stop()
+        LOG.info('Image pre-cache operation for image(s) %(image_ids)s '
+                 'completed in %(time).2f seconds',
+                 {'image_ids': ','.join(image_ids),
+                  'time': clock.elapsed()})
+
+        compute_utils.notify_about_aggregate_action(
+            context, aggregate,
+            fields.NotificationAction.IMAGE_CACHE,
+            fields.NotificationPhase.END)
