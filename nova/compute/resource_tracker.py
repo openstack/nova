@@ -1574,8 +1574,12 @@ class ResourceTracker(object):
                           "Deleting allocations that remained for this "
                           "instance against this compute host: %s.",
                           instance_uuid, alloc)
+                # We don't force delete the allocation in this case because if
+                # there is a conflict we'll retry on the next
+                # update_available_resource periodic run.
                 self.reportclient.delete_allocation_for_instance(context,
-                                                                 instance_uuid)
+                                                                 instance_uuid,
+                                                                 force=False)
                 continue
             if not instance.host:
                 # Allocations related to instances being scheduled should not
@@ -1643,8 +1647,8 @@ class ResourceTracker(object):
 
     def delete_allocation_for_shelve_offloaded_instance(self, context,
                                                         instance):
-        self.reportclient.delete_allocation_for_instance(context,
-                                                         instance.uuid)
+        self.reportclient.delete_allocation_for_instance(
+            context, instance.uuid, force=True)
 
     def _verify_resources(self, resources):
         resource_keys = ["vcpus", "memory_mb", "local_gb", "cpu_info",

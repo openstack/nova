@@ -1049,8 +1049,8 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         instance_uuids = [uuids.instance1, uuids.instance2]
         self.manager._cleanup_allocations(self.context, instance_uuids)
         mock_delete_alloc.assert_has_calls([
-            mock.call(self.context, uuids.instance1),
-            mock.call(self.context, uuids.instance2)
+            mock.call(self.context, uuids.instance1, force=True),
+            mock.call(self.context, uuids.instance2, force=True),
         ])
 
     def test_add_retry_host(self):

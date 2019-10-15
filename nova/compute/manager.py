@@ -825,8 +825,13 @@ class ComputeManager(manager.Manager):
     def _complete_deletion(self, context, instance):
         self._update_resource_tracker(context, instance)
 
+        # If we're configured to do deferred deletes, don't force deletion of
+        # allocations if there's a conflict.
+        force = False if CONF.reclaim_instance_interval > 0 else True
+
         self.reportclient.delete_allocation_for_instance(context,
-                                                         instance.uuid)
+                                                         instance.uuid,
+                                                         force=force)
 
         self._clean_instance_console_tokens(context, instance)
         self._delete_scheduler_instance_info(context, instance.uuid)
@@ -2134,7 +2139,7 @@ class ComputeManager(manager.Manager):
                         # have already been removed in
                         # self._do_build_and_run_instance().
                         self.reportclient.delete_allocation_for_instance(
-                            context, instance.uuid)
+                            context, instance.uuid, force=True)
 
                     if result in (build_results.FAILED,
                                   build_results.RESCHEDULED):
@@ -2252,8 +2257,8 @@ class ComputeManager(manager.Manager):
             # to unclaim those resources before casting to the conductor, so
             # that if there are alternate hosts available for a retry, it can
             # claim resources on that new host for the instance.
-            self.reportclient.delete_allocation_for_instance(context,
-                                                             instance.uuid)
+            self.reportclient.delete_allocation_for_instance(
+                context, instance.uuid, force=True)
 
             self.compute_task_api.build_instances(context, [instance],
                     image, filter_properties, admin_password,
@@ -4426,7 +4431,8 @@ class ComputeManager(manager.Manager):
             # NOTE(danms): We're finishing on the source node, so try
             # to delete the allocation based on the migration uuid
             self.reportclient.delete_allocation_for_instance(
-                context, migration.uuid, consumer_type='migration')
+                context, migration.uuid, consumer_type='migration',
+                force=False)
         except exception.AllocationDeleteFailed:
             LOG.error('Deleting allocation in placement for migration '
                       '%(migration_uuid)s failed. The instance '
@@ -6670,8 +6676,8 @@ class ComputeManager(manager.Manager):
                 # the instance claim failed with ComputeResourcesUnavailable
                 # or if we did claim but the spawn failed, because aborting the
                 # instance claim will not remove the allocations.
-                self.reportclient.delete_allocation_for_instance(context,
-                                                                 instance.uuid)
+                self.reportclient.delete_allocation_for_instance(
+                    context, instance.uuid, force=True)
                 # FIXME: Umm, shouldn't we be rolling back port bindings too?
                 self._terminate_volume_connections(context, instance, bdms)
                 # The reverts_task_state decorator on unshelve_instance will

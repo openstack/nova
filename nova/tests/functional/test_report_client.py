@@ -245,8 +245,8 @@ class SchedulerReportClientTests(test.TestCase):
         self.assertEqual(2, vcpu_data)
 
         # Delete allocations with our instance
-        self.client.delete_allocation_for_instance(self.context,
-                                                   self.instance.uuid)
+        self.client.delete_allocation_for_instance(
+            self.context, self.instance.uuid, force=True)
 
         # No usage
         resp = self.client.get('/resource_providers/%s/usages' %

@@ -2200,7 +2200,7 @@ class API:
         # mapping queued as deleted before _delete() return
         try:
             self.placementclient.delete_allocation_for_instance(
-                context, instance_uuid)
+                context, instance_uuid, force=True)
         except exception.AllocationDeleteFailed:
             LOG.info("Allocation delete failed during local delete cleanup.",
                      instance_uuid=instance_uuid)
@@ -2512,7 +2512,7 @@ class API:
             # Cleanup allocations in Placement since we can't do it from the
             # compute service.
             self.placementclient.delete_allocation_for_instance(
-                context, instance.uuid)
+                context, instance.uuid, force=True)
             cb(context, instance, bdms, local=True)
             instance.destroy()
 
