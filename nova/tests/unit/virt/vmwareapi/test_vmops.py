@@ -939,6 +939,9 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                 extra_specs={})
         self._vmops._resize_vm(self._context, self._instance, 'vm-ref', flavor,
                                None)
+        fake_get_metadata.assert_called_once_with(self._context,
+                                                  self._instance,
+                                                  flavor=flavor)
         fake_resize_spec.assert_called_once_with(
             self._session.vim.client.factory, 2, 1024, extra_specs,
                 metadata=self._metadata)
@@ -2806,6 +2809,30 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                     "imageid:70a599e0-31e7-49b7-b260-868f441e862b\n"
                     "package:%s\n" % version.version_string_with_package())
         self.assertEqual(expected, metadata)
+
+    def test_get_instance_metadata_flavor(self):
+        # Construct a flavor different from instance.flavor
+        flavor_int_meta_fields = ['memory_mb',
+                                  'vcpus',
+                                  'root_gb',
+                                  'ephemeral_gb',
+                                  'swap']
+        flavor = self._instance.flavor.obj_clone()
+        for field in flavor_int_meta_fields:
+            # Set int fields of flavor to instance.flavor value + 1
+            setattr(flavor, field, getattr(self._instance.flavor, field) + 1)
+        flavor.name = self._instance.flavor.name + '1'
+
+        metadata = self._vmops._get_instance_metadata(
+            self._context, self._instance, flavor)
+
+        # Verify metadata contains the values from flavor parameter
+        meta_lines = metadata.split('\n')
+        flavor_meta_fields = flavor_int_meta_fields[:]
+        flavor_meta_fields.append('name')
+        for field in flavor_meta_fields:
+            meta_repr = 'flavor:%s:%s' % (field, getattr(flavor, field))
+            self.assertIn(meta_repr, meta_lines)
 
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(vm_util, 'reconfigure_vm')
