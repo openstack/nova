@@ -11,6 +11,7 @@
 # under the License.
 
 from nova.compute import instance_actions
+from nova.compute import manager as compute_manager
 from nova.scheduler.client import query as query_client
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit.image import fake as fake_image
@@ -128,5 +129,31 @@ class DeletedServerAllocationRevertTest(
             'conductor_live_migrate_instance', api=self.api)
         self._assert_no_allocations(server)
 
-    # TODO(mriedem): Should have similar tests for resize failing in the
-    # compute service rather than conductor.
+    def test_migrate_on_compute_fail(self):
+        """Tests a scenario where during the _prep_resize on the dest host
+        the instance is gone which triggers a failure and revert of the
+        migration-based allocations created in conductor.
+        """
+        server, source_host, target_host = self._create_server(
+            'test_resize_on_compute_fail')
+
+        # Wrap _prep_resize so we can concurrently delete the server.
+        original_prep_resize = compute_manager.ComputeManager._prep_resize
+
+        def wrap_prep_resize(*args, **kwargs):
+            self.api.delete_server(server['id'])
+            self._wait_until_deleted(server)
+            return original_prep_resize(*args, **kwargs)
+
+        self.stub_out('nova.compute.manager.ComputeManager._prep_resize',
+                      wrap_prep_resize)
+
+        # Now start the cold migration which will fail in the dest compute.
+        self.api.post_server_action(server['id'], {'migrate': None})
+        # We cannot monitor the migration from the API since it is deleted
+        # when the instance is deleted so just wait for the failed instance
+        # action event after the allocation revert happens.
+        self._wait_for_action_fail_completion(
+            server, instance_actions.MIGRATE, 'compute_prep_resize',
+            api=self.api)
+        self._assert_no_allocations(server)
