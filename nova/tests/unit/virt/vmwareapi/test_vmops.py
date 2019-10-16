@@ -30,6 +30,7 @@ from nova import exception
 from nova.network import model as network_model
 from nova import objects
 from nova import test
+from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
@@ -1116,8 +1117,7 @@ class VMwareVMOpsTestCase(test.TestCase):
         self._vmops.migrate_disk_and_power_off(self._context,
                                                self._instance,
                                                None,
-                                               flavor,
-                                               None)
+                                               flavor)
 
         fake_get_vm_ref.assert_called_once_with(self._session,
                                                 self._instance)
@@ -1134,6 +1134,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                  for i in range(4)]
         fake_progress.assert_has_calls(calls)
 
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
     @mock.patch.object(vmops.VMwareVMOps, "_remove_ephemerals_and_swap")
     @mock.patch.object(vm_util, 'get_vmdk_info')
     @mock.patch.object(vmops.VMwareVMOps, "_resize_disk")
@@ -1145,24 +1146,52 @@ class VMwareVMOpsTestCase(test.TestCase):
                                          fake_get_vm_ref, fake_progress,
                                          fake_power_off, fake_resize_vm,
                                          fake_resize_disk, fake_get_vmdk_info,
-                                         fake_remove_ephemerals_and_swap):
+                                         fake_remove_ephemerals_and_swap,
+                                         fake_bdm_get_by_instance_uuid):
         # shrinking the root-disk should be ignored
         flavor_root_gb = self._instance.flavor.root_gb - 1
 
-        self._instance.image_ref = None
-        connection_info1 = {'data': 'fake-data1', 'serial': 'volume-fake-id1'}
-        connection_info2 = {'data': 'fake-data2', 'serial': 'volume-fake-id2'}
-        connection_info3 = {'data': 'fake-data3', 'serial': 'volume-fake-id3'}
-        bdm = [{'boot_index': 0,
-                'connection_info': connection_info1,
-                'disk_bus': constants.ADAPTER_TYPE_IDE},
-               {'boot_index': 1,
-                'connection_info': connection_info2,
-                'disk_bus': constants.DEFAULT_ADAPTER_TYPE},
-               {'boot_index': 2,
-                'connection_info': connection_info3,
-                'disk_bus': constants.ADAPTER_TYPE_LSILOGICSAS}]
-        bdi = {'block_device_mapping': bdm}
+        bdms = objects.block_device.block_device_make_list_from_dicts(
+            self._context, [
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 1,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/sda', 'tag': "db",
+                     'volume_id': uuids.volume_1,
+                     'boot_index': 0}),
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 2,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/hda', 'tag': "nfvfunc1",
+                     'volume_id': uuids.volume_2}),
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 3,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/sdb', 'tag': "nfvfunc2",
+                     'volume_id': uuids.volume_3}),
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 4,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/hdb',
+                     'volume_id': uuids.volume_4}),
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 5,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/vda', 'tag': "nfvfunc3",
+                     'volume_id': uuids.volume_5}),
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 6,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/vdb', 'tag': "nfvfunc4",
+                     'volume_id': uuids.volume_6}),
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 7,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/vdc', 'tag': "nfvfunc5",
+                     'volume_id': uuids.volume_7}),
+            ]
+        )
+        fake_bdm_get_by_instance_uuid.return_value = bdms
 
         vmdk = vm_util.VmdkInfo('[fake] uuid/root.vmdk',
                                 'fake-adapter',
@@ -1175,8 +1204,7 @@ class VMwareVMOpsTestCase(test.TestCase):
         self._vmops.migrate_disk_and_power_off(self._context,
                                                self._instance,
                                                None,
-                                               flavor,
-                                               bdi)
+                                               flavor)
 
         fake_get_vm_ref.assert_called_once_with(self._session,
                                                 self._instance)
