@@ -432,7 +432,7 @@
         - legacy-tempest-dsvm-full-devstack-plugin-nfs:
             irrelevant-files: *dsvm-irrelevant-files
         - nova-osprofiler-redis
-        - tempest-full-py3-opensuse150:
+        - tempest-full-py3-opensuse15:
             irrelevant-files: *dsvm-irrelevant-files
         - tempest-pg-full:
             irrelevant-files: *dsvm-irrelevant-files
