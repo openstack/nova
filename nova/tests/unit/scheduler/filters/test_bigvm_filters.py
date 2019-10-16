@@ -178,3 +178,194 @@ class TestBigVmClusterUtilizationFilter(test.NoDBTestCase):
                  'free_ram_mb': total_ram - (total_ram * hv_percent / 100.0),
                  'total_usable_ram_mb': total_ram})
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+
+class TestBigVmFlavorHostSizeFilter(test.NoDBTestCase):
+    def setUp(self):
+        super(TestBigVmFlavorHostSizeFilter, self).setUp()
+        self.hv_size = CONF.bigvm_mb + 1024
+        self.filt_cls = bigvm_filter.BigVmFlavorHostSizeFilter()
+        self.filt_cls._HV_SIZE_CACHE = {
+            uuidsentinel.host1: self.hv_size,
+            'last_modified': time.time()
+        }
+
+    def test_big_vm_with_small_vm_passes(self):
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(memory_mb=1024, extra_specs={}))
+        host = fakes.FakeHostState('host1', 'compute', {})
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_baremetal_instance_passes(self):
+        extra_specs = {'capabilities:cpu_arch': 'x86_64'}
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(memory_mb=CONF.bigvm_mb,
+                                  extra_specs=extra_specs))
+        host = fakes.FakeHostState('host1', 'compute', {})
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_big_vm_without_hv_size(self):
+        """If there's no inventory for this host, it should not even have
+        passed placement API checks, so we stop it here.
+        """
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(memory_mb=CONF.bigvm_mb, extra_specs={}))
+        host = fakes.FakeHostState('host1', 'compute',
+                {'uuid': uuidsentinel.host1})
+        self.filt_cls._HV_SIZE_CACHE[host.uuid] = None
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_memory_match_with_tolerance(self):
+        """We only accept tolerance below not above the given value."""
+
+        def call(a, b):
+            return self.filt_cls._memory_match_with_tolerance(a, b)
+
+        self.filt_cls._HV_SIZE_TOLERANCE_PERCENT = 10
+        self.assertTrue(call(1024, 1024 - 1024 * 0.1))
+        self.assertFalse(call(1024, 1024 - 1024 * 0.1 - 1))
+        self.assertTrue(call(1024, 1024))
+        self.assertFalse(call(1024, 1025))
+
+        self.filt_cls._HV_SIZE_TOLERANCE_PERCENT = 50
+        self.assertTrue(call(1024, 512))
+        self.assertFalse(call(1024, 511))
+
+    def test_big_vm_with_matching_full_size(self):
+        """Test automatic full size matching."""
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(memory_mb=CONF.bigvm_mb, extra_specs={}))
+        host = fakes.FakeHostState('host1', 'compute',
+                {'uuid': uuidsentinel.host1})
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_big_vm_with_matching_half_size(self):
+        """Test automatic full size matching."""
+        CONF.set_override('bigvm_host_size_filter_host_fractions',
+                          {'full': '1', 'half': '0.5'}, 'filter_scheduler')
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(memory_mb=CONF.bigvm_mb, extra_specs={}))
+        host = fakes.FakeHostState('host1', 'compute',
+                {'uuid': uuidsentinel.host1})
+        self.filt_cls._HV_SIZE_CACHE[host.uuid] = CONF.bigvm_mb * 2 + 1024
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_big_vm_with_half_size_not_defined(self):
+        """Test automatic full size matching."""
+        CONF.set_override('bigvm_host_size_filter_host_fractions',
+                          {'full': '1'}, 'filter_scheduler')
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(memory_mb=CONF.bigvm_mb, extra_specs={}))
+        host = fakes.FakeHostState('host1', 'compute',
+                {'uuid': uuidsentinel.host1})
+        self.filt_cls._HV_SIZE_CACHE[host.uuid] = CONF.bigvm_mb * 2 + 1024
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_big_vm_without_matching_size(self):
+        """Fails both half and full size test"""
+        CONF.set_override('bigvm_host_size_filter_host_fractions',
+                          {'full': '1', 'half': '0.5'}, 'filter_scheduler')
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(memory_mb=CONF.bigvm_mb, extra_specs={}))
+        host = fakes.FakeHostState('host1', 'compute',
+                {'uuid': uuidsentinel.host1})
+        self.filt_cls._HV_SIZE_CACHE[host.uuid] = CONF.bigvm_mb * 1.5 + 1024
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_extra_specs_without_key(self):
+        """If we don't have the extra spec set, we fail"""
+        CONF.set_override('bigvm_host_size_filter_uses_flavor_extra_specs',
+                          True, 'filter_scheduler')
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(memory_mb=CONF.bigvm_mb, extra_specs={},
+                                  name='random-name'))
+        host = fakes.FakeHostState('host1', 'compute',
+                {'uuid': uuidsentinel.host1})
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_extra_specs_invalid_value(self):
+        """invalid value in extra specs makes it unscheduleable"""
+        CONF.set_override('bigvm_host_size_filter_uses_flavor_extra_specs',
+                          True, 'filter_scheduler')
+        CONF.set_override('bigvm_host_size_filter_host_fractions',
+                          {'full': '1', 'half': '0.5'}, 'filter_scheduler')
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(memory_mb=CONF.bigvm_mb,
+                                  extra_specs={'host_fraction': 'any'},
+                                  name='random-name'))
+        host = fakes.FakeHostState('host1', 'compute',
+                {'uuid': uuidsentinel.host1})
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_extra_specs_full_positive(self):
+        """test specified full size"""
+        CONF.set_override('bigvm_host_size_filter_uses_flavor_extra_specs',
+                          True, 'filter_scheduler')
+        CONF.set_override('bigvm_host_size_filter_host_fractions',
+                          {'full': '1', 'half': '0.5'}, 'filter_scheduler')
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(memory_mb=CONF.bigvm_mb,
+                                  extra_specs={'host_fraction': 'full'},
+                                  name='random-name'))
+        host = fakes.FakeHostState('host1', 'compute',
+                {'uuid': uuidsentinel.host1})
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_extra_specs_full_negative(self):
+        """test specified full size"""
+        CONF.set_override('bigvm_host_size_filter_uses_flavor_extra_specs',
+                          True, 'filter_scheduler')
+        CONF.set_override('bigvm_host_size_filter_host_fractions',
+                          {'full': '1', 'half': '0.5'}, 'filter_scheduler')
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(memory_mb=CONF.bigvm_mb,
+                                  extra_specs={'host_fraction': 'full'},
+                                  name='random-name'))
+        host = fakes.FakeHostState('host1', 'compute',
+                {'uuid': uuidsentinel.host1})
+        self.filt_cls._HV_SIZE_CACHE[host.uuid] = CONF.bigvm_mb * 2 + 1024
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_extra_specs_half_positive(self):
+        """test specified half size"""
+        CONF.set_override('bigvm_host_size_filter_uses_flavor_extra_specs',
+                          True, 'filter_scheduler')
+        CONF.set_override('bigvm_host_size_filter_host_fractions',
+                          {'full': '1', 'half': '0.5'}, 'filter_scheduler')
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(memory_mb=CONF.bigvm_mb,
+                                  extra_specs={'host_fraction': 'full,half'},
+                                  name='random-name'))
+        host = fakes.FakeHostState('host1', 'compute',
+                {'uuid': uuidsentinel.host1})
+        self.filt_cls._HV_SIZE_CACHE[host.uuid] = CONF.bigvm_mb * 2 + 1024
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_extra_specs_half_positive_with_unknown(self):
+        """test specified half size"""
+        CONF.set_override('bigvm_host_size_filter_uses_flavor_extra_specs',
+                          True, 'filter_scheduler')
+        CONF.set_override('bigvm_host_size_filter_host_fractions',
+                          {'full': '1', 'half': '0.5'}, 'filter_scheduler')
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(memory_mb=CONF.bigvm_mb,
+                                  extra_specs={'host_fraction': 'broken,half'},
+                                  name='random-name'))
+        host = fakes.FakeHostState('host1', 'compute',
+                {'uuid': uuidsentinel.host1})
+        self.filt_cls._HV_SIZE_CACHE[host.uuid] = CONF.bigvm_mb * 2 + 1024
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_extra_specs_half_negative(self):
+        """test specified half size"""
+        CONF.set_override('bigvm_host_size_filter_uses_flavor_extra_specs',
+                          True, 'filter_scheduler')
+        CONF.set_override('bigvm_host_size_filter_host_fractions',
+                          {'full': '1', 'half': '0.5'}, 'filter_scheduler')
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(memory_mb=CONF.bigvm_mb,
+                                  extra_specs={'host_fraction': 'half'},
+                                  name='random-name'))
+        host = fakes.FakeHostState('host1', 'compute',
+                {'uuid': uuidsentinel.host1})
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
