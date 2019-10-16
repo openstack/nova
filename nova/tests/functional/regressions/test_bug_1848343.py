@@ -61,20 +61,14 @@ class DeletedServerAllocationRevertTest(
                                  'Leaked allocations on provider: %s (%s)' %
                                  (rp['uuid'], rp['name']))
 
-    def test_migration_task_rollback(self):
-        """Tests a scenario where the MigrationTask swaps the allocations
-        for a cold migrate (or resize, it does not matter) and then fails and
-        rolls back allocations before RPC casting to prep_resize on the dest
-        host.
-        """
-        server, source_host, target_host = self._create_server(
-            'test_migration_task_rollback')
+    def _disable_target_host(self, target_host):
         # Disable the target compute service to trigger a NoValidHost from
-        # the scheduler which happens after MigrationTask has moved the source
+        # the scheduler which happens after conductor has moved the source
         # node allocations to the migration record.
         target_service = self.computes[target_host].service_ref
         self.api.put_service(target_service.uuid, {'status': 'disabled'})
 
+    def _stub_delete_server_during_scheduling(self, server):
         # Wrap the select_destinations call so we can delete the server
         # concurrently while scheduling.
         original_select_dests = \
@@ -89,6 +83,17 @@ class DeletedServerAllocationRevertTest(
         self.stub_out('nova.scheduler.client.query.SchedulerQueryClient.'
                       'select_destinations', wrap_select_dests)
 
+    def test_migration_task_rollback(self):
+        """Tests a scenario where the MigrationTask swaps the allocations
+        for a cold migrate (or resize, it does not matter) and then fails and
+        rolls back allocations before RPC casting to prep_resize on the dest
+        host.
+        """
+        server, source_host, target_host = self._create_server(
+            'test_migration_task_rollback')
+        self._disable_target_host(target_host)
+        self._stub_delete_server_during_scheduling(server)
+
         # Now start the cold migration which will fail due to NoValidHost.
         # Note that we get a 404 back because this is a blocking call until
         # conductor RPC casts to prep_resize on the selected dest host but
@@ -102,5 +107,26 @@ class DeletedServerAllocationRevertTest(
             server, instance_actions.MIGRATE, 'cold_migrate', api=self.api)
         self._assert_no_allocations(server)
 
-    # TODO(mriedem): Should have similar tests for live migration and
-    # resize failing in the compute service rather than conductor.
+    def test_live_migration_task_rollback(self):
+        """Tests a scenario where the LiveMigrationTask swaps the allocations
+        for a live migration and then fails and rolls back allocations before
+        RPC casting to live_migration on the source host.
+        """
+        server, source_host, target_host = self._create_server(
+            'test_live_migration_task_rollback')
+        self._disable_target_host(target_host)
+        self._stub_delete_server_during_scheduling(server)
+
+        # Now start the live migration which will fail due to NoValidHost.
+        body = {'os-migrateLive': {'host': None, 'block_migration': 'auto'}}
+        self.api.post_server_action(server['id'], body)
+        # We cannot monitor the migration from the API since it is deleted
+        # when the instance is deleted so just wait for the failed instance
+        # action event after the task rollback happens.
+        self._wait_for_action_fail_completion(
+            server, instance_actions.LIVE_MIGRATION,
+            'conductor_live_migrate_instance', api=self.api)
+        self._assert_no_allocations(server)
+
+    # TODO(mriedem): Should have similar tests for resize failing in the
+    # compute service rather than conductor.
