@@ -1120,6 +1120,11 @@ class ResourceTracker(object):
             elif trait in traits:
                 traits.remove(trait)
 
+        # Always mark the compute node. This lets other processes (possibly
+        # unrelated to nova or even OpenStack) find and distinguish these
+        # providers easily.
+        traits.add(os_traits.COMPUTE_NODE)
+
         self._sync_compute_service_disabled_trait(context, traits)
 
         return list(traits)

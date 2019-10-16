@@ -81,7 +81,11 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
                 'step_size': 1,
             },
         }, self._get_provider_inventory(self.host_uuid))
-        self.assertItemsEqual(self.expected_fake_driver_capability_traits,
+        self.expected_compute_node_traits = (
+            self.expected_fake_driver_capability_traits.union(
+                # The COMPUTE_NODE trait is always added
+                [os_traits.COMPUTE_NODE]))
+        self.assertItemsEqual(self.expected_compute_node_traits,
                               self._get_provider_traits(self.host_uuid))
 
     def _run_update_available_resource(self, startup):
@@ -148,7 +152,7 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertIn('CUSTOM_GOLD', self._get_all_traits())
         self.assertEqual(inv, self._get_provider_inventory(self.host_uuid))
         self.assertItemsEqual(
-            traits.union(self.expected_fake_driver_capability_traits),
+            traits.union(self.expected_compute_node_traits),
             self._get_provider_traits(self.host_uuid)
         )
         self.assertEqual(aggs,
@@ -369,7 +373,7 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
             self._get_provider_inventory(uuids.pf2_2)['SRIOV_NET_VF']['total'])
 
         # Compute don't have any extra traits
-        self.assertItemsEqual(self.expected_fake_driver_capability_traits,
+        self.assertItemsEqual(self.expected_compute_node_traits,
                               self._get_provider_traits(self.host_uuid))
 
         # NUMAs don't have any traits
@@ -591,6 +595,7 @@ class TraitsTrackingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertNotIn(custom_trait, global_traits)
         self.assertIn(os_traits.COMPUTE_NET_ATTACH_INTERFACE, global_traits)
         self.assertIn(os_traits.COMPUTE_DEVICE_TAGGING, global_traits)
+        self.assertIn(os_traits.COMPUTE_NODE, global_traits)
         self.assertEqual([], self._get_all_providers())
 
         self._mock_upt(ptree_traits, [])
@@ -599,7 +604,8 @@ class TraitsTrackingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         rp_uuid = self._get_provider_uuid_by_host('host1')
         expected_traits = set(
-            ptree_traits + [os_traits.COMPUTE_NET_ATTACH_INTERFACE]
+            ptree_traits +
+            [os_traits.COMPUTE_NET_ATTACH_INTERFACE, os_traits.COMPUTE_NODE]
         )
         self.assertItemsEqual(expected_traits,
                               self._get_provider_traits(rp_uuid))
