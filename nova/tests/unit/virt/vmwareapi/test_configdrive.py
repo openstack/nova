@@ -33,7 +33,7 @@ from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
 
 
-class ConfigDriveTestCase(test.NoDBTestCase):
+class ConfigDriveTestCase(test.TestCase):
 
     REQUIRES_LOCKING = True
 

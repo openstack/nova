@@ -40,6 +40,7 @@ from nova.api.metadata import base as instance_metadata
 from nova.compute import api as compute
 from nova.compute import power_state
 from nova.compute import task_states
+from nova.compute import utils as compute_utils
 import nova.conf
 from nova.console import type as ctype
 from nova import context as nova_context
@@ -576,8 +577,10 @@ class VMwareVMOps(object):
     def _get_vm_config_info(self, instance, image_info, extra_specs):
         """Captures all relevant information from the spawn parameters."""
 
+        boot_from_volume = compute_utils.is_volume_backed_instance(
+                                                instance._context, instance)
         if (instance.flavor.root_gb != 0 and
-                instance.image_ref and
+                not boot_from_volume and
                 image_info.file_size > instance.flavor.root_gb * units.Gi):
             reason = _("Image disk size greater than requested disk size")
             raise exception.InstanceUnacceptable(instance_id=instance.uuid,
@@ -783,6 +786,8 @@ class VMwareVMOps(object):
         vi = self._get_vm_config_info(instance, image_info,
                                       extra_specs)
 
+        boot_from_volume = compute_utils.is_volume_backed_instance(
+                                                instance._context, instance)
         metadata = self._get_instance_metadata(context, instance)
         # Creates the virtual machine. The virtual machine reference returned
         # is unique within Virtual Center.
@@ -820,7 +825,7 @@ class VMwareVMOps(object):
             block_device_mapping = driver.block_device_info_get_mapping(
                 block_device_info)
 
-        if instance.image_ref:
+        if instance.image_ref and not boot_from_volume:
             self._imagecache.enlist_image(
                     image_info.image_id, vi.datastore, vi.dc_info.ref)
             self._fetch_image_if_missing(context, vi)
@@ -1510,8 +1515,7 @@ class VMwareVMOps(object):
         self._create_swap(block_device_info, instance, vm_ref, dc_info,
                           datastore, folder, vmdk.adapter_type)
 
-    def migrate_disk_and_power_off(self, context, instance, dest,
-                                   flavor, block_device_info):
+    def migrate_disk_and_power_off(self, context, instance, dest, flavor):
         """Transfers the disk of a running instance in multiple phases, turning
         off the instance before the end.
         """
@@ -1519,17 +1523,11 @@ class VMwareVMOps(object):
         vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
                                      uuid=instance.uuid)
 
-        def _is_volume_backed(bdi):
-            # this contains anything with _valid_destination = 'volume',
-            # ephemerals have their own list
-            bdm = driver.block_device_info_get_mapping(bdi)
-            for disk in bdm:
-                if disk.get('boot_index') == 0:
-                    return True
-            return False
+        boot_from_volume = compute_utils.is_volume_backed_instance(context,
+                                                                   instance)
 
         # Checks if the migration needs a disk resize down.
-        if (not _is_volume_backed(block_device_info) and (
+        if (not boot_from_volume and (
             flavor.root_gb < instance.flavor.root_gb or
             (flavor.root_gb != 0 and
              flavor.root_gb < vmdk.capacity_in_bytes / units.Gi))):
@@ -1558,7 +1556,7 @@ class VMwareVMOps(object):
                                        total_steps=RESIZE_TOTAL_STEPS)
 
         # 3.Reconfigure the disk properties
-        if not _is_volume_backed(block_device_info):
+        if not boot_from_volume:
             self._resize_disk(instance, vm_ref, vmdk, flavor)
         self._update_instance_progress(context, instance,
                                        step=3,

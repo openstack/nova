@@ -351,8 +351,10 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         self.instance = fake_instance.fake_instance_obj(
                 self.context, **values)
 
-    def _create_vm(self, node=None, num_instances=1, uuid=None,
-                   flavor='m1.large', powered_on=True,
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                return_value=False)
+    def _create_vm(self, fake_is_volume_backed, node=None, num_instances=1,
+                   uuid=None, flavor='m1.large', powered_on=True,
                    ephemeral=None, bdi=None, flavor_updates=None):
         """Create and spawn the VM."""
         if not node:
@@ -1098,6 +1100,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
             self._check_vm_info(info, power_state.RUNNING)
             self.assertTrue(self.exception)
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                return_value=True)
     @mock.patch('nova.virt.vmwareapi.vmops.VMwareVMOps.'
                 'update_cluster_placement')
     @mock.patch.object(vm_util, 'relocate_vm')
@@ -1113,6 +1117,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                                   mock_attach_volume,
                                   mock_relocate_vm,
                                   mock_update_cluster_placement,
+                                  mock_is_volume_backed,
                                   set_image_ref=True):
         self._create_instance(set_image_ref=set_image_ref)
 
@@ -1133,6 +1138,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         mock_attach_volume.assert_called_once_with(connection_info,
             self.instance, constants.DEFAULT_ADAPTER_TYPE)
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                return_value=False)
     @mock.patch('nova.virt.vmwareapi.vmops.VMwareVMOps.'
                 'update_cluster_placement')
     @mock.patch('nova.virt.vmwareapi.volumeops.VMwareVolumeOps.'
@@ -1143,7 +1150,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                                        mock_info_get_mapping,
                                        mock_block_volume_in_mapping,
                                        mock_attach_volume,
-                                       mock_update_cluster_placement):
+                                       mock_update_cluster_placement,
+                                       mock_is_volume_backed):
         self._create_instance()
         connection_info = self._test_vmdk_connection_info('iscsi')
         root_disk = [{'connection_info': connection_info,
@@ -2318,9 +2326,13 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
     def test_resize_to_smaller_disk(self):
         self._create_vm(flavor='m1.large')
         flavor = self._get_flavor_by_name('m1.small')
-        self.assertRaises(exception.InstanceFaultRollback,
-                          self.conn.migrate_disk_and_power_off, self.context,
-                          self.instance, 'fake_dest', flavor, None)
+        with test.nested(
+            mock.patch('nova.compute.utils.is_volume_backed_instance',
+                       return_value=False)):
+            self.assertRaises(exception.InstanceFaultRollback,
+                              self.conn.migrate_disk_and_power_off,
+                              self.context, self.instance, 'fake_dest', flavor,
+                              None)
 
     def test_spawn_attach_volume_vmdk(self):
         self._spawn_attach_volume_vmdk()

@@ -31,6 +31,7 @@ from nova import exception
 from nova.network import model as network_model
 from nova import objects
 from nova import test
+from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
@@ -1153,6 +1154,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                           self._test_migrate_disk_and_power_off,
                           flavor_root_gb=self._instance.flavor.root_gb - 1)
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                return_value=False)
     @mock.patch.object(vmops.VMwareVMOps, "_remove_ephemerals_and_swap")
     @mock.patch.object(vm_util, 'get_vmdk_info')
     @mock.patch.object(vmops.VMwareVMOps, "_resize_disk")
@@ -1164,6 +1167,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                          fake_power_off, fake_resize_vm,
                                          fake_resize_disk, fake_get_vmdk_info,
                                          fake_remove_ephemerals_and_swap,
+                                         fake_is_volume_backed,
                                          flavor_root_gb):
         vmdk = vm_util.VmdkInfo('[fake] uuid/root.vmdk',
                                 'fake-adapter',
@@ -1176,8 +1180,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._vmops.migrate_disk_and_power_off(self._context,
                                                self._instance,
                                                None,
-                                               flavor,
-                                               None)
+                                               flavor)
 
         fake_get_vm_ref.assert_called_once_with(self._session,
                                                 self._instance)
@@ -1194,6 +1197,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                  for i in range(4)]
         fake_progress.assert_has_calls(calls)
 
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
     @mock.patch.object(vmops.VMwareVMOps, "_remove_ephemerals_and_swap")
     @mock.patch.object(vm_util, 'get_vmdk_info')
     @mock.patch.object(vmops.VMwareVMOps, "_resize_disk")
@@ -1205,24 +1209,52 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                          fake_get_vm_ref, fake_progress,
                                          fake_power_off, fake_resize_vm,
                                          fake_resize_disk, fake_get_vmdk_info,
-                                         fake_remove_ephemerals_and_swap):
+                                         fake_remove_ephemerals_and_swap,
+                                         fake_bdm_get_by_instance_uuid):
         # shrinking the root-disk should be ignored
         flavor_root_gb = self._instance.flavor.root_gb - 1
 
-        self._instance.image_ref = None
-        connection_info1 = {'data': 'fake-data1', 'serial': 'volume-fake-id1'}
-        connection_info2 = {'data': 'fake-data2', 'serial': 'volume-fake-id2'}
-        connection_info3 = {'data': 'fake-data3', 'serial': 'volume-fake-id3'}
-        bdm = [{'boot_index': 0,
-                'connection_info': connection_info1,
-                'disk_bus': constants.ADAPTER_TYPE_IDE},
-               {'boot_index': 1,
-                'connection_info': connection_info2,
-                'disk_bus': constants.DEFAULT_ADAPTER_TYPE},
-               {'boot_index': 2,
-                'connection_info': connection_info3,
-                'disk_bus': constants.ADAPTER_TYPE_LSILOGICSAS}]
-        bdi = {'block_device_mapping': bdm}
+        bdms = objects.block_device.block_device_make_list_from_dicts(
+            self._context, [
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 1,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/sda', 'tag': "db",
+                     'volume_id': uuids.volume_1,
+                     'boot_index': 0}),
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 2,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/hda', 'tag': "nfvfunc1",
+                     'volume_id': uuids.volume_2}),
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 3,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/sdb', 'tag': "nfvfunc2",
+                     'volume_id': uuids.volume_3}),
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 4,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/hdb',
+                     'volume_id': uuids.volume_4}),
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 5,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/vda', 'tag': "nfvfunc3",
+                     'volume_id': uuids.volume_5}),
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 6,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/vdb', 'tag': "nfvfunc4",
+                     'volume_id': uuids.volume_6}),
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 7,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/vdc', 'tag': "nfvfunc5",
+                     'volume_id': uuids.volume_7}),
+            ]
+        )
+        fake_bdm_get_by_instance_uuid.return_value = bdms
 
         vmdk = vm_util.VmdkInfo('[fake] uuid/root.vmdk',
                                 'fake-adapter',
@@ -1235,8 +1267,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._vmops.migrate_disk_and_power_off(self._context,
                                                self._instance,
                                                None,
-                                               flavor,
-                                               bdi)
+                                               flavor)
 
         fake_get_vm_ref.assert_called_once_with(self._session,
                                                 self._instance)
@@ -1286,6 +1317,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self.assertRaises(exception.InstanceUnacceptable,
                           self._vmops.prepare_for_spawn, instance)
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                return_value=True)
     @mock.patch('nova.image.glance.API.get')
     @mock.patch.object(vmops.LOG, 'debug')
     @mock.patch.object(vmops.VMwareVMOps, '_fetch_image_if_missing')
@@ -1296,7 +1329,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_spawn_mask_block_device_info_password(self, mock_lock,
         mock_update_cluster_placement,
         mock_build_virtual_machine, mock_get_vm_config_info,
-        mock_fetch_image_if_missing, mock_debug, mock_glance):
+        mock_fetch_image_if_missing, mock_debug, mock_glance,
+        mock_is_volume_backed):
         # Very simple test that just ensures block_device_info auth_password
         # is masked when logged; the rest of the test just fails out early.
         data = {'auth_password': 'scrubme'}
@@ -1357,6 +1391,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                     'image_id': uuids.image if is_image_used else None,
                     'version': version.version_string_with_package()})
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                return_value=False)
     @mock.patch.object(vm_util, 'rename_vm')
     @mock.patch.object(vmops.VMwareVMOps, '_create_folders',
                        return_value='fake_vm_folder')
@@ -1379,7 +1415,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                          use_disk_image,
                                          power_on_instance,
                                          create_folders,
-                                         rename_vm):
+                                         rename_vm,
+                                         is_volume_backed_instance):
         self._instance.flavor = self._flavor
         extra_specs = get_extra_specs.return_value
         connection_info1 = {'data': 'fake-data1', 'serial': 'volume-fake-id1'}
@@ -1425,6 +1462,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 connection_info2, self._instance,
                 constants.DEFAULT_ADAPTER_TYPE)
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                return_value=True)
     @mock.patch.object(vm_util, 'rename_vm')
     @mock.patch.object(vmops.VMwareVMOps, '_create_folders',
                        return_value='fake_vm_folder')
@@ -1441,7 +1480,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                                    build_virtual_machine,
                                                    power_on_instance,
                                                    create_folders,
-                                                   rename_vm):
+                                                   rename_vm,
+                                                   is_volume_backed_instance):
         self._instance.image_ref = None
         self._instance.flavor = self._flavor
         extra_specs = get_extra_specs.return_value
@@ -1491,6 +1531,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 connection_info3, self._instance,
                 constants.ADAPTER_TYPE_LSILOGICSAS)
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                return_value=False)
     @mock.patch.object(vmops.VMwareVMOps, '_create_folders',
                        return_value='fake_vm_folder')
     @mock.patch('nova.virt.vmwareapi.vm_util.power_on_instance')
@@ -1505,7 +1547,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                         update_cluster_placement,
                                         build_virtual_machine,
                                         power_on_instance,
-                                        create_folders):
+                                        create_folders,
+                                        is_volume_backed_instance):
         self._instance.image_ref = None
         self._instance.flavor = self._flavor
         extra_specs = get_extra_specs.return_value
@@ -1727,6 +1770,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         recorded_methods = [c[1][1] for c in mock_call_method.mock_calls]
         self.assertEqual(expected_methods, recorded_methods)
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                return_value=False)
     @mock.patch.object(vmops.VMwareVMOps, '_create_folders',
                        return_value='fake_vm_folder')
     @mock.patch.object(vmops.VMwareVMOps, 'update_cluster_placement')
@@ -1768,6 +1813,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                    mock_update_vnic_index,
                    mock_update_cluster_placement,
                    mock_create_folders,
+                   mock_is_volume_backed,
                    block_device_info=None,
                    extra_specs=None,
                    config_drive=False):
@@ -1912,11 +1958,14 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             mock_update_vnic_index.assert_called_once_with(
                         self._context, self._instance, network_info)
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                return_value=False)
     @mock.patch.object(ds_util, 'get_datastore')
     @mock.patch.object(vmops.VMwareVMOps, 'get_datacenter_ref_and_name')
     def _test_get_spawn_vm_config_info(self,
                                        mock_get_datacenter_ref_and_name,
                                        mock_get_datastore,
+                                       mock_is_volume_backed,
                                        image_size_bytes=0):
         image_info = images.VMwareImage(
                 image_id=self._image_id,
@@ -2003,6 +2052,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                       'device_name': '/dev/sdb'}}
         self._test_spawn(block_device_info=block_device_info)
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                return_value=False)
     @mock.patch.object(vm_util, 'rename_vm')
     @mock.patch('nova.virt.vmwareapi.vm_util.power_on_instance')
     @mock.patch.object(vmops.VMwareVMOps, '_create_and_attach_thin_disk')
@@ -2025,7 +2076,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                             use_disk_image,
                                             create_and_attach_thin_disk,
                                             power_on_instance,
-                                            rename_vm):
+                                            rename_vm,
+                                            is_volume_backed_instance):
         self._instance.flavor = objects.Flavor(vcpus=1, memory_mb=512,
                                                name="m1.tiny", root_gb=1,
                                                ephemeral_gb=1, swap=512,
