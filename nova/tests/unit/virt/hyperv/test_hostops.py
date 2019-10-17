@@ -66,7 +66,8 @@ class HostOpsTestCase(test_base.HyperVBaseTestCase):
 
         expected = [mock.call(fkey)
                     for fkey in os_win_const.PROCESSOR_FEATURE.keys()]
-        self._hostops._hostutils.is_cpu_feature_present.has_calls(expected)
+        self._hostops._hostutils.is_cpu_feature_present.assert_has_calls(
+            expected, any_order=True)
         expected_response = self._get_mock_cpu_info()
         self.assertEqual(expected_response, response)
 
