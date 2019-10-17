@@ -51,8 +51,9 @@ from nova.tests.unit import cast_as_call
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_notifier
 from nova.tests.unit import fake_requests
-import nova.tests.unit.image.fake
+from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit.objects import test_instance_info_cache
+from nova import utils as nova_utils
 from nova.virt import fake
 from nova import volume
 
@@ -1371,8 +1372,7 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase):
         # Now update the image metadata to be something that won't work with
         # the fake compute driver we're using since the fake driver has an
         # "x86_64" architecture.
-        rebuild_image_ref = (
-            nova.tests.unit.image.fake.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID)
+        rebuild_image_ref = fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID
         self.api.put_image_meta_key(
             rebuild_image_ref, 'hw_architecture', 'unicore32')
         # Now rebuild the server with that updated image and it should result
@@ -1485,8 +1485,7 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase):
         allocs = allocs[rp_uuid]['resources']
         assertFlavorMatchesAllocation(flavor, allocs)
 
-        rebuild_image_ref = (
-            nova.tests.unit.image.fake.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID)
+        rebuild_image_ref = fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID
         # Now rebuild the server with a different image.
         rebuild_req_body = {
             'rebuild': {
@@ -1539,8 +1538,7 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase):
 
         # Now rebuild the server with a different image than was used to create
         # our fake volume.
-        rebuild_image_ref = (
-            nova.tests.unit.image.fake.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID)
+        rebuild_image_ref = fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID
         rebuild_req_body = {
             'rebuild': {
                 'imageRef': rebuild_image_ref
@@ -3699,13 +3697,11 @@ class ServerDeleteBuildTests(integrated_helpers.ProviderUsageBaseTestCase):
             networks='none')
 
         with test.nested(
-                 mock.patch.object(nova.scheduler.filter_scheduler.
-                                       FilterScheduler,
-                                       '_ensure_sufficient_hosts'),
-                 mock.patch.object(nova.conductor.manager.
-                                   ComputeTaskManager,
-                                       '_bury_in_cell0')
-                 ) as (mock_suff_hosts, mock_bury):
+            mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                       '_ensure_sufficient_hosts'),
+            mock.patch('nova.conductor.manager.ComputeTaskManager.'
+                       '_bury_in_cell0')
+        ) as (mock_suff_hosts, mock_bury):
             mock_suff_hosts.side_effect = test.TestingException('oops')
             server = self.api.post_server({'server': server_req})
             self._wait_for_server_allocations(server['id'])
@@ -4083,7 +4079,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
 
         # Note that we're using v2.35 explicitly as the api returns 404
         # starting with 2.36
-        with nova.utils.temporary_mutation(self.api, microversion='2.35'):
+        with nova_utils.temporary_mutation(self.api, microversion='2.35'):
             images = self.api.get_images()
             self.image_id_with_trait = images[0]['id']
             self.api.api_put('/images/%s/metadata' % self.image_id_with_trait,
@@ -6525,7 +6521,7 @@ class ServerMoveWithPortResourceRequestTest(
         server = self._create_server_with_ports_and_check_allocation(
             non_qos_normal_port, qos_normal_port, qos_sriov_port)
 
-        orig_get_service = nova.objects.Service.get_by_host_and_binary
+        orig_get_service = objects.Service.get_by_host_and_binary
 
         def fake_get_service(context, host, binary):
             # host2 is the only migration target, let's make it too old so the
@@ -6579,7 +6575,7 @@ class ServerMoveWithPortResourceRequestTest(
         server = self._create_server_with_ports_and_check_allocation(
             non_qos_normal_port, qos_normal_port, qos_sriov_port)
 
-        orig_get_service = nova.objects.Service.get_by_host_and_binary
+        orig_get_service = objects.Service.get_by_host_and_binary
 
         def fake_get_service(context, host, binary):
             # host2 is the first migration target, let's make it too old so the
@@ -7280,8 +7276,7 @@ class ServerMoveWithPortResourceRequestTest(
         server = self._create_server_with_ports_and_check_allocation(
             non_qos_normal_port, qos_normal_port, qos_sriov_port)
 
-        orig_check = nova.virt.fake.FakeDriver.\
-            check_can_live_migrate_destination
+        orig_check = fake.FakeDriver.check_can_live_migrate_destination
 
         def fake_check_can_live_migrate_destination(
                 context, instance, src_compute_info, dst_compute_info,
@@ -7558,7 +7553,7 @@ class PortResourceRequestReSchedulingTest(
         # First call is during boot, we want that to succeed normally. Then the
         # fake virt driver triggers a re-schedule. During that re-schedule the
         # fill is called again, and we simulate that call raises.
-        original_fill = nova.scheduler.utils.fill_provider_mapping
+        original_fill = utils.fill_provider_mapping
 
         def stub_fill_provider_mapping(*args, **kwargs):
             if not mock_fill.called:
