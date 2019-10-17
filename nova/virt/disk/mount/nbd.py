@@ -39,9 +39,10 @@ class NbdMount(api.Mount):
     """qemu-nbd support disk images."""
     mode = 'nbd'
 
-    def _detect_nbd_devices(self):
+    @staticmethod
+    def _detect_nbd_devices():
         """Detect nbd device files."""
-        return filter(NBD_DEVICE_RE.match, os.listdir('/sys/block/'))
+        return list(filter(NBD_DEVICE_RE.match, os.listdir('/sys/block/')))
 
     def _find_unused(self, devices):
         for device in devices:
