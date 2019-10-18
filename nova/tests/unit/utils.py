@@ -299,6 +299,47 @@ class CustomMockCallMatcher(object):
         return self.comparator(other)
 
 
+class ItemsMatcher(CustomMockCallMatcher):
+    """Convenience matcher for iterables (mainly lists) where the order is
+    unpredictable.
+
+    Usage::
+
+        my_mock.assert_called_once_with(
+            ...,
+            listy_kwarg=ItemsMatcher(['foo', 'bar', 'baz']),
+            ...)
+
+    Will pass if the mock is called with a listy_kwarg containing 'foo', 'bar',
+    'baz' in any order. E.g. the following will all pass::
+
+        # Called with a list in some other order
+        my_mock(..., listy_kwarg=['baz', 'foo', 'bar'], ...)
+        # Called with a set
+        my_mock(..., listy_kwarg={'baz', 'foo', 'bar'}, ...)
+        # Called with a tuple in some other order
+        my_mock(..., listy_kwarg=('baz', 'foo', 'bar'), ...)
+
+    But the following will fail::
+        my_mock(..., listy_kwarg=['foo', 'bar'], ...)
+
+    .. todo:: Because we internally use set()s, the following will **pass**,
+              but it shouldn't::
+
+                # Duplicated item
+                my_mock(..., listy_kwarg=['foo', 'foo', 'bar', 'baz'], ...)
+    """
+    def __init__(self, iterable):
+        self.items = set(iterable)
+
+        super(ItemsMatcher, self).__init__(
+            lambda other: self.items == set(other))
+
+    def __repr__(self):
+        """This exists so a failed assertion prints something useful."""
+        return 'ItemsMatcher(%r)' % self.items
+
+
 def assert_instance_delete_notification_by_uuid(
         mock_legacy_notify, mock_notify, expected_instance_uuid,
         expected_notifier, expected_context, expect_targeted_context=False,
