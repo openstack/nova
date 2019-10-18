@@ -23561,7 +23561,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         else:
             mock_et.assert_not_called()
 
-    def test_cache_image_existing_first_time(self):
+    def test_cache_image_uncached_first_time(self):
+        # Test the case where we do need to download the image,
+        # and this is the first time an image cache operation has ever
+        # been performed, so the directory structure has to be created.
         self.test_cache_image_uncached(first_time=True)
 
     @mock.patch('oslo_utils.fileutils.ensure_tree')
