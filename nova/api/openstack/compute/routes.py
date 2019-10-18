@@ -454,6 +454,9 @@ ROUTE_LIST = (
     ('/os-aggregates/{id}/action', {
         'POST': [aggregates_controller, 'action'],
     }),
+    ('/os-aggregates/{id}/images', {
+        'POST': [aggregates_controller, 'images'],
+    }),
     ('/os-assisted-volume-snapshots', {
         'POST': [assisted_volume_snapshots_controller, 'create']
     }),

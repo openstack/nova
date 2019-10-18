@@ -41,6 +41,7 @@ class AggregatesTest(integrated_helpers._IntegratedTestBase):
         agg = self.api.post_aggregate(agg)
         for service in compute_services:
             self.api.add_host_to_aggregate(agg['id'], service['host'])
+        self._test_aggregate = agg
         return len(compute_services)
 
     def test_add_hosts(self):
@@ -54,6 +55,103 @@ class AggregatesTest(integrated_helpers._IntegratedTestBase):
         self.start_service('compute', host='compute2')
         self.host_mappings['compute2'].destroy()
         self.assertEqual(2, self._add_hosts_to_aggregate())
+
+
+class AggregatesV281Test(AggregatesTest):
+    api_major_version = 'v2.1'
+    microversion = '2.81'
+
+    def setUp(self):
+        self.flags(compute_driver='fake.FakeDriverWithCaching')
+        super(AggregatesV281Test, self).setUp()
+
+    def test_cache_images_on_aggregate(self):
+        self._add_hosts_to_aggregate()
+        agg = self._test_aggregate
+        img = '155d900f-4e14-4e4c-a73d-069cbf4541e6'
+
+        self.assertEqual(set(), self.compute.driver.cached_images)
+
+        body = {'cache': [
+            {'id': img},
+        ]}
+        self.api.api_post('/os-aggregates/%s/images' % agg['id'], body,
+                          check_response_status=[202])
+
+        self.assertEqual(set([img]), self.compute.driver.cached_images)
+
+    def test_cache_images_on_aggregate_missing_image(self):
+        agg = {'aggregate': {'name': 'test-aggregate'}}
+        agg = self.api.post_aggregate(agg)
+        # NOTE(danms): This image-id does not exist
+        img = '155d900f-4e14-4e4c-a73d-069cbf4541e0'
+        body = {'cache': [
+            {'id': img},
+        ]}
+        self.api.api_post('/os-aggregates/%s/images' % agg['id'], body,
+                          check_response_status=[400])
+
+    def test_cache_images_on_missing_aggregate(self):
+        img = '155d900f-4e14-4e4c-a73d-069cbf4541e6'
+        body = {'cache': [
+            {'id': img},
+        ]}
+        self.api.api_post('/os-aggregates/123/images', body,
+                          check_response_status=[404])
+
+    def test_cache_images_with_duplicates(self):
+        agg = {'aggregate': {'name': 'test-aggregate'}}
+        agg = self.api.post_aggregate(agg)
+        img = '155d900f-4e14-4e4c-a73d-069cbf4541e6'
+        body = {'cache': [
+            {'id': img},
+            {'id': img},
+        ]}
+        self.api.api_post('/os-aggregates/%i/images' % agg['id'], body,
+                          check_response_status=[400])
+
+    def test_cache_images_with_no_images(self):
+        agg = {'aggregate': {'name': 'test-aggregate'}}
+        agg = self.api.post_aggregate(agg)
+        body = {'cache': []}
+        self.api.api_post('/os-aggregates/%i/images' % agg['id'], body,
+                          check_response_status=[400])
+
+    def test_cache_images_with_additional_in_image(self):
+        agg = {'aggregate': {'name': 'test-aggregate'}}
+        agg = self.api.post_aggregate(agg)
+        img = '155d900f-4e14-4e4c-a73d-069cbf4541e6'
+        body = {'cache': [
+            {'id': img, 'power': '1.21 gigawatts'},
+        ]}
+        self.api.api_post('/os-aggregates/%i/images' % agg['id'], body,
+                          check_response_status=[400])
+
+    def test_cache_images_with_missing_image_id(self):
+        agg = {'aggregate': {'name': 'test-aggregate'}}
+        agg = self.api.post_aggregate(agg)
+        body = {'cache': [
+            {'power': '1.21 gigawatts'},
+        ]}
+        self.api.api_post('/os-aggregates/%i/images' % agg['id'], body,
+                          check_response_status=[400])
+
+    def test_cache_images_with_missing_cache(self):
+        agg = {'aggregate': {'name': 'test-aggregate'}}
+        agg = self.api.post_aggregate(agg)
+        body = {}
+        self.api.api_post('/os-aggregates/%i/images' % agg['id'], body,
+                          check_response_status=[400])
+
+    def test_cache_images_with_additional_in_cache(self):
+        agg = {'aggregate': {'name': 'test-aggregate'}}
+        agg = self.api.post_aggregate(agg)
+        img = '155d900f-4e14-4e4c-a73d-069cbf4541e6'
+        body = {'cache': [{'id': img}],
+                'power': '1.21 gigawatts',
+        }
+        self.api.api_post('/os-aggregates/%i/images' % agg['id'], body,
+                          check_response_status=[400])
 
 
 class AggregateRequestFiltersTest(

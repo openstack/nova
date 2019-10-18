@@ -16,6 +16,7 @@
 from oslo_serialization import jsonutils
 
 from nova.tests.functional.api_sample_tests import api_sample_base
+from nova.tests.unit.image import fake as fake_image
 
 
 class AggregatesSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
@@ -117,3 +118,23 @@ class AggregatesV2_41_SampleJsonTest(AggregatesSampleJsonTest):
         self.extra_subs['uuid'] = subs['uuid']
         return self._verify_response('aggregate-post-resp',
                                      subs, response, 200)
+
+
+class AggregatesV2_81_SampleJsonTest(AggregatesV2_41_SampleJsonTest):
+    microversion = '2.81'
+    scenarios = [
+        (
+            "v2_81", {
+                'api_major_version': 'v2.1',
+            },
+        )
+    ]
+
+    def test_images(self):
+        agg_id = self._test_aggregate_create()
+        image = fake_image.get_valid_image_id()
+        response = self._do_post('os-aggregates/%s/images' % agg_id,
+                                 'aggregate-images-post-req',
+                                 {'image_id': image})
+        # No response body, so just check the status
+        self.assertEqual(202, response.status_code)
