@@ -249,11 +249,11 @@ Immediately after RC
 
   * Add database migration placeholders
 
-    * Example: https://review.openstack.org/650964
+    * Example: https://review.opendev.org/650964
 
   * Drop old RPC compat code (if there was a RPC major version bump)
 
-    * Example: https://review.openstack.org/543580
+    * Example: https://review.opendev.org/543580
 
 * Create the launchpad series for the next cycle
 
