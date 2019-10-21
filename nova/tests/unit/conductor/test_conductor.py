@@ -3152,6 +3152,50 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         tb = mock_notify.call_args_list[0][0][6]
         self.assertIn('Traceback (most recent call last):', tb)
 
+    @mock.patch('nova.scheduler.utils.claim_resources', return_value=True)
+    @mock.patch('nova.scheduler.utils.fill_provider_mapping')
+    @mock.patch('nova.availability_zones.get_host_availability_zone',
+                side_effect=db_exc.CantStartEngineError)
+    @mock.patch('nova.conductor.manager.ComputeTaskManager.'
+                '_cleanup_when_reschedule_fails')
+    @mock.patch('nova.objects.Instance.save')
+    def test_build_reschedule_get_az_error(self, mock_save, mock_cleanup,
+                                           mock_get_az, mock_fill, mock_claim):
+        """Tests a scenario where rescheduling during a build fails trying to
+        get the AZ for the selected host will put the instance into a terminal
+        (ERROR) state.
+        """
+        instance = fake_instance.fake_instance_obj(self.context)
+        image = objects.ImageMeta()
+        requested_networks = objects.NetworkRequestList()
+        request_spec = fake_request_spec.fake_spec_obj()
+        host_lists = copy.deepcopy(fake_host_lists_alt)
+        filter_props = {}
+        # Pre-populate the filter properties with the initial host we tried to
+        # build on which failed and triggered a reschedule.
+        host1 = host_lists[0].pop(0)
+        scheduler_utils.populate_filter_properties(filter_props, host1)
+        # We have to save off the first alternate we try since build_instances
+        # modifies the host_lists list.
+        host2 = host_lists[0][0]
+
+        self.conductor.build_instances(
+            self.context, [instance], image, filter_props,
+            mock.sentinel.admin_password, mock.sentinel.injected_files,
+            requested_networks, mock.sentinel.security_groups,
+            request_spec=request_spec, host_lists=host_lists)
+
+        mock_claim.assert_called_once()
+        mock_fill.assert_called_once()
+        mock_get_az.assert_called_once_with(self.context, host2.service_host)
+        mock_cleanup.assert_called_once_with(
+            self.context, instance,
+            test.MatchType(db_exc.CantStartEngineError), test.MatchType(dict),
+            requested_networks)
+        # Assert that we did not continue processing the instance once we
+        # handled the error.
+        mock_save.assert_not_called()
+
     def test_cleanup_allocated_networks_none_requested(self):
         # Tests that we don't deallocate networks if 'none' were specifically
         # requested.
