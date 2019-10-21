@@ -14,3 +14,14 @@ fixes:
     and rejects the rebuild.
 
     ..  _`bug #1763766`: https://bugs.launchpad.net/nova/+bug/1763766
+
+features:
+  - |
+    With the changes introduced to address `bug #1763766`_, Nova now guards
+    against NUMA constraint changes on rebuild. As a result the
+    ``NUMATopologyFilter`` is no longer required to run on rebuild since
+    we already know the topology will not change and therefor the existing
+    resource claim is still valid. As such it is now possible to do an in-place
+    rebuild of a instance with a NUMA topology even if the image changes
+    provided the new image does not alter the topology.
+
