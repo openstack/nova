@@ -17,6 +17,7 @@ from oslo_messaging import exceptions as messaging_exceptions
 from oslo_utils.fixture import uuidsentinel as uuids
 import six
 
+from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova.conductor.tasks import cross_cell_migrate
@@ -379,7 +380,8 @@ class CrossCellMigrationTaskTestCase(test.NoDBTestCase):
         source_context = nova_context.get_context()
         host_selection = objects.Selection(
             service_host='target.host.com', cell_uuid=uuids.cell_uuid)
-        migration = objects.Migration(id=1, cross_cell_move=False)
+        migration = objects.Migration(
+            id=1, cross_cell_move=False, source_compute='source.host.com')
         instance = objects.Instance()
         self.task = cross_cell_migrate.CrossCellMigrationTask(
             source_context,
@@ -399,9 +401,11 @@ class CrossCellMigrationTaskTestCase(test.NoDBTestCase):
             mock.patch.object(self.task, '_perform_external_api_checks'),
             mock.patch.object(self.task, '_setup_target_cell_db'),
             mock.patch.object(self.task, '_prep_resize_at_dest'),
+            mock.patch.object(self.task, '_prep_resize_at_source'),
         ) as (
             mock_migration_save, mock_perform_external_api_checks,
             mock_setup_target_cell_db, mock_prep_resize_at_dest,
+            mock_prep_resize_at_source,
         ):
             self.task.execute()
         # Assert the calls
@@ -412,6 +416,7 @@ class CrossCellMigrationTaskTestCase(test.NoDBTestCase):
         mock_setup_target_cell_db.assert_called_once_with()
         mock_prep_resize_at_dest.assert_called_once_with(
             mock_setup_target_cell_db.return_value)
+        mock_prep_resize_at_source.assert_called_once_with()
         # Now rollback the completed sub-tasks
         self.task.rollback()
 
@@ -568,6 +573,16 @@ class CrossCellMigrationTaskTestCase(test.NoDBTestCase):
         self.assertEqual('dest-node', source_cell_migration.dest_node)
         self.assertEqual('192.168.159.176', source_cell_migration.dest_host)
         save.assert_called_once_with()
+
+    @mock.patch.object(cross_cell_migrate.PrepResizeAtSourceTask, 'execute')
+    def test_prep_resize_at_source(self, mock_task_execute):
+        """Tests setting up and executing PrepResizeAtSourceTask"""
+        snapshot_id = self.task._prep_resize_at_source()
+        self.assertIs(snapshot_id, mock_task_execute.return_value)
+        self.assertIn('PrepResizeAtSourceTask', self.task._completed_tasks)
+        self.assertIsInstance(
+            self.task._completed_tasks['PrepResizeAtSourceTask'],
+            cross_cell_migrate.PrepResizeAtSourceTask)
 
 
 class PrepResizeAtDestTaskTestCase(test.NoDBTestCase):
@@ -747,3 +762,84 @@ class PrepResizeAtDestTaskTestCase(test.NoDBTestCase):
             any_order=True)
         # Should have logged both exceptions.
         self.assertEqual(2, mock_log_exception.call_count)
+
+
+class PrepResizeAtSourceTaskTestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        super(PrepResizeAtSourceTaskTestCase, self).setUp()
+        self.task = cross_cell_migrate.PrepResizeAtSourceTask(
+            nova_context.get_context(),
+            objects.Instance(
+                uuid=uuids.instance,
+                vm_state=vm_states.ACTIVE,
+                display_name='fake-server',
+                system_metadata={},
+                host='source.host.com'),
+            objects.Migration(),
+            objects.RequestSpec(),
+            compute_rpcapi=mock.Mock(),
+            image_api=mock.Mock())
+
+    @mock.patch('nova.compute.utils.create_image')
+    @mock.patch('nova.objects.Instance.save')
+    def test_execute_volume_backed(self, instance_save, create_image):
+        """Tests execution with a volume-backed server so no snapshot image
+        is created.
+        """
+        self.task.request_spec.is_bfv = True
+        # No image should be created so no image is returned.
+        self.assertIsNone(self.task.execute())
+        self.assertIsNone(self.task._image_id)
+        create_image.assert_not_called()
+        self.task.compute_rpcapi.prep_snapshot_based_resize_at_source.\
+            assert_called_once_with(
+                self.task.context, self.task.instance, self.task.migration,
+                snapshot_id=None)
+        # The instance should have been updated.
+        instance_save.assert_called_once_with(
+            expected_task_state=task_states.RESIZE_PREP)
+        self.assertEqual(
+            task_states.RESIZE_MIGRATING, self.task.instance.task_state)
+        self.assertEqual(self.task.instance.vm_state,
+                         self.task.instance.system_metadata['old_vm_state'])
+
+    @mock.patch('nova.compute.utils.create_image',
+                return_value={'id': uuids.snapshot_id})
+    @mock.patch('nova.objects.Instance.save')
+    def test_execute_image_backed(self, instance_save, create_image):
+        """Tests execution with an image-backed server so a snapshot image
+        is created.
+        """
+        self.task.request_spec.is_bfv = False
+        self.task.instance.image_ref = uuids.old_image_ref
+        # An image should be created so an image ID is returned.
+        self.assertEqual(uuids.snapshot_id, self.task.execute())
+        self.assertEqual(uuids.snapshot_id, self.task._image_id)
+        create_image.assert_called_once_with(
+            self.task.context, self.task.instance, 'fake-server-resize-temp',
+            'snapshot', self.task.image_api)
+        self.task.compute_rpcapi.prep_snapshot_based_resize_at_source.\
+            assert_called_once_with(
+                self.task.context, self.task.instance, self.task.migration,
+                snapshot_id=uuids.snapshot_id)
+        # The instance should have been updated.
+        instance_save.assert_called_once_with(
+            expected_task_state=task_states.RESIZE_PREP)
+        self.assertEqual(
+            task_states.RESIZE_MIGRATING, self.task.instance.task_state)
+        self.assertEqual(self.task.instance.vm_state,
+                         self.task.instance.system_metadata['old_vm_state'])
+
+    @mock.patch('nova.compute.utils.delete_image')
+    def test_rollback(self, delete_image):
+        """Tests rollback when there is an image and when there is not."""
+        # First test when there is no image_id so we do not try to delete it.
+        self.task.rollback()
+        delete_image.assert_not_called()
+        # Now set an image and we should try to delete it.
+        self.task._image_id = uuids.image_id
+        self.task.rollback()
+        delete_image.assert_called_once_with(
+            self.task.context, self.task.instance, self.task.image_api,
+            self.task._image_id)

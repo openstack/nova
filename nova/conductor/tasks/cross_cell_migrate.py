@@ -17,10 +17,13 @@ from oslo_log import log as logging
 import oslo_messaging as messaging
 
 from nova import availability_zones
+from nova.compute import task_states
+from nova.compute import utils as compute_utils
 from nova.conductor.tasks import base
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
+from nova import image as nova_image
 from nova import network
 from nova.network.neutronv2 import constants as neutron_constants
 from nova import objects
@@ -363,6 +366,87 @@ class PrepResizeAtDestTask(base.TaskBase):
                               instance=self.instance)
 
 
+class PrepResizeAtSourceTask(base.TaskBase):
+    """Task to prepare the instance at the source host for the resize.
+
+    Will power off the instance at the source host, create and upload a
+    snapshot image for a non-volume-backed server, and disconnect volumes and
+    networking from the source host.
+
+    The vm_state is recorded with the "old_vm_state" key in the
+    instance.system_metadata field prior to powering off the instance so the
+    revert flow can determine if the guest should be running or stopped.
+
+    Returns the snapshot image ID, if one was created, from the ``execute``
+    method.
+
+    Upon successful completion, the instance.task_state will be
+    ``resize_migrated`` and the migration.status will be ``post-migrating``.
+    """
+
+    def __init__(self, context, instance, migration, request_spec,
+                 compute_rpcapi, image_api):
+        """Initializes this PrepResizeAtSourceTask instance.
+
+        :param context: nova auth context targeted at the source cell
+        :param instance: Instance object from the source cell
+        :param migration: Migration object from the source cell
+        :param request_spec: RequestSpec object for the resize operation
+        :param compute_rpcapi: instance of nova.compute.rpcapi.ComputeAPI
+        :param image_api: instance of nova.image.api.API
+        """
+        super(PrepResizeAtSourceTask, self).__init__(context, instance)
+        self.migration = migration
+        self.request_spec = request_spec
+        self.compute_rpcapi = compute_rpcapi
+        self.image_api = image_api
+        self._image_id = None
+
+    def _execute(self):
+        # Save off the vm_state so we can use that later on the source host
+        # if the resize is reverted - it is used to determine if the reverted
+        # guest should be powered on.
+        self.instance.system_metadata['old_vm_state'] = self.instance.vm_state
+        self.instance.task_state = task_states.RESIZE_MIGRATING
+
+        # If the instance is not volume-backed, create a snapshot of the root
+        # disk.
+        if not self.request_spec.is_bfv:
+            # Create an empty image.
+            name = '%s-resize-temp' % self.instance.display_name
+            image_meta = compute_utils.create_image(
+                self.context, self.instance, name, 'snapshot', self.image_api)
+            self._image_id = image_meta['id']
+            LOG.debug('Created snapshot image %s for cross-cell resize.',
+                      self._image_id, instance=self.instance)
+
+        self.instance.save(expected_task_state=task_states.RESIZE_PREP)
+
+        # RPC call the source host to prepare for resize.
+        self.compute_rpcapi.prep_snapshot_based_resize_at_source(
+            self.context, self.instance, self.migration,
+            snapshot_id=self._image_id)
+
+        return self._image_id
+
+    def rollback(self):
+        # If we created a snapshot image, attempt to delete it.
+        if self._image_id:
+            compute_utils.delete_image(
+                self.context, self.instance, self.image_api, self._image_id)
+        # If the compute service successfully powered off the guest but failed
+        # to snapshot (or timed out during the snapshot), then the
+        # _sync_power_states periodic task should mark the instance as stopped
+        # and the user can start/reboot it.
+        # If the compute service powered off the instance, snapshot it and
+        # destroyed the guest and then a failure occurred, the instance should
+        # have been set to ERROR status (by the compute service) so the user
+        # has to hard reboot or rebuild it.
+        LOG.error('Preparing for cross-cell resize at the source host %s '
+                  'failed. The instance may need to be hard rebooted.',
+                  self.instance.host, instance=self.instance)
+
+
 class CrossCellMigrationTask(base.TaskBase):
     """Orchestrates a cross-cell cold migration (resize)."""
 
@@ -401,6 +485,7 @@ class CrossCellMigrationTask(base.TaskBase):
 
         self.network_api = network.API()
         self.volume_api = cinder.API()
+        self.image_api = nova_image.API()
 
         # Keep an ordered dict of the sub-tasks completed so we can call their
         # rollback routines if something fails.
@@ -534,6 +619,21 @@ class CrossCellMigrationTask(base.TaskBase):
 
         return target_cell_migration
 
+    def _prep_resize_at_source(self):
+        """Executes PrepResizeAtSourceTask
+
+        :return: The image snapshot ID if the instance is not volume-backed,
+            else None.
+        """
+        LOG.debug('Preparing source host %s for cross-cell resize.',
+                  self.source_migration.source_compute, instance=self.instance)
+        prep_source_task = PrepResizeAtSourceTask(
+            self.context, self.instance, self.source_migration,
+            self.request_spec, self.compute_rpcapi, self.image_api)
+        snapshot_id = prep_source_task.execute()
+        self._completed_tasks['PrepResizeAtSourceTask'] = prep_source_task
+        return snapshot_id
+
     def _execute(self):
         """Execute high-level orchestration of the cross-cell resize"""
         # We are committed to a cross-cell move at this point so update the
@@ -560,12 +660,10 @@ class CrossCellMigrationTask(base.TaskBase):
         target_cell_migration = self._prep_resize_at_dest(
             target_cell_migration)
 
-        # TODO(mriedem): If image-backed, snapshot the server from source host
-        # and store it in the migration_context for spawn. Should we do this
-        # in PrepResizeAtDestTask? Re-using compute_rpcapi.snapshot_instance()
-        # would be nice but it sets the task_state=None and sends different
-        # notifications from a normal resize (but do those matter?).
-        # TODO(mriedem): Stop the server on the source host.
+        # Prepare the instance at the source host (stop it, optionally snapshot
+        # it, disconnect volumes and VIFs, etc).
+        self._prep_resize_at_source()
+
         # TODO(mriedem): Copy data to dest cell DB.
         # TODO(mriedem): Update instance mapping to dest cell DB.
         # TODO(mriedem): Spawn in target cell host:
