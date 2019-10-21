@@ -92,7 +92,14 @@ rules = [
     policy.DocumentedRuleDefault(
         SERVERS % 'show:host_status',
         base.RULE_ADMIN_API,
-        "Show a server with additional host status information",
+        """
+Show a server with additional host status information.
+
+Microvision 2.75 added the ``host_status`` attribute in the
+``PUT /servers/{server_id}`` and ``POST /servers/{server_id}/action (rebuild)``
+API responses which are also controlled by this policy rule, like the
+``GET /servers*`` APIs.
+""",
         [
             {
                 'method': 'GET',
@@ -101,6 +108,14 @@ rules = [
             {
                 'method': 'GET',
                 'path': '/servers/detail'
+            },
+            {
+                'method': 'PUT',
+                'path': '/servers/{server_id}'
+            },
+            {
+                'method': 'POST',
+                'path': '/servers/{server_id}/action (rebuild)'
             }
         ]),
     policy.DocumentedRuleDefault(
