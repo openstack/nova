@@ -194,7 +194,8 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
     def instance(self):
         if not hasattr(self, '_cached_instance'):
             self._cached_instance = objects.Instance.get_by_uuid(
-                self._context, self.instance_uuid)
+                self._context, self.instance_uuid,
+                expected_attrs=['migration_context', 'flavor'])
         return self._cached_instance
 
     @instance.setter
