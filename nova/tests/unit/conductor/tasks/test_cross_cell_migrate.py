@@ -13,10 +13,12 @@
 import copy
 
 import mock
+from oslo_messaging import exceptions as messaging_exceptions
 from oslo_utils.fixture import uuidsentinel as uuids
 import six
 
 from nova.compute import utils as compute_utils
+from nova.compute import vm_states
 from nova.conductor.tasks import cross_cell_migrate
 from nova import context as nova_context
 from nova import exception
@@ -375,12 +377,14 @@ class CrossCellMigrationTaskTestCase(test.NoDBTestCase):
     def setUp(self):
         super(CrossCellMigrationTaskTestCase, self).setUp()
         source_context = nova_context.get_context()
-        host_selection = objects.Selection(cell_uuid=uuids.cell_uuid)
+        host_selection = objects.Selection(
+            service_host='target.host.com', cell_uuid=uuids.cell_uuid)
         migration = objects.Migration(id=1, cross_cell_move=False)
+        instance = objects.Instance()
         self.task = cross_cell_migrate.CrossCellMigrationTask(
             source_context,
-            mock.sentinel.instance,
-            mock.sentinel.flavor,
+            instance,
+            objects.Flavor(),
             mock.sentinel.request_spec,
             migration,
             mock.sentinel.compute_rpcapi,
@@ -391,20 +395,23 @@ class CrossCellMigrationTaskTestCase(test.NoDBTestCase):
         """Basic test to just hit execute and rollback."""
         # Mock out the things that execute calls
         with test.nested(
-            mock.patch.object(self.task.migration, 'save'),
+            mock.patch.object(self.task.source_migration, 'save'),
             mock.patch.object(self.task, '_perform_external_api_checks'),
             mock.patch.object(self.task, '_setup_target_cell_db'),
+            mock.patch.object(self.task, '_prep_resize_at_dest'),
         ) as (
             mock_migration_save, mock_perform_external_api_checks,
-            mock_setup_target_cell_db,
+            mock_setup_target_cell_db, mock_prep_resize_at_dest,
         ):
             self.task.execute()
         # Assert the calls
-        self.assertTrue(self.task.migration.cross_cell_move,
+        self.assertTrue(self.task.source_migration.cross_cell_move,
                         'Migration.cross_cell_move should be True.')
         mock_migration_save.assert_called_once_with()
         mock_perform_external_api_checks.assert_called_once_with()
         mock_setup_target_cell_db.assert_called_once_with()
+        mock_prep_resize_at_dest.assert_called_once_with(
+            mock_setup_target_cell_db.return_value)
         # Now rollback the completed sub-tasks
         self.task.rollback()
 
@@ -485,3 +492,258 @@ class CrossCellMigrationTaskTestCase(test.NoDBTestCase):
         self.assertIn('TargetDBSetupTask', self.task._completed_tasks)
         self.assertIsInstance(self.task._completed_tasks['TargetDBSetupTask'],
                               cross_cell_migrate.TargetDBSetupTask)
+
+    @mock.patch.object(cross_cell_migrate.PrepResizeAtDestTask, 'execute')
+    @mock.patch('nova.availability_zones.get_host_availability_zone',
+                return_value='cell2-az1')
+    def test_prep_resize_at_dest(self, mock_get_az, mock_task_execute):
+        """Tests setting up and executing PrepResizeAtDestTask"""
+        # _setup_target_cell_db set the _target_cell_context and
+        # _target_cell_instance variables so fake those out here
+        self.task._target_cell_context = mock.sentinel.target_cell_context
+        target_inst = objects.Instance(
+            vm_state=vm_states.ACTIVE, system_metadata={})
+        self.task._target_cell_instance = target_inst
+        target_cell_migration = objects.Migration(
+            # use unique ids for comparisons
+            id=self.task.source_migration.id + 1)
+        self.assertNotIn('migration_context', self.task.instance)
+        mock_task_execute.return_value = objects.MigrationContext(
+            migration_id=target_cell_migration.id)
+
+        with test.nested(
+            mock.patch.object(self.task,
+                              '_update_migration_from_dest_after_claim'),
+            mock.patch.object(self.task.instance, 'save'),
+            mock.patch.object(target_inst, 'save')
+        ) as (
+            _upd_mig, source_inst_save, target_inst_save
+        ):
+            retval = self.task._prep_resize_at_dest(target_cell_migration)
+
+        self.assertIs(retval, _upd_mig.return_value)
+        mock_task_execute.assert_called_once_with()
+        mock_get_az.assert_called_once_with(
+            self.task.context, self.task.host_selection.service_host)
+        self.assertIn('PrepResizeAtDestTask', self.task._completed_tasks)
+        self.assertIsInstance(
+            self.task._completed_tasks['PrepResizeAtDestTask'],
+            cross_cell_migrate.PrepResizeAtDestTask)
+        # The new_flavor should be set on the target cell instance along with
+        # the AZ and old_vm_state.
+        self.assertIs(target_inst.new_flavor, self.task.flavor)
+        self.assertEqual(vm_states.ACTIVE,
+                         target_inst.system_metadata['old_vm_state'])
+        self.assertEqual(mock_get_az.return_value,
+                         target_inst.availability_zone)
+        # A clone of the MigrationContext returned from execute() should be
+        # stored on the source instance with the internal context targeted
+        # at the source cell context and the migration_id updated.
+        self.assertIsNotNone('migration_context', self.task.instance)
+        self.assertEqual(self.task.source_migration.id,
+                         self.task.instance.migration_context.migration_id)
+        source_inst_save.assert_called_once_with()
+        _upd_mig.assert_called_once_with(target_cell_migration)
+
+    @mock.patch('nova.objects.Migration.get_by_uuid')
+    def test_update_migration_from_dest_after_claim(self, get_by_uuid):
+        """Tests the _update_migration_from_dest_after_claim method."""
+        self.task._target_cell_context = mock.sentinel.target_cell_context
+        target_cell_migration = objects.Migration(
+            uuid=uuids.migration, cross_cell_move=True,
+            dest_compute='dest-compute', dest_node='dest-node',
+            dest_host='192.168.159.176')
+        get_by_uuid.return_value = target_cell_migration.obj_clone()
+        with mock.patch.object(self.task.source_migration, 'save') as save:
+            retval = self.task._update_migration_from_dest_after_claim(
+                target_cell_migration)
+        # The returned target cell migration should be the one we pulled from
+        # the target cell database.
+        self.assertIs(retval, get_by_uuid.return_value)
+        get_by_uuid.assert_called_once_with(
+            self.task._target_cell_context, target_cell_migration.uuid)
+        # The source cell migration on the task should have been updated.
+        source_cell_migration = self.task.source_migration
+        self.assertEqual('dest-compute', source_cell_migration.dest_compute)
+        self.assertEqual('dest-node', source_cell_migration.dest_node)
+        self.assertEqual('192.168.159.176', source_cell_migration.dest_host)
+        save.assert_called_once_with()
+
+
+class PrepResizeAtDestTaskTestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        super(PrepResizeAtDestTaskTestCase, self).setUp()
+        host_selection = objects.Selection(
+            service_host='fake-host', nodename='fake-host',
+            limits=objects.SchedulerLimits())
+        self.task = cross_cell_migrate.PrepResizeAtDestTask(
+            nova_context.get_context(),
+            objects.Instance(uuid=uuids.instance),
+            objects.Flavor(),
+            objects.Migration(),
+            objects.RequestSpec(),
+            compute_rpcapi=mock.Mock(),
+            host_selection=host_selection,
+            network_api=mock.Mock(),
+            volume_api=mock.Mock())
+
+    def test_create_port_bindings(self):
+        """Happy path test for creating port bindings"""
+        with mock.patch.object(
+                self.task.network_api, 'bind_ports_to_host') as mock_bind:
+            self.task._create_port_bindings()
+        self.assertIs(self.task._bindings_by_port_id, mock_bind.return_value)
+        mock_bind.assert_called_once_with(
+            self.task.context, self.task.instance,
+            self.task.host_selection.service_host)
+
+    def test_create_port_bindings_port_binding_failed(self):
+        """Tests that bind_ports_to_host raises PortBindingFailed which
+        results in a MigrationPreCheckError.
+        """
+        with mock.patch.object(
+                self.task.network_api, 'bind_ports_to_host',
+                side_effect=exception.PortBindingFailed(
+                    port_id=uuids.port_id)) as mock_bind:
+            self.assertRaises(exception.MigrationPreCheckError,
+                              self.task._create_port_bindings)
+        self.assertEqual({}, self.task._bindings_by_port_id)
+        mock_bind.assert_called_once_with(
+            self.task.context, self.task.instance,
+            self.task.host_selection.service_host)
+
+    @mock.patch('nova.objects.BlockDeviceMapping.save')
+    def test_create_volume_attachments(self, mock_bdm_save):
+        """Happy path test for creating volume attachments"""
+        # Two BDMs: one as a local image and one as an attached data volume;
+        # only the volume BDM should be processed and returned.
+        bdms = objects.BlockDeviceMappingList(objects=[
+            objects.BlockDeviceMapping(
+                source_type='image', destination_type='local'),
+            objects.BlockDeviceMapping(
+                source_type='volume', destination_type='volume',
+                volume_id=uuids.volume_id,
+                instance_uuid=self.task.instance.uuid)])
+        with test.nested(
+            mock.patch.object(
+                self.task.instance, 'get_bdms', return_value=bdms),
+            mock.patch.object(
+                self.task.volume_api, 'attachment_create',
+                return_value={'id': uuids.attachment_id}),
+        ) as (
+            mock_get_bdms, mock_attachment_create
+        ):
+            volume_bdms = self.task._create_volume_attachments()
+
+        mock_attachment_create.assert_called_once_with(
+            self.task.context, uuids.volume_id, self.task.instance.uuid)
+        # The created attachment ID should be saved for rollbacks.
+        self.assertEqual(1, len(self.task._created_volume_attachment_ids))
+        self.assertEqual(
+            uuids.attachment_id, self.task._created_volume_attachment_ids[0])
+        # Only the volume BDM should have been processed and returned.
+        self.assertEqual(1, len(volume_bdms))
+        self.assertIs(bdms[1], volume_bdms[0])
+        # The volume BDM attachment_id should have been updated.
+        self.assertEqual(uuids.attachment_id, volume_bdms[0].attachment_id)
+
+    def test_execute(self):
+        """Happy path for executing the task"""
+
+        def fake_create_port_bindings():
+            self.task._bindings_by_port_id = mock.sentinel.bindings
+
+        with test.nested(
+            mock.patch.object(self.task, '_create_port_bindings',
+                              side_effect=fake_create_port_bindings),
+            mock.patch.object(self.task, '_create_volume_attachments'),
+            mock.patch.object(
+                self.task.compute_rpcapi, 'prep_snapshot_based_resize_at_dest')
+        ) as (
+            _create_port_bindings, _create_volume_attachments,
+            prep_snapshot_based_resize_at_dest
+        ):
+            # Execute the task. The return value should be the MigrationContext
+            # returned from prep_snapshot_based_resize_at_dest.
+            self.assertEqual(
+                prep_snapshot_based_resize_at_dest.return_value,
+                self.task.execute())
+
+        _create_port_bindings.assert_called_once_with()
+        _create_volume_attachments.assert_called_once_with()
+        prep_snapshot_based_resize_at_dest.assert_called_once_with(
+            self.task.context, self.task.instance, self.task.flavor,
+            self.task.host_selection.nodename, self.task.target_migration,
+            self.task.host_selection.limits, self.task.request_spec,
+            self.task.host_selection.service_host)
+
+    def test_execute_messaging_timeout(self):
+        """Tests the case that prep_snapshot_based_resize_at_dest raises
+        MessagingTimeout which results in a MigrationPreCheckError.
+        """
+        with test.nested(
+            mock.patch.object(self.task, '_create_port_bindings'),
+            mock.patch.object(self.task, '_create_volume_attachments'),
+            mock.patch.object(
+                self.task.compute_rpcapi, 'prep_snapshot_based_resize_at_dest',
+                side_effect=messaging_exceptions.MessagingTimeout)
+        ) as (
+            _create_port_bindings, _create_volume_attachments,
+            prep_snapshot_based_resize_at_dest
+        ):
+            ex = self.assertRaises(
+                exception.MigrationPreCheckError, self.task.execute)
+            self.assertIn(
+                'RPC timeout while checking if we can cross-cell migrate to '
+                'host: fake-host', six.text_type(ex))
+
+        _create_port_bindings.assert_called_once_with()
+        _create_volume_attachments.assert_called_once_with()
+        prep_snapshot_based_resize_at_dest.assert_called_once_with(
+            self.task.context, self.task.instance, self.task.flavor,
+            self.task.host_selection.nodename, self.task.target_migration,
+            self.task.host_selection.limits, self.task.request_spec,
+            self.task.host_selection.service_host)
+
+    @mock.patch('nova.conductor.tasks.cross_cell_migrate.LOG.exception')
+    def test_rollback(self, mock_log_exception):
+        """Tests rollback to make sure it idempotently handles cleaning up
+        port bindings and volume attachments even if one in the set fails for
+        each.
+        """
+        # Make sure we have two port bindings and two volume attachments
+        # because we are going to make the first of each fail and we want to
+        # make sure we still try to delete the other.
+        self.task._bindings_by_port_id = {
+            uuids.port_id1: mock.sentinel.binding1,
+            uuids.port_id2: mock.sentinel.binding2
+        }
+        self.task._created_volume_attachment_ids = [
+            uuids.attachment_id1, uuids.attachment_id2
+        ]
+        with test.nested(
+            mock.patch.object(
+                self.task.network_api, 'delete_port_binding',
+                # First call fails, second is OK.
+                side_effect=(exception.PortBindingDeletionFailed, None)),
+            mock.patch.object(
+                self.task.volume_api, 'attachment_delete',
+                # First call fails, second is OK.
+                side_effect=(exception.CinderConnectionFailed, None)),
+        ) as (
+            delete_port_binding, attachment_delete
+        ):
+            self.task.rollback()
+        # Should have called both delete methods twice in any order.
+        host = self.task.host_selection.service_host
+        delete_port_binding.assert_has_calls([
+            mock.call(self.task.context, port_id, host)
+            for port_id in self.task._bindings_by_port_id],
+            any_order=True)
+        attachment_delete.assert_has_calls([
+            mock.call(self.task.context, attachment_id)
+            for attachment_id in self.task._created_volume_attachment_ids],
+            any_order=True)
+        # Should have logged both exceptions.
+        self.assertEqual(2, mock_log_exception.call_count)
