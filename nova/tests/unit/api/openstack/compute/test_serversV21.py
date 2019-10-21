@@ -6830,10 +6830,7 @@ class ServersControllerCreateTestV267(ServersControllerCreateTest):
         return super(ServersControllerCreateTestV267, self)._test_create_extra(
             *args, **kwargs)
 
-    @mock.patch('nova.objects.Service.get_minimum_version',
-                return_value=compute_api.MIN_COMPUTE_VOLUME_TYPE)
-    def test_create_server_with_trusted_volume_type_pre_2_67_fails(self,
-            get_min_ver):
+    def test_create_server_with_trusted_volume_type_pre_2_67_fails(self):
         """Make sure we can't use volume_type before 2.67"""
         self.body['server'].update(
             {'block_device_mapping_v2': self.block_device_mapping_v2})
@@ -6856,18 +6853,6 @@ class ServersControllerCreateTestV267(ServersControllerCreateTest):
         ex = self.assertRaises(webob.exc.HTTPBadRequest,
                                self._test_create_extra, params)
         self.assertIn('Volume type fake-lvm-1 could not be found',
-                      six.text_type(ex))
-
-    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
-                return_value=compute_api.MIN_COMPUTE_VOLUME_TYPE - 1)
-    def test_check_volume_type_new_inst_old_compute(self, get_min_version):
-        """Trying to boot from volume with a volume_type but not all computes
-        are upgraded will result in a 409 error.
-        """
-        params = {'block_device_mapping_v2': self.block_device_mapping_v2}
-        ex = self.assertRaises(webob.exc.HTTPConflict,
-                               self._test_create_extra, params)
-        self.assertIn('Volume type support is not yet available',
                       six.text_type(ex))
 
     def test_create_instance_with_volume_type_empty_string(self):
