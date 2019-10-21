@@ -10302,6 +10302,205 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             'compute.%s' % fields.NotificationAction.EXCEPTION,
             fake_notifier.VERSIONED_NOTIFICATIONS[0]['event_type'])
 
+    def test_snapshot_for_resize(self):
+        """Happy path test for _snapshot_for_resize."""
+        with mock.patch.object(self.compute.driver, 'snapshot') as snapshot:
+            self.compute._snapshot_for_resize(
+                self.context, uuids.image_id, self.instance)
+        snapshot.assert_called_once_with(
+            self.context, self.instance, uuids.image_id, mock.ANY)
+
+    def test_snapshot_for_resize_delete_image_on_error(self):
+        """Tests that any exception raised from _snapshot_for_resize will
+        result in attempting to delete the image.
+        """
+        with mock.patch.object(self.compute.driver, 'snapshot',
+                               side_effect=test.TestingException) as snapshot:
+            with mock.patch.object(self.compute.image_api, 'delete') as delete:
+                self.assertRaises(test.TestingException,
+                                  self.compute._snapshot_for_resize,
+                                  self.context, uuids.image_id, self.instance)
+        snapshot.assert_called_once_with(
+            self.context, self.instance, uuids.image_id, mock.ANY)
+        delete.assert_called_once_with(self.context, uuids.image_id)
+
+    @mock.patch('nova.objects.Instance.get_bdms',
+                return_value=objects.BlockDeviceMappingList())
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch(
+        'nova.compute.manager.InstanceEvents.clear_events_for_instance')
+    def _test_prep_snapshot_based_resize_at_source(
+            self, clear_events_for_instance, instance_save, get_bdms,
+            snapshot_id=None):
+        """Happy path test for prep_snapshot_based_resize_at_source."""
+        with test.nested(
+            mock.patch.object(
+                self.compute.network_api, 'get_instance_nw_info',
+                return_value=network_model.NetworkInfo()),
+            mock.patch.object(
+                self.compute, '_send_resize_instance_notifications'),
+            mock.patch.object(self.compute, '_power_off_instance'),
+            mock.patch.object(self.compute, '_get_power_state',
+                              return_value=power_state.SHUTDOWN),
+            mock.patch.object(self.compute, '_snapshot_for_resize'),
+            mock.patch.object(self.compute, '_get_instance_block_device_info'),
+            mock.patch.object(self.compute.driver, 'destroy'),
+            mock.patch.object(self.compute, '_terminate_volume_connections'),
+            mock.patch.object(
+                self.compute.network_api, 'migrate_instance_start')
+        ) as (
+            get_instance_nw_info, _send_resize_instance_notifications,
+            _power_off_instance, _get_power_state, _snapshot_for_resize,
+            _get_instance_block_device_info, destroy,
+            _terminate_volume_connections, migrate_instance_start
+        ):
+            self.compute.prep_snapshot_based_resize_at_source(
+                self.context, self.instance, self.migration,
+                snapshot_id=snapshot_id)
+        # Assert the mock calls.
+        get_instance_nw_info.assert_called_once_with(
+            self.context, self.instance)
+        _send_resize_instance_notifications.assert_has_calls([
+            mock.call(self.context, self.instance, get_bdms.return_value,
+                      get_instance_nw_info.return_value,
+                      fields.NotificationPhase.START),
+            mock.call(self.context, self.instance, get_bdms.return_value,
+                      get_instance_nw_info.return_value,
+                      fields.NotificationPhase.END)])
+        _power_off_instance.assert_called_once_with(
+            self.context, self.instance)
+        self.assertEqual(power_state.SHUTDOWN, self.instance.power_state)
+        if snapshot_id is None:
+            _snapshot_for_resize.assert_not_called()
+        else:
+            _snapshot_for_resize.assert_called_once_with(
+                self.context, snapshot_id, self.instance)
+        _get_instance_block_device_info.assert_called_once_with(
+            self.context, self.instance, bdms=get_bdms.return_value)
+        destroy.assert_called_once_with(
+            self.context, self.instance, get_instance_nw_info.return_value,
+            block_device_info=_get_instance_block_device_info.return_value,
+            destroy_disks=False)
+        _terminate_volume_connections.assert_called_once_with(
+            self.context, self.instance, get_bdms.return_value)
+        migrate_instance_start.assert_called_once_with(
+            self.context, self.instance, self.migration)
+        self.assertEqual('post-migrating', self.migration.status)
+        self.assertEqual(2, self.migration.save.call_count)
+        self.assertEqual(task_states.RESIZE_MIGRATED, self.instance.task_state)
+        instance_save.assert_called_once_with(
+            expected_task_state=task_states.RESIZE_MIGRATING)
+        clear_events_for_instance.assert_called_once_with(self.instance)
+
+    def test_prep_snapshot_based_resize_at_source_with_snapshot(self):
+        self._test_prep_snapshot_based_resize_at_source(
+            snapshot_id=uuids.snapshot_id)
+
+    def test_prep_snapshot_based_resize_at_source_without_snapshot(self):
+        self._test_prep_snapshot_based_resize_at_source()
+
+    @mock.patch('nova.objects.Instance.get_bdms',
+                return_value=objects.BlockDeviceMappingList())
+    def test_prep_snapshot_based_resize_at_source_power_off_failure(
+            self, get_bdms):
+        """Tests that the power off fails and raises InstancePowerOffFailure"""
+        with test.nested(
+            mock.patch.object(
+                self.compute.network_api, 'get_instance_nw_info',
+                return_value=network_model.NetworkInfo()),
+            mock.patch.object(
+                self.compute, '_send_resize_instance_notifications'),
+            mock.patch.object(self.compute, '_power_off_instance',
+                              side_effect=test.TestingException),
+        ) as (
+            get_instance_nw_info, _send_resize_instance_notifications,
+            _power_off_instance,
+        ):
+            self.assertRaises(
+                exception.InstancePowerOffFailure,
+                self.compute._prep_snapshot_based_resize_at_source,
+                self.context, self.instance, self.migration)
+        _power_off_instance.assert_called_once_with(
+            self.context, self.instance)
+
+    @mock.patch('nova.objects.Instance.get_bdms',
+                return_value=objects.BlockDeviceMappingList())
+    @mock.patch('nova.objects.Instance.save')
+    def test_prep_snapshot_based_resize_at_source_destroy_error(
+            self, instance_save, get_bdms):
+        """Tests that the driver.destroy fails and
+        _error_out_instance_on_exception sets the instance.vm_state='error'.
+        """
+        with test.nested(
+            mock.patch.object(
+                self.compute.network_api, 'get_instance_nw_info',
+                return_value=network_model.NetworkInfo()),
+            mock.patch.object(
+                self.compute, '_send_resize_instance_notifications'),
+            mock.patch.object(self.compute, '_power_off_instance'),
+            mock.patch.object(self.compute, '_get_power_state',
+                              return_value=power_state.SHUTDOWN),
+            mock.patch.object(self.compute, '_snapshot_for_resize'),
+            mock.patch.object(self.compute, '_get_instance_block_device_info'),
+            mock.patch.object(self.compute.driver, 'destroy',
+                              side_effect=test.TestingException),
+        ) as (
+            get_instance_nw_info, _send_resize_instance_notifications,
+            _power_off_instance, _get_power_state, _snapshot_for_resize,
+            _get_instance_block_device_info, destroy,
+        ):
+            self.assertRaises(
+                test.TestingException,
+                self.compute._prep_snapshot_based_resize_at_source,
+                self.context, self.instance, self.migration)
+        destroy.assert_called_once_with(
+            self.context, self.instance, get_instance_nw_info.return_value,
+            block_device_info=_get_instance_block_device_info.return_value,
+            destroy_disks=False)
+        instance_save.assert_called_once_with()
+        self.assertEqual(vm_states.ERROR, self.instance.vm_state)
+
+    @mock.patch('nova.compute.utils.add_instance_fault_from_exc')
+    @mock.patch('nova.objects.Instance.save')
+    def test_prep_snapshot_based_resize_at_source_general_error_handling(
+            self, instance_save, add_fault):
+        """Tests the general error handling and allocation rollback code when
+        _prep_snapshot_based_resize_at_source raises an exception.
+        """
+        ex1 = exception.InstancePowerOffFailure(reason='testing')
+        with mock.patch.object(
+                self.compute, '_prep_snapshot_based_resize_at_source',
+                side_effect=ex1) as _prep_snapshot_based_resize_at_source:
+            self.instance.task_state = task_states.RESIZE_MIGRATING
+            ex2 = self.assertRaises(
+                messaging.ExpectedException,
+                self.compute.prep_snapshot_based_resize_at_source,
+                self.context, self.instance, self.migration,
+                snapshot_id=uuids.snapshot_id)
+        # The InstancePowerOffFailure should be wrapped in the
+        # ExpectedException.
+        wrapped_exc = ex2.exc_info[1]
+        self.assertIn('Failed to power off instance: testing',
+                      six.text_type(wrapped_exc))
+        # Assert the non-decorator mock calls.
+        _prep_snapshot_based_resize_at_source.assert_called_once_with(
+            self.context, self.instance, self.migration,
+            snapshot_id=uuids.snapshot_id)
+        # Assert wrap_instance_fault is called.
+        add_fault.assert_called_once_with(
+            self.context, self.instance, wrapped_exc, mock.ANY)
+        # Assert wrap_exception is called.
+        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(
+            'compute.%s' % fields.NotificationAction.EXCEPTION,
+            fake_notifier.VERSIONED_NOTIFICATIONS[0]['event_type'])
+        # Assert errors_out_migration is called.
+        self.assertEqual('error', self.migration.status)
+        self.migration.save.assert_called_once_with()
+        # Assert reverts_task_state is called.
+        self.assertIsNone(self.instance.task_state)
+        instance_save.assert_called_once_with()
+
 
 class ComputeManagerInstanceUsageAuditTestCase(test.TestCase):
     def setUp(self):

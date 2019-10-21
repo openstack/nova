@@ -535,6 +535,36 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             destination='dest')
         self.assertIn('Compute too old', six.text_type(ex))
 
+    def test_prep_snapshot_based_resize_at_source(self):
+        """Tests happy path for prep_snapshot_based_resize_at_source rpc call
+        """
+        self.flags(long_rpc_timeout=1234)
+        self._test_compute_api(
+            'prep_snapshot_based_resize_at_source', 'call',
+            # compute method kwargs
+            instance=self.fake_instance_obj,
+            migration=migration_obj.Migration(),
+            snapshot_id=uuids.snapshot_id,
+            # client.prepare kwargs
+            version='5.6', call_monitor_timeout=60, timeout=1234)
+
+    @mock.patch('nova.rpc.ClientRouter.client')
+    def test_prep_snapshot_based_resize_at_source_old_compute(
+            self, mock_client):
+        """Tests when the source compute service is too old to call
+        prep_snapshot_based_resize_at_source so MigrationError is raised.
+        """
+        mock_client.return_value.can_send_version.return_value = False
+        rpcapi = compute_rpcapi.ComputeAPI()
+        ex = self.assertRaises(
+            exception.MigrationError,
+            rpcapi.prep_snapshot_based_resize_at_source,
+            self.context,
+            instance=self.fake_instance_obj,
+            migration=migration_obj.Migration(),
+            snapshot_id=uuids.snapshot_id)
+        self.assertIn('Compute too old', six.text_type(ex))
+
     def test_reboot_instance(self):
         self.maxDiff = None
         self._test_compute_api('reboot_instance', 'cast',
