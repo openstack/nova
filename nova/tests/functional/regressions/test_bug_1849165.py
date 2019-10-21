@@ -58,9 +58,9 @@ class UpdateResourceMigrationRaceTest(
                      'OS-EXT-STS:task_state': None,
                      'status': 'ACTIVE'})
 
-            # FIXME(efried): This is bug 1849165 where
-            #  _populate_assigned_resources raises a TypeError because it tries
-            #  to access the instance's migration_context before that exists.
-            self.assertIn(
+            # NOTE(efried): This was bug 1849165 where
+            #  _populate_assigned_resources raised a TypeError because it tried
+            #  to access the instance's migration_context before that existed.
+            self.assertNotIn(
                 "TypeError: argument of type 'NoneType' is not iterable",
                 self.stdlog.logger.output)
