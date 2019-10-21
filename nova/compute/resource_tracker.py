@@ -477,6 +477,10 @@ class ResourceTracker(object):
         # Get resources assigned to migrations
         for mig in self.tracked_migrations.values():
             mig_ctx = mig.instance.migration_context
+            # We might have a migration whose instance hasn't arrived here yet.
+            # Ignore it.
+            if not mig_ctx:
+                continue
             if mig.source_compute == self.host and 'old_resources' in mig_ctx:
                 resources.extend(mig_ctx.old_resources or [])
             if mig.dest_compute == self.host and 'new_resources' in mig_ctx:
