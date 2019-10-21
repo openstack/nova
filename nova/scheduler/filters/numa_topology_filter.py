@@ -23,7 +23,11 @@ LOG = logging.getLogger(__name__)
 class NUMATopologyFilter(filters.BaseHostFilter):
     """Filter on requested NUMA topology."""
 
-    RUN_ON_REBUILD = True
+    # NOTE(sean-k-mooney): In change I0322d872bdff68936033a6f5a54e8296a6fb343
+    # we validate that the NUMA topology does not change in the api. If the
+    # requested image would alter the NUMA constrains we reject the rebuild
+    # request and therefore do not need to run this filter on rebuild.
+    RUN_ON_REBUILD = False
 
     def _satisfies_cpu_policy(self, host_state, extra_specs, image_props):
         """Check that the host_state provided satisfies any available
