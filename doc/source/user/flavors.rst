@@ -355,7 +355,7 @@ Random-number generator
 
   - RATE-BYTES: (integer) Allowed amount of bytes that the guest can read from
     the host's entropy per period.
-  - RATE-PERIOD: (integer) Duration of the read period in seconds.
+  - RATE-PERIOD: (integer) Duration of the read period in milliseconds.
 
 CPU topology
   For the libvirt driver, you can define the topology of the processors in the
