@@ -6551,8 +6551,8 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
             'test1', port_req_body)
 
     def test_migrate_instance_finish_binding_true(self):
-        migration = {'source_compute': self.instance.get('host'),
-                     'dest_compute': 'dest_host'}
+        migration = objects.Migration(source_compute=self.instance.get('host'),
+                                      dest_compute='dest_host')
         instance = self._fake_instance_object(self.instance)
         self._test_update_port_binding_true('dest_host',
                                             'migrate_instance_finish',
@@ -6562,8 +6562,8 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
                                             {})
 
     def test_migrate_instance_finish_binding_true_exception(self):
-        migration = {'source_compute': self.instance.get('host'),
-                     'dest_compute': 'dest_host'}
+        migration = objects.Migration(source_compute=self.instance.get('host'),
+                                      dest_compute='dest_host')
         instance = self._fake_instance_object(self.instance)
         self._test_update_port_true_exception('dest_host',
                                               'migrate_instance_finish',

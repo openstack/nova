@@ -6074,7 +6074,7 @@ class ComputeTestCase(BaseTestCase,
         # NOTE(hanrong): Prove that we pass the right value to the
         # "self.network_api.migrate_instance_finish".
         def fake_migrate_instance_finish(cls, context, instance, migration):
-            self.assertEqual(source_compute, migration['dest_compute'])
+            self.assertEqual(source_compute, migration.dest_compute)
         self.stub_out('nova.network.api.API.migrate_instance_finish',
                       fake_migrate_instance_finish)
 

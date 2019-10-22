@@ -510,15 +510,15 @@ class API(base_api.NetworkAPI):
             instance_uuid=instance.uuid,
             rxtx_factor=flavor['rxtx_factor'],
             project_id=instance.project_id,
-            source_compute=migration['source_compute'],
-            dest_compute=migration['dest_compute'],
+            source_compute=migration.source_compute,
+            dest_compute=migration.dest_compute,
             floating_addresses=None,
         )
 
         multi_host, addresses = self._get_multi_addresses(context, instance)
         if multi_host:
             args['floating_addresses'] = addresses
-            args['host'] = migration['dest_compute']
+            args['host'] = migration.dest_compute
 
         self.network_rpcapi.migrate_instance_finish(context, **args)
 

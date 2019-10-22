@@ -235,8 +235,9 @@ class ApiTestCase(test.TestCase):
             instance_type_id=fake_flavor['id'],
             flavor=fake_flavor,
             system_metadata={})
-        fake_migration = {'source_compute': 'fake_compute_source',
-                          'dest_compute': 'fake_compute_dest'}
+        fake_migration = objects.Migration(
+            source_compute='fake_compute_source',
+            dest_compute='fake_compute_dest')
 
         def fake_mig_inst_method(*args, **kwargs):
             info['kwargs'] = kwargs
