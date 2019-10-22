@@ -4333,10 +4333,9 @@ class ComputeManager(manager.Manager):
             self.network_api.setup_networks_on_host(context, instance,
                                                     teardown=True)
 
-            migration_p = obj_base.obj_to_primitive(migration)
             self.network_api.migrate_instance_start(context,
                                                     instance,
-                                                    migration_p)
+                                                    migration)
 
             network_info = self.network_api.get_instance_nw_info(context,
                                                                  instance)
@@ -5062,10 +5061,9 @@ class ComputeManager(manager.Manager):
 
             self._terminate_volume_connections(context, instance, bdms)
 
-            migration_p = obj_base.obj_to_primitive(migration)
             self.network_api.migrate_instance_start(context,
                                                     instance,
-                                                    migration_p)
+                                                    migration)
 
             migration.status = 'post-migrating'
             migration.save()
