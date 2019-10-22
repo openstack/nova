@@ -7909,7 +7909,7 @@ class ComputeManager(manager.Manager):
                 bdm.save()
             except cinder_exception.ClientException:
                 LOG.warning("Ignoring cinderclient exception when "
-                            "attempting to delete attachment %s for volume"
+                            "attempting to delete attachment %s for volume "
                             "%s while rolling back volume bdms.",
                             bdm.attachment_id, bdm.volume_id,
                             instance=instance)
