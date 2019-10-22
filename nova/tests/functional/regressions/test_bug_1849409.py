@@ -63,7 +63,5 @@ class ListDeletedServersWithMarker(test.TestCase,
         servers = self.api.get_servers(detail=False,
                                        search_opts={'deleted': True,
                                                     'marker': server['id']})
-        # FIXME(mriedem): This is bug 1849409 where the marker param is not
-        # honored correctly when using deleted=True.
         server_names = [serv['name'] for serv in servers]
-        self.assertIn(server['name'], server_names)
+        self.assertNotIn(server['name'], server_names)
