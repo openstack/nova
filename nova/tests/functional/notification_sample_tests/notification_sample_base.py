@@ -21,7 +21,6 @@ from oslo_utils import fixture as utils_fixture
 
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-from nova.tests.functional.api import client as api_client
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit.api.openstack.compute import test_services
 from nova.tests.unit import fake_notifier
@@ -174,19 +173,6 @@ class NotificationSampleTestBase(test.TestCase,
                                                    expected_status)
         found_server['reservation_id'] = reservation_id
         return found_server
-
-    def _wait_until_deleted(self, server):
-        try:
-            for i in range(40):
-                server = self.api.get_server(server['id'])
-                if server['status'] == 'ERROR':
-                    self.fail('Server went to error state instead of'
-                              'disappearing.')
-                time.sleep(0.5)
-
-            self.fail('Server failed to delete.')
-        except api_client.OpenStackApiNotFoundException:
-            return
 
     def _get_notifications(self, event_type):
         return [notification for notification
