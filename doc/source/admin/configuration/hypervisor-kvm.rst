@@ -291,8 +291,14 @@ If your ``nova.conf`` file contains ``cpu_mode=host-model``, libvirt identifies
 the CPU model in ``/usr/share/libvirt/cpu_map.xml`` file that most closely
 matches the host, and requests additional CPU flags to complete the match. This
 configuration provides the maximum functionality and performance and maintains
-good reliability and compatibility if the guest is migrated to another host
-with slightly different host CPUs.
+good reliability.
+
+With regard to enabling and facilitating live migration between
+compute nodes, you should assess whether ``host-model`` is suitable
+for your compute architecture. In general, using ``host-model`` is a
+safe choice if your compute node CPUs are largely identical. However,
+if your compute nodes span multiple processor generations, you may be
+better advised to select a ``custom`` CPU model.
 
 Host pass through
 -----------------
@@ -302,7 +308,21 @@ tells KVM to pass through the host CPU with no modifications.  The difference
 to host-model, instead of just matching feature flags, every last detail of the
 host CPU is matched. This gives the best performance, and can be important to
 some apps which check low level CPU details, but it comes at a cost with
-respect to migration.  The guest can only be migrated to a matching host CPU.
+respect to migration.
+
+In ``host-passthrough`` mode, the guest can only be live-migrated to a
+target host that matches the source host extremely closely. This
+definitely includes the physical CPU model and running microcode, and
+may even include the running kernel. Use this mode only if
+
+* your compute nodes have a very large degree of homogeneity
+  (i.e. substantially all of your compute nodes use the exact same CPU
+  generation and model), and you make sure to only live-migrate
+  between hosts with exactly matching kernel versions, `or`
+
+* you decide, for some reason and against established best practices,
+  that your compute infrastructure should not support any live
+  migration at all.
 
 Custom
 ------
@@ -318,14 +338,111 @@ option. For example, to configure the KVM guests to expose Nehalem CPUs, your
    cpu_mode = custom
    cpu_model = Nehalem
 
+In selecting the ``custom`` mode, along with a ``cpu_model`` that
+matches the oldest of your compute node CPUs, you can ensure that live
+migration between compute nodes will always be possible. However, you
+should ensure that the ``cpu_model`` you select passes the correct CPU
+feature flags to the guest.
+
+
 None (default for all libvirt-driven hypervisors other than KVM & QEMU)
 -----------------------------------------------------------------------
 
 If your ``nova.conf`` file contains ``cpu_mode=none``, libvirt does not specify
 a CPU model. Instead, the hypervisor chooses the default model.
 
+Set CPU feature flags
+~~~~~~~~~~~~~~~~~~~~~
+
+Regardless of whether your selected ``cpu_mode`` is
+``host-passthrough``, ``host-model``, or ``custom``, it is also
+possible to selectively enable additional feature flags. Suppose your
+selected ``custom`` CPU model is ``IvyBridge``, which normally does
+not enable the ``pcid`` feature flag --- but you do want to pass
+``pcid`` into your guest instances. In that case, you would set:
+
+.. code-block:: ini
+
+   [libvirt]
+   cpu_mode = custom
+   cpu_model = IvyBridge
+   cpu_model_extra_flags = pcid
+
+Nested guest support
+~~~~~~~~~~~~~~~~~~~~
+
+You may choose to enable support for nested guests --- that is, allow
+your Nova instances to themselves run hardware-accelerated virtual
+machines with KVM. Doing so requires a module parameter on
+your KVM kernel module, and corresponding ``nova.conf`` settings.
+
+Nested guest support in the KVM kernel module
+---------------------------------------------
+
+To enable nested KVM guests, your compute node must load the
+``kvm_intel`` or ``kvm_amd`` module with ``nested=1``. You can enable
+the ``nested`` parameter permanently, by creating a file named
+``/etc/modprobe.d/kvm.conf`` and populating it with the following
+content:
+
+.. code-block:: none
+
+   options kvm_intel nested=1
+   options kvm_amd nested=1
+
+A reboot may be required for the change to become effective.
+
+Nested guest support in ``nova.conf``
+-------------------------------------
+
+To support nested guests, you must set your ``cpu_mode`` configuration
+to one of the following options:
+
+Host pass through
+  In this mode, nested virtualization is automatically enabled once
+  the KVM kernel module is loaded with nesting support.
+
+  .. code-block:: ini
+
+     [libvirt]
+     cpu_mode = host-passthrough
+
+  However, do consider the other implications that `Host pass
+  through`_ mode has on compute functionality.
+
+Host model
+  In this mode, nested virtualization is automatically enabled once
+  the KVM kernel module is loaded with nesting support, **if** the
+  matching CPU model exposes the ``vmx`` feature flag to guests by
+  default (you can verify this with ``virsh capabilities`` on your
+  compute node).
+
+  .. code-block:: ini
+
+     [libvirt]
+     cpu_mode = host-model
+
+  Again, consider the other implications that apply to the `Host model
+  (default for KVM & Qemu)`_ mode.
+
+Nested guest support limitations
+--------------------------------
+
+When enabling nested guests, you should be aware of (and inform your
+users about) certain limitations that are currently inherent to nested
+KVM virtualization. Most importantly, guests using nested
+virtualization will, *while nested guests are running*,
+
+* fail to complete live migration;
+* fail to resume from suspend.
+
+See `the KVM documentation
+<https://www.linux-kvm.org/page/Nested_Guests#Limitations>`_ for more
+information on these limitations.
+
+
 Guest agent support
--------------------
+~~~~~~~~~~~~~~~~~~~
 
 Use guest agents to enable optional access between compute nodes and guests
 through a socket, using the QMP protocol.
