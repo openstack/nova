@@ -41,18 +41,6 @@ class KeypairController(wsgi.Controller):
         super(KeypairController, self).__init__()
         self.api = compute_api.KeypairAPI()
 
-    def _filter_keypair(self, keypair, **attrs):
-        # TODO(claudiub): After v2 and v2.1 is no longer supported,
-        # keypair.type can be added to the clean dict below
-        clean = {
-            'name': keypair.name,
-            'public_key': keypair.public_key,
-            'fingerprint': keypair.fingerprint,
-            }
-        for attr in attrs:
-            clean[attr] = keypair[attr]
-        return clean
-
     @wsgi.Controller.api_version("2.10")
     @wsgi.response(201)
     @wsgi.expected_errors((400, 403, 409))
@@ -70,7 +58,7 @@ class KeypairController(wsgi.Controller):
         """
         # handle optional user-id for admin only
         user_id = body['keypair'].get('user_id')
-        return self._create(req, body, type=True, user_id=user_id)
+        return self._create(req, body, key_type=True, user_id=user_id)
 
     @wsgi.Controller.api_version("2.2", "2.9")  # noqa
     @wsgi.response(201)
@@ -91,7 +79,7 @@ class KeypairController(wsgi.Controller):
             public_key (optional) - string
             type (optional) - string
         """
-        return self._create(req, body, type=True)
+        return self._create(req, body, key_type=True)
 
     @wsgi.Controller.api_version("2.1", "2.1")  # noqa
     @wsgi.expected_errors((400, 403, 409))
@@ -111,32 +99,27 @@ class KeypairController(wsgi.Controller):
         """
         return self._create(req, body)
 
-    def _create(self, req, body, user_id=None, **keypair_filters):
+    def _create(self, req, body, user_id=None, key_type=False):
         context = req.environ['nova.context']
         params = body['keypair']
         name = common.normalize_name(params['name'])
-        key_type = params.get('type', keypair_obj.KEYPAIR_TYPE_SSH)
+        key_type_value = params.get('type', keypair_obj.KEYPAIR_TYPE_SSH)
         user_id = user_id or context.user_id
         context.can(kp_policies.POLICY_ROOT % 'create',
                     target={'user_id': user_id,
                             'project_id': context.project_id})
 
+        return_priv_key = False
         try:
             if 'public_key' in params:
-                keypair = self.api.import_key_pair(context,
-                                              user_id, name,
-                                              params['public_key'], key_type)
-                keypair = self._filter_keypair(keypair, user_id=True,
-                                               **keypair_filters)
+                keypair = self.api.import_key_pair(
+                    context, user_id, name, params['public_key'],
+                    key_type_value)
             else:
                 keypair, private_key = self.api.create_key_pair(
-                    context, user_id, name, key_type)
-                keypair = self._filter_keypair(keypair, user_id=True,
-                                               **keypair_filters)
+                    context, user_id, name, key_type_value)
                 keypair['private_key'] = private_key
-
-            return {'keypair': keypair}
-
+                return_priv_key = True
         except exception.KeypairLimitExceeded:
             msg = _("Quota exceeded, too many key pairs.")
             raise webob.exc.HTTPForbidden(explanation=msg)
@@ -144,6 +127,10 @@ class KeypairController(wsgi.Controller):
             raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
         except exception.KeyPairExists as exc:
             raise webob.exc.HTTPConflict(explanation=exc.format_message())
+
+        return self._view_builder.create(keypair,
+                                         private_key=return_priv_key,
+                                         key_type=key_type)
 
     @wsgi.Controller.api_version("2.1", "2.1")
     @validation.query_schema(keypairs.delete_query_schema_v20)
@@ -194,13 +181,13 @@ class KeypairController(wsgi.Controller):
     def show(self, req, id):
         # handle optional user-id for admin only
         user_id = self._get_user_id(req)
-        return self._show(req, id, type=True, user_id=user_id)
+        return self._show(req, id, key_type=True, user_id=user_id)
 
     @wsgi.Controller.api_version("2.2", "2.9")  # noqa
     @validation.query_schema(keypairs.show_query_schema_v20)
     @wsgi.expected_errors(404)
     def show(self, req, id):
-        return self._show(req, id, type=True)
+        return self._show(req, id, key_type=True)
 
     @wsgi.Controller.api_version("2.1", "2.1")  # noqa
     @validation.query_schema(keypairs.show_query_schema_v20)
@@ -208,7 +195,7 @@ class KeypairController(wsgi.Controller):
     def show(self, req, id):
         return self._show(req, id)
 
-    def _show(self, req, id, user_id=None, **keypair_filters):
+    def _show(self, req, id, key_type=False, user_id=None):
         """Return data for the given key name."""
         context = req.environ['nova.context']
         user_id = user_id or context.user_id
@@ -217,19 +204,10 @@ class KeypairController(wsgi.Controller):
                             'project_id': context.project_id})
 
         try:
-            # The return object needs to be a dict in order to pop the 'type'
-            # field, if the api_version < 2.2.
             keypair = self.api.get_key_pair(context, user_id, id)
-            keypair = self._filter_keypair(keypair, created_at=True,
-                                           deleted=True, deleted_at=True,
-                                           id=True, user_id=True,
-                                           updated_at=True, **keypair_filters)
         except exception.KeypairNotFound as exc:
             raise webob.exc.HTTPNotFound(explanation=exc.format_message())
-        # TODO(oomichi): It is necessary to filter a response of keypair with
-        # _filter_keypair() when v2.1+microversions for implementing consistent
-        # behaviors in this keypair resource.
-        return {'keypair': keypair}
+        return self._view_builder.show(keypair, key_type=key_type)
 
     @wsgi.Controller.api_version("2.35")
     @validation.query_schema(keypairs.index_query_schema_v275, '2.75')
@@ -237,7 +215,7 @@ class KeypairController(wsgi.Controller):
     @wsgi.expected_errors(400)
     def index(self, req):
         user_id = self._get_user_id(req)
-        return self._index(req, links=True, type=True, user_id=user_id)
+        return self._index(req, key_type=True, user_id=user_id, links=True)
 
     @wsgi.Controller.api_version("2.10", "2.34")  # noqa
     @validation.query_schema(keypairs.index_query_schema_v210)
@@ -245,13 +223,13 @@ class KeypairController(wsgi.Controller):
     def index(self, req):
         # handle optional user-id for admin only
         user_id = self._get_user_id(req)
-        return self._index(req, type=True, user_id=user_id)
+        return self._index(req, key_type=True, user_id=user_id)
 
     @wsgi.Controller.api_version("2.2", "2.9")  # noqa
     @validation.query_schema(keypairs.index_query_schema_v20)
     @wsgi.expected_errors(())
     def index(self, req):
-        return self._index(req, type=True)
+        return self._index(req, key_type=True)
 
     @wsgi.Controller.api_version("2.1", "2.1")  # noqa
     @validation.query_schema(keypairs.index_query_schema_v20)
@@ -259,7 +237,7 @@ class KeypairController(wsgi.Controller):
     def index(self, req):
         return self._index(req)
 
-    def _index(self, req, user_id=None, links=False, **keypair_filters):
+    def _index(self, req, key_type=False, user_id=None, links=False):
         """List of keypairs for a user."""
         context = req.environ['nova.context']
         user_id = user_id or context.user_id
@@ -278,16 +256,5 @@ class KeypairController(wsgi.Controller):
         except exception.MarkerNotFound as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
 
-        key_pairs = [self._filter_keypair(key_pair, **keypair_filters)
-                     for key_pair in key_pairs]
-
-        keypairs_list = [{'keypair': key_pair} for key_pair in key_pairs]
-        keypairs_dict = {'keypairs': keypairs_list}
-
-        if links:
-            keypairs_links = self._view_builder.get_links(req, key_pairs)
-
-            if keypairs_links:
-                keypairs_dict['keypairs_links'] = keypairs_links
-
-        return keypairs_dict
+        return self._view_builder.index(req, key_pairs, key_type=key_type,
+                                        links=links)
