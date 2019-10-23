@@ -188,7 +188,8 @@ class ImageCacheTestCase(test_base.HyperVBaseTestCase):
 
     @ddt.data(True, False)
     def test_age_and_verify_cached_images(self, remove_unused_base_images):
-        self.flags(remove_unused_base_images=remove_unused_base_images)
+        self.flags(remove_unused_base_images=remove_unused_base_images,
+                   group='image_cache')
 
         fake_images = [mock.sentinel.FAKE_IMG1, mock.sentinel.FAKE_IMG2]
         fake_used_images = [mock.sentinel.FAKE_IMG1]

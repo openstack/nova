@@ -739,7 +739,7 @@ class CacheConcurrencyTestCase(test.NoDBTestCase):
 
         def fake_exists(fname):
             basedir = os.path.join(CONF.instances_path,
-                                   CONF.image_cache_subdirectory_name)
+                                   CONF.image_cache.subdirectory_name)
             if fname == basedir or fname == self.lock_path:
                 return True
             return False
@@ -12736,7 +12736,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         base_dir = os.path.join(CONF.instances_path,
-                                CONF.image_cache_subdirectory_name)
+                                CONF.image_cache.subdirectory_name)
         trusted_certs = objects.TrustedCerts(
             ids=['0b5d2c72-12cc-4ba6-a8d7-3ff5cc1d8cb8',
                  '674736e3-f25c-405c-8362-bbf991e0ce0a'])
@@ -12847,7 +12847,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         base_dir = os.path.join(CONF.instances_path,
-                                CONF.image_cache_subdirectory_name)
+                                CONF.image_cache.subdirectory_name)
         instance = objects.Instance(**self.test_instance)
         disk_info_byname = fake_disk_info_byname(instance)
 
@@ -23578,7 +23578,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # are fully mocked out and are just testing string formatting in this
         # test.
         self.flags(instances_path='/nova/instances')
-        self.flags(image_cache_subdirectory_name='cache')
+        self.flags(subdirectory_name='cache', group='image_cache')
         expected_fn = os.path.join('/nova/instances/cache',
                                    imagecache.get_cache_fname('an-image'))
 
@@ -23612,7 +23612,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # are fully mocked out and are just testing string formatting in this
         # test.
         self.flags(instances_path='/nova/instances')
-        self.flags(image_cache_subdirectory_name='cache')
+        self.flags(subdirectory_name='cache', group='image_cache')
         expected_fn = os.path.join('/nova/instances/cache',
                                    imagecache.get_cache_fname('an-image'))
 

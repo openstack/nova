@@ -1,0 +1,22 @@
+---
+deprecations:
+  - |
+    The following conf options have been moved to the ``[image_cache]`` group
+    and renamed accordingly. The old option paths are deprecated and will be
+    removed in a future release.
+
+    .. list-table::
+       :header-rows: 1
+
+       * - Deprecated Option
+         - New Option
+       * - ``[DEFAULT]image_cache_manager_interval``
+         - ``[image_cache]manager_interval``
+       * - ``[DEFAULT]image_cache_subdirectory_name``
+         - ``[image_cache]subdirectory_name``
+       * - ``[DEFAULT]remove_unused_base_images``
+         - ``[image_cache]remove_unused_base_images``
+       * - ``[DEFAULT]remove_unused_original_minimum_age_seconds``
+         - ``[image_cache]remove_unused_original_minimum_age_seconds``
+       * - ``[libvirt]remove_unused_resized_minimum_age_seconds``
+         - ``[image_cache]remove_unused_resized_minimum_age_seconds``

@@ -926,18 +926,11 @@ cached images are stored.
    have a shared file system.
 
 You can automatically purge unused images after a specified period of time.  To
-configure this action, set these options in the ``DEFAULT`` section in the
-``nova.conf`` file:
+configure this action, set these options in the :oslo.config:group`image_cache`
+section in the ``nova.conf`` file:
 
-``remove_unused_base_images``
-  Set this option to ``True`` to specify that unused images should be removed
-  after the duration specified in the
-  ``remove_unused_original_minimum_age_seconds`` option.  The default is
-  ``True``.
-
-``remove_unused_original_minimum_age_seconds``
-  Specifies the duration in seconds after which an unused image is purged from
-  the cache. The default is ``86400`` (24 hours).
+* :oslo.config:option:`image_cache.remove_unused_base_images`
+* :oslo.config:option:`image_cache.remove_unused_original_minimum_age_seconds`
 
 .. _vmware-networking:
 

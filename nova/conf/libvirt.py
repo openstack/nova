@@ -953,13 +953,6 @@ Requires:
 """),
 ]
 
-libvirt_imagecache_opts = [
-    cfg.IntOpt('remove_unused_resized_minimum_age_seconds',
-               default=3600,
-               help='Unused resized base images younger than this will not be '
-                    'removed'),
-]
-
 libvirt_lvm_opts = [
     cfg.StrOpt('volume_clear',
         default='zero',
@@ -1364,7 +1357,6 @@ For example::
 ALL_OPTS = list(itertools.chain(
     libvirt_general_opts,
     libvirt_imagebackend_opts,
-    libvirt_imagecache_opts,
     libvirt_lvm_opts,
     libvirt_utils_opts,
     libvirt_vif_opts,

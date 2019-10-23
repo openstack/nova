@@ -29,7 +29,8 @@ class ImageCacheManager(object):
     """
 
     def __init__(self):
-        self.remove_unused_base_images = CONF.remove_unused_base_images
+        self.remove_unused_base_images = (
+            CONF.image_cache.remove_unused_base_images)
         self.resize_states = [task_states.RESIZE_PREP,
                               task_states.RESIZE_MIGRATING,
                               task_states.RESIZE_MIGRATED,

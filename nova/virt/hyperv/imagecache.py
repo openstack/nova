@@ -171,7 +171,7 @@ class ImageCache(imagecache.ImageCacheManager):
                 # change the timestamp on the image so as to reflect the last
                 # time it was used
                 self._update_image_timestamp(img)
-            elif CONF.remove_unused_base_images:
+            elif CONF.image_cache.remove_unused_base_images:
                 self._remove_if_old_image(img)
 
     def _update_image_timestamp(self, image):
@@ -196,7 +196,8 @@ class ImageCache(imagecache.ImageCacheManager):
 
     def _remove_if_old_image(self, image):
         backing_files = self._get_image_backing_files(image)
-        max_age_seconds = CONF.remove_unused_original_minimum_age_seconds
+        max_age_seconds = (
+            CONF.image_cache.remove_unused_original_minimum_age_seconds)
 
         for img in backing_files:
             age_seconds = self._pathutils.get_age_of_file(img)
