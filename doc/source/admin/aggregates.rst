@@ -355,6 +355,38 @@ configuration:
 - :oslo.config:option:`filter_scheduler.aggregate_image_properties_isolation_separator`
 - :oslo.config:option:`filter_scheduler.aggregate_image_properties_isolation_namespace`
 
+.. _image-caching-aggregates:
+
+Image Caching
+-------------
+
+Aggregates can be used as a way to target multiple compute nodes for the purpose of
+requesting that images be pre-cached for performance reasons.
+
+.. note::
+
+    Some of the virt drivers provide image caching support, which improves performance
+    of second-and-later boots of the same image by keeping the base image in an on-disk
+    cache. This avoids the need to re-download the image from Glance, which reduces
+    network utilization and time-to-boot latency. Image pre-caching is the act of priming
+    that cache with images ahead of time to improve performance of the first boot.
+
+Assuming an aggregate called ``my-aggregate`` where two images should
+be pre-cached, running the following command will initiate the
+request:
+
+.. code-block:: console
+
+    $ nova aggregate-cache-images my-aggregate image1 image2
+
+Note that image pre-caching happens asynchronously in a best-effort
+manner. The images and aggregate provided are checked by the server
+when the command is run, but the compute nodes are not checked to see
+if they support image caching until the process runs. Progress and
+results are logged by each compute, and the process sends
+``aggregate.cache_images.start`` and ``aggregate.cache_images.end``
+notifications, which may be useful for monitoring the operation
+externally.
 
 References
 ----------
