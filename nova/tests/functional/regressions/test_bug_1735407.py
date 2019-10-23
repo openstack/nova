@@ -91,6 +91,7 @@ class TestParallelEvacuationWithServerGroup(
                       '_do_rebuild_instance', fake_rebuild)
 
     def test_parallel_evacuate_with_server_group(self):
+        self.skipTest('Skipped until bug 1763181 is fixed')
         group_req = {'name': 'a-name', 'policies': ['anti-affinity']}
         group = self.api.post_server_groups(group_req)
 
