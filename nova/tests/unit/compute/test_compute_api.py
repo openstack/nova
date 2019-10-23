@@ -5215,16 +5215,10 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch('nova.compute.api.API._record_action_start')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'live_migration_abort')
     @mock.patch.object(objects.Migration, 'get_by_id_and_instance')
-    @mock.patch.object(objects.Service, 'get_by_compute_host')
     def test_live_migrate_abort_in_queue_succeeded(self,
-                                                   mock_get_service,
                                                    mock_get_migration,
                                                    mock_lm_abort,
                                                    mock_rec_action):
-        service_obj = objects.Service()
-        service_obj.version = (
-                compute_api.MIN_COMPUTE_ABORT_QUEUED_LIVE_MIGRATION)
-        mock_get_service.return_value = service_obj
         instance = self._create_instance_obj()
         instance.task_state = task_states.MIGRATING
         for migration_status in ('queued', 'preparing'):
@@ -5254,23 +5248,6 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.compute_api.live_migrate_abort, self.context,
                           instance, migration.id,
                           support_abort_in_queue=False)
-
-    @mock.patch.object(objects.Migration, 'get_by_id_and_instance')
-    @mock.patch.object(objects.Service, 'get_by_compute_host')
-    def test_live_migration_abort_in_queue_old_compute_conflict(
-            self, mock_get_service, mock_get_migration):
-        service_obj = objects.Service()
-        service_obj.version = (
-                compute_api.MIN_COMPUTE_ABORT_QUEUED_LIVE_MIGRATION - 1)
-        mock_get_service.return_value = service_obj
-        instance = self._create_instance_obj()
-        instance.task_state = task_states.MIGRATING
-        migration = self._get_migration(21, 'queued', 'live-migration')
-        mock_get_migration.return_value = migration
-        self.assertRaises(exception.AbortQueuedLiveMigrationNotYetSupported,
-                          self.compute_api.live_migrate_abort, self.context,
-                          instance, migration.id,
-                          support_abort_in_queue=True)
 
     @mock.patch.object(objects.Migration, 'get_by_id_and_instance')
     def test_live_migration_abort_wrong_migration_status(self,

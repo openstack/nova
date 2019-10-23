@@ -1197,12 +1197,6 @@ class InvalidMigrationState(Invalid):
                 "migration is in this state.")
 
 
-class AbortQueuedLiveMigrationNotYetSupported(NovaException):
-    msg_fmt = _("Aborting live migration %(migration_id)s with status "
-                "%(status)s is not yet supported for this instance.")
-    code = 409
-
-
 class ConsoleLogOutputException(NovaException):
     msg_fmt = _("Console log output could not be retrieved for instance "
                 "%(instance_id)s. Reason: %(reason)s")

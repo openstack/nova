@@ -169,5 +169,3 @@ class ServerMigrationsController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.InvalidMigrationState as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
-        except exception.AbortQueuedLiveMigrationNotYetSupported as e:
-            raise exc.HTTPConflict(explanation=e.format_message())
