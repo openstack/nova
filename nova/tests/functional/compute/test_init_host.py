@@ -53,7 +53,9 @@ class ComputeManagerInitHostTestCase(
             # fail and set the instance to ERROR status, revert allocations,
             # etc which is not realistic if the service actually crashed while
             # migrate_disk_and_power_off was running.
-            time.sleep(30)
+            # The sleep value needs to be large to avoid this waking up and
+            # interfering with other tests running on the same worker.
+            time.sleep(1000000)
 
         source_driver = self.computes[source_host].manager.driver
         with mock.patch.object(source_driver, 'migrate_disk_and_power_off',
