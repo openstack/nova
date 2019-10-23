@@ -972,11 +972,14 @@ class LibvirtVifTestCase(test.NoDBTestCase):
     @mock.patch.object(pci_utils, 'get_vf_num_by_pci_address', return_value=1)
     @mock.patch('nova.privsep.linux_net.set_device_macaddr')
     @mock.patch('nova.privsep.linux_net.set_device_macaddr_and_vlan')
-    def test_unplug_hw_veb(self, mock_set_macaddr_and_vlan,
-                           mock_set_macaddr, mock_get_vf_num,
-                           mock_get_ifname):
-        d = vif.LibvirtGenericVIFDriver()
+    def _test_hw_veb_op(self, op, vlan, mock_set_macaddr_and_vlan,
+                        mock_set_macaddr, mock_get_vf_num,
+                        mock_get_ifname):
         mock_get_ifname.side_effect = ['eth1', 'eth13']
+        vlan_id = int(vlan)
+        port_state = 'up' if vlan_id > 0 else 'down'
+        mac = ('00:00:00:00:00:00' if op.__name__ == 'unplug'
+               else self.vif_hw_veb_macvtap['address'])
         calls = {
             'get_ifname':
                 [mock.call(self.vif_hw_veb_macvtap['profile']['pci_slot'],
@@ -984,17 +987,24 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                  mock.call(self.vif_hw_veb_macvtap['profile']['pci_slot'])],
             'get_vf_num':
                 [mock.call(self.vif_hw_veb_macvtap['profile']['pci_slot'])],
-            'set_macaddr': [mock.call(
-                'eth13', '00:00:00:00:00:00', port_state='down')]
+            'set_macaddr': [mock.call('eth13', mac, port_state=port_state)]
         }
-
-        d.unplug(self.instance, self.vif_hw_veb_macvtap)
-
+        op(self.instance, self.vif_hw_veb_macvtap)
         mock_get_ifname.assert_has_calls(calls['get_ifname'])
         mock_get_vf_num.assert_has_calls(calls['get_vf_num'])
         mock_set_macaddr.assert_has_calls(calls['set_macaddr'])
         mock_set_macaddr_and_vlan.assert_called_once_with(
-            'eth1', 1, mock.ANY, 0)
+            'eth1', 1, mock.ANY, vlan_id)
+
+    def test_plug_hw_veb(self):
+        d = vif.LibvirtGenericVIFDriver()
+        details = self.vif_hw_veb_macvtap['details']
+        vlan = details[network_model.VIF_DETAILS_VLAN]
+        self._test_hw_veb_op(d.plug, vlan)
+
+    def test_unplug_hw_veb(self):
+        d = vif.LibvirtGenericVIFDriver()
+        self._test_hw_veb_op(d.unplug, 0)
 
     @mock.patch('nova.network.linux_net.set_vf_trusted')
     def test_plug_hw_veb_trusted(self, mset_vf_trusted):

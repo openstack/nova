@@ -97,20 +97,20 @@ def is_vif_model_valid_for_virt(virt_type, vif_model):
 
 
 def set_vf_interface_vlan(pci_addr, mac_addr, vlan=0):
+    vlan_id = int(vlan)
     pf_ifname = pci_utils.get_ifname_by_pci_address(pci_addr,
                                                     pf_interface=True)
     vf_ifname = pci_utils.get_ifname_by_pci_address(pci_addr)
     vf_num = pci_utils.get_vf_num_by_pci_address(pci_addr)
 
     nova.privsep.linux_net.set_device_macaddr_and_vlan(
-        pf_ifname, vf_num, mac_addr, vlan)
+        pf_ifname, vf_num, mac_addr, vlan_id)
 
     # Bring up/down the VF's interface
     # TODO(edand): The mac is assigned as a workaround for the following issue
-    # https://bugzilla.redhat.com/show_bug.cgi?id=1415609 and should be removed
-    # once we bump the libvirt minimum to 3.2.0, as noted in
-    # https://bugzilla.redhat.com/show_bug.cgi?id=1372944
-    port_state = 'up' if vlan > 0 else 'down'
+    #              https://bugzilla.redhat.com/show_bug.cgi?id=1372944
+    #              once resolved it will be removed
+    port_state = 'up' if vlan_id > 0 else 'down'
     nova.privsep.linux_net.set_device_macaddr(vf_ifname, mac_addr,
                                               port_state=port_state)
 
@@ -625,7 +625,20 @@ class LibvirtGenericVIFDriver(object):
                           instance=instance)
 
     def plug_hw_veb(self, instance, vif):
-        if vif['vnic_type'] == network_model.VNIC_TYPE_DIRECT:
+        # TODO(adrianc): The piece of code for MACVTAP can be removed once:
+        #  1. neutron SR-IOV agent does not rely on the administrative mac
+        #     as depicted in https://bugs.launchpad.net/neutron/+bug/1841067
+        #  2. libvirt driver does not change mac address for macvtap VNICs
+        #     or Alternatively does not rely on recreating libvirt's nodev
+        #     name from the current mac address set on the netdevice.
+        #     See: virt.libvrit.driver.LibvirtDriver._get_pcinet_info
+        if vif['vnic_type'] == network_model.VNIC_TYPE_MACVTAP:
+            set_vf_interface_vlan(
+                vif['profile']['pci_slot'],
+                mac_addr=vif['address'],
+                vlan=vif['details'][network_model.VIF_DETAILS_VLAN])
+
+        elif vif['vnic_type'] == network_model.VNIC_TYPE_DIRECT:
             trusted = strutils.bool_from_string(
                 vif['profile'].get('trusted', "False"))
             if trusted:
