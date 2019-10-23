@@ -1042,11 +1042,23 @@ must be set globally otherwise servers could be put into a soft deleted
 state in the API and never actually reclaimed (deleted) on the compute
 node.
 
+.. note:: When using this option, you should also configure the ``[cinder]``
+          auth options, e.g. ``auth_type``, ``auth_url``, ``username``, etc.
+          Since the reclaim happens in a periodic task, there is no user token
+          to cleanup volumes attached to any SOFT_DELETED servers so nova must
+          be configured with administrator role access to cleanup those
+          resources in cinder.
+
 Possible values:
 
 * Any positive integer(in seconds) greater than 0 will enable
   this option.
 * Any value <=0 will disable the option.
+
+Related options:
+
+* [cinder] auth options for cleaning up volumes attached to servers during
+  the reclaim process
 """),
     cfg.IntOpt('volume_usage_poll_interval',
         default=0,
