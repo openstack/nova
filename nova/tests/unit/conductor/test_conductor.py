@@ -18,6 +18,7 @@
 import copy
 
 import mock
+from oslo_db import exception as db_exc
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
@@ -3045,6 +3046,41 @@ class ConductorTaskRPCAPITestCase(_BaseTaskTestCase,
         inst = mock.MagicMock()
         self.assertEqual(mock.sentinel.iransofaraway,
                          test(None, ctxt, inst))
+        mock_im.assert_called_once_with(ctxt, inst.uuid)
+
+    @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid',
+                       side_effect=db_exc.CantStartEngineError)
+    def test_targets_cell_no_api_db_conn_noop(self, mock_im):
+        """Tests that targets_cell noops on CantStartEngineError if the API
+        DB is not configured because we assume we're in the cell conductor.
+        """
+        self.flags(connection=None, group='api_database')
+
+        @conductor_manager.targets_cell
+        def _test(self, context, instance):
+            return mock.sentinel.iransofaraway
+
+        ctxt = mock.MagicMock()
+        inst = mock.MagicMock()
+        self.assertEqual(mock.sentinel.iransofaraway,
+                         _test(None, ctxt, inst))
+        mock_im.assert_called_once_with(ctxt, inst.uuid)
+
+    @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid',
+                       side_effect=db_exc.CantStartEngineError)
+    def test_targets_cell_no_api_db_conn_reraise(self, mock_im):
+        """Tests that targets_cell reraises CantStartEngineError if the
+        API DB is configured.
+        """
+        self.flags(connection='mysql://dbhost?nova_api', group='api_database')
+
+        @conductor_manager.targets_cell
+        def _test(self, context, instance):
+            return mock.sentinel.iransofaraway
+
+        ctxt = mock.MagicMock()
+        inst = mock.MagicMock()
+        self.assertRaises(db_exc.CantStartEngineError, _test, None, ctxt, inst)
         mock_im.assert_called_once_with(ctxt, inst.uuid)
 
     def test_schedule_and_build_instances_with_tags(self):
