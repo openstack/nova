@@ -365,11 +365,13 @@ requesting that images be pre-cached for performance reasons.
 
 .. note::
 
-    Some of the virt drivers provide image caching support, which improves performance
+    `Some of the virt drivers`_ provide image caching support, which improves performance
     of second-and-later boots of the same image by keeping the base image in an on-disk
     cache. This avoids the need to re-download the image from Glance, which reduces
     network utilization and time-to-boot latency. Image pre-caching is the act of priming
     that cache with images ahead of time to improve performance of the first boot.
+
+.. _Some of the virt drivers: https://docs.openstack.org/nova/latest/user/support-matrix.html#operation_cache_images
 
 Assuming an aggregate called ``my-aggregate`` where two images should
 be pre-cached, running the following command will initiate the

@@ -3,8 +3,9 @@ Image Caching
 =============
 
 Nova supports caching base images on compute nodes when using a
-supported virt driver. As of the Ussuri release, that list includes
-``hyperv``, ``libvirt``, and ``vmwareapi``.
+`supported virt driver`_.
+
+.. _supported virt driver: https://docs.openstack.org/nova/latest/user/support-matrix.html#operation_cache_images
 
 What is Image Caching?
 ----------------------
