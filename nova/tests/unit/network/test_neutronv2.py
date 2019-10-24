@@ -6151,6 +6151,8 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
             uuids.port1,
             request_groups[0].requester_id)
 
+        mock_get_client.assert_called_once_with(self.context, admin=True)
+
 
 class TestNeutronv2ModuleMethods(test.NoDBTestCase):
 
