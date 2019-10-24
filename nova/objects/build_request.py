@@ -372,14 +372,16 @@ class BuildRequestList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def get_by_filters(cls, context, filters, limit=None, marker=None,
                        sort_keys=None, sort_dirs=None):
-        if limit == 0:
-            return cls(context, objects=[])
+        # Short-circuit on anything that will not yield results.
         # 'deleted' records can not be returned from here since build_requests
         # are not soft deleted.
-        if filters.get('deleted', False):
-            return cls(context, objects=[])
         # 'cleaned' records won't exist as they would need to be deleted.
-        if filters.get('cleaned', False):
+        if (limit == 0 or
+                filters.get('deleted', False) or
+                filters.get('cleaned', False)):
+            # If we have a marker honor the MarkerNotFound semantics.
+            if marker:
+                raise exception.MarkerNotFound(marker=marker)
             return cls(context, objects=[])
 
         # Because the build_requests table stores an instance as a serialized
