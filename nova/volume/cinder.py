@@ -400,6 +400,20 @@ def translate_cinder_exception(method):
     return wrapper
 
 
+def translate_create_exception(method):
+    """Transforms the exception for create but keeps its traceback intact.
+    """
+    def wrapper(self, ctx, size, *args, **kwargs):
+        try:
+            res = method(self, ctx, size, *args, **kwargs)
+        except (keystone_exception.NotFound, cinder_exception.NotFound) as e:
+            _reraise(exception.NotFound(message=e.message))
+        except cinder_exception.OverLimit as e:
+            _reraise(exception.OverQuota(message=e.message))
+        return res
+    return translate_cinder_exception(wrapper)
+
+
 def translate_volume_exception(method):
     """Transforms the exception for the volume but keeps its traceback intact.
     """
@@ -606,7 +620,7 @@ class API(object):
         return cinderclient(context).volumes.migrate_volume_completion(
             old_volume_id, new_volume_id, error)
 
-    @translate_volume_exception
+    @translate_create_exception
     def create(self, context, size, name, description, snapshot=None,
                image_id=None, volume_type=None, metadata=None,
                availability_zone=None):
