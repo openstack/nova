@@ -965,6 +965,10 @@ class API(base_api.NetworkAPI):
         # We do not want to create a new neutron session for each call
         neutron = get_client(context)
 
+        # We always need admin_client to build nw_info,
+        # we sometimes need it when updating ports
+        admin_client = get_client(context, admin=True)
+
         #
         # Validate ports and networks with neutron. The requested_ports_dict
         # variable is a dict, keyed by port ID, of ports that were on the user
@@ -972,9 +976,15 @@ class API(base_api.NetworkAPI):
         # NetworkRequest objects for any networks or ports specifically
         # requested by the user, which again may be empty.
         #
+
+        # NOTE(gibi): we use the admin_client here to ensure that the returned
+        # ports has the resource_request attribute filled as later we use this
+        # information to decide when to add allocation key to the port binding.
+        # See bug 1849657.
         requested_ports_dict, ordered_networks = (
             self._validate_requested_port_ids(
-                context, instance, neutron, requested_networks, attach=attach))
+                context, instance, admin_client, requested_networks,
+                attach=attach))
 
         nets = self._validate_requested_network_ids(
             context, instance, neutron, requested_networks, ordered_networks)
@@ -1021,10 +1031,6 @@ class API(base_api.NetworkAPI):
         #
         # Update existing and newly created ports
         #
-
-        # We always need admin_client to build nw_info,
-        # we sometimes need it when updating ports
-        admin_client = get_client(context, admin=True)
 
         ordered_nets, ordered_port_ids, preexisting_port_ids, \
             created_port_ids = self._update_ports_for_instance(
