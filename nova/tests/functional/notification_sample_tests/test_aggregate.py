@@ -166,3 +166,45 @@ class TestAggregateNotificationSample(
                 'uuid': aggregate['uuid'],
                 'id': aggregate['id']},
                 actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
+
+    def test_aggregate_cache_images(self):
+        aggregate_req = {
+            "aggregate": {
+                "name": "my-aggregate",
+                "availability_zone": "nova"}}
+        aggregate = self.admin_api.post_aggregate(aggregate_req)
+        add_host_req = {
+            "add_host": {
+                "host": "compute"
+            }
+        }
+        self.admin_api.post_aggregate_action(aggregate['id'], add_host_req)
+
+        fake_notifier.reset()
+
+        cache_images_req = {
+            'cache': [
+                {'id': '155d900f-4e14-4e4c-a73d-069cbf4541e6'}
+            ]
+        }
+        self.admin_api.api_post('/os-aggregates/%s/images' % aggregate['id'],
+                                cache_images_req)
+        # Since the operation is asynchronous we have to wait for the end
+        # notification.
+        fake_notifier.wait_for_versioned_notifications(
+            'aggregate.cache_images.end')
+
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
+        self._verify_notification(
+            'aggregate-cache_images-start',
+            replacements={
+                'uuid': aggregate['uuid'],
+                'id': aggregate['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'aggregate-cache_images-end',
+            replacements={
+                'uuid': aggregate['uuid'],
+                'id': aggregate['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])

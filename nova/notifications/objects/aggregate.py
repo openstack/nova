@@ -54,6 +54,8 @@ class AggregatePayload(base.NotificationPayloadBase):
 @base.notification_sample('aggregate-update_metadata-end.json')
 @base.notification_sample('aggregate-update_prop-start.json')
 @base.notification_sample('aggregate-update_prop-end.json')
+@base.notification_sample('aggregate-cache_images-start.json')
+@base.notification_sample('aggregate-cache_images-end.json')
 @nova_base.NovaObjectRegistry.register_notification
 class AggregateNotification(base.NotificationBase):
     # Version 1.0: Initial version

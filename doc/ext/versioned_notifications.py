@@ -61,6 +61,10 @@ jQuery(document).ready(function(){
                   pkgutil.iter_modules(nova.notifications.objects.__path__))))
 
     def _collect_notifications(self):
+        # If you do not see your notification sample showing up in the docs
+        # be sure that the sample filename matches what is registered on the
+        # versioned notification object class using the
+        # @base.notification_sample decorator.
         self._import_all_notification_packages()
         base.NovaObjectRegistry.register_notification_objects()
         notifications = {}
