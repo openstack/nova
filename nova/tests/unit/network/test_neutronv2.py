@@ -516,7 +516,6 @@ class TestNeutronv2Base(test.TestCase):
                                     mock_refresh, mock_populate, net_idx=1,
                                     requested_networks=None,
                                     exception=None,
-                                    get_client_admin_call=True,
                                     context=None,
                                     **kwargs):
         ctxt = context or self.context
@@ -662,12 +661,9 @@ class TestNeutronv2Base(test.TestCase):
                 ctxt, self.instance, False, requested_networks,
                 bind_host_id=bind_host_id)
 
-        if get_client_admin_call:
-            mock_get_client.assert_has_calls([
-                mock.call(ctxt), mock.call(ctxt, admin=True)],
-                any_order=True)
-        else:
-            mock_get_client.assert_called_once_with(mock.ANY)
+        mock_get_client.assert_has_calls([
+            mock.call(ctxt), mock.call(ctxt, admin=True)],
+            any_order=True)
 
         mock_refresh.assert_not_called()
 
@@ -2600,8 +2596,7 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
     def test_allocate_for_instance_2(self):
         # Allocate one port in two networks env.
         self._test_allocate_for_instance(
-            net_idx=2, exception=exception.NetworkAmbiguous,
-            get_client_admin_call=False)
+            net_idx=2, exception=exception.NetworkAmbiguous)
 
     def test_allocate_for_instance_accepts_only_portid(self):
         # Make sure allocate_for_instance works when only a portid is provided
@@ -2622,8 +2617,7 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
 
     def test_allocate_for_instance_without_requested_networks(self):
         self._test_allocate_for_instance(
-            net_idx=3, exception=exception.NetworkAmbiguous,
-            get_client_admin_call=False)
+            net_idx=3, exception=exception.NetworkAmbiguous)
 
     def test_allocate_for_instance_with_requested_non_available_network(self):
         """verify that a non available network is ignored.
@@ -2663,7 +2657,6 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         # raised.
         self._test_allocate_for_instance_with_virtual_interface(
             net_idx=4, exception=exception.SecurityGroupCannotBeApplied,
-            get_client_admin_call=False,
             _break='post_list_extensions')
 
     def test_allocate_for_instance_with_invalid_network_id(self):
@@ -2673,7 +2666,6 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         self._test_allocate_for_instance(net_idx=9,
             requested_networks=requested_networks,
             exception=exception.NetworkNotFound,
-            get_client_admin_call=False,
             _break='post_list_networks')
 
     def test_allocate_for_instance_with_requested_networks_with_fixedip(self):
@@ -2702,7 +2694,9 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         nwinfo = self.api.allocate_for_instance(self.context, self.instance,
                                                 False, None)
         self.assertEqual(0, len(nwinfo))
-        mock_get_client.assert_called_once_with(self.context)
+        mock_get_client.assert_has_calls([
+            mock.call(self.context),
+            mock.call(self.context, admin=True)])
         mocked_client.list_networks.assert_has_calls([
             mock.call(tenant_id=self.instance.project_id, shared=False),
             mock.call(shared=True)])
@@ -2812,7 +2806,9 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
                           self.api.allocate_for_instance,
                           self.context, self.instance, False,
                           requested_networks=requested_networks)
-        mock_get_client.assert_called_once_with(self.context)
+        mock_get_client.assert_has_calls([
+            mock.call(self.context),
+            mock.call(self.context, admin=True)])
         mocked_client.list_networks.assert_called_once_with(
             id=[uuids.my_netid1, uuids.my_netid2])
         mocked_client.create_port.assert_called_once_with(port_req_body)
@@ -2833,7 +2829,9 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         self.assertRaises(test.TestingException,
                           self.api.allocate_for_instance, self.context,
                           self.instance, False, requested_networks)
-        mock_get_client.assert_called_once_with(self.context)
+        mock_get_client.assert_has_calls([
+            mock.call(self.context),
+            mock.call(self.context, admin=True)])
         mock_get_available.assert_called_once_with(
             self.context, self.instance.project_id, [],
             neutron=mocked_client, auto_allocate=False)
@@ -2852,9 +2850,8 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
             objects=[objects.NetworkRequest(port_id=uuids.portid_1)])
         self._test_allocate_for_instance(
             requested_networks=requested_networks,
-            exception=exception.PortInUse,
-            get_client_admin_call=False,
-            _break='pre_list_networks', _device=True)
+            exception=exception.PortInUse, _break='pre_list_networks',
+            _device=True)
 
     def test_allocate_for_instance_port_not_found(self):
         # If a port is not found, an exception should be raised.
@@ -2863,7 +2860,6 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         self._test_allocate_for_instance(
             requested_networks=requested_networks,
             exception=exception.PortNotFound,
-            get_client_admin_call=False,
             _break='pre_list_networks')
 
     def test_allocate_for_instance_port_invalid_tenantid(self):
@@ -2873,7 +2869,6 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         self._test_allocate_for_instance(
             requested_networks=requested_networks,
             exception=exception.PortNotUsable,
-            get_client_admin_call=False,
             _break='pre_list_networks')
 
     @mock.patch.object(neutronapi, 'get_client')
@@ -2894,7 +2889,9 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
         self.assertRaises(exception.ExternalNetworkAttachForbidden,
                           self.api.allocate_for_instance, self.context,
                           self.instance, False, None)
-        mock_get_client.assert_called_once_with(self.context)
+        mock_get_client.assert_has_calls([
+            mock.call(self.context),
+            mock.call(self.context, admin=True)])
         mocked_client.list_networks.assert_has_calls([
             mock.call(tenant_id=self.instance.project_id, shared=False),
             mock.call(shared=True)])
@@ -2919,7 +2916,9 @@ class TestNeutronv2WithMock(TestNeutronv2Base):
             exception.NetworkAmbiguous,
             self.api.allocate_for_instance,
             self.context, self.instance, False, None)
-        mock_get_client.assert_called_once_with(self.context)
+        mock_get_client.assert_has_calls([
+            mock.call(self.context),
+            mock.call(self.context, admin=True)])
         mocked_client.list_networks.assert_has_calls([
             mock.call(tenant_id=self.instance.project_id, shared=False),
             mock.call(shared=True)])
@@ -6737,6 +6736,9 @@ class TestAllocateForInstance(test.NoDBTestCase):
         self.assertEqual(result[0], {"id": uuids.created})
         self.assertEqual(result[1], {"id": uuids.preexist})
 
+        mock_validate_ports.assert_called_once_with(
+            self.context, self.instance, "admin", None, attach=False)
+
     def test_ensure_no_port_binding_failure_raises(self):
         port = {
             'id': uuids.port_id,
@@ -7108,7 +7110,6 @@ class TestNeutronv2NeutronHostnameDNS(TestNeutronv2Base):
         self._test_allocate_for_instance(
             requested_networks=requested_networks,
             exception=exception.PortNotUsableDNS,
-            get_client_admin_call=False,
             dns_extension=True,
             _break='pre_list_networks',
             _dns_name='my-instance')
