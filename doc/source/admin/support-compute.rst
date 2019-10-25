@@ -9,6 +9,13 @@ a compute node to the instances that run on that node. Another common problem
 is trying to run 32-bit images on a 64-bit compute node.  This section shows
 you how to troubleshoot Compute.
 
+.. todo:: Move the sections below into sub-pages for readability.
+
+.. toctree::
+   :maxdepth: 1
+
+   troubleshooting/orphaned-allocations.rst
+
 
 Compute service logging
 -----------------------
