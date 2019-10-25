@@ -417,6 +417,10 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         return self.placement_api.get(
             '/allocations/%s' % server_uuid).body['allocations']
 
+    def _get_allocations_by_provider_uuid(self, rp_uuid):
+        return self.placement_api.get(
+            '/resource_providers/%s/allocations' % rp_uuid).body['allocations']
+
     def _get_all_providers(self):
         return self.placement_api.get(
             '/resource_providers', version='1.14').body['resource_providers']
