@@ -3683,7 +3683,7 @@ class ConductorTaskAPITestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                         transport_url='')
         fake_mapping = objects.HostMapping(cell_mapping=fake_cell)
         mock_gbh.return_value = fake_mapping
-        fake_agg = objects.Aggregate(name='agg', uuid=uuids.agg,
+        fake_agg = objects.Aggregate(name='agg', uuid=uuids.agg, id=1,
                                      hosts=['host1', 'host2', 'host3'])
 
         @mock.patch.object(self.conductor_manager.compute_rpcapi,

@@ -384,9 +384,9 @@ manner. The images and aggregate provided are checked by the server
 when the command is run, but the compute nodes are not checked to see
 if they support image caching until the process runs. Progress and
 results are logged by each compute, and the process sends
-``aggregate.cache_images.start`` and ``aggregate.cache_images.end``
-notifications, which may be useful for monitoring the operation
-externally.
+``aggregate.cache_images.start``, ``aggregate.cache_images.progress``,
+and ``aggregate.cache_images.end`` notifications, which may be useful
+for monitoring the operation externally.
 
 References
 ----------

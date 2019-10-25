@@ -72,6 +72,23 @@ class ImageCacheTest(test.TestCase):
 
         fake_notifier.wait_for_versioned_notifications(
             'aggregate.cache_images.start')
+
+        progress = fake_notifier.wait_for_versioned_notifications(
+            'aggregate.cache_images.progress', n_events=4)
+        self.assertEqual(4, len(progress), progress)
+        for notification in progress:
+            payload = notification['payload']['nova_object.data']
+            if payload['host'] == 'compute5':
+                self.assertEqual(['an-image'], payload['images_failed'])
+                self.assertEqual([], payload['images_cached'])
+            else:
+                self.assertEqual(['an-image'], payload['images_cached'])
+                self.assertEqual([], payload['images_failed'])
+            self.assertLessEqual(payload['index'], 4)
+            self.assertGreater(payload['index'], 0)
+            self.assertEqual(4, payload['total'])
+            self.assertIn('conductor', notification['publisher_id'])
+
         fake_notifier.wait_for_versioned_notifications(
             'aggregate.cache_images.end')
 

@@ -17,6 +17,10 @@ from nova.tests.unit import fake_notifier
 class TestAggregateNotificationSample(
         notification_sample_base.NotificationSampleTestBase):
 
+    def setUp(self):
+        self.flags(compute_driver='fake.FakeDriverWithCaching')
+        super(TestAggregateNotificationSample, self).setUp()
+
     def test_aggregate_create_delete(self):
         aggregate_req = {
             "aggregate": {
@@ -194,7 +198,7 @@ class TestAggregateNotificationSample(
         fake_notifier.wait_for_versioned_notifications(
             'aggregate.cache_images.end')
 
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+        self.assertEqual(3, len(fake_notifier.VERSIONED_NOTIFICATIONS),
                          fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'aggregate-cache_images-start',
@@ -203,8 +207,14 @@ class TestAggregateNotificationSample(
                 'id': aggregate['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
         self._verify_notification(
-            'aggregate-cache_images-end',
+            'aggregate-cache_images-progress',
             replacements={
                 'uuid': aggregate['uuid'],
                 'id': aggregate['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+        self._verify_notification(
+            'aggregate-cache_images-end',
+            replacements={
+                'uuid': aggregate['uuid'],
+                'id': aggregate['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
