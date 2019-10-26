@@ -266,13 +266,8 @@ $MANAGE db online_data_migrations
 # creation of a new deleted marker instance.
 set +e
 archive_deleted_rows
+set -e
 
 # Verify whether online data migrations run after archiving will succeed.
 # See for more details: https://bugs.launchpad.net/nova/+bug/1824435
 $MANAGE db online_data_migrations
-rc=$?
-set -e
-if [[ $rc -ne 2 ]]; then
-    echo "Expected return code 2 from online_data_migrations until bug 1824435 is fixed"
-    exit 2
-fi
