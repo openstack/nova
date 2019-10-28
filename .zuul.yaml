@@ -385,7 +385,7 @@
         - ironic-tempest-ipa-wholedisk-bios-agent_ipmitool-tinyipa:
             voting: false
             irrelevant-files: *dsvm-irrelevant-files
-        - devstack-plugin-ceph-tempest:
+        - devstack-plugin-ceph-tempest-py3:
             voting: false
             irrelevant-files: *dsvm-irrelevant-files
         - neutron-grenade-multinode:
@@ -435,8 +435,6 @@
         - ironic-tempest-ipa-wholedisk-direct-tinyipa-multinode:
             irrelevant-files: *dsvm-irrelevant-files
         - barbican-simple-crypto-devstack-tempest:
-            irrelevant-files: *dsvm-irrelevant-files
-        - devstack-plugin-ceph-tempest-py3:
             irrelevant-files: *dsvm-irrelevant-files
         - legacy-grenade-dsvm-neutron-multinode-zero-downtime:
             irrelevant-files: *dsvm-irrelevant-files
