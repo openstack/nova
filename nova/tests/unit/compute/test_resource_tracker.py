@@ -1055,23 +1055,18 @@ class TestInitComputeNode(BaseTestCase):
         self.assertEqual(_HOSTNAME, self.rt.compute_nodes[_NODENAME].host)
 
     @mock.patch('nova.objects.ComputeNodeList.get_by_hypervisor')
-    @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
-                return_value=objects.PciDeviceList(objects=[]))
     @mock.patch('nova.objects.ComputeNode.create')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_update')
     def test_compute_node_created_on_empty(self, update_mock, get_mock,
-                                           create_mock, pci_tracker_mock,
+                                           create_mock,
                                            get_by_hypervisor_mock):
         get_by_hypervisor_mock.return_value = []
         self._test_compute_node_created(update_mock, get_mock, create_mock,
-                                        pci_tracker_mock,
                                         get_by_hypervisor_mock)
 
     @mock.patch('nova.objects.ComputeNodeList.get_by_hypervisor')
-    @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
-                return_value=objects.PciDeviceList(objects=[]))
     @mock.patch('nova.objects.ComputeNode.create')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
@@ -1079,32 +1074,26 @@ class TestInitComputeNode(BaseTestCase):
     def test_compute_node_created_on_empty_rebalance(self, update_mock,
                                                      get_mock,
                                                      create_mock,
-                                                     pci_tracker_mock,
                                                      get_by_hypervisor_mock):
         get_by_hypervisor_mock.return_value = []
         self._test_compute_node_created(update_mock, get_mock, create_mock,
-                                        pci_tracker_mock,
                                         get_by_hypervisor_mock,
                                         rebalances_nodes=True)
 
     @mock.patch('nova.objects.ComputeNodeList.get_by_hypervisor')
-    @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
-                return_value=objects.PciDeviceList(objects=[]))
     @mock.patch('nova.objects.ComputeNode.create')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_update')
     def test_compute_node_created_too_many(self, update_mock, get_mock,
-                                           create_mock, pci_tracker_mock,
+                                           create_mock,
                                            get_by_hypervisor_mock):
         get_by_hypervisor_mock.return_value = ["fake_node_1", "fake_node_2"]
         self._test_compute_node_created(update_mock, get_mock, create_mock,
-                                        pci_tracker_mock,
                                         get_by_hypervisor_mock,
                                         rebalances_nodes=True)
 
-    def _test_compute_node_created(self, update_mock, get_mock,
-                                   create_mock, pci_tracker_mock,
+    def _test_compute_node_created(self, update_mock, get_mock, create_mock,
                                    get_by_hypervisor_mock,
                                    rebalances_nodes=False):
         self.flags(cpu_allocation_ratio=1.0, ram_allocation_ratio=1.0,
@@ -1138,7 +1127,6 @@ class TestInitComputeNode(BaseTestCase):
         # The expected compute represents the initial values used
         # when creating a compute node.
         expected_compute = objects.ComputeNode(
-            id=42,
             host_ip=resources['host_ip'],
             vcpus=resources['vcpus'],
             memory_mb=resources['memory_mb'],
@@ -1158,20 +1146,22 @@ class TestInitComputeNode(BaseTestCase):
             cpu_allocation_ratio=1.0,
             disk_allocation_ratio=1.0,
             stats={'failed_builds': 0},
-            pci_device_pools=objects.PciDevicePoolList(objects=[]),
             uuid=uuids.compute_node_uuid
         )
 
-        def set_cn_id():
-            # The PCI tracker needs the compute node's ID when starting up, so
-            # make sure that we set the ID value so we don't get a Cannot load
-            # 'id' in base class error
-            cn = self.rt.compute_nodes[_NODENAME]
-            cn.id = 42  # Has to be a number, not a mock
-            cn.uuid = uuids.compute_node_uuid
+        original_copy_resources = self.rt._copy_resources
 
-        create_mock.side_effect = set_cn_id
-        self.rt._init_compute_node(mock.sentinel.ctx, resources)
+        def fake_copy_resources(_cn, _resources):
+            # We have to set the uuid field on the ComputeNode for logging.
+            _cn.uuid = uuids.compute_node_uuid
+            return original_copy_resources(_cn, _resources)
+
+        with test.nested(
+                mock.patch.object(self.rt, '_setup_pci_tracker'),
+                mock.patch.object(self.rt, '_copy_resources',
+                                  fake_copy_resources)
+        ) as (setup_pci, copy_resources):
+            self.rt._init_compute_node(mock.sentinel.ctx, resources)
 
         cn = self.rt.compute_nodes[_NODENAME]
         get_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
@@ -1183,22 +1173,55 @@ class TestInitComputeNode(BaseTestCase):
             get_by_hypervisor_mock.assert_not_called()
         create_mock.assert_called_once_with()
         self.assertTrue(obj_base.obj_equal_prims(expected_compute, cn))
-        pci_tracker_mock.assert_called_once_with(mock.sentinel.ctx,
-                                                 42)
+        setup_pci.assert_called_once_with(mock.sentinel.ctx, cn, resources)
         self.assertFalse(update_mock.called)
 
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_setup_pci_tracker')
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename',
+                side_effect=exc.ComputeHostNotFound(host=_HOSTNAME))
+    @mock.patch('nova.objects.ComputeNode.create',
+                side_effect=(test.TestingException, None))
+    def test_compute_node_create_fail_retry_works(self, mock_create, mock_get,
+                                                  mock_setup_pci):
+        """Tests that _init_compute_node will not save the ComputeNode object
+        in the compute_nodes dict if create() fails.
+        """
+        self._setup_rt()
+        self.assertEqual({}, self.rt.compute_nodes)
+        ctxt = context.get_context()
+        # The first ComputeNode.create fails so rt.compute_nodes should
+        # remain empty.
+        resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
+        self.assertRaises(test.TestingException,
+                          self.rt._init_compute_node, ctxt, resources)
+        self.assertEqual({}, self.rt.compute_nodes)
+        # Second create works so compute_nodes should have a mapping.
+        original_copy_resources = self.rt._copy_resources
+
+        def fake_copy_resources(_cn, _resources):
+            # We have to set the uuid field on the ComputeNode for logging.
+            _cn.uuid = uuids.cn_uuid
+            return original_copy_resources(_cn, _resources)
+
+        with mock.patch.object(self.rt, '_copy_resources',
+                               fake_copy_resources):
+            self.rt._init_compute_node(ctxt, resources)
+        self.assertIn(_NODENAME, self.rt.compute_nodes)
+        mock_get.assert_has_calls([mock.call(
+            ctxt, _HOSTNAME, _NODENAME)] * 2)
+        self.assertEqual(2, mock_create.call_count)
+        mock_setup_pci.assert_called_once_with(
+            ctxt, test.MatchType(objects.ComputeNode), resources)
+
     @mock.patch('nova.objects.ComputeNodeList.get_by_hypervisor')
-    @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
-                return_value=objects.PciDeviceList(objects=[]))
     @mock.patch('nova.objects.ComputeNode.create')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_update')
     def test_node_removed(self, update_mock, get_mock,
-                          create_mock, pci_tracker_mock,
-                          get_by_hypervisor_mock):
+                          create_mock, get_by_hypervisor_mock):
         self._test_compute_node_created(update_mock, get_mock, create_mock,
-                                        pci_tracker_mock,
                                         get_by_hypervisor_mock)
         self.rt.old_resources[_NODENAME] = mock.sentinel.foo
         self.assertIn(_NODENAME, self.rt.compute_nodes)
