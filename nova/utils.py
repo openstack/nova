@@ -1225,3 +1225,16 @@ def is_big_vm(memory_mb, flavor):
         return False
 
     return True
+
+
+def vm_needs_special_spawning(memory_mb, flavor):
+    if is_big_vm(memory_mb, flavor):
+        return True
+
+    if is_baremetal_flavor(flavor):
+        return False
+
+    if flavor.extra_specs.get('spawn_on_free_host', 'false').lower() == 'true':
+        return True
+
+    return False
