@@ -123,11 +123,10 @@ class ConfigDriveTestCase(test.TestCase):
         super(ConfigDriveTestCase, self).tearDown()
         vmwareapi_fake.cleanup()
 
-    @mock.patch.object(vm_util, 'update_cluster_placement')
+    @mock.patch('nova.virt.vmwareapi.vm_util.vm_needs_special_spawning')
     @mock.patch.object(vmops.VMwareVMOps, '_get_instance_metadata',
                        return_value='fake_metadata')
-    def _spawn_vm(self, fake_get_instance_meta,
-                  mock_update_cluster_placement,
+    def _spawn_vm(self, fake_get_instance_meta, mock_vm_special_spawning,
                   injected_files=None, admin_password=None,
                   block_device_info=None):
 
