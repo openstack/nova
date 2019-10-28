@@ -1892,6 +1892,7 @@ class VMwareVMOpsTestCase(test.TestCase):
         recorded_methods = [c[1][1] for c in mock_call_method.mock_calls]
         self.assertEqual(expected_methods, recorded_methods)
 
+    @mock.patch('nova.utils.vm_needs_special_spawning')
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)
     @mock.patch.object(vmops.VMwareVMOps, '_create_folders',
@@ -1936,10 +1937,10 @@ class VMwareVMOpsTestCase(test.TestCase):
                    mock_update_cluster_placement,
                    mock_create_folders,
                    mock_is_volume_backed,
+                   mock_special_spawning,
                    block_device_info=None,
                    extra_specs=None,
                    config_drive=False):
-
         if extra_specs is None:
             extra_specs = vm_util.ExtraSpecs()
 
@@ -2385,9 +2386,11 @@ class VMwareVMOpsTestCase(test.TestCase):
     def test_create_swap_with_no_bdi(self):
         self._test_create_swap_from_instance(None)
 
+    @mock.patch('nova.utils.vm_needs_special_spawning')
     @mock.patch.object(vmops.VMwareVMOps, '_create_folders',
                        return_value='fake_vm_folder')
-    def test_build_virtual_machine(self, mock_create_folder):
+    def test_build_virtual_machine(self, mock_create_folder,
+                                   mock_special_spawning):
         image = images.VMwareImage(image_id=self._image_id)
 
         extra_specs = vm_util.ExtraSpecs()

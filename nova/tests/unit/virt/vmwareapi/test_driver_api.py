@@ -21,6 +21,7 @@ Test suite for VMwareAPI.
 
 import collections
 import datetime
+import fixtures
 from unittest import mock
 
 from eventlet import greenthread
@@ -40,6 +41,7 @@ from nova.compute import provider_tree
 from nova.compute import task_states
 from nova.compute import vm_states
 import nova.conf
+
 from nova import context
 from nova import exception
 from nova.image import glance
@@ -228,6 +230,18 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         self.pt.new_root(self.cn_rp['name'], self.cn_rp['uuid'], generation=0)
         self.pt.new_root(self.shared_rp['name'], self.shared_rp['uuid'],
                          generation=0)
+        """ Monkey patch for vm_util.vm_needs_special_spawning
+        Currently set to return `True` since most of the methods are calling
+        vm_util.update_cluster_placement which calls _get_server_groups. This
+        is done in order to prevent mocking the tests using spawn.
+        """
+        self.useFixture(
+            fixtures.MonkeyPatch(
+                'nova.utils.vm_needs_special_spawning',
+                self._fake_vm_needs_special_spawning))
+
+    def _fake_vm_needs_special_spawning(self, *args, **kwargs):
+        return True
 
     def tearDown(self):
         super(VMwareAPIVMTestCase, self).tearDown()
