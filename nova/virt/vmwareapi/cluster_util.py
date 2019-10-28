@@ -126,29 +126,32 @@ def delete_vm_group(session, cluster, vm_group):
 
 
 @utils.synchronized('vmware-vm-group-policy')
-def update_placement(session, cluster, vm_ref, group_info):
+def update_placement(session, cluster, vm_ref, group_infos):
     """Updates cluster for vm placement using DRS"""
     cluster_config = session._call_method(
         vutil, "get_object_property", cluster, "configurationEx")
 
-    if cluster_config:
+    client_factory = session.vim.client.factory
+    config_spec = client_factory.create('ns0:ClusterConfigSpecEx')
+    config_spec.groupSpec = []
+    for group_info in group_infos:
         group = _get_vm_group(cluster_config, group_info)
-        client_factory = session.vim.client.factory
-        config_spec = client_factory.create('ns0:ClusterConfigSpecEx')
 
         if not group:
             """Creating group"""
-            config_spec.groupSpec = _create_vm_group_spec(
+            group_spec = _create_vm_group_spec(
                 client_factory, group_info, [vm_ref], operation="add",
                 group=group)
+            config_spec.groupSpec.append(group_spec)
 
         if group:
             # VM group exists on the cluster which is assumed to be
             # created by VC admin. Add instance to this vm group and let
             # the placement policy defined by the VC admin take over
-            config_spec.groupSpec = _create_vm_group_spec(
+            group_spec = _create_vm_group_spec(
                 client_factory, group_info, [vm_ref], operation="edit",
                 group=group)
+            config_spec.groupSpec.append(group_spec)
 
         # If server group policies are defined (by tenants), then
         # create/edit affinity/anti-affinity rules on cluster.
@@ -164,9 +167,13 @@ def update_placement(session, cluster, vm_ref, group_info):
                 rule_name = "%s-%s" % (group_info.uuid, policy)
                 rule = _get_rule(cluster_config, rule_name)
                 operation = "edit" if rule else "add"
-                config_spec.rulesSpec = _create_cluster_rules_spec(
+                rules_spec = _create_cluster_rules_spec(
                     client_factory, rule_name, [vm_ref], policy=policy,
                     operation=operation, rule=rule)
+                if config_spec.rulesSpec is None:
+                    config_spec.rulesSpec = [rules_spec]
+                else:
+                    config_spec.rulesSpec.append(rules_spec)
 
     reconfigure_cluster(session, cluster, config_spec)
 

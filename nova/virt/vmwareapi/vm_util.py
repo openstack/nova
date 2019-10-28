@@ -1391,26 +1391,26 @@ def get_stats_from_cluster(session, cluster):
     return stats
 
 
-def _get_server_group(context, instance):
-    server_group_info = None
+def _get_server_groups(context, instance):
+    server_group_infos = []
     try:
         instance_group_object = objects.instance_group.InstanceGroup
         server_group = instance_group_object.get_by_instance_uuid(
             context, instance.uuid)
         if server_group:
-            server_group_info = GroupInfo(server_group.uuid,
-                                          server_group.policies)
+            server_group_infos.append(GroupInfo(server_group.uuid,
+                                                server_group.policies))
     except nova.exception.InstanceGroupNotFound:
         pass
 
-    return server_group_info
+    return server_group_infos
 
 
 def update_cluster_placement(session, context, instance, cluster, vm_ref):
-    server_group_info = _get_server_group(context, instance)
-    if server_group_info is None:
+    server_group_infos = _get_server_groups(context, instance)
+    if not server_group_infos:
         return
-    cluster_util.update_placement(session, cluster, vm_ref, server_group_info)
+    cluster_util.update_placement(session, cluster, vm_ref, server_group_infos)
 
 
 def get_host_ref(session, cluster=None):
