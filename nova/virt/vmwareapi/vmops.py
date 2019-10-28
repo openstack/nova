@@ -1140,6 +1140,28 @@ class VMwareVMOps(object):
 
         vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
 
+        # clean up after special spawning behavior
+        if utils.vm_needs_special_spawning(int(instance.memory_mb),
+                                           instance.flavor):
+            # we're using a child resource provider, so we don't have to change
+            # the drivers' report-code to keep the CUSTOM_BIGVM resource, but
+            # instead can independently add it or remove it on a cluster
+            placement_client = self._virtapi._compute.reportclient
+            cn = self._virtapi._compute._get_compute_info(context, CONF.host)
+            parent_rp_uuid = cn.uuid
+            parent_tree = placement_client.get_provider_tree_and_ensure_root(
+                                                    context, parent_rp_uuid)
+            rp_name = '{}-{}'.format(CONF.bigvm_deployment_rp_name_prefix,
+                                     cn.host)
+            rp = parent_tree.data(rp_name)
+            # reserve the bigvm resource. this prohibits any further
+            # deployment on that host.
+            inv_data = rp.inventory
+            rp.inventory['CUSTOM_BIGVM']['reserved'] = 1
+            placement_client.set_inventory_for_provider(context,
+                                        rp.uuid, rp_name, inv_data,
+                                        parent_provider_uuid=parent_rp_uuid)
+
     def _is_bdm_valid(self, block_device_mapping):
         """Checks if the block device mapping is valid."""
         valid_bus = (constants.DEFAULT_ADAPTER_TYPE,
