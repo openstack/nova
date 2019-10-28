@@ -1640,7 +1640,8 @@ class ComputeTaskManager(base.Base):
         :param image_id: The IDs of the image to cache
         """
 
-        # TODO(danms): Fix notification sample for IMAGE_CACHE action
+        # TODO(mriedem): Consider including the list of images in the
+        # notification payload.
         compute_utils.notify_about_aggregate_action(
             context, aggregate,
             fields.NotificationAction.IMAGE_CACHE,

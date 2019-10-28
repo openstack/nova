@@ -1,0 +1,11 @@
+{
+    "priority": "INFO",
+    "payload": {
+        "$ref": "common_payloads/AggregatePayload.json#",
+        "nova_object.data": {
+            "hosts": ["compute"]
+        }
+    },
+    "event_type": "aggregate.cache_images.end",
+    "publisher_id": "nova-api:fake-mini"
+}
