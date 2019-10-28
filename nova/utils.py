@@ -1182,13 +1182,30 @@ class Semaphores(object):
         return len(self._semaphores)
 
 
+def is_baremetal_flavor(flavor):
+    return 'capabilities:cpu_arch' in flavor.extra_specs
+
+
 def is_big_vm(memory_mb, flavor):
     # small VMs are not big
     if memory_mb < CONF.bigvm_mb:
         return False
 
     # baremetal instances are not big
-    if 'capabilities:cpu_arch' in flavor.extra_specs:
+    if is_baremetal_flavor(flavor):
         return False
 
     return True
+
+
+def vm_needs_special_spawning(memory_mb, flavor):
+    if is_big_vm(memory_mb, flavor):
+        return True
+
+    if is_baremetal_flavor(flavor):
+        return False
+
+    if flavor.extra_specs.get('spawn_on_free_host', 'false').lower() == 'true':
+        return True
+
+    return False
