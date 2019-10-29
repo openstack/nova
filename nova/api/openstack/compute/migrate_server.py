@@ -58,7 +58,7 @@ class MigrateServerController(wsgi.Controller):
         # extra API call to neutron when we support move operations with ports
         # having resource requests.
         if (common.instance_has_port_with_resource_request(
-                    context, instance.uuid, self.network_api) and not
+                    instance.uuid, self.network_api) and not
                 common.supports_port_resource_request_during_move(req)):
             msg = _("The migrate action on a server with ports having "
                     "resource requests, like a port with a QoS minimum "
@@ -127,7 +127,7 @@ class MigrateServerController(wsgi.Controller):
         # extra API call to neutron when we support move operations with ports
         # having resource requests.
         if (common.instance_has_port_with_resource_request(
-                    context, instance.uuid, self.network_api) and not
+                    instance.uuid, self.network_api) and not
                 common.supports_port_resource_request_during_move(req)):
             msg = _("The os-migrateLive action on a server with ports having "
                     "resource requests, like a port with a QoS minimum "

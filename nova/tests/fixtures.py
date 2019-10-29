@@ -1473,7 +1473,20 @@ class NeutronFixture(fixtures.Fixture):
             self.fake_delete_port_binding)
 
         self.test.stub_out('nova.network.neutronv2.api.get_client',
-                           lambda *args, **kwargs: self)
+                           self._get_client)
+
+    def _get_client(self, context, admin=False):
+        # NOTE(gibi): This is a hack. As we return the same fixture for each
+        # get_client call there is no way to later know that a call came
+        # through which client. We store the parameters of the last get_client
+        # call. Later we should return a new client object from this call that
+        # is wrapping the fixture and this client can remember how it was
+        # initialized.
+
+        # This logic is copied from nova.network.neutronv2.api._get_auth_plugin
+        self.is_admin_client = (admin or
+                                (context.is_admin and not context.auth_token))
+        return self
 
     @staticmethod
     def fake_create_port_binding(context, client, port_id, data):
@@ -1538,6 +1551,14 @@ class NeutronFixture(fixtures.Fixture):
         _params.pop('fields', None)
         ports = [p for p in self._ports.values()
                  if all(p.get(opt) == _params[opt] for opt in _params)]
+        if not self.is_admin_client:
+            # Neutron returns None instead of the real resource_request if
+            # the ports are queried by a non-admin. So simulate this behavior
+            # here
+            for port in ports:
+                if 'resource_request' in port:
+                    port['resource_request'] = None
+
         return {'ports': copy.deepcopy(ports)}
 
     def list_subnets(self, retrieve_all=True, **_params):
