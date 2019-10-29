@@ -4912,14 +4912,14 @@ class _ComputeAPIUnitTestMixIn(object):
                            'set_admin_password')
         def do_test(compute_rpcapi_mock, record_mock, instance_save_mock):
             # call the API
-            self.compute_api.set_admin_password(self.context, instance)
+            self.compute_api.set_admin_password(self.context, instance, 'pass')
             # make our assertions
             instance_save_mock.assert_called_once_with(
                 expected_task_state=[None])
             record_mock.assert_called_once_with(
                 self.context, instance, instance_actions.CHANGE_PASSWORD)
             compute_rpcapi_mock.assert_called_once_with(
-                self.context, instance=instance, new_pass=None)
+                self.context, instance=instance, new_pass='pass')
 
         do_test()
 

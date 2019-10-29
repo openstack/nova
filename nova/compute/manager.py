@@ -3917,10 +3917,6 @@ class ComputeManager(manager.Manager):
         """
 
         context = context.elevated()
-        if new_pass is None:
-            # Generate a random password
-            new_pass = utils.generate_password()
-
         current_power_state = self._get_power_state(context, instance)
         expected_state = power_state.RUNNING
 

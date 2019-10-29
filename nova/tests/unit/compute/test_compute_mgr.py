@@ -4365,9 +4365,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
     @mock.patch('nova.compute.manager.ComputeManager._get_power_state',
                 return_value=power_state.RUNNING)
     @mock.patch.object(objects.Instance, 'save')
-    @mock.patch('nova.utils.generate_password', return_value='fake-pass')
-    def test_set_admin_password(self, gen_password_mock, instance_save_mock,
-                                power_state_mock):
+    def test_set_admin_password(self, instance_save_mock, power_state_mock):
         # Ensure instance can have its admin password set.
         instance = fake_instance.fake_instance_obj(
             self.context,
@@ -4378,7 +4376,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         @mock.patch.object(self.compute.driver, 'set_admin_password')
         def do_test(driver_mock, elevated_mock):
             # call the manager method
-            self.compute.set_admin_password(self.context, instance, None)
+            self.compute.set_admin_password(self.context, instance,
+                                            'fake-pass')
             # make our assertions
             self.assertEqual(vm_states.ACTIVE, instance.vm_state)
             self.assertIsNone(instance.task_state)
