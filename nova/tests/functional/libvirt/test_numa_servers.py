@@ -584,10 +584,14 @@ class ReshapeForPCPUsTest(NUMAServersTestBase):
         server_req['networks'] = 'auto'
 
         created_server1 = self.api.post_server({'server': server_req})
-        server1 = self._wait_for_state_change(created_server1, 'ACTIVE')
+        # _wait_for_state_change waits for the status to go from BUILD which
+        # should then be ACTIVE.
+        server1 = self._wait_for_state_change(created_server1, 'BUILD')
+        self.assertEqual('ACTIVE', server1['status'])
 
         created_server2 = self.api.post_server({'server': server_req})
-        server2 = self._wait_for_state_change(created_server2, 'ACTIVE')
+        server2 = self._wait_for_state_change(created_server2, 'BUILD')
+        self.assertEqual('ACTIVE', server2['status'])
 
         # sanity check usages
 
@@ -624,7 +628,10 @@ class ReshapeForPCPUsTest(NUMAServersTestBase):
             post = {'migrate': None}
             self.api.post_server_action(server2['id'], post)
 
-        server2 = self._wait_for_state_change(server2, 'VERIFY_RESIZE')
+        # _wait_for_state_change waits for the status to go from ACTIVE which
+        # should then be VERIFY_RESIZE.
+        server2 = self._wait_for_state_change(server2, 'ACTIVE')
+        self.assertEqual('VERIFY_RESIZE', server2['status'])
 
         # verify that the inventory, usages and allocation are correct before
         # the reshape. Note that the value of 8 VCPUs is derived from
@@ -755,7 +762,8 @@ class ReshapeForPCPUsTest(NUMAServersTestBase):
         # reshaped tree which should result in PCPU allocations
 
         created_server = self.api.post_server({'server': server_req})
-        server3 = self._wait_for_state_change(created_server, 'ACTIVE')
+        server3 = self._wait_for_state_change(created_server, 'BUILD')
+        self.assertEqual('ACTIVE', server3['status'])
 
         compute_rp_uuid = self.compute_rp_uuids['test_compute0']
 
