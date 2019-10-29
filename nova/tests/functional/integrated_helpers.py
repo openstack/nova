@@ -426,7 +426,7 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         self.flags(compute_driver=self.compute_driver)
         super(ProviderUsageBaseTestCase, self).setUp()
 
-        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.policy = self.useFixture(policy_fixture.RealPolicyFixture())
         self.neutron = self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(nova_fixtures.AllServicesCurrent())
 
