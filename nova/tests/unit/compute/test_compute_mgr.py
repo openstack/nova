@@ -7829,6 +7829,28 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         # Assert that we set the migration to an error state
         self.assertEqual("error", self.migration.status)
 
+    def test_resize_instance_fail_rollback_stays_stopped(self):
+        """Tests that when the driver's migrate_disk_and_power_off method
+        raises InstanceFaultRollback that the instance vm_state is preserved
+        rather than reset to ACTIVE which would be wrong if resizing a STOPPED
+        server.
+        """
+        with self._mock_resize_instance() as (
+                migrate_disk_and_power_off, notify):
+            migrate_disk_and_power_off.side_effect = \
+                exception.InstanceFaultRollback(
+                    exception.ResizeError(reason='unable to resize disk down'))
+            self.instance.vm_state = vm_states.STOPPED
+            self.assertRaises(
+                exception.ResizeError, self.compute.resize_instance,
+                context=self.context, instance=self.instance, image=self.image,
+                migration=self.migration,
+                instance_type='type', clean_shutdown=True,
+                request_spec=objects.RequestSpec())
+
+        # Assert the instance vm_state was unchanged.
+        self.assertEqual(vm_states.STOPPED, self.instance.vm_state)
+
     def test_resize_instance_notify_failure(self):
         # Raise an exception sending the end notification, which is after we
         # cast the migration to the destination host
