@@ -1260,7 +1260,6 @@ class ServerActionsControllerTestV21(test.TestCase):
                           self.req, FAKE_UUID, body=body)
 
         mock_has_res_req.assert_called_once_with(
-            self.req.environ['nova.context'], FAKE_UUID,
-            self.controller.network_api)
+            FAKE_UUID, self.controller.network_api)
         mock_get_service.assert_called_once_with(
             self.req.environ['nova.context'], 'fake_host', 'nova-compute')

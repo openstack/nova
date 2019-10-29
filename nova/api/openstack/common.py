@@ -28,6 +28,7 @@ from nova.api.openstack import api_version_request
 from nova.compute import task_states
 from nova.compute import vm_states
 import nova.conf
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova.network.neutronv2 import constants
@@ -573,8 +574,7 @@ def supports_port_resource_request_during_move(req):
     return False
 
 
-def instance_has_port_with_resource_request(
-        context, instance_uuid, network_api):
+def instance_has_port_with_resource_request(instance_uuid, network_api):
 
     # TODO(gibi): Use instance.info_cache to see if there is VIFs with
     # allocation key in the profile. If there is no such VIF for an instance
@@ -583,7 +583,12 @@ def instance_has_port_with_resource_request(
     # offloaded then we still have to hit neutron.
     search_opts = {'device_id': instance_uuid,
                    'fields': [constants.RESOURCE_REQUEST]}
-    ports = network_api.list_ports(context, **search_opts).get('ports', [])
+    # NOTE(gibi): We need to use an admin context to query neutron ports as
+    # neutron does not fill the resource_request field in the port response if
+    # we query with a non admin context.
+    admin_context = nova_context.get_admin_context()
+    ports = network_api.list_ports(
+        admin_context, **search_opts).get('ports', [])
     for port in ports:
         if port.get(constants.RESOURCE_REQUEST):
             return True
