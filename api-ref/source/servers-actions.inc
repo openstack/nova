@@ -800,18 +800,21 @@ Resizes a server.
 
 Specify the ``resize`` action in the request body.
 
-A successfully resized server shows a ``VERIFY_RESIZE`` status,
-``RESIZED`` VM status, and ``finished`` migration status. If you set the
-``resize_confirm_window`` option of the Compute service to an integer value,
-the Compute service automatically confirms the resize operation after
-the set interval in seconds.
-
 **Preconditions**
 
 You can only resize a server when its status is ``ACTIVE`` or ``SHUTOFF``.
 
 If the server is locked, you must have administrator privileges
 to resize the server.
+
+**Asynchronous Postconditions**
+
+A successfully resized server shows a ``VERIFY_RESIZE`` status and ``finished``
+migration status. If the cloud has configured the `resize_confirm_window`_
+option of the Compute service to a positive value, the Compute service
+automatically confirms the resize operation after the configured interval.
+
+.. _resize_confirm_window: https://docs.openstack.org/nova/latest/configuration/config.html#DEFAULT.resize_confirm_window
 
 .. note:: There is a `known limitation <https://bugs.launchpad.net/nova/+bug/1558880>`__
           that ephemeral disks are not resized.
