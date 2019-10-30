@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import re
 import time
 from unittest import mock
 
@@ -1425,6 +1426,158 @@ class VMwareVMOpsTestCase(test.TestCase):
                            total_steps=vmops.RESIZE_TOTAL_STEPS)
                  for i in range(2, 7)]
         fake_progress.assert_has_calls(calls)
+
+    @mock.patch.object(vutil, 'WithRetrieval')
+    @mock.patch.object(vim_util, 'get_objects')
+    def test_get_all_images_folders(self, mock_get_obj, mock_with_ret):
+        # fake folder result
+        def _ffr(moref, name, parent):
+            name_prop = mock.Mock(val=name)
+            name_prop.name = 'name'
+            parent_prop = mock.Mock(val=vutil.get_moref(parent, 'Folder'))
+            parent_prop.name = 'parent'
+            return mock.Mock(
+                propSet=[name_prop, parent_prop],
+                obj=vutil.get_moref(moref, 'Folder')
+            )
+        missing_parent_ref = 'missing-parent'
+        os_ref = 'os'
+        bad_prj_name = 'bad-prj-name'
+        bad_prj_parent = 'bad-prj-parent'
+        bad_os_parent = 'bad-os-parent'
+        prj_1 = 'prj-1'
+        prj_c = 'prj-c'
+        results_to_filter_out = [
+            _ffr(os_ref, 'OpenStack', self._dc_info.vmFolder.value),
+            _ffr(prj_1, 'Project (1)', os_ref),
+            _ffr(prj_c, 'Project (c)', os_ref),
+            _ffr(bad_os_parent, 'OpenStack', missing_parent_ref),
+            _ffr(bad_prj_name, 'Project (x)', os_ref),  # non-hex ID
+            _ffr(bad_prj_parent, 'Project (a)', bad_os_parent),
+            _ffr('bad-img-name', 'ImagesX', prj_1),
+            _ffr('bad-img-parent1', 'Images', bad_prj_name),
+            _ffr('bad-img-parent2', 'Images', bad_prj_parent)
+        ]
+        in_scope_results = [
+            _ffr('img-1', 'Images', prj_1),
+            _ffr('img-2', 'Images', prj_c)
+        ]
+
+        mock_get_obj.return_value = results_to_filter_out + in_scope_results
+
+        def _mock_with_ret(vim, ret_res):
+            return mock.Mock(__enter__=mock.Mock(return_value=ret_res),
+                             __exit__=mock.Mock(return_value=None))
+        mock_with_ret.side_effect = _mock_with_ret
+
+        images_folders = self._vmops._get_all_images_folders(self._dc_info)
+        img_folder_refs = [img.value for img in images_folders]
+        in_scope_refs = [res.obj.value for res in in_scope_results]
+        self.assertEqual(sorted(in_scope_refs), sorted(img_folder_refs))
+
+    @mock.patch.object(vm_util, 'destroy_vm')
+    @mock.patch.object(vm_util, 'TaskHistoryCollectorItems')
+    @mock.patch('oslo_utils.timeutils.is_older_than')
+    @mock.patch.object(ds_util, 'get_available_datastores')
+    def test_manage_image_cache_templates(self, mock_get_avlbl_ds,
+                                          mock_older_than,
+                                          mock_task_it,
+                                          mock_destroy_vm):
+        # any DS just to ensure dc_info is initialized
+        mock_get_avlbl_ds.return_value = [mock.Mock(
+            ref=vmwareapi_fake.ManagedObjectReference())]
+
+        expired_templ_vm_ref = vmwareapi_fake.ManagedObjectReference(
+            value='fake-vm-1')
+        used_templ_vm_ref = vmwareapi_fake.ManagedObjectReference(
+            value='fake-vm-2')
+
+        EXPIRED = True
+
+        tasks_and_expirations = [
+            # NEW task with type IN scope
+            (mock.Mock(descriptionId="VirtualMachine.clone",
+                       entity=used_templ_vm_ref),
+             not EXPIRED),
+            # OLD task with type IN scope
+            (mock.Mock(descriptionId="ResourcePool.ImportVAppLRO",
+                       entity=expired_templ_vm_ref),
+             EXPIRED),
+            # NEW task with type OUT of scope
+            (mock.Mock(descriptionId="fake-task-description",
+                       entity=expired_templ_vm_ref),
+             not EXPIRED)
+        ]
+
+        mock_task_it.return_value = []
+        mock_older_than_results = []
+        for task, expired in tasks_and_expirations:
+            mock_task_it.return_value.append(task)
+            mock_older_than_results.append(expired)
+        mock_older_than.side_effect = mock_older_than_results
+
+        # any instance just to ensure calling _destroy_expired_image_templates
+        fake_instances = [self._instance]
+        with test.nested(
+                mock.patch.object(self._vmops, '_imagecache'),
+                mock.patch.object(self._vmops, '_get_all_images_folders',
+                                  return_value=['fake-folder']),
+                mock.patch.object(self._vmops, '_get_image_template_vms',
+                                  return_value=[(expired_templ_vm_ref, 'n1'),
+                                                (used_templ_vm_ref, 'n2')]),
+                mock.patch.object(self._session, '_call_method'),
+                mock.patch.object(self._session, '_wait_for_task')):
+            self._vmops.manage_image_cache(self._context, fake_instances)
+            mock_destroy_vm.assert_called_once_with(self._session,
+                                                    None,
+                                                    expired_templ_vm_ref)
+
+    @mock.patch.object(vutil, 'WithRetrieval')
+    @mock.patch.object(vim_util, 'get_inner_objects')
+    def _get_image_template_vms(self, mock_get_inner, mock_with_ret,
+                                datastore_regex=None,
+                                additional_fail_names=None):
+        self._vmops._datastore_regex = datastore_regex
+
+        # fake image result
+        def _fir(moref, name):
+            return mock.Mock(propSet=[mock.Mock(val=name)],
+                             obj=moref)
+
+        fake_ref_ok1 = 'fake-moref-OK1'
+        fake_name_ok1 = '{} (ds-bb01-02)'.format(uuidutils.generate_uuid())
+        fake_ref_ok2 = 'fake-moref-OK2'
+        fake_name_ok2 = '{} (ds-bb01-01)'.format(uuidutils.generate_uuid())
+
+        ret_res = [
+            _fir(fake_ref_ok1, fake_name_ok1),
+            _fir('fake-moref-NOK1', 'non-uuid-name (ds)'),
+            _fir('fake-moref-NOK2', '{} ()'.format(uuidutils.generate_uuid())),
+            _fir(fake_ref_ok2, fake_name_ok2)
+        ]
+        if additional_fail_names is not None:
+            ret_res.extend([_fir('fake-moref-add', n)
+                            for n in additional_fail_names])
+        mock_get_inner.return_value = ret_res
+
+        def _mock_with_ret(vim, ret_res):
+            return mock.Mock(__enter__=mock.Mock(return_value=ret_res),
+                             __exit__=mock.Mock(return_value=None))
+        mock_with_ret.side_effect = _mock_with_ret
+
+        actual_result = self._vmops._get_image_template_vms(None)
+        expected = [
+            (fake_ref_ok1, fake_name_ok1),
+            (fake_ref_ok2, fake_name_ok2)]
+        self.assertEqual(expected, sorted(actual_result))
+
+    def test_get_image_template_vms(self):
+        self._get_image_template_vms()
+
+    def test_get_image_template_vms_with_datastore_regex(self):
+        fail_name = '{} (ds-bb02-01)'.format(uuidutils.generate_uuid())
+        self._get_image_template_vms(datastore_regex=re.compile('^ds-bb01-.*'),
+                                     additional_fail_names=[fail_name])
 
     @mock.patch.object(vutil, 'get_inventory_path', return_value='fake_path')
     @mock.patch.object(vmops.VMwareVMOps, '_attach_cdrom_to_vm')
