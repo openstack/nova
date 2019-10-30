@@ -14,9 +14,12 @@
 
 import mock
 from oslo_policy import policy as oslo_policy
+import six
 import webob
 
 from nova.api.openstack.compute import shelve as shelve_v21
+from nova.compute import task_states
+from nova.compute import vm_states
 from nova import exception
 from nova import policy
 from nova import test
@@ -41,6 +44,22 @@ class ShelvePolicyTestV21(test.NoDBTestCase):
                       fakes.fake_actions_to_locked_server)
         self.assertRaises(webob.exc.HTTPConflict, self.controller._shelve,
                           self.req, uuidsentinel.fake, {})
+
+    @mock.patch('nova.api.openstack.common.get_instance')
+    @mock.patch('nova.objects.instance.Instance.save')
+    def test_shelve_task_state_race(self, mock_save, get_instance_mock):
+        instance = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'],
+            vm_state=vm_states.ACTIVE, task_state=None)
+        instance.launched_at = instance.created_at
+        get_instance_mock.return_value = instance
+        mock_save.side_effect = exception.UnexpectedTaskStateError(
+            instance_uuid=instance.uuid, expected=None,
+            actual=task_states.SHELVING)
+        ex = self.assertRaises(webob.exc.HTTPConflict, self.controller._shelve,
+                          self.req, uuidsentinel.fake, body={'shelve': {}})
+        self.assertIn('Conflict updating instance', six.text_type(ex))
+        mock_save.assert_called_once_with(expected_task_state=[None])
 
     @mock.patch('nova.api.openstack.common.get_instance')
     def test_unshelve_locked_server(self, get_instance_mock):
