@@ -32,6 +32,7 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
 from oslo_utils import strutils
+from oslo_utils import timeutils
 from oslo_utils import units
 from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
@@ -2503,6 +2504,54 @@ class VMwareVMOps(object):
             dc_info = self.get_datacenter_ref_and_name(ds.ref)
             datastores_info.append((ds, dc_info))
         self._imagecache.update(context, instances, datastores_info)
+
+        if CONF.vmware.image_as_template:
+            self._age_cached_image_templates(dc_info, instances)
+
+    def _age_cached_image_templates(self, dc_info, instances):
+        project_ids = set()
+        for inst in instances:
+            project_ids.add(inst.project_id)
+        for project_id in project_ids:
+            folder_ref = self._get_project_folder(dc_info,
+                                                  project_id=project_id,
+                                                  type_='Images')
+            self._destroy_expired_image_templates(folder_ref)
+
+    def _destroy_expired_image_templates(self, templ_vm_folder_ref):
+        all_templ_vms = vutil.get_object_property(self._session.vim,
+                                                  templ_vm_folder_ref,
+                                                  "childEntity")
+
+        expired_templ_vms = {}
+        if all_templ_vms:
+            expired_templ_vms = {ref.value: ref for ref in
+                                 all_templ_vms.ManagedObjectReference}
+
+        client_factory = self._session.vim.client.factory
+        task_filter_spec = client_factory.create('ns0:TaskFilterSpec')
+        task_filter_spec.entity = client_factory.create(
+                                        'ns0:TaskFilterSpecByEntity')
+        task_filter_spec.entity.entity = templ_vm_folder_ref
+        task_filter_spec.entity.recursion = "children"
+
+        templ_tasks = vm_util.TaskHistoryCollectorItems(
+            self._session, task_filter_spec, reverse_page_order=True)
+
+        for ti in templ_tasks:
+            # Look for template creation or clone from template
+            if ti.descriptionId in ["ResourcePool.ImportVAppLRO",
+                                    "VirtualMachine.clone"]:
+                templ_vm_ref = ti.entity
+                if not timeutils.is_older_than(ti.queueTime,
+                    CONF.image_cache.
+                        remove_unused_original_minimum_age_seconds):
+                    expired_templ_vms.pop(templ_vm_ref.value, None)
+                    if not expired_templ_vms:
+                        break
+
+        for templ_vm_ref in expired_templ_vms.values():
+            vm_util.destroy_vm(self._session, None, templ_vm_ref)
 
     def _get_valid_vms_from_retrieve_result(self, retrieve_result,
                                             return_properties=False):

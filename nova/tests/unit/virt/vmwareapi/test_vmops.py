@@ -1423,6 +1423,66 @@ class VMwareVMOpsTestCase(test.TestCase):
                  for i in range(2, 7)]
         fake_progress.assert_has_calls(calls)
 
+    @mock.patch.object(vm_util, 'destroy_vm')
+    @mock.patch.object(vutil, 'get_object_property')
+    @mock.patch.object(vm_util, 'TaskHistoryCollectorItems')
+    @mock.patch('oslo_utils.timeutils.is_older_than')
+    @mock.patch.object(ds_util, 'get_available_datastores')
+    def test_manage_image_cache_templates(self, mock_get_avlbl_ds,
+                                          mock_older_than,
+                                          mock_task_it,
+                                          mock_get_obj_prop,
+                                          mock_destroy_vm):
+        # any DS just to ensure dc_info is initialized
+        mock_get_avlbl_ds.return_value = [mock.Mock(
+            ref=vmwareapi_fake.ManagedObjectReference())]
+
+        expired_templ_vm_ref = vmwareapi_fake.ManagedObjectReference(
+            value='fake-vm-1')
+        used_templ_vm_ref = vmwareapi_fake.ManagedObjectReference(
+            value='fake-vm-2')
+        templ_list = mock.Mock(ManagedObjectReference = [expired_templ_vm_ref,
+                                                         used_templ_vm_ref])
+        mock_get_obj_prop.return_value = templ_list
+
+        EXPIRED = True
+
+        tasks_and_expirations = [
+            # NEW task with type IN scope
+            (mock.Mock(descriptionId="VirtualMachine.clone",
+                       entity=used_templ_vm_ref),
+             not EXPIRED),
+            # OLD task with type IN scope
+            (mock.Mock(descriptionId="ResourcePool.ImportVAppLRO",
+                       entity=expired_templ_vm_ref),
+             EXPIRED),
+            # NEW task with type OUT of scope
+            (mock.Mock(descriptionId="fake-task-description",
+                       entity=expired_templ_vm_ref),
+             not EXPIRED)
+        ]
+
+        mock_task_it.return_value = []
+        mock_older_than_results = []
+        for task, expired in tasks_and_expirations:
+            mock_task_it.return_value.append(task)
+            mock_older_than_results.append(expired)
+        mock_older_than.side_effect = mock_older_than_results
+
+        self.flags(group='vmware', image_as_template=True)
+        # any instance just to ensure calling _destroy_expired_image_templates
+        fake_instances = [self._instance]
+        with test.nested(
+                mock.patch.object(self._vmops, '_imagecache'),
+                mock.patch.object(self._vmops, '_get_project_folder',
+                                  return_value='fake-folder'),
+                mock.patch.object(self._session, '_call_method'),
+                mock.patch.object(self._session, '_wait_for_task')):
+            self._vmops.manage_image_cache(self._context, fake_instances)
+            mock_destroy_vm.assert_called_once_with(self._session,
+                                                    None,
+                                                    expired_templ_vm_ref)
+
     @mock.patch.object(vutil, 'get_inventory_path', return_value='fake_path')
     @mock.patch.object(vmops.VMwareVMOps, '_attach_cdrom_to_vm')
     @mock.patch.object(vmops.VMwareVMOps, '_create_config_drive')
