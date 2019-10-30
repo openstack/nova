@@ -3661,3 +3661,47 @@ class ConductorTaskAPITestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             mock_cache.assert_not_called()
 
         _test()
+
+    @mock.patch('nova.objects.HostMapping.get_by_host')
+    @mock.patch('nova.context.target_cell')
+    @mock.patch('nova.objects.Service.get_by_compute_host')
+    def test_cache_images_failed_compute(self, mock_service, mock_target,
+                                         mock_gbh):
+        """Test the edge cases for cache_images(), specifically the
+        error, skip, and down situations.
+        """
+
+        fake_service = objects.Service(disabled=False, forced_down=False,
+                                       last_seen_up=timeutils.utcnow())
+        fake_down_service = objects.Service(disabled=False, forced_down=True,
+                                            last_seen_up=None)
+        mock_service.side_effect = [fake_service, fake_service,
+                                    fake_down_service]
+        mock_target.__return_value.__enter__.return_value = self.context
+        fake_cell = objects.CellMapping(uuid=uuids.cell,
+                                        database_connection='',
+                                        transport_url='')
+        fake_mapping = objects.HostMapping(cell_mapping=fake_cell)
+        mock_gbh.return_value = fake_mapping
+        fake_agg = objects.Aggregate(name='agg', uuid=uuids.agg,
+                                     hosts=['host1', 'host2', 'host3'])
+
+        @mock.patch.object(self.conductor_manager.compute_rpcapi,
+                           'cache_images')
+        def _test(mock_cache):
+            mock_cache.side_effect = [
+                {'image1': 'unsupported'},
+                {'image1': 'error'},
+            ]
+            self.conductor_manager.cache_images(self.context,
+                                                fake_agg,
+                                                ['image1'])
+
+        _test()
+
+        logtext = self.stdlog.logger.output
+        self.assertIn(
+            '0 cached, 0 existing, 1 errors, 1 unsupported, 1 skipped',
+            logtext)
+        self.assertIn('host3\' because it is not up', logtext)
+        self.assertIn('image1 failed 1 times', logtext)

@@ -14,6 +14,7 @@
 
 """Handles database requests from other nova services."""
 
+import collections
 import contextlib
 import copy
 import eventlet
@@ -1667,6 +1668,26 @@ class ComputeTaskManager(base.Base):
                   'cells': len(hosts_by_cell)})
         clock.start()
 
+        stats = collections.defaultdict(lambda: (0, 0, 0, 0))
+        failed_images = collections.defaultdict(int)
+        down_hosts = set()
+
+        def wrap_cache_images(ctxt, host, image_ids):
+            result = self.compute_rpcapi.cache_images(
+                ctxt, host=host, image_ids=image_ids)
+            for image_id, status in result.items():
+                cached, existing, error, unsupported = stats[image_id]
+                if status == 'error':
+                    failed_images[image_id] += 1
+                    error += 1
+                elif status == 'cached':
+                    cached += 1
+                elif status == 'existing':
+                    existing += 1
+                elif status == 'unsupported':
+                    unsupported += 1
+                stats[image_id] = (cached, existing, error, unsupported)
+
         for cell_uuid, hosts in hosts_by_cell.items():
             cell = cells_by_uuid[cell_uuid]
             with nova_context.target_cell(context, cell) as target_ctxt:
@@ -1674,27 +1695,47 @@ class ComputeTaskManager(base.Base):
                     service = objects.Service.get_by_compute_host(target_ctxt,
                                                                   host)
                     if not self.servicegroup_api.service_is_up(service):
+                        down_hosts.add(host)
                         LOG.info(
                             'Skipping image pre-cache request to compute '
                             '%(host)r because it is not up',
                             {'host': host})
                         continue
 
-                    fetch_pool.spawn_n(self.compute_rpcapi.cache_images,
-                                       target_ctxt,
-                                       host=host,
-                                       image_ids=image_ids)
+                    fetch_pool.spawn_n(wrap_cache_images, target_ctxt, host,
+                                       image_ids)
 
         # Wait until all those things finish
         fetch_pool.waitall()
 
+        overall_stats = {'cached': 0, 'existing': 0, 'error': 0,
+                         'unsupported': 0}
+        for cached, existing, error, unsupported in stats.values():
+            overall_stats['cached'] += cached
+            overall_stats['existing'] += existing
+            overall_stats['error'] += error
+            overall_stats['unsupported'] += unsupported
+
         clock.stop()
-        # FIXME(danms): Calculate some interesting statistics about the image
-        # download process to log for the admin.
         LOG.info('Image pre-cache operation for image(s) %(image_ids)s '
-                 'completed in %(time).2f seconds',
+                 'completed in %(time).2f seconds; '
+                 '%(cached)i cached, %(existing)i existing, %(error)i errors, '
+                 '%(unsupported)i unsupported, %(skipped)i skipped (down) '
+                 'hosts',
                  {'image_ids': ','.join(image_ids),
-                  'time': clock.elapsed()})
+                  'time': clock.elapsed(),
+                  'cached': overall_stats['cached'],
+                  'existing': overall_stats['existing'],
+                  'error': overall_stats['error'],
+                  'unsupported': overall_stats['unsupported'],
+                  'skipped': len(down_hosts),
+                 })
+        # Log error'd images specifically at warning level
+        for image_id, fails in failed_images.items():
+            LOG.warning('Image pre-cache operation for image %(image)s '
+                        'failed %(fails)i times',
+                        {'image': image_id,
+                         'fails': fails})
 
         compute_utils.notify_about_aggregate_action(
             context, aggregate,
