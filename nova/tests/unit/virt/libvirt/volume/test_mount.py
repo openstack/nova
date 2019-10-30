@@ -169,10 +169,46 @@ class ThreadController(object):
         self.thread.wait()
 
 
+class MountFixture(fixtures.Fixture):
+    def __init__(self, test):
+        super(MountFixture, self).__init__()
+        self.test = test
+
+        self.mounts = set()
+        test.mounts = self.mounts
+
+    def setUp(self):
+        super(MountFixture, self).setUp()
+
+        self.test.mock_mount = self.useFixture(fixtures.MockPatch(
+            'nova.privsep.fs.mount', side_effect=self._fake_mount)).mock
+        self.test.mock_umount = self.useFixture(fixtures.MockPatch(
+            'nova.privsep.fs.umount', side_effect=self._fake_umount)).mock
+        self.test.mock_ismount = self.useFixture(fixtures.MockPatch(
+            'os.path.ismount', side_effect=self._fake_ismount)).mock
+
+        self.test.mock_ensure_tree = self.useFixture(fixtures.MockPatch(
+            'oslo_utils.fileutils.ensure_tree')).mock
+        self.test.mock_rmdir = self.useFixture(fixtures.MockPatch(
+            'nova.privsep.path.rmdir')).mock
+
+    def _fake_mount(self, fstype, export, mountpoint, options):
+        self.mounts.add(mountpoint)
+
+    def _fake_umount(self, mountpoint):
+        self.mounts.remove(mountpoint)
+
+    def _fake_ismount(self, mountpoint):
+        return mountpoint in self.mounts
+
+
 class HostMountStateTestCase(test.NoDBTestCase):
-    @mock.patch('os.path.ismount',
-                side_effect=[False, True, True, True, True])
-    def test_init(self, mock_ismount):
+    def setUp(self):
+        super(HostMountStateTestCase, self).setUp()
+
+        self.mountfixture = self.useFixture(MountFixture(self))
+
+    def test_init(self):
         # Test that we initialise the state of MountManager correctly at
         # startup
         def fake_disk(disk):
@@ -190,6 +226,8 @@ class HostMountStateTestCase(test.NoDBTestCase):
         local_dir = '/local'
         mountpoint_a = '/mnt/a'
         mountpoint_b = '/mnt/b'
+        self.mounts.add(mountpoint_a)
+        self.mounts.add(mountpoint_b)
 
         guests = map(mock_guest, [uuids.instance_a, uuids.instance_b], [
             # Local file root disk and a volume on each of mountpoints a and b
@@ -244,64 +282,52 @@ class HostMountStateTestCase(test.NoDBTestCase):
                          instance=mock.sentinel.instance):
         m.umount(vol, mountpoint, instance)
 
-    @mock.patch('oslo_utils.fileutils.ensure_tree')
-    @mock.patch('nova.privsep.fs.mount')
-    @mock.patch('nova.privsep.fs.umount')
-    @mock.patch('os.path.ismount',
-                side_effect=[False, True, True, True])
-    def test_mount_umount(self, mock_ismount, mock_umount, mock_mount,
-                          mock_ensure_tree):
+    def test_mount_umount(self):
         # Mount 2 different volumes from the same export. Test that we only
         # mount and umount once.
         m = self._get_clean_hostmountstate()
 
         # Mount vol_a from export
         self._sentinel_mount(m, mock.sentinel.vol_a)
-        mock_ensure_tree.assert_has_calls([
+        self.mock_ensure_tree.assert_has_calls([
             mock.call(mock.sentinel.mountpoint)])
-        mock_mount.assert_has_calls([
+        self.mock_mount.assert_has_calls([
             mock.call(mock.sentinel.fstype,
                       mock.sentinel.export, mock.sentinel.mountpoint,
                       [mock.sentinel.option1, mock.sentinel.option2])])
 
         # Mount vol_b from export. We shouldn't have mounted again
         self._sentinel_mount(m, mock.sentinel.vol_b)
-        mock_ensure_tree.assert_has_calls([
+        self.mock_ensure_tree.assert_has_calls([
             mock.call(mock.sentinel.mountpoint)])
-        mock_mount.assert_has_calls([
+        self.mock_mount.assert_has_calls([
             mock.call(mock.sentinel.fstype,
                       mock.sentinel.export, mock.sentinel.mountpoint,
                       [mock.sentinel.option1, mock.sentinel.option2])])
 
         # Unmount vol_a. We shouldn't have unmounted
         self._sentinel_umount(m, mock.sentinel.vol_a)
-        mock_ensure_tree.assert_has_calls([
+        self.mock_ensure_tree.assert_has_calls([
             mock.call(mock.sentinel.mountpoint)])
-        mock_mount.assert_has_calls([
+        self.mock_mount.assert_has_calls([
             mock.call(mock.sentinel.fstype,
                       mock.sentinel.export, mock.sentinel.mountpoint,
                       [mock.sentinel.option1, mock.sentinel.option2])])
 
         # Unmount vol_b. We should have umounted.
         self._sentinel_umount(m, mock.sentinel.vol_b)
-        mock_ensure_tree.assert_has_calls([
+        self.mock_ensure_tree.assert_has_calls([
             mock.call(mock.sentinel.mountpoint)])
-        mock_mount.assert_has_calls([
+        self.mock_mount.assert_has_calls([
             mock.call(mock.sentinel.fstype,
                       mock.sentinel.export, mock.sentinel.mountpoint,
                       [mock.sentinel.option1, mock.sentinel.option2])])
-        mock_umount.assert_has_calls([
+        self.mock_umount.assert_has_calls([
+            mock.call(mock.sentinel.mountpoint)])
+        self.mock_rmdir.assert_has_calls([
             mock.call(mock.sentinel.mountpoint)])
 
-    @mock.patch('oslo_utils.fileutils.ensure_tree')
-    @mock.patch('nova.privsep.fs.mount')
-    @mock.patch('nova.privsep.fs.umount')
-    @mock.patch('os.path.ismount',
-                side_effect=[False, True, True, True])
-    @mock.patch('nova.privsep.path.rmdir')
-    def test_mount_umount_multi_attach(self, mock_rmdir, mock_ismount,
-                                       mock_umount, mock_mount,
-                                       mock_ensure_tree):
+    def test_mount_umount_multi_attach(self):
         # Mount a volume from a single export for 2 different instances. Test
         # that we only mount and umount once.
         m = self._get_clean_hostmountstate()
@@ -313,37 +339,31 @@ class HostMountStateTestCase(test.NoDBTestCase):
 
         # Mount vol_a for instance_a
         self._sentinel_mount(m, mock.sentinel.vol_a, instance=instance_a)
-        mock_mount.assert_has_calls([
+        self.mock_mount.assert_has_calls([
             mock.call(mock.sentinel.fstype, mock.sentinel.export,
                       mock.sentinel.mountpoint,
                       [mock.sentinel.option1, mock.sentinel.option2])])
-        mock_mount.reset_mock()
+        self.mock_mount.reset_mock()
 
         # Mount vol_a for instance_b. We shouldn't have mounted again
         self._sentinel_mount(m, mock.sentinel.vol_a, instance=instance_b)
-        mock_mount.assert_not_called()
+        self.mock_mount.assert_not_called()
 
         # Unmount vol_a for instance_a. We shouldn't have unmounted
         self._sentinel_umount(m, mock.sentinel.vol_a, instance=instance_a)
-        mock_umount.assert_not_called()
+        self.mock_umount.assert_not_called()
 
         # Unmount vol_a for instance_b. We should have umounted.
         self._sentinel_umount(m, mock.sentinel.vol_a, instance=instance_b)
-        mock_umount.assert_has_calls([mock.call(mock.sentinel.mountpoint)])
+        self.mock_umount.assert_has_calls(
+                [mock.call(mock.sentinel.mountpoint)])
 
-    @mock.patch('oslo_utils.fileutils.ensure_tree')
-    @mock.patch('nova.privsep.fs.mount')
-    @mock.patch('nova.privsep.fs.umount')
-    @mock.patch('os.path.ismount',
-                side_effect=[False, False, True, False, False, True])
-    @mock.patch('nova.privsep.path.rmdir')
-    def test_mount_concurrent(self, mock_rmdir, mock_ismount, mock_umount,
-                              mock_mount, mock_ensure_tree):
+    def test_mount_concurrent(self):
         # This is 2 tests in 1, because the first test is the precondition
         # for the second.
 
         # The first test is that if 2 threads call mount simultaneously,
-        # only one of them will call mount
+        # only one of them will do the mount
 
         # The second test is that we correctly handle the case where we
         # delete a lock after umount. During the umount of the first test,
@@ -378,21 +398,23 @@ class HostMountStateTestCase(test.NoDBTestCase):
         def trap_mount(*args, **kwargs):
             # Conditionally wait at a waitpoint named after the command
             # we're executing
+            self.mountfixture._fake_mount(*args, **kwargs)
             ThreadController.current().waitpoint('mount')
 
         def trap_umount(*args, **kwargs):
             # Conditionally wait at a waitpoint named after the command
             # we're executing
+            self.mountfixture._fake_umount(*args, **kwargs)
             ThreadController.current().waitpoint('umount')
 
-        mock_mount.side_effect = trap_mount
-        mock_umount.side_effect = trap_umount
+        self.mock_mount.side_effect = trap_mount
+        self.mock_umount.side_effect = trap_umount
 
         # Run the first thread until it's blocked while calling mount
         ctl_a.runto('mount')
-        mock_ensure_tree.assert_has_calls([
+        self.mock_ensure_tree.assert_has_calls([
             mock.call(mock.sentinel.mountpoint)])
-        mock_mount.assert_has_calls([
+        self.mock_mount.assert_has_calls([
             mock.call(mock.sentinel.fstype, mock.sentinel.export,
                       mock.sentinel.mountpoint,
                       [mock.sentinel.option1, mock.sentinel.option2])])
@@ -401,45 +423,46 @@ class HostMountStateTestCase(test.NoDBTestCase):
         # to race.
         ctl_b.start()
         time.sleep(0.01)
-        mock_ensure_tree.assert_has_calls([
+        self.mock_ensure_tree.assert_has_calls([
             mock.call(mock.sentinel.mountpoint)])
-        mock_mount.assert_has_calls([
+        self.mock_mount.assert_has_calls([
             mock.call(mock.sentinel.fstype, mock.sentinel.export,
                       mock.sentinel.mountpoint,
                       [mock.sentinel.option1, mock.sentinel.option2])])
-        mock_umount.assert_not_called()
+        self.mock_umount.assert_not_called()
 
         # Allow ctl_a to complete its mount
         ctl_a.runto('mounted')
-        mock_ensure_tree.assert_has_calls([
+        self.mock_ensure_tree.assert_has_calls([
             mock.call(mock.sentinel.mountpoint)])
-        mock_mount.assert_has_calls([
+        self.mock_mount.assert_has_calls([
             mock.call(mock.sentinel.fstype, mock.sentinel.export,
                       mock.sentinel.mountpoint,
                       [mock.sentinel.option1, mock.sentinel.option2])])
-        mock_umount.assert_not_called()
+        self.mock_umount.assert_not_called()
 
         # Allow ctl_b to finish. We should not have done a umount
         ctl_b.finish()
-        mock_ensure_tree.assert_has_calls([
+        self.mock_ensure_tree.assert_has_calls([
             mock.call(mock.sentinel.mountpoint)])
-        mock_mount.assert_has_calls([
+        self.mock_mount.assert_has_calls([
             mock.call(mock.sentinel.fstype, mock.sentinel.export,
                       mock.sentinel.mountpoint,
                       [mock.sentinel.option1, mock.sentinel.option2])])
-        mock_umount.assert_not_called()
+        self.mock_umount.assert_not_called()
 
         # Allow ctl_a to start umounting. We haven't executed rmdir yet,
         # because we've blocked during umount
         ctl_a.runto('umount')
-        mock_ensure_tree.assert_has_calls([
+        self.mock_ensure_tree.assert_has_calls([
             mock.call(mock.sentinel.mountpoint)])
-        mock_mount.assert_has_calls([
+        self.mock_mount.assert_has_calls([
             mock.call(mock.sentinel.fstype, mock.sentinel.export,
                       mock.sentinel.mountpoint,
                       [mock.sentinel.option1, mock.sentinel.option2])])
-        mock_umount.assert_has_calls([mock.call(mock.sentinel.mountpoint)])
-        mock_rmdir.assert_not_called()
+        self.mock_umount.assert_has_calls(
+                [mock.call(mock.sentinel.mountpoint)])
+        self.mock_rmdir.assert_not_called()
 
         # While ctl_a is umounting, simultaneously start both ctl_c and
         # ctl_d, and ensure they have an opportunity to race
@@ -453,26 +476,19 @@ class HostMountStateTestCase(test.NoDBTestCase):
 
         # We should have completed the previous umount, then remounted
         # exactly once
-        mock_ensure_tree.assert_has_calls([
+        self.mock_ensure_tree.assert_has_calls([
             mock.call(mock.sentinel.mountpoint)])
-        mock_mount.assert_has_calls([
+        self.mock_mount.assert_has_calls([
             mock.call(mock.sentinel.fstype, mock.sentinel.export,
                       mock.sentinel.mountpoint,
                       [mock.sentinel.option1, mock.sentinel.option2]),
             mock.call(mock.sentinel.fstype, mock.sentinel.export,
                       mock.sentinel.mountpoint,
                       [mock.sentinel.option1, mock.sentinel.option2])])
-        mock_umount.assert_has_calls([mock.call(mock.sentinel.mountpoint)])
+        self.mock_umount.assert_has_calls(
+                [mock.call(mock.sentinel.mountpoint)])
 
-    @mock.patch('oslo_utils.fileutils.ensure_tree')
-    @mock.patch('nova.privsep.fs.mount')
-    @mock.patch('nova.privsep.fs.umount')
-    @mock.patch('os.path.ismount',
-                side_effect=[False, False, True, True, True, False])
-    @mock.patch('nova.privsep.path.rmdir')
-    def test_mount_concurrent_no_interfere(self, mock_rmdir, mock_ismount,
-                                           mock_umount, mock_mount,
-                                           mock_ensure_tree):
+    def test_mount_concurrent_no_interfere(self):
         # Test that concurrent calls to mount volumes in different exports
         # run concurrently
         m = self._get_clean_hostmountstate()
@@ -496,83 +512,73 @@ class HostMountStateTestCase(test.NoDBTestCase):
         ctl_b = ThreadController(mount_b)
 
         ctl_a.runto('mounted')
-        mock_mount.assert_has_calls([
+        self.mock_mount.assert_has_calls([
             mock.call(mock.sentinel.fstype, mock.sentinel.export,
                       mock.sentinel.mountpoint_a,
                       [mock.sentinel.option1, mock.sentinel.option2])])
-        mock_mount.reset_mock()
+        self.mock_mount.reset_mock()
 
         ctl_b.finish()
-        mock_mount.assert_has_calls([
+        self.mock_mount.assert_has_calls([
             mock.call(mock.sentinel.fstype, mock.sentinel.export,
                       mock.sentinel.mountpoint_b,
                       [mock.sentinel.option1, mock.sentinel.option2])])
-        mock_umount.assert_has_calls([mock.call(mock.sentinel.mountpoint_b)])
-        mock_umount.reset_mock()
+        self.mock_umount.assert_has_calls(
+                [mock.call(mock.sentinel.mountpoint_b)])
+        self.mock_umount.reset_mock()
 
         ctl_a.finish()
-        mock_umount.assert_has_calls([mock.call(mock.sentinel.mountpoint_a)])
+        self.mock_umount.assert_has_calls(
+                [mock.call(mock.sentinel.mountpoint_a)])
 
-    @mock.patch('oslo_utils.fileutils.ensure_tree')
-    @mock.patch('nova.privsep.fs.mount')
-    @mock.patch('nova.privsep.fs.umount',
-                side_effect=processutils.ProcessExecutionError())
-    @mock.patch('os.path.ismount',
-                side_effect=[False, True, True, True, False])
-    @mock.patch('nova.privsep.path.rmdir')
-    def test_mount_after_failed_umount(self, mock_rmdir, mock_ismount,
-                                       mock_umount, mock_mount,
-                                       mock_ensure_tree):
+    def test_mount_after_failed_umount(self):
         # Test that MountManager correctly tracks state when umount fails.
         # Test that when umount fails a subsequent mount doesn't try to
         # remount it.
 
         m = self._get_clean_hostmountstate()
+        self.mock_umount.side_effect = processutils.ProcessExecutionError
 
         # Mount vol_a
         self._sentinel_mount(m, mock.sentinel.vol_a)
-        mock_mount.assert_has_calls([
+        self.mock_mount.assert_has_calls([
             mock.call(mock.sentinel.fstype, mock.sentinel.export,
                       mock.sentinel.mountpoint,
                       [mock.sentinel.option1, mock.sentinel.option2])])
-        mock_mount.reset_mock()
+        self.mock_mount.reset_mock()
 
         # Umount vol_a. The umount command will fail.
         self._sentinel_umount(m, mock.sentinel.vol_a)
-        mock_umount.assert_has_calls([mock.call(mock.sentinel.mountpoint)])
+        self.mock_umount.assert_has_calls(
+                [mock.call(mock.sentinel.mountpoint)])
 
         # We should not have called rmdir, because umount failed
-        mock_rmdir.assert_not_called()
+        self.mock_rmdir.assert_not_called()
 
         # Mount vol_a again. We should not have called mount, because umount
         # failed.
         self._sentinel_mount(m, mock.sentinel.vol_a)
-        mock_mount.assert_not_called()
+        self.mock_mount.assert_not_called()
 
         # Prevent future failure of umount
-        mock_umount.side_effect = None
+        self.mock_umount.side_effect = self.mountfixture._fake_umount
 
         # Umount vol_a successfully
         self._sentinel_umount(m, mock.sentinel.vol_a)
-        mock_umount.assert_has_calls([mock.call(mock.sentinel.mountpoint)])
+        self.mock_umount.assert_has_calls(
+                [mock.call(mock.sentinel.mountpoint)])
 
     @mock.patch.object(mount.LOG, 'error')
-    @mock.patch('oslo_utils.fileutils.ensure_tree')
-    @mock.patch('nova.privsep.fs.mount')
-    @mock.patch('os.path.ismount')
-    @mock.patch('nova.privsep.fs.umount')
-    def test_umount_log_failure(self, mock_umount, mock_ismount, mock_mount,
-                                mock_ensure_tree, mock_LOG_error):
-        mock_umount.side_effect = mount.processutils.ProcessExecutionError(
+    def test_umount_log_failure(self, mock_log):
+        self.mock_umount.side_effect = processutils.ProcessExecutionError(
             None, None, None, 'umount', 'umount: device is busy.')
-        mock_ismount.side_effect = [False, True, True]
 
         m = self._get_clean_hostmountstate()
 
         self._sentinel_mount(m, mock.sentinel.vol_a)
         self._sentinel_umount(m, mock.sentinel.vol_a)
 
-        mock_LOG_error.assert_called()
+        mock_log.assert_called()
 
 
 class MountManagerTestCase(test.NoDBTestCase):
