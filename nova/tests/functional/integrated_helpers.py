@@ -98,6 +98,9 @@ class _IntegratedTestBase(test.TestCase):
         placement = self.useFixture(func_fixtures.PlacementFixture())
         self.placement_api = placement.api
 
+        if self.USE_NEUTRON:
+            self.neutron = self.useFixture(nova_fixtures.NeutronFixture(self))
+
         self._setup_services()
 
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
@@ -116,9 +119,7 @@ class _IntegratedTestBase(test.TestCase):
             self.flags(transport_url=self.cell_mappings['cell1'].transport_url)
         self.conductor = self.start_service('conductor')
 
-        if self.USE_NEUTRON:
-            self.neutron = self.useFixture(nova_fixtures.NeutronFixture(self))
-        else:
+        if not self.USE_NEUTRON:
             self.network = self.start_service('network',
                                               manager=CONF.network_manager)
         self.scheduler = self._setup_scheduler_service()
