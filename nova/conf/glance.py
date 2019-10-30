@@ -29,6 +29,14 @@ glance_opts = [
     # NOTE(sdague/efried): there is intentionally no default here. This
     # requires configuration if ksa adapter config is not used.
     cfg.ListOpt('api_servers',
+        deprecated_for_removal=True,
+        deprecated_since='21.0.0',
+        deprecated_reason="""
+Support for image service configuration via standard keystoneauth1 Adapter
+options was added in the 17.0.0 Queens release. The api_servers option was
+retained temporarily to allow consumers time to cut over to a real load
+balancing solution.
+""",
         help="""
 List of glance api servers endpoints available to nova.
 

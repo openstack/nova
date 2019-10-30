@@ -1,0 +1,8 @@
+---
+deprecations:
+  - |
+    The ``[glance]api_servers`` configuration option is deprecated and will be
+    removed in a future release. Deployments should use standard keystoneauth1
+    options to configure communication with a single image service endpoint.
+    Any load balancing or high availability requirements should be satisfied
+    outside of nova.
