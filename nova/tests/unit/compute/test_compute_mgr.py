@@ -9218,6 +9218,42 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                                                 self.instance,
                                                 migration)
 
+    def test_post_live_migration_cinder_pre_344_api(self):
+        # Because live migration has
+        # succeeded,_post_live_migration_remove_source_vol_connections()
+        # should call terminate_connection() with the volume UUID.
+        dest_host = 'test_dest_host'
+        instance = fake_instance.fake_instance_obj(self.context,
+                                                   node='dest',
+                                                   uuid=uuids.instance)
+
+        vol_bdm = fake_block_device.fake_bdm_object(
+            self.context,
+            {'source_type': 'volume', 'destination_type': 'volume',
+             'volume_id': uuids.volume, 'device_name': '/dev/vdb',
+             'instance_uuid': instance.uuid,
+             'id': 42,
+             'connection_info':
+             '{"connector": {"host": "%s"}}' % dest_host})
+        image_bdm = fake_block_device.fake_bdm_object(
+            self.context,
+            {'source_type': 'image', 'destination_type': 'local',
+             'volume_id': uuids.image_volume, 'device_name': '/dev/vdb',
+             'instance_uuid': instance.uuid})
+
+        @mock.patch.object(self.compute.driver, 'get_volume_connector')
+        @mock.patch.object(self.compute.volume_api, 'terminate_connection')
+        def _test(mock_term_conn, mock_get_vol_conn):
+            bdms = objects.BlockDeviceMappingList(objects=[vol_bdm, image_bdm])
+
+            self.compute._post_live_migration_remove_source_vol_connections(
+                self.context, instance, bdms)
+
+            mock_term_conn.assert_called_once_with(
+                self.context, uuids.volume, mock_get_vol_conn.return_value)
+
+        _test()
+
     def test_post_live_migration_cinder_v3_api(self):
         # Because live migration has succeeded, _post_live_migration
         # should call attachment_delete with the original/old attachment_id
