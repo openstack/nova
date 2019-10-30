@@ -6643,9 +6643,6 @@ class ComputeTestCase(BaseTestCase,
                                         'state_description': 'migrating',
                                         'state': power_state.PAUSED},
                                         ctxt=c)
-        instance.update({'task_state': task_states.MIGRATING,
-                         'power_state': power_state.PAUSED})
-        instance.save()
 
         bdms = block_device_obj.block_device_make_list(c,
                 [fake_block_device.FakeDbBlockDeviceDict({
@@ -6657,29 +6654,16 @@ class ComputeTestCase(BaseTestCase,
                  ])
 
         with test.nested(
-            mock.patch.object(self.compute.network_api,
-                              'migrate_instance_start'),
-            mock.patch.object(self.compute.compute_rpcapi,
-                              'post_live_migration_at_destination'),
-            mock.patch.object(self.compute.network_api,
-                              'setup_networks_on_host'),
-            mock.patch.object(self.compute.instance_events,
-                              'clear_events_for_instance'),
-            mock.patch.object(self.compute,
-                              '_get_instance_block_device_info'),
             mock.patch.object(self.compute.driver, 'get_volume_connector'),
             mock.patch.object(cinder.API, 'terminate_connection'),
         ) as (
-            migrate_instance_start, post_live_migration_at_destination,
-            setup_networks_on_host, clear_events_for_instance,
-            get_instance_volume_block_device_info, get_volume_connector,
+            get_volume_connector,
             terminate_connection,
         ):
             get_volume_connector.return_value = 'fake-connector'
 
-            self.compute._post_live_migration(c, instance, 'dest_host',
-                                              migrate_data=mock.MagicMock(),
-                                              source_bdms=bdms)
+            self.compute._post_live_migration_remove_source_vol_connections(
+                c, instance, bdms)
 
             terminate_connection.assert_called_once_with(
                     c, uuids.volume_id, 'fake-connector')
