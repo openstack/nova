@@ -1607,10 +1607,9 @@ class VMwareVMOpsTestCase(test.TestCase):
                                                self._image_meta)
             get_vm_config_info.assert_called_once_with(self._instance,
                 image_info, extra_specs)
-            build_virtual_machine.assert_called_once_with(self._instance,
-                                                          self._context,
-                image_info, vi.dc_info, vi.datastore, [],
-                extra_specs, self._get_metadata())
+            build_virtual_machine.assert_called_once_with(
+                self._instance, self._context, image_info, vi.datastore, [],
+                extra_specs, self._get_metadata(), 'fake_vm_folder')
             enlist_image.assert_called_once_with(image_info.image_id,
                                                  vi.datastore, vi.dc_info.ref)
             fetch_image.assert_called_once_with(self._context, vi)
@@ -1676,10 +1675,10 @@ class VMwareVMOpsTestCase(test.TestCase):
                                                self._image_meta)
             get_vm_config_info.assert_called_once_with(self._instance,
                 image_info, extra_specs)
-            build_virtual_machine.assert_called_once_with(self._instance,
-                                                          self._context,
-                image_info, vi.dc_info, vi.datastore, [],
-                extra_specs, self._get_metadata(is_image_used=False))
+            build_virtual_machine.assert_called_once_with(
+                self._instance, self._context, image_info, vi.datastore, [],
+                extra_specs, self._get_metadata(is_image_used=False),
+                'fake_vm_folder')
             volumeops.attach_root_volume.assert_called_once_with(
                 connection_info1, self._instance, vi.datastore.ref,
                 constants.ADAPTER_TYPE_IDE)
@@ -1735,10 +1734,10 @@ class VMwareVMOpsTestCase(test.TestCase):
                                            self._image_meta)
         get_vm_config_info.assert_called_once_with(
             self._instance, image_info, extra_specs)
-        build_virtual_machine.assert_called_once_with(self._instance,
-                                                      self._context,
-            image_info, vi.dc_info, vi.datastore, [],
-            extra_specs, self._get_metadata(is_image_used=False))
+        build_virtual_machine.assert_called_once_with(
+            self._instance, self._context, image_info, vi.datastore, [],
+            extra_specs, self._get_metadata(is_image_used=False),
+            'fake_vm_folder')
 
     def test_get_ds_browser(self):
         cache = self._vmops._datastore_browser_mapping
@@ -2228,6 +2227,8 @@ class VMwareVMOpsTestCase(test.TestCase):
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)
+    @mock.patch.object(vmops.VMwareVMOps, '_get_project_folder',
+                       return_value='fake-folder')
     @mock.patch.object(vm_util, 'rename_vm')
     @mock.patch('nova.virt.vmwareapi.vm_util.power_on_instance')
     @mock.patch.object(vmops.VMwareVMOps, '_create_and_attach_thin_disk')
@@ -2251,6 +2252,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                                             create_and_attach_thin_disk,
                                             power_on_instance,
                                             rename_vm,
+                                            mock_get_project_folder,
                                             is_volume_backed_instance):
         self._instance.flavor = objects.Flavor(vcpus=1, memory_mb=512,
                                                name="m1.tiny", root_gb=1,
@@ -2291,7 +2293,7 @@ class VMwareVMOpsTestCase(test.TestCase):
             image_info, extra_specs)
         build_virtual_machine.assert_called_once_with(self._instance,
                                                       self._context,
-            image_info, vi.dc_info, vi.datastore, [], extra_specs, metadata)
+            image_info, vi.datastore, [], extra_specs, metadata, 'fake-folder')
         enlist_image.assert_called_once_with(image_info.image_id,
                                              vi.datastore, vi.dc_info.ref)
         fetch_image.assert_called_once_with(self._context, vi)
@@ -2438,11 +2440,12 @@ class VMwareVMOpsTestCase(test.TestCase):
 
         vm_ref = self._vmops.build_virtual_machine(self._instance,
                                                    self._context,
-                                                   image, self._dc_info,
+                                                   image,
                                                    self._ds,
                                                    self.network_info,
                                                    extra_specs,
-                                                   self._metadata)
+                                                   self._metadata,
+                                                   None)
 
         vm = vmwareapi_fake.get_object(vm_ref)
 

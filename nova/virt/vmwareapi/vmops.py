@@ -325,19 +325,19 @@ class VMwareVMOps(object):
 
         return config_spec
 
-    def build_virtual_machine(self, instance, context, image_info,
-                              dc_info, datastore, network_info, extra_specs,
-                              metadata, folder_type='Instances', vm_name=None):
-        config_spec = self._get_vm_config_spec(instance, image_info, datastore,
-                                               network_info, extra_specs,
-                                               metadata, vm_name=vm_name)
-
-        folder = self._get_project_folder(dc_info,
-                                          project_id=instance.project_id,
-                                          type_=folder_type)
+    def build_virtual_machine(self, instance, context, image_info, datastore,
+                              network_info, extra_specs, metadata, vm_folder,
+                              vm_name=None):
+        config_spec = self._get_vm_config_spec(instance,
+                                               image_info,
+                                               datastore,
+                                               network_info,
+                                               extra_specs,
+                                               metadata,
+                                               vm_name=vm_name)
 
         # Create the VM
-        vm_ref = vm_util.create_vm(self._session, instance, folder,
+        vm_ref = vm_util.create_vm(self._session, instance, vm_folder,
                                    config_spec, self._root_resource_pool)
 
         return vm_ref
@@ -510,7 +510,7 @@ class VMwareVMOps(object):
             vm_name,
             vi.datastore.name,
             self._get_project_folder(vi.dc_info,
-                                     project_id=vi.instance.project_id,
+                                     project_id=vi.ii.owner,
                                      type_='Images'),
             self._root_resource_pool,
             image_id=vi.ii.image_id)
@@ -526,15 +526,15 @@ class VMwareVMOps(object):
         vm_name = self._get_image_template_vm_name(
             vi.ii.image_id, vi.datastore.name)
 
-        image_size, src_folder_ds_path = images.fetch_image_ova(
-            context,
-            vi.instance,
-            self._session,
-            vm_name,
-            vi.datastore.name,
-            self._get_project_folder(vi.dc_info,
-                project_id=vi.instance.project_id, type_='Images'),
-            self._root_resource_pool)
+        image_size, src_folder_ds_path = images.fetch_image_ova(context,
+                               vi.instance,
+                               self._session,
+                               vm_name,
+                               vi.datastore.name,
+                               self._get_project_folder(vi.dc_info,
+                                        project_id=vi.ii.owner,
+                                        type_='Images'),
+                               self._root_resource_pool)
 
         # The size of the image is different from the size of the virtual disk.
         # We want to use the latter. On vSAN this is the only way to get this
@@ -729,9 +729,10 @@ class VMwareVMOps(object):
                     "CloneVM_Task",
                     other_templ_vm_ref,
                     folder=self._get_project_folder(vi.dc_info,
-                        project_id=vi.instance.project_id, type_='Images'),
-                    name=self._get_image_template_vm_name(
-                        vi.ii.image_id, vi.datastore.name),
+                                        project_id=vi.ii.owner,
+                                        type_='Images'),
+                    name=self._get_image_template_vm_name(vi.ii.image_id,
+                                                          vi.datastore.name),
                     spec=clone_spec)
                 try:
                     task_info = \
@@ -919,7 +920,7 @@ class VMwareVMOps(object):
                                                     vi.dc_info.vmFolder,
                                                     "name")
         images_folder_path = self._get_project_folder_path(
-            vi.instance.project_id, 'Images')
+                                        vi.ii.owner, 'Images')
         templ_vm_name = self._get_image_template_vm_name(vi.ii.image_id,
                                                          vi.datastore.name)
         templ_vm_inventory_path = '%s/%s/%s/%s' % (
@@ -949,16 +950,18 @@ class VMwareVMOps(object):
         boot_from_volume = compute_utils.is_volume_backed_instance(
                                                 instance._context, instance)
         metadata = self._get_instance_metadata(context, instance)
+        vm_folder = self._get_project_folder(
+            vi.dc_info, project_id=instance.project_id, type_='Instances')
         # Creates the virtual machine. The virtual machine reference returned
         # is unique within Virtual Center.
         vm_ref = self.build_virtual_machine(instance,
                                             context,
                                             image_info,
-                                            vi.dc_info,
                                             vi.datastore,
                                             network_info,
                                             extra_specs,
-                                            metadata)
+                                            metadata,
+                                            vm_folder)
 
         # Cache the vm_ref. This saves a remote call to the VC. This uses the
         # instance uuid.
