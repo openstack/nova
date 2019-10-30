@@ -123,6 +123,104 @@ class ExtraSpecs(object):
         self.numa_prefer_ht = numa_prefer_ht
 
 
+class HistoryCollectorItems(object):
+
+    def __init__(self, session, history_collector, read_page_method,
+                 reverse_page_order=False, max_page_size=10):
+        self.session = session
+        self.history_collector = history_collector
+        self.read_page_method = read_page_method
+        self.reverse_page_order = reverse_page_order
+        self.max_page_size = max_page_size
+
+    def __iter__(self):
+        self._latest_page_read = False
+        self._page_items = None
+
+        if self.reverse_page_order:
+            self.session._call_method(self.session.vim,
+                                      "ResetCollector",
+                                      self.history_collector)
+        else:
+            self.session._call_method(self.session.vim,
+                                      "RewindCollector",
+                                      self.history_collector)
+
+        return self
+
+    def next(self):
+        if not self._page_items:
+            self._load_page()
+
+        if not self._page_items:
+            raise StopIteration
+        else:
+            return self._page_items.pop(0)
+
+    def _load_page(self):
+        if self.reverse_page_order and not self._latest_page_read:
+            self._load_latest_page()
+
+        if not self._page_items:
+            self._page_items = self.session._call_method(
+                self.session.vim, self.read_page_method,
+                self.history_collector, maxCount=self.max_page_size)
+
+    def _load_latest_page(self):
+        self._latest_page_read = True
+        latest_page = vutil.get_object_property(self.session.vim,
+                                                self.history_collector,
+                                                "latestPage")
+
+        self._page_items = vim_util.get_array_items(latest_page)
+
+    def destroy_collector(self):
+        if self.history_collector:
+            self.session._call_method(self.session.vim,
+                                      "DestroyCollector",
+                                      self.history_collector)
+
+
+class TaskHistoryCollectorItems(HistoryCollectorItems):
+    def __init__(self, session, task_filter_spec, reverse_page_order=False,
+                 max_page_size=10):
+        task_collector = session._call_method(
+            session.vim,
+            "CreateCollectorForTasks",
+            session.vim.service_content.taskManager,
+            filter=task_filter_spec)
+        read_page_method = ("ReadPreviousTasks" if reverse_page_order
+                            else "ReadNextTasks")
+        super(TaskHistoryCollectorItems, self).__init__(session,
+                                                        task_collector,
+                                                        read_page_method,
+                                                        reverse_page_order,
+                                                        max_page_size)
+
+    def __del__(self):
+        self.destroy_collector()
+
+
+class EventHistoryCollectorItems(HistoryCollectorItems):
+    def __init__(self, session, event_filter_spec, reverse_page_order=False,
+                 max_page_size=10):
+        event_collector = session._call_method(
+            session.vim,
+            "CreateCollectorForEvents",
+            session.vim.service_content.eventManager,
+            filter=event_filter_spec)
+        read_page_method = ("ReadPreviousEvents" if reverse_page_order
+                            else "ReadNextEvents")
+        super(EventHistoryCollectorItems, self).__init__(session,
+                                                         event_collector,
+                                                         read_page_method,
+                                                         reverse_page_order,
+                                                         max_page_size)
+
+    def __del__(self):
+        self.destroy_collector()
+
+
 def vm_value_cache_reset():
     global _VM_VALUE_CACHE
     _VM_VALUE_CACHE = {}
