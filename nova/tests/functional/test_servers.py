@@ -2503,8 +2503,10 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             # evacuate the server
             self.api.post_server_action(server['id'], {'evacuate': {}})
             # the migration will fail on the dest node and the instance will
-            # go into error state
-            server = self._wait_for_state_change(self.api, server, 'ERROR')
+            # stay ACTIVE and task_state will be set to None.
+            server = self._wait_for_server_parameter(
+                self.api, server, {'status': 'ACTIVE',
+                                   'OS-EXT-STS:task_state': None})
 
         # Run the periodics to show those don't modify allocations.
         self._run_periodics()
@@ -7204,7 +7206,8 @@ class ServerMoveWithPortResourceRequestTest(
             server = self._wait_for_server_parameter(
                 self.api, server,
                 {'OS-EXT-SRV-ATTR:host': 'host1',
-                 'status': 'ERROR'})
+                 'status': 'ACTIVE',
+                 'OS-EXT-STS:task_state': None})
 
         self._wait_for_migration_status(server, ['failed'])
 
