@@ -514,3 +514,9 @@ class TestOpenStackClient(object):
     def get_hypervisor_stats(self):
         return self.api_get(
             '/os-hypervisors/statistics').body['hypervisor_statistics']
+
+    def put_service_force_down(self, service_id, forced_down):
+        req = {
+            'forced_down': forced_down
+        }
+        return self.api_put('os-services/%s' % service_id, req).body['service']
