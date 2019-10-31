@@ -69,21 +69,17 @@ class ResizeEvacuateTestCase(integrated_helpers._IntegratedTestBase,
         # Disable the host on which the server is now running (host2).
         host2.stop()
         self.api.force_down_service('host2', 'nova-compute', forced_down=True)
-
         # Now try to evacuate the server back to the original source compute.
-        # FIXME(mriedem): This is bug 1669054 where the evacuate fails with
-        # NoValidHost because the RequestSpec.ignore_hosts field has the
-        # original source host in it which is the only other available host to
-        # which we can evacuate the server.
         req = {'evacuate': {'onSharedStorage': False}}
-        self.api.post_server_action(server['id'], req,
-                                    check_response_status=[500])
-        # There should be fault recorded with the server.
-        server = self._wait_for_state_change(self.api, server, 'ERROR')
-        self.assertIn('fault', server)
-        self.assertIn('No valid host was found', server['fault']['message'])
-        # Assert the RequestSpec.ignore_hosts is still populated.
+        self.api.post_server_action(server['id'], req)
+        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        # The evacuate flow in the compute manager is annoying in that it
+        # sets the instance status to ACTIVE before updating the host, so we
+        # have to wait for the migration record to be 'done' to avoid a race.
+        self._wait_for_migration_status(server, 'done')
+        self.assertEqual(self.compute.host, server['OS-EXT-SRV-ATTR:host'])
+
+        # Assert the RequestSpec.ignore_hosts field is not populated.
         reqspec = objects.RequestSpec.get_by_instance_uuid(
             context.get_admin_context(), server['id'])
-        self.assertIsNotNone(reqspec.ignore_hosts)
-        self.assertIn(self.compute.host, reqspec.ignore_hosts)
+        self.assertIsNone(reqspec.ignore_hosts)

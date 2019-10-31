@@ -733,8 +733,7 @@ class ComputeTaskManager(base.Base):
                 elif recreate:
                     # NOTE(sbauza): Augment the RequestSpec object by excluding
                     # the source host for avoiding the scheduler to pick it
-                    request_spec.ignore_hosts = request_spec.ignore_hosts or []
-                    request_spec.ignore_hosts.append(instance.host)
+                    request_spec.ignore_hosts = [instance.host]
                     # NOTE(sbauza): Force_hosts/nodes needs to be reset
                     # if we want to make sure that the next destination
                     # is not forced to be the original host

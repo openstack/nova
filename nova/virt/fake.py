@@ -529,7 +529,11 @@ class FakeDriver(driver.ComputeDriver):
         return
 
     def confirm_migration(self, context, migration, instance, network_info):
-        return
+        # Confirm migration cleans up the guest from the source host so just
+        # destroy the guest to remove it from the list of tracked instances
+        # unless it is a same-host resize.
+        if migration.source_compute != migration.dest_compute:
+            self.destroy(context, instance, network_info)
 
     def pre_live_migration(self, context, instance, block_device_info,
                            network_info, disk_info, migrate_data):
