@@ -47,6 +47,7 @@
           export DEVSTACK_GATE_TEMPEST=1
           export DEVSTACK_GATE_TEMPEST_NOTESTS=1
           export DEVSTACK_GATE_TOPOLOGY="multinode"
+          export DEVSTACK_GATE_USE_PYTHON3=True
           function post_test_hook {
               /opt/stack/new/nova/gate/live_migration/hooks/run_tests.sh
               $BASE/new/nova/gate/test_evacuate.sh
