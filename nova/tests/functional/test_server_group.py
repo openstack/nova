@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import time
-
 import mock
 from oslo_config import cfg
 import six
@@ -51,10 +49,6 @@ class ServerGroupTestBase(test.TestCase,
                         ['ServerGroupAntiAffinityFilter',
                            'ServerGroupAffinityFilter'])
 
-    # Override servicegroup parameters to make the tests run faster
-    _service_down_time = 10
-    _report_interval = 1
-
     anti_affinity = {'name': 'fake-name-1', 'policies': ['anti-affinity']}
     affinity = {'name': 'fake-name-2', 'policies': ['affinity']}
 
@@ -70,8 +64,6 @@ class ServerGroupTestBase(test.TestCase,
         self.flags(disk_allocation_ratio=9999.0)
         self.flags(weight_classes=self._get_weight_classes(),
                    group='filter_scheduler')
-        self.flags(service_down_time=self._service_down_time)
-        self.flags(report_interval=self._report_interval)
 
         self.useFixture(policy_fixture.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
@@ -408,16 +400,20 @@ class ServerGroupTestV21(ServerGroupTestBase):
 
         return host
 
+    def _set_forced_down(self, service, forced_down):
+        # Use microversion 2.53 for PUT /os-services/{service_id} force down.
+        with utils.temporary_mutation(self.admin_api, microversion='2.53'):
+            self.admin_api.put_service_force_down(service.service_ref.uuid,
+                                                  forced_down)
+
     def test_evacuate_with_anti_affinity(self):
         created_group = self.api.post_server_groups(self.anti_affinity)
         servers = self._boot_servers_to_group(created_group)
 
         host = self._get_compute_service_by_host_name(
             servers[1]['OS-EXT-SRV-ATTR:host'])
-        host.stop()
-        # Need to wait service_down_time amount of seconds to ensure
-        # nova considers the host down
-        time.sleep(self._service_down_time)
+        # Set forced_down on the host to ensure nova considers the host down.
+        self._set_forced_down(host, True)
 
         # Start additional host to test evacuation
         self.start_service('compute', host='host3')
@@ -435,18 +431,14 @@ class ServerGroupTestV21(ServerGroupTestBase):
         self.assertNotEqual(evacuated_server['OS-EXT-SRV-ATTR:host'],
                             servers[0]['OS-EXT-SRV-ATTR:host'])
 
-        host.start()
-
     def test_evacuate_with_anti_affinity_no_valid_host(self):
         created_group = self.api.post_server_groups(self.anti_affinity)
         servers = self._boot_servers_to_group(created_group)
 
         host = self._get_compute_service_by_host_name(
             servers[1]['OS-EXT-SRV-ATTR:host'])
-        host.stop()
-        # Need to wait service_down_time amount of seconds to ensure
-        # nova considers the host down
-        time.sleep(self._service_down_time)
+        # Set forced_down on the host to ensure nova considers the host down.
+        self._set_forced_down(host, True)
 
         post = {'evacuate': {'onSharedStorage': False}}
         self.admin_api.post_server_action(servers[1]['id'], post)
@@ -458,8 +450,6 @@ class ServerGroupTestV21(ServerGroupTestBase):
         # as before
         self.assertEqual(server_after_failed_evac['OS-EXT-SRV-ATTR:host'],
                          servers[1]['OS-EXT-SRV-ATTR:host'])
-
-        host.start()
 
     def test_evacuate_with_affinity_no_valid_host(self):
         created_group = self.api.post_server_groups(self.affinity)
@@ -467,10 +457,8 @@ class ServerGroupTestV21(ServerGroupTestBase):
 
         host = self._get_compute_service_by_host_name(
             servers[1]['OS-EXT-SRV-ATTR:host'])
-        host.stop()
-        # Need to wait service_down_time amount of seconds to ensure
-        # nova considers the host down
-        time.sleep(self._service_down_time)
+        # Set forced_down on the host to ensure nova considers the host down.
+        self._set_forced_down(host, True)
 
         post = {'evacuate': {'onSharedStorage': False}}
         self.admin_api.post_server_action(servers[1]['id'], post)
@@ -482,8 +470,6 @@ class ServerGroupTestV21(ServerGroupTestBase):
         # as before
         self.assertEqual(server_after_failed_evac['OS-EXT-SRV-ATTR:host'],
                          servers[1]['OS-EXT-SRV-ATTR:host'])
-
-        host.start()
 
     def test_soft_affinity_not_supported(self):
         ex = self.assertRaises(client.OpenStackApiException,
@@ -610,10 +596,8 @@ class ServerGroupTestV215(ServerGroupTestV21):
 
         host = self._get_compute_service_by_host_name(
             servers[1]['OS-EXT-SRV-ATTR:host'])
-        host.stop()
-        # Need to wait service_down_time amount of seconds to ensure
-        # nova considers the host down
-        time.sleep(self._service_down_time)
+        # Set forced_down on the host to ensure nova considers the host down.
+        self._set_forced_down(host, True)
 
         # Start additional host to test evacuation
         compute3 = self.start_service('compute', host='host3')
@@ -632,7 +616,6 @@ class ServerGroupTestV215(ServerGroupTestV21):
                             servers[0]['OS-EXT-SRV-ATTR:host'])
 
         compute3.kill()
-        host.start()
 
     def test_evacuate_with_anti_affinity_no_valid_host(self):
         created_group = self.api.post_server_groups(self.anti_affinity)
@@ -640,10 +623,8 @@ class ServerGroupTestV215(ServerGroupTestV21):
 
         host = self._get_compute_service_by_host_name(
             servers[1]['OS-EXT-SRV-ATTR:host'])
-        host.stop()
-        # Need to wait service_down_time amount of seconds to ensure
-        # nova considers the host down
-        time.sleep(self._service_down_time)
+        # Set forced_down on the host to ensure nova considers the host down.
+        self._set_forced_down(host, True)
 
         post = {'evacuate': {}}
         self.admin_api.post_server_action(servers[1]['id'], post)
@@ -655,8 +636,6 @@ class ServerGroupTestV215(ServerGroupTestV21):
         # as before
         self.assertEqual(server_after_failed_evac['OS-EXT-SRV-ATTR:host'],
                          servers[1]['OS-EXT-SRV-ATTR:host'])
-
-        host.start()
 
     def test_evacuate_with_affinity_no_valid_host(self):
         created_group = self.api.post_server_groups(self.affinity)
@@ -664,10 +643,8 @@ class ServerGroupTestV215(ServerGroupTestV21):
 
         host = self._get_compute_service_by_host_name(
             servers[1]['OS-EXT-SRV-ATTR:host'])
-        host.stop()
-        # Need to wait service_down_time amount of seconds to ensure
-        # nova considers the host down
-        time.sleep(self._service_down_time)
+        # Set forced_down on the host to ensure nova considers the host down.
+        self._set_forced_down(host, True)
 
         post = {'evacuate': {}}
         self.admin_api.post_server_action(servers[1]['id'], post)
@@ -679,8 +656,6 @@ class ServerGroupTestV215(ServerGroupTestV21):
         # as before
         self.assertEqual(server_after_failed_evac['OS-EXT-SRV-ATTR:host'],
                          servers[1]['OS-EXT-SRV-ATTR:host'])
-
-        host.start()
 
     def _check_group_format(self, group, created_group):
         self.assertEqual(group['policies'], created_group['policies'])
@@ -810,10 +785,8 @@ class ServerGroupTestV215(ServerGroupTestV21):
 
         host = self._get_compute_service_by_host_name(
             servers[1]['OS-EXT-SRV-ATTR:host'])
-        host.stop()
-        # Need to wait service_down_time amount of seconds to ensure
-        # nova considers the host down
-        time.sleep(self._service_down_time)
+        # Set forced_down on the host to ensure nova considers the host down.
+        self._set_forced_down(host, True)
 
         post = {'evacuate': {}}
         self.admin_api.post_server_action(servers[1]['id'], post)
@@ -825,8 +798,6 @@ class ServerGroupTestV215(ServerGroupTestV21):
         # goes to ACTIVE first then the host of the instance changes to the
         # new host later
         evacuated_server = self.admin_api.get_server(evacuated_server['id'])
-
-        host.start()
 
         return [evacuated_server['OS-EXT-SRV-ATTR:host'],
                 servers[0]['OS-EXT-SRV-ATTR:host']]
