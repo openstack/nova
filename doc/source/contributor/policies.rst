@@ -129,3 +129,32 @@ deployments should not rely on the metrics that Nova gathers and should instead
 focus their efforts on alternative solutions for placement.
 
 .. _Newton midcycle: http://lists.openstack.org/pipermail/openstack-dev/2016-August/100600.html
+
+Continuous Delivery Mentality
+=============================
+
+Nova generally tries to subscribe to a philosophy of anything we merge today
+can be in production today, and people can continuously deliver Nova.
+
+In practice this means we should not merge code that will not work until some
+later change is merged, because that later change may never come, or not come
+in the same release cycle, or may be substantially different from what was
+originally intended. For example, if patch A uses code that is not available
+until patch D later in the series.
+
+The strategy for dealing with this in particularly long and complicated series
+of changes is to start from the "bottom" with code that is no-op until it is
+"turned on" at the top of the stack, generally with some feature flag, policy
+rule, API microversion, etc. So in the example above, the code from patch D
+should come before patch A even if nothing is using it yet, but things will
+build on it. Realistically this means if you are working on a feature that
+touches most of the Nova "stack", i.e. compute driver/service through to API,
+you will work on the compute driver/service code first, then conductor and/or
+scheduler, and finally the API. An extreme example of this can be found by
+reading the `code review guide for the cross-cell resize feature`_.
+
+Even if this philosophy is not the reality of how the vast majority of
+OpenStack deployments consume Nova, it is a development philosophy to try and
+avoid merging broken code.
+
+.. _code review guide for the cross-cell resize feature: http://lists.openstack.org/pipermail/openstack-discuss/2019-May/006366.html
