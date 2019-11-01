@@ -3584,6 +3584,36 @@ class ConductorTaskRPCAPITestCase(_BaseTaskTestCase,
                               self.context, mock.sentinel.aggregate,
                               [mock.sentinel.image])
 
+    def test_migrate_server(self):
+        self.flags(rpc_response_timeout=10, long_rpc_timeout=120)
+        instance = objects.Instance()
+        scheduler_hint = {}
+        live = rebuild = False
+        flavor = objects.Flavor()
+        block_migration = disk_over_commit = None
+
+        @mock.patch.object(self.conductor.client, 'can_send_version',
+                           return_value=True)
+        @mock.patch.object(self.conductor.client, 'prepare')
+        def _test(prepare_mock, can_send_mock):
+            self.conductor.migrate_server(
+                self.context, instance, scheduler_hint, live, rebuild,
+                flavor, block_migration, disk_over_commit)
+            kw = {'instance': instance, 'scheduler_hint': scheduler_hint,
+                  'live': live, 'rebuild': rebuild, 'flavor': flavor,
+                  'block_migration': block_migration,
+                  'disk_over_commit': disk_over_commit,
+                  'reservations': None, 'clean_shutdown': True,
+                  'request_spec': None, 'host_list': None}
+            prepare_mock.assert_called_once_with(
+                version=test.MatchType(str),  # version
+                call_monitor_timeout=10,
+                timeout=120)
+            prepare_mock.return_value.call.assert_called_once_with(
+                self.context, 'migrate_server', **kw)
+
+        _test()
+
 
 class ConductorTaskAPITestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     """Compute task API Tests."""
