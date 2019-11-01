@@ -4,7 +4,10 @@
 Code Review Guide for Nova
 ==========================
 
-This is a very terse set of points for reviewers to consider when
+OpenStack has a general set of code review guidelines:
+https://docs.openstack.org/infra/manual/developers.html#peer-review
+
+What follows is a very terse set of points for reviewers to consider when
 looking at nova code. These are things that are important for the
 continued smooth operation of Nova, but that tend to be carried as
 "tribal knowledge" instead of being written down. It is an attempt to
@@ -22,7 +25,7 @@ RPC API Versions
 
   * The manager-side (example: compute/manager) needs a version bump
   * The manager-side method needs to tolerate older calls as well as
-      newer calls
+    newer calls
   * Arguments can be added as long as they are optional. Arguments
     cannot be removed or changed in an incompatible way.
   * The RPC client code (example: compute/rpcapi.py) needs to be able
