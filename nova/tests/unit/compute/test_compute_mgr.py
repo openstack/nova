@@ -5119,7 +5119,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_rt = self._mock_rt()
         with test.nested(
             mock.patch.object(self.compute, '_get_compute_info'),
-            mock.patch.object(self.compute, '_do_rebuild_instance_with_claim'),
+            mock.patch.object(self.compute, '_do_rebuild_instance'),
             mock.patch.object(objects.Instance, 'save'),
             mock.patch.object(self.compute, '_set_migration_status'),
         ) as (mock_get, mock_rebuild, mock_save, mock_set):

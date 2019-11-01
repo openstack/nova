@@ -3326,15 +3326,12 @@ class ComputeManager(manager.Manager):
 
         with self._error_out_instance_on_exception(context, instance):
             try:
-                claim_ctxt = rebuild_claim(
-                    context, instance, scheduled_node, allocs,
-                    limits=limits, image_meta=image_meta,
-                    migration=migration)
                 self._do_rebuild_instance_with_claim(
-                    claim_ctxt, context, instance, orig_image_ref,
+                    context, instance, orig_image_ref,
                     image_meta, injected_files, new_pass, orig_sys_metadata,
                     bdms, evacuate, on_shared_storage, preserve_ephemeral,
-                    migration, request_spec, allocs)
+                    migration, request_spec, allocs, rebuild_claim,
+                    scheduled_node, limits)
             except (exception.ComputeResourcesUnavailable,
                     exception.RescheduledException) as e:
                 if isinstance(e, exception.ComputeResourcesUnavailable):
@@ -3392,11 +3389,22 @@ class ComputeManager(manager.Manager):
                 # mark the instance as belonging to this host.
                 self._set_migration_status(migration, 'done')
 
-    def _do_rebuild_instance_with_claim(self, claim_context, *args, **kwargs):
+    def _do_rebuild_instance_with_claim(
+            self, context, instance, orig_image_ref, image_meta,
+            injected_files, new_pass, orig_sys_metadata, bdms, evacuate,
+            on_shared_storage, preserve_ephemeral, migration, request_spec,
+            allocations, rebuild_claim, scheduled_node, limits):
         """Helper to avoid deep nesting in the top-level method."""
 
+        claim_context = rebuild_claim(
+            context, instance, scheduled_node, allocations,
+            limits=limits, image_meta=image_meta, migration=migration)
+
         with claim_context:
-            self._do_rebuild_instance(*args, **kwargs)
+            self._do_rebuild_instance(
+                context, instance, orig_image_ref, image_meta, injected_files,
+                new_pass, orig_sys_metadata, bdms, evacuate, on_shared_storage,
+                preserve_ephemeral, migration, request_spec, allocations)
 
     @staticmethod
     def _get_image_name(image_meta):
