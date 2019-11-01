@@ -22,7 +22,10 @@ function archive_deleted_rows {
         if [[ $RET -gt 1 ]]; then
             echo Archiving failed with result $RET
             return $RET
-        elif [[ $RET -eq 0 ]]; then
+        # When i = 1, we only archive cell0 (without --all-cells), so run at
+        # least twice to ensure --all-cells are archived before considering
+        # archiving complete.
+        elif [[ $RET -eq 0 && $i -gt 1 ]]; then
             echo Archiving Complete
             break;
         fi
@@ -148,5 +151,28 @@ allocations=$(openstack resource provider allocation show ${server_id} \
               -c resources -f value)
 if [[ "$allocations" == "" ]]; then
     echo "Failed to heal allocations."
+    exit 2
+fi
+
+echo "Verifying online_data_migrations idempotence"
+# We will re-use the server created earlier for this test. (A server needs to
+# be present during the run of online_data_migrations and archiving).
+
+# Run the online data migrations before archiving.
+$MANAGE db online_data_migrations
+
+# We need to archive the deleted marker instance used by the
+# fill_virtual_interface_list online data migration in order to trigger
+# creation of a new deleted marker instance.
+set +e
+archive_deleted_rows
+
+# Verify whether online data migrations run after archiving will succeed.
+# See for more details: https://bugs.launchpad.net/nova/+bug/1824435
+$MANAGE db online_data_migrations
+rc=$?
+set -e
+if [[ $rc -ne 2 ]]; then
+    echo "Expected return code 2 from online_data_migrations until bug 1824435 is fixed"
     exit 2
 fi
