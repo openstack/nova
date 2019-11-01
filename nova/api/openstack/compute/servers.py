@@ -737,6 +737,7 @@ class ServersController(wsgi.Controller):
                 exception.FlavorMemoryTooSmall,
                 exception.InvalidMetadata,
                 exception.InvalidVolume,
+                exception.MismatchVolumeAZException,
                 exception.MultiplePortsNotApplicable,
                 exception.InvalidFixedIpAndMaxCountRequest,
                 exception.InstanceUserDataMalformed,

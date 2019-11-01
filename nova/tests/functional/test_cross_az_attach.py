@@ -43,14 +43,20 @@ class CrossAZAttachTestCase(test.TestCase,
             api_version='v2.1')).admin_api
         self.start_service('conductor')
         self.start_service('scheduler')
-        # Start one compute service.
+        # Start one compute service and add it to the AZ. This allows us to
+        # get past the AvailabilityZoneFilter and build a server.
         self.start_service('compute', host='host1')
+        agg_id = self.api.post_aggregate({'aggregate': {
+            'name': self.az, 'availability_zone': self.az}})['id']
+        self.api.api_post('/os-aggregates/%s/action' % agg_id,
+                          {'add_host': {'host': 'host1'}})
 
     def test_cross_az_attach_false_boot_from_volume_no_az_specified(self):
         """Tests the scenario where [cinder]/cross_az_attach=False and the
         server is created with a pre-existing volume but the server create
         request does not specify an AZ nor is [DEFAULT]/default_schedule_zone
-        set.
+        set. In this case the server is created in the zone specified by the
+        volume.
         """
         self.flags(cross_az_attach=False, group='cinder')
         server = self._build_minimal_create_server_request(
@@ -63,22 +69,16 @@ class CrossAZAttachTestCase(test.TestCase,
             'boot_index': 0,
             'uuid': nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
         }]
-        # FIXME(mriedem): This is bug 1694844 where the user creates the server
-        # without specifying an AZ and there is no default_schedule_zone set
-        # and the cross_az_attach check fails because the volume's availability
-        # zone shows up as "us-central-1" and None != "us-central-1" so the API
-        # thinks the cross_az_attach=False setting was violated.
-        ex = self.assertRaises(api_client.OpenStackApiException,
-                               self.api.post_server, {'server': server})
-        self.assertEqual(400, ex.response.status_code)
-        self.assertIn('are not in the same availability_zone',
-                      six.text_type(ex))
+        server = self.api.post_server({'server': server})
+        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self.assertEqual(self.az, server['OS-EXT-AZ:availability_zone'])
 
     def test_cross_az_attach_false_data_volume_no_az_specified(self):
         """Tests the scenario where [cinder]/cross_az_attach=False and the
         server is created with a pre-existing volume as a non-boot data volume
         but the server create request does not specify an AZ nor is
-        [DEFAULT]/default_schedule_zone set.
+        [DEFAULT]/default_schedule_zone set. In this case the server is created
+        in the zone specified by the non-root data volume.
         """
         self.flags(cross_az_attach=False, group='cinder')
         server = self._build_minimal_create_server_request(
@@ -94,16 +94,9 @@ class CrossAZAttachTestCase(test.TestCase,
             # This is a non-bootable volume in the CinderFixture.
             'volume_id': nova_fixtures.CinderFixture.SWAP_OLD_VOL
         }]
-        # FIXME(mriedem): This is bug 1694844 where the user creates the server
-        # without specifying an AZ and there is no default_schedule_zone set
-        # and the cross_az_attach check fails because the volume's availability
-        # zone shows up as "us-central-1" and None != "us-central-1" so the API
-        # thinks the cross_az_attach=False setting was violated.
-        ex = self.assertRaises(api_client.OpenStackApiException,
-                               self.api.post_server, {'server': server})
-        self.assertEqual(400, ex.response.status_code)
-        self.assertIn('are not in the same availability_zone',
-                      six.text_type(ex))
+        server = self.api.post_server({'server': server})
+        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self.assertEqual(self.az, server['OS-EXT-AZ:availability_zone'])
 
     def test_cross_az_attach_false_boot_from_volume_default_zone_match(self):
         """Tests the scenario where [cinder]/cross_az_attach=False and the
@@ -112,16 +105,6 @@ class CrossAZAttachTestCase(test.TestCase,
         """
         self.flags(cross_az_attach=False, group='cinder')
         self.flags(default_schedule_zone=self.az)
-        # For this test we have to put the compute host in an aggregate with
-        # the AZ we want to match.
-        agg_id = self.api.post_aggregate({
-            'aggregate': {
-                'name': self.az,
-                'availability_zone': self.az
-            }
-        })['id']
-        self.api.add_host_to_aggregate(agg_id, 'host1')
-
         server = self._build_minimal_create_server_request(
             self.api,
             'test_cross_az_attach_false_boot_from_volume_default_zone_match')
@@ -132,6 +115,42 @@ class CrossAZAttachTestCase(test.TestCase,
             'boot_index': 0,
             'uuid': nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
         }]
+        server = self.api.post_server({'server': server})
+        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self.assertEqual(self.az, server['OS-EXT-AZ:availability_zone'])
+
+    def test_cross_az_attach_false_bfv_az_specified_mismatch(self):
+        """Negative test where the server is being created in a specific AZ
+        that does not match the volume being attached which results in a 400
+        error response.
+        """
+        self.flags(cross_az_attach=False, group='cinder')
+        server = self._build_minimal_create_server_request(
+            self.api, 'test_cross_az_attach_false_bfv_az_specified_mismatch',
+            az='london')
+        del server['imageRef']  # Do not need imageRef for boot from volume.
+        server['block_device_mapping_v2'] = [{
+            'source_type': 'volume',
+            'destination_type': 'volume',
+            'boot_index': 0,
+            'uuid': nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
+        }]
+        # Use the AZ fixture to fake out the london AZ.
+        with nova_fixtures.AvailabilityZoneFixture(zones=['london', self.az]):
+            ex = self.assertRaises(api_client.OpenStackApiException,
+                                   self.api.post_server, {'server': server})
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn('Server and volumes are not in the same availability '
+                      'zone. Server is in: london. Volumes are in: %s' %
+                      self.az, six.text_type(ex))
+
+    def test_cross_az_attach_false_no_volumes(self):
+        """A simple test to make sure cross_az_attach=False API validation is
+        a noop if there are no volumes in the server create request.
+        """
+        self.flags(cross_az_attach=False, group='cinder')
+        server = self._build_minimal_create_server_request(
+            self.api, 'test_cross_az_attach_false_no_volumes', az=self.az)
         server = self.api.post_server({'server': server})
         server = self._wait_for_state_change(self.api, server, 'ACTIVE')
         self.assertEqual(self.az, server['OS-EXT-AZ:availability_zone'])

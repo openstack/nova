@@ -4702,10 +4702,11 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._test_create, {}, no_image=True)
 
+    @mock.patch('nova.compute.api.API._get_volumes_for_bdms')
     @mock.patch.object(compute_api.API, '_validate_bdm')
     @mock.patch.object(compute_api.API, '_get_bdm_image_metadata')
     def test_create_instance_with_bdms_and_no_image(
-            self, mock_bdm_image_metadata, mock_validate_bdm):
+            self, mock_bdm_image_metadata, mock_validate_bdm, mock_get_vols):
         mock_bdm_image_metadata.return_value = {}
         mock_validate_bdm.return_value = True
         old_create = compute_api.API.create
@@ -4726,10 +4727,11 @@ class ServersControllerCreateTest(test.TestCase):
         mock_bdm_image_metadata.assert_called_once_with(
             mock.ANY, mock.ANY, False)
 
+    @mock.patch('nova.compute.api.API._get_volumes_for_bdms')
     @mock.patch.object(compute_api.API, '_validate_bdm')
     @mock.patch.object(compute_api.API, '_get_bdm_image_metadata')
     def test_create_instance_with_bdms_and_empty_imageRef(
-        self, mock_bdm_image_metadata, mock_validate_bdm):
+        self, mock_bdm_image_metadata, mock_validate_bdm, mock_get_volumes):
         mock_bdm_image_metadata.return_value = {}
         mock_validate_bdm.return_value = True
         old_create = compute_api.API.create
@@ -4930,8 +4932,9 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_with_invalid_destination_type(self):
         self._test_create_instance_with_destination_type_error('fake')
 
+    @mock.patch('nova.compute.api.API._get_volumes_for_bdms')
     @mock.patch.object(compute_api.API, '_validate_bdm')
-    def test_create_instance_bdm(self, mock_validate_bdm):
+    def test_create_instance_bdm(self, mock_validate_bdm, mock_get_volumes):
         bdm = [{
             'source_type': 'volume',
             'device_name': 'fake_dev',
@@ -4959,8 +4962,10 @@ class ServersControllerCreateTest(test.TestCase):
         self._test_create(params, no_image=True)
         mock_validate_bdm.assert_called_once()
 
+    @mock.patch('nova.compute.api.API._get_volumes_for_bdms')
     @mock.patch.object(compute_api.API, '_validate_bdm')
-    def test_create_instance_bdm_missing_device_name(self, mock_validate_bdm):
+    def test_create_instance_bdm_missing_device_name(self, mock_validate_bdm,
+                                                     mock_get_volumes):
         del self.bdm_v2[0]['device_name']
 
         old_create = compute_api.API.create
@@ -4992,7 +4997,8 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self._test_create, params,
                           no_image=True)
 
-    def test_create_instance_bdm_api_validation_fails(self):
+    @mock.patch('nova.compute.api.API._get_volumes_for_bdms')
+    def test_create_instance_bdm_api_validation_fails(self, mock_get_volumes):
         self.validation_fail_test_validate_called = False
         self.validation_fail_instance_destroy_called = False
 
@@ -5025,8 +5031,10 @@ class ServersControllerCreateTest(test.TestCase):
             self.validation_fail_test_validate_called = False
             self.validation_fail_instance_destroy_called = False
 
+    @mock.patch('nova.compute.api.API._get_volumes_for_bdms')
     @mock.patch.object(compute_api.API, '_validate_bdm')
-    def _test_create_bdm(self, params, mock_validate_bdm, no_image=False):
+    def _test_create_bdm(self, params, mock_validate_bdm, mock_get_volumes,
+                         no_image=False):
         self.body['server'].update(params)
         if no_image:
             del self.body['server']['imageRef']
@@ -5039,6 +5047,7 @@ class ServersControllerCreateTest(test.TestCase):
             test.MatchType(objects.Flavor),
             test.MatchType(objects.BlockDeviceMappingList),
             {},
+            mock_get_volumes.return_value,
             False)
 
     def test_create_instance_with_volumes_enabled(self):
