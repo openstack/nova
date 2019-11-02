@@ -64,3 +64,52 @@ class AggregateNotification(base.NotificationBase):
     fields = {
         'payload': fields.ObjectField('AggregatePayload')
     }
+
+
+@nova_base.NovaObjectRegistry.register_notification
+class AggregateCachePayload(base.NotificationPayloadBase):
+    SCHEMA = {
+        'id': ('aggregate', 'id'),
+        'uuid': ('aggregate', 'uuid'),
+        'name': ('aggregate', 'name'),
+    }
+
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'id': fields.IntegerField(),
+        'uuid': fields.UUIDField(),
+        'name': fields.StringField(),
+
+        # The host that we just worked
+        'host': fields.StringField(),
+
+        # The images that were downloaded or are already there
+        'images_cached': fields.ListOfStringsField(),
+
+        # The images that are unable to be cached for some reason
+        'images_failed': fields.ListOfStringsField(),
+
+        # The N/M progress information for this operation
+        'index': fields.IntegerField(),
+        'total': fields.IntegerField(),
+    }
+
+    def __init__(self, aggregate, host, index, total):
+        super(AggregateCachePayload, self).__init__()
+        self.populate_schema(aggregate=aggregate)
+        self.host = host
+        self.index = index
+        self.total = total
+
+
+@base.notification_sample('aggregate-cache_images-progress.json')
+@nova_base.NovaObjectRegistry.register_notification
+class AggregateCacheNotification(base.NotificationBase):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'payload': fields.ObjectField('AggregateCachePayload'),
+    }

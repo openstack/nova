@@ -1671,10 +1671,12 @@ class ComputeTaskManager(base.Base):
         stats = collections.defaultdict(lambda: (0, 0, 0, 0))
         failed_images = collections.defaultdict(int)
         down_hosts = set()
+        host_stats = {
+            'completed': 0,
+            'total': len(aggregate.hosts),
+        }
 
-        def wrap_cache_images(ctxt, host, image_ids):
-            result = self.compute_rpcapi.cache_images(
-                ctxt, host=host, image_ids=image_ids)
+        def host_completed(context, host, result):
             for image_id, status in result.items():
                 cached, existing, error, unsupported = stats[image_id]
                 if status == 'error':
@@ -1688,6 +1690,23 @@ class ComputeTaskManager(base.Base):
                     unsupported += 1
                 stats[image_id] = (cached, existing, error, unsupported)
 
+            host_stats['completed'] += 1
+            compute_utils.notify_about_aggregate_cache(context, aggregate,
+                                                       host, result,
+                                                       host_stats['completed'],
+                                                       host_stats['total'])
+
+        def wrap_cache_images(ctxt, host, image_ids):
+            result = self.compute_rpcapi.cache_images(
+                ctxt,
+                host=host,
+                image_ids=image_ids)
+            host_completed(context, host, result)
+
+        def skipped_host(context, host, image_ids):
+            result = {image: 'skipped' for image in image_ids}
+            host_completed(context, host, result)
+
         for cell_uuid, hosts in hosts_by_cell.items():
             cell = cells_by_uuid[cell_uuid]
             with nova_context.target_cell(context, cell) as target_ctxt:
@@ -1700,6 +1719,7 @@ class ComputeTaskManager(base.Base):
                             'Skipping image pre-cache request to compute '
                             '%(host)r because it is not up',
                             {'host': host})
+                        skipped_host(target_ctxt, host, image_ids)
                         continue
 
                     fetch_pool.spawn_n(wrap_cache_images, target_ctxt, host,

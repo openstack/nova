@@ -1,0 +1,20 @@
+{
+    "priority": "INFO",
+    "payload": {
+        "nova_object.version": "1.0",
+        "nova_object.namespace": "nova",
+        "nova_object.name": "AggregateCachePayload",
+        "nova_object.data": {
+            "name": "my-aggregate",
+            "uuid": "788608ec-ebdc-45c5-bc7f-e5f24ab92c80",
+            "host": "compute",
+            "total": 1,
+            "index": 1,
+            "images_cached": ["155d900f-4e14-4e4c-a73d-069cbf4541e6"],
+            "images_failed": [],
+            "id": 1
+        }
+    },
+    "event_type": "aggregate.cache_images.progress",
+    "publisher_id": "nova-conductor:fake-mini"
+}

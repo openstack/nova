@@ -768,8 +768,9 @@ class NotificationPhase(BaseNovaEnum):
     START = 'start'
     END = 'end'
     ERROR = 'error'
+    PROGRESS = 'progress'
 
-    ALL = (START, END, ERROR)
+    ALL = (START, END, ERROR, PROGRESS)
 
 
 class NotificationSource(BaseNovaEnum):

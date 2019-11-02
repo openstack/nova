@@ -772,6 +772,45 @@ def notify_about_aggregate_action(context, aggregate, action, phase):
     notification.emit(context)
 
 
+@rpc.if_notifications_enabled
+def notify_about_aggregate_cache(context, aggregate, host, image_status,
+                                 index, total):
+    """Send a notification about aggregate cache_images progress.
+
+    :param context: The RequestContext
+    :param aggregate: The target aggregate
+    :param host: The host within the aggregate for which to report status
+    :param image_status: The result from the compute host, which is a dict
+                         of {image_id: status}
+    :param index: An integer indicating progress toward completion, between
+                  1 and $total
+    :param total: The total number of hosts being processed in this operation,
+                  to bound $index
+    """
+    success_statuses = ('cached', 'existing')
+    payload = aggregate_notification.AggregateCachePayload(aggregate,
+                                                           host,
+                                                           index,
+                                                           total)
+    payload.images_cached = []
+    payload.images_failed = []
+    for img, status in image_status.items():
+        if status in success_statuses:
+            payload.images_cached.append(img)
+        else:
+            payload.images_failed.append(img)
+    notification = aggregate_notification.AggregateCacheNotification(
+        priority=fields.NotificationPriority.INFO,
+        publisher=notification_base.NotificationPublisher(
+            host=CONF.host, source=fields.NotificationSource.CONDUCTOR),
+        event_type=notification_base.EventType(
+            object='aggregate',
+            action=fields.NotificationAction.IMAGE_CACHE,
+            phase=fields.NotificationPhase.PROGRESS),
+        payload=payload)
+    notification.emit(context)
+
+
 def notify_about_host_update(context, event_suffix, host_payload):
     """Send a notification about host update.
 

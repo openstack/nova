@@ -366,6 +366,8 @@ class TestNotificationBase(test.NoDBTestCase):
 
 
 notification_object_data = {
+    'AggregateCacheNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
+    'AggregateCachePayload': '1.0-3f4dc002bed67d06eecb577242a43572',
     'AggregateNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'AggregatePayload': '1.1-1eb9adcc4440d8627de6ec37c6398746',
     'AuditPeriodPayload': '1.0-2b429dd307b8374636703b843fa3f9cb',
@@ -375,7 +377,7 @@ notification_object_data = {
     'ComputeTaskNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'ComputeTaskPayload': '1.0-e3d34762c14d131c98337b72e8c600e1',
     'DestinationPayload': '1.0-4ccf26318dd18c4377dada2b1e74ec2e',
-    'EventType': '1.20-4e02a676d3a18cab99579cacd1c91453',
+    'EventType': '1.21-6a5f57fafe478f354f66b81b4cb537ea',
     'ExceptionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'ExceptionPayload': '1.1-6c43008bd81885a63bc7f7c629f0793b',
     'FlavorNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
