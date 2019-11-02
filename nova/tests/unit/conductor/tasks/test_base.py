@@ -42,7 +42,7 @@ class TaskBaseTestCase(test.NoDBTestCase):
             self.task.execute()
         except Exception:
             pass
-        fake_rollback.assert_called_once_with()
+        fake_rollback.assert_called_once_with(test.MatchType(Exception))
 
     @mock.patch.object(FakeTask, 'rollback')
     def test_wrapper_no_exception(self, fake_rollback):

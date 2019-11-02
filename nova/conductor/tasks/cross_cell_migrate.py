@@ -190,7 +190,7 @@ class TargetDBSetupTask(base.TaskBase):
 
         return inst, target_cell_migration
 
-    def rollback(self):
+    def rollback(self, ex):
         """Deletes the instance data from the target cell in case of failure"""
         if self._target_cell_instance:
             # Deleting the instance in the target cell DB should perform a
@@ -340,7 +340,7 @@ class PrepResizeAtDestTask(base.TaskBase):
                     'to host: %s') % destination
             raise exception.MigrationPreCheckError(reason=msg)
 
-    def rollback(self):
+    def rollback(self, ex):
         # Rollback anything we created.
         host = self.host_selection.service_host
         # Cleanup any destination host port bindings.
@@ -431,7 +431,7 @@ class PrepResizeAtSourceTask(base.TaskBase):
 
         return self._image_id
 
-    def rollback(self):
+    def rollback(self, ex):
         # If we created a snapshot image, attempt to delete it.
         if self._image_id:
             compute_utils.delete_image(
@@ -627,7 +627,7 @@ class FinishResizeAtDestTask(base.TaskBase):
         # Do the instance.hidden/instance_mapping.cell_mapping swap.
         self._update_instance_mapping()
 
-    def rollback(self):
+    def rollback(self, ex):
         # The method executed in this task are self-contained for rollbacks.
         pass
 
@@ -874,7 +874,7 @@ class CrossCellMigrationTask(base.TaskBase):
         self._finish_resize_at_dest(
             target_cell_migration, target_cell_mapping, snapshot_id)
 
-    def rollback(self):
+    def rollback(self, ex):
         """Rollback based on how sub-tasks completed
 
         Sub-tasks should rollback appropriately for whatever they do but here
@@ -885,6 +885,6 @@ class CrossCellMigrationTask(base.TaskBase):
         # Rollback the completed tasks in reverse order.
         for task_name in reversed(self._completed_tasks):
             try:
-                self._completed_tasks[task_name].rollback()
+                self._completed_tasks[task_name].rollback(ex)
             except Exception:
                 LOG.exception('Rollback for task %s failed.', task_name)

@@ -444,7 +444,7 @@ class MigrationTask(base.TaskBase):
             raise exception.MaxRetriesExceeded(reason=reason)
         return selection
 
-    def rollback(self):
+    def rollback(self, ex):
         if self._migration:
             self._migration.status = 'error'
             self._migration.save()
