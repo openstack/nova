@@ -18,6 +18,7 @@ import collections
 import copy
 import datetime
 import ddt
+import functools
 
 import fixtures
 import iso8601
@@ -2150,6 +2151,21 @@ class ServersControllerTestV216(ServersControllerTest):
 
         return server_dict
 
+    @mock.patch('nova.compute.api.API.get_instance_host_status')
+    def _verify_host_status_policy_behavior(self, func, mock_get_host_status):
+        # Set policy to disallow both host_status cases and verify we don't
+        # call the get_instance_host_status compute RPC API.
+        rules = {
+            'os_compute_api:servers:show:host_status': '!',
+            'os_compute_api:servers:show:host_status:unknown-only': '!',
+        }
+        orig_rules = policy.get_rules()
+        policy.set_rules(oslo_policy.Rules.from_dict(rules), overwrite=False)
+        func()
+        mock_get_host_status.assert_not_called()
+        # Restore the original rules.
+        policy.set_rules(orig_rules)
+
     def test_show(self):
         image_bookmark = "http://localhost/%s/images/10" % self.project_id
         flavor_bookmark = "http://localhost/%s/flavors/2" % self.project_id
@@ -2160,6 +2176,8 @@ class ServersControllerTestV216(ServersControllerTest):
                                                      flavor_bookmark,
                                                      progress=0)
         self.assertThat(res_dict, matchers.DictMatches(expected_server))
+        func = functools.partial(self.controller.show, req, FAKE_UUID)
+        self._verify_host_status_policy_behavior(func)
 
     def test_detail(self):
         def fake_get_all(context, search_opts=None,
@@ -2214,6 +2232,9 @@ class ServersControllerTestV216(ServersControllerTest):
         # We should have only gotten the host status once per host (and the
         # 2 servers in the response are using the same host).
         self.mock_get_instance_host_status.assert_called_once()
+
+        func = functools.partial(self.controller.detail, req)
+        self._verify_host_status_policy_behavior(func)
 
 
 class ServersControllerTestV219(ServersControllerTest):

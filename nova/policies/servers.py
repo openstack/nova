@@ -95,6 +95,10 @@ rules = [
         """
 Show a server with additional host status information.
 
+This means host_status will be shown irrespective of status value. If showing
+only host_status UNKNOWN is desired, use the
+``os_compute_api:servers:show:host_status:unknown-only`` policy rule.
+
 Microvision 2.75 added the ``host_status`` attribute in the
 ``PUT /servers/{server_id}`` and ``POST /servers/{server_id}/action (rebuild)``
 API responses which are also controlled by this policy rule, like the
@@ -116,6 +120,30 @@ API responses which are also controlled by this policy rule, like the
             {
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (rebuild)'
+            }
+        ]),
+    policy.DocumentedRuleDefault(
+            SERVERS % 'show:host_status:unknown-only',
+        base.RULE_ADMIN_API,
+        """
+Show a server with additional host status information, only if host status is
+UNKNOWN.
+
+This policy rule will only be enforced when the
+``os_compute_api:servers:show:host_status`` policy rule does not pass for the
+request. An example policy configuration could be where the
+``os_compute_api:servers:show:host_status`` rule is set to allow admin-only and
+the ``os_compute_api:servers:show:host_status:unknown-only`` rule is set to
+allow everyone.
+""",
+        [
+            {
+                'method': 'GET',
+                'path': '/servers/{server_id}'
+            },
+            {
+                'method': 'GET',
+                'path': '/servers/detail'
             }
         ]),
     policy.DocumentedRuleDefault(

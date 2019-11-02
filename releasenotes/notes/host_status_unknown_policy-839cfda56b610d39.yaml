@@ -1,0 +1,17 @@
+---
+features:
+  - |
+    A new policy rule ``os_compute_api:servers:show:host_status:unknown-only``
+    has been added to control whether a user can view a server host status of
+    ``UNKNOWN`` in the following APIs:
+
+    * ``GET /servers/{server_id}`` if using API microversion >= 2.16
+    * ``GET /servers/detail`` if using API microversion >= 2.16
+    * ``PUT /servers/{server_id}`` if using API microversion >= 2.75
+    * ``POST /servers/{server_id}/action`` (rebuild) if using API microversion
+      >= 2.75
+
+    This is different than the ``os_compute_api:servers:show:host_status``
+    policy rule which controls whether a user can view all possible host
+    status in the aforementioned APIs including ``UP``, ``DOWN``,
+    ``MAINTENANCE``, and ``UNKNOWN``.
