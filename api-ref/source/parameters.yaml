@@ -2648,6 +2648,7 @@ event_name:
     - ``network-vif-deleted``
     - ``volume-extended`` (since microversion ``2.51``)
     - ``power-update`` (since microversion ``2.76``)
+    - ``accelerator-request-bound`` (since microversion ``2.82``)
 
   in: body
   required: true
@@ -2685,6 +2686,8 @@ event_tag:
     A string value that identifies the event. Certain types of events require
     specific tags:
 
+    - For the ``accelerator-request-bound`` event, the tag must be
+      the accelerator request UUID.
     - For the ``power-update`` event the tag must be either be ``POWER_ON``
       or ``POWER_OFF``.
     - For the ``volume-extended`` event the tag must be the volume id.

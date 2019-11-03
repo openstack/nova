@@ -1080,3 +1080,10 @@ project, for example:
 
 Adds support for image cache management by aggregate by adding
 ``POST /os-aggregates/{aggregate_id}/images``.
+
+2.82
+----
+
+Adds ``accelerator-request-bound`` event to ``os-server-external-events``
+API. This event is sent by Cyborg to indicate completion of the binding
+event for one accelerator request (ARQ) associated with an instance.
