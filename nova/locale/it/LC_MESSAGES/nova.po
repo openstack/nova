@@ -13,7 +13,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-09-21 04:59+0000\n"
+"POT-Creation-Date: 2019-11-01 08:37+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -244,9 +244,6 @@ msgstr ""
 #, python-format
 msgid "Aggregate for host %(host)s count not be found."
 msgstr "Aggregato per il conteggio host %(host)s non è stato trovato."
-
-msgid "All hosts are already mapped to cell(s), exiting."
-msgstr "Tutti gli host sono già associati alla cella, uscita."
 
 #, python-format
 msgid "An invalid 'name' value was provided. The name must be: %(reason)s"
@@ -1226,19 +1223,6 @@ msgid "Flavor access not found for %(flavor_id)s / %(project_id)s combination."
 msgstr ""
 "Impossibile trovare l'accesso a flavor per la combinazione %(flavor_id)s / "
 "%(project_id)s."
-
-msgid ""
-"Flavor id can only contain letters from A-Z (both cases), periods, dashes, "
-"underscores and spaces."
-msgstr ""
-"L'id flavor può solo contenere lettere da A a Z (sia in maiuscolo che in "
-"minuscolo), punti, trattini, caratteri di sottolineatura e spazi."
-
-msgid ""
-"Flavor names can only contain printable characters and horizontal spaces."
-msgstr ""
-"I nomi flavor possono contenere solo caratteri stampabili e spazi "
-"orizzontali."
 
 msgid "Flavor used by the instance could not be found."
 msgstr "Impossibile trovare flavor utilizzato dall'istanza."
@@ -2319,10 +2303,6 @@ msgstr "Nessun IP fisso associato all'istanza"
 msgid "No floating IP addresses have been defined."
 msgstr "Non è stato definito alcun IP mobile."
 
-#, python-format
-msgid "No free disk device names for prefix '%s'"
-msgstr "Nessun nome di unità disco disponibile per il prefisso '%s'"
-
 msgid "No free nbd devices"
 msgstr "Nessuna unità nbd disponibile"
 
@@ -2489,10 +2469,6 @@ msgid ""
 msgstr ""
 "In questa funzione sono supportati solo gli SR basati su file (ext/NFS).  SR "
 "%(uuid)s è di tipo %(type)s"
-
-#, python-format
-msgid "OpenSSL error: %s"
-msgstr "Errore OpenSSL: %s"
 
 msgid "Origin header does not match this host."
 msgstr "L'intestazione origine non corrisponde a questo host."
@@ -3900,9 +3876,6 @@ msgstr "href %s non contiene la versione"
 
 msgid "id"
 msgstr "id"
-
-msgid "id cannot contain leading and/or trailing whitespace(s)"
-msgstr "l'id non può contenere spazi vuoti iniziali e/o finali"
 
 msgid "image already mounted"
 msgstr "immagine già montata"

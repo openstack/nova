@@ -12,7 +12,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-09-21 04:59+0000\n"
+"POT-Creation-Date: 2019-11-01 08:37+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -222,9 +222,6 @@ msgstr "聚集 %s 不支援空白命名的可用區域"
 #, python-format
 msgid "Aggregate for host %(host)s count not be found."
 msgstr "找不到主機 %(host)s 計數的聚集。"
-
-msgid "All hosts are already mapped to cell(s), exiting."
-msgstr "所有主機均已對映至 Cell，正在結束。"
 
 #, python-format
 msgid "An invalid 'name' value was provided. The name must be: %(reason)s"
@@ -1097,15 +1094,6 @@ msgstr "特性 %(flavor_id)s 及專案%(project_id)s 組合已存在特性存取
 #, python-format
 msgid "Flavor access not found for %(flavor_id)s / %(project_id)s combination."
 msgstr "找不到 %(flavor_id)s / %(project_id)s 組合的特性存取。"
-
-msgid ""
-"Flavor id can only contain letters from A-Z (both cases), periods, dashes, "
-"underscores and spaces."
-msgstr "特性 ID 只能包含下列字母：A-Z（大小寫）、句點、橫線、底線及空格。"
-
-msgid ""
-"Flavor names can only contain printable characters and horizontal spaces."
-msgstr "特性名稱只能包含可列印的字元及水平間距。"
 
 msgid "Flavor used by the instance could not be found."
 msgstr "找不到實例所使用的特性。"
@@ -2117,10 +2105,6 @@ msgstr "沒有固定 IP 與實例相關聯"
 msgid "No floating IP addresses have been defined."
 msgstr "尚未定義浮動 IP 位址。"
 
-#, python-format
-msgid "No free disk device names for prefix '%s'"
-msgstr "字首 '%s' 沒有可用磁碟裝置名稱"
-
 msgid "No free nbd devices"
 msgstr "沒有可用的 NBD 裝置"
 
@@ -2281,10 +2265,6 @@ msgid ""
 msgstr ""
 "此特性僅支援檔案型「儲存體儲存庫 (SR)」(ext/NFS)。「儲存體儲存庫 "
 "(SR)」%(uuid)s 的類型是%(type)s"
-
-#, python-format
-msgid "OpenSSL error: %s"
-msgstr "OpenSSL 錯誤：%s"
 
 msgid "Origin header does not match this host."
 msgstr "原始標頭與此主機不符。"
@@ -3589,9 +3569,6 @@ msgstr "href %s 不包含版本"
 
 msgid "id"
 msgstr "ID"
-
-msgid "id cannot contain leading and/or trailing whitespace(s)"
-msgstr "ID 不能包含前導及/或尾端空格"
 
 msgid "image already mounted"
 msgstr "已裝載映像檔"

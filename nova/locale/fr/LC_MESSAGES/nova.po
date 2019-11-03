@@ -28,7 +28,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-09-21 04:59+0000\n"
+"POT-Creation-Date: 2019-11-01 08:37+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -255,9 +255,6 @@ msgstr ""
 #, python-format
 msgid "Aggregate for host %(host)s count not be found."
 msgstr "Agrégat introuvable pour le nombre d'hôtes %(host)s"
-
-msgid "All hosts are already mapped to cell(s), exiting."
-msgstr "Tous les hôtes sont déjà mappés à une ou plusieurs cellules. Sortie..."
 
 #, python-format
 msgid "An invalid 'name' value was provided. The name must be: %(reason)s"
@@ -1243,20 +1240,6 @@ msgstr ""
 msgid "Flavor access not found for %(flavor_id)s / %(project_id)s combination."
 msgstr ""
 "Version inaccessible pour la combinaison %(flavor_id)s / %(project_id)s."
-
-msgid ""
-"Flavor id can only contain letters from A-Z (both cases), periods, dashes, "
-"underscores and spaces."
-msgstr ""
-"L'identificateur de version peut seulement contenir des lettres de A à Z "
-"(dans les deux casses), les points, les tirets, les traits de soulignement "
-"et les espaces."
-
-msgid ""
-"Flavor names can only contain printable characters and horizontal spaces."
-msgstr ""
-"Les noms de version peuvent seulement contenir des caractères imprimables et "
-"des espaces horizontaux."
 
 msgid "Flavor used by the instance could not be found."
 msgstr "La version utilisée par l'instance est introuvable."
@@ -2350,10 +2333,6 @@ msgstr "Aucune adresse IP fixe associée à l'instance"
 msgid "No floating IP addresses have been defined."
 msgstr "Aucune adresses IP flottantes n'ont été définies. "
 
-#, python-format
-msgid "No free disk device names for prefix '%s'"
-msgstr "Aucun nom de périphérique disque disponible pour le préfixe '%s'"
-
 msgid "No free nbd devices"
 msgstr "Pas de device nbd libre"
 
@@ -2522,10 +2501,6 @@ msgstr ""
 "Seuls les demandes de service (ext/NFS) basées sur des fichiers sont pris en "
 "charge par cette fonctionnalité. La demande de service %(uuid)s est de type "
 "%(type)s"
-
-#, python-format
-msgid "OpenSSL error: %s"
-msgstr "Erreur OpenSSL : %s"
 
 msgid "Origin header does not match this host."
 msgstr "L'en-tête d'origine ne correspond pas à cet hôte."
@@ -3937,10 +3912,6 @@ msgstr "href %s ne contient pas de version"
 
 msgid "id"
 msgstr "id"
-
-msgid "id cannot contain leading and/or trailing whitespace(s)"
-msgstr ""
-"L'identificateur ne peut pas commencer et/ou se terminer par des espaces"
 
 msgid "image already mounted"
 msgstr "image déjà montée"
