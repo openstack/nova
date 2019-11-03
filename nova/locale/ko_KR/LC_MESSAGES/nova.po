@@ -11,16 +11,17 @@
 # Jongwon Lee <tothebinaryworld@gmail.com>, 2016. #zanata
 # Ian Y. Choi <ianyrchoi@gmail.com>, 2017. #zanata
 # Lee Dogeon <moreal@dsm.hs.kr>, 2018. #zanata
+# Hongjae Kim <neo415ha@gmail.com>, 2019. #zanata
 msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2019-10-01 18:30+0000\n"
+"POT-Creation-Date: 2019-11-02 17:18+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2018-09-23 12:50+0000\n"
-"Last-Translator: Lee Dogeon <moreal@dsm.hs.kr>\n"
+"PO-Revision-Date: 2019-11-02 08:19+0000\n"
+"Last-Translator: Hongjae Kim <neo415ha@gmail.com>\n"
 "Language: ko_KR\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
@@ -2840,6 +2841,12 @@ msgstr "`table_name` 또는 `table` 매개변수를 지정하십시오. "
 
 msgid "Specify only one param `table_name` `table`"
 msgstr "하나의 매개변수 `table_name` 또는 `table`만 지정하십시오."
+
+msgid "Specifying a volume_type with destination_type=local is not supported."
+msgstr "destination_type=local로 volume_type을 지정할 수 없음."
+
+msgid "Specifying volume type to existing volume is not supported."
+msgstr "기존 볼륨에 볼륨 유형을 지정할 수 없음."
 
 msgid "Started"
 msgstr "작동함"
