@@ -31,6 +31,7 @@ Operations with RPC calls that utilize this value:
 * enabling/disabling a compute service
 * image pre-caching
 * snapshot-based / cross-cell resize
+* resize / cold migration
 
 Related options:
 

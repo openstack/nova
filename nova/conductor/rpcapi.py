@@ -338,7 +338,10 @@ class ComputeTaskAPI(object):
             kw['instance'] = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
             version = '1.4'
-        cctxt = self.client.prepare(version=version)
+        cctxt = self.client.prepare(
+            version=version,
+            call_monitor_timeout=CONF.rpc_response_timeout,
+            timeout=CONF.long_rpc_timeout)
         return cctxt.call(context, 'migrate_server', **kw)
 
     def build_instances(self, context, instances, image, filter_properties,
