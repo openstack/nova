@@ -537,8 +537,9 @@ class FinishResizeAtDestTask(base.TaskBase):
             fault = objects.InstanceFault.get_latest_for_instance(
                 self.context, self.instance.uuid)
             if fault:
-                fault = clone_creatable_object(source_cell_context, fault)
-                fault.create()
+                fault_clone = clone_creatable_object(source_cell_context,
+                                                     fault)
+                fault_clone.create()
         except Exception:
             LOG.exception(
                 'Failed to copy instance fault from target cell DB',
@@ -568,9 +569,10 @@ class FinishResizeAtDestTask(base.TaskBase):
                 # create it in the source cell DB.
                 for event in events:
                     if event.event == event_name:
-                        event = clone_creatable_object(
+                        event_clone = clone_creatable_object(
                             source_cell_context, event)
-                        event.create(action.instance_uuid, action.request_id)
+                        event_clone.create(action.instance_uuid,
+                                           action.request_id)
                         break
                 else:
                     LOG.warning('Failed to find InstanceActionEvent with '
