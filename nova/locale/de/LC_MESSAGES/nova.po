@@ -15,7 +15,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-09-21 04:59+0000\n"
+"POT-Creation-Date: 2019-11-01 08:37+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -242,9 +242,6 @@ msgstr "Aggregat %s unterstützt keine leeren, bezeichneten Verfügbarkeitszonen
 #, python-format
 msgid "Aggregate for host %(host)s count not be found."
 msgstr "Aggregat für Host %(host)s konnte nicht gefunden werden. "
-
-msgid "All hosts are already mapped to cell(s), exiting."
-msgstr "Alle Hosts sind bereits der Zelle/den Zellen zugeordnet. Wird beendet."
 
 #, python-format
 msgid "An invalid 'name' value was provided. The name must be: %(reason)s"
@@ -1272,19 +1269,6 @@ msgid "Flavor access not found for %(flavor_id)s / %(project_id)s combination."
 msgstr ""
 "Versionszugriff nicht gefunden für Kombination aus %(flavor_id)s und "
 "%(project_id)s."
-
-msgid ""
-"Flavor id can only contain letters from A-Z (both cases), periods, dashes, "
-"underscores and spaces."
-msgstr ""
-"Versions-ID darf nur die Buchstaben A-Z (in Groß- und Kleinschreibung), "
-"Punkte, Gedankenstriche, Unterstriche und Leerzeichen enthalten."
-
-msgid ""
-"Flavor names can only contain printable characters and horizontal spaces."
-msgstr ""
-"Versionsnamen dürfen nur druckbare Zeichen und horizontale Leerstellen "
-"aufweisen"
 
 msgid "Flavor used by the instance could not be found."
 msgstr "Die von der Instanz verwendete Version konnte nicht gefunden werden. "
@@ -2382,10 +2366,6 @@ msgstr "Der Instanz sind keine festen IP-Adressen zugeordnet."
 msgid "No floating IP addresses have been defined."
 msgstr "Es wurden keine dynamischen IP-Adressen definiert."
 
-#, python-format
-msgid "No free disk device names for prefix '%s'"
-msgstr "Keine freien Platteneinheitennamen für Präfix '%s'"
-
 msgid "No free nbd devices"
 msgstr "Keine freien nbd-Geräte"
 
@@ -2558,10 +2538,6 @@ msgid ""
 msgstr ""
 "Nur dateibasierte SRs (ext/NFS) werden von dieser Funktion unterstützt. SR "
 "%(uuid)s weist den Typ %(type)s auf"
-
-#, python-format
-msgid "OpenSSL error: %s"
-msgstr "OpenSSL-Fehler: %s"
 
 msgid "Origin header does not match this host."
 msgstr "Ursprungsheader stimmt nicht mit diesem Host überein."
@@ -4001,9 +3977,6 @@ msgstr "Hyperlink %s enthält Version nicht"
 
 msgid "id"
 msgstr "Kennung"
-
-msgid "id cannot contain leading and/or trailing whitespace(s)"
-msgstr "ID darf keine führenden und/oder abschließenden Leerzeichen enthalten"
 
 msgid "image already mounted"
 msgstr "Abbild bereits eingehängt"

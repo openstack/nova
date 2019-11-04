@@ -11,16 +11,17 @@
 # Jongwon Lee <tothebinaryworld@gmail.com>, 2016. #zanata
 # Ian Y. Choi <ianyrchoi@gmail.com>, 2017. #zanata
 # Lee Dogeon <moreal@dsm.hs.kr>, 2018. #zanata
+# Hongjae Kim <neo415ha@gmail.com>, 2019. #zanata
 msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-09-23 05:27+0000\n"
+"POT-Creation-Date: 2019-11-01 08:37+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2018-09-23 12:50+0000\n"
-"Last-Translator: Lee Dogeon <moreal@dsm.hs.kr>\n"
+"PO-Revision-Date: 2019-11-02 08:20+0000\n"
+"Last-Translator: Hongjae Kim <neo415ha@gmail.com>\n"
 "Language: ko_KR\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
@@ -239,9 +240,6 @@ msgstr "%s 집합에서 이름 지정된 비어 있는 가용 구역을 지원�
 #, python-format
 msgid "Aggregate for host %(host)s count not be found."
 msgstr "%(host)s 호스트에 대한 집합을 찾을 수 없습니다. "
-
-msgid "All hosts are already mapped to cell(s), exiting."
-msgstr "모든 호스트가 이미 셀에 맵핑되어 있어 종료합니다."
 
 #, python-format
 msgid "An invalid 'name' value was provided. The name must be: %(reason)s"
@@ -1206,18 +1204,6 @@ msgid "Flavor access not found for %(flavor_id)s / %(project_id)s combination."
 msgstr ""
 "%(flavor_id)s / %(project_id)s 조합에 대한 플레이버 액세스를 찾을 수 없습니"
 "다. "
-
-msgid ""
-"Flavor id can only contain letters from A-Z (both cases), periods, dashes, "
-"underscores and spaces."
-msgstr ""
-"플레이버 ID는 A-Z(대소문자) 문자, 마침표, 대시, 밑줄 및 공백만 포함할 수 있습"
-"니다."
-
-msgid ""
-"Flavor names can only contain printable characters and horizontal spaces."
-msgstr ""
-"플레이버 이름에는 인쇄할 수 있는 문자와 가로 간격만 포함할 수 있습니다."
 
 msgid "Flavor used by the instance could not be found."
 msgstr "인스턴스가 사용한 플레이버를 찾을 수 없습니다. "
@@ -2284,10 +2270,6 @@ msgstr "인스턴스와 연관된 Fixed IP가 없음"
 msgid "No floating IP addresses have been defined."
 msgstr "정의된 부동 IP 주소가 없습니다. "
 
-#, python-format
-msgid "No free disk device names for prefix '%s'"
-msgstr "'%s' 접두부에 대한 여유 디스크 디바이스 이름이 없음"
-
 msgid "No free nbd devices"
 msgstr "여유 nbd 디바이스 없음"
 
@@ -2455,10 +2437,6 @@ msgid ""
 msgstr ""
 "이 기능에서는 파일 기반 SR(ext/NFS)만 지원합니다. SR %(uuid)s이(가) %(type)s "
 "유형입니다."
-
-#, python-format
-msgid "OpenSSL error: %s"
-msgstr "OpenSSL 오류: %s"
 
 msgid "Origin header does not match this host."
 msgstr "원본 헤더가 이 호스트와 일치하지 않습니다."
@@ -2988,6 +2966,12 @@ msgstr "`table_name` 또는 `table` 매개변수를 지정하십시오. "
 
 msgid "Specify only one param `table_name` `table`"
 msgstr "하나의 매개변수 `table_name` 또는 `table`만 지정하십시오."
+
+msgid "Specifying a volume_type with destination_type=local is not supported."
+msgstr "destination_type=local로 volume_type을 지정할 수 없음."
+
+msgid "Specifying volume type to existing volume is not supported."
+msgstr "기존 볼륨에 볼륨 유형을 지정할 수 없음."
 
 msgid "Started"
 msgstr "작동함"
@@ -3872,9 +3856,6 @@ msgstr "href %s에 버전이 없음"
 
 msgid "id"
 msgstr "ID"
-
-msgid "id cannot contain leading and/or trailing whitespace(s)"
-msgstr "id에는 선행 및/또는 후행 공백이 포함될 수 없음"
 
 msgid "image already mounted"
 msgstr "이미지가 이미 마운트되었음"
