@@ -15,10 +15,12 @@ import copy
 
 from oslo_log import log as logging
 import oslo_messaging as messaging
+from oslo_utils import excutils
 
 from nova import availability_zones
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
+from nova.compute import vm_states
 from nova.conductor.tasks import base
 from nova import context as nova_context
 from nova import exception
@@ -447,6 +449,187 @@ class PrepResizeAtSourceTask(base.TaskBase):
                   self.instance.host, instance=self.instance)
 
 
+class FinishResizeAtDestTask(base.TaskBase):
+    """Task to finish the resize at the destination host.
+
+    Calls the finish_snapshot_based_resize_at_dest method on the destination
+    compute service which sets up networking and block storage and spawns
+    the guest on the destination host. Upon successful completion of this
+    task, the migration status should be 'finished', the instance task_state
+    should be None and the vm_state should be 'resized'. The instance host/node
+    information should also reflect the destination compute.
+
+    If the compute call is successful, the task will change the instance
+    mapping to point at the target cell and hide the source cell instance thus
+    making the confirm/revert operations act on the target cell instance.
+    """
+
+    def __init__(self, context, instance, migration, source_cell_instance,
+                 compute_rpcapi, target_cell_mapping, snapshot_id,
+                 request_spec):
+        """Initialize this task.
+
+        :param context: nova auth request context targeted at the target cell
+        :param instance: Instance object in the target cell database
+        :param migration: Migration object in the target cell database
+        :param source_cell_instance: Instance object in the source cell DB
+        :param compute_rpcapi: instance of nova.compute.rpcapi.ComputeAPI
+        :param target_cell_mapping: CellMapping object for the target cell
+        :param snapshot_id: ID of the image snapshot to use for a
+            non-volume-backed instance.
+        :param request_spec: nova.objects.RequestSpec object for the operation
+        """
+        super(FinishResizeAtDestTask, self).__init__(context, instance)
+        self.migration = migration
+        self.source_cell_instance = source_cell_instance
+        self.compute_rpcapi = compute_rpcapi
+        self.target_cell_mapping = target_cell_mapping
+        self.snapshot_id = snapshot_id
+        self.request_spec = request_spec
+
+    def _finish_snapshot_based_resize_at_dest(self):
+        """Synchronously RPC calls finish_snapshot_based_resize_at_dest
+
+        If the finish_snapshot_based_resize_at_dest method fails in the
+        compute service, this method will update the source cell instance
+        data to reflect the error (vm_state='error', copy the fault and
+        instance action events for that compute method).
+        """
+        LOG.debug('Finishing cross-cell resize at the destination host %s',
+                  self.migration.dest_compute, instance=self.instance)
+        # prep_snapshot_based_resize_at_source in the source cell would have
+        # changed the source cell instance.task_state to resize_migrated and
+        # we need to reflect that in the target cell instance before calling
+        # the destination compute.
+        self.instance.task_state = task_states.RESIZE_MIGRATED
+        self.instance.save()
+        try:
+            self.compute_rpcapi.finish_snapshot_based_resize_at_dest(
+                self.context, self.instance, self.migration, self.snapshot_id,
+                self.request_spec)
+        except Exception:
+            # We need to mimic the error handlers on
+            # finish_snapshot_based_resize_at_dest in the destination compute
+            # service so those changes are reflected in the source cell
+            # instance.
+            with excutils.save_and_reraise_exception(logger=LOG):
+                # reverts_task_state and _error_out_instance_on_exception:
+                self.source_cell_instance.task_state = None
+                self.source_cell_instance.vm_state = vm_states.ERROR
+                self.source_cell_instance.save()
+
+                source_cell_context = self.source_cell_instance._context
+                # wrap_instance_fault (this is best effort)
+                self._copy_latest_fault(source_cell_context)
+
+                # wrap_instance_event (this is best effort)
+                self._copy_finish_snapshot_based_resize_at_dest_event(
+                    source_cell_context)
+
+    def _copy_latest_fault(self, source_cell_context):
+        """Copies the latest instance fault from the target cell to the source
+
+        :param source_cell_context: nova auth request context targeted at the
+            source cell
+        """
+        try:
+            # Get the latest fault from the target cell database.
+            fault = objects.InstanceFault.get_latest_for_instance(
+                self.context, self.instance.uuid)
+            if fault:
+                fault = clone_creatable_object(source_cell_context, fault)
+                fault.create()
+        except Exception:
+            LOG.exception(
+                'Failed to copy instance fault from target cell DB',
+                instance=self.instance)
+
+    def _copy_finish_snapshot_based_resize_at_dest_event(
+            self, source_cell_context):
+        """Copies the compute_finish_snapshot_based_resize_at_dest event from
+        the target cell database to the source cell database.
+
+        :param source_cell_context: nova auth request context targeted at the
+            source cell
+        """
+        event_name = 'compute_finish_snapshot_based_resize_at_dest'
+        try:
+            # TODO(mriedem): Need a method on InstanceActionEventList to
+            # lookup an event by action request_id and event name.
+            # Get the single action for this request in the target cell DB.
+            action = objects.InstanceAction.get_by_request_id(
+                self.context, self.instance.uuid,
+                self.context.request_id)
+            if action:
+                # Get the events for this action in the target cell DB.
+                events = objects.InstanceActionEventList.get_by_action(
+                    self.context, action.id)
+                # Find the finish_snapshot_based_resize_at_dest event and
+                # create it in the source cell DB.
+                for event in events:
+                    if event.event == event_name:
+                        event = clone_creatable_object(
+                            source_cell_context, event)
+                        event.create(action.instance_uuid, action.request_id)
+                        break
+                else:
+                    LOG.warning('Failed to find InstanceActionEvent with '
+                                'name %s in target cell DB', event_name,
+                                instance=self.instance)
+            else:
+                LOG.warning(
+                    'Failed to find InstanceAction by request_id %s',
+                    self.context.request_id, instance=self.instance)
+        except Exception:
+            LOG.exception(
+                'Failed to copy %s instance action event from target cell DB',
+                event_name, instance=self.instance)
+
+    def _update_instance_mapping(self):
+        """Swaps the hidden field value on the source and target cell instance
+        and updates the instance mapping to point at the target cell.
+        """
+        LOG.debug('Marking instance in source cell as hidden and updating '
+                  'instance mapping to point at target cell %s.',
+                  self.target_cell_mapping.identity, instance=self.instance)
+        # Get the instance mapping first to make the window of time where both
+        # instances are hidden=False as small as possible.
+        instance_mapping = objects.InstanceMapping.get_by_instance_uuid(
+            self.context, self.instance.uuid)
+        # Mark the target cell instance record as hidden=False so it will show
+        # up when listing servers. Note that because of how the API filters
+        # duplicate instance records, even if the user is listing servers at
+        # this exact moment only one copy of the instance will be returned.
+        self.instance.hidden = False
+        self.instance.save()
+        # Update the instance mapping to point at the target cell. This is so
+        # that the confirm/revert actions will be performed on the resized
+        # instance in the target cell rather than the destroyed guest in the
+        # source cell. Note that we could do this before finishing the resize
+        # on the dest host, but it makes sense to defer this until the
+        # instance is successfully resized in the dest host because if that
+        # fails, we want to be able to rebuild in the source cell to recover
+        # the instance.
+        instance_mapping.cell_mapping = self.target_cell_mapping
+        # If this fails the cascading task failures should delete the instance
+        # in the target cell database so we do not need to hide it again.
+        instance_mapping.save()
+        # Mark the source cell instance record as hidden=True to hide it from
+        # the user when listing servers.
+        self.source_cell_instance.hidden = True
+        self.source_cell_instance.save()
+
+    def _execute(self):
+        # Finish the resize on the destination host in the target cell.
+        self._finish_snapshot_based_resize_at_dest()
+        # Do the instance.hidden/instance_mapping.cell_mapping swap.
+        self._update_instance_mapping()
+
+    def rollback(self):
+        # The method executed in this task are self-contained for rollbacks.
+        pass
+
+
 class CrossCellMigrationTask(base.TaskBase):
     """Orchestrates a cross-cell cold migration (resize)."""
 
@@ -509,7 +692,10 @@ class CrossCellMigrationTask(base.TaskBase):
         Upon successful completion the self._target_cell_context and
         self._target_cell_instance variables are set.
 
-        :returns: The active Migration object from the target cell DB.
+        :returns: A 2-item tuple of:
+
+            - The active Migration object from the target cell DB
+            - The CellMapping for the target cell
         """
         LOG.debug('Setting up the target cell database for the instance and '
                   'its related records.', instance=self.instance)
@@ -524,7 +710,7 @@ class CrossCellMigrationTask(base.TaskBase):
             self._target_cell_context)
         self._target_cell_instance, target_cell_migration = task.execute()
         self._completed_tasks['TargetDBSetupTask'] = task
-        return target_cell_migration
+        return target_cell_migration, target_cell_mapping
 
     def _perform_external_api_checks(self):
         """Performs checks on external service APIs for support.
@@ -634,6 +820,22 @@ class CrossCellMigrationTask(base.TaskBase):
         self._completed_tasks['PrepResizeAtSourceTask'] = prep_source_task
         return snapshot_id
 
+    def _finish_resize_at_dest(
+            self, target_cell_migration, target_cell_mapping, snapshot_id):
+        """Executes FinishResizeAtDestTask
+
+        :param target_cell_migration: Migration object from the target cell DB
+        :param target_cell_mapping: CellMapping object for the target cell
+        :param snapshot_id: ID of the image snapshot to use for a
+            non-volume-backed instance.
+        """
+        task = FinishResizeAtDestTask(
+            self._target_cell_context, self._target_cell_instance,
+            target_cell_migration, self.instance, self.compute_rpcapi,
+            target_cell_mapping, snapshot_id, self.request_spec)
+        task.execute()
+        self._completed_tasks['FinishResizeAtDestTask'] = task
+
     def _execute(self):
         """Execute high-level orchestration of the cross-cell resize"""
         # We are committed to a cross-cell move at this point so update the
@@ -654,7 +856,8 @@ class CrossCellMigrationTask(base.TaskBase):
         # cannot simply pass the source cell context and instance over RPC
         # to the target compute host and assume changes get mirrored back to
         # the source cell database.
-        target_cell_migration = self._setup_target_cell_db()
+        target_cell_migration, target_cell_mapping = (
+            self._setup_target_cell_db())
 
         # Claim resources and validate the selected host in the target cell.
         target_cell_migration = self._prep_resize_at_dest(
@@ -662,15 +865,12 @@ class CrossCellMigrationTask(base.TaskBase):
 
         # Prepare the instance at the source host (stop it, optionally snapshot
         # it, disconnect volumes and VIFs, etc).
-        self._prep_resize_at_source()
+        snapshot_id = self._prep_resize_at_source()
 
-        # TODO(mriedem): Copy data to dest cell DB.
-        # TODO(mriedem): Update instance mapping to dest cell DB.
-        # TODO(mriedem): Spawn in target cell host:
-        # - Use new flavor to spawn guest
-        # - Wait for ACTIVE or keep powered off
-        # - Activate target host port bindings
-        # - Update/complete volume attachments and update BDM.attachment_id.
+        # Finish the resize at the destination host, swap the hidden fields
+        # on the instances and update the instance mapping.
+        self._finish_resize_at_dest(
+            target_cell_migration, target_cell_mapping, snapshot_id)
 
     def rollback(self):
         """Rollback based on how sub-tasks completed
