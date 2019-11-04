@@ -5596,6 +5596,8 @@ class PortResourceRequestBasedSchedulingTestBase(
         self.useFixture(nova_fixtures.SpawnIsSynchronousFixture())
         self.compute1 = self._start_compute('host1')
         self.compute1_rp_uuid = self._get_provider_uuid_by_host('host1')
+        self.compute1_service_id = self.admin_api.get_services(
+            host='host1', binary='nova-compute')[0]['id']
         self.ovs_bridge_rp_per_host = {}
         self.sriov_dev_rp_per_host = {}
         self.flavor = self.api.get_flavors()[0]
@@ -6995,6 +6997,308 @@ class ServerMoveWithPortResourceRequestTest(
         # And we expect not to have any allocation set in the port binding for
         # the port that doesn't have resource request
         self.assertNotIn('binding:profile', updated_non_qos_port)
+
+    def _turn_off_api_check(self):
+        # The API actively rejecting the move operations with resource
+        # request so we have to turn off that check.
+        # TODO(gibi): Remove this when the move operations are supported and
+        # the API check is removed.
+        patcher = mock.patch(
+            'nova.api.openstack.common.'
+            'supports_port_resource_request_during_move',
+            return_value=True)
+        self.addCleanup(patcher.stop)
+        patcher.start()
+
+    def _check_allocation_during_evacuate(
+            self, server, flavor, source_compute_rp_uuid, dest_compute_rp_uuid,
+            non_qos_port, qos_port, qos_sriov_port):
+        # evacuate is the only case when the same consumer has allocation from
+        # two different RP trees so we need special checks
+
+        updated_non_qos_port = self.neutron.show_port(
+            non_qos_port['id'])['port']
+        updated_qos_port = self.neutron.show_port(qos_port['id'])['port']
+        updated_qos_sriov_port = self.neutron.show_port(
+            qos_sriov_port['id'])['port']
+
+        allocations = self.placement_api.get(
+            '/allocations/%s' % server['id']).body['allocations']
+
+        # We expect two sets of allocations. One set for the source compute
+        # and one set for the dest compute. Each set we expect 3 allocations
+        # one for the compute RP according to the flavor, one for the ovs port
+        # and one for the SRIOV port.
+        self.assertEqual(6, len(allocations), allocations)
+
+        # 1. source compute allocation
+        compute_allocations = allocations[source_compute_rp_uuid]['resources']
+        self.assertEqual(
+            self._resources_from_flavor(flavor),
+            compute_allocations)
+
+        # 2. source ovs allocation
+        ovs_allocations = allocations[
+            self.ovs_bridge_rp_per_host[source_compute_rp_uuid]]['resources']
+        self.assertPortMatchesAllocation(qos_port, ovs_allocations)
+
+        # 3. source sriov allocation
+        sriov_allocations = allocations[
+            self.sriov_dev_rp_per_host[
+                source_compute_rp_uuid][self.PF2]]['resources']
+        self.assertPortMatchesAllocation(qos_sriov_port, sriov_allocations)
+
+        # 4. dest compute allocation
+        compute_allocations = allocations[dest_compute_rp_uuid]['resources']
+        self.assertEqual(
+            self._resources_from_flavor(flavor),
+            compute_allocations)
+
+        # 5. dest ovs allocation
+        ovs_allocations = allocations[
+            self.ovs_bridge_rp_per_host[dest_compute_rp_uuid]]['resources']
+        self.assertPortMatchesAllocation(qos_port, ovs_allocations)
+
+        # 6. dest SRIOV allocation
+        sriov_allocations = allocations[
+            self.sriov_dev_rp_per_host[
+                dest_compute_rp_uuid][self.PF2]]['resources']
+        self.assertPortMatchesAllocation(qos_sriov_port, sriov_allocations)
+
+        # the qos ports should have their binding pointing to the RPs in the
+        # dest compute RP tree
+        qos_binding_profile = updated_qos_port['binding:profile']
+        self.assertEqual(
+            self.ovs_bridge_rp_per_host[dest_compute_rp_uuid],
+            qos_binding_profile['allocation'])
+
+        qos_sriov_binding_profile = updated_qos_sriov_port['binding:profile']
+        self.assertEqual(
+            self.sriov_dev_rp_per_host[dest_compute_rp_uuid][self.PF2],
+            qos_sriov_binding_profile['allocation'])
+
+        # And we expect not to have any allocation set in the port binding for
+        # the port that doesn't have resource request
+        self.assertNotIn('binding:profile', updated_non_qos_port)
+
+    def _check_allocation_after_evacuation_source_recovered(
+            self, server, flavor, dest_compute_rp_uuid, non_qos_port,
+            qos_port, qos_sriov_port):
+        # check that source allocation is cleaned up and the dest allocation
+        # and the port bindings are not touched.
+
+        updated_non_qos_port = self.neutron.show_port(
+            non_qos_port['id'])['port']
+        updated_qos_port = self.neutron.show_port(qos_port['id'])['port']
+        updated_qos_sriov_port = self.neutron.show_port(
+            qos_sriov_port['id'])['port']
+
+        allocations = self.placement_api.get(
+            '/allocations/%s' % server['id']).body['allocations']
+
+        self.assertEqual(3, len(allocations), allocations)
+
+        # 1. dest compute allocation
+        compute_allocations = allocations[dest_compute_rp_uuid]['resources']
+        self.assertEqual(
+            self._resources_from_flavor(flavor),
+            compute_allocations)
+
+        # 2. dest ovs allocation
+        ovs_allocations = allocations[
+            self.ovs_bridge_rp_per_host[dest_compute_rp_uuid]]['resources']
+        self.assertPortMatchesAllocation(qos_port, ovs_allocations)
+
+        # 3. dest SRIOV allocation
+        sriov_allocations = allocations[
+            self.sriov_dev_rp_per_host[
+                dest_compute_rp_uuid][self.PF2]]['resources']
+        self.assertPortMatchesAllocation(qos_sriov_port, sriov_allocations)
+
+        # the qos ports should have their binding pointing to the RPs in the
+        # dest compute RP tree
+        qos_binding_profile = updated_qos_port['binding:profile']
+        self.assertEqual(
+            self.ovs_bridge_rp_per_host[dest_compute_rp_uuid],
+            qos_binding_profile['allocation'])
+
+        qos_sriov_binding_profile = updated_qos_sriov_port['binding:profile']
+        self.assertEqual(
+            self.sriov_dev_rp_per_host[dest_compute_rp_uuid][self.PF2],
+            qos_sriov_binding_profile['allocation'])
+
+        # And we expect not to have any allocation set in the port binding for
+        # the port that doesn't have resource request
+        self.assertNotIn('binding:profile', updated_non_qos_port)
+
+    def test_evacuate_with_qos_port(self, host=None):
+        # TODO(gibi): remove this when evacuate is fully supported and
+        # therefore the check is removed from the api
+        self._turn_off_api_check()
+
+        non_qos_normal_port = self.neutron.port_1
+        qos_normal_port = self.neutron.port_with_resource_request
+        qos_sriov_port = self.neutron.port_with_sriov_resource_request
+
+        server = self._create_server_with_ports(
+            non_qos_normal_port, qos_normal_port, qos_sriov_port)
+
+        # check that the server allocates from the current host properly
+        self._check_allocation(
+            server, self.compute1_rp_uuid, non_qos_normal_port,
+            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
+
+        # force source compute down
+        self.compute1.stop()
+        self.admin_api.put_service(
+            self.compute1_service_id, {'forced_down': 'true'})
+
+        req = {'evacuate': {}}
+        if host:
+            req['evacuate']['host'] = host
+
+        self.api.post_server_action(server['id'], req)
+        self._wait_for_server_parameter(
+            self.api, server,
+            {'OS-EXT-SRV-ATTR:host': 'host2',
+             'status': 'ACTIVE'})
+
+        self._check_allocation_during_evacuate(
+            server, self.flavor_with_group_policy, self.compute1_rp_uuid,
+            self.compute2_rp_uuid, non_qos_normal_port, qos_normal_port,
+            qos_sriov_port)
+
+        # recover source compute
+        self.admin_api.put_service(
+            self.compute1_service_id, {'forced_down': 'false'})
+        self.compute1 = self.restart_compute_service(self.compute1)
+
+        # check that source allocation is cleaned up and the dest allocation
+        # and the port bindings are not touched.
+        self._check_allocation_after_evacuation_source_recovered(
+            server, self.flavor_with_group_policy, self.compute2_rp_uuid,
+            non_qos_normal_port, qos_normal_port, qos_sriov_port)
+
+        self._delete_server_and_check_allocations(
+            qos_normal_port, qos_sriov_port, server)
+
+    def test_evacuate_with_target_host_with_qos_port(self):
+        self.test_evacuate_with_qos_port(host='host2')
+
+    def test_evacuate_with_qos_port_fails_recover_source_compute(self):
+        # TODO(gibi): remove this when evacuate is fully supported and
+        # therefore the check is removed from the api
+        self._turn_off_api_check()
+
+        non_qos_normal_port = self.neutron.port_1
+        qos_normal_port = self.neutron.port_with_resource_request
+        qos_sriov_port = self.neutron.port_with_sriov_resource_request
+
+        server = self._create_server_with_ports(
+            non_qos_normal_port, qos_normal_port, qos_sriov_port)
+
+        # check that the server allocates from the current host properly
+        self._check_allocation(
+            server, self.compute1_rp_uuid, non_qos_normal_port,
+            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
+
+        # force source compute down
+        self.compute1.stop()
+        self.admin_api.put_service(
+            self.compute1_service_id, {'forced_down': 'true'})
+
+        with mock.patch(
+                'nova.compute.resource_tracker.ResourceTracker.rebuild_claim',
+                side_effect=exception.ComputeResourcesUnavailable(
+                    reason='test evacuate failure')):
+            req = {'evacuate': {}}
+            self.api.post_server_action(server['id'], req)
+            # Evacuate does not have reschedule loop so evacuate expected to
+            # simply fail and the server remains on the source host
+            server = self._wait_for_server_parameter(
+                self.api, server,
+                {'OS-EXT-SRV-ATTR:host': 'host1',
+                 'status': 'ERROR'})
+
+        self._wait_for_migration_status(server, ['failed'])
+
+        # As evacuation failed the resource allocation should be untouched
+        self._check_allocation(
+            server, self.compute1_rp_uuid, non_qos_normal_port,
+            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
+
+        # recover source compute
+        self.admin_api.put_service(
+            self.compute1_service_id, {'forced_down': 'false'})
+        self.compute1 = self.restart_compute_service(self.compute1)
+
+        # check again that even after source host recovery the source
+        # allocation is intact
+        self._check_allocation(
+            server, self.compute1_rp_uuid, non_qos_normal_port,
+            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
+
+        self._delete_server_and_check_allocations(
+            qos_normal_port, qos_sriov_port, server)
+
+    def test_evacuate_with_qos_port_pci_update_fail(self):
+        # TODO(gibi): remove this when evacuate is fully supported and
+        # therefore the check is removed from the api
+        self._turn_off_api_check()
+        # Update the name of the network device RP of PF2 on host2 to something
+        # unexpected. This will cause
+        # _update_pci_request_spec_with_allocated_interface_name() to raise
+        # when the instance is evacuated to the host2.
+        rsp = self.placement_api.put(
+            '/resource_providers/%s'
+            % self.sriov_dev_rp_per_host[self.compute2_rp_uuid][self.PF2],
+            {"name": "invalid-device-rp-name"})
+        self.assertEqual(200, rsp.status)
+
+        non_qos_port = self.neutron.port_1
+        qos_port = self.neutron.port_with_resource_request
+        qos_sriov_port = self.neutron.port_with_sriov_resource_request
+
+        server = self._create_server_with_ports(
+            non_qos_port, qos_port, qos_sriov_port)
+
+        # check that the server allocates from the current host properly
+        self._check_allocation(
+            server, self.compute1_rp_uuid, non_qos_port, qos_port,
+            qos_sriov_port, self.flavor_with_group_policy)
+
+        # force source compute down
+        self.compute1.stop()
+        self.admin_api.put_service(
+            self.compute1_service_id, {'forced_down': 'true'})
+
+        # The compute manager on host2 will raise from
+        # _update_pci_request_spec_with_allocated_interface_name
+        self.api.post_server_action(server['id'], {'evacuate': {}})
+        server = self._wait_for_server_parameter(
+            self.api, server,
+            {'OS-EXT-SRV-ATTR:host': 'host1',
+             'OS-EXT-STS:task_state': None,
+             'status': 'ERROR'})
+        self._wait_for_migration_status(server, ['failed'])
+
+        self.assertIn(
+            'Build of instance %s aborted' % server['id'],
+            server['fault']['message'])
+
+        self._wait_for_action_fail_completion(
+            server, instance_actions.EVACUATE, 'compute_rebuild_instance',
+            self.admin_api)
+
+        fake_notifier.wait_for_versioned_notifications(
+            'instance.rebuild.error')
+        fake_notifier.wait_for_versioned_notifications(
+            'compute.exception')
+
+        # and the instance allocates from the source host
+        self._check_allocation(
+            server, self.compute1_rp_uuid, non_qos_port, qos_port,
+            qos_sriov_port, self.flavor_with_group_policy)
 
 
 class PortResourceRequestReSchedulingTest(
