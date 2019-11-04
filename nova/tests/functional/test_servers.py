@@ -5915,27 +5915,6 @@ class UnsupportedPortResourceRequestBasedSchedulingTest(
             'The os-migrateLive action on a server with ports having resource '
             'requests', six.text_type(ex))
 
-    def test_evacuate_server_with_port_resource_request_old_microversion(
-            self):
-        server = self._create_server(
-            flavor=self.flavor,
-            networks=[{'port': self.neutron.port_1['id']}])
-        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
-
-        # We need to simulate that the above server has a port that has
-        # resource request; we cannot boot with such a port but legacy servers
-        # can exist with such a port.
-        self._add_resource_request_to_a_bound_port(self.neutron.port_1['id'])
-
-        ex = self.assertRaises(
-            client.OpenStackApiException,
-            self.api.post_server_action, server['id'], {'evacuate': {}})
-
-        self.assertEqual(400, ex.response.status_code)
-        self.assertIn(
-            'The evacuate action on a server with ports having resource '
-            'requests', six.text_type(ex))
-
     def test_unshelve_offloaded_server_with_port_resource_request_old_version(
             self):
         server = self._create_server(
@@ -6998,18 +6977,6 @@ class ServerMoveWithPortResourceRequestTest(
         # the port that doesn't have resource request
         self.assertNotIn('binding:profile', updated_non_qos_port)
 
-    def _turn_off_api_check(self):
-        # The API actively rejecting the move operations with resource
-        # request so we have to turn off that check.
-        # TODO(gibi): Remove this when the move operations are supported and
-        # the API check is removed.
-        patcher = mock.patch(
-            'nova.api.openstack.common.'
-            'supports_port_resource_request_during_move',
-            return_value=True)
-        self.addCleanup(patcher.stop)
-        patcher.start()
-
     def _check_allocation_during_evacuate(
             self, server, flavor, source_compute_rp_uuid, dest_compute_rp_uuid,
             non_qos_port, qos_port, qos_sriov_port):
@@ -7132,10 +7099,6 @@ class ServerMoveWithPortResourceRequestTest(
         self.assertNotIn('binding:profile', updated_non_qos_port)
 
     def test_evacuate_with_qos_port(self, host=None):
-        # TODO(gibi): remove this when evacuate is fully supported and
-        # therefore the check is removed from the api
-        self._turn_off_api_check()
-
         non_qos_normal_port = self.neutron.port_1
         qos_normal_port = self.neutron.port_with_resource_request
         qos_sriov_port = self.neutron.port_with_sriov_resource_request
@@ -7186,10 +7149,6 @@ class ServerMoveWithPortResourceRequestTest(
         self.test_evacuate_with_qos_port(host='host2')
 
     def test_evacuate_with_qos_port_fails_recover_source_compute(self):
-        # TODO(gibi): remove this when evacuate is fully supported and
-        # therefore the check is removed from the api
-        self._turn_off_api_check()
-
         non_qos_normal_port = self.neutron.port_1
         qos_normal_port = self.neutron.port_with_resource_request
         qos_sriov_port = self.neutron.port_with_sriov_resource_request
@@ -7242,9 +7201,6 @@ class ServerMoveWithPortResourceRequestTest(
             qos_normal_port, qos_sriov_port, server)
 
     def test_evacuate_with_qos_port_pci_update_fail(self):
-        # TODO(gibi): remove this when evacuate is fully supported and
-        # therefore the check is removed from the api
-        self._turn_off_api_check()
         # Update the name of the network device RP of PF2 on host2 to something
         # unexpected. This will cause
         # _update_pci_request_spec_with_allocated_interface_name() to raise
