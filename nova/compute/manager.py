@@ -521,7 +521,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='5.6')
+    target = messaging.Target(version='5.7')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -1917,9 +1917,10 @@ class ComputeManager(manager.Manager):
             # useful details which the standard InvalidBDM error message lacks.
             raise exception.InvalidBDM(six.text_type(ex))
 
-    def _update_instance_after_spawn(self, context, instance):
+    def _update_instance_after_spawn(self, context, instance,
+                                     vm_state=vm_states.ACTIVE):
         instance.power_state = self._get_power_state(context, instance)
-        instance.vm_state = vm_states.ACTIVE
+        instance.vm_state = vm_state
         instance.task_state = None
         # NOTE(sean-k-mooney): configdrive.update_instance checks
         # instance.launched_at to determine if it is the first or
@@ -5355,6 +5356,203 @@ class ComputeManager(manager.Manager):
             context, instance, self.host,
             action=fields.NotificationAction.RESIZE_FINISH, phase=phase,
             bdms=bdms)
+
+    @wrap_exception()
+    @reverts_task_state
+    @wrap_instance_event(prefix='compute')
+    @errors_out_migration
+    @wrap_instance_fault
+    def finish_snapshot_based_resize_at_dest(
+            self, ctxt, instance, migration, snapshot_id, request_spec):
+        """Finishes the snapshot-based resize at the destination compute.
+
+        Sets up block devices and networking on the destination compute and
+        spawns the guest.
+
+        :param ctxt: nova auth request context targeted at the target cell DB
+        :param instance: The Instance object being resized with the
+            ``migration_context`` field set. Upon successful completion of this
+            method the vm_state should be "resized", the task_state should be
+            None, and migration context, host/node and flavor-related fields
+            should be set on the instance.
+        :param migration: The Migration object for this resize operation. Upon
+            successful completion of this method the migration status should
+            be "finished".
+        :param snapshot_id: ID of the image snapshot created for a
+            non-volume-backed instance, else None.
+        :param request_spec: nova.objects.RequestSpec object for the operation
+        """
+        LOG.info('Finishing snapshot based resize on destination host %s.',
+                 self.host, instance=instance)
+        with self._error_out_instance_on_exception(ctxt, instance):
+            # Note that if anything fails here, the migration-based allocations
+            # created in conductor should be reverted by conductor as well,
+            # see MigrationTask.rollback.
+            self._finish_snapshot_based_resize_at_dest(
+                ctxt, instance, migration, snapshot_id)
+
+    def _finish_snapshot_based_resize_at_dest(
+            self, ctxt, instance, migration, snapshot_id):
+        """Private variant of finish_snapshot_based_resize_at_dest so the
+        caller can handle reverting resource allocations on failure and perform
+        other generic error handling.
+        """
+        # Figure out the image metadata to use when spawning the guest.
+        if snapshot_id:
+            image_meta = objects.ImageMeta.from_image_ref(
+                ctxt, self.image_api, snapshot_id)
+        else:
+            # Just use what is already on the volume-backed instance.
+            image_meta = instance.image_meta
+
+        resize = migration.migration_type == 'resize'
+        instance.old_flavor = instance.flavor
+        if resize:
+            flavor = instance.new_flavor
+            # If we are resizing to a new flavor we need to set the
+            # flavor-related fields on the instance.
+            # NOTE(mriedem): This is likely where storing old/new_flavor on
+            # the MigrationContext would make this cleaner.
+            self._set_instance_info(instance, flavor)
+
+        instance.apply_migration_context()
+        instance.task_state = task_states.RESIZE_FINISH
+        instance.save(expected_task_state=task_states.RESIZE_MIGRATED)
+
+        # This seems a bit late to be sending the start notification but
+        # it is what traditional resize has always done as well and it does
+        # contain the changes to the instance with the new_flavor and
+        # task_state.
+        bdms = instance.get_bdms()
+        network_info = instance.get_network_info()
+        self._send_finish_resize_notifications(
+            ctxt, instance, bdms, network_info,
+            fields.NotificationPhase.START)
+
+        # Setup volumes and networking and spawn the guest in the hypervisor.
+        self._finish_snapshot_based_resize_at_dest_spawn(
+            ctxt, instance, migration, image_meta, bdms)
+
+        # If we spawned from a temporary snapshot image we can delete that now,
+        # similar to how unshelve works.
+        if snapshot_id:
+            # FIXME(mriedem): Need to deal with bug 1653953 for libvirt with
+            # the rbd image backend. I think the cleanest thing we can do is
+            # from the driver check to see if instance.migration_context is not
+            # None and if so, get the Migration record for that context
+            # (instance.migration_context.migration_id) and from that check the
+            # Migration.cross_cell_move flag and if True, then flatten the
+            # image.
+            compute_utils.delete_image(
+                ctxt, instance, self.image_api, snapshot_id)
+
+        migration.status = 'finished'
+        migration.save()
+
+        self._update_instance_after_spawn(
+            ctxt, instance, vm_state=vm_states.RESIZED)
+        # Setting the host/node values will make the ResourceTracker continue
+        # to track usage for this instance on this host.
+        instance.host = migration.dest_compute
+        instance.node = migration.dest_node
+        instance.save(expected_task_state=task_states.RESIZE_FINISH)
+
+        # Broadcast to all schedulers that the instance is on this host.
+        self._update_scheduler_instance_info(ctxt, instance)
+        self._send_finish_resize_notifications(
+            ctxt, instance, bdms, network_info,
+            fields.NotificationPhase.END)
+
+    def _finish_snapshot_based_resize_at_dest_spawn(
+            self, ctxt, instance, migration, image_meta, bdms):
+        """Sets up volumes and networking and spawns the guest on the dest host
+
+        If the instance was stopped when the resize was initiated the guest
+        will be created but remain in a shutdown power state.
+
+        If the spawn fails, port bindings are rolled back to the source host
+        and volume connections are terminated for this dest host.
+
+        :param ctxt: nova auth request context
+        :param instance: Instance object being migrated
+        :param migration: Migration object for the operation
+        :param image_meta: ImageMeta object used during driver.spawn
+        :param bdms: BlockDeviceMappingList of BDMs for the instance
+        """
+        # Update the volume attachments using this host's connector.
+        # That will update the BlockDeviceMapping.connection_info which
+        # will be used to connect the volumes on this host during spawn().
+        block_device_info = self._prep_block_device(ctxt, instance, bdms)
+
+        allocations = self.reportclient.get_allocations_for_consumer(
+            ctxt, instance.uuid)
+
+        # We do not call self.network_api.setup_networks_on_host here because
+        # for neutron that sets up the port migration profile which is only
+        # used during live migration with DVR. Yes it is gross knowing what
+        # that method does internally. We could change this when bug 1814837
+        # is fixed if setup_networks_on_host is made smarter by passing the
+        # migration record and the method checks the migration_type.
+
+        # Activate the port bindings for this host.
+        # FIXME(mriedem): We're going to have the same issue as bug 1813789
+        # here because this will update the port bindings and send the
+        # network-vif-plugged event and that means when driver.spawn waits for
+        # it we might have already gotten the event and neutron won't send
+        # another one so we could timeout.
+        # TODO(mriedem): Calculate provider mappings when we support cross-cell
+        # resize/migrate with ports having resource requests.
+        self.network_api.migrate_instance_finish(
+            ctxt, instance, migration, provider_mappings=None)
+        network_info = self.network_api.get_instance_nw_info(ctxt, instance)
+
+        # If the original vm_state was STOPPED, we do not automatically
+        # power on the instance after it is migrated.
+        power_on = instance.system_metadata['old_vm_state'] == vm_states.ACTIVE
+        try:
+            # NOTE(mriedem): If this instance uses a config drive, it will get
+            # rebuilt here which means any personality files will be lost,
+            # similar to unshelve. If the instance is not using a config drive
+            # and getting metadata from the metadata API service, personality
+            # files would be lost regardless of the move operation.
+            self.driver.spawn(
+                ctxt, instance, image_meta, injected_files=[],
+                admin_password=None, allocations=allocations,
+                network_info=network_info, block_device_info=block_device_info,
+                power_on=power_on)
+        except Exception:
+            with excutils.save_and_reraise_exception(logger=LOG):
+                # Rollback port bindings to the source host.
+                try:
+                    # This is gross but migrate_instance_start looks at the
+                    # migration.dest_compute to determine where to activate the
+                    # port bindings and we want the source compute port
+                    # bindings to be re-activated. Remember at this point the
+                    # instance.host is still pointing at the source compute.
+                    # TODO(mriedem): Maybe we should be calling
+                    # setup_instance_network_on_host here to deal with pci
+                    # devices?
+                    with utils.temporary_mutation(
+                            migration, dest_compute=migration.source_compute):
+                        self.network_api.migrate_instance_start(
+                            ctxt, instance, migration)
+                except Exception:
+                    LOG.exception(
+                        'Failed to activate port bindings on the source '
+                        'host: %s', migration.source_compute,
+                        instance=instance)
+
+                # Rollback volume connections on this host.
+                for bdm in bdms:
+                    if bdm.is_volume:
+                        try:
+                            self._remove_volume_connection(
+                                ctxt, bdm, instance, delete_attachment=True)
+                        except Exception:
+                            LOG.exception('Failed to remove volume connection '
+                                          'on this host %s for volume %s.',
+                                          self.host, bdm.volume_id,
+                                          instance=instance)
 
     @wrap_exception()
     @wrap_instance_fault

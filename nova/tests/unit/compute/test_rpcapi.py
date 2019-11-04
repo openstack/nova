@@ -155,6 +155,11 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             host = kwargs['instances'][0]['host']
         elif 'destination' in kwargs:
             host = expected_kwargs.pop('destination')
+        elif 'prepare_server' in kwargs:
+            # This is the "server" kwarg to the prepare() method so remove it
+            # from both kwargs that go to the actual RPC method call.
+            expected_kwargs.pop('prepare_server')
+            host = kwargs.pop('prepare_server')
         else:
             host = kwargs['instance']['host']
 
@@ -563,6 +568,37 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             instance=self.fake_instance_obj,
             migration=migration_obj.Migration(),
             snapshot_id=uuids.snapshot_id)
+        self.assertIn('Compute too old', six.text_type(ex))
+
+    def test_finish_snapshot_based_resize_at_dest(self):
+        """Tests happy path for finish_snapshot_based_resize_at_dest."""
+        self.flags(long_rpc_timeout=1234)
+        self._test_compute_api(
+            'finish_snapshot_based_resize_at_dest', 'call',
+            # compute method kwargs
+            instance=self.fake_instance_obj,
+            migration=migration_obj.Migration(dest_compute='dest'),
+            snapshot_id=uuids.snapshot_id,
+            request_spec=objects.RequestSpec(),
+            # client.prepare kwargs
+            version='5.7', prepare_server='dest',
+            call_monitor_timeout=60, timeout=1234)
+
+    @mock.patch('nova.rpc.ClientRouter.client')
+    def test_finish_snapshot_based_resize_at_dest_old_compute(self, client):
+        """Tests when the dest compute service is too old to call
+        finish_snapshot_based_resize_at_dest so MigrationError is raised.
+        """
+        client.return_value.can_send_version.return_value = False
+        rpcapi = compute_rpcapi.ComputeAPI()
+        ex = self.assertRaises(
+            exception.MigrationError,
+            rpcapi.finish_snapshot_based_resize_at_dest,
+            self.context,
+            instance=self.fake_instance_obj,
+            migration=migration_obj.Migration(dest_compute='dest'),
+            snapshot_id=uuids.snapshot_id,
+            request_spec=objects.RequestSpec())
         self.assertIn('Compute too old', six.text_type(ex))
 
     def test_reboot_instance(self):
