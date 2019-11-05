@@ -5,7 +5,7 @@ Launch an instance from a volume
 You can boot instances from a volume instead of an image.
 
 To complete these tasks, use these parameters on the
-:command:`openstack server create` command:
+:command:`nova boot` command:
 
 .. tabularcolumns:: |p{0.3\textwidth}|p{0.25\textwidth}|p{0.4\textwidth}|
 .. list-table::
@@ -13,7 +13,7 @@ To complete these tasks, use these parameters on the
    :widths: 30 15 30
 
    * - Task
-     - openstack server create parameter
+     - nova boot parameter
      - Information
    * - Boot an instance from an image and attach a non-bootable
        volume.
@@ -97,11 +97,11 @@ system.
 
    .. code-block:: console
 
-      $ openstack server create --flavor 2 --image 98901246-af91-43d8-b5e6-a4506aa8f369 \
+      $ nova boot --flavor 2 --image 98901246-af91-43d8-b5e6-a4506aa8f369 \
         --block-device source=volume,id=d620d971-b160-4c4e-8652-2513d74e2080,dest=volume,shutdown=preserve \
         myInstanceWithVolume
       +--------------------------------------+--------------------------------------------+
-      | Field                                | Value                                      |
+      | Property                             | Value                                      |
       +--------------------------------------+--------------------------------------------+
       | OS-DCF:diskConfig                    | MANUAL                                     |
       | OS-EXT-AZ:availability_zone          | nova                                       |
@@ -271,7 +271,7 @@ the volume to boot an instance.
    deleted when the instance is terminated.
 
    .. note:: The example here uses the ``--volume`` option for simplicity. The
-      ``--block-device`` option could also be used for more granular control
+      ``--block-device-mapping`` option could also be used for more granular control
       over the parameters. See the `openstack server create`_ documentation for
       details.
 
