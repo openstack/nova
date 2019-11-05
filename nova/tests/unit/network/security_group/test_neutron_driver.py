@@ -272,7 +272,7 @@ class TestNeutronDriver(test.NoDBTestCase):
         self.assertEqual(expected, result)
         self.mocked_client.list_security_groups.assert_called_once_with()
 
-    def test_instances_security_group_bindings(self):
+    def test_instances_security_group_bindings(self, detailed=False):
         server_id = 'c5a20e8d-c4b0-47cf-9dca-ebe4f758acb1'
         port1_id = '4c505aec-09aa-47bc-bcc0-940477e84dc0'
         port2_id = 'b3b31a53-6e29-479f-ae5c-00b7b71a6d44'
@@ -288,22 +288,37 @@ class TestNeutronDriver(test.NoDBTestCase):
         sg2 = {'id': sg2_id, 'name': 'eor'}
         security_groups_list = {'security_groups': [sg1, sg2]}
 
-        sg_bindings = {server_id: [{'name': 'wol'}, {'name': 'eor'}]}
-
         self.mocked_client.list_ports.return_value = port_list
         self.mocked_client.list_security_groups.return_value = (
             security_groups_list)
 
         sg_api = neutron_driver.SecurityGroupAPI()
-        result = sg_api.get_instances_security_groups_bindings(
-                                  self.context, servers)
+        with mock.patch.object(
+                sg_api, '_convert_to_nova_security_group_format') as convert:
+            result = sg_api.get_instances_security_groups_bindings(
+                                      self.context, servers, detailed=detailed)
+            if detailed:
+                convert.assert_has_calls([mock.call(sg1), mock.call(sg2)],
+                                         any_order=True)
+                sg_bindings = {server_id: [
+                    call() for call in convert.mock_calls
+                ]}
+            else:
+                convert.assert_not_called()
+                sg_bindings = {server_id: [{'name': 'wol'}, {'name': 'eor'}]}
         self.assertEqual(sg_bindings, result)
         self.mocked_client.list_ports.assert_called_once_with(
             device_id=[server_id])
+        expected_search_opts = {'id': mock.ANY}
+        if not detailed:
+            expected_search_opts['fields'] = ['id', 'name']
         self.mocked_client.list_security_groups.assert_called_once_with(
-            id=mock.ANY)
+            **expected_search_opts)
         self.assertEqual(sorted([sg1_id, sg2_id]),
             sorted(self.mocked_client.list_security_groups.call_args[1]['id']))
+
+    def test_instances_security_group_bindings_detailed(self):
+        self.test_instances_security_group_bindings(detailed=True)
 
     def test_instances_security_group_bindings_port_not_found(self):
         server_id = 'c5a20e8d-c4b0-47cf-9dca-ebe4f758acb1'
@@ -355,7 +370,7 @@ class TestNeutronDriver(test.NoDBTestCase):
                                   self.context, servers)
         self.assertEqual(sg_bindings, result)
         self.mocked_client.list_security_groups.assert_called_once_with(
-            id=mock.ANY)
+            id=mock.ANY, fields=['id', 'name'])
         self.assertEqual(sorted([sg1_id, sg2_id]),
             sorted(self.mocked_client.list_security_groups.call_args[1]['id']))
         self.assertEqual(expected_args,
@@ -392,7 +407,7 @@ class TestNeutronDriver(test.NoDBTestCase):
         self.mocked_client.list_ports.assert_called_once_with(
             device_id=['server_1'])
         self.mocked_client.list_security_groups.assert_called_once_with(
-            id=mock.ANY)
+            id=mock.ANY, fields=['id', 'name'])
         self.assertEqual(['1', '2'],
             sorted(self.mocked_client.list_security_groups.call_args[1]['id']))
 
