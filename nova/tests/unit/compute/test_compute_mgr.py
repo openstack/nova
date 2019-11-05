@@ -3745,7 +3745,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             # both instance_1 and instance_2 is destroyed in the driver
             destroy.assert_has_calls(
                 [mock.call(self.context, instance_1, None, {}, True),
-                 mock.call(self.context, instance_2, None, {}, True)])
+                 mock.call(self.context, instance_2, None, {}, True)],
+                any_order=True)
 
             # but only instance_2 is deallocated as the compute node for
             # instance_1 is already deleted
@@ -3754,6 +3755,93 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 uuids.user_id, uuids.project_id, mock.sentinel.resources)
 
             self.assertEqual(2, get_node.call_count)
+
+    def test_destroy_evacuated_instances_not_on_hypervisor(self):
+        our_host = self.compute.host
+        flavor = objects.Flavor()
+        instance_1 = objects.Instance(self.context, flavor=flavor)
+        instance_1.uuid = uuids.instance_1
+        instance_1.task_state = None
+        instance_1.vm_state = vm_states.ACTIVE
+        instance_1.host = 'not-' + our_host
+        instance_1.user_id = uuids.user_id
+        instance_1.project_id = uuids.project_id
+        instance_1.deleted = False
+
+        migration_1 = objects.Migration(instance_uuid=instance_1.uuid)
+        migration_1.status = 'done'
+        migration_1.source_node = 'our-node'
+
+        our_node = objects.ComputeNode(
+            host=our_host, uuid=uuids.our_node_uuid)
+
+        with test.nested(
+            mock.patch.object(self.compute, '_get_instances_on_driver',
+                               return_value=[]),
+            mock.patch.object(self.compute.driver, 'destroy'),
+            mock.patch('nova.objects.MigrationList.get_by_filters'),
+            mock.patch('nova.objects.Migration.save'),
+            mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename'),
+            mock.patch('nova.scheduler.utils.resources_from_flavor'),
+            mock.patch.object(self.compute.reportclient,
+                              'remove_provider_from_instance_allocation'),
+            mock.patch('nova.objects.Instance.get_by_uuid')
+        ) as (_get_intances_on_driver, destroy, migration_list, migration_save,
+              get_node, get_resources, remove_allocation,
+              instance_get_by_uuid):
+            migration_list.return_value = [migration_1]
+            instance_get_by_uuid.return_value = instance_1
+            get_node.return_value = our_node
+            get_resources.return_value = mock.sentinel.resources
+
+            self.compute._destroy_evacuated_instances(self.context)
+
+            # nothing to be destroyed as the driver returned no instances on
+            # the hypervisor
+            self.assertFalse(destroy.called)
+
+            # but our only instance still cleaned up in placement
+            remove_allocation.assert_called_once_with(
+                self.context, instance_1.uuid, uuids.our_node_uuid,
+                instance_1.user_id, instance_1.project_id,
+                mock.sentinel.resources)
+            instance_get_by_uuid.assert_called_once_with(
+                self.context, instance_1.uuid)
+            get_node.assert_called_once_with(
+                self.context, our_host, 'our-node')
+
+    def test_destroy_evacuated_instances_not_on_hyp_and_instance_deleted(self):
+        migration_1 = objects.Migration(instance_uuid=uuids.instance_1)
+        migration_1.status = 'done'
+        migration_1.source_node = 'our-node'
+
+        with test.nested(
+            mock.patch.object(self.compute, '_get_instances_on_driver',
+                               return_value=[]),
+            mock.patch.object(self.compute.driver, 'destroy'),
+            mock.patch('nova.objects.MigrationList.get_by_filters'),
+            mock.patch('nova.objects.Migration.save'),
+            mock.patch('nova.scheduler.utils.resources_from_flavor'),
+            mock.patch.object(self.compute.reportclient,
+                              'remove_provider_from_instance_allocation'),
+            mock.patch('nova.objects.Instance.get_by_uuid')
+        ) as (_get_instances_on_driver,
+              destroy, migration_list, migration_save, get_resources,
+              remove_allocation, instance_get_by_uuid):
+            migration_list.return_value = [migration_1]
+            instance_get_by_uuid.side_effect = exception.InstanceNotFound(
+                instance_id=uuids.instance_1)
+
+            self.compute._destroy_evacuated_instances(self.context)
+
+            # nothing to be destroyed as the driver returned no instances on
+            # the hypervisor
+            self.assertFalse(destroy.called)
+
+            instance_get_by_uuid.assert_called_once_with(
+                self.context, uuids.instance_1)
+            # nothing to be cleaned as the instance was deleted already
+            self.assertFalse(remove_allocation.called)
 
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_destroy_evacuated_instances')
