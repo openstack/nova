@@ -338,7 +338,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
 
         return ports
 
-    def _get_secgroups_from_port_list(self, ports, neutron):
+    def _get_secgroups_from_port_list(self, ports, neutron, fields=None):
         """Returns a dict of security groups keyed by their ids."""
 
         def _chunk_by_ids(sg_ids, limit):
@@ -361,6 +361,8 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
         security_groups = {}
         for sg_id_list in _chunk_by_ids(sg_ids, MAX_SEARCH_IDS):
             sg_search_opts = {'id': sg_id_list}
+            if fields:
+                sg_search_opts['fields'] = fields
             search_results = neutron.list_security_groups(**sg_search_opts)
             for sg in search_results.get('security_groups'):
                 security_groups[sg['id']] = sg
@@ -371,13 +373,20 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                                                detailed=False):
         """Returns a dict(instance_id, [security_groups]) to allow obtaining
         all of the instances and their security groups in one shot.
+        If detailed is False only the security group name is returned.
         """
 
         neutron = neutronapi.get_client(context)
 
         ports = self._get_ports_from_server_list(servers, neutron)
 
-        security_groups = self._get_secgroups_from_port_list(ports, neutron)
+        # If detailed is True, we want all fields from the security groups
+        # including the potentially slow-to-join security_group_rules field.
+        # But if detailed is False, only get the id and name fields since
+        # that's all we'll use below.
+        fields = None if detailed else ['id', 'name']
+        security_groups = self._get_secgroups_from_port_list(
+            ports, neutron, fields=fields)
 
         instances_security_group_bindings = {}
         for port in ports:
@@ -407,7 +416,8 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
     def get_instance_security_groups(self, context, instance, detailed=False):
         """Returns the security groups that are associated with an instance.
         If detailed is True then it also returns the full details of the
-        security groups associated with an instance.
+        security groups associated with an instance, otherwise just the
+        security group name.
         """
         servers = [{'id': instance.uuid}]
         sg_bindings = self.get_instances_security_groups_bindings(
