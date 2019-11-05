@@ -245,7 +245,15 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
 
             expected = expected % self.subs
             expected = '^%s$' % expected
-            match = re.match(expected, result)
+            try:
+                match = re.match(expected, result)
+            except TypeError as e:
+                raise NoMatch(
+                    'Values do not match:\n'
+                    'Template: %(expected)s\n%(result_str)s: %(result)s\n'
+                    'Error: %(error)s' %
+                    {'expected': expected, 'result_str': result_str,
+                     'result': result, 'error': e})
             if not match:
                 raise NoMatch(
                     'Values do not match:\n'
