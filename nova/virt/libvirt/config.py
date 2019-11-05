@@ -1933,7 +1933,9 @@ class LibvirtConfigGuestController(LibvirtConfigGuestDevice):
 
     @property
     def uses_virtio(self):
-        return 'virtio-scsi' == self.model
+        model_is_virtio = 'virtio-scsi' == self.model
+        type_is_virtio = 'virtio-serial' == self.type
+        return model_is_virtio or type_is_virtio
 
     def format_dom(self):
         controller = super(LibvirtConfigGuestController, self).format_dom()

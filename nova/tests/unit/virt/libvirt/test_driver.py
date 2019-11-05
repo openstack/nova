@@ -3060,7 +3060,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        "_has_uefi_support", new=mock.Mock(return_value=True))
-    def _setup_sev_guest(self):
+    def _setup_sev_guest(self, extra_image_properties=None):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr._host._supports_amd_sev = True
 
@@ -3082,13 +3082,16 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.flavor = flavor
+        image_meta_properties = {
+            'hw_firmware_type': 'uefi',
+            'hw_machine_type': 'q35'}
+        if extra_image_properties:
+            image_meta_properties.update(extra_image_properties)
         image_meta = objects.ImageMeta.from_dict({
             'id': 'd9c6aeee-8258-4bdb-bca4-39940461b182',
             'name': 'fakeimage',
             'disk_format': 'raw',
-            'properties': {'hw_firmware_type': 'uefi',
-                           'hw_machine_type': 'q35'}
-        })
+            'properties': image_meta_properties})
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref,
@@ -5980,6 +5983,24 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(cfg.devices[4].type, "vnc")
         self.assertEqual(cfg.devices[6].type, "unix")
         self.assertEqual(cfg.devices[6].target_name, "org.qemu.guest_agent.0")
+
+    @mock.patch.object(host.Host, 'get_domain_capabilities')
+    @mock.patch.object(designer, 'set_driver_iommu_for_sev')
+    def test_get_guest_config_with_qga_through_image_meta_with_sev(
+            self, mock_designer, fake_domain_caps):
+        self._setup_fake_domain_caps(fake_domain_caps)
+        extra_properties = {"hw_qemu_guest_agent": "yes"}
+        cfg = self._setup_sev_guest(extra_properties)
+
+        self.assertIsInstance(cfg.devices[8],
+                              vconfig.LibvirtConfigGuestController)
+        self.assertIsInstance(cfg.devices[9],
+                              vconfig.LibvirtConfigGuestChannel)
+
+        self.assertEqual(cfg.devices[8].type, "virtio-serial")
+        self.assertTrue(cfg.devices[8].uses_virtio)
+        self.assertEqual(cfg.devices[9].type, "unix")
+        self.assertEqual(cfg.devices[9].target_name, "org.qemu.guest_agent.0")
 
     def test_get_guest_config_with_video_driver_vram(self):
         self.flags(enabled=False, group='vnc')

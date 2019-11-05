@@ -1,0 +1,14 @@
+---
+fixes:
+  - |
+    `Bug 1845986`_ has been fixed by adding iommu driver when the following
+    metadata options are used with AMD SEV:
+
+    - ``hw_scsi_model=virtio-scsi`` and either ``hw_disk_bus=scsi`` or
+      ``hw_cdrom_bus=scsi``
+    - ``hw_video_model=virtio``
+
+    Also a virtio-serial controller is created when ``hw_qemu_guest_agent=yes``
+    option is used, together with iommu driver for it.
+
+    .. _Bug 1845986: https://launchpad.net/bugs/1845986
