@@ -73,3 +73,46 @@ if [[ $LEAKED_ALLOCATIONS -eq 1 ]]; then
     exit 1
 fi
 echo "Resource provider allocations were cleaned up properly."
+
+
+# Test "nova-manage placement heal_allocations" by creating a server, deleting
+# its allocations in placement, and then running heal_allocations and assert
+# the allocations were healed as expected.
+image_id=$(openstack image list -f value -c ID | awk 'NR==1{print $1}')
+flavor_id=$(openstack flavor list -f value -c ID | awk 'NR==1{print $1}')
+network_id=$(openstack network list --no-share -f value -c ID | awk 'NR==1{print $1}')
+
+echo "Creating server for heal_allocations testing"
+openstack server create --image ${image_id} --flavor ${flavor_id} \
+--nic net-id=${network_id} --wait heal-allocations-test
+server_id=$(openstack server show heal-allocations-test -f value -c id)
+
+# Make sure there are allocations for the consumer.
+allocations=$(openstack resource provider allocation show ${server_id} \
+              -c resources -f value)
+if [[ "$allocations" == "" ]]; then
+    echo "No allocations found for the server."
+    exit 2
+fi
+
+echo "Deleting allocations in placement for the server"
+openstack resource provider allocation delete ${server_id}
+
+# Make sure the allocations are gone.
+allocations=$(openstack resource provider allocation show ${server_id} \
+              -c resources -f value)
+if [[ "$allocations" != "" ]]; then
+    echo "Server allocations were not deleted."
+    exit 2
+fi
+
+echo "Healing allocations"
+nova-manage placement heal_allocations --verbose
+
+# Make sure there are allocations for the consumer.
+allocations=$(openstack resource provider allocation show ${server_id} \
+              -c resources -f value)
+if [[ "$allocations" == "" ]]; then
+    echo "Failed to heal allocations."
+    exit 2
+fi
