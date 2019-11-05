@@ -622,6 +622,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             return instance_obj._make_instance_list(
                     self.context, objects.InstanceList(), db_list, None)
 
+        @mock.patch.object(manager.ComputeManager,
+                           '_error_out_instances_whose_build_was_interrupted')
         @mock.patch.object(fake_driver.FakeDriver, 'init_host')
         @mock.patch.object(fake_driver.FakeDriver, 'filter_defer_apply_on')
         @mock.patch.object(fake_driver.FakeDriver, 'filter_defer_apply_off')
@@ -634,7 +636,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         def _do_mock_calls(mock_update_scheduler, mock_inst_init,
                            mock_destroy, mock_admin_ctxt, mock_host_get,
                            mock_filter_off, mock_filter_on, mock_init_host,
-                           defer_iptables_apply):
+                           mock_error_interrupted, defer_iptables_apply):
             mock_admin_ctxt.return_value = self.context
             inst_list = _make_instance_list(startup_instances)
             mock_host_get.return_value = inst_list
@@ -658,6 +660,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock_update_scheduler.assert_called_once_with(
                 self.context, inst_list)
 
+            mock_error_interrupted.assert_called_once_with(
+                self.context, {inst.uuid for inst in inst_list})
+
         # Test with defer_iptables_apply
         self.flags(defer_iptables_apply=True)
         _do_mock_calls(defer_iptables_apply=True)
@@ -666,6 +671,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.flags(defer_iptables_apply=False)
         _do_mock_calls(defer_iptables_apply=False)
 
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_error_out_instances_whose_build_was_interrupted')
     @mock.patch('nova.objects.InstanceList.get_by_host',
                 return_value=objects.InstanceList())
     @mock.patch('nova.compute.manager.ComputeManager.'
@@ -675,12 +682,14 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_update_scheduler_instance_info', mock.NonCallableMock())
     def test_init_host_no_instances(self, mock_destroy_evac_instances,
-                                    mock_get_by_host):
+                                    mock_get_by_host, mock_error_interrupted):
         """Tests the case that init_host runs and there are no instances
         on this host yet (it's brand new). Uses NonCallableMock for the
         methods we assert should not be called.
         """
         self.compute.init_host()
+
+        mock_error_interrupted.assert_called_once_with(mock.ANY, set())
 
     @mock.patch('nova.objects.InstanceList')
     @mock.patch('nova.objects.MigrationList.get_by_filters')
@@ -711,6 +720,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertFalse(mock_register.called)
 
     @mock.patch('nova.context.RequestContext.elevated')
+    @mock.patch.object(manager.ComputeManager,
+                       '_error_out_instances_whose_build_was_interrupted')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
     @mock.patch('nova.scheduler.utils.resources_from_flavor')
     @mock.patch.object(manager.ComputeManager, '_get_instances_on_driver')
@@ -725,7 +736,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     def test_init_host_with_evacuated_instance(self, mock_save, mock_mig_get,
             mock_temp_mut, mock_init_host, mock_destroy, mock_host_get,
             mock_admin_ctxt, mock_init_virt, mock_get_inst, mock_resources,
-            mock_get_node, mock_elevated):
+            mock_get_node, mock_error_interrupted, mock_elevated):
         our_host = self.compute.host
         not_our_host = 'not-' + our_host
 
@@ -775,6 +786,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                              mock.ANY, mock.ANY, mock.ANY)
         mock_save.assert_called_once_with()
 
+        mock_error_interrupted.assert_called_once_with(
+            self.context, {deleted_instance.uuid})
+
+    @mock.patch.object(manager.ComputeManager,
+                       '_error_out_instances_whose_build_was_interrupted')
     @mock.patch.object(context, 'get_admin_context')
     @mock.patch.object(objects.InstanceList, 'get_by_host')
     @mock.patch.object(fake_driver.FakeDriver, 'init_host')
@@ -783,7 +799,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                   '_destroy_evacuated_instances')
     def test_init_host_with_in_progress_evacuations(self, mock_destroy_evac,
             mock_init_instance, mock_init_host, mock_host_get,
-            mock_admin_ctxt):
+            mock_admin_ctxt, mock_error_interrupted):
         """Assert that init_instance is not called for instances that are
            evacuating from the host during init_host.
         """
@@ -804,6 +820,145 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         mock_init_instance.assert_called_once_with(
             self.context, active_instance)
+        mock_error_interrupted.assert_called_once_with(
+            self.context, {active_instance.uuid, evacuating_instance.uuid})
+
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(objects.InstanceList, 'get_by_filters')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocations_for_resource_provider')
+    @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename')
+    @mock.patch.object(fake_driver.FakeDriver, 'get_available_nodes')
+    def test_init_host_with_interrupted_instance_build(
+            self, mock_get_nodes, mock_get_by_host_and_node,
+            mock_get_allocations, mock_get_instances, mock_instance_save):
+
+        mock_get_nodes.return_value = ['fake-node']
+        mock_get_by_host_and_node.return_value = objects.ComputeNode(
+            host=self.compute.host, uuid=uuids.cn_uuid)
+
+        active_instance = fake_instance.fake_instance_obj(
+            self.context, host=self.compute.host, uuid=uuids.active_instance)
+        evacuating_instance = fake_instance.fake_instance_obj(
+            self.context, host=self.compute.host, uuid=uuids.evac_instance)
+        interrupted_instance = fake_instance.fake_instance_obj(
+            self.context, host=None, uuid=uuids.interrupted_instance,
+            vm_state=vm_states.BUILDING)
+
+        # we have 3 different instances. We need consumers for each instance
+        # in placement and an extra consumer that is not an instance
+        allocations = {
+            uuids.active_instance: "fake-resources-active",
+            uuids.evac_instance: "fake-resources-evacuating",
+            uuids.interrupted_instance: "fake-resources-interrupted",
+            uuids.not_an_instance: "fake-resources-not-an-instance",
+        }
+        mock_get_allocations.return_value = allocations
+
+        # get is called with a uuid filter containing interrupted_instance,
+        # error_instance, and not_an_instance but it will only return the
+        # interrupted_instance as the error_instance is not in building state
+        # and not_an_instance does not match with any instance in the db.
+        mock_get_instances.return_value = objects.InstanceList(
+            self.context, objects=[interrupted_instance])
+
+        # interrupted_instance and error_instance is not in the list passed in
+        # because it is not assigned to the compute and therefore not processed
+        # by init_host and init_instance
+        self.compute._error_out_instances_whose_build_was_interrupted(
+            self.context,
+            {inst.uuid for inst in [active_instance, evacuating_instance]})
+
+        mock_get_by_host_and_node.assert_called_once_with(
+            self.context, self.compute.host, 'fake-node')
+        mock_get_allocations.assert_called_once_with(
+            self.context, uuids.cn_uuid)
+
+        mock_get_instances.assert_called_once_with(
+            self.context,
+            {'vm_state': 'building',
+             'uuid': {uuids.interrupted_instance, uuids.not_an_instance}
+             },
+            expected_attrs=[])
+
+        # this is expected to be called only once for interrupted_instance
+        mock_instance_save.assert_called_once_with()
+        self.assertEqual(vm_states.ERROR, interrupted_instance.vm_state)
+
+    @mock.patch.object(manager.LOG, 'warning')
+    @mock.patch.object(
+        fake_driver.FakeDriver, 'get_available_nodes',
+        side_effect=exception.VirtDriverNotReady)
+    def test_init_host_with_interrupted_instance_build_driver_not_ready(
+            self, mock_get_nodes, mock_log_warning):
+        self.compute._error_out_instances_whose_build_was_interrupted(
+            self.context, set())
+
+        mock_log_warning.assert_called_once_with(
+            "Virt driver is not ready. Therefore unable to error out any "
+            "instances stuck in BUILDING state on this node. If this is the "
+            "first time this service is starting on this host, then you can "
+            "ignore this warning.")
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocations_for_resource_provider')
+    @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename')
+    @mock.patch.object(fake_driver.FakeDriver, 'get_available_nodes')
+    def test_init_host_with_interrupted_instance_build_compute_node_not_found(
+            self, mock_get_nodes, mock_get_by_host_and_node,
+            mock_get_allocations):
+
+        mock_get_nodes.return_value = ['fake-node1', 'fake-node2']
+        mock_get_by_host_and_node.side_effect = [
+            exception.ComputeHostNotFound(host='fake-node1'),
+            objects.ComputeNode(host=self.compute.host, uuid=uuids.cn_uuid)]
+
+        self.compute._error_out_instances_whose_build_was_interrupted(
+            self.context, set())
+
+        # check that nova skip the node that is not found in the db and
+        # continue with the next
+        mock_get_by_host_and_node.assert_has_calls(
+            [
+                mock.call(self.context, self.compute.host, 'fake-node1'),
+                mock.call(self.context, self.compute.host, 'fake-node2'),
+            ]
+        )
+
+        # placement only queried for the existing compute
+        mock_get_allocations.assert_called_once_with(
+            self.context, uuids.cn_uuid)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocations_for_resource_provider')
+    @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename')
+    @mock.patch.object(fake_driver.FakeDriver, 'get_available_nodes')
+    def test_init_host_with_interrupted_instance_build_compute_rp_not_found(
+            self, mock_get_nodes, mock_get_by_host_and_node,
+            mock_get_allocations):
+
+        mock_get_nodes.return_value = ['fake-node1', 'fake-node2']
+        mock_get_by_host_and_node.side_effect = [
+            objects.ComputeNode(host=self.compute.host, uuid=uuids.cn1_uuid),
+            objects.ComputeNode(host=self.compute.host, uuid=uuids.cn2_uuid),
+        ]
+
+        mock_get_allocations.side_effect = [
+            {},
+            {uuids.active_instance: "fake-resources"}
+        ]
+
+        self.compute._error_out_instances_whose_build_was_interrupted(
+            self.context, {uuids.active_instance})
+
+        # check that nova skip the node that is not found in placement and
+        # continue with the next
+        mock_get_allocations.assert_has_calls(
+            [
+                mock.call(self.context, uuids.cn1_uuid),
+                mock.call(self.context, uuids.cn2_uuid),
+            ]
+        )
 
     def test_init_instance_with_binding_failed_vif_type(self):
         # this instance will plug a 'binding_failed' vif
@@ -3608,6 +3763,14 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         expected_exception = exception.InstanceAgentNotEnabled
         self._do_test_set_admin_password_driver_error(
             exc, vm_states.ACTIVE, None, expected_exception)
+
+    def test_destroy_evacuated_instances_no_migrations(self):
+        with mock.patch(
+                'nova.objects.MigrationList.get_by_filters') as migration_list:
+            migration_list.return_value = []
+
+            result = self.compute._destroy_evacuated_instances(self.context)
+            self.assertEqual({}, result)
 
     def test_destroy_evacuated_instances(self):
         our_host = self.compute.host
