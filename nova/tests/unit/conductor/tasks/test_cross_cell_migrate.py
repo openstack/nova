@@ -969,7 +969,8 @@ class FinishResizeAtDestTaskTestCase(test.TestCase):
         self.assertEqual(self.target_context.cell_uuid,
                          mapping.cell_mapping.uuid)
 
-    def test_finish_snapshot_based_resize_at_dest_fails(self):
+    @mock.patch('nova.objects.InstanceMapping.save')
+    def test_finish_snapshot_based_resize_at_dest_fails(self, mock_im_save):
         """Tests when the finish_snapshot_based_resize_at_dest compute method
         raises an error.
         """
@@ -994,6 +995,8 @@ class FinishResizeAtDestTaskTestCase(test.TestCase):
         # copied from the target cell DB to the source cell DB.
         copy_fault.assert_called_once_with(self.source_context)
         copy_event.assert_called_once_with(self.source_context)
+        # Assert the instance mapping was never updated.
+        mock_im_save.assert_not_called()
 
     def test_copy_latest_fault(self):
         """Tests _copy_latest_fault working as expected"""
