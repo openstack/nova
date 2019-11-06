@@ -2719,7 +2719,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         notify_mock.assert_called_once_with(self.context, inst_obj.uuid,
                                               'migrate_server', updates,
                                               exc_info, fake_spec)
-        rollback_mock.assert_called_once_with()
+        rollback_mock.assert_called_once_with(exc_info)
 
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
@@ -2770,7 +2770,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         notify_mock.assert_called_once_with(self.context, inst_obj.uuid,
                                             'migrate_server', updates,
                                             exc_info, fake_spec)
-        rollback_mock.assert_called_once_with()
+        rollback_mock.assert_called_once_with(exc_info)
 
     def test_cold_migrate_no_valid_host_error_msg(self):
         inst_obj = objects.Instance(
@@ -2911,7 +2911,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         notify_mock.assert_called_once_with(self.context, inst_obj.uuid,
                                             'migrate_server', updates,
                                             exc_info, fake_spec)
-        rollback_mock.assert_called_once_with()
+        rollback_mock.assert_called_once_with(exc_info)
 
     @mock.patch.object(objects.RequestSpec, 'save')
     @mock.patch.object(migrate.MigrationTask, 'execute')

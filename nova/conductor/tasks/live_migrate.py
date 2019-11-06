@@ -140,7 +140,7 @@ class LiveMigrationTask(base.TaskBase):
                 migration=self.migration,
                 migrate_data=self.migrate_data)
 
-    def rollback(self):
+    def rollback(self, ex):
         # TODO(johngarbutt) need to implement the clean up operation
         # but this will make sense only once we pull in the compute
         # calls, since this class currently makes no state changes,

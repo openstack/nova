@@ -366,7 +366,7 @@ class TargetDBSetupTaskTestCase(
         # Rollback the task and assert the instance and its related data are
         # gone from the target cell database. Use a modified context to make
         # sure the instance was hard-deleted.
-        task.rollback()
+        task.rollback(test.TestingException('error'))
         read_deleted_ctxt = self.target_context.elevated(read_deleted='yes')
         self.assertRaises(exception.InstanceNotFound,
                           objects.Instance.get_by_uuid,
@@ -426,7 +426,7 @@ class CrossCellMigrationTaskTestCase(test.NoDBTestCase):
             mock.sentinel.target_cell_mapping,
             mock_prep_resize_at_source.return_value)
         # Now rollback the completed sub-tasks
-        self.task.rollback()
+        self.task.rollback(test.TestingException('error'))
 
     def test_perform_external_api_checks_ok(self):
         """Tests the happy path scenario where neutron APIs are new enough for
@@ -461,14 +461,14 @@ class CrossCellMigrationTaskTestCase(test.NoDBTestCase):
                 task.rollback.side_effect = test.TestingException('sub-task')
             self.task._completed_tasks[str(x)] = task
         # Run execute but mock _execute to fail somehow.
-        with mock.patch.object(self.task, '_execute',
-                               side_effect=test.TestingException('main task')):
+        error = test.TestingException('main task')
+        with mock.patch.object(self.task, '_execute', side_effect=error):
             # The TestingException from the main task should be raised.
             ex = self.assertRaises(test.TestingException, self.task.execute)
             self.assertEqual('main task', six.text_type(ex))
         # And all three sub-task rollbacks should have been called.
         for subtask in self.task._completed_tasks.values():
-            subtask.rollback.assert_called_once_with()
+            subtask.rollback.assert_called_once_with(error)
         # The 2nd task rollback should have raised and been logged.
         mock_log_exception.assert_called_once()
         self.assertEqual('1', mock_log_exception.call_args[0][1])
@@ -771,7 +771,7 @@ class PrepResizeAtDestTaskTestCase(test.NoDBTestCase):
         ) as (
             delete_port_binding, attachment_delete
         ):
-            self.task.rollback()
+            self.task.rollback(test.TestingException('error'))
         # Should have called both delete methods twice in any order.
         host = self.task.host_selection.service_host
         delete_port_binding.assert_has_calls([
@@ -857,11 +857,11 @@ class PrepResizeAtSourceTaskTestCase(test.NoDBTestCase):
     def test_rollback(self, delete_image):
         """Tests rollback when there is an image and when there is not."""
         # First test when there is no image_id so we do not try to delete it.
-        self.task.rollback()
+        self.task.rollback(test.TestingException('error'))
         delete_image.assert_not_called()
         # Now set an image and we should try to delete it.
         self.task._image_id = uuids.image_id
-        self.task.rollback()
+        self.task.rollback(test.TestingException('error'))
         delete_image.assert_called_once_with(
             self.task.context, self.task.instance, self.task.image_api,
             self.task._image_id)

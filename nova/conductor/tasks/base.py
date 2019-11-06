@@ -22,9 +22,9 @@ def rollback_wrapper(original):
     def wrap(self):
         try:
             return original(self)
-        except Exception:
+        except Exception as ex:
             with excutils.save_and_reraise_exception():
-                self.rollback()
+                self.rollback(ex)
     return wrap
 
 
@@ -48,7 +48,7 @@ class TaskBase(object):
         """
         pass
 
-    def rollback(self):
+    def rollback(self, ex):
         """Rollback failed task
         Descendants should implement this method to allow task user to
         rollback status to state before execute method  was call
