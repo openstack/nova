@@ -2845,6 +2845,9 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             inst_obj.availability_zone, project_id=inst_obj.project_id,
             user_id=inst_obj.user_id)
 
+    @mock.patch.object(migrate.MigrationTask,
+                       '_is_selected_host_in_source_cell',
+                       return_value=True)
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     @mock.patch.object(objects.RequestSpec, 'from_components')
@@ -2858,7 +2861,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     def test_cold_migrate_exception_host_in_error_state_and_raise(
             self, _preallocate_migration, prep_resize_mock, rollback_mock,
             notify_mock, select_dest_mock, metadata_mock, spec_fc_mock,
-            sig_mock, im_mock):
+            sig_mock, im_mock, check_cell_mock):
         inst_obj = objects.Instance(
             image_ref='fake-image_ref',
             vm_state=vm_states.STOPPED,
