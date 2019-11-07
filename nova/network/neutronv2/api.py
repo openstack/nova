@@ -2231,7 +2231,11 @@ class API(base_api.NetworkAPI):
         :return: A list of RequestGroup objects
         """
 
-        neutron = get_client(context)
+        # NOTE(gibi): We need to use an admin client as otherwise a non admin
+        # initiated resize causes that neutron does not fill the
+        # resource_request field of the port and this will lead to resource
+        # allocation issues. See bug 1849695
+        neutron = get_client(context, admin=True)
         # get the ports associated to this instance
         data = neutron.list_ports(
             device_id=instance_uuid, fields=['id', 'resource_request'])
