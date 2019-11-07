@@ -1276,7 +1276,7 @@ class InstancePowerStateField(BaseEnumField):
     AUTO_TYPE = InstancePowerState()
 
 
-class ListOfListsOfStringsField(fields.AutoTypedField):
+class ListOfListsOfStringsField(AutoTypedField):
     AUTO_TYPE = List(List(fields.String()))
 
 
@@ -1286,5 +1286,5 @@ class ListOfUUIDField(AutoTypedField):
     AUTO_TYPE = List(fields.UUID())
 
 
-class DictOfSetOfIntegersField(fields.AutoTypedField):
+class DictOfSetOfIntegersField(AutoTypedField):
     AUTO_TYPE = Dict(Set(fields.Integer()))
