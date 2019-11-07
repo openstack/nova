@@ -1463,6 +1463,8 @@ def notify_about_instance_delete(notifier, context, instance,
                 phase=fields.NotificationPhase.END)
 
 
+# TODO(mriedem): We should be able to remove this now that the ResourceTracker
+# requires drivers to implement the update_provider_tree interface.
 def compute_node_to_inventory_dict(compute_node):
     """Given a supplied `objects.ComputeNode` object, return a dict, keyed
     by resource class, of various inventory information.

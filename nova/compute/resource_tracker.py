@@ -82,6 +82,7 @@ def _instance_is_live_migrating(instance):
     return False
 
 
+# TODO(mriedem): Remove this now that get_inventory isn't being used anymore
 def _normalize_inventory_from_cn_obj(inv_data, cn):
     """Helper function that injects various information from a compute node
     object into the inventory dict returned from the virt driver's
@@ -1153,59 +1154,38 @@ class ResourceTracker(object):
         # the inventory, traits, and aggregates throughout.
         allocs = None
         try:
-            try:
-                self.driver.update_provider_tree(prov_tree, nodename)
-            except exception.ReshapeNeeded:
-                if not startup:
-                    # This isn't supposed to happen during periodic, so raise
-                    # it up; the compute manager will treat it specially.
-                    raise
-                LOG.info("Performing resource provider inventory and "
-                         "allocation data migration during compute service "
-                         "startup or fast-forward upgrade.")
-                allocs = self.reportclient.get_allocations_for_provider_tree(
-                    context, nodename)
-                self.driver.update_provider_tree(prov_tree, nodename,
-                                                 allocations=allocs)
+            self.driver.update_provider_tree(prov_tree, nodename)
+        except exception.ReshapeNeeded:
+            if not startup:
+                # This isn't supposed to happen during periodic, so raise
+                # it up; the compute manager will treat it specially.
+                raise
+            LOG.info("Performing resource provider inventory and "
+                     "allocation data migration during compute service "
+                     "startup or fast-forward upgrade.")
+            allocs = self.reportclient.get_allocations_for_provider_tree(
+                context, nodename)
+            self.driver.update_provider_tree(prov_tree, nodename,
+                                             allocations=allocs)
 
-            # Inject driver capabilities traits into the provider
-            # tree.  We need to determine the traits that the virt
-            # driver owns - so those that come from the tree itself
-            # (via the virt driver) plus the compute capabilities
-            # traits, and then merge those with the traits set
-            # externally that the driver does not own - and remove any
-            # set on the provider externally that the virt owns but
-            # aren't in the current list of supported traits.  For
-            # example, let's say we reported multiattach support as a
-            # trait at t1 and then at t2 it's not, so we need to
-            # remove it.  But at both t1 and t2 there is a
-            # CUSTOM_VENDOR_TRAIT_X which we can't touch because it
-            # was set externally on the provider.
-            # We also want to sync the COMPUTE_STATUS_DISABLED trait based
-            # on the related nova-compute service's disabled status.
-            traits = self._get_traits(
-                context, nodename, provider_tree=prov_tree)
-            prov_tree.update_traits(nodename, traits)
-        except NotImplementedError:
-            # TODO(mriedem): Remove the compatibility code in the U release.
-            LOG.warning('Compute driver "%s" does not implement the '
-                        '"update_provider_tree" interface. Compatibility for '
-                        'non-update_provider_tree interfaces will be removed '
-                        'in a future release and result in an error to report '
-                        'inventory for this compute service.',
-                        CONF.compute_driver)
-            # update_provider_tree isn't implemented yet - try get_inventory
-            try:
-                inv_data = self.driver.get_inventory(nodename)
-                _normalize_inventory_from_cn_obj(inv_data, compute_node)
-            except NotImplementedError:
-                # Eventually all virt drivers will return an inventory dict in
-                # the format that the placement API expects and we'll be able
-                # to remove this code branch
-                inv_data = compute_utils.compute_node_to_inventory_dict(
-                    compute_node)
-
-            prov_tree.update_inventory(nodename, inv_data)
+        # Inject driver capabilities traits into the provider
+        # tree.  We need to determine the traits that the virt
+        # driver owns - so those that come from the tree itself
+        # (via the virt driver) plus the compute capabilities
+        # traits, and then merge those with the traits set
+        # externally that the driver does not own - and remove any
+        # set on the provider externally that the virt owns but
+        # aren't in the current list of supported traits.  For
+        # example, let's say we reported multiattach support as a
+        # trait at t1 and then at t2 it's not, so we need to
+        # remove it.  But at both t1 and t2 there is a
+        # CUSTOM_VENDOR_TRAIT_X which we can't touch because it
+        # was set externally on the provider.
+        # We also want to sync the COMPUTE_STATUS_DISABLED trait based
+        # on the related nova-compute service's disabled status.
+        traits = self._get_traits(
+            context, nodename, provider_tree=prov_tree)
+        prov_tree.update_traits(nodename, traits)
 
         self.provider_tree = prov_tree
 

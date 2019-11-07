@@ -972,9 +972,6 @@ class ComputeDriver(object):
         node, as well as the inventory, aggregates, and traits associated with
         those resource providers.
 
-        This method supersedes get_inventory(): if this method is implemented,
-        get_inventory() is not used.
-
         Implementors of this interface are expected to set ``allocation_ratio``
         and ``reserved`` values for inventory records, which may be based on
         configuration options, e.g. ``[DEFAULT]/cpu_allocation_ratio``,
@@ -1045,12 +1042,6 @@ class ComputeDriver(object):
             resource class.
         :raises: ReshapeFailed if the requested tree reshape fails for
             whatever reason.
-        """
-        raise NotImplementedError()
-
-    def get_inventory(self, nodename):
-        """Return a dict, keyed by resource class, of inventory information for
-        the supplied node.
         """
         raise NotImplementedError()
 

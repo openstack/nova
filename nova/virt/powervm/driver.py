@@ -167,8 +167,6 @@ class PowerVMDriver(driver.ComputeDriver):
                          this.
         :return: Dictionary describing resources.
         """
-        # TODO(efried): Switch to get_inventory, per blueprint
-        #               custom-resource-classes-pike
         # Do this here so it refreshes each time this method is called.
         self.host_wrapper = pvm_ms.System.get(self.adapter)[0]
         return self._get_available_resource()

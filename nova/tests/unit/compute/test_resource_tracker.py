@@ -449,7 +449,6 @@ def setup_rt(hostname, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES):
     # Make sure we don't change any global fixtures during tests
     virt_resources = copy.deepcopy(virt_resources)
     vd.get_available_resource.return_value = virt_resources
-    vd.get_inventory.side_effect = NotImplementedError
 
     def fake_upt(provider_tree, nodename, allocations=None):
         inventory = {
@@ -1514,11 +1513,11 @@ class TestInitComputeNode(BaseTestCase):
 
 
 class TestUpdateComputeNode(BaseTestCase):
-
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_sync_compute_service_disabled_trait', new=mock.Mock())
     @mock.patch('nova.objects.ComputeNode.save')
     def test_existing_compute_node_updated_same_resources(self, save_mock):
         self._setup_rt()
-        self.driver_mock.update_provider_tree.side_effect = NotImplementedError
 
         # This is the same set of resources as the fixture, deliberately. We
         # are checking below to see that compute_node.save is not needlessly
@@ -1531,8 +1530,9 @@ class TestUpdateComputeNode(BaseTestCase):
 
         self.rt._update(mock.sentinel.ctx, new_compute)
         self.assertFalse(save_mock.called)
-        # Even the compute node is not updated, get_inventory still got called.
-        self.driver_mock.get_inventory.assert_called_once_with(_NODENAME)
+        # Even the compute node is not updated, update_provider_tree
+        # still got called.
+        self.driver_mock.update_provider_tree.assert_called_once()
 
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_sync_compute_service_disabled_trait', new=mock.Mock())
@@ -1558,11 +1558,8 @@ class TestUpdateComputeNode(BaseTestCase):
 
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_sync_compute_service_disabled_trait', new=mock.Mock())
-    @mock.patch('nova.compute.resource_tracker.'
-                '_normalize_inventory_from_cn_obj')
     @mock.patch('nova.objects.ComputeNode.save')
-    def test_existing_compute_node_updated_new_resources(self, save_mock,
-                                                         norm_mock):
+    def test_existing_compute_node_updated_new_resources(self, save_mock):
         self._setup_rt()
 
         orig_compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()
@@ -1580,42 +1577,6 @@ class TestUpdateComputeNode(BaseTestCase):
 
         self.rt._update(mock.sentinel.ctx, new_compute)
         save_mock.assert_called_once_with()
-        # The get_inventory() is not implemented, it shouldn't call
-        # _normalize_inventory_from_cn_obj
-        norm_mock.assert_not_called()
-
-    @mock.patch('nova.compute.resource_tracker.'
-                '_normalize_inventory_from_cn_obj')
-    @mock.patch('nova.objects.ComputeNode.save')
-    def test_existing_node_get_inventory_implemented(self, save_mock,
-            norm_mock):
-        """The get_inventory() virt driver method is only implemented for some
-        virt drivers. This method returns inventory information for a
-        node/provider in a way that the placement API better understands.
-        """
-        self._setup_rt()
-        self.driver_mock.update_provider_tree.side_effect = NotImplementedError
-
-        # Emulate a driver that has implemented the newish get_inventory() virt
-        # driver method
-        self.driver_mock.get_inventory.side_effect = [mock.sentinel.inv_data]
-
-        orig_compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()
-        self.rt.compute_nodes[_NODENAME] = orig_compute
-        self.rt.old_resources[_NODENAME] = orig_compute
-
-        # Deliberately changing local_gb to trigger updating inventory
-        new_compute = orig_compute.obj_clone()
-        new_compute.local_gb = 210000
-
-        self.rt._update(mock.sentinel.ctx, new_compute)
-        save_mock.assert_called_once_with()
-        norm_mock.assert_called_once_with(mock.sentinel.inv_data, new_compute)
-        # Assert a warning was logged about using a virt driver that does not
-        # implement update_provider_tree.
-        self.assertIn('Compute driver "%s" does not implement the '
-                      '"update_provider_tree" interface.' %
-                      CONF.compute_driver, self.stdlog.logger.output)
 
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_sync_compute_service_disabled_trait')
@@ -1654,14 +1615,10 @@ class TestUpdateComputeNode(BaseTestCase):
     @mock.patch('nova.objects.ComputeNode.save')
     def test_existing_node_update_provider_tree_implemented(
             self, save_mock, mock_sync_disabled):
-        """The update_provider_tree() virt driver method is only implemented
-        for some virt drivers. This method returns inventory, trait, and
+        """The update_provider_tree() virt driver method must be implemented
+        by all virt drivers. This method returns inventory, trait, and
         aggregate information for resource providers in a tree associated with
-        the compute node.  If this method doesn't raise a NotImplementedError,
-        it triggers _update() to try get_inventory() and then
-        compute_node_to_inventory_dict() to produce the inventory data with
-        which to call the update_from_provider_tree() method of the reporting
-        client instead.
+        the compute node.
         """
         fake_inv = {
             orc.VCPU: {
@@ -1721,7 +1678,6 @@ class TestUpdateComputeNode(BaseTestCase):
             ptree, new_compute.hypervisor_hostname)
         self.rt.reportclient.update_from_provider_tree.assert_called_once_with(
             mock.sentinel.ctx, ptree, allocations=None)
-        self.driver_mock.get_inventory.assert_not_called()
         ptree.update_traits.assert_called_once_with(
             new_compute.hypervisor_hostname,
             []

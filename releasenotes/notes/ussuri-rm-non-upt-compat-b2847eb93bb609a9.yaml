@@ -1,0 +1,8 @@
+---
+upgrade:
+  - |
+    Compatibility code for compute drivers that do not implement the
+    `update_provider_tree`__ interface has been removed. All compute drivers
+    must now implement ``update_provider_tree``.
+
+    __ https://docs.openstack.org/nova/latest/reference/update-provider-tree.html
