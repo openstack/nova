@@ -151,7 +151,21 @@ class IronicResourceTrackerTest(test_base.SchedulerReportClientTestBase):
 
         driver = mock.MagicMock(autospec=virt_driver.ComputeDriver)
         driver.node_is_available.return_value = True
-        driver.update_provider_tree.side_effect = NotImplementedError
+
+        def fake_upt(provider_tree, nodename, allocations=None):
+            inventory = {
+                'CUSTOM_SMALL_IRON': {
+                    'total': 1,
+                    'reserved': 0,
+                    'min_unit': 1,
+                    'max_unit': 1,
+                    'step_size': 1,
+                    'allocation_ratio': 1.0,
+                },
+            }
+            provider_tree.update_inventory(nodename, inventory)
+
+        driver.update_provider_tree.side_effect = fake_upt
         self.driver_mock = driver
         self.rt = resource_tracker.ResourceTracker(COMPUTE_HOST, driver)
         self.instances = self.create_fixtures()
@@ -228,16 +242,6 @@ class IronicResourceTrackerTest(test_base.SchedulerReportClientTestBase):
                 'numa_topology': None,
                 'resource_class': None,  # Act like admin hasn't set yet...
                 'stats': stats,
-            }
-            self.driver_mock.get_inventory.return_value = {
-                'CUSTOM_SMALL_IRON': {
-                    'total': 1,
-                    'reserved': 0,
-                    'min_unit': 1,
-                    'max_unit': 1,
-                    'step_size': 1,
-                    'allocation_ratio': 1.0,
-                },
             }
             self.rt.update_available_resource(self.ctx, nodename)
 

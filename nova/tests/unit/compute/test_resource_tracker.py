@@ -28,6 +28,7 @@ from nova.compute import power_state
 from nova.compute import provider_tree
 from nova.compute import resource_tracker
 from nova.compute import task_states
+from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import context
 from nova import exception as exc
@@ -449,8 +450,44 @@ def setup_rt(hostname, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES):
     virt_resources = copy.deepcopy(virt_resources)
     vd.get_available_resource.return_value = virt_resources
     vd.get_inventory.side_effect = NotImplementedError
-    # TODO(mriedem): Need to make this mocked virt driver implement upt.
-    vd.update_provider_tree.side_effect = NotImplementedError
+
+    def fake_upt(provider_tree, nodename, allocations=None):
+        inventory = {
+            'VCPU': {
+                'total': virt_resources['vcpus'],
+                'min_unit': 1,
+                'max_unit': virt_resources['vcpus'],
+                'step_size': 1,
+                'allocation_ratio': (
+                    CONF.cpu_allocation_ratio or
+                    CONF.initial_cpu_allocation_ratio),
+                'reserved': CONF.reserved_host_cpus,
+            },
+            'MEMORY_MB': {
+                'total': virt_resources['memory_mb'],
+                'min_unit': 1,
+                'max_unit': virt_resources['memory_mb'],
+                'step_size': 1,
+                'allocation_ratio': (
+                    CONF.ram_allocation_ratio or
+                    CONF.initial_ram_allocation_ratio),
+                'reserved': CONF.reserved_host_memory_mb,
+            },
+            'DISK_GB': {
+                'total': virt_resources['local_gb'],
+                'min_unit': 1,
+                'max_unit': virt_resources['local_gb'],
+                'step_size': 1,
+                'allocation_ratio': (
+                    CONF.disk_allocation_ratio or
+                    CONF.initial_disk_allocation_ratio),
+                'reserved': compute_utils.convert_mb_to_ceil_gb(
+                    CONF.reserved_host_disk_mb),
+            },
+        }
+        provider_tree.update_inventory(nodename, inventory)
+
+    vd.update_provider_tree.side_effect = fake_upt
     vd.get_host_ip_addr.return_value = _NODENAME
     vd.rebalances_nodes = False
 
@@ -1481,6 +1518,7 @@ class TestUpdateComputeNode(BaseTestCase):
     @mock.patch('nova.objects.ComputeNode.save')
     def test_existing_compute_node_updated_same_resources(self, save_mock):
         self._setup_rt()
+        self.driver_mock.update_provider_tree.side_effect = NotImplementedError
 
         # This is the same set of resources as the fixture, deliberately. We
         # are checking below to see that compute_node.save is not needlessly
@@ -1496,6 +1534,8 @@ class TestUpdateComputeNode(BaseTestCase):
         # Even the compute node is not updated, get_inventory still got called.
         self.driver_mock.get_inventory.assert_called_once_with(_NODENAME)
 
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_sync_compute_service_disabled_trait', new=mock.Mock())
     @mock.patch('nova.objects.ComputeNode.save')
     def test_existing_compute_node_updated_diff_updated_at(self, save_mock):
         # if only updated_at is changed, it won't call compute_node.save()
@@ -1516,6 +1556,8 @@ class TestUpdateComputeNode(BaseTestCase):
         self.rt._update(mock.sentinel.ctx, new_compute)
         self.assertFalse(save_mock.called)
 
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_sync_compute_service_disabled_trait', new=mock.Mock())
     @mock.patch('nova.compute.resource_tracker.'
                 '_normalize_inventory_from_cn_obj')
     @mock.patch('nova.objects.ComputeNode.save')
@@ -1552,6 +1594,7 @@ class TestUpdateComputeNode(BaseTestCase):
         node/provider in a way that the placement API better understands.
         """
         self._setup_rt()
+        self.driver_mock.update_provider_tree.side_effect = NotImplementedError
 
         # Emulate a driver that has implemented the newish get_inventory() virt
         # driver method
@@ -2369,6 +2412,8 @@ class TestInstanceClaim(BaseTestCase):
         self.assertEqual(
             0, len(self.rt.assigned_resources[cn.uuid]['CUSTOM_RESOURCE_0']))
 
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_sync_compute_service_disabled_trait', new=mock.Mock())
     @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
@@ -2412,6 +2457,8 @@ class TestInstanceClaim(BaseTestCase):
         self.assertEqual(0, cn.memory_mb_used)
         self.assertEqual(0, cn.running_vms)
 
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_sync_compute_service_disabled_trait', new=mock.Mock())
     @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
@@ -2484,6 +2531,8 @@ class TestInstanceClaim(BaseTestCase):
 
 
 class TestResize(BaseTestCase):
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_sync_compute_service_disabled_trait', new=mock.Mock())
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)
     @mock.patch('nova.objects.Service.get_minimum_version',
@@ -2588,6 +2637,8 @@ class TestResize(BaseTestCase):
         self.assertEqual(128, cn.memory_mb_used)
         self.assertEqual(0, len(self.rt.tracked_migrations))
 
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_sync_compute_service_disabled_trait', new=mock.Mock())
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)
     @mock.patch('nova.objects.Service.get_minimum_version',
@@ -2759,6 +2810,8 @@ class TestResize(BaseTestCase):
     def test_instance_build_resize_confirm(self):
         self._test_instance_build_resize()
 
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_sync_compute_service_disabled_trait', new=mock.Mock())
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)
     @mock.patch('nova.objects.Service.get_minimum_version',
@@ -2917,6 +2970,8 @@ class TestResize(BaseTestCase):
             mock_update_usage.assert_called_once_with(
                 mock_get_usage.return_value, _NODENAME, sign=-1)
 
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_sync_compute_service_disabled_trait', new=mock.Mock())
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)
     @mock.patch('nova.objects.Service.get_minimum_version',
@@ -3050,6 +3105,8 @@ class TestResize(BaseTestCase):
 
 
 class TestRebuild(BaseTestCase):
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_sync_compute_service_disabled_trait', new=mock.Mock())
     @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.objects.Service.get_minimum_version',
                 return_value=22)
