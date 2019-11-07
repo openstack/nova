@@ -3579,7 +3579,8 @@ class _ComputeAPIUnitTestMixIn(object):
                     preserve_ephemeral=False, host=instance.host,
                     request_spec=fake_spec)
 
-        _check_auto_disk_config.assert_called_once_with(image=image)
+        _check_auto_disk_config.assert_called_once_with(
+            image=image, auto_disk_config=None)
         _checks_for_create_and_rebuild.assert_called_once_with(self.context,
                 None, image, flavor, {}, [], None)
         self.assertNotEqual(orig_system_metadata, instance.system_metadata)
@@ -3655,7 +3656,8 @@ class _ComputeAPIUnitTestMixIn(object):
             self.assertEqual('rebuild',
                              fake_spec.scheduler_hints['_nova_check_type'][0])
 
-        _check_auto_disk_config.assert_called_once_with(image=new_image)
+        _check_auto_disk_config.assert_called_once_with(
+            image=new_image, auto_disk_config=None)
         _checks_for_create_and_rebuild.assert_called_once_with(self.context,
                 None, new_image, flavor, {}, [], None)
         self.assertEqual(fields_obj.VMMode.XEN, instance.vm_mode)
@@ -3716,7 +3718,8 @@ class _ComputeAPIUnitTestMixIn(object):
                     preserve_ephemeral=False, host=instance.host,
                     request_spec=fake_spec)
 
-        _check_auto_disk_config.assert_called_once_with(image=image)
+        _check_auto_disk_config.assert_called_once_with(
+            image=image, auto_disk_config=None)
         _checks_for_create_and_rebuild.assert_called_once_with(self.context,
                 None, image, flavor, {}, [], None)
         self.assertNotEqual(orig_key_name, instance.key_name)
@@ -3774,7 +3777,8 @@ class _ComputeAPIUnitTestMixIn(object):
                 preserve_ephemeral=False, host=instance.host,
                 request_spec=fake_spec)
 
-        _check_auto_disk_config.assert_called_once_with(image=image)
+        _check_auto_disk_config.assert_called_once_with(
+            image=image, auto_disk_config=None)
         _checks_for_create_and_rebuild.assert_called_once_with(
             self.context, None, image, flavor, {}, [], None)
         self.assertEqual(new_trusted_certs, instance.trusted_certs.ids)
@@ -3837,7 +3841,8 @@ class _ComputeAPIUnitTestMixIn(object):
                 preserve_ephemeral=False, host=instance.host,
                 request_spec=fake_spec)
 
-        _check_auto_disk_config.assert_called_once_with(image=image)
+        _check_auto_disk_config.assert_called_once_with(
+            image=image, auto_disk_config=None)
         _checks_for_create_and_rebuild.assert_called_once_with(
             self.context, None, image, flavor, {}, [], None)
         self.assertIsNone(instance.trusted_certs)
@@ -3877,7 +3882,8 @@ class _ComputeAPIUnitTestMixIn(object):
                           image_href, admin_pass, files_to_inject,
                           trusted_certs=new_trusted_certs)
 
-        _check_auto_disk_config.assert_called_once_with(image=image)
+        _check_auto_disk_config.assert_called_once_with(
+            image=image, auto_disk_config=None)
 
     def _test_check_injected_file_quota_onset_file_limit_exceeded(self,
                                                                   side_effect):

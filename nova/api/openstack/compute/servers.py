@@ -932,7 +932,7 @@ class ServersController(wsgi.Controller):
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'reboot', id)
 
-    def _resize(self, req, instance_id, flavor_id, **kwargs):
+    def _resize(self, req, instance_id, flavor_id, auto_disk_config=None):
         """Begin the resize process with given instance/flavor."""
         context = req.environ["nova.context"]
         instance = self._get_server(context, req, instance_id)
@@ -953,7 +953,8 @@ class ServersController(wsgi.Controller):
                 raise exc.HTTPConflict(explanation=msg)
 
         try:
-            self.compute_api.resize(context, instance, flavor_id, **kwargs)
+            self.compute_api.resize(context, instance, flavor_id,
+                                    auto_disk_config=auto_disk_config)
         except exception.QuotaError as error:
             raise exc.HTTPForbidden(
                 explanation=error.format_message())
