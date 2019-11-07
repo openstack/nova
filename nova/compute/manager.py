@@ -4272,7 +4272,6 @@ class ComputeManager(manager.Manager):
         network_info = self._get_updated_nw_info_with_pci_mapping(
             network_info, pci_mapping)
 
-        # TODO(mriedem): Get BDMs here and pass them to the driver.
         self.driver.confirm_migration(context, migration, instance,
                                       network_info)
 
