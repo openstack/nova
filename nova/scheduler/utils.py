@@ -775,7 +775,7 @@ def set_vm_state_and_notify(context, instance_uuid, service, method, updates,
         This becomes part of the publisher_id for the notification payload.
     :param method: The method that failed, e.g. 'migrate_server'.
     :param updates: dict of updates for the instance object, typically a
-        vm_state and/or task_state value.
+        vm_state and task_state value.
     :param ex: An exception which occurred during the given method.
     :param request_spec: Optional request spec.
     """
@@ -790,6 +790,9 @@ def set_vm_state_and_notify(context, instance_uuid, service, method, updates,
     else:
         request_spec = {}
 
+    # TODO(mriedem): We should make vm_state optional since not all callers
+    # of this method want to change the vm_state, e.g. the Exception block
+    # in ComputeTaskManager._cold_migrate.
     vm_state = updates['vm_state']
     properties = request_spec.get('instance_properties', {})
     notifier = rpc.get_notifier(service)

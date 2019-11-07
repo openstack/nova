@@ -376,11 +376,23 @@ class ComputeTaskManager(base.Base):
                                               updates, ex, request_spec)
         except Exception as ex:
             with excutils.save_and_reraise_exception():
-                updates = {'vm_state': instance.vm_state,
-                           'task_state': None}
-                self._set_vm_state_and_notify(context, instance.uuid,
-                                              'migrate_server',
-                                              updates, ex, request_spec)
+                # Refresh the instance so we don't overwrite vm_state changes
+                # set after we executed the task.
+                try:
+                    instance.refresh()
+                    # Passing vm_state is kind of silly but it's expected in
+                    # set_vm_state_and_notify.
+                    updates = {'vm_state': instance.vm_state,
+                               'task_state': None}
+                    self._set_vm_state_and_notify(context, instance.uuid,
+                                                  'migrate_server',
+                                                  updates, ex, request_spec)
+                except exception.InstanceNotFound:
+                    # We can't send the notification because the instance is
+                    # gone so just log it.
+                    LOG.info('During %s the instance was deleted.',
+                             'resize' if instance.instance_type_id != flavor.id
+                             else 'cold migrate', instance=instance)
         # NOTE(sbauza): Make sure we persist the new flavor in case we had
         # a successful scheduler call if and only if nothing bad happened
         if request_spec.obj_what_changed():
