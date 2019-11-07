@@ -1,11 +1,12 @@
 # See https://docs.openstack.org/infra/manual/drivers.html#naming-with-zuul-v3
 # for job naming conventions.
 - job:
-    name: nova-dsvm-base
-    parent: legacy-dsvm-base
+    name: nova-dsvm-multinode-base
+    parent: legacy-dsvm-base-multinode
     description: |
-      The base job definition for nova devstack/tempest jobs.
-      Contains common configuration.
+      Base job for multinode nova devstack/tempest jobs.
+      Will setup firewall rules on all the nodes allowing them to talk to
+      each other.
     timeout: 10800
     required-projects:
       - openstack/devstack-gate
@@ -26,20 +27,6 @@
       - ^tests-py3.txt$
       - ^tools/.*$
       - ^tox.ini$
-
-- job:
-    name: nova-dsvm-multinode-base
-    parent: legacy-dsvm-base-multinode
-    description: |
-      Base job for multinode nova devstack/tempest jobs.
-      Will setup firewall rules on all the nodes allowing them to talk to
-      each other.
-    timeout: 10800
-    required-projects:
-      - openstack/devstack-gate
-      - openstack/nova
-      - openstack/tempest
-    irrelevant-files: *dsvm-irrelevant-files
 
 - job:
     name: nova-tox-functional
@@ -136,8 +123,8 @@
     description: |
       Run tempest compute API tests using LVM image backend. This only runs
       against nova/virt/libvirt/* changes.
-    # Copy irrelevant-files from nova-dsvm-base and then exclude anything
-    # that is not in nova/virt/libvirt/* or nova/privsep/*.
+    # Copy irrelevant-files from nova-dsvm-multinode-base and then exclude
+    # anything that is not in nova/virt/libvirt/* or nova/privsep/*.
     irrelevant-files:
       - ^(?!.zuul.yaml)(?!nova/virt/libvirt/)(?!nova/privsep/).*$
       - ^api-.*$
