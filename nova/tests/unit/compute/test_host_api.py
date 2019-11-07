@@ -513,11 +513,12 @@ class ComputeHostAPITestCase(test.TestCase):
     @mock.patch.object(objects.HostMapping, 'get_by_host')
     def test_service_delete_compute_in_aggregate(
             self, mock_hm, mock_get_cn, mock_add_host, mock_remove_host):
-        compute = self.host_api.db.service_create(self.ctxt,
-            {'host': 'fake-compute-host',
-             'binary': 'nova-compute',
-             'topic': 'compute',
-             'report_count': 0})
+        compute = objects.Service(self.ctxt,
+                                  **{'host': 'fake-compute-host',
+                                     'binary': 'nova-compute',
+                                     'topic': 'compute',
+                                     'report_count': 0})
+        compute.create()
         # This is needed because of lazy-loading service.compute_node
         cn = objects.ComputeNode(uuid=uuids.cn, host="fake-compute-host",
                                  hypervisor_hostname="fake-compute-host")

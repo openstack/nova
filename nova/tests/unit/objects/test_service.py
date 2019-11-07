@@ -426,20 +426,6 @@ class _TestServiceObject(object):
         s.obj_make_compatible_from_manifest(primitive, '1.20', mock.Mock())
         self.assertNotIn('uuid', primitive)
 
-    @mock.patch('nova.objects.service.uuidutils.generate_uuid',
-                return_value=uuidsentinel.service4)
-    def test_from_db_object_without_uuid_generates_one(self, generate_uuid):
-        values = _fake_service(uuid=None, id=None)
-        db_service = db.service_create(self.context, values)
-
-        s = service.Service()
-        service.Service._from_db_object(self.context, s, db_service)
-        self.assertEqual(uuidsentinel.service4, s.uuid)
-
-        # Check the DB too
-        db_service2 = db.service_get(self.context, s.id)
-        self.assertEqual(s.uuid, db_service2['uuid'])
-
 
 class TestServiceObject(test_objects._LocalTest,
                         _TestServiceObject):

@@ -294,13 +294,6 @@ class Service(base.NovaPersistentObject, base.NovaObject,
         service._context = context
         service.obj_reset_changes()
 
-        # TODO(dpeschman): Drop this once all services have uuids in database
-        if 'uuid' not in service and not service.deleted:
-            service.uuid = uuidutils.generate_uuid()
-            LOG.debug('Generated UUID %(uuid)s for service %(id)i',
-                      dict(uuid=service.uuid, id=service.id))
-            service.save()
-
         return service
 
     def obj_load_attr(self, attrname):

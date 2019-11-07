@@ -3152,11 +3152,11 @@ def _create_service_entries(context, values={'avail_zone1': ['fake_host1',
                                          'avail_zone2': ['fake_host3'], }):
     for hosts in values.values():
         for service_host in hosts:
-            db.service_create(context,
-                              {'host': service_host,
+            objects.Service(context,
+                            **{'host': service_host,
                                'binary': 'nova-compute',
                                'topic': 'compute',
-                               'report_count': 0})
+                               'report_count': 0}).create()
     return values
 
 

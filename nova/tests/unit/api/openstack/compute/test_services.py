@@ -684,18 +684,22 @@ class ServicesTestV21(test.TestCase):
                 self.controller.update, self.req, "disable-log-reason",
                 body=body)
 
-    def test_services_delete(self):
-
-        compute = self.host_api.db.service_create(self.ctxt,
-            {'host': 'fake-compute-host',
-             'binary': 'nova-compute',
-             'topic': 'compute',
-             'report_count': 0})
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_host',
+                return_value=objects.ComputeNodeList(objects=[]))
+    def test_services_delete(self, mock_get_compute_nodes):
+        compute = objects.Service(self.ctxt,
+                                  **{'host': 'fake-compute-host',
+                                     'binary': 'nova-compute',
+                                     'topic': 'compute',
+                                     'report_count': 0})
+        compute.create()
 
         with mock.patch('nova.objects.Service.destroy') as service_delete:
             self.controller.delete(self.req, compute.id)
             service_delete.assert_called_once_with()
             self.assertEqual(self.controller.delete.wsgi_code, 204)
+        mock_get_compute_nodes.assert_called_once_with(
+            self.req.environ['nova.context'], compute.host)
 
     def test_services_delete_not_found(self):
 
