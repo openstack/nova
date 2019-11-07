@@ -17544,7 +17544,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock.patch.object(drvr._remotefs, 'create_file'),
             mock.patch.object(drvr._remotefs, 'remove_file')
         ) as (mock_rem_fs_create, mock_rem_fs_remove):
-            result = drvr._is_storage_shared_with('host', '/path')
+            result = drvr._is_path_shared_with('host', '/path')
         mock_rem_fs_create.assert_any_call('host', mock.ANY)
         create_args, create_kwargs = mock_rem_fs_create.call_args
         self.assertTrue(create_args[1].startswith('/path'))
@@ -17570,7 +17570,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_shared_storage_detection_easy(self, mock_get, mock_exec,
                                            mock_exists, mock_unlink):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.assertTrue(drvr._is_storage_shared_with('foo', '/path'))
+        self.assertTrue(drvr._is_path_shared_with('foo', '/path'))
         mock_get.assert_called_once_with()
         mock_exec.assert_not_called()
         mock_exists.assert_not_called()
@@ -20295,7 +20295,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_host_ip_addr',
                 return_value='10.0.0.1')
     @mock.patch(('nova.virt.libvirt.driver.LibvirtDriver.'
-                 '_is_storage_shared_with'), return_value=False)
+                 '_is_path_shared_with'), return_value=False)
     @mock.patch('os.rename')
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('oslo_concurrency.processutils.execute',
@@ -20322,7 +20322,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_host_ip_addr',
                 return_value='10.0.0.1')
     @mock.patch(('nova.virt.libvirt.driver.LibvirtDriver.'
-                 '_is_storage_shared_with'), return_value=False)
+                 '_is_path_shared_with'), return_value=False)
     @mock.patch('os.rename')
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('oslo_concurrency.processutils.execute')
@@ -20474,7 +20474,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
                 '._get_instance_disk_info')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
-                '._is_storage_shared_with')
+                '._is_path_shared_with')
     def _test_migrate_disk_and_power_off_backing_file(self,
                                                       shared_storage,
                                                       mock_is_shared_storage,
@@ -20520,8 +20520,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         expected_exc = exception.InstanceFaultRollback
         self._test_migrate_disk_and_power_off_resize_check(expected_exc)
 
-    @mock.patch.object(libvirt_driver.LibvirtDriver, '_is_storage_shared_with',
-                       return_value=False)
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_is_path_shared_with', return_value=False)
     def test_migrate_disk_and_power_off_resize_cannot_ssh(self,
                                                           mock_is_shared):
         def fake_execute(*args, **kwargs):
@@ -20648,7 +20648,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._destroy')
     @mock.patch('nova.virt.libvirt.utils.get_instance_path')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
-                '._is_storage_shared_with')
+                '._is_path_shared_with')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
                 '._get_instance_disk_info')
     def test_migrate_disk_and_power_off_resize_copy_disk_info(

@@ -9592,26 +9592,26 @@ class LibvirtDriver(driver.ComputeDriver):
             images.fetch_to_raw(context, image_id, path)
             return True
 
-    def _is_storage_shared_with(self, dest, inst_base):
+    def _is_path_shared_with(self, dest, path):
         # NOTE (rmk): There are two methods of determining whether we are
         #             on the same filesystem: the source and dest IP are the
         #             same, or we create a file on the dest system via SSH
         #             and check whether the source system can also see it.
-        shared_storage = (dest == self.get_host_ip_addr())
-        if not shared_storage:
+        shared_path = (dest == self.get_host_ip_addr())
+        if not shared_path:
             tmp_file = uuidutils.generate_uuid(dashed=False) + '.tmp'
-            tmp_path = os.path.join(inst_base, tmp_file)
+            tmp_path = os.path.join(path, tmp_file)
 
             try:
                 self._remotefs.create_file(dest, tmp_path)
                 if os.path.exists(tmp_path):
-                    shared_storage = True
+                    shared_path = True
                     os.unlink(tmp_path)
                 else:
                     self._remotefs.remove_file(dest, tmp_path)
             except Exception:
                 pass
-        return shared_storage
+        return shared_path
 
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    flavor, network_info,
@@ -9651,12 +9651,12 @@ class LibvirtDriver(driver.ComputeDriver):
         # shared storage for instance dir (eg. NFS).
         inst_base = libvirt_utils.get_instance_path(instance)
         inst_base_resize = inst_base + "_resize"
-        shared_storage = self._is_storage_shared_with(dest, inst_base)
+        shared_instance_path = self._is_path_shared_with(dest, inst_base)
 
         # try to create the directory on the remote compute node
         # if this fails we pass the exception up the stack so we can catch
         # failures here earlier
-        if not shared_storage:
+        if not shared_instance_path:
             try:
                 self._remotefs.create_dir(dest, inst_base)
             except processutils.ProcessExecutionError as e:
@@ -9676,10 +9676,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
         try:
             os.rename(inst_base, inst_base_resize)
-            # if we are migrating the instance with shared storage then
+            # if we are migrating the instance with shared instance path then
             # create the directory.  If it is a remote node the directory
             # has already been created
-            if shared_storage:
+            if shared_instance_path:
                 dest = None
                 fileutils.ensure_tree(inst_base)
 
@@ -9721,7 +9721,7 @@ class LibvirtDriver(driver.ComputeDriver):
             with excutils.save_and_reraise_exception():
                 self._cleanup_remote_migration(dest, inst_base,
                                                inst_base_resize,
-                                               shared_storage)
+                                               shared_instance_path)
 
         return jsonutils.dumps(disk_info)
 
