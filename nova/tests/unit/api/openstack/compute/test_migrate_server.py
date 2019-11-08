@@ -314,8 +314,7 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
             instance['uuid'], body={'migrate': None})
 
         mock_has_res_req.assert_called_once_with(
-            self.req.environ['nova.context'], instance['uuid'],
-            self.controller.network_api)
+            instance['uuid'], self.controller.network_api)
         mock_get_service.assert_called_once_with(
             self.req.environ['nova.context'], instance['host'], 'nova-compute')
 

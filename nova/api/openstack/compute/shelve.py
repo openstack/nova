@@ -97,7 +97,7 @@ class ShelveController(wsgi.Controller):
         # having resource requests.
         if (instance.vm_state == vm_states.SHELVED_OFFLOADED and
                 common.instance_has_port_with_resource_request(
-                    context, instance.uuid, self.network_api) and
+                    instance.uuid, self.network_api) and
                 not common.supports_port_resource_request_during_move(
                     req)):
             msg = _("The unshelve action on a server with ports having "
