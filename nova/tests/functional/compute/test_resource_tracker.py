@@ -10,9 +10,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+import fixtures
 import mock
+import os
+
 import os_resource_classes as orc
+import os_traits
 from oslo_utils.fixture import uuidsentinel as uuids
+import yaml
 
 from nova.compute import power_state
 from nova.compute import resource_tracker
@@ -23,8 +29,11 @@ from nova import conf
 from nova import context
 from nova import objects
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
+from nova.tests.unit import fake_notifier
+from nova.tests.unit.image import fake as fake_image
 from nova.virt import driver as virt_driver
 
 
@@ -469,3 +478,258 @@ class TestUpdateComputeNodeReservedAndAllocationRatio(
             self.assertIn('allocation_ratio', inv[rc])
             self.assertEqual(ratio, inv[rc]['allocation_ratio'],
                              'Unexpected allocation ratio for %s' % rc)
+
+
+class TestProviderConfig(integrated_helpers.ProviderUsageBaseTestCase):
+    """Tests for adding inventories and traits to resource providers using
+    provider config files described in spec provider-config-file.
+    """
+
+    compute_driver = 'fake.FakeDriver'
+
+    BASE_CONFIG = {
+        "meta": {
+            "schema_version": "1.0"
+        },
+        "providers": []
+    }
+    EMPTY_PROVIDER = {
+        "identification": {
+        },
+        "inventories": {
+            "additional": []
+        },
+        "traits": {
+            "additional": []
+        }
+    }
+
+    def setUp(self):
+        super().setUp()
+
+        # make a new temp dir and configure nova-compute to look for provider
+        # config files there
+        self.pconf_loc = self.useFixture(fixtures.TempDir()).path
+        self.flags(provider_config_location=self.pconf_loc, group='compute')
+
+    def _create_config_entry(self, id_value, id_method="uuid", cfg_file=None):
+        """Adds an entry in the config file for the provider using the
+        requested identification method [uuid, name] with additional traits
+        and inventories.
+        """
+        # if an existing config file was not passed, create a new one
+        if not cfg_file:
+            cfg_file = copy.deepcopy(self.BASE_CONFIG)
+        provider = copy.deepcopy(self.EMPTY_PROVIDER)
+
+        # create identification method
+        provider['identification'] = {id_method: id_value}
+
+        # create entries for additional traits and inventories using values
+        # unique to this provider entry
+        provider['inventories']['additional'].append({
+            orc.normalize_name(id_value): {
+                "total": 100,
+                "reserved": 0,
+                "min_unit": 1,
+                "max_unit": 10,
+                "step_size": 1,
+                "allocation_ratio": 1
+            }
+        })
+        provider['traits']['additional'].append(
+            os_traits.normalize_name(id_value))
+
+        # edit cfg_file in place, but return it in case this is the first call
+        cfg_file['providers'].append(provider)
+        return cfg_file
+
+    def _assert_inventory_and_traits(self, provider, config):
+        """Asserts that the inventory and traits on the provider include those
+        defined in the provided config file. If the provider was identified
+        explicitly, also asserts that the $COMPUTE_NODE values are not included
+        on the provider.
+
+        Testing for specific inventory values is done in depth in unit tests
+        so here we are just checking for keys.
+        """
+        # retrieve actual inventory and traits for the provider
+        actual_inventory = list(
+            self._get_provider_inventory(provider['uuid']).keys())
+        actual_traits = self._get_provider_traits(provider['uuid'])
+
+        # search config file data for expected inventory and traits
+        # since we also want to check for unexpected inventory,
+        # we also need to track compute node entries
+        expected_inventory, expected_traits = [], []
+        cn_expected_inventory, cn_expected_traits = [], []
+        for p_config in config['providers']:
+            _pid = p_config['identification']
+            # check for explicit uuid/name match
+            if _pid.get("uuid") == provider['uuid'] \
+                    or _pid.get("name") == provider['name']:
+                expected_inventory = list(p_config.get(
+                    "inventories", {}).get("additional", [])[0].keys())
+                expected_traits = p_config.get(
+                    "traits", {}).get("additional", [])
+            # check for uuid==$COMPUTE_NODE match
+            elif _pid.get("uuid") == "$COMPUTE_NODE":
+                cn_expected_inventory = list(p_config.get(
+                    "inventories", {}).get("additional", [])[0].keys())
+                cn_expected_traits = p_config.get(
+                    "traits", {}).get("additional", [])
+
+        # if expected inventory or traits are found,
+        #   test that they all exist in the actual inventory/traits
+        missing_inventory, missing_traits = None, None
+        unexpected_inventory, unexpected_traits = None, None
+        if expected_inventory or expected_traits:
+            missing_inventory = [key for key in expected_inventory
+                                 if key not in actual_inventory]
+            missing_traits = [key for key in expected_traits
+                              if key not in actual_traits]
+            # if $COMPUTE_NODE values are also found,
+            #   test that they do not exist
+            if cn_expected_inventory or cn_expected_traits:
+                unexpected_inventory = [
+                    key for key in actual_inventory
+                    if key in cn_expected_inventory and key
+                    not in expected_inventory]
+                missing_traits = [
+                    trait for trait in cn_expected_traits
+                    if trait in actual_traits and trait
+                    not in expected_traits]
+        # if no explicit values were found, test for $COMPUTE_NODE values
+        elif cn_expected_inventory or cn_expected_traits:
+            missing_inventory = [key for key in cn_expected_inventory
+                                 if key not in actual_inventory]
+            missing_traits = [trait for trait in cn_expected_traits
+                              if trait not in actual_traits]
+        # if no values were found, the test is broken
+        else:
+            self.fail("No expected values were found, the test is broken.")
+
+        self.assertFalse(missing_inventory,
+                         msg="Missing inventory: %s" % missing_inventory)
+        self.assertFalse(unexpected_inventory,
+                         msg="Unexpected inventory: %s" % unexpected_inventory)
+        self.assertFalse(missing_traits,
+                         msg="Missing traits: %s" % missing_traits)
+        self.assertFalse(unexpected_traits,
+                         msg="Unexpected traits: %s" % unexpected_traits)
+
+    def _place_config_file(self, file_name, file_data):
+        """Creates a file in the provider config directory using file_name and
+        dumps file_data to it in yaml format.
+
+        NOTE: The file name should end in ".yaml" for Nova to recognize and
+        load it.
+        """
+        with open(os.path.join(self.pconf_loc, file_name), "w") as open_file:
+            yaml.dump(file_data, open_file)
+
+    def test_single_config_file(self):
+        """Tests that additional inventories and traits defined for a provider
+        are applied to the correct provider.
+        """
+        # create a config file with both explicit name and uuid=$COMPUTE_NODE
+        config = self._create_config_entry("fake-host", id_method="name")
+        self._place_config_file("provider_config1.yaml", config)
+
+        # start nova-compute
+        self._start_compute("fake-host")
+
+        # test that only inventory from the explicit entry exists
+        provider = self._get_resource_provider_by_uuid(
+            self._get_provider_uuid_by_host("fake-host"))
+        self._assert_inventory_and_traits(provider, config)
+
+    def test_multiple_config_files(self):
+        """This performs the same test as test_single_config_file but splits
+        the configurations into separate files.
+        """
+        # create a config file with uuid=$COMPUTE_NODE
+        config1 = self._create_config_entry("$COMPUTE_NODE", id_method="uuid")
+        self._place_config_file("provider_config1.yaml", config1)
+        # create a second config file with explicit name
+        config2 = self._create_config_entry("fake-host", id_method="name")
+        self._place_config_file("provider_config2.yaml", config2)
+
+        # start nova-compute
+        self._start_compute("fake-host")
+
+        # test that only inventory from the explicit entry exists
+        provider1 = self._get_resource_provider_by_uuid(
+            self._get_provider_uuid_by_host("fake-host"))
+        self._assert_inventory_and_traits(provider1, config2)
+
+    def test_multiple_compute_nodes(self):
+        """This test mimics an ironic-like environment with multiple compute
+        nodes. Some nodes will be updated with the uuid=$COMPUTE_NODE provider
+        config entries and others will use explicit name matching.
+        """
+        # get some uuids to use as compute host names
+        provider_names = [uuids.cn2, uuids.cn3, uuids.cn4,
+                          uuids.cn5, uuids.cn6, uuids.cn7]
+
+        # create config file with $COMPUTE_NODE entry
+        config = self._create_config_entry("$COMPUTE_NODE", id_method="uuid")
+        # add three explicit name entries
+        for provider_name in provider_names[-3:]:
+            self._create_config_entry(provider_name, id_method="name",
+                                      cfg_file=config)
+        self._place_config_file("provider.yaml", config)
+
+        # start the compute services
+        for provider_name in provider_names:
+            self._start_compute(provider_name)
+
+        # test for expected inventory and traits on each provider
+        for provider_name in provider_names:
+            self._assert_inventory_and_traits(
+                self._get_resource_provider_by_uuid(
+                    self._get_provider_uuid_by_host(provider_name)),
+                config)
+
+    def test_end_to_end(self):
+        """This test emulates a full end to end test showing that without this
+        feature a vm cannot be spawning using a custom trait and then start a
+        compute service that provides that trait.
+        """
+
+        self.neutron = nova_fixtures.NeutronFixture(self)
+        self.useFixture(self.neutron)
+        fake_image.stub_out_image_service(self)
+        self.addCleanup(fake_image.FakeImageService_reset)
+        # Start nova services.
+        self.api = self.useFixture(nova_fixtures.OSAPIFixture(
+            api_version='v2.1')).admin_api
+        self.api.microversion = 'latest'
+        fake_notifier.stub_notifier(self)
+        self.addCleanup(fake_notifier.reset)
+        self.start_service('conductor')
+        # start nova-compute that will not have the additional trait.
+        self._start_compute("fake-host-1")
+
+        node_name = "fake-host-2"
+
+        # create a config file with explicit name
+        provider_config = self._create_config_entry(
+            node_name, id_method="name")
+        self._place_config_file("provider_config.yaml", provider_config)
+
+        self._create_flavor(
+            name='CUSTOM_Flavor', id=42, vcpu=4, memory_mb=4096,
+            disk=1024, swap=0, extra_spec={
+                f"trait:{os_traits.normalize_name(node_name)}": "required"
+            })
+
+        self._create_server(
+            flavor_id=42, expected_state='ERROR',
+            networks=[{'port': self.neutron.port_1['id']}])
+
+        # start compute node that will report the custom trait.
+        self._start_compute("fake-host-2")
+        self._create_server(
+            flavor_id=42, expected_state='ACTIVE',
+            networks=[{'port': self.neutron.port_1['id']}])

@@ -113,6 +113,7 @@ instance for these kind of workloads.
    ports-with-resource-requests
    virtual-persistent-memory
    emulated-tpm
+   managing-resource-providers
 
 
 Additional guides

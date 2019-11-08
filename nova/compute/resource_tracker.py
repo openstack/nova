@@ -30,6 +30,7 @@ import retrying
 
 from nova.compute import claims
 from nova.compute import monitors
+from nova.compute import provider_config
 from nova.compute import stats as compute_stats
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
@@ -112,6 +113,11 @@ class ResourceTracker(object):
         # and value of this sub-dict is a set of Resource obj
         self.assigned_resources = collections.defaultdict(
             lambda: collections.defaultdict(set))
+        # Retrieves dict of provider config data. This can fail with
+        # nova.exception.ProviderConfigException if invalid or conflicting
+        # data exists in the provider config files.
+        self.provider_configs = provider_config.get_provider_configs(
+            CONF.compute.provider_config_location)
         # Set of ids for providers identified in provider config files that
         # are not found on the provider tree. These are tracked to facilitate
         # smarter logging.
@@ -1155,6 +1161,9 @@ class ResourceTracker(object):
 
         self.provider_tree = prov_tree
 
+        # This merges in changes from the provider config files loaded in init
+        self._merge_provider_configs(self.provider_configs, prov_tree)
+
         # Flush any changes. If we processed ReshapeNeeded above, allocs is not
         # None, and this will hit placement's POST /reshaper route.
         self.reportclient.update_from_provider_tree(context, prov_tree,
@@ -1714,6 +1723,7 @@ class ResourceTracker(object):
         :param provider_tree: The provider tree to be updated in place
         """
         processed_providers = {}
+        provider_custom_traits = {}
         for uuid_or_name, provider_data in provider_configs.items():
             additional_traits = provider_data.get(
                 "traits", {}).get("additional", [])
@@ -1758,10 +1768,23 @@ class ResourceTracker(object):
                             'current_uuid': current_uuid
                         }
                     )
-                processed_providers[current_uuid] = source_file_name
+
+                # NOTE(sean-k-mooney): since each provider should be processed
+                # at most once if a provider has custom traits they were
+                # set either in previous iteration, the virt driver or via the
+                # the placement api. As a result we must ignore them when
+                # checking for duplicate traits so we construct a set of the
+                # existing custom traits.
+                if current_uuid not in provider_custom_traits:
+                    provider_custom_traits[current_uuid] = {
+                        trait for trait in provider.traits
+                        if trait.startswith('CUSTOM')
+                    }
+                existing_custom_traits = provider_custom_traits[current_uuid]
 
                 if additional_traits:
                     intersect = set(provider.traits) & set(additional_traits)
+                    intersect -= existing_custom_traits
                     if intersect:
                         invalid = ','.join(intersect)
                         raise ValueError(_(
@@ -1796,6 +1819,8 @@ class ResourceTracker(object):
 
                     provider_tree.update_inventory(
                         provider.uuid, merged_inventory)
+
+                processed_providers[current_uuid] = source_file_name
 
     def _get_providers_to_update(self, uuid_or_name, provider_tree,
                                  source_file):
