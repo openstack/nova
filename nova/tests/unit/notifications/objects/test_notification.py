@@ -425,7 +425,7 @@ notification_object_data = {
     'MetricPayload': '1.0-bcdbe85048f335132e4c82a1b8fa3da8',
     'MetricsNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'MetricsPayload': '1.0-65c69b15b4de5a8c01971cb5bb9ab650',
-    'NotificationPublisher': '2.2-b6ad48126247e10b46b6b0240e52e614',
+    'NotificationPublisher': '2.2-ff8ef16673817ca7a3ea69c689e260c6',
     'RequestSpecPayload': '1.1-64d30723a2e381d0cd6a16a877002c64',
     'SchedulerRetriesPayload': '1.0-03a07d09575ef52cced5b1b24301d0b4',
     'SelectDestinationsNotification': '1.0-a73147b93b520ff0061865849d3dfa56',

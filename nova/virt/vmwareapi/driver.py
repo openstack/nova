@@ -56,6 +56,7 @@ from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import host
 from nova.virt.vmwareapi.rpc import VmwareRpcService
 from nova.virt.vmwareapi import session
+from nova.virt.vmwareapi import special_spawning
 from nova.virt.vmwareapi import vim_util as nova_vim_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
@@ -165,6 +166,7 @@ class VMwareVCDriver(driver.ComputeDriver):
         self._register_openstack_extension()
 
         virtapi._compute.additional_endpoints.extend([
+            special_spawning._SpecialVmSpawningServer(self),
             VmwareRpcService(self)])
 
     def _check_min_version(self):

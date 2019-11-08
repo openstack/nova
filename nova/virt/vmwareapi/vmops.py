@@ -62,6 +62,7 @@ from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import imagecache
 from nova.virt.vmwareapi import images
 from nova.virt.vmwareapi.rpc import VmwareRpcApi
+from nova.virt.vmwareapi import special_spawning
 from nova.virt.vmwareapi import vif as vmwarevif
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
@@ -1049,6 +1050,41 @@ class VMwareVMOps(object):
 
         vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
 
+        self._clean_up_after_special_spawning(context, instance.memory_mb,
+                                              instance.flavor)
+
+    def _clean_up_after_special_spawning(self, context, instance_memory_mb,
+                                         instance_flavor):
+        if utils.vm_needs_special_spawning(int(instance_memory_mb),
+                                           instance_flavor):
+            # we're using a child resource provider, so we don't have to change
+            # the drivers' report-code to keep the CUSTOM_BIGVM resource, but
+            # instead can independently add it or remove it on a cluster
+            placement_client = self._virtapi._compute.reportclient
+            cn = self._virtapi._compute._get_compute_info(context, CONF.host)
+            parent_rp_uuid = cn.uuid
+            parent_tree = placement_client.get_provider_tree_and_ensure_root(
+                                                    context, parent_rp_uuid)
+            rp_name = '{}-{}'.format(CONF.bigvm_deployment_rp_name_prefix,
+                                     cn.host)
+            try:
+                rp = parent_tree.data(rp_name)
+            except ValueError:
+                LOG.warning('Could not find resource-provider %(rp)s for '
+                            'reserving resources after (re)starting a big VM.',
+                            {'rp': rp_name})
+            else:
+                # we need to update the inventory of the bigvm provider in our
+                # cache, because the generation might be too old after the
+                # allocations of our currently spawning big vm
+                placement_client._refresh_and_get_inventory(context, rp.uuid)
+                # reserve the bigvm resource. this prohibits any further
+                # deployment needing a free host on that compute-node.
+                inv_data = rp.inventory
+                inv_data[special_spawning.BIGVM_RESOURCE]['reserved'] = 1
+                placement_client.set_inventory_for_provider(context, rp.uuid,
+                                                            inv_data)
+
     def _is_bdm_valid(self, block_device_mapping):
         """Checks if the block device mapping is valid."""
         valid_bus = (constants.DEFAULT_ADAPTER_TYPE,
@@ -1696,8 +1732,8 @@ class VMwareVMOps(object):
         vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
 
         old_flavor = instance.old_flavor
-        new_is_big = utils.is_big_vm(int(old_flavor.memory_mb), old_flavor)
-        old_is_big = utils.is_big_vm(int(flavor.memory_mb), flavor)
+        old_is_big = utils.is_big_vm(int(old_flavor.memory_mb), old_flavor)
+        new_is_big = utils.is_big_vm(int(flavor.memory_mb), flavor)
 
         if not old_is_big and new_is_big:
             # Make sure we don't automatically move around "big" VMs
@@ -1722,6 +1758,9 @@ class VMwareVMOps(object):
             except Exception:
                 LOG.exception('Could not remove DRS override.',
                               instance=instance)
+
+        self._clean_up_after_special_spawning(context, flavor.memory_mb,
+                                              flavor)
 
     def _resize_disk(self, instance, vm_ref, vmdk, flavor):
         extra_specs = self._get_extra_specs(instance.flavor,

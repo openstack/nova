@@ -16,10 +16,13 @@ import time
 
 from unittest import mock
 
+import nova.conf
 from nova import objects
 from nova.scheduler.filters import shard_filter
 from nova import test
 from nova.tests.unit.scheduler import fakes
+
+CONF = nova.conf.CONF
 
 
 class TestShardFilter(test.NoDBTestCase):
@@ -234,3 +237,69 @@ class TestShardFilter(test.NoDBTestCase):
 
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
         mock_is_non_vmware_spec.assert_called_once_with(spec_obj)
+
+    def test_ignores_hana_by_trait(self):
+        extra_specs = {'trait:CUSTOM_HANA_EXCLUSIVE_HOST': 'required'}
+        self._shard_filter_ignoring_hana(True, extra_specs)
+
+    def test_ignores_hana_by_memory(self):
+        CONF.set_override('bigvm_mb', 8192)
+        CONF.set_override('hana_detection_strategy', 'memory_mb',
+                          'filter_scheduler')
+        extra_specs = {}
+        self._shard_filter_ignoring_hana(True,
+                                         extra_specs=extra_specs,
+                                         memory_mb=8192)
+
+    def test_sharding_ignore_hana_config(self):
+        CONF.set_override('sharding_ignore_hana', False, 'filter_scheduler')
+        extra_specs = {'trait:CUSTOM_HANA_EXCLUSIVE_HOST': 'required'}
+        self._shard_filter_ignoring_hana(False,
+                                         extra_specs=extra_specs)
+
+    def test_use_individual_shard_tags_hana_tag(self):
+        extra_specs = {'trait:CUSTOM_HANA_EXCLUSIVE_HOST': 'required'}
+        tag = 'use_individual_shard_tags_hana'
+        self._shard_filter_ignoring_hana(False,
+                                         extra_specs=extra_specs,
+                                         project_tag=tag)
+
+    def test_allow_hana_by_trait_forbidden(self):
+        extra_specs = {'trait:CUSTOM_HANA_EXCLUSIVE_HOST': 'forbidden'}
+        self._shard_filter_ignoring_hana(False, extra_specs)
+
+    def test_allow_hana_by_memory(self):
+        CONF.set_override('bigvm_mb', 8192)
+        CONF.set_override('hana_detection_strategy', 'memory_mb',
+                          'filter_scheduler')
+        extra_specs = {}
+        self._shard_filter_ignoring_hana(False,
+                                         extra_specs=extra_specs,
+                                         memory_mb=8191)
+
+    def _shard_filter_ignoring_hana(self, expect_to_ignore, extra_specs=None,
+                                    project_tag=None, memory_mb=4096):
+        aggs = [objects.Aggregate(id=1, name='some-az-a', hosts=['host1',
+                                                                 'host2']),
+                objects.Aggregate(id=1, name='vc-a-1', hosts=['host1'])]
+
+        host_allow = fakes.FakeHostState(
+            'host1', 'compute', {'aggregates': aggs})
+        host_forbid = fakes.FakeHostState(
+            'host2', 'compute', {'aggregates': aggs[:1]})
+
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx, project_id='foo',
+            flavor=objects.Flavor(extra_specs=extra_specs,
+                                  memory_mb=memory_mb))
+
+        self.filt_cls._PROJECT_TAG_CACHE['foo'] = ['vc-a-0', 'vc-a-1',
+                                                   'vc-b-0']
+        if project_tag:
+            self.filt_cls._PROJECT_TAG_CACHE['foo'].append(project_tag)
+        result = list(self.filt_cls.filter_all(
+            [host_allow, host_forbid], spec_obj))
+        if expect_to_ignore:
+            self.assertEqual(result, [host_allow, host_forbid])
+        else:
+            self.assertEqual(result, [host_allow])

@@ -1080,21 +1080,20 @@ class VMwareVMOpsTestCase(test.TestCase):
 
     @mock.patch.object(vmops.VMwareVMOps, '_get_instance_metadata')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
+    @mock.patch.object(vmops.VMwareVMOps, '_clean_up_after_special_spawning')
     @mock.patch.object(vm_util, 'reconfigure_vm')
     @mock.patch.object(vm_util, 'get_vm_resize_spec',
                        return_value='fake-spec')
-    @mock.patch.object(utils, 'is_big_vm')
     @mock.patch.object(cluster_util, 'update_cluster_drs_vm_override')
-    def test_resize_vm_bigvm_upsize(self, fake_drs_override, fake_is_big_vm,
-                                    fake_resize_spec, fake_reconfigure,
+    def test_resize_vm_bigvm_upsize(self, fake_drs_override, fake_resize_spec,
+                                    fake_reconfigure,
+                                    fake_cleanup_after_special_spawning,
                                     fake_get_extra_specs, fake_get_metadata):
-        # new is big, new is big, old is not
-        fake_is_big_vm.side_effect = [True, False]
         extra_specs = vm_util.ExtraSpecs()
         fake_get_extra_specs.return_value = extra_specs
         fake_get_metadata.return_value = self._metadata
-        flavor = objects.Flavor(name='m1.small',
-                                memory_mb=1024,
+        flavor = objects.Flavor(name='bigvm-test',
+                                memory_mb=CONF.bigvm_mb,
                                 vcpus=2,
                                 extra_specs={})
         instance = self._instance.obj_clone()
@@ -1107,19 +1106,20 @@ class VMwareVMOpsTestCase(test.TestCase):
                                                   'vm-ref',
                                                   operation='add',
                                                   behavior=behavior)
+        expected = (self._context, int(flavor.memory_mb), flavor)
+        fake_cleanup_after_special_spawning.assert_called_once_with(*expected)
 
     @mock.patch.object(vmops.VMwareVMOps, '_get_instance_metadata')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
+    @mock.patch.object(vmops.VMwareVMOps, '_clean_up_after_special_spawning')
     @mock.patch.object(vm_util, 'reconfigure_vm')
     @mock.patch.object(vm_util, 'get_vm_resize_spec',
                        return_value='fake-spec')
-    @mock.patch.object(utils, 'is_big_vm')
     @mock.patch.object(cluster_util, 'update_cluster_drs_vm_override')
-    def test_resize_vm_bigvm_downsize(self, fake_drs_override, fake_is_big_vm,
+    def test_resize_vm_bigvm_downsize(self, fake_drs_override,
                                       fake_resize_spec, fake_reconfigure,
+                                      fake_cleanup_after_special_spawning,
                                       fake_get_extra_specs, fake_get_metadata):
-        # new is not big, new is not big, old is big
-        fake_is_big_vm.side_effect = [False, True]
         extra_specs = vm_util.ExtraSpecs()
         fake_get_extra_specs.return_value = extra_specs
         fake_get_metadata.return_value = self._metadata
@@ -1129,12 +1129,15 @@ class VMwareVMOpsTestCase(test.TestCase):
                                 extra_specs={})
         instance = self._instance.obj_clone()
         instance.old_flavor = instance.flavor.obj_clone()
+        instance.old_flavor.memory_mb = CONF.bigvm_mb
         self._vmops._resize_vm(self._context, instance, 'vm-ref', flavor,
                                None)
         fake_drs_override.assert_called_once_with(self._session,
                                                   self._cluster.obj,
                                                   'vm-ref',
                                                   operation='remove')
+        expected = (self._context, int(flavor.memory_mb), flavor)
+        fake_cleanup_after_special_spawning.assert_called_once_with(*expected)
 
     def test_reserve_all_memory_for_memory_reserved_flavor(self):
         self.flags(group='vmware', reserve_all_memory=False)
@@ -1929,7 +1932,8 @@ class VMwareVMOpsTestCase(test.TestCase):
         recorded_methods = [c[1][1] for c in mock_call_method.mock_calls]
         self.assertEqual(expected_methods, recorded_methods)
 
-    @mock.patch('nova.utils.vm_needs_special_spawning')
+    @mock.patch('nova.utils.vm_needs_special_spawning',
+                return_value=False)
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)
     @mock.patch.object(vmops.VMwareVMOps, '_create_folders',

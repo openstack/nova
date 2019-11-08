@@ -118,6 +118,32 @@ For a couple of operations, e.g. scheduling decisions and special settings when
 spawning, we have to identify a big VM and handle them differently. Every VM
 having more or equal to this setting's amount of RAM is a big VM.
 """),
+    cfg.StrOpt(
+        'bigvm_deployment_rp_name_prefix',
+        default='bigvm-deployment',
+        help="""
+This is the prefix used when creating resource-providers in placement for
+handling spawning of VMs with special requirements like big VMs. The suffix of
+the name will contain the nova-compute host. Prefix and suffix are joined by a
+"-".
+"""),
+    cfg.IntOpt(
+        'prepare_empty_host_for_spawning_interval',
+        default=-1,
+        help="""
+Time in seconds between runs of the periodic task that frees up a host for
+spawning VMs with special needs like big VMs.
+
+This is disabled by default, because it only makes sense for some setups.
+"""),
+    cfg.IntOpt(
+        'bigvm_cluster_max_usage_percent',
+        default=80,
+        help="""
+Clusters/resource-provider with this much usage are not used for freeing up a
+host for spawning (a big VM). Clusters found to reach that amount, that already
+have a host freed, get their free host removed.
+"""),
 ]
 
 metrics_opts = [

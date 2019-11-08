@@ -505,7 +505,8 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     @db.select_db_reader_mode
     def _db_compute_node_get_by_hv_type(context, hv_type):
         db_computes = context.session.query(models.ComputeNode).filter(
-            models.ComputeNode.hypervisor_type == hv_type).all()
+            models.ComputeNode.hypervisor_type == hv_type,
+            models.ComputeNode.deleted == 0).all()
         return db_computes
 
     @classmethod

@@ -389,6 +389,15 @@ Possible values:
 
 * Any string or empty to keep VMware default
 """),
+    cfg.StrOpt('bigvm_deployment_free_host_hostgroup_name',
+        default='',
+        help="""
+Name of the hostgroup used to free up a host for special spawning.
+
+All VMs in the cluster have to be in a VM group that has a rule specifying a
+must-not-run-on-hostgroup rule for this hostgroup. Putting a host in this
+hostgroup will then result in the host getting freed up by DRS.
+"""),
 ]
 
 vmwareapi_driver_opts = [

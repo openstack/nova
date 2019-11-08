@@ -967,6 +967,33 @@ Possible values:
 
 * Any positive integer
 """),
+    cfg.BoolOpt("sharding_ignore_hana",
+        default=True,
+        help="""
+Ignore hana and/or BigVM flavors in the ShardFilter.
+Enabling this option will allow such flavors to be placed on any shard,
+regardless the shards that were enabled for the project.
+
+While this is set to True, individual projects may still have the
+``use_individual_shard_tags_hana`` tag set, which will disable it for
+that project.
+"""),
+    cfg.StrOpt("hana_detection_strategy",
+        default="hana_exclusive_host",
+        help="""
+How to determine if a flavor is a Hana/BigVM to be ignored by the ShardFilter.
+
+Possible values are:
+
+* ``hana_exclusive_host``
+  it will look for the trait:CUSTOM_HANA_EXCLUSIVE_HOST=required
+* ``memory_mb``
+  it will compare flavor.memory_mb >= CONF.bigvm_mb
+
+Related options:
+
+* ``[DEFAULT] bigvm_mb``
+"""),
 ]
 
 metrics_group = cfg.OptGroup(
