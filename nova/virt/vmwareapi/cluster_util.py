@@ -74,6 +74,22 @@ def create_group_spec(client_factory, group, operation):
     return group_spec
 
 
+def _create_host_group_spec(client_factory, name, host_refs, operation="add",
+                            group=None):
+    group = group or client_factory.create('ns0:ClusterHostGroup')
+    group.name = name
+
+    if hasattr(group, 'host'):
+        group.host += host_refs
+    else:
+        group.host = host_refs
+
+    group_spec = client_factory.create('ns0:ClusterGroupSpec')
+    group_spec.operation = operation
+    group_spec.info = group
+    return group_spec
+
+
 def _get_vm_group(cluster_config, group_name):
     if not hasattr(cluster_config, 'group'):
         return None
