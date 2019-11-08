@@ -2447,26 +2447,37 @@ class VMwareVMOps(object):
             datastores_info.append((ds, dc_info))
         self._imagecache.update(context, instances, datastores_info)
 
-    def _get_valid_vms_from_retrieve_result(self, retrieve_result):
-        """Returns list of valid vms from RetrieveResult object."""
+    def _get_valid_vms_from_retrieve_result(self, retrieve_result,
+                                            return_properties=False):
+        """Returns list of valid vms from RetrieveResult object.
+
+        If `return_properties` is True, it will also return the properties of
+        these VMs, thus returning a tuple (vm_uuid, properties).
+        """
         lst_vm_names = []
         with vutil.WithRetrieval(self._session.vim, retrieve_result) as \
                 objects:
             for vm in objects:
                 vm_uuid = None
                 conn_state = None
+                props = {}
                 for prop in vm.propSet:
                     if prop.name == "runtime.connectionState":
                         conn_state = prop.val
                     elif prop.name == 'config.extraConfig["nvp.vm-uuid"]':
                         vm_uuid = prop.val.value
+                    props[prop.name] = prop.val
                 # Ignore VM's that do not have nvp.vm-uuid defined
                 if not vm_uuid:
                     continue
                 # Ignoring the orphaned or inaccessible VMs
-                if conn_state not in ["orphaned", "inaccessible"]:
-                    lst_vm_names.append(vm_uuid)
+                if conn_state in ["orphaned", "inaccessible"]:
+                    continue
 
+                if return_properties:
+                    lst_vm_names.append((vm_uuid, props))
+                else:
+                    lst_vm_names.append(vm_uuid)
         return lst_vm_names
 
     def instance_exists(self, instance):
@@ -2697,10 +2708,12 @@ class VMwareVMOps(object):
 
         return lst_vm_names
 
-    def _list_instances_in_cluster(self):
+    def _list_instances_in_cluster(self, additional_properties=None):
         """Lists the VM instances that are registered with vCenter cluster."""
         properties = ['runtime.connectionState',
                       'config.extraConfig["nvp.vm-uuid"]']
+        if additional_properties is not None:
+            properties.extend(additional_properties)
         LOG.debug("Getting list of instances from cluster %s",
                   self._cluster)
         vms = []
@@ -2708,7 +2721,9 @@ class VMwareVMOps(object):
             vms = self._session._call_method(
                 vim_util, 'get_inner_objects', self._root_resource_pool, 'vm',
                 'VirtualMachine', properties)
-        lst_vm_names = self._get_valid_vms_from_retrieve_result(vms)
+        return_properties = additional_properties is not None
+        lst_vm_names = self._get_valid_vms_from_retrieve_result(vms,
+                                        return_properties=return_properties)
 
         return lst_vm_names
 
