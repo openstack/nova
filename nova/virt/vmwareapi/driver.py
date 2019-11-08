@@ -48,6 +48,7 @@ from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import host
+from nova.virt.vmwareapi import special_spawning
 from nova.virt.vmwareapi import vim_util as nova_vim_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
@@ -158,6 +159,9 @@ class VMwareVCDriver(driver.ComputeDriver):
 
         # Register the OpenStack extension
         self._register_openstack_extension()
+
+        virtapi._compute.additional_endpoints.append(
+            special_spawning._SpecialVmSpawningServer(self))
 
     def _check_min_version(self):
         min_version = v_utils.convert_version_to_int(constants.MIN_VC_VERSION)

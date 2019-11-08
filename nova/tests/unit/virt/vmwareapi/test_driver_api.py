@@ -57,6 +57,7 @@ from nova.tests.unit import utils
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
 from nova.virt import driver as v_driver
+from nova.virt import fake
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import ds_util
@@ -225,7 +226,8 @@ class VMwareAPIVMTestCase(test.TestCase,
         self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
         service = self._create_service(host=HOST)
 
-        self.conn = driver.VMwareVCDriver(None, False)
+        virtapi = fake.FakeComputeVirtAPI(mock.MagicMock())
+        self.conn = driver.VMwareVCDriver(virtapi, False)
         self.assertFalse(service.disabled)
         self._set_exception_vars()
         self.node_name = self.conn._nodename

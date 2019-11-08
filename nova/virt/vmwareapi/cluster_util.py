@@ -223,6 +223,35 @@ def _create_cluster_rules_spec(client_factory, name, vm_refs,
     return rules_spec
 
 
+def _create_cluster_group_rules_spec(client_factory, name, vm_group_name,
+                                     host_group_name, policy='affinity',
+                                     rule=None):
+    operation = 'add' if rule is None else 'edit'
+
+    rules_spec = client_factory.create('ns0:ClusterRuleSpec')
+    rules_spec.operation = operation
+
+    rules_info = client_factory.create('ns0:ClusterVmHostRuleInfo')
+    rules_info.name = name
+    rules_info.enabled = True
+    rules_info.mandatory = True
+    rules_info.vmGroupName = vm_group_name
+    if policy == 'affinity':
+        rules_info.affineHostGroupName = host_group_name
+    elif policy == 'anti-affinity':
+        rules_info.antiAffineHostGroupName = host_group_name
+    else:
+        msg = _('%s policy is not supported.') % policy
+        raise exception.ValidationError(msg)
+
+    if rule is not None:
+        rules_info.key = rule.key
+        rules_info.ruleUuid = rule.ruleUuid
+
+    rules_spec.info = rules_info
+    return rules_spec
+
+
 def _get_rule(cluster_config, rule_name):
     if not hasattr(cluster_config, 'rule'):
         return
