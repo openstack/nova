@@ -1089,15 +1089,14 @@ class ResourceTracker(object):
         """Send resource and inventory changes to placement."""
         # NOTE(jianghuaw): Some resources(e.g. VGPU) are not saved in the
         # object of compute_node; instead the inventory data for these
-        # resource is reported by driver's get_inventory(). So even there
-        # is no resource change for compute_node as above, we need proceed
+        # resource is reported by driver's update_provider_tree(). So even if
+        # there is no resource change for compute_node, we need proceed
         # to get inventory and use report client interfaces to update
         # inventory to placement. It's report client's responsibility to
         # ensure the update request to placement only happens when inventory
         # is changed.
         nodename = compute_node.hypervisor_hostname
         # Persist the stats to the Scheduler
-        # First try update_provider_tree
         # Retrieve the provider tree associated with this compute node.  If
         # it doesn't exist yet, this will create it with a (single, root)
         # provider corresponding to the compute node.
@@ -1154,10 +1153,11 @@ class ResourceTracker(object):
         nodename = compute_node.hypervisor_hostname
         old_compute = self.old_resources[nodename]
         if self._resource_change(compute_node):
-            # If the compute_node's resource changed, update to DB.
-            # NOTE(jianghuaw): Once we completely move to use get_inventory()
-            # for all resource provider's inv data. We can remove this check.
-            # At the moment we still need this check and save compute_node.
+            # If the compute_node's resource changed, update to DB. Note that
+            # _update_to_placement below does not supersede the need to do this
+            # because there are stats-related fields in the ComputeNode object
+            # which could have changed and still need to be reported to the
+            # scheduler filters/weighers (which could be out of tree as well).
             try:
                 compute_node.save()
             except Exception:
