@@ -50,8 +50,6 @@ openstack server create --image ${image_id} --flavor ${flavor_id} \
 --nic net-id=${network_id} --availability-zone nova:${subnode} --wait evacuate-test
 
 echo "Creating BFV test server on subnode"
-# TODO(mriedem): Use OSC when it supports boot from volume where nova creates
-# the root volume from an image.
 nova boot --flavor ${flavor_id} --poll \
 --block-device id=${image_id},source=image,dest=volume,size=1,bootindex=0,shutdown=remove \
 --nic net-id=${network_id} --availability-zone nova:${subnode} evacuate-bfv-test
