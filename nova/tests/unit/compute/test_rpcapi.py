@@ -410,10 +410,12 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 limits=None, request_spec=None, version='5.0')
 
     def test_reserve_block_device_name(self):
+        self.flags(long_rpc_timeout=1234)
         self._test_compute_api('reserve_block_device_name', 'call',
                 instance=self.fake_instance_obj, device='device',
                 volume_id='id', disk_bus='ide', device_type='cdrom',
                 tag='foo', multiattach=True, version='5.0',
+                timeout=1234, call_monitor_timeout=60,
                 _return_value=objects_block_dev.BlockDeviceMapping())
 
     def test_refresh_instance_security_rules(self):
