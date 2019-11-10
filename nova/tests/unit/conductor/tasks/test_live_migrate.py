@@ -33,10 +33,12 @@ from nova.tests.unit import fake_instance
 
 fake_limits1 = objects.SchedulerLimits()
 fake_selection1 = objects.Selection(service_host="host1", nodename="node1",
-        cell_uuid=uuids.cell, limits=fake_limits1)
+        cell_uuid=uuids.cell, limits=fake_limits1,
+        compute_node_uuid=uuids.compute_node1)
 fake_limits2 = objects.SchedulerLimits()
 fake_selection2 = objects.Selection(service_host="host2", nodename="node2",
-        cell_uuid=uuids.cell, limits=fake_limits2)
+        cell_uuid=uuids.cell, limits=fake_limits2,
+        compute_node_uuid=uuids.compute_node2)
 
 
 class LiveMigrationTaskTestCase(test.NoDBTestCase):
@@ -476,7 +478,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.assertEqual(("host2", "node2", fake_limits2),
                          self.task._find_destination())
         # Should have removed allocations for the first host.
-        mock_remove.assert_called_once_with('host1', 'node1')
+        mock_remove.assert_called_once_with(fake_selection1.compute_node_uuid)
         mock_setup.assert_called_once_with(self.context, self.fake_spec)
         mock_select.assert_has_calls([
             mock.call(self.context, self.fake_spec, [self.instance.uuid],
@@ -511,7 +513,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.assertEqual(("host2", "node2", fake_limits2),
                          self.task._find_destination())
         # Should have removed allocations for the first host.
-        mock_remove.assert_called_once_with('host1', 'node1')
+        mock_remove.assert_called_once_with(fake_selection1.compute_node_uuid)
         mock_setup.assert_called_once_with(self.context, self.fake_spec)
         mock_select.assert_has_calls([
             mock.call(self.context, self.fake_spec, [self.instance.uuid],
@@ -539,7 +541,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.assertEqual(("host2", "node2", fake_limits2),
                          self.task._find_destination())
         # Should have removed allocations for the first host.
-        mock_remove.assert_called_once_with('host1', 'node1')
+        mock_remove.assert_called_once_with(fake_selection1.compute_node_uuid)
         mock_setup.assert_called_once_with(self.context, self.fake_spec)
         mock_select.assert_has_calls([
             mock.call(self.context, self.fake_spec, [self.instance.uuid],
@@ -567,7 +569,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.assertEqual('failed', self.task.migration.status)
         mock_save.assert_called_once_with()
         # Should have removed allocations for the first host.
-        mock_remove.assert_called_once_with('host1', 'node1')
+        mock_remove.assert_called_once_with(fake_selection1.compute_node_uuid)
         mock_setup.assert_called_once_with(self.context, self.fake_spec)
         mock_select.assert_called_once_with(
             self.context, self.fake_spec, [self.instance.uuid],
@@ -673,17 +675,12 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         mock_get.assert_called_once_with(
             self.task.context, self.task.destination)
 
-    @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename',
-                       side_effect=exception.ComputeHostNotFound(host='host'))
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'remove_provider_tree_from_instance_allocation')
-    def test_remove_host_allocations_compute_host_not_found(
-            self, remove_provider, get_cn):
-        """Tests that failing to find a ComputeNode will not blow up
-        the _remove_host_allocations method.
-        """
-        self.task._remove_host_allocations('host', 'node')
-        remove_provider.assert_not_called()
+    def test_remove_host_allocations(self, remove_provider):
+        self.task._remove_host_allocations(uuids.cn)
+        remove_provider.assert_called_once_with(
+            self.task.context, self.task.instance.uuid, uuids.cn)
 
     def test_check_can_migrate_pci(self):
         """Tests that _check_can_migrate_pci() allows live-migration if
