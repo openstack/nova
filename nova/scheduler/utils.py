@@ -646,8 +646,6 @@ def resources_from_request_spec(ctxt, spec_obj, host_manager,
     return res_req
 
 
-# TODO(mriedem): Remove this when select_destinations() in the scheduler takes
-# some sort of skip_filters flag.
 def claim_resources_on_destination(
         context, reportclient, instance, source_node, dest_node,
         source_allocations=None, consumer_generation=None):

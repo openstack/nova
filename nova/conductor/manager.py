@@ -1000,11 +1000,6 @@ class ComputeTaskManager(base.Base):
                                 'not found.', instance.host, instance.node,
                                 instance=instance)
 
-        # TODO(mriedem): Call select_destinations() with a
-        # skip_filters=True flag so the scheduler does the work of
-        # claiming resources on the destination in Placement but still
-        # bypass the scheduler filters, which honors the 'force' flag
-        # in the API.
         try:
             scheduler_utils.claim_resources_on_destination(
                 context, self.report_client, instance, source_node, dest_node)
