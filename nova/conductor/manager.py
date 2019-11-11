@@ -482,7 +482,6 @@ class ComputeTaskManager(base.Base):
                 exception.MigrationPreCheckError,
                 exception.MigrationSchedulerRPCError) as ex:
             with excutils.save_and_reraise_exception():
-                # TODO(johngarbutt) - eventually need instance actions here
                 _set_vm_state(context, instance, ex, instance.vm_state)
                 migration.status = 'error'
                 migration.save()
