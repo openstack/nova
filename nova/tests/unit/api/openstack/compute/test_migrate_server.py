@@ -581,10 +581,6 @@ class MigrateServerTestsV256(MigrateServerTestsV234):
         exc_info = exception.ComputeHostNotFound(host='nonexistent_host')
         self._test_migrate_exception(exc_info, webob.exc.HTTPBadRequest)
 
-    def test_migrate_no_request_spec(self):
-        exc_info = exception.CannotMigrateWithTargetHost()
-        self._test_migrate_exception(exc_info, webob.exc.HTTPConflict)
-
     def test_migrate_to_same_host(self):
         exc_info = exception.CannotMigrateToSameHost()
         self._test_migrate_exception(exc_info, webob.exc.HTTPBadRequest)

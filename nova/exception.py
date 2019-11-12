@@ -2312,11 +2312,6 @@ class TraitCreationFailed(NovaException):
     msg_fmt = _("Failed to create trait %(name)s: %(error)s")
 
 
-class CannotMigrateWithTargetHost(NovaException):
-    msg_fmt = _("Cannot migrate with target host. Retry without a host "
-                "specified.")
-
-
 class CannotMigrateToSameHost(NovaException):
     msg_fmt = _("Cannot migrate to the host where the server exists.")
 
