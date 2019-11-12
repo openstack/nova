@@ -39,6 +39,7 @@ import nova.conf
 from nova import context
 from nova import exception
 from nova import objects
+from nova.objects import block_device as block_device_obj
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
@@ -731,8 +732,9 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
                        side_effect=exception.InstanceIsLocked(
                            instance_uuid=uuids.instance))
     def test_swap_volume_for_locked_server(self, mock_swap_volume):
-        self.assertRaises(webob.exc.HTTPConflict, self._test_swap,
-                          self.attachments)
+        with mock.patch.object(self.attachments, '_update_volume_regular'):
+            self.assertRaises(webob.exc.HTTPConflict, self._test_swap,
+                              self.attachments)
         mock_swap_volume.assert_called_once_with(
             self.req.environ['nova.context'], test.MatchType(objects.Instance),
             {'attach_status': 'attached',
@@ -771,8 +773,9 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         mock_get.side_effect = [
             None, exception.VolumeNotFound(volume_id=FAKE_UUID_C)]
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_C}}
-        self.assertRaises(exc.HTTPBadRequest, self._test_swap,
-                          self.attachments, body=body)
+        with mock.patch.object(self.attachments, '_update_volume_regular'):
+            self.assertRaises(exc.HTTPBadRequest, self._test_swap,
+                              self.attachments, body=body)
         mock_get.assert_has_calls([
             mock.call(self.req.environ['nova.context'], FAKE_UUID_A),
             mock.call(self.req.environ['nova.context'], FAKE_UUID_C)])
@@ -796,17 +799,30 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
     @mock.patch.object(compute_api.API, 'swap_volume',
                        side_effect=exception.VolumeBDMNotFound(
                            volume_id=FAKE_UUID_B))
-    def test_swap_volume_for_bdm_not_found(self, mock_swap_volume):
+    @mock.patch.object(objects.BlockDeviceMapping,
+                       'get_by_volume_and_instance',
+                       side_effect=exception.VolumeBDMNotFound(
+                           volume_id=FAKE_UUID_A))
+    def test_swap_volume_for_bdm_not_found(self, mock_bdm, mock_swap_volume):
         self.assertRaises(webob.exc.HTTPNotFound, self._test_swap,
                           self.attachments)
-        mock_swap_volume.assert_called_once_with(
-            self.req.environ['nova.context'], test.MatchType(objects.Instance),
-            {'attach_status': 'attached',
-             'status': 'in-use',
-             'id': FAKE_UUID_A},
-            {'attach_status': 'detached',
-             'status': 'available',
-             'id': FAKE_UUID_B})
+        if mock_bdm.called:
+            # New path includes regular PUT procedure
+            mock_bdm.assert_called_once_with(self.req.environ['nova.context'],
+                                             FAKE_UUID_A, uuids.instance)
+            mock_swap_volume.assert_not_called()
+        else:
+            # Old path is pure swap-volume
+            mock_bdm.assert_not_called()
+            mock_swap_volume.assert_called_once_with(
+                self.req.environ['nova.context'],
+                test.MatchType(objects.Instance),
+                {'attach_status': 'attached',
+                 'status': 'in-use',
+                 'id': FAKE_UUID_A},
+                {'attach_status': 'detached',
+                 'status': 'available',
+                 'id': FAKE_UUID_B})
 
     def _test_list_with_invalid_filter(self, url):
         req = self._build_request(url)
@@ -1147,6 +1163,296 @@ class VolumeAttachTestsV279(VolumeAttachTestsV2_75):
         result = self.attachments.index(req, FAKE_UUID)
 
         self.assertNotIn('delete_on_termination', result['volumeAttachments'])
+
+
+class UpdateVolumeAttachTests(VolumeAttachTestsV279):
+    microversion = '2.85'
+
+    @mock.patch.object(objects.BlockDeviceMapping,
+                       'get_by_volume_and_instance')
+    @mock.patch.object(block_device_obj.BlockDeviceMapping, 'save')
+    def test_swap_volume(self, mock_save_bdm, mock_get_bdm):
+        vol_bdm = objects.BlockDeviceMapping(
+            self.context,
+            id=1,
+            instance_uuid=FAKE_UUID,
+            volume_id=FAKE_UUID_A,
+            source_type='volume',
+            destination_type='volume',
+            delete_on_termination=False,
+            connection_info=None,
+            tag='fake-tag',
+            device_name='/dev/fake0',
+            attachment_id=uuids.attachment_id)
+        mock_get_bdm.return_value = vol_bdm
+        # On the newer microversion, this test will try to look up the
+        # BDM to check for update of other fields.
+        super(UpdateVolumeAttachTests, self).test_swap_volume()
+
+    def test_swap_volume_with_extra_arg(self):
+        # NOTE(danms): Override this from parent because now device
+        # is checked for unchanged-ness.
+        body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
+                                     'device': '/dev/fake0',
+                                     'notathing': 'foo'}}
+
+        self.assertRaises(self.validation_error,
+                          self._test_swap,
+                          self.attachments,
+                          body=body)
+
+    @mock.patch.object(compute_api.API, 'swap_volume')
+    @mock.patch.object(objects.BlockDeviceMapping,
+                       'get_by_volume_and_instance')
+    @mock.patch.object(block_device_obj.BlockDeviceMapping, 'save')
+    def test_update_volume(self, mock_bdm_save,
+                           mock_get_vol_and_inst, mock_swap):
+        vol_bdm = objects.BlockDeviceMapping(
+            self.context,
+            id=1,
+            instance_uuid=FAKE_UUID,
+            volume_id=FAKE_UUID_A,
+            source_type='volume',
+            destination_type='volume',
+            delete_on_termination=False,
+            connection_info=None,
+            tag='fake-tag',
+            device_name='/dev/fake0',
+            attachment_id=uuids.attachment_id)
+        mock_get_vol_and_inst.return_value = vol_bdm
+
+        body = {'volumeAttachment': {
+            'volumeId': FAKE_UUID_A,
+            'tag': 'fake-tag',
+            'delete_on_termination': True,
+            'device': '/dev/fake0',
+        }}
+        self.attachments.update(self.req, FAKE_UUID,
+                                FAKE_UUID_A, body=body)
+        mock_swap.assert_not_called()
+        mock_bdm_save.assert_called_once()
+        self.assertTrue(vol_bdm['delete_on_termination'])
+
+    @mock.patch.object(compute_api.API, 'swap_volume')
+    @mock.patch.object(objects.BlockDeviceMapping,
+                       'get_by_volume_and_instance')
+    @mock.patch.object(block_device_obj.BlockDeviceMapping, 'save')
+    def test_update_volume_swap(self, mock_bdm_save,
+                                mock_get_vol_and_inst, mock_swap):
+        vol_bdm = objects.BlockDeviceMapping(
+            self.context,
+            id=1,
+            instance_uuid=FAKE_UUID,
+            volume_id=FAKE_UUID_A,
+            source_type='volume',
+            destination_type='volume',
+            delete_on_termination=False,
+            connection_info=None,
+            tag='fake-tag',
+            device_name='/dev/fake0',
+            attachment_id=uuids.attachment_id)
+        mock_get_vol_and_inst.return_value = vol_bdm
+
+        body = {'volumeAttachment': {
+            'volumeId': FAKE_UUID_B,
+            'tag': 'fake-tag',
+            'delete_on_termination': True,
+        }}
+        self.attachments.update(self.req, FAKE_UUID,
+                                FAKE_UUID_A, body=body)
+        mock_bdm_save.assert_called_once()
+        self.assertTrue(vol_bdm['delete_on_termination'])
+        # Swap volume is tested elsewhere, just make sure that we did
+        # attempt to call it in addition to updating the BDM
+        self.assertTrue(mock_swap.called)
+
+    @mock.patch.object(compute_api.API, 'swap_volume')
+    @mock.patch.object(objects.BlockDeviceMapping,
+                       'get_by_volume_and_instance')
+    @mock.patch.object(block_device_obj.BlockDeviceMapping, 'save')
+    def test_update_volume_swap_only_old_microversion(
+            self, mock_bdm_save, mock_get_vol_and_inst, mock_swap):
+        vol_bdm = objects.BlockDeviceMapping(
+            self.context,
+            id=1,
+            instance_uuid=FAKE_UUID,
+            volume_id=FAKE_UUID_A,
+            source_type='volume',
+            destination_type='volume',
+            delete_on_termination=False,
+            connection_info=None,
+            tag='fake-tag',
+            device_name='/dev/fake0',
+            attachment_id=uuids.attachment_id)
+        mock_get_vol_and_inst.return_value = vol_bdm
+
+        body = {'volumeAttachment': {
+            'volumeId': FAKE_UUID_B,
+        }}
+        req = self._get_req(body, microversion='2.84')
+        self.attachments.update(req, FAKE_UUID,
+                                FAKE_UUID_A, body=body)
+        mock_swap.assert_called_once()
+        mock_bdm_save.assert_not_called()
+
+    @mock.patch.object(objects.BlockDeviceMapping,
+                       'get_by_volume_and_instance',
+                       side_effect=exception.VolumeBDMNotFound(
+                           volume_id=FAKE_UUID_A))
+    def test_update_volume_with_invalid_volume_id(self, mock_mr):
+        body = {'volumeAttachment': {
+            'volumeId': FAKE_UUID_A,
+            'delete_on_termination': True,
+        }}
+        self.assertRaises(exc.HTTPNotFound,
+                          self.attachments.update,
+                          self.req, FAKE_UUID,
+                          FAKE_UUID_A, body=body)
+
+    @mock.patch.object(objects.BlockDeviceMapping,
+                       'get_by_volume_and_instance')
+    def test_update_volume_with_changed_attachment_id(self,
+                                                      mock_get_vol_and_inst):
+        vol_bdm = objects.BlockDeviceMapping(
+            self.context,
+            id=1,
+            instance_uuid=FAKE_UUID,
+            volume_id=FAKE_UUID_A,
+            source_type='volume',
+            destination_type='volume',
+            delete_on_termination=False,
+            connection_info=None,
+            tag='fake-tag',
+            device_name='/dev/fake0',
+            attachment_id=uuids.attachment_id)
+        mock_get_vol_and_inst.return_value = vol_bdm
+
+        body = {'volumeAttachment': {
+            'volumeId': FAKE_UUID_A,
+            'id': uuids.attachment_id2,
+        }}
+        self.assertRaises(exc.HTTPBadRequest,
+                          self.attachments.update,
+                          self.req, FAKE_UUID,
+                          FAKE_UUID_A, body=body)
+
+    @mock.patch.object(objects.BlockDeviceMapping,
+                       'get_by_volume_and_instance')
+    def test_update_volume_with_changed_serverId(self,
+                                                 mock_get_vol_and_inst):
+        vol_bdm = objects.BlockDeviceMapping(
+            self.context,
+            id=1,
+            instance_uuid=FAKE_UUID,
+            volume_id=FAKE_UUID_A,
+            source_type='volume',
+            destination_type='volume',
+            delete_on_termination=False,
+            connection_info=None,
+            tag='fake-tag',
+            device_name='/dev/fake0',
+            attachment_id=uuids.attachment_id)
+        mock_get_vol_and_inst.return_value = vol_bdm
+
+        body = {'volumeAttachment': {
+            'volumeId': FAKE_UUID_A,
+            'serverId': uuids.server_id,
+        }}
+        self.assertRaises(exc.HTTPBadRequest,
+                          self.attachments.update,
+                          self.req, FAKE_UUID,
+                          FAKE_UUID_A, body=body)
+
+    @mock.patch.object(objects.BlockDeviceMapping,
+                       'get_by_volume_and_instance')
+    def test_update_volume_with_changed_device(self, mock_get_vol_and_inst):
+        vol_bdm = objects.BlockDeviceMapping(
+            self.context,
+            id=1,
+            instance_uuid=FAKE_UUID,
+            volume_id=FAKE_UUID_A,
+            source_type='volume',
+            destination_type='volume',
+            delete_on_termination=False,
+            connection_info=None,
+            tag='fake-tag',
+            device_name='/dev/fake0',
+            attachment_id=uuids.attachment_id)
+        mock_get_vol_and_inst.return_value = vol_bdm
+
+        body = {'volumeAttachment': {
+            'volumeId': FAKE_UUID_A,
+            'device': '/dev/sdz',
+        }}
+        self.assertRaises(exc.HTTPBadRequest,
+                          self.attachments.update,
+                          self.req, FAKE_UUID,
+                          FAKE_UUID_A, body=body)
+
+    def test_update_volume_with_device_name_old_microversion(self):
+        body = {'volumeAttachment': {
+            'volumeId': FAKE_UUID_A,
+            'device': '/dev/fake0',
+        }}
+        req = self._get_req(body, microversion='2.84')
+        ex = self.assertRaises(exception.ValidationError,
+                               self.attachments.update,
+                               req, FAKE_UUID,
+                               FAKE_UUID_A, body=body)
+        self.assertIn('Additional properties are not allowed',
+                      six.text_type(ex))
+
+    @mock.patch.object(objects.BlockDeviceMapping,
+                       'get_by_volume_and_instance')
+    def test_update_volume_with_changed_tag(self, mock_get_vol_and_inst):
+        vol_bdm = objects.BlockDeviceMapping(
+            self.context,
+            id=1,
+            instance_uuid=FAKE_UUID,
+            volume_id=FAKE_UUID_A,
+            source_type='volume',
+            destination_type='volume',
+            delete_on_termination=False,
+            connection_info=None,
+            tag='fake-tag',
+            device_name='/dev/fake0',
+            attachment_id=uuids.attachment_id)
+        mock_get_vol_and_inst.return_value = vol_bdm
+
+        body = {'volumeAttachment': {
+            'volumeId': FAKE_UUID_A,
+           'tag': 'icanhaznewtag',
+        }}
+        self.assertRaises(exc.HTTPBadRequest,
+                          self.attachments.update,
+                          self.req, FAKE_UUID,
+                          FAKE_UUID_A, body=body)
+
+    def test_update_volume_with_tag_old_microversion(self):
+        body = {'volumeAttachment': {
+            'volumeId': FAKE_UUID_A,
+            'tag': 'fake-tag',
+        }}
+        req = self._get_req(body, microversion='2.84')
+        ex = self.assertRaises(exception.ValidationError,
+                               self.attachments.update,
+                               req, FAKE_UUID,
+                               FAKE_UUID_A, body=body)
+        self.assertIn('Additional properties are not allowed',
+                      six.text_type(ex))
+
+    def test_update_volume_with_delete_flag_old_microversion(self):
+        body = {'volumeAttachment': {
+            'volumeId': FAKE_UUID_A,
+            'delete_on_termination': True,
+        }}
+        req = self._get_req(body, microversion='2.84')
+        ex = self.assertRaises(exception.ValidationError,
+                               self.attachments.update,
+                               req, FAKE_UUID,
+                               FAKE_UUID_A, body=body)
+        self.assertIn('Additional properties are not allowed',
+                      six.text_type(ex))
 
 
 class SwapVolumeMultiattachTestCase(test.NoDBTestCase):

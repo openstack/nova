@@ -1113,3 +1113,10 @@ The ``GET /servers/{server_id}/os-instance-actions/{request_id}`` API returns
 a ``details`` parameter for each failed event with a fault message, similar to
 the server ``fault.message`` parameter in ``GET /servers/{server_id}`` for a
 server with status ``ERROR``.
+
+2.85
+----
+
+Adds the ability to specify ``delete_on_termination`` in the
+``PUT /servers/{server_id}/os-volume_attachments/{volume_id}`` API, which
+allows changing the behavior of volume deletion on instance deletion.

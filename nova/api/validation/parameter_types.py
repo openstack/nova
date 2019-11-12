@@ -336,6 +336,11 @@ volume_id = {
 }
 
 
+attachment_id = {
+    'type': 'string', 'format': 'uuid'
+}
+
+
 volume_type = {
     'type': ['string', 'null'], 'minLength': 0, 'maxLength': 255
 }

@@ -227,6 +227,10 @@ REST_API_VERSION_HISTORY = """REST API Version History:
     * 2.83 - Allow more filter parameters for ``GET /servers/detail`` and
              ``GET /servers`` for non-admin.
     * 2.84 - Adds ``details`` field to instance action events.
+    * 2.85 - Add support for
+             ``PUT /servers/{server_id}/os-volume_attachments/{volume_id}``
+             which supports specifying the ``delete_on_termination`` field in
+             the request body to change the attached volume's flag.
 """
 
 # The minimum and maximum versions of the API supported
@@ -235,7 +239,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.84"
+_MAX_API_VERSION = "2.85"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which are related to network, images and baremetal

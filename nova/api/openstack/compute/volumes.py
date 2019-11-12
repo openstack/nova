@@ -391,15 +391,8 @@ class VolumeAttachmentController(wsgi.Controller):
             attachment['delete_on_termination'] = delete_on_termination
         return {'volumeAttachment': attachment}
 
-    @wsgi.response(202)
-    @wsgi.expected_errors((400, 404, 409))
-    @validation.schema(volumes_schema.update_volume_attachment)
-    def update(self, req, server_id, id, body):
+    def _update_volume_swap(self, req, instance, id, body):
         context = req.environ['nova.context']
-        instance = common.get_instance(self.compute_api, context, server_id)
-        context.can(va_policies.POLICY_ROOT % 'update',
-                    target={'project_id': instance.project_id})
-
         old_volume_id = id
         try:
             old_volume = self.volume_api.get(context, old_volume_id)
@@ -431,7 +424,67 @@ class VolumeAttachmentController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'swap_volume', server_id)
+                    'swap_volume', instance.uuid)
+
+    def _update_volume_regular(self, req, instance, id, body):
+        context = req.environ['nova.context']
+        att = body['volumeAttachment']
+        # NOTE(danms): We may be doing an update of regular parameters in
+        # the midst of a swap operation, so to find the original BDM, we need
+        # to use the old volume ID, which is the one in the path.
+        volume_id = id
+
+        try:
+            bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
+                context, volume_id, instance.uuid)
+
+            # NOTE(danms): The attachment id is just the (current) volume id
+            if 'id' in att and att['id'] != volume_id:
+                raise exc.HTTPBadRequest(explanation='The id property is '
+                                         'not mutable')
+            if 'serverId' in att and att['serverId'] != instance.uuid:
+                raise exc.HTTPBadRequest(explanation='The serverId property '
+                                         'is not mutable')
+            if 'device' in att and att['device'] != bdm.device_name:
+                raise exc.HTTPBadRequest(explanation='The device property is '
+                                         'not mutable')
+            if 'tag' in att and att['tag'] != bdm.tag:
+                raise exc.HTTPBadRequest(explanation='The tag property is '
+                                         'not mutable')
+            if 'delete_on_termination' in att:
+                bdm.delete_on_termination = att['delete_on_termination']
+            bdm.save()
+        except exception.VolumeBDMNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+
+    @wsgi.response(202)
+    @wsgi.expected_errors((400, 404, 409))
+    @validation.schema(volumes_schema.update_volume_attachment, '2.0', '2.84')
+    @validation.schema(volumes_schema.update_volume_attachment_v285,
+                       min_version='2.85')
+    def update(self, req, server_id, id, body):
+        context = req.environ['nova.context']
+        instance = common.get_instance(self.compute_api, context, server_id)
+        # TODO(danms): For now, use the existing admin-only policy for update.
+        # Later, split off the swap_volume permission and check the correct
+        # policy based on what is being asked by the client.
+        context.can(va_policies.POLICY_ROOT % 'update',
+                    target={'project_id': instance.project_id})
+
+        attachment = body['volumeAttachment']
+        volume_id = attachment['volumeId']
+        only_swap = not api_version_request.is_supported(req, '2.85')
+        if only_swap:
+            # NOTE(danms): Original behavior is always call swap on PUT
+            # FIXME(danms): Check the swap volume policy here
+            self._update_volume_swap(req, instance, id, body)
+        else:
+            # NOTE(danms): New behavior is update any supported attachment
+            # properties first, and then call swap if volumeId differs
+            # FIXME(danms): Check the volume attachment update policy here
+            self._update_volume_regular(req, instance, id, body)
+            if id != volume_id:
+                self._update_volume_swap(req, instance, id, body)
 
     @wsgi.response(202)
     @wsgi.expected_errors((400, 403, 404, 409))
