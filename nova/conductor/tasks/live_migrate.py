@@ -489,38 +489,23 @@ class LiveMigrationTask(base.TaskBase):
                 # The scheduler would have created allocations against the
                 # selected destination host in Placement, so we need to remove
                 # those before moving on.
-                self._remove_host_allocations(host, selection.nodename)
+                self._remove_host_allocations(selection.compute_node_uuid)
                 host = None
         # TODO(artom) We should probably just return the whole selection object
         # at this point.
         return (selection.service_host, selection.nodename, selection.limits)
 
-    def _remove_host_allocations(self, host, node):
-        """Removes instance allocations against the given host from Placement
+    def _remove_host_allocations(self, compute_node_uuid):
+        """Removes instance allocations against the given node from Placement
 
-        :param host: The name of the host.
-        :param node: The name of the node.
+        :param compute_node_uuid: UUID of ComputeNode resource provider
         """
-        # Get the compute node object since we need the UUID.
-        # TODO(mriedem): If the result of select_destinations eventually
-        # returns the compute node uuid, we wouldn't need to look it
-        # up via host/node and we can save some time.
-        try:
-            compute_node = objects.ComputeNode.get_by_host_and_nodename(
-                self.context, host, node)
-        except exception.ComputeHostNotFound:
-            # This shouldn't happen, but we're being careful.
-            LOG.info('Unable to remove instance allocations from host %s '
-                     'and node %s since it was not found.', host, node,
-                     instance=self.instance)
-            return
-
         # Now remove the allocations for our instance against that node.
         # Note that this does not remove allocations against any other node
         # or shared resource provider, it's just undoing what the scheduler
         # allocated for the given (destination) node.
         self.report_client.remove_provider_tree_from_instance_allocation(
-            self.context, self.instance.uuid, compute_node.uuid)
+            self.context, self.instance.uuid, compute_node_uuid)
 
     def _check_not_over_max_retries(self, attempted_hosts):
         if CONF.migrate_max_retries == -1:
