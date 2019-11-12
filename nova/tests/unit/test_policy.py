@@ -185,6 +185,22 @@ class PolicyTestCase(test.NoDBTestCase):
                 "project_id:%(project_id)s")])
         mock_warning.assert_not_called()
 
+    @requests_mock.mock()
+    def test_authorize_raise_invalid_scope(self, req_mock):
+        req_mock.post('http://www.example.com/',
+                      text='False')
+        action = "example:get_http"
+        target = {}
+        with mock.patch('oslo_policy.policy.Enforcer.authorize') as auth_mock:
+            auth_mock.side_effect = oslo_policy.InvalidScope(
+                action, self.context.system_scope, 'invalid_scope')
+            exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                    policy.authorize, self.context,
+                                    action, target)
+            self.assertEqual(
+                "Policy doesn't allow %s to be performed." % action,
+                exc.format_message())
+
     @mock.patch.object(policy.LOG, 'warning')
     def test_verify_deprecated_policy_using_old_action(self, mock_warning):
 
@@ -256,7 +272,7 @@ class IsAdminCheckTestCase(test.NoDBTestCase):
         mock_auth.assert_called_once_with(
             'context_is_admin',
             {'user_id': 'fake-user', 'project_id': 'fake-project'},
-            ctxt.to_policy_values())
+            ctxt)
 
 
 class AdminRolePolicyTestCase(test.NoDBTestCase):
