@@ -332,7 +332,7 @@ class PCIServersTest(_PCIServersTestBase):
         self._run_build_test(flavor_id, end_status='ERROR')
 
 
-class PCIServersWithNUMAPoliciesTest(_PCIServersTestBase):
+class PCIServersWithPreferredNUMATest(_PCIServersTestBase):
 
     ALIAS_NAME = 'a1'
     PCI_PASSTHROUGH_WHITELIST = [jsonutils.dumps(
@@ -350,6 +350,7 @@ class PCIServersWithNUMAPoliciesTest(_PCIServersTestBase):
             'numa_policy': fields.PCINUMAAffinityPolicy.PREFERRED,
         }
     )]
+    end_status = 'ACTIVE'
 
     def test_create_server_with_pci_dev_and_numa(self):
         """Validate behavior of 'preferred' PCI NUMA policy.
@@ -381,4 +382,19 @@ class PCIServersWithNUMAPoliciesTest(_PCIServersTestBase):
         extra_spec['pci_passthrough:alias'] = '%s:1' % self.ALIAS_NAME
         flavor_id = self._create_flavor(extra_spec=extra_spec)
 
-        self._run_build_test(flavor_id)
+        self._run_build_test(flavor_id, end_status=self.end_status)
+
+
+class PCIServersWithRequiredNUMATest(PCIServersWithPreferredNUMATest):
+
+    ALIAS_NAME = 'a1'
+    PCI_ALIAS = [jsonutils.dumps(
+        {
+            'vendor_id': fakelibvirt.PCI_VEND_ID,
+            'product_id': fakelibvirt.PCI_PROD_ID,
+            'name': ALIAS_NAME,
+            'device_type': fields.PciDeviceType.STANDARD,
+            'numa_policy': fields.PCINUMAAffinityPolicy.REQUIRED,
+        }
+    )]
+    end_status = 'ERROR'
