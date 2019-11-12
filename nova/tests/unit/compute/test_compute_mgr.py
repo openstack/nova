@@ -548,12 +548,30 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         instance = fake_instance.fake_instance_obj(self.context,
                                                    uuid=uuids.instance,
                                                    host='foo-host',
-                                                   node='foo-node')
+                                                   node='foo-node',
+                                                   availability_zone='foo-az')
         self.assertIsNotNone(instance.host)
         self.assertIsNotNone(instance.node)
+        self.assertIsNotNone(instance.availability_zone)
+        self.compute._nil_out_instance_obj_host_and_node(
+            instance, nil_az=False)
+        self.assertIsNone(instance.host)
+        self.assertIsNone(instance.node)
+        self.assertIsNotNone(instance.availability_zone)
+
+    def test_nil_out_inst_obj_host_and_node_nils_az(self):
+        instance = fake_instance.fake_instance_obj(self.context,
+                                                   uuid=uuids.instance,
+                                                   host='foo-host',
+                                                   node='foo-node',
+                                                   availability_zone='foo-az')
+        self.assertIsNotNone(instance.host)
+        self.assertIsNotNone(instance.node)
+        self.assertIsNotNone(instance.availability_zone)
         self.compute._nil_out_instance_obj_host_and_node(instance)
         self.assertIsNone(instance.host)
         self.assertIsNone(instance.node)
+        self.assertIsNone(instance.availability_zone)
 
     def test_init_host(self):
         our_host = self.compute.host
@@ -4473,7 +4491,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.filter_properties)
         mock_clean.assert_called_once_with(self.context, self.instance,
                 self.compute.host)
-        mock_nil.assert_called_once_with(self.instance)
+        mock_nil.assert_called_once_with(self.instance, nil_az=False)
         mock_build.assert_called_once_with(self.context,
                 [self.instance], self.image, self.filter_properties,
                 self.admin_pass, self.injected_files, self.requested_networks,
@@ -4761,7 +4779,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_deallocate.assert_called_once_with(self.instance)
         mock_clean_inst.assert_called_once_with(self.context, self.instance,
                 self.compute.host)
-        mock_nil.assert_called_once_with(self.instance)
+        mock_nil.assert_called_once_with(self.instance, nil_az=False)
         mock_build.assert_called_once_with(self.context,
                 [self.instance], self.image, self.filter_properties,
                 self.admin_pass, self.injected_files, self.requested_networks,
@@ -4809,7 +4827,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_deallocate.assert_called_once_with(self.instance)
         mock_clean.assert_called_once_with(self.context, self.instance,
                 self.requested_networks)
-        mock_nil.assert_called_once_with(self.instance)
+        mock_nil.assert_called_once_with(self.instance, nil_az=False)
         mock_build.assert_called_once_with(self.context,
                 [self.instance], self.image, self.filter_properties,
                 self.admin_pass, self.injected_files, self.requested_networks,
@@ -5198,7 +5216,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.image, self.filter_properties, self.admin_pass,
                 self.injected_files, self.requested_networks,
                 self.security_groups, self.block_device_mapping)
-        mock_nil.assert_called_once_with(self.instance)
+        mock_nil.assert_called_once_with(self.instance, nil_az=False)
         mock_clean.assert_called_once_with(self.context, self.instance,
                 self.compute.host)
 

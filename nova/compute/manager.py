@@ -569,16 +569,18 @@ class ComputeManager(manager.Manager):
         instance.save()
         self._update_resource_tracker(context, instance)
 
-    def _nil_out_instance_obj_host_and_node(self, instance):
+    def _nil_out_instance_obj_host_and_node(self, instance, nil_az=True):
         # NOTE(jwcroppe): We don't do instance.save() here for performance
         # reasons; a call to this is expected to be immediately followed by
         # another call that does instance.save(), thus avoiding two writes
         # to the database layer.
         instance.host = None
         instance.node = None
-        # If the instance is not on a host, it's not in an aggregate and
-        # therefore is not in an availability zone.
-        instance.availability_zone = None
+        if nil_az:
+            # If the instance is not on a host, it's not in an aggregate and
+            # therefore is not in an availability zone. Except if re-schedule
+            # is triggered, then we need to keep the az information
+            instance.availability_zone = None
 
     def _set_instance_obj_error_state(self, context, instance,
                                       clean_task_state=False):
@@ -1931,7 +1933,9 @@ class ComputeManager(manager.Manager):
                 self.network_api.cleanup_instance_network_on_host(
                     context, instance, self.host)
 
-            self._nil_out_instance_obj_host_and_node(instance)
+            # We should not nil out the availability zone here as it is needed
+            # during reschedule
+            self._nil_out_instance_obj_host_and_node(instance, nil_az=False)
             instance.task_state = task_states.SCHEDULING
             instance.save()
 

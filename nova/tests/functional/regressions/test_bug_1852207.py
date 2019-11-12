@@ -86,14 +86,10 @@ class BootServerInAzRescheduleTest(
 
             # The server expected to go the ERROR state as the resource claim
             # failed on the only host that was in the requested aggregate
-            # server = self._wait_for_state_change(self.api, server, 'ERROR')
-            #
-            # bug 1852207: re-schedule allows to boot the server outside of the
-            # requested availability zone so the instance ends up on the
-            # compute_not_in_my_az host
-            server = self._wait_for_state_change(self.api, server, 'ACTIVE')
-            self.assertEqual('nova', server['OS-EXT-AZ:availability_zone'])
-            self.assertEqual(
-                'compute_not_in_my_az', server['OS-EXT-SRV-ATTR:host'])
+            server = self._wait_for_state_change(self.api, server, 'ERROR')
+            self.assertIn(
+                'No valid host was found. '
+                'There are not enough hosts available.',
+                server['fault']['message'])
 
             self.assertTrue(mock_instance_claim.called)
