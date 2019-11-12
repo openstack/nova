@@ -2006,11 +2006,10 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             }
         }
 
-        resp = self.api.post_server_action(
-            server['id'], resize_req, check_response_status=[400])
-        self.assertEqual(
-            resp['badRequest']['message'],
-            "No valid host was found. No valid host found for resize")
+        self.api.post_server_action(
+            server['id'], resize_req, check_response_status=[202])
+        self._assert_resize_migrate_action_fail(
+            server, instance_actions.RESIZE, 'NoValidHost')
         server = self.admin_api.get_server(server['id'])
         self.assertEqual(source_hostname, server['OS-EXT-SRV-ATTR:host'])
 
@@ -2210,10 +2209,9 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         # migrate the server
         post = {'migrate': None}
-        ex = self.assertRaises(client.OpenStackApiException,
-                               self.api.post_server_action,
-                               server['id'], post)
-        self.assertIn('No valid host', six.text_type(ex))
+        self.api.post_server_action(server['id'], post)
+        self._assert_resize_migrate_action_fail(
+            server, instance_actions.MIGRATE, 'NoValidHost')
         expected_params = {'OS-EXT-SRV-ATTR:host': source_hostname,
                            'status': 'ACTIVE'}
         self._wait_for_server_parameter(self.api, server, expected_params)
@@ -3300,15 +3298,6 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         data = {"resize": {"flavorRef": self.flavor2["id"]}}
         self.api.post_server_action(server_uuid, data)
 
-        # fill_provider_mapping should have been called once for the initial
-        # build, once for the resize scheduling to the primary host and then
-        # once per reschedule.
-        expected_fill_count = 2
-        if num_alts > 1:
-            expected_fill_count += self.num_fails - 1
-        self.assertGreaterEqual(mock_fill_provider_map.call_count,
-                                expected_fill_count)
-
         if num_alts < fails:
             # We will run out of alternates before populate_retry will
             # raise a MaxRetriesExceeded exception, so the migration will
@@ -3348,6 +3337,15 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             filters = {"instance_uuid": server["id"]}
             migrations = objects.MigrationList.get_by_filters(ctxt, filters)
             self.assertEqual(1, len(migrations.objects))
+
+        # fill_provider_mapping should have been called once for the initial
+        # build, once for the resize scheduling to the primary host and then
+        # once per reschedule.
+        expected_fill_count = 2
+        if num_alts > 1:
+            expected_fill_count += self.num_fails - 1
+        self.assertGreaterEqual(mock_fill_provider_map.call_count,
+                                expected_fill_count)
 
     def test_resize_reschedule_uses_host_lists_1_fail(self):
         self._test_resize_reschedule_uses_host_lists(fails=1)
@@ -4701,14 +4699,19 @@ class ConsumerGenerationConflictTest(
             mock_put.return_value = rsp
 
             request = {'migrate': None}
-            exception = self.assertRaises(client.OpenStackApiException,
-                                          self.api.post_server_action,
-                                          server['id'], request)
+            self.api.post_server_action(server['id'], request,
+                                        check_response_status=[202])
+            self._wait_for_server_parameter(self.admin_api, server,
+                                            {'OS-EXT-STS:task_state': None})
 
-        # I know that HTTP 500 is harsh code but I think this conflict case
-        # signals either a serious db inconsistency or a bug in nova's
-        # claim code.
-        self.assertEqual(500, exception.response.status_code)
+        # The instance action should have failed with details.
+        # save_and_reraise_exception gets different results between py2 and py3
+        # for the traceback but we want to use the more specific
+        # "claim_resources" for py3. We can remove this when we drop support
+        # for py2.
+        error_in_tb = 'claim_resources' if six.PY3 else 'select_destinations'
+        self._assert_resize_migrate_action_fail(
+            server, instance_actions.MIGRATE, error_in_tb)
 
         # The migration is aborted so the instance is ACTIVE on the source
         # host instead of being in VERIFY_RESIZE state.
@@ -4741,14 +4744,15 @@ class ConsumerGenerationConflictTest(
             mock_post.return_value = rsp
 
             request = {'migrate': None}
-            exception = self.assertRaises(client.OpenStackApiException,
-                                          self.api.post_server_action,
-                                          server['id'], request)
+            self.api.post_server_action(server['id'], request,
+                                        check_response_status=[202])
+            self._wait_for_server_parameter(self.admin_api, server,
+                                            {'OS-EXT-STS:task_state': None})
+
+        self._assert_resize_migrate_action_fail(
+            server, instance_actions.MIGRATE, 'move_allocations')
 
         self.assertEqual(1, mock_post.call_count)
-
-        self.assertEqual(409, exception.response.status_code)
-        self.assertIn('Failed to move allocations', exception.response.text)
 
         migrations = self.api.get_migrations()
         self.assertEqual(1, len(migrations))
@@ -6542,12 +6546,13 @@ class ServerMoveWithPortResourceRequestTest(
                 'nova.objects.Service.get_by_host_and_binary',
                 side_effect=fake_get_service):
 
-            ex = self.assertRaises(
-                client.OpenStackApiException,
-                self.api.post_server_action, server['id'], {'migrate': None})
+            self.api.post_server_action(server['id'], {'migrate': None},
+                                        check_response_status=[202])
+            self._wait_for_server_parameter(self.admin_api, server,
+                                            {'OS-EXT-STS:task_state': None})
 
-        self.assertEqual(400, ex.response.status_code)
-        self.assertIn('No valid host was found.', six.text_type(ex))
+        self._assert_resize_migrate_action_fail(
+            server, instance_actions.MIGRATE, 'NoValidHost')
 
         # check that the server still allocates from the original host
         self._check_allocation(
@@ -6607,8 +6612,7 @@ class ServerMoveWithPortResourceRequestTest(
                 side_effect=fake_get_service):
 
             self.api.post_server_action(server['id'], {'migrate': None})
-
-        self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+            self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
 
         migration_uuid = self.get_migration_uuid_for_instance(server['id'])
 
@@ -6954,13 +6958,11 @@ class ServerMoveWithPortResourceRequestTest(
         # enough information to do a proper port binding on the target host.
         # The MigrationTask in the conductor checks that the RPC is new enough
         # for this request for each possible destination provided by the
-        # scheduler and skips the old hosts.
-        ex = self.assertRaises(
-            client.OpenStackApiException, self.api.post_server_action,
-            server['id'], {'migrate': None})
-
-        self.assertEqual(400, ex.response.status_code)
-        self.assertIn('No valid host was found.', six.text_type(ex))
+        # scheduler and skips the old hosts. The actual response will be a 202
+        # so we have to wait for the failed instance action event.
+        self.api.post_server_action(server['id'], {'migrate': None})
+        self._assert_resize_migrate_action_fail(
+            server, instance_actions.MIGRATE, 'NoValidHost')
 
         # The migration is put into error
         self._wait_for_migration_status(server, ['error'])

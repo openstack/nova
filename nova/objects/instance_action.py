@@ -184,6 +184,17 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject,
             values['result'] = 'Success'
         else:
             values['result'] = 'Error'
+            # FIXME(mriedem): message is not used. The instance_actions_events
+            # table has a "details" column but not a "message" column which
+            # means the exc_val is never stored in the record. So far it does
+            # not matter because the exc_val is not exposed out of the API,
+            # but we should consider storing at least the exception type so
+            # we could expose that to non-admin owners of a server in the API
+            # since then they could see something like NoValidHost to know why
+            # the operation failed. Note by default policy non-admins are not
+            # allowed to see the traceback field. If we expose exc_val somehow
+            # we might consider re-using logic from exception_to_dict which
+            # is used to store an instance fault message.
             values['message'] = exc_val
             values['traceback'] = exc_tb
         return values

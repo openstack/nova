@@ -12,13 +12,11 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import six
-
+from nova.compute import instance_actions
 from nova import context
 from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-from nova.tests.functional.api import client
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit.image import fake as image_fake
@@ -118,18 +116,15 @@ class NonPersistentFieldNotResetTest(
             source_compute_id, {'forced_down': 'true'})
 
         # Cold migrate a server with a target host.
-        # If requested_destination is reset, the server is moved to a host
-        # that is not a requested target host.
-        # In that case, the response code is 202.
-        # If requested_destination is not reset, no valid host error (400) is
-        # returned because the target host is down.
-        ex = self.assertRaises(client.OpenStackApiException,
-                               self.api.post_server_action,
-                               server['id'],
-                               {'migrate': {'host': target_host}})
-        self.assertEqual(400, ex.response.status_code)
-        self.assertIn('No valid host was found. No valid host found '
-                      'for cold migrate', six.text_type(ex))
+        # The response status code is 202 even though the operation will
+        # fail because the requested target host is down which will result
+        # in a NoValidHost error.
+        self.api.post_server_action(
+            server['id'], {'migrate': {'host': target_host}},
+            check_response_status=[202])
+        # The instance action should have failed with details.
+        self._assert_resize_migrate_action_fail(
+            server, instance_actions.MIGRATE, 'NoValidHost')
 
         # Make sure 'is_bfv' is set.
         reqspec = objects.RequestSpec.get_by_instance_uuid(self.ctxt,

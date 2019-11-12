@@ -721,8 +721,6 @@ class ServerActionsControllerTestV21(test.TestCase):
             (exception.ImageNotFound(image_id=image_id),
              webob.exc.HTTPBadRequest),
             (exception.Invalid, webob.exc.HTTPBadRequest),
-            (exception.NoValidHost(reason='Bad host'),
-             webob.exc.HTTPBadRequest),
             (exception.AutoDiskConfigDisabledByImage(image=image_id),
              webob.exc.HTTPBadRequest),
         ]
@@ -791,15 +789,6 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.stub_out('nova.compute.api.API.resize', fake_resize)
 
         self.assertRaises(webob.exc.HTTPConflict,
-                          self.controller._action_resize,
-                          self.req, FAKE_UUID, body=body)
-
-    @mock.patch('nova.compute.api.API.resize',
-                side_effect=exception.NoValidHost(reason=''))
-    def test_resize_raises_no_valid_host(self, mock_resize):
-        body = dict(resize=dict(flavorRef="http://localhost/3"))
-
-        self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_resize,
                           self.req, FAKE_UUID, body=body)
 

@@ -1941,7 +1941,7 @@ class _ComputeAPIUnitTestMixIn(object):
                     scheduler_hint=scheduler_hint,
                     flavor=test.MatchType(objects.Flavor),
                     clean_shutdown=clean_shutdown,
-                    request_spec=fake_spec, do_cast=allow_cross_cell_resize)
+                    request_spec=fake_spec, do_cast=True)
             else:
                 mock_resize.assert_not_called()
 

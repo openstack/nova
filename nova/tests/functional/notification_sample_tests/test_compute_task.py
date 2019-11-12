@@ -11,7 +11,6 @@
 #    under the License.
 
 from nova.tests import fixtures
-from nova.tests.functional.api import client as api_client
 from nova.tests.functional.notification_sample_tests \
     import notification_sample_base
 from nova.tests.unit import fake_notifier
@@ -107,9 +106,9 @@ class TestComputeTaskNotificationSample(
 
         fake_notifier.reset()
 
-        self.assertRaises(api_client.OpenStackApiException,
-                          self.admin_api.post_server_action,
-                          server['id'], {'migrate': None})
+        # Note that the operation will return a 202 response but fail with
+        # NoValidHost asynchronously.
+        self.admin_api.post_server_action(server['id'], {'migrate': None})
         self._wait_for_notification('compute_task.migrate_server.error')
         # 0. scheduler.select_destinations.start
         # 1. compute_task.migrate_server.error

@@ -957,8 +957,7 @@ class ServersController(wsgi.Controller):
         except exception.QuotaError as error:
             raise exc.HTTPForbidden(
                 explanation=error.format_message())
-        except (exception.InstanceIsLocked,
-                exception.AllocationMoveFailed) as e:
+        except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
@@ -974,8 +973,7 @@ class ServersController(wsgi.Controller):
         except (exception.AutoDiskConfigDisabledByImage,
                 exception.CannotResizeDisk,
                 exception.CannotResizeToSameFlavor,
-                exception.FlavorNotFound,
-                exception.NoValidHost) as e:
+                exception.FlavorNotFound) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except INVALID_FLAVOR_IMAGE_EXCEPTIONS as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())

@@ -3839,17 +3839,15 @@ class API(base.Base):
                 host=node.host, node=node.hypervisor_hostname,
                 allow_cross_cell_move=allow_cross_cell_resize)
 
-        # This is by default a synchronous RPC call to conductor which does not
-        # return until the MigrationTask in conductor RPC casts to the
-        # prep_resize method on the selected destination nova-compute service.
-        # However, if we are allowed to do a cross-cell resize, then we
-        # asynchronously RPC cast since the CrossCellMigrationTask is blocking.
+        # Asynchronously RPC cast to conductor so the response is not blocked
+        # during scheduling. If something fails the user can find out via
+        # instance actions.
         self.compute_task_api.resize_instance(context, instance,
             scheduler_hint=scheduler_hint,
             flavor=new_instance_type,
             clean_shutdown=clean_shutdown,
             request_spec=request_spec,
-            do_cast=allow_cross_cell_resize)
+            do_cast=True)
 
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
