@@ -95,6 +95,7 @@ from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_diagnostics
 from nova.tests.unit.objects import test_pci_device
 from nova.tests.unit.objects import test_vcpu_model
+from nova.tests.unit import utils as test_utils
 from nova.tests.unit.virt.libvirt import fake_imagebackend
 from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova import utils
@@ -23470,7 +23471,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             </capabilities>
             """
         self.drvr._get_cpu_feature_traits()
-        self.assertItemsEqual(['pcid', 'erms'], mock_to_traits.call_args[0][0])
+        mock_to_traits.assert_called_once_with(
+            test_utils.ItemsMatcher(['pcid', 'erms']))
 
     @mock.patch('nova.virt.libvirt.host.libvirt.Connection.baselineCPU')
     @mock.patch('nova.virt.libvirt.utils.cpu_features_to_traits')
@@ -23498,7 +23500,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
   <topology sockets="1" cores="2" threads="1"/>
 </cpu>
 '''], 1)
-        self.assertItemsEqual(['pcid', 'erms'], mock_to_traits.call_args[0][0])
+        mock_to_traits.assert_called_once_with(
+            test_utils.ItemsMatcher(['pcid', 'erms']))
 
     @mock.patch('nova.virt.libvirt.host.libvirt.Connection.baselineCPU')
     @mock.patch('nova.virt.libvirt.utils.cpu_features_to_traits')
@@ -23518,7 +23521,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             </cpu>
             """
         self.drvr._get_cpu_feature_traits()
-        self.assertItemsEqual(['pcid', 'erms'], mock_to_traits.call_args[0][0])
+        mock_to_traits.assert_called_once_with(
+            test_utils.ItemsMatcher(['pcid', 'erms']))
 
     def test_cpu_traits_with_mode_none_and_invalid_virt_type(self):
         """Test case that cpu mode is none and virt_type is neither kvm nor

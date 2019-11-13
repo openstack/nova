@@ -19,6 +19,7 @@ from nova import exception
 from nova import objects
 from nova.scheduler import request_filter
 from nova import test
+from nova.tests.unit import utils
 
 
 class TestRequestFilter(test.NoDBTestCase):
@@ -130,15 +131,15 @@ class TestRequestFilter(test.NoDBTestCase):
         self.assertItemsEqual(
             set([uuids.agg1, uuids.agg2, uuids.agg4]),
             reqspec.requested_destination.forbidden_aggregates)
-        mock_getnotmd.assert_called_once_with(self.context, mock.ANY,
-                                              'trait:', value='required')
-        self.assertItemsEqual(agg4_traits, mock_getnotmd.call_args[0][1])
+        mock_getnotmd.assert_called_once_with(
+            self.context, utils.ItemsMatcher(agg4_traits), 'trait:',
+            value='required')
 
     @mock.patch('nova.objects.aggregate.AggregateList.'
                 'get_non_matching_by_metadata_keys')
     def test_isolate_aggregates_union(self, mock_getnotmd):
         agg_traits = {'trait:HW_GPU_API_DXVA': 'required',
-                       'trait:CUSTOM_XYZ_TRAIT': 'required'}
+                      'trait:CUSTOM_XYZ_TRAIT': 'required'}
         mock_getnotmd.return_value = [
             objects.Aggregate(
                 uuid=uuids.agg2,
@@ -164,9 +165,9 @@ class TestRequestFilter(test.NoDBTestCase):
             ','.join(sorted([uuids.agg1, uuids.agg2, uuids.agg4])),
             ','.join(sorted(
                 reqspec.requested_destination.forbidden_aggregates)))
-        mock_getnotmd.assert_called_once_with(self.context, mock.ANY,
-                                              'trait:', value='required')
-        self.assertItemsEqual(agg_traits, mock_getnotmd.call_args[0][1])
+        mock_getnotmd.assert_called_once_with(
+            self.context, utils.ItemsMatcher(agg_traits), 'trait:',
+            value='required')
 
     @mock.patch('nova.objects.aggregate.AggregateList.'
                 'get_non_matching_by_metadata_keys')
@@ -185,9 +186,8 @@ class TestRequestFilter(test.NoDBTestCase):
         self.assertTrue(result)
         self.assertNotIn('requested_destination', reqspec)
         keys = ['trait:%s' % trait for trait in traits]
-        mock_getnotmd.assert_called_once_with(self.context, mock.ANY,
-                                              'trait:', value='required')
-        self.assertItemsEqual(keys, mock_getnotmd.call_args[0][1])
+        mock_getnotmd.assert_called_once_with(
+            self.context, utils.ItemsMatcher(keys), 'trait:', value='required')
 
     @mock.patch('nova.objects.aggregate.AggregateList.'
                 'get_non_matching_by_metadata_keys')
@@ -209,9 +209,8 @@ class TestRequestFilter(test.NoDBTestCase):
         self.assertNotIn('requested_destination', reqspec)
         keys = ['trait:%s' % trait for trait in flavor_traits.union(
             image_traits)]
-        mock_getnotmd.assert_called_once_with(self.context, mock.ANY,
-                                              'trait:', value='required')
-        self.assertItemsEqual(keys, mock_getnotmd.call_args[0][1])
+        mock_getnotmd.assert_called_once_with(
+            self.context, utils.ItemsMatcher(keys), 'trait:', value='required')
 
     @mock.patch('nova.objects.AggregateList.get_by_metadata')
     def test_require_tenant_aggregate_no_match(self, getmd):
@@ -330,9 +329,8 @@ class TestRequestFilter(test.NoDBTestCase):
                       value='myaz')])
 
         keys = ['trait:%s' % trait for trait in traits]
-        mock_getnotmd.assert_called_once_with(self.context, mock.ANY,
-                'trait:', value='required')
-        self.assertItemsEqual(keys, mock_getnotmd.call_args[0][1])
+        mock_getnotmd.assert_called_once_with(
+            self.context, utils.ItemsMatcher(keys), 'trait:', value='required')
 
     def test_require_image_type_support_disabled(self):
         self.flags(query_placement_for_image_type_support=False,
