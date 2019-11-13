@@ -3266,7 +3266,7 @@ class ComputeManager(manager.Manager):
         :param new_pass: password to set on rebuilt instance
         :param orig_sys_metadata: instance system metadata from pre-rebuild
         :param bdms: block-device-mappings to use for rebuild
-        :param recreate: True if the instance is being recreated (e.g. the
+        :param recreate: True if the instance is being evacuated (e.g. the
             hypervisor it was on failed) - cleanup of old state will be
             skipped.
         :param on_shared_storage: True if instance files on shared storage.

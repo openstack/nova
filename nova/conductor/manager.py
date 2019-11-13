@@ -1019,7 +1019,15 @@ class ComputeTaskManager(base.Base):
                          bdms, recreate, on_shared_storage,
                          preserve_ephemeral=False, host=None,
                          request_spec=None):
+        # recreate=True means the instance is being evacuated from a failed
+        # host to a new destination host. The 'recreate' variable name is
+        # confusing, so rename it to evacuate here at the top, which is simpler
+        # than renaming a parameter in an RPC versioned method.
+        evacuate = recreate
 
+        # NOTE(efried): It would be nice if this were two separate events, one
+        # for 'rebuild' and one for 'evacuate', but this is part of the API
+        # now, so it would be nontrivial to change.
         with compute_utils.EventReporter(context, 'rebuild_server',
                                          self.host, instance.uuid):
             node = limits = None
@@ -1054,6 +1062,10 @@ class ComputeTaskManager(base.Base):
                             if migration:
                                 migration.status = 'error'
                                 migration.save()
+                            # NOTE(efried): It would be nice if this were two
+                            # separate events, one for 'rebuild' and one for
+                            # 'evacuate', but this is part of the API now, so
+                            # it would be nontrivial to change.
                             self._set_vm_state_and_notify(
                                 context,
                                 instance.uuid,
@@ -1077,7 +1089,7 @@ class ComputeTaskManager(base.Base):
                 # In either case, the API passes host=None but sets up the
                 # RequestSpec.requested_destination field for the specified
                 # host.
-                if recreate:
+                if evacuate:
                     # NOTE(sbauza): Augment the RequestSpec object by excluding
                     # the source host for avoiding the scheduler to pick it
                     request_spec.ignore_hosts = [instance.host]
@@ -1098,7 +1110,7 @@ class ComputeTaskManager(base.Base):
                 try:
                     # if this is a rebuild of instance on the same host with
                     # new image.
-                    if not recreate and orig_image_ref != image_ref:
+                    if not evacuate and orig_image_ref != image_ref:
                         self._validate_image_traits_for_rebuild(context,
                                                                 instance,
                                                                 image_ref)
@@ -1136,6 +1148,10 @@ class ComputeTaskManager(base.Base):
                         instance.image_ref = orig_image_ref
                         instance.save()
                     with excutils.save_and_reraise_exception():
+                        # NOTE(efried): It would be nice if this were two
+                        # separate events, one for 'rebuild' and one for
+                        # 'evacuate', but this is part of the API now, so it
+                        # would be nontrivial to change.
                         self._set_vm_state_and_notify(context, instance.uuid,
                                 'rebuild_server',
                                 {'vm_state': vm_states.ERROR,
@@ -1162,7 +1178,7 @@ class ComputeTaskManager(base.Base):
                     orig_image_ref=orig_image_ref,
                     orig_sys_metadata=orig_sys_metadata,
                     bdms=bdms,
-                    recreate=recreate,
+                    recreate=evacuate,
                     on_shared_storage=on_shared_storage,
                     preserve_ephemeral=preserve_ephemeral,
                     migration=migration,
