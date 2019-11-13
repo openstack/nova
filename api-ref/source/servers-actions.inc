@@ -813,6 +813,9 @@ You can only resize a server when its status is ``ACTIVE`` or ``SHUTOFF``.
 If the server is locked, you must have administrator privileges
 to resize the server.
 
+.. note:: There is a `known limitation <https://bugs.launchpad.net/nova/+bug/1558880>`__
+          that ephemeral disks are not resized.
+
 Normal response codes: 202
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
