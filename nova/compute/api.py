@@ -5426,20 +5426,6 @@ class HostAPI(base.Base):
         service.update(params_to_update)
         return self.service_update(context, service)
 
-    def _service_delete(self, context, service_id):
-        """Performs the actual Service deletion operation."""
-        try:
-            service = _find_service_in_cell(context, service_id=service_id)
-        except exception.NotFound:
-            raise exception.ServiceNotFound(service_id=service_id)
-        service.destroy()
-
-    # TODO(mriedem): Nothing outside of tests is using this now so we should
-    # be able to remove it.
-    def service_delete(self, context, service_id):
-        """Deletes the specified service found via id or uuid."""
-        self._service_delete(context, service_id)
-
     @target_host_cell
     def instance_get_all_by_host(self, context, host_name):
         """Return all instances on the given host."""
