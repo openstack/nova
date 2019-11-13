@@ -178,7 +178,8 @@ class AggregateController(wsgi.Controller):
             msg = _('Cannot remove host %(host)s in aggregate %(id)s') % {
                         'host': host, 'id': id}
             raise exc.HTTPNotFound(explanation=msg)
-        except exception.InvalidAggregateAction:
+        except (exception.InvalidAggregateAction,
+                exception.ResourceProviderUpdateConflict):
             msg = _('Cannot remove host %(host)s in aggregate %(id)s') % {
                         'host': host, 'id': id}
             raise exc.HTTPConflict(explanation=msg)

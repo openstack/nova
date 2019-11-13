@@ -5794,16 +5794,6 @@ class AggregateAPI(base.Base):
         try:
             self.placement_client.aggregate_add_host(
                 context, aggregate.uuid, host_name=host_name)
-        except exception.PlacementAPIConnectFailure:
-            # NOTE(jaypipes): Rocky should be able to tolerate the nova-api
-            # service not communicating with the Placement API, so just log a
-            # warning here.
-            # TODO(jaypipes): Remove this in Stein, when placement must be able
-            # to be contacted from the nova-api service.
-            LOG.warning("Failed to associate %s with a placement "
-                        "aggregate: %s. There was a failure to communicate "
-                        "with the placement service.",
-                        host_name, aggregate.uuid)
         except (exception.ResourceProviderNotFound,
                 exception.ResourceProviderAggregateRetrievalFailed,
                 exception.ResourceProviderUpdateFailed,
@@ -5855,35 +5845,26 @@ class AggregateAPI(base.Base):
             action=fields_obj.NotificationAction.REMOVE_HOST,
             phase=fields_obj.NotificationPhase.START)
 
-        aggregate.delete_host(host_name)
-        self.query_client.update_aggregates(context, [aggregate])
+        # Remove the resource provider from the provider aggregate first before
+        # we change anything on the nova side because if we did the nova stuff
+        # first we can't re-attempt this from the compute API if cleaning up
+        # placement fails.
         try:
+            # Anything else this raises is handled in the route handler as
+            # either a 409 (ResourceProviderUpdateConflict) or 500.
             self.placement_client.aggregate_remove_host(
                 context, aggregate.uuid, host_name)
-        except exception.PlacementAPIConnectFailure:
-            # NOTE(jaypipes): Rocky should be able to tolerate the nova-api
-            # service not communicating with the Placement API, so just log a
-            # warning here.
-            # TODO(jaypipes): Remove this in Stein, when placement must be able
-            # to be contacted from the nova-api service.
+        except exception.ResourceProviderNotFound as err:
+            # If the resource provider is not found then it's likely not part
+            # of the aggregate anymore anyway since provider aggregates are
+            # not resources themselves with metadata like nova aggregates, they
+            # are just a grouping concept around resource providers. Log and
+            # continue.
             LOG.warning("Failed to remove association of %s with a placement "
-                        "aggregate: %s. There was a failure to communicate "
-                        "with the placement service.",
-                        host_name, aggregate.uuid)
-        except (exception.ResourceProviderNotFound,
-                exception.ResourceProviderAggregateRetrievalFailed,
-                exception.ResourceProviderUpdateFailed,
-                exception.ResourceProviderUpdateConflict) as err:
-            # NOTE(jaypipes): We don't want a failure perform the mirroring
-            # action in the placement service to be returned to the user (they
-            # probably don't know anything about the placement service and
-            # would just be confused). So, we just log a warning here, noting
-            # that on the next run of nova-manage placement sync_aggregates
-            # things will go back to normal
-            LOG.warning("Failed to remove association of %s with a placement "
-                        "aggregate: %s. This may be corrected after running "
-                        "nova-manage placement sync_aggregates.",
-                        host_name, err)
+                        "aggregate: %s.", host_name, err)
+
+        aggregate.delete_host(host_name)
+        self.query_client.update_aggregates(context, [aggregate])
         self._update_az_cache_for_host(context, host_name, aggregate.metadata)
         self.compute_rpcapi.remove_aggregate_host(context,
                 aggregate=aggregate, host_param=host_name, host=host_name)
