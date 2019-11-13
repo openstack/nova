@@ -2546,7 +2546,8 @@ class ComputeManager(manager.Manager):
                     'not rescheduling.') % e.format_message()
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=msg)
-        except (exception.VirtualInterfaceCreateException,
+        except (exception.ExternalNetworkAttachForbidden,
+                exception.VirtualInterfaceCreateException,
                 exception.VirtualInterfaceMacAddressException,
                 exception.FixedIpInvalidOnHost,
                 exception.UnableToAutoAllocateNetwork,
