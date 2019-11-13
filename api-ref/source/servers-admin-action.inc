@@ -68,12 +68,12 @@ this parameter, the scheduler chooses a host.
 
 **Asynchronous Postconditions**
 
-The server goes to a ``VERIFY_RESIZE`` status, ``RESIZED`` VM status,
-and ``finished`` migration status after a successful cold migration
-and then must be confirmed or reverted. If you set the
-``resize_confirm_window`` option of the Compute service to a positive integer
-value, the Compute service automatically confirms the migrate operation
-after the set interval in seconds.
+A successfully migrated server shows a ``VERIFY_RESIZE`` status and ``finished``
+migration status. If the cloud has configured the `resize_confirm_window`_
+option of the Compute service to a positive value, the Compute service
+automatically confirms the migrate operation after the configured interval.
+
+.. _resize_confirm_window: https://docs.openstack.org/nova/latest/configuration/config.html#DEFAULT.resize_confirm_window
 
 Policy defaults enable only users with the administrative role to
 perform this operation. Cloud providers can change these permissions
