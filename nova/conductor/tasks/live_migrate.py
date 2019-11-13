@@ -276,9 +276,6 @@ class LiveMigrationTask(base.TaskBase):
                     instance_id=self.instance.uuid, host=self.destination)
 
     def _check_destination_has_enough_memory(self):
-        # TODO(mriedem): This method can be removed when the forced host
-        # scenario is calling select_destinations() in the scheduler because
-        # Placement will be used to filter allocation candidates by MEMORY_MB.
         compute = self._get_compute_info(self.destination)
         free_ram_mb = compute.free_ram_mb
         total_ram_mb = compute.memory_mb
