@@ -57,7 +57,7 @@ class Claim(NopClaim):
     correct decisions with respect to host selection.
     """
 
-    def __init__(self, context, instance, nodename, tracker, resources,
+    def __init__(self, context, instance, nodename, tracker, compute_node,
                  pci_requests, migration=None, limits=None):
         super(Claim, self).__init__(migration=migration)
         # Stash a copy of the instance at the current point of time
@@ -69,7 +69,7 @@ class Claim(NopClaim):
 
         # Check claim at constructor to avoid mess code
         # Raise exception ComputeResourcesUnavailable if claim failed
-        self._claim_test(resources, limits)
+        self._claim_test(compute_node, limits)
 
     @property
     def numa_topology(self):
@@ -83,14 +83,14 @@ class Claim(NopClaim):
         self.tracker.abort_instance_claim(self.context, self.instance,
                                           self.nodename)
 
-    def _claim_test(self, resources, limits=None):
+    def _claim_test(self, compute_node, limits=None):
         """Test if this claim can be satisfied given available resources and
         optional oversubscription limits
 
         This should be called before the compute node actually consumes the
         resources required to execute the claim.
 
-        :param resources: available local compute node resources
+        :param compute_node: available local ComputeNode object
         :param limits: Optional limits to test, either dict or
             objects.SchedulerLimits
         :raises: exception.ComputeResourcesUnavailable if any resource claim
@@ -106,7 +106,7 @@ class Claim(NopClaim):
         # unlimited:
         numa_topology_limit = limits.get('numa_topology')
 
-        reasons = [self._test_numa_topology(resources, numa_topology_limit),
+        reasons = [self._test_numa_topology(compute_node, numa_topology_limit),
                    self._test_pci()]
         reasons = [r for r in reasons if r is not None]
         if len(reasons) > 0:
@@ -123,9 +123,9 @@ class Claim(NopClaim):
             if not stats.support_requests(pci_requests.requests):
                 return _('Claim pci failed')
 
-    def _test_numa_topology(self, resources, limit):
-        host_topology = (resources.numa_topology
-                         if 'numa_topology' in resources else None)
+    def _test_numa_topology(self, compute_node, limit):
+        host_topology = (compute_node.numa_topology
+                         if 'numa_topology' in compute_node else None)
         requested_topology = self.numa_topology
         if host_topology:
             host_topology = objects.NUMATopology.obj_from_db_obj(
@@ -160,14 +160,14 @@ class MoveClaim(Claim):
     Move can be either a migrate/resize, live-migrate or an evacuate operation.
     """
     def __init__(self, context, instance, nodename, instance_type, image_meta,
-                 tracker, resources, pci_requests, migration, limits=None):
+                 tracker, compute_node, pci_requests, migration, limits=None):
         self.context = context
         self.instance_type = instance_type
         if isinstance(image_meta, dict):
             image_meta = objects.ImageMeta.from_dict(image_meta)
         self.image_meta = image_meta
         super(MoveClaim, self).__init__(context, instance, nodename, tracker,
-                                        resources, pci_requests,
+                                        compute_node, pci_requests,
                                         migration=migration, limits=limits)
 
     @property
