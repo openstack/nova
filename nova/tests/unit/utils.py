@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
 import errno
 import platform
 import socket
@@ -322,22 +323,20 @@ class ItemsMatcher(CustomMockCallMatcher):
 
     But the following will fail::
         my_mock(..., listy_kwarg=['foo', 'bar'], ...)
-
-    .. todo:: Because we internally use set()s, the following will **pass**,
-              but it shouldn't::
-
-                # Duplicated item
-                my_mock(..., listy_kwarg=['foo', 'foo', 'bar', 'baz'], ...)
     """
     def __init__(self, iterable):
-        self.items = set(iterable)
+        # NOTE(gibi): we need the extra iter() call as Counter handles dicts
+        # directly to initialize item count. However if a dict passed to
+        # ItemMatcher we want to use the keys of such dict as an iterable to
+        # initialize the Counter instead.
+        self.bag = collections.Counter(iter(iterable))
 
         super(ItemsMatcher, self).__init__(
-            lambda other: self.items == set(other))
+            lambda other: self.bag == collections.Counter(iter(other)))
 
     def __repr__(self):
         """This exists so a failed assertion prints something useful."""
-        return 'ItemsMatcher(%r)' % self.items
+        return 'ItemsMatcher(%r)' % list(self.bag.elements())
 
 
 def assert_instance_delete_notification_by_uuid(
