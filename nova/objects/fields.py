@@ -47,6 +47,7 @@ DictOfStringsField = fields.DictOfStringsField
 DictOfNullableStringsField = fields.DictOfNullableStringsField
 DictOfIntegersField = fields.DictOfIntegersField
 ListOfStringsField = fields.ListOfStringsField
+ListOfUUIDField = fields.ListOfUUIDField
 SetOfIntegersField = fields.SetOfIntegersField
 ListOfSetsOfIntegersField = fields.ListOfSetsOfIntegersField
 ListOfDictOfNullableStringsField = fields.ListOfDictOfNullableStringsField
@@ -1278,12 +1279,6 @@ class InstancePowerStateField(BaseEnumField):
 
 class ListOfListsOfStringsField(AutoTypedField):
     AUTO_TYPE = List(List(fields.String()))
-
-
-# TODO(mriedem): Replace this with the version from oslo.versiondobjects
-# when https://review.opendev.org/#/c/634700/ is released.
-class ListOfUUIDField(AutoTypedField):
-    AUTO_TYPE = List(fields.UUID())
 
 
 class DictOfSetOfIntegersField(AutoTypedField):
