@@ -1269,7 +1269,8 @@ class TestInstanceNotificationSample(
                 'image.tags': [],
                 'scheduler_hints': {'_nova_check_type': ['rebuild']},
                 'force_hosts': 'compute',
-                'force_nodes': 'fake-mini'})
+                'force_nodes': 'fake-mini',
+                'requested_destination': self._build_destination_payload()})
 
         # 0. instance.rebuild_scheduled
         # 1. instance.exists
@@ -1365,7 +1366,8 @@ class TestInstanceNotificationSample(
                 'image.tags': [],
                 'scheduler_hints': {'_nova_check_type': ['rebuild']},
                 'force_hosts': 'compute',
-                'force_nodes': 'fake-mini'})
+                'force_nodes': 'fake-mini',
+                'requested_destination': self._build_destination_payload()})
 
         # 0. instance.rebuild_scheduled
         # 1. instance.exists

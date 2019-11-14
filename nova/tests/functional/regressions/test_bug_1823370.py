@@ -73,8 +73,4 @@ class MultiCellEvacuateTestCase(integrated_helpers._IntegratedTestBase,
         self.api.post_server_action(server['id'], req)
         self._wait_for_migration_status(server, ['done'])
         server = self._wait_for_state_change(self.api, server, 'ACTIVE')
-        # FIXME(mriedem): This is bug 1823370 where conductor does not restrict
-        # the RequestSpec to the origin cell before calling the scheduler to
-        # pick a new host so the host (host2) in the other cell (cell2) is
-        # incorrectly picked.
-        self.assertEqual('host2', server['OS-EXT-SRV-ATTR:host'])
+        self.assertEqual('host3', server['OS-EXT-SRV-ATTR:host'])

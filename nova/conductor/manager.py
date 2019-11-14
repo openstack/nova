@@ -860,6 +860,32 @@ class ComputeTaskManager(base.Base):
                   'instance(s).', timer.elapsed(), len(instance_uuids))
         return host_lists
 
+    @staticmethod
+    def _restrict_request_spec_to_cell(context, instance, request_spec):
+        """Sets RequestSpec.requested_destination.cell for the move operation
+
+        Move operations, e.g. evacuate and unshelve, must be restricted to the
+        cell in which the instance already exists, so this method is used to
+        target the RequestSpec, which is sent to the scheduler via the
+        _schedule_instances method, to the instance's current cell.
+
+        :param context: nova auth RequestContext
+        """
+        instance_mapping = \
+            objects.InstanceMapping.get_by_instance_uuid(
+                context, instance.uuid)
+        LOG.debug('Requesting cell %(cell)s during scheduling',
+                  {'cell': instance_mapping.cell_mapping.identity},
+                  instance=instance)
+        if ('requested_destination' in request_spec and
+                request_spec.requested_destination):
+            request_spec.requested_destination.cell = (
+                instance_mapping.cell_mapping)
+        else:
+            request_spec.requested_destination = (
+                objects.Destination(
+                    cell=instance_mapping.cell_mapping))
+
     # TODO(mriedem): Make request_spec required in ComputeTaskAPI RPC v2.0.
     @targets_cell
     def unshelve_instance(self, context, instance, request_spec=None):
@@ -918,20 +944,8 @@ class ComputeTaskManager(base.Base):
 
                     # NOTE(cfriesen): Ensure that we restrict the scheduler to
                     # the cell specified by the instance mapping.
-                    instance_mapping = \
-                        objects.InstanceMapping.get_by_instance_uuid(
-                            context, instance.uuid)
-                    LOG.debug('Requesting cell %(cell)s while unshelving',
-                              {'cell': instance_mapping.cell_mapping.identity},
-                              instance=instance)
-                    if ('requested_destination' in request_spec and
-                            request_spec.requested_destination):
-                        request_spec.requested_destination.cell = (
-                            instance_mapping.cell_mapping)
-                    else:
-                        request_spec.requested_destination = (
-                            objects.Destination(
-                                cell=instance_mapping.cell_mapping))
+                    self._restrict_request_spec_to_cell(
+                        context, instance, request_spec)
 
                     request_spec.ensure_project_and_user_id(instance)
                     request_spec.ensure_network_metadata(instance)
@@ -1114,6 +1128,8 @@ class ComputeTaskManager(base.Base):
                         self._validate_image_traits_for_rebuild(context,
                                                                 instance,
                                                                 image_ref)
+                    self._restrict_request_spec_to_cell(
+                        context, instance, request_spec)
                     request_spec.ensure_project_and_user_id(instance)
                     request_spec.ensure_network_metadata(instance)
                     compute_utils.heal_reqspec_is_bfv(
