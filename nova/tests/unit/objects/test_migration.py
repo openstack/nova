@@ -200,10 +200,11 @@ class _TestMigrationObject(object):
                                                   fake_migration)
         mig._context = ctxt
         self.assertEqual(mig.instance.host, fake_inst['host'])
-        mock_get.assert_called_once_with(ctxt,
-                                         fake_migration['instance_uuid'],
-                                         columns_to_join=['info_cache',
-                                                          'security_groups'])
+        mock_get.assert_called_once_with(
+            ctxt, fake_migration['instance_uuid'],
+            columns_to_join=['extra',
+                             'extra.flavor',
+                             'extra.migration_context'])
 
     def test_instance_setter(self):
         migration = objects.Migration(instance_uuid=uuidsentinel.instance)
