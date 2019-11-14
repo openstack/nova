@@ -103,15 +103,13 @@ class NUMAServersTest(NUMAServersTestBase):
         else:
             self.assertFalse(self.mock_filter.called)
 
-        found_server = self._wait_for_state_change(found_server, 'BUILD')
+        found_server = self._wait_for_state_change(found_server, end_status)
 
         if expected_usage:
             compute_usage = self.placement_api.get(
                 '/resource_providers/%s/usages' % compute_rp_uuid).body[
                     'usages']
             self.assertEqual(expected_usage, compute_usage)
-
-        self.assertEqual(end_status, found_server['status'])
 
         self.addCleanup(self._delete_server, found_server)
         return created_server
@@ -382,9 +380,7 @@ class NUMAServersTest(NUMAServersTestBase):
         post = {'server': good_server}
 
         created_server = self.api.post_server(post)
-        server = self._wait_for_state_change(created_server, 'BUILD')
-
-        self.assertEqual('ACTIVE', server['status'])
+        server = self._wait_for_state_change(created_server, 'ACTIVE')
 
         original_host = server['OS-EXT-SRV-ATTR:host']
 
@@ -540,14 +536,10 @@ class ReshapeForPCPUsTest(NUMAServersTestBase):
         server_req['networks'] = 'auto'
 
         created_server1 = self.api.post_server({'server': server_req})
-        # _wait_for_state_change waits for the status to go from BUILD which
-        # should then be ACTIVE.
-        server1 = self._wait_for_state_change(created_server1, 'BUILD')
-        self.assertEqual('ACTIVE', server1['status'])
+        server1 = self._wait_for_state_change(created_server1, 'ACTIVE')
 
         created_server2 = self.api.post_server({'server': server_req})
-        server2 = self._wait_for_state_change(created_server2, 'BUILD')
-        self.assertEqual('ACTIVE', server2['status'])
+        server2 = self._wait_for_state_change(created_server2, 'ACTIVE')
 
         # sanity check usages
 
@@ -573,21 +565,12 @@ class ReshapeForPCPUsTest(NUMAServersTestBase):
 
         # now initiate the migration process for one of the servers
 
-        # FIXME(stephenfin): This is a hack due to the poor behavior of the
-        # '_wait_for_state_change' implementation here, which doesn't actually
-        # wait for a transition _to_ a state. I'll be fixing this real soon.
-        import time
-        time.sleep(0.5)
-
         with mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
                         '.migrate_disk_and_power_off', return_value='{}'):
             post = {'migrate': None}
             self.api.post_server_action(server2['id'], post)
 
-        # _wait_for_state_change waits for the status to go from ACTIVE which
-        # should then be VERIFY_RESIZE.
-        server2 = self._wait_for_state_change(server2, 'ACTIVE')
-        self.assertEqual('VERIFY_RESIZE', server2['status'])
+        server2 = self._wait_for_state_change(server2, 'VERIFY_RESIZE')
 
         # verify that the inventory, usages and allocation are correct before
         # the reshape. Note that the value of 8 VCPUs is derived from
@@ -718,8 +701,7 @@ class ReshapeForPCPUsTest(NUMAServersTestBase):
         # reshaped tree which should result in PCPU allocations
 
         created_server = self.api.post_server({'server': server_req})
-        server3 = self._wait_for_state_change(created_server, 'BUILD')
-        self.assertEqual('ACTIVE', server3['status'])
+        server3 = self._wait_for_state_change(created_server, 'ACTIVE')
 
         compute_rp_uuid = self.compute_rp_uuids['test_compute0']
 
@@ -766,7 +748,8 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         # fixture already stubbed.
         self.neutron = self.useFixture(base.LibvirtNeutronFixture(self))
 
-    def _test_create_server_with_networks(self, flavor_id, networks):
+    def _test_create_server_with_networks(self, flavor_id, networks,
+                                          end_status='ACTIVE'):
         host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
                                          cpu_cores=2, cpu_threads=2,
                                          kB_mem=15740000)
@@ -785,7 +768,7 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
 
         found_server = self.api.get_server(created_server['id'])
 
-        return self._wait_for_state_change(found_server, 'BUILD')
+        return self._wait_for_state_change(found_server, end_status)
 
     def test_create_server_with_single_physnet(self):
         extra_spec = {'hw:numa_nodes': '1'}
@@ -794,11 +777,9 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
             {'uuid': base.LibvirtNeutronFixture.network_1['id']},
         ]
 
-        status = self._test_create_server_with_networks(
-            flavor_id, networks)['status']
+        self._test_create_server_with_networks(flavor_id, networks)
 
         self.assertTrue(self.mock_filter.called)
-        self.assertEqual('ACTIVE', status)
 
     def test_create_server_with_multiple_physnets(self):
         """Test multiple networks split across host NUMA nodes.
@@ -814,11 +795,9 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
             {'uuid': base.LibvirtNeutronFixture.network_2['id']},
         ]
 
-        status = self._test_create_server_with_networks(
-            flavor_id, networks)['status']
+        self._test_create_server_with_networks(flavor_id, networks)
 
         self.assertTrue(self.mock_filter.called)
-        self.assertEqual('ACTIVE', status)
 
     def test_create_server_with_multiple_physnets_fail(self):
         """Test multiple networks split across host NUMA nodes.
@@ -833,11 +812,10 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
             {'uuid': base.LibvirtNeutronFixture.network_2['id']},
         ]
 
-        status = self._test_create_server_with_networks(
-            flavor_id, networks)['status']
+        self._test_create_server_with_networks(flavor_id, networks,
+                                               end_status='ERROR')
 
         self.assertTrue(self.mock_filter.called)
-        self.assertEqual('ERROR', status)
 
     def test_create_server_with_physnet_and_tunneled_net(self):
         """Test combination of physnet and tunneled network.
@@ -852,11 +830,9 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
             {'uuid': base.LibvirtNeutronFixture.network_3['id']},
         ]
 
-        status = self._test_create_server_with_networks(
-            flavor_id, networks)['status']
+        self._test_create_server_with_networks(flavor_id, networks)
 
         self.assertTrue(self.mock_filter.called)
-        self.assertEqual('ACTIVE', status)
 
     def test_rebuild_server_with_network_affinity(self):
         extra_spec = {'hw:numa_nodes': '1'}
@@ -866,8 +842,6 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         ]
 
         server = self._test_create_server_with_networks(flavor_id, networks)
-
-        self.assertEqual('ACTIVE', server['status'])
 
         # attach an interface from the **same** network
         post = {
@@ -884,8 +858,7 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         # This should succeed since we haven't changed the NUMA affinity
         # requirements
         self.api.post_server_action(server['id'], post)
-        found_server = self._wait_for_state_change(server, 'BUILD')
-        self.assertEqual('ACTIVE', found_server['status'])
+        self._wait_for_state_change(server, 'ACTIVE')
 
         # attach an interface from a **different** network
         post = {
@@ -924,9 +897,8 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         post = {'server': good_server}
 
         created_server = self.api.post_server(post)
-        server = self._wait_for_state_change(created_server, 'BUILD')
+        server = self._wait_for_state_change(created_server, 'ACTIVE')
 
-        self.assertEqual('ACTIVE', server['status'])
         original_host = server['OS-EXT-SRV-ATTR:host']
 
         # We reset mock_filter because we want to ensure it's called as part of

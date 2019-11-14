@@ -68,9 +68,7 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
         found_server = self.api.get_server(created_server_id)
         self.assertEqual(created_server_id, found_server['id'])
 
-        found_server = self._wait_for_state_change(found_server, 'BUILD')
-        # It should be available...
-        self.assertEqual('ACTIVE', found_server['status'])
+        found_server = self._wait_for_state_change(found_server, 'ACTIVE')
         return found_server
 
     def test_archive_deleted_rows(self):

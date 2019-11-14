@@ -117,8 +117,7 @@ class InterfaceFullstackWithNeutron(test_servers.ServersTestBase):
             "networks": [{"uuid": "3cb9bc59-5699-4588-a4b1-b87f96708bc6"}]}}
         created_server = self.api.post_server(post)
         created_server_id = created_server['id']
-        found_server = self._wait_for_state_change(created_server, 'BUILD')
-        self.assertEqual('ACTIVE', found_server['status'])
+        found_server = self._wait_for_state_change(created_server, 'ACTIVE')
 
         post = {
             'interfaceAttachment': {
@@ -133,8 +132,7 @@ class InterfaceFullstackWithNeutron(test_servers.ServersTestBase):
         # Change status from ACTIVE to SUSPENDED for negative test
         post = {'suspend': {}}
         self.api.post_server_action(created_server_id, post)
-        found_server = self._wait_for_state_change(found_server, 'ACTIVE')
-        self.assertEqual('SUSPENDED', found_server['status'])
+        found_server = self._wait_for_state_change(found_server, 'SUSPENDED')
 
         # Detach port interface in SUSPENDED (not ACTIVE, etc.)
         ex = self.assertRaises(client.OpenStackApiException,

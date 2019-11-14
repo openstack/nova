@@ -13,7 +13,6 @@
 
 import io
 import mock
-import time
 
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -32,15 +31,6 @@ LOG = logging.getLogger(__name__)
 class VGPUReshapeTests(base.ServersTestBase):
     # the minimum libvirt version needed for vgpu
     MIN_LIBVIRT_MDEV_SUPPORT = 3004000
-
-    def _wait_for_state_change(self, server, expected_status):
-        for i in range(0, 50):
-            server = self.api.get_server(server['id'])
-            if server['status'] == expected_status:
-                return server
-            time.sleep(.1)
-        self.assertEqual(expected_status, server['status'])
-        return server
 
     @mock.patch('nova.virt.libvirt.LibvirtDriver._get_local_gb_info',
                 return_value={'total': 128,

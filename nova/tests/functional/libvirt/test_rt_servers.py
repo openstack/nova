@@ -63,8 +63,6 @@ class RealTimeServersTest(base.ServersTestBase):
         server = self._build_server(flavor)
         created = self.api.post_server({'server': server})
 
-        instance = self.api.get_server(created['id'])
-        instance = self._wait_for_state_change(instance, 'BUILD')
+        instance = self._wait_for_state_change(created, 'ACTIVE')
 
-        self.assertEqual('ACTIVE', instance['status'])
         self._delete_server(instance)

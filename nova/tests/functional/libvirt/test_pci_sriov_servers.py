@@ -77,9 +77,8 @@ class _PCIServersTestBase(base.ServersTestBase):
         # Validate that PciPassthroughFilter has been called
         self.assertTrue(self.mock_filter.called)
 
-        found_server = self._wait_for_state_change(found_server, 'BUILD')
+        found_server = self._wait_for_state_change(found_server, end_status)
 
-        self.assertEqual(end_status, found_server['status'])
         self.addCleanup(self._delete_server, found_server)
         return created_server
 
@@ -246,7 +245,7 @@ class GetServerDiagnosticsServerWithVfTestV21(_PCIServersTestBase):
 
         post = {'server': good_server}
         created_server = self.api.post_server(post)
-        self._wait_for_state_change(created_server, 'BUILD')
+        self._wait_for_state_change(created_server, 'ACTIVE')
 
         diagnostics = self.api.get_server_diagnostics(created_server['id'])
 

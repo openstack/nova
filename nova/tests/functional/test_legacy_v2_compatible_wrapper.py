@@ -52,7 +52,7 @@ class LegacyV2CompatibleTestBase(test_servers.ServersTestBase):
         server = self._build_minimal_create_server_request()
         post = {'server': server}
         created_server = self.api.post_server(post)
-        self._wait_for_state_change(created_server, 'BUILD')
+        self._wait_for_state_change(created_server, 'ACTIVE')
         response = self.api.post_server_metadata(created_server['id'],
                                                  {'a': 'b'})
         self.assertEqual(response, {'a': 'b'})

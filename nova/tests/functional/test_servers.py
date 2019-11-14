@@ -73,14 +73,26 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
         self.computes = {}
         super(ServersTestBase, self).setUp()
 
-    def _wait_for_state_change(self, server, from_status):
-        for i in range(0, 50):
-            server = self.api.get_server(server['id'])
-            if server['status'] != from_status:
+    def _wait_for_server_parameter(self, admin_api, server, expected_params,
+                                   max_retries=10):
+        retry_count = 0
+        while True:
+            server = admin_api.get_server(server['id'])
+            if all([server[attr] == expected_params[attr]
+                    for attr in expected_params]):
                 break
-            time.sleep(.1)
+            retry_count += 1
+            if retry_count == max_retries:
+                self.fail('Wait for state change failed, '
+                          'expected_params=%s, server=%s' % (
+                              expected_params, server))
+            time.sleep(0.5)
 
         return server
+
+    def _wait_for_state_change(self, server, expected_status, max_retries=10):
+        return self._wait_for_server_parameter(
+            self.api, server, {'status': expected_status}, max_retries)
 
     def _wait_for_deletion(self, server_id):
         # Wait (briefly) for deletion
@@ -165,9 +177,9 @@ class ServersTest(ServersTestBase):
         found_server = self.api.get_server(created_server_id)
         self.assertEqual(created_server_id, found_server['id'])
 
-        found_server = self._wait_for_state_change(found_server, 'BUILD')
+        found_server = self._wait_for_state_change(found_server, 'ERROR')
 
-        self.assertEqual('ERROR', found_server['status'])
+        # Delete the server
         self._delete_server(created_server)
 
         # We should have no (persisted) build failures until we update
@@ -187,16 +199,17 @@ class ServersTest(ServersTestBase):
             image_uuid=vhd_image)
         server = self.api.post_server({'server': server})
         server = self.api.get_server(server['id'])
-        errored_server = self._wait_for_state_change(server, server['status'])
-        self.assertEqual('ERROR', errored_server['status'])
+        errored_server = self._wait_for_state_change(server, 'ERROR')
         self.assertIn('No valid host', errored_server['fault']['message'])
 
         server = self._build_minimal_create_server_request(
             image_uuid=raw_image)
         server = self.api.post_server({'server': server})
         server = self.api.get_server(server['id'])
-        created_server = self._wait_for_state_change(server, server['status'])
-        self.assertEqual('ACTIVE', created_server['status'])
+        created_server = self._wait_for_state_change(server, 'ACTIVE')
+
+        # Delete the server
+        self._delete_server(created_server)
 
     def _test_create_server_with_error_with_retries(self):
         # Create a server which will enter error state.
@@ -219,9 +232,9 @@ class ServersTest(ServersTestBase):
         found_server = self.api.get_server(created_server_id)
         self.assertEqual(created_server_id, found_server['id'])
 
-        found_server = self._wait_for_state_change(found_server, 'BUILD')
+        found_server = self._wait_for_state_change(found_server, 'ERROR')
 
-        self.assertEqual('ERROR', found_server['status'])
+        # Delete the server
         self._delete_server(created_server)
 
         return len(fails)
@@ -297,15 +310,14 @@ class ServersTest(ServersTestBase):
         server_ids = [s['id'] for s in servers]
         self.assertIn(created_server_id, server_ids)
 
-        found_server = self._wait_for_state_change(found_server, 'BUILD')
-        # It should be available...
-        # TODO(justinsb): Mock doesn't yet do this...
-        self.assertEqual('ACTIVE', found_server['status'])
+        found_server = self._wait_for_state_change(found_server, 'ACTIVE')
+
         servers = self.api.get_servers(detail=True)
         for server in servers:
             self.assertIn("image", server)
             self.assertIn("flavor", server)
 
+        # Delete the server
         self._delete_server(found_server)
 
     def _force_reclaim(self):
@@ -330,10 +342,7 @@ class ServersTest(ServersTestBase):
         created_server_id = created_server['id']
 
         # Wait for it to finish being created
-        found_server = self._wait_for_state_change(created_server, 'BUILD')
-
-        # It should be available...
-        self.assertEqual('ACTIVE', found_server['status'])
+        found_server = self._wait_for_state_change(created_server, 'ACTIVE')
 
         # Cannot restore unless instance is deleted
         self.assertRaises(client.OpenStackApiException,
@@ -344,8 +353,8 @@ class ServersTest(ServersTestBase):
         self.api.delete_server(created_server_id)
 
         # Wait for queued deletion
-        found_server = self._wait_for_state_change(found_server, 'ACTIVE')
-        self.assertEqual('SOFT_DELETED', found_server['status'])
+        found_server = self._wait_for_state_change(found_server,
+                                                   'SOFT_DELETED')
 
         self._force_reclaim()
 
@@ -365,24 +374,20 @@ class ServersTest(ServersTestBase):
         created_server_id = created_server['id']
 
         # Wait for it to finish being created
-        found_server = self._wait_for_state_change(created_server, 'BUILD')
-
-        # It should be available...
-        self.assertEqual('ACTIVE', found_server['status'])
+        found_server = self._wait_for_state_change(created_server, 'ACTIVE')
 
         # Delete the server
         self.api.delete_server(created_server_id)
 
         # Wait for queued deletion
-        found_server = self._wait_for_state_change(found_server, 'ACTIVE')
-        self.assertEqual('SOFT_DELETED', found_server['status'])
+        found_server = self._wait_for_state_change(found_server,
+                                                   'SOFT_DELETED')
 
         # Restore server
         self.api.post_server_action(created_server_id, {'restore': {}})
 
         # Wait for server to become active again
-        found_server = self._wait_for_state_change(found_server, 'DELETED')
-        self.assertEqual('ACTIVE', found_server['status'])
+        found_server = self._wait_for_state_change(found_server, 'ACTIVE')
 
     def test_deferred_delete_restore_overquota(self):
         # Test that a restore that would put the user over quota fails
@@ -399,17 +404,14 @@ class ServersTest(ServersTestBase):
         created_server_id1 = created_server1['id']
 
         # Wait for it to finish being created
-        found_server1 = self._wait_for_state_change(created_server1, 'BUILD')
-
-        # It should be available...
-        self.assertEqual('ACTIVE', found_server1['status'])
+        found_server1 = self._wait_for_state_change(created_server1, 'ACTIVE')
 
         # Delete the server
         self.api.delete_server(created_server_id1)
 
         # Wait for queued deletion
-        found_server1 = self._wait_for_state_change(found_server1, 'ACTIVE')
-        self.assertEqual('SOFT_DELETED', found_server1['status'])
+        found_server1 = self._wait_for_state_change(found_server1,
+                                                    'SOFT_DELETED')
 
         # Create a second server
         server = self._build_minimal_create_server_request()
@@ -419,10 +421,7 @@ class ServersTest(ServersTestBase):
         self.assertTrue(created_server2['id'])
 
         # Wait for it to finish being created
-        found_server2 = self._wait_for_state_change(created_server2, 'BUILD')
-
-        # It should be available...
-        self.assertEqual('ACTIVE', found_server2['status'])
+        self._wait_for_state_change(created_server2, 'ACTIVE')
 
         # Try to restore the first server, it should fail
         ex = self.assertRaises(client.OpenStackApiException,
@@ -444,17 +443,14 @@ class ServersTest(ServersTestBase):
         created_server_id = created_server['id']
 
         # Wait for it to finish being created
-        found_server = self._wait_for_state_change(created_server, 'BUILD')
-
-        # It should be available...
-        self.assertEqual('ACTIVE', found_server['status'])
+        found_server = self._wait_for_state_change(created_server, 'ACTIVE')
 
         # Delete the server
         self.api.delete_server(created_server_id)
 
         # Wait for queued deletion
-        found_server = self._wait_for_state_change(found_server, 'ACTIVE')
-        self.assertEqual('SOFT_DELETED', found_server['status'])
+        found_server = self._wait_for_state_change(found_server,
+                                                   'SOFT_DELETED')
 
         # Force delete server
         self.api.post_server_action(created_server_id,
@@ -515,16 +511,14 @@ class ServersTest(ServersTestBase):
         post = {'server': server}
         created_server = self.api.post_server(post)
 
-        found_server = self._wait_for_state_change(created_server, 'BUILD')
-        self.assertEqual('ACTIVE', found_server['status'])
+        found_server = self._wait_for_state_change(created_server, 'ACTIVE')
         self.assertEqual(metadata, found_server.get('metadata'))
         server_id = found_server['id']
 
         # Change status from ACTIVE to SHELVED for negative test
         self.flags(shelved_offload_time = -1)
         self.api.post_server_action(server_id, {'shelve': {}})
-        found_server = self._wait_for_state_change(found_server, 'ACTIVE')
-        self.assertEqual('SHELVED', found_server['status'])
+        found_server = self._wait_for_state_change(found_server, 'SHELVED')
 
         metadata = {'key_2': 'value_2'}
 
@@ -563,7 +557,7 @@ class ServersTest(ServersTestBase):
         self.assertTrue(created_server['id'])
         created_server_id = created_server['id']
 
-        created_server = self._wait_for_state_change(created_server, 'BUILD')
+        created_server = self._wait_for_state_change(created_server, 'ACTIVE')
 
         # rebuild the server with metadata and other server attributes
         post = {}
@@ -701,8 +695,7 @@ class ServersTest(ServersTestBase):
         found_server = self.api.get_server(created_server_id)
         self.assertEqual(created_server_id, found_server['id'])
 
-        found_server = self._wait_for_state_change(found_server, 'BUILD')
-        self.assertEqual('ACTIVE', found_server['status'])
+        found_server = self._wait_for_state_change(found_server, 'ACTIVE')
 
         # Cleanup
         self._delete_server(found_server)
@@ -713,8 +706,7 @@ class ServersTest(ServersTestBase):
         created_server = self.api.post_server({"server": server})
         created_server_id = created_server['id']
 
-        found_server = self._wait_for_state_change(created_server, 'BUILD')
-        self.assertEqual('ACTIVE', found_server['status'])
+        found_server = self._wait_for_state_change(created_server, 'ACTIVE')
 
         # Start server in ACTIVE
         # NOTE(mkoshiya): When os-start API runs, the server status
@@ -731,8 +723,7 @@ class ServersTest(ServersTestBase):
         # Stop server
         post = {'os-stop': {}}
         self.api.post_server_action(created_server_id, post)
-        found_server = self._wait_for_state_change(found_server, 'ACTIVE')
-        self.assertEqual('SHUTOFF', found_server['status'])
+        found_server = self._wait_for_state_change(found_server, 'SHUTOFF')
 
         # Stop server in SHUTOFF
         # NOTE(mkoshiya): When os-stop API runs, the server status
@@ -754,8 +745,7 @@ class ServersTest(ServersTestBase):
         server = self._build_minimal_create_server_request()
         created_server = self.api.post_server({"server": server})
         created_server_id = created_server['id']
-        found_server = self._wait_for_state_change(created_server, 'BUILD')
-        self.assertEqual('ACTIVE', found_server['status'])
+        found_server = self._wait_for_state_change(created_server, 'ACTIVE')
 
         # Revert resized server in ACTIVE
         # NOTE(yatsumi): When revert resized server API runs,
@@ -780,14 +770,13 @@ class ServersTest(ServersTestBase):
         server = self._build_minimal_create_server_request()
         created_server = self.api.post_server({"server": server})
         created_server_id = created_server['id']
-        found_server = self._wait_for_state_change(created_server, 'BUILD')
-        self.assertEqual('ACTIVE', found_server['status'])
+        found_server = self._wait_for_state_change(created_server, 'ACTIVE')
 
         # Resize server(flavorRef: 1 -> 2)
         post = {'resize': {"flavorRef": "2", "OS-DCF:diskConfig": "AUTO"}}
         self.api.post_server_action(created_server_id, post)
-        found_server = self._wait_for_state_change(found_server, 'RESIZE')
-        self.assertEqual('VERIFY_RESIZE', found_server['status'])
+        found_server = self._wait_for_state_change(found_server,
+                                                   'VERIFY_RESIZE')
 
         # Resize server in VERIFY_RESIZE(flavorRef: 2 -> 1)
         # NOTE(yatsumi): When resize API runs, the server status
@@ -809,8 +798,7 @@ class ServersTest(ServersTestBase):
         server = self._build_minimal_create_server_request()
         created_server = self.api.post_server({"server": server})
         created_server_id = created_server['id']
-        found_server = self._wait_for_state_change(created_server, 'BUILD')
-        self.assertEqual('ACTIVE', found_server['status'])
+        found_server = self._wait_for_state_change(created_server, 'ACTIVE')
 
         # Confirm resized server in ACTIVE
         # NOTE(yatsumi): When confirm resized server API runs,
@@ -835,8 +823,7 @@ class ServersTest(ServersTestBase):
         created_server = self.api.post_server({"server": server})
         created_server_id = created_server['id']
 
-        found_server = self._wait_for_state_change(created_server, 'BUILD')
-        self.assertEqual('ACTIVE', found_server['status'])
+        self._wait_for_state_change(created_server, 'ACTIVE')
 
         # Try to resize to flavorid 2, 1 core, 2048 ram
         post = {'resize': {'flavorRef': '2'}}
@@ -851,7 +838,7 @@ class ServersTest(ServersTestBase):
         server = self._build_minimal_create_server_request()
         created_server = self.api.post_server({"server": server})
         server_id = created_server['id']
-        self._wait_for_state_change(created_server, 'BUILD')
+        self._wait_for_state_change(created_server, 'ACTIVE')
 
         volume_id = '9a695496-44aa-4404-b2cc-ccab2501f87e'
         LOG.info('Attaching volume %s to server %s', volume_id, server_id)
@@ -1012,7 +999,7 @@ class ServersTestV219(ServersTestBase):
         # Create a server with an initial description
         server = self._create_server(True, 'test desc 1')[1]
         server_id = server['id']
-        self._wait_for_state_change(server, 'BUILD')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         # Rebuild and get the server with a description
         self._rebuild_server_and_verify(server_id, True, 'updated desc')
@@ -1097,9 +1084,9 @@ class ServerTestV220(ServersTestBase):
     def _shelve_server(self):
         server = self._create_server()[1]
         server_id = server['id']
-        self._wait_for_state_change(server, 'BUILD')
+        self._wait_for_state_change(server, 'ACTIVE')
         self.api.post_server_action(server_id, {'shelve': None})
-        return self._wait_for_state_change(server, 'ACTIVE')
+        return self._wait_for_state_change(server, 'SHELVED_OFFLOADED')
 
     def _get_fake_bdms(self, ctxt):
         return block_device_obj.block_device_make_list(self.ctxt,
@@ -1112,7 +1099,6 @@ class ServerTestV220(ServersTestBase):
     def test_attach_detach_vol_to_shelved_offloaded_server_new_flow(self):
         self.flags(shelved_offload_time=0)
         found_server = self._shelve_server()
-        self.assertEqual('SHELVED_OFFLOADED', found_server['status'])
         server_id = found_server['id']
         fake_bdms = self._get_fake_bdms(self.ctxt)
 
@@ -4566,7 +4552,7 @@ class ServerTestV256MultiCellTestCase(ServerTestV256Common):
         # We target host1 specifically so that we have a predictable target for
         # the cold migration in cell2.
         server = self._create_server(target_host='host1')
-        server = self._wait_for_state_change(server, 'BUILD')
+        server = self._wait_for_state_change(server, 'ACTIVE')
 
         self.assertEqual('host1', server['OS-EXT-SRV-ATTR:host'])
         ex = self.assertRaises(client.OpenStackApiException,
@@ -4588,7 +4574,7 @@ class ServerTestV256SingleCellMultiHostTestCase(ServerTestV256Common):
     """
     def test_migrate_server_to_host_in_same_cell(self):
         server = self._create_server()
-        server = self._wait_for_state_change(server, 'BUILD')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         source_host = server['OS-EXT-SRV-ATTR:host']
         target_host = self._get_target_and_other_hosts(source_host)[0]
         self.api.post_server_action(server['id'],
@@ -4605,7 +4591,7 @@ class ServerTestV256RescheduleTestCase(ServerTestV256Common):
                            reason='Test Exception'))
     def test_migrate_server_not_reschedule(self, mock_prep_resize):
         server = self._create_server()
-        found_server = self._wait_for_state_change(server, 'BUILD')
+        found_server = self._wait_for_state_change(server, 'ACTIVE')
 
         target_host, other_host = self._get_target_and_other_hosts(
             found_server['OS-EXT-SRV-ATTR:host'])
