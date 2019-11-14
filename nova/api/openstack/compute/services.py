@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_log import log as logging
 from oslo_utils import strutils
 from oslo_utils import uuidutils
 import webob.exc
@@ -32,6 +33,8 @@ from nova import utils
 
 UUID_FOR_ID_MIN_VERSION = '2.53'
 PARTIAL_CONSTRUCT_FOR_CELL_DOWN_MIN_VERSION = '2.69'
+
+LOG = logging.getLogger(__name__)
 
 
 class ServiceController(wsgi.Controller):
@@ -259,6 +262,16 @@ class ServiceController(wsgi.Controller):
                                       'is hosting instances. Migrate or '
                                       'delete the instances first.'))
 
+                # Similarly, check to see if the are any in-progress migrations
+                # involving this host because if there are we need to block the
+                # service delete since we could orphan resource providers and
+                # break the ability to do things like confirm/revert instances
+                # in VERIFY_RESIZE status.
+                compute_nodes = objects.ComputeNodeList.get_all_by_host(
+                    context, service.host)
+                self._assert_no_in_progress_migrations(
+                    context, id, compute_nodes)
+
                 aggrs = self.aggregate_api.get_aggregates_by_host(context,
                                                                   service.host)
                 for ag in aggrs:
@@ -269,8 +282,6 @@ class ServiceController(wsgi.Controller):
                 # placement for the compute nodes managed by this service;
                 # remember that an ironic compute service can manage multiple
                 # nodes
-                compute_nodes = objects.ComputeNodeList.get_all_by_host(
-                    context, service.host)
                 for compute_node in compute_nodes:
                     self.placementclient.delete_resource_provider(
                         context, compute_node, cascade=True)
@@ -291,6 +302,36 @@ class ServiceController(wsgi.Controller):
         except exception.ServiceNotUnique:
             explanation = _("Service id %s refers to multiple services.") % id
             raise webob.exc.HTTPBadRequest(explanation=explanation)
+
+    @staticmethod
+    def _assert_no_in_progress_migrations(context, service_id, compute_nodes):
+        """Ensures there are no in-progress migrations on the given nodes.
+
+        :param context: nova auth RequestContext
+        :param service_id: id of the Service being deleted
+        :param compute_nodes: ComputeNodeList of nodes on a compute service
+        :raises: HTTPConflict if there are any in-progress migrations on the
+            nodes
+        """
+        for cn in compute_nodes:
+            migrations = (
+                objects.MigrationList.get_in_progress_by_host_and_node(
+                    context, cn.host, cn.hypervisor_hostname))
+            if migrations:
+                # Log the migrations for the operator and then raise
+                # a 409 error.
+                LOG.info('Unable to delete compute service with id %s '
+                         'for host %s. There are %i in-progress '
+                         'migrations involving the host. Migrations '
+                         '(uuid:status): %s',
+                         service_id, cn.host, len(migrations),
+                         ','.join(['%s:%s' % (mig.uuid, mig.status)
+                                   for mig in migrations]))
+                raise webob.exc.HTTPConflict(
+                    explanation=_(
+                        'Unable to delete compute service that has '
+                        'in-progress migrations. Complete the '
+                        'migrations or delete the instances first.'))
 
     @validation.query_schema(services.index_query_schema)
     @wsgi.expected_errors(())
