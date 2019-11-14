@@ -23,13 +23,13 @@ Background
 ----------
 In the movement towards using placement for scheduling and resource management,
 the virt driver method ``get_available_resource`` was initially superseded by
-``get_inventory``, whereby the driver could specify its inventory in terms
-understood by placement. In Queens, a ``get_traits`` driver method was added.
-But ``get_inventory`` is limited to expressing only inventory (not traits or
-aggregates). And both of these methods are limited to the resource provider
-corresponding to the compute node.
+``get_inventory`` (now gone), whereby the driver could specify its inventory in
+terms understood by placement. In Queens, a ``get_traits`` driver method was
+added. But ``get_inventory`` is limited to expressing only inventory (not
+traits or aggregates). And both of these methods are limited to the resource
+provider corresponding to the compute node.
 
-Recent developments such as Nested Resource Providers necessitate the ability
+Developments such as Nested Resource Providers necessitate the ability
 for the virt driver to have deeper control over what the resource tracker
 configures in placement on behalf of the compute node. This need is filled by
 the virt driver method ``update_provider_tree`` and its consumption by the
@@ -129,9 +129,6 @@ aggregates, and traits associated with those resource providers.
               /     \   /    \
             PF1    PF2 PF3   PF4------BW1 (root)
                                  agg2
-
-This method supersedes ``get_inventory`` and ``get_traits``: if this method is
-implemented, neither ``get_inventory`` nor ``get_traits`` is used.
 
 Driver implementations of ``update_provider_tree`` are expected to use public
 ``ProviderTree`` methods to effect changes to the provider tree passed in.
