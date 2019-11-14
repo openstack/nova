@@ -306,7 +306,7 @@ class FlatTestCase(_ImageTestCase, test.NoDBTestCase):
         # a non-existent backend.
 
         base_dir = os.path.join(CONF.instances_path,
-                                CONF.image_cache_subdirectory_name)
+                                CONF.image_cache.subdirectory_name)
 
         # Lets assume the base image cache directory already exists
         existing = set([base_dir])

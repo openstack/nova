@@ -152,14 +152,14 @@ class VMwareVMOps(object):
         # Enable more than one compute node to run on the same host
         if CONF.vmware.cache_prefix:
             base_folder = '%s%s' % (CONF.vmware.cache_prefix,
-                                    CONF.image_cache_subdirectory_name)
+                                    CONF.image_cache.subdirectory_name)
         # Ensure that the base folder is unique per compute node
-        elif CONF.remove_unused_base_images:
+        elif CONF.image_cache.remove_unused_base_images:
             base_folder = '%s%s' % (CONF.my_ip,
-                                    CONF.image_cache_subdirectory_name)
+                                    CONF.image_cache.subdirectory_name)
         else:
             # Aging disable ensures backward compatibility
-            base_folder = CONF.image_cache_subdirectory_name
+            base_folder = CONF.image_cache.subdirectory_name
         return base_folder
 
     def _extend_virtual_disk(self, instance, requested_size, name, dc_ref):
@@ -1855,7 +1855,7 @@ class VMwareVMOps(object):
         self._set_machine_id(client_factory, instance, network_info)
 
     def manage_image_cache(self, context, instances):
-        if not CONF.remove_unused_base_images:
+        if not CONF.image_cache.remove_unused_base_images:
             LOG.debug("Image aging disabled. Aging will not be done.")
             return
 

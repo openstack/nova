@@ -264,22 +264,6 @@ driver (for qcow and raw), or loop (for raw).
         default=10,
         min=0,
         help='Amount of time, in seconds, to wait for NBD device start up.'),
-    cfg.StrOpt('image_cache_subdirectory_name',
-        default='_base',
-        help="""
-Location of cached images.
-
-This is NOT the full path - just a folder name relative to '$instances_path'.
-For per-compute-host cached images, set to '_base_$my_ip'
-"""),
-    cfg.BoolOpt('remove_unused_base_images',
-        default=True,
-        help='Should unused base images be removed?'),
-    cfg.IntOpt('remove_unused_original_minimum_age_seconds',
-        default=(24 * 3600),
-        help="""
-Unused unresized base images younger than this will not be removed.
-"""),
     cfg.StrOpt('pointer_model',
         default='usbtablet',
         choices=[
@@ -954,31 +938,6 @@ Possible values:
 ]
 
 interval_opts = [
-    cfg.IntOpt('image_cache_manager_interval',
-        default=2400,
-        min=-1,
-        help="""
-Number of seconds to wait between runs of the image cache manager.
-
-Note that when using shared storage for the ``[DEFAULT]/instances_path``
-configuration option across multiple nova-compute services, this periodic
-could process a large number of instances. Similarly, using a compute driver
-that manages a cluster (like vmwareapi.VMwareVCDriver) could result in
-processing a large number of instances. Therefore you may need to adjust the
-time interval for the anticipated load, or only run on one nova-compute
-service within a shared storage aggregate.
-
-Possible values:
-
-* 0: run at the default interval of 60 seconds (not recommended)
-* -1: disable
-* Any other value
-
-Related options:
-
-* ``[DEFAULT]/compute_driver``
-* ``[DEFAULT]/instances_path``
-"""),
     cfg.IntOpt('bandwidth_poll_interval',
         default=600,
         help="""

@@ -249,7 +249,7 @@ class Image(object):
         :size: Size of created image in bytes (optional)
         """
         base_dir = os.path.join(CONF.instances_path,
-                                CONF.image_cache_subdirectory_name)
+                                CONF.image_cache.subdirectory_name)
         if not os.path.exists(base_dir):
             fileutils.ensure_tree(base_dir)
         base = os.path.join(base_dir, filename)

@@ -140,7 +140,8 @@ class ImageCacheManager(imagecache.ImageCacheManager):
     def _age_cached_images(self, context, datastore, dc_info,
                            ds_path):
         """Ages cached images."""
-        age_seconds = CONF.remove_unused_original_minimum_age_seconds
+        age_seconds = (
+            CONF.image_cache.remove_unused_original_minimum_age_seconds)
         unused_images = self.originals - self.used_images
         ds_browser = self._get_ds_browser(datastore.ref)
         for image in unused_images:

@@ -53,11 +53,12 @@ swap_bdm_256 = [block_device.BlockDeviceDict(
 class ImageCacheManagerTests(test.NoDBTestCase):
 
     def test_configurationi_defaults(self):
-        self.assertEqual(2400, CONF.image_cache_manager_interval)
-        self.assertEqual('_base', CONF.image_cache_subdirectory_name)
-        self.assertTrue(CONF.remove_unused_base_images)
-        self.assertEqual(24 * 3600,
-                         CONF.remove_unused_original_minimum_age_seconds)
+        self.assertEqual(2400, CONF.image_cache.manager_interval)
+        self.assertEqual('_base', CONF.image_cache.subdirectory_name)
+        self.assertTrue(CONF.image_cache.remove_unused_base_images)
+        self.assertEqual(
+            24 * 3600,
+            CONF.image_cache.remove_unused_original_minimum_age_seconds)
 
     def test_cache_manager(self):
         cache_manager = imagecache.ImageCacheManager()

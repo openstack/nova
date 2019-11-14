@@ -64,8 +64,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         vmwareapi_fake.reset()
         stubs.set_stubs(self)
         self.flags(enabled=True, group='vnc')
-        self.flags(image_cache_subdirectory_name='vmware_base',
-                   my_ip='',
+        self.flags(subdirectory_name='vmware_base', group='image_cache')
+        self.flags(my_ip='',
                    flat_injected=True)
         self._context = context.RequestContext('fake_user', 'fake_project')
         self._session = driver.VMwareAPISession()
@@ -2723,19 +2723,19 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self.assertEqual('flavor-policy', extra_specs.storage_policy)
 
     def test_get_base_folder_not_set(self):
-        self.flags(image_cache_subdirectory_name='vmware_base')
+        self.flags(subdirectory_name='vmware_base', group='image_cache')
         base_folder = self._vmops._get_base_folder()
         self.assertEqual('vmware_base', base_folder)
 
     def test_get_base_folder_host_ip(self):
-        self.flags(my_ip='7.7.7.7',
-                   image_cache_subdirectory_name='_base')
+        self.flags(my_ip='7.7.7.7')
+        self.flags(subdirectory_name='_base', group='image_cache')
         base_folder = self._vmops._get_base_folder()
         self.assertEqual('7.7.7.7_base', base_folder)
 
     def test_get_base_folder_cache_prefix(self):
         self.flags(cache_prefix='my_prefix', group='vmware')
-        self.flags(image_cache_subdirectory_name='_base')
+        self.flags(subdirectory_name='_base', group='image_cache')
         base_folder = self._vmops._get_base_folder()
         self.assertEqual('my_prefix_base', base_folder)
 

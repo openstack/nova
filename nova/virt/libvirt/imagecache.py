@@ -137,7 +137,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                     if backing_file:
                         backing_path = os.path.join(
                             CONF.instances_path,
-                            CONF.image_cache_subdirectory_name,
+                            CONF.image_cache.subdirectory_name,
                             backing_file)
                         if backing_path not in inuse_images:
                             inuse_images.append(backing_path)
@@ -236,15 +236,16 @@ class ImageCacheManager(imagecache.ImageCacheManager):
 
     def _remove_swap_file(self, base_file):
         """Remove a single swap base file if it is old enough."""
-        maxage = CONF.remove_unused_original_minimum_age_seconds
+        maxage = CONF.image_cache.remove_unused_original_minimum_age_seconds
 
         self._remove_old_enough_file(base_file, maxage, remove_lock=False)
 
     def _remove_base_file(self, base_file):
         """Remove a single base file if it is old enough."""
-        maxage = CONF.libvirt.remove_unused_resized_minimum_age_seconds
+        maxage = CONF.image_cache.remove_unused_resized_minimum_age_seconds
         if base_file in self.originals:
-            maxage = CONF.remove_unused_original_minimum_age_seconds
+            maxage = (
+                CONF.image_cache.remove_unused_original_minimum_age_seconds)
 
         self._remove_old_enough_file(base_file, maxage)
 
@@ -330,7 +331,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         # created, but may remain from previous versions.
 
         base_dir = os.path.join(CONF.instances_path,
-                                CONF.image_cache_subdirectory_name)
+                                CONF.image_cache.subdirectory_name)
         if not os.path.exists(base_dir):
             LOG.debug('Skipping verification, no base directory at %s',
                       base_dir)

@@ -9658,7 +9658,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def cache_image(self, context, image_id):
         cache_dir = os.path.join(CONF.instances_path,
-                                 CONF.image_cache_subdirectory_name)
+                                 CONF.image_cache.subdirectory_name)
         path = os.path.join(cache_dir,
                             imagecache.get_cache_fname(image_id))
         if os.path.exists(path):

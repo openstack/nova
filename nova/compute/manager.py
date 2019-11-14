@@ -9706,7 +9706,7 @@ class ComputeManager(manager.Manager):
             else:
                 self._process_instance_event(instance, event)
 
-    @periodic_task.periodic_task(spacing=CONF.image_cache_manager_interval,
+    @periodic_task.periodic_task(spacing=CONF.image_cache.manager_interval,
                                  external_process_ok=True)
     def _run_image_cache_manager_pass(self, context):
         """Run a single pass of the image cache manager."""
