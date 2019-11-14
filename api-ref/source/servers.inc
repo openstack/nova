@@ -139,8 +139,7 @@ body. The possible server status values are:
 - ``SOFT_DELETED``. The server is marked as deleted but the disk
   images are still available to restore.
 - ``SUSPENDED``. The server is suspended, either by request or
-  necessity. This status appears for only the following hypervisors:
-  XenServer/XCP, KVM, and ESXi. When you suspend a server, its state is stored
+  necessity. When you suspend a server, its state is stored
   on disk, all memory is written to disk, and the server is stopped.
   Suspending a server is similar to placing a device in hibernation and its
   occupied resource will not be freed but rather kept for when the server is

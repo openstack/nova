@@ -69,8 +69,9 @@ server status is one of the following values:
    expires, the server will be deleted permanently.
 
 -  ``SUSPENDED``: The server is suspended, either by request or
-   necessity. This status appears for only the following hypervisors:
-   XenServer/XCP, KVM, and ESXi. When you suspend a server, its state is stored
+   necessity. See the
+   :nova-doc:`feature support matrix <user/support-matrix.html#operation_suspend>`
+   for supported compute drivers. When you suspend a server, its state is stored
    on disk, all memory is written to disk, and the server is stopped.
    Suspending a server is similar to placing a device in hibernation and its
    occupied resource will not be freed but rather kept for when the server is
