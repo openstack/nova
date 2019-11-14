@@ -114,6 +114,59 @@ class ServersTestBase(base.ServersTestBase):
             hostname=hostname)
         return fake_connection
 
+    def start_computes(self, host_info_dict=None, save_rp_uuids=False):
+        """Start compute services. The started services will be saved in
+        self.computes, keyed by hostname.
+
+        :param host_info_dict: A hostname -> fakelibvirt.HostInfo object
+                               dictionary representing the libvirt HostInfo of
+                               each compute host. If None, the default is to
+                               start 2 computes, named test_compute0 and
+                               test_compute1, with 2 NUMA nodes, 2 cores per
+                               node, 2 threads per core, and 16GB of RAM.
+        :param save_rp_uuids: If True, save the resource provider UUID of each
+                              started compute in self.compute_rp_uuids, keyed
+                              by hostname.
+        """
+        if host_info_dict is None:
+            host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
+                                             cpu_cores=2, cpu_threads=2,
+                                             kB_mem=15740000)
+            host_info_dict = {'test_compute0': host_info,
+                              'test_compute1': host_info}
+
+        def start_compute(host, host_info):
+            fake_connection = self._get_connection(host_info=host_info,
+                                                   hostname=host)
+            # This is fun. Firstly we need to do a global'ish mock so we can
+            # actually start the service.
+            with mock.patch('nova.virt.libvirt.host.Host.get_connection',
+                            return_value=fake_connection):
+                compute = self.start_service('compute', host=host)
+                # Once that's done, we need to tweak the compute "service" to
+                # make sure it returns unique objects. We do this inside the
+                # mock context to avoid a small window between the end of the
+                # context and the tweaking where get_connection would revert to
+                # being an autospec mock.
+                compute.driver._host.get_connection = lambda: fake_connection
+            return compute
+
+        self.computes = {}
+        self.compute_rp_uuids = {}
+        for host, host_info in host_info_dict.items():
+            # NOTE(artom) A lambda: foo construct returns the value of foo at
+            # call-time, so if the value of foo changes with every iteration of
+            # a loop, every call to the lambda will return a different value of
+            # foo. Because that's not what we want in our lambda further up,
+            # we can't put it directly in the for loop, and need to introduce
+            # the start_compute function to create a scope in which host and
+            # host_info do not change with every iteration of the for loop.
+            self.computes[host] = start_compute(host, host_info)
+            if save_rp_uuids:
+                self.compute_rp_uuids[host] = self.placement_api.get(
+                    '/resource_providers?name=%s' % host).body[
+                    'resource_providers'][0]['uuid']
+
 
 class LibvirtNeutronFixture(nova_fixtures.NeutronFixture):
     """A custom variant of the stock neutron fixture with more networks.
