@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.compute import instance_actions
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
@@ -63,7 +64,7 @@ class MultiCellSchedulerTestCase(test.TestCase,
         return self.admin_api.api_post(
             '/servers/%s/action' % found_server['id'],
             {'migrate': None},
-            check_response_status=[expected_status])
+            check_response_status=[expected_status]), found_server
 
     def test_migrate_between_cells(self):
         """Verify that migrating between cells is not allowed.
@@ -75,8 +76,10 @@ class MultiCellSchedulerTestCase(test.TestCase,
         self.start_service('compute', host='compute1', cell=CELL1_NAME)
         self.start_service('compute', host='compute2', cell=CELL2_NAME)
 
-        result = self._test_create_and_migrate(expected_status=400)
-        self.assertIn('No valid host', result.body['badRequest']['message'])
+        _, server = self._test_create_and_migrate(expected_status=202)
+        # The instance action should have failed with details.
+        self._assert_resize_migrate_action_fail(
+            server, instance_actions.MIGRATE, 'NoValidHost')
 
     def test_migrate_within_cell(self):
         """Verify that migrating within cells is allowed.

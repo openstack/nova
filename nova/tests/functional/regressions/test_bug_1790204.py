@@ -11,9 +11,8 @@
 # under the License.
 
 from oslo_utils.fixture import uuidsentinel as uuids
-import six
 
-from nova.tests.functional.api import client as api_client
+from nova.compute import instance_actions
 from nova.tests.functional import integrated_helpers
 
 
@@ -70,8 +69,8 @@ class ResizeSameHostDoubledAllocations(
         # fails because DISK_GB inventory allocation ratio is 1.0 and when
         # resizing to the same host we'll be trying to claim 2048 but the
         # provider only has a total of 1024.
-        ex = self.assertRaises(api_client.OpenStackApiException,
-                               self.api.post_server_action,
-                               server['id'], resize_req)
-        self.assertEqual(400, ex.response.status_code)
-        self.assertIn('No valid host was found', six.text_type(ex))
+        self.api.post_server_action(server['id'], resize_req,
+                                    check_response_status=[202])
+        # The instance action should have failed with details.
+        self._assert_resize_migrate_action_fail(
+            server, instance_actions.RESIZE, 'NoValidHost')

@@ -1,0 +1,12 @@
+---
+other:
+  - |
+    The ``resize`` and ``migrate`` server action APIs used to synchronously
+    block until a destination host is selected by the scheduler. Those APIs
+    now asynchronously return a response to the user before scheduling.
+    The response code remains 202 and users can monitor the operation via the
+    ``status`` and ``OS-EXT-STS:task_state`` fields on the server resource and
+    also by using the ``os-instance-actions`` API. The most notable
+    change is ``NoValidHost`` will not be returned in a 400 error response
+    from the API if scheduling fails but that information is available via the
+    instance actions API interface.

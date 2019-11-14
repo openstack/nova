@@ -17,6 +17,7 @@ import mock
 from oslo_config import cfg
 import six
 
+from nova.compute import instance_actions
 from nova import context
 from nova.db import api as db
 from nova.db.sqlalchemy import api as db_api
@@ -346,11 +347,13 @@ class ServerGroupTestV21(ServerGroupTestBase):
         servers = self._boot_servers_to_group(created_group)
 
         post = {'migrate': {}}
-        ex = self.assertRaises(client.OpenStackApiException,
-                               self.admin_api.post_server_action,
-                               servers[1]['id'], post)
-        self.assertEqual(400, ex.response.status_code)
-        self.assertIn('No valid host found for cold migrate', ex.response.text)
+        # NoValidHost errors are handled in conductor after the API has cast
+        # off and returned a 202 response to the user.
+        self.admin_api.post_server_action(servers[1]['id'], post,
+                                          check_response_status=[202])
+        # The instance action should have failed with details.
+        self._assert_resize_migrate_action_fail(
+            servers[1], instance_actions.MIGRATE, 'NoValidHost')
 
     def test_migrate_with_group_no_valid_host(self):
         for group in [self.affinity, self.anti_affinity]:

@@ -96,16 +96,17 @@ class DeletedServerAllocationRevertTest(
         self._stub_delete_server_during_scheduling(server)
 
         # Now start the cold migration which will fail due to NoValidHost.
-        # Note that we get a 404 back because this is a blocking call until
-        # conductor RPC casts to prep_resize on the selected dest host but
-        # we never get that far.
         self.api.post_server_action(server['id'], {'migrate': None},
-                                    check_response_status=[404])
+                                    check_response_status=[202])
         # We cannot monitor the migration from the API since it is deleted
         # when the instance is deleted so just wait for the failed instance
         # action event after the task rollback happens.
-        self._wait_for_action_fail_completion(
-            server, instance_actions.MIGRATE, 'cold_migrate', api=self.api)
+        # Note that we get InstanceNotFound rather than NoValidHost because
+        # the NoValidHost handler in ComputeTaskManager._cold_migrate calls
+        # _set_vm_state_and_notify which raises InstanceNotFound and masks
+        # the NoValidHost error.
+        self._assert_resize_migrate_action_fail(
+            server, instance_actions.MIGRATE, 'InstanceNotFound')
         self._assert_no_allocations(server)
 
     def test_live_migration_task_rollback(self):
