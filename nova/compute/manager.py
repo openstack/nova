@@ -8038,9 +8038,9 @@ class ComputeManager(manager.Manager):
         # NOTE(mriedem): This is a no-op for neutron.
         self.network_api.setup_networks_on_host(context, instance,
                                                          self.host)
-        migration = {'source_compute': instance.host,
-                     'dest_compute': self.host,
-                     'migration_type': 'live-migration'}
+        migration = objects.Migration(source_compute=instance.host,
+                                      dest_compute=self.host,
+                                      migration_type='live-migration')
         # TODO(gibi): calculate and pass resource_provider_mapping
         self.network_api.migrate_instance_finish(
             context, instance, migration, provider_mappings=None)

@@ -52,6 +52,7 @@ from nova.network import api as network_api
 from nova.network import model as network_model
 from nova.network.neutronv2 import api as neutronv2_api
 from nova import objects
+from nova.objects import base as base_obj
 from nova.objects import block_device as block_device_obj
 from nova.objects import fields
 from nova.objects import instance as instance_obj
@@ -9039,10 +9040,14 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
 
             migrate_instance_finish.assert_called_once_with(
                 self.context, self.instance,
-                {'source_compute': cn_old,
-                 'dest_compute': self.compute.host,
-                 'migration_type': 'live-migration'},
+                test.MatchType(objects.Migration),
                 provider_mappings=None)
+            mig = migrate_instance_finish.call_args[0][2]
+            self.assertTrue(base_obj.obj_equal_prims(
+                objects.Migration(source_compute=cn_old,
+                                  dest_compute=self.compute.host,
+                                  migration_type='live-migration'),
+                mig))
             _get_instance_block_device_info.assert_called_once_with(
                 self.context, self.instance
             )

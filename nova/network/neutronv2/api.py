@@ -2834,9 +2834,18 @@ class API(base_api.NetworkAPI):
 
     def migrate_instance_finish(
             self, context, instance, migration, provider_mappings):
-        """Finish migrating the network of an instance."""
+        """Finish migrating the network of an instance.
+
+        :param context: nova auth request context
+        :param instance: Instance object being migrated
+        :param migration: Migration object for the operation; used to determine
+            the phase of the migration which dictates what to do with claimed
+            PCI devices for SR-IOV ports
+        :param provider_mappings: a dict of list of resource provider uuids
+            keyed by port uuid
+        """
         self._update_port_binding_for_instance(
-            context, instance, migration['dest_compute'], migration=migration,
+            context, instance, migration.dest_compute, migration=migration,
             provider_mappings=provider_mappings)
 
     def add_network_to_project(self, context, project_id, network_uuid=None):
