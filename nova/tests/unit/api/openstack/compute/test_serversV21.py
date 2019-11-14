@@ -8502,7 +8502,8 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
         body = {'resize': {'flavorRef': '1'}}
         self.controller._action_resize(self.req, fakes.FAKE_UUID, body=body)
         resize_mock.assert_called_once_with(self.req.environ['nova.context'],
-                                            instance, '1')
+                                            instance, '1',
+                                            auto_disk_config=None)
 
     @mock.patch('nova.api.openstack.common.get_instance')
     def test_resize_overridden_policy_failed_with_other_user_in_same_project(
@@ -8535,7 +8536,8 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
         body = {'resize': {'flavorRef': '1'}}
         self.controller._action_resize(self.req, fakes.FAKE_UUID, body=body)
         resize_mock.assert_called_once_with(self.req.environ['nova.context'],
-                                            instance, '1')
+                                            instance, '1',
+                                            auto_disk_config=None)
 
     @mock.patch('nova.api.openstack.common.get_instance')
     def test_rebuild_policy_failed_with_other_project(self, get_instance_mock):

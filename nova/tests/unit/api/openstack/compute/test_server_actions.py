@@ -162,7 +162,7 @@ class ServerActionsControllerTestV21(test.TestCase):
                                 'imageRef': self.image_uuid,
                                 'adminPass': 'TNc53Dr8s7vw'}}}
 
-        args_map = {'_action_resize': (('2'), {}),
+        args_map = {'_action_resize': (('2'), {'auto_disk_config': None}),
                     '_action_confirm_resize': ((), {}),
                     '_action_reboot': (('HARD',), {}),
                     '_action_rebuild': ((self.image_uuid,
@@ -664,7 +664,7 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         self.resize_called = False
 
-        def resize_mock(*args):
+        def resize_mock(*args, **kwargs):
             self.resize_called = True
 
         self.stub_out('nova.compute.api.API.resize', resize_mock)
@@ -729,7 +729,8 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         raised, expected = map(iter, zip(*exceptions))
 
-        def _fake_resize(obj, context, instance, flavor_id):
+        def _fake_resize(obj, context, instance, flavor_id,
+                         auto_disk_config=None):
             self.resize_called += 1
             raise next(raised)
 

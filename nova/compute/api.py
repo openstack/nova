@@ -1985,8 +1985,7 @@ class API(base.Base):
             requested_hypervisor_hostname=requested_hypervisor_hostname)
 
     def _check_auto_disk_config(self, instance=None, image=None,
-                                **extra_instance_updates):
-        auto_disk_config = extra_instance_updates.get("auto_disk_config")
+                                auto_disk_config=None):
         if auto_disk_config is None:
             return
         if not image and not instance:
@@ -3360,7 +3359,8 @@ class API(base.Base):
                 context, trusted_certs, rebuild=True)
 
         image_id, image = self._get_image(context, image_href)
-        self._check_auto_disk_config(image=image, **kwargs)
+        self._check_auto_disk_config(image=image,
+                                     auto_disk_config=auto_disk_config)
 
         flavor = instance.get_flavor()
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
@@ -3707,13 +3707,10 @@ class API(base.Base):
 
         return node
 
-    # TODO(mriedem): It looks like for resize (not cold migrate) the only
-    # possible kwarg here is auto_disk_config. Drop this dumb **kwargs and make
-    # it explicitly an auto_disk_config param
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
     def resize(self, context, instance, flavor_id=None, clean_shutdown=True,
-               host_name=None, **extra_instance_updates):
+               host_name=None, auto_disk_config=None):
         """Resize (ie, migrate) a running instance.
 
         If flavor_id is None, the process is considered a migration, keeping
@@ -3729,7 +3726,8 @@ class API(base.Base):
             node = self._validate_host_for_cold_migrate(
                 context, instance, host_name, allow_cross_cell_resize)
 
-        self._check_auto_disk_config(instance, **extra_instance_updates)
+        self._check_auto_disk_config(
+            instance, auto_disk_config=auto_disk_config)
 
         current_instance_type = instance.get_flavor()
 
@@ -3809,7 +3807,7 @@ class API(base.Base):
 
         instance.task_state = task_states.RESIZE_PREP
         instance.progress = 0
-        instance.update(extra_instance_updates)
+        instance.auto_disk_config = auto_disk_config or False
         instance.save(expected_task_state=[None])
 
         if not flavor_id:
