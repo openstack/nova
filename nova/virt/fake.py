@@ -106,6 +106,7 @@ class FakeDriver(driver.ComputeDriver):
         "supports_evacuate": True,
         "supports_migrate_to_same_host": True,
         "supports_attach_interface": True,
+        "supports_device_tagging": True,
         "supports_tagged_attach_interface": True,
         "supports_tagged_attach_volume": True,
         "supports_extend_volume": True,
@@ -642,7 +643,7 @@ class FakeDriver(driver.ComputeDriver):
     def get_volume_connector(self, instance):
         return {'ip': CONF.my_block_storage_ip,
                 'initiator': 'fake',
-                'host': 'fakehost'}
+                'host': self._host}
 
     def get_available_nodes(self, refresh=False):
         return self._nodes
