@@ -193,21 +193,30 @@ class TestServicesAPI(test_servers.ProviderUsageBaseTestCase):
         # Delete the source compute service.
         service = self.admin_api.get_services(
             binary='nova-compute', host='host1')[0]
-        self.admin_api.api_delete('/os-services/%s' % service['id'])
-        # FIXME(mriedem): This is bug 1852610 where the compute service is
-        # deleted but the resource provider is not because there are still
-        # migration-based allocations against the source node provider.
+        # We expect the delete request to fail with a 409 error because of the
+        # instance in VERIFY_RESIZE status even though that instance is marked
+        # as being on host2 now.
+        ex = self.assertRaises(api_client.OpenStackApiException,
+                               self.admin_api.api_delete,
+                               '/os-services/%s' % service['id'])
+        self.assertEqual(409, ex.response.status_code)
+        self.assertIn('Unable to delete compute service that has in-progress '
+                      'migrations', six.text_type(ex))
+        self.assertIn('There are 1 in-progress migrations involving the host',
+                      self.stdlog.logger.output)
+        # The provider is still around because we did not delete the service.
         resp = self.placement_api.get('/resource_providers/%s' % host1_rp_uuid)
         self.assertEqual(200, resp.status)
         self.assertFlavorMatchesUsage(host1_rp_uuid, flavor)
         # Now try to confirm the migration.
-        # FIXME(mriedem): This will fail until bug 1852610 is fixed and the
-        # source compute service delete is blocked while there is an
-        # in-progress migration involving the node.
-        self.assertNotIn('ComputeHostNotFound', self.stdlog.logger.output)
         self.api.post_server_action(server['id'], {'confirmResize': None})
-        self._wait_for_state_change(self.api, server, 'ERROR')
-        self.assertIn('ComputeHostNotFound', self.stdlog.logger.output)
+        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        # Delete the host1 service since the migration is confirmed and the
+        # server is on host2.
+        self.admin_api.api_delete('/os-services/%s' % service['id'])
+        # The host1 resource provider should be gone.
+        resp = self.placement_api.get('/resource_providers/%s' % host1_rp_uuid)
+        self.assertEqual(404, resp.status)
 
     def test_resize_revert_after_deleted_source_compute(self):
         """Tests a scenario where a server is resized and while in
@@ -230,22 +239,31 @@ class TestServicesAPI(test_servers.ProviderUsageBaseTestCase):
         # Delete the source compute service.
         service = self.admin_api.get_services(
             binary='nova-compute', host='host1')[0]
-        self.admin_api.api_delete('/os-services/%s' % service['id'])
-        # FIXME(mriedem): This is bug 1852610 where the compute service is
-        # deleted but the resource provider is not because there are still
-        # migration-based allocations against the source node provider.
+        # We expect the delete request to fail with a 409 error because of the
+        # instance in VERIFY_RESIZE status even though that instance is marked
+        # as being on host2 now.
+        ex = self.assertRaises(api_client.OpenStackApiException,
+                               self.admin_api.api_delete,
+                               '/os-services/%s' % service['id'])
+        self.assertEqual(409, ex.response.status_code)
+        self.assertIn('Unable to delete compute service that has in-progress '
+                      'migrations', six.text_type(ex))
+        self.assertIn('There are 1 in-progress migrations involving the host',
+                      self.stdlog.logger.output)
+        # The provider is still around because we did not delete the service.
         resp = self.placement_api.get('/resource_providers/%s' % host1_rp_uuid)
         self.assertEqual(200, resp.status)
         self.assertFlavorMatchesUsage(host1_rp_uuid, flavor1)
-        # Now try to revert the resize.
-        # NOTE(mriedem): This actually works because the drop_move_claim
-        # happens in revert_resize on the dest host which still has its
-        # ComputeNode record. The migration-based allocations are reverted
-        # so the instance holds the allocations for the source provider and
-        # the allocations against the dest provider are dropped.
-        self.api.post_server_action(server['id'], {'revertResize': None})
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
-        self.assertNotIn('ComputeHostNotFound', self.stdlog.logger.output)
+        # Now revert the resize.
+        self._revert_resize(server)
         self.assertFlavorMatchesUsage(host1_rp_uuid, flavor1)
         zero_flavor = {'vcpus': 0, 'ram': 0, 'disk': 0, 'extra_specs': {}}
         self.assertFlavorMatchesUsage(host2_rp_uuid, zero_flavor)
+        # Delete the host2 service since the migration is reverted and the
+        # server is on host1 again.
+        service2 = self.admin_api.get_services(
+            binary='nova-compute', host='host2')[0]
+        self.admin_api.api_delete('/os-services/%s' % service2['id'])
+        # The host2 resource provider should be gone.
+        resp = self.placement_api.get('/resource_providers/%s' % host2_rp_uuid)
+        self.assertEqual(404, resp.status)

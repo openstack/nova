@@ -322,6 +322,12 @@ Attempts to delete a ``nova-compute`` service which is still hosting instances
 will result in a 409 HTTPConflict response. The instances will need to be
 migrated or deleted before a compute service can be deleted.
 
+Similarly, attempts to delete a ``nova-compute`` service which is involved in
+in-progress migrations will result in a 409 HTTPConflict response. The
+migrations will need to be completed, for example confirming or reverting a
+resize, or the instances will need to be deleted before the compute service can
+be deleted.
+
 .. important:: Be sure to stop the actual ``nova-compute`` process on the
                physical host *before* deleting the service with this API.
                Failing to do so can lead to the running service re-creating
