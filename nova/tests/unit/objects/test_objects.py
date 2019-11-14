@@ -1080,7 +1080,7 @@ object_data = {
     'ImageMetaProps': '1.25-66fc973af215eb5701ed4034bb6f0685',
     'Instance': '2.7-d187aec68cad2e4d8b8a03a68e4739ce',
     'InstanceAction': '1.2-9a5abc87fdd3af46f45731960651efb5',
-    'InstanceActionEvent': '1.3-c749e1b3589e7117c81cb2aa6ac438d5',
+    'InstanceActionEvent': '1.4-5b1f361bd81989f8bb2c20bb7e8a4cb4',
     'InstanceActionEventList': '1.1-13d92fb953030cdbfee56481756e02be',
     'InstanceActionList': '1.1-a2b2fb6006b47c27076d3a1d48baa759',
     'InstanceDeviceMetadata': '1.0-74d78dd36aa32d26d2769a1b57caf186',

@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import traceback
 
 import mock
@@ -22,6 +23,7 @@ import six
 
 from nova.db import api as db
 from nova import exception
+from nova import objects
 from nova.objects import instance_action
 from nova import test
 from nova.tests.unit.objects import test_objects
@@ -56,6 +58,7 @@ fake_event = {
     'result': 'fake-result',
     'traceback': 'fake-tb',
     'host': 'fake-host',
+    'details': None
 }
 
 
@@ -250,6 +253,7 @@ class _TestInstanceActionEventObject(object):
         expected_packed_values = test_class.pack_action_event_finish(
             self.context, 'fake-uuid', 'fake-event')
         expected_packed_values['finish_time'] = NOW
+        self.assertNotIn('details', expected_packed_values)
         mock_finish.return_value = fake_event
         event = instance_action.InstanceActionEvent.event_finish(
             self.context, 'fake-uuid', 'fake-event', want_result=True)
@@ -276,17 +280,24 @@ class _TestInstanceActionEventObject(object):
     def test_event_finish_with_failure(self, mock_finish, mock_tb):
         self.useFixture(utils_fixture.TimeFixture(NOW))
         test_class = instance_action.InstanceActionEvent
+        # The NovaException message will get formatted for the 'details' field.
+        exc_val = exception.NoValidHost(reason='some error')
         expected_packed_values = test_class.pack_action_event_finish(
-            self.context, 'fake-uuid', 'fake-event', 'val', 'fake-tb')
+            self.context, 'fake-uuid', 'fake-event', exc_val, 'fake-tb')
         expected_packed_values['finish_time'] = NOW
+        self.assertEqual(exc_val.format_message(),
+                         expected_packed_values['details'])
 
-        mock_finish.return_value = fake_event
+        fake_event_with_details = copy.deepcopy(fake_event)
+        fake_event_with_details['details'] = expected_packed_values['details']
+        mock_finish.return_value = fake_event_with_details
         event = test_class.event_finish_with_failure(
-            self.context, 'fake-uuid', 'fake-event', 'val', 'fake-tb',
+            self.context, 'fake-uuid', 'fake-event', exc_val, 'fake-tb',
             want_result=True)
         mock_finish.assert_called_once_with(self.context,
                                             expected_packed_values)
-        self.compare_obj(event, fake_event)
+        self.compare_obj(event, fake_event_with_details)
+        mock_tb.assert_not_called()
 
     @mock.patch.object(traceback, 'format_tb')
     @mock.patch.object(db, 'action_event_finish')
@@ -295,18 +306,27 @@ class _TestInstanceActionEventObject(object):
         mock_tb.return_value = 'fake-tb'
         self.useFixture(utils_fixture.TimeFixture(NOW))
         test_class = instance_action.InstanceActionEvent
+        # A non-NovaException will use the exception class name for
+        # the 'details' field.
+        exc_val = test.TestingException('non-nova-error')
         expected_packed_values = test_class.pack_action_event_finish(
-            self.context, 'fake-uuid', 'fake-event', 'val', 'fake-tb')
+            self.context, 'fake-uuid', 'fake-event', exc_val, 'fake-tb')
         expected_packed_values['finish_time'] = NOW
+        self.assertEqual('TestingException', expected_packed_values['details'])
 
-        mock_finish.return_value = fake_event
+        fake_event_with_details = copy.deepcopy(fake_event)
+        fake_event_with_details['details'] = expected_packed_values['details']
+        mock_finish.return_value = fake_event_with_details
         fake_tb = mock.sentinel.fake_tb
         event = test_class.event_finish_with_failure(
-            self.context, 'fake-uuid', 'fake-event', exc_val='val',
+            self.context, 'fake-uuid', 'fake-event', exc_val=exc_val,
             exc_tb=fake_tb, want_result=True)
+        # When calling event_finish_with_failure and using exc_val as a kwarg
+        # serialize_args will convert exc_val to non-nova exception class name
+        # form before it reaches event_finish_with_failure.
         mock_finish.assert_called_once_with(self.context,
                                             expected_packed_values)
-        self.compare_obj(event, fake_event)
+        self.compare_obj(event, fake_event_with_details)
         mock_tb.assert_called_once_with(fake_tb)
 
     @mock.patch.object(db, 'action_event_finish')
@@ -397,6 +417,17 @@ class _TestInstanceActionEventObject(object):
         mock_action_event_start.assert_called_once_with(
             self.context, expected_updates)
         self.compare_obj(event, fake_event)
+
+    def test_obj_make_compatible(self):
+        action_event_obj = objects.InstanceActionEvent(
+            details=None,       # added in 1.4
+            host='fake-host'    # added in 1.2
+        )
+        data = lambda x: x['nova_object.data']
+        primitive = data(action_event_obj.obj_to_primitive(
+            target_version='1.3'))
+        self.assertIn('host', primitive)
+        self.assertNotIn('details', primitive)
 
 
 class TestInstanceActionEventObject(test_objects._LocalTest,
