@@ -208,3 +208,44 @@ class TestServicesAPI(test_servers.ProviderUsageBaseTestCase):
         self.api.post_server_action(server['id'], {'confirmResize': None})
         self._wait_for_state_change(self.api, server, 'ERROR')
         self.assertIn('ComputeHostNotFound', self.stdlog.logger.output)
+
+    def test_resize_revert_after_deleted_source_compute(self):
+        """Tests a scenario where a server is resized and while in
+        VERIFY_RESIZE status the admin attempts to delete the source compute
+        and then the user tries to revert the resize.
+        """
+        # Start a compute service and create a server there.
+        self._start_compute('host1')
+        host1_rp_uuid = self._get_provider_uuid_by_host('host1')
+        flavors = self.api.get_flavors()
+        flavor1 = flavors[0]
+        flavor2 = flavors[1]
+        server = self._boot_and_check_allocations(flavor1, 'host1')
+        # Start a second compute service so we can resize there.
+        self._start_compute('host2')
+        host2_rp_uuid = self._get_provider_uuid_by_host('host2')
+        # Resize the server to host2.
+        self._resize_and_check_allocations(
+            server, flavor1, flavor2, host1_rp_uuid, host2_rp_uuid)
+        # Delete the source compute service.
+        service = self.admin_api.get_services(
+            binary='nova-compute', host='host1')[0]
+        self.admin_api.api_delete('/os-services/%s' % service['id'])
+        # FIXME(mriedem): This is bug 1852610 where the compute service is
+        # deleted but the resource provider is not because there are still
+        # migration-based allocations against the source node provider.
+        resp = self.placement_api.get('/resource_providers/%s' % host1_rp_uuid)
+        self.assertEqual(200, resp.status)
+        self.assertFlavorMatchesUsage(host1_rp_uuid, flavor1)
+        # Now try to revert the resize.
+        # NOTE(mriedem): This actually works because the drop_move_claim
+        # happens in revert_resize on the dest host which still has its
+        # ComputeNode record. The migration-based allocations are reverted
+        # so the instance holds the allocations for the source provider and
+        # the allocations against the dest provider are dropped.
+        self.api.post_server_action(server['id'], {'revertResize': None})
+        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self.assertNotIn('ComputeHostNotFound', self.stdlog.logger.output)
+        self.assertFlavorMatchesUsage(host1_rp_uuid, flavor1)
+        zero_flavor = {'vcpus': 0, 'ram': 0, 'disk': 0, 'extra_specs': {}}
+        self.assertFlavorMatchesUsage(host2_rp_uuid, zero_flavor)

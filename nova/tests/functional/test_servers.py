@@ -1750,6 +1750,18 @@ class ProviderUsageBaseTestCase(test.TestCase,
             server, request=request, old_flavor=flavor, new_flavor=flavor,
             source_rp_uuid=source_rp_uuid, dest_rp_uuid=dest_rp_uuid)
 
+    def _resize_and_check_allocations(self, server, old_flavor, new_flavor,
+                                      source_rp_uuid, dest_rp_uuid):
+        request = {
+            'resize': {
+                'flavorRef': new_flavor['id']
+            }
+        }
+        self._move_and_check_allocations(
+            server, request=request, old_flavor=old_flavor,
+            new_flavor=new_flavor, source_rp_uuid=source_rp_uuid,
+            dest_rp_uuid=dest_rp_uuid)
+
 
 class TraitsTrackingTests(ProviderUsageBaseTestCase):
     compute_driver = 'fake.SmallFakeDriver'
