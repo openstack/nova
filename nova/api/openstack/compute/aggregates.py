@@ -17,6 +17,8 @@
 
 import datetime
 
+from oslo_log import log as logging
+import six
 from webob import exc
 
 from nova.api.openstack import api_version_request
@@ -30,6 +32,8 @@ from nova.conductor import api as conductor
 from nova import exception
 from nova.i18n import _
 from nova.policies import aggregates as aggr_policies
+
+LOG = logging.getLogger(__name__)
 
 
 def _get_context(req):
@@ -173,13 +177,19 @@ class AggregateController(wsgi.Controller):
         context.can(aggr_policies.POLICY_ROOT % 'remove_host')
         try:
             aggregate = self.api.remove_host_from_aggregate(context, id, host)
-        except (exception.AggregateNotFound, exception.AggregateHostNotFound,
-                exception.HostMappingNotFound, exception.ComputeHostNotFound):
+        except (exception.AggregateNotFound,
+                exception.AggregateHostNotFound,
+                exception.HostMappingNotFound,
+                exception.ComputeHostNotFound) as e:
+            LOG.error('Failed to remove host %s from aggregate %s. Error: %s',
+                      host, id, six.text_type(e))
             msg = _('Cannot remove host %(host)s in aggregate %(id)s') % {
                         'host': host, 'id': id}
             raise exc.HTTPNotFound(explanation=msg)
         except (exception.InvalidAggregateAction,
-                exception.ResourceProviderUpdateConflict):
+                exception.ResourceProviderUpdateConflict) as e:
+            LOG.error('Failed to remove host %s from aggregate %s. Error: %s',
+                      host, id, six.text_type(e))
             msg = _('Cannot remove host %(host)s in aggregate %(id)s') % {
                         'host': host, 'id': id}
             raise exc.HTTPConflict(explanation=msg)

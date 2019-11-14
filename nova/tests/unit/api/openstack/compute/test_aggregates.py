@@ -563,6 +563,9 @@ class AggregateTestCaseV21(test.NoDBTestCase):
             self.assertRaises(exc.HTTPNotFound, eval(self.remove_host),
                 self.req, "1", body={"remove_host": {"host": "bogushost"}})
             mock_rem.assert_called_once_with(self.context, "1", "bogushost")
+        self.assertIn('Failed to remove host bogushost from aggregate 1. '
+                      'Error: Compute host bogushost could not be found.',
+                      self.stdlog.logger.output)
 
     def test_remove_host_with_missing_host(self):
         self.assertRaises(self.bad_request, eval(self.remove_host),
@@ -599,6 +602,9 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                               self.req, "1",
                               body={"remove_host": {"host": "bogushost"}})
             mock_rem.assert_called_once_with(self.context, "1", "bogushost")
+        self.assertIn('Failed to remove host bogushost from aggregate 1. '
+                      'Error: A conflict was encountered attempting to update '
+                      'resource provider', self.stdlog.logger.output)
 
     def test_set_metadata(self):
         body = {"set_metadata": {"metadata": {"foo": "bar"}}}
