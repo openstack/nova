@@ -22,7 +22,6 @@ import collections
 import copy
 
 from keystoneauth1 import exceptions as ks_exc
-import os_resource_classes as orc
 import os_traits
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -80,52 +79,6 @@ def _instance_is_live_migrating(instance):
                                                 vm_states.PAUSED]:
         return True
     return False
-
-
-# TODO(mriedem): Remove this now that get_inventory isn't being used anymore
-def _normalize_inventory_from_cn_obj(inv_data, cn):
-    """Helper function that injects various information from a compute node
-    object into the inventory dict returned from the virt driver's
-    get_inventory() method. This function allows us to marry information like
-    *_allocation_ratio and reserved memory amounts that are in the
-    compute_nodes DB table and that the virt driver doesn't know about with the
-    information the virt driver *does* know about.
-
-    Note that if the supplied inv_data contains allocation_ratio, reserved or
-    other fields, we DO NOT override the value with that of the compute node.
-    This is to ensure that the virt driver is the single source of truth
-    regarding inventory information. For instance, the Ironic virt driver will
-    always return a very specific inventory with allocation_ratios pinned to
-    1.0.
-
-    :param inv_data: Dict, keyed by resource class, of inventory information
-                     returned from virt driver's get_inventory() method
-    :param compute_node: `objects.ComputeNode` describing the compute node
-    """
-    if orc.VCPU in inv_data:
-        cpu_inv = inv_data[orc.VCPU]
-        if 'allocation_ratio' not in cpu_inv:
-            cpu_inv['allocation_ratio'] = cn.cpu_allocation_ratio
-        if 'reserved' not in cpu_inv:
-            cpu_inv['reserved'] = CONF.reserved_host_cpus
-
-    if orc.MEMORY_MB in inv_data:
-        mem_inv = inv_data[orc.MEMORY_MB]
-        if 'allocation_ratio' not in mem_inv:
-            mem_inv['allocation_ratio'] = cn.ram_allocation_ratio
-        if 'reserved' not in mem_inv:
-            mem_inv['reserved'] = CONF.reserved_host_memory_mb
-
-    if orc.DISK_GB in inv_data:
-        disk_inv = inv_data[orc.DISK_GB]
-        if 'allocation_ratio' not in disk_inv:
-            disk_inv['allocation_ratio'] = cn.disk_allocation_ratio
-        if 'reserved' not in disk_inv:
-            # TODO(johngarbutt) We should either move to reserved_host_disk_gb
-            # or start tracking DISK_MB.
-            reserved_mb = CONF.reserved_host_disk_mb
-            reserved_gb = compute_utils.convert_mb_to_ceil_gb(reserved_mb)
-            disk_inv['reserved'] = reserved_gb
 
 
 class ResourceTracker(object):
