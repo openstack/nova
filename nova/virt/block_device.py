@@ -742,6 +742,13 @@ class DriverVolSnapshotBlockDevice(DriverVolumeBlockDevice):
         if not self.volume_id:
             snapshot = volume_api.get_snapshot(context,
                                                self.snapshot_id)
+            # NOTE(lyarwood): Try to use the original volume type if one isn't
+            # set against the bdm but is on the original volume.
+            if not self.volume_type and snapshot.get('volume_id'):
+                snap_volume_id = snapshot.get('volume_id')
+                orig_volume = volume_api.get(context, snap_volume_id)
+                self.volume_type = orig_volume.get('volume_type_id')
+
             self.volume_id, self.attachment_id = self._create_volume(
                 context, instance, volume_api, self.volume_size,
                 wait_func=wait_func, snapshot=snapshot)

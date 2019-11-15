@@ -1019,6 +1019,37 @@ class TestDriverBlockDevice(test.NoDBTestCase):
             mock_get_snapshot.assert_not_called()
             mock_create.assert_not_called()
 
+    def test_snapshot_attach_no_volume_and_no_volume_type(self):
+        bdm = self.driver_classes['volsnapshot'](self.volsnapshot_bdm)
+        instance = fake_instance.fake_instance_obj(self.context,
+                                                   **{'uuid': uuids.uuid})
+        snapshot = {'volume_id': uuids.original_volume_id}
+        original_volume = {'id': uuids.original_volume_id,
+                           'volume_type_id': 'original_volume_type'}
+        new_volume = {'id': uuids.new_volume_id}
+        with test.nested(
+            mock.patch.object(self.driver_classes['volume'], 'attach'),
+            mock.patch.object(self.volume_api, 'get_snapshot',
+                              return_value=snapshot),
+            mock.patch.object(self.volume_api, 'get',
+                              return_value=original_volume),
+            mock.patch.object(self.volume_api, 'create',
+                              return_value=new_volume),
+        ) as (mock_attach, mock_get_snapshot, mock_get, mock_create):
+            bdm.volume_id = None
+            bdm.volume_type = None
+            bdm.attach(self.context, instance, self.volume_api,
+                       self.virt_driver)
+
+            # Assert that the original volume type is fetched, stored within
+            # the bdm and then used to create the new snapshot based volume.
+            mock_get.assert_called_once_with(self.context,
+                                             uuids.original_volume_id)
+            self.assertEqual('original_volume_type', bdm.volume_type)
+            mock_create.assert_called_once_with(self.context, bdm.volume_size,
+                '', '', volume_type='original_volume_type', snapshot=snapshot,
+                availability_zone=None)
+
     def test_image_attach_no_volume(self):
         no_volume_image = self.volimage_bdm_dict.copy()
         no_volume_image['volume_id'] = None
