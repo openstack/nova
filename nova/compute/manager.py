@@ -1324,7 +1324,7 @@ class ComputeManager(manager.Manager):
 
             f = self.reportclient.get_allocations_for_resource_provider
             allocations = f(context, cn_uuid)
-            if not allocations:
+            if allocations is None:
                 LOG.error(
                     "Could not retrieve compute node resource provider %s and "
                     "therefore unable to error out any instances stuck in "
