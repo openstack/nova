@@ -34,6 +34,27 @@ in nova 23.0.0 release.
 
 instance_actions_policies = [
     policy.DocumentedRuleDefault(
+        name=BASE_POLICY_NAME % 'events:details',
+        check_str=base.SYSTEM_READER,
+        description="""Add "details" key in action events for a server.
+
+This check is performed only after the check
+os_compute_api:os-instance-actions:show passes. Beginning with Microversion
+2.84, new field 'details' is exposed via API which can have more details about
+event failure. That field is controlled by this policy which is system reader
+by default. Making the 'details' field visible to the non-admin user helps to
+understand the nature of the problem (i.e. if the action can be retried),
+but in the other hand it might leak information about the deployment
+(e.g. the type of the hypervisor).
+""",
+        operations=[
+            {
+                'method': 'GET',
+                'path': '/servers/{server_id}/os-instance-actions/{request_id}'
+            }
+        ],
+        scope_types=['system']),
+    policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'events',
         check_str=base.SYSTEM_READER,
         description="""Add events details in action details for a server.

@@ -1105,3 +1105,11 @@ and ``GET /servers`` for non-admin :
 * ``vm_state``
 * ``progress``
 * ``user_id``
+
+2.84
+----
+
+The ``GET /servers/{server_id}/os-instance-actions/{request_id}`` API returns
+a ``details`` parameter for each failed event with a fault message, similar to
+the server ``fault.message`` parameter in ``GET /servers/{server_id}`` for a
+server with status ``ERROR``.

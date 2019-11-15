@@ -415,3 +415,47 @@ class InstanceActionsTestV266(InstanceActionsTestV258):
                                self.controller.index, req)
         detail = 'Additional properties are not allowed'
         self.assertIn(detail, six.text_type(ex))
+
+
+class InstanceActionsTestV284(InstanceActionsTestV266):
+    wsgi_api_version = "2.84"
+
+    def _set_policy_rules(self, overwrite=True):
+        rules = {'os_compute_api:os-instance-actions:show': '',
+                 'os_compute_api:os-instance-actions:events:details':
+                     'project_id:%(project_id)s'}
+        policy.set_rules(oslo_policy.Rules.from_dict(rules),
+                         overwrite=overwrite)
+
+    def test_show_action_with_details(self):
+        def fake_get_action(context, uuid, request_id):
+            return self.fake_actions[uuid][request_id]
+
+        def fake_get_events(context, action_id):
+            return self.fake_events[action_id]
+
+        self.stub_out('nova.db.api.action_get_by_request_id', fake_get_action)
+        self.stub_out('nova.db.api.action_events_get', fake_get_events)
+
+        self._set_policy_rules(overwrite=False)
+        req = self._get_http_req('os-instance-actions/1')
+        res_dict = self.controller.show(req, FAKE_UUID, FAKE_REQUEST_ID)
+        for event in res_dict['instanceAction']['events']:
+            self.assertIn('details', event)
+
+    def test_show_action_with_details_old_microversion(self):
+        """Before microversion 2.84, we cannot get the details in events."""
+        def fake_get_action(context, uuid, request_id):
+            return self.fake_actions[uuid][request_id]
+
+        def fake_get_events(context, action_id):
+            return self.fake_events[action_id]
+
+        self.stub_out('nova.db.api.action_get_by_request_id', fake_get_action)
+        self.stub_out('nova.db.api.action_events_get', fake_get_events)
+
+        req = self._get_http_req_with_version('os-instance-actions/1',
+                                              version="2.83")
+        res_dict = self.controller.show(req, FAKE_UUID, FAKE_REQUEST_ID)
+        for event in res_dict['instanceAction']['events']:
+            self.assertNotIn('details', event)

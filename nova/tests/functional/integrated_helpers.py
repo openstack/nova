@@ -162,10 +162,12 @@ class InstanceHelperMixin(object):
         :param server: API response dict of the server being resized/migrated
         :param action: Either "resize" or "migrate" instance action.
         :param error_in_tb: Some expected part of the error event traceback.
+        :returns: The instance action event dict from the API response
         """
         event = self._wait_for_action_fail_completion(
             server, action, 'conductor_migrate_server')
         self.assertIn(error_in_tb, event['traceback'])
+        return event
 
     def _wait_for_migration_status(self, server, expected_statuses):
         """Waits for a migration record with the given statuses to be found

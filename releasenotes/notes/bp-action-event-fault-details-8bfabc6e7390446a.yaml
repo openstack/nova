@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    With microversion 2.84 the
+    ``GET /servers/{server_id}/os-instance-actions/{request_id}`` API returns
+    a ``details`` parameter for each failed event with a fault message, similar
+    to the server ``fault.message`` parameter in ``GET /servers/{server_id}``
+    for a server with status ``ERROR``.
