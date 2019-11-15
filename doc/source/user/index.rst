@@ -15,6 +15,7 @@ End user guide
    certificate-validation
    resize
    reboot
+   rescue
    availability-zones
    block-device-mapping
    /reference/api-microversion-history
