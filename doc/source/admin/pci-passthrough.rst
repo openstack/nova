@@ -100,15 +100,36 @@ If using vendor and product IDs, all PCI devices matching the ``vendor_id`` and
 to VMs.
 
 In addition, it is necessary to configure the :oslo.config:option:`pci.alias`
-option. As noted previously, PCI devices are requested through flavor extra
-specs - specifically via the ``pci_passthrough:alias`` flavor extra spec - so
-this config option allows us to map a given type of device to a specific alias.
-For example, to map the sample PCI device to the alias ``a1``:
+option, which is a JSON-style configuration option that allows you to map a
+given device type, identified by the standard PCI ``vendor_id`` and (optional)
+``product_id`` fields, to an arbitrary name or *alias*. This alias can then be
+used to request a PCI device using the ``pci_passthrough:alias=<alias>`` flavor
+extra spec, as discussed previously. For our sample device with a vendor ID of
+``0x8086`` and a product ID of ``0x154d``, this would be:
 
 .. code-block:: ini
 
    [pci]
    alias = { "vendor_id":"8086", "product_id":"154d", "device_type":"type-PF", "name":"a1" }
+
+It's important to note the addition of the ``device_type`` field. This is
+necessary because this PCI device supports SR-IOV. The ``nova-compute`` service
+categorizes devices into one of three types, depending on the capabilities the
+devices report:
+
+``type-PF``
+  The device supports SR-IOV and is the parent or root device.
+
+``type-VF``
+  The device is a child device of a device that supports SR-IOV.
+
+``type-PCI``
+  The device does not support SR-IOV.
+
+By default, it is only possible to attach ``type-PCI`` devices using PCI
+passthrough. If you wish to attach ``type-PF`` or ``type-VF`` devices, you must
+specify the ``device_type`` field in the config option. If the device was a
+device that did not support SR-IOV, the ``device_type`` field could be omitted.
 
 Refer to :oslo.config:option:`pci.alias` for syntax information.
 
