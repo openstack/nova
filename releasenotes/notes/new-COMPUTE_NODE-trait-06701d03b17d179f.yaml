@@ -1,0 +1,12 @@
+---
+upgrade:
+  - |
+    Starting in the Ussuri release, compute node resource providers are
+    automatically marked with the ``COMPUTE_NODE`` trait. This allows them to
+    be distinguished easily from other providers, including sharing and nested
+    providers, as well as other non-compute-related providers in a deployment.
+    To make effective use of this trait (e.g. for scheduling purposes), all
+    compute nodes must be upgrade to Ussuri. Alternatively, you can manually
+    add the trait to pre-Ussuri compute node providers via `openstack resource
+    provider trait set
+    <https://docs.openstack.org/osc-placement/train/cli/index.html#resource-provider-trait-set>`_

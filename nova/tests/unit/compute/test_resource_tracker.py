@@ -42,6 +42,7 @@ from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_pci_device as fake_pci_device
+from nova.tests.unit import utils
 from nova.virt import driver
 
 _HOSTNAME = 'fake-host'
@@ -1601,12 +1602,13 @@ class TestUpdateComputeNode(BaseTestCase):
 
         self.rt._update(mock.sentinel.ctx, new_compute)
         self.driver_mock.capabilities_as_traits.assert_called_once()
+        # We always decorate with COMPUTE_NODE
+        exp_traits = {mock.sentinel.trait, os_traits.COMPUTE_NODE}
+        # Can't predict the order of the traits list, so use ItemsMatcher
         ptree.update_traits.assert_called_once_with(
-            new_compute.hypervisor_hostname,
-            [mock.sentinel.trait]
-        )
+            new_compute.hypervisor_hostname, utils.ItemsMatcher(exp_traits))
         mock_sync_disabled.assert_called_once_with(
-            mock.sentinel.ctx, {mock.sentinel.trait})
+            mock.sentinel.ctx, exp_traits)
 
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_sync_compute_service_disabled_trait')
@@ -1678,7 +1680,7 @@ class TestUpdateComputeNode(BaseTestCase):
             mock.sentinel.ctx, ptree, allocations=None)
         ptree.update_traits.assert_called_once_with(
             new_compute.hypervisor_hostname,
-            []
+            [os_traits.COMPUTE_NODE]
         )
         exp_inv = copy.deepcopy(fake_inv)
         # These ratios and reserved amounts come from fake_upt
