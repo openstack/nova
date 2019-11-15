@@ -13,6 +13,9 @@ initial image attaching the current boot disk as a secondary one.
    loss of the original instance state and makes it impossible to
    unrescue the instance.
 
+   As of the 20.0.0 (Train) release rescuing a volume-backed server
+   is not supported.
+
 To perform an instance rescue, use the :command:`openstack server rescue`
 command:
 
