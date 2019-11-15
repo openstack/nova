@@ -41,6 +41,10 @@ class TestCORSMiddleware(api_sample_base.ApiSampleTestBaseV21):
         self._original_call_method = cfg.ConfigOpts.GroupAttr.__getattr__
         cfg.ConfigOpts.GroupAttr.__getattr__ = _mock_getattr
 
+        # With the project_id in the URL, we get the 300 'multiple choices'
+        # response from nova.api.openstack.compute.versions.Versions.
+        self.exp_version_status = 300 if self._use_project_id else 200
+
         # Initialize the application after all the config overrides are in
         # place.
         super(TestCORSMiddleware, self).setUp()
@@ -103,7 +107,7 @@ class TestCORSMiddleware(api_sample_base.ApiSampleTestBaseV21):
                                     'Access-Control-Request-Method': 'GET'
                                 })
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, self.exp_version_status)
         self.assertIn('Access-Control-Allow-Origin', response.headers)
         self.assertEqual('http://valid.example.com',
                          response.headers['Access-Control-Allow-Origin'])
@@ -116,5 +120,5 @@ class TestCORSMiddleware(api_sample_base.ApiSampleTestBaseV21):
                                     'Access-Control-Request-Method': 'GET'
                                 })
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, self.exp_version_status)
         self.assertNotIn('Access-Control-Allow-Origin', response.headers)

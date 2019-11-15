@@ -62,6 +62,11 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
     # any additional fixtures needed for this scenario
     _additional_fixtures = []
     sample_dir = None
+    # Include the project ID in request URLs by default. This is overridden
+    # for certain `scenarios` and by certain subclasses.
+    # Note that API sample tests also use this in substitutions to validate
+    # that URLs in responses (e.g. location of a server just created) are
+    # correctly constructed.
     _use_project_id = True
     # Availability zones for the API samples tests. Can be overridden by
     # sub-classes. If set, the AvailabilityZoneFilter is not used.

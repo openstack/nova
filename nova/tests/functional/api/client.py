@@ -124,13 +124,10 @@ class TestOpenStackClient(object):
 
     """
 
-    def __init__(self, auth_user, auth_key, auth_url,
-                 project_id=None):
+    def __init__(self, auth_user, base_url, project_id=None):
         super(TestOpenStackClient, self).__init__()
-        self.auth_result = None
         self.auth_user = auth_user
-        self.auth_key = auth_key
-        self.auth_url = auth_url
+        self.base_url = base_url
         if project_id is None:
             self.project_id = "6f70656e737461636b20342065766572"
         else:
@@ -144,49 +141,22 @@ class TestOpenStackClient(object):
         response = requests.request(method, url, data=body, headers=_headers)
         return response
 
-    def _authenticate(self, retry_count=0):
-        if self.auth_result:
-            return self.auth_result
-
-        auth_url = self.auth_url
-        headers = {'X-Auth-User': self.auth_user,
-                   'X-Auth-Key': self.auth_key,
-                   'X-Auth-Project-Id': self.project_id}
-        response = self.request(auth_url,
-                                headers=headers)
-
-        http_status = response.status_code
-        LOG.debug("%(auth_url)s => code %(http_status)s",
-                  {'auth_url': auth_url,
-                   'http_status': http_status})
-
-        # NOTE(cdent): This is a workaround for an issue where the placement
-        # API fixture may respond when a request was supposed to go to the
-        # compute API fixture. Retry a few times, hoping to hit the right
-        # fixture.
-        if http_status == 401:
-            if retry_count <= 3:
-                return self._authenticate(retry_count=retry_count + 1)
-            else:
-                raise OpenStackApiAuthenticationException(response=response)
-
-        self.auth_result = response.headers
-        return self.auth_result
-
     def api_request(self, relative_uri, check_response_status=None,
                     strip_version=False, **kwargs):
-        auth_result = self._authenticate()
-
-        # NOTE(justinsb): httplib 'helpfully' converts headers to lower case
-        base_uri = auth_result['x-server-management-url']
+        base_uri = self.base_url
         if strip_version:
-            # NOTE(vish): cut out version number and tenant_id
-            base_uri = '/'.join(base_uri.split('/', 3)[:-1])
+            # The base_uri is either http://%(host)s:%(port)s/%(api_version)s
+            # or http://%(host)s:%(port)s/%(api_version)s/%(project_id)s
+            # NOTE(efried): Using urlparse was not easier :)
+            chunked = base_uri.split('/')
+            base_uri = '/'.join(chunked[:3])
+            # Restore the project ID if present
+            if len(chunked) == 5:
+                base_uri += '/' + chunked[-1]
 
         full_uri = '%s/%s' % (base_uri, relative_uri)
 
         headers = kwargs.setdefault('headers', {})
-        headers['X-Auth-Token'] = auth_result['x-auth-token']
         if ('X-OpenStack-Nova-API-Version' in headers or
                 'OpenStack-API-Version' in headers):
             raise Exception('Microversion should be set via '
@@ -194,6 +164,10 @@ class TestOpenStackClient(object):
         elif self.microversion:
             headers['X-OpenStack-Nova-API-Version'] = self.microversion
             headers['OpenStack-API-Version'] = 'compute %s' % self.microversion
+
+        headers.setdefault('X-Auth-User', self.auth_user)
+        headers.setdefault('X-User-Id', self.auth_user)
+        headers.setdefault('X-Auth-Project-Id', self.project_id)
 
         response = self.request(full_uri, **kwargs)
 

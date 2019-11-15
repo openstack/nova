@@ -955,18 +955,21 @@ class OSAPIFixture(fixtures.Fixture):
     """
 
     def __init__(self, api_version='v2',
-                 project_id='6f70656e737461636b20342065766572'):
+                 project_id='6f70656e737461636b20342065766572',
+                 use_project_id_in_urls=False):
         """Constructor
 
         :param api_version: the API version that we're interested in
         using. Currently this expects 'v2' or 'v2.1' as possible
         options.
         :param project_id: the project id to use on the API.
-
+        :param use_project_id_in_urls: If True, act like the "endpoint" in the
+            "service catalog" has the legacy format including the project_id.
         """
         super(OSAPIFixture, self).__init__()
         self.api_version = api_version
         self.project_id = project_id
+        self.use_project_id_in_urls = use_project_id_in_urls
 
     def setUp(self):
         super(OSAPIFixture, self).setUp()
@@ -981,6 +984,23 @@ class OSAPIFixture(fixtures.Fixture):
             'debug': True,
         }
         self.useFixture(ConfPatcher(**conf_overrides))
+
+        # Stub out authentication middleware
+        # TODO(efried): Use keystonemiddleware.fixtures.AuthTokenFixture
+        self.useFixture(fixtures.MockPatch(
+            'keystonemiddleware.auth_token.filter_factory',
+            return_value=lambda _app: _app))
+
+        # Stub out context middleware
+        def fake_ctx(env, **kwargs):
+            user_id = env['HTTP_X_AUTH_USER']
+            project_id = env['HTTP_X_AUTH_PROJECT_ID']
+            is_admin = user_id == 'admin'
+            return context.RequestContext(
+                user_id, project_id, is_admin=is_admin, **kwargs)
+
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.api.auth.NovaKeystoneContext._create_context', fake_ctx))
 
         # Turn off manipulation of socket_options in TCPKeepAliveAdapter
         # to keep wsgi-intercept happy. Replace it with the method
@@ -999,12 +1019,15 @@ class OSAPIFixture(fixtures.Fixture):
         intercept.install_intercept()
         self.addCleanup(intercept.uninstall_intercept)
 
-        self.auth_url = 'http://%(host)s:%(port)s/%(api_version)s' % ({
+        base_url = 'http://%(host)s:%(port)s/%(api_version)s' % ({
             'host': hostname, 'port': port, 'api_version': self.api_version})
-        self.api = client.TestOpenStackClient('fake', 'fake', self.auth_url,
-                                              self.project_id)
+        if self.use_project_id_in_urls:
+            base_url += '/' + self.project_id
+
+        self.api = client.TestOpenStackClient(
+            'fake', base_url, project_id=self.project_id)
         self.admin_api = client.TestOpenStackClient(
-            'admin', 'admin', self.auth_url, self.project_id)
+            'admin', base_url, project_id=self.project_id)
         # Provide a way to access the wsgi application to tests using
         # the fixture.
         self.app = app
