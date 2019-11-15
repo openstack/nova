@@ -1777,19 +1777,6 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
     def test_resize_confirm_reverse(self):
         self._test_resize_confirm(dest_hostname='host2')
 
-    def _resize_and_check_allocations(self, server, old_flavor, new_flavor,
-            source_rp_uuid, dest_rp_uuid):
-        self.flags(allow_resize_to_same_host=False)
-        resize_req = {
-            'resize': {
-                'flavorRef': new_flavor['id']
-            }
-        }
-        self._move_and_check_allocations(
-            server, request=resize_req, old_flavor=old_flavor,
-            new_flavor=new_flavor, source_rp_uuid=source_rp_uuid,
-            dest_rp_uuid=dest_rp_uuid)
-
     def test_migration_confirm_resize_error(self):
         source_hostname = self.compute1.host
         dest_hostname = self.compute2.host
