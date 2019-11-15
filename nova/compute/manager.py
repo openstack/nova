@@ -3335,7 +3335,12 @@ class ComputeManager(manager.Manager):
         allocs = self.reportclient.get_allocations_for_consumer(
                     context, instance.uuid)
 
-        with self._error_out_instance_on_exception(context, instance):
+        # If the resource claim or group policy validation fails before we
+        # do anything to the guest or its networking/volumes we want to keep
+        # the current status rather than put the instance into ERROR status.
+        instance_state = instance.vm_state
+        with self._error_out_instance_on_exception(
+                context, instance, instance_state=instance_state):
             try:
                 self._do_rebuild_instance_with_claim(
                     context, instance, orig_image_ref,
@@ -3369,8 +3374,13 @@ class ComputeManager(manager.Manager):
                 self.rt.delete_allocation_for_evacuated_instance(
                     context, instance, scheduled_node, node_type='destination')
                 self._notify_instance_rebuild_error(context, instance, e, bdms)
-                raise exception.BuildAbortException(
-                    instance_uuid=instance.uuid, reason=e.format_message())
+                # Wrap this in InstanceFaultRollback so that the
+                # _error_out_instance_on_exception context manager keeps the
+                # vm_state unchanged.
+                raise exception.InstanceFaultRollback(
+                    inner_exception=exception.BuildAbortException(
+                        instance_uuid=instance.uuid,
+                        reason=e.format_message()))
             except (exception.InstanceNotFound,
                     exception.UnexpectedDeletingTaskStateError) as e:
                 LOG.debug('Instance was deleted while rebuilding',

@@ -5007,6 +5007,28 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         delete_alloc.assert_called_once_with(self.context, instance, 'foo',
                                              node_type='destination')
 
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch('nova.compute.utils.add_instance_fault_from_exc')
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                'delete_allocation_for_evacuated_instance')
+    def test_rebuild_compute_resources_unavailable(self, mock_delete_alloc,
+                                                   mock_add_fault,
+                                                   mock_save):
+        """Tests that when the rebuild_claim fails with
+        ComputeResourcesUnavailable the vm_state on the instance remains
+        unchanged.
+        """
+        instance = fake_instance.fake_instance_obj(self.context)
+        instance.vm_state = vm_states.ACTIVE
+        ex = exception.ComputeResourcesUnavailable(reason='out of foo')
+        self.assertRaises(exception.BuildAbortException,
+                          self._test_rebuild_ex, instance, ex)
+        # Make sure the instance vm_state did not change.
+        self.assertEqual(vm_states.ACTIVE, instance.vm_state)
+        mock_delete_alloc.assert_called_once()
+        mock_save.assert_called()
+        mock_add_fault.assert_called_once()
+
     @mock.patch('nova.context.RequestContext.elevated')
     @mock.patch('nova.objects.instance.Instance.drop_migration_context')
     @mock.patch('nova.objects.instance.Instance.apply_migration_context')
@@ -5071,6 +5093,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         instance = fake_instance.fake_instance_obj(self.context)
         instance.info_cache = None
         instance.system_metadata = {}
+        instance.vm_state = vm_states.ACTIVE
         elevated_context = mock.Mock()
         mock_context_elevated.return_value = elevated_context
         request_spec = objects.RequestSpec()
@@ -5094,6 +5117,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_notify.assert_called_once_with(
             elevated_context, instance, 'fake-mini', bdms=None, exception=exc,
             phase='error', tb=mock.ANY)
+        # Make sure the instance vm_state did not change.
+        self.assertEqual(vm_states.ACTIVE, instance.vm_state)
 
     def test_rebuild_node_not_updated_if_not_recreate(self):
         node = uuidutils.generate_uuid()  # ironic node uuid
