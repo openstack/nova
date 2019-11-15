@@ -22,7 +22,6 @@ import math
 import traceback
 
 import netifaces
-import os_resource_classes as orc
 from oslo_log import log
 from oslo_serialization import jsonutils
 import six
@@ -1461,49 +1460,3 @@ def notify_about_instance_delete(notifier, context, instance,
                 source=source,
                 action=delete_type,
                 phase=fields.NotificationPhase.END)
-
-
-# TODO(mriedem): We should be able to remove this now that the ResourceTracker
-# requires drivers to implement the update_provider_tree interface.
-def compute_node_to_inventory_dict(compute_node):
-    """Given a supplied `objects.ComputeNode` object, return a dict, keyed
-    by resource class, of various inventory information.
-
-    :param compute_node: `objects.ComputeNode` object to translate
-    """
-    result = {}
-
-    # NOTE(jaypipes): Ironic virt driver will return 0 values for vcpus,
-    # memory_mb and disk_gb if the Ironic node is not available/operable
-    if compute_node.vcpus > 0:
-        result[orc.VCPU] = {
-            'total': compute_node.vcpus,
-            'reserved': CONF.reserved_host_cpus,
-            'min_unit': 1,
-            'max_unit': compute_node.vcpus,
-            'step_size': 1,
-            'allocation_ratio': compute_node.cpu_allocation_ratio,
-        }
-    if compute_node.memory_mb > 0:
-        result[orc.MEMORY_MB] = {
-            'total': compute_node.memory_mb,
-            'reserved': CONF.reserved_host_memory_mb,
-            'min_unit': 1,
-            'max_unit': compute_node.memory_mb,
-            'step_size': 1,
-            'allocation_ratio': compute_node.ram_allocation_ratio,
-        }
-    if compute_node.local_gb > 0:
-        # TODO(johngarbutt) We should either move to reserved_host_disk_gb
-        # or start tracking DISK_MB.
-        reserved_disk_gb = convert_mb_to_ceil_gb(
-            CONF.reserved_host_disk_mb)
-        result[orc.DISK_GB] = {
-            'total': compute_node.local_gb,
-            'reserved': reserved_disk_gb,
-            'min_unit': 1,
-            'max_unit': compute_node.local_gb,
-            'step_size': 1,
-            'allocation_ratio': compute_node.disk_allocation_ratio,
-        }
-    return result

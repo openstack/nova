@@ -177,6 +177,39 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
         # TODO(efried): Rip this out and just use `as client` throughout.
         self.client = client
 
+    def compute_node_to_inventory_dict(self):
+        result = {}
+        if self.compute_node.vcpus > 0:
+            result[orc.VCPU] = {
+                'total': self.compute_node.vcpus,
+                'reserved': CONF.reserved_host_cpus,
+                'min_unit': 1,
+                'max_unit': self.compute_node.vcpus,
+                'step_size': 1,
+                'allocation_ratio': self.compute_node.cpu_allocation_ratio,
+            }
+        if self.compute_node.memory_mb > 0:
+            result[orc.MEMORY_MB] = {
+                'total': self.compute_node.memory_mb,
+                'reserved': CONF.reserved_host_memory_mb,
+                'min_unit': 1,
+                'max_unit': self.compute_node.memory_mb,
+                'step_size': 1,
+                'allocation_ratio': self.compute_node.ram_allocation_ratio,
+            }
+        if self.compute_node.local_gb > 0:
+            reserved_disk_gb = compute_utils.convert_mb_to_ceil_gb(
+                CONF.reserved_host_disk_mb)
+            result[orc.DISK_GB] = {
+                'total': self.compute_node.local_gb,
+                'reserved': reserved_disk_gb,
+                'min_unit': 1,
+                'max_unit': self.compute_node.local_gb,
+                'step_size': 1,
+                'allocation_ratio': self.compute_node.disk_allocation_ratio,
+            }
+        return result
+
     def test_client_report_smoke(self):
         """Check things go as expected when doing the right things."""
         # TODO(cdent): We should probably also have a test that
@@ -202,8 +235,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
                 self.context, self.compute_uuid, name=self.compute_name)
             self.client.set_inventory_for_provider(
                 self.context, self.compute_uuid,
-                compute_utils.compute_node_to_inventory_dict(
-                    self.compute_node))
+                self.compute_node_to_inventory_dict())
 
             # So now we have a resource provider
             rp = self.client._get_resource_provider(self.context,
@@ -289,8 +321,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
             self.compute_node.local_gb = 0
             self.client.set_inventory_for_provider(
                 self.context, self.compute_uuid,
-                compute_utils.compute_node_to_inventory_dict(
-                    self.compute_node))
+                self.compute_node_to_inventory_dict())
 
             # Check there's no more inventory records
             resp = self.client.get(inventory_url)
@@ -349,8 +380,7 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
                 self.context, self.compute_uuid, name=self.compute_name)
             self.client.set_inventory_for_provider(
                 self.context, self.compute_uuid,
-                compute_utils.compute_node_to_inventory_dict(
-                    self.compute_node))
+                self.compute_node_to_inventory_dict())
             # The compute node is associated with two of the shared storages
             self.client.set_aggregates_for_provider(
                 self.context, self.compute_uuid,
