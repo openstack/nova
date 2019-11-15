@@ -567,9 +567,7 @@ class BaseTestCase(test.NoDBTestCase):
 
 class TestUpdateAvailableResources(BaseTestCase):
 
-    @mock.patch('nova.objects.Service.get_minimum_version',
-                return_value=22)
-    def _update_available_resources(self, version_mock, **kwargs):
+    def _update_available_resources(self, **kwargs):
         # We test RT._update separately, since the complexity
         # of the update_available_resource() function is high enough as
         # it is, we just want to focus here on testing the resources
@@ -2368,8 +2366,6 @@ class TestResize(BaseTestCase):
                 '_sync_compute_service_disabled_trait', new=mock.Mock())
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)
-    @mock.patch('nova.objects.Service.get_minimum_version',
-                return_value=22)
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
@@ -2380,7 +2376,7 @@ class TestResize(BaseTestCase):
     @mock.patch('nova.objects.ComputeNode.save')
     def test_resize_claim_same_host(self, save_mock, get_mock, migr_mock,
                                     get_cn_mock, pci_mock, instance_pci_mock,
-                                    version_mock, is_bfv_mock):
+                                    is_bfv_mock):
         # Resize an existing instance from its current flavor (instance type
         # 1) to a new flavor (instance type 2) and verify that the compute
         # node's resources are appropriately updated to account for the new
@@ -2474,8 +2470,6 @@ class TestResize(BaseTestCase):
                 '_sync_compute_service_disabled_trait', new=mock.Mock())
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)
-    @mock.patch('nova.objects.Service.get_minimum_version',
-                return_value=22)
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
@@ -2497,7 +2491,6 @@ class TestResize(BaseTestCase):
                                     pci_get_by_compute_node_mock,
                                     pci_get_by_instance_mock,
                                     pci_get_by_instance_uuid_mock,
-                                    version_mock,
                                     is_bfv_mock,
                                     revert=False):
 
@@ -2647,8 +2640,6 @@ class TestResize(BaseTestCase):
                 '_sync_compute_service_disabled_trait', new=mock.Mock())
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)
-    @mock.patch('nova.objects.Service.get_minimum_version',
-                return_value=22)
     @mock.patch('nova.pci.stats.PciDeviceStats.support_requests',
                 return_value=True)
     @mock.patch('nova.objects.PciDevice.save')
@@ -2661,7 +2652,7 @@ class TestResize(BaseTestCase):
     @mock.patch('nova.objects.ComputeNode.save')
     def test_resize_claim_dest_host_with_pci(self, save_mock, get_mock,
             migr_mock, get_cn_mock, pci_mock, pci_req_mock, pci_claim_mock,
-            pci_dev_save_mock, pci_supports_mock, version_mock,
+            pci_dev_save_mock, pci_supports_mock,
             mock_is_volume_backed_instance):
         # Starting from an empty destination compute node, perform a resize
         # operation for an instance containing SR-IOV PCI devices on the
@@ -2807,8 +2798,6 @@ class TestResize(BaseTestCase):
                 '_sync_compute_service_disabled_trait', new=mock.Mock())
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)
-    @mock.patch('nova.objects.Service.get_minimum_version',
-                return_value=22)
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
@@ -2818,7 +2807,7 @@ class TestResize(BaseTestCase):
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     @mock.patch('nova.objects.ComputeNode.save')
     def test_resize_claim_two_instances(self, save_mock, get_mock, migr_mock,
-            get_cn_mock, pci_mock, instance_pci_mock, version_mock,
+            get_cn_mock, pci_mock, instance_pci_mock,
             mock_is_volume_backed_instance):
         # Issue two resize claims against a destination host with no prior
         # instances on it and validate that the accounting for resources is
@@ -2941,8 +2930,6 @@ class TestRebuild(BaseTestCase):
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_sync_compute_service_disabled_trait', new=mock.Mock())
     @mock.patch('nova.compute.utils.is_volume_backed_instance')
-    @mock.patch('nova.objects.Service.get_minimum_version',
-                return_value=22)
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
@@ -2952,7 +2939,7 @@ class TestRebuild(BaseTestCase):
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     @mock.patch('nova.objects.ComputeNode.save')
     def test_rebuild_claim(self, save_mock, get_mock, migr_mock, get_cn_mock,
-            pci_mock, instance_pci_mock, version_mock, bfv_check_mock):
+            pci_mock, instance_pci_mock, bfv_check_mock):
         # Rebuild an instance, emulating an evacuate command issued against the
         # original instance. The rebuild operation uses the resource tracker's
         # _move_claim() method, but unlike with resize_claim(), rebuild_claim()
@@ -3634,9 +3621,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         self.rt.compute_nodes['foo'] = cn
 
         @mock.patch.object(self.rt, '_update_usage_from_instance')
-        @mock.patch('nova.objects.Service.get_minimum_version',
-                    return_value=22)
-        def test(version_mock, uufi):
+        def test(uufi):
             self.rt._update_usage_from_instances('ctxt', [], 'foo')
 
         test()
