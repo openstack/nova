@@ -25,8 +25,8 @@ In the movement towards using placement for scheduling and resource management,
 the virt driver method ``get_available_resource`` was initially superseded by
 ``get_inventory`` (now gone), whereby the driver could specify its inventory in
 terms understood by placement. In Queens, a ``get_traits`` driver method was
-added. But ``get_inventory`` is limited to expressing only inventory (not
-traits or aggregates). And both of these methods are limited to the resource
+added. But ``get_inventory`` was limited to expressing only inventory (not
+traits or aggregates). And both of these methods were limited to the resource
 provider corresponding to the compute node.
 
 Developments such as Nested Resource Providers necessitate the ability
