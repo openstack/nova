@@ -302,11 +302,17 @@ class ServersControllerTest(ControllerTest):
         self.assertIsNotNone(ctxt.db_connection)
 
     def test_requested_networks_prefix(self):
+        """Tests that we no longer support the legacy br-<uuid> format for
+        a network id.
+        """
         self.flags(use_neutron=True)
         uuid = 'br-00000000-0000-0000-0000-000000000000'
         requested_networks = [{'uuid': uuid}]
-        res = self.controller._get_requested_networks(requested_networks)
-        self.assertIn((uuid, None, None, None), res.as_tuples())
+        ex = self.assertRaises(webob.exc.HTTPBadRequest,
+                               self.controller._get_requested_networks,
+                               requested_networks)
+        self.assertIn('Bad networks format: network uuid is not in proper '
+                      'format', six.text_type(ex))
 
     def test_requested_networks_neutronv2_enabled_with_port(self):
         self.flags(use_neutron=True)

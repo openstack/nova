@@ -389,14 +389,9 @@ class ServersController(wsgi.Controller):
         :raises: webob.exc.HTTPBadRequest if validation fails
         """
         if not uuidutils.is_uuid_like(net_id):
-            # NOTE(mriedem): Neutron would allow a network id with a br- prefix
-            # back in Folsom so continue to honor that.
-            # TODO(mriedem): Need to figure out if this is still a valid case.
-            br_uuid = net_id.split('-', 1)[-1]
-            if not uuidutils.is_uuid_like(br_uuid):
-                msg = _("Bad networks format: network uuid is "
-                        "not in proper format (%s)") % net_id
-                raise exc.HTTPBadRequest(explanation=msg)
+            msg = _("Bad networks format: network uuid is "
+                    "not in proper format (%s)") % net_id
+            raise exc.HTTPBadRequest(explanation=msg)
 
         # duplicate networks are allowed only for neutron v2.0
         if net_id in network_uuids and not utils.is_neutron():
