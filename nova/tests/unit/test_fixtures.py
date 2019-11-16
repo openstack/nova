@@ -34,6 +34,7 @@ from nova import conductor
 from nova import context
 from nova.db.sqlalchemy import api as session
 from nova import exception
+from nova.network.neutronv2 import api as neutron_api
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import service as service_obj
@@ -624,3 +625,26 @@ class TestDownCellFixture(test.TestCase):
             # when targeted.
             result = dummy_tester(ctxt, cell1, inst2.uuid)
             self.assertEqual(inst2.uuid, result.uuid)
+
+
+class TestNeutronFixture(test.NoDBTestCase):
+
+    def setUp(self):
+        super(TestNeutronFixture, self).setUp()
+        self.neutron = self.useFixture(fixtures.NeutronFixture(self))
+
+    def test_list_ports_with_resource_request_non_admin_client(self):
+        ctxt = context.get_context()
+        client = neutron_api.get_client(ctxt)
+        ports = client.list_ports(ctxt)['ports']
+        port_id = self.neutron.port_with_resource_request['id']
+        ports = [port for port in ports if port_id == port['id']]
+        self.assertIsNone(ports[0]['resource_request'])
+
+    def test_list_ports_with_resource_request_admin_client(self):
+        ctxt = context.get_admin_context()
+        client = neutron_api.get_client(ctxt)
+        ports = client.list_ports(ctxt)['ports']
+        port_id = self.neutron.port_with_resource_request['id']
+        ports = [port for port in ports if port_id == port['id']]
+        self.assertIsNotNone(ports[0]['resource_request'])

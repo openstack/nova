@@ -1234,6 +1234,32 @@ class RegisterNetworkQuota(fixtures.Fixture):
         nova_quota.QUOTAS._resources.pop('networks', None)
 
 
+class _FakeNeutronClient(object):
+    """Class representing a Neutron client which wraps a NeutronFixture.
+
+    This wrapper class stores an instance of a NeutronFixture and whether the
+    Neutron client is an admin client.
+
+    For supported methods, (example: list_ports), this class will call the
+    NeutronFixture's class method with an additional 'is_admin' keyword
+    argument indicating whether the client is an admin client and the
+    NeutronFixture method handles it accordingly.
+
+    For all other methods, this wrapper class simply calls through to the
+    corresponding NeutronFixture class method without any modifications.
+    """
+    def __init__(self, fixture, is_admin):
+        self.fixture = fixture
+        self.is_admin = is_admin
+
+    def __getattr__(self, name):
+        return getattr(self.fixture, name)
+
+    def list_ports(self, retrieve_all=True, **_params):
+        return self.fixture.list_ports(self.is_admin,
+                                       retrieve_all=retrieve_all, **_params)
+
+
 class NeutronFixture(fixtures.Fixture):
     """A fixture to boot instances with neutron ports"""
 
@@ -1708,17 +1734,9 @@ class NeutronFixture(fixtures.Fixture):
                            self._get_client)
 
     def _get_client(self, context, admin=False):
-        # NOTE(gibi): This is a hack. As we return the same fixture for each
-        # get_client call there is no way to later know that a call came
-        # through which client. We store the parameters of the last get_client
-        # call. Later we should return a new client object from this call that
-        # is wrapping the fixture and this client can remember how it was
-        # initialized.
-
         # This logic is copied from nova.network.neutronv2.api._get_auth_plugin
-        self.is_admin_client = (admin or
-                                (context.is_admin and not context.auth_token))
-        return self
+        admin = admin or context.is_admin and not context.auth_token
+        return _FakeNeutronClient(self, admin)
 
     @staticmethod
     def fake_create_port_binding(context, client, port_id, data):
@@ -1731,20 +1749,6 @@ class NeutronFixture(fixtures.Fixture):
         # TODO(mriedem): Make this smarter by keeping track of our bindings
         # per port so we can reflect the status accurately.
         return fake_requests.FakeResponse(204)
-
-    @staticmethod
-    def fake_get_instance_security_group_bindings(
-            _, context, servers, detailed=False):
-        if detailed:
-            raise Exception('We do not support detailed view')
-        return {server['id']: [{'name': 'default'}] for server in servers}
-
-    def _get_first_id_match(self, id, list):
-        filtered_list = [p for p in list if p['id'] == id]
-        if len(filtered_list) > 0:
-            return filtered_list[0]
-        else:
-            return None
 
     def _list_resource(self, resources, retrieve_all, **_params):
         # If 'fields' is passed we need to strip that out since it will mess
@@ -1789,9 +1793,9 @@ class NeutronFixture(fixtures.Fixture):
         if port_id in self._ports:
             del self._ports[port_id]
 
-    def list_ports(self, retrieve_all=True, **_params):
+    def list_ports(self, is_admin, retrieve_all=True, **_params):
         ports = self._list_resource(self._ports, retrieve_all, **_params)
-        if not self.is_admin_client:
+        if not is_admin:
             # Neutron returns None instead of the real resource_request if
             # the ports are queried by a non-admin. So simulate this behavior
             # here
