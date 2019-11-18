@@ -5692,25 +5692,6 @@ def purge_shadow_tables(context, before_date, status_fn=None):
     return total_deleted
 
 
-# TODO(mriedem): Remove this in the U release.
-@pick_context_manager_writer
-def service_uuids_online_data_migration(context, max_count):
-    from nova.objects import service
-
-    count_all = 0
-    count_hit = 0
-
-    db_services = model_query(context, models.Service).filter_by(
-        uuid=None).limit(max_count)
-    for db_service in db_services:
-        count_all += 1
-        service_obj = service.Service._from_db_object(
-            context, service.Service(), db_service)
-        if 'uuid' in service_obj:
-            count_hit += 1
-    return count_all, count_hit
-
-
 ####################
 
 

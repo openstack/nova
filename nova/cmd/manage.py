@@ -387,9 +387,6 @@ class DbCommands(object):
     # NOTE(stephenfin): These names must be unique
     online_migrations = (
         # Added in Pike
-        # TODO(mriedem): Remove this in the U release.
-        db.service_uuids_online_data_migration,
-        # Added in Pike
         quotas_obj.migrate_quota_limits_to_api_db,
         # Added in Pike
         quotas_obj.migrate_quota_classes_to_api_db,

@@ -279,7 +279,6 @@ Nova Database
      |     populate_missing_availability_zones     |      0       |     0     |
      |          populate_queued_for_delete         |      2       |     2     |
      |                populate_uuids               |      0       |     0     |
-     |     service_uuids_online_data_migration     |      0       |     0     |
      +---------------------------------------------+--------------+-----------+
 
    In the above example, the ``migrate_instances_add_request_spec`` migration
