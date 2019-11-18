@@ -73,6 +73,150 @@ def generate_new_element(items, prefix, numeric=False):
         LOG.debug("Random collision on %s", candidate)
 
 
+class InstanceHelperMixin(object):
+    def _wait_for_server_parameter(self, admin_api, server, expected_params,
+                                   max_retries=10):
+        retry_count = 0
+        while True:
+            server = admin_api.get_server(server['id'])
+            if all([server[attr] == expected_params[attr]
+                    for attr in expected_params]):
+                break
+            retry_count += 1
+            if retry_count == max_retries:
+                self.fail('Wait for state change failed, '
+                          'expected_params=%s, server=%s' % (
+                              expected_params, server))
+            time.sleep(0.5)
+
+        return server
+
+    def _wait_for_state_change(self, admin_api, server, expected_status,
+                               max_retries=10):
+        return self._wait_for_server_parameter(
+            admin_api, server, {'status': expected_status}, max_retries)
+
+    def _build_minimal_create_server_request(self, api, name, image_uuid=None,
+                                             flavor_id=None, networks=None,
+                                             az=None, host=None):
+        server = {}
+
+        # We now have a valid imageId
+        server['imageRef'] = image_uuid or api.get_images()[0]['id']
+
+        if not flavor_id:
+            # Set a valid flavorId
+            flavor_id = api.get_flavors()[1]['id']
+        server['flavorRef'] = ('http://fake.server/%s' % flavor_id)
+        server['name'] = name
+        if networks is not None:
+            server['networks'] = networks
+        if az is not None:
+            server['availability_zone'] = az
+        # This requires at least microversion 2.74 to work
+        if host is not None:
+            server['host'] = host
+        return server
+
+    def _wait_until_deleted(self, server):
+        initially_in_error = (server['status'] == 'ERROR')
+        try:
+            for i in range(40):
+                server = self.api.get_server(server['id'])
+                if not initially_in_error and server['status'] == 'ERROR':
+                    self.fail('Server went to error state instead of'
+                              'disappearing.')
+                time.sleep(0.5)
+
+            self.fail('Server failed to delete.')
+        except api_client.OpenStackApiNotFoundException:
+            return
+
+    def _wait_for_action_fail_completion(
+            self, server, expected_action, event_name, api=None):
+        """Polls instance action events for the given instance, action and
+        action event name until it finds the action event with an error
+        result.
+        """
+        if api is None:
+            api = self.api
+        return self._wait_for_instance_action_event(
+            api, server, expected_action, event_name, event_result='error')
+
+    def _wait_for_instance_action_event(
+            self, api, server, action_name, event_name, event_result):
+        """Polls the instance action events for the given instance, action,
+        event, and event result until it finds the event.
+        """
+        actions = []
+        events = []
+        for attempt in range(10):
+            actions = api.get_instance_actions(server['id'])
+            # The API returns the newest event first
+            for action in actions:
+                if action['action'] == action_name:
+                    events = (
+                        api.api_get(
+                            '/servers/%s/os-instance-actions/%s' %
+                            (server['id'], action['request_id'])
+                        ).body['instanceAction']['events'])
+                    # Look for the action event being in error state.
+                    for event in events:
+                        result = event['result']
+                        if (event['event'] == event_name and
+                                result is not None and
+                                result.lower() == event_result.lower()):
+                            return event
+            # We didn't find the completion event yet, so wait a bit.
+            time.sleep(0.5)
+
+        self.fail(
+            'Timed out waiting for %s instance action event. Current instance '
+            'actions: %s. Events in the last matching action: %s'
+            % (event_name, actions, events))
+
+    def _assert_resize_migrate_action_fail(self, server, action, error_in_tb):
+        """Waits for the conductor_migrate_server action event to fail for
+        the given action and asserts the error is in the event traceback.
+
+        :param server: API response dict of the server being resized/migrated
+        :param action: Either "resize" or "migrate" instance action.
+        :param error_in_tb: Some expected part of the error event traceback.
+        """
+        api = self.admin_api if hasattr(self, 'admin_api') else self.api
+        event = self._wait_for_action_fail_completion(
+            server, action, 'conductor_migrate_server', api=api)
+        self.assertIn(error_in_tb, event['traceback'])
+
+    def _wait_for_migration_status(self, server, expected_statuses):
+        """Waits for a migration record with the given statuses to be found
+        for the given server, else the test fails. The migration record, if
+        found, is returned.
+        """
+        api = getattr(self, 'admin_api', None)
+        if api is None:
+            api = self.api
+
+        statuses = [status.lower() for status in expected_statuses]
+        for attempt in range(10):
+            migrations = api.api_get('/os-migrations').body['migrations']
+            for migration in migrations:
+                if (migration['instance_uuid'] == server['id'] and
+                        migration['status'].lower() in statuses):
+                    return migration
+            time.sleep(0.5)
+        self.fail('Timed out waiting for migration with status "%s" for '
+                  'instance: %s' % (expected_statuses, server['id']))
+
+    def _wait_for_log(self, log_line):
+        for i in range(10):
+            if log_line in self.stdlog.logger.output:
+                return
+            time.sleep(0.5)
+
+        self.fail('The line "%(log_line)s" did not appear in the log')
+
+
 class _IntegratedTestBase(test.TestCase):
     REQUIRES_LOCKING = True
     ADMIN_API = False
@@ -249,150 +393,6 @@ class _IntegratedTestBase(test.TestCase):
                          expected_middleware,
                          ("The expected wsgi middlewares %s are not "
                           "existed") % expected_middleware)
-
-
-class InstanceHelperMixin(object):
-    def _wait_for_server_parameter(self, admin_api, server, expected_params,
-                                   max_retries=10):
-        retry_count = 0
-        while True:
-            server = admin_api.get_server(server['id'])
-            if all([server[attr] == expected_params[attr]
-                    for attr in expected_params]):
-                break
-            retry_count += 1
-            if retry_count == max_retries:
-                self.fail('Wait for state change failed, '
-                          'expected_params=%s, server=%s' % (
-                              expected_params, server))
-            time.sleep(0.5)
-
-        return server
-
-    def _wait_for_state_change(self, admin_api, server, expected_status,
-                               max_retries=10):
-        return self._wait_for_server_parameter(
-            admin_api, server, {'status': expected_status}, max_retries)
-
-    def _build_minimal_create_server_request(self, api, name, image_uuid=None,
-                                             flavor_id=None, networks=None,
-                                             az=None, host=None):
-        server = {}
-
-        # We now have a valid imageId
-        server['imageRef'] = image_uuid or api.get_images()[0]['id']
-
-        if not flavor_id:
-            # Set a valid flavorId
-            flavor_id = api.get_flavors()[1]['id']
-        server['flavorRef'] = ('http://fake.server/%s' % flavor_id)
-        server['name'] = name
-        if networks is not None:
-            server['networks'] = networks
-        if az is not None:
-            server['availability_zone'] = az
-        # This requires at least microversion 2.74 to work
-        if host is not None:
-            server['host'] = host
-        return server
-
-    def _wait_until_deleted(self, server):
-        initially_in_error = (server['status'] == 'ERROR')
-        try:
-            for i in range(40):
-                server = self.api.get_server(server['id'])
-                if not initially_in_error and server['status'] == 'ERROR':
-                    self.fail('Server went to error state instead of'
-                              'disappearing.')
-                time.sleep(0.5)
-
-            self.fail('Server failed to delete.')
-        except api_client.OpenStackApiNotFoundException:
-            return
-
-    def _wait_for_action_fail_completion(
-            self, server, expected_action, event_name, api=None):
-        """Polls instance action events for the given instance, action and
-        action event name until it finds the action event with an error
-        result.
-        """
-        if api is None:
-            api = self.api
-        return self._wait_for_instance_action_event(
-            api, server, expected_action, event_name, event_result='error')
-
-    def _wait_for_instance_action_event(
-            self, api, server, action_name, event_name, event_result):
-        """Polls the instance action events for the given instance, action,
-        event, and event result until it finds the event.
-        """
-        actions = []
-        events = []
-        for attempt in range(10):
-            actions = api.get_instance_actions(server['id'])
-            # The API returns the newest event first
-            for action in actions:
-                if action['action'] == action_name:
-                    events = (
-                        api.api_get(
-                            '/servers/%s/os-instance-actions/%s' %
-                            (server['id'], action['request_id'])
-                        ).body['instanceAction']['events'])
-                    # Look for the action event being in error state.
-                    for event in events:
-                        result = event['result']
-                        if (event['event'] == event_name and
-                                result is not None and
-                                result.lower() == event_result.lower()):
-                            return event
-            # We didn't find the completion event yet, so wait a bit.
-            time.sleep(0.5)
-
-        self.fail(
-            'Timed out waiting for %s instance action event. Current instance '
-            'actions: %s. Events in the last matching action: %s'
-            % (event_name, actions, events))
-
-    def _assert_resize_migrate_action_fail(self, server, action, error_in_tb):
-        """Waits for the conductor_migrate_server action event to fail for
-        the given action and asserts the error is in the event traceback.
-
-        :param server: API response dict of the server being resized/migrated
-        :param action: Either "resize" or "migrate" instance action.
-        :param error_in_tb: Some expected part of the error event traceback.
-        """
-        api = self.admin_api if hasattr(self, 'admin_api') else self.api
-        event = self._wait_for_action_fail_completion(
-            server, action, 'conductor_migrate_server', api=api)
-        self.assertIn(error_in_tb, event['traceback'])
-
-    def _wait_for_migration_status(self, server, expected_statuses):
-        """Waits for a migration record with the given statuses to be found
-        for the given server, else the test fails. The migration record, if
-        found, is returned.
-        """
-        api = getattr(self, 'admin_api', None)
-        if api is None:
-            api = self.api
-
-        statuses = [status.lower() for status in expected_statuses]
-        for attempt in range(10):
-            migrations = api.api_get('/os-migrations').body['migrations']
-            for migration in migrations:
-                if (migration['instance_uuid'] == server['id'] and
-                        migration['status'].lower() in statuses):
-                    return migration
-            time.sleep(0.5)
-        self.fail('Timed out waiting for migration with status "%s" for '
-                  'instance: %s' % (expected_statuses, server['id']))
-
-    def _wait_for_log(self, log_line):
-        for i in range(10):
-            if log_line in self.stdlog.logger.output:
-                return
-            time.sleep(0.5)
-
-        self.fail('The line "%(log_line)s" did not appear in the log')
 
 
 class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
