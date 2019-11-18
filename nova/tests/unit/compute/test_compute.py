@@ -199,7 +199,8 @@ class BaseTestCase(test.TestCase):
                         context, objects.ComputeNode(), cn)
                     for cn in fake_compute_nodes]
 
-        def fake_compute_node_delete(context, compute_node_id):
+        def fake_compute_node_delete(context, compute_node_id,
+                                     constraint=None):
             self.assertEqual(2, compute_node_id)
 
         self.stub_out(
