@@ -33,6 +33,7 @@
           export DEVSTACK_GATE_NEUTRON=1
           export DEVSTACK_GATE_TEMPEST_NOTESTS=1
           export DEVSTACK_GATE_GRENADE=pullup
+          export DEVSTACK_GATE_USE_PYTHON3=True
           # By default grenade runs only smoke tests so we need to set
           # RUN_SMOKE to False in order to run live migration tests using
           # grenade

@@ -56,6 +56,7 @@ echo '4. test with Ceph for root + ephemeral disks'
 # Discover and set variables for the OS version so the devstack-plugin-ceph
 # scripts can find the correct repository to install the ceph packages.
 GetOSVersion
+USE_PYTHON3=${USE_PYTHON3:-True}
 prepare_ceph
 GLANCE_API_CONF=${GLANCE_API_CONF:-/etc/glance/glance-api.conf}
 configure_and_start_glance

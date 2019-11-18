@@ -6,8 +6,9 @@ function prepare_ceph {
     source /tmp/devstack-plugin-ceph/devstack/lib/ceph
     install_ceph
     configure_ceph
-    #install ceph-common package on compute nodes
+    #install ceph-common package and additional python3 ceph libraries on compute nodes
     $ANSIBLE subnodes --become -f 5 -i "$WORKSPACE/inventory" -m raw -a "executable=/bin/bash
+    USE_PYTHON3=${USE_PYTHON3:-True}
     source $BASE/new/devstack/functions
     source $BASE/new/devstack/functions-common
     git clone https://opendev.org/openstack/devstack-plugin-ceph /tmp/devstack-plugin-ceph
