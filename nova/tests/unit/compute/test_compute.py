@@ -200,13 +200,14 @@ class BaseTestCase(test.TestCase):
                         context, objects.ComputeNode(), cn)
                     for cn in fake_compute_nodes]
 
-        def fake_compute_node_delete(context, compute_node_id):
+        def fake_compute_node_delete(context, compute_node_id,
+                                     constraint=None):
             self.assertEqual(2, compute_node_id)
 
         self.stub_out(
             'nova.compute.manager.ComputeManager._get_compute_nodes_in_db',
             fake_get_compute_nodes_in_db)
-        self.stub_out('nova.db.api.compute_node_delete',
+        self.stub_out('nova.db.sqlalchemy.api.compute_node_delete',
                 fake_compute_node_delete)
 
         self.compute.update_available_resource(

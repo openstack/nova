@@ -133,24 +133,35 @@ class NodeRebalanceDeletedComputeNodeRaceTestCase(
         # Mock out the compute node query to simulate a race condition where
         # the list includes an orphan compute node that is newly owned by
         # host_b by the time host_a attempts to delete it.
-        # FIXME(mgoddard): Ideally host_a would not delete a node that does not
-        # belong to it. See https://bugs.launchpad.net/nova/+bug/1853009.
         with mock.patch(
             'nova.compute.manager.ComputeManager._get_compute_nodes_in_db'
         ) as mock_get:
             mock_get.return_value = [cn]
             host_a.manager.update_available_resource(self.ctxt)
 
-        # Verify that the node was deleted.
+        # Verify that the node was almost deleted, but was saved by the host
+        # check
         self.assertIn(
             'Deleting orphan compute node %s hypervisor host '
             'is fake-node, nodes are' % cn.id,
             self.stdlog.logger.output)
-        hypervisors = self.api.api_get(
-            '/os-hypervisors/detail').body['hypervisors']
-        self.assertEqual(0, len(hypervisors), hypervisors)
+        self.assertIn(
+            'Ignoring failure to delete orphan compute node %s on '
+            'hypervisor host fake-node' % cn.id,
+            self.stdlog.logger.output)
+        self._assert_hypervisor_api(self.nodename, 'host_b')
         rps = self._get_all_providers()
-        self.assertEqual(0, len(rps), rps)
+        self.assertEqual(1, len(rps), rps)
+        self.assertEqual(self.nodename, rps[0]['name'])
+
+        # Simulate deletion of an orphan by host_a. It shouldn't happen
+        # anymore, but let's assume it already did.
+        cn = objects.ComputeNode.get_by_host_and_nodename(
+            self.ctxt, 'host_b', self.nodename)
+        cn.destroy()
+        host_a.manager.rt.remove_node(cn.hypervisor_hostname)
+        host_a.manager.reportclient.delete_resource_provider(
+            self.ctxt, cn, cascade=True)
 
         # host_b[3]: Should recreate compute node and resource provider.
         # FIXME(mgoddard): Resource provider not recreated here, due to

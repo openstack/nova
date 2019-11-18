@@ -24,6 +24,7 @@ from oslo_versionedobjects import exception as ovo_exc
 
 from nova import conf
 from nova.db import api as db
+from nova.db.sqlalchemy import api as sa_api
 from nova import exception
 from nova import objects
 from nova.objects import base
@@ -410,12 +411,22 @@ class _TestComputeNodeObject(object):
         self.assertRaises(ovo_exc.ReadOnlyFieldError, setattr,
                           compute, 'id', 124)
 
-    @mock.patch.object(db, 'compute_node_delete')
+    @mock.patch.object(sa_api, 'compute_node_delete')
     def test_destroy(self, mock_delete):
         compute = compute_node.ComputeNode(context=self.context)
         compute.id = 123
         compute.destroy()
-        mock_delete.assert_called_once_with(self.context, 123)
+        mock_delete.assert_called_once_with(self.context, 123, constraint=None)
+
+    def test_destroy_host_constraint(self):
+        # Create compute node with host='fake'
+        compute = fake_compute_with_resources.obj_clone()
+        compute._context = self.context
+        compute.host = 'fake'
+        compute.create()
+        # Simulate a compute node ownership change due to a node rebalance
+        compute.host = 'different'
+        self.assertRaises(exception.ObjectActionError, compute.destroy)
 
     @mock.patch.object(db, 'compute_node_get_all')
     def test_get_all(self, mock_get_all):
