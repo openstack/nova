@@ -31,7 +31,13 @@
           export PYTHONUNBUFFERED=true
           export DEVSTACK_GATE_CONFIGDRIVE=0
           export DEVSTACK_GATE_NEUTRON=1
-          export DEVSTACK_GATE_TEMPEST_NOTESTS=1
+          # NOTE(mriedem): Run tempest smoke tests specific to compute on the
+          # new side of the grenade environment. The post-test hook script will
+          # run non-smoke migration tests in a local/block and shared/ceph
+          # setup. Note that grenade hard-codes "tox -esmoke" for tempest on
+          # the old side so the regex is not appied there.
+          export DEVSTACK_GATE_TEMPEST=1
+          export DEVSTACK_GATE_TEMPEST_REGEX="tempest\.(api\.compute|scenario)\..*smoke.*"
           export DEVSTACK_GATE_GRENADE=pullup
           export DEVSTACK_GATE_USE_PYTHON3=True
           # By default grenade runs only smoke tests so we need to set
