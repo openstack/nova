@@ -5134,18 +5134,22 @@ class LibvirtDriver(driver.ComputeDriver):
                           ("org.qemu.guest_agent.0", instance.name))
         guest.add_device(qga)
 
-    def _add_rng_device(self, guest, flavor):
-        rng_device = vconfig.LibvirtConfigGuestRng()
-        rate_bytes = flavor.extra_specs.get('hw_rng:rate_bytes', 0)
-        period = flavor.extra_specs.get('hw_rng:rate_period', 0)
-        if rate_bytes:
-            rng_device.rate_bytes = int(rate_bytes)
-            rng_device.rate_period = int(period)
-        rng_path = CONF.libvirt.rng_dev_path
-        if (rng_path and not os.path.exists(rng_path)):
-            raise exception.RngDeviceNotExist(path=rng_path)
-        rng_device.backend = rng_path
-        guest.add_device(rng_device)
+    def _add_rng_device(self, guest, flavor, image_meta):
+        rng_is_virtio = image_meta.properties.get('hw_rng_model') == 'virtio'
+        rng_allowed_str = flavor.extra_specs.get('hw_rng:allowed', '')
+        rng_allowed = strutils.bool_from_string(rng_allowed_str)
+        if rng_is_virtio and rng_allowed:
+            rng_device = vconfig.LibvirtConfigGuestRng()
+            rate_bytes = flavor.extra_specs.get('hw_rng:rate_bytes', 0)
+            period = flavor.extra_specs.get('hw_rng:rate_period', 0)
+            if rate_bytes:
+                rng_device.rate_bytes = int(rate_bytes)
+                rng_device.rate_period = int(period)
+            rng_path = CONF.libvirt.rng_dev_path
+            if (rng_path and not os.path.exists(rng_path)):
+                raise exception.RngDeviceNotExist(path=rng_path)
+            rng_device.backend = rng_path
+            guest.add_device(rng_device)
 
     def _set_qemu_guest_agent(self, guest, flavor, instance, image_meta):
         # Enable qga only if the 'hw_qemu_guest_agent' is equal to yes
@@ -5153,11 +5157,6 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.debug("Qemu guest agent is enabled through image "
                       "metadata", instance=instance)
             self._add_qga_device(guest, instance)
-        rng_is_virtio = image_meta.properties.get('hw_rng_model') == 'virtio'
-        rng_allowed_str = flavor.extra_specs.get('hw_rng:allowed', '')
-        rng_allowed = strutils.bool_from_string(rng_allowed_str)
-        if rng_is_virtio and rng_allowed:
-            self._add_rng_device(guest, flavor)
 
     def _get_guest_memory_backing_config(
             self, inst_topology, numatune, flavor, image_meta):
@@ -5725,6 +5724,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # Qemu guest agent only support 'qemu' and 'kvm' hypervisor
         if virt_type in ('qemu', 'kvm'):
             self._set_qemu_guest_agent(guest, flavor, instance, image_meta)
+            self._add_rng_device(guest, flavor, image_meta)
 
         if self._guest_needs_pcie(guest, caps):
             self._guest_add_pcie_root_ports(guest)
