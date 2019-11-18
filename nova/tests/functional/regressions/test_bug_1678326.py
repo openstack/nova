@@ -53,7 +53,7 @@ class TestDeleteFromCell0CheckQuotaRollback(
             imageRef=self.image_id,
             flavorRef=self.flavor_id)
         server = self.api.post_server({'server': server})
-        self.addCleanup(self._delete_server, server['id'])
+        self.addCleanup(self._delete_server, server)
         self._wait_for_instance_status(server['id'], 'ERROR')
 
         # Check quota to see we've incremented usage by 1.
@@ -71,7 +71,7 @@ class TestDeleteFromCell0CheckQuotaRollback(
                       fake_instance_destroy)
 
         # Now delete the server and wait for it to be gone.
-        self._delete_server(server['id'])
+        self._delete_server(server)
 
         # Reset the stub so we can actually delete the instance on tearDown.
         self.stub_out('nova.objects.instance.Instance.destroy',
