@@ -35,7 +35,7 @@ Run without arguments to see a list of available command categories::
 
   nova-manage
 
-You can also run with a category argument such as user to see a list of all
+You can also run with a category argument such as ``db`` to see a list of all
 commands in that category::
 
   nova-manage db
