@@ -410,12 +410,13 @@ def service_destroy(context, service_id):
                 filter_by(id=service_id).\
                 soft_delete(synchronize_session=False)
 
-    # TODO(sbauza): Remove the service_id filter in a later release
-    # once we are sure that all compute nodes report the host field
-    model_query(context, models.ComputeNode).\
-                filter(or_(models.ComputeNode.service_id == service_id,
-                           models.ComputeNode.host == service['host'])).\
-                soft_delete(synchronize_session=False)
+    if service.binary == 'nova-compute':
+        # TODO(sbauza): Remove the service_id filter in a later release
+        # once we are sure that all compute nodes report the host field
+        model_query(context, models.ComputeNode).\
+                    filter(or_(models.ComputeNode.service_id == service_id,
+                               models.ComputeNode.host == service['host'])).\
+                    soft_delete(synchronize_session=False)
 
 
 @pick_context_manager_reader

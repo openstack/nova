@@ -3189,6 +3189,15 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._assertEqualObjects(db.service_get(self.ctxt, service2['id']),
                                  service2, ignored_keys=['compute_node'])
 
+    def test_service_destroy_not_nova_compute(self):
+        service = self._create_service({'binary': 'nova-consoleauth',
+                                        'host': 'host1'})
+        compute_node_dict = _make_compute_node('host1', 'node1', 'kvm', None)
+        compute_node = db.compute_node_create(self.ctxt, compute_node_dict)
+        db.service_destroy(self.ctxt, service['id'])
+        # make sure ComputeHostNotFound is not raised
+        db.compute_node_get(self.ctxt, compute_node['id'])
+
     def test_service_update(self):
         service = self._create_service({})
         new_values = {
