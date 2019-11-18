@@ -234,8 +234,8 @@ MIN_QEMU_VERSION = (2, 8, 0)
 # MIN_LIBVIRT_VERSION can be updated to match this after
 # NEXT_MIN_LIBVIRT_VERSION  has been at a higher value for
 # one cycle
-NEXT_MIN_LIBVIRT_VERSION = (4, 0, 0)
-NEXT_MIN_QEMU_VERSION = (2, 11, 0)
+NEXT_MIN_LIBVIRT_VERSION = (5, 0, 0)
+NEXT_MIN_QEMU_VERSION = (4, 0, 0)
 
 
 # Virtuozzo driver support
