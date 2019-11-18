@@ -1,0 +1,5 @@
+---
+upgrade:
+  - |
+    Python 2.7 support has been dropped. The minimum version of Python now
+    supported by nova is Python 3.6.
