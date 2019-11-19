@@ -1963,3 +1963,4 @@ class ResourceTracker(object):
             # where another compute service took ownership of the node. Clean
             # up the cache.
             self.remove_node(stale_cn)
+            self.reportclient.invalidate_resource_provider(stale_cn)

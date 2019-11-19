@@ -677,11 +677,7 @@ class SchedulerReportClient(object):
             if resp:
                 LOG.info("Deleted resource provider %s", rp_uuid)
             # clean the caches
-            try:
-                self._provider_tree.remove(rp_uuid)
-            except ValueError:
-                pass
-            self._association_refresh_time.pop(rp_uuid, None)
+            self.invalidate_resource_provider(rp_uuid)
             return
 
         msg = ("[%(placement_req_id)s] Failed to delete resource provider "
@@ -2265,6 +2261,17 @@ class SchedulerReportClient(object):
                 # TODO(efried): Raise these.  Right now this is being
                 #  left a no-op for backward compatibility.
                 pass
+
+    def invalidate_resource_provider(self, name_or_uuid):
+        """Invalidate the cache for a resource provider.
+
+        :param name_or_uuid: Name or UUID of the resource provider to look up.
+        """
+        try:
+            self._provider_tree.remove(name_or_uuid)
+        except ValueError:
+            pass
+        self._association_refresh_time.pop(name_or_uuid, None)
 
     def get_provider_by_name(self, context, name):
         """Queries the placement API for resource provider information matching
