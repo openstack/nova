@@ -18,6 +18,7 @@ import os
 from oslo_utils.fixture import uuidsentinel
 import six
 
+from nova.compute import provider_tree
 from nova import conf
 from nova import context
 from nova import exception
@@ -504,3 +505,43 @@ class TestZVMDriver(test.NoDBTestCase):
         outputs = self._driver.get_console_output(None, self._instance)
         call.assert_called_once_with('guest_get_console_output', 'abc00001')
         self.assertEqual('console output', outputs)
+
+    @mock.patch('nova.virt.zvm.utils.ConnectorClient.call')
+    def test_update_provider_tree(self, call):
+        host_info = {'vcpus': 84,
+                     'disk_total': 2000,
+                     'memory_mb': 78192}
+        call.return_value = host_info
+        expected_inv = {
+            'VCPU': {
+                'total': 84,
+                'min_unit': 1,
+                'max_unit': 84,
+                'step_size': 1,
+                'allocation_ratio': CONF.initial_cpu_allocation_ratio,
+                'reserved': CONF.reserved_host_cpus,
+            },
+            'MEMORY_MB': {
+                'total': 78192,
+                'min_unit': 1,
+                'max_unit': 78192,
+                'step_size': 1,
+                'allocation_ratio': CONF.initial_ram_allocation_ratio,
+                'reserved': CONF.reserved_host_memory_mb,
+            },
+            'DISK_GB': {
+                'total': 2000,
+                'min_unit': 1,
+                'max_unit': 2000,
+                'step_size': 1,
+                'allocation_ratio': CONF.initial_disk_allocation_ratio,
+                'reserved': CONF.reserved_host_disk_mb,
+            },
+        }
+
+        pt = provider_tree.ProviderTree()
+        nodename = 'fake-node'
+        pt.new_root(nodename, uuidsentinel.rp_uuid)
+        self._driver.update_provider_tree(pt, nodename)
+        inv = pt.data(nodename).inventory
+        self.assertEqual(expected_inv, inv)

@@ -17,6 +17,7 @@ import os
 import six
 import time
 
+import os_resource_classes as orc
 from oslo_concurrency import lockutils
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -413,3 +414,38 @@ class ZVMDriver(driver.ComputeDriver):
 
     def get_console_output(self, context, instance):
         return self._hypervisor.guest_get_console_output(instance.name)
+
+    def update_provider_tree(self, provider_tree, nodename, allocations=None):
+        resources = self._hypervisor.get_available_resource()
+
+        inventory = provider_tree.data(nodename).inventory
+        allocation_ratios = self._get_allocation_ratios(inventory)
+
+        inventory = {
+            orc.VCPU: {
+                'total': resources['vcpus'],
+                'min_unit': 1,
+                'max_unit': resources['vcpus'],
+                'step_size': 1,
+                'allocation_ratio': allocation_ratios[orc.VCPU],
+                'reserved': CONF.reserved_host_cpus,
+            },
+            orc.MEMORY_MB: {
+                'total': resources['memory_mb'],
+                'min_unit': 1,
+                'max_unit': resources['memory_mb'],
+                'step_size': 1,
+                'allocation_ratio': allocation_ratios[orc.MEMORY_MB],
+                'reserved': CONF.reserved_host_memory_mb,
+            },
+            orc.DISK_GB: {
+                'total': resources['disk_total'],
+                'min_unit': 1,
+                'max_unit': resources['disk_total'],
+                'step_size': 1,
+                'allocation_ratio': allocation_ratios[orc.DISK_GB],
+                'reserved': self._get_reserved_host_disk_gb_from_config(),
+            },
+        }
+
+        provider_tree.update_inventory(nodename, inventory)
