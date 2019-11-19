@@ -94,7 +94,7 @@
       Run tempest live migration tests against both local storage and shared
       storage using ceph (the environment is reconfigured for ceph after the
       local storage tests are run). Also runs simple evacuate tests.
-      Config drive is forced on all instances.
+      Config drive is forced on all instances. Runs with python 3.
     run: playbooks/legacy/nova-live-migration/run.yaml
     post-run: playbooks/legacy/nova-live-migration/post.yaml
     irrelevant-files: *dsvm-irrelevant-files
@@ -262,7 +262,8 @@
     name: nova-grenade-multinode
     parent: nova-dsvm-multinode-base
     description: |
-      Multi-node grenade job which runs gate/live_migration/hooks tests.
+      Multi-node grenade job which runs gate/live_migration/hooks tests under
+      python 3.
       In other words, this tests live and cold migration and resize with
       mixed-version compute services which is important for things like
       rolling upgrade support.
