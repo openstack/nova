@@ -29,8 +29,6 @@ LOG = logging.getLogger(__name__)
 
 
 class VGPUReshapeTests(base.ServersTestBase):
-    # the minimum libvirt version needed for vgpu
-    MIN_LIBVIRT_MDEV_SUPPORT = 3004000
 
     @mock.patch('nova.virt.libvirt.LibvirtDriver._get_local_gb_info',
                 return_value={'total': 128,
@@ -64,7 +62,6 @@ class VGPUReshapeTests(base.ServersTestBase):
         fake_connection = self._get_connection(
             # We need more RAM or the 3rd server won't be created
             host_info=fakelibvirt.HostInfo(kB_mem=8192),
-            libvirt_version=self.MIN_LIBVIRT_MDEV_SUPPORT,
             mdev_info=fakelibvirt.HostMdevDevicesInfo())
         self.mock_conn.return_value = fake_connection
 

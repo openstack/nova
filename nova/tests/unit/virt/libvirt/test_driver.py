@@ -6089,7 +6089,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         # finally if the min version is not met assert that
         # the video model is not supported.
         min_version_mock.return_value = False
-        self.assertFalse(drvr._video_model_supported("gop"))
+        self.assertFalse(drvr._video_model_supported("none"))
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_video_model_supported')
     def test__add_video_driver_gop(self, _supports_gop_video):
@@ -22731,11 +22731,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 
     @mock.patch.object(host.Host, 'device_lookup_by_name')
     @mock.patch.object(host.Host, 'list_mdev_capable_devices')
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
-                       return_value=versionutils.convert_version_to_int(
-                            libvirt_driver.MIN_LIBVIRT_MDEV_SUPPORT))
-    def test_get_mdev_capable_devices(self, _get_libvirt_version,
-                                      list_mdev_capable_devs,
+    def test_get_mdev_capable_devices(self, list_mdev_capable_devs,
                                       device_lookup_by_name):
         list_mdev_capable_devs.return_value = ['pci_0000_06_00_0']
 
@@ -22756,11 +22752,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 
     @mock.patch.object(host.Host, 'device_lookup_by_name')
     @mock.patch.object(host.Host, 'list_mdev_capable_devices')
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
-                       return_value=versionutils.convert_version_to_int(
-                            libvirt_driver.MIN_LIBVIRT_MDEV_SUPPORT))
-    def test_get_mdev_capable_devices_filtering(self, _get_libvirt_version,
-                                                list_mdev_capable_devs,
+    def test_get_mdev_capable_devices_filtering(self, list_mdev_capable_devs,
                                                 device_lookup_by_name):
         list_mdev_capable_devs.return_value = ['pci_0000_06_00_0']
 
@@ -22777,11 +22769,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 
     @mock.patch.object(host.Host, 'device_lookup_by_name')
     @mock.patch.object(host.Host, 'list_mediated_devices')
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
-                       return_value=versionutils.convert_version_to_int(
-                            libvirt_driver.MIN_LIBVIRT_MDEV_SUPPORT))
-    def test_get_mediated_devices(self, _get_libvirt_version,
-                                  list_mediated_devices,
+    def test_get_mediated_devices(self, list_mediated_devices,
                                   device_lookup_by_name):
         list_mediated_devices.return_value = [
             'mdev_4b20d080_1b54_4048_85b3_a6a62d165c01']
@@ -22801,11 +22789,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 
     @mock.patch.object(host.Host, 'device_lookup_by_name')
     @mock.patch.object(host.Host, 'list_mediated_devices')
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
-                       return_value=versionutils.convert_version_to_int(
-                            libvirt_driver.MIN_LIBVIRT_MDEV_SUPPORT))
-    def test_get_mediated_devices_filtering(self, _get_libvirt_version,
-                                            list_mediated_devices,
+    def test_get_mediated_devices_filtering(self, list_mediated_devices,
                                             device_lookup_by_name):
         list_mediated_devices.return_value = [
             'mdev_4b20d080_1b54_4048_85b3_a6a62d165c01']
@@ -23066,13 +23050,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     @mock.patch.object(os.path, 'exists')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_get_all_assigned_mediated_devices')
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
-                       return_value=versionutils.convert_version_to_int(
-                            libvirt_driver.MIN_LIBVIRT_MDEV_SUPPORT))
     def test_recreate_mediated_device_on_init_host(
-            self, _get_libvirt_version,
-            get_all_assigned_mdevs, exists, get_mdev_capable_devs,
-            privsep_create_mdev):
+            self, get_all_assigned_mdevs, exists,
+            get_mdev_capable_devs, privsep_create_mdev):
         self.flags(enabled_vgpu_types=['nvidia-11'], group='devices')
         get_all_assigned_mdevs.return_value = {uuids.mdev1: uuids.inst1,
                                                uuids.mdev2: uuids.inst2}
