@@ -442,9 +442,40 @@ def _create_vif_spec(client_factory, vif_info, vif_limits=None, offset=0):
     # NOTE(asomya): Only works on ESXi if the portgroup binding is set to
     # ephemeral. Invalid configuration if set to static and the NIC does
     # not come up on boot if set to dynamic.
+    mac_address = vif_info['mac_address']
+    set_net_device_backing(client_factory, net_device, vif_info)
+    connectable_spec = client_factory.create('ns0:VirtualDeviceConnectInfo')
+    connectable_spec.startConnected = True
+    connectable_spec.allowGuestControl = True
+    connectable_spec.connected = True
+
+    net_device.connectable = connectable_spec
+
+    # The Server assigns a Key to the device. Here we pass a -ve temporary key.
+    # -ve because actual keys are +ve numbers and we don't
+    # want a clash with the key that server might associate with the device
+    net_device.key = -47 - offset
+    net_device.addressType = "manual"
+    net_device.macAddress = mac_address
+    net_device.wakeOnLanEnabled = True
+
+    # vnic limits are only supported from version 6.0
+    if vif_limits and vif_limits.has_limits():
+        if hasattr(net_device, 'resourceAllocation'):
+            net_device.resourceAllocation = _get_allocation_info(
+                client_factory, vif_limits,
+                'ns0:VirtualEthernetCardResourceAllocation')
+        else:
+            msg = _('Limits only supported from vCenter 6.0 and above')
+            raise exception.Invalid(msg)
+
+    network_spec.device = net_device
+    return network_spec
+
+
+def set_net_device_backing(client_factory, net_device, vif_info):
     network_ref = vif_info['network_ref']
     network_name = vif_info['network_name']
-    mac_address = vif_info['mac_address']
     backing = None
     if network_ref and network_ref['type'] == 'OpaqueNetwork':
         backing = client_factory.create(
@@ -476,35 +507,7 @@ def _create_vif_spec(client_factory, vif_info, vif_limits=None, offset=0):
         backing = client_factory.create(
                   'ns0:VirtualEthernetCardNetworkBackingInfo')
         backing.deviceName = network_name
-
-    connectable_spec = client_factory.create('ns0:VirtualDeviceConnectInfo')
-    connectable_spec.startConnected = True
-    connectable_spec.allowGuestControl = True
-    connectable_spec.connected = True
-
-    net_device.connectable = connectable_spec
     net_device.backing = backing
-
-    # The Server assigns a Key to the device. Here we pass a -ve temporary key.
-    # -ve because actual keys are +ve numbers and we don't
-    # want a clash with the key that server might associate with the device
-    net_device.key = -47 - offset
-    net_device.addressType = "manual"
-    net_device.macAddress = mac_address
-    net_device.wakeOnLanEnabled = True
-
-    # vnic limits are only supported from version 6.0
-    if vif_limits and vif_limits.has_limits():
-        if hasattr(net_device, 'resourceAllocation'):
-            net_device.resourceAllocation = _get_allocation_info(
-                client_factory, vif_limits,
-                'ns0:VirtualEthernetCardResourceAllocation')
-        else:
-            msg = _('Limits only supported from vCenter 6.0 and above')
-            raise exception.Invalid(msg)
-
-    network_spec.device = net_device
-    return network_spec
 
 
 def get_network_attach_config_spec(client_factory, vif_info, index,
@@ -988,10 +991,11 @@ def clone_vm_spec(client_factory, location,
 
 def relocate_vm_spec(client_factory, res_pool=None, datastore=None, host=None,
                      disk_move_type="moveAllDiskBackingsAndAllowSharing",
-                     devices=None):
+                     devices=None, folder=None):
     rel_spec = client_factory.create('ns0:VirtualMachineRelocateSpec')
     rel_spec.datastore = datastore
     rel_spec.host = host
+    rel_spec.folder = folder
     rel_spec.pool = res_pool
     rel_spec.diskMoveType = disk_move_type
     if devices is not None:
@@ -1001,10 +1005,10 @@ def relocate_vm_spec(client_factory, res_pool=None, datastore=None, host=None,
 
 def relocate_vm(session, vm_ref, res_pool=None, datastore=None, host=None,
                 disk_move_type="moveAllDiskBackingsAndAllowSharing",
-                devices=None):
+                devices=None, spec=None):
     client_factory = session.vim.client.factory
-    rel_spec = relocate_vm_spec(client_factory, res_pool, datastore, host,
-                                disk_move_type, devices)
+    rel_spec = spec or relocate_vm_spec(client_factory, res_pool, datastore,
+                                        host, disk_move_type, devices)
     relocate_task = session._call_method(session.vim, "RelocateVM_Task",
                                          vm_ref, spec=rel_spec)
     session._wait_for_task(relocate_task)
