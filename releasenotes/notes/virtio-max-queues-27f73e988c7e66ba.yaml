@@ -1,0 +1,15 @@
+---
+other:
+  - |
+    The nova libvirt virt driver supports creating instances with multi-queue
+    virtio network interfaces. In previous releases nova has based the maximum
+    number of virtio queue pairs that can be allocated on the reported kernel
+    major version. It has been reported in `bug #1847367`_ that some distros have
+    backported changes from later major versions that make major version
+    number no longer suitable to determine the maximum virtio queue pair count.
+    A new config option has been added to the libvirt section of the nova.conf.
+    When defined nova will now use the ``[libvirt]/max_queues`` option to
+    define the max queues that can be configured, if undefined it will
+    fallback to the previous kernel version approach.
+
+    .. _`bug #1847367`: https://bugs.launchpad.net/nova/+bug/1847367

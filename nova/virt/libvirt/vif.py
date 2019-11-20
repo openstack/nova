@@ -225,6 +225,13 @@ class LibvirtGenericVIFDriver(object):
         return (driver, vhost_queues)
 
     def _get_max_tap_queues(self):
+        # Note(sean-k-mooney): some linux distros have backported
+        # changes for newer kernels which make the kernel version
+        # number unreliable to determine the max queues supported
+        # To address this without making the code distro dependent
+        # we introduce a new config option and prefer it if set.
+        if CONF.libvirt.max_queues:
+            return CONF.libvirt.max_queues
         # NOTE(kengo.sakai): In kernels prior to 3.0,
         # multiple queues on a tap interface is not supported.
         # In kernels 3.x, the number of queues on a tap interface
