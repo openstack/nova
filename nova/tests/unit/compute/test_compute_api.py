@@ -1741,6 +1741,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
     @mock.patch('nova.compute.api.API.get_instance_host_status',
                 new=mock.Mock(return_value=fields_obj.HostStatus.UP))
+    @mock.patch('nova.compute.api.API._allow_resize_to_same_host')
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)
     @mock.patch('nova.compute.api.API._validate_flavor_image_nostatus')
@@ -1757,6 +1758,7 @@ class _ComputeAPIUnitTestMixIn(object):
                      mock_get_by_instance_uuid, mock_get_flavor, mock_upsize,
                      mock_inst_save, mock_count, mock_limit, mock_record,
                      mock_migration, mock_validate, mock_is_vol_backed,
+                     mock_allow_resize_to_same_host,
                      flavor_id_passed=True,
                      same_host=False, allow_same_host=False,
                      project_id=None,
@@ -1768,6 +1770,7 @@ class _ComputeAPIUnitTestMixIn(object):
                      allow_cross_cell_resize=False):
 
         self.flags(allow_resize_to_same_host=allow_same_host)
+        mock_allow_resize_to_same_host.return_value = allow_same_host
 
         params = {}
         if project_id is not None:
@@ -1871,6 +1874,7 @@ class _ComputeAPIUnitTestMixIn(object):
             self.assertEqual(
                 allow_cross_cell_resize,
                 fake_spec.requested_destination.allow_cross_cell_move)
+            mock_allow_resize_to_same_host.assert_called_once()
 
         if host_name:
             mock_get_all_by_host.assert_called_once_with(

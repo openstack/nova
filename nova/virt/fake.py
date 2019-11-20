@@ -104,7 +104,7 @@ class FakeDriver(driver.ComputeDriver):
     capabilities = {
         "has_imagecache": True,
         "supports_evacuate": True,
-        "supports_migrate_to_same_host": True,
+        "supports_migrate_to_same_host": False,
         "supports_attach_interface": True,
         "supports_device_tagging": True,
         "supports_tagged_attach_interface": True,
@@ -700,6 +700,12 @@ class MediumFakeDriver(FakeDriver):
     vcpus = 10
     memory_mb = 8192
     local_gb = 1028
+
+
+class SameHostColdMigrateDriver(MediumFakeDriver):
+    """MediumFakeDriver variant that supports same-host cold migrate."""
+    capabilities = dict(FakeDriver.capabilities,
+                        supports_migrate_to_same_host=True)
 
 
 class PowerUpdateFakeDriver(SmallFakeDriver):

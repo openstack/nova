@@ -1,0 +1,18 @@
+---
+fixes:
+  - |
+    This release contains a fix for `bug 1748697`_ which distinguishes between
+    resize and cold migrate such that the ``allow_resize_to_same_host`` config
+    option is no longer used to determine if a server can be cold migrated to
+    the same compute service host. Now when requesting a cold migration the
+    API will check if the source compute node resource provider has the
+    ``COMPUTE_SAME_HOST_COLD_MIGRATE`` trait and if so the scheduler can select
+    the source host. Note that the only in-tree compute driver that supports
+    cold migration to the same host is ``VMwareVCDriver``.
+
+    To support rolling upgrades with N-1 computes if a node does not report the
+    trait and is old the API will fallback to the ``allow_resize_to_same_host``
+    config option value. That compatibility will be removed in a subsequent
+    release.
+
+    .. _bug 1748697: https://launchpad.net/bugs/1748697

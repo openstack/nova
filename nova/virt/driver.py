@@ -124,6 +124,9 @@ CAPABILITY_TRAITS_MAP = {
     "supports_image_type_vmdk": os_traits.COMPUTE_IMAGE_TYPE_VMDK,
     # Added in os-traits 2.0.0
     "supports_image_type_ploop": os_traits.COMPUTE_IMAGE_TYPE_PLOOP,
+
+    # Added in os-traits 2.1.0.
+    "supports_migrate_to_same_host": os_traits.COMPUTE_SAME_HOST_COLD_MIGRATE,
 }
 
 
