@@ -688,7 +688,7 @@ def compute_node_search_by_hypervisor(context, hypervisor_match):
 
 
 @pick_context_manager_writer
-def compute_node_create(context, values):
+def _compute_node_create(context, values):
     """Creates a new ComputeNode and populates the capacity fields
     with the most recent data.
     """
@@ -696,8 +696,21 @@ def compute_node_create(context, values):
 
     compute_node_ref = models.ComputeNode()
     compute_node_ref.update(values)
+    compute_node_ref.save(context.session)
+    return compute_node_ref
+
+
+# NOTE(mgoddard): We avoid decorating this with @pick_context_manager_writer,
+# so that we get a separate transaction in the exception handler. This avoids
+# an error message about inactive DB sessions during a transaction rollback.
+# See https://bugs.launchpad.net/nova/+bug/1853159.
+def compute_node_create(context, values):
+    """Creates a new ComputeNode and populates the capacity fields
+    with the most recent data. Will restore a soft deleted compute node if a
+    UUID has been explicitly requested.
+    """
     try:
-        compute_node_ref.save(context.session)
+        compute_node_ref = _compute_node_create(context, values)
     except db_exc.DBDuplicateEntry:
         with excutils.save_and_reraise_exception(logger=LOG) as err_ctx:
             # Check to see if we have a (soft) deleted ComputeNode with the

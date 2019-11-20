@@ -5257,6 +5257,22 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertRaises(db_exc.DBDuplicateEntry,
                           db.compute_node_create, self.ctxt, other_node)
 
+    def test_compute_node_create_duplicate_uuid(self):
+        """Tests to make sure that no exception is raised when trying to create
+        a compute node with the same host, hypervisor_hostname and uuid values
+        as another compute node that was previously soft-deleted.
+        """
+        # Prior to fixing https://bugs.launchpad.net/nova/+bug/1853159, this
+        # raised the following error:
+        # sqlalchemy.exc.InvalidRequestError: This session is in 'inactive'
+        # state, due to the SQL transaction being rolled back; no further SQL
+        # can be emitted within this transaction.
+        constraint = db.constraint(host=db.equal_any(self.item['host']))
+        sqlalchemy_api.compute_node_delete(
+            self.ctxt, self.item['id'], constraint=constraint)
+        new_node = db.compute_node_create(self.ctxt, self.compute_node_dict)
+        self.assertEqual(self.item['uuid'], new_node['uuid'])
+
     def test_compute_node_get_all(self):
         nodes = db.compute_node_get_all(self.ctxt)
         self.assertEqual(1, len(nodes))
