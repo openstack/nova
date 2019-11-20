@@ -80,7 +80,7 @@ oslo.context==2.21.0
 oslo.db==4.44.0
 oslo.i18n==3.15.3
 oslo.log==3.36.0
-oslo.messaging==7.0.0
+oslo.messaging==10.3.0
 oslo.middleware==3.31.0
 oslo.policy==1.38.0
 oslo.privsep==1.33.2
