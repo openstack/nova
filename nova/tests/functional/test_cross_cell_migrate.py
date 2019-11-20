@@ -15,6 +15,7 @@ import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.compute import instance_actions
+from nova import conf
 from nova import context as nova_context
 from nova.db import api as db_api
 from nova import exception
@@ -25,6 +26,8 @@ from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_notifier
 from nova.tests.unit.image import fake as fake_image
 from nova import utils
+
+CONF = conf.CONF
 
 
 class HostNameWeigher(weights.BaseHostWeigher):
@@ -69,6 +72,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         self.host_to_cell_mappings = {
             'host1': 'cell1', 'host2': 'cell2'}
 
+        self.cell_to_aggregate = {}
         for host in sorted(self.host_to_cell_mappings):
             cell_name = self.host_to_cell_mappings[host]
             # Start the compute service on the given host in the given cell.
@@ -79,6 +83,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
             # Add the host to the aggregate.
             body = {'add_host': {'host': host}}
             self.admin_api.post_aggregate_action(agg_id, body)
+            self.cell_to_aggregate[cell_name] = agg_id
 
     def _enable_cross_cell_resize(self):
         # Enable cross-cell resize policy since it defaults to not allow
@@ -812,10 +817,47 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         server = self._wait_for_state_change(server, 'VERIFY_RESIZE')
         self.assertEqual('host3', server['OS-EXT-SRV-ATTR:host'])
 
-    # TODO(mriedem): Add a variant of
-    # test_cold_migrate_cross_cell_weigher_stays_in_source_cell where the
-    # flavor being resized to is only available, via aggregate, on the host in
-    # the other cell so the CrossCellWeigher is overruled by the filters.
+    def test_resize_cross_cell_weigher_filtered_to_target_cell_by_spec(self):
+        """Variant of test_cold_migrate_cross_cell_weigher_stays_in_source_cell
+        but in this case the flavor used for the resize is restricted via
+        aggregate metadata to host2 in cell2 so even though normally host3 in
+        cell1 would be weigher higher the CrossCellWeigher is a no-op since
+        host3 is filtered out.
+        """
+        # Create the server first (should go in host1).
+        old_flavor = self.api.get_flavors()[0]
+        server = self._create_server(old_flavor)
+        # Start another compute host service in cell1.
+        self._start_compute(
+            'host3', cell_name=self.host_to_cell_mappings['host1'])
+        # Set foo=bar metadata on the cell2 aggregate.
+        self.admin_api.post_aggregate_action(
+            self.cell_to_aggregate['cell2'],
+            {'set_metadata': {'metadata': {'foo': 'bar'}}})
+        # Create a flavor to use for the resize which has the foo=bar spec.
+        new_flavor = {
+            'id': uuids.new_flavor,
+            'name': 'cell2-foo-bar-flavor',
+            'vcpus': old_flavor['vcpus'],
+            'ram': old_flavor['ram'],
+            'disk': old_flavor['disk']
+        }
+        self.admin_api.post_flavor({'flavor': new_flavor})
+        self.admin_api.post_extra_spec(new_flavor['id'],
+                                       {'extra_specs': {'foo': 'bar'}})
+        # Enable AggregateInstanceExtraSpecsFilter and restart the scheduler.
+        enabled_filters = CONF.filter_scheduler.enabled_filters
+        if 'AggregateInstanceExtraSpecsFilter' not in enabled_filters:
+            enabled_filters.append('AggregateInstanceExtraSpecsFilter')
+            self.flags(enabled_filters=enabled_filters,
+                       group='filter_scheduler')
+            self.scheduler_service.stop()
+            self.scheduler_service = self.start_service('scheduler')
+        # Now resize to the new flavor and it should go to host2 in cell2.
+        self.admin_api.post_server_action(
+            server['id'], {'resize': {'flavorRef': new_flavor['id']}})
+        server = self._wait_for_state_change(server, 'VERIFY_RESIZE')
+        self.assertEqual('host2', server['OS-EXT-SRV-ATTR:host'])
 
     # TODO(mriedem): Test a bunch of rollback scenarios.
 
