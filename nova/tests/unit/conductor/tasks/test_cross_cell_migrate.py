@@ -1351,7 +1351,9 @@ class RevertResizeTaskTestCase(test.NoDBTestCase, ObjectComparatorMixin):
             source_cell_instance)
         _update_instance_mapping.assert_called_once_with(
             source_cell_instance, source_cell_mapping)
-        # _source_cell_migration should have been set for rollbacks
+        # _source_cell_instance and _source_cell_migration should have been
+        # set for rollbacks
+        self.assertIs(self.task._source_cell_instance, source_cell_instance)
         self.assertIs(self.task._source_cell_migration,
                       mock.sentinel.source_cell_migration)
         # Cleanup at dest host.
@@ -1377,26 +1379,61 @@ class RevertResizeTaskTestCase(test.NoDBTestCase, ObjectComparatorMixin):
         # Refresh the source cell instance so we have the latest data.
         mock_inst_refresh.assert_called_once_with()
 
-    def test_rollback_target_cell(self):
+    @mock.patch('nova.conductor.tasks.cross_cell_migrate.RevertResizeTask.'
+                '_execute')
+    @mock.patch('nova.objects.RequestSpec.get_by_instance_uuid')
+    @mock.patch('nova.scheduler.utils.set_vm_state_and_notify')
+    def test_rollback_target_cell(
+            self, mock_set_state_notify, mock_get_reqspec, mock_execute):
         """Tests the case that we did not update the instance mapping
         so we set the target cell migration to error status.
         """
+        error = test.TestingException('zoinks!')
+        mock_execute.side_effect = error
         with mock.patch.object(self.task.migration, 'save') as mock_save:
-            self.task.rollback(test.TestingException('zoinks!'))
+            self.assertRaises(test.TestingException, self.task.execute)
         self.assertEqual('error', self.task.migration.status)
         mock_save.assert_called_once_with()
+        mock_get_reqspec.assert_called_once_with(
+            self.task.context, self.task.instance.uuid)
+        mock_set_state_notify.assert_called_once_with(
+            self.task.instance._context, self.task.instance.uuid,
+            'compute_task', 'migrate_server',
+            {'vm_state': vm_states.ERROR, 'task_state': None}, error,
+            mock_get_reqspec.return_value)
+        self.assertIn('The instance is mapped to the target cell',
+                      self.stdlog.logger.output)
 
-    def test_rollback_source_cell(self):
+    @mock.patch('nova.conductor.tasks.cross_cell_migrate.RevertResizeTask.'
+                '_execute')
+    @mock.patch('nova.objects.RequestSpec.get_by_instance_uuid')
+    @mock.patch('nova.scheduler.utils.set_vm_state_and_notify')
+    def test_rollback_source_cell(
+            self, mock_set_state_notify, mock_get_reqspec, mock_execute):
         """Tests the case that we did update the instance mapping
         so we set the source cell migration to error status.
         """
+        source_cell_instance = self._generate_source_cell_instance()
+        source_cell_context = source_cell_instance._context
+        self.task._source_cell_instance = source_cell_instance
         self.task._source_cell_migration = objects.Migration(
-            status='reverting')
+            source_cell_context, status='reverting', dest_compute='dest-host')
+        error = test.TestingException('jinkies!')
+        mock_execute.side_effect = error
         with mock.patch.object(self.task._source_cell_migration,
                                'save') as mock_save:
-            self.task.rollback(test.TestingException('jinkies!'))
+            self.assertRaises(test.TestingException, self.task.execute)
         self.assertEqual('error', self.task._source_cell_migration.status)
         mock_save.assert_called_once_with()
+        mock_get_reqspec.assert_called_once_with(
+            self.task.context, self.task.instance.uuid)
+        mock_set_state_notify.assert_called_once_with(
+            source_cell_context, source_cell_instance.uuid,
+            'compute_task', 'migrate_server',
+            {'vm_state': vm_states.ERROR, 'task_state': None}, error,
+            mock_get_reqspec.return_value)
+        self.assertIn('The instance is mapped to the source cell',
+                      self.stdlog.logger.output)
 
     @mock.patch('nova.compute.utils.notify_about_instance_usage')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
