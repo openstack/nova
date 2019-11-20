@@ -1319,6 +1319,14 @@ Configure virtio tx queue size.
 This option is only usable for virtio-net device with vhost-user
 backend. Available only with QEMU/KVM. Requires libvirt v3.7 QEMU
 v2.10."""),
+     cfg.IntOpt('max_queues', default=None, min=1, help="""
+The maximum number of virtio queue pairs that can be enabled
+when creating a multiqueue guest. The number of virtio queues
+allocated will be the lesser of the CPUs requested by the guest
+and the max value defined. By default, this value is set to none
+meaning the legacy limits based on the reported kernel
+major version will be used.
+"""),
 
 ]
 
