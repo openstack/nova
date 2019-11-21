@@ -935,6 +935,11 @@ class FinishResizeAtDestTaskTestCase(test.TestCase):
         source_instance = self._create_instance(
             self.source_context, create_instance_mapping=True,
             hidden=False)
+        # Create the instance action record in the source cell which is needed
+        # by the EventReporter.
+        objects.InstanceAction.action_start(
+            self.source_context, source_instance.uuid,
+            instance_actions.RESIZE, want_result=False)
         # Create the target cell instance which would normally be a clone of
         # the source cell instance but the only thing these tests care about
         # is that the UUID matches. The target cell instance is also hidden.
@@ -989,12 +994,10 @@ class FinishResizeAtDestTaskTestCase(test.TestCase):
         with test.nested(
             mock.patch.object(self.task.compute_rpcapi,
                               'finish_snapshot_based_resize_at_dest',
-                              side_effect=test.TestingException),
+                              side_effect=test.TestingException('oops')),
             mock.patch.object(self.task, '_copy_latest_fault'),
-            mock.patch.object(
-                self.task, '_copy_finish_snapshot_based_resize_at_dest_event'),
         ) as (
-            finish_resize, copy_fault, copy_event
+            finish_resize, copy_fault
         ):
             self.assertRaises(test.TestingException,
                               self.task._finish_snapshot_based_resize_at_dest)
@@ -1006,7 +1009,20 @@ class FinishResizeAtDestTaskTestCase(test.TestCase):
         # And the latest fault and instance action event should have been
         # copied from the target cell DB to the source cell DB.
         copy_fault.assert_called_once_with(self.source_context)
-        copy_event.assert_called_once_with(self.source_context)
+        # Assert the event was recorded in the source cell DB.
+        event_name = 'compute_finish_snapshot_based_resize_at_dest'
+        action = objects.InstanceAction.get_by_request_id(
+            source_instance._context, source_instance.uuid,
+            source_instance._context.request_id)
+        self.assertIsNotNone(action, 'InstanceAction not found.')
+        events = objects.InstanceActionEventList.get_by_action(
+            source_instance._context, action.id)
+        self.assertEqual(1, len(events), events)
+        self.assertEqual(event_name, events[0].event)
+        self.assertEqual('Error', events[0].result)
+        self.assertIn('_finish_snapshot_based_resize_at_dest',
+                      events[0].traceback)
+        self.assertEqual(self.task.migration.dest_compute, events[0].host)
         # Assert the instance mapping was never updated.
         mock_im_save.assert_not_called()
 
@@ -1037,74 +1053,6 @@ class FinishResizeAtDestTaskTestCase(test.TestCase):
         # The error should have been logged.
         mock_log.assert_called_once()
         self.assertIn('Failed to copy instance fault from target cell DB',
-                      mock_log.call_args[0][0])
-
-    @mock.patch('nova.conductor.tasks.cross_cell_migrate.LOG.warning')
-    def test_copy_finish_snapshot_based_resize_at_dest_event(self, mock_warn):
-        """Tests _copy_finish_snapshot_based_resize_at_dest_event working
-        without errors (but also warning cases).
-        """
-        # First run it without any action record created and we should get a
-        # warning logged that the action could not be found.
-        self.task._copy_finish_snapshot_based_resize_at_dest_event(
-            self.source_context)
-        mock_warn.assert_called_once()
-        self.assertIn('Failed to find InstanceAction by request_id',
-                      mock_warn.call_args[0][0])
-
-        # The source and target context must have the same request_id for this
-        # to work.
-        self.assertEqual(self.source_context.request_id,
-                         self.target_context.request_id)
-        # Create an action record in the source cell database. This is needed
-        # to find the action for the events when they get copied over.
-        src_action = objects.InstanceAction.action_start(
-            self.source_context, self.task.instance.uuid, 'resize')
-        # Create the same action in the target cell database.
-        objects.InstanceAction.action_start(
-            self.target_context, self.task.instance.uuid, 'resize')
-
-        # Now run it again without creating the underlying event record and
-        # we should log a warning that no event was found.
-        mock_warn.reset_mock()
-        self.task._copy_finish_snapshot_based_resize_at_dest_event(
-            self.source_context)
-        mock_warn.assert_called_once()
-        self.assertIn('Failed to find InstanceActionEvent',
-                      mock_warn.call_args[0][0])
-
-        # Generate the event in the target cell database.
-
-        @compute_utils.wrap_instance_event(prefix='compute')
-        def finish_snapshot_based_resize_at_dest(_self, context, instance):
-            raise test.TestingException('oops')
-        self.assertRaises(test.TestingException,
-                          finish_snapshot_based_resize_at_dest,
-                          mock.Mock(host='dest-host'),
-                          self.target_context, self.task.instance)
-
-        self.task._copy_finish_snapshot_based_resize_at_dest_event(
-            self.source_context)
-        # There should now be one InstanceActionEvent in the source cell DB.
-        src_events = objects.InstanceActionEventList.get_by_action(
-            self.source_context, src_action.id)
-        self.assertEqual(1, len(src_events))
-        self.assertEqual('compute_finish_snapshot_based_resize_at_dest',
-                         src_events[0].event)
-        self.assertEqual('Error', src_events[0].result)
-
-    @mock.patch('nova.conductor.tasks.cross_cell_migrate.LOG.exception')
-    @mock.patch('nova.objects.InstanceAction.get_by_request_id',
-                side_effect=test.TestingException)
-    def test_copy_finish_snapshot_based_resize_at_dest_event_error(
-            self, get_by_request_id, mock_log):
-        """Tests that _copy_finish_snapshot_based_resize_at_dest_event errors
-        are swallowed.
-        """
-        self.task._copy_finish_snapshot_based_resize_at_dest_event(
-            self.source_context)
-        mock_log.assert_called_once()
-        self.assertIn('Failed to copy %s instance action event from target',
                       mock_log.call_args[0][0])
 
 
