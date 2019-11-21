@@ -3355,6 +3355,20 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual({}, db.instance_metadata_get(ctxt, inst_uuid))
         self.assertEqual([], db.instance_tag_get_by_instance_uuid(
             ctxt, inst_uuid))
+
+        @sqlalchemy_api.pick_context_manager_reader
+        def _assert_instance_id_mapping(_ctxt):
+            # NOTE(mriedem): We can't use ec2_instance_get_by_uuid to assert
+            # the instance_id_mappings record is gone because it hard-codes
+            # read_deleted='yes' and will read the soft-deleted record. So we
+            # do the model_query directly here. See bug 1061166.
+            inst_id_mapping = sqlalchemy_api.model_query(
+                _ctxt, models.InstanceIdMapping).filter_by(
+                uuid=inst_uuid).first()
+            self.assertFalse(inst_id_mapping,
+                             'instance_id_mapping not deleted for '
+                             'instance: %s' % inst_uuid)
+        _assert_instance_id_mapping(ctxt)
         ctxt.read_deleted = 'yes'
         self.assertEqual(values['system_metadata'],
                          db.instance_system_metadata_get(ctxt, inst_uuid))
