@@ -79,7 +79,6 @@ profiling and benchmarking scenarios so not all changes are relevant here):
     DATABASE_PASSWORD=$ADMIN_PASSWORD
     RABBIT_PASSWORD=$ADMIN_PASSWORD
     SERVICE_PASSWORD=$ADMIN_PASSWORD
-    USE_PYTHON3=True
     VIRT_DRIVER=fake
     # You may use different numbers of fake computes, but be careful: 100 will
     # completely overwhelm a 16GB, 16VPCU server. In the test profiles below a
