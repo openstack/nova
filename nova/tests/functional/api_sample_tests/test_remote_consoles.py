@@ -15,6 +15,8 @@
 
 from nova.tests.functional.api_sample_tests import test_servers
 
+HTTP_RE = r'(https?://)([\w\d:#@%/;$()~_?\+-=\\.&](#!)?)*'
+
 
 class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
     microversion = None
@@ -33,18 +35,15 @@ class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
         response = self._do_post('servers/%s/action' % uuid,
                                  'get-vnc-console-post-req',
                                 {'action': 'os-getVNCConsole'})
-        subs = {"url":
-            "((https?):((//)|(\\\\))+([\\w\\d:#@%/;$()~_?\\+-=\\\\.&](#!)?)*)"}
-        self._verify_response('get-vnc-console-post-resp', subs, response, 200)
+        self._verify_response('get-vnc-console-post-resp', {'url': HTTP_RE},
+                              response, 200)
 
     def test_get_spice_console(self):
         uuid = self._post_server()
         response = self._do_post('servers/%s/action' % uuid,
                                  'get-spice-console-post-req',
                                 {'action': 'os-getSPICEConsole'})
-        subs = {"url":
-            "((https?):((//)|(\\\\))+([\\w\\d:#@%/;$()~_?\\+-=\\\\.&](#!)?)*)"}
-        self._verify_response('get-spice-console-post-resp', subs,
+        self._verify_response('get-spice-console-post-resp', {'url': HTTP_RE},
                               response, 200)
 
     def test_get_rdp_console(self):
@@ -52,9 +51,7 @@ class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
         response = self._do_post('servers/%s/action' % uuid,
                                  'get-rdp-console-post-req',
                                 {'action': 'os-getRDPConsole'})
-        subs = {"url":
-            "((https?):((//)|(\\\\))+([\\w\\d:#@%/;$()~_?\\+-=\\\\.&](#!)?)*)"}
-        self._verify_response('get-rdp-console-post-resp', subs,
+        self._verify_response('get-rdp-console-post-resp', {'url': HTTP_RE},
                               response, 200)
 
     def test_get_serial_console(self):
@@ -62,9 +59,7 @@ class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
         response = self._do_post('servers/%s/action' % uuid,
                                  'get-serial-console-post-req',
                                 {'action': 'os-getSerialConsole'})
-        subs = {"url":
-            "((https?):((//)|(\\\\))+([\\w\\d:#@%/;$()~_?\\+-=\\\\.&](#!)?)*)"}
-        self._verify_response('get-serial-console-post-resp', subs,
+        self._verify_response('get-serial-console-post-resp', {'url': HTTP_RE},
                               response, 200)
 
 
@@ -76,18 +71,14 @@ class ConsolesV26SampleJsonTests(test_servers.ServersSampleBase):
     # by appending '(v2_6)' in test_id.
     scenarios = [('v2_6', {'api_major_version': 'v2.1'})]
 
-    def setUp(self):
-        super(ConsolesV26SampleJsonTests, self).setUp()
-        self.http_regex = '(https?://)([\\w\\d:#@%/;$()~_?\\+-=\\\\.&](#!)?)*'
-
     def test_create_console(self):
         uuid = self._post_server()
 
         body = {'protocol': 'vnc', 'type': 'novnc'}
         response = self._do_post('servers/%s/remote-consoles' % uuid,
                                  'create-vnc-console-req', body)
-        subs = {"url": self.http_regex}
-        self._verify_response('create-vnc-console-resp', subs, response, 200)
+        self._verify_response('create-vnc-console-resp', {'url': HTTP_RE},
+                              response, 200)
 
 
 class ConsolesV28SampleJsonTests(test_servers.ServersSampleBase):
@@ -97,7 +88,6 @@ class ConsolesV28SampleJsonTests(test_servers.ServersSampleBase):
 
     def setUp(self):
         super(ConsolesV28SampleJsonTests, self).setUp()
-        self.http_regex = '(https?://)([\\w\\d:#@%/;$()~_?\\+-=\\\\.&](#!)?)*'
         self.flags(enabled=True, group='mks')
 
     def test_create_mks_console(self):
@@ -106,5 +96,5 @@ class ConsolesV28SampleJsonTests(test_servers.ServersSampleBase):
         body = {'protocol': 'mks', 'type': 'webmks'}
         response = self._do_post('servers/%s/remote-consoles' % uuid,
                                  'create-mks-console-req', body)
-        subs = {"url": self.http_regex}
-        self._verify_response('create-mks-console-resp', subs, response, 200)
+        self._verify_response('create-mks-console-resp', {'url': HTTP_RE},
+                              response, 200)
