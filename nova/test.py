@@ -48,6 +48,7 @@ from oslo_utils import timeutils
 from oslo_versionedobjects import fixture as ovo_fixture
 from oslotest import mock_fixture
 from oslotest import moxstubout
+from oslotest import output
 from oslotest import timeout
 import six
 from six.moves import builtins
@@ -192,8 +193,7 @@ class TestCase(testtools.TestCase):
         self.useFixture(fixtures.TempHomeDir())
         self.useFixture(log_fixture.get_logging_handle_error_fixture())
 
-        self.output = nova_fixtures.OutputStreamCapture()
-        self.useFixture(self.output)
+        self.output = self.useFixture(output.CaptureOutput())
 
         self.stdlog = nova_fixtures.StandardLogging()
         self.useFixture(self.stdlog)
