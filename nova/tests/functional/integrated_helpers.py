@@ -843,6 +843,18 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
             server, request=request, old_flavor=flavor, new_flavor=flavor,
             source_rp_uuid=source_rp_uuid, dest_rp_uuid=dest_rp_uuid)
 
+    def _resize_and_check_allocations(self, server, old_flavor, new_flavor,
+                                      source_rp_uuid, dest_rp_uuid):
+        request = {
+            'resize': {
+                'flavorRef': new_flavor['id']
+            }
+        }
+        self._move_and_check_allocations(
+            server, request=request, old_flavor=old_flavor,
+            new_flavor=new_flavor, source_rp_uuid=source_rp_uuid,
+            dest_rp_uuid=dest_rp_uuid)
+
     def _resize_to_same_host_and_check_allocations(self, server, old_flavor,
                                                    new_flavor, rp_uuid):
         # Resize the server to the same host and check usages in VERIFY_RESIZE
