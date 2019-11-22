@@ -24,7 +24,6 @@ from nova.policies import baremetal_nodes
 from nova.policies import base
 from nova.policies import console_auth_tokens
 from nova.policies import console_output
-from nova.policies import consoles
 from nova.policies import create_backup
 from nova.policies import deferred_delete
 from nova.policies import evacuate
@@ -85,7 +84,6 @@ def list_rules():
         baremetal_nodes.list_rules(),
         console_auth_tokens.list_rules(),
         console_output.list_rules(),
-        consoles.list_rules(),
         create_backup.list_rules(),
         deferred_delete.list_rules(),
         evacuate.list_rules(),

@@ -1,12 +1,15 @@
 .. -*- rst -*-
 
-===============================================================
- Server consoles (servers, os-consoles, os-console-auth-tokens)
-===============================================================
+==================================================
+ XenServer VNC Proxy (XVP) consoles (os-consoles)
+==================================================
 
-Manages server consoles.
+Manages server XVP consoles.
 
-.. note:: This is only used in Xenserver VNC Proxy.
+.. warning::
+
+   These APIs are only applicable when using the XenServer virt driver.
+   They were removed in the 21.0.0 (Ussuri) release.
 
 Lists Consoles
 ==============
@@ -17,7 +20,7 @@ Lists all consoles for a server.
 
 Normal response codes: 200
 
-Error response codes: unauthorized(401), forbidden(403)
+Error response codes: unauthorized(401), forbidden(403), gone(410)
 
 Request
 -------
@@ -53,7 +56,8 @@ Creates a console for a server.
 
 Normal response codes: 200
 
-Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
+gone(410)
 
 Request
 -------
@@ -77,7 +81,8 @@ Shows console details for a server.
 
 Normal response codes: 200
 
-Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
+gone(410)
 
 Request
 -------
@@ -117,7 +122,8 @@ Deletes a console for a server.
 
 Normal response codes: 202
 
-Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
+gone(410)
 
 Request
 -------
@@ -132,48 +138,3 @@ Response
 --------
 
 If successful, this method does not return a response body.
-
-
-Show Console Connection Information
-===================================
-
-.. rest_method:: GET /os-console-auth-tokens/{console_token}
-
-Given the console authentication token for a server,
-shows the related connection information.
-
-This method used to be available only for the ``rdp-html5`` console type before
-microversion 2.31. Starting from microversion 2.31 it's available for all
-console types.
-
-Normal response codes: 200
-
-Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-
-  - console_token: console_token
-
-|
-
-Response
---------
-
-.. rest_parameters:: parameters.yaml
-
-  - console: console
-  - instance_uuid: instance_id_body
-  - host: console_host
-  - port: port_number
-  - internal_access_path: internal_access_path
-
-|
-
-**Example Show Console Authentication Token**
-
-.. literalinclude:: ../../doc/api_samples/os-console-auth-tokens/get-console-connect-info-get-resp.json
-   :language: javascript

@@ -41,7 +41,6 @@ the `API guide <https://docs.openstack.org/api-guide/compute/index.html>`_.
 .. include:: os-aggregates.inc
 .. include:: os-assisted-volume-snapshots.inc
 .. include:: os-availability-zone.inc
-.. include:: os-consoles.inc
 .. include:: os-hypervisors.inc
 .. include:: os-instance-usage-audit-log.inc
 .. include:: os-migrations.inc
@@ -89,4 +88,5 @@ Compute API in the past, but no longer exist.
 .. include:: os-floating-ips-bulk.inc
 .. include:: os-floating-ip-dns.inc
 .. include:: os-cells.inc
+.. include:: os-consoles.inc
 .. include:: os-security-group-default-rules.inc
