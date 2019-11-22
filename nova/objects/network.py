@@ -103,11 +103,11 @@ class Network(obj_base.NovaPersistentObject, obj_base.NovaObject,
     def _from_db_object(context, network, db_network):
         for field in network.fields:
             db_value = db_network[field]
-            if field is 'netmask_v6' and db_value is not None:
+            if field == 'netmask_v6' and db_value is not None:
                 db_value = network._convert_legacy_ipv6_netmask(db_value)
-            if field is 'dhcp_server' and db_value is None:
+            if field == 'dhcp_server' and db_value is None:
                 db_value = db_network['gateway']
-            if field is 'share_address' and CONF.share_dhcp_address:
+            if field == 'share_address' and CONF.share_dhcp_address:
                 db_value = CONF.share_dhcp_address
 
             network[field] = db_value

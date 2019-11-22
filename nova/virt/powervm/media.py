@@ -76,7 +76,7 @@ class ConfigDrivePowerVM(object):
         # OVS is the only supported vif type. All others (SEA, PowerVM SR-IOV)
         # will default to generic vif.
         for vif in network_info:
-            if vif.get('type') is not 'ovs':
+            if vif.get('type') != 'ovs':
                 LOG.debug('Changing vif type from %(type)s to vif for vif '
                           '%(id)s.', {'type': vif.get('type'),
                                       'id': vif.get('id')})

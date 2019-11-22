@@ -49,7 +49,7 @@ class SecurityGroup(base.NovaPersistentObject, base.NovaObject):
     @staticmethod
     def _from_db_object(context, secgroup, db_secgroup):
         for field in secgroup.fields:
-            if field is not 'uuid':
+            if field != 'uuid':
                 setattr(secgroup, field, db_secgroup[field])
         secgroup._context = context
         secgroup.obj_reset_changes()

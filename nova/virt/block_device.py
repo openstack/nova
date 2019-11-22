@@ -333,7 +333,7 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                         '%(mp)s : %(err)s',
                         {'volume_id': volume_id, 'mp': mp,
                          'err': err}, instance=instance)
-        except exception.DeviceDetachFailed as err:
+        except exception.DeviceDetachFailed:
             with excutils.save_and_reraise_exception():
                 LOG.warning('Guest refused to detach volume %(vol)s',
                             {'vol': volume_id}, instance=instance)
