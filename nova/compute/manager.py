@@ -882,6 +882,25 @@ class ComputeManager(manager.Manager):
                     {'cpus': list(pinned_cpus)},
                     instance=instance)
 
+    def _reset_live_migration(self, context, instance):
+        migration = None
+        try:
+            migration = objects.Migration.get_by_instance_and_status(
+                                      context, instance.uuid, 'running')
+            if migration:
+                self.live_migration_abort(context, instance, migration.id)
+        except Exception:
+            LOG.exception('Failed to abort live-migration',
+                          instance=instance)
+        finally:
+            if migration:
+                self._set_migration_status(migration, 'error')
+            LOG.info('Instance found in migrating state during '
+                     'startup. Resetting task_state',
+                     instance=instance)
+            instance.task_state = None
+            instance.save(expected_task_state=[task_states.MIGRATING])
+
     def _init_instance(self, context, instance):
         """Initialize this instance during service init."""
 
@@ -1114,9 +1133,8 @@ class ComputeManager(manager.Manager):
                 instance.save()
         if instance.task_state == task_states.MIGRATING:
             # Live migration did not complete, but instance is on this
-            # host, so reset the state.
-            instance.task_state = None
-            instance.save(expected_task_state=[task_states.MIGRATING])
+            # host. Abort ongoing migration if still running and reset state.
+            self._reset_live_migration(context, instance)
 
         db_state = instance.power_state
         drv_state = self._get_power_state(context, instance)
