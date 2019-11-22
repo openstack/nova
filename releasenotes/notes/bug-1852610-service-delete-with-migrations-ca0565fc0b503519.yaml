@@ -1,0 +1,10 @@
+---
+fixes:
+  - |
+    The ``DELETE /os-services/{service_id}`` compute API will now return a
+    ``409 HTTPConflict`` response when trying to delete a ``nova-compute``
+    service which is involved in in-progress migrations. This is because doing
+    so would not only orphan the compute node resource provider in the
+    placement service on which those instances have resource allocations but
+    can also break the ability to confirm/revert a pending resize properly.
+    See https://bugs.launchpad.net/nova/+bug/1852610 for more details.

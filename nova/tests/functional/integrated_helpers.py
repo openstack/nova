@@ -941,3 +941,15 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
             self.api, server, instance_actions.CONFIRM_RESIZE,
             'compute_confirm_resize', 'success')
         return server
+
+    def _revert_resize(self, server):
+        self.api.post_server_action(server['id'], {'revertResize': None})
+        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_migration_status(server, ['reverted'])
+        # Note that the migration status is changed to "reverted" in the
+        # dest host revert_resize method but the allocations are cleaned up
+        # in the source host finish_revert_resize method so we need to wait
+        # for the finish_revert_resize method to complete.
+        fake_notifier.wait_for_versioned_notifications(
+            'instance.resize_revert.end')
+        return server
