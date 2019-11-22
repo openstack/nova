@@ -162,7 +162,7 @@ You can launch an instance from various sources.
 .. toctree::
    :maxdepth: 2
 
-   launch-instance-from-image.rst
-   launch-instance-from-volume.rst
-   launch-instance-using-ISO-image.rst
+   launch-instance-from-image
+   launch-instance-from-volume
+   launch-instance-using-ISO-image
 
