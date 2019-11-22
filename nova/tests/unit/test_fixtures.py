@@ -146,27 +146,6 @@ class TestLogging(testtools.TestCase):
         self.assertIn("at debug", stdlog.logger.output)
 
 
-class TestTimeout(testtools.TestCase):
-    """Tests for our timeout fixture.
-
-    Testing the actual timeout mechanism is beyond the scope of this
-    test, because it's a pretty clear pass through to fixtures'
-    timeout fixture, which tested in their tree.
-
-    """
-    def test_scaling(self):
-        # a bad scaling factor
-        self.assertRaises(ValueError, fixtures.Timeout, 1, 0.5)
-
-        # various things that should work.
-        timeout = fixtures.Timeout(10)
-        self.assertEqual(10, timeout.test_timeout)
-        timeout = fixtures.Timeout("10")
-        self.assertEqual(10, timeout.test_timeout)
-        timeout = fixtures.Timeout("10", 2)
-        self.assertEqual(20, timeout.test_timeout)
-
-
 class TestOSAPIFixture(testtools.TestCase):
     @mock.patch('nova.objects.Service.get_by_host_and_binary')
     @mock.patch('nova.objects.Service.create')
