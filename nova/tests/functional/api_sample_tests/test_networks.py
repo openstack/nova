@@ -39,8 +39,9 @@ def _fixtures_passthrough(method_name):
     return call
 
 
+# TODO(stephenfin): Remove the parts of this test that are nova-network only
 class NetworksJsonTests(api_sample_base.ApiSampleTestBaseV21):
-    USE_NEUTRON = False
+    USE_NEUTRON = False  # partially nova-net only
     ADMIN_API = True
     sample_dir = "os-networks"
 
@@ -59,21 +60,25 @@ class NetworksJsonTests(api_sample_base.ApiSampleTestBaseV21):
         self.stub_out("nova.network.api.API.add_network_to_project",
                       _fixtures_passthrough('add_network_to_project'))
 
+    # TODO(stephenfin): Rework this to work with neutron
     def test_network_list(self):
         response = self._do_get('os-networks')
         self._verify_response('networks-list-resp', {}, response, 200)
 
+    # TODO(stephenfin): Rework this to work with neutron
     def test_network_show(self):
         uuid = test_networks.FAKE_NETWORKS[0]['uuid']
         response = self._do_get('os-networks/%s' % uuid)
         self._verify_response('network-show-resp', {}, response, 200)
 
+    # TODO(stephenfin): Rework this to work with neutron
     @mock.patch('nova.network.api.API.get', side_effect=exception.Unauthorized)
     def test_network_show_token_expired(self, mock_get):
         uuid = test_networks.FAKE_NETWORKS[0]['uuid']
         response = self._do_get('os-networks/%s' % uuid)
         self.assertEqual(401, response.status_code)
 
+    # TODO(stephenfin): Remove this API since it's nova-network only
     @mock.patch('nova.network.api.API.create',
                 side_effect=exception.Forbidden)
     def test_network_create_forbidden(self, mock_create):
@@ -81,17 +86,20 @@ class NetworksJsonTests(api_sample_base.ApiSampleTestBaseV21):
                                  'network-create-req', {})
         self.assertEqual(403, response.status_code)
 
+    # TODO(stephenfin): Remove this API since it's nova-network only
     def test_network_create(self):
         response = self._do_post("os-networks",
                                  'network-create-req', {})
         self._verify_response('network-create-resp', {}, response, 200)
 
+    # TODO(stephenfin): Remove this API since it's nova-network only
     def test_network_add(self):
         response = self._do_post("os-networks/add",
                                  'network-add-req', {})
         self.assertEqual(202, response.status_code)
         self.assertEqual("", response.text)
 
+    # TODO(stephenfin): Remove this API since it's nova-network only
     def test_network_delete(self):
         response = self._do_delete('os-networks/always_delete')
         self.assertEqual(202, response.status_code)

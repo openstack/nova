@@ -122,6 +122,8 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
 
         super(ApiSampleTestBaseV21, self)._setup_services()
 
+        # TODO(stephenfin): Remove once we remove the few remaining
+        # nova-network-only APIs
         if not self.USE_NEUTRON:
             # self.network is only setup if USE_NEUTRON=False
             self.useFixture(test.SampleNetworks(host=self.network.host))
