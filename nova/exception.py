@@ -1164,10 +1164,6 @@ class SecurityGroupNotExistsForInstance(Invalid):
                 " the instance %(instance_id)s")
 
 
-class SecurityGroupDefaultRuleNotFound(Invalid):
-    msg_fmt = _("Security group default rule (%rule_id)s not found.")
-
-
 class SecurityGroupCannotBeApplied(Invalid):
     msg_fmt = _("Network requires port_security_enabled and subnet associated"
                 " in order to apply security groups.")

@@ -4116,18 +4116,6 @@ def _security_group_ensure_default(context):
                   'user_id': context.user_id,
                   'project_id': context.project_id}
         default_group = security_group_create(context, values)
-
-        default_rules = _security_group_rule_get_default_query(context).all()
-        for default_rule in default_rules:
-            # This is suboptimal, it should be programmatic to know
-            # the values of the default_rule
-            rule_values = {'protocol': default_rule.protocol,
-                           'from_port': default_rule.from_port,
-                           'to_port': default_rule.to_port,
-                           'cidr': default_rule.cidr,
-                           'parent_group_id': default_group.id,
-            }
-            _security_group_rule_create(context, rule_values)
     return default_group
 
 
@@ -4224,52 +4212,6 @@ def security_group_rule_count_by_group(context, security_group_id):
                    read_deleted="no").
                    filter_by(parent_group_id=security_group_id).
                    count())
-
-
-###################
-
-
-def _security_group_rule_get_default_query(context):
-    return model_query(context, models.SecurityGroupIngressDefaultRule)
-
-
-@require_context
-@pick_context_manager_reader
-def security_group_default_rule_get(context, security_group_rule_default_id):
-    result = _security_group_rule_get_default_query(context).\
-                        filter_by(id=security_group_rule_default_id).\
-                        first()
-
-    if not result:
-        raise exception.SecurityGroupDefaultRuleNotFound(
-                                        rule_id=security_group_rule_default_id)
-
-    return result
-
-
-@pick_context_manager_writer
-def security_group_default_rule_destroy(context,
-                                        security_group_rule_default_id):
-    count = _security_group_rule_get_default_query(context).\
-                        filter_by(id=security_group_rule_default_id).\
-                        soft_delete()
-    if count == 0:
-        raise exception.SecurityGroupDefaultRuleNotFound(
-                                    rule_id=security_group_rule_default_id)
-
-
-@pick_context_manager_writer
-def security_group_default_rule_create(context, values):
-    security_group_default_rule_ref = models.SecurityGroupIngressDefaultRule()
-    security_group_default_rule_ref.update(values)
-    security_group_default_rule_ref.save(context.session)
-    return security_group_default_rule_ref
-
-
-@require_context
-@pick_context_manager_reader
-def security_group_default_rule_list(context):
-    return _security_group_rule_get_default_query(context).all()
 
 
 ###################

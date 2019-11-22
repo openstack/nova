@@ -558,23 +558,3 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                    {'security_group_name': security_group_name,
                     'instance': instance.uuid})
             self.raise_not_found(msg)
-
-    def get_default_rule(self, context, id):
-        msg = _("Network driver does not support this function.")
-        raise exc.HTTPNotImplemented(explanation=msg)
-
-    def get_all_default_rules(self, context):
-        msg = _("Network driver does not support this function.")
-        raise exc.HTTPNotImplemented(explanation=msg)
-
-    def add_default_rules(self, context, vals):
-        msg = _("Network driver does not support this function.")
-        raise exc.HTTPNotImplemented(explanation=msg)
-
-    def remove_default_rules(self, context, rule_ids):
-        msg = _("Network driver does not support this function.")
-        raise exc.HTTPNotImplemented(explanation=msg)
-
-    def default_rule_exists(self, context, values):
-        msg = _("Network driver does not support this function.")
-        raise exc.HTTPNotImplemented(explanation=msg)

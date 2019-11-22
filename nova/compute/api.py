@@ -6365,40 +6365,6 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         # NOTE(vish): we removed some rules, so refresh
         self.trigger_rules_refresh(context, id=security_group['id'])
 
-    def remove_default_rules(self, context, rule_ids):
-        for rule_id in rule_ids:
-            self.db.security_group_default_rule_destroy(context, rule_id)
-
-    def add_default_rules(self, context, vals):
-        rules = [self.db.security_group_default_rule_create(context, v)
-                 for v in vals]
-        return rules
-
-    def default_rule_exists(self, context, values):
-        """Indicates whether the specified rule values are already
-           defined in the default security group rules.
-        """
-        for rule in self.db.security_group_default_rule_list(context):
-            keys = ('cidr', 'from_port', 'to_port', 'protocol')
-            for key in keys:
-                if rule.get(key) != values.get(key):
-                    break
-            else:
-                return rule.get('id') or True
-        return False
-
-    def get_all_default_rules(self, context):
-        try:
-            rules = self.db.security_group_default_rule_list(context)
-        except Exception:
-            msg = 'cannot get default security group rules'
-            raise exception.SecurityGroupDefaultRuleNotFound(msg)
-
-        return rules
-
-    def get_default_rule(self, context, id):
-        return self.db.security_group_default_rule_get(context, id)
-
     def validate_id(self, id):
         try:
             return int(id)
