@@ -346,8 +346,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-lock-server:unlock:unlock_override",
 "os_compute_api:os-migrate-server:migrate",
 "os_compute_api:os-migrate-server:migrate_live",
-"os_compute_api:os-networks",
-"os_compute_api:os-networks-associate",
 "os_compute_api:os-quota-sets:update",
 "os_compute_api:os-quota-sets:delete",
 "os_compute_api:os-server-diagnostics",
