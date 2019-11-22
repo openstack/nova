@@ -74,3 +74,5 @@
 /nova/latest/vendordata.html 301 /nova/latest/user/metadata.html
 /nova/latest/vmstates.html 301 /nova/latest/reference/vm-states.html
 /nova/latest/wsgi.html 301 /nova/latest/user/wsgi.html
+/nova/latest/admin/adv-config.html 301 /nova/latest/admin/index.html
+/nova/latest/admin/system-admin.html 301 /nova/latest/admin/index.html
