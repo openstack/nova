@@ -27,7 +27,9 @@ Keystone middleware is used to authenticate users and identify their roles.
 The Compute API uses these roles, along with oslo.policy, to decide
 what the user is authorized to do.
 
-.. todo:: link to compute admin guide for details.
+Refer to the to
+:nova-doc:`compute admin guide </admin/arch#projects-users-and-roles>`
+for details.
 
 Personas used in this guide
 ===========================
@@ -53,14 +55,12 @@ actions on any of them.
   various facets of the different users but instead aims to be a minimal set of
   users such that we use a consistent terminology throughout this document.
 
-.. todo::
-
-  could assign names to these users, or similar, to make it more "real".
-
 Discovering Policy
 ==================
 
 An API to discover what actions you are authorized to perform is still a work
-in progress. Currently this reported by a HTTP 403 error.
+in progress. Currently this reported by a HTTP 403
+:ref:`error <synchronous_faults>`.
 
-.. todo:: link to the doc on errors.
+Refer to the :nova-doc:`configuration guide </configuration/policy>` for a list
+of policy rules along with their default values.
