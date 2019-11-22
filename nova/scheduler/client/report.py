@@ -360,7 +360,6 @@ class SchedulerReportClient(object):
         LOG.error(msg, args)
         return None, None, None
 
-    @safe_connect
     def _get_provider_aggregates(self, context, rp_uuid):
         """Queries the placement API for a resource provider's aggregates.
 
