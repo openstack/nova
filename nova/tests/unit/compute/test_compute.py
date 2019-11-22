@@ -1355,6 +1355,17 @@ class ComputeVolumeTestCase(BaseTestCase):
                 self.compute.volume_snapshot_create, self.context,
                 self.instance_object, 'fake_id', {})
 
+    @mock.patch.object(compute_manager.LOG, 'debug')
+    def test_volume_snapshot_create_instance_not_running(self, mock_debug):
+        with mock.patch.object(self.compute.driver,
+                               'volume_snapshot_create') as mock_create:
+            exc = exception.InstanceNotRunning(instance_id=uuids.instance)
+            mock_create.side_effect = exc
+            self.compute.volume_snapshot_create(self.context,
+                self.instance_object, uuids.volume, {})
+            mock_debug.assert_called_once_with('Instance disappeared during '
+                'volume snapshot create', instance=self.instance_object)
+
     def test_volume_snapshot_delete(self):
         self.assertRaises(messaging.ExpectedException,
                 self.compute.volume_snapshot_delete, self.context,
@@ -1365,6 +1376,17 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertRaises(NotImplementedError,
                 self.compute.volume_snapshot_delete, self.context,
                 self.instance_object, uuids.volume, uuids.snapshot, {})
+
+    @mock.patch.object(compute_manager.LOG, 'debug')
+    def test_volume_snapshot_delete_instance_not_running(self, mock_debug):
+        with mock.patch.object(self.compute.driver,
+                               'volume_snapshot_delete') as mock_delete:
+            exc = exception.InstanceNotRunning(instance_id=uuids.instance)
+            mock_delete.side_effect = exc
+            self.compute.volume_snapshot_delete(self.context,
+                self.instance_object, uuids.volume, uuids.snapshot, {})
+            mock_debug.assert_called_once_with('Instance disappeared during '
+                'volume snapshot delete', instance=self.instance_object)
 
     @mock.patch.object(cinder.API, 'create',
                        side_effect=exception.OverQuota(overs='something'))
@@ -3518,6 +3540,15 @@ class ComputeTestCase(BaseTestCase,
             'active', instance_not_found, image_not_exist=True)
         self.assertFalse(self.fake_image_delete_called)
         mock_warning.assert_not_called()
+
+    def test_snapshot_fails_with_instance_not_running(self):
+        instance_not_running = exception.InstanceNotRunning(instance_id='uuid')
+        self._test_snapshot_deletes_image_on_failure(
+            'error', instance_not_running)
+        self.assertTrue(self.fake_image_delete_called)
+        self._test_snapshot_deletes_image_on_failure(
+            'active', instance_not_running)
+        self.assertFalse(self.fake_image_delete_called)
 
     def test_snapshot_handles_cases_when_instance_is_deleted(self):
         inst_obj = self._get_snapshotting_instance()
