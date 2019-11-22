@@ -78,7 +78,6 @@ responsibilities of services and drivers are:
 .. toctree::
    :maxdepth: 2
 
-   manage-users
    manage-volumes
    flavors
    default-ports
