@@ -116,6 +116,30 @@ command directly. Running ``stestr run`` will run the entire test suite.
 tests in parallel). More information about stestr can be found at:
 http://stestr.readthedocs.io/
 
+Since when testing locally, running the entire test suite on a regular
+basis is prohibitively expensive, the ``tools/run-tests-for-diff.sh``
+script is provided as a convenient way to run selected tests using
+output from ``git diff``.  For example, this allows running only the
+test files changed/added in the working tree::
+
+    tools/run-tests-for-diff.sh
+
+However since it passes its arguments directly to ``git diff``, tests
+can be selected in lots of other interesting ways, e.g. it can run all
+tests affected by a single commit at the tip of a given branch::
+
+    tools/run-tests-for-diff.sh mybranch^!
+
+or all those affected by a range of commits, e.g. a branch containing
+a whole patch series for a blueprint::
+
+    tools/run-tests-for-diff.sh gerrit/master..bp/my-blueprint
+
+It supports the same ``-HEAD`` invocation syntax as ``flake8wrap.sh``
+(as used by the ``fast8`` tox environment)::
+
+    tools/run-tests-for-diff.sh -HEAD
+
 By default tests log at ``INFO`` level. It is possible to make them
 log at ``DEBUG`` level by exporting the ``OS_DEBUG`` environment
 variable to ``True``.

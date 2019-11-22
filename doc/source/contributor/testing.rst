@@ -32,6 +32,13 @@ For details on plans to report the current test coverage, refer to
 Running tests and reporting results
 ===================================
 
+Running tests locally
+---------------------
+
+Please see
+https://opendev.org/openstack/nova/src/branch/master/HACKING.rst#running-tests
+
+
 Voting in Gerrit
 ----------------
 
