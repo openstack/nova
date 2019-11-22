@@ -34,7 +34,7 @@ EXTENDED_QUOTAS = ['server_groups', 'server_group_members']
 
 # NOTE(gmann): Network related quotas are filter out in
 # microversion 2.50. Bug#1701211.
-FILTERED_QUOTAS_2_50 = ["fixed_ips", "floating_ips", "networks",
+FILTERED_QUOTAS_2_50 = ["fixed_ips", "floating_ips",
                         "security_group_rules", "security_groups"]
 
 # Microversion 2.57 removes personality (injected) files from the API.

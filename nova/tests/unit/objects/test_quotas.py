@@ -248,13 +248,13 @@ class _TestQuotasObject(object):
         mock_get_all.return_value = {'project_id': 'fake-project',
                                      'fixed_ips': 20, 'floating_ips': 5}
         mock_get_all_main.return_value = {'project_id': 'fake-project',
-                                          'fixed_ips': 10, 'networks': 5}
+                                          'fixed_ips': 10}
         quotas_dict = quotas_obj.Quotas.get_all_by_project(self.context,
                                                            'fake-project')
         mock_get_all.assert_called_once_with(self.context, 'fake-project')
         mock_get_all_main.assert_called_once_with(self.context, 'fake-project')
         expected = {'project_id': 'fake-project', 'fixed_ips': 20,
-                    'floating_ips': 5, 'networks': 5}
+                    'floating_ips': 5}
         self.assertEqual(expected, quotas_dict)
 
     @mock.patch('nova.objects.Quotas._get_all_from_db_by_project_and_user')

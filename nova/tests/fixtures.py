@@ -46,7 +46,6 @@ from requests import adapters
 from sqlalchemy import exc as sqla_exc
 from wsgi_intercept import interceptor
 
-from nova.api.openstack.compute import tenant_networks
 from nova.api.openstack import wsgi_app
 from nova.api import wsgi
 from nova.compute import multi_cell_list
@@ -1229,18 +1228,6 @@ class AllServicesCurrent(fixtures.Fixture):
 
     def _fake_minimum(self, *args, **kwargs):
         return service_obj.SERVICE_VERSION
-
-
-class RegisterNetworkQuota(fixtures.Fixture):
-    def setUp(self):
-        super(RegisterNetworkQuota, self).setUp()
-        # Quota resource registration modifies the global QUOTAS engine, so
-        # this fixture registers and unregisters network quota for a test.
-        tenant_networks._register_network_quota()
-        self.addCleanup(self.cleanup)
-
-    def cleanup(self):
-        nova_quota.QUOTAS._resources.pop('networks', None)
 
 
 class _FakeNeutronClient(object):

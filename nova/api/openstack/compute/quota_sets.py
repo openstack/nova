@@ -37,7 +37,7 @@ from nova import quota
 CONF = nova.conf.CONF
 QUOTAS = quota.QUOTAS
 
-FILTERED_QUOTAS_2_36 = ["fixed_ips", "floating_ips", "networks",
+FILTERED_QUOTAS_2_36 = ["fixed_ips", "floating_ips",
                         "security_group_rules", "security_groups"]
 
 FILTERED_QUOTAS_2_57 = list(FILTERED_QUOTAS_2_36)
@@ -194,13 +194,11 @@ class QuotaSetsController(wsgi.Controller):
 
         quota_set = body['quota_set']
 
-        # NOTE(alex_xu): The CONF.enable_network_quota was deprecated
-        # due to it is only used by nova-network, and nova-network will be
-        # deprecated also. So when CONF.enable_newtork_quota is removed,
-        # the networks quota will disappeare also.
-        if not CONF.enable_network_quota and 'networks' in quota_set:
+        # NOTE(stephenfin): network quotas were only used by nova-network and
+        # therefore should be explicitly rejected
+        if 'networks' in quota_set:
             raise webob.exc.HTTPBadRequest(
-                explanation=_('The networks quota is disabled'))
+                explanation=_('The networks quota has been removed'))
 
         force_update = strutils.bool_from_string(quota_set.get('force',
                                                                'False'))
