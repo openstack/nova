@@ -28,13 +28,13 @@ Problems with current system
 
 The following is a list of issues with the existing policy enforcement system:
 
-* Default policies lack exhaustive testing
-* Mismatch between authoritative scope and resources
-* Policies are inconsistently named
-* Current defaults do not use default roles provided from keystone
-* Policy enforcement is spread across multiple levels and components
-* Some policies use hard-coded check strings
-* Some APIs do not use granular rules
+* `Testing default policies`_
+* `Mismatched authorization`_
+* `Inconsistent naming`_
+* `Incorporating default roles`_
+* `Compartmentalized policy enforcement`_
+* `Refactoring hard-coded permission checks`_
+* `Granular policy checks`_
 
 Addressing the list above helps operators by:
 
@@ -55,89 +55,124 @@ Additionally, the following is a list of benefits to contributors:
 3. Increased confidence in RBAC refactoring through exhaustive testing that
    prevents regressions before they merge
 
-Future of policy enforcement
-----------------------------
+Testing default policies
+------------------------
 
-The generic rule for all the improvement is keep V2 API back-compatible.
-Because V2 API may be deprecated after V2.1 parity with V2. This can reduce
-the risk we take. The improvement just for EC2 and V2.1 API. There isn't
-any user for V2.1, as it isn't ready yet. We have to do change for EC2 API.
-EC2 API won't be removed like v2 API. If we keep back-compatible for EC2 API
-also, the old compute api layer checks won't be removed forever. EC2 API is
-really small than Nova API. It's about 29 APIs without volume and image
-related(those policy check done by cinder and glance). So it will affect user
-less.
+Testing default policies is important in protecting against authoritative
+regression. Authoritative regression is when a change accidentally allows
+someone to do something or see something they shouldn't. It can also be when a
+change accidentally restricts a user from doing something they used to have the
+authorization to perform. This testing is especially useful prior to
+refactoring large parts of the policy system. For example, this level of
+testing would be invaluable prior to pulling policy enforcement logic from the
+database layer up to the API layer.
 
-Enforcement policy at REST API layer
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+`Testing documentation`_ exists that describes the process for developing these
+types of tests.
 
-The policy should be only enforced at REST API layer. This is clear for user
-to know where the policy will be enforced. If the policy spread into multiple
-layer of nova code, user won't know when and where the policy will be enforced
-if they didn't have knowledge about nova code.
+.. _Testing documentation: https://docs.openstack.org/keystone/latest/contributor/services.html#ruthless-testing
 
-Remove all the permission checking under REST API layer. Policy will only be
-enforced at REST API layer.
+Mismatched authorization
+------------------------
 
-This will affect the EC2 API and V2.1 API, there are some API just have policy
-enforcement at Compute/Network API layer, those policy will be move to API
-layer and renamed.
+The compute API is rich in functionality and has grown to manage both physical
+and virtual hardware. Some APIs were meant to assist operators while others
+were specific to end users. Historically, nova used project-scoped tokens to
+protect almost every API, regardless of the intended user. Using project-scoped
+tokens to authorize requests for system-level APIs makes for undesirable
+user-experience and is prone to overloading roles. For example, to prevent
+every user from accessing hardware level APIs that would otherwise violate
+tenancy requires operators to create a ``system-admin`` or ``super-admin``
+role, then rewrite those system-level policies to incorporate that role. This
+means users with that special role on a project could access system-level
+resources that aren't even tracked against projects (hypervisor information is
+an example of system-specific information.)
 
-Removes hard-code permission checks
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+As of the Queens release, keystone supports a scope type dedicated to easing
+this problem, called system scope. Consuming system scope across the compute
+API results in fewer overloaded roles, less specialized authorization logic in
+code, and simpler policies that expose more functionality to users without
+violating tenancy. Please refer to keystone's `authorization scopes
+documentation`_ to learn more about scopes and how to use them effectively.
 
-Hard-coded permission checks make it impossible to supply a configurable
-policy. They should be removed in order to make nova auth completely
-configurable.
+.. _authorization scopes documentation: https://docs.openstack.org/keystone/latest/contributor/services.html#authorization-scopes
 
-This will affect EC2 API and Nova V2.1 API. User need update their policy
-rule to match the old hard-code permission.
+Inconsistent naming
+-------------------
 
-For Nova V2 API, the hard-code permission checks will be moved to REST API
-layer to guarantee it won't break the back-compatibility. That may ugly
-some hard-code permission check in API layer, but V2 API will be removed
-once V2.1 API ready, so our choice will reduce the risk.
+Inconsistent conventions for policy names are scattered across most OpenStack
+services, nova included. Recently, there was an effort that introduced a
+convention that factored in service names, resources, and use cases. This new
+convention is applicable to nova policy names. The convention is formally
+`documented`_ in oslo.policy and we can use policy `deprecation tooling`_ to
+gracefully rename policies.
 
-Use different prefix in policy rule name for EC2/V2/V2.1 API
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. _documented: https://docs.openstack.org/oslo.policy/latest/user/usage.html#naming-policies
+.. _deprecation tooling: https://docs.openstack.org/oslo.policy/latest/reference/api/oslo_policy.policy.html#oslo_policy.policy.DeprecatedRule
 
-Currently all the APIs(Nova v2/v2.1 API, EC2 API) use same set of policy
-rules. Especially there isn't obvious mapping between those policy rules
-and EC2 API. User can know clearly which policy should be configured for
-specific API.
+Incorporating default roles
+---------------------------
 
-Nova should provide different prefix for policy rule name that used to
-group them, and put them in different policy configure file in policy.d
+Up until the Rocky release, keystone only ensured a single role called
+``admin``
+was available to the deployment upon installation. In Rocky, this support was
+expanded to include ``member`` and ``reader`` roles as first-class citizens during
+keystone's installation. This allows service developers to rely on these roles
+and include them in their default policy definitions. Standardizing on a set of
+role names for default policies increases interoperability between deployments
+and decreases operator overhead.
 
-* EC2 API: Use prefix "ec2_api". The rule looks like "ec2_api:[action]"
+You can find more information on default roles in the keystone `specification`_
+or `developer documentation`_.
 
-* Nova V2 API: After we move to V2.1, we needn't spend time to change V2
-  api rule, and needn't to bother deployer upgrade their policy config. So
-  just keep V2 API policy rule named as before.
+.. _specification: http://specs.openstack.org/openstack/keystone-specs/specs/keystone/rocky/define-default-roles.html
+.. _developer documentation: https://docs.openstack.org/keystone/latest/contributor/services.html#reusable-default-roles
 
-* Nova V2.1 API: We name the policy rule as
-  "os_compute_api:[extension]:[action]". The core API may be changed in
-  the future, so we needn't name them as "compute" or "compute_extension"
-  to distinguish the core or extension API.
+Compartmentalized policy enforcement
+------------------------------------
 
-This will affect EC2 API and V2.1 API. For EC2 API, it need deployer update
-their policy config. For V2.1 API, there isn't any user yet, so there won't
-any effect.
+Policy logic and processing is inherently sensitive and often complicated. It
+is sensitive in that coding mistakes can lead to security vulnerabilities. It
+is complicated in the resources and APIs it needs to protect and the vast
+number of use cases it needs to support. These reasons make a case for
+isolating policy enforcement and processing into a compartmentalized space, as
+opposed to policy logic bleeding through to different layers of nova. Not
+having all policy logic in a single place makes evolving the policy enforcement
+system arduous and makes the policy system itself fragile.
 
-Existed Nova API being restricted
----------------------------------
+Currently, the database and API components of nova contain policy logic. At
+some point, we should refactor these systems into a single component that is
+easier to maintain. Before we do this, we should consider approaches for
+bolstering testing coverage, which ensures we are aware of or prevent policy
+regressions. There are examples and documentation in API protection `testing
+guides`_.
 
-Nova provide default policy rules for all the APIs. Operator should only make
-the policy rule more permissive. If the Operator make the API to be restricted
-that make break the existed API user or application. That's kind of
-back-incompatible. SO Operator can free to add additional permission to the
-existed API.
+.. _testing guides: https://docs.openstack.org/keystone/latest/contributor/services.html#ruthless-testing
 
-Policy Enforcement by user_id
------------------------------
+Refactoring hard-coded permission checks
+----------------------------------------
 
-In the legacy v2 API, the policy enforces with target object, and some operators
-implement user-based authorization based on that. Actually only project-based
-authorization is well tested, the user based authorization is untested and
-isn't supported by Nova. In the future, the nova will remove all the supports
-for user-based authorization.
+The policy system in nova is designed to be configurable. Despite this design,
+there are some APIs that have hard-coded checks for specific roles. This makes
+configuration impossible, misleading, and frustrating for operators. Instead,
+we can remove hard-coded policies and ensure a configuration-driven approach,
+which reduces technical debt, increases consistency, and provides better
+user-experience for operators. Additionally, moving hard-coded checks into
+first-class policy rules let us use existing policy tooling to deprecate,
+document, and evolve policies.
+
+Granular policy checks
+----------------------
+
+Policies should be as granular as possible to ensure consistency and reasonable
+defaults. Using a single policy to protect CRUD for an entire API is
+restrictive because it prevents us from using default roles to make delegation
+to that API flexible. For example, a policy for ``compute:foobar`` could be
+broken into ``compute:foobar:create``, ``compute:foobar:update``,
+``compute:foobar:list``, ``compute:foobar:get``, and ``compute:foobar:delete``.
+Breaking policies down this way allows us to set read-only policies for
+readable operations or use another default role for creation and management of
+`foobar` resources. The oslo.policy library has `examples`_ that show how to do
+this using deprecated policy rules.
+
+.. _examples: https://docs.openstack.org/oslo.policy/latest/reference/api/oslo_policy.policy.html#oslo_policy.policy.DeprecatedRule
