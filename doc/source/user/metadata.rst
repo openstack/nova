@@ -427,8 +427,9 @@ You can place user data in a local file and pass it through the ``--user-data
 
 .. note::
 
-    The provided user data must be base64 encoded and is restricted to 65535
-    bytes.
+    The provided user data should not be base64-encoded, as it will be
+    automatically encoded in order to pass valid input to the REST
+    API, which has a limit of 65535 bytes after encoding.
 
 Once booted, you can access this data from the instance using either the
 metadata service or the config drive. To access it via the metadata service,
