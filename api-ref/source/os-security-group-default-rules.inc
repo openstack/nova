@@ -1,17 +1,15 @@
 .. -*- rst -*-
 
-.. NOTE(gmann): These APIs are deprecated so do not update this
-   file even body, example or parameters are not complete.
-
-================================================================================
- Rules for default security group (os-security-group-default-rules) (DEPRECATED)
-================================================================================
+====================================================================
+ Rules for default security group (os-security-group-default-rules)
+====================================================================
 
 .. warning::
 
    This API only available with ``nova-network`` which is
    deprecated. It should be avoided in any new applications.
    These will fail with a 404 starting from microversion 2.36.
+   They were completely removed in the 21.0.0 (Ussuri) release.
 
 Lists, shows information for, and creates default security group rules.
 
@@ -24,7 +22,8 @@ Lists default security group rules.
 
 Normal response codes: 200
 
-Error response codes: unauthorized(401), forbidden(403), itemNotFound(404), notImplemented(501)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
+gone(410), notImplemented(501)
 
 Response
 --------
@@ -53,7 +52,8 @@ Shows details for a security group rule.
 
 Normal response codes: 200
 
-Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404), notImplemented(501)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), gone(410), notImplemented(501)
 
 Request
 -------
@@ -92,7 +92,8 @@ IP protocol ( ``ip_protocol`` ) value. Otherwise, the operation returns the ``Ba
 
 Normal response codes: 200
 
-Error response codes: badRequest(400), unauthorized(401), forbidden(403), conflict(409), notImplemented(501)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+conflict(409), gone(410), notImplemented(501)
 
 Request
 -------
@@ -137,7 +138,8 @@ Deletes a security group rule.
 
 Normal response codes: 204
 
-Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404), notImplemented(501)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), gone(410), notImplemented(501)
 
 Request
 -------

@@ -15,29 +15,17 @@
 from nova.tests.functional.api_sample_tests import api_sample_base
 
 
-# TODO(stephenfin): Remove this API since it's nova-network only
 class SecurityGroupDefaultRulesSampleJsonTest(
         api_sample_base.ApiSampleTestBaseV21):
-    USE_NEUTRON = False  # nova-net only
-    ADMIN_API = True
-    sample_dir = 'os-security-group-default-rules'
 
     def test_security_group_default_rules_create(self):
-        response = self._do_post('os-security-group-default-rules',
-                                 'security-group-default-rules-create-req',
-                                 {})
-        self._verify_response('security-group-default-rules-create-resp',
-                              {}, response, 200)
+        self.api.api_post('os-security-group-default-rules', {},
+                          check_response_status=[410])
 
     def test_security_group_default_rules_list(self):
-        self.test_security_group_default_rules_create()
-        response = self._do_get('os-security-group-default-rules')
-        self._verify_response('security-group-default-rules-list-resp',
-                              {}, response, 200)
+        self.api.api_get('os-security-group-default-rules',
+                         check_response_status=[410])
 
     def test_security_group_default_rules_show(self):
-        self.test_security_group_default_rules_create()
-        rule_id = '1'
-        response = self._do_get('os-security-group-default-rules/%s' % rule_id)
-        self._verify_response('security-group-default-rules-show-resp',
-                              {}, response, 200)
+        self.api.api_get('os-security-group-default-rules/1',
+                         check_response_status=[410])

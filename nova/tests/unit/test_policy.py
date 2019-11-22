@@ -350,7 +350,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-networks-associate",
 "os_compute_api:os-quota-sets:update",
 "os_compute_api:os-quota-sets:delete",
-"os_compute_api:os-security-group-default-rules",
 "os_compute_api:os-server-diagnostics",
 "os_compute_api:os-services",
 "os_compute_api:os-shelve:shelve_offload",

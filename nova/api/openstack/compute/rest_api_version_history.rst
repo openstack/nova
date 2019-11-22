@@ -415,11 +415,25 @@ API endpoints as below::
   '/os-baremetal-nodes'
   '/os-fping'
 
-.. note:: A `regression`_ was introduced in this microversion which broke the
+.. note::
+
+    A `regression`__ was introduced in this microversion which broke the
     ``force`` parameter in the ``PUT /os-quota-sets`` API. The fix will have
     to be applied to restore this functionality.
 
-.. _regression: https://bugs.launchpad.net/nova/+bug/1733886
+    __ https://bugs.launchpad.net/nova/+bug/1733886
+
+.. versionchanged:: 18.0.0
+
+    The ``os-fping`` API was completely removed in the 18.0.0 (Rocky) release.
+    On deployments newer than this, the API will return HTTP 410 (Gone)
+    regardless of the requested microversion.
+
+.. versionchanged:: 21.0.0
+
+    The ``os-security-group-default-rules`` API was completely removed in the
+    21.0.0 (Ussuri) release. On deployments newer than this, the APIs will
+    return HTTP 410 (Gone) regadless of the requested microversion.
 
 2.37
 ----
