@@ -108,23 +108,27 @@ several key concepts:
 Networking Concepts
 -------------------
 
-In this section we focus on this related to networking.
+Networking is handled by the :neutron-doc:`networking service <>`. When working
+with a server in the compute service, the most important networking resource
+is a *port* which is part of a *network*. Ports can have *security groups*
+applied to control firewall access. Ports can also be linked to *floating IPs*
+for external network access depending on the networking service configuration.
 
--  **Port**
+When creating a server or attaching a network interface to an existing server,
+zero or more networks and/or ports can be specified to attach to the server.
+If nothing is provided, the compute service will by default create a port on
+the single network available to the project making the request. If more than
+one network is available to the project, such as a public external network and
+a private tenant network, an error will occur and the request will have to be
+made with a specific network or port. If a network is specified the compute
+service will attempt to create a port on the given network on behalf of the
+user. More advanced types of ports, such as
+:neutron-doc:`SR-IOV ports </admin/config-sriov>`, must be pre-created and
+provided to the compute service.
 
-   .. todo:: Add more details.
+Refer to the `network API reference`_ for more details.
 
--  **Floating IPs, Pools and DNS**
-
-   .. todo:: Add more details.
-
--  **Security Groups**
-
-   .. todo:: Add more details.
-
--  **Extended Networks**
-
-   .. todo:: Add more details.
+.. _network API reference: https://docs.openstack.org/api-ref/network/
 
 
 Administrator Concepts
