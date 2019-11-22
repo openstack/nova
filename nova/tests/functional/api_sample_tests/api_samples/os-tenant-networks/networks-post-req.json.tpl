@@ -1,9 +1,0 @@
-{
-    "network": {
-        "label": "public",
-        "cidr": "172.0.0.0/24",
-        "vlan_start": 1,
-        "num_networks": 1,
-        "network_size": 255
-    }
-}

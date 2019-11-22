@@ -1,10 +1,8 @@
 .. -*- rst -*-
-.. NOTE(gmann): These APIs are deprecated so do not update this
-   file even body, example or parameters are not complete.
 
-===================================================
+====================================================
  Project networks (os-tenant-networks) (DEPRECATED)
-===================================================
+====================================================
 
 .. warning::
 
@@ -57,7 +55,8 @@ through the ``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: badRequest(400), unauthorized(401), forbidden(403), conflict(409), serviceUnavailable(503)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+conflict(409), gone(410), serviceUnavailable(503)
 
 **Example Create Project Network: JSON request**
 
@@ -121,7 +120,8 @@ can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 202
 
-Error response codes: unauthorized(401), forbidden(403), itemNotFound(404), conflict(409)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
+conflict(409), gone(410)
 
 Request
 -------
