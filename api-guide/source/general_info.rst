@@ -276,30 +276,3 @@ on compute hosts rather than servers.
    Administrators are able to query the records in database for information
    about migrations. For example, they can determine the source and
    destination hosts, type of migration, or changes in the server's flavor.
-
-Relationship with Volume API
-============================
-
-Here we discuss about Cinder's API and how Nova users volume UUIDs.
-
-.. todo:: add more details.
-
-Relationship with Image API
-===========================
-
-Here we discuss about Glance's API and how Nova uses image UUIDs.
-We also discuss how Nova proxies setting image metadata.
-
-.. todo:: add more details.
-
-Interactions with neutron and nova-network (deprecated)
-=======================================================
-
-We talk about how networking can be provided be either neutron or
-nova-network (deprecated).
-
-Here we discuss about Neutron's API and how Nova users port UUIDs.
-We also discuss Nova automatically creating ports, proxying security groups,
-and proxying floating IPs. Also talk about the APIs we do not proxy.
-
-.. todo:: add more details.
