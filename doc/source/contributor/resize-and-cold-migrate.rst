@@ -109,10 +109,71 @@ Summary of differences
      - No
      - Yes (microversion >= 2.56)
 
-Sequence Diagram
-~~~~~~~~~~~~~~~~
+Sequence Diagrams
+~~~~~~~~~~~~~~~~~
 
-.. todo:: Add something like the :doc:`/reference/live-migration` diagram.
+The following diagrams are current as of the 21.0.0 (Ussuri) release.
+
+Resize
+------
+
+This is the sequence of calls to get the server to ``VERIFY_RESIZE`` status.
+
+.. seqdiag::
+
+    seqdiag {
+        API; Conductor; Scheduler; Source; Destination;
+        edge_length = 300;
+        span_height = 15;
+        activation = none;
+        default_note_color = white;
+
+        API -> Conductor [label = "cast", note = "resize_instance/migrate_server"];
+               Conductor => Scheduler [label = "call", note = "select_destinations"];
+               Conductor -> Destination [label = "cast", note = "prep_resize"];
+                   Source <- Destination [label = "cast", leftnote = "resize_instance"];
+                   Source -> Destination [label = "cast", note = "finish_resize"];
+    }
+
+Confirm resize
+--------------
+
+This is the sequence of calls when confirming `or deleting`_ a server in
+``VERIFY_RESIZE`` status.
+
+Note that in the below diagram, if confirming a resize while deleting a server
+the API synchronously calls the source compute service.
+
+.. seqdiag::
+
+    seqdiag {
+        API; Source;
+        edge_length = 300;
+        span_height = 15;
+        activation = none;
+        default_note_color = white;
+
+        API -> Source [label = "cast (or call if deleting)", note = "confirm_resize"];
+    }
+
+Revert resize
+-------------
+
+This is the sequence of calls when reverting a server in ``VERIFY_RESIZE``
+status.
+
+.. seqdiag::
+
+    seqdiag {
+        API; Source; Destination;
+        edge_length = 300;
+        span_height = 15;
+        activation = none;
+        default_note_color = white;
+
+        API -> Destination [label = "cast", note = "revert_resize"];
+               Source <- Destination [label = "cast", leftnote = "finish_revert_resize"];
+    }
 
 .. _resize API: https://docs.openstack.org/api-ref/compute/#resize-server-resize-action
 .. _cold migrate API: https://docs.openstack.org/api-ref/compute/#migrate-server-migrate-action
@@ -129,3 +190,4 @@ Sequence Diagram
 .. _migration-based allocations: https://specs.openstack.org/openstack/nova-specs/specs/queens/implemented/migration-allocations.html
 .. _dropped: https://opendev.org/openstack/nova/src/tag/19.0.0/nova/compute/manager.py#L4048
 .. _reverted: https://opendev.org/openstack/nova/src/tag/19.0.0/nova/compute/manager.py#L4233
+.. _or deleting: https://opendev.org/openstack/nova/src/tag/19.0.0/nova/compute/api.py#L2135
