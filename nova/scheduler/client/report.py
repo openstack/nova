@@ -590,8 +590,8 @@ class SchedulerReportClient(object):
         cache of resource provider information contains a record of:
         - The specified provider
         - All providers in its tree
-        - All providers associated via aggregate with all providers in said
-          tree
+        - All sharing providers associated via aggregate with all providers in
+          said tree
         and for each of those providers:
         - The UUIDs of its aggregates
         - The trait strings associated with the provider
