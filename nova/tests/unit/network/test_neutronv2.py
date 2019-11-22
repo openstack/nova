@@ -497,7 +497,6 @@ class _TestNeutronv2Common(test.TestCase):
                                     mock_refresh, mock_populate, net_idx=1,
                                     requested_networks=None, macs=None,
                                     exception=None,
-                                    get_client_admin_call=True,
                                     context=None,
                                     **kwargs):
         ctxt = context or self.context
@@ -651,12 +650,9 @@ class _TestNeutronv2Common(test.TestCase):
                 ctxt, self.instance, False, requested_networks,
                 macs=original_macs, bind_host_id=bind_host_id)
 
-        if get_client_admin_call:
-            mock_get_client.assert_has_calls([
-                mock.call(ctxt), mock.call(ctxt, admin=True)],
-                any_order=True)
-        else:
-            mock_get_client.assert_called_once_with(mock.ANY)
+        mock_get_client.assert_has_calls([
+            mock.call(ctxt), mock.call(ctxt, admin=True)],
+            any_order=True)
 
         mock_refresh.assert_not_called()
 
@@ -848,6 +844,10 @@ class TestNeutronv2Base(_TestNeutronv2Common):
         self._stub_allocate_for_instance_show_port(nets, ports, fixed_ips,
             macs, req_net_ids, ordered_networks, **kwargs)
 
+        neutronapi.get_client(
+            mox.IgnoreArg(), admin=True).AndReturn(
+            self.moxed_client)
+
         if kwargs.get('_break') == 'pre_list_networks':
             self.mox.ReplayAll()
             return api
@@ -870,10 +870,6 @@ class TestNeutronv2Base(_TestNeutronv2Common):
 
         self._stub_allocate_for_instance_create_port(
             ordered_networks, fixed_ips, nets)
-
-        neutronapi.get_client(
-            mox.IgnoreArg(), admin=True).AndReturn(
-            self.moxed_client)
 
         preexisting_port_ids = []
         ports_in_requested_net_order = []
@@ -1289,6 +1285,8 @@ class TestNeutronv2(TestNeutronv2Base):
             shared=False).AndReturn(
                 {'networks': model.NetworkInfo([])})
         neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
+        neutronapi.get_client(
+            mox.IgnoreArg(), admin=True).AndReturn(self.moxed_client)
         self.moxed_client.list_networks(shared=True).AndReturn(
             {'networks': model.NetworkInfo([])})
         self.mox.ReplayAll()
@@ -1380,6 +1378,8 @@ class TestNeutronv2(TestNeutronv2Base):
             objects=[objects.NetworkRequest(network_id=net['id'])
                      for net in (self.nets2[0], self.nets2[1])])
         neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
+        neutronapi.get_client(
+            mox.IgnoreArg(), admin=True).AndReturn(self.moxed_client)
         self.moxed_client.list_networks(
             id=[uuids.my_netid1, uuids.my_netid2]).AndReturn(
             {'networks': self.nets2})
@@ -1406,6 +1406,8 @@ class TestNeutronv2(TestNeutronv2Base):
                                                         **self.instance)
         api = neutronapi.API()
         neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
+        neutronapi.get_client(
+            mox.IgnoreArg(), admin=True).AndReturn(self.moxed_client)
         self.mox.StubOutWithMock(api, '_get_available_networks')
         # Make sure we get an empty list and then bail out of the rest
         # of the function
@@ -1437,6 +1439,8 @@ class TestNeutronv2(TestNeutronv2Base):
         self.instance = fake_instance.fake_instance_obj(self.context,
                                                         **self.instance)
         neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
+        neutronapi.get_client(
+            mox.IgnoreArg(), admin=True).AndReturn(self.moxed_client)
         # no networks in the tenant
         self.moxed_client.list_networks(
             tenant_id=self.instance.project_id,
@@ -1458,6 +1462,8 @@ class TestNeutronv2(TestNeutronv2Base):
         self.instance = fake_instance.fake_instance_obj(self.context,
                                                         **self.instance)
         neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
+        neutronapi.get_client(
+            mox.IgnoreArg(), admin=True).AndReturn(self.moxed_client)
         # network found in the tenant
         self.moxed_client.list_networks(
             tenant_id=self.instance.project_id,
@@ -3609,8 +3615,7 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
     def test_allocate_for_instance_2(self):
         # Allocate one port in two networks env.
         self._test_allocate_for_instance(
-            net_idx=2, exception=exception.NetworkAmbiguous,
-            get_client_admin_call=False)
+            net_idx=2, exception=exception.NetworkAmbiguous)
 
     @mock.patch('nova.network.neutronv2.api.API._unbind_ports')
     def test_allocate_for_instance_not_enough_macs_via_ports(self,
@@ -3650,8 +3655,7 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
 
     def test_allocate_for_instance_without_requested_networks(self):
         self._test_allocate_for_instance(
-            net_idx=3, exception=exception.NetworkAmbiguous,
-            get_client_admin_call=False)
+            net_idx=3, exception=exception.NetworkAmbiguous)
 
     def test_allocate_for_instance_with_invalid_network_id(self):
         requested_networks = objects.NetworkRequestList(
@@ -3660,7 +3664,6 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
         self._test_allocate_for_instance(net_idx=9,
             requested_networks=requested_networks,
             exception=exception.NetworkNotFound,
-            get_client_admin_call=False,
             _break='post_list_networks')
 
     def test_allocate_for_instance_port_in_use(self):
@@ -3670,7 +3673,6 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
         self._test_allocate_for_instance(
             requested_networks=requested_networks,
             exception=exception.PortInUse,
-            get_client_admin_call=False,
             _break='pre_list_networks', _device=True)
 
     def test_allocate_for_instance_port_not_found(self):
@@ -3680,7 +3682,6 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
         self._test_allocate_for_instance(
             requested_networks=requested_networks,
             exception=exception.PortNotFound,
-            get_client_admin_call=False,
             _break='pre_list_networks')
 
     def test_allocate_for_instance_port_invalid_tenantid(self):
@@ -3690,7 +3691,6 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
         self._test_allocate_for_instance(
             requested_networks=requested_networks,
             exception=exception.PortNotUsable,
-            get_client_admin_call=False,
             _break='pre_list_networks')
 
     def test_allocate_for_instance_with_externalnet_admin_ctx(self):
@@ -6764,6 +6764,9 @@ class TestAllocateForInstance(test.NoDBTestCase):
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0], {"id": uuids.created})
         self.assertEqual(result[1], {"id": uuids.preexist})
+
+        mock_validate_ports.assert_called_once_with(
+            self.context, self.instance, "admin", None, attach=False)
 
     def test_populate_mac_address_skip_if_none(self):
         api = neutronapi.API()
