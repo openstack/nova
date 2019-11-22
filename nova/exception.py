@@ -1203,33 +1203,8 @@ class ConsoleLogOutputException(NovaException):
                 "%(instance_id)s. Reason: %(reason)s")
 
 
-class ConsolePoolExists(NovaException):
-    msg_fmt = _("Console pool with host %(host)s, console_type "
-                "%(console_type)s and compute_host %(compute_host)s "
-                "already exists.")
-
-
-class ConsolePoolNotFoundForHostType(NotFound):
-    msg_fmt = _("Console pool of type %(console_type)s "
-                "for compute host %(compute_host)s "
-                "on proxy host %(host)s not found.")
-
-
-class ConsoleNotFound(NotFound):
-    msg_fmt = _("Console %(console_id)s could not be found.")
-
-
-class ConsoleNotFoundForInstance(ConsoleNotFound):
-    msg_fmt = _("Console for instance %(instance_uuid)s could not be found.")
-
-
 class ConsoleNotAvailable(NotFound):
     msg_fmt = _("Guest does not have a console available.")
-
-
-class ConsoleNotFoundInPoolForInstance(ConsoleNotFound):
-    msg_fmt = _("Console for instance %(instance_uuid)s "
-                "in pool %(pool_id)s could not be found.")
 
 
 class ConsoleTypeInvalid(Invalid):

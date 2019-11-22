@@ -3210,25 +3210,6 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
         db.virtual_interface_create(ctxt, {'instance_uuid': uuid})
 
-        pool_values = {
-            'address': '192.168.10.10',
-            'username': 'user1',
-            'password': 'passwd1',
-            'console_type': 'type1',
-            'public_hostname': 'public_host1',
-            'host': 'host1',
-            'compute_host': 'compute_host1',
-        }
-        console_pool = db.console_pool_create(ctxt, pool_values)
-        console_values = {
-            'instance_name': instance['name'],
-            'instance_uuid': uuid,
-            'password': 'pass',
-            'port': 7878,
-            'pool_id': console_pool['id']
-        }
-        db.console_create(self.ctxt, console_values)
-
         # Hard delete the instance
         db.instance_destroy(ctxt, uuid, hard_delete=True)
 
@@ -3260,10 +3241,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             _assert_instance_id_mapping(ctxt, self, uuid)
             self.assertRaises(exception.InstanceNotFound,
                               db.instance_destroy, ctxt, uuid)
-            # NOTE(ttsiouts): Should these also be valid?
-            # instance_consoles = db.console_get_all_by_instance(ctxt, uuid)
-            # self.assertEqual(0, len(instance_consoles))
-            # Also FixedIp has the instance_uuid as a foreign key
+            # NOTE(ttsiouts): FixedIp has the instance_uuid as a foreign key
 
     def test_check_instance_exists(self):
         instance = self.create_instance_with_args()
@@ -7916,207 +7894,6 @@ class CertificateTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._assertEqualObjects(self.created[1], cert[0])
 
 
-class ConsoleTestCase(test.TestCase, ModelsObjectComparatorMixin):
-
-    def setUp(self):
-        super(ConsoleTestCase, self).setUp()
-        self.ctxt = context.get_admin_context()
-        pools_data = [
-            {'address': '192.168.10.10',
-             'username': 'user1',
-             'password': 'passwd1',
-             'console_type': 'type1',
-             'public_hostname': 'public_host1',
-             'host': 'host1',
-             'compute_host': 'compute_host1',
-            },
-            {'address': '192.168.10.11',
-             'username': 'user2',
-             'password': 'passwd2',
-             'console_type': 'type2',
-             'public_hostname': 'public_host2',
-             'host': 'host2',
-             'compute_host': 'compute_host2',
-            },
-        ]
-        self.console_pools = [db.console_pool_create(self.ctxt, val)
-                         for val in pools_data]
-        instance_uuid = uuidsentinel.uuid1
-        db.instance_create(self.ctxt, {'uuid': instance_uuid})
-        self.console_data = [{'instance_name': 'name' + str(x),
-                              'instance_uuid': instance_uuid,
-                              'password': 'pass' + str(x),
-                              'port': 7878 + x,
-                              'pool_id': self.console_pools[x]['id']}
-                             for x in range(len(pools_data))]
-        self.consoles = [db.console_create(self.ctxt, val)
-                         for val in self.console_data]
-
-    def test_console_create(self):
-        ignored_keys = ['id', 'deleted', 'deleted_at', 'created_at',
-                        'updated_at']
-        for console in self.consoles:
-            self.assertIsNotNone(console['id'])
-        self._assertEqualListsOfObjects(self.console_data, self.consoles,
-                                        ignored_keys=ignored_keys)
-
-    def test_console_get_by_id(self):
-        console = self.consoles[0]
-        console_get = db.console_get(self.ctxt, console['id'])
-        self._assertEqualObjects(console, console_get,
-                                 ignored_keys=['pool'])
-
-    def test_console_get_by_id_uuid(self):
-        console = self.consoles[0]
-        console_get = db.console_get(self.ctxt, console['id'],
-                                     console['instance_uuid'])
-        self._assertEqualObjects(console, console_get,
-                                 ignored_keys=['pool'])
-
-    def test_console_get_by_pool_instance(self):
-        console = self.consoles[0]
-        console_get = db.console_get_by_pool_instance(self.ctxt,
-                            console['pool_id'], console['instance_uuid'])
-        self._assertEqualObjects(console, console_get,
-                                 ignored_keys=['pool'])
-
-    def test_console_get_all_by_instance(self):
-        instance_uuid = self.consoles[0]['instance_uuid']
-        consoles_get = db.console_get_all_by_instance(self.ctxt, instance_uuid)
-        self._assertEqualListsOfObjects(self.consoles, consoles_get)
-
-    def test_console_get_all_by_instance_with_pool(self):
-        instance_uuid = self.consoles[0]['instance_uuid']
-        consoles_get = db.console_get_all_by_instance(self.ctxt, instance_uuid,
-                                                      columns_to_join=['pool'])
-        self._assertEqualListsOfObjects(self.consoles, consoles_get,
-                                        ignored_keys=['pool'])
-        self._assertEqualListsOfObjects([pool for pool in self.console_pools],
-                                        [c['pool'] for c in consoles_get])
-
-    def test_console_get_all_by_instance_empty(self):
-        consoles_get = db.console_get_all_by_instance(self.ctxt,
-                                                uuidsentinel.uuid2)
-        self.assertEqual(consoles_get, [])
-
-    def test_console_delete(self):
-        console_id = self.consoles[0]['id']
-        db.console_delete(self.ctxt, console_id)
-        self.assertRaises(exception.ConsoleNotFound, db.console_get,
-                          self.ctxt, console_id)
-
-    def test_console_get_by_pool_instance_not_found(self):
-        self.assertRaises(exception.ConsoleNotFoundInPoolForInstance,
-                          db.console_get_by_pool_instance, self.ctxt,
-                          self.consoles[0]['pool_id'],
-                          uuidsentinel.uuid2)
-
-    def test_console_get_not_found(self):
-        self.assertRaises(exception.ConsoleNotFound, db.console_get,
-                          self.ctxt, 100500)
-
-    def test_console_get_not_found_instance(self):
-        self.assertRaises(exception.ConsoleNotFoundForInstance, db.console_get,
-                          self.ctxt, self.consoles[0]['id'],
-                          uuidsentinel.uuid2)
-
-
-class ConsolePoolTestCase(test.TestCase, ModelsObjectComparatorMixin):
-    def setUp(self):
-        super(ConsolePoolTestCase, self).setUp()
-
-        self.ctxt = context.get_admin_context()
-        self.test_console_pool_1 = {
-            'address': '192.168.2.10',
-            'username': 'user_1',
-            'password': 'secret_123',
-            'console_type': 'type_1',
-            'public_hostname': 'public_hostname_123',
-            'host': 'localhost',
-            'compute_host': '127.0.0.1',
-        }
-        self.test_console_pool_2 = {
-            'address': '192.168.2.11',
-            'username': 'user_2',
-            'password': 'secret_1234',
-            'console_type': 'type_2',
-            'public_hostname': 'public_hostname_1234',
-            'host': '127.0.0.1',
-            'compute_host': 'localhost',
-        }
-        self.test_console_pool_3 = {
-            'address': '192.168.2.12',
-            'username': 'user_3',
-            'password': 'secret_12345',
-            'console_type': 'type_2',
-            'public_hostname': 'public_hostname_12345',
-            'host': '127.0.0.1',
-            'compute_host': '192.168.1.1',
-        }
-
-    def test_console_pool_create(self):
-        console_pool = db.console_pool_create(
-            self.ctxt, self.test_console_pool_1)
-        self.assertIsNotNone(console_pool.get('id'))
-        ignored_keys = ['deleted', 'created_at', 'updated_at',
-                        'deleted_at', 'id']
-        self._assertEqualObjects(
-            console_pool, self.test_console_pool_1, ignored_keys)
-
-    def test_console_pool_create_duplicate(self):
-        db.console_pool_create(self.ctxt, self.test_console_pool_1)
-        self.assertRaises(exception.ConsolePoolExists, db.console_pool_create,
-                          self.ctxt, self.test_console_pool_1)
-
-    def test_console_pool_get_by_host_type(self):
-        params = [
-            self.test_console_pool_1,
-            self.test_console_pool_2,
-        ]
-
-        for p in params:
-            db.console_pool_create(self.ctxt, p)
-
-        ignored_keys = ['deleted', 'created_at', 'updated_at',
-                        'deleted_at', 'id', 'consoles']
-
-        cp = self.test_console_pool_1
-        db_cp = db.console_pool_get_by_host_type(
-            self.ctxt, cp['compute_host'], cp['host'], cp['console_type']
-        )
-        self._assertEqualObjects(cp, db_cp, ignored_keys)
-
-    def test_console_pool_get_by_host_type_no_resuls(self):
-        self.assertRaises(
-            exception.ConsolePoolNotFoundForHostType,
-            db.console_pool_get_by_host_type, self.ctxt, 'compute_host',
-            'host', 'console_type')
-
-    def test_console_pool_get_all_by_host_type(self):
-        params = [
-            self.test_console_pool_1,
-            self.test_console_pool_2,
-            self.test_console_pool_3,
-        ]
-        for p in params:
-            db.console_pool_create(self.ctxt, p)
-        ignored_keys = ['deleted', 'created_at', 'updated_at',
-                        'deleted_at', 'id', 'consoles']
-
-        cp = self.test_console_pool_2
-        db_cp = db.console_pool_get_all_by_host_type(
-            self.ctxt, cp['host'], cp['console_type'])
-
-        self._assertEqualListsOfObjects(
-            db_cp, [self.test_console_pool_2, self.test_console_pool_3],
-            ignored_keys)
-
-    def test_console_pool_get_all_by_host_type_no_results(self):
-        res = db.console_pool_get_all_by_host_type(
-            self.ctxt, 'cp_host', 'cp_console_type')
-        self.assertEqual([], res)
-
-
 class DnsdomainTestCase(test.TestCase):
 
     def setUp(self):
@@ -8455,9 +8232,6 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.dns_domains = models.DNSDomain.__table__
         self.shadow_dns_domains = sqlalchemyutils.get_table(
             self.engine, "shadow_dns_domains")
-        self.consoles = models.Console.__table__
-        self.shadow_consoles = sqlalchemyutils.get_table(
-            self.engine, "shadow_consoles")
         self.console_pools = models.ConsolePool.__table__
         self.shadow_console_pools = sqlalchemyutils.get_table(
             self.engine, "shadow_console_pools")
@@ -8812,41 +8586,6 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 self.skipTest(
                     'sqlite version too old for reliable SQLA foreign_keys')
             self.conn.execute("PRAGMA foreign_keys = ON")
-
-    def test_archive_deleted_rows_fk_constraint(self):
-        # consoles.pool_id depends on console_pools.id
-        self._check_sqlite_version_less_than_3_7()
-        ins_stmt = self.console_pools.insert().values(deleted=1,
-                                                deleted_at=timeutils.utcnow())
-        result = self.conn.execute(ins_stmt)
-        id1 = result.inserted_primary_key[0]
-        ins_stmt = self.consoles.insert().values(deleted=1,
-                                                deleted_at=timeutils.utcnow(),
-                                                pool_id=id1)
-        result = self.conn.execute(ins_stmt)
-        result.inserted_primary_key[0]
-        # The first try to archive console_pools should fail, due to FK.
-        num = sqlalchemy_api._archive_deleted_rows_for_table(self.metadata,
-                                                             "console_pools",
-                                                             max_rows=None,
-                                                             before=None)
-        self.assertEqual(num[0], 0)
-        # Then archiving consoles should work.
-        num = sqlalchemy_api._archive_deleted_rows_for_table(self.metadata,
-                                                             "consoles",
-                                                             max_rows=None,
-                                                             before=None)
-        self.assertEqual(num[0], 1)
-        # Then archiving console_pools should work.
-        num = sqlalchemy_api._archive_deleted_rows_for_table(self.metadata,
-                                                             "console_pools",
-                                                             max_rows=None,
-                                                             before=None)
-        self.assertEqual(num[0], 1)
-        self._assert_shadow_tables_empty_except(
-            'shadow_console_pools',
-            'shadow_consoles'
-        )
 
     def test_archive_deleted_rows_for_migrations(self):
         # migrations.instance_uuid depends on instances.uuid

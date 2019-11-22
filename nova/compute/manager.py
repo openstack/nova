@@ -69,7 +69,6 @@ from nova.compute.utils import wrap_instance_event
 from nova.compute import vm_states
 from nova import conductor
 import nova.conf
-from nova.console import rpcapi as console_rpcapi
 import nova.context
 from nova import exception
 from nova import exception_wrapper
@@ -1522,6 +1521,7 @@ class ComputeManager(manager.Manager):
         except exception.InstanceNotFound:
             return power_state.NOSTATE
 
+    # TODO(stephenfin): Remove this once we bump the compute API to v6.0
     def get_console_topic(self, context):
         """Retrieves the console host for a project on this host.
 
@@ -1529,7 +1529,7 @@ class ComputeManager(manager.Manager):
 
         """
         # TODO(mdragon): perhaps make this variable by console_type?
-        return '%s.%s' % (console_rpcapi.RPC_TOPIC, CONF.console_host)
+        return 'console.%s' % CONF.console_host
 
     @wrap_exception()
     def get_console_pool_info(self, context, console_type):

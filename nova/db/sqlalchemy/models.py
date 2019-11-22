@@ -1001,6 +1001,7 @@ class ConsolePool(BASE, NovaBase, models.SoftDeleteMixin):
     compute_host = Column(String(255))
 
 
+# TODO(stephenfin): Remove in V or later
 class Console(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a console session for an instance."""
     __tablename__ = 'consoles'

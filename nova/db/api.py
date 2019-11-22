@@ -1413,21 +1413,7 @@ def project_get_networks(context, project_id, associate=True):
     return IMPL.project_get_networks(context, project_id, associate)
 
 
-###################
-
-
-def console_pool_create(context, values):
-    """Create console pool."""
-    return IMPL.console_pool_create(context, values)
-
-
-def console_pool_get_by_host_type(context, compute_host, proxy_host,
-                                  console_type):
-    """Fetch a console pool for a given proxy host, compute host, and type."""
-    return IMPL.console_pool_get_by_host_type(context,
-                                              compute_host,
-                                              proxy_host,
-                                              console_type)
+##################
 
 
 def console_pool_get_all_by_host_type(context, host, console_type):
@@ -1436,31 +1422,6 @@ def console_pool_get_all_by_host_type(context, host, console_type):
                                                   host,
                                                   console_type)
 
-
-def console_create(context, values):
-    """Create a console."""
-    return IMPL.console_create(context, values)
-
-
-def console_delete(context, console_id):
-    """Delete a console."""
-    return IMPL.console_delete(context, console_id)
-
-
-def console_get_by_pool_instance(context, pool_id, instance_uuid):
-    """Get console entry for a given instance and pool."""
-    return IMPL.console_get_by_pool_instance(context, pool_id, instance_uuid)
-
-
-def console_get_all_by_instance(context, instance_uuid, columns_to_join=None):
-    """Get consoles for a given instance."""
-    return IMPL.console_get_all_by_instance(context, instance_uuid,
-                                            columns_to_join)
-
-
-def console_get(context, console_id, instance_uuid=None):
-    """Get a specific console (possibly on a given instance)."""
-    return IMPL.console_get(context, console_id, instance_uuid)
 
 ##################
 
