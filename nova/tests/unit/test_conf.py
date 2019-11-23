@@ -15,7 +15,6 @@
 import os
 import tempfile
 
-import fixtures
 import mock
 from oslo_config import cfg
 
@@ -42,7 +41,6 @@ class ConfTest(test.NoDBTestCase):
 
     def setUp(self):
         super(ConfTest, self).setUp()
-        self.useFixture(fixtures.NestedTempfile())
         self.conf = self.TestConfigOpts()
         self.tempdirs = []
 

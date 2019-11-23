@@ -46,10 +46,9 @@ from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from oslo_versionedobjects import fixture as ovo_fixture
+from oslotest import base
 from oslotest import mock_fixture
 from oslotest import moxstubout
-from oslotest import output
-from oslotest import timeout
 import six
 from six.moves import builtins
 import testtools
@@ -151,7 +150,7 @@ class NovaExceptionReraiseFormatError(object):
 NovaExceptionReraiseFormatError.patch()
 
 
-class TestCase(testtools.TestCase):
+class TestCase(base.BaseTestCase):
     """Test case base class for all unit tests.
 
     Due to the slowness of DB access, please consider deriving from
@@ -175,28 +174,21 @@ class TestCase(testtools.TestCase):
     # base class when USES_DB is True.
     NUMBER_OF_CELLS = 1
 
-    TIMEOUT_SCALING_FACTOR = 1
-
     def setUp(self):
         """Run before each test method to initialize test environment."""
-        super(TestCase, self).setUp()
-        # The Timeout fixture picks up env.OS_TEST_TIMEOUT, defaulting to 0.
-        self.useFixture(timeout.Timeout(
-            scaling_factor=self.TIMEOUT_SCALING_FACTOR))
+        # Ensure BaseTestCase's ConfigureLogging fixture is disabled since
+        # we're using our own (StandardLogging).
+        with fixtures.EnvironmentVariable('OS_LOG_CAPTURE', '0'):
+            super(TestCase, self).setUp()
 
         # How many of which service we've started. {$service-name: $count}
         self._service_fixture_count = collections.defaultdict(int)
 
         self.useFixture(nova_fixtures.OpenStackSDKFixture())
 
-        self.useFixture(fixtures.NestedTempfile())
-        self.useFixture(fixtures.TempHomeDir())
         self.useFixture(log_fixture.get_logging_handle_error_fixture())
 
-        self.output = self.useFixture(output.CaptureOutput())
-
-        self.stdlog = nova_fixtures.StandardLogging()
-        self.useFixture(self.stdlog)
+        self.stdlog = self.useFixture(nova_fixtures.StandardLogging())
 
         # NOTE(sdague): because of the way we were using the lock
         # wrapper we ended up with a lot of tests that started
