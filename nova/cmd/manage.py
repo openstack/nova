@@ -30,9 +30,7 @@ import sys
 import traceback
 
 from dateutil import parser as dateutil_parser
-import decorator
 from keystoneauth1 import exceptions as ks_exc
-import netaddr
 from neutronclient.common import exceptions as neutron_client_exc
 from oslo_config import cfg
 from oslo_db import exception as db_exc
@@ -40,7 +38,6 @@ from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
-from oslo_utils import importutils
 from oslo_utils import uuidutils
 import prettytable
 import six
@@ -67,19 +64,14 @@ from nova.objects import instance as instance_obj
 from nova.objects import instance_mapping as instance_mapping_obj
 from nova.objects import quotas as quotas_obj
 from nova.objects import virtual_interface as virtual_interface_obj
-from nova import quota
 from nova import rpc
 from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
-from nova import utils
 from nova import version
 from nova.virt import ironic
 
 CONF = nova.conf.CONF
-
 LOG = logging.getLogger(__name__)
-
-QUOTAS = quota.QUOTAS
 
 # Keep this list sorted and one entry per line for readability.
 _EXTRA_DEFAULT_LOG_LEVELS = ['oslo_concurrency=INFO',
@@ -104,268 +96,6 @@ def mask_passwd_in_url(url):
         parsed.path, parsed.params,
         parsed.query, parsed.fragment)
     return urlparse.urlunparse(new_parsed)
-
-
-class FloatingIpCommands(object):
-    """Class for managing floating IP."""
-
-    # TODO(stephenfin): Remove these when we remove cells v1
-    description = ('DEPRECATED: Floating IP commands are deprecated since '
-                   'nova-network is deprecated in favor of Neutron. The '
-                   'floating IP commands will be removed in an upcoming '
-                   'release.')
-
-    @staticmethod
-    def address_to_hosts(addresses):
-        """Iterate over hosts within an address range.
-
-        If an explicit range specifier is missing, the parameter is
-        interpreted as a specific individual address.
-        """
-        try:
-            return [netaddr.IPAddress(addresses)]
-        except ValueError:
-            net = netaddr.IPNetwork(addresses)
-            if net.size < 4:
-                reason = _("/%s should be specified as single address(es) "
-                           "not in cidr format") % net.prefixlen
-                raise exception.InvalidInput(reason=reason)
-            elif net.size >= 1000000:
-                # NOTE(dripton): If we generate a million IPs and put them in
-                # the database, the system will slow to a crawl and/or run
-                # out of memory and crash.  This is clearly a misconfiguration.
-                reason = _("Too many IP addresses will be generated.  Please "
-                           "increase /%s to reduce the number generated."
-                          ) % net.prefixlen
-                raise exception.InvalidInput(reason=reason)
-            else:
-                return net.iter_hosts()
-
-    @args('--ip_range', metavar='<range>', help='IP range')
-    @args('--pool', metavar='<pool>', help='Optional pool')
-    @args('--interface', metavar='<interface>', help='Optional interface')
-    def create(self, ip_range, pool=None, interface=None):
-        """Creates floating IPs for zone by range."""
-        admin_context = context.get_admin_context()
-        if not pool:
-            pool = CONF.default_floating_pool
-        if not interface:
-            interface = CONF.public_interface
-
-        ips = [{'address': str(address), 'pool': pool, 'interface': interface}
-               for address in self.address_to_hosts(ip_range)]
-        try:
-            db.floating_ip_bulk_create(admin_context, ips, want_result=False)
-        except exception.FloatingIpExists as exc:
-            # NOTE(simplylizz): Maybe logging would be better here
-            # instead of printing, but logging isn't used here and I
-            # don't know why.
-            print('error: %s' % exc)
-            return 1
-
-    @args('--ip_range', metavar='<range>', help='IP range')
-    def delete(self, ip_range):
-        """Deletes floating IPs by range."""
-        admin_context = context.get_admin_context()
-
-        ips = ({'address': str(address)}
-               for address in self.address_to_hosts(ip_range))
-        db.floating_ip_bulk_destroy(admin_context, ips)
-
-    @args('--host', metavar='<host>', help='Host')
-    def list(self, host=None):
-        """Lists all floating IPs (optionally by host).
-
-        Note: if host is given, only active floating IPs are returned
-        """
-        ctxt = context.get_admin_context()
-        try:
-            if host is None:
-                floating_ips = db.floating_ip_get_all(ctxt)
-            else:
-                floating_ips = db.floating_ip_get_all_by_host(ctxt, host)
-        except exception.NoFloatingIpsDefined:
-            print(_("No floating IP addresses have been defined."))
-            return
-        for floating_ip in floating_ips:
-            instance_uuid = None
-            if floating_ip['fixed_ip_id']:
-                fixed_ip = db.fixed_ip_get(ctxt, floating_ip['fixed_ip_id'])
-                instance_uuid = fixed_ip['instance_uuid']
-
-            print("%s\t%s\t%s\t%s\t%s" % (floating_ip['project_id'],
-                                          floating_ip['address'],
-                                          instance_uuid,
-                                          floating_ip['pool'],
-                                          floating_ip['interface']))
-
-
-@decorator.decorator
-def validate_network_plugin(f, *args, **kwargs):
-    """Decorator to validate the network plugin."""
-    if utils.is_neutron():
-        print(_("ERROR: Network commands are not supported when using the "
-                "Neutron API.  Use python-neutronclient instead."))
-        return 2
-    return f(*args, **kwargs)
-
-
-class NetworkCommands(object):
-    """Class for managing networks."""
-
-    # TODO(stephenfin): Remove these when we remove cells v1
-    description = ('DEPRECATED: Network commands are deprecated since '
-                   'nova-network is deprecated in favor of Neutron. The '
-                   'network commands will be removed in an upcoming release.')
-
-    @validate_network_plugin
-    @args('--label', metavar='<label>', help='Label for network (ex: public)')
-    @args('--fixed_range_v4', dest='cidr', metavar='<x.x.x.x/yy>',
-            help='IPv4 subnet (ex: 10.0.0.0/8)')
-    @args('--num_networks', metavar='<number>',
-            help='Number of networks to create')
-    @args('--network_size', metavar='<number>',
-            help='Number of IPs per network')
-    @args('--vlan', metavar='<vlan id>', help='vlan id')
-    @args('--vlan_start', dest='vlan_start', metavar='<vlan start id>',
-          help='vlan start id')
-    @args('--vpn', dest='vpn_start', help='vpn start')
-    @args('--fixed_range_v6', dest='cidr_v6',
-          help='IPv6 subnet (ex: fe80::/64')
-    @args('--gateway', help='gateway')
-    @args('--gateway_v6', help='ipv6 gateway')
-    @args('--bridge', metavar='<bridge>',
-            help='VIFs on this network are connected to this bridge')
-    @args('--bridge_interface', metavar='<bridge interface>',
-            help='the bridge is connected to this interface')
-    @args('--multi_host', metavar="<'T'|'F'>",
-            help='Multi host')
-    @args('--dns1', metavar="<DNS Address>", help='First DNS')
-    @args('--dns2', metavar="<DNS Address>", help='Second DNS')
-    @args('--uuid', metavar="<network uuid>", help='Network UUID')
-    @args('--fixed_cidr', metavar='<x.x.x.x/yy>',
-            help='IPv4 subnet for fixed IPs (ex: 10.20.0.0/16)')
-    @args('--project_id', metavar="<project id>",
-          help='Project id')
-    @args('--priority', metavar="<number>", help='Network interface priority')
-    def create(self, label=None, cidr=None, num_networks=None,
-               network_size=None, multi_host=None, vlan=None,
-               vlan_start=None, vpn_start=None, cidr_v6=None, gateway=None,
-               gateway_v6=None, bridge=None, bridge_interface=None,
-               dns1=None, dns2=None, project_id=None, priority=None,
-               uuid=None, fixed_cidr=None):
-        """Creates fixed IPs for host by range."""
-
-        # NOTE(gmann): These checks are moved here as API layer does all these
-        # validation through JSON schema.
-        if not label:
-            raise exception.NetworkNotCreated(req="label")
-        if len(label) > 255:
-            raise exception.LabelTooLong()
-        if not (cidr or cidr_v6):
-            raise exception.NetworkNotCreated(req="cidr or cidr_v6")
-
-        kwargs = {k: v for k, v in locals().items()
-                  if v and k != "self"}
-        if multi_host is not None:
-            kwargs['multi_host'] = multi_host == 'T'
-        net_manager = importutils.import_object(CONF.network_manager)
-        net_manager.create_networks(context.get_admin_context(), **kwargs)
-
-    @validate_network_plugin
-    def list(self):
-        """List all created networks."""
-        _fmt = "%-5s\t%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s"
-        print(_fmt % (_('id'),
-                          _('IPv4'),
-                          _('IPv6'),
-                          _('start address'),
-                          _('DNS1'),
-                          _('DNS2'),
-                          _('VlanID'),
-                          _('project'),
-                          _("uuid")))
-        try:
-            # Since network_get_all can throw exception.NoNetworksFound
-            # for this command to show a nice result, this exception
-            # should be caught and handled as such.
-            networks = db.network_get_all(context.get_admin_context())
-        except exception.NoNetworksFound:
-            print(_('No networks found'))
-        else:
-            for network in networks:
-                print(_fmt % (network.id,
-                              network.cidr,
-                              network.cidr_v6,
-                              network.dhcp_start,
-                              network.dns1,
-                              network.dns2,
-                              network.vlan,
-                              network.project_id,
-                              network.uuid))
-
-    @validate_network_plugin
-    @args('--fixed_range', metavar='<x.x.x.x/yy>', help='Network to delete')
-    @args('--uuid', metavar='<uuid>', help='UUID of network to delete')
-    def delete(self, fixed_range=None, uuid=None):
-        """Deletes a network."""
-        if fixed_range is None and uuid is None:
-            raise Exception(_("Please specify either fixed_range or uuid"))
-
-        net_manager = importutils.import_object(CONF.network_manager)
-
-        # delete the network
-        net_manager.delete_network(context.get_admin_context(),
-            fixed_range, uuid)
-
-    @validate_network_plugin
-    @args('--fixed_range', metavar='<x.x.x.x/yy>', help='Network to modify')
-    @args('--project', metavar='<project name>',
-            help='Project name to associate')
-    @args('--host', metavar='<host>', help='Host to associate')
-    @args('--disassociate-project', action="store_true", dest='dis_project',
-          default=False, help='Disassociate Network from Project')
-    @args('--disassociate-host', action="store_true", dest='dis_host',
-          default=False, help='Disassociate Host from Project')
-    def modify(self, fixed_range, project=None, host=None,
-               dis_project=None, dis_host=None):
-        """Associate/Disassociate Network with Project and/or Host
-        arguments: network project host
-        leave any field blank to ignore it
-        """
-        admin_context = context.get_admin_context()
-        network = db.network_get_by_cidr(admin_context, fixed_range)
-        net = {}
-        # User can choose the following actions each for project and host.
-        # 1) Associate (set not None value given by project/host parameter)
-        # 2) Disassociate (set None by disassociate parameter)
-        # 3) Keep unchanged (project/host key is not added to 'net')
-        if dis_project:
-            net['project_id'] = None
-        if dis_host:
-            net['host'] = None
-
-        # The --disassociate-X are boolean options, but if they user
-        # mistakenly provides a value, it will be used as a positional argument
-        # and be erroneously interpreted as some other parameter (e.g.
-        # a project instead of host value). The safest thing to do is error-out
-        # with a message indicating that there is probably a problem with
-        # how the disassociate modifications are being used.
-        if dis_project or dis_host:
-            if project or host:
-                error_msg = "ERROR: Unexpected arguments provided. Please " \
-                    "use separate commands."
-                print(error_msg)
-                return 1
-            db.network_update(admin_context, network['id'], net)
-            return
-
-        if project:
-            net['project_id'] = project
-        if host:
-            net['host'] = host
-
-        db.network_update(admin_context, network['id'], net)
 
 
 class DbCommands(object):
@@ -2666,8 +2396,6 @@ CATEGORIES = {
     'api_db': ApiDbCommands,
     'cell_v2': CellV2Commands,
     'db': DbCommands,
-    'floating': FloatingIpCommands,
-    'network': NetworkCommands,
     'placement': PlacementCommands
 }
 

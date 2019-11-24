@@ -43,3 +43,11 @@ upgrade:
 
     * ``enable_network_quota``
     * ``quota_networks``
+  - |
+    The following ``nova-manage`` commands have been removed.
+
+    * ``network``
+    * ``floating``
+
+    These were only useful for the now-removed *nova-network* service and have
+    been deprecated since the 15.0.0 (Ocata) release.
