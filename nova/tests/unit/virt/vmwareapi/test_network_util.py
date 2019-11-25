@@ -19,13 +19,11 @@ import collections
 import mock
 from oslo_vmware import vim_util
 
-from nova import exception
 from nova import test
 from nova.tests.unit.virt.vmwareapi import fake
 from nova.tests.unit.virt.vmwareapi import stubs
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import network_util
-from nova.virt.vmwareapi import vm_util
 
 
 ResultSet = collections.namedtuple('ResultSet', ['objects'])
@@ -155,59 +153,6 @@ class GetNetworkWithTheNameTestCase(test.NoDBTestCase):
                                                         'fake_net',
                                                         'fake_cluster')
             self.assertIsNotNone(res)
-
-
-class GetVlanIdAndVswitchForPortgroupTestCase(test.NoDBTestCase):
-
-    @mock.patch.object(vm_util, 'get_host_ref')
-    def test_no_port_groups(self, mock_get_host_ref):
-        session = mock.Mock()
-        session._call_method.return_value = None
-        self.assertRaises(
-            exception.NovaException,
-            network_util.get_vlanid_and_vswitch_for_portgroup,
-            session,
-            'port_group_name',
-            'fake_cluster'
-        )
-
-    @mock.patch.object(vm_util, 'get_host_ref')
-    def test_valid_port_group(self, mock_get_host_ref):
-        session = mock.Mock()
-        session._call_method.return_value = self._fake_port_groups()
-        vlanid, vswitch = network_util.get_vlanid_and_vswitch_for_portgroup(
-            session,
-            'port_group_name',
-            'fake_cluster'
-        )
-        self.assertEqual(vlanid, 100)
-        self.assertEqual(vswitch, 'vswitch_name')
-
-    @mock.patch.object(vm_util, 'get_host_ref')
-    def test_unknown_port_group(self, mock_get_host_ref):
-        session = mock.Mock()
-        session._call_method.return_value = self._fake_port_groups()
-        vlanid, vswitch = network_util.get_vlanid_and_vswitch_for_portgroup(
-            session,
-            'unknown_port_group',
-            'fake_cluster'
-        )
-        self.assertIsNone(vlanid)
-        self.assertIsNone(vswitch)
-
-    def _fake_port_groups(self):
-        port_group_spec = fake.DataObject()
-        port_group_spec.name = 'port_group_name'
-        port_group_spec.vlanId = 100
-        port_group_spec.vswitchName = 'vswitch_name'
-
-        port_group = fake.DataObject()
-        port_group.vswitch = 'vswitch_name'
-        port_group.spec = port_group_spec
-
-        response = fake.DataObject()
-        response.HostPortGroup = [port_group]
-        return response
 
 
 class GetDVSNetworkNameTestCase(test.NoDBTestCase):

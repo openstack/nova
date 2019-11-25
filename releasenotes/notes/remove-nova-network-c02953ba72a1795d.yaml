@@ -54,3 +54,9 @@ upgrade:
   - |
     The ``nova-dhcpbridge`` service has been removed. This was only used with
     the now-removed *nova-network* service.
+  - |
+    The following config options only applied when using the *nova-network*
+    network driver which has now been removed. The config options have
+    therefore been removed also.
+
+    * ``vmware.vlan_interface``

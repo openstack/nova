@@ -1022,25 +1022,6 @@ def get_machine_id_change_spec(client_factory, machine_id_str):
     return virtual_machine_config_spec
 
 
-def get_add_vswitch_port_group_spec(client_factory, vswitch_name,
-                                    port_group_name, vlan_id):
-    """Builds the virtual switch port group add spec."""
-    vswitch_port_group_spec = client_factory.create('ns0:HostPortGroupSpec')
-    vswitch_port_group_spec.name = port_group_name
-    vswitch_port_group_spec.vswitchName = vswitch_name
-
-    # VLAN ID of 0 means that VLAN tagging is not to be done for the network.
-    vswitch_port_group_spec.vlanId = int(vlan_id)
-
-    policy = client_factory.create('ns0:HostNetworkPolicy')
-    nicteaming = client_factory.create('ns0:HostNicTeamingPolicy')
-    nicteaming.notifySwitches = True
-    policy.nicTeaming = nicteaming
-
-    vswitch_port_group_spec.policy = policy
-    return vswitch_port_group_spec
-
-
 def get_vnc_config_spec(client_factory, port):
     """Builds the vnc config spec."""
     virtual_machine_config_spec = client_factory.create(

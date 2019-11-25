@@ -274,7 +274,6 @@ class VMwareVMOps(object):
                               metadata):
         vif_infos = vmwarevif.get_vif_info(self._session,
                                            self._cluster,
-                                           utils.is_neutron(),
                                            image_info.vif_model,
                                            network_info)
         LOG.debug('Instance VIF info %s', vif_infos, instance=instance)
@@ -1644,7 +1643,7 @@ class VMwareVMOps(object):
             constants.DEFAULT_VIF_MODEL)
         for vif in network_info:
             vif_info = vmwarevif.get_vif_dict(
-                self._session, cluster_ref, vif_model, utils.is_neutron(), vif)
+                self._session, cluster_ref, vif_model, vif)
             device = vmwarevif.get_network_device(hardware_devices,
                                                   vif['address'])
             devices.append(vm_util.update_vif_spec(client_factory, vif_info,
@@ -1905,7 +1904,7 @@ class VMwareVMOps(object):
                                               constants.DEFAULT_VIF_MODEL)
         vif_model = vm_util.convert_vif_model(vif_model)
         vif_info = vmwarevif.get_vif_dict(self._session, self._cluster,
-                                          vif_model, utils.is_neutron(), vif)
+                                          vif_model, vif)
         vm_ref = vm_util.get_vm_ref(self._session, instance)
         # Ensure that there is not a race with the port index management
         with lockutils.lock(instance.uuid,

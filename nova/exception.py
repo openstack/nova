@@ -573,19 +573,6 @@ class InvalidIpAddressError(Invalid):
     msg_fmt = _("%(address)s is not a valid IP v4/6 address.")
 
 
-class InvalidVLANTag(Invalid):
-    msg_fmt = _("VLAN tag is not appropriate for the port group "
-                "%(bridge)s. Expected VLAN tag is %(tag)s, "
-                "but the one associated with the port group is %(pgroup)s.")
-
-
-class InvalidVLANPortGroup(Invalid):
-    msg_fmt = _("vSwitch which contains the port group %(bridge)s is "
-                "not associated with the desired physical adapter. "
-                "Expected vSwitch is %(expected)s, but the one associated "
-                "is %(actual)s.")
-
-
 class InvalidDiskFormat(Invalid):
     msg_fmt = _("Disk format %(disk_format)s is not acceptable")
 
@@ -1258,15 +1245,6 @@ class ComputeHostMetricNotFound(NotFound):
 
 class FileNotFound(NotFound):
     msg_fmt = _("File %(file_path)s could not be found.")
-
-
-class SwitchNotFoundForNetworkAdapter(NotFound):
-    msg_fmt = _("Virtual switch associated with the "
-                "network adapter %(adapter)s not found.")
-
-
-class NetworkAdapterNotFound(NotFound):
-    msg_fmt = _("Network adapter %(adapter)s could not be found.")
 
 
 class ClassNotFound(NotFound):
