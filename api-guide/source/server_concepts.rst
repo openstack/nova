@@ -106,11 +106,17 @@ Status Transition:
 
 - ``BUILD``
 
-  .. todo:: Add more details.
+  While the server is building there are several task state transitions that
+  can occur:
+
+  - ``scheduling``: The request is being scheduled to a compute node.
+  - ``networking``: Setting up network interfaces asynchronously.
+  - ``block_device_mapping``: Preparing block devices (local disks, volumes).
+  - ``spawning``: Creating the guest in the hypervisor.
 
 - ``ACTIVE``
 
-  .. todo:: Add more details.
+  The terminal state for a successfully built and running server.
 
 - ``ERROR`` (on error)
 
