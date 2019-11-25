@@ -51,6 +51,10 @@ class RealPolicyFixture(fixtures.Fixture):
         CONF.set_override('policy_file', self.policy_file, group='oslo_policy')
         nova.policy.reset()
         nova.policy.init()
+        # NOTE(gmann): Logging all the deprecation warning for every unit
+        # test will overflow the log files and leads to error. Suppress
+        # the deprecation warning for tests only.
+        nova.policy._ENFORCER.suppress_deprecation_warnings = True
         self.addCleanup(nova.policy.reset)
 
     def set_rules(self, rules, overwrite=True):
