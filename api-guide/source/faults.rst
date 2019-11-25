@@ -137,6 +137,7 @@ In many cases there are also notifications emitted that describe the error.
 This is an administrator focused API, that works best when treated as
 structured logging.
 
+.. _synchronous_faults:
 
 Synchronous Faults
 ==================
