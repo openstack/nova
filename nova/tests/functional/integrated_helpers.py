@@ -408,7 +408,7 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         self.flags(compute_driver=self.compute_driver)
         super(ProviderUsageBaseTestCase, self).setUp()
 
-        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.policy = self.useFixture(policy_fixture.RealPolicyFixture())
         self.neutron = self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(nova_fixtures.AllServicesCurrent())
 
@@ -417,10 +417,10 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
 
         placement = self.useFixture(func_fixtures.PlacementFixture())
         self.placement_api = placement.api
-        api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
+        self.api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
 
-        self.admin_api = api_fixture.admin_api
+        self.admin_api = self.api_fixture.admin_api
         self.admin_api.microversion = self.microversion
         self.api = self.admin_api
 

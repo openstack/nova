@@ -6504,6 +6504,33 @@ class UnsupportedPortResourceRequestBasedSchedulingTest(
         self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
 
 
+class NonAdminUnsupportedPortResourceRequestBasedSchedulingTest(
+        UnsupportedPortResourceRequestBasedSchedulingTest):
+
+    def setUp(self):
+        super(
+            NonAdminUnsupportedPortResourceRequestBasedSchedulingTest,
+            self).setUp()
+        # switch to non admin api
+        self.api = self.api_fixture.api
+        self.api.microversion = self.microversion
+
+        # allow non-admin to call the operations
+        self.policy.set_rules({
+            'os_compute_api:os-evacuate': '@',
+            'os_compute_api:servers:create': '@',
+            'os_compute_api:servers:create:attach_network': '@',
+            'os_compute_api:servers:show': '@',
+            'os_compute_api:os-attach-interfaces': '@',
+            'os_compute_api:os-attach-interfaces:create': '@',
+            'os_compute_api:os-shelve:shelve': '@',
+            'os_compute_api:os-shelve:unshelve': '@',
+            'os_compute_api:os-migrate-server:migrate_live': '@',
+            'os_compute_api:os-migrate-server:migrate': '@',
+            'os_compute_api:servers:resize': '@',
+        })
+
+
 class PortResourceRequestBasedSchedulingTest(
         PortResourceRequestBasedSchedulingTestBase):
     """Tests creating a server with a pre-existing port that has a resource

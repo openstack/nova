@@ -909,7 +909,7 @@ class ServersController(wsgi.Controller):
         # extra API call to neutron when we support move operations with ports
         # having resource requests.
         if (common.instance_has_port_with_resource_request(
-                    context, instance_id, self.network_api) and not
+                    instance_id, self.network_api) and not
                 common.supports_port_resource_request_during_move(req)):
             msg = _("The resize action on a server with ports having "
                     "resource requests, like a port with a QoS minimum "
