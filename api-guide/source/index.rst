@@ -79,6 +79,7 @@ Contents
     general_info
     server_concepts
     authentication
+    extra_specs_and_properties
     faults
     limits
     links_and_references
@@ -87,8 +88,3 @@ Contents
     request_and_response_formats
     down_cells
     port_with_resource_request
-
-.. toctree::
-    :hidden:
-
-    extra_specs_and_properties

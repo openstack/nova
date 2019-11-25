@@ -285,6 +285,7 @@ pdf_documents = [
 # -- Options for openstackdocstheme -------------------------------------------
 
 openstack_projects = [
+    'glance',
     'nova',
     'neutron',
     'placement',
