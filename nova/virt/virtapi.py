@@ -21,6 +21,9 @@ class VirtAPI(object):
                                 error_callback=None):
         raise NotImplementedError()
 
+    def exit_wait_early(self, events):
+        raise NotImplementedError()
+
     def update_compute_provider_status(self, context, rp_uuid, enabled):
         """Used to add/remove the COMPUTE_STATUS_DISABLED trait on the provider
 

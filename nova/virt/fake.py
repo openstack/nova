@@ -666,6 +666,10 @@ class FakeVirtAPI(virtapi.VirtAPI):
         # fall through
         yield
 
+    def exit_wait_early(self, events):
+        # We never wait, so there is nothing to exit early
+        pass
+
     def update_compute_provider_status(self, context, rp_uuid, enabled):
         pass
 

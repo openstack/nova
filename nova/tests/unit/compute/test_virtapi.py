@@ -48,6 +48,9 @@ class VirtAPIBaseTest(test.NoDBTestCase, test.APICoverage):
         self.assertExpected('wait_for_instance_event',
                             'instance', ['event'])
 
+    def test_exit_wait_early(self):
+        self.assertExpected('exit_wait_early', [])
+
     def test_update_compute_provider_status(self):
         self.assertExpected('update_compute_provider_status',
                             nova_context.get_admin_context(), uuids.rp_uuid,
@@ -67,6 +70,8 @@ class FakeVirtAPITest(VirtAPIBaseTest):
             with self.virtapi.wait_for_instance_event(*args, **kwargs):
                 run = True
             self.assertTrue(run)
+        elif method == 'exit_wait_early':
+            self.virtapi.exit_wait_early(*args, **kwargs)
         elif method == 'update_compute_provider_status':
             self.virtapi.update_compute_provider_status(*args, **kwargs)
         else:
@@ -119,6 +124,12 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
     def set_up_virtapi(self):
         self.compute = FakeCompute()
         self.virtapi = compute_manager.ComputeVirtAPI(self.compute)
+
+    def test_exit_wait_early(self):
+        self.assertRaises(self.virtapi._exit_early_exc,
+                          self.virtapi.exit_wait_early,
+                          [('foo', 'bar'),
+                           ('foo', 'baz')])
 
     def test_wait_for_instance_event(self):
         and_i_ran = ''
@@ -181,6 +192,22 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
                 pass
 
         self.assertRaises(test.TestingException, do_test)
+
+    def test_wait_for_instance_event_exit_early(self):
+        # Wait for two events, exit early skipping one.
+        # Make sure we waited for one and did not wait for the other
+        with self.virtapi.wait_for_instance_event('instance',
+                                                  [('foo', 'bar'),
+                                                   ('foo', 'baz')]):
+            self.virtapi.exit_wait_early([('foo', 'baz')])
+            self.fail('never gonna happen')
+
+        self.assertEqual(2, len(self.compute._events))
+        for event in self.compute._events:
+            if event.tag == 'bar':
+                event.wait.assert_called_once_with()
+            else:
+                event.wait.assert_not_called()
 
     def test_update_compute_provider_status(self):
         """Tests scenarios for adding/removing the COMPUTE_STATUS_DISABLED

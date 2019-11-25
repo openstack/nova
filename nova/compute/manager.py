@@ -418,6 +418,22 @@ class ComputeVirtAPI(virtapi.VirtAPI):
         self._compute = compute
         self.reportclient = compute.reportclient
 
+        class ExitEarly(Exception):
+            def __init__(self, events):
+                super(Exception, self).__init__()
+                self.events = events
+
+        self._exit_early_exc = ExitEarly
+
+    def exit_wait_early(self, events):
+        """Exit a wait_for_instance_event() immediately and avoid
+        waiting for some events.
+
+        :param: events: A list of (name, tag) tuples for events that we should
+                        skip waiting for during a wait_for_instance_event().
+        """
+        raise self._exit_early_exc(events=events)
+
     def _default_error_callback(self, event_name, instance):
         raise exception.NovaException(_('Instance event failed'))
 
@@ -445,6 +461,17 @@ class ComputeVirtAPI(virtapi.VirtAPI):
         waiting for the rest of the events, False to stop processing,
         or raise an exception which will bubble up to the waiter.
 
+        If the inner code wishes to abort waiting for one or more
+        events because it knows some state to be finished or condition
+        to be satisfied, it can use VirtAPI.exit_wait_early() with a
+        list of event (name,tag) items to avoid waiting for those
+        events upon context exit. Note that exit_wait_early() exits
+        the context immediately and should be used to signal that all
+        work has been completed and provide the unified list of events
+        that need not be waited for. Waiting for the remaining events
+        will begin immediately upon early exit as if the context was
+        exited normally.
+
         :param instance: The instance for which an event is expected
         :param event_names: A list of event names. Each element is a
                             tuple of strings to indicate (name, tag),
@@ -471,12 +498,25 @@ class ComputeVirtAPI(virtapi.VirtAPI):
                 # should all be canceled and fired immediately below,
                 # but don't stick around if not.
                 deadline = 0
-        yield
+        try:
+            yield
+        except self._exit_early_exc as e:
+            early_events = set([objects.InstanceExternalEvent.make_key(n, t)
+                                for n, t in e.events])
+        else:
+            early_events = []
+
         with eventlet.timeout.Timeout(deadline):
             for event_name, event in events.items():
-                actual_event = event.wait()
-                if actual_event.status == 'completed':
+                if event_name in early_events:
                     continue
+                else:
+                    actual_event = event.wait()
+                    if actual_event.status == 'completed':
+                        continue
+                # If we get here, we have an event that was not completed,
+                # nor skipped via exit_wait_early(). Decide whether to
+                # keep waiting by calling the error_callback() hook.
                 decision = error_callback(event_name, instance)
                 if decision is False:
                     break
