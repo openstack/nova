@@ -285,7 +285,6 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
     """Unit tests for VM operations."""
     def setUp(self):
         super(XenAPIVMTestCase, self).setUp()
-        self.useFixture(test.SampleNetworks())
         self.network = importutils.import_object(CONF.network_manager)
         self.fixture = self.useFixture(config_fixture.Config(lockutils.CONF))
         self.fixture.config(disable_process_locking=True,
@@ -1133,65 +1132,6 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
 
         mock_inject_auto_disk_config.assert_called_once_with(instance,
                                                              mock.ANY)
-
-    @mock.patch.object(vmops.VMOps, '_create_vifs')
-    @mock.patch('nova.privsep.linux_net.add_bridge', return_value=('', ''))
-    @mock.patch('nova.privsep.linux_net.set_device_mtu')
-    @mock.patch('nova.privsep.linux_net.set_device_enabled')
-    @mock.patch('nova.privsep.linux_net.set_device_macaddr')
-    @mock.patch('nova.privsep.linux_net.change_ip')
-    @mock.patch('nova.privsep.linux_net.address_command_deprecated')
-    @mock.patch('nova.privsep.linux_net.ipv4_forwarding_check',
-                return_value=False)
-    @mock.patch('nova.privsep.linux_net._enable_ipv4_forwarding_inner')
-    @mock.patch('nova.privsep.linux_net.add_vlan')
-    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
-                return_value=('', ''))
-    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
-                return_value=('', ''))
-    @mock.patch('nova.privsep.linux_net.bridge_setfd')
-    @mock.patch('nova.privsep.linux_net.bridge_disable_stp')
-    @mock.patch('nova.privsep.linux_net.bridge_add_interface',
-                return_value=('', ''))
-    def test_spawn_vlanmanager(self, mock_bridge_add_interface,
-                               mock_bridge_disable_stp,
-                               mock_bridge_setfd,
-                               mock_iptables_set_rules,
-                               mock_iptables_get_rules,
-                               mock_add_vlan, mock_forwarding_enable,
-                               mock_forwarding_check,
-                               mock_address_command_horrid,
-                               mock_change_ip, mock_set_macaddr,
-                               mock_set_enabled, mock_set_mtu, mock_add_bridge,
-                               mock_create_vifs):
-        self.flags(network_manager='nova.network.manager.VlanManager',
-                   vlan_interface='fake0')
-        # Reset network table
-        xenapi_fake.reset_table('network')
-        # Instance 2 will use vlan network (see db/fakes.py)
-        ctxt = self.context.elevated()
-        inst2 = self._create_instance(False, obj=True)
-        networks = self.network.db.network_get_all(ctxt)
-        with mock.patch('nova.objects.network.Network._from_db_object'):
-            for network in networks:
-                self.network.set_network_host(ctxt, network)
-
-        self.network.allocate_for_instance(ctxt,
-                          instance_id=inst2.id,
-                          instance_uuid=inst2.uuid,
-                          host=CONF.host,
-                          vpn=None,
-                          rxtx_factor=3,
-                          project_id=self.project_id,
-                          macs=None)
-        self._test_spawn(IMAGE_MACHINE,
-                         IMAGE_KERNEL,
-                         IMAGE_RAMDISK,
-                         instance_id=inst2.id,
-                         create_record=False)
-        # TODO(salvatore-orlando): a complete test here would require
-        # a check for making sure the bridge for the VM's VIF is
-        # consistent with bridge specified in nova db
 
     def test_spawn_with_network_qos(self):
         self._create_instance()
