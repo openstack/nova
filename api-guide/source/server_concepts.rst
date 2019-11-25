@@ -798,28 +798,6 @@ time. One or more networks can be specified. User can also specify a
 specific port on the network or the fixed IP address to assign to the
 server interface.
 
-Considerations
-~~~~~~~~~~~~~~
-
--  The maximum limit refers to the number of bytes in the decoded data
-   and not the number of characters in the encoded data.
-
--  The maximum number of file path/content pairs that you can supply is
-   also determined by the compute provider and is defined by the
-   maxPersonality absolute limit.
-
--  The absolute limit, maxPersonalitySize, is a byte limit that is
-   guaranteed to apply to all images in the deployment. Providers can
-   set additional per-image personality limits.
-
--  The file injection might not occur until after the server is built and
-   booted.
-
--  After file injection, personality files are accessible by only system
-   administrators. For example, on Linux, all files have root and the root
-   group as the owner and group owner, respectively, and allow user and
-   group read access only (octal 440).
-
 Server access addresses
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1090,3 +1068,24 @@ Follow these guidelines when you inject files:
 -  Encode the file contents as a Base64 string. The maximum size of the
    file contents is determined by the compute provider and may vary
    based on the image that is used to create the server.
+
+Considerations:
+
+-  The maximum limit refers to the number of bytes in the decoded data
+   and not the number of characters in the encoded data.
+
+-  The maximum number of file path/content pairs that you can supply is
+   also determined by the compute provider and is defined by the
+   maxPersonality absolute limit.
+
+-  The absolute limit, maxPersonalitySize, is a byte limit that is
+   guaranteed to apply to all images in the deployment. Providers can
+   set additional per-image personality limits.
+
+-  The file injection might not occur until after the server is built and
+   booted.
+
+-  After file injection, personality files are accessible by only system
+   administrators. For example, on Linux, all files have root and the root
+   group as the owner and group owner, respectively, and allow user and
+   group read access only (octal 440).
