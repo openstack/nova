@@ -4658,6 +4658,34 @@ class TestNeutronv2(TestNeutronv2Base):
             "are required for ports with a resource request.",
             six.text_type(ex))
 
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_update_port_bindings_for_instance_with_resource_req_live_mig(
+            self, get_client_mock):
+
+        instance = fake_instance.fake_instance_obj(self.context)
+        fake_ports = {'ports': [
+            {'id': 'fake-port-1',
+             'binding:vnic_type': 'normal',
+             constants.BINDING_HOST_ID: 'old-host',
+             constants.BINDING_PROFILE:
+                 {'allocation': uuids.dest_compute_rp},
+             'resource_request': mock.sentinel.resource_request}]}
+        migration = objects.Migration(
+            status='confirmed', migration_type='live-migration')
+        list_ports_mock = mock.Mock(return_value=fake_ports)
+        get_client_mock.return_value.list_ports = list_ports_mock
+
+        # No mapping is passed in as during live migration the conductor
+        # already created the binding and added the allocation key
+        self.api._update_port_binding_for_instance(
+            self.context, instance, 'new-host', migration, {})
+
+        # Note that binding:profile is not updated
+        get_client_mock.return_value.update_port.assert_called_once_with(
+            'fake-port-1',
+            {'port': {'device_owner': 'compute:None',
+                      'binding:host_id': 'new-host'}})
+
     def test_get_pci_mapping_for_migration(self):
         instance = fake_instance.fake_instance_obj(self.context)
         instance.migration_context = objects.MigrationContext()

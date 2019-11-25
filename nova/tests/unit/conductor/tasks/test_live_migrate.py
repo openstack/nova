@@ -12,6 +12,7 @@
 
 import mock
 import oslo_messaging as messaging
+from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 import six
 
@@ -72,6 +73,13 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
         _p = mock.patch('nova.objects.RequestSpec.ensure_network_metadata')
         self.ensure_network_metadata_mock = _p.start()
+        self.addCleanup(_p.stop)
+
+        _p = mock.patch(
+            'nova.network.neutronv2.api.API.'
+            'get_requested_resource_for_instance',
+            return_value=[])
+        self.mock_get_res_req = _p.start()
         self.addCleanup(_p.stop)
 
     def _generate_task(self):
@@ -438,7 +446,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         mock_select.assert_called_once_with(self.context, self.fake_spec,
             [self.instance.uuid], return_objects=True, return_alternates=False)
         mock_check.assert_called_once_with('host1')
-        mock_call.assert_called_once_with('host1')
+        mock_call.assert_called_once_with('host1', {})
 
     @mock.patch.object(live_migrate.LiveMigrationTask,
                        '_call_livem_checks_on_host')
@@ -459,7 +467,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             self.context, self.fake_spec, [self.instance.uuid],
             return_objects=True, return_alternates=False)
         mock_check.assert_called_once_with('host1')
-        mock_call.assert_called_once_with('host1')
+        mock_call.assert_called_once_with('host1', {})
 
     @mock.patch.object(live_migrate.LiveMigrationTask,
                        '_remove_host_allocations')
@@ -486,7 +494,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             mock.call(self.context, self.fake_spec, [self.instance.uuid],
                       return_objects=True, return_alternates=False)])
         mock_check.assert_has_calls([mock.call('host1'), mock.call('host2')])
-        mock_call.assert_called_once_with('host2')
+        mock_call.assert_called_once_with('host2', {})
 
     def test_find_destination_retry_with_old_hypervisor(self):
         self._test_find_destination_retry_hypervisor_raises(
@@ -521,7 +529,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             mock.call(self.context, self.fake_spec, [self.instance.uuid],
                       return_objects=True, return_alternates=False)])
         mock_check.assert_has_calls([mock.call('host1'), mock.call('host2')])
-        mock_call.assert_has_calls([mock.call('host1'), mock.call('host2')])
+        mock_call.assert_has_calls(
+            [mock.call('host1', {}), mock.call('host2', {})])
 
     @mock.patch.object(live_migrate.LiveMigrationTask,
                        '_remove_host_allocations')
@@ -549,7 +558,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             mock.call(self.context, self.fake_spec, [self.instance.uuid],
                       return_objects=True, return_alternates=False)])
         mock_check.assert_has_calls([mock.call('host1'), mock.call('host2')])
-        mock_call.assert_has_calls([mock.call('host1'), mock.call('host2')])
+        mock_call.assert_has_calls(
+            [mock.call('host1', {}), mock.call('host2', {})])
 
     @mock.patch.object(objects.Migration, 'save')
     @mock.patch.object(live_migrate.LiveMigrationTask,
@@ -612,7 +622,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                                   side_effect=messaging.MessagingTimeout),
                 mock.patch.object(self.task, '_check_can_migrate_pci')):
             self.assertRaises(exception.MigrationPreCheckError,
-                              self.task._call_livem_checks_on_host, {})
+                              self.task._call_livem_checks_on_host, {}, {})
 
     def test_call_livem_checks_on_host_bind_ports(self):
         data = objects.LibvirtLiveMigrateData()
@@ -639,7 +649,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 network_model.VIF(uuids.port2)])
             self.instance.info_cache = objects.InstanceInfoCache(
                 network_info=nwinfo)
-            self.task._call_livem_checks_on_host('dest-host')
+            self.task._call_livem_checks_on_host('dest-host', {})
             # Assert the migrate_data set on the task based on the port
             # bindings created.
             self.assertIn('vifs', data)
@@ -650,6 +660,118 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 self.assertEqual(vif.port_id, vif.source_vif['id'])
 
         _test()
+
+    @mock.patch('nova.network.neutronv2.api.API.bind_ports_to_host')
+    def test_bind_ports_on_destination_merges_profiles(self, mock_bind_ports):
+        """Assert that if both the migration_data and the provider mapping
+        contains binding profile related information then such information is
+        merged in the resulting profile.
+        """
+
+        self.task.migrate_data = objects.LibvirtLiveMigrateData(
+            vifs=[
+                objects.VIFMigrateData(
+                    port_id=uuids.port1,
+                    profile_json=jsonutils.dumps(
+                        {'some-key': 'value'}))
+            ])
+        provider_mappings = {uuids.port1: [uuids.dest_bw_rp]}
+
+        self.task._bind_ports_on_destination('dest-host', provider_mappings)
+
+        mock_bind_ports.assert_called_once_with(
+            context=self.context, instance=self.instance, host='dest-host',
+            vnic_types=None,
+            port_profiles={uuids.port1: {'allocation': uuids.dest_bw_rp,
+                                         'some-key': 'value'}})
+
+    @mock.patch('nova.network.neutronv2.api.API.bind_ports_to_host')
+    def test_bind_ports_on_destination_migration_data(self, mock_bind_ports):
+        """Assert that if only the migration_data contains binding profile
+        related information then that is sent to neutron.
+        """
+
+        self.task.migrate_data = objects.LibvirtLiveMigrateData(
+            vifs=[
+                objects.VIFMigrateData(
+                    port_id=uuids.port1,
+                    profile_json=jsonutils.dumps(
+                        {'some-key': 'value'}))
+            ])
+        provider_mappings = {}
+
+        self.task._bind_ports_on_destination('dest-host', provider_mappings)
+
+        mock_bind_ports.assert_called_once_with(
+            context=self.context, instance=self.instance, host='dest-host',
+            vnic_types=None,
+            port_profiles={uuids.port1: {'some-key': 'value'}})
+
+    @mock.patch('nova.network.neutronv2.api.API.bind_ports_to_host')
+    def test_bind_ports_on_destination_provider_mapping(self, mock_bind_ports):
+        """Assert that if only the provider mapping contains binding
+        profile related information then that is sent to neutron.
+        """
+
+        self.task.migrate_data = objects.LibvirtLiveMigrateData(
+            vifs=[
+                objects.VIFMigrateData(
+                    port_id=uuids.port1)
+            ])
+        provider_mappings = {uuids.port1: [uuids.dest_bw_rp]}
+
+        self.task._bind_ports_on_destination('dest-host', provider_mappings)
+
+        mock_bind_ports.assert_called_once_with(
+            context=self.context, instance=self.instance, host='dest-host',
+            vnic_types=None,
+            port_profiles={uuids.port1: {'allocation': uuids.dest_bw_rp}})
+
+    @mock.patch(
+        'nova.compute.utils.'
+        'update_pci_request_spec_with_allocated_interface_name')
+    @mock.patch('nova.scheduler.utils.fill_provider_mapping')
+    @mock.patch.object(live_migrate.LiveMigrationTask,
+                       '_call_livem_checks_on_host')
+    @mock.patch.object(live_migrate.LiveMigrationTask,
+                       '_check_compatible_with_source_hypervisor')
+    @mock.patch.object(query.SchedulerQueryClient, 'select_destinations',
+                       return_value=[[fake_selection1]])
+    @mock.patch.object(objects.RequestSpec, 'reset_forced_destinations')
+    @mock.patch.object(scheduler_utils, 'setup_instance_group')
+    def test_find_destination_with_resource_request(
+            self, mock_setup, mock_reset, mock_select, mock_check, mock_call,
+            mock_fill_provider_mapping, mock_update_pci_req):
+        resource_req = [objects.RequestGroup(requester_id=uuids.port_id)]
+        self.mock_get_res_req.return_value = resource_req
+
+        self.assertEqual(("host1", "node1", fake_limits1),
+                         self.task._find_destination())
+
+        # Make sure the request_spec was updated to include the cell
+        # mapping.
+        self.assertIsNotNone(self.fake_spec.requested_destination.cell)
+        # Make sure the spec was updated to include the project_id.
+        self.assertEqual(self.fake_spec.project_id, self.instance.project_id)
+        # Make sure that requested_resources are added to the request spec
+        self.assertEqual(
+            resource_req, self.task.request_spec.requested_resources)
+
+        mock_setup.assert_called_once_with(self.context, self.fake_spec)
+        mock_reset.assert_called_once_with()
+        self.ensure_network_metadata_mock.assert_called_once_with(
+            self.instance)
+        self.heal_reqspec_is_bfv_mock.assert_called_once_with(
+            self.context, self.fake_spec, self.instance)
+        mock_select.assert_called_once_with(self.context, self.fake_spec,
+            [self.instance.uuid], return_objects=True, return_alternates=False)
+        mock_check.assert_called_once_with('host1')
+        mock_call.assert_called_once_with('host1', {uuids.port_id: []})
+        mock_fill_provider_mapping.assert_called_once_with(
+            self.task.request_spec, fake_selection1)
+        mock_update_pci_req.assert_called_once_with(
+            self.context, self.task.report_client, self.instance,
+            {uuids.port_id: []})
 
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid',
                        side_effect=exception.InstanceMappingNotFound(

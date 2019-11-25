@@ -257,7 +257,12 @@ class LiveMigrationTask(base.TaskBase):
         self._check_destination_has_enough_memory()
         source_node, dest_node = self._check_compatible_with_source_hypervisor(
             self.destination)
-        self._call_livem_checks_on_host(self.destination)
+        # NOTE(gibi): This code path is used when the live migration is forced
+        # to a target host and skipping the scheduler. Such operation is
+        # rejected for servers with nested resource allocations since
+        # I7cbd5d9fb875ebf72995362e0b6693492ce32051. So here we can safely
+        # assume that the provider mapping is empty.
+        self._call_livem_checks_on_host(self.destination, {})
         # Make sure the forced destination host is in the same cell that the
         # instance currently lives in.
         # NOTE(mriedem): This can go away if/when the forced destination host
@@ -316,7 +321,7 @@ class LiveMigrationTask(base.TaskBase):
             raise exception.DestinationHypervisorTooOld()
         return source_info, destination_info
 
-    def _call_livem_checks_on_host(self, destination):
+    def _call_livem_checks_on_host(self, destination, provider_mapping):
         self._check_can_migrate_pci(self.source, destination)
         try:
             self.migrate_data = self.compute_rpcapi.\
@@ -338,11 +343,25 @@ class LiveMigrationTask(base.TaskBase):
                 self.migrate_data.vifs = migrate_data_obj.VIFMigrateData.\
                     create_skeleton_migrate_vifs(
                     self.instance.get_network_info())
-            bindings = self._bind_ports_on_destination(destination)
+            bindings = self._bind_ports_on_destination(
+                destination, provider_mapping)
             self._update_migrate_vifs_from_bindings(self.migrate_data.vifs,
                                                     bindings)
 
-    def _bind_ports_on_destination(self, destination):
+    @staticmethod
+    def _get_port_profile_from_provider_mapping(port_id, provider_mappings):
+        if port_id in provider_mappings:
+            # NOTE(gibi): In the resource provider mapping there can be
+            # more than one RP fulfilling a request group. But resource
+            # requests of a Neutron port is always mapped to a
+            # numbered request group that is always fulfilled by one
+            # resource provider. So we only pass that single RP UUID
+            # here.
+            return {'allocation': provider_mappings[port_id][0]}
+        else:
+            return {}
+
+    def _bind_ports_on_destination(self, destination, provider_mappings):
         LOG.debug('Start binding ports on destination host: %s', destination,
                   instance=self.instance)
         # Bind ports on the destination host; returns a dict, keyed by
@@ -355,15 +374,18 @@ class LiveMigrationTask(base.TaskBase):
             # if that is the case, it may have updated the required port
             # profile for the destination node (e.g new PCI address if SR-IOV)
             # perform port binding against the requested profile
-            migrate_vifs_with_profile = [mig_vif for mig_vif in
-                                         self.migrate_data.vifs
-                                         if 'profile_json' in mig_vif]
-
-            ports_profile = None
-            if migrate_vifs_with_profile:
-                # Update to the port profile is required
-                ports_profile = {mig_vif.port_id: mig_vif.profile
-                                 for mig_vif in migrate_vifs_with_profile}
+            ports_profile = {}
+            for mig_vif in self.migrate_data.vifs:
+                profile = mig_vif.profile if 'profile_json' in mig_vif else {}
+                # NOTE(gibi): provider_mappings also contribute to the
+                # binding profile of the ports if the port has resource
+                # request. So we need to merge the profile information from
+                # both sources.
+                profile.update(
+                    self._get_port_profile_from_provider_mapping(
+                        mig_vif.port_id, provider_mappings))
+                if profile:
+                    ports_profile[mig_vif.port_id] = profile
 
             bindings = self.network_api.bind_ports_to_host(
                 context=self.context, instance=self.instance, host=destination,
@@ -425,8 +447,15 @@ class LiveMigrationTask(base.TaskBase):
         # is not forced to be the original host
         request_spec.reset_forced_destinations()
 
-        # TODO(gibi): We need to make sure that the requested_resources field
-        # is re calculated based on neutron ports.
+        port_res_req = (
+            self.network_api.get_requested_resource_for_instance(
+                self.context, self.instance.uuid))
+        # NOTE(gibi): When cyborg or other module wants to handle
+        # similar non-nova resources then here we have to collect
+        # all the external resource requests in a single list and
+        # add them to the RequestSpec.
+        request_spec.requested_resources = port_res_req
+
         scheduler_utils.setup_instance_group(self.context, request_spec)
 
         # We currently only support live migrating to hosts in the same
@@ -476,9 +505,19 @@ class LiveMigrationTask(base.TaskBase):
                 # ex.exc_type.
                 raise exception.MigrationSchedulerRPCError(
                     reason=six.text_type(ex))
+
+            scheduler_utils.fill_provider_mapping(request_spec, selection)
+
+            provider_mapping = request_spec.get_request_group_mapping()
+
+            if provider_mapping:
+                compute_utils.\
+                    update_pci_request_spec_with_allocated_interface_name(
+                        self.context, self.report_client, self.instance,
+                        provider_mapping)
             try:
                 self._check_compatible_with_source_hypervisor(host)
-                self._call_livem_checks_on_host(host)
+                self._call_livem_checks_on_host(host, provider_mapping)
             except (exception.Invalid, exception.MigrationPreCheckError) as e:
                 LOG.debug("Skipping host: %(host)s because: %(e)s",
                     {"host": host, "e": e})

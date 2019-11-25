@@ -1260,10 +1260,6 @@ class API(base_api.NetworkAPI):
 
         client = _get_ksa_client(context, admin=True)
 
-        # TODO(gibi): To support ports with resource request during server
-        # live migrate operation we need to take care of 'allocation' key in
-        # the binding profile per binding.
-
         bindings_by_port_id = {}
         for vif in network_info:
             # Now bind each port to the destination host and keep track of each
@@ -3399,7 +3395,10 @@ class API(base_api.NetworkAPI):
                         reason=_("Unable to correlate PCI slot %s") %
                                  pci_slot)
 
-            if p.get('resource_request'):
+            # NOTE(gibi): during live migration the conductor already sets the
+            # allocation key in the port binding
+            if (p.get('resource_request') and
+                    migration['migration_type'] != constants.LIVE_MIGRATION):
                 if not provider_mappings:
                     # TODO(gibi): Remove this check when compute RPC API is
                     # bumped to 6.0
