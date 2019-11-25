@@ -59,7 +59,8 @@ services_policies = [
                 'method': 'DELETE',
                 'path': '/os-services/{service_id}'
             }
-        ]),
+        ],
+        scope_types=['system']),
 ]
 
 
