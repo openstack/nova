@@ -265,8 +265,6 @@ PERF_EVENTS_CPU_FLAG_MAPPING = {'cmt': 'cmt',
 # for details.
 MIN_LIBVIRT_MULTIATTACH = (3, 10, 0)
 
-MIN_LIBVIRT_FILE_BACKED_VERSION = (4, 0, 0)
-MIN_QEMU_FILE_BACKED_VERSION = (2, 6, 0)
 
 MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION = (4, 4, 0)
 
@@ -824,18 +822,6 @@ class LibvirtDriver(driver.ComputeDriver):
                       '%(type)s is not supported. file_backed_memory is only '
                       'supported with qemu and kvm types.') %
                     {'type': CONF.libvirt.virt_type})
-
-            # Check needed versions for file_backed_memory
-            if not self._host.has_min_version(
-                    MIN_LIBVIRT_FILE_BACKED_VERSION,
-                    MIN_QEMU_FILE_BACKED_VERSION):
-                raise exception.InternalError(
-                    _('Running Nova with file_backed_memory requires libvirt '
-                      'version %(libvirt)s and qemu version %(qemu)s') %
-                    {'libvirt': libvirt_utils.version_to_string(
-                        MIN_LIBVIRT_FILE_BACKED_VERSION),
-                    'qemu': libvirt_utils.version_to_string(
-                        MIN_QEMU_FILE_BACKED_VERSION)})
 
             # file-backed memory doesn't work with memory overcommit.
             # Block service startup if file-backed memory is enabled and
