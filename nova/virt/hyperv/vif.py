@@ -14,8 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import abc
-
 import os_vif
 from os_win import utilsfactory
 
@@ -28,55 +26,15 @@ from nova.network import os_vif_util
 CONF = nova.conf.CONF
 
 
-class HyperVBaseVIFPlugin(object):
-    @abc.abstractmethod
-    def plug(self, instance, vif):
-        pass
-
-    @abc.abstractmethod
-    def unplug(self, instance, vif):
-        pass
-
-
-class HyperVNeutronVIFPlugin(HyperVBaseVIFPlugin):
-    """Neutron VIF plugin."""
-
-    def plug(self, instance, vif):
-        # Neutron takes care of plugging the port
-        pass
-
-    def unplug(self, instance, vif):
-        # Neutron takes care of unplugging the port
-        pass
-
-
-class HyperVNovaNetworkVIFPlugin(HyperVBaseVIFPlugin):
-    """Nova network VIF plugin."""
-
-    def __init__(self):
-        self._netutils = utilsfactory.get_networkutils()
-
-    def plug(self, instance, vif):
-        self._netutils.connect_vnic_to_vswitch(CONF.hyperv.vswitch_name,
-                                               vif['id'])
-
-    def unplug(self, instance, vif):
-        # TODO(alepilotti) Not implemented
-        pass
-
-
 class HyperVVIFDriver(object):
     def __init__(self):
         self._netutils = utilsfactory.get_networkutils()
-        if nova.network.is_neutron():
-            self._vif_plugin = HyperVNeutronVIFPlugin()
-        else:
-            self._vif_plugin = HyperVNovaNetworkVIFPlugin()
 
     def plug(self, instance, vif):
         vif_type = vif['type']
         if vif_type == model.VIF_TYPE_HYPERV:
-            self._vif_plugin.plug(instance, vif)
+            # neutron takes care of plugging the port
+            pass
         elif vif_type == model.VIF_TYPE_OVS:
             vif = os_vif_util.nova_to_osvif_vif(vif)
             instance = os_vif_util.nova_to_osvif_instance(instance)
@@ -94,7 +52,8 @@ class HyperVVIFDriver(object):
     def unplug(self, instance, vif):
         vif_type = vif['type']
         if vif_type == model.VIF_TYPE_HYPERV:
-            self._vif_plugin.unplug(instance, vif)
+            # neutron takes care of unplugging the port
+            pass
         elif vif_type == model.VIF_TYPE_OVS:
             vif = os_vif_util.nova_to_osvif_vif(vif)
             instance = os_vif_util.nova_to_osvif_instance(instance)
