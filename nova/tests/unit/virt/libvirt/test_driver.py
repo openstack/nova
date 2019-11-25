@@ -3129,48 +3129,26 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertTrue(result.filesource)
         self.assertTrue(result.allocateimmediate)
 
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion')
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion')
     def test_get_guest_memory_backing_config_file_backed_discard(self,
-            mock_lib_version, mock_version):
+            mock_lib_version):
         self.flags(file_backed_memory=1024, group='libvirt')
 
         mock_lib_version.return_value = versionutils.convert_version_to_int(
             libvirt_driver.MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION)
-        mock_version.return_value = versionutils.convert_version_to_int(
-            libvirt_driver.MIN_QEMU_FILE_BACKED_DISCARD_VERSION)
 
         result = self._test_get_guest_memory_backing_config(
             None, None, None
         )
         self.assertTrue(result.discard)
 
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion')
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion')
     def test_get_guest_memory_backing_config_file_backed_discard_libvirt(self,
-            mock_lib_version, mock_version):
+            mock_lib_version):
         self.flags(file_backed_memory=1024, group='libvirt')
 
         mock_lib_version.return_value = versionutils.convert_version_to_int(
             libvirt_driver.MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION) - 1
-        mock_version.return_value = versionutils.convert_version_to_int(
-            libvirt_driver.MIN_QEMU_FILE_BACKED_DISCARD_VERSION)
-
-        result = self._test_get_guest_memory_backing_config(
-            None, None, None
-        )
-        self.assertFalse(result.discard)
-
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion')
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion')
-    def test_get_guest_memory_backing_config_file_backed_discard_qemu(self,
-            mock_lib_version, mock_version):
-        self.flags(file_backed_memory=1024, group='libvirt')
-
-        mock_lib_version.return_value = versionutils.convert_version_to_int(
-            libvirt_driver.MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION)
-        mock_version.return_value = versionutils.convert_version_to_int(
-            libvirt_driver.MIN_QEMU_FILE_BACKED_DISCARD_VERSION) - 1
 
         result = self._test_get_guest_memory_backing_config(
             None, None, None
@@ -10152,19 +10130,17 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.assertTrue(return_value.dst_wants_file_backed_memory)
 
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion')
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_create_shared_storage_test_file')
     @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
     def _test_check_can_live_migrate_dest_file_backed_discard(
-            self, libvirt_version, qemu_version, mock_cpu, mock_test_file,
-            mock_lib_version, mock_version):
+            self, libvirt_version, mock_cpu, mock_test_file,
+            mock_lib_version):
 
         self.flags(file_backed_memory=1024, group='libvirt')
 
         mock_lib_version.return_value = libvirt_version
-        mock_version.return_value = qemu_version
 
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.vcpu_model = test_vcpu_model.fake_vcpumodel
@@ -10189,11 +10165,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_check_can_live_migrate_dest_file_backed_discard(self):
         libvirt_version = versionutils.convert_version_to_int(
                 libvirt_driver.MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION)
-        qemu_version = versionutils.convert_version_to_int(
-                libvirt_driver.MIN_QEMU_FILE_BACKED_DISCARD_VERSION)
 
         data = self._test_check_can_live_migrate_dest_file_backed_discard(
-                libvirt_version, qemu_version)
+                libvirt_version)
 
         self.assertTrue(data.dst_wants_file_backed_memory)
         self.assertTrue(data.file_backed_memory_discard)
@@ -10201,23 +10175,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_check_can_live_migrate_dest_file_backed_discard_bad_libvirt(self):
         libvirt_version = versionutils.convert_version_to_int(
             libvirt_driver.MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION) - 1
-        qemu_version = versionutils.convert_version_to_int(
-            libvirt_driver.MIN_QEMU_FILE_BACKED_DISCARD_VERSION)
 
         data = self._test_check_can_live_migrate_dest_file_backed_discard(
-            libvirt_version, qemu_version)
-
-        self.assertTrue(data.dst_wants_file_backed_memory)
-        self.assertFalse(data.file_backed_memory_discard)
-
-    def test_check_can_live_migrate_dest_file_backed_discard_bad_qemu(self):
-        libvirt_version = versionutils.convert_version_to_int(
-            libvirt_driver.MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION)
-        qemu_version = versionutils.convert_version_to_int(
-            libvirt_driver.MIN_QEMU_FILE_BACKED_DISCARD_VERSION) - 1
-
-        data = self._test_check_can_live_migrate_dest_file_backed_discard(
-            libvirt_version, qemu_version)
+            libvirt_version)
 
         self.assertTrue(data.dst_wants_file_backed_memory)
         self.assertFalse(data.file_backed_memory_discard)
