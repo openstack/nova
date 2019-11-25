@@ -56,23 +56,19 @@ hosts to run only instances requiring Windows licensing.
 
      # openstack --os-placement-api-version 1.6 trait create CUSTOM_LICENSED_WINDOWS
 
-   Discover the ID of ``HOST1``, which is its resource provider UUID
-
-   .. code-block:: console
-
-     # host_id=$(openstack resource provider show <HOST1_UUID>)
+   Assume ``<HOST1_UUID>`` is the UUID of ``HOST1``, which is the same as its resource provider UUID.
 
    Start to build the command line by first collecting existing traits for ``HOST1``
 
    .. code-block:: console
 
-     # traits=$(openstack --os-placement-api-version 1.6 resource provider trait list -f value $server_id | sed 's/^/--trait /')
+     # traits=$(openstack --os-placement-api-version 1.6 resource provider trait list -f value <HOST1_UUID> | sed 's/^/--trait /')
 
    Replace ``HOST1``\ 's traits, adding ``CUSTOM_LICENSED_WINDOWS``
 
    .. code-block:: console
 
-     # openstack --os-placement-api-version 1.6 resource provider trait set $traits --trait CUSTOM_LICENSED_WINDOWS $server_id
+     # openstack --os-placement-api-version 1.6 resource provider trait set $traits --trait CUSTOM_LICENSED_WINDOWS <HOST1_UUID>
 
    Repeat the above steps for ``HOST2``.
 
@@ -81,7 +77,7 @@ hosts to run only instances requiring Windows licensing.
 
    .. code-block:: console
 
-     openstack --os-compute-api-version 2.53 aggregate set --property trait:CUSTOM_LICENSED_WINDOWS=required ABC
+     # openstack --os-compute-api-version 2.53 aggregate set --property trait:CUSTOM_LICENSED_WINDOWS=required ABC
 
 As before, any instance spawned with a flavor or image containing
 ``trait:CUSTOM_LICENSED_WINDOWS=required`` will land on ``HOST1`` or ``HOST2``
