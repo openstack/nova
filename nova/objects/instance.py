@@ -195,6 +195,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         'info_cache': fields.ObjectField('InstanceInfoCache',
                                          nullable=True),
 
+        # TODO(stephenfin): Remove this in version 3.0 of the object as it's
+        # related to nova-network
         'security_groups': fields.ObjectField('SecurityGroupList'),
 
         'fault': fields.ObjectField('InstanceFault', nullable=True),
@@ -415,6 +417,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                     context, objects.PciDeviceList(context),
                     objects.PciDevice, db_inst['pci_devices'])
             instance['pci_devices'] = pci_devices
+
+        # TODO(stephenfin): Remove this as it's related to nova-network
         if 'security_groups' in expected_attrs:
             sec_groups = base.obj_make_list(
                     context, objects.SecurityGroupList(context),
@@ -549,6 +553,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
 
         expected_attrs = [attr for attr in INSTANCE_DEFAULT_FIELDS
                           if attr in updates]
+
+        # TODO(stephenfin): Remove this as it's related to nova-network
         if 'security_groups' in updates:
             updates['security_groups'] = [x.name for x in
                                           updates['security_groups']]
@@ -658,6 +664,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             with self.info_cache.obj_alternate_context(context):
                 self.info_cache.save()
 
+    # TODO(stephenfin): Remove this as it's related to nova-network
     def _save_security_groups(self, context):
         security_groups = self.security_groups or []
         for secgroup in security_groups:
@@ -952,6 +959,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     def _load_ec2_ids(self):
         self.ec2_ids = objects.EC2Ids.get_by_instance(self._context, self)
 
+    # TODO(stephenfin): Remove this as it's related to nova-network
     def _load_security_groups(self):
         self.security_groups = objects.SecurityGroupList.get_by_instance(
             self._context, self)
@@ -1420,6 +1428,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
                                                 use_slave=use_slave,
                                                 limit=limit, marker=marker)
 
+    # TODO(stephenfin): Remove this as it's related to nova-network
     @base.remotable_classmethod
     def get_by_security_group_id(cls, context, security_group_id):
         db_secgroup = db.security_group_get(
@@ -1429,10 +1438,12 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         return _make_instance_list(context, cls(), db_secgroup['instances'],
                                    ['info_cache', 'system_metadata'])
 
+    # TODO(stephenfin): Remove this as it's related to nova-network
     @classmethod
     def get_by_security_group(cls, context, security_group):
         return cls.get_by_security_group_id(context, security_group.id)
 
+    # TODO(stephenfin): Remove this as it's related to nova-network
     @base.remotable_classmethod
     def get_by_grantee_security_group_ids(cls, context, security_group_ids):
         db_instances = db.instance_get_all_by_grantee_security_groups(

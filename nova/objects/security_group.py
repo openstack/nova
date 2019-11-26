@@ -12,6 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+# TODO(stephenfin): This is all nova-network related and can be deleted as soon
+# as we remove the 'security_group' field from the 'Instance' object
+
 from oslo_utils import uuidutils
 from oslo_utils import versionutils
 

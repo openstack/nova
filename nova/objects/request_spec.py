@@ -91,6 +91,7 @@ class RequestSpec(base.NovaObject):
         # just provide to the RequestSpec object a free-form dictionary
         'scheduler_hints': fields.DictOfListOfStringsField(nullable=True),
         'instance_uuid': fields.UUIDField(),
+        # TODO(stephenfin): Remove this as it's related to nova-network
         'security_groups': fields.ObjectField('SecurityGroupList'),
         # NOTE(alex_xu): This field won't be persisted.
         'network_metadata': fields.ObjectField('NetworkMetadata'),
