@@ -349,7 +349,8 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-quota-sets:update",
 "os_compute_api:os-quota-sets:delete",
 "os_compute_api:os-server-diagnostics",
-"os_compute_api:os-services",
+"os_compute_api:os-services:update",
+"os_compute_api:os-services:delete",
 "os_compute_api:os-shelve:shelve_offload",
 "os_compute_api:os-simple-tenant-usage:list",
 "os_compute_api:os-availability-zone:detail",
@@ -459,6 +460,10 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-quota-sets:defaults",
 )
 
+        self.system_reader_rules = (
+"os_compute_api:os-services:list",
+)
+
     def test_all_rules_in_sample_file(self):
         special_rules = ["context_is_admin", "admin_or_owner", "default"]
         for (name, rule) in self.fake_policy.items():
@@ -496,5 +501,5 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
                          'system_admin_or_owner', 'system_or_project_reader')
         result = set(rules.keys()) - set(self.admin_only_rules +
             self.admin_or_owner_rules +
-            self.allow_all_rules + special_rules)
+            self.allow_all_rules + self.system_reader_rules + special_rules)
         self.assertEqual(set([]), result)

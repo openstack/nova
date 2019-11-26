@@ -18,49 +18,67 @@ from oslo_policy import policy
 from nova.policies import base
 
 
-BASE_POLICY_NAME = 'os_compute_api:os-services'
+BASE_POLICY_NAME = 'os_compute_api:os-services:%s'
+DEPRECATED_SERVICE_POLICY = policy.DeprecatedRule(
+    'os_compute_api:os-services',
+    base.RULE_ADMIN_API,
+)
 
+DEPRECATED_REASON = """
+Since Ussuri release, nova API policies are introducing new default roles
+with scope_type capabilities. These new changes improve the security level
+and manageability. New policies are more rich in term of handling access
+at system and project level token with read, write roles.
+Start using the new policies and enable the scope checks via config option
+``nova.conf [oslo_policy] enforce_scope=True`` which is False by default.
+Old policies are marked as deprecated and silently going to be ignored
+in nova 23.0.0 (OpenStack W) release
+"""
 
 services_policies = [
     policy.DocumentedRuleDefault(
-        BASE_POLICY_NAME,
-        base.RULE_ADMIN_API,
-        "List all running Compute services in a region, enables or disable "
-        "scheduling for a Compute service, logs disabled Compute service "
-        "information, set or unset forced_down flag for the compute service "
-        "and delete a Compute service",
-        [
+        name=BASE_POLICY_NAME % 'list',
+        check_str=base.SYSTEM_READER,
+        description="List all running Compute services in a region.",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/os-services'
-            },
-            {
-                'method': 'PUT',
-                'path': '/os-services/enable'
-            },
-            {
-                'method': 'PUT',
-                'path': '/os-services/disable'
-            },
-            {
-                'method': 'PUT',
-                'path': '/os-services/disable-log-reason'
-            },
-            {
-                'method': 'PUT',
-                'path': '/os-services/force-down'
-            },
+            }
+        ],
+        scope_types=['system'],
+        deprecated_rule=DEPRECATED_SERVICE_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='20.0.0'),
+    policy.DocumentedRuleDefault(
+        name=BASE_POLICY_NAME % 'update',
+        check_str=base.SYSTEM_ADMIN,
+        description="Update a Compute service.",
+        operations=[
             {
                 # Added in microversion 2.53.
                 'method': 'PUT',
                 'path': '/os-services/{service_id}'
             },
+        ],
+        scope_types=['system'],
+        deprecated_rule=DEPRECATED_SERVICE_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='20.0.0'),
+    policy.DocumentedRuleDefault(
+        name=BASE_POLICY_NAME % 'delete',
+        check_str=base.SYSTEM_ADMIN,
+        description="Delete a Compute service.",
+        operations=[
             {
                 'method': 'DELETE',
                 'path': '/os-services/{service_id}'
             }
         ],
-        scope_types=['system']),
+        scope_types=['system'],
+        deprecated_rule=DEPRECATED_SERVICE_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='20.0.0'),
 ]
 
 
