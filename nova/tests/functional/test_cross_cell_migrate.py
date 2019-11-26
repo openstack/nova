@@ -59,12 +59,16 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         self.host_to_cell_mappings = {
             'host1': 'cell1', 'host2': 'cell2'}
 
-        # TODO(mriedem): Should probably put the hosts in separate AZs so we
-        # can assert the instance.availability_zone value is updated when it
-        # moves.
         for host in sorted(self.host_to_cell_mappings):
-            self._start_compute(
-                host, cell_name=self.host_to_cell_mappings[host])
+            cell_name = self.host_to_cell_mappings[host]
+            # Start the compute service on the given host in the given cell.
+            self._start_compute(host, cell_name=cell_name)
+            # Create an aggregate where the AZ name is the cell name.
+            agg_id = self._create_aggregate(
+                cell_name, availability_zone=cell_name)
+            # Add the host to the aggregate.
+            body = {'add_host': {'host': host}}
+            self.admin_api.post_aggregate_action(agg_id, body)
 
     def _enable_cross_cell_resize(self):
         # Enable cross-cell resize policy since it defaults to not allow
@@ -187,6 +191,10 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         original_host = server['OS-EXT-SRV-ATTR:host']
         image_uuid = None if volume_backed else server['image']['id']
 
+        # Our HostNameWeigher ensures the server starts in cell1, so we expect
+        # the server AZ to be cell1 as well.
+        self.assertEqual('cell1', server['OS-EXT-AZ:availability_zone'])
+
         if stopped:
             # Stop the server before resizing it.
             self.api.post_server_action(server['id'], {'os-stop': None})
@@ -271,8 +279,10 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
 
         # The instance, in the target cell DB, should have the old and new
         # flavor stored with it with the values we expect at this point.
-        target_cell = self.cell_mappings[
-            self.host_to_cell_mappings[expected_host]]
+        target_cell_name = self.host_to_cell_mappings[expected_host]
+        self.assertEqual(
+            target_cell_name, server['OS-EXT-AZ:availability_zone'])
+        target_cell = self.cell_mappings[target_cell_name]
         admin_context = nova_context.get_admin_context()
         with nova_context.target_cell(admin_context, target_cell) as cctxt:
             inst = objects.Instance.get_by_uuid(
@@ -295,6 +305,8 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
             # Assert the ComputeManager._set_instance_info fields
             # are correct after the resize.
             self.assert_instance_fields_match_flavor(inst, new_flavor)
+            # The availability_zone field in the DB should also be updated.
+            self.assertEqual(target_cell_name, inst.availability_zone)
 
         # Assert the VIF tag was carried through to the target cell DB.
         interface_attachments = self.api.get_port_interfaces(server['id'])
