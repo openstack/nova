@@ -83,6 +83,9 @@ section in the Nova Configuration Reference.
 Projects, users, and roles
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+To begin using Compute, you must create a user with the
+:keystone-doc:`Identity service <>`.
+
 The Compute system is designed to be used by different consumers in the form of
 projects on a shared system, and role-based access assignments.  Roles control
 the actions that a user is allowed to perform.
