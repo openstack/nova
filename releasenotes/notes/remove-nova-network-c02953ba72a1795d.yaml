@@ -51,3 +51,6 @@ upgrade:
 
     These were only useful for the now-removed *nova-network* service and have
     been deprecated since the 15.0.0 (Ocata) release.
+  - |
+    The ``nova-dhcpbridge`` service has been removed. This was only used with
+    the now-removed *nova-network* service.
