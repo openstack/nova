@@ -5097,7 +5097,12 @@ class ComputeManager(manager.Manager):
     def _resize_instance(self, context, instance, image,
                          migration, instance_type, clean_shutdown,
                          request_spec):
-        with self._error_out_instance_on_exception(context, instance), \
+        # Pass instance_state=instance.vm_state because we can resize
+        # a STOPPED server and we don't want to set it back to ACTIVE
+        # in case migrate_disk_and_power_off raises InstanceFaultRollback.
+        instance_state = instance.vm_state
+        with self._error_out_instance_on_exception(
+                context, instance, instance_state=instance_state), \
              errors_out_migration_ctxt(migration):
             network_info = self.network_api.get_instance_nw_info(context,
                                                                  instance)
