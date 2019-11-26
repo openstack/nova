@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_serialization import jsonutils
+
 from nova.api.openstack.compute import servers as servers_v21
 from nova import exception
 from nova import test
@@ -33,8 +35,7 @@ class AccessIPsAPIValidationTestV21(test.TestCase):
 
         def fake_rebuild(*args, **kwargs):
             pass
-        # Neutron security groups are tested in test_neutron_security_groups.py
-        self.flags(use_neutron=False)
+
         fakes.stub_out_nw_api(self)
         self._set_up_controller()
         fake.stub_out_image_service(self)
@@ -43,8 +44,6 @@ class AccessIPsAPIValidationTestV21(test.TestCase):
                       fakes.fake_compute_get(project_id=fakes.FAKE_PROJECT_ID))
         self.stub_out('nova.objects.instance.Instance.save', fake_save)
         self.stub_out('nova.compute.api.API.rebuild', fake_rebuild)
-
-        self.req = fakes.HTTPRequest.blank('')
 
     def _set_up_controller(self):
         self.controller = servers_v21.ServersController()
@@ -63,7 +62,11 @@ class AccessIPsAPIValidationTestV21(test.TestCase):
             },
         }
         body['server'].update(params)
-        res_dict = self.controller.create(self.req, body=body).obj
+        req = fakes.HTTPRequest.blank('')
+        req.method = 'POST'
+        req.body = jsonutils.dump_as_bytes(body)
+        req.headers['content-type'] = 'application/json'
+        res_dict = self.controller.create(req, body=body).obj
         return res_dict
 
     def _test_update(self, params):
@@ -72,8 +75,9 @@ class AccessIPsAPIValidationTestV21(test.TestCase):
             },
         }
         body['server'].update(params)
+        req = fakes.HTTPRequest.blank('')
 
-        res_dict = self.controller.update(self.req, fakes.FAKE_UUID, body=body)
+        res_dict = self.controller.update(req, fakes.FAKE_UUID, body=body)
         self._verify_update_access_ip(res_dict, params)
 
     def _test_rebuild(self, params):
@@ -83,7 +87,8 @@ class AccessIPsAPIValidationTestV21(test.TestCase):
             },
         }
         body['rebuild'].update(params)
-        self.controller._action_rebuild(self.req, fakes.FAKE_UUID, body=body)
+        req = fakes.HTTPRequest.blank('')
+        self.controller._action_rebuild(req, fakes.FAKE_UUID, body=body)
 
     def test_create_server_with_access_ipv4(self):
         params = {v4_key: '192.168.0.10'}
