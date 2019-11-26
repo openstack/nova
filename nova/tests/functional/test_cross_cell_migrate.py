@@ -10,12 +10,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+
 from nova import context as nova_context
 from nova import objects
 from nova.scheduler import weights
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit.image import fake as fake_image
+from nova import utils
 
 
 class HostNameWeigher(weights.BaseHostWeigher):
@@ -46,6 +49,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         self.cinder = self.useFixture(nova_fixtures.CinderFixture(self))
 
         self._enable_cross_cell_resize()
+        self.created_images = []  # list of image IDs created during resize
 
         # Adjust the polling interval and timeout for long RPC calls.
         self.flags(rpc_response_timeout=1)
@@ -143,6 +147,20 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
                              self.cinder.volume_to_attachment)
         return server
 
+    def stub_image_create(self):
+        """Stubs the _FakeImageService.create method to track created images"""
+        original_create = self.image_service.create
+
+        def image_create_snooper(*args, **kwargs):
+            image = original_create(*args, **kwargs)
+            self.created_images.append(image['id'])
+            return image
+
+        _p = mock.patch.object(
+            self.image_service, 'create', side_effect=image_create_snooper)
+        _p.start()
+        self.addCleanup(_p.stop)
+
     def _resize_and_validate(self, volume_backed=False, stopped=False,
                              target_host=None):
         """Creates and resizes the server to another cell. Validates various
@@ -167,6 +185,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         old_flavor = flavors[0]
         server = self._create_server(old_flavor, volume_backed=volume_backed)
         original_host = server['OS-EXT-SRV-ATTR:host']
+        image_uuid = None if volume_backed else server['image']['id']
 
         if stopped:
             # Stop the server before resizing it.
@@ -187,6 +206,9 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
             new_flavor = flavors[1]
             body = {'resize': {'flavorRef': new_flavor['id']}}
             expected_host = 'host1' if original_host == 'host2' else 'host2'
+
+        self.stub_image_create()
+
         self.api.post_server_action(server['id'], body)
         # Wait for the server to be resized and then verify the host has
         # changed to be the host in the other cell.
@@ -317,6 +339,28 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertEqual(
             expected_power_state, server['OS-EXT-STS:power_state'],
             "Unexpected power state after resize.")
+
+        # For an image-backed server, a snapshot image should have been created
+        # and then deleted during the resize.
+        if volume_backed:
+            self.assertEqual('', server['image'])
+            self.assertEqual(
+                0, len(self.created_images),
+                "Unexpected image create during volume-backed resize")
+        else:
+            # The original image for the server shown in the API should not
+            # have changed even if a snapshot was used to create the guest
+            # on the dest host.
+            self.assertEqual(image_uuid, server['image']['id'])
+            self.assertEqual(
+                1, len(self.created_images),
+                "Unexpected number of images created for image-backed resize")
+            # Make sure the temporary snapshot image was deleted; we use the
+            # compute images proxy API here which is deprecated so we force the
+            # microversion to 2.1.
+            with utils.temporary_mutation(self.api, microversion='2.1'):
+                self.api.api_get('/images/%s' % self.created_images[0],
+                                 check_response_status=[404])
 
         return server, source_rp_uuid, target_rp_uuid, old_flavor, new_flavor
 
