@@ -4131,6 +4131,14 @@ class LibvirtDriver(driver.ComputeDriver):
                                         root_fname, disk_images['image_id'],
                                         instance, size, fallback_from_host)
 
+            # During unshelve on Qcow2 backend, we spawn() using snapshot image
+            # created during shelve. Extra work is needed in order to rebase
+            # disk image to its original image_ref. Disk backing file will
+            # then represent back image_ref instead of shelved image.
+            if (instance.vm_state == vm_states.SHELVED_OFFLOADED and
+                   isinstance(backend, imagebackend.Qcow2)):
+                self._finalize_unshelve_qcow2_image(context, instance, backend)
+
             if need_inject:
                 self._inject_data(backend, instance, injection_info)
 
@@ -4139,6 +4147,36 @@ class LibvirtDriver(driver.ComputeDriver):
                         'instance is not supported', instance=instance)
 
         return created_disks
+
+    def _finalize_unshelve_qcow2_image(self, context, instance, backend):
+        # NOTE(aarents): During qcow2 instance unshelve, backing file
+        # represents shelved image, not original instance.image_ref.
+        # We rebase here instance disk to original image.
+        # This second fetch call does nothing except downloading original
+        # backing file if missing, as image disk have already been
+        # created/resized by first fetch call.
+        base_dir = self.image_cache_manager.cache_dir
+        base_image_ref = instance.system_metadata.get('image_base_image_ref')
+        root_fname = imagecache.get_cache_fname(base_image_ref)
+        base_backing_fname = os.path.join(base_dir, root_fname)
+
+        try:
+            self._try_fetch_image_cache(backend, libvirt_utils.fetch_image,
+                                        context, root_fname, base_image_ref,
+                                        instance, None)
+        except exception.ImageNotFound:
+            # We must flatten here in order to remove dependency with an orphan
+            # backing file (as shelved image will be dropped once unshelve
+            # is successfull).
+            LOG.warning('Current disk image is created on top of shelved '
+                        'image and cannot be rebased to original image '
+                        'because it is no longer available in the image '
+                        'service, disk will be consequently flattened.',
+                        instance=instance)
+            base_backing_fname = None
+
+        LOG.info('Rebasing disk image.', instance=instance)
+        self._rebase_with_qemu_img(backend.path, base_backing_fname)
 
     def _create_configdrive(self, context, instance, injection_info,
                             rescue=False):

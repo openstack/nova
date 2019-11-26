@@ -22622,6 +22622,74 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.assertEqual('migrating instance across cells',
                          mock_debug.call_args[0][2])
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_try_fetch_image_cache')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_rebase_with_qemu_img')
+    def _test_unshelve_qcow2_rebase_image_during_create(self,
+            mock_rebase, mock_fetch, original_image_in_glance=True):
+        self.flags(images_type='qcow2', group='libvirt')
+
+        # Original image ref from where instance was created, before SHELVE
+        # occurs, base_root_fname is related backing file name.
+        base_image_ref = 'base_image_ref'
+        base_root_fname = imagecache.get_cache_fname(base_image_ref)
+        # Snapshot image ref created during SHELVE.
+        shelved_image_ref = 'shelved_image_ref'
+        shelved_root_fname = imagecache.get_cache_fname(shelved_image_ref)
+
+        # Instance state during unshelve spawn().
+        inst_params = {
+                'image_ref': shelved_image_ref,
+                'vm_state': vm_states.SHELVED_OFFLOADED,
+                'system_metadata': {'image_base_image_ref': base_image_ref}
+            }
+
+        instance = self._create_instance(params=inst_params)
+        disk_images = {'image_id': instance.image_ref}
+        instance_dir = libvirt_utils.get_instance_path(instance)
+        disk_path = os.path.join(instance_dir, 'disk')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        if original_image_in_glance:
+            # We expect final backing file is original image, not shelved one.
+            expected_backing_file = os.path.join(
+                    imagecache.ImageCacheManager().cache_dir,
+                    base_root_fname)
+        else:
+            # None means rebase will merge backing file into disk(flatten).
+            expected_backing_file = None
+            mock_fetch.side_effect = [
+                None,
+                exception.ImageNotFound(image_id=base_image_ref)
+            ]
+
+        drvr._create_and_inject_local_root(
+            self.context, instance, False, '', disk_images, None, None)
+
+        mock_fetch.assert_has_calls([
+            mock.call(test.MatchType(nova.virt.libvirt.imagebackend.Qcow2),
+                      libvirt_utils.fetch_image,
+                      self.context, shelved_root_fname, shelved_image_ref,
+                      instance, instance.root_gb * units.Gi, None),
+            mock.call(test.MatchType(nova.virt.libvirt.imagebackend.Qcow2),
+                      libvirt_utils.fetch_image,
+                      self.context, base_root_fname, base_image_ref,
+                      instance, None)])
+        mock_rebase.assert_called_once_with(disk_path, expected_backing_file)
+
+    def test_unshelve_qcow2_rebase_image_during_create(self):
+        # Original image is present in Glance. In that case the 2nd
+        # fetch succeeds and we rebase instance disk to original image backing
+        # file, instance is back to nominal state: after unshelve,
+        # instance.image_ref will match current backing file.
+        self._test_unshelve_qcow2_rebase_image_during_create()
+
+    def test_unshelve_qcow2_rebase_image_during_create_notfound(self):
+        # Original image is no longer available in Glance, so 2nd fetch
+        # will failed (HTTP 404). In that case qemu-img rebase will merge
+        # backing file into disk, removing backing file dependency.
+        self._test_unshelve_qcow2_rebase_image_during_create(
+                original_image_in_glance=False)
+
     @mock.patch('nova.virt.libvirt.driver.imagebackend')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._inject_data')
     @mock.patch('nova.virt.libvirt.driver.imagecache')
