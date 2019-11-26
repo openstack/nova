@@ -369,8 +369,6 @@
         - devstack-plugin-ceph-tempest-py3:
             voting: false
             irrelevant-files: *dsvm-irrelevant-files
-        - neutron-grenade-multinode:
-            irrelevant-files: *dsvm-irrelevant-files
         - neutron-tempest-linuxbridge:
             irrelevant-files:
               # NOTE(mriedem): This job has its own irrelevant-files section
