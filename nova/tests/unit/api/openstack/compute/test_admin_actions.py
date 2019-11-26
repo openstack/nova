@@ -13,10 +13,7 @@
 #   under the License.
 
 from nova.api.openstack.compute import admin_actions as admin_actions_v21
-from nova import exception
-from nova import test
 from nova.tests.unit.api.openstack.compute import admin_only_action_common
-from nova.tests.unit.api.openstack import fakes
 
 
 class AdminActionsTestV21(admin_only_action_common.CommonTests):
@@ -49,40 +46,3 @@ class AdminActionsTestV21(admin_only_action_common.CommonTests):
 
         self._test_actions_with_locked_instance(actions,
             method_translations=method_translations)
-
-
-class AdminActionsPolicyEnforcementV21(test.NoDBTestCase):
-
-    def setUp(self):
-        super(AdminActionsPolicyEnforcementV21, self).setUp()
-        self.controller = admin_actions_v21.AdminActionsController()
-        self.req = fakes.HTTPRequest.blank('')
-        self.fake_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
-
-    def common_policy_check(self, rule, fun_name, *arg, **kwarg):
-        self.policy.set_rules(rule)
-        func = getattr(self.controller, fun_name)
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized, func, *arg, **kwarg)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." %
-            rule.popitem()[0], exc.format_message())
-
-    def test_reset_network_policy_failed(self):
-        rule = {"os_compute_api:os-admin-actions:reset_network":
-            "project:non_fake"}
-        self.common_policy_check(
-            rule, "_reset_network", self.req, self.fake_id, body={})
-
-    def test_inject_network_info_policy_failed(self):
-        rule = {"os_compute_api:os-admin-actions:inject_network_info":
-            "project:non_fake"}
-        self.common_policy_check(
-            rule, "_inject_network_info", self.req, self.fake_id, body={})
-
-    def test_reset_state_policy_failed(self):
-        rule = {"os_compute_api:os-admin-actions:reset_state":
-            "project:non_fake"}
-        self.common_policy_check(
-            rule, "_reset_state", self.req,
-            self.fake_id, body={"os-resetState": {"state": "active"}})
