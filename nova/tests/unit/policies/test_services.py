@@ -160,13 +160,13 @@ class ServicesDeprecatedPolicyTest(base.BasePolicyTest):
         super(ServicesDeprecatedPolicyTest, self).setUp()
         self.controller = services_v21.ServiceController()
         self.member_req = fakes.HTTPRequest.blank('')
-        self.member_req.environ['nova.context'] = self.project_member_context
+        self.member_req.environ['nova.context'] = self.system_reader_context
         self.reader_req = fakes.HTTPRequest.blank('')
         self.reader_req.environ['nova.context'] = self.project_reader_context
         self.deprecated_policy = "os_compute_api:os-services"
         # Overridde rule with different checks than defaults so that we can
         # verify the rule overridden case.
-        override_rules = {self.deprecated_policy: base_policy.PROJECT_MEMBER}
+        override_rules = {self.deprecated_policy: base_policy.SYSTEM_READER}
         # NOTE(gmann): Only override the deprecated rule in policy file so
         # that
         # we can verify if overridden checks are considered by oslo.policy.
