@@ -692,7 +692,8 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
                          'but found %i' % len(migrations))
         return migrations[0].uuid
 
-    def _boot_and_check_allocations(self, flavor, source_hostname):
+    def _boot_and_check_allocations(
+            self, flavor, source_hostname, networks='none'):
         """Boot an instance and check that the resource allocation is correct
 
         After booting an instance on the given host with a given flavor it
@@ -709,7 +710,7 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         server_req = self._build_minimal_create_server_request(
             self.api, 'some-server', flavor_id=flavor['id'],
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
-            networks='none')
+            networks=networks)
         server_req['availability_zone'] = 'nova:%s' % source_hostname
         LOG.info('booting on %s', source_hostname)
         created_server = self.api.post_server({'server': server_req})
