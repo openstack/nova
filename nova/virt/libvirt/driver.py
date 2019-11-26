@@ -227,8 +227,8 @@ patch_tpool_proxy()
 # versions. Over time, this will become a common min version
 # for all architectures/hypervisors, as this value rises to
 # meet them.
-MIN_LIBVIRT_VERSION = (3, 0, 0)
-MIN_QEMU_VERSION = (2, 8, 0)
+MIN_LIBVIRT_VERSION = (4, 0, 0)
+MIN_QEMU_VERSION = (2, 11, 0)
 # TODO(berrange): Re-evaluate this at start of each release cycle
 # to decide if we want to plan a future min version bump.
 # MIN_LIBVIRT_VERSION can be updated to match this after
@@ -265,8 +265,6 @@ PERF_EVENTS_CPU_FLAG_MAPPING = {'cmt': 'cmt',
                                 'mbmt': 'mbm_total',
                                }
 
-# Mediated devices support
-MIN_LIBVIRT_MDEV_SUPPORT = (3, 4, 0)
 
 # libvirt>=3.10 is required for volume multiattach unless qemu<2.10.
 # See https://bugzilla.redhat.com/show_bug.cgi?id=1378242
@@ -291,7 +289,6 @@ VGPU_RESOURCE_SEMAPHORE = "vgpu_resources"
 
 # see https://libvirt.org/formatdomain.html#elementsVideo
 MIN_LIBVIRT_VIDEO_MODEL_VERSIONS = {
-    fields.VideoModel.GOP: (3, 2, 0),
     fields.VideoModel.NONE: (4, 6, 0),
 }
 
@@ -740,8 +737,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # TODO(sbauza): Remove this code once mediated devices are persisted
         # across reboots.
-        if self._host.has_min_version(MIN_LIBVIRT_MDEV_SUPPORT):
-            self._recreate_assigned_mediated_devices()
+        self._recreate_assigned_mediated_devices()
 
         self._check_cpu_compatibility()
 
@@ -6698,8 +6694,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         :param types: Filter only devices supporting those types.
         """
-        if not self._host.has_min_version(MIN_LIBVIRT_MDEV_SUPPORT):
-            return []
         dev_names = self._host.list_mdev_capable_devices() or []
         mdev_capable_devices = []
         for name in dev_names:
@@ -6735,8 +6729,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         :param types: Filter only devices supporting those types.
         """
-        if not self._host.has_min_version(MIN_LIBVIRT_MDEV_SUPPORT):
-            return []
         dev_names = self._host.list_mediated_devices() or []
         mediated_devices = []
         for name in dev_names:
