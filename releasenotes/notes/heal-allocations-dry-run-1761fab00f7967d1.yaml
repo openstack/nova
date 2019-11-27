@@ -1,0 +1,6 @@
+---
+other:
+  - |
+    A ``--dry-run`` option has been added to the
+    ``nova-manage placement heal_allocations`` CLI which allows running the
+    command to get output without committing any changes to placement.

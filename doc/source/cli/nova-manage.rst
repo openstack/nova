@@ -335,7 +335,7 @@ Nova Cells v2
 Placement
 ~~~~~~~~~
 
-``nova-manage placement heal_allocations [--max-count <max_count>] [--verbose]``
+``nova-manage placement heal_allocations [--max-count <max_count>] [--verbose] [--dry-run]``
     Iterates over non-cell0 cells looking for instances which do not have
     allocations in the Placement service and which are not undergoing a task
     state transition. For each instance found, allocations are created against
@@ -353,6 +353,9 @@ Placement
     specifying a custom value and run the command until it exits with 0 or 4.
 
     Specify ``--verbose`` to get detailed progress output during execution.
+
+    Specify ``--dry-run`` to print output but not commit any changes. The
+    return code should be 4.
 
     This command requires that the ``[api_database]/connection`` and
     ``[placement]`` configuration options are set. Placement API >= 1.28 is
