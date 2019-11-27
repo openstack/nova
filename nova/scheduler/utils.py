@@ -60,8 +60,8 @@ class ResourceRequest(object):
     def __init__(self, request_spec, enable_pinning_translate=True):
         """Create a new instance of ResourceRequest from a RequestSpec.
 
-        Examines the flavor, flavor extra specs, and (optional) image metadata
-        of the provided ``request_spec``.
+        Examines the flavor, flavor extra specs, (optional) image metadata,
+        and (optional) requested_resources of the provided ``request_spec``.
 
         For extra specs, items of the following form are examined:
 
@@ -80,6 +80,11 @@ class ResourceRequest(object):
         For the flavor, ``VCPU``, ``MEMORY_MB`` and ``DISK_GB`` are calculated
         from Flavor properties, though these are only used if they aren't
         overridden by flavor extra specs.
+
+        requested_resources, which are existing RequestGroup instances created
+        on the RequestSpec based on resources specified outside of the flavor/
+        image (e.g. from ports) are incorporated as is, but ensuring that they
+        get unique group suffixes.
 
         :param request_spec: An instance of ``objects.RequestSpec``.
         :param enable_pinning_translate: True if the CPU policy extra specs
@@ -117,9 +122,13 @@ class ResourceRequest(object):
             # Next up, let's handle those pesky CPU pinning policies
             self._translate_pinning_policies(request_spec.flavor, image)
 
-        # Finally, parse the flavor itself, though we'll only use these fields
-        # if they don't conflict with something already provided by the flavor
-        # extra specs. These are all added to the unnumbered request group.
+        # Add on any request groups that came from outside of the flavor/image,
+        # e.g. from ports or device profiles.
+        self._process_requested_resources(request_spec)
+
+        # Parse the flavor itself, though we'll only use these fields if they
+        # don't conflict with something already provided by the flavor extra
+        # specs. These are all added to the unnumbered request group.
         merged_resources = self.merged_resources()
 
         if (orc.VCPU not in merged_resources and
@@ -143,6 +152,14 @@ class ResourceRequest(object):
         self._translate_vpmems_request(request_spec.flavor)
 
         self.strip_zeros()
+
+    def _process_requested_resources(self, request_spec):
+        requested_resources = (request_spec.requested_resources
+                               if 'requested_resources' in request_spec and
+                                  request_spec.requested_resources
+                               else [])
+        for group in requested_resources:
+            self._add_request_group(group)
 
     def _process_extra_specs(self, flavor):
         if 'extra_specs' not in flavor:
@@ -277,7 +294,7 @@ class ResourceRequest(object):
             self._rg_by_id[ident] = rq_grp
         return self._rg_by_id[ident]
 
-    def add_request_group(self, request_group):
+    def _add_request_group(self, request_group):
         """Inserts the existing group with a unique integer id
 
         The groups coming from the flavor can have arbitrary ids but every id
@@ -542,13 +559,6 @@ def resources_from_request_spec(ctxt, spec_obj, host_manager,
     :raises NoValidHost: If the specified host/node is not found in the DB.
     """
     res_req = ResourceRequest(spec_obj, enable_pinning_translate)
-
-    requested_resources = (spec_obj.requested_resources
-                           if 'requested_resources' in spec_obj and
-                              spec_obj.requested_resources
-                           else [])
-    for group in requested_resources:
-        res_req.add_request_group(group)
 
     # values to get the destination target compute uuid
     target_host = None

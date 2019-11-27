@@ -675,8 +675,8 @@ class TestUtils(TestUtilsBase):
                 root_gb=10,
                 ephemeral_gb=5,
                 swap=0)
-        rg1 = objects.RequestGroup()
-        rg2 = objects.RequestGroup()
+        rg1 = objects.RequestGroup(resources={'CUSTOM_FOO': 1})
+        rg2 = objects.RequestGroup(required_traits={'CUSTOM_BAR'})
         reqspec = objects.RequestSpec(flavor=flavor,
                                       requested_resources=[rg1, rg2])
         req = utils.resources_from_request_spec(
@@ -1094,9 +1094,9 @@ class TestUtils(TestUtilsBase):
         rs = objects.RequestSpec(flavor=flavor, is_bfv=False)
         req = utils.ResourceRequest(rs)
         rg1 = objects.RequestGroup()
-        req.add_request_group(rg1)
+        req._add_request_group(rg1)
         rg2 = objects.RequestGroup()
-        req.add_request_group(rg2)
+        req._add_request_group(rg2)
         self.assertIs(rg1, req.get_request_group(1))
         self.assertIs(rg2, req.get_request_group(2))
 
@@ -1110,9 +1110,9 @@ class TestUtils(TestUtilsBase):
         unnumbered_rg = req.get_request_group(42)
 
         rg1 = objects.RequestGroup()
-        req.add_request_group(rg1)
+        req._add_request_group(rg1)
         rg2 = objects.RequestGroup()
-        req.add_request_group(rg2)
+        req._add_request_group(rg2)
 
         self.assertIs(rg1, req.get_request_group(43))
         self.assertIs(rg2, req.get_request_group(44))
