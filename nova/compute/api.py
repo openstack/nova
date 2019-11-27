@@ -5173,6 +5173,21 @@ def target_host_cell(fn):
     return targeted
 
 
+def _get_service_in_cell_by_host(context, host_name):
+    # validates the host; ComputeHostNotFound is raised if invalid
+    try:
+        mapping = objects.HostMapping.get_by_host(context, host_name)
+        nova_context.set_target_cell(context, mapping.cell_mapping)
+        service = objects.Service.get_by_compute_host(context, host_name)
+    except exception.HostMappingNotFound:
+        try:
+            # NOTE(danms): This targets our cell
+            service = _find_service_in_cell(context, service_host=host_name)
+        except exception.NotFound:
+            raise exception.ComputeHostNotFound(host=host_name)
+    return service
+
+
 def _find_service_in_cell(context, service_id=None, service_host=None):
     """Find a service by id or hostname by searching all cells.
 
@@ -5788,20 +5803,8 @@ class AggregateAPI(base.Base):
         compute_utils.notify_about_aggregate_update(context,
                                                     "addhost.start",
                                                     aggregate_payload)
-        # validates the host; HostMappingNotFound or ComputeHostNotFound
-        # is raised if invalid
-        try:
-            mapping = objects.HostMapping.get_by_host(context, host_name)
-            nova_context.set_target_cell(context, mapping.cell_mapping)
-            service = objects.Service.get_by_compute_host(context, host_name)
-        except exception.HostMappingNotFound:
-            try:
-                # NOTE(danms): This targets our cell
-                service = _find_service_in_cell(context,
-                                                service_host=host_name)
-            except exception.NotFound:
-                raise exception.ComputeHostNotFound(host=host_name)
 
+        service = _get_service_in_cell_by_host(context, host_name)
         if service.host != host_name:
             # NOTE(danms): If we found a service but it is not an
             # exact match, we may have a case-insensitive backend
@@ -5864,11 +5867,7 @@ class AggregateAPI(base.Base):
         compute_utils.notify_about_aggregate_update(context,
                                                     "removehost.start",
                                                     aggregate_payload)
-        # validates the host; HostMappingNotFound or ComputeHostNotFound
-        # is raised if invalid
-        mapping = objects.HostMapping.get_by_host(context, host_name)
-        nova_context.set_target_cell(context, mapping.cell_mapping)
-        objects.Service.get_by_compute_host(context, host_name)
+        _get_service_in_cell_by_host(context, host_name)
         aggregate = objects.Aggregate.get_by_id(context, aggregate_id)
 
         compute_utils.notify_about_aggregate_action(

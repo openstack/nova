@@ -11601,9 +11601,10 @@ def fake_rpc_method(self, context, method, **kwargs):
     pass
 
 
-def _create_service_entries(ctxt, values=[['avail_zone1', ['fake_host1',
-                                                           'fake_host2']],
-                                          ['avail_zone2', ['fake_host3']]]):
+def _create_service_entries(
+        ctxt, values=[['avail_zone1', ['fake_host1', 'fake_host2']],
+                      ['avail_zone2', ['fake_host3']]],
+        skip_host_mapping_creation_for_hosts=None):
     cells = objects.CellMappingList.get_all(ctxt)
     index = 0
     for (avail_zone, hosts) in values:
@@ -11618,10 +11619,11 @@ def _create_service_entries(ctxt, values=[['avail_zone1', ['fake_host1',
                                     topic='compute',
                                     report_count=0)
                 s.create()
-            hm = objects.HostMapping(context=ctxt,
-                                     cell_mapping=cell,
-                                     host=host)
-            hm.create()
+            if host not in (skip_host_mapping_creation_for_hosts or []):
+                hm = objects.HostMapping(context=ctxt,
+                                         cell_mapping=cell,
+                                         host=host)
+                hm.create()
     return values
 
 
@@ -12221,14 +12223,44 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                 'aggregate_remove_host')
     def test_remove_host_from_aggregate_raise_not_found(
             self, mock_remove_host):
-        # Ensure HostMappingNotFound is raised when removing invalid host.
+        # Ensure ComputeHostNotFound is raised when removing invalid host.
         _create_service_entries(self.context, [['fake_zone', ['fake_host']]])
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          'fake_zone')
-        self.assertRaises(exception.HostMappingNotFound,
+        self.assertRaises(exception.ComputeHostNotFound,
                           self.api.remove_host_from_aggregate,
                           self.context, aggr.id, 'invalid_host')
         mock_remove_host.assert_not_called()
+
+    @mock.patch('nova.objects.Service.get_by_compute_host')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'aggregate_remove_host')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'aggregate_add_host')
+    @mock.patch('nova.compute.utils.notify_about_aggregate_action')
+    @mock.patch.object(availability_zones,
+                       'update_host_availability_zone_cache')
+    def test_remove_host_from_aggregate_no_host_mapping_service_exists(
+            self, mock_az, mock_notify, mock_add_host, mock_rm_host,
+            mock_get_service):
+        # Ensure ComputeHostNotFound is not raised when adding a host with a
+        # hostname that doesn't have host mapping but has a service entry.
+        fake_host = 'fake_host'
+        # This is called 4 times, during addition to aggregate for cell0 and
+        # cell1, and during deletion for cell0 and cell1 as well
+        mock_get_service.side_effect = [
+            exception.NotFound(), objects.Service(host=fake_host),
+            exception.NotFound(), objects.Service(host=fake_host)
+        ]
+
+        aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
+                                         'fake_zone')
+        fake_notifier.NOTIFICATIONS = []
+        _create_service_entries(
+            self.context, values=[['az', [fake_host]]],
+            skip_host_mapping_creation_for_hosts=[fake_host])
+        self.api.add_host_to_aggregate(self.context, aggr.id, fake_host)
+        self.api.remove_host_from_aggregate(self.context, aggr.id, fake_host)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_remove_host')
