@@ -852,8 +852,8 @@ class TestUtils(TestUtilsBase):
                 'trait2:CUSTOM_PHYSNET_NET2': 'required',
                 'trait2:HW_NIC_ACCEL_SSL': 'required',
                 # Groupings that don't quite match the patterns are ignored
-                'resources_5:SRIOV_NET_VF': '7',
-                'traitFoo:HW_NIC_ACCEL_SSL': 'required',
+                'resources_*5:SRIOV_NET_VF': '7',
+                'traitFoo$:HW_NIC_ACCEL_SSL': 'required',
                 # Solo resource, no corresponding traits
                 'resources3:DISK_GB': '5',
                 'group_policy': 'isolate',

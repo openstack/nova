@@ -53,8 +53,8 @@ class ResourceRequest(object):
     # extra_specs-specific consts
     XS_RES_PREFIX = 'resources'
     XS_TRAIT_PREFIX = 'trait'
-    # Regex patterns for numbered or un-numbered resources/trait keys
-    XS_KEYPAT = re.compile(r"^(%s)([1-9][0-9]*)?:(.*)$" %
+    # Regex patterns for suffixed or unsuffixed resources/trait keys
+    XS_KEYPAT = re.compile(r"^(%s)([a-zA-Z0-9_-]{1,64})?:(.*)$" %
                            '|'.join((XS_RES_PREFIX, XS_TRAIT_PREFIX)))
 
     def __init__(self, request_spec, enable_pinning_translate=True):
@@ -66,13 +66,17 @@ class ResourceRequest(object):
         For extra specs, items of the following form are examined:
 
         - ``resources:$RESOURCE_CLASS``: $AMOUNT
-        - ``resources$N:$RESOURCE_CLASS``: $AMOUNT
+        - ``resources$S:$RESOURCE_CLASS``: $AMOUNT
         - ``trait:$TRAIT_NAME``: "required"
-        - ``trait$N:$TRAIT_NAME``: "required"
+        - ``trait$S:$TRAIT_NAME``: "required"
+
+        ...where ``$S`` is a string suffix as supported via Placement
+        microversion 1.33
+        https://docs.openstack.org/placement/train/specs/train/implemented/2005575-nested-magic-1.html#arbitrary-group-suffixes  # noqa
 
         .. note::
 
-            This does *not* yet handle ``member_of[$N]``.
+            This does *not* yet handle ``member_of[$S]``.
 
         For image metadata, traits are extracted from the ``traits_required``
         property, if present.
@@ -97,7 +101,7 @@ class ResourceRequest(object):
         # set to None to indicate "no limit".
         self._limit = CONF.scheduler.max_placement_results
 
-        # TODO(efried): Handle member_of[$N], which will need to be reconciled
+        # TODO(efried): Handle member_of[$S], which will need to be reconciled
         # with destination.aggregates handling in resources_from_request_spec
 
         # request_spec.image is nullable
@@ -109,7 +113,7 @@ class ResourceRequest(object):
         # Parse the flavor extra specs
         self._process_extra_specs(request_spec.flavor)
 
-        self.numbered_groups_from_flavor = self.get_num_of_numbered_groups()
+        self.suffixed_groups_from_flavor = self.get_num_of_suffixed_groups()
 
         # Now parse the (optional) image metadata
         self._process_image_meta(image)
@@ -128,7 +132,7 @@ class ResourceRequest(object):
 
         # Parse the flavor itself, though we'll only use these fields if they
         # don't conflict with something already provided by the flavor extra
-        # specs. These are all added to the unnumbered request group.
+        # specs. These are all added to the unsuffixed request group.
         merged_resources = self.merged_resources()
 
         if (orc.VCPU not in merged_resources and
@@ -175,15 +179,15 @@ class ResourceRequest(object):
                 continue
 
             # 'prefix' is 'resources' or 'trait'
-            # 'suffix' is $N or None
+            # 'suffix' is $S or None
             # 'name' is either the resource class name or the trait name.
             prefix, suffix, name = match.groups()
 
-            # Process "resources[$N]"
+            # Process "resources[$S]"
             if prefix == self.XS_RES_PREFIX:
                 self._add_resource(suffix, name, val)
 
-            # Process "trait[$N]"
+            # Process "trait[$S]"
             elif prefix == self.XS_TRAIT_PREFIX:
                 self._add_trait(suffix, name, val)
 
@@ -193,7 +197,7 @@ class ResourceRequest(object):
 
         for trait in image.properties.get('traits_required', []):
             # required traits from the image are always added to the
-            # unnumbered request group, granular request groups are not
+            # unsuffixed request group, granular request groups are not
             # supported in image traits
             self._add_trait(None, trait, "required")
 
@@ -295,18 +299,29 @@ class ResourceRequest(object):
         return self._rg_by_id[ident]
 
     def _add_request_group(self, request_group):
-        """Inserts the existing group with a unique integer id
+        """Inserts the existing group with a unique suffix.
 
-        The groups coming from the flavor can have arbitrary ids but every id
-        is an integer. So this function can ensure unique ids by using bigger
-        ids than the maximum of existing ids.
+        The groups coming from the flavor can have arbitrary suffixes; those
+        are guaranteed to be unique within the flavor.
+
+        A group coming from "outside" (ports, device profiles) must be given a
+        suffix that is unique in combination with suffixes from the flavor.
+
+        .. todo:: Tie suffixes to RequestGroup.requester_id
 
         :param request_group: the RequestGroup to be added
         """
-        # NOTE(gibi) [0] just here to always have a defined maximum
-        group_idents = [0] + [int(ident) for ident in self._rg_by_id if ident]
-        ident = max(group_idents) + 1
-        self._rg_by_id[ident] = request_group
+        # Generate a unique suffix by peeling out all the suffixes that are
+        # integers (respond to int()) and adding 1 to the highest one.
+        max_ident = 0
+        for ident in self._rg_by_id:
+            try:
+                max_ident = max(int(ident), max_ident)
+            except (TypeError, ValueError):
+                # Non-numeric or None (unsuffixed)
+                continue
+
+        self._rg_by_id[max_ident + 1] = request_group
 
     def _add_resource(self, groupid, rclass, amount):
         self.get_request_group(groupid).add_resource(rclass, amount)
@@ -327,7 +342,7 @@ class ResourceRequest(object):
         for rg in self._rg_by_id.values():
             yield rg.resources
 
-    def get_num_of_numbered_groups(self):
+    def get_num_of_suffixed_groups(self):
         return len([ident for ident in self._rg_by_id.keys()
                     if ident is not None])
 
@@ -346,7 +361,7 @@ class ResourceRequest(object):
         return dict(ret)
 
     def _clean_empties(self):
-        """Get rid of any empty ResourceGroup instances."""
+        """Get rid of any empty RequestGroup instances."""
         for ident, rg in list(self._rg_by_id.items()):
             if not any((rg.resources, rg.required_traits,
                         rg.forbidden_traits)):
@@ -390,8 +405,8 @@ class ResourceRequest(object):
                 qs_params.append(('required%s' % suffix, required_val))
             if aggregates:
                 aggs = []
-                # member_ofN is a list of lists.  We need a tuple of
-                # ('member_ofN', 'in:uuid,uuid,...') for each inner list.
+                # member_of$S is a list of lists.  We need a tuple of
+                # ('member_of$S', 'in:uuid,uuid,...') for each inner list.
                 for agglist in aggregates:
                     aggs.append(('member_of%s' % suffix,
                                  'in:' + ','.join(sorted(agglist))))
@@ -399,8 +414,8 @@ class ResourceRequest(object):
             if in_tree:
                 qs_params.append(('in_tree%s' % suffix, in_tree))
             if forbidden_aggregates:
-                # member_ofN is a list of aggregate uuids. We need a
-                # tuple of ('member_ofN, '!in:uuid,uuid,...').
+                # member_of$S is a list of aggregate uuids. We need a
+                # tuple of ('member_of$S, '!in:uuid,uuid,...').
                 forbidden_aggs = '!in:' + ','.join(
                     sorted(forbidden_aggregates))
                 qs_params.append(('member_of%s' % suffix, forbidden_aggs))
@@ -414,10 +429,10 @@ class ResourceRequest(object):
             qparams.append(('group_policy', self._group_policy))
 
         for ident, rg in self._rg_by_id.items():
-            # [('resourcesN', 'rclass:amount,rclass:amount,...'),
-            #  ('requiredN', 'trait_name,!trait_name,...'),
-            #  ('member_ofN', 'in:uuid,uuid,...'),
-            #  ('member_ofN', 'in:uuid,uuid,...')]
+            # [('resources[$S]', 'rclass:amount,rclass:amount,...'),
+            #  ('required[$S]', 'trait_name,!trait_name,...'),
+            #  ('member_of[$S]', 'in:uuid,uuid,...'),
+            #  ('member_of[$S]', 'in:uuid,uuid,...')]
             qparams.extend(to_queryparams(rg, ident or ''))
 
         return parse.urlencode(sorted(qparams))
@@ -435,7 +450,7 @@ class ResourceRequest(object):
 
 
 def build_request_spec(image, instances, instance_type=None):
-    """Build a request_spec for the scheduler.
+    """Build a request_spec (ahem, not a RequestSpec) for the scheduler.
 
     The request_spec assumes that all instances to be scheduled are the same
     type.
@@ -600,7 +615,7 @@ def resources_from_request_spec(ctxt, spec_obj, host_manager,
         for key in spec_obj.scheduler_hints)):
         res_req._limit = None
 
-    if res_req.get_num_of_numbered_groups() >= 2 and not res_req.group_policy:
+    if res_req.get_num_of_suffixed_groups() >= 2 and not res_req.group_policy:
         LOG.warning(
             "There is more than one numbered request group in the "
             "allocation candidate query but the flavor did not specify "
@@ -613,7 +628,7 @@ def resources_from_request_spec(ctxt, spec_obj, host_manager,
             "group to be satisfied from a separate resource provider then "
             "use 'group_policy': 'isolate'.")
 
-        if res_req.numbered_groups_from_flavor <= 1:
+        if res_req.suffixed_groups_from_flavor <= 1:
             LOG.info(
                 "At least one numbered request group is defined outside of "
                 "the flavor (e.g. in a port that has a QoS minimum bandwidth "
