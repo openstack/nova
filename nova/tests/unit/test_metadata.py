@@ -293,7 +293,7 @@ class MetadataTestCase(test.TestCase):
             md.get_ec2_metadata(version='2009-04-04').get('user-data', obj),
             obj)
 
-    def _test_security_groups(self):
+    def test_security_groups(self):
         inst = self.instance.obj_clone()
         sgroups = [{'name': name} for name in ('default', 'other')]
         expected = ['default', 'other']
@@ -301,13 +301,6 @@ class MetadataTestCase(test.TestCase):
         md = fake_InstanceMetadata(self, inst, sgroups=sgroups)
         data = md.get_ec2_metadata(version='2009-04-04')
         self.assertEqual(data['meta-data']['security-groups'], expected)
-
-    def test_security_groups(self):
-        self._test_security_groups()
-
-    def test_neutron_security_groups(self):
-        self.flags(use_neutron=True)
-        self._test_security_groups()
 
     def test_local_hostname(self):
         self.flags(dhcp_domain=None, group='api')

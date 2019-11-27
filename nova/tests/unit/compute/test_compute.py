@@ -240,25 +240,13 @@ class BaseTestCase(test.TestCase):
         def fake_get_nw_info(cls, ctxt, instance, *args, **kwargs):
             return network_model.NetworkInfo()
 
-        if CONF.use_neutron:
-            self.stub_out(
-                'nova.network.neutronv2.api.API.get_instance_nw_info',
-                fake_get_nw_info)
-            self.stub_out(
-                'nova.network.neutronv2.api.API.migrate_instance_start',
-                lambda *args, **kwargs: None)
-            self.useFixture(fixtures.NeutronFixture(self))
-        else:
-            self.stub_out('nova.network.api.API.get_instance_nw_info',
-                           fake_get_nw_info)
-
-            def fake_allocate_for_instance(cls, ctxt, instance,
-                                           *args, **kwargs):
-                self.assertFalse(ctxt.is_admin)
-                return fake_network.fake_get_instance_nw_info(self, 1, 1)
-
-            self.stub_out('nova.network.api.API.allocate_for_instance',
-                           fake_allocate_for_instance)
+        self.stub_out(
+            'nova.network.neutronv2.api.API.get_instance_nw_info',
+            fake_get_nw_info)
+        self.stub_out(
+            'nova.network.neutronv2.api.API.migrate_instance_start',
+            lambda *args, **kwargs: None)
+        self.useFixture(fixtures.NeutronFixture(self))
 
         self.compute_api = compute.API()
 
@@ -1704,9 +1692,6 @@ class ComputeTestCase(BaseTestCase,
         self.assertEqual(17152, cn.local_gb_used)
 
     def test_create_multiple_instance_with_neutron_port(self):
-        def fake_is_neutron():
-            return True
-        self.stub_out('nova.utils.is_neutron', fake_is_neutron)
         requested_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(port_id=uuids.port_instance)])
         self.assertRaises(exception.MultiplePortsNotApplicable,
@@ -6145,11 +6130,9 @@ class ComputeTestCase(BaseTestCase,
         # Confirm setup_compute_volume is called when volume is mounted.
         def stupid(*args, **kwargs):
             return fake_network.fake_get_instance_nw_info(self)
-        if CONF.use_neutron:
-            self.stub_out(
-                'nova.network.neutronv2.api.API.get_instance_nw_info', stupid)
-        else:
-            self.stub_out('nova.network.api.API.get_instance_nw_info', stupid)
+
+        self.stub_out(
+            'nova.network.neutronv2.api.API.get_instance_nw_info', stupid)
 
         # creating instance testdata
         instance = self._create_fake_instance_obj({'host': 'dummy'})
@@ -7152,23 +7135,9 @@ class ComputeTestCase(BaseTestCase,
                     CONF.running_deleted_instance_timeout)
 
     @mock.patch('nova.network.neutronv2.api.API.list_ports')
-    @mock.patch.object(nova.utils, 'is_neutron')
-    def test_require_nw_info_update_not_neutron(self, mock_is_neutron,
-                                                mock_list_ports):
+    def test_require_nw_info_update_host_match(self, mock_list_ports):
         ctxt = context.get_admin_context()
         instance = self._create_fake_instance_obj()
-        mock_is_neutron.return_value = False
-        val = self.compute._require_nw_info_update(ctxt, instance)
-        self.assertFalse(val)
-        mock_list_ports.assert_not_called()
-
-    @mock.patch('nova.network.neutronv2.api.API.list_ports')
-    @mock.patch.object(nova.utils, 'is_neutron')
-    def test_require_nw_info_update_host_match(self, mock_is_neutron,
-                                               mock_list_ports):
-        ctxt = context.get_admin_context()
-        instance = self._create_fake_instance_obj()
-        mock_is_neutron.return_value = True
         mock_list_ports.return_value = {'ports': [
             {'binding:host_id': self.compute.host,
              'binding:vif_type': 'foo'}
@@ -7183,12 +7152,9 @@ class ComputeTestCase(BaseTestCase,
         mock_list_ports.assert_called_once_with(ctxt, **search_opts)
 
     @mock.patch('nova.network.neutronv2.api.API.list_ports')
-    @mock.patch.object(nova.utils, 'is_neutron')
-    def test_require_nw_info_update_host_mismatch(self, mock_is_neutron,
-                                                  mock_list_ports):
+    def test_require_nw_info_update_host_mismatch(self, mock_list_ports):
         ctxt = context.get_admin_context()
         instance = self._create_fake_instance_obj()
-        mock_is_neutron.return_value = True
         mock_list_ports.return_value = {'ports': [
             {'binding:host_id': 'foo', 'binding:vif_type': 'foo'}
         ]}
@@ -7199,12 +7165,9 @@ class ComputeTestCase(BaseTestCase,
         mock_list_ports.assert_called_once_with(ctxt, **search_opts)
 
     @mock.patch('nova.network.neutronv2.api.API.list_ports')
-    @mock.patch.object(nova.utils, 'is_neutron')
-    def test_require_nw_info_update_failed_vif_types(
-            self, mock_is_neutron, mock_list_ports):
+    def test_require_nw_info_update_failed_vif_types(self, mock_list_ports):
         ctxt = context.get_admin_context()
         instance = self._create_fake_instance_obj()
-        mock_is_neutron.return_value = True
         search_opts = {'device_id': instance.uuid,
                        'fields': ['binding:host_id', 'binding:vif_type']}
 
@@ -7313,20 +7276,12 @@ class ComputeTestCase(BaseTestCase,
                       '_require_nw_info_update',
                 fake_require_nw_info_update)
 
-        if CONF.use_neutron:
-            self.stub_out(
-                'nova.network.neutronv2.api.API.get_instance_nw_info',
-                fake_get_instance_nw_info)
-            self.stub_out(
-                'nova.network.neutronv2.api.API.'
-                'setup_instance_network_on_host',
-                fake_setup_instance_network_on_host)
-        else:
-            self.stub_out('nova.network.api.API.get_instance_nw_info',
-                    fake_get_instance_nw_info)
-            self.stub_out(
-                'nova.network.api.API.setup_instance_network_on_host',
-                fake_setup_instance_network_on_host)
+        self.stub_out(
+            'nova.network.neutronv2.api.API.get_instance_nw_info',
+            fake_get_instance_nw_info)
+        self.stub_out(
+            'nova.network.neutronv2.api.API.setup_instance_network_on_host',
+            fake_setup_instance_network_on_host)
 
         expected_require_nw_info = 0
         expect_setup_network = 0
