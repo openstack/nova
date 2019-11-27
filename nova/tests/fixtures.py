@@ -1660,12 +1660,6 @@ class NeutronFixture(fixtures.Fixture):
         self.test.flags(vif_plugging_timeout=0)
 
         self.test.stub_out(
-            'nova.network.neutronv2.api.API.setup_networks_on_host',
-            lambda *args, **kwargs: None)
-        self.test.stub_out(
-            'nova.network.neutronv2.api.API.migrate_instance_start',
-            lambda *args, **kwargs: None)
-        self.test.stub_out(
             'nova.network.neutronv2.api.API.add_fixed_ip_to_instance',
             lambda *args, **kwargs: network_model.NetworkInfo.hydrate(
                 self.nw_info))
