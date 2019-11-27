@@ -28,7 +28,6 @@ class TestInstanceNotificationSampleWithMultipleCompute(
 
     def setUp(self):
         self.flags(compute_driver='fake.FakeLiveMigrateDriver')
-        self.flags(use_neutron=True)
         self.flags(bdms_in_notifications='True', group='notifications')
         super(TestInstanceNotificationSampleWithMultipleCompute, self).setUp()
         self.neutron = fixtures.NeutronFixture(self)
@@ -333,7 +332,6 @@ class TestInstanceNotificationSample(
         notification_sample_base.NotificationSampleTestBase):
 
     def setUp(self):
-        self.flags(use_neutron=True)
         self.flags(bdms_in_notifications='True', group='notifications')
         super(TestInstanceNotificationSample, self).setUp()
         self.neutron = fixtures.NeutronFixture(self)

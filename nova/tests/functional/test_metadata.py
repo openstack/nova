@@ -62,18 +62,16 @@ class MetadataTest(test.TestCase):
                                     project_id='fake', hostname='test')
         instance.create()
 
-        # NOTE(mikal): We could create a network and a fixed IP here, but it
-        # turns out to be heaps of fiddly boiler plate code, so let's just
-        # fake it and hope mriedem doesn't notice.
-        # TODO(mriedem): Make this all work with the Neutron fixture.
-        self.flags(use_neutron=False)
+        # The NeutronFixture is needed to provide the fixed IP for the metadata
+        # service
+        self.useFixture(nova_fixtures.NeutronFixture(self))
 
         def fake_get_fixed_ip_by_address(self, ctxt, address):
             return {'instance_uuid': instance.uuid}
 
         self.useFixture(
             fixtures.MonkeyPatch(
-                'nova.network.api.API.get_fixed_ip_by_address',
+                'nova.network.neutronv2.api.API.get_fixed_ip_by_address',
                 fake_get_fixed_ip_by_address))
 
         def fake_get_ec2_ip_info(nw_info):

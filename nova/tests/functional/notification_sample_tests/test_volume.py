@@ -23,7 +23,6 @@ class TestVolumeUsageNotificationSample(
         notification_sample_base.NotificationSampleTestBase):
 
     def setUp(self):
-        self.flags(use_neutron=True)
         self.flags(volume_usage_poll_interval=60)
         super(TestVolumeUsageNotificationSample, self).setUp()
         self.neutron = fixtures.NeutronFixture(self)

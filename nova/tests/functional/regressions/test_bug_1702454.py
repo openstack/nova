@@ -45,7 +45,6 @@ class SchedulerOnlyChecksTargetTest(test.TestCase,
         self.useFixture(policy_fixture.RealPolicyFixture())
 
         # The NeutronFixture is needed to stub out validate_networks in API.
-        self.flags(use_neutron=True)
         self.useFixture(nova_fixtures.NeutronFixture(self))
 
         # We need the computes reporting into placement for the filter
