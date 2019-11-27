@@ -34,8 +34,7 @@
 
 - job:
     name: nova-tox-functional-py36
-    parent: openstack-tox
-    nodeset: ubuntu-bionic
+    parent: openstack-tox-functional-py36
     description: |
       Run tox-based functional tests for the OpenStack Nova project
       under cPython version 3.6 with Nova specific irrelevant-files list.
@@ -57,15 +56,13 @@
       # explicitly stating the work dir makes this job reusable by other
       # projects
       zuul_work_dir: src/opendev.org/openstack/nova
-      tox_envlist: functional-py36
       tox_install_siblings: true
       bindep_profile: test py36
     timeout: 3600
 
 - job:
     name: nova-tox-functional-py37
-    parent: openstack-tox
-    nodeset: ubuntu-bionic
+    parent: openstack-tox-functional-py37
     description: |
       Run tox-based functional tests for the OpenStack Nova project
       under cPython version 3.7 with Nova specific irrelevant-files list.
@@ -82,9 +79,8 @@
       # explicitly stating the work dir makes this job reusable by other
       # projects
       zuul_work_dir: src/opendev.org/openstack/nova
-      tox_envlist: functional-py37
+      tox_install_siblings: true
       bindep_profile: test py37
-      python_version: 3.7
     timeout: 3600
 
 - job:
