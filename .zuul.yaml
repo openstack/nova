@@ -56,7 +56,6 @@
       # explicitly stating the work dir makes this job reusable by other
       # projects
       zuul_work_dir: src/opendev.org/openstack/nova
-      tox_install_siblings: true
       bindep_profile: test py36
     timeout: 3600
 
@@ -79,7 +78,6 @@
       # explicitly stating the work dir makes this job reusable by other
       # projects
       zuul_work_dir: src/opendev.org/openstack/nova
-      tox_install_siblings: true
       bindep_profile: test py37
     timeout: 3600
 
