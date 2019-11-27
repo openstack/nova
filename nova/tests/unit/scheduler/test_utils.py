@@ -266,7 +266,7 @@ class TestUtils(TestUtilsBase):
                                 extra_specs={
                                     "resources:DOESNT_EXIST": 0})
         fake_spec = objects.RequestSpec(flavor=flavor)
-        with mock.patch("nova.scheduler.utils.LOG.warning") as mock_log:
+        with mock.patch("nova.objects.request_spec.LOG.warning") as mock_log:
             utils.resources_from_request_spec(
                 self.context, fake_spec, self.mock_host_manager)
             mock_log.assert_called_once()

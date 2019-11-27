@@ -309,41 +309,10 @@ class ResourceRequest(object):
         self._rg_by_id[ident] = request_group
 
     def _add_resource(self, groupid, rclass, amount):
-        # Validate the class.
-        if not (rclass.startswith(orc.CUSTOM_NAMESPACE) or
-                        rclass in orc.STANDARDS):
-            LOG.warning(
-                "Received an invalid ResourceClass '%(key)s' in extra_specs.",
-                {"key": rclass})
-            return
-        # val represents the amount.  Convert to int, or warn and skip.
-        try:
-            amount = int(amount)
-            if amount < 0:
-                raise ValueError()
-        except ValueError:
-            LOG.warning(
-                "Resource amounts must be nonnegative integers. Received "
-                "'%(val)s' for key resources%(groupid)s.",
-                {"groupid": groupid or '', "val": amount})
-            return
-        self.get_request_group(groupid).resources[rclass] = amount
+        self.get_request_group(groupid).add_resource(rclass, amount)
 
     def _add_trait(self, groupid, trait_name, trait_type):
-        # Currently the only valid values for a trait entry are 'required'
-        # and 'forbidden'
-        trait_vals = ('required', 'forbidden')
-        if trait_type == 'required':
-            self.get_request_group(groupid).required_traits.add(trait_name)
-        elif trait_type == 'forbidden':
-            self.get_request_group(groupid).forbidden_traits.add(trait_name)
-        else:
-            LOG.warning(
-                "Only (%(tvals)s) traits are supported. Received '%(val)s' "
-                "for key trait%(groupid)s.",
-                {"tvals": ', '.join(trait_vals), "groupid": groupid or '',
-                 "val": trait_type})
-        return
+        self.get_request_group(groupid).add_trait(trait_name, trait_type)
 
     def _add_group_policy(self, policy):
         # The only valid values for group_policy are 'none' and 'isolate'.
