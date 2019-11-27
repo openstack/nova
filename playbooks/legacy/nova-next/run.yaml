@@ -45,6 +45,9 @@
           USE_PYTHON3=True
           ENABLE_VOLUME_MULTIATTACH=True
 
+          # Disable non-essential services that we don't need for this job.
+          disable_service c-bak
+
           [[post-config|$NOVA_CONF]]
           [compute]
           resource_provider_association_refresh = 0
