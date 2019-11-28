@@ -2359,19 +2359,13 @@ class ComputeManager(manager.Manager):
         used for Neutron ports that have resource request due to the port
         having QoS minimum bandwidth policy rule attached.
 
-        :param request_spec: A RequestSpec object
+        :param request_spec: A RequestSpec object or None
         :returns: A dict keyed by RequestGroup requester_id, currently Neutron
         port_id, to resource provider UUID that provides resource for that
-        RequestGroup.
+        RequestGroup. Or None if the request_spec was None.
         """
-
-        if (request_spec and
-                'requested_resources' in request_spec and
-                request_spec.requested_resources is not None):
-            return {
-                group.requester_id: group.provider_uuids
-                for group in request_spec.requested_resources
-            }
+        if request_spec:
+            return request_spec.get_request_group_mapping()
         else:
             return None
 

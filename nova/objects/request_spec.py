@@ -873,6 +873,23 @@ class RequestSpec(base.NovaObject):
                          (self.requested_resources, placement_allocations,
                           provider_traits))
 
+    def get_request_group_mapping(self):
+        """Return request group resource - provider mapping. This is currently
+        used for Neutron ports that have resource request due to the port
+        having QoS minimum bandwidth policy rule attached.
+
+        :returns: A dict keyed by RequestGroup requester_id, currently Neutron
+        port_id, to resource provider UUID that provides resource for that
+        RequestGroup.
+        """
+
+        if ('requested_resources' in self and
+                self.requested_resources is not None):
+            return {
+                group.requester_id: group.provider_uuids
+                for group in self.requested_resources
+            }
+
 
 @base.NovaObjectRegistry.register
 class Destination(base.NovaObject):
