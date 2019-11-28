@@ -6854,7 +6854,7 @@ class ServerMoveWithPortResourceRequestTest(
     def test_migrate_server_with_qos_port_pci_update_fail_not_reschedule(self):
         # Update the name of the network device RP of PF2 on host2 to something
         # unexpected. This will cause
-        # _update_pci_request_spec_with_allocated_interface_name() to raise
+        # update_pci_request_spec_with_allocated_interface_name() to raise
         # when the instance is migrated to the host2.
         rsp = self.placement_api.put(
             '/resource_providers/%s'
@@ -6879,7 +6879,7 @@ class ServerMoveWithPortResourceRequestTest(
             qos_sriov_port, self.flavor_with_group_policy)
 
         # The compute manager on host2 will raise from
-        # _update_pci_request_spec_with_allocated_interface_name which will
+        # update_pci_request_spec_with_allocated_interface_name which will
         # intentionally not trigger a re-schedule even if there is host3 as an
         # alternate.
         self.api.post_server_action(server['id'], {'migrate': None})
@@ -7208,7 +7208,7 @@ class ServerMoveWithPortResourceRequestTest(
     def test_evacuate_with_qos_port_pci_update_fail(self):
         # Update the name of the network device RP of PF2 on host2 to something
         # unexpected. This will cause
-        # _update_pci_request_spec_with_allocated_interface_name() to raise
+        # update_pci_request_spec_with_allocated_interface_name() to raise
         # when the instance is evacuated to the host2.
         rsp = self.placement_api.put(
             '/resource_providers/%s'
@@ -7234,7 +7234,7 @@ class ServerMoveWithPortResourceRequestTest(
             self.compute1_service_id, {'forced_down': 'true'})
 
         # The compute manager on host2 will raise from
-        # _update_pci_request_spec_with_allocated_interface_name
+        # update_pci_request_spec_with_allocated_interface_name
         self.api.post_server_action(server['id'], {'evacuate': {}})
         server = self._wait_for_server_parameter(
             self.api, server,
@@ -7244,7 +7244,7 @@ class ServerMoveWithPortResourceRequestTest(
         self._wait_for_migration_status(server, ['failed'])
 
         self.assertIn(
-            'Build of instance %s aborted' % server['id'],
+            'does not have a properly formatted name',
             server['fault']['message'])
 
         self._wait_for_action_fail_completion(

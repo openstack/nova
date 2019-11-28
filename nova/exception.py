@@ -2482,3 +2482,17 @@ class VPMEMCleanupFailed(NovaException):
 
 class RequestGroupSuffixConflict(NovaException):
     msg_fmt = _("Duplicate request group suffix %(suffix)s!")
+
+
+class AmbiguousResourceProviderForPCIRequest(NovaException):
+    msg_fmt = _("Allocating resources from multiple resource providers "
+                "%(providers)s for a single pci request %(requester)s is not "
+                "supported.")
+
+
+class UnexpectedResourceProviderNameForPCIRequest(NovaException):
+    msg_fmt = _("Resource provider %(provider)s used to allocate resources "
+                "for the pci request %(requester)s does not have a properly "
+                "formatted name. Expected name format is "
+                "<hostname>:<agentname>:<interfacename>, but got "
+                "%(provider_name)s")
