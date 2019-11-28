@@ -22,6 +22,8 @@ mysql [platform:rpm]
 mysql-client [platform:dpkg]
 mysql-devel [platform:rpm test]
 mysql-server
+openssh-client [platform:dpkg]
+openssh-clients [platform:rpm]
 pkg-config [platform:dpkg test]
 pkgconfig [platform:rpm test]
 postgresql
