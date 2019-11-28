@@ -91,19 +91,30 @@ Solution
 --------
 
 Using the example resources above, remove the allocation for server *vm1* from
-the *devstack1* resource provider.
+the *devstack1* resource provider. If you have `osc-placement
+<https://pypi.org/project/osc-placement/>`_ 1.8.0 or newer, you can use the
+:command:`openstack resource provider allocation unset` command to remove the
+allocations for consumer *vm1* from resource provider *devstack1*:
 
-Note that we do not use :command:`openstack resource provider allocation delete`
-here because that will remove the allocations for the server from all resource
-providers, including *devstack2* where it is now running. So we use
+.. code-block:: console
+
+  $ openstack --os-placement-api-version 1.12 resource provider allocation \
+      unset --provider $devstack1 $vm1
+  +--------------------------------------+------------+------------------------------------------------+----------------------------------+----------------------------------+
+  | resource_provider                    | generation | resources                                      | project_id                       | user_id                          |
+  +--------------------------------------+------------+------------------------------------------------+----------------------------------+----------------------------------+
+  | 52d0182d-d466-4210-8f0d-29466bb54feb |          4 | {u'VCPU': 1, u'MEMORY_MB': 512, u'DISK_GB': 1} | 2f3bffc5db2b47deb40808a4ed2d7c7a | 2206168427c54d92ae2b2572bb0da9af |
+  +--------------------------------------+------------+------------------------------------------------+----------------------------------+----------------------------------+
+
+If you have *osc-placement* 1.7.x or older, the ``unset`` command is not
+available and you must instead overwrite the allocations. Note that we do not
+use :command:`openstack resource provider allocation delete` here because that
+will remove the allocations for the server from all resource providers,
+including *devstack2* where it is now running; instead, we use
 :command:`openstack resource provider allocation set` to overwrite the
 allocations and only retain the *devstack2* provider allocations. If you do
-remove all allocations for a given server, you can heal them later. See
-`Using heal_allocations`_ for details.
-
-.. TODO: Update this when openstack resource provider allocation set has a
-   --no-provider option to remove a specific provider from the allocations,
-   see https://storyboard.openstack.org/#!/story/2006779.
+remove all allocations for a given server, you can heal them later. See `Using
+heal_allocations`_ for details.
 
 .. code-block:: console
 
@@ -119,7 +130,9 @@ remove all allocations for a given server, you can heal them later. See
   | 52d0182d-d466-4210-8f0d-29466bb54feb |          4 | {u'VCPU': 1, u'MEMORY_MB': 512, u'DISK_GB': 1} | 2f3bffc5db2b47deb40808a4ed2d7c7a | 2206168427c54d92ae2b2572bb0da9af |
   +--------------------------------------+------------+------------------------------------------------+----------------------------------+----------------------------------+
 
-Now the *devstack1* resource provider can be deleted:
+Once the *devstack1* resource provider allocations have been removed using
+either of the approaches above, the *devstack1* resource provider can be
+deleted:
 
 .. code-block:: console
 
@@ -161,7 +174,7 @@ heal the allocations for the consumer using the
   +--------------------------------------+------------+------------------------------------------------+
 
 Note that deleting allocations and then relying on ``heal_allocations`` may not
-always the best solution since healing allocations does not account for some
+always be the best solution since healing allocations does not account for some
 things:
 
 * `Migration-based allocations`_ would be lost if manually deleted during a
