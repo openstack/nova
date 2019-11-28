@@ -42,7 +42,6 @@ from nova import objects
 from nova.objects import base
 from nova import quota
 from nova.tests.unit import fake_block_device
-from nova.tests.unit import fake_network
 from nova.tests.unit.objects import test_keypair
 from nova import utils
 
@@ -177,10 +176,6 @@ class stub_out_compute_api_backup(object):
                      rotation=rotation)
         props.update(extra_properties or {})
         return dict(id='123', status='ACTIVE', name=name, properties=props)
-
-
-def stub_out_nw_api_get_instance_nw_info(test, num_networks=1, func=None):
-    fake_network.stub_out_nw_api_get_instance_nw_info(test)
 
 
 def stub_out_nw_api(test, cls=None, private=None, publics=None):

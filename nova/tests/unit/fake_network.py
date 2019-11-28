@@ -276,39 +276,7 @@ def next_floating_ip(fixed_ip_id):
             'auto_assigned': False}
 
 
-def ipv4_like(ip, match_string):
-    ip = ip.split('.')
-    match_octets = match_string.split('.')
-
-    for i, octet in enumerate(match_octets):
-        if octet == '*':
-            continue
-        if octet != ip[i]:
-            return False
-    return True
-
-
-def fake_get_instance_nw_info(test, num_networks=1, ips_per_vif=2,
-                              floating_ips_per_fixed_ip=0):
-    # test is an instance of nova.test.TestCase
-    # ips_per_vif is the number of ips each vif will have
-    # num_floating_ips is number of float ips for each fixed ip
-    network = network_manager.FlatManager(host=HOST)
-    network.db = db
-
-    # reset the fixed and floating ip generators
-    global floating_ip_id, fixed_ip_id, fixed_ips
-    floating_ip_id = floating_ip_ids()
-    fixed_ip_id = fixed_ip_ids()
-    fixed_ips = []
-
-    def fixed_ips_fake(*args, **kwargs):
-        global fixed_ips
-        ips = [next_fixed_ip(i, floating_ips_per_fixed_ip)
-               for i in range(1, num_networks + 1)
-               for j in range(ips_per_vif)]
-        fixed_ips = ips
-        return ips
+def fake_get_instance_nw_info(test, num_networks=1):
 
     def update_cache_fake(*args, **kwargs):
         fake_info_cache = {
@@ -321,28 +289,101 @@ def fake_get_instance_nw_info(test, num_networks=1, ips_per_vif=2,
             }
         return fake_info_cache
 
-    test.stub_out('nova.db.api.fixed_ip_get_by_instance', fixed_ips_fake)
     test.stub_out('nova.db.api.instance_info_cache_update', update_cache_fake)
 
-    class FakeContext(nova.context.RequestContext):
-        def is_admin(self):
-            return True
+    # TODO(stephenfin): This doesn't match the kind of object we would receive
+    # from '_build_vif_model' and callers of same. We should fix that.
+    nw_model = network_model.NetworkInfo()
+    for network_id in range(1, num_networks + 1):
+        network = network_model.Network(
+            id=getattr(uuids, 'network%i' % network_id),
+            bridge='fake_br%d' % network_id,
+            label='test%d' % network_id,
+            subnets=[
+                network_model.Subnet(
+                    cidr='192.168.%d.0/24' % network_id,
+                    dns=[
+                        network_model.IP(
+                            address='192.168.%d.3' % network_id,
+                            type='dns',
+                            version=4,
+                            meta={},
+                        ),
+                        network_model.IP(
+                            address='192.168.%d.4' % network_id,
+                            type='dns',
+                            version=4,
+                            meta={},
+                        ),
+                    ],
+                    gateway=network_model.IP(
+                        address='192.168.%d.1' % network_id,
+                        type='gateway',
+                        version=4,
+                        meta={},
+                    ),
+                    ips=[
+                        network_model.FixedIP(
+                            address='192.168.%d.100' % network_id,
+                            version=4,
+                            meta={},
+                        ),
+                    ],
+                    routes=[],
+                    version=4,
+                    meta={},
+                ),
+                network_model.Subnet(
+                    cidr='2001:db8:0:%x::/64' % network_id,
+                    dns=[],
+                    gateway=network_model.IP(
+                        address='2001:db8:0:%x::1' % network_id,
+                        type='gateway',
+                        version=6,
+                        meta={},
+                    ),
+                    ips=[
+                        network_model.FixedIP(
+                            address='2001:db8:0:%x:dcad:beff:feef:1' % (
+                                network_id),
+                            version=6,
+                            meta={},
+                        ),
+                    ],
+                    routes=[],
+                    version=6,
+                    meta={}
+                ),
+            ],
+            meta={
+                "tenant_id": "806e1f03-b36f-4fc6-be29-11a366f150eb"
+            },
+        )
+        vif = network_model.VIF(
+            id=getattr(uuids, 'vif%i' % network_id),
+            address='DE:AD:BE:EF:00:%02x' % network_id,
+            network=network,
+            type='bridge',
+            details={},
+            devname=None,
+            ovs_interfaceid=None,
+            qbh_params=None,
+            qbg_params=None,
+            active=False,
+            vnic_type='normal',
+            profile=None,
+            preserve_on_delete=False,
+            meta={'rxtx_cap': 30},
+        )
+        nw_model.append(vif)
 
-    nw_model = network.get_instance_nw_info(
-                FakeContext('fakeuser', 'fake_project'),
-                0, 3, None)
     return nw_model
 
 
-def stub_out_nw_api_get_instance_nw_info(test, func=None,
-                                         num_networks=1,
-                                         ips_per_vif=1,
-                                         floating_ips_per_fixed_ip=0):
+def stub_out_nw_api_get_instance_nw_info(test, func=None):
 
     def get_instance_nw_info(self, context, instance, conductor_api=None):
-        return fake_get_instance_nw_info(test, num_networks=num_networks,
-                        ips_per_vif=ips_per_vif,
-                        floating_ips_per_fixed_ip=floating_ips_per_fixed_ip)
+        return fake_get_instance_nw_info(test)
 
     if func is None:
         func = get_instance_nw_info
