@@ -26,7 +26,7 @@ from webob import exc
 
 from nova import exception
 from nova.i18n import _
-from nova.network.neutronv2 import api as neutronapi
+from nova.network import neutron as neutronapi
 from nova.network.security_group import security_group_base
 from nova import utils
 

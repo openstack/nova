@@ -77,7 +77,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.addCleanup(_p.stop)
 
         _p = mock.patch(
-            'nova.network.neutronv2.api.API.'
+            'nova.network.neutron.API.'
             'get_requested_resource_for_instance',
             return_value=[])
         self.mock_get_res_req = _p.start()
@@ -662,7 +662,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
         _test()
 
-    @mock.patch('nova.network.neutronv2.api.API.bind_ports_to_host')
+    @mock.patch('nova.network.neutron.API.bind_ports_to_host')
     def test_bind_ports_on_destination_merges_profiles(self, mock_bind_ports):
         """Assert that if both the migration_data and the provider mapping
         contains binding profile related information then such information is
@@ -686,7 +686,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             port_profiles={uuids.port1: {'allocation': uuids.dest_bw_rp,
                                          'some-key': 'value'}})
 
-    @mock.patch('nova.network.neutronv2.api.API.bind_ports_to_host')
+    @mock.patch('nova.network.neutron.API.bind_ports_to_host')
     def test_bind_ports_on_destination_migration_data(self, mock_bind_ports):
         """Assert that if only the migration_data contains binding profile
         related information then that is sent to neutron.
@@ -708,7 +708,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             vnic_types=None,
             port_profiles={uuids.port1: {'some-key': 'value'}})
 
-    @mock.patch('nova.network.neutronv2.api.API.bind_ports_to_host')
+    @mock.patch('nova.network.neutron.API.bind_ports_to_host')
     def test_bind_ports_on_destination_provider_mapping(self, mock_bind_ports):
         """Assert that if only the provider mapping contains binding
         profile related information then that is sent to neutron.

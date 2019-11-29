@@ -29,7 +29,7 @@ from nova.api import validation
 from nova.compute import api as compute
 from nova import exception
 from nova.i18n import _
-from nova import network
+from nova.network import neutron
 from nova.policies import floating_ips as fi_policies
 
 
@@ -108,7 +108,7 @@ class FloatingIPController(wsgi.Controller):
     def __init__(self):
         super(FloatingIPController, self).__init__()
         self.compute_api = compute.API()
-        self.network_api = network.API()
+        self.network_api = neutron.API()
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 404))
@@ -207,7 +207,7 @@ class FloatingIPActionController(wsgi.Controller):
     def __init__(self):
         super(FloatingIPActionController, self).__init__()
         self.compute_api = compute.API()
-        self.network_api = network.API()
+        self.network_api = neutron.API()
 
     @wsgi.Controller.api_version("2.1", "2.43")
     @wsgi.expected_errors((400, 403, 404))

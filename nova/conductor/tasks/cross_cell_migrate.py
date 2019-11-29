@@ -29,8 +29,8 @@ from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova import image as nova_image
-from nova import network
-from nova.network.neutronv2 import constants as neutron_constants
+from nova.network import constants as neutron_constants
+from nova.network import neutron
 from nova import objects
 from nova.objects import fields
 from nova.scheduler import utils as scheduler_utils
@@ -634,7 +634,7 @@ class CrossCellMigrationTask(base.TaskBase):
         self._target_cell_instance = None
         self._target_cell_context = None
 
-        self.network_api = network.API()
+        self.network_api = neutron.API()
         self.volume_api = cinder.API()
         self.image_api = nova_image.API()
 

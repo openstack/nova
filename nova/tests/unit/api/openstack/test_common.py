@@ -29,7 +29,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import exception
-from nova import network
+from nova.network import neutron as network
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 

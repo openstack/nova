@@ -205,7 +205,7 @@ def stub_out_nw_api(test, cls=None, private=None, publics=None):
     if cls is None:
         cls = Fake
 
-    test.stub_out('nova.network.neutronv2.api.API', cls)
+    test.stub_out('nova.network.neutron.API', cls)
 
 
 def stub_out_secgroup_api(test, security_groups=None):

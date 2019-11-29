@@ -25,7 +25,7 @@ import webob
 from nova.api.openstack.compute import networks as networks_v21
 import nova.context
 from nova import exception
-from nova.network.neutronv2 import api as neutron
+from nova.network import neutron
 from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes

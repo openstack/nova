@@ -24,7 +24,7 @@ from nova.cmd import manage
 from nova import config
 from nova import context
 from nova import exception
-from nova.network.neutronv2 import constants
+from nova.network import constants
 from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures

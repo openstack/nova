@@ -54,8 +54,8 @@ from nova import context
 from nova.db import migration
 from nova.db.sqlalchemy import api as session
 from nova import exception
+from nova.network import constants as neutron_constants
 from nova.network import model as network_model
-from nova.network.neutronv2 import constants as neutron_constants
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import service as service_obj
@@ -1645,38 +1645,38 @@ class NeutronFixture(fixtures.Fixture):
         self.test.flags(vif_plugging_timeout=0)
 
         self.test.stub_out(
-            'nova.network.neutronv2.api.API.add_fixed_ip_to_instance',
+            'nova.network.neutron.API.add_fixed_ip_to_instance',
             lambda *args, **kwargs: network_model.NetworkInfo.hydrate(
                 self.nw_info))
         self.test.stub_out(
-            'nova.network.neutronv2.api.API.remove_fixed_ip_from_instance',
+            'nova.network.neutron.API.remove_fixed_ip_from_instance',
             lambda *args, **kwargs: network_model.NetworkInfo.hydrate(
                 self.nw_info))
 
         # Stub out port binding APIs which go through a KSA client Adapter
         # rather than python-neutronclient.
         self.test.stub_out(
-            'nova.network.neutronv2.api._get_ksa_client',
+            'nova.network.neutron._get_ksa_client',
             lambda *args, **kwargs: mock.Mock(
                 spec=ksa_adap.Adapter))
         self.test.stub_out(
-            'nova.network.neutronv2.api.API._create_port_binding',
+            'nova.network.neutron.API._create_port_binding',
             self.create_port_binding)
         self.test.stub_out(
-            'nova.network.neutronv2.api.API._delete_port_binding',
+            'nova.network.neutron.API._delete_port_binding',
             self.delete_port_binding)
         self.test.stub_out(
-            'nova.network.neutronv2.api.API._activate_port_binding',
+            'nova.network.neutron.API._activate_port_binding',
             self.activate_port_binding)
         self.test.stub_out(
-            'nova.network.neutronv2.api.API._get_port_binding',
+            'nova.network.neutron.API._get_port_binding',
             self.get_port_binding)
 
-        self.test.stub_out('nova.network.neutronv2.api.get_client',
+        self.test.stub_out('nova.network.neutron.get_client',
                            self._get_client)
 
     def _get_client(self, context, admin=False):
-        # This logic is copied from nova.network.neutronv2.api._get_auth_plugin
+        # This logic is copied from nova.network.neutron._get_auth_plugin
         admin = admin or context.is_admin and not context.auth_token
         return _FakeNeutronClient(self, admin)
 

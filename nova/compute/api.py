@@ -59,9 +59,9 @@ from nova import exception_wrapper
 from nova import hooks
 from nova.i18n import _
 from nova import image
-from nova import network
+from nova.network import constants
 from nova.network import model as network_model
-from nova.network.neutronv2 import constants
+from nova.network import neutron
 from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import base as obj_base
@@ -289,7 +289,7 @@ class API(base.Base):
     def __init__(self, image_api=None, network_api=None, volume_api=None,
                  security_group_api=None, **kwargs):
         self.image_api = image_api or image.API()
-        self.network_api = network_api or network.API()
+        self.network_api = network_api or neutron.API()
         self.volume_api = volume_api or cinder.API()
         self._placementclient = None  # Lazy-load on first access.
         self.security_group_api = (security_group_api or

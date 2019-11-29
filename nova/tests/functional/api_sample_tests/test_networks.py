@@ -33,7 +33,7 @@ class NetworksJsonTests(api_sample_base.ApiSampleTestBaseV21):
         response = self._do_get('os-networks/%s' % uuid)
         self._verify_response('network-show-resp', {}, response, 200)
 
-    @mock.patch('nova.network.neutronv2.api.API.get',
+    @mock.patch('nova.network.neutron.API.get',
                 side_effect=exception.Unauthorized)
     def test_network_show_token_expired(self, mock_get):
         uuid = nova_fixtures.NeutronFixture.network_1['id']

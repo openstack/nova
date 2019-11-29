@@ -35,7 +35,7 @@ class TestNeutronDriver(test.NoDBTestCase):
                 'auth_token',
                 'bff4a5a6b9eb4ea2a6efec6eefb77936')
         self.mocked_client = mock.Mock(spec=client.Client)
-        self.stub_out('nova.network.neutronv2.api.get_client',
+        self.stub_out('nova.network.neutron.get_client',
                       lambda context: self.mocked_client)
 
     def test_list_with_project(self):

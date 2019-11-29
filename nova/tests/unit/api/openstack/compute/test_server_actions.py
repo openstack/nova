@@ -100,8 +100,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.addCleanup(mock_conductor.stop)
         # Assume that none of the tests are using ports with resource requests.
         self.mock_list_port = self.useFixture(
-            fixtures.MockPatch(
-                'nova.network.neutronv2.api.API.list_ports')).mock
+            fixtures.MockPatch('nova.network.neutron.API.list_ports')).mock
         self.mock_list_port.return_value = {'ports': []}
 
     def _get_controller(self):

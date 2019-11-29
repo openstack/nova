@@ -78,5 +78,5 @@ def set_stubs(test):
                   fake_vim_prop)
     test.stub_out('nova.virt.vmwareapi.driver.VMwareAPISession._is_vim_object',
                   fake_is_vim_object)
-    test.stub_out('nova.network.neutronv2.api.API.update_instance_vnic_index',
+    test.stub_out('nova.network.neutron.API.update_instance_vnic_index',
                   lambda *args, **kwargs: None)

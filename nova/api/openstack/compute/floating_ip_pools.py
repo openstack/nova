@@ -15,7 +15,7 @@
 from nova.api.openstack.api_version_request \
     import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack import wsgi
-from nova import network
+from nova.network import neutron
 from nova.policies import floating_ip_pools as fip_policies
 
 
@@ -37,7 +37,7 @@ class FloatingIPPoolsController(wsgi.Controller):
 
     def __init__(self):
         super(FloatingIPPoolsController, self).__init__()
-        self.network_api = network.API()
+        self.network_api = neutron.API()
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(())

@@ -26,7 +26,7 @@ from nova.api import validation
 from nova.compute import api as compute
 from nova import exception
 from nova.i18n import _
-from nova import network
+from nova.network import neutron
 from nova import objects
 from nova.policies import migrate_server as ms_policies
 
@@ -39,7 +39,7 @@ class MigrateServerController(wsgi.Controller):
     def __init__(self):
         super(MigrateServerController, self).__init__()
         self.compute_api = compute.API()
-        self.network_api = network.API()
+        self.network_api = neutron.API()
 
     @wsgi.response(202)
     @wsgi.expected_errors((400, 403, 404, 409))

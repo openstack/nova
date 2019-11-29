@@ -47,7 +47,7 @@ from nova import block_device
 from nova import context
 from nova import exception
 from nova.network import model as network_model
-from nova.network.neutronv2 import api as neutronapi
+from nova.network import neutron as neutronapi
 from nova import objects
 from nova.objects import virt_device_metadata as metadata_obj
 from nova import test
@@ -1098,7 +1098,7 @@ class MetadataHandlerTestCase(test.TestCase):
         response_ctype = response.headers['Content-Type']
         self.assertTrue(response_ctype.startswith("application/json"))
 
-    @mock.patch('nova.network.API')
+    @mock.patch('nova.network.neutron.API')
     def test_user_data_non_existing_fixed_address(self, mock_network_api):
         mock_network_api.return_value.get_fixed_ip_by_address.side_effect = (
             exception.NotFound())
@@ -1580,7 +1580,7 @@ class MetadataHandlerTestCase(test.TestCase):
         self.assertEqual(403, response.status_int)
 
     @mock.patch.object(context, 'get_admin_context')
-    @mock.patch('nova.network.API')
+    @mock.patch('nova.network.neutron.API')
     def test_get_metadata_by_address(self, mock_net_api, mock_get_context):
         mock_get_context.return_value = 'CONTEXT'
         api = mock.Mock()

@@ -45,7 +45,7 @@ from nova.console import type as ctype
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
-from nova import network
+from nova.network import neutron
 from nova import objects
 from nova.objects import fields
 from nova import utils
@@ -146,7 +146,7 @@ class VMwareVMOps(object):
         self._datastore_browser_mapping = {}
         self._imagecache = imagecache.ImageCacheManager(self._session,
                                                         self._base_folder)
-        self._network_api = network.API()
+        self._network_api = neutron.API()
 
     def _get_base_folder(self):
         # Enable more than one compute node to run on the same host

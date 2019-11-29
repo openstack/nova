@@ -25,7 +25,7 @@ from nova.compute import vm_states
 import nova.conf
 from nova.db import api as db
 from nova import exception
-from nova.network.neutronv2 import api as neutron_api
+from nova.network import neutron as neutron_api
 from nova import objects
 from nova import test
 from nova.tests.unit.compute import test_compute

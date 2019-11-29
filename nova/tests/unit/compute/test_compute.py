@@ -239,12 +239,10 @@ class BaseTestCase(test.TestCase):
         def fake_get_nw_info(cls, ctxt, instance, *args, **kwargs):
             return network_model.NetworkInfo()
 
-        self.stub_out(
-            'nova.network.neutronv2.api.API.get_instance_nw_info',
-            fake_get_nw_info)
-        self.stub_out(
-            'nova.network.neutronv2.api.API.migrate_instance_start',
-            lambda *args, **kwargs: None)
+        self.stub_out('nova.network.neutron.API.get_instance_nw_info',
+                      fake_get_nw_info)
+        self.stub_out('nova.network.neutron.API.migrate_instance_start',
+                      lambda *args, **kwargs: None)
         self.useFixture(fixtures.NeutronFixture(self))
 
         self.compute_api = compute.API()
@@ -6079,8 +6077,7 @@ class ComputeTestCase(BaseTestCase,
         def stupid(*args, **kwargs):
             return fake_network.fake_get_instance_nw_info(self)
 
-        self.stub_out(
-            'nova.network.neutronv2.api.API.get_instance_nw_info', stupid)
+        self.stub_out('nova.network.neutron.API.get_instance_nw_info', stupid)
 
         # creating instance testdata
         instance = self._create_fake_instance_obj({'host': 'dummy'})
@@ -7075,7 +7072,7 @@ class ComputeTestCase(BaseTestCase,
         mock_is_older.assert_called_once_with(now,
                     CONF.running_deleted_instance_timeout)
 
-    @mock.patch('nova.network.neutronv2.api.API.list_ports')
+    @mock.patch('nova.network.neutron.API.list_ports')
     def test_require_nw_info_update_host_match(self, mock_list_ports):
         ctxt = context.get_admin_context()
         instance = self._create_fake_instance_obj()
@@ -7092,7 +7089,7 @@ class ComputeTestCase(BaseTestCase,
         self.assertFalse(val)
         mock_list_ports.assert_called_once_with(ctxt, **search_opts)
 
-    @mock.patch('nova.network.neutronv2.api.API.list_ports')
+    @mock.patch('nova.network.neutron.API.list_ports')
     def test_require_nw_info_update_host_mismatch(self, mock_list_ports):
         ctxt = context.get_admin_context()
         instance = self._create_fake_instance_obj()
@@ -7105,7 +7102,7 @@ class ComputeTestCase(BaseTestCase,
         self.assertTrue(val)
         mock_list_ports.assert_called_once_with(ctxt, **search_opts)
 
-    @mock.patch('nova.network.neutronv2.api.API.list_ports')
+    @mock.patch('nova.network.neutron.API.list_ports')
     def test_require_nw_info_update_failed_vif_types(self, mock_list_ports):
         ctxt = context.get_admin_context()
         instance = self._create_fake_instance_obj()
@@ -7218,10 +7215,10 @@ class ComputeTestCase(BaseTestCase,
                 fake_require_nw_info_update)
 
         self.stub_out(
-            'nova.network.neutronv2.api.API.get_instance_nw_info',
+            'nova.network.neutron.API.get_instance_nw_info',
             fake_get_instance_nw_info)
         self.stub_out(
-            'nova.network.neutronv2.api.API.setup_instance_network_on_host',
+            'nova.network.neutron.API.setup_instance_network_on_host',
             fake_setup_instance_network_on_host)
 
         expected_require_nw_info = 0
@@ -11405,8 +11402,8 @@ class ComputeAPIIpFilterTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.BuildRequestList, 'get_by_filters')
     @mock.patch.object(objects.CellMapping, 'get_by_uuid',
             side_effect=exception.CellMappingNotFound(uuid=uuids.volume))
-    @mock.patch('nova.network.neutronv2.api.API.'
-                'has_substr_port_filtering_extension', return_value=False)
+    @mock.patch('nova.network.neutron.API.has_substr_port_filtering_extension',
+                return_value=False)
     def test_ip_filtering_no_limit_to_db(self, mock_has_port_filter_ext,
                                          _mock_cell_map_get,
                                          mock_buildreq_get):

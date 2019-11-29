@@ -136,7 +136,7 @@ class TestSendInstanceUpdateNotification(test.NoDBTestCase):
 
 class TestBandwidthUsage(test.NoDBTestCase):
     @mock.patch('nova.context.RequestContext.elevated')
-    @mock.patch('nova.network.API')
+    @mock.patch('nova.network.neutron.API')
     @mock.patch('nova.objects.BandwidthUsageList.get_by_uuids')
     def test_context_elevated(self, mock_get_bw_usage, mock_nw_api,
                               mock_elevated):

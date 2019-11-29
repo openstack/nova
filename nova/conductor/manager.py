@@ -47,7 +47,7 @@ from nova import exception
 from nova.i18n import _
 from nova import image
 from nova import manager
-from nova import network
+from nova.network import neutron
 from nova import notifications
 from nova import objects
 from nova.objects import base as nova_object
@@ -240,7 +240,7 @@ class ComputeTaskManager(base.Base):
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.volume_api = cinder.API()
         self.image_api = image.API()
-        self.network_api = network.API()
+        self.network_api = neutron.API()
         self.servicegroup_api = servicegroup.API()
         self.query_client = query.SchedulerQueryClient()
         self.report_client = report.SchedulerReportClient()
