@@ -47,7 +47,6 @@ class TestProfiler(test.NoDBTestCase):
         six.reload_module(importutils.import_module('nova.manager'))
 
         classes = [
-            'nova.api.manager.MetadataManager',
             'nova.compute.api.API',
             'nova.compute.manager.ComputeManager',
             'nova.compute.rpcapi.ComputeAPI',

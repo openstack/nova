@@ -55,7 +55,6 @@ CONF = nova.conf.CONF
 SERVICE_MANAGERS = {
     'nova-compute': 'nova.compute.manager.ComputeManager',
     'nova-conductor': 'nova.conductor.manager.ConductorManager',
-    'nova-metadata': 'nova.api.manager.MetadataManager',
     'nova-scheduler': 'nova.scheduler.manager.SchedulerManager',
 }
 
