@@ -206,6 +206,8 @@
         NOVA_CONSOLE_PROXY_COMPUTE_TLS: True
         # Added in Stein.
         ENABLE_VOLUME_MULTIATTACH: True
+        # Added in Ussuri.
+        FORCE_CONFIG_DRIVE: True
       devstack_services:
         tls-proxy: true
         # neutron-* needed for QoS port heal allocation testing.
@@ -222,6 +224,7 @@
           USE_PYTHON3: True
           NOVA_USE_SERVICE_TOKEN: True
           NOVA_CONSOLE_PROXY_COMPUTE_TLS: True
+          FORCE_CONFIG_DRIVE: True
         devstack_services:
           tls-proxy: true
           c-bak: false
