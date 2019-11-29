@@ -27,7 +27,7 @@ def fake_get(*args, **kwargs):
     return nova_group
 
 
-def fake_get_instances_security_groups_bindings(self, context, servers,
+def fake_get_instances_security_groups_bindings(context, servers,
                                                 detailed=False):
     result = {}
     for s in servers:
@@ -35,29 +35,28 @@ def fake_get_instances_security_groups_bindings(self, context, servers,
     return result
 
 
-def fake_add_to_instance(self, context, instance, security_group_name):
+def fake_add_to_instance(context, instance, security_group_name):
     pass
 
 
-def fake_remove_from_instance(self, context, instance, security_group_name):
+def fake_remove_from_instance(context, instance, security_group_name):
     pass
 
 
-def fake_list(self, context, names=None, ids=None, project=None,
-             search_opts=None):
+def fake_list(context, names=None, ids=None, project=None, search_opts=None):
     return [fake_get()]
 
 
-def fake_get_instance_security_groups(self, context, instance_uuid,
+def fake_get_instance_security_groups(context, instance_uuid,
                                       detailed=False):
     return [fake_get()]
 
 
-def fake_create_security_group(self, context, name, description):
+def fake_create_security_group(context, name, description):
     return fake_get()
 
 
-def fake_create_security_group_rule(self, context, security_group, new_rule):
+def fake_create_security_group_rule(context, security_group, new_rule):
     return {
         'from_port': 22,
         'to_port': 22,
@@ -69,11 +68,11 @@ def fake_create_security_group_rule(self, context, security_group, new_rule):
     }
 
 
-def fake_remove_rules(self, context, security_group, rule_ids):
+def fake_remove_rules(context, security_group, rule_ids):
     pass
 
 
-def fake_get_rule(self, context, id):
+def fake_get_rule(context, id):
     return {
         'id': id,
         'parent_group_id': '11111111-1111-1111-1111-111111111111'
@@ -85,7 +84,7 @@ class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
 
     def setUp(self):
         super(SecurityGroupsJsonTest, self).setUp()
-        path = 'nova.network.security_group.neutron_driver.SecurityGroupAPI.'
+        path = 'nova.network.security_group_api.'
         self.stub_out(path + 'get', fake_get)
         self.stub_out(path + 'get_instances_security_groups_bindings',
                       fake_get_instances_security_groups_bindings)

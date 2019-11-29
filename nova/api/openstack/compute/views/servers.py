@@ -27,7 +27,7 @@ from nova.compute import api as compute
 from nova.compute import vm_states
 from nova import context as nova_context
 from nova import exception
-from nova.network.security_group import openstack_driver
+from nova.network import security_group_api
 from nova import objects
 from nova.objects import fields
 from nova.objects import virtual_interface
@@ -70,8 +70,6 @@ class ViewBuilder(common.ViewBuilder):
         self._image_builder = views_images.ViewBuilder()
         self._flavor_builder = views_flavors.ViewBuilder()
         self.compute_api = compute.API()
-        self.security_group_api = (
-            openstack_driver.get_openstack_security_group_driver())
 
     def create(self, request, instance):
         """View that should be returned when an instance is created."""
@@ -657,9 +655,8 @@ class ViewBuilder(common.ViewBuilder):
         if not create_request:
             context = req.environ['nova.context']
             sg_instance_bindings = (
-                self.security_group_api
-                .get_instances_security_groups_bindings(context,
-                                                        servers))
+                security_group_api.get_instances_security_groups_bindings(
+                    context, servers))
             for server in servers:
                 groups = sg_instance_bindings.get(server['id'])
                 if groups:

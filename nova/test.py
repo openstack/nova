@@ -55,7 +55,6 @@ import testtools
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
 from nova import exception
-from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import base as objects_base
 from nova import quota
@@ -235,8 +234,6 @@ class TestCase(base.BaseTestCase):
         self.policy = self.useFixture(policy_fixture.PolicyFixture())
 
         self.useFixture(nova_fixtures.PoisonFunctions())
-
-        openstack_driver.DRIVER_CACHE = None
 
         self.useFixture(nova_fixtures.ForbidNewLegacyNotificationFixture())
 

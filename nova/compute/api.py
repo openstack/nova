@@ -62,7 +62,7 @@ from nova import image
 from nova.network import constants
 from nova.network import model as network_model
 from nova.network import neutron
-from nova.network.security_group import openstack_driver
+from nova.network import security_group_api
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
@@ -287,13 +287,11 @@ class API(base.Base):
     """API for interacting with the compute manager."""
 
     def __init__(self, image_api=None, network_api=None, volume_api=None,
-                 security_group_api=None, **kwargs):
+                 **kwargs):
         self.image_api = image_api or image.API()
         self.network_api = network_api or neutron.API()
         self.volume_api = volume_api or cinder.API()
         self._placementclient = None  # Lazy-load on first access.
-        self.security_group_api = (security_group_api or
-            openstack_driver.get_openstack_security_group_driver())
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.compute_task_api = conductor.ComputeTaskAPI()
         self.servicegroup_api = servicegroup.API()
@@ -399,7 +397,7 @@ class API(base.Base):
             if secgroup == "default":
                 security_groups.append(secgroup)
                 continue
-            secgroup_dict = self.security_group_api.get(context, secgroup)
+            secgroup_dict = security_group_api.get(context, secgroup)
             if not secgroup_dict:
                 raise exception.SecurityGroupNotFoundForProject(
                     project_id=context.project_id, security_group_id=secgroup)
@@ -1167,9 +1165,8 @@ class API(base.Base):
         # Check quotas
         num_instances = compute_utils.check_num_instances_quota(
                 context, instance_type, min_count, max_count)
-        security_groups = self.security_group_api.populate_security_groups(
+        security_groups = security_group_api.populate_security_groups(
                 security_groups)
-        self.security_group_api.ensure_default(context)
         port_resource_requests = base_options.pop('port_resource_requests')
         instances_to_build = []
         # We could be iterating over several instances with several BDMs per

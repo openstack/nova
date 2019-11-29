@@ -29,6 +29,7 @@ import nova.db.api
 from nova import exception
 from nova.network import model
 from nova.network import neutron as neutron_api
+from nova.network import security_group_api
 from nova import objects
 from nova.objects import instance as instance_obj
 from nova import test
@@ -532,8 +533,8 @@ class TestSecurityGroupsV21(test.TestCase):
 
         expected = {'security_groups': [expected]}
 
-        with mock.patch.object(
-                self.controller.security_group_api, 'list',
+        with mock.patch(
+                'nova.network.security_group_api.list',
                 return_value=[
                     security_group_db(
                         secgroup) for secgroup in groups]) as mock_list:
@@ -560,13 +561,12 @@ class TestSecurityGroupsV21(test.TestCase):
             req, UUID_SERVER)['security_groups']
         self.assertEqual(expected, res_dict)
 
-    @mock.patch('nova.network.security_group.neutron_driver.SecurityGroupAPI.'
+    @mock.patch('nova.network.security_group_api.'
                 'get_instances_security_groups_bindings')
     def test_get_security_group_empty_for_instance(self, neutron_sg_bind_mock):
         servers = [{'id': FAKE_UUID1}]
         neutron_sg_bind_mock.return_value = {}
 
-        security_group_api = self.controller.security_group_api
         ctx = context_maker.get_admin_context()
         sgs = security_group_api.get_instance_security_groups(ctx,
                 instance_obj.Instance(uuid=FAKE_UUID1))
@@ -890,10 +890,8 @@ class TestSecurityGroupsV21(test.TestCase):
             device_id=FAKE_UUID2)
         expected = {FAKE_UUID1: [{'name': sg1['name']}, {'name': sg2['name']}],
                     FAKE_UUID2: [{'name': sg2['name']}, {'name': sg3['id']}]}
-        security_group_api = self.controller.security_group_api
-        bindings = (
-            security_group_api.get_instances_security_groups_bindings(
-                context_maker.get_admin_context(), servers))
+        bindings = security_group_api.get_instances_security_groups_bindings(
+                context_maker.get_admin_context(), servers)
         self.assertEqual(bindings, expected)
 
     def test_get_instance_security_groups(self):
@@ -909,7 +907,6 @@ class TestSecurityGroupsV21(test.TestCase):
 
         expected = [{'name': sg1['name']}, {'name': sg2['name']},
                     {'name': sg3['id']}]
-        security_group_api = self.controller.security_group_api
         sgs = security_group_api.get_instance_security_groups(
             context_maker.get_admin_context(),
             instance_obj.Instance(uuid=FAKE_UUID1))
@@ -922,7 +919,6 @@ class TestSecurityGroupsV21(test.TestCase):
             network_id=net['network']['id'], security_groups=[sg1['id']],
             port_security_enabled=True,
             device_id=FAKE_UUID1)
-        security_group_api = self.controller.security_group_api
         sgs = security_group_api.get_instance_security_groups(
             context_maker.get_admin_context(),
             instance_obj.Instance(uuid=FAKE_UUID1))
@@ -1450,7 +1446,7 @@ class SecurityGroupsOutputTest(test.TestCase):
         self.stub_out('nova.compute.api.API.get_all', fake_compute_get_all)
         self.stub_out('nova.compute.api.API.create', fake_compute_create)
         self.stub_out(
-            'nova.network.security_group.neutron_driver.SecurityGroupAPI.'
+            'nova.network.security_group_api.'
             'get_instances_security_groups_bindings',
             self._fake_get_instances_security_groups_bindings)
 
@@ -1459,8 +1455,7 @@ class SecurityGroupsOutputTest(test.TestCase):
         get_client()._reset()
         super(SecurityGroupsOutputTest, self).tearDown()
 
-    def _fake_get_instances_security_groups_bindings(self, inst, context,
-                                                     servers):
+    def _fake_get_instances_security_groups_bindings(inst, context, servers):
         groups = {
             '00000000-0000-0000-0000-000000000001': [{'name': 'fake-0-0'},
                                                      {'name': 'fake-0-1'}],
@@ -1528,10 +1523,10 @@ class SecurityGroupsOutputTest(test.TestCase):
         self.assertEqual(group.get('name'), 'default')
 
     def test_show(self):
-        self.stub_out('nova.network.security_group.neutron_driver.'
-                      'SecurityGroupAPI.get_instance_security_groups',
-                      lambda self, inst, context, id:
-                          [{'name': 'fake-2-0'}, {'name': 'fake-2-1'}])
+        self.stub_out(
+            'nova.network.security_group_api.get_instance_security_groups',
+            lambda inst, context, id: [
+                {'name': 'fake-2-0'}, {'name': 'fake-2-1'}])
 
         url = '/v2/%s/servers' % fakes.FAKE_PROJECT_ID
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'

@@ -8696,8 +8696,8 @@ class ComputeAPITestCase(BaseTestCase):
         with test.nested(
                 mock.patch.object(self.compute_api.compute_task_api,
                                   'schedule_and_build_instances'),
-                mock.patch.object(self.compute_api.security_group_api, 'get',
-                                  return_value=group),
+                mock.patch('nova.network.security_group_api.get',
+                          return_value=group),
         ) as (mock_sbi, mock_secgroups):
             self.compute_api.create(
                 self.context,
@@ -8714,10 +8714,8 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_create_instance_with_invalid_security_group_raises(self):
         pre_build_len = len(db.instance_get_all(self.context))
-        with test.nested(
-                mock.patch.object(self.compute_api.security_group_api, 'get',
-                                  return_value=None),
-        ) as (mock_secgroups, ):
+        with mock.patch('nova.network.security_group_api.get',
+                        return_value=None) as mock_secgroups:
             self.assertRaises(exception.SecurityGroupNotFoundForProject,
                               self.compute_api.create,
                               self.context,

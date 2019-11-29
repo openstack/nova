@@ -37,7 +37,6 @@ import nova.conf
 from nova import context
 from nova.db.sqlalchemy import models
 from nova import exception as exc
-from nova.network.security_group import security_group_base
 from nova import objects
 from nova.objects import base
 from nova import quota
@@ -210,25 +209,27 @@ def stub_out_nw_api(test, cls=None, private=None, publics=None):
 
 def stub_out_secgroup_api(test, security_groups=None):
 
-    class FakeSecurityGroupAPI(security_group_base.SecurityGroupBase):
-        def get_instances_security_groups_bindings(
-                self, context, servers, detailed=False):
-            instances_security_group_bindings = {}
-            if servers:
-                # we don't get security group information for down cells
-                instances_security_group_bindings = {
-                    server['id']: security_groups or [] for server in servers
-                    if server['status'] != 'UNKNOWN'
-                }
-            return instances_security_group_bindings
+    def get_instances_security_groups_bindings(
+            context, servers, detailed=False):
+        instances_security_group_bindings = {}
+        if servers:
+            # we don't get security group information for down cells
+            instances_security_group_bindings = {
+                server['id']: security_groups or [] for server in servers
+                if server['status'] != 'UNKNOWN'
+            }
+        return instances_security_group_bindings
 
-        def get_instance_security_groups(
-                self, context, instance, detailed=False):
-            return security_groups if security_groups is not None else []
+    def get_instance_security_groups(context, instance, detailed=False):
+        return security_groups if security_groups is not None else []
 
     test.stub_out(
-        'nova.network.security_group.neutron_driver.SecurityGroupAPI',
-        FakeSecurityGroupAPI)
+        'nova.network.security_group_api'
+        '.get_instances_security_groups_bindings',
+        get_instances_security_groups_bindings)
+    test.stub_out(
+        'nova.network.security_group_api.get_instance_security_groups',
+        get_instance_security_groups)
 
 
 class FakeToken(object):

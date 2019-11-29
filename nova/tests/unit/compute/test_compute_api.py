@@ -4561,12 +4561,10 @@ class _ComputeAPIUnitTestMixIn(object):
                                                     expected_exception):
         @mock.patch('nova.compute.utils.check_num_instances_quota')
         @mock.patch.object(objects.Instance, 'create')
-        @mock.patch.object(self.compute_api.security_group_api,
-                'ensure_default')
         @mock.patch.object(objects.RequestSpec, 'from_components')
         def do_test(
-                mock_req_spec_from_components, _mock_ensure_default,
-                _mock_create, mock_check_num_inst_quota):
+                mock_req_spec_from_components, _mock_create,
+                mock_check_num_inst_quota):
             req_spec_mock = mock.MagicMock()
 
             mock_check_num_inst_quota.return_value = 1
@@ -4654,7 +4652,7 @@ class _ComputeAPIUnitTestMixIn(object):
                            '_create_reqspec_buildreq_instmapping',
                            new=mock.MagicMock())
         @mock.patch('nova.compute.utils.check_num_instances_quota')
-        @mock.patch.object(self.compute_api, 'security_group_api')
+        @mock.patch('nova.network.security_group_api')
         @mock.patch.object(self.compute_api,
                            'create_db_entry_for_new_instance')
         @mock.patch.object(self.compute_api,
@@ -4691,12 +4689,9 @@ class _ComputeAPIUnitTestMixIn(object):
                            '_create_reqspec_buildreq_instmapping')
         @mock.patch.object(objects.Instance, 'create')
         @mock.patch('nova.compute.utils.check_num_instances_quota')
-        @mock.patch.object(self.compute_api.security_group_api,
-                'ensure_default')
         @mock.patch.object(objects.RequestSpec, 'from_components')
-        def do_test(mock_req_spec_from_components, _mock_ensure_default,
-                    mock_check_num_inst_quota, mock_inst_create,
-                    mock_create_rs_br_im, mock_get_volumes):
+        def do_test(mock_req_spec_from_components, mock_check_num_inst_quota,
+                    mock_inst_create, mock_create_rs_br_im, mock_get_volumes):
 
             min_count = 1
             max_count = 2
@@ -4780,8 +4775,6 @@ class _ComputeAPIUnitTestMixIn(object):
                            new=mock.MagicMock())
         @mock.patch('nova.compute.utils.check_num_instances_quota')
         @mock.patch.object(objects.Instance, 'create', new=mock.MagicMock())
-        @mock.patch.object(self.compute_api.security_group_api,
-                'ensure_default', new=mock.MagicMock())
         @mock.patch.object(self.compute_api, '_validate_bdm',
                 new=mock.MagicMock())
         @mock.patch.object(objects.RequestSpec, 'from_components',
@@ -4871,14 +4864,12 @@ class _ComputeAPIUnitTestMixIn(object):
                            '_create_reqspec_buildreq_instmapping')
         @mock.patch('nova.compute.utils.check_num_instances_quota')
         @mock.patch.object(objects, 'Instance')
-        @mock.patch.object(self.compute_api.security_group_api,
-                'ensure_default')
         @mock.patch.object(objects.RequestSpec, 'from_components')
         @mock.patch.object(objects, 'BuildRequest')
         @mock.patch.object(objects, 'InstanceMapping')
         def do_test(mock_inst_mapping, mock_build_req,
-                mock_req_spec_from_components, _mock_ensure_default,
-                mock_inst, mock_check_num_inst_quota, mock_create_rs_br_im):
+                mock_req_spec_from_components, mock_inst,
+                mock_check_num_inst_quota, mock_create_rs_br_im):
 
             min_count = 1
             max_count = 2
@@ -4963,7 +4954,8 @@ class _ComputeAPIUnitTestMixIn(object):
                            '_create_reqspec_buildreq_instmapping',
                            new=mock.MagicMock())
         @mock.patch('nova.compute.utils.check_num_instances_quota')
-        @mock.patch.object(self.compute_api, 'security_group_api')
+        @mock.patch('nova.network.security_group_api'
+                    '.populate_security_groups')
         @mock.patch.object(compute_api, 'objects')
         @mock.patch.object(self.compute_api,
                            'create_db_entry_for_new_instance',
@@ -4979,7 +4971,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                                   [], None, None, None, None,
                                                   None, objects.TagList(),
                                                   None, False)
-            secgroups = mock_secgroup.populate_security_groups.return_value
+            secgroups = mock_secgroup.return_value
             mock_objects.RequestSpec.from_components.assert_called_once_with(
                 mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY,
                 mock.ANY, mock.ANY, mock.ANY,
@@ -6560,8 +6552,8 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             objects.NetworkRequest(network_id='none')])
         max_count = 1
         supports_port_resource_request = False
-        with mock.patch.object(
-                self.compute_api.security_group_api, 'get',
+        with mock.patch(
+                'nova.network.security_group_api.get',
                 return_value={'id': uuids.secgroup_uuid}) as scget:
             base_options, max_network_count, key_pair, security_groups, \
                     network_metadata = (

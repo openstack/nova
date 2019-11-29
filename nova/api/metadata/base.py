@@ -33,7 +33,7 @@ import nova.conf
 from nova import context
 from nova import exception
 from nova.network import neutron
-from nova.network.security_group import openstack_driver
+from nova.network import security_group_api
 from nova import objects
 from nova.objects import virt_device_metadata as metadata_obj
 from nova import utils
@@ -140,8 +140,7 @@ class InstanceMetadata(object):
 
         self.availability_zone = instance.get('availability_zone')
 
-        secgroup_api = openstack_driver.get_openstack_security_group_driver()
-        self.security_groups = secgroup_api.get_instance_security_groups(
+        self.security_groups = security_group_api.get_instance_security_groups(
             ctxt, instance)
 
         self.mappings = _format_instance_mapping(ctxt, instance)
