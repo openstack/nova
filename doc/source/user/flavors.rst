@@ -59,16 +59,12 @@ Swap
   Amount of swap space (in megabytes) to use. This property is optional. If
   unspecified, the value is ``0`` by default.
 
-RXTX Factor
-  The receive/transmit factor of any network ports on the instance. This
-  property is optional. If unspecified, the value is ``1.0`` by default.
-
-  .. note::
-
-     This property only applies if using the ``xen`` compute driver with the
-     ``nova-network`` network driver. It will likely be deprecated in a future
-     release. ``neutron`` users should refer to the :neutron-doc:`neutron QoS
-     documentation <admin/config-qos.html>`
+RXTX Factor (DEPRECATED)
+  This value was only applicable when using the ``xen`` compute driver with the
+  ``nova-network`` network driver. Since ``nova-network`` has been removed,
+  this no longer applies and should not be specified. It will likely be
+  removed in a future release. ``neutron`` users should refer to the
+  :neutron-doc:`neutron QoS documentation <admin/config-qos.html>`
 
 Is Public
   Boolean value that defines whether the flavor is available to all users or

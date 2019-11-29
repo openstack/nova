@@ -258,10 +258,9 @@ Deprecating APIs
 
 Compute REST API routes may be deprecated by capping a method or functionality
 using microversions. For example, the
-:ref:`2.36 microversion <2.36 microversion>` deprecated
-several compute REST API routes which only work when using the ``nova-network``
-service, which itself was deprecated, or are proxies to other external
-services like Cinder, Neutron, etc.
+:ref:`2.36 microversion <2.36 microversion>` deprecated several compute REST
+API routes which only worked when using the since-removed ``nova-network``
+service or are proxies to other external services like cinder, neutron, etc.
 
 The point of deprecating with microversions is users can still get the same
 functionality at a lower microversion but there is at least some way to signal

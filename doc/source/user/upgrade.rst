@@ -20,8 +20,7 @@ Upgrades
 Nova aims to provide upgrades with minimal downtime.
 
 Firstly, the data plane. There should be no VM downtime when you upgrade
-Nova. Nova has had this since the early days, with the exception of
-some nova-network related services.
+Nova. Nova has had this since the early days.
 
 Secondly, we want no downtime during upgrades of the Nova control plane.
 This document is trying to describe how we can achieve that.

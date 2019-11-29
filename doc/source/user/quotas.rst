@@ -48,7 +48,7 @@ The following quotas were previously available but were removed in microversion
    * - floating_ips
      - Number of floating IP addresses allowed per project.
    * - networks
-     - Number of networks allowed per project (nova-network only).
+     - Number of networks allowed per project (no longer used).
    * - security_groups
      - Number of security groups per project.
    * - security_group_rules

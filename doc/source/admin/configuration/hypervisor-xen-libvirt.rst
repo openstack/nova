@@ -203,13 +203,6 @@ Reporting_Bugs_against_Xen>`_ against Xen.
 Known issues
 ~~~~~~~~~~~~
 
-* **Networking**: Xen via libvirt is currently only supported with
-  nova-network. Fixes for a number of bugs are currently being worked on to
-  make sure that Xen via libvirt will also work with OpenStack Networking
-  (neutron).
-
-  .. todo:: Is this still true?
-
 * **Live migration**: Live migration is supported in the libvirt libxl driver
   since version 1.2.5. However, there were a number of issues when used with
   OpenStack, in particular with libvirt migration protocol compatibility. It is
