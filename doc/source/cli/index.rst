@@ -85,5 +85,4 @@ deployments, but are documented for existing ones.
 .. toctree::
    :maxdepth: 1
 
-   nova-network
    nova-xvpvncproxy
