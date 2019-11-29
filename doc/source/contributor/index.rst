@@ -162,6 +162,8 @@ diving in.
 
   * :doc:`/contributor/evacuate-vs-rebuild`: Describes the differences between
     the often-confused evacuate and rebuild operations.
+  * :doc:`/contributor/resize-and-cold-migrate`: Describes the differences and
+    similarities between resize and cold migrate operations.
 
 .. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
    # keep the document structure in the PDF doc.
@@ -169,3 +171,4 @@ diving in.
    :hidden:
 
    evacuate-vs-rebuild
+   resize-and-cold-migrate
