@@ -134,7 +134,7 @@ def fake_kvm_guest():
 
     # obj.devices[6]
     video = config.LibvirtConfigGuestVideo()
-    video.type = 'qxl'
+    video.type = 'virtio'
     obj.add_device(video)
 
     # obj.devices[7]
@@ -149,6 +149,13 @@ def fake_kvm_guest():
     rng.rate_period = '12'
     rng.rate_bytes = '34'
     obj.add_device(rng)
+
+    # obj.devices[9]
+    controller = config.LibvirtConfigGuestController()
+    controller.type = 'scsi'
+    controller.model = 'virtio-scsi'  # usually set from image meta
+    controller.index = 0
+    obj.add_device(controller)
 
     return obj
 
@@ -225,7 +232,7 @@ FAKE_KVM_GUEST = """
       <input type="mouse" bus="virtio"/>
       <graphics type="vnc" autoport="yes" keymap="en_US" listen="127.0.0.1"/>
       <video>
-        <model type='qxl'/>
+        <model type='virtio'/>
       </video>
       <serial type="file">
         <source path="/tmp/vm.log"/>
@@ -234,6 +241,8 @@ FAKE_KVM_GUEST = """
           <rate period='12' bytes='34'/>
           <backend model='random'>/dev/urandom</backend>
       </rng>
+      <controller type='scsi' index='0' model='virtio-scsi'>
+      </controller>
     </devices>
     <launchSecurity type="sev">
       <policy>0x0033</policy>

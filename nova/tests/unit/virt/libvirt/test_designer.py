@@ -232,15 +232,15 @@ class DesignerTestCase(test.NoDBTestCase):
 
         # All disks/interfaces/memballoon are expected to be virtio,
         # thus driver_iommu should be on
-        self.assertEqual(9, len(conf.devices))
-        for i in (0, 2, 3, 8):
+        self.assertEqual(10, len(conf.devices))
+        for i in (0, 2, 3, 6, 8, 9):
             dev = conf.devices[i]
             self.assertTrue(
                 dev.driver_iommu,
                 "expected device %d to have driver_iommu enabled\n%s" %
                 (i, dev.to_xml()))
 
-        for i in (1, 4, 6):
+        for i in (1, 4):
             dev = conf.devices[i]
             self.assertFalse(
                 dev.driver_iommu,

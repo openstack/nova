@@ -709,10 +709,12 @@ features:
 
   __ https://wiki.qemu.org/Features/VirtioVhostUser
 
-- The boot disk of SEV-encrypted VMs can only be ``virtio-blk`` on
-  newer kernels which contain the necessary fixes.  Using
-  ``virtio-scsi`` or SATA for the boot disk works as expected, as does
-  ``virtio-blk`` for non-boot disks.
+- The boot disk of SEV-encrypted VMs can only be ``virtio``.
+  (``virtio-blk`` is typically the default for libvirt disks on x86,
+  but can also be explicitly set e.g. via the image property
+  ``hw_disk_bus=virtio``). Valid alternatives for the disk
+  include using ``hw_disk_bus=scsi`` with
+  ``hw_scsi_model=virtio-scsi`` , or ``hw_disk_bus=sata``.
 
 - QEMU and libvirt cannot yet expose the number of slots available for
   encrypted guests in the memory controller on SEV hardware.  Until

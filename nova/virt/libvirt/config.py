@@ -1873,6 +1873,10 @@ class LibvirtConfigGuestVideo(LibvirtConfigGuestDevice):
         self.heads = None
         self.driver_iommu = False
 
+    @property
+    def uses_virtio(self):
+        return 'virtio' == self.type
+
     def format_dom(self):
         dev = super(LibvirtConfigGuestVideo, self).format_dom()
 
@@ -1926,6 +1930,10 @@ class LibvirtConfigGuestController(LibvirtConfigGuestDevice):
         self.index = None
         self.model = None
         self.driver_iommu = False
+
+    @property
+    def uses_virtio(self):
+        return 'virtio-scsi' == self.model
 
     def format_dom(self):
         controller = super(LibvirtConfigGuestController, self).format_dom()
