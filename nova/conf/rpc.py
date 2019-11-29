@@ -32,6 +32,7 @@ Operations with RPC calls that utilize this value:
 * image pre-caching
 * snapshot-based / cross-cell resize
 * resize / cold migration
+* volume attach
 
 Related options:
 
