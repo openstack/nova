@@ -6587,11 +6587,6 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
             'fake_host', 'setup_instance_network_on_host',
             self.context, instance, 'fake_host')
 
-    def test_associate_not_implemented(self):
-        self.assertRaises(NotImplementedError,
-                          self.api.associate,
-                          self.context, 'id')
-
     @mock.patch('nova.network.neutronv2.api._get_ksa_client',
                 new_callable=mock.NonCallableMock)
     def test_bind_ports_to_host_no_ports(self, mock_client):

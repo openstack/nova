@@ -203,10 +203,6 @@ class NetworkRpcAPITestCase(test.NoDBTestCase):
                 rxtx_factor='fake_factor', host='fake_host',
                 address='fake_address', version='1.9')
 
-    def test_add_network_to_project(self):
-        self._test_network_api('add_network_to_project', rpc_method='call',
-                project_id='fake_id', network_uuid='fake_uuid')
-
     def test_get_instance_nw_info(self):
         self._test_network_api('get_instance_nw_info', rpc_method='call',
                 instance_id='fake_id', rxtx_factor='fake_factor',

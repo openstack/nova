@@ -110,10 +110,6 @@ class NetworkAPI(base.Base):
         """Delete a specific network."""
         raise NotImplementedError()
 
-    def disassociate(self, context, network_uuid):
-        """Disassociate a network for client."""
-        raise NotImplementedError()
-
     def get_fixed_ip(self, context, id):
         """Get fixed IP by id."""
         raise NotImplementedError()
@@ -235,15 +231,6 @@ class NetworkAPI(base.Base):
 
     def remove_fixed_ip_from_instance(self, context, instance, address):
         """Removes a fixed IP from instance from specified network."""
-        raise NotImplementedError()
-
-    def add_network_to_project(self, context, project_id, network_uuid=None):
-        """Force adds another network to a project."""
-        raise NotImplementedError()
-
-    def associate(self, context, network_uuid, host=SENTINEL,
-                  project=SENTINEL):
-        """Associate or disassociate host or project to network."""
         raise NotImplementedError()
 
     def get_instance_nw_info(self, context, instance, **kwargs):
