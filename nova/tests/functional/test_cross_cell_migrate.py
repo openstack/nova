@@ -498,21 +498,37 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertIn('Connection to the hypervisor is broken',
                       server['fault']['message'])
         # The instance in the target cell DB should have been hard-deleted.
-        target_cell = self.cell_mappings['cell2']
-        ctxt = nova_context.get_admin_context(read_deleted='yes')
-        with nova_context.target_cell(ctxt, target_cell) as cctxt:
-            self.assertRaises(
-                exception.InstanceNotFound,
-                objects.Instance.get_by_uuid, cctxt, server['id'])
+        self._assert_instance_not_in_cell('cell2', server['id'])
 
         # Assert that there is only one volume attachment for the server, i.e.
         # the one in the target cell was deleted.
         self.assertEqual(1, self._count_volume_attachments(server['id']),
                          self.cinder.volume_to_attachment)
 
-        # Assert that migration-based allocations were properly reverted. Since
-        # this happens in MigrationTask.rollback in conductor, we need to wait
-        # for something which happens after that, which is the
+        # Assert that migration-based allocations were properly reverted.
+        self._assert_allocation_revert_on_fail(server)
+
+        # Now hard reboot the server in the source cell and it should go back
+        # to ACTIVE.
+        self.api.post_server_action(server['id'], {'reboot': {'type': 'HARD'}})
+        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+        # Now retry the resize without the fault in the target host to make
+        # sure things are OK (no duplicate entry errors in the target DB).
+        self.api.post_server_action(server['id'], body)
+        self._wait_for_state_change(self.admin_api, server, 'VERIFY_RESIZE')
+
+    def _assert_instance_not_in_cell(self, cell_name, server_id):
+        cell = self.cell_mappings[cell_name]
+        ctxt = nova_context.get_admin_context(read_deleted='yes')
+        with nova_context.target_cell(ctxt, cell) as cctxt:
+            self.assertRaises(
+                exception.InstanceNotFound,
+                objects.Instance.get_by_uuid, cctxt, server_id)
+
+    def _assert_allocation_revert_on_fail(self, server):
+        # Since this happens in MigrationTask.rollback in conductor, we need
+        # to wait for something which happens after that, which is the
         # ComputeTaskManager._cold_migrate method sending the
         # compute_task.migrate_server.error event.
         fake_notifier.wait_for_versioned_notifications(
@@ -523,9 +539,48 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         source_rp_uuid = self._get_provider_uuid_by_host(
             server['OS-EXT-SRV-ATTR:host'])
         server_allocs = self._get_allocations_by_server_uuid(server['id'])
+        volume_backed = False if server['image'] else True
         self.assertFlavorMatchesAllocation(
-            flavors[0], server_allocs[source_rp_uuid]['resources'],
-            volume_backed=True)
+            server['flavor'], server_allocs[source_rp_uuid]['resources'],
+            volume_backed=volume_backed)
+
+    def test_prep_snapshot_based_resize_at_source_destroy_fails(self):
+        """Negative test where prep_snapshot_based_resize_at_source fails
+        destroying the guest for the non-volume backed server and asserts
+        resources are rolled back.
+        """
+        # Create a non-volume backed server for the snapshot flow.
+        flavors = self.api.get_flavors()
+        flavor1 = flavors[0]
+        server = self._create_server(flavor1)
+
+        # Now mock out the snapshot method on the source host to fail
+        # during _prep_snapshot_based_resize_at_source and then resize
+        # the server.
+        source_host = server['OS-EXT-SRV-ATTR:host']
+        error = exception.HypervisorUnavailable(host=source_host)
+        with mock.patch.object(self.computes[source_host].driver, 'destroy',
+                               side_effect=error):
+            flavor2 = flavors[1]['id']
+            body = {'resize': {'flavorRef': flavor2}}
+            self.api.post_server_action(server['id'], body)
+            # The server should go to ERROR state with a fault record and
+            # the API should still be showing the server from the source cell
+            # because the instance mapping was not updated.
+            server = self._wait_for_server_parameter(
+                self.admin_api, server,
+                {'status': 'ERROR', 'OS-EXT-STS:task_state': None})
+
+        # The migration should be in 'error' status.
+        self._wait_for_migration_status(server, ['error'])
+        # Assert a fault was recorded.
+        self.assertIn('fault', server)
+        self.assertIn('Connection to the hypervisor is broken',
+                      server['fault']['message'])
+        # The instance in the target cell DB should have been hard-deleted.
+        self._assert_instance_not_in_cell('cell2', server['id'])
+        # Assert that migration-based allocations were properly reverted.
+        self._assert_allocation_revert_on_fail(server)
 
         # Now hard reboot the server in the source cell and it should go back
         # to ACTIVE.
