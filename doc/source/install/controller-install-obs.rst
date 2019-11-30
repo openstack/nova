@@ -264,23 +264,6 @@ Install and configure components
         # ...
         my_ip = 10.0.0.11
 
-   * In the ``[DEFAULT]`` section, enable support for the Networking service:
-
-     .. path /etc/nova/nova.conf
-     .. code-block:: ini
-
-        [DEFAULT]
-        # ...
-        use_neutron = true
-        firewall_driver = nova.virt.firewall.NoopFirewallDriver
-
-     .. note::
-
-        By default, Compute uses an internal firewall driver. Since the
-        Networking service includes a firewall driver, you must disable the
-        Compute firewall driver by using the
-        ``nova.virt.firewall.NoopFirewallDriver`` firewall driver.
-
    * Configure the ``[neutron]`` section of **/etc/nova/nova.conf**. Refer to
      the :neutron-doc:`Networking service install guide
      <install/controller-install-obs.html#configure-the-compute-service-to-use-the-networking-service>`

@@ -366,9 +366,10 @@ on Hyper-V. Below is a sample ``nova.conf`` for Windows:
    logfile = nova-compute.log
    instance_usage_audit = true
    instance_usage_audit_period = hour
-   use_neutron = True
+
    [glance]
    api_servers = http://IP_ADDRESS:9292
+
    [neutron]
    endpoint_override = http://IP_ADDRESS:9696
    auth_strategy = keystone
@@ -377,6 +378,7 @@ on Hyper-V. Below is a sample ``nova.conf`` for Windows:
    password = Passw0rd
    auth_url = http://IP_ADDRESS:5000/v3
    auth_type = password
+
    [hyperv]
    vswitch_name = newVSwitch0
    limit_cpu_features = false
@@ -385,6 +387,7 @@ on Hyper-V. Below is a sample ``nova.conf`` for Windows:
    config_drive_cdrom = true
    dynamic_memory_ratio = 1
    enable_instance_metrics_collection = true
+
    [rdp]
    enabled = true
    html5_proxy_base_url = https://IP_ADDRESS:4430
