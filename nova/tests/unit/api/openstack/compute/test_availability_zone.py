@@ -61,11 +61,7 @@ def fake_service_get_all(context, filters=None, **kwargs):
                 __fake_service("nova-scheduler", "internal",
                                datetime.datetime(2012, 11, 14, 9, 57, 3, 0),
                                datetime.datetime(2012, 12, 26, 14, 45, 25, 0),
-                               "fake_host-1", True),
-                __fake_service("nova-network", "internal",
-                               datetime.datetime(2012, 11, 16, 7, 25, 46, 0),
-                               datetime.datetime(2012, 12, 26, 14, 45, 24, 0),
-                               "fake_host-2", True)]
+                               "fake_host-1", True)]
     else:
         svcs = [__fake_service("nova-compute", "zone-1",
                                datetime.datetime(2012, 11, 14, 9, 53, 25, 0),
@@ -80,11 +76,7 @@ def fake_service_get_all(context, filters=None, **kwargs):
                 __fake_service("nova-conductor", "internal",
                                datetime.datetime(2012, 11, 14, 9, 57, 3, 0),
                                datetime.datetime(2012, 12, 26, 14, 45, 25, 0),
-                               "fake_host-1", False),
-                __fake_service("nova-network", "internal",
-                               datetime.datetime(2012, 11, 16, 7, 25, 46, 0),
-                               datetime.datetime(2012, 12, 26, 14, 45, 24, 0),
-                               "fake_host-2", False)]
+                               "fake_host-1", False)]
     return objects.ServiceList(objects=svcs)
 
 
@@ -98,7 +90,7 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
         self.stub_out('nova.availability_zones.set_availability_zones',
                       lambda c, services: services)
         self.stub_out('nova.servicegroup.API.service_is_up',
-                      lambda s, service: service['binary'] != u"nova-network")
+                      lambda s, service: True)
         self.controller = self.availability_zone.AvailabilityZoneController()
         self.mock_service_get_all = mock.patch.object(
             self.controller.host_api, 'service_get_all',
@@ -141,7 +133,6 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
         zones = resp_dict['availabilityZoneInfo']
         self.assertEqual(len(zones), 3)
         timestamp = iso8601.parse_date("2012-12-26T14:45:25Z")
-        nova_network_timestamp = iso8601.parse_date("2012-12-26T14:45:24Z")
         expected = [
             {
                 'zoneName': 'zone-1',
@@ -170,13 +161,6 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
                             'active': True,
                             'available': True,
                             'updated_at': timestamp
-                        }
-                    },
-                    'fake_host-2': {
-                        'nova-network': {
-                            'active': True,
-                            'available': False,
-                            'updated_at': nova_network_timestamp
                         }
                     }
                 }
