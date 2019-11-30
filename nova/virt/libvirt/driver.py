@@ -6146,9 +6146,6 @@ class LibvirtDriver(driver.ComputeDriver):
         if power_on or pause:
             guest.launch(pause=pause)
 
-        if not utils.is_neutron():
-            guest.enable_hairpin()
-
         return guest
 
     def _neutron_failed_callback(self, event_name, instance):
@@ -9337,7 +9334,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # being left in an ERROR state and still marked on the source.
             try:
                 self._disconnect_volume(context, connection_info, instance)
-            except Exception as ex:
+            except Exception:
                 volume_id = driver_block_device.get_volume_id(connection_info)
                 LOG.exception("Ignoring exception while attempting to "
                               "disconnect volume %s from the source host "

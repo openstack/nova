@@ -114,13 +114,6 @@ def ploop_restore_descriptor(image_dir, base_delta, fmt):
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
-def enable_hairpin(interface):
-    """Enable hairpin mode for a libvirt guest."""
-    with open('/sys/class/net/%s/brport/hairpin_mode' % interface, 'w') as f:
-        f.write('1')
-
-
-@nova.privsep.sys_admin_pctxt.entrypoint
 def plug_infiniband_vif(vnic_mac, device_id, fabric, net_model, pci_slot):
     processutils.execute('ebrctl', 'add-port', vnic_mac, device_id,
                          fabric, net_model, pci_slot)
