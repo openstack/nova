@@ -19,7 +19,6 @@ class TestServerGroupNotificationSample(
         notification_sample_base.NotificationSampleTestBase):
 
     def setUp(self):
-        self.flags(use_neutron=True)
         super(TestServerGroupNotificationSample, self).setUp()
         self.neutron = fixtures.NeutronFixture(self)
         self.useFixture(self.neutron)
