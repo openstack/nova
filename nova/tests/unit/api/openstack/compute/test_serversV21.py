@@ -302,33 +302,33 @@ class ServersControllerTest(ControllerTest):
         self.assertIn('Bad networks format: network uuid is not in proper '
                       'format', six.text_type(ex))
 
-    def test_requested_networks_neutronv2_enabled_with_port(self):
+    def test_requested_networks_enabled_with_port(self):
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'port': port}]
         res = self.controller._get_requested_networks(requested_networks)
         self.assertEqual([(None, None, port, None)], res.as_tuples())
 
-    def test_requested_networks_neutronv2_enabled_with_network(self):
+    def test_requested_networks_enabled_with_network(self):
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         requested_networks = [{'uuid': network}]
         res = self.controller._get_requested_networks(requested_networks)
         self.assertEqual([(network, None, None, None)], res.as_tuples())
 
-    def test_requested_networks_neutronv2_enabled_with_network_and_port(self):
+    def test_requested_networks_enabled_with_network_and_port(self):
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'uuid': network, 'port': port}]
         res = self.controller._get_requested_networks(requested_networks)
         self.assertEqual([(None, None, port, None)], res.as_tuples())
 
-    def test_requested_networks_with_neutronv2_and_duplicate_networks(self):
+    def test_requested_networks_with_and_duplicate_networks(self):
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         requested_networks = [{'uuid': network}, {'uuid': network}]
         res = self.controller._get_requested_networks(requested_networks)
         self.assertEqual([(network, None, None, None),
                           (network, None, None, None)], res.as_tuples())
 
-    def test_requested_networks_neutronv2_enabled_conflict_on_fixed_ip(self):
+    def test_requested_networks_enabled_conflict_on_fixed_ip(self):
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         addr = '10.0.0.1'
@@ -5528,7 +5528,7 @@ class ServersControllerCreateTest(test.TestCase):
 
     @mock.patch.object(compute_api.API, 'create',
                       side_effect=exception.PortInUse(port_id=uuids.port))
-    def test_create_instance_with_neutronv2_port_in_use(self, mock_create):
+    def test_create_instance_with_port_in_use(self, mock_create):
         requested_networks = [{'uuid': uuids.network, 'port': uuids.port}]
         params = {'networks': requested_networks}
         self.assertRaises(webob.exc.HTTPConflict,
@@ -5940,7 +5940,7 @@ class ServersControllerCreateTest(test.TestCase):
                                   "a single configured port ID. Please "
                                   "launch your instance one by one with "
                                   "different ports."))
-    def test_create_multiple_instance_with_neutronv2_port(self, mock_create):
+    def test_create_multiple_instance_with_port(self, mock_create):
         requested_networks = [{'uuid': uuids.network, 'port': uuids.port}]
         params = {'networks': requested_networks}
         self.body['server']['max_count'] = 2
@@ -5950,8 +5950,7 @@ class ServersControllerCreateTest(test.TestCase):
     @mock.patch.object(compute_api.API, 'create',
                        side_effect=exception.NetworkNotFound(
                            network_id=uuids.network))
-    def test_create_instance_with_neutronv2_not_found_network(
-            self, mock_create):
+    def test_create_instance_with_not_found_network(self, mock_create):
         requested_networks = [{'uuid': uuids.network}]
         params = {'networks': requested_networks}
         self.assertRaises(webob.exc.HTTPBadRequest,
@@ -5959,7 +5958,7 @@ class ServersControllerCreateTest(test.TestCase):
 
     @mock.patch.object(compute_api.API, 'create',
                        side_effect=exception.PortNotFound(port_id=uuids.port))
-    def test_create_instance_with_neutronv2_port_not_found(self, mock_create):
+    def test_create_instance_with_port_not_found(self, mock_create):
         requested_networks = [{'uuid': uuids.network, 'port': uuids.port}]
         params = {'networks': requested_networks}
         self.assertRaises(webob.exc.HTTPBadRequest,
@@ -6956,8 +6955,7 @@ class ServersControllerCreateTestWithMock(test.TestCase):
         self.controller.create(self.req, body=self.body).obj['server']
 
     @mock.patch.object(compute_api.API, 'create')
-    def test_create_instance_with_neutronv2_fixed_ip_already_in_use(self,
-            create_mock):
+    def test_create_instance_with_fixed_ip_already_in_use(self, create_mock):
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         address = '10.0.2.3'
         requested_networks = [{'uuid': network, 'fixed_ip': address}]
@@ -6970,8 +6968,7 @@ class ServersControllerCreateTestWithMock(test.TestCase):
         self.assertEqual(1, len(create_mock.call_args_list))
 
     @mock.patch.object(compute_api.API, 'create')
-    def test_create_instance_with_neutronv2_invalid_fixed_ip(self,
-                                                             create_mock):
+    def test_create_instance_with_invalid_fixed_ip(self, create_mock):
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         address = '999.0.2.3'
         requested_networks = [{'uuid': network, 'fixed_ip': address}]
