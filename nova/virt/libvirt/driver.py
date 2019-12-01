@@ -6184,7 +6184,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         """Do required network setup and create domain."""
         timeout = CONF.vif_plugging_timeout
-        if (self._conn_supports_start_paused and utils.is_neutron() and not
+        if (self._conn_supports_start_paused and not
                 vifs_already_plugged and power_on and timeout):
             events = (external_events if external_events
                       else self._get_neutron_events(network_info))
