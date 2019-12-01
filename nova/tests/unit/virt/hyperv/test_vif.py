@@ -25,49 +25,16 @@ from nova.virt.hyperv import vif
 CONF = nova.conf.CONF
 
 
-class HyperVNovaNetworkVIFPluginTestCase(test_base.HyperVBaseTestCase):
-    def setUp(self):
-        super(HyperVNovaNetworkVIFPluginTestCase, self).setUp()
-        self.vif_driver = vif.HyperVNovaNetworkVIFPlugin()
-
-    def test_plug(self):
-        self.flags(vswitch_name='fake_vswitch_name', group='hyperv')
-        fake_vif = {'id': mock.sentinel.fake_id}
-
-        self.vif_driver.plug(mock.sentinel.instance, fake_vif)
-        netutils = self.vif_driver._netutils
-        netutils.connect_vnic_to_vswitch.assert_called_once_with(
-            'fake_vswitch_name', mock.sentinel.fake_id)
-
-
 class HyperVVIFDriverTestCase(test_base.HyperVBaseTestCase):
     def setUp(self):
         super(HyperVVIFDriverTestCase, self).setUp()
         self.vif_driver = vif.HyperVVIFDriver()
         self.vif_driver._netutils = mock.MagicMock()
-        self.vif_driver._vif_plugin = mock.MagicMock()
-
-    @mock.patch.object(vif.nova.network, 'is_neutron')
-    def test_init_neutron(self, mock_is_neutron):
-        mock_is_neutron.return_value = True
-
-        driver = vif.HyperVVIFDriver()
-        self.assertIsInstance(driver._vif_plugin, vif.HyperVNeutronVIFPlugin)
-
-    @mock.patch.object(vif.nova.network, 'is_neutron')
-    def test_init_nova(self, mock_is_neutron):
-        mock_is_neutron.return_value = False
-
-        driver = vif.HyperVVIFDriver()
-        self.assertIsInstance(driver._vif_plugin,
-                              vif.HyperVNovaNetworkVIFPlugin)
 
     def test_plug(self):
         vif = {'type': model.VIF_TYPE_HYPERV}
+        # this is handled by neutron so just assert it doesn't blow up
         self.vif_driver.plug(mock.sentinel.instance, vif)
-
-        self.vif_driver._vif_plugin.plug.assert_called_once_with(
-            mock.sentinel.instance, vif)
 
     @mock.patch.object(vif, 'os_vif')
     @mock.patch.object(vif.os_vif_util, 'nova_to_osvif_instance')
@@ -95,10 +62,8 @@ class HyperVVIFDriverTestCase(test_base.HyperVBaseTestCase):
 
     def test_unplug(self):
         vif = {'type': model.VIF_TYPE_HYPERV}
+        # this is handled by neutron so just assert it doesn't blow up
         self.vif_driver.unplug(mock.sentinel.instance, vif)
-
-        self.vif_driver._vif_plugin.unplug.assert_called_once_with(
-            mock.sentinel.instance, vif)
 
     @mock.patch.object(vif, 'os_vif')
     @mock.patch.object(vif.os_vif_util, 'nova_to_osvif_instance')
