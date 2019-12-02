@@ -114,14 +114,6 @@ class EncryptionFailure(NovaException):
     msg_fmt = _("Failed to encrypt text: %(reason)s")
 
 
-class DecryptionFailure(NovaException):
-    msg_fmt = _("Failed to decrypt text: %(reason)s")
-
-
-class RevokeCertFailure(NovaException):
-    msg_fmt = _("Failed to revoke certificate for %(project_id)s")
-
-
 class VirtualInterfaceCreateException(NovaException):
     msg_fmt = _("Virtual Interface creation failed")
 
@@ -710,20 +702,12 @@ class PreserveEphemeralNotSupported(Invalid):
                 "preserving ephemeral partitions.")
 
 
-class ProjectNotFound(NotFound):
-    msg_fmt = _("Project %(project_id)s could not be found.")
-
-
 class StorageRepositoryNotFound(NotFound):
     msg_fmt = _("Cannot find SR to read/write VDI.")
 
 
 class InstanceMappingNotFound(NotFound):
     msg_fmt = _("Instance %(uuid)s has no mapping to a cell.")
-
-
-class NetworkDhcpReleaseFailed(NovaException):
-    msg_fmt = _("Failed to release IP %(address)s with MAC %(mac_address)s")
 
 
 class NetworkInUse(NovaException):
@@ -734,44 +718,13 @@ class NetworkSetHostFailed(NovaException):
     msg_fmt = _("Network set host failed for network %(network_id)s.")
 
 
-class NetworkNotCreated(Invalid):
-    msg_fmt = _("%(req)s is required to create a network.")
-
-
-class LabelTooLong(Invalid):
-    msg_fmt = _("Maximum allowed length for 'label' is 255.")
-
-
-class InvalidIntValue(Invalid):
-    msg_fmt = _("%(key)s must be an integer.")
-
-
 class InvalidCidr(Invalid):
     msg_fmt = _("%(cidr)s is not a valid IP network.")
-
-
-class InvalidAddress(Invalid):
-    msg_fmt = _("%(address)s is not a valid IP address.")
-
-
-class AddressOutOfRange(Invalid):
-    msg_fmt = _("%(address)s is not within %(cidr)s.")
 
 
 class DuplicateVlan(NovaException):
     msg_fmt = _("Detected existing vlan with id %(vlan)d")
     code = 409
-
-
-class CidrConflict(NovaException):
-    msg_fmt = _('Requested cidr (%(cidr)s) conflicts '
-                'with existing cidr (%(other)s)')
-    code = 409
-
-
-class NetworkHasProject(NetworkInUse):
-    msg_fmt = _('Network must be disassociated from project '
-                '%(project_id)s before it can be deleted.')
 
 
 class NetworkNotFound(NotFound):
@@ -847,10 +800,6 @@ class VifDetailsMissingMacvtapParameters(Invalid):
                 " correct.")
 
 
-class OVSConfigurationFailure(NovaException):
-    msg_fmt = _("OVS configuration failed with: %(inner_exception)s.")
-
-
 class DatastoreNotFound(NotFound):
     msg_fmt = _("Could not find the datastore reference(s) which the VM uses.")
 
@@ -871,10 +820,6 @@ class PortNotUsableDNS(Invalid):
     msg_fmt = _("Port %(port_id)s not usable for instance %(instance)s. "
                 "Value %(value)s assigned to dns_name attribute does not "
                 "match instance's hostname %(hostname)s")
-
-
-class PortNotFree(Invalid):
-    msg_fmt = _("No free port available for instance %(instance)s.")
 
 
 class PortBindingFailed(Invalid):
@@ -971,10 +916,6 @@ class FloatingIpNotFound(NotFound):
     msg_fmt = _("Floating IP not found for ID %(id)s.")
 
 
-class FloatingIpDNSExists(Invalid):
-    msg_fmt = _("The DNS entry %(name)s already exists in domain %(domain)s.")
-
-
 class FloatingIpNotFoundForAddress(FloatingIpNotFound):
     msg_fmt = _("Floating IP not found for address %(address)s.")
 
@@ -1062,10 +1003,6 @@ class HostBinaryNotFound(NotFound):
     msg_fmt = _("Could not find binary %(binary)s on host %(host)s.")
 
 
-class InvalidReservationExpiration(Invalid):
-    msg_fmt = _("Invalid reservation expiration %(expire)s.")
-
-
 class InvalidQuotaValue(Invalid):
     msg_fmt = _("Change would make usage less than 0 for the following "
                 "resources: %(unders)s")
@@ -1103,16 +1040,6 @@ class QuotaClassNotFound(QuotaNotFound):
 
 class QuotaClassExists(NovaException):
     msg_fmt = _("Quota class %(class_name)s exists for resource %(resource)s")
-
-
-class QuotaUsageNotFound(QuotaNotFound):
-    msg_fmt = _("Quota usage for project %(project_id)s could not be found.")
-
-
-class QuotaUsageRefreshNotAllowed(Invalid):
-    msg_fmt = _("Quota usage refresh of resource %(resource)s for project "
-                "%(project_id)s, user %(user_id)s, is not allowed. "
-                "The allowed resources are %(syncable)s.")
 
 
 class ReservationNotFound(QuotaNotFound):
@@ -1298,10 +1225,6 @@ class MigrationPreCheckError(MigrationError):
 
 class MigrationSchedulerRPCError(MigrationError):
     msg_fmt = _("Migration select destinations error: %(reason)s")
-
-
-class RPCPinnedToOldVersion(NovaException):
-    msg_fmt = _("RPC is pinned to old version")
 
 
 class MalformedRequestBody(NovaException):
@@ -1560,14 +1483,6 @@ class InstanceActionEventNotFound(NovaException):
     msg_fmt = _("Event %(event)s not found for action id %(action_id)s")
 
 
-class CryptoCAFileNotFound(FileNotFound):
-    msg_fmt = _("The CA file for %(project)s could not be found")
-
-
-class CryptoCRLFileNotFound(FileNotFound):
-    msg_fmt = _("The CRL file for %(project)s could not be found")
-
-
 class InstanceEvacuateNotSupported(Invalid):
     msg_fmt = _('Instance evacuate is not supported.')
 
@@ -1638,11 +1553,6 @@ class InstanceGroupNotFound(NotFound):
 
 class InstanceGroupIdExists(NovaException):
     msg_fmt = _("Instance group %(group_uuid)s already exists.")
-
-
-class InstanceGroupMemberNotFound(NotFound):
-    msg_fmt = _("Instance group %(group_uuid)s has no member with "
-                "id %(instance_id)s.")
 
 
 class InstanceGroupSaveException(NovaException):
@@ -1986,11 +1896,6 @@ class MemoryPageSizeNotSupported(Invalid):
     msg_fmt = _("Page size %(pagesize)s is not supported by the host.")
 
 
-class CPUPinningNotSupported(Invalid):
-    msg_fmt = _("CPU pinning is not supported by the host: "
-                "%(reason)s")
-
-
 class CPUPinningInvalid(Invalid):
     msg_fmt = _("CPU set to pin %(requested)s must be a subset of "
                 "free CPU set %(available)s")
@@ -2194,10 +2099,6 @@ class ResourceProviderUpdateConflict(PlacementAPIConflict):
 
 class InvalidResourceClass(Invalid):
     msg_fmt = _("Resource class '%(resource_class)s' invalid.")
-
-
-class InvalidResourceAmount(Invalid):
-    msg_fmt = _("Resource amounts must be integers. Received '%(amount)s'.")
 
 
 class InvalidInventory(Invalid):
@@ -2479,10 +2380,6 @@ class AssignedResourceNotFound(NovaException):
 class PMEMNamespaceConfigInvalid(NovaException):
     msg_fmt = _("The pmem_namespaces configuration is invalid: %(reason)s, "
                 "please check your conf file. ")
-
-
-class GetPMEMNamespaceFailed(NovaException):
-    msg_fmt = _("Get PMEM namespaces on host failed: %(reason)s.")
 
 
 class VPMEMCleanupFailed(NovaException):
