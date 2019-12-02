@@ -2472,3 +2472,7 @@ class GetPMEMNamespaceFailed(NovaException):
 class VPMEMCleanupFailed(NovaException):
     msg_fmt = _("Failed to clean up the vpmem backend device %(dev)s: "
                 "%(error)s")
+
+
+class RequestGroupSuffixConflict(NovaException):
+    msg_fmt = _("Duplicate request group suffix %(suffix)s!")

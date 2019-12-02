@@ -310,12 +310,14 @@ class TestUtils(TestUtilsBase):
             }
         )
         expected_resources._rg_by_id['1'] = objects.RequestGroup(
+            requester_id='1',
             resources={
                 'VGPU': 1,
                 'VGPU_DISPLAY_HEAD': 2,
             }
         )
         expected_resources._rg_by_id['3'] = objects.RequestGroup(
+            requester_id='3',
             resources={
                 'VCPU': 2,
             },
@@ -325,11 +327,13 @@ class TestUtils(TestUtilsBase):
             }
         )
         expected_resources._rg_by_id['24'] = objects.RequestGroup(
+            requester_id='24',
             resources={
                 'SRIOV_NET_VF': 2,
             },
         )
         expected_resources._rg_by_id['42'] = objects.RequestGroup(
+            requester_id='42',
             resources={
                 'SRIOV_NET_VF': 1,
             }
@@ -675,16 +679,40 @@ class TestUtils(TestUtilsBase):
                 root_gb=10,
                 ephemeral_gb=5,
                 swap=0)
-        rg1 = objects.RequestGroup(resources={'CUSTOM_FOO': 1})
+        rg1 = objects.RequestGroup(
+            resources={'CUSTOM_FOO': 1}, requester_id='The-first-group')
+
+        # Leave requester_id out to trigger ValueError
         rg2 = objects.RequestGroup(required_traits={'CUSTOM_BAR'})
+
         reqspec = objects.RequestSpec(flavor=flavor,
                                       requested_resources=[rg1, rg2])
+
+        self.assertRaises(
+            ValueError,
+            utils.resources_from_request_spec,
+            self.context, reqspec, self.mock_host_manager)
+
+        # Set conflicting requester_id
+        rg2.requester_id = 'The-first-group'
+        self.assertRaises(
+            exception.RequestGroupSuffixConflict,
+            utils.resources_from_request_spec,
+            self.context, reqspec, self.mock_host_manager)
+
+        # Good path: nonempty non-conflicting requester_id
+        rg2.requester_id = 'The-second-group'
+
         req = utils.resources_from_request_spec(
                 self.context, reqspec, self.mock_host_manager)
         self.assertEqual({'MEMORY_MB': 1024, 'DISK_GB': 15, 'VCPU': 1},
                          req.get_request_group(None).resources)
-        self.assertIs(rg1, req.get_request_group(1))
-        self.assertIs(rg2, req.get_request_group(2))
+        self.assertIs(rg1, req.get_request_group('The-first-group'))
+        self.assertIs(rg2, req.get_request_group('The-second-group'))
+        # Make sure those ended up as suffixes correctly
+        qs = req.to_querystring()
+        self.assertIn('resourcesThe-first-group=CUSTOM_FOO%3A1', qs)
+        self.assertIn('requiredThe-second-group=CUSTOM_BAR', qs)
 
     def test_resources_from_request_spec_requested_resources_unfilled(self):
         flavor = objects.Flavor(
@@ -876,6 +904,7 @@ class TestUtils(TestUtilsBase):
             },
         )
         expected._rg_by_id['1'] = objects.RequestGroup(
+            requester_id='1',
             resources={
                 'SRIOV_NET_VF': 1,
                 'IPV4_ADDRESS': 1,
@@ -888,6 +917,7 @@ class TestUtils(TestUtilsBase):
             },
         )
         expected._rg_by_id['2'] = objects.RequestGroup(
+            requester_id='2',
             resources={
                 'SRIOV_NET_VF': 1,
                 'IPV4_ADDRESS': 2,
@@ -898,6 +928,7 @@ class TestUtils(TestUtilsBase):
             }
         )
         expected._rg_by_id['3'] = objects.RequestGroup(
+            requester_id='3',
             resources={
                 'DISK_GB': 5,
             }
@@ -1093,30 +1124,25 @@ class TestUtils(TestUtilsBase):
             vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0)
         rs = objects.RequestSpec(flavor=flavor, is_bfv=False)
         req = utils.ResourceRequest(rs)
-        rg1 = objects.RequestGroup()
+        rg1 = objects.RequestGroup(requester_id='foo',
+                                   required_traits={'CUSTOM_FOO'})
         req._add_request_group(rg1)
-        rg2 = objects.RequestGroup()
+        rg2 = objects.RequestGroup(requester_id='bar',
+                                   forbidden_traits={'CUSTOM_BAR'})
         req._add_request_group(rg2)
-        self.assertIs(rg1, req.get_request_group(1))
-        self.assertIs(rg2, req.get_request_group(2))
+        self.assertIs(rg1, req.get_request_group('foo'))
+        self.assertIs(rg2, req.get_request_group('bar'))
 
-    def test_resource_request_add_group_inserts_the_group_implicit_group(self):
+    def test_empty_groups_forbidden(self):
+        """Not allowed to add premade RequestGroup without resources/traits/
+        aggregates.
+        """
         flavor = objects.Flavor(
             vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0)
         rs = objects.RequestSpec(flavor=flavor, is_bfv=False)
         req = utils.ResourceRequest(rs)
-
-        # this implicitly creates the specified group
-        unnumbered_rg = req.get_request_group(42)
-
-        rg1 = objects.RequestGroup()
-        req._add_request_group(rg1)
-        rg2 = objects.RequestGroup()
-        req._add_request_group(rg2)
-
-        self.assertIs(rg1, req.get_request_group(43))
-        self.assertIs(rg2, req.get_request_group(44))
-        self.assertIs(unnumbered_rg, req.get_request_group(42))
+        rg = objects.RequestGroup(requester_id='foo')
+        self.assertRaises(ValueError, req._add_request_group, rg)
 
     def test_claim_resources_on_destination_no_source_allocations(self):
         """Tests the negative scenario where the instance does not have
