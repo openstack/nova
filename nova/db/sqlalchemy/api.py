@@ -4217,29 +4217,6 @@ def security_group_rule_count_by_group(context, security_group_id):
 ###################
 
 
-@pick_context_manager_writer
-def provider_fw_rule_create(context, rule):
-    fw_rule_ref = models.ProviderFirewallRule()
-    fw_rule_ref.update(rule)
-    fw_rule_ref.save(context.session)
-    return fw_rule_ref
-
-
-@pick_context_manager_reader
-def provider_fw_rule_get_all(context):
-    return model_query(context, models.ProviderFirewallRule).all()
-
-
-@pick_context_manager_writer
-def provider_fw_rule_destroy(context, rule_id):
-    context.session.query(models.ProviderFirewallRule).\
-        filter_by(id=rule_id).\
-        soft_delete()
-
-
-###################
-
-
 @require_context
 @pick_context_manager_writer
 def project_get_networks(context, project_id, associate=True):

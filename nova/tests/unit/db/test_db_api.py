@@ -7811,46 +7811,6 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         mock_model_query.assert_called_once_with(self.ctxt, models.ComputeNode)
 
 
-class ProviderFwRuleTestCase(test.TestCase, ModelsObjectComparatorMixin):
-
-    def setUp(self):
-        super(ProviderFwRuleTestCase, self).setUp()
-        self.ctxt = context.get_admin_context()
-        self.values = self._get_rule_values()
-        self.rules = [db.provider_fw_rule_create(self.ctxt, rule)
-                                  for rule in self.values]
-
-    def _get_rule_values(self):
-        cidr_samples = ['192.168.0.0/24', '10.1.2.3/32',
-                        '2001:4f8:3:ba::/64',
-                        '2001:4f8:3:ba:2e0:81ff:fe22:d1f1/128']
-        values = []
-        for i in range(len(cidr_samples)):
-            rule = {}
-            rule['protocol'] = 'foo' + str(i)
-            rule['from_port'] = 9999 + i
-            rule['to_port'] = 9898 + i
-            rule['cidr'] = cidr_samples[i]
-            values.append(rule)
-        return values
-
-    def test_provider_fw_rule_create(self):
-        ignored_keys = ['id', 'deleted', 'deleted_at', 'created_at',
-                        'updated_at']
-        for i, rule in enumerate(self.values):
-            self._assertEqualObjects(self.rules[i], rule,
-                                     ignored_keys=ignored_keys)
-
-    def test_provider_fw_rule_get_all(self):
-        self._assertEqualListsOfObjects(self.rules,
-                                        db.provider_fw_rule_get_all(self.ctxt))
-
-    def test_provider_fw_rule_destroy(self):
-        for rule in self.rules:
-            db.provider_fw_rule_destroy(self.ctxt, rule.id)
-        self.assertEqual([], db.provider_fw_rule_get_all(self.ctxt))
-
-
 class CertificateTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def setUp(self):
