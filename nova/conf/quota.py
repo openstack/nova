@@ -64,50 +64,6 @@ Possible values:
 * A positive integer or 0.
 * -1 to disable the quota.
 """),
-    cfg.IntOpt('floating_ips',
-        min=-1,
-        default=10,
-        deprecated_group='DEFAULT',
-        deprecated_name='quota_floating_ips',
-        deprecated_for_removal=True,
-        deprecated_since='15.0.0',
-        deprecated_reason="""
-nova-network is deprecated, as are any related configuration options.
-""",
-        help="""
-The number of floating IPs allowed per project.
-
-Floating IPs are not allocated to instances by default. Users need to select
-them from the pool configured by the OpenStack administrator to attach to their
-instances.
-
-Possible values:
-
-* A positive integer or 0.
-* -1 to disable the quota.
-"""),
-    cfg.IntOpt('fixed_ips',
-        min=-1,
-        default=-1,
-        deprecated_group='DEFAULT',
-        deprecated_name='quota_fixed_ips',
-        deprecated_for_removal=True,
-        deprecated_since='15.0.0',
-        deprecated_reason="""
-nova-network is deprecated, as are any related configuration options.
-""",
-        help="""
-The number of fixed IPs allowed per project.
-
-Unlike floating IPs, fixed IPs are allocated dynamically by the network
-component when instances boot up.  This quota value should be at least the
-number of instances allowed
-
-Possible values:
-
-* A positive integer or 0.
-* -1 to disable the quota.
-"""),
     cfg.IntOpt('metadata_items',
         min=-1,
         default=128,
@@ -163,45 +119,6 @@ Possible values:
         deprecated_name='quota_injected_file_path_length',
         help="""
 The maximum allowed injected file path length.
-
-Possible values:
-
-* A positive integer or 0.
-* -1 to disable the quota.
-"""),
-    cfg.IntOpt('security_groups',
-        min=-1,
-        default=10,
-        deprecated_group='DEFAULT',
-        deprecated_name='quota_security_groups',
-        deprecated_for_removal=True,
-        deprecated_since='15.0.0',
-        deprecated_reason="""
-nova-network is deprecated, as are any related configuration options.
-""",
-        help="""
-The number of security groups per project.
-
-Possible values:
-
-* A positive integer or 0.
-* -1 to disable the quota.
-"""),
-    cfg.IntOpt('security_group_rules',
-        min=-1,
-        default=20,
-        deprecated_group='DEFAULT',
-        deprecated_name='quota_security_group_rules',
-        deprecated_for_removal=True,
-        deprecated_since='15.0.0',
-        deprecated_reason="""
-nova-network is deprecated, as are any related configuration options.
-""",
-        help="""
-The number of security rules per security group.
-
-The associated rules in each security group control the traffic to instances in
-the group.
 
 Possible values:
 

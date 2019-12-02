@@ -160,8 +160,7 @@ class DbQuotaDriver(object):
                   for example:
                   {'project_id': 'project-uuid',
                    'user_id': 'user-uuid',
-                   'instances': {'in_use': 5},
-                   'fixed_ips': {'in_use': 5}}
+                   'instances': {'in_use': 5}}
         """
         usages = {}
         for resource in resources.values():
@@ -176,8 +175,7 @@ class DbQuotaDriver(object):
                 # of multiple times). So, a count of any one of them contains
                 # counts for the others and we can avoid re-counting things.
                 continue
-            if resource.name in ('key_pairs', 'server_group_members',
-                                 'security_group_rules'):
+            if resource.name in ('key_pairs', 'server_group_members'):
                 # These per user resources are special cases whose usages
                 # are not considered when validating limit create/update or
                 # displaying used limits. They are always zero.
@@ -546,7 +544,7 @@ class DbQuotaDriver(object):
         # together.
 
         # per project quota limits (quotas that have no concept of
-        # user-scoping: fixed_ips, floating_ips)
+        # user-scoping: <none>)
         project_quotas = objects.Quotas.get_all_by_project(context, project_id)
         # per user quotas, project quota limits (for quotas that have
         # user-scoping, limits for the project)
@@ -586,9 +584,9 @@ class DbQuotaDriver(object):
                                           headroom=headroom)
 
         # This is for resources that are counted across a project and
-        # across a user (instances, cores, ram, security_groups,
-        # server_groups). The project_values must pass the quota for the
-        # project and the user_values must pass the quota for the user.
+        # across a user (instances, cores, ram, server_groups). The
+        # project_values must pass the quota for the project and the
+        # user_values must pass the quota for the user.
         over_user_quota = False
         overs = []
         for key in user_values.keys():
@@ -613,10 +611,8 @@ class DbQuotaDriver(object):
 
 class NoopQuotaDriver(object):
     """Driver that turns quotas calls into no-ops and pretends that quotas
-    for all resources are unlimited.  This can be used if you do not
-    wish to have any quota checking.  For instance, with nova compute
-    cells, the parent cell should do quota checking, but the child cell
-    should not.
+    for all resources are unlimited. This can be used if you do not
+    wish to have any quota checking.
     """
 
     def get_defaults(self, context, resources):
@@ -808,8 +804,7 @@ class CountableResource(AbsoluteResource):
 
         Countable resources are those resources which directly
         correspond to objects in the database, but for which a count
-        by project ID is inappropriate e.g. security_group_rules,
-        keypairs, etc.
+        by project ID is inappropriate e.g. keypairs
         A CountableResource must be constructed with a counting
         function, which will be called to determine the current counts
         of the resource.
@@ -1102,23 +1097,6 @@ def _keypair_get_count_by_user(context, user_id):
     return {'user': {'key_pairs': count}}
 
 
-def _security_group_count(context, project_id, user_id=None):
-    """Get the counts of security groups in the database.
-
-    :param context: The request context for database access
-    :param project_id: The project_id to count across
-    :param user_id: The user_id to count across
-    :returns: A dict containing the project-scoped counts and user-scoped
-              counts if user_id is specified. For example:
-
-                {'project': {'security_groups': <count across project>},
-                 'user': {'security_groups': <count across user>}}
-    """
-    # NOTE(melwitt): This assumes a single cell.
-    return objects.SecurityGroupList.get_counts(context, project_id,
-                                                user_id=user_id)
-
-
 def _server_group_count_members_by_user_legacy(context, group, user_id):
     # NOTE(melwitt): This is mostly duplicated from
     # InstanceGroup.count_members_by_user() to query across multiple cells.
@@ -1187,18 +1165,6 @@ def _server_group_count_members_by_user(context, group, user_id):
                 'group members')
     return _server_group_count_members_by_user_legacy(context, group,
                                                       user_id)
-
-
-def _fixed_ip_count(context, project_id):
-    # NOTE(melwitt): This assumes a single cell.
-    count = objects.FixedIPList.get_count_by_project(context, project_id)
-    return {'project': {'fixed_ips': count}}
-
-
-def _floating_ip_count(context, project_id):
-    # NOTE(melwitt): This assumes a single cell.
-    count = objects.FloatingIPList.get_count_by_project(context, project_id)
-    return {'project': {'floating_ips': count}}
 
 
 def _instances_cores_ram_count_legacy(context, project_id, user_id=None):
@@ -1323,15 +1289,6 @@ def _server_group_count(context, project_id, user_id=None):
                                                 user_id=user_id)
 
 
-def _security_group_rule_count_by_group(context, security_group_id):
-    count = db.security_group_rule_count_by_group(context, security_group_id)
-    # NOTE(melwitt): Neither 'project' nor 'user' fit perfectly here as
-    # security group rules are counted per security group, not by user or
-    # project. But, the quota limits for security_group_rules can be scoped to
-    # a user, so we'll use 'user' here.
-    return {'user': {'security_group_rules': count}}
-
-
 QUOTAS = QuotaEngine(
     resources=[
         CountableResource(
@@ -1340,12 +1297,6 @@ QUOTAS = QuotaEngine(
             'cores', _instances_cores_ram_count, 'cores'),
         CountableResource(
             'ram', _instances_cores_ram_count, 'ram'),
-        CountableResource(
-            'security_groups', _security_group_count, 'security_groups'),
-        CountableResource(
-            'fixed_ips', _fixed_ip_count, 'fixed_ips'),
-        CountableResource(
-            'floating_ips', _floating_ip_count, 'floating_ips'),
         AbsoluteResource(
             'metadata_items', 'metadata_items'),
         AbsoluteResource(
@@ -1355,15 +1306,18 @@ QUOTAS = QuotaEngine(
         AbsoluteResource(
             'injected_file_path_bytes', 'injected_file_path_length'),
         CountableResource(
-            'security_group_rules', _security_group_rule_count_by_group,
-            'security_group_rules'),
-        CountableResource(
             'key_pairs', _keypair_get_count_by_user, 'key_pairs'),
         CountableResource(
             'server_groups', _server_group_count, 'server_groups'),
         CountableResource(
             'server_group_members', _server_group_count_members_by_user,
             'server_group_members'),
+        # Deprecated nova-network quotas, retained to avoid changing API
+        # responses
+        AbsoluteResource('fixed_ips'),
+        AbsoluteResource('floating_ips'),
+        AbsoluteResource('security_groups'),
+        AbsoluteResource('security_group_rules'),
     ],
 )
 

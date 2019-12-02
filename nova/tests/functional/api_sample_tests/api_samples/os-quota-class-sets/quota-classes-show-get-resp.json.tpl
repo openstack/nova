@@ -1,7 +1,7 @@
 {
     "quota_class_set": {
         "cores": 20,
-        "floating_ips": 10,
+        "floating_ips": -1,
         "fixed_ips": -1,
         "id": "%(set_id)s",
         "injected_file_content_bytes": 10240,
@@ -11,7 +11,7 @@
         "key_pairs": 100,
         "metadata_items": 128,
         "ram": 51200,
-        "security_group_rules": 20,
-        "security_groups": 10
+        "security_group_rules": -1,
+        "security_groups": -1
     }
 }

@@ -36,10 +36,8 @@ def _get_fake_get_usages(updates=None):
     # These values are not realistic (they should all be 0) and are
     # only for testing that countable usages get included in the
     # results.
-    usages = {'security_group_rules': {'in_use': 1},
-              'key_pairs': {'in_use': 2},
+    usages = {'key_pairs': {'in_use': 2},
               'server_group_members': {'in_use': 3},
-              'floating_ips': {'in_use': 2},
               'instances': {'in_use': 2},
               'cores': {'in_use': 4},
               'ram': {'in_use': 10 * 1024}}
@@ -503,14 +501,10 @@ class DbQuotaDriverTestCase(test.TestCase):
         self.flags(instances=10,
                    cores=20,
                    ram=50 * 1024,
-                   floating_ips=10,
-                   fixed_ips=10,
                    metadata_items=128,
                    injected_files=5,
                    injected_file_content_bytes=10 * 1024,
                    injected_file_path_length=255,
-                   security_groups=10,
-                   security_group_rules=20,
                    server_groups=10,
                    server_group_members=10,
                    group='quota'
@@ -531,17 +525,17 @@ class DbQuotaDriverTestCase(test.TestCase):
                 instances=5,
                 cores=20,
                 ram=25 * 1024,
-                floating_ips=10,
-                fixed_ips=10,
                 metadata_items=64,
                 injected_files=5,
                 injected_file_content_bytes=5 * 1024,
                 injected_file_path_bytes=255,
-                security_groups=10,
-                security_group_rules=20,
                 key_pairs=100,
                 server_groups=10,
                 server_group_members=10,
+                security_groups=-1,
+                security_group_rules=-1,
+                fixed_ips=-1,
+                floating_ips=-1,
                 ))
 
     def _stub_quota_class_get_default(self):
@@ -579,17 +573,17 @@ class DbQuotaDriverTestCase(test.TestCase):
                 instances=5,
                 cores=20,
                 ram=25 * 1024,
-                floating_ips=10,
-                fixed_ips=10,
                 metadata_items=64,
                 injected_files=5,
                 injected_file_content_bytes=5 * 1024,
                 injected_file_path_bytes=255,
-                security_groups=10,
-                security_group_rules=20,
                 key_pairs=100,
                 server_groups=10,
                 server_group_members=10,
+                floating_ips=-1,
+                fixed_ips=-1,
+                security_groups=-1,
+                security_group_rules=-1,
                 ))
 
     def _stub_get_by_project_and_user(self):
@@ -624,10 +618,6 @@ class DbQuotaDriverTestCase(test.TestCase):
             return {'project': {'instances': 2, 'cores': 4, 'ram': 1024},
                     'user': {'instances': 1, 'cores': 2, 'ram': 512}}
 
-        def fake_security_group_count(*a, **k):
-            return {'project': {'security_groups': 2},
-                    'user': {'security_groups': 1}}
-
         def fake_server_group_count(*a, **k):
             return {'project': {'server_groups': 5},
                     'user': {'server_groups': 3}}
@@ -642,23 +632,17 @@ class DbQuotaDriverTestCase(test.TestCase):
             'cores', fake_instances_cores_ram_count, 'cores')
         resources['ram'] = quota.CountableResource(
             'ram', fake_instances_cores_ram_count, 'ram')
-        resources['security_groups'] = quota.CountableResource(
-            'security_groups', fake_security_group_count, 'security_groups')
-        resources['floating_ips'] = quota.CountableResource(
-            'floating_ips', lambda *a, **k: {'project': {'floating_ips': 4}},
-            'floating_ips')
-        resources['fixed_ips'] = quota.CountableResource(
-            'fixed_ips', lambda *a, **k: {'project': {'fixed_ips': 5}},
-            'fixed_ips')
         resources['server_groups'] = quota.CountableResource(
             'server_groups', fake_server_group_count, 'server_groups')
         resources['server_group_members'] = quota.CountableResource(
             'server_group_members',
             lambda *a, **k: {'user': {'server_group_members': 7}},
             'server_group_members')
-        resources['security_group_rules'] = quota.CountableResource(
-            'security_group_rules',
-            lambda *a, **k: {'project': {'security_group_rules': 8}},
+        resources['floating_ips'] = quota.AbsoluteResource('floating_ips')
+        resources['fixed_ips'] = quota.AbsoluteResource('fixed_ips')
+        resources['security_groups'] = quota.AbsoluteResource(
+            'security_groups')
+        resources['security_group_rules'] = quota.AbsoluteResource(
             'security_group_rules')
         return resources
 
@@ -673,12 +657,8 @@ class DbQuotaDriverTestCase(test.TestCase):
                     'instances': {'in_use': 2},
                     'cores': {'in_use': 4},
                     'ram': {'in_use': 1024},
-                    'security_groups': {'in_use': 2},
-                    'floating_ips': {'in_use': 4},
-                    'fixed_ips': {'in_use': 5},
                     'server_groups': {'in_use': 5},
-                    'server_group_members': {'in_use': 0},
-                    'security_group_rules': {'in_use': 0}}
+                    'server_group_members': {'in_use': 0}}
         self.assertEqual(expected, actual)
 
     def test_get_usages_for_user(self):
@@ -692,12 +672,8 @@ class DbQuotaDriverTestCase(test.TestCase):
                     'instances': {'in_use': 1},
                     'cores': {'in_use': 2},
                     'ram': {'in_use': 512},
-                    'security_groups': {'in_use': 1},
-                    'floating_ips': {'in_use': 4},
-                    'fixed_ips': {'in_use': 5},
                     'server_groups': {'in_use': 3},
-                    'server_group_members': {'in_use': 0},
-                    'security_group_rules': {'in_use': 0}}
+                    'server_group_members': {'in_use': 0}}
         self.assertEqual(expected, actual)
 
     @mock.patch('nova.quota.DbQuotaDriver._get_usages',
@@ -731,11 +707,11 @@ class DbQuotaDriverTestCase(test.TestCase):
                     in_use=10 * 1024,
                     ),
                floating_ips=dict(
-                    limit=10,
-                    in_use=2,
+                    limit=-1,
+                    in_use=0,
                     ),
                 fixed_ips=dict(
-                    limit=10,
+                    limit=-1,
                     in_use=0,
                     ),
                 metadata_items=dict(
@@ -755,12 +731,12 @@ class DbQuotaDriverTestCase(test.TestCase):
                     in_use=0,
                     ),
                 security_groups=dict(
-                    limit=10,
+                    limit=-1,
                     in_use=0,
                     ),
                 security_group_rules=dict(
-                    limit=20,
-                    in_use=1,
+                    limit=-1,
+                    in_use=0,
                     ),
                 key_pairs=dict(
                     limit=100,
@@ -841,11 +817,11 @@ class DbQuotaDriverTestCase(test.TestCase):
                     in_use=10 * 1024,
                     ),
                floating_ips=dict(
-                    limit=10,
-                    in_use=2,
+                    limit=-1,
+                    in_use=0,
                     ),
                 fixed_ips=dict(
-                    limit=10,
+                    limit=-1,
                     in_use=0,
                     ),
                 metadata_items=dict(
@@ -865,12 +841,12 @@ class DbQuotaDriverTestCase(test.TestCase):
                     in_use=0,
                     ),
                 security_groups=dict(
-                    limit=10,
+                    limit=-1,
                     in_use=0,
                     ),
                 security_group_rules=dict(
-                    limit=20,
-                    in_use=1,
+                    limit=-1,
+                    in_use=0,
                     ),
                 key_pairs=dict(
                     limit=100,
@@ -920,14 +896,14 @@ class DbQuotaDriverTestCase(test.TestCase):
                     remains=25 * 1024,
                     ),
                 floating_ips=dict(
-                    limit=10,
-                    in_use=2,
-                    remains=10,
+                    limit=-1,
+                    in_use=0,
+                    remains=-1,
                     ),
                 fixed_ips=dict(
-                    limit=10,
+                    limit=-1,
                     in_use=0,
-                    remains=10,
+                    remains=-1,
                     ),
                 metadata_items=dict(
                     limit=64,
@@ -950,14 +926,14 @@ class DbQuotaDriverTestCase(test.TestCase):
                     remains=127,
                     ),
                 security_groups=dict(
-                    limit=10,
+                    limit=-1,
                     in_use=0,
-                    remains=10,
+                    remains=-1,
                     ),
                 security_group_rules=dict(
-                    limit=20,
-                    in_use=1,
-                    remains=20,
+                    limit=-1,
+                    in_use=0,
+                    remains=-1,
                     ),
                 key_pairs=dict(
                     limit=100,
@@ -1006,11 +982,11 @@ class DbQuotaDriverTestCase(test.TestCase):
                     in_use=10 * 1024,
                     ),
                 floating_ips=dict(
-                    limit=10,
-                    in_use=2,
+                    limit=-1,
+                    in_use=0,
                     ),
                 fixed_ips=dict(
-                    limit=10,
+                    limit=-1,
                     in_use=0,
                     ),
                 metadata_items=dict(
@@ -1030,12 +1006,12 @@ class DbQuotaDriverTestCase(test.TestCase):
                     in_use=0,
                     ),
                 security_groups=dict(
-                    limit=10,
+                    limit=-1,
                     in_use=0,
                     ),
                 security_group_rules=dict(
-                    limit=20,
-                    in_use=1,
+                    limit=-1,
+                    in_use=0,
                     ),
                 key_pairs=dict(
                     limit=100,
@@ -1080,11 +1056,11 @@ class DbQuotaDriverTestCase(test.TestCase):
                     in_use=10 * 1024,
                     ),
                floating_ips=dict(
-                    limit=10,
-                    in_use=2,
+                    limit=-1,
+                    in_use=0,
                     ),
                 fixed_ips=dict(
-                    limit=10,
+                    limit=-1,
                     in_use=0,
                     ),
                 metadata_items=dict(
@@ -1104,12 +1080,12 @@ class DbQuotaDriverTestCase(test.TestCase):
                     in_use=0,
                     ),
                 security_groups=dict(
-                    limit=10,
+                    limit=-1,
                     in_use=0,
                     ),
                 security_group_rules=dict(
-                    limit=20,
-                    in_use=1,
+                    limit=-1,
+                    in_use=0,
                     ),
                 key_pairs=dict(
                     limit=100,
@@ -1157,11 +1133,11 @@ class DbQuotaDriverTestCase(test.TestCase):
                     in_use=10 * 1024,
                     ),
                 floating_ips=dict(
-                    limit=10,
-                    in_use=2,
+                    limit=-1,
+                    in_use=0,
                     ),
                 fixed_ips=dict(
-                    limit=10,
+                    limit=-1,
                     in_use=0,
                     ),
                 metadata_items=dict(
@@ -1181,12 +1157,12 @@ class DbQuotaDriverTestCase(test.TestCase):
                     in_use=0,
                     ),
                 security_groups=dict(
-                    limit=10,
+                    limit=-1,
                     in_use=0,
                     ),
                 security_group_rules=dict(
-                    limit=20,
-                    in_use=1,
+                    limit=-1,
+                    in_use=0,
                     ),
                 key_pairs=dict(
                     limit=100,
@@ -1233,11 +1209,11 @@ class DbQuotaDriverTestCase(test.TestCase):
                     in_use=10 * 1024,
                     ),
                 floating_ips=dict(
-                    limit=10,
-                    in_use=2,
+                    limit=-1,
+                    in_use=0,
                     ),
                 fixed_ips=dict(
-                    limit=10,
+                    limit=-1,
                     in_use=0,
                     ),
                 metadata_items=dict(
@@ -1257,12 +1233,12 @@ class DbQuotaDriverTestCase(test.TestCase):
                     in_use=0,
                     ),
                 security_groups=dict(
-                    limit=10,
+                    limit=-1,
                     in_use=0,
                     ),
                 security_group_rules=dict(
-                    limit=20,
-                    in_use=1,
+                    limit=-1,
+                    in_use=0,
                     ),
                 key_pairs=dict(
                     limit=100,
@@ -1300,10 +1276,10 @@ class DbQuotaDriverTestCase(test.TestCase):
                     limit=25 * 1024,
                     ),
                 floating_ips=dict(
-                    limit=10,
+                    limit=-1,
                     ),
                 fixed_ips=dict(
-                    limit=10,
+                    limit=-1,
                     ),
                 metadata_items=dict(
                     limit=64,
@@ -1318,10 +1294,10 @@ class DbQuotaDriverTestCase(test.TestCase):
                     limit=127,
                     ),
                 security_groups=dict(
-                    limit=10,
+                    limit=-1,
                     ),
                 security_group_rules=dict(
-                    limit=20,
+                    limit=-1,
                     ),
                 key_pairs=dict(
                     limit=100,
@@ -1356,10 +1332,10 @@ class DbQuotaDriverTestCase(test.TestCase):
                     limit=25 * 1024,
                     ),
                 floating_ips=dict(
-                    limit=10,
+                    limit=-1,
                     ),
                 fixed_ips=dict(
-                    limit=10,
+                    limit=-1,
                     ),
                 metadata_items=dict(
                     limit=64,
@@ -1374,10 +1350,10 @@ class DbQuotaDriverTestCase(test.TestCase):
                     limit=127,
                     ),
                 security_groups=dict(
-                    limit=10,
+                    limit=-1,
                     ),
                 security_group_rules=dict(
-                    limit=20,
+                    limit=-1,
                     ),
                 key_pairs=dict(
                     limit=100,
@@ -1394,7 +1370,7 @@ class DbQuotaDriverTestCase(test.TestCase):
 
         def fake_quota_get_all_by_project(context, project_id):
             self.calls.append('quota_get_all_by_project')
-            return {'floating_ips': 20}
+            return {'floating_ips': -1}
 
         def fake_get_project_quotas(dbdrv, context, resources, project_id,
                                     quota_class=None,
@@ -1412,9 +1388,9 @@ class DbQuotaDriverTestCase(test.TestCase):
                     in_use = 5
                     limit = -1
                 elif k == 'floating_ips':
-                    remains = 20
+                    remains = -1
                     in_use = 0
-                    limit = 20
+                    limit = -1
                 else:
                     remains = v.default
                     in_use = 0
@@ -1480,11 +1456,11 @@ class DbQuotaDriverTestCase(test.TestCase):
                     },
                 'floating_ips': {
                     'minimum': 0,
-                    'maximum': 20,
+                    'maximum': -1,
                     },
                 'fixed_ips': {
                     'minimum': 0,
-                    'maximum': 10,
+                    'maximum': -1,
                     },
                 'metadata_items': {
                     'minimum': 0,
@@ -1504,11 +1480,11 @@ class DbQuotaDriverTestCase(test.TestCase):
                     },
                 'security_groups': {
                     'minimum': 0,
-                    'maximum': 10,
+                    'maximum': -1,
                     },
                 'security_group_rules': {
                     'minimum': 0,
-                    'maximum': 20,
+                    'maximum': -1,
                     },
                 'key_pairs': {
                     'minimum': 0,
@@ -1620,11 +1596,11 @@ class DbQuotaDriverTestCase(test.TestCase):
                     },
                 'floating_ips': {
                     'minimum': 0,
-                    'maximum': 20,
+                    'maximum': -1,
                     },
                 'fixed_ips': {
                     'minimum': 0,
-                    'maximum': 10,
+                    'maximum': -1,
                     },
                 'metadata_items': {
                     'minimum': 0,
@@ -1644,11 +1620,11 @@ class DbQuotaDriverTestCase(test.TestCase):
                     },
                 'security_groups': {
                     'minimum': 0,
-                    'maximum': 10,
+                    'maximum': -1,
                     },
                 'security_group_rules': {
                     'minimum': 0,
-                    'maximum': 20,
+                    'maximum': -1,
                     },
                 'key_pairs': {
                     'minimum': 0,
@@ -1773,7 +1749,7 @@ class DbQuotaDriverTestCase(test.TestCase):
         ctxt = FakeContext('test_project', 'test_class')
         resources = self._get_fake_countable_resources()
         # Check: only project_values, only user_values, and then both.
-        kwargs = [{'project_values': {'fixed_ips': 10241}},
+        kwargs = [{'project_values': {'instances': 512}},
                   {'user_values': {'key_pairs': 256}},
                   {'project_values': {'instances': 512},
                    'user_values': {'instances': 256}}]
@@ -1783,7 +1759,6 @@ class DbQuotaDriverTestCase(test.TestCase):
                               ctxt, resources, **kwarg)
 
     def test_limit_check_project_and_user_unlimited(self):
-        self.flags(fixed_ips=-1, group='quota')
         self.flags(key_pairs=-1, group='quota')
         self.flags(instances=-1, group='quota')
         self._stub_get_project_quotas()
@@ -1833,13 +1808,10 @@ class NoopQuotaDriverTestCase(test.TestCase):
         self.flags(instances=10,
                    cores=20,
                    ram=50 * 1024,
-                   floating_ips=10,
                    metadata_items=128,
                    injected_files=5,
                    injected_file_content_bytes=10 * 1024,
                    injected_file_path_length=255,
-                   security_groups=10,
-                   security_group_rules=20,
                    group='quota'
                    )
 
