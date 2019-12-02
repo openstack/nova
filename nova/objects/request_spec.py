@@ -15,6 +15,7 @@
 import copy
 import itertools
 
+import os_resource_classes as orc
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
@@ -1119,3 +1120,36 @@ class RequestGroup(base.NovaObject):
                 del primitive['requester_id']
             if 'provider_uuids' in primitive:
                 del primitive['provider_uuids']
+
+    def add_resource(self, rclass, amount):
+        # Validate the class.
+        if not (rclass.startswith(orc.CUSTOM_NAMESPACE) or
+                        rclass in orc.STANDARDS):
+            LOG.warning(
+                "Received an invalid ResourceClass '%(key)s' in extra_specs.",
+                {"key": rclass})
+            return
+        # val represents the amount.  Convert to int, or warn and skip.
+        try:
+            amount = int(amount)
+            if amount < 0:
+                raise ValueError()
+        except ValueError:
+            LOG.warning(
+                "Resource amounts must be nonnegative integers. Received '%s'",
+                amount)
+            return
+        self.resources[rclass] = amount
+
+    def add_trait(self, trait_name, trait_type):
+        # Currently the only valid values for a trait entry are 'required'
+        # and 'forbidden'
+        trait_vals = ('required', 'forbidden')
+        if trait_type == 'required':
+            self.required_traits.add(trait_name)
+        elif trait_type == 'forbidden':
+            self.forbidden_traits.add(trait_name)
+        else:
+            LOG.warning(
+                "Only (%(tvals)s) traits are supported. Received '%(val)s'.",
+                {"tvals": ', '.join(trait_vals), "val": trait_type})
