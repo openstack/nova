@@ -67,13 +67,167 @@ Response header example::
 Server Actions
 --------------
 
-There is an API for end users to list the outcome of `Server Actions`_,
-referencing the requested action by request id.
+Most `server action APIs`_ are asynchronous. Usually the API service will do
+some minimal work and then send the request off to the ``nova-compute`` service
+to complete the action and the API will return a 202 response to the client.
+The client will poll the API until the operation completes, which could be a
+status change on the server but is usually at least always waiting for the
+server ``OS-EXT-STS:task_state`` field to go to ``null`` indicating the action
+has completed either successfully or with an error.
 
-For more details, please see:
-https://docs.openstack.org/api-ref/compute/#servers-actions-servers-os-instance-actions
+If a server action fails and the server status changes to ``ERROR`` an
+:ref:`instance fault <instance-fault>` will be shown with the server details.
 
-.. _Server Actions: https://docs.openstack.org/api-ref/compute/#servers-run-an-action-servers-action
+The `os-instance-actions API`_ allows users end users to list the outcome of
+server actions, referencing the requested action by request id. This is useful
+when an action fails and the server status does not change to ``ERROR``.
+
+To illustrate, consider a server (vm1) created with flavor ``m1.tiny``:
+
+.. code-block:: console
+
+  $ openstack server create --flavor m1.tiny --image cirros-0.4.0-x86_64-disk --wait vm1
+  +-----------------------------+-----------------------------------------------------------------+
+  | Field                       | Value                                                           |
+  +-----------------------------+-----------------------------------------------------------------+
+  | OS-DCF:diskConfig           | MANUAL                                                          |
+  | OS-EXT-AZ:availability_zone | nova                                                            |
+  | OS-EXT-STS:power_state      | Running                                                         |
+  | OS-EXT-STS:task_state       | None                                                            |
+  | OS-EXT-STS:vm_state         | active                                                          |
+  | OS-SRV-USG:launched_at      | 2019-12-02T19:14:48.000000                                      |
+  | OS-SRV-USG:terminated_at    | None                                                            |
+  | accessIPv4                  |                                                                 |
+  | accessIPv6                  |                                                                 |
+  | addresses                   | private=10.0.0.60, fda0:e0c4:2764:0:f816:3eff:fe03:806          |
+  | adminPass                   | NgascCr3dYo4                                                    |
+  | config_drive                |                                                                 |
+  | created                     | 2019-12-02T19:14:42Z                                            |
+  | flavor                      | m1.tiny (1)                                                     |
+  | hostId                      | 22e88bec09a7e33606348fce0abac0ebbbe091a35e29db1498ec4e14        |
+  | id                          | 344174b8-34fd-4017-ae29-b9084dcf3861                            |
+  | image                       | cirros-0.4.0-x86_64-disk (cce5e6d6-d359-4152-b277-1b4f1871557f) |
+  | key_name                    | None                                                            |
+  | name                        | vm1                                                             |
+  | progress                    | 0                                                               |
+  | project_id                  | b22597ea961545f3bde1b2ede0bd5b91                                |
+  | properties                  |                                                                 |
+  | security_groups             | name='default'                                                  |
+  | status                      | ACTIVE                                                          |
+  | updated                     | 2019-12-02T19:14:49Z                                            |
+  | user_id                     | 046033fb3f824550999752b6525adbac                                |
+  | volumes_attached            |                                                                 |
+  +-----------------------------+-----------------------------------------------------------------+
+
+The owner of the server then tries to resize the server to flavor ``m1.small``
+which fails because there are no hosts available on which to resize the server:
+
+.. code-block:: console
+
+  $ openstack server resize --flavor m1.small --wait vm1
+  Complete
+
+Despite the openstack command saying the operation completed, the server shows
+the original ``m1.tiny`` flavor and the status is not ``VERIFY_RESIZE``:
+
+.. code-block::
+
+  $ openstack server show vm1 -f value -c status -c flavor
+  m1.tiny (1)
+  ACTIVE
+
+Since the status is not ``ERROR`` there are is no ``fault`` field in the server
+details so we find the details by listing the events for the server:
+
+.. code-block:: console
+
+  $ openstack server event list vm1
+  +------------------------------------------+--------------------------------------+--------+----------------------------+
+  | Request ID                               | Server ID                            | Action | Start Time                 |
+  +------------------------------------------+--------------------------------------+--------+----------------------------+
+  | req-ea1b0dfc-3186-42a9-84ff-c4f4fb130fae | 344174b8-34fd-4017-ae29-b9084dcf3861 | resize | 2019-12-02T19:15:35.000000 |
+  | req-4cdc4c93-0668-4ae6-98c8-a0a5fcc63d39 | 344174b8-34fd-4017-ae29-b9084dcf3861 | create | 2019-12-02T19:14:42.000000 |
+  +------------------------------------------+--------------------------------------+--------+----------------------------+
+
+To see details about the ``resize`` action, we use the Request ID for that
+action:
+
+.. code-block:: console
+
+  $ openstack server event show vm1 req-ea1b0dfc-3186-42a9-84ff-c4f4fb130fae
+  +---------------+------------------------------------------+
+  | Field         | Value                                    |
+  +---------------+------------------------------------------+
+  | action        | resize                                   |
+  | instance_uuid | 344174b8-34fd-4017-ae29-b9084dcf3861     |
+  | message       | Error                                    |
+  | project_id    | b22597ea961545f3bde1b2ede0bd5b91         |
+  | request_id    | req-ea1b0dfc-3186-42a9-84ff-c4f4fb130fae |
+  | start_time    | 2019-12-02T19:15:35.000000               |
+  | user_id       | 046033fb3f824550999752b6525adbac         |
+  +---------------+------------------------------------------+
+
+We see the message is "Error" but are not sure what failed. By default the
+event details for an action are not shown to users without the admin role so
+use microversion 2.51 to see the events (the ``events`` field is JSON-formatted
+here for readability):
+
+.. code-block::
+
+  $ openstack --os-compute-api-version 2.51 server event show vm1 req-ea1b0dfc-3186-42a9-84ff-c4f4fb130fae -f json -c events
+  {
+    "events": [
+      {
+        "event": "cold_migrate",
+        "start_time": "2019-12-02T19:15:35.000000",
+        "finish_time": "2019-12-02T19:15:36.000000",
+        "result": "Error"
+      },
+      {
+        "event": "conductor_migrate_server",
+        "start_time": "2019-12-02T19:15:35.000000",
+        "finish_time": "2019-12-02T19:15:36.000000",
+        "result": "Error"
+      }
+    ]
+  }
+
+By default policy configuration a user with the admin role can see a
+``traceback`` for each failed event just like with an instance fault:
+
+.. code-block::
+
+  $ source openrc admin admin
+  $ openstack --os-compute-api-version 2.51 server event show 344174b8-34fd-4017-ae29-b9084dcf3861 req-ea1b0dfc-3186-42a9-84ff-c4f4fb130fae -f json -c events
+  {
+    "events": [
+      {
+        "event": "cold_migrate",
+        "start_time": "2019-12-02T19:15:35.000000",
+        "finish_time": "2019-12-02T19:15:36.000000",
+        "result": "Error",
+        "traceback": "  File \"/opt/stack/nova/nova/conductor/manager.py\",
+        line 301, in migrate_server\n    host_list)\n
+        File \"/opt/stack/nova/nova/conductor/manager.py\", line 367, in
+        _cold_migrate\n    raise exception.NoValidHost(reason=msg)\n"
+      },
+      {
+        "event": "conductor_migrate_server",
+        "start_time": "2019-12-02T19:15:35.000000",
+        "finish_time": "2019-12-02T19:15:36.000000",
+        "result": "Error",
+        "traceback": "  File \"/opt/stack/nova/nova/compute/utils.py\",
+        line 1410, in decorated_function\n    return function(self, context,
+        *args, **kwargs)\n  File \"/opt/stack/nova/nova/conductor/manager.py\",
+        line 301, in migrate_server\n    host_list)\n
+        File \"/opt/stack/nova/nova/conductor/manager.py\", line 367, in
+        _cold_migrate\n    raise exception.NoValidHost(reason=msg)\n"
+      }
+    ]
+  }
+
+.. _server action APIs: https://docs.openstack.org/api-ref/compute/#servers-run-an-action-servers-action
+.. _os-instance-actions API: https://docs.openstack.org/api-ref/compute/#servers-actions-servers-os-instance-actions
 
 Logs
 ----
@@ -105,6 +259,8 @@ while neutron is using local request ID
 .. note::
 
    The local request IDs are useful to make 'call graphs'.
+
+.. _instance-fault:
 
 Instance Faults
 ---------------
@@ -182,7 +338,7 @@ In these cases, the server is usually placed in an ``ERROR`` state. For some
 operations, like resize, it is possible that the operation fails but
 the instance gracefully returned to its original state before attempting the
 operation. In both of these cases, you should be able to find out more from
-the Server Actions API described above.
+the `Server Actions`_ API described above.
 
 When a server is placed into an ``ERROR`` state, a fault is embedded in the
 offending server. Note that these asynchronous faults follow the same format
