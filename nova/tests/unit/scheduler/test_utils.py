@@ -698,14 +698,14 @@ class TestUtils(TestUtilsBase):
                 self.context, reqspec, self.mock_host_manager)
         self.assertEqual({'MEMORY_MB': 1024, 'DISK_GB': 15, 'VCPU': 1},
                          req.get_request_group(None).resources)
-        self.assertEqual(1, len(list(req.resource_groups())))
+        self.assertEqual(1, len(list(req._rg_by_id)))
 
         reqspec = objects.RequestSpec(flavor=flavor, requested_resources=[])
         req = utils.resources_from_request_spec(
                 self.context, reqspec, self.mock_host_manager)
         self.assertEqual({'MEMORY_MB': 1024, 'DISK_GB': 15, 'VCPU': 1},
                          req.get_request_group(None).resources)
-        self.assertEqual(1, len(list(req.resource_groups())))
+        self.assertEqual(1, len(list(req._rg_by_id)))
 
     @ddt.data(
         # Test single hint that we are checking for.

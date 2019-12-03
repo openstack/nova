@@ -1153,3 +1153,15 @@ class RequestGroup(base.NovaObject):
             LOG.warning(
                 "Only (%(tvals)s) traits are supported. Received '%(val)s'.",
                 {"tvals": ', '.join(trait_vals), "val": trait_type})
+
+    def is_empty(self):
+        return not any((
+            self.resources,
+            self.required_traits, self.forbidden_traits,
+            self.aggregates, self.forbidden_aggregates))
+
+    def strip_zeros(self):
+        """Remove any resources whose amount is zero."""
+        for rclass in list(self.resources):
+            if self.resources[rclass] == 0:
+                self.resources.pop(rclass)

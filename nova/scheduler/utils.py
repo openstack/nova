@@ -338,10 +338,6 @@ class ResourceRequest(object):
             return
         self._group_policy = policy
 
-    def resource_groups(self):
-        for rg in self._rg_by_id.values():
-            yield rg.resources
-
     def get_num_of_suffixed_groups(self):
         return len([ident for ident in self._rg_by_id.keys()
                     if ident is not None])
@@ -355,25 +351,19 @@ class ResourceRequest(object):
         :return: A dict of the form {resource_class: amount}
         """
         ret = collections.defaultdict(lambda: 0)
-        for resource_dict in self.resource_groups():
-            for resource_class, amount in resource_dict.items():
+        for rg in self._rg_by_id.values():
+            for resource_class, amount in rg.resources.items():
                 ret[resource_class] += amount
         return dict(ret)
 
-    def _clean_empties(self):
-        """Get rid of any empty RequestGroup instances."""
-        for ident, rg in list(self._rg_by_id.items()):
-            if not any((rg.resources, rg.required_traits,
-                        rg.forbidden_traits)):
-                self._rg_by_id.pop(ident)
-
     def strip_zeros(self):
         """Remove any resources whose amounts are zero."""
-        for resource_dict in self.resource_groups():
-            for rclass in list(resource_dict):
-                if resource_dict[rclass] == 0:
-                    resource_dict.pop(rclass)
-        self._clean_empties()
+        for rg in self._rg_by_id.values():
+            rg.strip_zeros()
+        # Get rid of any empty RequestGroup instances.
+        for ident, rg in list(self._rg_by_id.items()):
+            if rg.is_empty():
+                self._rg_by_id.pop(ident)
 
     def to_querystring(self):
         """Produce a querystring of the form expected by
