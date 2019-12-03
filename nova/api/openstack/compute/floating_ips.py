@@ -17,7 +17,6 @@
 
 from oslo_log import log as logging
 from oslo_utils import netutils
-from oslo_utils import uuidutils
 import webob
 
 from nova.api.openstack.api_version_request \
@@ -37,44 +36,20 @@ LOG = logging.getLogger(__name__)
 
 
 def _translate_floating_ip_view(floating_ip):
-    result = {
-        'id': floating_ip['id'],
-        'ip': floating_ip['address'],
-        'pool': floating_ip['pool'],
+    instance_id = None
+    if floating_ip['port_details']:
+        instance_id = floating_ip['port_details']['device_id']
+
+    return {
+        'floating_ip': {
+            'id': floating_ip['id'],
+            'ip': floating_ip['floating_ip_address'],
+            'pool': floating_ip['network_details']['name'] or (
+                floating_ip['network_details']['id']),
+            'fixed_ip': floating_ip['fixed_ip_address'],
+            'instance_id': instance_id,
+        }
     }
-
-    # If fixed_ip is unset on floating_ip, then we can't get any of the next
-    # stuff, so we'll just short-circuit
-    if 'fixed_ip' not in floating_ip:
-        result['fixed_ip'] = None
-        result['instance_id'] = None
-        return {'floating_ip': result}
-
-    # TODO(rlrossit): These look like dicts, but they're actually versioned
-    # objects, so we need to do these contain checks because they will not be
-    # caught by the exceptions below (it raises NotImplementedError and
-    # OrphanedObjectError. This comment can probably be removed when
-    # the dict syntax goes away.
-    try:
-        if 'address' in floating_ip['fixed_ip']:
-            result['fixed_ip'] = floating_ip['fixed_ip']['address']
-        else:
-            result['fixed_ip'] = None
-    except (TypeError, KeyError, AttributeError):
-        result['fixed_ip'] = None
-    try:
-        if 'instance_uuid' in floating_ip['fixed_ip']:
-            result['instance_id'] = floating_ip['fixed_ip']['instance_uuid']
-        else:
-            result['instance_id'] = None
-    except (TypeError, KeyError, AttributeError):
-        result['instance_id'] = None
-    return {'floating_ip': result}
-
-
-def _translate_floating_ips_view(floating_ips):
-    return {'floating_ips': [_translate_floating_ip_view(ip)['floating_ip']
-                             for ip in floating_ips]}
 
 
 def get_instance_by_floating_ip_addr(self, context, address):
@@ -136,7 +111,8 @@ class FloatingIPController(wsgi.Controller):
 
         floating_ips = self.network_api.get_floating_ips_by_project(context)
 
-        return _translate_floating_ips_view(floating_ips)
+        return {'floating_ips': [_translate_floating_ip_view(ip)['floating_ip']
+                                 for ip in floating_ips]}
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 403, 404))
@@ -185,7 +161,7 @@ class FloatingIPController(wsgi.Controller):
         except exception.InvalidID as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
 
-        address = floating_ip['address']
+        address = floating_ip['floating_ip_address']
 
         # get the associated instance object (if any)
         instance = get_instance_by_floating_ip_addr(self, context, address)
@@ -311,11 +287,7 @@ class FloatingIPActionController(wsgi.Controller):
         instance = get_instance_by_floating_ip_addr(self, context, address)
 
         # disassociate if associated
-        if (instance and
-            floating_ip.get('fixed_ip_id') and
-            (uuidutils.is_uuid_like(id) and
-             [instance.uuid == id] or
-             [instance.id == id])[0]):
+        if instance and floating_ip['port_id'] and instance.uuid == id:
             try:
                 disassociate_floating_ip(self, context, instance, address)
             except exception.FloatingIpNotAssociated:

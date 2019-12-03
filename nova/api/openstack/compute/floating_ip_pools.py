@@ -19,16 +19,16 @@ from nova.network import neutron
 from nova.policies import floating_ip_pools as fip_policies
 
 
-def _translate_floating_ip_view(pool_name):
+def _translate_floating_ip_view(pool):
     return {
-        'name': pool_name,
+        'name': pool['name'] or pool['id'],
     }
 
 
 def _translate_floating_ip_pools_view(pools):
     return {
-        'floating_ip_pools': [_translate_floating_ip_view(pool_name)
-                              for pool_name in pools]
+        'floating_ip_pools': [_translate_floating_ip_view(pool)
+                              for pool in pools]
     }
 
 

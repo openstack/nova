@@ -785,7 +785,7 @@ class ServersActionsJsonTest(ServersSampleBase, _ServersActionsJsonTestMixin):
         self.stub_out(
             'nova.network.neutron.API.get_floating_ip_by_address',
             lambda *a, **k: {
-                'fixed_ip_id': 'a0c566f0-faab-406f-b77f-2b286dc6dd7e'})
+                'port_id': 'a0c566f0-faab-406f-b77f-2b286dc6dd7e'})
         self.stub_out(
             'nova.network.neutron.API.'
             'get_instance_id_by_floating_address',

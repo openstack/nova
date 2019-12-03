@@ -20,85 +20,8 @@ import webob
 
 from nova.api.openstack.compute import floating_ips as fips_v21
 from nova import exception
-from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-from nova.tests.unit import fake_network
-
-
-FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
-TEST_INST = 1
-WRONG_INST = 9999
-
-
-def network_api_get_floating_ip(self, context, id):
-    return {'id': 1, 'address': '10.10.10.10', 'pool': 'nova',
-            'fixed_ip_id': None}
-
-
-def network_api_get_floating_ip_by_address(self, context, address):
-    return {'id': 1, 'address': '10.10.10.10', 'pool': 'nova',
-            'fixed_ip_id': 10}
-
-
-def network_api_get_floating_ips_by_project(self, context):
-    return [{'id': 1,
-             'address': '10.10.10.10',
-             'pool': 'nova',
-             'fixed_ip': {'address': '10.0.0.1',
-                          'instance_uuid': FAKE_UUID,
-                          'instance': objects.Instance(
-                              **{'uuid': FAKE_UUID})}},
-            {'id': 2,
-             'pool': 'nova', 'interface': 'eth0',
-             'address': '10.10.10.11',
-             'fixed_ip': None}]
-
-
-def compute_api_get(self, context, instance_id, expected_attrs=None,
-                    cell_down_support=False):
-    return objects.Instance(uuid=FAKE_UUID, id=instance_id,
-                            instance_type_id=1, host='bob')
-
-
-def network_api_allocate(self, context):
-    return '10.10.10.10'
-
-
-def network_api_release(self, context, address):
-    pass
-
-
-def compute_api_associate(self, context, instance_id, address):
-    pass
-
-
-def network_api_associate(self, context, floating_address, fixed_address):
-    pass
-
-
-def network_api_disassociate(self, context, instance, floating_address):
-    pass
-
-
-def fake_instance_get(context, instance_id):
-    return objects.Instance(**{
-        "id": 1,
-        "uuid": uuids.fake,
-        "name": 'fake',
-        "user_id": 'fakeuser',
-        "project_id": '123'
-    })
-
-
-def stub_nw_info(test):
-    def get_nw_info_for_instance(instance):
-        return fake_network.fake_get_instance_nw_info(test)
-    return get_nw_info_for_instance
-
-
-def get_instance_by_floating_ip_addr(self, context, address):
-    return None
 
 
 class FloatingIpTestV21(test.NoDBTestCase):
@@ -110,7 +33,10 @@ class FloatingIpTestV21(test.NoDBTestCase):
 
     def test_floatingip_delete(self):
         req = fakes.HTTPRequest.blank('')
-        fip_val = {'address': '1.1.1.1', 'fixed_ip_id': '192.168.1.2'}
+        fip_val = {
+            'floating_ip_address': '1.1.1.1',
+            'fixed_ip_address': '192.168.1.2',
+        }
         with test.nested(
             mock.patch.object(self.controller.network_api,
                               'disassociate_floating_ip'),
@@ -162,7 +88,7 @@ class FloatingIpTestV21(test.NoDBTestCase):
         req = fakes.HTTPRequest.blank('')
         with mock.patch.object(self.controller.network_api,
                                'get_floating_ip',
-                               return_value={'address': 'foo'}), \
+                               return_value={'floating_ip_address': 'foo'}), \
              mock.patch.object(self.controller.network_api,
                                'get_instance_id_by_floating_address',
                                return_value=None), \
@@ -212,13 +138,13 @@ class FloatingIPPolicyEnforcementV21(test.NoDBTestCase):
         self._common_policy_check(self.controller.index, self.req)
 
     def test_show_policy_failed(self):
-        self._common_policy_check(self.controller.show, self.req, FAKE_UUID)
+        self._common_policy_check(self.controller.show, self.req, uuids.fake)
 
     def test_create_policy_failed(self):
         self._common_policy_check(self.controller.create, self.req)
 
     def test_delete_policy_failed(self):
-        self._common_policy_check(self.controller.delete, self.req, FAKE_UUID)
+        self._common_policy_check(self.controller.delete, self.req, uuids.fake)
 
 
 class FloatingIPActionPolicyEnforcementV21(test.NoDBTestCase):
@@ -241,13 +167,13 @@ class FloatingIPActionPolicyEnforcementV21(test.NoDBTestCase):
     def test_add_policy_failed(self):
         body = dict(addFloatingIp=dict(address='10.10.10.11'))
         self._common_policy_check(
-            self.controller._add_floating_ip, self.req, FAKE_UUID, body=body)
+            self.controller._add_floating_ip, self.req, uuids.fake, body=body)
 
     def test_remove_policy_failed(self):
         body = dict(removeFloatingIp=dict(address='10.10.10.10'))
         self._common_policy_check(
             self.controller._remove_floating_ip, self.req,
-            FAKE_UUID, body=body)
+            uuids.fake, body=body)
 
 
 class FloatingIpsDeprecationTest(test.NoDBTestCase):
@@ -259,13 +185,13 @@ class FloatingIpsDeprecationTest(test.NoDBTestCase):
 
     def test_all_apis_return_not_found(self):
         self.assertRaises(exception.VersionNotFoundForAPIMethod,
-            self.controller.show, self.req, fakes.FAKE_UUID)
+            self.controller.show, self.req, uuids.fake)
         self.assertRaises(exception.VersionNotFoundForAPIMethod,
             self.controller.index, self.req)
         self.assertRaises(exception.VersionNotFoundForAPIMethod,
             self.controller.create, self.req, {})
         self.assertRaises(exception.VersionNotFoundForAPIMethod,
-            self.controller.delete, self.req, fakes.FAKE_UUID)
+            self.controller.delete, self.req, uuids.fake)
 
 
 class FloatingIpActionDeprecationTest(test.NoDBTestCase):
@@ -278,10 +204,10 @@ class FloatingIpActionDeprecationTest(test.NoDBTestCase):
     def test_add_floating_ip_not_found(self):
         body = dict(addFloatingIp=dict(address='10.10.10.11'))
         self.assertRaises(exception.VersionNotFoundForAPIMethod,
-            self.controller._add_floating_ip, self.req, FAKE_UUID, body=body)
+            self.controller._add_floating_ip, self.req, uuids.fake, body=body)
 
     def test_remove_floating_ip_not_found(self):
         body = dict(removeFloatingIp=dict(address='10.10.10.10'))
         self.assertRaises(exception.VersionNotFoundForAPIMethod,
-            self.controller._remove_floating_ip, self.req, FAKE_UUID,
+            self.controller._remove_floating_ip, self.req, uuids.fake,
             body=body)

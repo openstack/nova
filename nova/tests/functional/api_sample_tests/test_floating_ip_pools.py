@@ -19,7 +19,10 @@ class FloatingIPPoolsSampleTests(api_sample_base.ApiSampleTestBaseV21):
     sample_dir = "os-floating-ip-pools"
 
     def test_list_floatingippools(self):
-        pool_list = ["pool1", "pool2"]
+        pool_list = [
+            {'name': 'pool1'},
+            {'name': 'pool2'},
+        ]
 
         def fake_get_floating_ip_pools(self, context):
             return pool_list
@@ -28,7 +31,7 @@ class FloatingIPPoolsSampleTests(api_sample_base.ApiSampleTestBaseV21):
                       fake_get_floating_ip_pools)
         response = self._do_get('os-floating-ip-pools')
         subs = {
-            'pool1': pool_list[0],
-            'pool2': pool_list[1]
+            'pool1': pool_list[0]['name'],
+            'pool2': pool_list[1]['name'],
         }
         self._verify_response('floatingippools-list-resp', subs, response, 200)
