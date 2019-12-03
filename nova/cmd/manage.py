@@ -703,12 +703,19 @@ class ApiDbCommands(object):
 class CellV2Commands(object):
     """Commands for managing cells v2."""
 
-    def _validate_transport_url(self, transport_url):
-        transport_url = transport_url or CONF.transport_url
+    def _validate_transport_url(self, transport_url, warn_about_none=True):
         if not transport_url:
-            print('Must specify --transport-url if [DEFAULT]/transport_url '
-                  'is not set in the configuration file.')
-            return None
+            if not CONF.transport_url:
+                if warn_about_none:
+                    print(_(
+                        'Must specify --transport-url if '
+                        '[DEFAULT]/transport_url is not set in the '
+                        'configuration file.'))
+                return None
+            print(_('--transport-url not provided in the command line, '
+                    'using the value [DEFAULT]/transport_url from the '
+                    'configuration file'))
+            transport_url = CONF.transport_url
 
         try:
             messaging.TransportURL.parse(conf=CONF,
@@ -719,6 +726,22 @@ class CellV2Commands(object):
             return None
 
         return transport_url
+
+    def _validate_database_connection(
+            self, database_connection, warn_about_none=True):
+        if not database_connection:
+            if not CONF.database.connection:
+                if warn_about_none:
+                    print(_(
+                        'Must specify --database_connection if '
+                        '[database]/connection is not set in the '
+                        'configuration file.'))
+                return None
+            print(_('--database_connection not provided in the command line, '
+                    'using the value [database]/connection from the '
+                    'configuration file'))
+            return CONF.database.connection
+        return database_connection
 
     def _non_unique_transport_url_database_connection_checker(self, ctxt,
                             cell_mapping, transport_url, database_connection):
@@ -1151,11 +1174,9 @@ class CellV2Commands(object):
         if not transport_url:
             return 1
 
-        database_connection = database_connection or CONF.database.connection
+        database_connection = self._validate_database_connection(
+            database_connection)
         if not database_connection:
-            print(_('Must specify --database_connection '
-                    'if [database]/connection is not set '
-                    'in the configuration file.'))
             return 1
         if (self._non_unique_transport_url_database_connection_checker(ctxt,
             None, transport_url, database_connection)):
@@ -1338,8 +1359,12 @@ class CellV2Commands(object):
         if name:
             cell_mapping.name = name
 
-        transport_url = transport_url or CONF.transport_url
-        db_connection = db_connection or CONF.database.connection
+        # Having empty transport_url and db_connection means leaving the
+        # existing values
+        transport_url = self._validate_transport_url(
+            transport_url, warn_about_none=False)
+        db_connection = self._validate_database_connection(
+            db_connection, warn_about_none=False)
 
         if (self._non_unique_transport_url_database_connection_checker(ctxt,
                 cell_mapping, transport_url, db_connection)):
