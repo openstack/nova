@@ -6346,14 +6346,12 @@ class VirtualInterfaceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         super(VirtualInterfaceTestCase, self).setUp()
         self.ctxt = context.get_admin_context()
         self.instance_uuid = db.instance_create(self.ctxt, {})['uuid']
-        values = {'host': 'localhost', 'project_id': 'project1'}
-        self.network = db.network_create_safe(self.ctxt, values)
 
     def _get_base_values(self):
         return {
             'instance_uuid': self.instance_uuid,
             'address': 'fake_address',
-            'network_id': self.network['id'],
+            'network_id': uuidsentinel.network,
             'uuid': uuidutils.generate_uuid(),
             'tag': 'fake-tag',
         }
@@ -6429,8 +6427,7 @@ class VirtualInterfaceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_virtual_interface_get_by_instance_and_network(self):
         inst_uuid2 = db.instance_create(self.ctxt, {})['uuid']
-        values = {'host': 'localhost', 'project_id': 'project2'}
-        network_id = db.network_create_safe(self.ctxt, values)['id']
+        network_id = uuidutils.generate_uuid()
 
         vifs = [self._create_virt_interface({'address': 'fake1'}),
                 self._create_virt_interface({'address': 'fake2',
@@ -6485,7 +6482,7 @@ class VirtualInterfaceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_virtual_interface_update(self):
         instance_uuid = db.instance_create(self.ctxt, {})['uuid']
-        network_id = db.network_create_safe(self.ctxt, {})['id']
+        network_id = uuidutils.generate_uuid()
         create = {'address': 'fake1',
                   'network_id': network_id,
                   'instance_uuid': instance_uuid,

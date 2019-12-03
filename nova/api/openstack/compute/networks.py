@@ -22,12 +22,13 @@ from nova.api.openstack import wsgi
 from nova import exception
 from nova.i18n import _
 from nova.network import neutron
-from nova.objects import base as base_obj
-from nova.objects import fields as obj_fields
 from nova.policies import networks as net_policies
 
 
 def network_dict(context, network):
+    if not network:
+        return {}
+
     fields = ('id', 'cidr', 'netmask', 'gateway', 'broadcast', 'dns1', 'dns2',
               'cidr_v6', 'gateway_v6', 'label', 'netmask_v6')
     admin_fields = ('created_at', 'updated_at', 'deleted_at', 'deleted',
@@ -36,40 +37,26 @@ def network_dict(context, network):
                     'project_id', 'host', 'bridge_interface', 'multi_host',
                     'priority', 'rxtx_base', 'mtu', 'dhcp_server',
                     'enable_dhcp', 'share_address')
-    if network:
-        # NOTE(mnaser): We display a limited set of fields so users can know
-        #               what networks are available, extra system-only fields
-        #               are only visible if they are an admin.
-        if context.is_admin:
-            fields += admin_fields
-        # TODO(mriedem): Remove the NovaObject type check once the
-        # network.create API is returning objects.
-        is_obj = isinstance(network, base_obj.NovaObject)
-        result = {}
-        for field in fields:
-            # NOTE(mriedem): If network is an object, IPAddress fields need to
-            # be cast to a string so they look the same in the response as
-            # before the objects conversion.
-            if is_obj and isinstance(network.fields[field].AUTO_TYPE,
-                                     obj_fields.IPAddress):
-                # NOTE(danms): Here, network should be an object, which could
-                # have come from neutron and thus be missing most of the
-                # attributes. Providing a default to get() avoids trying to
-                # lazy-load missing attributes.
-                val = network.get(field, None)
-                if val is not None:
-                    result[field] = str(val)
-                else:
-                    result[field] = val
-            else:
-                # It's either not an object or it's not an IPAddress field.
-                result[field] = network.get(field, None)
-        uuid = network.get('uuid')
-        if uuid:
-            result['id'] = uuid
-        return result
-    else:
-        return {}
+
+    # NOTE(mnaser): We display a limited set of fields so users can know what
+    # networks are available, extra system-only fields are only visible if they
+    # are an admin.
+
+    if context.is_admin:
+        fields += admin_fields
+
+    result = {}
+    for field in fields:
+        # we only provide a limited number of fields now that nova-network is
+        # gone (yes, two fields of thirty)
+        if field == 'id':
+            result[field] = network['id']
+        elif field == 'label':
+            result[field] = network['name']
+        else:
+            result[field] = None
+
+    return result
 
 
 class NetworkController(wsgi.Controller):

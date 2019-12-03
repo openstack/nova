@@ -2544,28 +2544,15 @@ class API(base.Base):
     def get_all(self, context):
         """Get all networks for client."""
         client = get_client(context)
-        networks = client.list_networks().get('networks')
-        network_objs = []
-        for network in networks:
-            network_objs.append(objects.Network(context=context,
-                                                name=network['name'],
-                                                label=network['name'],
-                                                uuid=network['id']))
-        return objects.NetworkList(context=context,
-                                   objects=network_objs)
+        return client.list_networks().get('networks')
 
     def get(self, context, network_uuid):
         """Get specific network for client."""
         client = get_client(context)
         try:
-            network = client.show_network(network_uuid).get('network') or {}
+            return client.show_network(network_uuid).get('network') or {}
         except neutron_client_exc.NetworkNotFoundClient:
             raise exception.NetworkNotFound(network_id=network_uuid)
-        net_obj = objects.Network(context=context,
-                                  name=network['name'],
-                                  label=network['name'],
-                                  uuid=network['id'])
-        return net_obj
 
     def get_fixed_ip_by_address(self, context, address):
         """Return instance uuids given an address."""
