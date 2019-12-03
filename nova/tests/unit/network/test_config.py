@@ -12,6 +12,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import mock
+
 import nova.network
 import nova.network.security_group.neutron_driver
 import nova.network.security_group.openstack_driver as sgapi
@@ -55,3 +57,11 @@ class SecurityGroupAPIConfigTest(nova.test.NoDBTestCase):
         self.assertIsInstance(
             driver,
             nova.compute.api.SecurityGroupAPI)
+
+    @mock.patch('oslo_utils.importutils.import_object')
+    def test_caches(self, mock_import):
+        self.flags(use_neutron=True)
+        sgapi.DRIVER_CACHE = None
+        for _ in range(2):
+            self.assertIsNotNone(sgapi.get_openstack_security_group_driver())
+        mock_import.assert_called_once_with(sgapi.NEUTRON_DRIVER)
