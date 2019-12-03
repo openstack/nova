@@ -1928,23 +1928,6 @@ class _TestInstanceListObject(object):
         inst.destroy()
         self.assertFalse(db.security_group_in_use(self.context, db_sg.id))
 
-    def test_get_by_grantee_security_group_ids(self):
-        fake_instances = [
-            fake_instance.fake_db_instance(id=1),
-            fake_instance.fake_db_instance(id=2)
-            ]
-
-        with mock.patch.object(
-            db, 'instance_get_all_by_grantee_security_groups') as igabgsg:
-            igabgsg.return_value = fake_instances
-            secgroup_ids = [1]
-            instances = objects.InstanceList.get_by_grantee_security_group_ids(
-                self.context, secgroup_ids)
-            igabgsg.assert_called_once_with(self.context, secgroup_ids)
-
-        self.assertEqual(2, len(instances))
-        self.assertEqual([1, 2], [x.id for x in instances])
-
     @mock.patch('nova.db.api.instance_get_all_uuids_by_hosts')
     def test_get_uuids_by_host_no_match(self, mock_get_all):
         mock_get_all.return_value = collections.defaultdict(list)

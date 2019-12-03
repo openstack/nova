@@ -2654,18 +2654,6 @@ def instance_get_all_by_host_and_not_type(context, host, type_id=None):
                    filter(models.Instance.instance_type_id != type_id).all())
 
 
-@pick_context_manager_reader
-def instance_get_all_by_grantee_security_groups(context, group_ids):
-    if not group_ids:
-        return []
-    return _instances_fill_metadata(context,
-        _instance_get_all_query(context).
-            join(models.Instance.security_groups).
-            filter(models.SecurityGroup.rules.any(
-                models.SecurityGroupIngressRule.group_id.in_(group_ids))).
-            all())
-
-
 @require_context
 @pick_context_manager_reader
 def instance_floating_address_get_all(context, instance_uuid):
