@@ -729,8 +729,7 @@ class ComputeTaskManager(base.Base):
                                 # moves the allocation of the instance to
                                 # another host
                                 scheduler_utils.fill_provider_mapping(
-                                    context, self.report_client, request_spec,
-                                    host)
+                                    request_spec, host)
                         except Exception as exc:
                             self._cleanup_when_reschedule_fails(
                                 context, instance, exc, legacy_request_spec,
@@ -1144,8 +1143,7 @@ class ComputeTaskManager(base.Base):
 
                     if recreate:
                         scheduler_utils.fill_provider_mapping(
-                            context, self.report_client, request_spec,
-                            selection)
+                            request_spec, selection)
 
                 except (exception.NoValidHost,
                         exception.UnsupportedPolicyException,
@@ -1531,8 +1529,7 @@ class ComputeTaskManager(base.Base):
             # allocations in the scheduler) for this instance, we may need to
             # map allocations to resource providers in the request spec.
             try:
-                scheduler_utils.fill_provider_mapping(
-                    context, self.report_client, request_spec, host)
+                scheduler_utils.fill_provider_mapping(request_spec, host)
             except Exception as exc:
                 # If anything failed here we need to cleanup and bail out.
                 with excutils.save_and_reraise_exception():

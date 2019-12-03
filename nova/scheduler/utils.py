@@ -1214,23 +1214,10 @@ def get_weight_multiplier(host_state, multiplier_name, multiplier_config):
     return value
 
 
-def fill_provider_mapping(
-        context, report_client, request_spec, host_selection):
+def fill_provider_mapping(request_spec, host_selection):
     """Fills out the request group - resource provider mapping in the
     request spec.
 
-    This is a workaround as placement does not return which RP
-    fulfills which granular request group in the allocation candidate
-    request. There is a spec proposing a solution in placement:
-    https://review.opendev.org/#/c/597601/
-    When that spec is implemented then this function can be
-    replaced with a simpler code that copies the group - RP
-    mapping out from the Selection object returned by the scheduler's
-    select_destinations call.
-
-    :param context: The security context
-    :param report_client: SchedulerReportClient instance to be used to
-        communicate with placement
     :param request_spec: The RequestSpec object associated with the
         operation
     :param host_selection: The Selection object returned by the scheduler
@@ -1244,11 +1231,19 @@ def fill_provider_mapping(
     # allocations in placement but if request_spec.maps_requested_resources
     # is not empty and the scheduling succeeded then placement has to be
     # involved
-    ar = jsonutils.loads(host_selection.allocation_request)
-    allocs = ar['allocations']
+    mappings = jsonutils.loads(host_selection.allocation_request)['mappings']
 
-    fill_provider_mapping_based_on_allocation(
-        context, report_client, request_spec, allocs)
+    for request_group in request_spec.requested_resources:
+        # NOTE(efried): We can count on request_group.requester_id being set:
+        # - For groups from flavors, ResourceRequest.get_request_group sets it
+        #   to the group suffix.
+        # - For groups from other sources (e.g. ports, accelerators), it is
+        #   required to be set by ResourceRequest._add_request_group, and that
+        #   method uses it as the suffix.
+        # And we can count on mappings[requester_id] existing because each
+        # RequestGroup translated into a (replete - empties are disallowed by
+        # ResourceRequest._add_request_group) group fed to Placement.
+        request_group.provider_uuids = mappings[request_group.requester_id]
 
 
 def fill_provider_mapping_based_on_allocation(
@@ -1261,6 +1256,13 @@ def fill_provider_mapping_based_on_allocation(
     in case of revert operations such Selection does not exists. In this case
     the mapping is calculated based on the allocation of the source host the
     move operation is reverting to.
+
+    This is a workaround as placement does not return which RP fulfills which
+    granular request group except in the allocation candidate request (because
+    request groups are ephemeral, only existing in the scope of that request).
+
+    .. todo:: Figure out a better way to preserve the mappings so we can get
+              rid of this workaround.
 
     :param context: The security context
     :param report_client: SchedulerReportClient instance to be used to

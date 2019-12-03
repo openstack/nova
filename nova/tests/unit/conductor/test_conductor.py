@@ -48,7 +48,6 @@ from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
 from nova.objects import fields
 from nova.scheduler.client import query
-from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests import fixtures
@@ -68,24 +67,42 @@ from nova.volume import cinder
 CONF = conf.CONF
 
 
-fake_alloc1 = {"allocations": {
-    uuids.host1: {
-         "resources": {"VCPU": 1,
-                       "MEMORY_MB": 1024,
-                       "DISK_GB": 100}
-    }}}
-fake_alloc2 = {"allocations": {
-    uuids.host2: {
-         "resources": {"VCPU": 1,
-                       "MEMORY_MB": 1024,
-                       "DISK_GB": 100}
-    }}}
-fake_alloc3 = {"allocations": {
-    uuids.host3: {
-         "resources": {"VCPU": 1,
-                       "MEMORY_MB": 1024,
-                       "DISK_GB": 100}
-    }}}
+fake_alloc1 = {
+    "allocations": {
+        uuids.host1: {
+             "resources": {"VCPU": 1,
+                           "MEMORY_MB": 1024,
+                           "DISK_GB": 100}
+        }
+    },
+    "mappings": {
+        uuids.port1: [uuids.host1]
+    }
+}
+fake_alloc2 = {
+    "allocations": {
+        uuids.host2: {
+             "resources": {"VCPU": 1,
+                           "MEMORY_MB": 1024,
+                           "DISK_GB": 100}
+        }
+    },
+    "mappings": {
+        uuids.port1: [uuids.host2]
+    }
+}
+fake_alloc3 = {
+    "allocations": {
+        uuids.host3: {
+             "resources": {"VCPU": 1,
+                           "MEMORY_MB": 1024,
+                           "DISK_GB": 100}
+        }
+    },
+    "mappings": {
+        uuids.port1: [uuids.host3]
+    }
+}
 fake_alloc_json1 = jsonutils.dumps(fake_alloc1)
 fake_alloc_json2 = jsonutils.dumps(fake_alloc2)
 fake_alloc_json3 = jsonutils.dumps(fake_alloc3)
@@ -1028,11 +1045,9 @@ class _BaseTaskTestCase(object):
                 host_list=expected_build_run_host_list)
 
             mock_rp_mapping.assert_called_once_with(
-                self.context,
-                test.MatchType(report.SchedulerReportClient),
                 test.MatchType(objects.RequestSpec),
                 test.MatchType(objects.Selection))
-            actual_request_spec = mock_rp_mapping.mock_calls[0][1][2]
+            actual_request_spec = mock_rp_mapping.mock_calls[0][1][0]
             self.assertEqual(
                 rg1.resources,
                 actual_request_spec.requested_resources[0].resources)
@@ -1113,11 +1128,9 @@ class _BaseTaskTestCase(object):
 
             # called only once when the claim succeeded
             mock_rp_mapping.assert_called_once_with(
-                self.context,
-                test.MatchType(report.SchedulerReportClient),
                 test.MatchType(objects.RequestSpec),
                 test.MatchType(objects.Selection))
-            actual_request_spec = mock_rp_mapping.mock_calls[0][1][2]
+            actual_request_spec = mock_rp_mapping.mock_calls[0][1][0]
             self.assertEqual(
                 rg1.resources,
                 actual_request_spec.requested_resources[0].resources)
@@ -1750,7 +1763,6 @@ class _BaseTaskTestCase(object):
             get_req_res_mock.assert_called_once_with(
                 self.context, inst_obj.uuid)
             fill_rp_mapping_mock.assert_called_once_with(
-                self.context, self.conductor_manager.report_client,
                 fake_spec, fake_selection)
 
         self.assertEqual('compute.instance.rebuild.scheduled',
@@ -2291,23 +2303,12 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         self.assertTrue(mock_build.called)
 
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get_provider_traits')
-    @mock.patch('nova.objects.request_spec.RequestSpec.'
-                'map_requested_resources_to_providers')
-    def test_schedule_and_build_instances_fill_request_spec(
-            self, mock_map, mock_traits):
+    def test_schedule_and_build_instances_fill_request_spec(self):
         # makes sure there is some request group in the spec to be mapped
         self.params['request_specs'][0].requested_resources = [
-            objects.RequestGroup()]
-
-        mock_traits.return_value.traits = ['TRAIT1']
+            objects.RequestGroup(requester_id=uuids.port1)]
 
         self._do_schedule_and_build_instances_test(self.params)
-
-        mock_map.assert_called_once_with(fake_alloc1['allocations'],
-                                         {uuids.host1: ['TRAIT1']})
-        mock_traits.assert_called_once_with(mock.ANY, uuids.host1)
 
     @mock.patch('nova.conductor.manager.ComputeTaskManager.'
                 '_cleanup_build_artifacts')
