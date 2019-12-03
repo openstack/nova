@@ -11036,19 +11036,13 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         """Happy path test for
         _confirm_snapshot_based_resize_delete_port_bindings.
         """
-
-        def stub_setup_networks_on_host(ctxt, instance, *args, **kwargs):
-            # Make sure the instance.host was mutated to point at the dest host
-            self.assertEqual(self.migration.dest_compute, instance.host)
-
         with mock.patch.object(
-                self.compute.network_api, 'setup_networks_on_host',
-                side_effect=stub_setup_networks_on_host) as setup_networks:
+                self.compute.network_api,
+                'cleanup_instance_network_on_host') as cleanup_networks:
             self.compute._confirm_snapshot_based_resize_delete_port_bindings(
                 self.context, self.instance, self.migration)
-        setup_networks.assert_called_once_with(
-            self.context, self.instance, host=self.compute.host,
-            teardown=True)
+        cleanup_networks.assert_called_once_with(
+            self.context, self.instance, self.compute.host)
 
     def test_confirm_snapshot_based_resize_delete_port_bindings_errors(self):
         """Tests error handling for
@@ -11056,29 +11050,27 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         """
         # PortBindingDeletionFailed will be caught and logged.
         with mock.patch.object(
-                self.compute.network_api, 'setup_networks_on_host',
+                self.compute.network_api, 'cleanup_instance_network_on_host',
                 side_effect=exception.PortBindingDeletionFailed(
                     port_id=uuids.port_id, host=self.compute.host)
-        ) as setup_networks:
+        ) as cleanup_networks:
             self.compute._confirm_snapshot_based_resize_delete_port_bindings(
                 self.context, self.instance, self.migration)
-            setup_networks.assert_called_once_with(
-                self.context, self.instance, host=self.compute.host,
-                teardown=True)
+            cleanup_networks.assert_called_once_with(
+                self.context, self.instance, self.compute.host)
         self.assertIn('Failed to delete port bindings from source host',
                       self.stdlog.logger.output)
 
         # Anything else is re-raised.
         func = self.compute._confirm_snapshot_based_resize_delete_port_bindings
         with mock.patch.object(
-                self.compute.network_api, 'setup_networks_on_host',
+                self.compute.network_api, 'cleanup_instance_network_on_host',
                 side_effect=test.TestingException('neutron down')
-        ) as setup_networks:
+        ) as cleanup_networks:
             self.assertRaises(test.TestingException, func,
                               self.context, self.instance, self.migration)
-            setup_networks.assert_called_once_with(
-                self.context, self.instance, host=self.compute.host,
-                teardown=True)
+            cleanup_networks.assert_called_once_with(
+                self.context, self.instance, self.compute.host)
 
     def test_delete_volume_attachments(self):
         """Happy path test for _delete_volume_attachments."""
@@ -11209,15 +11201,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             # at the source compute.
             self.assertEqual(migration.source_compute, migration.dest_compute)
 
-        def stub_setup_networks_on_host(ctxt, instance, *args, **kwargs):
-            # The instance.host should have been mutated to point at the
-            # source compute.
-            self.assertEqual(self.migration.source_compute, instance.host)
-            # Raise PortBindingDeletionFailed to make sure it's caught and
-            # logged but not fatal.
-            raise exception.PortBindingDeletionFailed(port_id=uuids.port_id,
-                                                      host=self.compute.host)
-
         with test.nested(
             mock.patch.object(self.compute, 'network_api'),
             mock.patch.object(self.compute, '_get_instance_block_device_info'),
@@ -11230,8 +11213,11 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         ):
             mock_network_api.migrate_instance_start.side_effect = \
                 stub_migrate_instance_start
-            mock_network_api.setup_networks_on_host.side_effect = \
-                stub_setup_networks_on_host
+            # Raise PortBindingDeletionFailed to make sure it's caught and
+            # logged but not fatal.
+            mock_network_api.cleanup_instance_network_on_host.side_effect = \
+                exception.PortBindingDeletionFailed(port_id=uuids.port_id,
+                                                    host=self.compute.host)
             # Run the code.
             self.compute._revert_snapshot_based_resize_at_dest(
                 self.context, self.instance, self.migration)
@@ -11246,9 +11232,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             block_device_info=mock_get_bdi.return_value)
         mock_network_api.migrate_instance_start.assert_called_once_with(
             self.context, self.instance, self.migration)
-        mock_network_api.setup_networks_on_host.assert_called_once_with(
-            self.context, self.instance, host=self.compute.host,
-            teardown=True)
+        mock_network_api.cleanup_instance_network_on_host.\
+            assert_called_once_with(
+            self.context, self.instance, self.compute.host)
         # Assert that even though setup_networks_on_host raised
         # PortBindingDeletionFailed it was handled and logged.
         self.assertIn('Failed to delete port bindings from target host.',
