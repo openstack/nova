@@ -31,7 +31,8 @@ admin_actions_policies = [
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (os-resetState)'
             }
-        ]),
+        ],
+        scope_types=['system']),
     policy.DocumentedRuleDefault(
         POLICY_ROOT % 'inject_network_info',
         base.RULE_ADMIN_API,
@@ -41,7 +42,8 @@ admin_actions_policies = [
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (injectNetworkInfo)'
             }
-        ]),
+        ],
+        scope_types=['system']),
     policy.DocumentedRuleDefault(
         POLICY_ROOT % 'reset_network',
         base.RULE_ADMIN_API,
@@ -51,7 +53,8 @@ admin_actions_policies = [
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (resetNetwork)'
             }
-        ])
+        ],
+        scope_types=['system'])
 ]
 
 
