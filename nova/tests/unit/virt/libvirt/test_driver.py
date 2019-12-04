@@ -10355,6 +10355,26 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         ret = conn._compare_cpu(None, None, instance)
         self.assertIsNone(ret)
 
+    def test_compare_cpu_virt_platform_s390x(self):
+        _fake_s390xcpu_info = {
+            "arch": "s390x",
+            "model": "test_model",
+            "vendor": "test_vendor",
+            "topology": {
+                "sockets": 1,
+                "cores": 8,
+                "threads": 16
+            },
+            "features": ["feature1", "feature2"]
+        }
+
+        instance = objects.Instance(**self.test_instance)
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        ret = conn._compare_cpu(None,
+                                jsonutils.dumps(_fake_s390xcpu_info),
+                                instance)
+        self.assertIsNone(ret)
+
     @mock.patch.object(host.Host, 'compare_cpu')
     @mock.patch.object(nova.virt.libvirt, 'config')
     def test_compare_cpu_invalid_cpuinfo_raises(self, mock_vconfig,
