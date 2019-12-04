@@ -17,6 +17,7 @@ import oslo_messaging as messaging
 from oslo_utils import fixture as utils_fixture
 from oslo_utils import timeutils
 
+from nova import exception
 from nova import objects
 from nova import servicegroup
 from nova import test
@@ -95,18 +96,26 @@ class DBServiceGroupTestCase(test.NoDBTestCase):
     def _test_report_state_error(self, exc_cls, upd_mock):
         upd_mock.side_effect = exc_cls("service save failed")
         service_ref = objects.Service(host='fake-host', topic='compute',
-                                      report_count=10)
+                                      report_count=10, binary='nova-compute')
         service = mock.MagicMock(model_disconnected=False,
                                  service_ref=service_ref)
         fn = self.servicegroup_api._driver._report_state
         fn(service)  # fail if exception not caught
         self.assertTrue(service.model_disconnected)
+        return service_ref
 
     def test_report_state_error_handling_timeout(self):
         self._test_report_state_error(messaging.MessagingTimeout)
 
     def test_report_state_unexpected_error(self):
         self._test_report_state_error(RuntimeError)
+
+    def test_report_state_service_not_found(self):
+        service_ref = self._test_report_state_error(exception.ServiceNotFound)
+        self.assertIn('The services table record for the %s service on '
+                      'host %s is gone.' %
+                      (service_ref.binary, service_ref.host),
+                      self.stdlog.logger.output)
 
     def test_get_updated_time(self):
         retval = "2016-11-02T22:40:31.000000"
