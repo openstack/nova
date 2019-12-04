@@ -10548,7 +10548,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 error_code = ex.get_error_code()
                 if error_code == libvirt.VIR_ERR_NO_SUPPORT:
                     ctxt.reraise = False
-                    LOG.info('URI %(uri)s does not support full set'
-                             ' of host capabilities: %(error)s',
-                             {'uri': self._host._uri, 'error': ex})
+                    LOG.debug('URI %(uri)s does not support full set'
+                              ' of host capabilities: %(error)s',
+                              {'uri': self._host._uri, 'error': ex})
                     return None
