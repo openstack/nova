@@ -176,9 +176,7 @@
       # (1) take a long time and (2) are already covered in the
       # tempest-slow* job. If this regex gets more complicated use
       # tempest_test_blacklist.
-      # TODO(mriedem): Unskip test_minbw_allocation_placement once bug 1844568
-      # is fixed.
-      tempest_black_regex: ^tempest.scenario\.(test_network|test_minbw_allocation_placement)
+      tempest_black_regex: ^tempest.scenario.test_network
       devstack_local_conf:
         post-config:
           $NOVA_CPU_CONF:
