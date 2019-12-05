@@ -36,7 +36,6 @@ from nova.tests.unit import fake_instance
 import nova.tests.unit.image.fake
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
-from nova import utils
 from nova import version
 from nova.virt import hardware
 from nova.virt.vmwareapi import constants
@@ -1582,8 +1581,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         'nova.virt.vmwareapi.vmops.VMwareVMOps.get_datacenter_ref_and_name')
     @mock.patch('nova.virt.vmwareapi.vif.get_vif_info',
                 return_value=[])
-    @mock.patch('nova.utils.is_neutron',
-                return_value=False)
     @mock.patch('nova.virt.vmwareapi.vm_util.get_vm_create_spec',
                 return_value='fake_create_spec')
     @mock.patch('nova.virt.vmwareapi.vm_util.create_vm',
@@ -1606,7 +1603,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                    mock_mkdir,
                    mock_create_vm,
                    mock_get_create_spec,
-                   mock_is_neutron,
                    mock_get_vif_info,
                    mock_get_datacenter_ref_and_name,
                    mock_get_datastore,
@@ -1665,12 +1661,10 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                               network_info=network_info,
                               block_device_info=block_device_info)
 
-            mock_is_neutron.assert_called_once_with()
-
             self.assertEqual(2, mock_mkdir.call_count)
 
             mock_get_vif_info.assert_called_once_with(
-                    self._session, self._cluster.obj, False,
+                    self._session, self._cluster.obj,
                     constants.DEFAULT_VIF_MODEL, network_info)
             mock_get_create_spec.assert_called_once_with(
                     self._session.vim.client.factory,
@@ -2849,9 +2843,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._vmops._network_api = _network_api
 
         vif_info = vif.get_vif_dict(self._session, self._cluster,
-                                    'VirtualE1000',
-                                    utils.is_neutron(),
-                                    self._network_values)
+                                    'VirtualE1000', self._network_values)
         extra_specs = vm_util.ExtraSpecs()
         mock_extra_specs.return_value = extra_specs
         self._vmops.attach_interface(self._context, self._instance,
@@ -2955,9 +2947,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._vmops._network_api = _network_api
 
         vif_info = vif.get_vif_dict(self._session, self._cluster,
-                                    'VirtualE1000',
-                                    utils.is_neutron(),
-                                    self._network_values)
+                                    'VirtualE1000', self._network_values)
         vif_limits = vm_util.Limits(shares_level='custom',
                                     shares_share=40)
         extra_specs = vm_util.ExtraSpecs(vif_limits=vif_limits)

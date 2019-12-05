@@ -29,19 +29,6 @@ virtual machines.
 """)
 
 vmwareapi_vif_opts = [
-    cfg.StrOpt('vlan_interface',
-               default='vmnic0',
-               help="""
-This option specifies the physical ethernet adapter name for VLAN
-networking.
-
-Set the vlan_interface configuration option to match the ESX host
-interface that handles VLAN-tagged VM traffic.
-
-Possible values:
-
-* Any valid string representing VLAN interface name
-"""),
     cfg.StrOpt('integration_bridge',
                help="""
 This option should be configured only when using the NSX-MH Neutron
