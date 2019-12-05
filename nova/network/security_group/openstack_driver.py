@@ -21,13 +21,17 @@ import nova.network
 NOVA_DRIVER = ('nova.compute.api.SecurityGroupAPI')
 NEUTRON_DRIVER = ('nova.network.security_group.neutron_driver.'
                   'SecurityGroupAPI')
+DRIVER_CACHE = None  # singleton of the driver once loaded
 
 
 def get_openstack_security_group_driver():
-    if is_neutron_security_groups():
-        return importutils.import_object(NEUTRON_DRIVER)
-    else:
-        return importutils.import_object(NOVA_DRIVER)
+    global DRIVER_CACHE
+    if DRIVER_CACHE is None:
+        if is_neutron_security_groups():
+            DRIVER_CACHE = importutils.import_object(NEUTRON_DRIVER)
+        else:
+            DRIVER_CACHE = importutils.import_object(NOVA_DRIVER)
+    return DRIVER_CACHE
 
 
 def is_neutron_security_groups():

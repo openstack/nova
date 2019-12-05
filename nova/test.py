@@ -285,7 +285,7 @@ class TestCase(base.BaseTestCase):
 
         self.useFixture(nova_fixtures.PoisonFunctions())
 
-        openstack_driver.DRIVER_CACHE = {}
+        openstack_driver.DRIVER_CACHE = None
 
         self.useFixture(nova_fixtures.ForbidNewLegacyNotificationFixture())
 
