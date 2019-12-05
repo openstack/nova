@@ -3397,6 +3397,29 @@ class LibvirtDriver(driver.ComputeDriver):
         should not edit or over-ride the original image, only allow for
         data recovery.
 
+        Two modes are provided when rescuing an instance with this driver.
+
+        The original and default rescue mode, where the rescue boot disk,
+        original root disk and optional regenerated config drive are attached
+        to the instance.
+
+        A second stable device rescue mode is also provided where all of the
+        original devices are attached to the instance during the rescue attempt
+        with the addition of the rescue boot disk. This second mode is
+        controlled by the hw_rescue_device and hw_rescue_bus image properties
+        on the rescue image provided to this method via image_meta.
+
+        :param nova.context.RequestContext context:
+            The context for the rescue.
+        :param nova.objects.instance.Instance instance:
+            The instance being rescued.
+        :param nova.network.model.NetworkInfo network_info:
+            Necessary network information for the resume.
+        :param nova.objects.ImageMeta image_meta:
+            The metadata of the image of the instance.
+        :param rescue_password: new root password to set for rescue.
+        :param dict block_device_info:
+            The block device mapping of the instance.
         """
         instance_dir = libvirt_utils.get_instance_path(instance)
         unrescue_xml = self._get_existing_domain_xml(instance, network_info)
@@ -3404,6 +3427,7 @@ class LibvirtDriver(driver.ComputeDriver):
         libvirt_utils.write_to_file(unrescue_xml_path, unrescue_xml)
 
         rescue_image_id = None
+        rescue_image_meta = None
         if image_meta.obj_attr_is_set("id"):
             rescue_image_id = image_meta.id
 
@@ -3415,10 +3439,43 @@ class LibvirtDriver(driver.ComputeDriver):
             'ramdisk_id': (CONF.libvirt.rescue_ramdisk_id or
                            instance.ramdisk_id),
         }
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance,
-                                            image_meta,
-                                            rescue=True)
+
+        virt_type = CONF.libvirt.virt_type
+        if hardware.check_hw_rescue_props(image_meta):
+            LOG.info("Attempting a stable device rescue", instance=instance)
+            # NOTE(lyarwood): Stable device rescue is not supported when using
+            # the LXC and Xen virt_types as they do not support the required
+            # <boot order=''> definitions allowing an instance to boot from the
+            # rescue device added as a final device to the domain.
+            if virt_type in ('lxc', 'xen'):
+                reason = ("Stable device rescue is not supported by virt_type "
+                          "%s", virt_type)
+                raise exception.InstanceNotRescuable(instance_id=instance.uuid,
+                                                     reason=reason)
+            # NOTE(lyarwood): Stable device rescue provides the original disk
+            # mapping of the instance with the rescue device appened to the
+            # end. As a result we need to provide the original image_meta, the
+            # new rescue_image_meta and block_device_info when calling
+            # get_disk_info.
+            rescue_image_meta = image_meta
+            if instance.image_ref:
+                image_meta = objects.ImageMeta.from_image_ref(
+                    context, self._image_api, instance.image_ref)
+            else:
+                image_meta = objects.ImageMeta.from_dict({})
+
+        else:
+            LOG.info("Attempting an unstable device rescue", instance=instance)
+            # NOTE(lyarwood): An unstable rescue only provides the rescue
+            # device and the original root device so we don't need to provide
+            # block_device_info to the get_disk_info call.
+            block_device_info = None
+
+        disk_info = blockinfo.get_disk_info(virt_type, instance, image_meta,
+            rescue=True, block_device_info=block_device_info,
+            rescue_image_meta=rescue_image_meta)
+        LOG.debug("rescue generated disk_info: %s", disk_info)
+
         injection_info = InjectionInfo(network_info=network_info,
                                        admin_pass=rescue_password,
                                        files=None)
@@ -3434,7 +3491,8 @@ class LibvirtDriver(driver.ComputeDriver):
                            disk_images=rescue_images)
         xml = self._get_guest_xml(context, instance, network_info, disk_info,
                                   image_meta, rescue=rescue_images,
-                                  mdevs=mdevs)
+                                  mdevs=mdevs,
+                                  block_device_info=block_device_info)
         self._destroy(instance)
         self._create_domain(xml, post_xml_callback=gen_confdrive)
 
@@ -4387,7 +4445,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return cpu
 
     def _get_guest_disk_config(self, instance, name, disk_mapping, inst_type,
-                               image_type=None):
+                               image_type=None, boot_order=None):
         disk_unit = None
         disk = self.image_backend.by_name(instance, name, image_type)
         if (name == 'disk.config' and image_type == 'rbd' and
@@ -4410,7 +4468,8 @@ class LibvirtDriver(driver.ComputeDriver):
         conf = disk.libvirt_info(disk_info, self.disk_cachemode,
                                  inst_type['extra_specs'],
                                  self._host.get_version(),
-                                 disk_unit=disk_unit)
+                                 disk_unit=disk_unit,
+                                 boot_order=boot_order)
         return conf
 
     def _get_guest_fs_config(self, instance, name, image_type=None):
@@ -4482,7 +4541,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 devices = devices + _get_ephemeral_devices()
         else:
 
-            if rescue:
+            if rescue and disk_mapping['disk.rescue'] == disk_mapping['root']:
                 diskrescue = self._get_guest_disk_config(instance,
                                                          'disk.rescue',
                                                          disk_mapping,
@@ -4522,7 +4581,10 @@ class LibvirtDriver(driver.ComputeDriver):
                     instance.default_swap_device = (
                         block_device.prepend_dev(diskswap.target_dev))
 
-            config_name = 'disk.config.rescue' if rescue else 'disk.config'
+            config_name = 'disk.config'
+            if rescue and disk_mapping['disk.rescue'] == disk_mapping['root']:
+                config_name = 'disk.config.rescue'
+
             if config_name in disk_mapping:
                 diskconfig = self._get_guest_disk_config(
                     instance, config_name, disk_mapping, inst_type,
@@ -4554,6 +4616,12 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if scsi_controller:
             devices.append(scsi_controller)
+
+        if rescue and disk_mapping['disk.rescue'] != disk_mapping['root']:
+            diskrescue = self._get_guest_disk_config(instance, 'disk.rescue',
+                                                     disk_mapping, inst_type,
+                                                     boot_order='1')
+            devices.append(diskrescue)
 
         return devices
 

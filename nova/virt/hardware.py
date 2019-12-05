@@ -2259,3 +2259,10 @@ def get_vpmems(flavor):
         if formed_label:
             formed_labels.append(formed_label)
     return formed_labels
+
+
+def check_hw_rescue_props(image_meta):
+    """Confirm that hw_rescue_* image properties are present.
+    """
+    hw_rescue_props = ['hw_rescue_device', 'hw_rescue_bus']
+    return any(key in image_meta.properties for key in hw_rescue_props)
