@@ -29,7 +29,6 @@ from nova import exception
 from nova.i18n import _
 from nova.image import glance
 from nova.objects import fields as obj_fields
-from nova import utils
 from nova.virt import driver
 from nova.virt import images
 from nova.virt.zvm import guest
@@ -200,7 +199,7 @@ class ZVMDriver(driver.ComputeDriver):
                 try:
                     self.destroy(context, instance, network_info,
                                  block_device_info)
-                except Exception as err:
+                except Exception:
                     LOG.exception("Failed to destroy instance",
                                   instance=instance)
 
@@ -262,11 +261,11 @@ class ZVMDriver(driver.ComputeDriver):
 
     @staticmethod
     def _get_neutron_event(network_info):
-        if utils.is_neutron() and CONF.vif_plugging_timeout:
+        if CONF.vif_plugging_timeout:
             return [('network-vif-plugged', vif['id'])
                     for vif in network_info if vif.get('active') is False]
-        else:
-            return []
+
+        return []
 
     @staticmethod
     def _neutron_failed_callback(self, event_name, instance):
