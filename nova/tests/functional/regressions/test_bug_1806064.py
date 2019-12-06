@@ -103,7 +103,7 @@ class BootFromVolumeOverQuotaRaceDeleteTest(
                       stub_check_num_instances_quota)
 
         server = self.api.post_server(server)
-        server = self._wait_for_state_change(self.api, server, 'ERROR')
+        server = self._wait_for_state_change(server, 'ERROR')
         # At this point, the build request should be gone and the instance
         # should have been created in cell1.
         context = nova_context.get_admin_context()

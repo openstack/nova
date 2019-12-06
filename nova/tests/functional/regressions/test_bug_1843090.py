@@ -43,12 +43,12 @@ class PinnedComputeRpcTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.flags(compute=version_cap, group='upgrade_levels')
 
         server_req = self._build_minimal_create_server_request(
-            self.api, 'server1',
+            'server1',
             networks=[],
             image_uuid=fake_image.get_valid_image_id(),
             flavor_id=self.flavor1['id'])
         server = self.api.post_server({'server': server_req})
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
 
         orig_claim = nova.compute.resource_tracker.ResourceTracker.resize_claim
         claim_calls = []
@@ -76,12 +76,10 @@ class PinnedComputeRpcTests(integrated_helpers.ProviderUsageBaseTestCase):
             # We expect that the instance is on host3 as the scheduler
             # selected host2 due to our weigher and the cold migrate failed
             # there and re-scheduled to host3 were it succeeded.
-            self._wait_for_server_parameter(
-                self.api, server,
-                {
-                    'OS-EXT-SRV-ATTR:host': 'host3',
-                    'OS-EXT-STS:task_state': None,
-                    'status': 'VERIFY_RESIZE'})
+            self._wait_for_server_parameter(server, {
+                'OS-EXT-SRV-ATTR:host': 'host3',
+                'OS-EXT-STS:task_state': None,
+                'status': 'VERIFY_RESIZE'})
 
         # we ensure that there was a failed and then a successful claim call
         self.assertEqual(['host2', 'host3'], claim_calls)

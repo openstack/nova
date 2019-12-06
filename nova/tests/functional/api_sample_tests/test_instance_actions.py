@@ -34,7 +34,7 @@ class ServerActionsSampleJsonTest(test_servers.ServersSampleBase,
         response_data = api_samples_test_base.pretty_data(response.content)
         actions = api_samples_test_base.objectify(response_data)
         self.action_stop = actions['instanceActions'][0]
-        self._wait_for_state_change(self.api, {'id': self.uuid}, 'SHUTOFF')
+        self._wait_for_state_change({'id': self.uuid}, 'SHUTOFF')
 
     def _get_subs(self):
         return {

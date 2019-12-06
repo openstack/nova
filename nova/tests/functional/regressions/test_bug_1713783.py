@@ -84,13 +84,12 @@ class FailedEvacuateStateTests(test.TestCase,
 
     def _boot_a_server(self):
         server_req = self._build_minimal_create_server_request(
-            self.api, 'some-server', flavor_id=self.flavor1['id'],
+            'some-server', flavor_id=self.flavor1['id'],
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             networks='none')
         LOG.info('booting on %s', self.hostname)
         created_server = self.api.post_server({'server': server_req})
-        return self._wait_for_state_change(
-            self.api, created_server, 'ACTIVE')
+        return self._wait_for_state_change(created_server, 'ACTIVE')
 
     def test_evacuate_no_valid_host(self):
         # Boot a server
@@ -110,7 +109,7 @@ class FailedEvacuateStateTests(test.TestCase,
 
         self._wait_for_notification_event_type('compute_task.rebuild_server')
 
-        server = self._wait_for_state_change(self.api, server, 'ERROR')
+        server = self._wait_for_state_change(server, 'ERROR')
         self.assertEqual(self.hostname, server['OS-EXT-SRV-ATTR:host'])
 
         # Check migrations

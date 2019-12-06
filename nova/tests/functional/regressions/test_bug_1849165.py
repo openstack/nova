@@ -52,11 +52,9 @@ class UpdateResourceMigrationRaceTest(
                 server['id'],
                 {'os-migrateLive': {'host': None, 'block_migration': 'auto'}})
 
-            self._wait_for_server_parameter(
-                 self.api, server,
-                 {
-                     'OS-EXT-STS:task_state': None,
-                     'status': 'ACTIVE'})
+            self._wait_for_server_parameter(server, {
+                 'OS-EXT-STS:task_state': None,
+                 'status': 'ACTIVE'})
 
             # NOTE(efried): This was bug 1849165 where
             #  _populate_assigned_resources raised a TypeError because it tried

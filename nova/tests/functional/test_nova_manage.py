@@ -414,7 +414,7 @@ class TestNovaManagePlacementHealAllocations(
                   provider uuid
         """
         server_req = self._build_minimal_create_server_request(
-            self.api, 'some-server', flavor_id=flavor['id'],
+            'some-server', flavor_id=flavor['id'],
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             networks='none')
         server_req['availability_zone'] = 'nova:%s' % hostname
@@ -428,8 +428,7 @@ class TestNovaManagePlacementHealAllocations(
             }]
             server_req['imageRef'] = ''
         created_server = self.api.post_server({'server': server_req})
-        server = self._wait_for_state_change(
-            self.admin_api, created_server, 'ACTIVE')
+        server = self._wait_for_state_change(created_server, 'ACTIVE')
 
         # Verify that our source host is what the server ended up on
         self.assertEqual(hostname, server['OS-EXT-SRV-ATTR:host'])
@@ -564,8 +563,7 @@ class TestNovaManagePlacementHealAllocations(
         # The server status goes to SHELVED_OFFLOADED before the host/node
         # is nulled out in the compute service, so we also have to wait for
         # that so we don't race when we run heal_allocations.
-        server = self._wait_for_server_parameter(
-            self.admin_api, server,
+        server = self._wait_for_server_parameter(server,
             {'OS-EXT-SRV-ATTR:host': None, 'status': 'SHELVED_OFFLOADED'})
         result = self.cli.heal_allocations(verbose=True)
         self.assertEqual(4, result, self.output.getvalue())
@@ -788,7 +786,7 @@ class TestNovaManagePlacementHealPortAllocations(
         server = self._create_server(
             flavor=self.flavor,
             networks=[{'port': port['id']} for port in ports])
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
 
         # This is a hack to simulate that we have a server that is missing
         # allocation for its port
@@ -1482,23 +1480,23 @@ class TestDBArchiveDeletedRowsMultiCell(integrated_helpers.InstanceHelperMixin,
         # Boot a server to cell1
         server_ids = {}
         server = self._build_minimal_create_server_request(
-            self.api, 'cell1-server', az='nova:host1')
+            'cell1-server', az='nova:host1')
         created_server = self.api.post_server({'server': server})
-        self._wait_for_state_change(self.api, created_server, 'ACTIVE')
+        self._wait_for_state_change(created_server, 'ACTIVE')
         server_ids['cell1'] = created_server['id']
         # Boot a server to cell2
         server = self._build_minimal_create_server_request(
-            self.api, 'cell2-server', az='nova:host2')
+            'cell2-server', az='nova:host2')
         created_server = self.api.post_server({'server': server})
-        self._wait_for_state_change(self.api, created_server, 'ACTIVE')
+        self._wait_for_state_change(created_server, 'ACTIVE')
         server_ids['cell2'] = created_server['id']
         # Boot a server to cell0 (cause ERROR state prior to schedule)
         server = self._build_minimal_create_server_request(
-            self.api, 'cell0-server')
+            'cell0-server')
         # Flavor m1.xlarge cannot be fulfilled
         server['flavorRef'] = 'http://fake.server/5'
         created_server = self.api.post_server({'server': server})
-        self._wait_for_state_change(self.api, created_server, 'ERROR')
+        self._wait_for_state_change(created_server, 'ERROR')
         server_ids['cell0'] = created_server['id']
         # Verify all the servers are in the databases
         for cell_name, server_id in server_ids.items():

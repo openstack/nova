@@ -76,7 +76,7 @@ class TestRescheduleWithVolumesAttached(
         server_response = self.api.post_server({'server': server_request})
         server_id = server_response['id']
 
-        self._wait_for_state_change(self.api, server_response, 'ACTIVE')
+        self._wait_for_state_change(server_response, 'ACTIVE')
         attached_volume_ids = self.cinder.volume_ids_for_instance(server_id)
         self.assertIn(volume_id, attached_volume_ids)
         self.assertEqual(1, len(self.cinder.volume_to_attachment))

@@ -57,7 +57,7 @@ class ShowErrorServerWithTags(test.TestCase,
                 'imageRef': self.image_id
             }
         })
-        return self._wait_for_state_change(self.api, server, 'ERROR')
+        return self._wait_for_state_change(server, 'ERROR')
 
     def test_show_server_tag_in_error(self):
         # Create a server which should go to ERROR state because we don't

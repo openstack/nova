@@ -147,9 +147,9 @@ class TestServicesAPI(integrated_helpers.ProviderUsageBaseTestCase):
         self.admin_api.post_server_action(server['id'], {'evacuate': {}})
         # The host does not change until after the status is changed to ACTIVE
         # so wait for both parameters.
-        self._wait_for_server_parameter(
-            self.admin_api, server, {'status': 'ACTIVE',
-                                     'OS-EXT-SRV-ATTR:host': 'host2'})
+        self._wait_for_server_parameter(server, {
+            'status': 'ACTIVE',
+            'OS-EXT-SRV-ATTR:host': 'host2'})
         # Delete the compute service for host1 and check the related
         # placement resources for that host.
         self.admin_api.api_delete('/os-services/%s' % service['id'])
@@ -324,10 +324,10 @@ class ComputeStatusFilterTest(integrated_helpers.ProviderUsageBaseTestCase):
         # Try creating a server which should fail because nothing is available.
         networks = [{'port': self.neutron.port_1['id']}]
         server_req = self._build_minimal_create_server_request(
-            self.api, 'test_compute_status_filter',
+            'test_compute_status_filter',
             image_uuid=fake_image.get_valid_image_id(), networks=networks)
         server = self.api.post_server({'server': server_req})
-        server = self._wait_for_state_change(self.api, server, 'ERROR')
+        server = self._wait_for_state_change(server, 'ERROR')
         # There should be a NoValidHost fault recorded.
         self.assertIn('fault', server)
         self.assertIn('No valid host', server['fault']['message'])
@@ -339,7 +339,7 @@ class ComputeStatusFilterTest(integrated_helpers.ProviderUsageBaseTestCase):
 
         # Try creating another server and it should be OK.
         server = self.api.post_server({'server': server_req})
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         # Stop, force-down and disable the service so the API cannot call
         # the compute service to sync the trait.

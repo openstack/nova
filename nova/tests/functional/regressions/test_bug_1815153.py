@@ -82,11 +82,11 @@ class NonPersistentFieldNotResetTest(
     def _create_server(self):
         # Create a server, it doesn't matter on which host it builds.
         server = self._build_minimal_create_server_request(
-            self.api, 'sample-server',
+            'sample-server',
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             networks='none')
         server = self.api.post_server({'server': server})
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
 
         return server
 
@@ -156,8 +156,7 @@ class NonPersistentFieldNotResetTest(
             server['id'], {'evacuate': {'host': target_host}})
         expected_params = {'OS-EXT-SRV-ATTR:host': original_host,
                            'status': 'ERROR'}
-        server = self._wait_for_server_parameter(self.api, server,
-                                                 expected_params)
+        server = self._wait_for_server_parameter(server, expected_params)
 
         # Make sure 'is_bfv' is set.
         reqspec = objects.RequestSpec.get_by_instance_uuid(self.ctxt,

@@ -60,7 +60,7 @@ class TestMultiCreateServerGroupMemberOverQuota(
         multi-create POST /servers request.
         """
         server_req = self._build_minimal_create_server_request(
-            self.api, 'test_multi_create_server_group_members_over_quota',
+            'test_multi_create_server_group_members_over_quota',
             image_uuid=fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID,
             networks='none')
         server_req['min_count'] = 3
@@ -88,7 +88,7 @@ class TestMultiCreateServerGroupMemberOverQuota(
         self.useFixture(nova_fixtures.NoopConductorFixture())
         for x in range(3):
             server_req = self._build_minimal_create_server_request(
-                self.api, 'test_concurrent_request_%s' % x,
+                'test_concurrent_request_%s' % x,
                 image_uuid=fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID,
                 networks='none')
             hints = {'group': self.created_group['id']}

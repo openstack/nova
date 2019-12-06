@@ -90,7 +90,7 @@ class TestBootFromVolumeIsolatedHostsFilter(
         # networks='none'.
         with utils.temporary_mutation(self.api, microversion='2.37'):
             server = self.api.post_server(server_req_body)
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         # NOTE(mriedem): The instance is successfully scheduled but since
         # the image_id from the volume_image_metadata isn't stored in the
         # RequestSpec.image.id, and restrict_isolated_hosts_to_isolated_images

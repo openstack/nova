@@ -77,11 +77,11 @@ class TestResizeWithNoAllocationScheduler(
     def test_resize(self):
         # Create our server without networking just to keep things simple.
         server_req = self._build_minimal_create_server_request(
-            self.api, 'test-resize', flavor_id=self.old_flavor['id'],
+            'test-resize', flavor_id=self.old_flavor['id'],
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             networks='none')
         server = self.api.post_server({'server': server_req})
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
 
         original_host = server['OS-EXT-SRV-ATTR:host']
         target_host = 'host1' if original_host == 'host2' else 'host2'
@@ -95,8 +95,7 @@ class TestResizeWithNoAllocationScheduler(
         self.api.post_server_action(server['id'], post)
 
         # Poll the server until the resize is done.
-        server = self._wait_for_state_change(
-            self.api, server, 'VERIFY_RESIZE')
+        server = self._wait_for_state_change(server, 'VERIFY_RESIZE')
         # Assert that the server was migrated to the other host.
         self.assertEqual(target_host, server['OS-EXT-SRV-ATTR:host'])
         # Confirm the resize.

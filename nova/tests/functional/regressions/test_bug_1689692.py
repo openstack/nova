@@ -66,10 +66,10 @@ class ServerListLimitMarkerCell0Test(test.TestCase,
         for x in range(3):
             server = self.api.post_server(
                 dict(server=self._build_minimal_create_server_request(
-                    self.api, 'test-list-server-limit%i' % x, self.image_id,
+                    'test-list-server-limit%i' % x, self.image_id,
                     networks='none')))
             self.addCleanup(self.api.delete_server, server['id'])
-            self._wait_for_state_change(self.api, server, 'ERROR')
+            self._wait_for_state_change(server, 'ERROR')
 
         servers = self.api.get_servers()
         self.assertEqual(3, len(servers))

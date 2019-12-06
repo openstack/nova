@@ -95,11 +95,11 @@ class SchedulerOnlyChecksTargetTest(test.TestCase,
         # We first create the instance
         server = self.admin_api.post_server(
             dict(server=self._build_minimal_create_server_request(
-                self.api, 'my-pretty-instance-to-evacuate', self.image_id,
+                'my-pretty-instance-to-evacuate', self.image_id,
                 networks='none')))
         server_id = server['id']
         self.addCleanup(self.api.delete_server, server_id)
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         # We need to get instance details for knowing its host
         server = self.admin_api.get_server(server_id)
@@ -125,7 +125,7 @@ class SchedulerOnlyChecksTargetTest(test.TestCase,
         }
         self.admin_api.post_server_action(server['id'], evacuate)
 
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
         server = self.admin_api.get_server(server_id)
 
         # Yeepee, that works!

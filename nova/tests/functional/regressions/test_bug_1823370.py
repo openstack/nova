@@ -59,7 +59,7 @@ class MultiCellEvacuateTestCase(integrated_helpers._IntegratedTestBase,
         # weight.
         server = self._build_server(self.api.get_flavors()[0]['id'])
         server = self.api.post_server({'server': server})
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         self.assertEqual('host1', server['OS-EXT-SRV-ATTR:host'])
 
         # Disable the host on which the server is now running.
@@ -72,5 +72,5 @@ class MultiCellEvacuateTestCase(integrated_helpers._IntegratedTestBase,
         req = {'evacuate': {'onSharedStorage': False}}
         self.api.post_server_action(server['id'], req)
         self._wait_for_migration_status(server, ['done'])
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         self.assertEqual('host3', server['OS-EXT-SRV-ATTR:host'])

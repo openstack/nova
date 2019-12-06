@@ -67,14 +67,14 @@ class VolumeBackedResizeDiskDown(test.TestCase,
             }]
         }
         server = self.api.post_server({'server': server})
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         # Now try to resize the server with the flavor that has smaller disk.
         # This should be allowed since the server is volume-backed and the
         # disk size in the flavor shouldn't matter.
         data = {'resize': {'flavorRef': flavor1['id']}}
         self.api.post_server_action(server['id'], data)
-        self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+        self._wait_for_state_change(server, 'VERIFY_RESIZE')
         # Now confirm the resize just to complete the operation.
         self.api.post_server_action(server['id'], {'confirmResize': None})
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')

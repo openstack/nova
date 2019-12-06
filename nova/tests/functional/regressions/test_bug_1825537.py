@@ -40,7 +40,7 @@ class FinishResizeErrorAllocationCleanupTestCase(
         # to avoid a race we need to wait for the migration status to change
         # to 'error' which happens after the fault is recorded.
         self._wait_for_migration_status(server, ['error'])
-        server = self._wait_for_state_change(self.admin_api, server, 'ERROR')
+        server = self._wait_for_state_change(server, 'ERROR')
         # The server should be pointing at $dest_host because resize_instance
         # will have updated the host/node value on the instance before casting
         # to the finish_resize method on the dest compute.

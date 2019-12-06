@@ -99,13 +99,11 @@ class TestParallelEvacuationWithServerGroup(
         hints = {'group': group['id']}
         created_server1 = self.api.post_server({'server': server,
                                                 'os:scheduler_hints': hints})
-        server1 = self._wait_for_state_change(self.api,
-                                              created_server1, 'ACTIVE')
+        server1 = self._wait_for_state_change(created_server1, 'ACTIVE')
 
         created_server2 = self.api.post_server({'server': server,
                                                 'os:scheduler_hints': hints})
-        server2 = self._wait_for_state_change(self.api,
-                                              created_server2, 'ACTIVE')
+        server2 = self._wait_for_state_change(created_server2, 'ACTIVE')
 
         # assert that the anti-affinity policy is enforced during the boot
         self.assertNotEqual(server1['OS-EXT-SRV-ATTR:host'],
@@ -134,9 +132,9 @@ class TestParallelEvacuationWithServerGroup(
         fake_notifier.wait_for_versioned_notifications(
             'instance.rebuild.start', n_events=1)
         server1 = self._wait_for_server_parameter(
-            self.api, server1, {'OS-EXT-STS:task_state': None})
+            server1, {'OS-EXT-STS:task_state': None})
         server2 = self._wait_for_server_parameter(
-            self.api, server2, {'OS-EXT-STS:task_state': None})
+            server2, {'OS-EXT-STS:task_state': None})
 
         # NOTE(gibi): The instance.host set _after_ the instance state and
         # tast_state is set back to normal so it is not enough to wait for

@@ -80,11 +80,11 @@ class BuildRescheduleClaimFailsTestCase(
         # Now that our stub is in place, try to create a server and wait for it
         # to go to ERROR status.
         server = self._build_minimal_create_server_request(
-            self.api, 'test_build_reschedule_alt_host_alloc_fails',
+            'test_build_reschedule_alt_host_alloc_fails',
             image_uuid=fake_image.get_valid_image_id(),
             networks=[{'port': self.neutron.port_1['id']}])
         server = self.api.post_server({'server': server})
-        server = self._wait_for_state_change(self.api, server, 'ERROR')
+        server = self._wait_for_state_change(server, 'ERROR')
 
         # Wait for the MaxRetriesExceeded fault to be recorded.
         # set_vm_state_and_notify sets the vm_state to ERROR before the fault

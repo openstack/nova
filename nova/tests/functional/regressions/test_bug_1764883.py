@@ -94,7 +94,7 @@ class TestEvacuationWithSourceReturningDuringRebuild(
                           'imageRef': self.image_id,
                           'flavorRef': self.flavor_id}
         server_response = self.api.post_server({'server': server_request})
-        server = self._wait_for_state_change(self.api, server_response,
+        server = self._wait_for_state_change(server_response,
                                              'ACTIVE')
 
         # Record where the instance is running before forcing the service down
@@ -106,7 +106,7 @@ class TestEvacuationWithSourceReturningDuringRebuild(
         self.api.post_server_action(server['id'], {'evacuate': {}})
 
         # Wait for the instance to go into an ACTIVE state
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
         server = self.api.get_server(server['id'])
         host = server['OS-EXT-SRV-ATTR:host']
         migrations = self.api.get_migrations()

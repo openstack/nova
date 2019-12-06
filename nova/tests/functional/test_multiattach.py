@@ -51,7 +51,7 @@ class TestMultiattachVolumes(integrated_helpers._IntegratedTestBase,
             'boot_index': 0
         }]
         server = self.api.post_server({'server': create_req})
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
         # Make sure the volume is attached to the first server.
         attachments = self.api.api_get(
             '/servers/%s/os-volume_attachments' % server['id']).body[
@@ -65,7 +65,7 @@ class TestMultiattachVolumes(integrated_helpers._IntegratedTestBase,
             flavor_id='1', image='155d900f-4e14-4e4c-a73d-069cbf4541e6')
         create_req['networks'] = 'none'
         server2 = self.api.post_server({'server': create_req})
-        self._wait_for_state_change(self.api, server2, 'ACTIVE')
+        self._wait_for_state_change(server2, 'ACTIVE')
         # Attach the volume to the second server.
         self.api.api_post('/servers/%s/os-volume_attachments' % server2['id'],
                           {'volumeAttachment': {'volumeId': volume_id}})

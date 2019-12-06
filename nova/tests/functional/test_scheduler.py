@@ -50,8 +50,7 @@ class MultiCellSchedulerTestCase(test.TestCase,
         self.addCleanup(fake_image.FakeImageService_reset)
 
     def _test_create_and_migrate(self, expected_status, az=None):
-        server = self._build_minimal_create_server_request(self.api,
-                                                           'some-server',
+        server = self._build_minimal_create_server_request('some-server',
                                                            az=az)
         post = {'server': server}
         # If forcing the server onto a host we have to use the admin API.
@@ -59,8 +58,7 @@ class MultiCellSchedulerTestCase(test.TestCase,
         created_server = api.post_server(post)
 
         # Wait for it to finish being created
-        found_server = self._wait_for_state_change(
-            self.admin_api, created_server, 'ACTIVE')
+        found_server = self._wait_for_state_change(created_server, 'ACTIVE')
         return self.admin_api.api_post(
             '/servers/%s/action' % found_server['id'],
             {'migrate': None},

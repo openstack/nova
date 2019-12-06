@@ -103,7 +103,7 @@ class AntiAffinityMultiCreateRequest(test.TestCase,
 
         # Now create two servers in that group.
         server_req = self._build_minimal_create_server_request(
-            self.api, 'test_anti_affinity_multi_create',
+            'test_anti_affinity_multi_create',
             image_uuid=image_fake.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID,
             networks='none')
         server_req['min_count'] = 2
@@ -115,8 +115,7 @@ class AntiAffinityMultiCreateRequest(test.TestCase,
         # Now wait for both servers to be ACTIVE and get the host on which
         # each server was built.
         for server in self.api.get_servers(detail=False):
-            server = self._wait_for_state_change(
-                self.admin_api, server, 'ACTIVE')
+            server = self._wait_for_state_change(server, 'ACTIVE')
             selected_hosts.add(server['OS-EXT-SRV-ATTR:host'])
 
         # Assert that each server is on a separate host.

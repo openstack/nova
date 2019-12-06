@@ -104,8 +104,7 @@ class TestRescheduleWithServerGroup(test.TestCase,
         hints = {'group': created_group['id']}
         created_server = self.api.post_server({'server': server,
                                                'os:scheduler_hints': hints})
-        found_server = self._wait_for_state_change(self.admin_api,
-                                                   created_server, 'ACTIVE')
+        found_server = self._wait_for_state_change(created_server, 'ACTIVE')
         # Assert that the host is not the failed host.
         self.assertNotEqual(self.failed_host,
                             found_server['OS-EXT-SRV-ATTR:host'])

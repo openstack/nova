@@ -215,13 +215,12 @@ class AggregateRequestFiltersTest(
         flavor_id = flavor_id or self.flavors[0]['id']
         image_uuid = image_id or '155d900f-4e14-4e4c-a73d-069cbf4541e6'
         server_req = self._build_minimal_create_server_request(
-            self.api, 'test-instance', flavor_id=flavor_id,
+            'test-instance', flavor_id=flavor_id,
             image_uuid=image_uuid,
             networks='none', az=az)
 
         created_server = self.api.post_server({'server': server_req})
-        server = self._wait_for_state_change(
-            self.admin_api, created_server, end_status)
+        server = self._wait_for_state_change(created_server, end_status)
 
         return server
 
@@ -330,8 +329,7 @@ class AggregatePostTest(AggregateRequestFiltersTest):
         # Configure for the SOFT_DELETED scenario.
         self.flags(reclaim_instance_interval=300)
         self.api.delete_server(server['id'])
-        server = self._wait_for_state_change(
-            self.admin_api, server, 'SOFT_DELETED')
+        server = self._wait_for_state_change(server, 'SOFT_DELETED')
         self.assertRaisesRegex(
             client.OpenStackApiException,
             'One or more hosts contain instances in this zone.',
@@ -876,7 +874,7 @@ class TestAggregateMultiTenancyIsolationFilter(
           aggregate
         """
         # Create a tenant-isolated aggregate for the non-admin user.
-        user_api = self.useFixture(
+        self.api = self.useFixture(
             nova_fixtures.OSAPIFixture(api_version='v2.1',
                                        project_id=uuids.non_admin)).api
         agg_id = self.admin_api.post_aggregate(
@@ -901,13 +899,12 @@ class TestAggregateMultiTenancyIsolationFilter(
             spy_get_filtered_hosts)
         # Create a server for the admin - should only have one host candidate.
         server_req = self._build_minimal_create_server_request(
-            self.admin_api,
             'test_aggregate_multitenancy_isolation_filter-admin',
             networks='none')  # requires microversion 2.37
         server_req = {'server': server_req}
         with utils.temporary_mutation(self.admin_api, microversion='2.37'):
             server = self.admin_api.post_server(server_req)
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         # Assert it's not on host2 which is isolated to the non-admin tenant.
         self.assertNotEqual('host2', server['OS-EXT-SRV-ATTR:host'])
         self.assertEqual(1, len(self.filtered_hosts))
@@ -917,13 +914,12 @@ class TestAggregateMultiTenancyIsolationFilter(
         # up on host2 because the other host, which is not isolated to the
         # aggregate, is still a candidate.
         server_req = self._build_minimal_create_server_request(
-            user_api,
             'test_aggregate_multitenancy_isolation_filter-user',
             networks='none')  # requires microversion 2.37
         server_req = {'server': server_req}
-        with utils.temporary_mutation(user_api, microversion='2.37'):
-            server = user_api.post_server(server_req)
-        self._wait_for_state_change(user_api, server, 'ACTIVE')
+        with utils.temporary_mutation(self.api, microversion='2.37'):
+            server = self.api.post_server(server_req)
+        self._wait_for_state_change(server, 'ACTIVE')
         self.assertEqual(2, len(self.filtered_hosts))
 
 
@@ -1028,10 +1024,10 @@ class AggregateMultiTenancyIsolationColdMigrateTest(
         """
         img = nova.tests.unit.image.fake.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID
         server_req_body = self._build_minimal_create_server_request(
-            self.api, 'test_cold_migrate_server', image_uuid=img,
+            'test_cold_migrate_server', image_uuid=img,
             networks='none')
         server = self.api.post_server({'server': server_req_body})
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         # Ensure the server ended up in host2 or host3
         original_host = server['OS-EXT-SRV-ATTR:host']
         self.assertNotEqual('host1', original_host)
@@ -1039,8 +1035,7 @@ class AggregateMultiTenancyIsolationColdMigrateTest(
         # in the same tenant-isolated aggregate.
         self.admin_api.api_post(
             '/servers/%s/action' % server['id'], {'migrate': None})
-        server = self._wait_for_state_change(
-            self.admin_api, server, 'VERIFY_RESIZE')
+        server = self._wait_for_state_change(server, 'VERIFY_RESIZE')
         # Ensure the server is on the other host in the same aggregate.
         expected_host = 'host3' if original_host == 'host2' else 'host2'
         self.assertEqual(expected_host, server['OS-EXT-SRV-ATTR:host'])

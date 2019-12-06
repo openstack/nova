@@ -32,14 +32,14 @@ class MultinicSampleJsonTest(integrated_helpers.InstanceHelperMixin,
 
     def _boot_a_server(self, expected_status='ACTIVE', extra_params=None):
         server = self._build_minimal_create_server_request(
-            self.api, 'MultinicSampleJsonTestServer')
+            'MultinicSampleJsonTestServer')
         if extra_params:
             server.update(extra_params)
 
         created_server = self.api.post_server({'server': server})
 
         # Wait for it to finish being created
-        found_server = self._wait_for_state_change(self.api, created_server,
+        found_server = self._wait_for_state_change(created_server,
                                                    expected_status)
         return found_server
 

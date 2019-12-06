@@ -81,10 +81,10 @@ class TestLocalDeleteAllocations(test.TestCase,
                 self.assertEqual(0, usage)
 
             # Create a server.
-            server = self._build_minimal_create_server_request(self.api,
+            server = self._build_minimal_create_server_request(
                 'local-delete-test', self.image_id, self.flavor_id, 'none')
             server = self.admin_api.post_server({'server': server})
-            server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+            server = self._wait_for_state_change(server, 'ACTIVE')
 
             # Assert usages are non zero now.
             usages_during = self._get_usages(placement_api, rp_uuid)
@@ -136,10 +136,10 @@ class TestLocalDeleteAllocations(test.TestCase,
             self.assertEqual(0, usage)
 
         # Create a server.
-        server = self._build_minimal_create_server_request(self.api,
+        server = self._build_minimal_create_server_request(
             'local-delete-test', self.image_id, self.flavor_id, 'none')
         server = self.admin_api.post_server({'server': server})
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
 
         # Assert usages are non zero now.
         usages_during = self._get_usages(placement_api, rp_uuid)

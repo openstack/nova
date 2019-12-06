@@ -73,11 +73,14 @@ def generate_new_element(items, prefix, numeric=False):
 
 
 class InstanceHelperMixin(object):
-    def _wait_for_server_parameter(self, admin_api, server, expected_params,
-                                   max_retries=10):
+
+    def _wait_for_server_parameter(
+            self, server, expected_params, max_retries=10, api=None):
+        api = api or getattr(self, 'admin_api', self.api)
+
         retry_count = 0
         while True:
-            server = admin_api.get_server(server['id'])
+            server = api.get_server(server['id'])
             if all([server[attr] == expected_params[attr]
                     for attr in expected_params]):
                 break
@@ -90,22 +93,21 @@ class InstanceHelperMixin(object):
 
         return server
 
-    def _wait_for_state_change(self, admin_api, server, expected_status,
-                               max_retries=10):
+    def _wait_for_state_change(self, server, expected_status, max_retries=10):
         return self._wait_for_server_parameter(
-            admin_api, server, {'status': expected_status}, max_retries)
+            server, {'status': expected_status}, max_retries)
 
-    def _build_minimal_create_server_request(self, api, name=None,
-                                             image_uuid=None, flavor_id=None,
-                                             networks=None, az=None,
-                                             host=None):
+    def _build_minimal_create_server_request(
+            self, name=None, image_uuid=None, flavor_id=None, networks=None,
+            az=None, host=None):
+
         server = {}
 
         if not image_uuid:
             # NOTE(takashin): In API version 2.36, image APIs were deprecated.
             # In API version 2.36 or greater, self.api.get_images() returns
             # a 404 error. In that case, 'image_uuid' should be specified.
-            image_uuid = api.get_images()[0]['id']
+            image_uuid = self.api.get_images()[0]['id']
         server['imageRef'] = image_uuid
 
         if not name:
@@ -115,7 +117,7 @@ class InstanceHelperMixin(object):
 
         if not flavor_id:
             # Set a valid flavorId
-            flavor_id = api.get_flavors()[0]['id']
+            flavor_id = self.api.get_flavors()[0]['id']
         server['flavorRef'] = 'http://fake.server/%s' % flavor_id
 
         if networks is not None:
@@ -142,40 +144,43 @@ class InstanceHelperMixin(object):
             return
 
     def _wait_for_action_fail_completion(
-            self, server, expected_action, event_name, api=None):
+            self, server, expected_action, event_name):
         """Polls instance action events for the given instance, action and
         action event name until it finds the action event with an error
         result.
         """
-        if api is None:
-            api = self.api
         return self._wait_for_instance_action_event(
-            api, server, expected_action, event_name, event_result='error')
+            server, expected_action, event_name, event_result='error')
 
     def _wait_for_instance_action_event(
-            self, api, server, action_name, event_name, event_result):
+            self, server, action_name, event_name, event_result):
         """Polls the instance action events for the given instance, action,
         event, and event result until it finds the event.
         """
+        api = getattr(self, 'admin_api', self.api)
+
         actions = []
         events = []
         for attempt in range(10):
             actions = api.get_instance_actions(server['id'])
             # The API returns the newest event first
             for action in actions:
-                if action['action'] == action_name:
-                    events = (
-                        api.api_get(
-                            '/servers/%s/os-instance-actions/%s' %
-                            (server['id'], action['request_id'])
-                        ).body['instanceAction']['events'])
-                    # Look for the action event being in error state.
-                    for event in events:
-                        result = event['result']
-                        if (event['event'] == event_name and
-                                result is not None and
-                                result.lower() == event_result.lower()):
-                            return event
+                if action['action'] != action_name:
+                    continue
+
+                events = api.api_get(
+                    '/servers/%s/os-instance-actions/%s' % (
+                        server['id'], action['request_id'])
+                ).body['instanceAction']['events']
+
+                # Look for the action event being in error state.
+                for event in events:
+                    result = event['result']
+                    if (event['event'] == event_name and
+                            result is not None and
+                            result.lower() == event_result.lower()):
+                        return event
+
             # We didn't find the completion event yet, so wait a bit.
             time.sleep(0.5)
 
@@ -192,9 +197,8 @@ class InstanceHelperMixin(object):
         :param action: Either "resize" or "migrate" instance action.
         :param error_in_tb: Some expected part of the error event traceback.
         """
-        api = self.admin_api if hasattr(self, 'admin_api') else self.api
         event = self._wait_for_action_fail_completion(
-            server, action, 'conductor_migrate_server', api=api)
+            server, action, 'conductor_migrate_server')
         self.assertIn(error_in_tb, event['traceback'])
 
     def _wait_for_migration_status(self, server, expected_statuses):
@@ -202,9 +206,7 @@ class InstanceHelperMixin(object):
         for the given server, else the test fails. The migration record, if
         found, is returned.
         """
-        api = getattr(self, 'admin_api', None)
-        if api is None:
-            api = self.api
+        api = getattr(self, 'admin_api', self.api)
 
         statuses = [status.lower() for status in expected_statuses]
         for attempt in range(10):
@@ -296,9 +298,13 @@ class _IntegratedTestBase(test.TestCase):
             self.api = self.api_fixture.admin_api
         else:
             self.api = self.api_fixture.api
+            self.admin_api = self.api_fixture.admin_api
 
         if hasattr(self, 'microversion'):
             self.api.microversion = self.microversion
+
+            if not self.ADMIN_API:
+                self.admin_api.microversion = self.microversion
 
     def get_unused_server_name(self):
         servers = self.api.get_servers()
@@ -725,14 +731,13 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         :return: the API representation of the booted instance
         """
         server_req = self._build_minimal_create_server_request(
-            self.api, 'some-server', flavor_id=flavor['id'],
+            'some-server', flavor_id=flavor['id'],
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             networks=networks)
         server_req['availability_zone'] = 'nova:%s' % source_hostname
         LOG.info('booting on %s', source_hostname)
         created_server = self.api.post_server({'server': server_req})
-        server = self._wait_for_state_change(
-            self.admin_api, created_server, 'ACTIVE')
+        server = self._wait_for_state_change(created_server, 'ACTIVE')
 
         # Verify that our source host is what the server ended up on
         self.assertEqual(source_hostname, server['OS-EXT-SRV-ATTR:host'])
@@ -846,7 +851,7 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
     def _move_and_check_allocations(self, server, request, old_flavor,
                                     new_flavor, source_rp_uuid, dest_rp_uuid):
         self.api.post_server_action(server['id'], request)
-        self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+        self._wait_for_state_change(server, 'VERIFY_RESIZE')
 
         def _check_allocation():
             self.assertFlavorMatchesUsage(source_rp_uuid, old_flavor)
@@ -908,7 +913,7 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
             }
         }
         self.api.post_server_action(server['id'], resize_req)
-        self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+        self._wait_for_state_change(server, 'VERIFY_RESIZE')
 
         self.assertFlavorMatchesUsage(rp_uuid, old_flavor, new_flavor)
 
@@ -978,15 +983,15 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
 
     def _confirm_resize(self, server):
         self.api.post_server_action(server['id'], {'confirmResize': None})
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         self._wait_for_instance_action_event(
-            self.api, server, instance_actions.CONFIRM_RESIZE,
+            server, instance_actions.CONFIRM_RESIZE,
             'compute_confirm_resize', 'success')
         return server
 
     def _revert_resize(self, server):
         self.api.post_server_action(server['id'], {'revertResize': None})
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         self._wait_for_migration_status(server, ['reverted'])
         # Note that the migration status is changed to "reverted" in the
         # dest host revert_resize method but the allocations are cleaned up

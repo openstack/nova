@@ -127,7 +127,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         }]
         image_uuid = fake_image.get_valid_image_id()
         server = self._build_minimal_create_server_request(
-            self.api, 'test_cross_cell_resize',
+            'test_cross_cell_resize',
             image_uuid=image_uuid,
             flavor_id=flavor['id'],
             networks=networks)
@@ -146,7 +146,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
             server.pop('imageRef', None)
 
         server = self.api.post_server({'server': server})
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         # For volume-backed make sure there is one attachment to start.
         if volume_backed:
             self.assertEqual(1, self._count_volume_attachments(server['id']),
@@ -200,7 +200,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         if stopped:
             # Stop the server before resizing it.
             self.api.post_server_action(server['id'], {'os-stop': None})
-            self._wait_for_state_change(self.api, server, 'SHUTOFF')
+            self._wait_for_state_change(server, 'SHUTOFF')
 
         # Before resizing make sure quota usage is only 1 for total instances.
         self.assert_quota_usage(expected_num_instances=1)
@@ -222,7 +222,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         self.api.post_server_action(server['id'], body)
         # Wait for the server to be resized and then verify the host has
         # changed to be the host in the other cell.
-        server = self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+        server = self._wait_for_state_change(server, 'VERIFY_RESIZE')
         self.assertEqual(expected_host, server['OS-EXT-SRV-ATTR:host'])
         # Assert that the instance is only listed one time from the API (to
         # make sure it's not listed out of both cells).
@@ -487,8 +487,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
             # The server should go to ERROR state with a fault record and
             # the API should still be showing the server from the source cell
             # because the instance mapping was not updated.
-            server = self._wait_for_server_parameter(
-                self.admin_api, server,
+            server = self._wait_for_server_parameter(server,
                 {'status': 'ERROR', 'OS-EXT-STS:task_state': None})
 
         # The migration should be in 'error' status.
@@ -511,12 +510,12 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         # Now hard reboot the server in the source cell and it should go back
         # to ACTIVE.
         self.api.post_server_action(server['id'], {'reboot': {'type': 'HARD'}})
-        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         # Now retry the resize without the fault in the target host to make
         # sure things are OK (no duplicate entry errors in the target DB).
         self.api.post_server_action(server['id'], body)
-        self._wait_for_state_change(self.admin_api, server, 'VERIFY_RESIZE')
+        self._wait_for_state_change(server, 'VERIFY_RESIZE')
 
     def _assert_instance_not_in_cell(self, cell_name, server_id):
         cell = self.cell_mappings[cell_name]
@@ -567,8 +566,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
             # The server should go to ERROR state with a fault record and
             # the API should still be showing the server from the source cell
             # because the instance mapping was not updated.
-            server = self._wait_for_server_parameter(
-                self.admin_api, server,
+            server = self._wait_for_server_parameter(server,
                 {'status': 'ERROR', 'OS-EXT-STS:task_state': None})
 
         # The migration should be in 'error' status.
@@ -585,9 +583,9 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         # Now hard reboot the server in the source cell and it should go back
         # to ACTIVE.
         self.api.post_server_action(server['id'], {'reboot': {'type': 'HARD'}})
-        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         # Now retry the resize without the fault in the target host to make
         # sure things are OK (no duplicate entry errors in the target DB).
         self.api.post_server_action(server['id'], body)
-        self._wait_for_state_change(self.admin_api, server, 'VERIFY_RESIZE')
+        self._wait_for_state_change(server, 'VERIFY_RESIZE')

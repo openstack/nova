@@ -60,7 +60,6 @@ class CrossAZAttachTestCase(test.TestCase,
         """
         self.flags(cross_az_attach=False, group='cinder')
         server = self._build_minimal_create_server_request(
-            self.api,
             'test_cross_az_attach_false_boot_from_volume_no_az_specified')
         del server['imageRef']  # Do not need imageRef for boot from volume.
         server['block_device_mapping_v2'] = [{
@@ -70,7 +69,7 @@ class CrossAZAttachTestCase(test.TestCase,
             'uuid': nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
         }]
         server = self.api.post_server({'server': server})
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         self.assertEqual(self.az, server['OS-EXT-AZ:availability_zone'])
 
     def test_cross_az_attach_false_data_volume_no_az_specified(self):
@@ -82,7 +81,6 @@ class CrossAZAttachTestCase(test.TestCase,
         """
         self.flags(cross_az_attach=False, group='cinder')
         server = self._build_minimal_create_server_request(
-            self.api,
             'test_cross_az_attach_false_data_volume_no_az_specified')
         # Note that we use the legacy block_device_mapping parameter rather
         # than block_device_mapping_v2 because that will create an implicit
@@ -95,7 +93,7 @@ class CrossAZAttachTestCase(test.TestCase,
             'volume_id': nova_fixtures.CinderFixture.SWAP_OLD_VOL
         }]
         server = self.api.post_server({'server': server})
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         self.assertEqual(self.az, server['OS-EXT-AZ:availability_zone'])
 
     def test_cross_az_attach_false_boot_from_volume_default_zone_match(self):
@@ -106,7 +104,6 @@ class CrossAZAttachTestCase(test.TestCase,
         self.flags(cross_az_attach=False, group='cinder')
         self.flags(default_schedule_zone=self.az)
         server = self._build_minimal_create_server_request(
-            self.api,
             'test_cross_az_attach_false_boot_from_volume_default_zone_match')
         del server['imageRef']  # Do not need imageRef for boot from volume.
         server['block_device_mapping_v2'] = [{
@@ -116,7 +113,7 @@ class CrossAZAttachTestCase(test.TestCase,
             'uuid': nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
         }]
         server = self.api.post_server({'server': server})
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         self.assertEqual(self.az, server['OS-EXT-AZ:availability_zone'])
 
     def test_cross_az_attach_false_bfv_az_specified_mismatch(self):
@@ -126,7 +123,7 @@ class CrossAZAttachTestCase(test.TestCase,
         """
         self.flags(cross_az_attach=False, group='cinder')
         server = self._build_minimal_create_server_request(
-            self.api, 'test_cross_az_attach_false_bfv_az_specified_mismatch',
+            'test_cross_az_attach_false_bfv_az_specified_mismatch',
             az='london')
         del server['imageRef']  # Do not need imageRef for boot from volume.
         server['block_device_mapping_v2'] = [{
@@ -150,7 +147,7 @@ class CrossAZAttachTestCase(test.TestCase,
         """
         self.flags(cross_az_attach=False, group='cinder')
         server = self._build_minimal_create_server_request(
-            self.api, 'test_cross_az_attach_false_no_volumes', az=self.az)
+            'test_cross_az_attach_false_no_volumes', az=self.az)
         server = self.api.post_server({'server': server})
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         self.assertEqual(self.az, server['OS-EXT-AZ:availability_zone'])

@@ -37,10 +37,10 @@ class DeletedServerAllocationRevertTest(
         source host and target host.
         """
         server = self._build_minimal_create_server_request(
-            self.api, name, image_uuid=fake_image.get_valid_image_id(),
+            name, image_uuid=fake_image.get_valid_image_id(),
             networks='none')
         server = self.api.post_server({'server': server})
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         source_host = server['OS-EXT-SRV-ATTR:host']
         target_host = 'host2' if source_host == 'host1' else 'host1'
         return server, source_host, target_host
@@ -127,7 +127,7 @@ class DeletedServerAllocationRevertTest(
         # action event after the task rollback happens.
         self._wait_for_action_fail_completion(
             server, instance_actions.LIVE_MIGRATION,
-            'conductor_live_migrate_instance', api=self.api)
+            'conductor_live_migrate_instance')
         self._assert_no_allocations(server)
 
     def test_migrate_on_compute_fail(self):
@@ -155,6 +155,5 @@ class DeletedServerAllocationRevertTest(
         # when the instance is deleted so just wait for the failed instance
         # action event after the allocation revert happens.
         self._wait_for_action_fail_completion(
-            server, instance_actions.MIGRATE, 'compute_prep_resize',
-            api=self.api)
+            server, instance_actions.MIGRATE, 'compute_prep_resize')
         self._assert_no_allocations(server)
