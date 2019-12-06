@@ -16,12 +16,10 @@ import six
 
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
-from nova.tests.functional import integrated_helpers
 from nova.tests.functional import test_servers
 
 
-class ConfigurableMaxDiskDevicesTest(integrated_helpers.InstanceHelperMixin,
-                                     test_servers.ServersTestBase):
+class ConfigurableMaxDiskDevicesTest(test_servers.ServersTestBase):
     def setUp(self):
         super(ConfigurableMaxDiskDevicesTest, self).setUp()
         self.cinder = self.useFixture(

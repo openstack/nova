@@ -1430,9 +1430,7 @@ class TestDBArchiveDeletedRows(integrated_helpers._IntegratedTestBase):
         # Now delete one server and then we can archive.
         server = self.api.get_server(server['id'])
         self.api.delete_server(server['id'])
-        helper = integrated_helpers.InstanceHelperMixin()
-        helper.api = self.api
-        helper._wait_until_deleted(server)
+        self._wait_until_deleted(server)
         # Now archive.
         self.cli.archive_deleted_rows(verbose=True)
         # Assert only one instance_group_member record was deleted.

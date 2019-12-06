@@ -15,8 +15,7 @@ from nova import objects
 from nova.tests.functional import integrated_helpers
 
 
-class ResizeEvacuateTestCase(integrated_helpers._IntegratedTestBase,
-                             integrated_helpers.InstanceHelperMixin):
+class ResizeEvacuateTestCase(integrated_helpers._IntegratedTestBase):
     """Regression test for bug 1669054 introduced in Newton.
 
     When resizing a server, if CONF.allow_resize_to_same_host is False,

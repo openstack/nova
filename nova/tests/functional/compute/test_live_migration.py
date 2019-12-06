@@ -38,8 +38,7 @@ class FakeCinderError(object):
             raise exception.CinderConnectionFailed(reason='Fake Cinder error')
 
 
-class LiveMigrationCinderFailure(integrated_helpers._IntegratedTestBase,
-                                 integrated_helpers.InstanceHelperMixin):
+class LiveMigrationCinderFailure(integrated_helpers._IntegratedTestBase):
     api_major_version = 'v2.1'
     microversion = 'latest'
 
@@ -47,7 +46,7 @@ class LiveMigrationCinderFailure(integrated_helpers._IntegratedTestBase,
         super(LiveMigrationCinderFailure, self).setUp()
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
-        # Start a second compte node (the first one was started for us by
+        # Start a second compute node (the first one was started for us by
         # _IntegratedTestBase. set_nodes() is needed to avoid duplicate
         # nodenames. See comments in test_bug_1702454.py.
         self.compute2 = self.start_service('compute', host='host2')

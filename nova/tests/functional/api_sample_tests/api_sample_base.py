@@ -53,7 +53,7 @@ CONF = nova.conf.CONF
 
 
 class ApiSampleTestBaseV21(testscenarios.WithScenarios,
-                          api_samples_test_base.ApiSampleTestBase):
+                           api_samples_test_base.ApiSampleTestBase):
     SUPPORTS_CELLS = False
 
     api_major_version = 'v2'

@@ -244,7 +244,7 @@ class InstanceHelperMixin(object):
         return api.post_aggregate(body)['id']
 
 
-class _IntegratedTestBase(test.TestCase):
+class _IntegratedTestBase(test.TestCase, InstanceHelperMixin):
     REQUIRES_LOCKING = True
     ADMIN_API = False
     # This indicates whether to include the project ID in the URL for API
@@ -320,37 +320,6 @@ class _IntegratedTestBase(test.TestCase):
          for flavor in flavors]
         return (generate_new_element(flavor_names, 'flavor'),
                 int(generate_new_element(flavor_ids, '', True)))
-
-    def _build_minimal_create_server_request(self, name=None, image_uuid=None,
-                                             flavor_id=None, networks=None,
-                                             az=None, host=None):
-        server = {}
-
-        if not image_uuid:
-            # NOTE(takashin): In API version 2.36, image APIs were deprecated.
-            # In API version 2.36 or greater, self.api.get_images() returns
-            # a 404 error. In that case, 'image_uuid' should be specified.
-            image_uuid = self.api.get_images()[0]['id']
-        server['imageRef'] = image_uuid
-
-        if not name:
-            name = ''.join(
-                random.choice(string.ascii_lowercase) for i in range(10))
-        server['name'] = name
-
-        if not flavor_id:
-            # Set a valid flavorId
-            flavor_id = self.api.get_flavors()[0]['id']
-        server['flavorRef'] = 'http://fake.server/%s' % flavor_id
-
-        if networks is not None:
-            server['networks'] = networks
-        if az is not None:
-            server['availability_zone'] = az
-        # This requires at least microversion 2.74 to work
-        if host is not None:
-            server['host'] = host
-        return server
 
     def _create_flavor_body(self, name, ram, vcpus, disk, ephemeral, id, swap,
                             rxtx_factor, is_public):
