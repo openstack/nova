@@ -356,6 +356,18 @@ _fake_cpu_info = {
     "features": ["feature1", "feature2"]
 }
 
+_fake_cpu_info_aarch64 = {
+    "arch": fields.Architecture.AARCH64,
+    "model": "test_model",
+    "vendor": "test_vendor",
+    "topology": {
+        "sockets": 1,
+        "cores": 8,
+        "threads": 16
+    },
+    "features": ["feature1", "feature2"]
+}
+
 eph_default_ext = utils.get_hash_str(nova.privsep.fs._DEFAULT_FILE_SYSTEM)[:7]
 
 _fake_qemu64_cpu_feature = """
@@ -10260,6 +10272,22 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_compare.side_effect = not_supported_exc
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         ret = conn._compare_cpu(None, jsonutils.dumps(_fake_cpu_info),
+                instance)
+        self.assertIsNone(ret)
+
+    @mock.patch.object(host.Host, 'compare_cpu')
+    @mock.patch.object(nova.virt.libvirt, 'config')
+    def test_compare_cpu_aarch64_skip_comparison(self,
+                                                 mock_vconfig,
+                                                 mock_compare):
+        instance = objects.Instance(**self.test_instance)
+        skip_comparison_exc = fakelibvirt.make_libvirtError(
+                fakelibvirt.libvirtError,
+                'Host CPU compatibility check does not make '
+                'sense on AArch64; skip CPU comparison')
+        mock_compare.side_effect = skip_comparison_exc
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        ret = conn._compare_cpu(None, jsonutils.dumps(_fake_cpu_info_aarch64),
                 instance)
         self.assertIsNone(ret)
 
