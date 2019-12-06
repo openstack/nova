@@ -125,9 +125,9 @@ class VPMEMTestBase(integrated_helpers.LibvirtProviderUsageBaseTestCase):
         return compute
 
     def _create_server(self, flavor_id, hostname):
-        server_req = self._build_minimal_create_server_request(
-            'some-server', flavor_id=flavor_id,
+        server_req = self._build_server(
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id=flavor_id,
             networks='none')
         server_req['availability_zone'] = 'nova:%s' % hostname
         LOG.info('booting on %s', hostname)

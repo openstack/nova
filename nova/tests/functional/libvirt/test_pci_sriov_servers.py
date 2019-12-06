@@ -58,7 +58,7 @@ class _PCIServersTestBase(base.ServersTestBase):
             self.compute_started = True
 
         # Create server
-        good_server = self._build_server(flavor_id)
+        good_server = self._build_server(flavor_id=flavor_id)
 
         post = {'server': good_server}
 
@@ -238,8 +238,9 @@ class GetServerDiagnosticsServerWithVfTestV21(_PCIServersTestBase):
             self.compute_started = True
 
         # Create server
-        good_server = self._build_server(flavor_id,
-                                       '155d900f-4e14-4e4c-a73d-069cbf4541e6')
+        good_server = self._build_server(
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id=flavor_id)
         good_server['networks'] = [
             {'uuid': base.LibvirtNeutronFixture.network_1['id']},
             {'uuid': base.LibvirtNeutronFixture.network_4['id']},

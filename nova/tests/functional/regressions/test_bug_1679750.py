@@ -43,9 +43,6 @@ class TestLocalDeleteAllocations(test.TestCase,
 
         self.start_service('scheduler')
 
-        self.image_id = self.api.get_images()[0]['id']
-        self.flavor_id = self.api.get_flavors()[0]['id']
-
     @staticmethod
     def _get_usages(placement_api, rp_uuid):
         fmt = '/resource_providers/%(uuid)s/usages'
@@ -81,8 +78,7 @@ class TestLocalDeleteAllocations(test.TestCase,
                 self.assertEqual(0, usage)
 
             # Create a server.
-            server = self._build_minimal_create_server_request(
-                'local-delete-test', self.image_id, self.flavor_id, 'none')
+            server = self._build_server(networks='none')
             server = self.admin_api.post_server({'server': server})
             server = self._wait_for_state_change(server, 'ACTIVE')
 
@@ -136,8 +132,7 @@ class TestLocalDeleteAllocations(test.TestCase,
             self.assertEqual(0, usage)
 
         # Create a server.
-        server = self._build_minimal_create_server_request(
-            'local-delete-test', self.image_id, self.flavor_id, 'none')
+        server = self._build_server(networks='none')
         server = self.admin_api.post_server({'server': server})
         server = self._wait_for_state_change(server, 'ACTIVE')
 

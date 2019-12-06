@@ -73,9 +73,9 @@ class TestAvailabilityZoneScheduling(
 
     def _create_server(self, name):
         # Create a server, it doesn't matter which host it ends up in.
-        server_body = self._build_minimal_create_server_request(
-            name, image_uuid=fake_image.get_valid_image_id(),
-            flavor_id=self.flavor1, networks='none')
+        server_body = self._build_server(
+            flavor_id=self.flavor1,
+            networks='none')
         server = self.api.post_server({'server': server_body})
         server = self._wait_for_state_change(server, 'ACTIVE')
         original_host = server['OS-EXT-SRV-ATTR:host']

@@ -70,7 +70,7 @@ class NUMAServersTest(NUMAServersTestBase):
             'resource_providers'][0]['uuid']
 
         # Create server
-        good_server = self._build_server(flavor_id)
+        good_server = self._build_server(flavor_id=flavor_id)
 
         post = {'server': good_server}
 
@@ -270,7 +270,7 @@ class NUMAServersTest(NUMAServersTestBase):
         # 'start_service' to make sure there isn't a mismatch
         self.compute = self.start_service('compute', host='compute1')
 
-        post = {'server': self._build_server(flavor_id)}
+        post = {'server': self._build_server(flavor_id=flavor_id)}
 
         ex = self.assertRaises(client.OpenStackApiException,
             self.api.post_server, post)
@@ -355,7 +355,7 @@ class NUMAServersTest(NUMAServersTestBase):
         # 'start_service' to make sure there isn't a mismatch
         self.compute = self.start_service('compute', host='compute1')
 
-        post = {'server': self._build_server(flavor_id)}
+        post = {'server': self._build_server(flavor_id=flavor_id)}
 
         ex = self.assertRaises(client.OpenStackApiException,
             self.api.post_server, post)
@@ -376,7 +376,7 @@ class NUMAServersTest(NUMAServersTestBase):
 
         # Create server
         flavor_a_id = self._create_flavor(extra_spec={})
-        good_server = self._build_server(flavor_a_id)
+        good_server = self._build_server(flavor_id=flavor_a_id)
 
         post = {'server': good_server}
 
@@ -532,7 +532,7 @@ class ReshapeForPCPUsTest(NUMAServersTestBase):
         extra_spec = {'hw:cpu_policy': 'dedicated'}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
 
-        server_req = self._build_server(flavor_id)
+        server_req = self._build_server(flavor_id=flavor_id)
         server_req['host'] = 'test_compute0'
         server_req['networks'] = 'auto'
 
@@ -760,7 +760,7 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         self.compute = self.start_service('compute', host='test_compute0')
 
         # Create server
-        good_server = self._build_server(flavor_id)
+        good_server = self._build_server(flavor_id=flavor_id)
         good_server['networks'] = networks
         post = {'server': good_server}
 
@@ -908,7 +908,7 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
             {'uuid': base.LibvirtNeutronFixture.network_1['id']},
         ]
 
-        good_server = self._build_server(flavor_id)
+        good_server = self._build_server(flavor_id=flavor_id)
         good_server['networks'] = networks
         post = {'server': good_server}
 

@@ -89,13 +89,11 @@ class ServerGroupTestBase(test.TestCase,
     def _boot_a_server_to_group(self, group,
                                 expected_status='ACTIVE', flavor=None,
                                 az=None):
-        server = self._build_minimal_create_server_request(
-            'some-server',
-            image_uuid='a2459075-d96c-40d5-893e-577ff92e721c', networks=[],
+        server = self._build_server(
+            image_uuid='a2459075-d96c-40d5-893e-577ff92e721c',
+            flavor_id=flavor['id'] if flavor else None,
+            networks=[],
             az=az)
-        if flavor:
-            server['flavorRef'] = ('http://fake.server/%s'
-                                                  % flavor['id'])
         post = {'server': server,
                 'os:scheduler_hints': {'group': group['id']}}
         created_server = self.api.post_server(post)
@@ -968,10 +966,8 @@ class TestAntiAffinityLiveMigration(test.TestCase,
             {'name': 'test_serial_no_valid_host_then_pass_with_third_host',
              'policies': ['anti-affinity']})
         servers = []
-        for x in range(2):
-            server = self._build_minimal_create_server_request(
-                'test_serial_no_valid_host_then_pass_with_third_host-%d' % x,
-                networks='none')
+        for _ in range(2):
+            server = self._build_server(networks='none')
             # Add the group hint so the server is created in our group.
             server_req = {
                 'server': server,

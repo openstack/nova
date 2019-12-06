@@ -86,9 +86,7 @@ class MissingReqSpecInstanceGroupUUIDTestCase(
 
         # Create a server in the group which should land on host1 due to our
         # custom weigher.
-        server = self._build_minimal_create_server_request(
-            'test_cold_migrate_reschedule')
-        body = dict(server=server)
+        body = {'server': self._build_server()}
         body['os:scheduler_hints'] = {'group': group_id}
         server = self.api.post_server(body)
         server = self._wait_for_state_change(server, 'ACTIVE')

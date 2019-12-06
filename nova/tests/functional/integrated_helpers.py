@@ -97,38 +97,6 @@ class InstanceHelperMixin(object):
         return self._wait_for_server_parameter(
             server, {'status': expected_status}, max_retries)
 
-    def _build_minimal_create_server_request(
-            self, name=None, image_uuid=None, flavor_id=None, networks=None,
-            az=None, host=None):
-
-        server = {}
-
-        if not image_uuid:
-            # NOTE(takashin): In API version 2.36, image APIs were deprecated.
-            # In API version 2.36 or greater, self.api.get_images() returns
-            # a 404 error. In that case, 'image_uuid' should be specified.
-            image_uuid = self.api.get_images()[0]['id']
-        server['imageRef'] = image_uuid
-
-        if not name:
-            name = ''.join(
-                random.choice(string.ascii_lowercase) for i in range(10))
-        server['name'] = name
-
-        if not flavor_id:
-            # Set a valid flavorId
-            flavor_id = self.api.get_flavors()[0]['id']
-        server['flavorRef'] = 'http://fake.server/%s' % flavor_id
-
-        if networks is not None:
-            server['networks'] = networks
-        if az is not None:
-            server['availability_zone'] = az
-        # This requires at least microversion 2.74 to work
-        if host is not None:
-            server['host'] = host
-        return server
-
     def _wait_until_deleted(self, server):
         initially_in_error = server.get('status') == 'ERROR'
         try:
@@ -241,6 +209,54 @@ class InstanceHelperMixin(object):
         }
         return api.post_aggregate(body)['id']
 
+    def _build_server(self, name=None, image_uuid=None, flavor_id=None,
+                      networks=None, az=None, host=None):
+        """Build a request for the server create API.
+
+        :param name: A name for the server.
+        :param image_uuid: The ID of an existing image.
+        :param flavor_id: The ID of an existing flavor.
+        :param networks: A dict of networks to attach or a string of 'none' or
+            'auto'.
+        :param az: The name of the availability zone the instance should
+            request.
+        :param host: The host to boot the instance on. Requires API
+            microversion 2.74 or greater.
+        :returns: The generated request body.
+        """
+        if not name:
+            name = ''.join(
+                random.choice(string.ascii_lowercase) for i in range(20))
+
+        if image_uuid is None:  # we need to handle ''
+            # NOTE(takashin): In API version 2.36, image APIs were deprecated.
+            # In API version 2.36 or greater, self.api.get_images() returns
+            # a 404 error. In that case, 'image_uuid' should be specified.
+            with utils.temporary_mutation(self.api, microversion='2.35'):
+                image_uuid = self.api.get_images()[0]['id']
+
+        if not flavor_id:
+            # Set a valid flavorId
+            flavor_id = self.api.get_flavors()[0]['id']
+
+        server = {
+            'name': name,
+            'imageRef': image_uuid,
+            'flavorRef': 'http://fake.server/%s' % flavor_id,
+        }
+
+        if networks is not None:
+            server['networks'] = networks
+
+        if az is not None:
+            server['availability_zone'] = az
+
+        # This requires at least microversion 2.74 to work
+        if host is not None:
+            server['host'] = host
+
+        return server
+
 
 class _IntegratedTestBase(test.TestCase, InstanceHelperMixin):
     REQUIRES_LOCKING = True
@@ -300,11 +316,6 @@ class _IntegratedTestBase(test.TestCase, InstanceHelperMixin):
             if not self.ADMIN_API:
                 self.admin_api.microversion = self.microversion
 
-    def get_unused_server_name(self):
-        servers = self.api.get_servers()
-        server_names = [server['name'] for server in servers]
-        return generate_new_element(server_names, 'server')
-
     def get_unused_flavor_name_id(self):
         flavors = self.api.get_flavors()
         flavor_names = list()
@@ -343,30 +354,6 @@ class _IntegratedTestBase(test.TestCase, InstanceHelperMixin):
             spec = {"extra_specs": extra_spec}
             self.api_fixture.admin_api.post_extra_spec(flv_id, spec)
         return flv_id
-
-    def _build_server(self, flavor_id, image=None):
-        server = {}
-        if image is None:
-            # TODO(stephenfin): We need to stop relying on this API
-            with utils.temporary_mutation(self.api, microversion='2.35'):
-                image = self.api.get_images()[0]
-            LOG.debug("Image: %s", image)
-
-            # We now have a valid imageId
-            server[self._image_ref_parameter] = image['id']
-        else:
-            server[self._image_ref_parameter] = image
-
-        # Set a valid flavorId
-        flavor = self.api.get_flavor(flavor_id)
-        LOG.debug("Using flavor: %s", flavor)
-        server[self._flavor_ref_parameter] = ('http://fake.server/%s'
-                                              % flavor['id'])
-
-        # Set a valid server name
-        server_name = self.get_unused_server_name()
-        server['name'] = server_name
-        return server
 
     def _check_api_endpoint(self, endpoint, expected_middleware):
         app = self.api_fixture.app().get((None, '/v2'))
@@ -695,9 +682,9 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
             or "none" or "auto"
         :return: the API representation of the booted instance
         """
-        server_req = self._build_minimal_create_server_request(
-            'some-server', flavor_id=flavor['id'],
+        server_req = self._build_server(
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id=flavor['id'],
             networks=networks)
         server_req['availability_zone'] = 'nova:%s' % source_hostname
         LOG.info('booting on %s', source_hostname)

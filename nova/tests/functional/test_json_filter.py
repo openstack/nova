@@ -59,8 +59,7 @@ class JsonFilterTestCase(integrated_helpers.ProviderUsageBaseTestCase):
         # for host2 to make sure the filter works. If not, because of the
         # custom HostNameWeigher, host1 would be chosen.
         query = jsonutils.dumps(['=', '$hypervisor_hostname', 'host2'])
-        server = self._build_minimal_create_server_request(
-            'test_filter_on_hypervisor_hostname')
+        server = self._build_server()
         request = {'server': server, 'os:scheduler_hints': {'query': query}}
         server = self.api.post_server(request)
         server = self._wait_for_state_change(server, 'ACTIVE')

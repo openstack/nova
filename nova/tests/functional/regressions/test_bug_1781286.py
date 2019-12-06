@@ -77,8 +77,7 @@ class RescheduleBuildAvailabilityZoneUpCall(
 
         self.stub_out('nova.compute.manager.ComputeManager.'
                       'build_and_run_instance', wrap_bari)
-        server = self._build_minimal_create_server_request(
-            'test_server_create_reschedule_blocked_az_up_call')
+        server = self._build_server()
         server = self.api.post_server({'server': server})
         # Because we poisoned AggregateList.get_by_host after hitting the
         # compute service we have to wait for the notification that the build
@@ -147,8 +146,7 @@ class RescheduleMigrateAvailabilityZoneUpCall(
 
         self.stub_out('nova.compute.manager.ComputeManager._prep_resize',
                       wrap_prep_resize)
-        server = self._build_minimal_create_server_request(
-            'test_migrate_reschedule_blocked_az_up_call')
+        server = self._build_server()
         server = self.api.post_server({'server': server})
         server = self._wait_for_state_change(server, 'ACTIVE')
         original_host = server['OS-EXT-SRV-ATTR:host']

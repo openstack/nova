@@ -27,8 +27,8 @@ class RealTimeServersTest(base.ServersTestBase):
         self.flags(sysinfo_serial='none', group='libvirt')
 
     def test_no_dedicated_cpu(self):
-        flavor = self._create_flavor(extra_spec={'hw:cpu_realtime': 'yes'})
-        server = self._build_server(flavor)
+        flavor_id = self._create_flavor(extra_spec={'hw:cpu_realtime': 'yes'})
+        server = self._build_server(flavor_id=flavor_id)
 
         # Cannot set realtime policy in a non dedicated cpu pinning policy
         self.assertRaises(
@@ -36,9 +36,9 @@ class RealTimeServersTest(base.ServersTestBase):
             self.api.post_server, {'server': server})
 
     def test_no_realtime_mask(self):
-        flavor = self._create_flavor(extra_spec={
+        flavor_id = self._create_flavor(extra_spec={
             'hw:cpu_realtime': 'yes', 'hw:cpu_policy': 'dedicated'})
-        server = self._build_server(flavor)
+        server = self._build_server(flavor_id=flavor_id)
 
         # Cannot set realtime policy if not vcpus mask defined
         self.assertRaises(
@@ -56,11 +56,11 @@ class RealTimeServersTest(base.ServersTestBase):
 
         self.compute = self.start_service('compute', host='test_compute0')
 
-        flavor = self._create_flavor(extra_spec={
+        flavor_id = self._create_flavor(extra_spec={
             'hw:cpu_realtime': 'yes',
             'hw:cpu_policy': 'dedicated',
             'hw:cpu_realtime_mask': '^1'})
-        server = self._build_server(flavor)
+        server = self._build_server(flavor_id=flavor_id)
         created = self.api.post_server({'server': server})
 
         instance = self._wait_for_state_change(created, 'ACTIVE')

@@ -40,8 +40,8 @@ class TestMultiattachVolumes(integrated_helpers._IntegratedTestBase):
         for it to be ACTIVE, and then attaches the volume to another server.
         """
         volume_id = nova_fixtures.CinderFixture.MULTIATTACH_VOL
-        create_req = self._build_server(flavor_id='1', image='')
-        create_req['networks'] = 'none'
+        create_req = self._build_server(
+            image_uuid='', flavor_id='1', networks='none')
         create_req['block_device_mapping_v2'] = [{
             'uuid': volume_id,
             'source_type': 'volume',
@@ -61,8 +61,8 @@ class TestMultiattachVolumes(integrated_helpers._IntegratedTestBase):
 
         # Now create a second server and attach the same volume to that.
         create_req = self._build_server(
-            flavor_id='1', image='155d900f-4e14-4e4c-a73d-069cbf4541e6')
-        create_req['networks'] = 'none'
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6', flavor_id='1',
+            networks='none')
         server2 = self.api.post_server({'server': create_req})
         self._wait_for_state_change(server2, 'ACTIVE')
         # Attach the volume to the second server.

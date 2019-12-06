@@ -413,9 +413,9 @@ class TestNovaManagePlacementHealAllocations(
         :returns: two-item tuple of the server and the compute node resource
                   provider uuid
         """
-        server_req = self._build_minimal_create_server_request(
-            'some-server', flavor_id=flavor['id'],
+        server_req = self._build_server(
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id=flavor['id'],
             networks='none')
         server_req['availability_zone'] = 'nova:%s' % hostname
         if volume_backed:
@@ -1415,7 +1415,7 @@ class TestDBArchiveDeletedRows(integrated_helpers._IntegratedTestBase):
             {'name': 'test_archive_instance_group_members',
              'policies': ['affinity']})
         # Create two servers in the group.
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
         server['min_count'] = 2
         server_req = {
             'server': server, 'os:scheduler_hints': {'group': group['id']}}
@@ -1477,20 +1477,17 @@ class TestDBArchiveDeletedRowsMultiCell(integrated_helpers.InstanceHelperMixin,
         admin_context = context.get_admin_context(read_deleted='yes')
         # Boot a server to cell1
         server_ids = {}
-        server = self._build_minimal_create_server_request(
-            'cell1-server', az='nova:host1')
+        server = self._build_server(az='nova:host1')
         created_server = self.api.post_server({'server': server})
         self._wait_for_state_change(created_server, 'ACTIVE')
         server_ids['cell1'] = created_server['id']
         # Boot a server to cell2
-        server = self._build_minimal_create_server_request(
-            'cell2-server', az='nova:host2')
+        server = self._build_server(az='nova:host2')
         created_server = self.api.post_server({'server': server})
         self._wait_for_state_change(created_server, 'ACTIVE')
         server_ids['cell2'] = created_server['id']
         # Boot a server to cell0 (cause ERROR state prior to schedule)
-        server = self._build_minimal_create_server_request(
-            'cell0-server')
+        server = self._build_server()
         # Flavor m1.xlarge cannot be fulfilled
         server['flavorRef'] = 'http://fake.server/5'
         created_server = self.api.post_server({'server': server})

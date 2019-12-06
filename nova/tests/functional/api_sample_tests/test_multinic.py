@@ -29,8 +29,7 @@ class MultinicSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         self.uuid = server['id']
 
     def _boot_a_server(self, expected_status='ACTIVE', extra_params=None):
-        server = self._build_minimal_create_server_request(
-            'MultinicSampleJsonTestServer')
+        server = self._build_server()
         if extra_params:
             server.update(extra_params)
 

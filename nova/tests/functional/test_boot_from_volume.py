@@ -68,8 +68,7 @@ class BootFromVolumeTest(test_servers.ServersTestBase):
 
         # Boot a server with a flavor disk larger than the available local
         # disk. It should succeed for boot from volume.
-        server = self._build_server(flavor_id)
-        server['imageRef'] = ''
+        server = self._build_server(image_uuid='', flavor_id=flavor_id)
         volume_uuid = nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
         bdm = {'boot_index': 0,
                'uuid': volume_uuid,
@@ -158,8 +157,7 @@ class BootFromVolumeTest(test_servers.ServersTestBase):
         a user cannot boot from image, they must boot from volume.
         """
         self.flags(max_local_block_devices=0)
-        server = self._build_minimal_create_server_request(
-            'test_max_local_block_devices_0_force_bfv')
+        server = self._build_server()
         ex = self.assertRaises(api_client.OpenStackApiException,
                                self.admin_api.post_server,
                                {'server': server})
@@ -200,8 +198,7 @@ class BootFromVolumeLargeRequestTest(test.TestCase,
         # _handle_kernel_and_ramdisk()
         image1 = 'a2459075-d96c-40d5-893e-577ff92e721c'
         image2 = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        server = self._build_minimal_create_server_request(
-            'test_boot_from_volume_10_servers_255_volumes_2_images')
+        server = self._build_server()
         server.pop('imageRef')
         server['min_count'] = 10
         bdms = []

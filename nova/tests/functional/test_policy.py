@@ -68,8 +68,7 @@ class HostStatusPolicyTestCase(test.TestCase,
         if networks:
             # Starting with microversion 2.37 the networks field is required.
             kwargs['networks'] = networks
-        server = self._build_minimal_create_server_request(
-            'test_host_status_unknown_only', **kwargs)
+        server = self._build_server(**kwargs)
         server = self.api.post_server({'server': server})
         server = self._wait_for_state_change(server, 'ACTIVE')
         return server
