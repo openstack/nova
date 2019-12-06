@@ -85,58 +85,6 @@ class TestNeutronSecurityGroupsV21(test_security_groups.TestSecurityGroupsV21):
         neutron = get_client()
         return neutron.create_security_group(body)
 
-    def test_create_security_group_with_no_description(self):
-        # Neutron's security group description field is optional.
-        pass
-
-    def test_create_security_group_with_empty_description(self):
-        # Neutron's security group description field is optional.
-        pass
-
-    def test_create_security_group_with_blank_name(self):
-        # Neutron's security group name field is optional.
-        pass
-
-    def test_create_security_group_with_whitespace_name(self):
-        # Neutron allows security group name to be whitespace.
-        pass
-
-    def test_create_security_group_with_blank_description(self):
-        # Neutron's security group description field is optional.
-        pass
-
-    def test_create_security_group_with_whitespace_description(self):
-        # Neutron allows description to be whitespace.
-        pass
-
-    def test_create_security_group_with_duplicate_name(self):
-        # Neutron allows duplicate names for security groups.
-        pass
-
-    def test_create_security_group_non_string_name(self):
-        # Neutron allows security group name to be non string.
-        pass
-
-    def test_create_security_group_non_string_description(self):
-        # Neutron allows non string description.
-        pass
-
-    def test_create_security_group_quota_limit(self):
-        # Enforced by Neutron server.
-        pass
-
-    def test_create_security_group_over_quota_during_recheck(self):
-        # Enforced by Neutron server.
-        pass
-
-    def test_create_security_group_no_quota_recheck(self):
-        # Enforced by Neutron server.
-        pass
-
-    def test_update_security_group(self):
-        # Enforced by Neutron server.
-        pass
-
     def test_get_security_group_list(self):
         self._create_sg_template().get('security_group')
         req = fakes.HTTPRequest.blank(
@@ -151,9 +99,6 @@ class TestNeutronSecurityGroupsV21(test_security_groups.TestSecurityGroupsV21):
         req = fakes.HTTPRequest.blank(path)
         list_dict = self.controller.index(req)
         self.assertEqual(len(list_dict['security_groups']), 1)
-
-    def test_get_security_group_list_all_tenants(self):
-        pass
 
     def test_get_security_group_by_instance(self):
         sg = self._create_sg_template().get('security_group')
@@ -214,18 +159,6 @@ class TestNeutronSecurityGroupsV21(test_security_groups.TestSecurityGroupsV21):
                 % (fakes.FAKE_PROJECT_ID, sg['id']))
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.delete,
                           req, sg['id'])
-
-    def test_associate_non_running_instance(self):
-        # Neutron does not care if the instance is running or not. When the
-        # instances is detected by neutron it will push down the security
-        # group policy to it.
-        pass
-
-    def test_associate_already_associated_security_group_to_instance(self):
-        # Neutron security groups does not raise an error if you update a
-        # port adding a security group to it that was already associated
-        # to the port. This is because PUT semantics are used.
-        pass
 
     def test_associate(self):
         sg = self._create_sg_template().get('security_group')
@@ -315,18 +248,6 @@ class TestNeutronSecurityGroupsV21(test_security_groups.TestSecurityGroupsV21):
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.manager._removeSecurityGroup,
                           req, UUID_SERVER, body)
-
-    def test_disassociate_non_running_instance(self):
-        # Neutron does not care if the instance is running or not. When the
-        # instances is detected by neutron it will push down the security
-        # group policy to it.
-        pass
-
-    def test_disassociate_already_associated_security_group_to_instance(self):
-        # Neutron security groups does not raise an error if you update a
-        # port adding a security group to it that was already associated
-        # to the port. This is because PUT semantics are used.
-        pass
 
     def test_disassociate(self):
         sg = self._create_sg_template().get('security_group')
@@ -491,18 +412,6 @@ class TestNeutronSecurityGroupRulesV21(
         req = fakes.HTTPRequest.blank('/v2/%s/os-security-group-rules/%s' % (
                 fakes.FAKE_PROJECT_ID, security_group_rule['id']))
         self.controller.delete(req, security_group_rule['id'])
-
-    def test_create_rule_quota_limit(self):
-        # Enforced by neutron
-        pass
-
-    def test_create_rule_over_quota_during_recheck(self):
-        # Enforced by neutron
-        pass
-
-    def test_create_rule_no_quota_recheck(self):
-        # Enforced by neutron
-        pass
 
 
 class TestNeutronSecurityGroupsOutputTest(test.TestCase):

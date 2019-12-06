@@ -150,59 +150,6 @@ class TestSecurityGroupsV21(test.TestCase):
                           self.controller.create, self.req,
                           {'security_group': sg})
 
-    def test_create_security_group_with_no_description(self):
-        sg = security_group_request_template()
-        del sg['description']
-
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          self.req, {'security_group': sg})
-
-    def test_create_security_group_with_empty_description(self):
-        sg = security_group_request_template()
-        sg['description'] = ""
-
-        try:
-            self.controller.create(self.req, {'security_group': sg})
-            self.fail('Should have raised BadRequest exception')
-        except webob.exc.HTTPBadRequest as exc:
-            self.assertEqual('description has 0 characters, '
-                             'less than 1.', exc.explanation)
-        except exception.InvalidInput:
-            self.fail('Should have raised BadRequest exception instead of')
-
-    def test_create_security_group_with_blank_name(self):
-        sg = security_group_request_template(name='')
-
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          self.req, {'security_group': sg})
-
-    def test_create_security_group_with_whitespace_name(self):
-        sg = security_group_request_template(name=' ')
-
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          self.req, {'security_group': sg})
-
-    def test_create_security_group_with_blank_description(self):
-        sg = security_group_request_template(description='')
-
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          self.req, {'security_group': sg})
-
-    def test_create_security_group_with_whitespace_description(self):
-        sg = security_group_request_template(description=' ')
-
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          self.req, {'security_group': sg})
-
-    def test_create_security_group_with_duplicate_name(self):
-        sg = security_group_request_template()
-
-        # FIXME: Stub out _get instead of creating twice
-        self.controller.create(self.req, {'security_group': sg})
-
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          self.req, {'security_group': sg})
-
     def test_create_security_group_with_no_body(self):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, self.req, None)
@@ -224,67 +171,6 @@ class TestSecurityGroupsV21(test.TestCase):
 
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           self.req, {'security_group': sg})
-
-    def test_create_security_group_non_string_name(self):
-        sg = security_group_request_template(name=12)
-
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          self.req, {'security_group': sg})
-
-    def test_create_security_group_non_string_description(self):
-        sg = security_group_request_template(description=12)
-
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          self.req, {'security_group': sg})
-
-    def test_create_security_group_quota_limit(self):
-        for num in range(1, CONF.quota.security_groups):
-            name = 'test%s' % num
-            sg = security_group_request_template(name=name)
-            res_dict = self.controller.create(self.req, {'security_group': sg})
-            self.assertEqual(res_dict['security_group']['name'], name)
-
-        sg = security_group_request_template()
-        self.assertRaises(webob.exc.HTTPForbidden, self.controller.create,
-                          self.req, {'security_group': sg})
-
-    @mock.patch('nova.objects.quotas.Quotas.check_deltas')
-    def test_create_security_group_over_quota_during_recheck(self, check_mock):
-        # Simulate a race where the first check passes and the recheck fails.
-        check_mock.side_effect = [None,
-                                  exception.OverQuota(overs='security_groups')]
-
-        ctxt = self.req.environ['nova.context']
-        sg = security_group_request_template()
-        self.assertRaises(webob.exc.HTTPForbidden, self.controller.create,
-                          self.req, {'security_group': sg})
-
-        self.assertEqual(2, check_mock.call_count)
-        call1 = mock.call(ctxt, {'security_groups': 1}, ctxt.project_id,
-                          user_id=ctxt.user_id)
-        call2 = mock.call(ctxt, {'security_groups': 0}, ctxt.project_id,
-                          user_id=ctxt.user_id)
-        check_mock.assert_has_calls([call1, call2])
-
-        # Verify we removed the security group that was added after the first
-        # quota check passed.
-        self.assertRaises(exception.SecurityGroupNotFound,
-                          objects.SecurityGroup.get_by_name, ctxt,
-                          ctxt.project_id, sg['name'])
-
-    @mock.patch('nova.objects.quotas.Quotas.check_deltas')
-    def test_create_security_group_no_quota_recheck(self, check_mock):
-        # Disable recheck_quota.
-        self.flags(recheck_quota=False, group='quota')
-
-        ctxt = self.req.environ['nova.context']
-        sg = security_group_request_template()
-        self.controller.create(self.req, {'security_group': sg})
-
-        # check_deltas should have been called only once.
-        check_mock.assert_called_once_with(ctxt, {'security_groups': 1},
-                                           ctxt.project_id,
-                                           user_id=ctxt.user_id)
 
     def test_get_security_group_list(self):
         self._test_get_security_group_list()
@@ -361,45 +247,6 @@ class TestSecurityGroupsV21(test.TestCase):
         mock_list.assert_called_once_with(self.req.environ['nova.context'],
                                           project=fakes.FAKE_PROJECT_ID,
                                           search_opts={})
-
-    def test_get_security_group_list_all_tenants(self):
-        all_groups = []
-        tenant_groups = []
-
-        for i, name in enumerate(['default', 'test']):
-            sg = security_group_template(id=i + 1,
-                                         name=name,
-                                         description=name + '-desc',
-                                         rules=[])
-            all_groups.append(sg)
-            if name == 'default':
-                tenant_groups.append(sg)
-
-        all = {'security_groups': all_groups}
-        tenant_specific = {'security_groups': tenant_groups}
-
-        def return_all_security_groups(context):
-            return [security_group_db(sg) for sg in all_groups]
-
-        self.stub_out('nova.db.api.security_group_get_all',
-                      return_all_security_groups)
-
-        def return_tenant_security_groups(context, project_id):
-            return [security_group_db(sg) for sg in tenant_groups]
-
-        self.stub_out('nova.db.api.security_group_get_by_project',
-                      return_tenant_security_groups)
-
-        path = '/v2/%s/os-security-groups' % fakes.FAKE_PROJECT_ID
-
-        req = fakes.HTTPRequest.blank(path, use_admin_context=True)
-        res_dict = self.controller.index(req)
-        self.assertEqual(res_dict, tenant_specific)
-
-        req = fakes.HTTPRequest.blank('%s?all_tenants=1' % path,
-                                      use_admin_context=True)
-        res_dict = self.controller.index(req)
-        self.assertEqual(res_dict, all)
 
     def test_get_security_group_by_instance(self):
         groups = []
@@ -504,46 +351,6 @@ class TestSecurityGroupsV21(test.TestCase):
     def test_get_security_group_by_non_existing_id(self):
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
                           self.req, self.fake_id)
-
-    def test_update_security_group(self):
-        sg = security_group_template(id=2, rules=[])
-        sg_update = security_group_template(id=2, rules=[],
-                        name='update_name', description='update_desc')
-
-        def return_security_group(context, group_id, columns_to_join=None):
-            self.assertEqual(sg['id'], group_id)
-            return security_group_db(sg)
-
-        def return_update_security_group(context, group_id, values,
-                                         columns_to_join=None):
-            self.assertEqual(sg_update['id'], group_id)
-            self.assertEqual(sg_update['name'], values['name'])
-            self.assertEqual(sg_update['description'], values['description'])
-            return security_group_db(sg_update)
-
-        self.stub_out('nova.db.api.security_group_update',
-                      return_update_security_group)
-        self.stub_out('nova.db.api.security_group_get',
-                      return_security_group)
-
-        res_dict = self.controller.update(self.req, '2',
-                                          {'security_group': sg_update})
-
-        expected = {'security_group': sg_update}
-        self.assertEqual(res_dict, expected)
-
-    def test_update_security_group_name_to_default(self):
-        sg = security_group_template(id=2, rules=[], name='default')
-
-        def return_security_group(context, group_id, columns_to_join=None):
-            self.assertEqual(sg['id'], group_id)
-            return security_group_db(sg)
-
-        self.stub_out('nova.db.api.security_group_get',
-                      return_security_group)
-
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          self.req, '2', {'security_group': sg})
 
     def test_update_default_security_group_fail(self):
         sg = security_group_template()
@@ -709,15 +516,6 @@ class TestSecurityGroupsV21(test.TestCase):
                               self.manager._addSecurityGroup,
                               self.req, '1', body)
 
-    def test_associate_already_associated_security_group_to_instance(self):
-        self.stub_out('nova.db.api.security_group_get_by_name',
-                       return_security_group_by_name)
-        body = dict(addSecurityGroup=dict(name="test"))
-
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.manager._addSecurityGroup, self.req,
-                          UUID_SERVER, body)
-
     @mock.patch.object(nova.db.api, 'instance_add_security_group')
     def test_associate(self, mock_add_security_group):
         self.stub_out('nova.db.api.security_group_get_by_name',
@@ -768,15 +566,6 @@ class TestSecurityGroupsV21(test.TestCase):
             self.assertRaises(webob.exc.HTTPNotFound,
                               self.manager._removeSecurityGroup,
                               self.req, '1', body)
-
-    def test_disassociate_already_associated_security_group_to_instance(self):
-        self.stub_out('nova.db.api.security_group_get_by_name',
-                       return_security_group_without_instances)
-        body = dict(removeSecurityGroup=dict(name="test"))
-
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.manager._removeSecurityGroup, self.req,
-                          UUID_SERVER, body)
 
     @mock.patch.object(nova.db.api, 'instance_remove_security_group')
     def test_disassociate(self, mock_remove_sec_group):
@@ -1205,67 +994,6 @@ class TestSecurityGroupRulesV21(test.TestCase):
     def test_delete_non_existing_rule_id(self):
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
                           self.req, self.invalid_id)
-
-    def test_create_rule_quota_limit(self):
-        for num in range(100, 100 + CONF.quota.security_group_rules):
-            rule = {
-                'ip_protocol': 'tcp', 'from_port': num,
-                'to_port': num, 'parent_group_id': self.sg2['id'],
-                'group_id': self.sg1['id']
-            }
-            self.controller.create(self.req, {'security_group_rule': rule})
-
-        rule = {
-            'ip_protocol': 'tcp', 'from_port': '121', 'to_port': '121',
-            'parent_group_id': self.sg2['id'], 'group_id': self.sg1['id']
-        }
-        self.assertRaises(webob.exc.HTTPForbidden, self.controller.create,
-                          self.req, {'security_group_rule': rule})
-
-    @mock.patch('nova.objects.Quotas.check_deltas')
-    def test_create_rule_over_quota_during_recheck(self, mock_check):
-        # Simulate a race where the first check passes and the recheck fails.
-        # First check occurs in compute/api.
-        exc = exception.OverQuota(overs='security_group_rules',
-                                  usages={'security_group_rules': 100})
-        mock_check.side_effect = [None, exc]
-
-        rule = {
-            'ip_protocol': 'tcp', 'from_port': '121', 'to_port': '121',
-            'parent_group_id': self.sg2['id'], 'group_id': self.sg1['id']
-        }
-        self.assertRaises(webob.exc.HTTPForbidden, self.controller.create,
-                          self.req, {'security_group_rule': rule})
-
-        ctxt = self.req.environ['nova.context']
-        self.assertEqual(2, mock_check.call_count)
-        # parent_group_id is used for adding the rules.
-        call1 = mock.call(ctxt, {'security_group_rules': 1}, self.sg2['id'])
-        call2 = mock.call(ctxt, {'security_group_rules': 0}, self.sg2['id'])
-        mock_check.assert_has_calls([call1, call2])
-
-        # Verify we removed the rule that was added after the first quota check
-        # passed.
-        rules = objects.SecurityGroupRuleList.get_by_security_group_id(
-            ctxt, self.sg1['id'])
-        self.assertEqual(0, len(rules))
-
-    @mock.patch('nova.objects.Quotas.check_deltas')
-    def test_create_rule_no_quota_recheck(self, mock_check):
-        # Disable recheck_quota.
-        self.flags(recheck_quota=False, group='quota')
-
-        rule = {
-            'ip_protocol': 'tcp', 'from_port': '121', 'to_port': '121',
-            'parent_group_id': self.sg2['id'], 'group_id': self.sg1['id']
-        }
-        self.controller.create(self.req, {'security_group_rule': rule})
-
-        ctxt = self.req.environ['nova.context']
-        # check_deltas should have been called only once.
-        # parent_group_id is used for adding the rules.
-        mock_check.assert_called_once_with(ctxt, {'security_group_rules': 1},
-                                           self.sg2['id'])
 
     def test_create_rule_cidr_allow_all(self):
         rule = security_group_rule_template(cidr='0.0.0.0/0',
