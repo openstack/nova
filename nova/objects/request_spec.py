@@ -197,6 +197,8 @@ class RequestSpec(base.NovaObject):
             policies = list(filter_properties.get('group_policies'))
             hosts = list(filter_properties.get('group_hosts'))
             members = list(filter_properties.get('group_members'))
+            # TODO(mriedem): We could try to get the group uuid from the
+            # group hint in the filter_properties.
             self.instance_group = objects.InstanceGroup(policies=policies,
                                                         hosts=hosts,
                                                         members=members)
@@ -445,6 +447,12 @@ class RequestSpec(base.NovaObject):
         spec._context = context
 
         if 'instance_group' in spec and spec.instance_group:
+            # NOTE(mriedem): We could have a half-baked instance group with no
+            # uuid if some legacy translation was performed on this spec in the
+            # past. In that case, try to workaround the issue by getting the
+            # group uuid from the scheduler hint.
+            if 'uuid' not in spec.instance_group:
+                spec.instance_group.uuid = spec.get_scheduler_hint('group')
             # NOTE(danms): We don't store the full instance group in
             # the reqspec since it would be stale almost immediately.
             # Instead, load it by uuid here so it's up-to-date.
