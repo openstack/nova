@@ -6913,29 +6913,3 @@ class DiffDictTestCase(test.NoDBTestCase):
         diff = compute_api._diff_dict(old, new)
 
         self.assertEqual(diff, dict(b=['-']))
-
-
-class SecurityGroupAPITest(test.NoDBTestCase):
-    def setUp(self):
-        super(SecurityGroupAPITest, self).setUp()
-        self.secgroup_api = compute_api.SecurityGroupAPI()
-        self.user_id = 'fake'
-        self.project_id = 'fake'
-        self.context = context.RequestContext(self.user_id,
-                                              self.project_id)
-
-    def test_get_instance_security_groups(self):
-        groups = objects.SecurityGroupList()
-        groups.objects = [objects.SecurityGroup(name='foo'),
-                          objects.SecurityGroup(name='bar')]
-        instance = objects.Instance(security_groups=groups)
-        names = self.secgroup_api.get_instance_security_groups(self.context,
-                                                               instance)
-        self.assertEqual(sorted([{'name': 'bar'}, {'name': 'foo'}], key=str),
-                         sorted(names, key=str))
-
-    @mock.patch('nova.objects.security_group.make_secgroup_list')
-    def test_populate_security_groups(self, mock_msl):
-        r = self.secgroup_api.populate_security_groups([mock.sentinel.group])
-        mock_msl.assert_called_once_with([mock.sentinel.group])
-        self.assertEqual(r, mock_msl.return_value)

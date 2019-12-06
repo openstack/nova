@@ -26,6 +26,7 @@ from nova.i18n import _
 from nova.objects import security_group as security_group_obj
 
 
+# TODO(stephenfin): Merge this into the only implementation that exists now
 class SecurityGroupBase(object):
 
     def parse_cidr(self, cidr):
