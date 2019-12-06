@@ -373,6 +373,7 @@ class ComputeAPI(object):
         * 5.5 - Add prep_snapshot_based_resize_at_dest()
         * 5.6 - Add prep_snapshot_based_resize_at_source()
         * 5.7 - Add finish_snapshot_based_resize_at_dest()
+        * 5.8 - Add confirm_snapshot_based_resize_at_source()
     '''
 
     VERSION_ALIASES = {
@@ -598,6 +599,41 @@ class ComputeAPI(object):
         rpc_method = cctxt.cast if cast else cctxt.call
         return rpc_method(ctxt, 'confirm_resize',
                           instance=instance, migration=migration)
+
+    def confirm_snapshot_based_resize_at_source(
+            self, ctxt, instance, migration):
+        """Confirms a snapshot-based resize on the source host.
+
+        Cleans the guest from the source hypervisor including disks and drops
+        the MoveClaim which will free up "old_flavor" usage from the
+        ResourceTracker.
+
+        Deletes the allocations held by the migration consumer against the
+        source compute node resource provider.
+
+        This is a synchronous RPC call using the ``long_rpc_timeout``
+        configuration option.
+
+        :param ctxt: nova auth request context targeted at the source cell
+        :param instance: Instance object being resized which should have the
+            "old_flavor" attribute set
+        :param migration: Migration object for the resize operation
+        :raises: nova.exception.MigrationError if the source compute is too
+            old to perform the operation
+        :raises: oslo_messaging.exceptions.MessagingTimeout if the RPC call
+            times out
+        """
+        version = '5.8'
+        client = self.router.client(ctxt)
+        if not client.can_send_version(version):
+            raise exception.MigrationError(reason=_('Compute too old'))
+        cctxt = client.prepare(server=migration.source_compute,
+                               version=version,
+                               call_monitor_timeout=CONF.rpc_response_timeout,
+                               timeout=CONF.long_rpc_timeout)
+        return cctxt.call(
+            ctxt, 'confirm_snapshot_based_resize_at_source',
+            instance=instance, migration=migration)
 
     def detach_interface(self, ctxt, instance, port_id):
         version = '5.0'
