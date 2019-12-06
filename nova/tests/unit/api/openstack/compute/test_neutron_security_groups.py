@@ -38,9 +38,12 @@ from nova.tests.unit.api.openstack import fakes
 UUID_SERVER = uuids.server
 
 
-class TestNeutronSecurityGroupsTestCase(test.TestCase):
+class TestNeutronSecurityGroupsV21(test_security_groups.TestSecurityGroupsV21):
+    # Used to override set config in the base test in test_security_groups.
+    use_neutron = True
+
     def setUp(self):
-        super(TestNeutronSecurityGroupsTestCase, self).setUp()
+        super(TestNeutronSecurityGroupsV21, self).setUp()
         cfg.CONF.set_override('use_neutron', True)
         self.original_client = neutron_api.get_client
         neutron_api.get_client = get_client
@@ -48,14 +51,7 @@ class TestNeutronSecurityGroupsTestCase(test.TestCase):
     def tearDown(self):
         neutron_api.get_client = self.original_client
         get_client()._reset()
-        super(TestNeutronSecurityGroupsTestCase, self).tearDown()
-
-
-class TestNeutronSecurityGroupsV21(
-        test_security_groups.TestSecurityGroupsV21,
-        TestNeutronSecurityGroupsTestCase):
-    # Used to override set config in the base test in test_security_groups.
-    use_neutron = True
+        super(TestNeutronSecurityGroupsV21, self).tearDown()
 
     def _create_sg_template(self, **kwargs):
         sg = test_security_groups.security_group_request_template(**kwargs)
@@ -430,9 +426,18 @@ class TestNeutronSecurityGroupsV21(
                            device_id=test_security_groups.FAKE_UUID1)
 
 
-class TestNeutronSecurityGroupRulesTestCase(TestNeutronSecurityGroupsTestCase):
+class TestNeutronSecurityGroupRulesV21(
+        test_security_groups.TestSecurityGroupRulesV21):
+    # Used to override set config in the base test in test_security_groups.
+    use_neutron = True
+
     def setUp(self):
-        super(TestNeutronSecurityGroupRulesTestCase, self).setUp()
+        super(TestNeutronSecurityGroupRulesV21, self).setUp()
+
+        cfg.CONF.set_override('use_neutron', True)
+        self.original_client = neutron_api.get_client
+        neutron_api.get_client = get_client
+
         id1 = '11111111-1111-1111-1111-111111111111'
         sg_template1 = test_security_groups.security_group_template(
             security_group_rules=[], id=id1)
@@ -447,10 +452,7 @@ class TestNeutronSecurityGroupRulesTestCase(TestNeutronSecurityGroupsTestCase):
     def tearDown(self):
         neutron_api.get_client = self.original_client
         get_client()._reset()
-        super(TestNeutronSecurityGroupsTestCase, self).tearDown()
-
-
-class _TestNeutronSecurityGroupRulesBase(object):
+        super(TestNeutronSecurityGroupRulesV21, self).tearDown()
 
     def test_create_add_existing_rules_by_cidr(self):
         sg = test_security_groups.security_group_template()
@@ -503,19 +505,16 @@ class _TestNeutronSecurityGroupRulesBase(object):
         pass
 
 
-class TestNeutronSecurityGroupRulesV21(
-        _TestNeutronSecurityGroupRulesBase,
-        test_security_groups.TestSecurityGroupRulesV21,
-        TestNeutronSecurityGroupRulesTestCase):
-    # Used to override set config in the base test in test_security_groups.
-    use_neutron = True
-
-
-class TestNeutronSecurityGroupsOutputTest(TestNeutronSecurityGroupsTestCase):
+class TestNeutronSecurityGroupsOutputTest(test.TestCase):
     content_type = 'application/json'
 
     def setUp(self):
         super(TestNeutronSecurityGroupsOutputTest, self).setUp()
+
+        cfg.CONF.set_override('use_neutron', True)
+        self.original_client = neutron_api.get_client
+        neutron_api.get_client = get_client
+
         fakes.stub_out_nw_api(self)
         self.controller = security_groups.SecurityGroupController()
         self.stub_out('nova.compute.api.API.get',
@@ -528,6 +527,11 @@ class TestNeutronSecurityGroupsOutputTest(TestNeutronSecurityGroupsTestCase):
             'nova.network.security_group.neutron_driver.SecurityGroupAPI.'
             'get_instances_security_groups_bindings',
             self._fake_get_instances_security_groups_bindings)
+
+    def tearDown(self):
+        neutron_api.get_client = self.original_client
+        get_client()._reset()
+        super(TestNeutronSecurityGroupsOutputTest, self).tearDown()
 
     def _fake_get_instances_security_groups_bindings(self, inst, context,
                                                      servers):
