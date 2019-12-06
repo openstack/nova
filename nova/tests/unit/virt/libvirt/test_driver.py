@@ -4523,29 +4523,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[8],
                               vconfig.LibvirtConfigMemoryBalloon)
 
-    def test_get_guest_config_bug_1118829(self):
-        self.flags(virt_type='uml', group='libvirt')
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance_ref = objects.Instance(**self.test_instance)
-
-        disk_info = {'disk_bus': 'virtio',
-                     'cdrom_bus': 'ide',
-                     'mapping': {u'vda': {'bus': 'virtio',
-                                          'type': 'disk',
-                                          'dev': u'vda'},
-                                 'root': {'bus': 'virtio',
-                                          'type': 'disk',
-                                          'dev': 'vda'}}}
-
-        # NOTE(jdg): For this specific test leave this blank
-        # This will exercise the failed code path still,
-        # and won't require fakes and stubs of the iscsi discovery
-        block_device_info = {}
-        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
-        drvr._get_guest_config(instance_ref, [], image_meta, disk_info,
-                               None, block_device_info)
-        self.assertEqual(instance_ref['root_device_name'], '/dev/vda')
-
     def test_get_guest_config_with_root_device_name(self):
         self.flags(virt_type='uml', group='libvirt')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -21987,6 +21964,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                      mock_build_device_metadata, mock_set_host_enabled,
                      mock_write_to_file,
                      mock_get_mdev,
+                     image_meta_dict=None,
                      exists=None):
         self.flags(instances_path=self.useFixture(fixtures.TempDir()).path)
         mock_build_device_metadata.return_value = None
@@ -21997,8 +21975,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         backend = self.useFixture(
             fake_imagebackend.ImageBackendFixture(exists=exists))
 
-        image_meta = objects.ImageMeta.from_dict(
-            {'id': uuids.image_id, 'name': 'fake'})
+        if not image_meta_dict:
+            image_meta_dict = {'id': uuids.image_id, 'name': 'fake'}
+        image_meta = objects.ImageMeta.from_dict(image_meta_dict)
+
         network_info = _fake_network_info(self, 1)
         rescue_password = 'fake_password'
 
@@ -22061,6 +22041,29 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.assertEqual(
             [uuids.mdev1],
             doc.xpath("devices/*[@type='mdev']/source/address/@uuid"))
+
+    def test_rescue_with_different_hw_disk_bus(self):
+        params = {'config_drive': None, 'root_device_name': '/dev/vda'}
+        image_meta_dict = {
+            'id': uuids.image_id,
+            'name': 'fake',
+            'properties': {
+                'hw_disk_bus': 'scsi',
+                'hw_scsi_model': 'virtio-scsi'
+            }
+        }
+
+        instance = self._create_instance(params)
+        backend, doc = self._test_rescue(instance,
+                                         image_meta_dict=image_meta_dict)
+
+        domain_disk_device_name = doc.xpath('devices/disk/target/@dev')
+        # Assert that rescued instance will have scsi device name (sd*)
+        self.assertEqual(['sda', 'sdb'], domain_disk_device_name)
+
+        # Assert that instance object preserve virtio root_device_name
+        # (aarents): Bug #1835926
+        self.assertEqual('/dev/vda', instance.get('root_device_name'))
 
     @mock.patch('nova.virt.configdrive.ConfigDriveBuilder._make_iso9660')
     def test_rescue_config_drive(self, mock_mkisofs):
