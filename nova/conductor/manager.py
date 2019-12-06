@@ -595,8 +595,8 @@ class ComputeTaskManager(base.Base):
             context, instance, requested_networks)
 
     # NOTE(danms): This is never cell-targeted because it is only used for
-    # cellsv1 (which does not target cells directly) and n-cpu reschedules
-    # (which go to the cell conductor and thus are always cell-specific).
+    # n-cpu reschedules which go to the cell conductor and thus are always
+    # cell-specific.
     def build_instances(self, context, instances, image, filter_properties,
             admin_password, injected_files, requested_networks,
             security_groups, block_device_mapping=None, legacy_bdm=True,
@@ -617,9 +617,8 @@ class ComputeTaskManager(base.Base):
             flavor = objects.Flavor.get_by_id(context, flavor['id'])
             filter_properties = dict(filter_properties, instance_type=flavor)
 
-        # Older computes will not send a request_spec during reschedules, nor
-        # will the API send the request_spec if using cells v1, so we need
-        # to check and build our own if one is not provided.
+        # Older computes will not send a request_spec during reschedules so we
+        # need to check and build our own if one is not provided.
         if request_spec is None:
             legacy_request_spec = scheduler_utils.build_request_spec(
                 image, instances)
@@ -635,10 +634,10 @@ class ComputeTaskManager(base.Base):
             # during the below legacy conversion
             legacy_request_spec = request_spec.to_legacy_request_spec_dict()
 
-        # 'host_lists' will be None in one of two cases: when running cellsv1,
-        # or during a reschedule from a pre-Queens compute. In all other cases,
-        # it will be a list of lists, though the lists may be empty if there
-        # are no more hosts left in a rescheduling situation.
+        # 'host_lists' will be None during a reschedule from a pre-Queens
+        # compute. In all other cases, it will be a list of lists, though the
+        # lists may be empty if there are no more hosts left in a rescheduling
+        # situation.
         is_reschedule = host_lists is not None
         try:
             # check retry policy. Rather ugly use of instances[0]...
@@ -665,11 +664,10 @@ class ComputeTaskManager(base.Base):
             else:
                 # This is not a reschedule, so we need to call the scheduler to
                 # get appropriate hosts for the request.
-                # NOTE(gibi): We only call the scheduler if using cells v1 or
-                # we are rescheduling from a really old compute. In
-                # either case we do not support externally-defined resource
-                # requests, like port QoS. So no requested_resources are set
-                # on the RequestSpec here.
+                # NOTE(gibi): We only call the scheduler if we are rescheduling
+                # from a really old compute. In that case we do not support
+                # externally-defined resource requests, like port QoS. So no
+                # requested_resources are set on the RequestSpec here.
                 host_lists = self._schedule_instances(context, spec_obj,
                         instance_uuids, return_alternates=True)
         except Exception as exc:
