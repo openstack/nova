@@ -2803,7 +2803,8 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
 
         server = self._boot_and_check_allocations(
-            self.flavor1, source_hostname)
+            self.flavor1, source_hostname,
+            networks=[{'port': self.neutron.port_1['id']}])
         post = {
             'os-migrateLive': {
                 'host': dest_hostname,

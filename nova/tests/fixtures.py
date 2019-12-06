@@ -1641,6 +1641,14 @@ class NeutronFixture(fixtures.Fixture):
     def setUp(self):
         super(NeutronFixture, self).setUp()
 
+        # NOTE(gibi): This is the simplest way to unblock nova during live
+        # migration. A nicest way would be to actually send vif-plug events
+        # to the nova-api from NeutronFixture when the port is bound but
+        # calling nova API from this fixture needs a big surgery and sending
+        # event right at the binding request means that such event will arrive
+        # to nova earlier than the compute manager starts waiting for it.
+        self.test.flags(vif_plugging_timeout=0)
+
         self.test.stub_out(
             'nova.network.neutronv2.api.API.setup_networks_on_host',
             lambda *args, **kwargs: None)
