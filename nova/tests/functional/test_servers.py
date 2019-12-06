@@ -6022,7 +6022,7 @@ class PortResourceRequestBasedSchedulingTest(
 
         # And we expect not to have any allocation set in the port binding for
         # the port that doesn't have resource request
-        self.assertNotIn('binding:profile', updated_non_qos_port)
+        self.assertEqual({}, updated_non_qos_port['binding:profile'])
 
         self._delete_and_check_allocations(server)
 
@@ -6448,7 +6448,7 @@ class ServerMoveWithPortResourceRequestTest(
 
         # And we expect not to have any allocation set in the port binding for
         # the port that doesn't have resource request
-        self.assertNotIn('binding:profile', updated_non_qos_port)
+        self.assertEqual({}, updated_non_qos_port['binding:profile'])
 
         if migration_uuid:
             migration_allocations = self.placement_api.get(
@@ -6979,7 +6979,7 @@ class ServerMoveWithPortResourceRequestTest(
                          qos_binding_profile['allocation'])
         # And we expect not to have any allocation set in the port binding for
         # the port that doesn't have resource request
-        self.assertNotIn('binding:profile', updated_non_qos_port)
+        self.assertEqual({}, updated_non_qos_port['binding:profile'])
 
     def _check_allocation_during_evacuate(
             self, server, flavor, source_compute_rp_uuid, dest_compute_rp_uuid,
@@ -7050,7 +7050,7 @@ class ServerMoveWithPortResourceRequestTest(
 
         # And we expect not to have any allocation set in the port binding for
         # the port that doesn't have resource request
-        self.assertNotIn('binding:profile', updated_non_qos_port)
+        self.assertEqual({}, updated_non_qos_port['binding:profile'])
 
     def _check_allocation_after_evacuation_source_recovered(
             self, server, flavor, dest_compute_rp_uuid, non_qos_port,
@@ -7100,7 +7100,7 @@ class ServerMoveWithPortResourceRequestTest(
 
         # And we expect not to have any allocation set in the port binding for
         # the port that doesn't have resource request
-        self.assertNotIn('binding:profile', updated_non_qos_port)
+        self.assertEqual({}, updated_non_qos_port['binding:profile'])
 
     def test_evacuate_with_qos_port(self, host=None):
         non_qos_normal_port = self.neutron.port_1

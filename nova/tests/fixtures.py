@@ -1365,6 +1365,7 @@ class NeutronFixture(fixtures.Fixture):
         'tenant_id': tenant_id,
         'project_id': tenant_id,
         'device_id': '',
+        'binding:profile': {},
         'binding:vnic_type': 'normal',
         'binding:vif_type': 'ovs',
         'port_security_enabled': True,
@@ -1390,6 +1391,7 @@ class NeutronFixture(fixtures.Fixture):
         'tenant_id': tenant_id,
         'project_id': tenant_id,
         'device_id': '',
+        'binding:profile': {},
         'binding:vnic_type': 'normal',
         'binding:vif_type': 'ovs',
         'port_security_enabled': True,
@@ -1415,6 +1417,7 @@ class NeutronFixture(fixtures.Fixture):
         'tenant_id': tenant_id,
         'project_id': tenant_id,
         'device_id': '',
+        'binding:profile': {},
         'binding:vnic_type': 'normal',
         'binding:vif_type': 'ovs',
         'resource_request': {
@@ -1499,6 +1502,7 @@ class NeutronFixture(fixtures.Fixture):
         'project_id': tenant_id,
         'device_id': '',
         'resource_request': {},
+        'binding:profile': {},
         'binding:vnic_type': 'direct',
         'port_security_enabled': False,
     }
@@ -1527,6 +1531,7 @@ class NeutronFixture(fixtures.Fixture):
                 orc.NET_BW_EGR_KILOBIT_PER_SEC: 10000},
             "required": ["CUSTOM_PHYSNET2", "CUSTOM_VNIC_TYPE_DIRECT"]
         },
+        'binding:profile': {},
         'binding:vnic_type': 'direct',
         'port_security_enabled': False,
     }
@@ -1555,6 +1560,7 @@ class NeutronFixture(fixtures.Fixture):
                 orc.NET_BW_EGR_KILOBIT_PER_SEC: 10000},
             "required": ["CUSTOM_PHYSNET2", "CUSTOM_VNIC_TYPE_MACVTAP"]
         },
+        'binding:profile': {},
         'binding:vnic_type': 'macvtap',
         'port_security_enabled': False,
     }
