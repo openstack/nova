@@ -684,8 +684,7 @@ class VMOps(object):
         # With VIF whose status is active, neutron may not notify such event.
         # Don't get network-vif-plugged events from rescued VM or migrated VM
         timeout = CONF.vif_plugging_timeout
-        if (utils.is_neutron() and power_on and timeout and first_boot and
-                not rescue):
+        if power_on and timeout and first_boot and not rescue:
             return [('network-vif-plugged', vif['id'])
                 for vif in network_info if vif.get('active', True) is False]
         else:

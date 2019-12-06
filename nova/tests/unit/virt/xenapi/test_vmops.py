@@ -42,7 +42,6 @@ from nova import test
 from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.xenapi import stubs
-from nova import utils
 from nova.virt import fake
 from nova.virt.xenapi import agent as xenapi_agent
 from nova.virt.xenapi import fake as xenapi_fake
@@ -712,10 +711,8 @@ class SpawnTestCase(VMOpsTestBase):
     @mock.patch.object(vmops.VMOps, '_get_neutron_events',
                        return_value=[('network-vif-plugged', 1)])
     def test_spawn_with_neutron(self, mock_get_neutron_events):
-        self.flags(use_neutron=True)
         network_info = [{'id': 1, 'active': True}]
-        self.stub_out('nova.virt.xenapi.vmops.VMOps.'
-                      '_neutron_failed_callback',
+        self.stub_out('nova.virt.xenapi.vmops.VMOps._neutron_failed_callback',
                       lambda event_name, instance: None)
 
         self._test_spawn(network_info=network_info)
@@ -1115,8 +1112,7 @@ class SpawnTestCase(VMOpsTestBase):
         mock_resetnetwork.assert_called_once_with()
         mock_update_if_needed.assert_called_once_with('1.2.3')
 
-    @mock.patch.object(utils, 'is_neutron', return_value=True)
-    def test_get_neutron_event(self, mock_is_neutron):
+    def test_get_neutron_event(self):
         network_info = [{"active": False, "id": 1},
                         {"active": True, "id": 2},
                         {"active": False, "id": 3},
@@ -1131,21 +1127,7 @@ class SpawnTestCase(VMOpsTestBase):
         self.assertEqual("network-vif-plugged", events[1][0])
         self.assertEqual(3, events[1][1])
 
-    @mock.patch.object(utils, 'is_neutron', return_value=False)
-    def test_get_neutron_event_not_neutron_network(self, mock_is_neutron):
-        network_info = [{"active": False, "id": 1},
-                        {"active": True, "id": 2},
-                        {"active": False, "id": 3},
-                        {"id": 4}]
-        power_on = True
-        first_boot = True
-        rescue = False
-        events = self.vmops._get_neutron_events(network_info,
-                                                power_on, first_boot, rescue)
-        self.assertEqual([], events)
-
-    @mock.patch.object(utils, 'is_neutron', return_value=True)
-    def test_get_neutron_event_power_off(self, mock_is_neutron):
+    def test_get_neutron_event_power_off(self):
         network_info = [{"active": False, "id": 1},
                         {"active": True, "id": 2},
                         {"active": False, "id": 3},
@@ -1157,8 +1139,7 @@ class SpawnTestCase(VMOpsTestBase):
                                                 power_on, first_boot, rescue)
         self.assertEqual([], events)
 
-    @mock.patch.object(utils, 'is_neutron', return_value=True)
-    def test_get_neutron_event_not_first_boot(self, mock_is_neutron):
+    def test_get_neutron_event_not_first_boot(self):
         network_info = [{"active": False, "id": 1},
                         {"active": True, "id": 2},
                         {"active": False, "id": 3},
@@ -1170,8 +1151,7 @@ class SpawnTestCase(VMOpsTestBase):
                                                 power_on, first_boot, rescue)
         self.assertEqual([], events)
 
-    @mock.patch.object(utils, 'is_neutron', return_value=True)
-    def test_get_neutron_event_rescue(self, mock_is_neutron):
+    def test_get_neutron_event_rescue(self):
         network_info = [{"active": False, "id": 1},
                         {"active": True, "id": 2},
                         {"active": False, "id": 3},
