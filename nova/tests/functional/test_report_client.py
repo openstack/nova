@@ -1272,6 +1272,33 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
                     del alloc['generation']
         self.assertEqual(expected, actual)
 
+    def test_allocation_candidates_mappings(self):
+        """Do a complex GET /allocation_candidates query and make sure the
+        response contains the ``mappings`` keys we expect at Placement 1.34.
+        """
+        flavor = objects.Flavor(
+            vcpus=0, memory_mb=0, root_gb=0, ephemeral_gb=0, swap=0,
+            extra_specs={
+                'group_policy': 'none',
+                'resources_CPU:VCPU': 1,
+                'resources_MEM:MEMORY_MB': 1024,
+                'resources_DISK:DISK_GB': 10
+            })
+        req_spec = objects.RequestSpec(flavor=flavor, is_bfv=False)
+        with self._interceptor():
+            self._set_up_provider_tree()
+            acs = self.client.get_allocation_candidates(
+                self.context, utils.ResourceRequest(req_spec))[0]
+            # We're not going to validate all the allocations - Placement has
+            # tests for that - just make sure they're there.
+            self.assertEqual(3, len(acs))
+            # We're not going to validate all the mappings - Placement has
+            # tests for that - just make sure they're there.
+            for ac in acs:
+                self.assertIn('allocations', ac)
+                self.assertEqual({'_CPU', '_MEM', '_DISK'},
+                                 set(ac['mappings']))
+
     def test_get_allocations_for_provider_tree(self):
         with self._interceptor():
             # When the provider tree cache is empty (or we otherwise supply a
