@@ -269,7 +269,7 @@ order to determine which AZ the host aggregate(s) belong to, run:
 
 .. code-block:: console
 
-    $ openstack aggegrate list --long
+    $ openstack aggregate list --long
     $ openstack aggregate show my-aggregate
 
 Finally, to disassociate a host aggregate from an availability zone, run:

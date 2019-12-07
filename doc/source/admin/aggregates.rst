@@ -295,7 +295,7 @@ To list all aggregates and show information about a specific aggregate, run:
 
 .. code-block:: console
 
-    $ openstack aggegrate list
+    $ openstack aggregate list
     $ openstack aggregate show my-aggregate
 
 To set and unset a property on the aggregate, run:
