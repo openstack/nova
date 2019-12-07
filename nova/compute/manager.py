@@ -3437,6 +3437,15 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def reboot_instance(self, context, instance, block_device_info,
                         reboot_type):
+        @utils.synchronized(instance.uuid)
+        def do_reboot_instance(context, instance, block_device_info,
+                               reboot_type):
+            self._reboot_instance(context, instance, block_device_info,
+                                  reboot_type)
+        do_reboot_instance(context, instance, block_device_info, reboot_type)
+
+    def _reboot_instance(self, context, instance, block_device_info,
+                         reboot_type):
         """Reboot an instance on this host."""
         # acknowledge the request made it to the manager
         if reboot_type == "SOFT":
