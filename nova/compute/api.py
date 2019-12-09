@@ -295,7 +295,7 @@ class API(base.Base):
 
         Raises a QuotaError if any limit is exceeded.
         """
-        if injected_files is None:
+        if not injected_files:
             return
 
         # Check number of files first
@@ -330,7 +330,7 @@ class API(base.Base):
     def _check_metadata_properties_quota(self, context, metadata=None):
         """Enforce quota limits on metadata properties."""
         if not metadata:
-            metadata = {}
+            return
         if not isinstance(metadata, dict):
             msg = (_("Metadata type should be dict."))
             raise exception.InvalidMetadata(reason=msg)
