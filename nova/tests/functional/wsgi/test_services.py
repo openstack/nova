@@ -171,3 +171,38 @@ class TestServicesAPI(integrated_helpers.ProviderUsageBaseTestCase):
         log_output = self.stdlog.logger.output
         self.assertIn('Error updating resources for node host1.', log_output)
         self.assertIn('Failed to create resource provider host1', log_output)
+
+    def test_migrate_confirm_after_deleted_source_compute(self):
+        """Tests a scenario where a server is cold migrated and while in
+        VERIFY_RESIZE status the admin attempts to delete the source compute
+        and then the user tries to confirm the resize.
+        """
+        # Start a compute service and create a server there.
+        self._start_compute('host1')
+        host1_rp_uuid = self._get_provider_uuid_by_host('host1')
+        flavor = self.api.get_flavors()[0]
+        server = self._boot_and_check_allocations(flavor, 'host1')
+        # Start a second compute service so we can cold migrate there.
+        self._start_compute('host2')
+        host2_rp_uuid = self._get_provider_uuid_by_host('host2')
+        # Cold migrate the server to host2.
+        self._migrate_and_check_allocations(
+            server, flavor, host1_rp_uuid, host2_rp_uuid)
+        # Delete the source compute service.
+        service = self.admin_api.get_services(
+            binary='nova-compute', host='host1')[0]
+        self.admin_api.api_delete('/os-services/%s' % service['id'])
+        # FIXME(mriedem): This is bug 1852610 where the compute service is
+        # deleted but the resource provider is not because there are still
+        # migration-based allocations against the source node provider.
+        resp = self.placement_api.get('/resource_providers/%s' % host1_rp_uuid)
+        self.assertEqual(200, resp.status)
+        self.assertFlavorMatchesUsage(host1_rp_uuid, flavor)
+        # Now try to confirm the migration.
+        # FIXME(mriedem): This will fail until bug 1852610 is fixed and the
+        # source compute service delete is blocked while there is an
+        # in-progress migration involving the node.
+        self.assertNotIn('ComputeHostNotFound', self.stdlog.logger.output)
+        self.api.post_server_action(server['id'], {'confirmResize': None})
+        self._wait_for_state_change(self.api, server, 'ERROR')
+        self.assertIn('ComputeHostNotFound', self.stdlog.logger.output)
