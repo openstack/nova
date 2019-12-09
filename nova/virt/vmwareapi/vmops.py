@@ -1372,6 +1372,8 @@ class VMwareVMOps(object):
         vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
 
     def _resize_disk(self, instance, vm_ref, vmdk, flavor):
+        extra_specs = self._get_extra_specs(instance.flavor,
+                                            instance.image_meta)
         if (flavor.root_gb > instance.flavor.root_gb and
             flavor.root_gb > vmdk.capacity_in_bytes / units.Gi):
             root_disk_in_kb = flavor.root_gb * units.Mi
@@ -1392,9 +1394,12 @@ class VMwareVMOps(object):
                               original_disk)
             ds_util.disk_move(self._session, dc_info.ref, resized_disk,
                               vmdk.path)
-            self._volumeops.attach_disk_to_vm(vm_ref, instance,
-                                              vmdk.adapter_type,
-                                              vmdk.disk_type, vmdk.path)
+        else:
+            self._volumeops.detach_disk_from_vm(vm_ref, instance, vmdk.device)
+
+        self._volumeops.attach_disk_to_vm(
+            vm_ref, instance, vmdk.adapter_type, vmdk.disk_type, vmdk.path,
+            disk_io_limits=extra_specs.disk_io_limits)
 
     def _remove_ephemerals_and_swap(self, vm_ref):
         devices = vm_util.get_ephemerals(self._session, vm_ref)
@@ -1492,6 +1497,8 @@ class VMwareVMOps(object):
 
     def _revert_migration_update_disks(self, vm_ref, instance, vmdk,
                                        block_device_info):
+        extra_specs = self._get_extra_specs(instance.flavor,
+                                            instance.image_meta)
         ds_ref = vmdk.device.backing.datastore
         dc_info = self.get_datacenter_ref_and_name(ds_ref)
         folder = ds_obj.DatastorePath.parse(vmdk.path).dirname
@@ -1507,9 +1514,12 @@ class VMwareVMOps(object):
             ds_util.disk_delete(self._session, dc_info.ref, vmdk.path)
             ds_util.disk_move(self._session, dc_info.ref,
                               str(original_disk), vmdk.path)
-            self._volumeops.attach_disk_to_vm(vm_ref, instance,
-                                              vmdk.adapter_type,
-                                              vmdk.disk_type, vmdk.path)
+        else:
+            self._volumeops.detach_disk_from_vm(vm_ref, instance,
+                                                vmdk.device)
+        self._volumeops.attach_disk_to_vm(
+            vm_ref, instance, vmdk.adapter_type, vmdk.disk_type, vmdk.path,
+            disk_io_limits=extra_specs.disk_io_limits)
         # Reconfigure ephemerals
         self._remove_ephemerals_and_swap(vm_ref)
         self._resize_create_ephemerals_and_swap(vm_ref, instance,
