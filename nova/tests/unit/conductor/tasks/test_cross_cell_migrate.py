@@ -1203,13 +1203,14 @@ class ConfirmResizeTaskTestCase(test.NoDBTestCase):
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     def test_send_resize_confirm_notification(self, mock_versioned_notify,
                                               mock_legacy_notify):
+        self.flags(host='fake-conductor-host')
         instance = self.task.instance
         self.task._send_resize_confirm_notification(instance, 'fake-phase')
         mock_legacy_notify.assert_called_once_with(
             self.task.legacy_notifier, instance._context, instance,
             'resize.confirm.fake-phase')
         mock_versioned_notify.assert_called_once_with(
-            instance._context, instance, instance.host,
+            instance._context, instance, 'fake-conductor-host',
             action=fields.NotificationAction.RESIZE_CONFIRM,
             phase='fake-phase')
 
