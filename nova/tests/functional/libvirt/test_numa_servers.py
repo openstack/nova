@@ -13,26 +13,26 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 import six
 
-import mock
 from oslo_config import cfg
 from oslo_log import log as logging
 
 from nova.conf import neutron as neutron_conf
 from nova import context as nova_context
 from nova import objects
+
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.functional.libvirt import base
+from nova.tests.unit import fake_notifier
 from nova.tests.unit.virt.libvirt import fakelibvirt
-
-
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
 class NUMAServersTestBase(base.ServersTestBase):
-
     ADDITIONAL_FILTERS = ['NUMATopologyFilter']
 
     def setUp(self):
@@ -925,3 +925,127 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         network_metadata = args[1].network_metadata
         self.assertIsNotNone(network_metadata)
         self.assertEqual(set(['foo']), network_metadata.physnets)
+
+
+class NUMAServersRebuildTests(NUMAServersTestBase):
+
+    def setUp(self):
+        super().setUp()
+        images = self.api.get_images()
+        # save references to first two image for server create and rebuild
+        self.image_ref_0 = images[0]['id']
+        self.image_ref_1 = images[1]['id']
+
+        fake_notifier.stub_notifier(self)
+        self.addCleanup(fake_notifier.reset)
+
+    def _create_active_server(self, server_args=None):
+        basic_server = {
+            'flavorRef': 1,
+            'name': 'numa_server',
+            'networks': [{
+                'uuid': nova_fixtures.NeutronFixture.network_1['id']
+            }],
+            'imageRef': self.image_ref_0
+        }
+        if server_args:
+            basic_server.update(server_args)
+        server = self.api.post_server({'server': basic_server})
+        return self._wait_for_state_change(server, 'ACTIVE')
+
+    def _rebuild_server(self, active_server, image_ref):
+        args = {"rebuild": {"imageRef": image_ref}}
+        self.api.api_post(
+            'servers/%s/action' % active_server['id'], args)
+        fake_notifier.wait_for_versioned_notifications('instance.rebuild.end')
+        return self._wait_for_state_change(active_server, 'ACTIVE')
+
+    def test_rebuild_server_with_numa(self):
+        """Create a NUMA instance and ensure it can be rebuilt.
+        """
+
+        # Create a flavor consuming 2 pinned cpus with an implicit
+        # numa topology of 1 virtual numa node.
+        extra_spec = {'hw:cpu_policy': 'dedicated'}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+
+        # Create a host with 4 physical cpus to allow rebuild leveraging
+        # the free space to ensure the numa topology filter does not
+        # eliminate the host.
+        host_info = fakelibvirt.HostInfo(cpu_nodes=1, cpu_sockets=1,
+                                         cpu_cores=4, kB_mem=15740000)
+        fake_connection = self._get_connection(host_info=host_info)
+        self.mock_conn.return_value = fake_connection
+        self.compute = self.start_service('compute', host='compute1')
+
+        server = self._create_active_server(
+            server_args={"flavorRef": flavor_id})
+
+        # this should succeed as the NUMA topology has not changed
+        # and we have enough resources on the host. We rebuild with
+        # a different image to force the rebuild to query the scheduler
+        # to validate the host.
+        self._rebuild_server(server, self.image_ref_1)
+
+    def test_rebuild_server_with_numa_inplace_fails(self):
+        """Create a NUMA instance and ensure in place rebuild fails.
+        """
+
+        # Create a flavor consuming 2 pinned cpus with an implicit
+        # numa topology of 1 virtual numa node.
+        extra_spec = {'hw:cpu_policy': 'dedicated'}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+
+        # cpu_cores is set to 2 to ensure that
+        # we have enough space to boot the vm but not enough space to rebuild
+        # by doubling  the resource use during scheduling.
+        host_info = fakelibvirt.HostInfo(
+            cpu_nodes=1, cpu_sockets=1, cpu_cores=2, kB_mem=15740000)
+        fake_connection = self._get_connection(host_info=host_info)
+        self.mock_conn.return_value = fake_connection
+        self.compute = self.start_service('compute', host='compute1')
+
+        server = self._create_active_server(
+            server_args={"flavorRef": flavor_id})
+
+        # TODO(sean-k-mooney): this should pass but i currently expect it to
+        # fail because the NUMA topology filter does not support in place
+        # rebuild and we have used all the resources on the compute node.
+        self.assertRaises(
+            client.OpenStackApiException, self._rebuild_server,
+            server, self.image_ref_1)
+
+    def test_rebuild_server_with_different_numa_topology_fails(self):
+        """Create a NUMA instance and ensure inplace rebuild fails.
+        """
+
+        # Create a flavor consuming 2 pinned cpus with an implicit
+        # numa topology of 1 virtual numa node.
+        extra_spec = {'hw:cpu_policy': 'dedicated'}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+
+        host_info = fakelibvirt.HostInfo(
+            cpu_nodes=2, cpu_sockets=1, cpu_cores=4, kB_mem=15740000)
+        fake_connection = self._get_connection(host_info=host_info)
+        self.mock_conn.return_value = fake_connection
+        self.compute = self.start_service('compute', host='compute1')
+
+        server = self._create_active_server(
+            server_args={"flavorRef": flavor_id})
+
+        # the original vm had an implicit numa topology of 1 virtual numa nodes
+        # so we alter the requested numa topology in image_ref_1 to request
+        # 2 virtual numa nodes.
+        ctx = nova_context.get_admin_context()
+        image_meta = {'properties': {'hw_numa_nodes': 2}}
+        self.fake_image_service.update(ctx, self.image_ref_1, image_meta)
+
+        # NOTE(sean-k-mooney): this should fail because rebuild uses noop
+        # claims therefor it is not allowed for the numa topology or resource
+        # usage to change during a rebuild.
+        ex = self.assertRaises(
+            client.OpenStackApiException, self._rebuild_server,
+            server, self.image_ref_1)
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn("An instance's NUMA typology cannot be changed",
+                      six.text_type(ex))
