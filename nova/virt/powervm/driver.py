@@ -473,7 +473,8 @@ class PowerVMDriver(driver.ComputeDriver):
         vm.power_on(self.adapter, instance)
 
     def reboot(self, context, instance, network_info, reboot_type,
-               block_device_info=None, bad_volumes_callback=None):
+               block_device_info=None, bad_volumes_callback=None,
+               accel_info=None):
         """Reboot the specified instance.
 
         After this is called successfully, the instance's state
@@ -489,6 +490,8 @@ class PowerVMDriver(driver.ComputeDriver):
         :param block_device_info: Info pertaining to attached volumes
         :param bad_volumes_callback: Function to handle any bad volumes
             encountered
+        :param accel_info: List of accelerator request dicts. The exact
+            data struct is doc'd in nova/virt/driver.py::spawn().
         """
         self._log_operation(reboot_type + ' reboot', instance)
         vm.reboot(self.adapter, instance, reboot_type == 'HARD')

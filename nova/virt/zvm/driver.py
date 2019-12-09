@@ -405,7 +405,8 @@ class ZVMDriver(driver.ComputeDriver):
         self._hypervisor.guest_unpause(instance.name)
 
     def reboot(self, context, instance, network_info, reboot_type,
-               block_device_info=None, bad_volumes_callback=None):
+               block_device_info=None, bad_volumes_callback=None,
+               accel_info=None):
 
         if reboot_type == 'SOFT':
             self._hypervisor.guest_reboot(instance.name)

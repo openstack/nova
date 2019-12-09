@@ -1371,7 +1371,8 @@ class IronicDriver(virt_driver.ComputeDriver):
                  node.uuid, instance=instance)
 
     def reboot(self, context, instance, network_info, reboot_type,
-               block_device_info=None, bad_volumes_callback=None):
+               block_device_info=None, bad_volumes_callback=None,
+               accel_info=None):
         """Reboot the specified instance.
 
         NOTE: Unlike the libvirt driver, this method does not delete
@@ -1386,7 +1387,8 @@ class IronicDriver(virt_driver.ComputeDriver):
             Ignored by this driver.
         :param bad_volumes_callback: Function to handle any bad volumes
             encountered. Ignored by this driver.
-
+        :param accel_info: List of accelerator request dicts. The exact
+            data struct is doc'd in nova/virt/driver.py::spawn().
         """
         LOG.debug('Reboot(type %s) called for instance',
                   reboot_type, instance=instance)
