@@ -705,6 +705,8 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         :param flavor: the flavor the instance will be booted with
         :param source_hostname: the name of the host the instance will be
                                 booted on
+        :param networks: list of network dicts passed to the server create API
+            or "none" or "auto"
         :return: the API representation of the booted instance
         """
         server_req = self._build_minimal_create_server_request(
