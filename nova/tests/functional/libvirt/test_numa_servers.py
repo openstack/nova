@@ -15,8 +15,7 @@
 
 import mock
 import six
-
-from testtools import skip
+import testtools
 
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -262,7 +261,7 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
     # would be violated and it should fail at that point not when the
     # instance is rebuilt. This is a latent bug which will be addressed
     # in a separate patch.
-    @skip("bug 1855332")
+    @testtools.skip("bug 1855332")
     def test_attach_interface_with_network_affinity_violation(self):
         extra_spec = {'hw:numa_nodes': '1'}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
@@ -387,7 +386,7 @@ class NUMAServersRebuildTests(NUMAServersTestBase):
     def setUp(self):
         super(NUMAServersRebuildTests, self).setUp()
         images = self.api.get_images()
-        # save references to first two image for server create and rebuild
+        # save references to first two images for server create and rebuild
         self.image_ref_0 = images[0]['id']
         self.image_ref_1 = images[1]['id']
 
@@ -451,9 +450,9 @@ class NUMAServersRebuildTests(NUMAServersTestBase):
         extra_spec = {'hw:cpu_policy': 'dedicated'}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
 
-        # cpu_cores is set to 2 to ensure that
-        # we have enough space to boot the vm but not enough space to rebuild
-        # by doubling  the resource use during scheduling.
+        # cpu_cores is set to 2 to ensure that we have enough space
+        # to boot the vm but not enough space to rebuild
+        # by doubling the resource use during scheduling.
         host_info = fakelibvirt.NUMAHostInfo(
             cpu_nodes=1, cpu_sockets=1, cpu_cores=2, kB_mem=15740000)
         fake_connection = self._get_connection(host_info=host_info)
@@ -484,7 +483,7 @@ class NUMAServersRebuildTests(NUMAServersTestBase):
         server = self._create_active_server(
             server_args={"flavorRef": flavor_id})
 
-        # the original vm had an implicit numa topology of 1 virtual numa nodes
+        # The original vm had an implicit numa topology of 1 virtual numa node
         # so we alter the requested numa topology in image_ref_1 to request
         # 2 virtual numa nodes.
         ctx = nova_context.get_admin_context()
@@ -492,11 +491,11 @@ class NUMAServersRebuildTests(NUMAServersTestBase):
         self.fake_image_service.update(ctx, self.image_ref_1, image_meta)
 
         # NOTE(sean-k-mooney): this should fail because rebuild uses noop
-        # claims therefor it is not allowed for the numa topology or resource
+        # claims therefore it is not allowed for the NUMA topology or resource
         # usage to change during a rebuild.
         ex = self.assertRaises(
             client.OpenStackApiException, self._rebuild_server,
             server, self.image_ref_1)
         self.assertEqual(400, ex.response.status_code)
-        self.assertIn("An instance's NUMA typology cannot be changed",
+        self.assertIn("An instance's NUMA topology cannot be changed",
                       six.text_type(ex))

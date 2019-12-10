@@ -3505,8 +3505,6 @@ class API(base.Base):
         :param instance: nova.objects.instance.Instance object
         :param image: the new image the instance will be rebuilt with.
         :param flavor: the flavor of the current instance.
-
-        :returns: True or raises on failure.
         :raises: nova.exception.ImageNUMATopologyRebuildConflict
         """
 
@@ -3521,24 +3519,27 @@ class API(base.Base):
 
         # early out for non NUMA instances
         if old_constraints is None and new_constraints is None:
-            # return true for easy unit testing
-            return True
+            return
 
-        # if only one of the constrains are non-None (or 'set') then the
+        # if only one of the constraints are non-None (or 'set') then the
         # constraints changed so raise an exception.
         if old_constraints is None or new_constraints is None:
+            action = "removing" if old_constraints else "introducing"
+            LOG.debug("NUMA rebuild validation failed. The requested image "
+                      "would alter the NUMA constraints by %s a NUMA "
+                      "topology.", action, instance=instance)
             raise exception.ImageNUMATopologyRebuildConflict()
 
-        # otherwise since both the old a new constrains are non none compare
+        # otherwise since both the old a new constraints are non none compare
         # them as dictionaries.
         old = old_constraints.obj_to_primitive()
         new = new_constraints.obj_to_primitive()
         if old != new:
+            LOG.debug("NUMA rebuild validation failed. The requested image "
+                      "conflicts with the existing NUMA constraints.",
+                      instance=instance)
             raise exception.ImageNUMATopologyRebuildConflict()
         # TODO(sean-k-mooney): add PCI NUMA affinity policy check.
-
-        # return true for easy unit testing
-        return True
 
     @staticmethod
     def _check_quota_for_upsize(context, instance, current_flavor, new_flavor):
