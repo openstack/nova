@@ -13,14 +13,12 @@
 #    under the License.
 
 from oslo_log import log as logging
-import webob
 
 from nova.api.openstack.compute.schemas import server_external_events
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute
 from nova import context as nova_context
-from nova.i18n import _
 from nova import objects
 from nova.policies import server_external_events as see_policies
 
@@ -65,7 +63,7 @@ class ServerExternalEventsController(wsgi.Controller):
 
         return instances
 
-    @wsgi.expected_errors((403, 404))
+    @wsgi.expected_errors(403)
     @wsgi.response(200)
     @validation.schema(server_external_events.create, '2.0', '2.50')
     @validation.schema(server_external_events.create_v251, '2.51', '2.75')
@@ -146,9 +144,6 @@ class ServerExternalEventsController(wsgi.Controller):
         if accepted_events:
             self.compute_api.external_instance_event(
                 context, accepted_instances, accepted_events)
-        else:
-            msg = _('No instances found for any event')
-            raise webob.exc.HTTPNotFound(explanation=msg)
 
         # FIXME(cyeoh): This needs some infrastructure support so that
         # we have a general way to do this

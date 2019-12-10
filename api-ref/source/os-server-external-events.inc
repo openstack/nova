@@ -32,11 +32,15 @@ updated ``code`` and ``status`` indicating their level of success.
 Normal response codes: 200, 207
 
 A 200 will be returned if all events succeeded, 207 will be returned
-if some events could not be processed. The ``code`` attribute for the
+if any events could not be processed. The ``code`` attribute for the
 event will explain further what went wrong.
 
-Error response codes: badRequest(400), unauthorized(401), forbidden(403),
-itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403)
+
+.. note:: Prior to the fix for `bug 1855752`_, error response code 404 may be
+          erroneously returned when all events failed.
+
+.. _bug 1855752: https://bugs.launchpad.net/nova/+bug/1855752
 
 Request
 -------
