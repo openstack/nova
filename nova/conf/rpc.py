@@ -28,6 +28,7 @@ Operations with RPC calls that utilize this value:
 
 * live migration
 * scheduling
+* volume attach
 
 Related options:
 
