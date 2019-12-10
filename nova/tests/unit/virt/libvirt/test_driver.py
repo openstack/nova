@@ -1010,6 +1010,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                         'Driver capabilities for '
                         '\'supports_image_type_qcow2\' '
                         'is invalid')
+        self.assertFalse(drvr.capabilities['supports_image_type_ploop'],
+                         'Driver capabilities for '
+                         '\'supports_image_type_ploop\' '
+                         'is invalid')
 
     def test_driver_capabilities_qcow2_with_rbd(self):
         self.flags(images_type='rbd', group='libvirt')
@@ -1038,6 +1042,18 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.flags(force_raw_images=True)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertTrue(drvr.capabilities['supports_image_type_qcow2'])
+
+    def test_driver_capabilities_ploop_with_virtuozzo(self):
+        self.flags(virt_type='kvm', group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertFalse(drvr.capabilities['supports_image_type_ploop'],
+                         'Driver capabilities for '
+                         '\'supports_image_type_ploop\' '
+                         'is invalid when virt_type=kvm')
+
+        self.flags(virt_type='parallels', group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertTrue(drvr.capabilities['supports_image_type_ploop'])
 
     def create_fake_libvirt_mock(self, **kwargs):
         """Defining mocks for LibvirtDriver(libvirt is not used)."""

@@ -122,6 +122,8 @@ CAPABILITY_TRAITS_MAP = {
     "supports_image_type_vhd": os_traits.COMPUTE_IMAGE_TYPE_VHD,
     "supports_image_type_vhdx": os_traits.COMPUTE_IMAGE_TYPE_VHDX,
     "supports_image_type_vmdk": os_traits.COMPUTE_IMAGE_TYPE_VMDK,
+    # Added in os-traits 2.0.0
+    "supports_image_type_ploop": os_traits.COMPUTE_IMAGE_TYPE_PLOOP,
 }
 
 
@@ -183,6 +185,7 @@ class ComputeDriver(object):
         "supports_image_type_vhd": False,
         "supports_image_type_vhdx": False,
         "supports_image_type_vmdk": False,
+        "supports_image_type_ploop": False,
     }
 
     # Indicates if this driver will rebalance nodes among compute service

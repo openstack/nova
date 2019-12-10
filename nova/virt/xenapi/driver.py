@@ -82,6 +82,7 @@ class XenAPIDriver(driver.ComputeDriver):
         "supports_image_type_vhd": True,
         "supports_image_type_vhdx": False,
         "supports_image_type_vmdk": False,
+        "supports_image_type_ploop": False,
     }
 
     def __init__(self, virtapi, read_only=False):

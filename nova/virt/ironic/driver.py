@@ -176,6 +176,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         "supports_image_type_vhd": False,
         "supports_image_type_vhdx": False,
         "supports_image_type_vmdk": False,
+        "supports_image_type_ploop": False,
     }
 
     # This driver is capable of rebalancing nodes between computes.

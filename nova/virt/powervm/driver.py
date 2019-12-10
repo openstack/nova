@@ -90,6 +90,7 @@ class PowerVMDriver(driver.ComputeDriver):
             "supports_image_type_vhd": False,
             "supports_image_type_vhdx": False,
             "supports_image_type_vmdk": False,
+            "supports_image_type_ploop": False,
         }
         super(PowerVMDriver, self).__init__(virtapi)
 
