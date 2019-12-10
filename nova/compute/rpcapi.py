@@ -964,7 +964,9 @@ class ComputeAPI(object):
         version = '5.0'
         client = self.router.client(ctxt)
         cctxt = client.prepare(server=_compute_host(None, instance),
-                               version=version)
+                               version=version,
+                               call_monitor_timeout=CONF.rpc_response_timeout,
+                               timeout=CONF.long_rpc_timeout)
         return cctxt.call(ctxt, 'reserve_block_device_name', **kw)
 
     def backup_instance(self, ctxt, instance, image_id, backup_type,
