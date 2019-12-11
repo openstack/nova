@@ -78,6 +78,11 @@ class ResourceRequest(object):
 
             This does *not* yet handle ``member_of[$S]``.
 
+        The string suffix is used as the RequestGroup.requester_id to
+        facilitate mapping of requests to allocation candidates using the
+        ``mappings`` piece of the response added in Placement microversion 1.34
+        https://docs.openstack.org/placement/train/specs/train/implemented/placement-resource-provider-request-group-mapping-in-allocation-candidates.html  # noqa
+
         For image metadata, traits are extracted from the ``traits_required``
         property, if present.
 
@@ -294,7 +299,9 @@ class ResourceRequest(object):
 
     def get_request_group(self, ident):
         if ident not in self._rg_by_id:
-            rq_grp = objects.RequestGroup(use_same_provider=bool(ident))
+            rq_grp = objects.RequestGroup(
+                use_same_provider=bool(ident),
+                requester_id=ident)
             self._rg_by_id[ident] = rq_grp
         return self._rg_by_id[ident]
 
@@ -304,24 +311,46 @@ class ResourceRequest(object):
         The groups coming from the flavor can have arbitrary suffixes; those
         are guaranteed to be unique within the flavor.
 
-        A group coming from "outside" (ports, device profiles) must be given a
-        suffix that is unique in combination with suffixes from the flavor.
+        A group coming from "outside" (ports, device profiles) must be
+        associated with a requester_id, such as a port UUID. We use this
+        requester_id as the group suffix (but ensure that it is unique in
+        combination with suffixes from the flavor).
 
-        .. todo:: Tie suffixes to RequestGroup.requester_id
+        Groups coming from "outside" are not allowed to be no-ops. That is,
+        they must provide resources and/or required/forbidden traits/aggregates
 
-        :param request_group: the RequestGroup to be added
+        :param request_group: the RequestGroup to be added.
+        :raise: ValueError if request_group has no requester_id, or if it
+            provides no resources or (required/forbidden) traits or aggregates.
+        :raise: RequestGroupSuffixConflict if request_group.requester_id
+            already exists in this ResourceRequest.
         """
-        # Generate a unique suffix by peeling out all the suffixes that are
-        # integers (respond to int()) and adding 1 to the highest one.
-        max_ident = 0
-        for ident in self._rg_by_id:
-            try:
-                max_ident = max(int(ident), max_ident)
-            except (TypeError, ValueError):
-                # Non-numeric or None (unsuffixed)
-                continue
+        # NOTE(efried): Deliberately check False-ness rather than None-ness
+        # here, since both would result in the unsuffixed request group being
+        # used, and that's bad.
+        if not request_group.requester_id:
+            # NOTE(efried): An "outside" RequestGroup is created by a
+            # programmatic agent and that agent is responsible for guaranteeing
+            # the presence of a unique requester_id. This is in contrast to
+            # flavor extra_specs where a human is responsible for the group
+            # suffix.
+            raise ValueError(
+                _('Missing requester_id in RequestGroup! This is probably a '
+                  'programmer error. %s') % request_group)
 
-        self._rg_by_id[max_ident + 1] = request_group
+        if request_group.is_empty():
+            # NOTE(efried): It is up to the calling code to enforce a nonempty
+            # RequestGroup with suitable logic and exceptions.
+            raise ValueError(
+                _('Refusing to add no-op RequestGroup with requester_id=%s. '
+                  'This is a probably a programmer error.') %
+                request_group.requester_id)
+
+        if request_group.requester_id in self._rg_by_id:
+            raise exception.RequestGroupSuffixConflict(
+                suffix=request_group.requester_id)
+
+        self._rg_by_id[request_group.requester_id] = request_group
 
     def _add_resource(self, groupid, rclass, amount):
         self.get_request_group(groupid).add_resource(rclass, amount)
