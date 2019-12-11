@@ -3276,6 +3276,18 @@ class LibvirtConfigGuestVideoTest(LibvirtConfigBaseTest):
                     <model type='qxl'/>
                 </video>""")
 
+    def test_config_video_driver_virtio(self):
+        obj = config.LibvirtConfigGuestVideo()
+        obj.type = 'virtio'
+
+        self.assertTrue(obj.uses_virtio)
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+                <video>
+                    <model type='virtio'/>
+                </video>""")
+
     def test_config_video_driver_vram_heads(self):
         obj = config.LibvirtConfigGuestVideo()
         obj.type = 'qxl'
@@ -3356,6 +3368,8 @@ class LibvirtConfigGuestControllerTest(LibvirtConfigBaseTest):
         obj.index = 0
         obj.model = 'virtio-scsi'
         obj.driver_iommu = True
+
+        self.assertTrue(obj.uses_virtio)
 
         xml = obj.to_xml()
         self.assertXmlEqual(xml, """
