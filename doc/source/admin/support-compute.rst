@@ -15,6 +15,7 @@ you how to troubleshoot Compute.
    :maxdepth: 1
 
    troubleshooting/orphaned-allocations.rst
+   troubleshooting/rebuild-placement-db.rst
 
 
 Compute service logging
