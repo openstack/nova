@@ -1141,7 +1141,7 @@ class IronicDriver(virt_driver.ComputeDriver):
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, allocations, network_info=None,
-              block_device_info=None, power_on=True):
+              block_device_info=None, power_on=True, accel_info=None):
         """Deploy an instance.
 
         :param context: The security context.
@@ -1158,6 +1158,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param network_info: Instance network information.
         :param block_device_info: Instance block device
             information.
+        :param arqs: Accelerator requests for this instance.
         :param power_on: True if the instance should be powered on, False
                          otherwise
         """

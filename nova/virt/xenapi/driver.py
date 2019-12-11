@@ -215,7 +215,7 @@ class XenAPIDriver(driver.ComputeDriver):
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, allocations, network_info=None,
-              block_device_info=None, power_on=True):
+              block_device_info=None, power_on=True, accel_info=None):
         """Create VM instance."""
         vgpu_info = self._get_vgpu_info(allocations)
         self._vmops.spawn(context, instance, image_meta, injected_files,

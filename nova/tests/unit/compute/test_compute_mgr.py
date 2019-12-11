@@ -6175,6 +6175,46 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             mock.call(self.instance.uuid),
             mock.call(self.instance.uuid, only_resolved=True)])
 
+    @mock.patch.object(fake_driver.FakeDriver, 'spawn')
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocations_for_consumer')
+    @mock.patch.object(manager.ComputeManager, '_get_request_group_mapping')
+    @mock.patch.object(manager.ComputeManager, '_check_trusted_certs')
+    @mock.patch.object(manager.ComputeManager, '_check_device_tagging')
+    @mock.patch.object(compute_utils, 'notify_about_instance_create')
+    @mock.patch.object(manager.ComputeManager, '_notify_about_instance_usage')
+    def test_spawn_called_with_accel_info(self, mock_ins_usage,
+            mock_ins_create, mock_dev_tag, mock_certs, mock_req_group_map,
+            mock_get_allocations, mock_ins_save, mock_spawn):
+
+        accel_info = [{'k1': 'v1', 'k2': 'v2'}]
+        @contextlib.contextmanager
+        def fake_build_resources(compute_mgr, *args, **kwargs):
+            yield {
+                'block_device_info': None,
+                'network_info': None,
+                'accel_info': accel_info,
+            }
+
+        self.stub_out('nova.compute.manager.ComputeManager._build_resources',
+                      fake_build_resources)
+        mock_req_group_map.return_value = None
+        mock_get_allocations.return_value = mock.sentinel.allocation
+
+        self.compute._build_and_run_instance(self.context, self.instance,
+            self.image, injected_files=self.injected_files,
+            admin_password=self.admin_pass,
+            requested_networks=self.requested_networks,
+            security_groups=self.security_groups,
+            block_device_mapping=self.block_device_mapping,
+            node=self.node, limits=self.limits,
+            filter_properties=self.filter_properties)
+
+        mock_spawn.assert_called_once_with(self.context, self.instance,
+            mock.ANY, self.injected_files, self.admin_pass, mock.ANY,
+            network_info=None, block_device_info=None, accel_info=accel_info)
+
     def test_build_and_run_instance_called_with_proper_args(self):
         self._test_build_and_run_instance()
 
@@ -6373,7 +6413,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_spawn.assert_called_once_with(self.context, self.instance,
             test.MatchType(objects.ImageMeta), self.injected_files,
             self.admin_pass, self.allocations, network_info=self.network_info,
-            block_device_info=self.block_device_info)
+            block_device_info=self.block_device_info, accel_info=[])
 
     @mock.patch.object(manager.ComputeManager, '_build_and_run_instance')
     @mock.patch.object(conductor_api.ComputeTaskAPI, 'build_instances')
@@ -6864,7 +6904,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             self.context, self.instance, test.MatchType(objects.ImageMeta),
             self.injected_files, self.admin_pass, self.allocations,
             network_info=self.network_info,
-            block_device_info=self.block_device_info)
+            block_device_info=self.block_device_info, accel_info=[])
 
     def test_instance_not_found(self):
         got_exc = exception.InstanceNotFound(instance_id=1)
@@ -6999,7 +7039,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 test.MatchType(objects.ImageMeta),
                 self.injected_files, self.admin_pass, self.allocations,
                 network_info=self.network_info,
-                block_device_info=self.block_device_info)])
+                block_device_info=self.block_device_info, accel_info=[])])
 
             _shutdown_instance.assert_called_once_with(self.context,
                     self.instance, self.block_device_mapping,

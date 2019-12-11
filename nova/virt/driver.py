@@ -349,7 +349,7 @@ class ComputeDriver(object):
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, allocations, network_info=None,
-              block_device_info=None, power_on=True):
+              block_device_info=None, power_on=True, accel_info=None):
         """Create a new instance/VM/domain on the virtualization platform.
 
         Once this successfully completes, the instance should be
@@ -376,6 +376,22 @@ class ComputeDriver(object):
                                   attached to the instance.
         :param power_on: True if the instance should be powered on, False
                          otherwise
+        :param arqs: List of bound accelerator requests for this instance.
+            [
+             {'uuid': $arq_uuid,
+              'device_profile_name': $dp_name,
+              'device_profile_group_id': $dp_request_group_index,
+              'state': 'Bound',
+              'device_rp_uuid': $resource_provider_uuid,
+              'hostname': $host_nodename,
+              'instance_uuid': $instance_uuid,
+              'attach_handle_info': {  # PCI bdf
+                'bus': '0c', 'device': '0', 'domain': '0000', 'function': '0'},
+              'attach_handle_type': 'PCI'
+                   # or 'TEST_PCI' for Cyborg fake driver
+             }
+            ]
+            Also doc'd in nova/accelerator/cyborg.py::get_arqs_for_instance()
         """
         raise NotImplementedError()
 
