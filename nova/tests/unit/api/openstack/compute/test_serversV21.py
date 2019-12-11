@@ -228,22 +228,14 @@ class ControllerTest(test.TestCase):
     def setUp(self):
         super(ControllerTest, self).setUp()
         self.flags(use_ipv6=False)
-        # Neutron security groups are tested in test_neutron_security_groups.py
-        self.flags(use_neutron=False)
         fakes.stub_out_nw_api(self)
         fakes.stub_out_key_pair_funcs(self)
         fake.stub_out_image_service(self)
-        security_groups = [
-            {'name': 'fake-0-0', 'id': 1, 'description': 'foo',
-             'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-             'deleted_at': None, 'updated_at': None, 'created_at': None},
-            {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
-             'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-             'deleted_at': None, 'updated_at': None, 'created_at': None}]
+        fakes.stub_out_secgroup_api(
+            self, security_groups=[{'name': 'default'}])
         return_server = fakes.fake_compute_get(id=2, availability_zone='nova',
                                                launched_at=None,
                                                terminated_at=None,
-                                               security_groups=security_groups,
                                                task_state=None,
                                                vm_state=vm_states.ACTIVE,
                                                power_state=1)
@@ -305,7 +297,6 @@ class ServersControllerTest(ControllerTest):
         """Tests that we no longer support the legacy br-<uuid> format for
         a network id.
         """
-        self.flags(use_neutron=True)
         uuid = 'br-00000000-0000-0000-0000-000000000000'
         requested_networks = [{'uuid': uuid}]
         ex = self.assertRaises(webob.exc.HTTPBadRequest,
@@ -315,40 +306,25 @@ class ServersControllerTest(ControllerTest):
                       'format', six.text_type(ex))
 
     def test_requested_networks_neutronv2_enabled_with_port(self):
-        self.flags(use_neutron=True)
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'port': port}]
         res = self.controller._get_requested_networks(requested_networks)
         self.assertEqual([(None, None, port, None)], res.as_tuples())
 
     def test_requested_networks_neutronv2_enabled_with_network(self):
-        self.flags(use_neutron=True)
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         requested_networks = [{'uuid': network}]
         res = self.controller._get_requested_networks(requested_networks)
         self.assertEqual([(network, None, None, None)], res.as_tuples())
 
     def test_requested_networks_neutronv2_enabled_with_network_and_port(self):
-        self.flags(use_neutron=True)
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'uuid': network, 'port': port}]
         res = self.controller._get_requested_networks(requested_networks)
         self.assertEqual([(None, None, port, None)], res.as_tuples())
 
-    def test_requested_networks_with_duplicate_networks_nova_net(self):
-        # duplicate networks are allowed only for nova neutron v2.0
-        self.flags(use_neutron=False)
-        network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
-        requested_networks = [{'uuid': network}, {'uuid': network}]
-        self.assertRaises(
-            webob.exc.HTTPBadRequest,
-            self.controller._get_requested_networks,
-            requested_networks)
-
     def test_requested_networks_with_neutronv2_and_duplicate_networks(self):
-        # duplicate networks are allowed only for nova neutron v2.0
-        self.flags(use_neutron=True)
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         requested_networks = [{'uuid': network}, {'uuid': network}]
         res = self.controller._get_requested_networks(requested_networks)
@@ -356,7 +332,6 @@ class ServersControllerTest(ControllerTest):
                           (network, None, None, None)], res.as_tuples())
 
     def test_requested_networks_neutronv2_enabled_conflict_on_fixed_ip(self):
-        self.flags(use_neutron=True)
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         addr = '10.0.0.1'
@@ -368,17 +343,7 @@ class ServersControllerTest(ControllerTest):
             self.controller._get_requested_networks,
             requested_networks)
 
-    def test_requested_networks_neutronv2_disabled_with_port(self):
-        self.flags(use_neutron=False)
-        port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
-        requested_networks = [{'port': port}]
-        self.assertRaises(
-            webob.exc.HTTPBadRequest,
-            self.controller._get_requested_networks,
-            requested_networks)
-
     def test_requested_networks_api_enabled_with_v2_subclass(self):
-        self.flags(use_neutron=True)
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'uuid': network, 'port': port}]
@@ -487,8 +452,7 @@ class ServersControllerTest(ControllerTest):
                 "key_name": '',
                 "OS-SRV-USG:launched_at": None,
                 "OS-SRV-USG:terminated_at": None,
-                "security_groups": [{'name': 'fake-0-0'},
-                                    {'name': 'fake-0-1'}],
+                "security_groups": [{'name': 'default'}],
                 "OS-EXT-STS:task_state": None,
                 "OS-EXT-STS:vm_state": vm_states.ACTIVE,
                 "OS-EXT-STS:power_state": 1,
@@ -1677,7 +1641,6 @@ class ServersControllerTest(ControllerTest):
         DATE2 = datetime.datetime(year=2013, month=4, day=5, hour=13)
         self.mock_get.side_effect = fakes.fake_compute_get(
             id=1, uuid=FAKE_UUID, launched_at=DATE1, terminated_at=DATE2)
-        fakes.stub_out_secgroup_api(self)
         req = self.req(self.path_with_id % FAKE_UUID)
         req.accept = 'application/json'
         req.method = 'GET'
@@ -1704,7 +1667,6 @@ class ServersControllerTest(ControllerTest):
             ]
             return objects.InstanceList(objects=db_list)
         self.mock_get_all.side_effect = fake_compute_get_all
-        fakes.stub_out_secgroup_api(self)
         req = self.req(self.path_detail)
         req.accept = 'application/json'
         servers = req.get_response(compute.APIRouterV21())
@@ -1824,13 +1786,6 @@ class ServersControllerTestV23(ServersControllerTest):
             availability_zone='nova',
             launched_at=None,
             terminated_at=None,
-            security_groups=[
-                {'name': 'fake-0-0', 'id': 1, 'description': 'foo',
-                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                 'deleted_at': None, 'updated_at': None, 'created_at': None},
-                {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
-                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                 'deleted_at': None, 'updated_at': None, 'created_at': None}],
             task_state=None,
             vm_state=vm_states.ACTIVE,
             power_state=1)
@@ -1891,17 +1846,6 @@ class ServersControllerTestV23(ServersControllerTest):
                               availability_zone='nova',
                               launched_at=None,
                               terminated_at=None,
-                              security_groups=[
-                                  {'name': 'fake-0-0', 'id': 1,
-                                   'description': 'foo',
-                                   'user_id': 'bar', 'project_id': 'baz',
-                                   'deleted': False, 'deleted_at': None,
-                                   'updated_at': None, 'created_at': None},
-                                  {'name': 'fake-0-1', 'id': 1,
-                                   'description': 'foo',
-                                   'user_id': 'bar', 'project_id': 'baz',
-                                   'deleted': False, 'deleted_at': None,
-                                   'updated_at': None, 'created_at': None}],
                               task_state=None,
                               vm_state=vm_states.ACTIVE,
                               power_state=1)
@@ -1940,13 +1884,6 @@ class ServersControllerTestV29(ServersControllerTest):
             availability_zone='nova',
             launched_at=None,
             terminated_at=None,
-            security_groups=[
-                {'name': 'fake-0-0', 'id': 1, 'description': 'foo',
-                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                 'deleted_at': None, 'updated_at': None, 'created_at': None},
-                {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
-                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                 'deleted_at': None, 'updated_at': None, 'created_at': None}],
             task_state=None,
             vm_state=vm_states.ACTIVE,
             power_state=1)
@@ -1992,13 +1929,6 @@ class ServersControllerTestV29(ServersControllerTest):
             availability_zone='nova',
             launched_at=None,
             terminated_at=None,
-            security_groups=[
-                {'name': 'fake-0-0', 'id': 1, 'description': 'foo',
-                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                 'deleted_at': None, 'updated_at': None, 'created_at': None},
-                {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
-                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                 'deleted_at': None, 'updated_at': None, 'created_at': None}],
             task_state=None,
             vm_state=vm_states.ACTIVE,
             power_state=1)
@@ -2042,13 +1972,6 @@ class ServersControllerTestV29(ServersControllerTest):
             availability_zone='nova',
             launched_at=None,
             terminated_at=None,
-            security_groups=[
-                {'name': 'fake-0-0', 'id': 1, 'description': 'foo',
-                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                 'deleted_at': None, 'updated_at': None, 'created_at': None},
-                {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
-                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                 'deleted_at': None, 'updated_at': None, 'created_at': None}],
             task_state=None,
             vm_state=vm_states.ACTIVE,
             power_state=1)
@@ -2111,13 +2034,6 @@ class ServersControllerTestV216(ServersControllerTest):
             availability_zone='nova',
             launched_at=None,
             terminated_at=None,
-            security_groups=[
-                {'name': 'fake-0-0', 'id': 1, 'description': 'foo',
-                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                 'deleted_at': None, 'updated_at': None, 'created_at': None},
-                {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
-                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                 'deleted_at': None, 'updated_at': None, 'created_at': None}],
             task_state=None,
             vm_state=vm_states.ACTIVE,
             power_state=1)
@@ -2204,17 +2120,6 @@ class ServersControllerTestV216(ServersControllerTest):
                               availability_zone='nova',
                               launched_at=None,
                               terminated_at=None,
-                              security_groups=[
-                                  {'name': 'fake-0-0', 'id': 1,
-                                   'description': 'foo',
-                                   'user_id': 'bar', 'project_id': 'baz',
-                                   'deleted': False, 'deleted_at': None,
-                                   'updated_at': None, 'created_at': None},
-                                  {'name': 'fake-0-1', 'id': 1,
-                                   'description': 'foo',
-                                   'user_id': 'bar', 'project_id': 'baz',
-                                   'deleted': False, 'deleted_at': None,
-                                   'updated_at': None, 'created_at': None}],
                               task_state=None,
                               vm_state=vm_states.ACTIVE,
                               power_state=1)
@@ -2260,13 +2165,6 @@ class ServersControllerTestV219(ServersControllerTest):
             availability_zone='nova',
             launched_at=None,
             terminated_at=None,
-            security_groups=[
-                {'name': 'fake-0-0', 'id': 1, 'description': 'foo',
-                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                 'deleted_at': None, 'updated_at': None, 'created_at': None},
-                {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
-                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                 'deleted_at': None, 'updated_at': None, 'created_at': None}],
             task_state=None,
             vm_state=vm_states.ACTIVE,
             power_state=1)
@@ -2318,13 +2216,6 @@ class ServersControllerTestV219(ServersControllerTest):
             availability_zone='nova',
             launched_at=None,
             terminated_at=None,
-            security_groups=[
-                {'name': 'fake-0-0', 'id': 1, 'description': 'foo',
-                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                 'deleted_at': None, 'updated_at': None, 'created_at': None},
-                {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
-                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                 'deleted_at': None, 'updated_at': None, 'created_at': None}],
             task_state=None,
             vm_state=vm_states.ACTIVE,
             power_state=1)
@@ -4082,8 +3973,9 @@ class ServerStatusTest(test.TestCase):
 
     def setUp(self):
         super(ServerStatusTest, self).setUp()
-        self.flags(use_neutron=False)
         fakes.stub_out_nw_api(self)
+        fakes.stub_out_secgroup_api(
+            self, security_groups=[{'name': 'default'}])
 
         self.controller = servers.ServersController()
 
@@ -4206,15 +4098,6 @@ class ServersControllerCreateTest(test.TestCase):
                 "task_state": "",
                 "vm_state": "",
                 "root_device_name": inst.get('root_device_name', 'vda'),
-                "security_groups": [
-                    {'name': 'fake-0-0', 'id': 1, 'description': 'foo',
-                     'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                     'deleted_at': None, 'updated_at': None,
-                     'created_at': None},
-                    {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
-                     'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                     'deleted_at': None, 'updated_at': None,
-                     'created_at': None}]
             })
 
             self.instance_cache_by_id[instance['id']] = instance
@@ -4472,7 +4355,6 @@ class ServersControllerCreateTest(test.TestCase):
         self._test_create_extra(params)
 
     def test_create_instance_with_networks_disabled_neutronv2(self):
-        self.flags(use_neutron=True)
         net_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         requested_networks = [{'uuid': net_uuid}]
         params = {'networks': requested_networks}
@@ -6400,7 +6282,6 @@ class ServersControllerCreateTestV219(ServersControllerCreateTest):
 class ServersControllerCreateTestV232(test.NoDBTestCase):
     def setUp(self):
         super(ServersControllerCreateTestV232, self).setUp()
-        self.flags(use_neutron=True)
 
         self.controller = servers.ServersController()
 
@@ -6478,8 +6359,6 @@ class ServersControllerCreateTestV237(test.NoDBTestCase):
     """
     def setUp(self):
         super(ServersControllerCreateTestV237, self).setUp()
-        # Set the use_neutron flag to process requested networks.
-        self.flags(use_neutron=True)
         # Create the server controller.
         self.controller = servers.ServersController()
         # Define a basic server create request body which tests can customize.
@@ -7099,7 +6978,6 @@ class ServersControllerCreateTestWithMock(test.TestCase):
     @mock.patch.object(compute_api.API, 'create')
     def test_create_instance_with_neutronv2_invalid_fixed_ip(self,
                                                              create_mock):
-        self.flags(use_neutron=True)
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         address = '999.0.2.3'
         requested_networks = [{'uuid': network, 'fixed_ip': address}]
@@ -7122,8 +7000,6 @@ class ServersViewBuilderTest(test.TestCase):
     def setUp(self):
         super(ServersViewBuilderTest, self).setUp()
         self.flags(use_ipv6=True)
-        # Neutron security groups are tested in test_neutron_security_groups.py
-        self.flags(use_neutron=False)
         fakes.stub_out_nw_api(self)
         self.flags(group='glance', api_servers=['http://localhost:9292'])
         nw_cache_info = self._generate_nw_cache_info()
@@ -7137,16 +7013,9 @@ class ServersViewBuilderTest(test.TestCase):
             nw_cache=nw_cache_info,
             launched_at=None,
             terminated_at=None,
-            security_groups=[
-                {'name': 'fake-0-0', 'id': 1, 'description': 'foo',
-                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                 'deleted_at': None, 'updated_at': None, 'created_at': None},
-                {'name': 'fake-0-1', 'id': 1, 'description': 'foo',
-                 'user_id': 'bar', 'project_id': 'baz', 'deleted': False,
-                 'deleted_at': None, 'updated_at': None, 'created_at': None}],
-                task_state=None,
-                vm_state=vm_states.ACTIVE,
-                power_state=1)
+            task_state=None,
+            vm_state=vm_states.ACTIVE,
+            power_state=1)
 
         privates = ['172.19.0.1']
         publics = ['192.168.0.3']
@@ -7160,6 +7029,10 @@ class ServersViewBuilderTest(test.TestCase):
                             'ips': [dict(ip=ip) for ip in privates]})]
 
         fakes.stub_out_nw_api_get_instance_nw_info(self, nw_info)
+
+        fakes.stub_out_secgroup_api(
+            self, security_groups=[{'name': 'default'}])
+
         self.stub_out('nova.db.api.'
                       'block_device_mapping_get_all_by_instance_uuids',
                       fake_bdms_get_all_by_instance_uuids)
@@ -7351,8 +7224,7 @@ class ServersViewBuilderTest(test.TestCase):
                 "key_name": '',
                 "OS-SRV-USG:launched_at": None,
                 "OS-SRV-USG:terminated_at": None,
-                "security_groups": [{'name': 'fake-0-0'},
-                                    {'name': 'fake-0-1'}],
+                "security_groups": [{'name': 'default'}],
                 "OS-EXT-STS:task_state": None,
                 "OS-EXT-STS:vm_state": vm_states.ACTIVE,
                 "OS-EXT-STS:power_state": 1,
@@ -7447,8 +7319,7 @@ class ServersViewBuilderTest(test.TestCase):
                 "key_name": '',
                 "OS-SRV-USG:launched_at": None,
                 "OS-SRV-USG:terminated_at": None,
-                "security_groups": [{'name': 'fake-0-0'},
-                                    {'name': 'fake-0-1'}],
+                "security_groups": [{'name': 'default'}],
                 "OS-EXT-STS:task_state": None,
                 "OS-EXT-STS:vm_state": vm_states.ERROR,
                 "OS-EXT-STS:power_state": 1,
@@ -7642,8 +7513,7 @@ class ServersViewBuilderTest(test.TestCase):
                 "key_name": '',
                 "OS-SRV-USG:launched_at": None,
                 "OS-SRV-USG:terminated_at": None,
-                "security_groups": [{'name': 'fake-0-0'},
-                                    {'name': 'fake-0-1'}],
+                "security_groups": [{'name': 'default'}],
                 "OS-EXT-STS:task_state": None,
                 "OS-EXT-STS:vm_state": vm_states.ACTIVE,
                 "OS-EXT-STS:power_state": 1,
@@ -7735,8 +7605,7 @@ class ServersViewBuilderTest(test.TestCase):
                 "key_name": '',
                 "OS-SRV-USG:launched_at": None,
                 "OS-SRV-USG:terminated_at": None,
-                "security_groups": [{'name': 'fake-0-0'},
-                                    {'name': 'fake-0-1'}],
+                "security_groups": [{'name': 'default'}],
                 "OS-EXT-STS:task_state": None,
                 "OS-EXT-STS:vm_state": vm_states.ACTIVE,
                 "OS-EXT-STS:power_state": 1,
@@ -7873,8 +7742,7 @@ class ServersViewBuilderTestV269(ServersViewBuilderTest):
                 "description": None,
                 "OS-SRV-USG:launched_at": None,
                 "OS-SRV-USG:terminated_at": None,
-                "security_groups": [{'name': 'fake-0-0'},
-                                    {'name': 'fake-0-1'}],
+                "security_groups": [{'name': 'default'}],
                 "OS-EXT-STS:task_state": None,
                 "OS-EXT-STS:vm_state": vm_states.ACTIVE,
                 "OS-EXT-STS:power_state": 1,

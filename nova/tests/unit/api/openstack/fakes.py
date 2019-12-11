@@ -227,8 +227,10 @@ def stub_out_secgroup_api(test, security_groups=None):
                 raise Exception('Invalid security group API call for nova-net')
             instances_security_group_bindings = {}
             if servers:
+                # we don't get security group information for down cells
                 instances_security_group_bindings = {
-                    server['id']: [] for server in servers
+                    server['id']: security_groups or [] for server in servers
+                    if server['status'] != 'UNKNOWN'
                 }
             return instances_security_group_bindings
 

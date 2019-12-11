@@ -16,6 +16,7 @@ import datetime
 
 import iso8601
 import mock
+from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel
 
 from nova.api.openstack.compute import availability_zone as az_v21
@@ -96,7 +97,6 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
             self.controller.host_api, 'service_get_all',
             side_effect=fake_service_get_all).start()
         self.addCleanup(self.mock_service_get_all.stop)
-        self.req = fakes.HTTPRequest.blank('')
 
     def test_filtered_availability_zones(self):
         zones = ['zone1', 'internal']
@@ -114,7 +114,8 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
         self.assertEqual(result, expected)
 
     def test_availability_zone_index(self):
-        resp_dict = self.controller.index(self.req)
+        req = fakes.HTTPRequest.blank('')
+        resp_dict = self.controller.index(req)
 
         self.assertIn('availabilityZoneInfo', resp_dict)
         zones = resp_dict['availabilityZoneInfo']
@@ -127,7 +128,8 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
         self.assertIsNone(zones[1]['hosts'])
 
     def test_availability_zone_detail(self):
-        resp_dict = self.controller.detail(self.req)
+        req = fakes.HTTPRequest.blank('')
+        resp_dict = self.controller.detail(req)
 
         self.assertIn('availabilityZoneInfo', resp_dict)
         zones = resp_dict['availabilityZoneInfo']
@@ -184,7 +186,8 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
                                  [{'zoneState': {'available': True},
                              'hosts': {},
                              'zoneName': 'nova'}]}
-        resp_dict = self.controller.detail(self.req)
+        req = fakes.HTTPRequest.blank('')
+        resp_dict = self.controller.detail(req)
 
         self.assertThat(resp_dict,
                         matchers.DictMatches(expected_response))
@@ -198,8 +201,6 @@ class ServersControllerCreateTestV21(test.TestCase):
         super(ServersControllerCreateTestV21, self).setUp()
 
         self.instance_cache_num = 0
-        # Neutron security groups are tested in test_neutron_security_groups.py
-        self.flags(use_neutron=False)
         fakes.stub_out_nw_api(self)
         self._set_up_controller()
 
@@ -211,7 +212,6 @@ class ServersControllerCreateTestV21(test.TestCase):
         fake.stub_out_image_service(self)
         self.stub_out('nova.compute.api.API.create_db_entry_for_new_instance',
                       create_db_entry_for_new_instance)
-        self.req = fakes.HTTPRequest.blank('')
 
     def _set_up_controller(self):
         self.controller = servers_v21.ServersController()
@@ -239,6 +239,11 @@ class ServersControllerCreateTestV21(test.TestCase):
             },
         }
 
+        req = fakes.HTTPRequest.blank('')
+        req.method = 'POST'
+        req.body = jsonutils.dump_as_bytes(body)
+        req.headers['content-type'] = 'application/json'
+
         admin_context = context.get_admin_context()
         db.service_create(admin_context, {'host': 'host1_zones',
                                           'binary': "nova-compute",
@@ -250,7 +255,7 @@ class ServersControllerCreateTestV21(test.TestCase):
                                 metadata={'availability_zone': 'nova'})
         agg.create()
         agg.add_host('host1_zones')
-        return self.req, body
+        return req, body
 
     def test_create_instance_with_availability_zone(self):
         zone_name = 'nova'
@@ -291,7 +296,11 @@ class ServersControllerCreateTestV21(test.TestCase):
                 },
             },
         }
+        req = fakes.HTTPRequest.blank('')
+        req.method = 'POST'
+        req.body = jsonutils.dump_as_bytes(body)
+        req.headers['content-type'] = 'application/json'
 
-        res = self.controller.create(self.req, body=body).obj
+        res = self.controller.create(req, body=body).obj
         server = res['server']
         self.assertEqual(fakes.FAKE_UUID, server['id'])
