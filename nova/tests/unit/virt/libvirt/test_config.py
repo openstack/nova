@@ -1836,6 +1836,7 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
         obj.mac_addr = "DE:AD:BE:EF:CA:FE"
         obj.model = "virtio"
         obj.target_dev = "vnet0"
+        self.assertTrue(obj.uses_virtio)
         return obj
 
     def test_config_driver_options(self):
@@ -2859,6 +2860,8 @@ class LibvirtConfigGuestSnapshotTest(LibvirtConfigBaseTest):
         obj.target_bus = "virtio"
         obj.serial = "7a97c4a3-6f59-41d4-bf47-191d7f97f8e9"
 
+        self.assertTrue(obj.uses_virtio)
+
         xml = obj.to_xml()
         self.assertXmlEqual("""
             <disk type="file" device="disk">
@@ -3265,6 +3268,8 @@ class LibvirtConfigGuestVideoTest(LibvirtConfigBaseTest):
         obj = config.LibvirtConfigGuestVideo()
         obj.type = 'qxl'
 
+        self.assertFalse(obj.uses_virtio)
+
         xml = obj.to_xml()
         self.assertXmlEqual(xml, """
                 <video>
@@ -3332,6 +3337,8 @@ class LibvirtConfigGuestRngTest(LibvirtConfigBaseTest):
     def test_config_rng_driver_iommu(self):
         obj = config.LibvirtConfigGuestRng()
         obj.driver_iommu = True
+
+        self.assertTrue(obj.uses_virtio)
 
         xml = obj.to_xml()
         self.assertXmlEqual(xml, """
@@ -3667,12 +3674,12 @@ class LibvirtConfigMemoryBalloonTest(LibvirtConfigBaseTest):
 
     def test_config_memory_balloon_period(self):
         balloon = config.LibvirtConfigMemoryBalloon()
-        balloon.model = 'fake_virtio'
+        balloon.model = 'virtio'
         balloon.period = 11
 
         xml = balloon.to_xml()
         expected_xml = """
-        <memballoon model='fake_virtio'>
+        <memballoon model='virtio'>
             <stats period='11'/>
         </memballoon>"""
 
@@ -3680,22 +3687,24 @@ class LibvirtConfigMemoryBalloonTest(LibvirtConfigBaseTest):
 
     def test_config_memory_balloon_no_period(self):
         balloon = config.LibvirtConfigMemoryBalloon()
-        balloon.model = 'fake_virtio'
+        balloon.model = 'virtio'
 
         xml = balloon.to_xml()
         expected_xml = """
-        <memballoon model='fake_virtio' />"""
+        <memballoon model='virtio' />"""
 
         self.assertXmlEqual(expected_xml, xml)
 
     def test_config_memory_balloon_driver_iommu(self):
         balloon = config.LibvirtConfigMemoryBalloon()
-        balloon.model = 'fake_virtio'
+        balloon.model = 'virtio'
         balloon.driver_iommu = True
+
+        self.assertTrue(balloon.uses_virtio)
 
         xml = balloon.to_xml()
         expected_xml = """
-            <memballoon model='fake_virtio'>
+            <memballoon model='virtio'>
               <driver iommu="on" />
             </memballoon>"""
 
