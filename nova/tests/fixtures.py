@@ -1630,6 +1630,10 @@ class NeutronFixture(fixtures.Fixture):
             self.port_with_resource_request['id']:
                 copy.deepcopy(self.port_with_resource_request)
         }
+        # Store multiple port bindings per port in a dict keyed by the host.
+        # At startup we assume that none of the ports are bound.
+        # {<port_id>: {<hostname>: <binding>}}
+        self._port_bindings = collections.defaultdict(dict)
 
         # The fixture does not allow network, subnet or security group updates
         # so we don't have to deepcopy here
@@ -1678,10 +1682,16 @@ class NeutronFixture(fixtures.Fixture):
                 spec=ksa_adap.Adapter))
         self.test.stub_out(
             'nova.network.neutronv2.api.API._create_port_binding',
-            self.fake_create_port_binding)
+            self.create_port_binding)
         self.test.stub_out(
             'nova.network.neutronv2.api.API._delete_port_binding',
-            self.fake_delete_port_binding)
+            self.delete_port_binding)
+        self.test.stub_out(
+            'nova.network.neutronv2.api.API._activate_port_binding',
+            self.activate_port_binding)
+        self.test.stub_out(
+            'nova.network.neutronv2.api.API._get_port_binding',
+            self.get_port_binding)
 
         self.test.stub_out('nova.network.neutronv2.api.get_client',
                            self._get_client)
@@ -1691,17 +1701,72 @@ class NeutronFixture(fixtures.Fixture):
         admin = admin or context.is_admin and not context.auth_token
         return _FakeNeutronClient(self, admin)
 
-    @staticmethod
-    def fake_create_port_binding(context, client, port_id, data):
-        # TODO(mriedem): Make this smarter by keeping track of our bindings
-        # per port so we can reflect the status accurately.
+    def create_port_binding(self, context, client, port_id, data):
+        if port_id not in self._ports:
+            return fake_requests.FakeResponse(
+                404, content='Port %s not found' % port_id)
+
+        host = data['binding']['host']
+        # We assume that every binding that is created is inactive.
+        # This is only true from the current nova code perspective where
+        # explicit binding creation only happen for migration where the port
+        # is already actively bound to the source host.
+        # TODO(gibi): enhance update_port to detect if the port is bound by
+        # the update and create a binding internally in _port_bindings. Then
+        # we can change the logic here to mimic neutron better by making the
+        # first binding active by default.
+        data['binding']['status'] = 'INACTIVE'
+        self._port_bindings[port_id][host] = copy.deepcopy(data['binding'])
+
         return fake_requests.FakeResponse(200, content=jsonutils.dumps(data))
 
-    @staticmethod
-    def fake_delete_port_binding(context, client, port_id, host):
-        # TODO(mriedem): Make this smarter by keeping track of our bindings
-        # per port so we can reflect the status accurately.
+    def _get_failure_response_if_port_or_binding_not_exists(
+            self, port_id, host):
+        if port_id not in self._ports:
+            return fake_requests.FakeResponse(
+                404, content='Port %s not found' % port_id)
+        if host not in self._port_bindings[port_id]:
+            return fake_requests.FakeResponse(
+                404,
+                content='Binding for host %s for port %s not found'
+                        % (host, port_id))
+
+    def delete_port_binding(self, context, client, port_id, host):
+        failure = self._get_failure_response_if_port_or_binding_not_exists(
+            port_id, host)
+        if failure is not None:
+            return failure
+
+        del self._port_bindings[port_id][host]
+
         return fake_requests.FakeResponse(204)
+
+    def activate_port_binding(self, context, client, port_id, host):
+        failure = self._get_failure_response_if_port_or_binding_not_exists(
+            port_id, host)
+        if failure is not None:
+            return failure
+
+        # It makes sure that only one binding is active for a port
+        for h, binding in self._port_bindings[port_id].items():
+            if h == host:
+                # NOTE(gibi): neutron returns 409 if this binding is already
+                # active but nova does not depend on this behaviour yet.
+                binding['status'] = 'ACTIVE'
+            else:
+                binding['status'] = 'INACTIVE'
+
+        return fake_requests.FakeResponse(200)
+
+    def get_port_binding(self, context, client, port_id, host):
+        failure = self._get_failure_response_if_port_or_binding_not_exists(
+            port_id, host)
+        if failure is not None:
+            return failure
+
+        binding = {"binding": self._port_bindings[port_id][host]}
+        return fake_requests.FakeResponse(
+            200, content=jsonutils.dumps(binding))
 
     def _list_resource(self, resources, retrieve_all, **_params):
         # If 'fields' is passed we need to strip that out since it will mess
@@ -1737,24 +1802,55 @@ class NeutronFixture(fixtures.Fixture):
             ]
         }
 
+    def _get_active_binding(self, port_id):
+        for host, binding in self._port_bindings[port_id].items():
+            if binding['status'] == 'ACTIVE':
+                return binding
+
+    def _merge_in_active_binding(self, port):
+        """Update the port dict with the currently active port binding"""
+        if port['id'] not in self._port_bindings:
+            return
+
+        binding = self._get_active_binding(port['id']) or {}
+        for key, value in binding.items():
+            # keys in the binding is like 'vnic_type' but in the port response
+            # they are like 'binding:vnic_type'. Except for the host_id that
+            # is called 'host' in the binding but 'binding:host_id' in the
+            # port response.
+            if key != 'host':
+                port['binding:' + key] = value
+            else:
+                port['binding:host_id'] = binding['host']
+
     def show_port(self, port_id, **_params):
         if port_id not in self._ports:
             raise exception.PortNotFound(port_id=port_id)
-        return {'port': copy.deepcopy(self._ports[port_id])}
+        port = copy.deepcopy(self._ports[port_id])
+        self._merge_in_active_binding(port)
+        return {'port': port}
 
     def delete_port(self, port_id, **_params):
         if port_id in self._ports:
             del self._ports[port_id]
+            # Not all flow use explicit binding creation by calling
+            # neutronv2.api.API.bind_ports_to_host(). Non live migration flows
+            # simply update the port to bind it. So we need to delete bindings
+            # conditionally
+            if port_id in self._port_bindings:
+                del self._port_bindings[port_id]
 
     def list_ports(self, is_admin, retrieve_all=True, **_params):
         ports = self._list_resource(self._ports, retrieve_all, **_params)
-        if not is_admin:
+        for port in ports:
+            self._merge_in_active_binding(port)
             # Neutron returns None instead of the real resource_request if
             # the ports are queried by a non-admin. So simulate this behavior
             # here
-            for port in ports:
+            if not is_admin:
                 if 'resource_request' in port:
                     port['resource_request'] = None
+
         return {'ports': ports}
 
     def show_network(self, network_id, **_params):
@@ -1802,6 +1898,9 @@ class NeutronFixture(fixtures.Fixture):
         return {'port': copy.deepcopy(new_port)}
 
     def update_port(self, port_id, body=None):
+        # TODO(gibi): check if the port update binds the port and update the
+        # internal _port_bindings dict accordingly. Such a binding always
+        # becomes and active port binding of the port.
         port = self._ports[port_id]
         # We need to deepcopy here as well as the body can have a nested dict
         # which can be modified by the caller after this update_port call

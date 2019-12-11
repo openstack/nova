@@ -1381,10 +1381,7 @@ class API(base_api.NetworkAPI):
         client = _get_ksa_client(context, admin=True)
         # This is a bit weird in that we don't PUT and update the status
         # to ACTIVE, it's more like a POST action method in the compute API.
-        resp = client.put(
-            '/v2.0/ports/%s/bindings/%s/activate' % (port_id, host),
-            raise_exc=False,
-            global_request_id=context.global_id)
+        resp = self._activate_port_binding(context, client, port_id, host)
         if resp:
             LOG.debug('Activated binding for port %s and host %s.',
                       port_id, host)
@@ -1401,6 +1398,38 @@ class API(base_api.NetworkAPI):
                       resp.text)
             raise exception.PortBindingActivationFailed(
                 port_id=port_id, host=host)
+
+    @staticmethod
+    def _activate_port_binding(context, client, port_id, host):
+        """Activates an inactive port binding.
+
+        :param context: The request context for the operation.
+        :param client: keystoneauth1.adapter.Adapter
+        :param port_id: ID of the port to activate the binding on
+        :param host: A string name of the host identifying the binding to be
+            activated
+        :return: requests.Response object
+        """
+        return client.put(
+            '/v2.0/ports/%s/bindings/%s/activate' % (port_id, host),
+            raise_exc=False,
+            global_request_id=context.global_id)
+
+    @staticmethod
+    def _get_port_binding(context, client, port_id, host):
+        """Returns a port binding of a given port on a given host
+
+        :param context: The request context for the operation.
+        :param client: keystoneauth1.adapter.Adapter
+        :param port_id: ID of the port to get the binding
+        :param host: A string name of the host identifying the binding to be
+            returned
+        :return: requests.Response object
+        """
+        return client.get(
+            '/v2.0/ports/%s/bindings/%s' % (port_id, host),
+            raise_exc=False,
+            global_request_id=context.global_id)
 
     def _get_pci_device_profile(self, pci_dev):
         dev_spec = self.pci_whitelist.get_devspec(pci_dev)
@@ -2790,9 +2819,8 @@ class API(base_api.NetworkAPI):
             # Not all compute migration flows use the port binding-extended
             # API yet, so first check to see if there is a binding for the
             # port and destination host.
-            resp = client.get(
-                '/v2.0/ports/%s/bindings/%s' % (vif['id'], dest_host),
-                raise_exc=False, global_request_id=context.global_id)
+            resp = self._get_port_binding(
+                context, client, vif['id'], dest_host)
             if resp:
                 if resp.json()['binding']['status'] != 'ACTIVE':
                     self.activate_port_binding(context, vif['id'], dest_host)
