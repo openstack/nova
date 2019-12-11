@@ -3481,7 +3481,7 @@ class LibvirtDriver(driver.ComputeDriver):
         xml = self._get_guest_xml(context, instance, network_info,
                                   disk_info, image_meta,
                                   block_device_info=block_device_info,
-                                  mdevs=mdevs)
+                                  mdevs=mdevs, accel_info=accel_info)
         self._create_domain_and_network(
             context, xml, instance, network_info,
             block_device_info=block_device_info,
@@ -4584,17 +4584,19 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return sysinfo
 
+    def _set_managed_mode(self, pcidev):
+        # only kvm support managed mode
+        if CONF.libvirt.virt_type in ('xen', 'parallels',):
+            pcidev.managed = 'no'
+        if CONF.libvirt.virt_type in ('kvm', 'qemu'):
+            pcidev.managed = 'yes'
+
     def _get_guest_pci_device(self, pci_device):
 
         dbsf = pci_utils.parse_address(pci_device.address)
         dev = vconfig.LibvirtConfigGuestHostdevPCI()
         dev.domain, dev.bus, dev.slot, dev.function = dbsf
-
-        # only kvm support managed mode
-        if CONF.libvirt.virt_type in ('xen', 'parallels',):
-            dev.managed = 'no'
-        if CONF.libvirt.virt_type in ('kvm', 'qemu'):
-            dev.managed = 'yes'
+        self._set_managed_mode(dev)
 
         return dev
 
@@ -5658,7 +5660,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _get_guest_config(self, instance, network_info, image_meta,
                           disk_info, rescue=None, block_device_info=None,
-                          context=None, mdevs=None):
+                          context=None, mdevs=None, accel_info=None):
         """Get config data for parameters.
 
         :param rescue: optional dictionary that should contain the key
@@ -5666,6 +5668,7 @@ class LibvirtDriver(driver.ComputeDriver):
             'kernel_id' if a kernel is needed for the rescue image.
 
         :param mdevs: optional list of mediated devices to assign to the guest.
+        :param accel_info: optional list of accelerator requests (ARQs)
         """
         flavor = instance.flavor
         inst_path = libvirt_utils.get_instance_path(instance)
@@ -5773,6 +5776,26 @@ class LibvirtDriver(driver.ComputeDriver):
             self._guest_add_pcie_root_ports(guest)
 
         self._guest_add_pci_devices(guest, instance)
+
+        pci_arq_list = []
+        if accel_info:
+            # NOTE(Sundar): We handle only the case where all attach handles
+            # are of type 'PCI'. The Cyborg fake driver used for testing
+            # returns attach handles of type 'TEST_PCI' and so its ARQs will
+            # not get composed into the VM's domain XML. For now, we do not
+            # expect a mixture of different attach handles for the same
+            # instance; but that case also gets ignored by this logic.
+            ah_types_set = {arq['attach_handle_type'] for arq in accel_info}
+            supported_types_set = {'PCI'}
+            if ah_types_set == supported_types_set:
+                pci_arq_list = accel_info
+            else:
+                LOG.info('Ignoring accelerator requests for instance %s. '
+                         'Supported Attach handle types: %s. '
+                         'But got these unsupported types: %s.',
+                         instance.uuid, supported_types_set,
+                         ah_types_set.difference(supported_types_set))
+        self._guest_add_accel_pci_devices(guest, pci_arq_list)
 
         self._guest_add_watchdog_action(guest, flavor, image_meta)
 
@@ -5971,6 +5994,18 @@ class LibvirtDriver(driver.ComputeDriver):
             if pci_manager.get_instance_pci_devs(instance, 'all'):
                 raise exception.PciDeviceUnsupportedHypervisor(type=virt_type)
 
+    def _guest_add_accel_pci_devices(self, guest, accel_info):
+        """Add all accelerator PCI functions from ARQ list."""
+        for arq in accel_info:
+            dev = vconfig.LibvirtConfigGuestHostdevPCI()
+            pci_addr = arq['attach_handle_info']
+            dev.domain, dev.bus, dev.slot, dev.function = (
+                pci_addr['domain'], pci_addr['bus'],
+                pci_addr['device'], pci_addr['function'])
+            self._set_managed_mode(dev)
+
+            guest.add_device(dev)
+
     @staticmethod
     def _guest_add_video_device(guest):
         # NB some versions of libvirt support both SPICE and VNC
@@ -6055,7 +6090,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _get_guest_xml(self, context, instance, network_info, disk_info,
                        image_meta, rescue=None,
                        block_device_info=None,
-                       mdevs=None):
+                       mdevs=None, accel_info=None):
         # NOTE(danms): Stringifying a NetworkInfo will take a lock. Do
         # this ahead of time so that we don't acquire it while also
         # holding the logging lock.
@@ -6073,7 +6108,7 @@ class LibvirtDriver(driver.ComputeDriver):
         LOG.debug(strutils.mask_password(msg), instance=instance)
         conf = self._get_guest_config(instance, network_info, image_meta,
                                       disk_info, rescue, block_device_info,
-                                      context, mdevs)
+                                      context, mdevs, accel_info)
         xml = conf.to_xml()
 
         LOG.debug('End _get_guest_xml xml=%(xml)s',
