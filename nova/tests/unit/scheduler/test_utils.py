@@ -1371,45 +1371,48 @@ class TestUtils(TestUtilsBase):
             utils.get_weight_multiplier(host1, 'cpu_weight_multiplier', 1.0)
         )
 
-    @mock.patch('nova.scheduler.utils.'
-                'fill_provider_mapping_based_on_allocation')
-    def test_fill_provider_mapping_returns_early_if_nothing_to_do(
-            self, mock_fill_provider):
-        context = nova_context.RequestContext()
+    def _set_up_and_fill_provider_mapping(self, requested_resources):
         request_spec = objects.RequestSpec()
-        # set up the request that there is nothing to do
-        request_spec.requested_resources = []
-        report_client = mock.sentinel.report_client
-        selection = objects.Selection()
-
-        utils.fill_provider_mapping(
-            context, report_client, request_spec, selection)
-
-        mock_fill_provider.assert_not_called()
-
-    @mock.patch('nova.scheduler.utils.'
-                'fill_provider_mapping_based_on_allocation')
-    def test_fill_provider_mapping(self, mock_fill_provider):
-        context = nova_context.RequestContext()
-        request_spec = objects.RequestSpec()
-        request_spec.requested_resources = [objects.RequestGroup()]
-        report_client = mock.sentinel.report_client
+        request_spec.requested_resources = requested_resources
         allocs = {
-            uuids.rp_uuid: {
+            uuids.rp_uuid1: {
                 'resources': {
                     'NET_BW_EGR_KILOBIT_PER_SEC': 1,
                 }
+            },
+            uuids.rp_uuid2: {
+                'resources': {
+                    'NET_BW_INGR_KILOBIT_PER_SEC': 1,
+                }
             }
         }
-        allocation_req = {'allocations': allocs}
+        mappings = {
+            uuids.port_id1: [uuids.rp_uuid2],
+            uuids.port_id2: [uuids.rp_uuid1],
+        }
+        allocation_req = {'allocations': allocs, 'mappings': mappings}
         selection = objects.Selection(
             allocation_request=jsonutils.dumps(allocation_req))
 
-        utils.fill_provider_mapping(
-            context, report_client, request_spec, selection)
+        # Unmapped initially
+        for rg in requested_resources:
+            self.assertEqual([], rg.provider_uuids)
 
-        mock_fill_provider.assert_called_once_with(
-            context, report_client, request_spec, allocs)
+        utils.fill_provider_mapping(request_spec, selection)
+
+    def test_fill_provider_mapping(self):
+        rg1 = objects.RequestGroup(requester_id=uuids.port_id1)
+        rg2 = objects.RequestGroup(requester_id=uuids.port_id2)
+        self._set_up_and_fill_provider_mapping([rg1, rg2])
+
+        # Validate the mappings
+        self.assertEqual([uuids.rp_uuid2], rg1.provider_uuids)
+        self.assertEqual([uuids.rp_uuid1], rg2.provider_uuids)
+
+    def test_fill_provider_mapping_no_op(self):
+        # This just proves that having 'mappings' in the allocation request
+        # doesn't break anything.
+        self._set_up_and_fill_provider_mapping([])
 
     @mock.patch.object(objects.RequestSpec,
                        'map_requested_resources_to_providers')

@@ -441,8 +441,7 @@ class MigrationTask(base.TaskBase):
         selection, self.host_list = self._get_host_supporting_request(
             selection_list)
 
-        scheduler_utils.fill_provider_mapping(
-            self.context, self.reportclient, self.request_spec, selection)
+        scheduler_utils.fill_provider_mapping(self.request_spec, selection)
         return selection
 
     def _reschedule(self):
@@ -479,8 +478,7 @@ class MigrationTask(base.TaskBase):
                     selection.allocation_request_version)
                 if host_available:
                     scheduler_utils.fill_provider_mapping(
-                        self.context, self.reportclient, self.request_spec,
-                        selection)
+                        self.request_spec, selection)
             else:
                 # Some deployments use different schedulers that do not
                 # use Placement, so they will not have an

@@ -125,15 +125,9 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         cn_mock.side_effect = set_migration_uuid
 
         selection = self.host_lists[0][0]
-        with test.nested(
-                mock.patch.object(scheduler_utils,
-                                  'fill_provider_mapping'),
-                mock.patch.object(task, '_is_selected_host_in_source_cell',
-                                  return_value=same_cell)
-        ) as (fill_mock, _is_source_cell_mock):
+        with mock.patch.object(task, '_is_selected_host_in_source_cell',
+                               return_value=same_cell) as _is_source_cell_mock:
             task.execute()
-            fill_mock.assert_called_once_with(
-                task.context, task.reportclient, task.request_spec, selection)
             _is_source_cell_mock.assert_called_once_with(selection)
 
         self.ensure_network_metadata_mock.assert_called_once_with(
@@ -253,11 +247,9 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         mock_get_resources.assert_called_once_with(
             self.context, self.instance.uuid)
 
-    @mock.patch.object(scheduler_utils, 'fill_provider_mapping')
     @mock.patch.object(scheduler_utils, 'claim_resources')
     @mock.patch.object(context.RequestContext, 'elevated')
-    def test_execute_reschedule(
-            self, mock_elevated, mock_claim, mock_fill_provider_mapping):
+    def test_execute_reschedule(self, mock_elevated, mock_claim):
         report_client = report.SchedulerReportClient()
         # setup task for re-schedule
         alloc_req = {
@@ -286,9 +278,6 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         mock_claim.assert_called_once_with(
             mock_elevated.return_value, report_client, self.request_spec,
             self.instance.uuid, alloc_req, '1.19')
-        mock_fill_provider_mapping.assert_called_once_with(
-            self.context, report_client, self.request_spec,
-            alternate_selection)
 
     @mock.patch.object(scheduler_utils, 'fill_provider_mapping')
     @mock.patch.object(scheduler_utils, 'claim_resources')
@@ -724,14 +713,12 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         ])
 
     @mock.patch.object(migrate.LOG, 'debug')
-    @mock.patch('nova.scheduler.utils.fill_provider_mapping')
     @mock.patch('nova.scheduler.utils.claim_resources')
     @mock.patch('nova.objects.Service.get_by_host_and_binary')
     def test_reschedule_old_compute_skipped(
-            self, mock_get_service, mock_claim_resources, mock_fill_mapping,
-            mock_debug):
+            self, mock_get_service, mock_claim_resources, mock_debug):
         self.request_spec.requested_resources = [
-            objects.RequestGroup()
+            objects.RequestGroup(requester_id=uuids.port1)
         ]
         task = self._generate_task()
         resources = {
@@ -745,15 +732,17 @@ class MigrationTaskTestCase(test.NoDBTestCase):
             nodename="node1",
             cell_uuid=uuids.cell1,
             allocation_request=jsonutils.dumps(
-                {"allocations": {uuids.host1: resources}}),
-            allocation_request_version='1.19')
+                {"allocations": {uuids.host1: resources},
+                 "mappings": {uuids.port1: [uuids.host1]}}),
+            allocation_request_version='1.34')
         second = objects.Selection(
             service_host="host2",
             nodename="node2",
             cell_uuid=uuids.cell1,
             allocation_request=jsonutils.dumps(
-                {"allocations": {uuids.host2: resources}}),
-            allocation_request_version='1.19')
+                {"allocations": {uuids.host2: resources},
+                 "mappings": {uuids.port1: [uuids.host2]}}),
+            allocation_request_version='1.34')
 
         first_service = objects.Service(service_host='host1')
         first_service.version = 38
@@ -775,9 +764,8 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         mock_claim_resources.assert_called_once_with(
             self.context.elevated(), task.reportclient, task.request_spec,
             self.instance.uuid,
-            {"allocations": {uuids.host2: resources}}, '1.19')
-        mock_fill_mapping.assert_called_once_with(
-            task.context, task.reportclient, task.request_spec, second)
+            {"allocations": {uuids.host2: resources},
+             "mappings": {uuids.port1: [uuids.host2]}}, '1.34')
         mock_debug.assert_has_calls([
             mock.call(
                 'Scheduler returned alternate host %(host)s as a possible '
