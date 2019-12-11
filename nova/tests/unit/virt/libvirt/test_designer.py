@@ -228,12 +228,19 @@ class DesignerTestCase(test.NoDBTestCase):
 
     def test_set_driver_iommu_for_sev(self):
         conf = fake_libvirt_data.fake_kvm_guest()
+
+        # obj.devices[11]
+        controller = config.LibvirtConfigGuestController()
+        controller.type = 'virtio-serial'
+        controller.index = 0
+        conf.add_device(controller)
+
         designer.set_driver_iommu_for_sev(conf)
 
         # All disks/interfaces/memballoon are expected to be virtio,
         # thus driver_iommu should be on
-        self.assertEqual(10, len(conf.devices))
-        for i in (0, 2, 3, 6, 8, 9):
+        self.assertEqual(11, len(conf.devices))
+        for i in (0, 2, 3, 6, 8, 9, 10):
             dev = conf.devices[i]
             self.assertTrue(
                 dev.driver_iommu,

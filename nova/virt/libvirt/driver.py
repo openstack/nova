@@ -5147,9 +5147,22 @@ class LibvirtDriver(driver.ComputeDriver):
             rng_device.backend = rng_path
             guest.add_device(rng_device)
 
+    def _add_virtio_serial_controller(self, guest, instance):
+        virtio_controller = vconfig.LibvirtConfigGuestController()
+        virtio_controller.type = 'virtio-serial'
+        guest.add_device(virtio_controller)
+
     def _set_qemu_guest_agent(self, guest, flavor, instance, image_meta):
         # Enable qga only if the 'hw_qemu_guest_agent' is equal to yes
         if image_meta.properties.get('hw_qemu_guest_agent', False):
+            # a virtio-serial controller is required for qga. If it is not
+            # created explicitly, libvirt will do it by itself. But in case
+            # of AMD SEV, any virtio device should use iommu driver, and
+            # libvirt does not know about it. That is why the controller
+            # should be created manually.
+            if self._sev_enabled(flavor, image_meta):
+                self._add_virtio_serial_controller(guest, instance)
+
             LOG.debug("Qemu guest agent is enabled through image "
                       "metadata", instance=instance)
             self._add_qga_device(guest, instance)
