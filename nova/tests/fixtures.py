@@ -2498,7 +2498,7 @@ class HostNameWeigher(weights.BaseHostWeigher):
         self.weights = self.get_weights()
 
     def get_weights(self):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def _weigh_object(self, host_state, weight_properties):
         # Any unspecified host gets no weight.

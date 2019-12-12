@@ -1399,10 +1399,10 @@ class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
         self.controller.delete(req, '5')
 
     def test_delete_duplicate_query_parameters_validation(self):
-        params = {
-            'delete_info': jsonutils.dumps({'volume_id': '1'}),
-            'delete_info': jsonutils.dumps({'volume_id': '2'})
-        }
+        params = [
+            ('delete_info', jsonutils.dumps({'volume_id': '1'})),
+            ('delete_info', jsonutils.dumps({'volume_id': '2'}))
+        ]
         req = fakes.HTTPRequest.blank(
                 self.url + '?%s' %
                 urllib.parse.urlencode(params),
