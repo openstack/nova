@@ -18,6 +18,8 @@ import oslo_messaging as messaging
 from oslo_utils import excutils
 
 from nova import availability_zones
+from nova.compute import instance_actions
+from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
@@ -29,6 +31,8 @@ from nova import image as nova_image
 from nova import network
 from nova.network.neutronv2 import constants as neutron_constants
 from nova import objects
+from nova.objects import fields
+from nova.scheduler import utils as scheduler_utils
 from nova.volume import cinder
 
 LOG = logging.getLogger(__name__)
@@ -888,3 +892,212 @@ class CrossCellMigrationTask(base.TaskBase):
                 self._completed_tasks[task_name].rollback(ex)
             except Exception:
                 LOG.exception('Rollback for task %s failed.', task_name)
+
+
+def get_instance_from_source_cell(
+        target_cell_context, source_compute, instance_uuid):
+    """Queries the instance from the source cell database.
+
+    :param target_cell_context: nova auth request context targeted at the
+        target cell database
+    :param source_compute: name of the source compute service host
+    :param instance_uuid: UUID of the instance
+    :returns: Instance object from the source cell database.
+    """
+    # We can get the source cell via the host mapping based on the
+    # source_compute in the migration object.
+    source_host_mapping = objects.HostMapping.get_by_host(
+        target_cell_context, source_compute)
+    source_cell_mapping = source_host_mapping.cell_mapping
+    # Clone the context targeted at the target cell and then target the
+    # clone at the source cell.
+    source_cell_context = copy.copy(target_cell_context)
+    nova_context.set_target_cell(source_cell_context, source_cell_mapping)
+    # Now get the instance from the source cell DB using the source
+    # cell context which will make the source cell instance permanently
+    # targeted to the source cell database.
+    return objects.Instance.get_by_uuid(
+        source_cell_context, instance_uuid,
+        expected_attrs=['flavor', 'info_cache', 'system_metadata'])
+
+
+class ConfirmResizeTask(base.TaskBase):
+    """Task which orchestrates a cross-cell resize confirm operation
+
+    When confirming a cross-cell resize, the instance is in both the source
+    and target cell databases and on the source and target compute hosts.
+    The API operation is performed on the target cell instance and it is the
+    job of this task to cleanup the source cell host and database and
+    update the status of the instance in the target cell.
+
+    This can be called either asynchronously from the API service during a
+    normal confirmResize server action or synchronously when deleting a server
+    in VERIFY_RESIZE status.
+    """
+
+    def __init__(self, context, instance, migration, legacy_notifier,
+                 compute_rpcapi):
+        """Initialize this ConfirmResizeTask instance
+
+        :param context: nova auth request context targeted at the target cell
+        :param instance: Instance object in "resized" status from the target
+            cell
+        :param migration: Migration object from the target cell for the resize
+            operation expected to have status "confirming"
+        :param legacy_notifier: LegacyValidatingNotifier for sending legacy
+            unversioned notifications
+        :param compute_rpcapi: instance of nova.compute.rpcapi.ComputeAPI
+        """
+        super(ConfirmResizeTask, self).__init__(context, instance)
+        self.migration = migration
+        self.legacy_notifier = legacy_notifier
+        self.compute_rpcapi = compute_rpcapi
+
+    def _send_resize_confirm_notification(self, instance, phase):
+        """Sends an unversioned and versioned resize.confirm.(phase)
+        notification.
+
+        :param instance: The instance whose resize is being confirmed.
+        :param phase: The phase for the resize.confirm operation (either
+            "start" or "end").
+        """
+        ctxt = instance._context
+        # Send the legacy unversioned notification.
+        compute_utils.notify_about_instance_usage(
+            self.legacy_notifier, ctxt, instance, 'resize.confirm.%s' % phase)
+        # Send the versioned notification.
+        compute_utils.notify_about_instance_action(
+            ctxt, instance, instance.host,  # TODO(mriedem): Use CONF.host?
+            action=fields.NotificationAction.RESIZE_CONFIRM,
+            phase=phase)
+
+    def _cleanup_source_host(self, source_instance):
+        """Cleans up the instance from the source host.
+
+        Creates a confirmResize instance action in the source cell DB.
+
+        Destroys the guest from the source hypervisor, cleans up networking
+        and storage and frees up resource usage on the source host.
+
+        :param source_instance: Instance object from the source cell DB
+        """
+        ctxt = source_instance._context
+        # The confirmResize instance action has to be created in the source
+        # cell database before calling the compute service to properly
+        # track action events. Note that the API created the same action
+        # record but on the target cell instance.
+        objects.InstanceAction.action_start(
+            ctxt, source_instance.uuid, instance_actions.CONFIRM_RESIZE,
+            want_result=False)
+        # Get the Migration record from the source cell database.
+        source_migration = objects.Migration.get_by_uuid(
+            ctxt, self.migration.uuid)
+        LOG.debug('Cleaning up source host %s for cross-cell resize confirm.',
+                  source_migration.source_compute, instance=source_instance)
+        # The instance.old_flavor field needs to be set before the source
+        # host drops the MoveClaim in the ResourceTracker.
+        source_instance.old_flavor = source_instance.flavor
+        # Use the EventReport context manager to create the same event that
+        # the source compute will create but in the target cell DB so we do not
+        # have to explicitly copy it over from source to target DB.
+        event_name = 'compute_confirm_snapshot_based_resize_at_source'
+        with compute_utils.EventReporter(
+                self.context, event_name, source_migration.source_compute,
+                source_instance.uuid):
+            self.compute_rpcapi.confirm_snapshot_based_resize_at_source(
+                ctxt, source_instance, source_migration)
+
+    def _finish_confirm_in_target_cell(self):
+        """Sets "terminal" states on the migration and instance in target cell.
+
+        This is similar to how ``confirm_resize`` works in the compute service
+        for same-cell resize.
+        """
+        LOG.debug('Updating migration and instance status in target cell DB.',
+                  instance=self.instance)
+        # Complete the migration confirmation.
+        self.migration.status = 'confirmed'
+        self.migration.save()
+        # Update the target cell instance.
+        # Delete stashed information for the resize.
+        self.instance.old_flavor = None
+        self.instance.new_flavor = None
+        self.instance.system_metadata.pop('old_vm_state', None)
+        self._set_vm_and_task_state()
+        self.instance.drop_migration_context()
+        # There are multiple possible task_states set on the instance because
+        # if we are called from the confirmResize instance action the
+        # task_state should be None, but if we are called from
+        # _confirm_resize_on_deleting then the instance is being deleted.
+        self.instance.save(expected_task_state=[
+            None, task_states.DELETING, task_states.SOFT_DELETING])
+
+    def _set_vm_and_task_state(self):
+        """Sets the target cell instance vm_state based on the power_state.
+
+        The task_state is set to None.
+        """
+        # The old_vm_state could be STOPPED but the user might have manually
+        # powered up the instance to confirm the resize/migrate, so we need to
+        # check the current power state on the instance and set the vm_state
+        # appropriately. We default to ACTIVE because if the power state is
+        # not SHUTDOWN, we assume the _sync_power_states periodic task in the
+        # compute service will clean it up.
+        p_state = self.instance.power_state
+        if p_state == power_state.SHUTDOWN:
+            vm_state = vm_states.STOPPED
+            LOG.debug("Resized/migrated instance is powered off. "
+                      "Setting vm_state to '%s'.", vm_state,
+                      instance=self.instance)
+        else:
+            vm_state = vm_states.ACTIVE
+        self.instance.vm_state = vm_state
+        self.instance.task_state = None
+
+    def _execute(self):
+        # First get the instance from the source cell so we can cleanup.
+        source_cell_instance = get_instance_from_source_cell(
+            self.context, self.migration.source_compute, self.instance.uuid)
+        # Send the resize.confirm.start notification(s) using the source
+        # cell instance since we start there.
+        self._send_resize_confirm_notification(
+            source_cell_instance, fields.NotificationPhase.START)
+        # RPC call the source compute to cleanup.
+        self._cleanup_source_host(source_cell_instance)
+        # Now we can delete the instance in the source cell database.
+        LOG.info('Deleting instance record from source cell %s',
+                 source_cell_instance._context.cell_uuid,
+                 instance=source_cell_instance)
+        # This needs to be a hard delete because we want to be able to resize
+        # back to this cell without hitting a duplicate entry unique constraint
+        # error.
+        source_cell_instance.destroy(hard_delete=True)
+        # Update the information in the target cell database.
+        self._finish_confirm_in_target_cell()
+        # Send the resize.confirm.end notification using the target cell
+        # instance since we end there.
+        self._send_resize_confirm_notification(
+            self.instance, fields.NotificationPhase.END)
+
+    def rollback(self, ex):
+        with excutils.save_and_reraise_exception():
+            LOG.exception(
+                'An error occurred while confirming the resize for instance '
+                'in target cell %s. Depending on the error, a copy of the '
+                'instance may still exist in the source cell database which '
+                'contains the source host %s. At this point the instance is '
+                'on the target host %s and anything left in the source cell '
+                'can be cleaned up.', self.context.cell_uuid,
+                self.migration.source_compute, self.migration.dest_compute,
+                instance=self.instance)
+            # If anything failed set the migration status to 'error'.
+            self.migration.status = 'error'
+            self.migration.save()
+            # Put the instance in the target DB into ERROR status, record
+            # a fault and send an error notification.
+            updates = {'vm_state': vm_states.ERROR, 'task_state': None}
+            request_spec = objects.RequestSpec.get_by_instance_uuid(
+                self.context, self.instance.uuid)
+            scheduler_utils.set_vm_state_and_notify(
+                self.context, self.instance.uuid, 'compute_task',
+                'migrate_server', updates, ex, request_spec)

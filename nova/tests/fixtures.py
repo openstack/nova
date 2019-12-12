@@ -285,7 +285,7 @@ class SingleCellSimple(fixtures.Fixture):
             self._fake_target_cell))
         self.useFixture(fixtures.MonkeyPatch(
             'nova.context.set_target_cell',
-            lambda c, m: None))
+            self._fake_set_target_cell))
 
     def _fake_hostmapping_get(self, *args):
         return {'id': 1,
@@ -334,6 +334,14 @@ class SingleCellSimple(fixtures.Fixture):
         # NOTE(danms): Just pass through the context without actually
         # targeting anything.
         yield context
+
+    def _fake_set_target_cell(self, context, cell_mapping):
+        # Just do something simple and set/unset the cell_uuid on the context.
+        if cell_mapping:
+            context.cell_uuid = getattr(cell_mapping, 'uuid',
+                                        uuidsentinel.cell1)
+        else:
+            context.cell_uuid = None
 
 
 class CheatingSerializer(rpc.RequestContextSerializer):
