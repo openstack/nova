@@ -949,20 +949,25 @@ class FinishResizeAtDestTaskTestCase(test.TestCase):
 
     def test_execute(self):
         """Tests the happy path scenario for the task execution."""
-        with mock.patch.object(
+        with test.nested(
+            mock.patch.object(
                 self.task.compute_rpcapi,
-                'finish_snapshot_based_resize_at_dest') as finish_resize:
+                'finish_snapshot_based_resize_at_dest'),
+            mock.patch.object(self.task.instance, 'refresh')
+        ) as (
+            finish_resize, refresh
+        ):
             self.task.execute()
         # _finish_snapshot_based_resize_at_dest will set the instance
         # task_state to resize_migrated, save the change, and call the
         # finish_snapshot_based_resize_at_dest method.
         target_instance = self.task.instance
-        target_instance.refresh()
         self.assertEqual(task_states.RESIZE_MIGRATED,
                          self.task.instance.task_state)
         finish_resize.assert_called_once_with(
             self.task.context, target_instance, self.task.migration,
             self.task.snapshot_id, self.task.request_spec)
+        refresh.assert_called_once_with()
         # _update_instance_mapping will swap the hidden fields and update
         # the instance mapping to point at the target cell.
         self.assertFalse(target_instance.hidden,
