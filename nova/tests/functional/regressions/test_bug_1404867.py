@@ -55,7 +55,7 @@ class DeleteWithReservedVolumes(integrated_helpers._IntegratedTestBase,
                 ]
             }
         })
-        return self._wait_for_state_change(self.api, server, 'ERROR')
+        return self._wait_for_state_change(server, 'ERROR')
 
     def test_delete_with_reserved_volumes_new(self):
         self.cinder = self.useFixture(

@@ -57,30 +57,29 @@ class RegressionTest1835822(
         if server_args:
             basic_server.update(server_args)
         server = self.api.post_server({'server': basic_server})
-        return self._wait_for_state_change(self.api, server, 'ACTIVE')
+        return self._wait_for_state_change(server, 'ACTIVE')
 
     def _hard_reboot_server(self, active_server):
         args = {"reboot": {"type": "HARD"}}
         self.api.api_post('servers/%s/action' %
                           active_server['id'], args)
         fake_notifier.wait_for_versioned_notifications('instance.reboot.end')
-        return self._wait_for_state_change(self.api, active_server, 'ACTIVE')
+        return self._wait_for_state_change(active_server, 'ACTIVE')
 
     def _rebuild_server(self, active_server):
         args = {"rebuild": {"imageRef": self.image_ref_1}}
         self.api.api_post('servers/%s/action' %
                           active_server['id'], args)
         fake_notifier.wait_for_versioned_notifications('instance.rebuild.end')
-        return self._wait_for_state_change(self.api, active_server, 'ACTIVE')
+        return self._wait_for_state_change(active_server, 'ACTIVE')
 
     def _shelve_server(self, active_server):
         self.api.post_server_action(active_server['id'], {'shelve': {}})
-        return self._wait_for_state_change(
-            self.api, active_server, 'SHELVED_OFFLOADED')
+        return self._wait_for_state_change(active_server, 'SHELVED_OFFLOADED')
 
     def _unshelve_server(self, shelved_server):
         self.api.post_server_action(shelved_server['id'], {'unshelve': {}})
-        return self._wait_for_state_change(self.api, shelved_server, 'ACTIVE')
+        return self._wait_for_state_change(shelved_server, 'ACTIVE')
 
     # ---------------------------- tests ----------------------------
     def test_create_server_with_config_drive(self):

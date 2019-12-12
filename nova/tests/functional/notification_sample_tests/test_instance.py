@@ -59,7 +59,7 @@ class TestInstanceNotificationSampleWithMultipleCompute(
             fake_notifier.reset()
             action(server)
             # Ensure that instance is in active state after an action
-            self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+            self._wait_for_state_change(server, 'ACTIVE')
 
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_live_migration_cleanup_flags', return_value=[True, False])
@@ -188,13 +188,13 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         }
 
         self.admin_api.post_server_action(server['id'], post)
-        self._wait_for_state_change(self.api, server, 'MIGRATING')
+        self._wait_for_state_change(server, 'MIGRATING')
 
         migrations = self._wait_and_get_migrations(server)
 
         self.admin_api.delete_migration(server['id'], migrations[0]['id'])
         self._wait_for_notification('instance.live_migration_abort.start')
-        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
         # NOTE(gibi): the intance.live_migration_rollback notification emitted
         # after the instance.live_migration_abort notification so we have to
         # wait for the rollback to ensure we can assert both notifications
@@ -261,10 +261,8 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         }
 
         self.admin_api.post_server_action(server['id'], evacuate)
-        self._wait_for_state_change(self.api, server,
-                                    expected_status='REBUILD')
-        self._wait_for_state_change(self.api, server,
-                                    expected_status='ACTIVE')
+        self._wait_for_state_change(server, expected_status='REBUILD')
+        self._wait_for_state_change(server, expected_status='ACTIVE')
 
         notifications = self._get_notifications('instance.evacuate')
         self.assertEqual(1, len(notifications),
@@ -286,7 +284,7 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         }
         self.admin_api.post_server_action(server['id'], post)
 
-        self._wait_for_state_change(self.api, server, 'MIGRATING')
+        self._wait_for_state_change(server, 'MIGRATING')
 
         migrations = self._wait_and_get_migrations(server)
         migration_id = migrations[0]['id']
@@ -390,7 +388,7 @@ class TestInstanceNotificationSample(
             fake_notifier.reset()
             action(server)
             # Ensure that instance is in active state after an action
-            self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+            self._wait_for_state_change(server, 'ACTIVE')
 
             # if the test step did not raised then we consider the step as
             # succeeded. We drop the logs to avoid causing subunit parser
@@ -520,10 +518,8 @@ class TestInstanceNotificationSample(
             }
         }
         self.api.post_server_action(server['id'], post)
-        self._wait_for_state_change(self.api, server,
-                                    expected_status='REBUILD')
-        self._wait_for_state_change(self.api, server,
-                                    expected_status='ACTIVE')
+        self._wait_for_state_change(server, expected_status='REBUILD')
+        self._wait_for_state_change(server, expected_status='ACTIVE')
 
         notifications = self._get_notifications('instance.exists')
         self._verify_notification(
@@ -751,11 +747,9 @@ class TestInstanceNotificationSample(
 
     def _test_power_off_on_server(self, server):
         self.api.post_server_action(server['id'], {'os-stop': {}})
-        self._wait_for_state_change(self.api, server,
-                                    expected_status='SHUTOFF')
+        self._wait_for_state_change(server, expected_status='SHUTOFF')
         self.api.post_server_action(server['id'], {'os-start': {}})
-        self._wait_for_state_change(self.api, server,
-                                    expected_status='ACTIVE')
+        self._wait_for_state_change(server, expected_status='ACTIVE')
 
         self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS),
                          fake_notifier.VERSIONED_NOTIFICATIONS)
@@ -788,8 +782,7 @@ class TestInstanceNotificationSample(
     def _test_shelve_and_shelve_offload_server(self, server):
         self.flags(shelved_offload_time=-1)
         self.api.post_server_action(server['id'], {'shelve': {}})
-        self._wait_for_state_change(self.api, server,
-                                    expected_status='SHELVED')
+        self._wait_for_state_change(server, expected_status='SHELVED')
 
         self.assertEqual(3, len(fake_notifier.VERSIONED_NOTIFICATIONS),
                          fake_notifier.VERSIONED_NOTIFICATIONS)
@@ -812,7 +805,7 @@ class TestInstanceNotificationSample(
         # we can unshelve to make sure that the unshelve.start notification
         # payload is stable as the compute manager first sets the instance
         # state then a bit later sets the instance.host to None.
-        self._wait_for_server_parameter(self.api, server,
+        self._wait_for_server_parameter(server,
                                         {'status': 'SHELVED_OFFLOADED',
                                          'OS-EXT-SRV-ATTR:host': None})
 
@@ -832,7 +825,7 @@ class TestInstanceNotificationSample(
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
         self.api.post_server_action(server['id'], {'unshelve': None})
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
         self._wait_for_notification('instance.unshelve.end')
 
     def _test_unshelve_server(self, server):
@@ -844,13 +837,13 @@ class TestInstanceNotificationSample(
         # we can unshelve to make sure that the unshelve.start notification
         # payload is stable as the compute manager first sets the instance
         # state then a bit later sets the instance.host to None.
-        self._wait_for_server_parameter(self.api, server,
+        self._wait_for_server_parameter(server,
                                         {'status': 'SHELVED_OFFLOADED',
                                          'OS-EXT-SRV-ATTR:host': None})
 
         post = {'unshelve': None}
         self.api.post_server_action(server['id'], post)
-        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
         self._wait_for_notification('instance.unshelve.end')
         self.assertEqual(9, len(fake_notifier.VERSIONED_NOTIFICATIONS),
                          fake_notifier.VERSIONED_NOTIFICATIONS)
@@ -870,11 +863,11 @@ class TestInstanceNotificationSample(
     def _test_suspend_resume_server(self, server):
         post = {'suspend': {}}
         self.api.post_server_action(server['id'], post)
-        self._wait_for_state_change(self.admin_api, server, 'SUSPENDED')
+        self._wait_for_state_change(server, 'SUSPENDED')
 
         post = {'resume': None}
         self.api.post_server_action(server['id'], post)
-        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         # Four versioned notification are generated.
         # 0. instance-suspend-start
@@ -913,10 +906,10 @@ class TestInstanceNotificationSample(
 
     def _test_pause_unpause_server(self, server):
         self.api.post_server_action(server['id'], {'pause': {}})
-        self._wait_for_state_change(self.api, server, 'PAUSED')
+        self._wait_for_state_change(server, 'PAUSED')
 
         self.api.post_server_action(server['id'], {'unpause': {}})
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         # Four versioned notifications are generated
         # 0. instance-pause-start
@@ -997,7 +990,7 @@ class TestInstanceNotificationSample(
             }
         }
         self.api.post_server_action(server['id'], post)
-        self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+        self._wait_for_state_change(server, 'VERIFY_RESIZE')
 
         self._pop_and_verify_dest_select_notification(server['id'],
             replacements={
@@ -1034,7 +1027,7 @@ class TestInstanceNotificationSample(
         # the following is the revert server request
         post = {'revertResize': None}
         self.api.post_server_action(server['id'], post)
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         self.assertEqual(3, len(fake_notifier.VERSIONED_NOTIFICATIONS),
                          fake_notifier.VERSIONED_NOTIFICATIONS)
@@ -1170,7 +1163,7 @@ class TestInstanceNotificationSample(
         self.addCleanup(patcher.stop)
         patcher.start()
         self.api.post_server_action(server['id'], post)
-        self._wait_for_state_change(self.api, server, expected_status='ERROR')
+        self._wait_for_state_change(server, expected_status='ERROR')
         self._wait_for_notification('compute.exception')
         # There should be the following notifications after scheduler's
         # select_destination notifications:
@@ -1248,10 +1241,8 @@ class TestInstanceNotificationSample(
         self.api.post_server_action(server['id'], post)
         # Before going back to ACTIVE state
         # server state need to be changed to REBUILD state
-        self._wait_for_state_change(self.api, server,
-                                    expected_status='REBUILD')
-        self._wait_for_state_change(self.api, server,
-                                    expected_status='ACTIVE')
+        self._wait_for_state_change(server, expected_status='REBUILD')
+        self._wait_for_state_change(server, expected_status='ACTIVE')
 
         self._pop_and_verify_dest_select_notification(server['id'],
             replacements={
@@ -1345,10 +1336,8 @@ class TestInstanceNotificationSample(
         self.api.post_server_action(server['id'], post)
         # Before going back to ACTIVE state
         # server state need to be changed to REBUILD state
-        self._wait_for_state_change(self.api, server,
-                                    expected_status='REBUILD')
-        self._wait_for_state_change(self.api, server,
-                                    expected_status='ACTIVE')
+        self._wait_for_state_change(server, expected_status='REBUILD')
+        self._wait_for_state_change(server, expected_status='ACTIVE')
 
         self._pop_and_verify_dest_select_notification(server['id'],
             replacements={
@@ -1434,7 +1423,7 @@ class TestInstanceNotificationSample(
         }
         self.api.post_server_action(server['id'], post)
         mock_rebuild.side_effect = _virtual_interface_create_failed
-        self._wait_for_state_change(self.api, server, expected_status='ERROR')
+        self._wait_for_state_change(server, expected_status='ERROR')
         notification = self._get_notifications('instance.rebuild.error')
         self.assertEqual(1, len(notification),
                          fake_notifier.VERSIONED_NOTIFICATIONS)
@@ -1455,11 +1444,11 @@ class TestInstanceNotificationSample(
     def _test_restore_server(self, server):
         self.flags(reclaim_instance_interval=30)
         self.api.delete_server(server['id'])
-        self._wait_for_state_change(self.api, server, 'SOFT_DELETED')
+        self._wait_for_state_change(server, 'SOFT_DELETED')
         # we don't want to test soft_delete here
         fake_notifier.reset()
         self.api.post_server_action(server['id'], {'restore': {}})
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
                          fake_notifier.VERSIONED_NOTIFICATIONS)
@@ -1641,12 +1630,12 @@ class TestInstanceNotificationSample(
         self.flags(allow_resize_to_same_host=True)
         post = {'resize': {'flavorRef': '2'}}
         self.api.post_server_action(server['id'], post)
-        self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+        self._wait_for_state_change(server, 'VERIFY_RESIZE')
         fake_notifier.reset()
 
         post = {'confirmResize': None}
         self.api.post_server_action(server['id'], post)
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
                          fake_notifier.VERSIONED_NOTIFICATIONS)
@@ -1733,7 +1722,7 @@ class TestInstanceNotificationSample(
             }
         }
         self.api.post_server_action(server['id'], post)
-        self._wait_for_state_change(self.admin_api, server, 'RESCUE')
+        self._wait_for_state_change(server, 'RESCUE')
 
         # 0. instance.rescue.start
         # 1. instance.exists
@@ -1759,7 +1748,7 @@ class TestInstanceNotificationSample(
             'unrescue': None
         }
         self.api.post_server_action(server['id'], post)
-        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
                          fake_notifier.VERSIONED_NOTIFICATIONS)
@@ -1779,7 +1768,7 @@ class TestInstanceNotificationSample(
     def _test_soft_delete_server(self, server):
         self.flags(reclaim_instance_interval=30)
         self.api.delete_server(server['id'])
-        self._wait_for_state_change(self.api, server, 'SOFT_DELETED')
+        self._wait_for_state_change(server, 'SOFT_DELETED')
 
         self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
                          fake_notifier.VERSIONED_NOTIFICATIONS)
@@ -1948,9 +1937,9 @@ class TestInstanceNotificationSample(
 
     def _test_lock_unlock_instance(self, server):
         self.api.post_server_action(server['id'], {'lock': {}})
-        self._wait_for_server_parameter(self.api, server, {'locked': True})
+        self._wait_for_server_parameter(server, {'locked': True})
         self.api.post_server_action(server['id'], {'unlock': {}})
-        self._wait_for_server_parameter(self.api, server, {'locked': False})
+        self._wait_for_server_parameter(server, {'locked': False})
         # Two versioned notifications are generated
         # 0. instance-lock
         # 1. instance-unlock
@@ -1973,9 +1962,9 @@ class TestInstanceNotificationSample(
     def _test_lock_unlock_instance_with_reason(self, server):
         self.api.post_server_action(
             server['id'], {'lock': {"locked_reason": "global warming"}})
-        self._wait_for_server_parameter(self.api, server, {'locked': True})
+        self._wait_for_server_parameter(server, {'locked': True})
         self.api.post_server_action(server['id'], {'unlock': {}})
-        self._wait_for_server_parameter(self.api, server, {'locked': False})
+        self._wait_for_server_parameter(server, {'locked': False})
         # Two versioned notifications are generated
         # 0. instance-lock
         # 1. instance-unlock

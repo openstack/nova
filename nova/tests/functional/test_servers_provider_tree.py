@@ -419,11 +419,11 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
 
     def _create_instance(self, flavor):
         server_req = self._build_minimal_create_server_request(
-            self.api, 'some-server', flavor_id=flavor['id'],
+            'some-server', flavor_id=flavor['id'],
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             networks='none', az='nova:host1')
         inst = self.api.post_server({'server': server_req})
-        return self._wait_for_state_change(self.admin_api, inst, 'ACTIVE')
+        return self._wait_for_state_change(inst, 'ACTIVE')
 
     def test_reshape(self):
         """On startup, virt driver signals it needs to reshape, then does so.

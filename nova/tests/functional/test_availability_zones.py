@@ -74,10 +74,10 @@ class TestAvailabilityZoneScheduling(
     def _create_server(self, name):
         # Create a server, it doesn't matter which host it ends up in.
         server_body = self._build_minimal_create_server_request(
-            self.api, name, image_uuid=fake_image.get_valid_image_id(),
+            name, image_uuid=fake_image.get_valid_image_id(),
             flavor_id=self.flavor1, networks='none')
         server = self.api.post_server({'server': server_body})
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         original_host = server['OS-EXT-SRV-ATTR:host']
         # Assert the server has the AZ set (not None or 'nova').
         expected_zone = 'zone1' if original_host == 'host1' else 'zone2'
@@ -153,7 +153,7 @@ class TestAvailabilityZoneScheduling(
         # Resize the server which should move it to the other zone.
         self.api.post_server_action(
             server['id'], {'resize': {'flavorRef': self.flavor2}})
-        server = self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+        server = self._wait_for_state_change(server, 'VERIFY_RESIZE')
 
         # Now the server should be in the other AZ.
         new_zone = 'zone2' if original_host == 'host1' else 'zone1'
@@ -161,5 +161,5 @@ class TestAvailabilityZoneScheduling(
 
         # Revert the resize and the server should be back in the original AZ.
         self.api.post_server_action(server['id'], {'revertResize': None})
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         self._assert_instance_az(server, original_az)

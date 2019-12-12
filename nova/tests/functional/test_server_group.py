@@ -90,7 +90,7 @@ class ServerGroupTestBase(test.TestCase,
                                 expected_status='ACTIVE', flavor=None,
                                 az=None):
         server = self._build_minimal_create_server_request(
-            self.api, 'some-server',
+            'some-server',
             image_uuid='a2459075-d96c-40d5-893e-577ff92e721c', networks=[],
             az=az)
         if flavor:
@@ -103,7 +103,7 @@ class ServerGroupTestBase(test.TestCase,
 
         # Wait for it to finish being created
         found_server = self._wait_for_state_change(
-            self.admin_api, created_server, expected_status)
+            created_server, expected_status)
 
         return found_server
 
@@ -323,8 +323,7 @@ class ServerGroupTestV21(ServerGroupTestBase):
                             '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'}}
         self.api.post_server_action(servers[1]['id'], post)
 
-        rebuilt_server = self._wait_for_state_change(
-            self.admin_api, servers[1], 'ACTIVE')
+        rebuilt_server = self._wait_for_state_change(servers[1], 'ACTIVE')
 
         self.assertEqual(post['rebuild']['imageRef'],
                          rebuilt_server.get('image')['id'])
@@ -369,7 +368,7 @@ class ServerGroupTestV21(ServerGroupTestBase):
         post = {'migrate': {}}
         self.admin_api.post_server_action(servers[1]['id'], post)
         migrated_server = self._wait_for_state_change(
-            self.admin_api, servers[1], 'VERIFY_RESIZE')
+            servers[1], 'VERIFY_RESIZE')
 
         self.assertNotEqual(servers[0]['OS-EXT-SRV-ATTR:host'],
                             migrated_server['OS-EXT-SRV-ATTR:host'])
@@ -384,7 +383,7 @@ class ServerGroupTestV21(ServerGroupTestBase):
         server1_old_host = servers[1]['OS-EXT-SRV-ATTR:host']
         self.admin_api.post_server_action(servers[1]['id'], post)
         migrated_server = self._wait_for_state_change(
-            self.admin_api, servers[1], 'VERIFY_RESIZE')
+            servers[1], 'VERIFY_RESIZE')
 
         self.assertEqual(server1_old_host,
                          migrated_server['OS-EXT-SRV-ATTR:host'])
@@ -424,8 +423,7 @@ class ServerGroupTestV21(ServerGroupTestBase):
         post = {'evacuate': {'onSharedStorage': False}}
         self.admin_api.post_server_action(servers[1]['id'], post)
         self._wait_for_migration_status(servers[1], ['done'])
-        evacuated_server = self._wait_for_state_change(
-            self.admin_api, servers[1], 'ACTIVE')
+        evacuated_server = self._wait_for_state_change(servers[1], 'ACTIVE')
 
         # check that the server is evacuated to another host
         self.assertNotEqual(evacuated_server['OS-EXT-SRV-ATTR:host'],
@@ -447,7 +445,7 @@ class ServerGroupTestV21(ServerGroupTestBase):
         self.admin_api.post_server_action(servers[1]['id'], post)
         self._wait_for_migration_status(servers[1], ['error'])
         server_after_failed_evac = self._wait_for_state_change(
-            self.admin_api, servers[1], 'ERROR')
+            servers[1], 'ERROR')
 
         # assert that after a failed evac the server active on the same host
         # as before
@@ -467,7 +465,7 @@ class ServerGroupTestV21(ServerGroupTestBase):
         self.admin_api.post_server_action(servers[1]['id'], post)
         self._wait_for_migration_status(servers[1], ['error'])
         server_after_failed_evac = self._wait_for_state_change(
-            self.admin_api, servers[1], 'ERROR')
+            servers[1], 'ERROR')
 
         # assert that after a failed evac the server active on the same host
         # as before
@@ -608,8 +606,7 @@ class ServerGroupTestV215(ServerGroupTestV21):
         post = {'evacuate': {}}
         self.admin_api.post_server_action(servers[1]['id'], post)
         self._wait_for_migration_status(servers[1], ['done'])
-        evacuated_server = self._wait_for_state_change(
-            self.admin_api, servers[1], 'ACTIVE')
+        evacuated_server = self._wait_for_state_change(servers[1], 'ACTIVE')
 
         # check that the server is evacuated
         self.assertNotEqual(evacuated_server['OS-EXT-SRV-ATTR:host'],
@@ -633,7 +630,7 @@ class ServerGroupTestV215(ServerGroupTestV21):
         self.admin_api.post_server_action(servers[1]['id'], post)
         self._wait_for_migration_status(servers[1], ['error'])
         server_after_failed_evac = self._wait_for_state_change(
-            self.admin_api, servers[1], 'ERROR')
+            servers[1], 'ERROR')
 
         # assert that after a failed evac the server active on the same host
         # as before
@@ -653,7 +650,7 @@ class ServerGroupTestV215(ServerGroupTestV21):
         self.admin_api.post_server_action(servers[1]['id'], post)
         self._wait_for_migration_status(servers[1], ['error'])
         server_after_failed_evac = self._wait_for_state_change(
-            self.admin_api, servers[1], 'ERROR')
+            servers[1], 'ERROR')
 
         # assert that after a failed evac the server active on the same host
         # as before
@@ -767,7 +764,7 @@ class ServerGroupTestV215(ServerGroupTestV21):
         post = {'migrate': {}}
         self.admin_api.post_server_action(servers[1]['id'], post)
         migrated_server = self._wait_for_state_change(
-            self.admin_api, servers[1], 'VERIFY_RESIZE')
+            servers[1], 'VERIFY_RESIZE')
 
         return [migrated_server['OS-EXT-SRV-ATTR:host'],
                 servers[0]['OS-EXT-SRV-ATTR:host']]
@@ -794,8 +791,7 @@ class ServerGroupTestV215(ServerGroupTestV21):
         post = {'evacuate': {}}
         self.admin_api.post_server_action(servers[1]['id'], post)
         self._wait_for_migration_status(servers[1], ['done'])
-        evacuated_server = self._wait_for_state_change(
-            self.admin_api, servers[1], 'ACTIVE')
+        evacuated_server = self._wait_for_state_change(servers[1], 'ACTIVE')
 
         # Note(gibi): need to get the server again as the state of the instance
         # goes to ACTIVE first then the host of the instance changes to the
@@ -974,7 +970,6 @@ class TestAntiAffinityLiveMigration(test.TestCase,
         servers = []
         for x in range(2):
             server = self._build_minimal_create_server_request(
-                self.api,
                 'test_serial_no_valid_host_then_pass_with_third_host-%d' % x,
                 networks='none')
             # Add the group hint so the server is created in our group.
@@ -986,8 +981,7 @@ class TestAntiAffinityLiveMigration(test.TestCase,
             with utils.temporary_mutation(self.api, microversion='2.37'):
                 server = self.api.post_server(server_req)
                 servers.append(
-                    self._wait_for_state_change(
-                        self.admin_api, server, 'ACTIVE'))
+                    self._wait_for_state_change(server, 'ACTIVE'))
 
         # Make sure each server is on a unique host.
         hosts = set([svr['OS-EXT-SRV-ATTR:host'] for svr in servers])
@@ -1021,7 +1015,7 @@ class TestAntiAffinityLiveMigration(test.TestCase,
         # should work this time.
         self.start_service('compute', host='host3')
         self.admin_api.post_server_action(server['id'], body)
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         # Now the server should be on host3 since that was the only available
         # host for the live migration.
         self.assertEqual('host3', server['OS-EXT-SRV-ATTR:host'])

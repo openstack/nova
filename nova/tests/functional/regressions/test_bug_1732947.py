@@ -64,7 +64,7 @@ class RebuildVolumeBackedSameImage(integrated_helpers._IntegratedTestBase,
             }
         }
         server = self.api.post_server(server_req_body)
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         # For a volume-backed server, the image ref will be an empty string
         # in the server response.
         self.assertEqual('', server['image'])

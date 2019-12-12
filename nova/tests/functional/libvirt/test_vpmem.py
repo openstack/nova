@@ -126,7 +126,7 @@ class VPMEMTestBase(integrated_helpers.LibvirtProviderUsageBaseTestCase):
 
     def _create_server(self, flavor_id, hostname):
         server_req = self._build_minimal_create_server_request(
-            self.api, 'some-server', flavor_id=flavor_id,
+            'some-server', flavor_id=flavor_id,
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             networks='none')
         server_req['availability_zone'] = 'nova:%s' % hostname
@@ -173,22 +173,22 @@ class VPMEMTests(VPMEMTestBase):
 
         # Boot two servers with pmem
         server1 = self._create_server(self.flavor, self.compute1.host)
-        self._wait_for_state_change(self.api, server1, 'ACTIVE')
+        self._wait_for_state_change(server1, 'ACTIVE')
         self._check_vpmem_allocations({'CUSTOM_PMEM_NAMESPACE_SMALL': 1},
                                       server1['id'], cn1_uuid)
         server2 = self._create_server(self.flavor, self.compute1.host)
-        self._wait_for_state_change(self.api, server2, 'ACTIVE')
+        self._wait_for_state_change(server2, 'ACTIVE')
         self._check_vpmem_allocations({'CUSTOM_PMEM_NAMESPACE_SMALL': 1},
                                       server2['id'], cn1_uuid)
 
         # 'SMALL' VPMEM resource has used up
         server3 = self._create_server(self.flavor, self.compute1.host)
-        self._wait_for_state_change(self.api, server3, 'ERROR')
+        self._wait_for_state_change(server3, 'ERROR')
 
         # Delete server2, one 'SMALL' VPMEM will be released
         self._delete_server(server2)
         server3 = self._create_server(self.flavor, self.compute1.host)
-        self._wait_for_state_change(self.api, server3, 'ACTIVE')
+        self._wait_for_state_change(server3, 'ACTIVE')
         self._check_vpmem_allocations({'CUSTOM_PMEM_NAMESPACE_SMALL': 1},
                                       server3['id'], cn1_uuid)
 
@@ -237,29 +237,29 @@ class VPMEMResizeTests(VPMEMTestBase):
 
         # Boot one server with pmem, then resize the server
         server = self._create_server(self.flavor1, self.compute1.host)
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
         self._check_vpmem_allocations({'CUSTOM_PMEM_NAMESPACE_SMALL': 1},
                                       server['id'], cn1_uuid)
 
         # Revert resize
         self._resize_server(server, self.flavor2)
-        self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+        self._wait_for_state_change(server, 'VERIFY_RESIZE')
         self._check_vpmem_allocations({'CUSTOM_PMEM_NAMESPACE_4GB': 1,
                                        'CUSTOM_PMEM_NAMESPACE_SMALL': 1},
                                       server['id'], cn2_uuid)
         self._revert_resize(server)
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
         self._check_vpmem_allocations({'CUSTOM_PMEM_NAMESPACE_SMALL': 1},
                                       server['id'], cn1_uuid)
 
         # Confirm resize
         self._resize_server(server, self.flavor2)
-        self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+        self._wait_for_state_change(server, 'VERIFY_RESIZE')
         self._check_vpmem_allocations({'CUSTOM_PMEM_NAMESPACE_4GB': 1,
                                        'CUSTOM_PMEM_NAMESPACE_SMALL': 1},
                                       server['id'], cn2_uuid)
         self._confirm_resize(server)
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
         self._check_vpmem_allocations({'CUSTOM_PMEM_NAMESPACE_4GB': 1,
                                        'CUSTOM_PMEM_NAMESPACE_SMALL': 1},
                                       server['id'], cn2_uuid)
@@ -272,29 +272,29 @@ class VPMEMResizeTests(VPMEMTestBase):
 
         # Boot one server with pmem, then resize the server
         server = self._create_server(self.flavor1, self.compute1.host)
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
         self._check_vpmem_allocations({'CUSTOM_PMEM_NAMESPACE_SMALL': 1},
                                       server['id'], cn1_uuid)
 
         # Revert resize
         self._resize_server(server, self.flavor2)
-        self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+        self._wait_for_state_change(server, 'VERIFY_RESIZE')
         self._check_vpmem_allocations({'CUSTOM_PMEM_NAMESPACE_4GB': 1,
                                        'CUSTOM_PMEM_NAMESPACE_SMALL': 1},
                                       server['id'], cn1_uuid)
         self._revert_resize(server)
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
         self._check_vpmem_allocations({'CUSTOM_PMEM_NAMESPACE_SMALL': 1},
                                       server['id'], cn1_uuid)
 
         # Confirm resize
         self._resize_server(server, self.flavor2)
-        self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+        self._wait_for_state_change(server, 'VERIFY_RESIZE')
         self._check_vpmem_allocations({'CUSTOM_PMEM_NAMESPACE_4GB': 1,
                                        'CUSTOM_PMEM_NAMESPACE_SMALL': 1},
                                       server['id'], cn1_uuid)
         self._confirm_resize(server)
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
         self._check_vpmem_allocations({'CUSTOM_PMEM_NAMESPACE_4GB': 1,
                                        'CUSTOM_PMEM_NAMESPACE_SMALL': 1},
                                       server['id'], cn1_uuid)

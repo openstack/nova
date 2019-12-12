@@ -69,7 +69,7 @@ class LiveMigrationCinderFailure(integrated_helpers._IntegratedTestBase,
                      'uuid': uuids.working_volume,
                      'source_type': 'volume',
                      'destination_type': 'volume'}]}})
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
 
         source = server['OS-EXT-SRV-ATTR:host']
         if source == self.compute.host:
@@ -87,7 +87,7 @@ class LiveMigrationCinderFailure(integrated_helpers._IntegratedTestBase,
         self.stub_out('nova.volume.cinder.API.attachment_delete',
                       stub_attachment_delete)
         self.api.post_server_action(server['id'], post)
-        self._wait_for_server_parameter(self.api, server,
+        self._wait_for_server_parameter(server,
                                         {'OS-EXT-SRV-ATTR:host': dest,
                                          'status': 'ACTIVE'})
         self.assertEqual(2, stub_attachment_delete.call_count)

@@ -73,11 +73,12 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
         self.computes = {}
         super(ServersTestBase, self).setUp()
 
-    def _wait_for_server_parameter(self, admin_api, server, expected_params,
+    def _wait_for_server_parameter(self, server, expected_params,
                                    max_retries=10):
+        api = getattr(self, 'admin_api', self.api)
         retry_count = 0
         while True:
-            server = admin_api.get_server(server['id'])
+            server = api.get_server(server['id'])
             if all([server[attr] == expected_params[attr]
                     for attr in expected_params]):
                 break
@@ -92,7 +93,7 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
 
     def _wait_for_state_change(self, server, expected_status, max_retries=10):
         return self._wait_for_server_parameter(
-            self.api, server, {'status': expected_status}, max_retries)
+            server, {'status': expected_status}, max_retries)
 
     # TODO(stephenfin): Remove this once we subclass 'InstanceHelperMixin'
     def _wait_until_deleted(self, server):
@@ -1404,7 +1405,7 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
             }
         }
         server = self.api.post_server(server_req_body)
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         # Disable the host we're on so ComputeFilter would have ruled it out
         # normally
@@ -1434,10 +1435,7 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
                           rebuild_req_body, check_response_status=[500])
         # Look for the failed rebuild action.
         self._wait_for_action_fail_completion(
-            server, instance_actions.REBUILD, 'rebuild_server',
-            # Before microversion 2.51 events are only returned for instance
-            # actions if you're an admin.
-            self.api_fixture.admin_api)
+            server, instance_actions.REBUILD, 'rebuild_server')
         # Assert the server image_ref was rolled back on failure.
         server = self.api.get_server(server['id'])
         self.assertEqual(original_image_ref, server['image']['id'])
@@ -1515,7 +1513,7 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
             }
         }
         server = self.api.post_server(server_req_body)
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         flavor = self.api.api_get('/flavors/1').body['flavor']
 
@@ -1541,7 +1539,7 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
         self.api.api_post('/servers/%s/action' % server['id'],
                           rebuild_req_body)
         self._wait_for_server_parameter(
-            self.api, server, {'OS-EXT-STS:task_state': None})
+            server, {'OS-EXT-STS:task_state': None})
 
         # The usage and allocations should not have changed.
         rp_usages = _get_provider_usages(rp_uuid)
@@ -1577,7 +1575,7 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
             }
         }
         server = self.api.post_server(server_req_body)
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         # For a volume-backed server, the image ref will be an empty string
         # in the server response.
         self.assertEqual('', server['image'])
@@ -1787,7 +1785,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             post = {'confirmResize': None}
             self.api.post_server_action(
                 server['id'], post, check_response_status=[204])
-            server = self._wait_for_state_change(self.api, server, 'ERROR')
+            server = self._wait_for_state_change(server, 'ERROR')
 
         # After confirming and error, we should have an allocation only on the
         # destination host
@@ -1826,7 +1824,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         # Revert the resize and check the usages
         post = {'revertResize': None}
         self.api.post_server_action(server['id'], post)
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         # Make sure the RequestSpec.flavor matches the original flavor.
         ctxt = context.get_admin_context()
@@ -1908,7 +1906,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         # Revert the resize and check the usages
         post = {'revertResize': None}
         self.api.post_server_action(server['id'], post)
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         self._run_periodics()
 
@@ -2052,7 +2050,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             }
         }
         self.api.post_server_action(server['id'], resize_req)
-        self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+        self._wait_for_state_change(server, 'VERIFY_RESIZE')
 
         # There should be resource usage for flavor1 on the source host.
         self.assert_hypervisor_usage(
@@ -2132,7 +2130,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         # VM to ERROR state, but it should remain on source compute
         expected_params = {'OS-EXT-SRV-ATTR:host': source_hostname,
                            'status': 'ERROR'}
-        server = self._wait_for_server_parameter(self.api, server,
+        server = self._wait_for_server_parameter(server,
                                                  expected_params)
 
         # Check migrations
@@ -2183,7 +2181,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             server, instance_actions.MIGRATE, 'NoValidHost')
         expected_params = {'OS-EXT-SRV-ATTR:host': source_hostname,
                            'status': 'ACTIVE'}
-        self._wait_for_server_parameter(self.api, server, expected_params)
+        self._wait_for_server_parameter(server, expected_params)
 
         self._run_periodics()
 
@@ -2217,7 +2215,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             server['id'], post)
         expected_params = {'OS-EXT-SRV-ATTR:host': dest_hostname,
                            'status': 'ACTIVE'}
-        server = self._wait_for_server_parameter(self.api, server,
+        server = self._wait_for_server_parameter(server,
                                                  expected_params)
 
         # Expect to have allocation and usages on both computes as the
@@ -2292,7 +2290,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.api.post_server_action(server['id'], post)
         expected_params = {'OS-EXT-SRV-ATTR:host': dest_hostname,
                            'status': 'ACTIVE'}
-        server = self._wait_for_server_parameter(self.api, server,
+        server = self._wait_for_server_parameter(server,
                                                  expected_params)
 
         # Run the periodics to show those don't modify allocations.
@@ -2397,7 +2395,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.api.post_server_action(server['id'], post)
         expected_params = {'OS-EXT-SRV-ATTR:host': dest_hostname,
                            'status': 'ACTIVE'}
-        server = self._wait_for_server_parameter(self.api, server,
+        server = self._wait_for_server_parameter(server,
                                                  expected_params)
 
         # Run the periodics to show those don't modify allocations.
@@ -2474,8 +2472,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             # the migration will fail on the dest node and the instance will
             # stay ACTIVE and task_state will be set to None.
             server = self._wait_for_server_parameter(
-                self.api, server, {'status': 'ACTIVE',
-                                   'OS-EXT-STS:task_state': None})
+                server, {'status': 'ACTIVE', 'OS-EXT-STS:task_state': None})
 
         # Run the periodics to show those don't modify allocations.
         self._run_periodics()
@@ -2550,7 +2547,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             self.api.post_server_action(server['id'], {'evacuate': {}})
             # the migration will fail on the dest node and the instance will
             # go into error state
-            server = self._wait_for_state_change(self.api, server, 'ERROR')
+            server = self._wait_for_state_change(server, 'ERROR')
 
         # Run the periodics to show those don't modify allocations.
         self._run_periodics()
@@ -2602,7 +2599,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             'shelve': {}
         }
         self.api.post_server_action(server['id'], req)
-        self._wait_for_state_change(self.api, server, 'SHELVED')
+        self._wait_for_state_change(server, 'SHELVED')
         # the host should maintain the existing allocation for this instance
         # while the instance is shelved
         self.assertFlavorMatchesUsage(rp_uuid, self.flavor1)
@@ -2622,7 +2619,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             'unshelve': None
         }
         self.api.post_server_action(server['id'], req)
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         # the host should have resource usage as the instance is ACTIVE
         self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
@@ -2639,8 +2636,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             'shelveOffload': {}
         }
         self.api.post_server_action(server['id'], req)
-        self._wait_for_server_parameter(
-            self.api, server, {'status': 'SHELVED_OFFLOADED',
+        self._wait_for_server_parameter(server, {'status': 'SHELVED_OFFLOADED',
                                'OS-EXT-SRV-ATTR:host': None,
                                'OS-EXT-AZ:availability_zone': ''})
         source_usages = self._get_provider_usages(source_rp_uuid)
@@ -2671,7 +2667,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             'unshelve': None
         }
         self.api.post_server_action(server['id'], req)
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         # unshelving an offloaded instance will call the scheduler so the
         # instance might end up on a different host
         current_hostname = server['OS-EXT-SRV-ATTR:host']
@@ -2707,7 +2703,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             'unshelve': None
         }
         self.api.post_server_action(server['id'], req)
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         # unshelving an offloaded instance will call the scheduler so the
         # instance might end up on a different host
         current_hostname = server['OS-EXT-SRV-ATTR:host']
@@ -2746,7 +2742,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         }
 
         self.api.post_server_action(server['id'], post)
-        self._wait_for_server_parameter(self.api, server,
+        self._wait_for_server_parameter(server,
             {'OS-EXT-SRV-ATTR:host': dest_hostname,
              'status': 'ACTIVE'})
 
@@ -2808,7 +2804,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         }
 
         self.api.post_server_action(server['id'], post)
-        self._wait_for_server_parameter(self.api, server,
+        self._wait_for_server_parameter(server,
                                         {'OS-EXT-SRV-ATTR:host': dest_hostname,
                                          'status': 'ACTIVE'})
 
@@ -2947,7 +2943,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         # The _rollback_live_migration method in the compute manager will reset
         # the task_state on the instance, so wait for that to happen.
         server = self._wait_for_server_parameter(
-            self.api, server, {'OS-EXT-STS:task_state': None})
+            server, {'OS-EXT-STS:task_state': None})
 
         self.assertEqual(source_hostname, migration['source_compute'])
         self.assertEqual(dest_hostname, migration['dest_compute'])
@@ -3089,14 +3085,13 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
     def _server_created_with_host(self):
         hostname = self.compute1.host
         server_req = self._build_minimal_create_server_request(
-            self.api, "some-server", flavor_id=self.flavor1["id"],
+            "some-server", flavor_id=self.flavor1["id"],
             image_uuid="155d900f-4e14-4e4c-a73d-069cbf4541e6",
             networks='none')
         server_req['host'] = hostname
 
         created_server = self.api.post_server({"server": server_req})
-        server = self._wait_for_state_change(
-            self.api, created_server, "ACTIVE")
+        server = self._wait_for_state_change(created_server, "ACTIVE")
         return server
 
     def test_live_migration_after_server_created_with_host(self):
@@ -3115,7 +3110,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         }
         self.api.post_server_action(created_server['id'], post)
         new_server = self._wait_for_server_parameter(
-            self.api, created_server, {'status': 'ACTIVE'})
+            created_server, {'status': 'ACTIVE'})
         inst_dest_host = new_server["OS-EXT-SRV-ATTR:host"]
 
         self.assertEqual(dest_hostname, inst_dest_host)
@@ -3143,7 +3138,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.api.post_server_action(created_server['id'], post)
         expected_params = {'OS-EXT-SRV-ATTR:host': dest_hostname,
                            'status': 'ACTIVE'}
-        new_server = self._wait_for_server_parameter(self.api, created_server,
+        new_server = self._wait_for_server_parameter(created_server,
                                                      expected_params)
         inst_dest_host = new_server["OS-EXT-SRV-ATTR:host"]
 
@@ -3165,7 +3160,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             }
         }
         self.api.post_server_action(created_server['id'], resize_req)
-        self._wait_for_state_change(self.api, created_server, 'VERIFY_RESIZE')
+        self._wait_for_state_change(created_server, 'VERIFY_RESIZE')
 
         # Confirm the resize
         new_server = self._confirm_resize(created_server)
@@ -3184,14 +3179,14 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.flags(shelved_offload_time=-1)
         req = {'shelve': {}}
         self.api.post_server_action(created_server['id'], req)
-        self._wait_for_state_change(self.api, created_server, 'SHELVED')
+        self._wait_for_state_change(created_server, 'SHELVED')
 
         req = {'shelveOffload': {}}
         self.api.post_server_action(created_server['id'], req)
-        self._wait_for_server_parameter(
-            self.api, created_server, {'status': 'SHELVED_OFFLOADED',
-                                       'OS-EXT-SRV-ATTR:host': None,
-                                       'OS-EXT-AZ:availability_zone': ''})
+        self._wait_for_server_parameter(created_server, {
+            'status': 'SHELVED_OFFLOADED',
+            'OS-EXT-SRV-ATTR:host': None,
+            'OS-EXT-AZ:availability_zone': ''})
 
         # unshelve after shelve offload will do scheduling. this test case
         # wants to test the scenario when the scheduler select a different host
@@ -3203,8 +3198,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         req = {'unshelve': None}
         self.api.post_server_action(created_server['id'], req)
-        new_server = self._wait_for_state_change(
-            self.api, created_server, 'ACTIVE')
+        new_server = self._wait_for_state_change(created_server, 'ACTIVE')
         inst_dest_host = new_server["OS-EXT-SRV-ATTR:host"]
 
         self.assertEqual(dest_hostname, inst_dest_host)
@@ -3217,12 +3211,12 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         supplied host_list, and does not call the scheduler.
         """
         server_req = self._build_minimal_create_server_request(
-                self.api, "some-server", flavor_id=self.flavor1["id"],
+                "some-server", flavor_id=self.flavor1["id"],
                 image_uuid="155d900f-4e14-4e4c-a73d-069cbf4541e6",
                 networks='none')
 
         created_server = self.api.post_server({"server": server_req})
-        server = self._wait_for_state_change(self.api, created_server,
+        server = self._wait_for_state_change(created_server,
                 "ACTIVE")
         inst_host = server["OS-EXT-SRV-ATTR:host"]
         uuid_orig = self._get_provider_uuid_by_host(inst_host)
@@ -3274,7 +3268,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             # We will run out of alternates before populate_retry will
             # raise a MaxRetriesExceeded exception, so the migration will
             # fail and the server should be in status "ERROR"
-            server = self._wait_for_state_change(self.api, created_server,
+            server = self._wait_for_state_change(created_server,
                     "ERROR")
             # The usage should be unchanged from the original flavor
             self.assertFlavorMatchesUsage(uuid_orig, self.flavor1)
@@ -3285,7 +3279,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
                 usage = self._get_provider_usages(target_uuid)
                 self.assertEqual(empty_usage, usage)
         else:
-            server = self._wait_for_state_change(self.api, created_server,
+            server = self._wait_for_state_change(created_server,
                     "VERIFY_RESIZE")
             # Verify that the selected host failed, and was rescheduled to
             # an alternate host.
@@ -3380,7 +3374,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         # Revert the move and check the usages
         post = {'revertResize': None}
         self.api.post_server_action(server['id'], post)
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         def _check_allocation():
             self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
@@ -3442,7 +3436,7 @@ class ServerLiveMigrateForceAndAbort(
         self.api.force_complete_migration(server['id'],
                                           migration['id'])
 
-        self._wait_for_server_parameter(self.api, server,
+        self._wait_for_server_parameter(server,
                                         {'OS-EXT-SRV-ATTR:host': dest_hostname,
                                          'status': 'ACTIVE'})
 
@@ -3479,7 +3473,7 @@ class ServerLiveMigrateForceAndAbort(
         migration = self._wait_for_migration_status(server, ['running'])
 
         self.api.delete_migration(server['id'], migration['id'])
-        self._wait_for_server_parameter(self.api, server,
+        self._wait_for_server_parameter(server,
             {'OS-EXT-SRV-ATTR:host': source_hostname,
              'status': 'ACTIVE'})
 
@@ -3546,13 +3540,12 @@ class ServerRescheduleTests(integrated_helpers.ProviderUsageBaseTestCase):
         rescheduled to another node.
         """
         server_req = self._build_minimal_create_server_request(
-                self.api, 'some-server', flavor_id=self.flavor1['id'],
+                'some-server', flavor_id=self.flavor1['id'],
                 image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
                 networks='none')
 
         created_server = self.api.post_server({'server': server_req})
-        server = self._wait_for_state_change(
-                self.api, created_server, 'ACTIVE')
+        server = self._wait_for_state_change(created_server, 'ACTIVE')
         dest_hostname = server['OS-EXT-SRV-ATTR:host']
         failed_hostname = self._other_hostname(dest_hostname)
 
@@ -3577,7 +3570,7 @@ class ServerRescheduleTests(integrated_helpers.ProviderUsageBaseTestCase):
         """
 
         server_req = self._build_minimal_create_server_request(
-            self.api, 'some-server', flavor_id=self.flavor1['id'],
+            'some-server', flavor_id=self.flavor1['id'],
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             networks='none')
 
@@ -3592,8 +3585,7 @@ class ServerRescheduleTests(integrated_helpers.ProviderUsageBaseTestCase):
                                 consumer_uuid=uuids.inst1, error='testing')]):
 
             server = self.api.post_server({'server': server_req})
-            server = self._wait_for_state_change(
-                self.admin_api, server, 'ERROR')
+            server = self._wait_for_state_change(server, 'ERROR')
 
         self._delete_and_check_allocations(server)
 
@@ -3636,12 +3628,12 @@ class ServerBuildAbortTests(integrated_helpers.ProviderUsageBaseTestCase):
         from the source node when the build is aborted on that node.
         """
         server_req = self._build_minimal_create_server_request(
-                self.api, 'some-server', flavor_id=self.flavor1['id'],
+                'some-server', flavor_id=self.flavor1['id'],
                 image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
                 networks='none')
 
         created_server = self.api.post_server({'server': server_req})
-        self._wait_for_state_change(self.api, created_server, 'ERROR')
+        self._wait_for_state_change(created_server, 'ERROR')
 
         failed_hostname = self.compute1.manager.host
 
@@ -3697,12 +3689,12 @@ class ServerUnshelveSpawnFailTests(
              'DISK_GB': 0}, rp_uuid)
 
         server_req = self._build_minimal_create_server_request(
-            self.api, 'unshelve-spawn-fail', flavor_id=self.flavor1['id'],
+            'unshelve-spawn-fail', flavor_id=self.flavor1['id'],
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             networks='none')
 
         server = self.api.post_server({'server': server_req})
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         # assert allocations exist for the host
         self.assertFlavorMatchesUsage(rp_uuid, self.flavor1)
@@ -3710,8 +3702,7 @@ class ServerUnshelveSpawnFailTests(
         # shelve offload the server
         self.flags(shelved_offload_time=0)
         self.api.post_server_action(server['id'], {'shelve': None})
-        self._wait_for_server_parameter(
-            self.api, server, {'status': 'SHELVED_OFFLOADED',
+        self._wait_for_server_parameter(server, {'status': 'SHELVED_OFFLOADED',
                                'OS-EXT-SRV-ATTR:host': None})
 
         # assert allocations were removed from the host
@@ -3764,7 +3755,7 @@ class ServerSoftDeleteTests(integrated_helpers.ProviderUsageBaseTestCase):
 
     def _soft_delete_and_check_allocation(self, server, hostname):
         self.api.delete_server(server['id'])
-        server = self._wait_for_state_change(self.api, server, 'SOFT_DELETED')
+        server = self._wait_for_state_change(server, 'SOFT_DELETED')
 
         self._run_periodics()
 
@@ -3842,7 +3833,7 @@ class ServerSoftDeleteTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         post = {'restore': {}}
         self.api.post_server_action(server['id'], post)
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
 
         # after restore the allocations should be kept
         self.assertFlavorMatchesUsage(rp_uuid, self.flavor1)
@@ -3901,11 +3892,11 @@ class VolumeBackedServerTest(integrated_helpers.ProviderUsageBaseTestCase):
         with nova.utils.temporary_mutation(self.api, microversion='2.35'):
             image_id = self.api.get_images()[0]['id']
         server_req = self._build_minimal_create_server_request(
-            self.api, 'trait-based-server',
+            'trait-based-server',
             image_uuid=image_id,
             flavor_id=self.flavor_id, networks='none')
         server = self.api.post_server({'server': server_req})
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         return server
 
     def _create_volume_backed_server(self):
@@ -3928,7 +3919,7 @@ class VolumeBackedServerTest(integrated_helpers.ProviderUsageBaseTestCase):
             }
         }
         server = self.api.post_server(server_req_body)
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         return server
 
     def test_ephemeral_has_disk_allocation(self):
@@ -3985,8 +3976,7 @@ class VolumeBackedServerTest(integrated_helpers.ProviderUsageBaseTestCase):
         self._start_compute('host2')
         self.admin_api.post_server_action(server['id'], {'migrate': None})
         # Wait for the server to complete the cold migration.
-        server = self._wait_for_state_change(
-            self.admin_api, server, 'VERIFY_RESIZE')
+        server = self._wait_for_state_change(server, 'VERIFY_RESIZE')
         self.assertEqual('host2', server['OS-EXT-SRV-ATTR:host'])
         # Confirm the cold migration and check usage and the request spec.
         self._confirm_resize(server)
@@ -4002,7 +3992,7 @@ class VolumeBackedServerTest(integrated_helpers.ProviderUsageBaseTestCase):
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
         self.api.post_server_action(server['id'], {'shelve': None})
-        self._wait_for_state_change(self.api, server, 'SHELVED_OFFLOADED')
+        self._wait_for_state_change(server, 'SHELVED_OFFLOADED')
         fake_notifier.wait_for_versioned_notifications(
                 'instance.shelve_offload.end')
         # The server should not have any allocations since it's not currently
@@ -4012,7 +4002,7 @@ class VolumeBackedServerTest(integrated_helpers.ProviderUsageBaseTestCase):
         # Now unshelve the server and make sure there are still no DISK_GB
         # allocations for the root disk.
         self.api.post_server_action(server['id'], {'unshelve': None})
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
         allocs = self._get_allocations_by_server_uuid(server['id'])
         resources = list(allocs.values())[0]['resources']
         self.assertEqual(expected_usage, resources['DISK_GB'])
@@ -4058,7 +4048,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
         """
 
         server_req = self._build_minimal_create_server_request(
-            self.api, 'trait-based-server',
+            'trait-based-server',
             image_uuid=image_id,
             flavor_id=flavor_id, networks='none')
         return self.api.post_server({'server': server_req})
@@ -4107,7 +4097,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
         # Create server using flavor with required trait
         server = self._create_server_with_traits(self.flavor_with_trait['id'],
                                                  self.image_id_without_trait)
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         # Assert the server ended up on the expected compute host that has
         # the required trait.
         self.assertEqual(self.compute1.host, server['OS-EXT-SRV-ATTR:host'])
@@ -4122,7 +4112,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
                                                  self.image_id_without_trait)
 
         # The server should go to ERROR state because there is no valid host.
-        server = self._wait_for_state_change(self.admin_api, server, 'ERROR')
+        server = self._wait_for_state_change(server, 'ERROR')
         self.assertIsNone(server['OS-EXT-SRV-ATTR:host'])
         # Make sure the failure was due to NoValidHost by checking the fault.
         self.assertIn('fault', server)
@@ -4147,7 +4137,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
             self.image_id_without_trait
         )
 
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
 
         # Assert the server ended up on the expected compute host that doesn't
         # have the forbidden trait.
@@ -4165,7 +4155,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
         )
 
         # The server should go to ERROR state because there is no valid host.
-        server = self._wait_for_state_change(self.admin_api, server, 'ERROR')
+        server = self._wait_for_state_change(server, 'ERROR')
         self.assertIsNone(server['OS-EXT-SRV-ATTR:host'])
         # Make sure the failure was due to NoValidHost by checking the fault.
         self.assertIn('fault', server)
@@ -4184,7 +4174,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
         # Create server using only image trait
         server = self._create_server_with_traits(
             self.flavor_without_trait['id'], self.image_id_with_trait)
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         # Assert the server ended up on the expected compute host that has
         # the required trait.
         self.assertEqual(self.compute2.host, server['OS-EXT-SRV-ATTR:host'])
@@ -4203,7 +4193,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
         # Create server using flavor and image trait
         server = self._create_server_with_traits(
             self.flavor_with_trait['id'], self.image_id_with_trait)
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         # Assert the server ended up on the expected compute host that has
         # the required trait.
         self.assertEqual(self.compute2.host, server['OS-EXT-SRV-ATTR:host'])
@@ -4226,7 +4216,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
             nova_fixtures.CinderFixture.
             IMAGE_WITH_TRAITS_BACKED_VOL)
 
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         # Assert the server ended up on the expected compute host that has
         # the required trait.
         self.assertEqual(self.compute2.host, server['OS-EXT-SRV-ATTR:host'])
@@ -4250,7 +4240,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
             nova_fixtures.CinderFixture.
             IMAGE_WITH_TRAITS_BACKED_VOL)
 
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         # Assert the server ended up on the expected compute host that has
         # the required trait.
         self.assertEqual(self.compute2.host, server['OS-EXT-SRV-ATTR:host'])
@@ -4268,7 +4258,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
         server = self._create_server_with_traits(self.flavor_with_trait['id'],
                                                  self.image_id_without_trait)
         # The server should go to ERROR state because there is no valid host.
-        server = self._wait_for_state_change(self.admin_api, server, 'ERROR')
+        server = self._wait_for_state_change(server, 'ERROR')
         self.assertIsNone(server['OS-EXT-SRV-ATTR:host'])
         # Make sure the failure was due to NoValidHost by checking the fault.
         self.assertIn('fault', server)
@@ -4287,7 +4277,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
         server = self._create_server_with_traits(
             self.flavor_without_trait['id'], self.image_id_with_trait)
         # The server should go to ERROR state because there is no valid host.
-        server = self._wait_for_state_change(self.admin_api, server, 'ERROR')
+        server = self._wait_for_state_change(server, 'ERROR')
         self.assertIsNone(server['OS-EXT-SRV-ATTR:host'])
         # Make sure the failure was due to NoValidHost by checking the fault.
         self.assertIn('fault', server)
@@ -4302,7 +4292,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
         server = self._create_server_with_traits(
             self.flavor_with_trait['id'], self.image_id_with_trait)
         # The server should go to ERROR state because there is no valid host.
-        server = self._wait_for_state_change(self.admin_api, server, 'ERROR')
+        server = self._wait_for_state_change(server, 'ERROR')
         self.assertIsNone(server['OS-EXT-SRV-ATTR:host'])
         # Make sure the failure was due to NoValidHost by checking the fault.
         self.assertIn('fault', server)
@@ -4322,7 +4312,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
             IMAGE_WITH_TRAITS_BACKED_VOL)
 
         # The server should go to ERROR state because there is no valid host.
-        server = self._wait_for_state_change(self.admin_api, server, 'ERROR')
+        server = self._wait_for_state_change(server, 'ERROR')
         self.assertIsNone(server['OS-EXT-SRV-ATTR:host'])
         # Make sure the failure was due to NoValidHost by checking the fault.
         self.assertIn('fault', server)
@@ -4345,7 +4335,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
         # create a server without traits on image and with traits on flavour
         server = self._create_server_with_traits(
             self.flavor_with_trait['id'], self.image_id_without_trait)
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
 
         # make the compute node full and ensure rebuild still succeed
         inv = {"resource_class": "VCPU",
@@ -4361,7 +4351,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
         self.api.api_post('/servers/%s/action' % server['id'],
                           rebuild_req_body)
         self._wait_for_server_parameter(
-            self.api, server, {'OS-EXT-STS:task_state': None})
+            server, {'OS-EXT-STS:task_state': None})
 
         allocs = self._get_allocations_by_server_uuid(server['id'])
         self.assertIn(rp_uuid, allocs)
@@ -4387,7 +4377,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
         # create a server without traits on image and with traits on flavour
         server = self._create_server_with_traits(
             self.flavor_with_trait['id'], self.image_id_without_trait)
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
 
         # Now rebuild the server with a different image with traits
         rebuild_req_body = {
@@ -4400,7 +4390,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
                           rebuild_req_body)
         # Look for the failed rebuild action.
         self._wait_for_action_fail_completion(
-            server, instance_actions.REBUILD, 'rebuild_server', self.admin_api)
+            server, instance_actions.REBUILD, 'rebuild_server')
         # Assert the server image_ref was rolled back on failure.
         server = self.api.get_server(server['id'])
         self.assertEqual(self.image_id_without_trait, server['image']['id'])
@@ -4431,7 +4421,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
         # create a server with traits in both image and flavour
         server = self._create_server_with_traits(
             self.flavor_with_trait['id'], self.image_id_with_trait)
-        server = self._wait_for_state_change(self.admin_api, server,
+        server = self._wait_for_state_change(server,
                                              'ACTIVE')
 
         # Now rebuild the server with a different image with traits
@@ -4443,7 +4433,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
         self.api.api_post('/servers/%s/action' % server['id'],
                           rebuild_req_body)
         self._wait_for_server_parameter(
-            self.api, server, {'OS-EXT-STS:task_state': None})
+            server, {'OS-EXT-STS:task_state': None})
 
         allocs = self._get_allocations_by_server_uuid(server['id'])
         self.assertIn(rp_uuid, allocs)
@@ -4473,7 +4463,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
         server = self._create_server_with_traits(
             self.flavor_with_forbidden_trait['id'],
             self.image_id_without_trait)
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
 
         # Now rebuild the server with a different image with traits
         rebuild_req_body = {
@@ -4486,7 +4476,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
                           rebuild_req_body)
         # Look for the failed rebuild action.
         self._wait_for_action_fail_completion(
-            server, instance_actions.REBUILD, 'rebuild_server', self.admin_api)
+            server, instance_actions.REBUILD, 'rebuild_server')
         # Assert the server image_ref was rolled back on failure.
         server = self.api.get_server(server['id'])
         self.assertEqual(self.image_id_without_trait, server['image']['id'])
@@ -4619,7 +4609,7 @@ class ConsumerGenerationConflictTest(
 
     def test_create_server_fails_as_placement_reports_consumer_conflict(self):
         server_req = self._build_minimal_create_server_request(
-            self.api, 'some-server', flavor_id=self.flavor['id'],
+            'some-server', flavor_id=self.flavor['id'],
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             networks='none')
 
@@ -4637,8 +4627,7 @@ class ConsumerGenerationConflictTest(
             mock_put.return_value = rsp
 
             created_server = self.api.post_server({'server': server_req})
-            server = self._wait_for_state_change(
-                self.admin_api, created_server, 'ERROR')
+            server = self._wait_for_state_change(created_server, 'ERROR')
 
         # This is not a conflict that the API user can ever resolve. It is a
         # serious inconsistency in our database or a bug in the scheduler code
@@ -4673,7 +4662,7 @@ class ConsumerGenerationConflictTest(
             request = {'migrate': None}
             self.api.post_server_action(server['id'], request,
                                         check_response_status=[202])
-            self._wait_for_server_parameter(self.admin_api, server,
+            self._wait_for_server_parameter(server,
                                             {'OS-EXT-STS:task_state': None})
 
         # The instance action should have failed with details.
@@ -4718,7 +4707,7 @@ class ConsumerGenerationConflictTest(
             request = {'migrate': None}
             self.api.post_server_action(server['id'], request,
                                         check_response_status=[202])
-            self._wait_for_server_parameter(self.admin_api, server,
+            self._wait_for_server_parameter(server,
                                             {'OS-EXT-STS:task_state': None})
 
         self._assert_resize_migrate_action_fail(
@@ -4770,7 +4759,7 @@ class ConsumerGenerationConflictTest(
             post = {'confirmResize': None}
             self.api.post_server_action(
                 server['id'], post, check_response_status=[204])
-            server = self._wait_for_state_change(self.api, server, 'ERROR')
+            server = self._wait_for_state_change(server, 'ERROR')
             self.assertIn('Failed to delete allocations',
                           server['fault']['message'])
 
@@ -4821,7 +4810,7 @@ class ConsumerGenerationConflictTest(
 
             post = {'revertResize': None}
             self.api.post_server_action(server['id'], post)
-            server = self._wait_for_state_change(self.api, server, 'ERROR')
+            server = self._wait_for_state_change(server, 'ERROR')
 
         self.assertEqual(1, mock_post.call_count)
 
@@ -4873,7 +4862,7 @@ class ConsumerGenerationConflictTest(
 
             post = {'revertResize': None}
             self.api.post_server_action(server['id'], post)
-            server = self._wait_for_state_change(self.api, server, 'ERROR',)
+            server = self._wait_for_state_change(server, 'ERROR',)
 
         self.assertEqual(1, mock_post.call_count)
 
@@ -4932,7 +4921,7 @@ class ConsumerGenerationConflictTest(
             }
 
             self.api.post_server_action(server['id'], post)
-            server = self._wait_for_state_change(self.api, server, 'ERROR')
+            server = self._wait_for_state_change(server, 'ERROR')
 
         self.assertEqual(1, mock_put.call_count)
 
@@ -4998,7 +4987,7 @@ class ConsumerGenerationConflictTest(
 
             # Nova failed to clean up on the source host. This right now puts
             # the instance to ERROR state and fails the migration.
-            server = self._wait_for_server_parameter(self.api, server,
+            server = self._wait_for_server_parameter(server,
                 {'OS-EXT-SRV-ATTR:host': dest_hostname,
                  'status': 'ERROR'})
             self._wait_for_migration_status(server, ['error'])
@@ -5072,7 +5061,7 @@ class ConsumerGenerationConflictTest(
                 post['evacuate']['host'] = dest_hostname
 
             self.api.post_server_action(server['id'], post)
-            server = self._wait_for_state_change(self.api, server, 'ERROR')
+            server = self._wait_for_state_change(server, 'ERROR')
 
         self.assertEqual(1, mock_put.call_count)
 
@@ -5111,7 +5100,7 @@ class ConsumerGenerationConflictTest(
             mock_put.return_value = rsp
 
             self.api.delete_server(server['id'])
-            server = self._wait_for_state_change(self.admin_api, server,
+            server = self._wait_for_state_change(server,
                                                  'ERROR')
             self.assertEqual(1, mock_put.call_count)
 
@@ -5236,7 +5225,7 @@ class ServerMovingTestsWithNestedResourceRequests(
 
         self.api.post_server_action(server['id'], post)
         self._wait_for_migration_status(server, ['error'])
-        self._wait_for_server_parameter(self.api, server,
+        self._wait_for_server_parameter(server,
             {'OS-EXT-SRV-ATTR:host': source_hostname,
              'status': 'ACTIVE'})
         self.assertIn('Unable to move instance %s to host host2. The instance '
@@ -5294,7 +5283,7 @@ class ServerMovingTestsWithNestedResourceRequests(
         self._wait_for_migration_status(server, ['error'])
         expected_params = {'OS-EXT-SRV-ATTR:host': source_hostname,
                            'status': 'ACTIVE'}
-        server = self._wait_for_server_parameter(self.api, server,
+        server = self._wait_for_server_parameter(server,
                                                  expected_params)
         self.assertIn('Unable to move instance %s to host host2. The instance '
                       'has complex allocations on the source host so move '
@@ -5416,7 +5405,7 @@ class ServerMovingTestsFromFlatToNested(
         # blindly copy the source allocation to the destination but on the
         # destination there is no inventory of CUSTOM_MAGIC on the compute node
         # provider as that resource is reported on a child provider.
-        self._wait_for_server_parameter(self.api, server,
+        self._wait_for_server_parameter(server,
             {'OS-EXT-SRV-ATTR:host': 'host1',
              'status': 'ACTIVE'})
 
@@ -5505,7 +5494,7 @@ class ServerMovingTestsFromFlatToNested(
         # blindly copy the source allocation to the destination but on the
         # destination there is no inventory of CUSTOM_MAGIC on the compute node
         # provider as that resource is reported on a child provider.
-        self._wait_for_server_parameter(self.api, server,
+        self._wait_for_server_parameter(server,
             {'OS-EXT-SRV-ATTR:host': 'host1',
              'status': 'ACTIVE'})
 
@@ -5614,7 +5603,7 @@ class PortResourceRequestBasedSchedulingTestBase(
 
     def _create_server(self, flavor, networks, host=None):
         server_req = self._build_minimal_create_server_request(
-            self.api, 'bandwidth-aware-server',
+            'bandwidth-aware-server',
             image_uuid='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
             flavor_id=flavor['id'], networks=networks,
             host=host)
@@ -5786,7 +5775,7 @@ class UnsupportedPortResourceRequestBasedSchedulingTest(
         server = self._create_server(
             flavor=self.flavor,
             networks=[{'port': self.neutron.port_1['id']}])
-        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         # try to add a port with resource request
         post = {
@@ -5808,7 +5797,7 @@ class UnsupportedPortResourceRequestBasedSchedulingTest(
         server = self._create_server(
             flavor=self.flavor,
             networks=[{'port': self.neutron.port_1['id']}])
-        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         # the interfaceAttach operation below will result in a new port being
         # created in the network that is attached. Make sure that neutron
@@ -5841,7 +5830,7 @@ class UnsupportedPortResourceRequestBasedSchedulingTest(
         server = self._create_server(
             flavor=self.flavor,
             networks=[{'uuid': self.neutron.network_1['id']}])
-        server = self._wait_for_state_change(self.admin_api, server, 'ERROR')
+        server = self._wait_for_state_change(server, 'ERROR')
 
         self.assertEqual(500, server['fault']['code'])
         self.assertIn('Failed to allocate the network',
@@ -5869,7 +5858,7 @@ class UnsupportedPortResourceRequestBasedSchedulingTest(
         server = self._create_server(
             flavor=self.flavor,
             networks=[{'port': self.neutron.port_1['id']}])
-        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         # We need to simulate that the above server has a port that has
         # resource request; we cannot boot with such a port but legacy servers
@@ -5896,7 +5885,7 @@ class UnsupportedPortResourceRequestBasedSchedulingTest(
         server = self._create_server(
             flavor=self.flavor,
             networks=[{'port': self.neutron.port_1['id']}])
-        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         # with default config shelve means immediate offload as well
         req = {
@@ -5904,7 +5893,7 @@ class UnsupportedPortResourceRequestBasedSchedulingTest(
         }
         self.api.post_server_action(server['id'], req)
         self._wait_for_server_parameter(
-            self.api, server, {'status': 'SHELVED_OFFLOADED'})
+            server, {'status': 'SHELVED_OFFLOADED'})
 
         # We need to simulate that the above server has a port that has
         # resource request; we cannot boot with such a port but legacy servers
@@ -5930,7 +5919,7 @@ class UnsupportedPortResourceRequestBasedSchedulingTest(
         server = self._create_server(
             flavor=self.flavor,
             networks=[{'port': self.neutron.port_1['id']}])
-        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         # avoid automatic shelve offloading
         self.flags(shelved_offload_time=-1)
@@ -5938,8 +5927,7 @@ class UnsupportedPortResourceRequestBasedSchedulingTest(
             'shelve': {}
         }
         self.api.post_server_action(server['id'], req)
-        self._wait_for_server_parameter(
-            self.api, server, {'status': 'SHELVED'})
+        self._wait_for_server_parameter(server, {'status': 'SHELVED'})
 
         # We need to simulate that the above server has a port that has
         # resource request; we cannot boot with such a port but legacy servers
@@ -5947,7 +5935,7 @@ class UnsupportedPortResourceRequestBasedSchedulingTest(
         self._add_resource_request_to_a_bound_port(self.neutron.port_1['id'])
 
         self.api.post_server_action(server['id'], {'unshelve': None})
-        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
 
 class NonAdminUnsupportedPortResourceRequestBasedSchedulingTest(
@@ -5989,7 +5977,7 @@ class PortResourceRequestBasedSchedulingTest(
             flavor=self.flavor,
             networks=[{'port': non_qos_port['id']},
                       {'port': qos_port['id']}])
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         updated_non_qos_port = self.neutron.show_port(
             non_qos_port['id'])['port']
         updated_qos_port = self.neutron.show_port(qos_port['id'])['port']
@@ -6035,7 +6023,7 @@ class PortResourceRequestBasedSchedulingTest(
                                      networks=[{'port': ovs_port['id']},
                                                {'port': sriov_port['id']}])
 
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
 
         ovs_port = self.neutron.show_port(ovs_port['id'])['port']
         sriov_port = self.neutron.show_port(sriov_port['id'])['port']
@@ -6078,7 +6066,7 @@ class PortResourceRequestBasedSchedulingTest(
         server = self._create_server(
             flavor=self.flavor,
             networks=[{'port': port['id']}])
-        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         allocations = self.placement_api.get(
             '/allocations/%s' % server['id']).body['allocations']
@@ -6138,7 +6126,7 @@ class PortResourceRequestBasedSchedulingTest(
         server = self._create_server(
             flavor=self.flavor,
             networks=[{'port': port['id']}])
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
 
         allocations = self.placement_api.get(
             '/allocations/%s' % server['id']).body['allocations']
@@ -6236,7 +6224,7 @@ class PortResourceRequestBasedSchedulingTest(
                 {'port': sriov_port_with_res_req['id']},
                 {'port': sriov_port['id']}])
 
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
 
         sriov_port = self.neutron.show_port(sriov_port['id'])['port']
         sriov_port_with_res_req = self.neutron.show_port(
@@ -6294,7 +6282,7 @@ class PortResourceRequestBasedSchedulingTest(
             flavor=self.flavor_with_group_policy,
             networks=[{'port': sriov_port['id']}])
 
-        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
         sriov_port = self.neutron.show_port(sriov_port['id'])['port']
         sriov_binding = sriov_port['binding:profile']
 
@@ -6320,7 +6308,7 @@ class PortResourceRequestBasedSchedulingTest(
         # for the port in this case is PF2) it see the whole host as a
         # candidate and in our host there is available VF for the request even
         # if that is on the wrong PF.
-        server = self._wait_for_state_change(self.admin_api, server, 'ERROR')
+        server = self._wait_for_state_change(server, 'ERROR')
         self.assertIn(
             'Exceeded maximum number of retries. Exhausted all hosts '
             'available for retrying build failures for instance',
@@ -6335,7 +6323,7 @@ class PortResourceRequestBasedSchedulingTest(
             flavor=self.flavor,
             networks=[{'port': port['id']}])
 
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
 
         port = self.neutron.show_port(port['id'])['port']
 
@@ -6470,7 +6458,7 @@ class ServerMoveWithPortResourceRequestTest(
             flavor=self.flavor_with_group_policy,
             networks=[{'port': port['id']} for port in ports],
             host='host1')
-        return self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        return self._wait_for_state_change(server, 'ACTIVE')
 
     def _delete_server_and_check_allocations(
             self, server, qos_port, qos_sriov_port):
@@ -6520,7 +6508,7 @@ class ServerMoveWithPortResourceRequestTest(
 
             self.api.post_server_action(server['id'], {'migrate': None},
                                         check_response_status=[202])
-            self._wait_for_server_parameter(self.admin_api, server,
+            self._wait_for_server_parameter(server,
                                             {'OS-EXT-STS:task_state': None})
 
         self._assert_resize_migrate_action_fail(
@@ -6584,7 +6572,7 @@ class ServerMoveWithPortResourceRequestTest(
                 side_effect=fake_get_service):
 
             self.api.post_server_action(server['id'], {'migrate': None})
-            self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+            self._wait_for_state_change(server, 'VERIFY_RESIZE')
 
         migration_uuid = self.get_migration_uuid_for_instance(server['id'])
 
@@ -6627,7 +6615,7 @@ class ServerMoveWithPortResourceRequestTest(
         else:
             self.api.post_server_action(server['id'], {'migrate': None})
 
-        self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+        self._wait_for_state_change(server, 'VERIFY_RESIZE')
 
         migration_uuid = self.get_migration_uuid_for_instance(server['id'])
 
@@ -6678,7 +6666,7 @@ class ServerMoveWithPortResourceRequestTest(
         else:
             self.api.post_server_action(server['id'], {'migrate': None})
 
-        self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+        self._wait_for_state_change(server, 'VERIFY_RESIZE')
 
         migration_uuid = self.get_migration_uuid_for_instance(server['id'])
 
@@ -6690,7 +6678,7 @@ class ServerMoveWithPortResourceRequestTest(
             new_flavor=new_flavor)
 
         self.api.post_server_action(server['id'], {'revertResize': None})
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         # check that allocation is moved back to the source host
         self._check_allocation(
@@ -6759,7 +6747,7 @@ class ServerMoveWithPortResourceRequestTest(
                     server['id'], {'resize': {"flavorRef": new_flavor['id']}})
             else:
                 self.api.post_server_action(server['id'], {'migrate': None})
-            self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+            self._wait_for_state_change(server, 'VERIFY_RESIZE')
 
         # ensure that resize is tried on two hosts, so we had a re-schedule
         self.assertEqual(['host2', 'host3'], prep_resize_calls)
@@ -6820,8 +6808,7 @@ class ServerMoveWithPortResourceRequestTest(
                     server['id'], {'resize': {"flavorRef": new_flavor['id']}})
             else:
                 self.api.post_server_action(server['id'], {'migrate': None})
-            self._wait_for_server_parameter(
-                self.api, server,
+            self._wait_for_server_parameter(server,
                 {'OS-EXT-SRV-ATTR:host': 'host1',
                  'status': 'ERROR'})
             self._wait_for_migration_status(server, ['error'])
@@ -6878,8 +6865,7 @@ class ServerMoveWithPortResourceRequestTest(
         # intentionally not trigger a re-schedule even if there is host3 as an
         # alternate.
         self.api.post_server_action(server['id'], {'migrate': None})
-        server = self._wait_for_server_parameter(
-            self.api, server,
+        server = self._wait_for_server_parameter(server,
             {'OS-EXT-SRV-ATTR:host': 'host1',
              # Note that we have to wait for the task_state to be reverted
              # to None since that happens after the fault is recorded.
@@ -6892,8 +6878,7 @@ class ServerMoveWithPortResourceRequestTest(
             server['fault']['message'])
 
         self._wait_for_action_fail_completion(
-            server, instance_actions.MIGRATE, 'compute_prep_resize',
-            self.admin_api)
+            server, instance_actions.MIGRATE, 'compute_prep_resize')
 
         fake_notifier.wait_for_versioned_notifications(
             'instance.resize_prep.end')
@@ -7120,8 +7105,7 @@ class ServerMoveWithPortResourceRequestTest(
             req['evacuate']['host'] = host
 
         self.api.post_server_action(server['id'], req)
-        self._wait_for_server_parameter(
-            self.api, server,
+        self._wait_for_server_parameter(server,
             {'OS-EXT-SRV-ATTR:host': 'host2',
              'status': 'ACTIVE'})
 
@@ -7173,8 +7157,7 @@ class ServerMoveWithPortResourceRequestTest(
             self.api.post_server_action(server['id'], req)
             # Evacuate does not have reschedule loop so evacuate expected to
             # simply fail and the server remains on the source host
-            server = self._wait_for_server_parameter(
-                self.api, server,
+            server = self._wait_for_server_parameter(server,
                 {'OS-EXT-SRV-ATTR:host': 'host1',
                  'status': 'ACTIVE',
                  'OS-EXT-STS:task_state': None})
@@ -7231,8 +7214,7 @@ class ServerMoveWithPortResourceRequestTest(
         # The compute manager on host2 will raise from
         # _update_pci_request_spec_with_allocated_interface_name
         self.api.post_server_action(server['id'], {'evacuate': {}})
-        server = self._wait_for_server_parameter(
-            self.api, server,
+        server = self._wait_for_server_parameter(server,
             {'OS-EXT-SRV-ATTR:host': 'host1',
              'OS-EXT-STS:task_state': None,
              'status': 'ERROR'})
@@ -7243,8 +7225,7 @@ class ServerMoveWithPortResourceRequestTest(
             server['fault']['message'])
 
         self._wait_for_action_fail_completion(
-            server, instance_actions.EVACUATE, 'compute_rebuild_instance',
-            self.admin_api)
+            server, instance_actions.EVACUATE, 'compute_rebuild_instance')
 
         fake_notifier.wait_for_versioned_notifications(
             'instance.rebuild.error')
@@ -7284,7 +7265,7 @@ class PortResourceRequestReSchedulingTest(
         server = self._create_server(
             flavor=self.flavor,
             networks=[{'port': port['id']}])
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         updated_port = self.neutron.show_port(port['id'])['port']
 
         dest_hostname = server['OS-EXT-SRV-ATTR:host']
@@ -7356,8 +7337,7 @@ class PortResourceRequestReSchedulingTest(
             server = self._create_server(
                 flavor=self.flavor,
                 networks=[{'port': port['id']}])
-            server = self._wait_for_state_change(
-                self.admin_api, server, 'ERROR')
+            server = self._wait_for_state_change(server, 'ERROR')
 
         self.assertIn(
             'Failed to get traits for resource provider',

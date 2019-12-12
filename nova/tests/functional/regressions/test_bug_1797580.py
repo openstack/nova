@@ -65,31 +65,30 @@ class ColdMigrateTargetHostThenLiveMigrateTest(
     def test_cold_migrate_target_host_then_live_migrate(self):
         # Create a server, it doesn't matter on which host it builds.
         server = self._build_minimal_create_server_request(
-            self.api, 'test_cold_migrate_target_host_then_live_migrate',
+            'test_cold_migrate_target_host_then_live_migrate',
             image_uuid=image_fake.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID,
             networks='none')
         server = self.api.post_server({'server': server})
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         original_host = server['OS-EXT-SRV-ATTR:host']
         target_host = 'host1' if original_host == 'host2' else 'host2'
 
         # Cold migrate the server to the specific target host.
         migrate_req = {'migrate': {'host': target_host}}
         self.admin_api.post_server_action(server['id'], migrate_req)
-        server = self._wait_for_state_change(
-            self.admin_api, server, 'VERIFY_RESIZE')
+        server = self._wait_for_state_change(server, 'VERIFY_RESIZE')
 
         # Confirm the resize so the server stays on the target host.
         confim_req = {'confirmResize': None}
         self.admin_api.post_server_action(server['id'], confim_req)
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
 
         # Attempt to live migrate the server but don't specify a host so the
         # scheduler has to pick one.
         live_migrate_req = {
             'os-migrateLive': {'host': None, 'block_migration': 'auto'}}
         self.admin_api.post_server_action(server['id'], live_migrate_req)
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         # The live migration should have been successful and the server is now
         # back on the original host.
         self.assertEqual(original_host, server['OS-EXT-SRV-ATTR:host'])

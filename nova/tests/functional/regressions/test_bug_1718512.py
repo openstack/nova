@@ -103,9 +103,9 @@ class TestRequestSpecRetryReschedule(test.TestCase,
         # create the instance which should go to host1
         server = self.admin_api.post_server(
             dict(server=self._build_minimal_create_server_request(
-                self.api, 'test_resize_with_reschedule_then_live_migrate',
+                'test_resize_with_reschedule_then_live_migrate',
                 self.image_id, flavor_id=flavor1['id'], networks='none')))
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         self.assertEqual('host1', server['OS-EXT-SRV-ATTR:host'])
 
         # Stub out the resize to fail on host2, which will trigger a reschedule
@@ -116,17 +116,17 @@ class TestRequestSpecRetryReschedule(test.TestCase,
         # on host3.
         data = {'resize': {'flavorRef': flavor2['id']}}
         self.api.post_server_action(server['id'], data)
-        server = self._wait_for_state_change(self.admin_api, server,
+        server = self._wait_for_state_change(server,
                                              'VERIFY_RESIZE')
         self.assertEqual('host3', server['OS-EXT-SRV-ATTR:host'])
         self.api.post_server_action(server['id'], {'confirmResize': None})
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
 
         # Now live migrate the server to host2 specifically, which previously
         # failed the resize attempt but here it should pass.
         data = {'os-migrateLive': {'host': 'host2', 'block_migration': 'auto'}}
         self.admin_api.post_server_action(server['id'], data)
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         self.assertEqual('host2', server['OS-EXT-SRV-ATTR:host'])
         # NOTE(mriedem): The instance status effectively goes to ACTIVE before
         # the migration status is changed to "completed" since

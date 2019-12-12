@@ -70,7 +70,7 @@ class TestLiveMigrateOneOfConcurrentlyCreatedInstances(
 
     def _boot_servers(self, num_servers=1):
         server_req = self._build_minimal_create_server_request(
-            self.api, 'some-server', flavor_id=self.flavor1['id'],
+            'some-server', flavor_id=self.flavor1['id'],
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             networks='none')
         server_req.update({'min_count': str(num_servers),
@@ -81,7 +81,7 @@ class TestLiveMigrateOneOfConcurrentlyCreatedInstances(
         servers = self.api.get_servers(detail=True,
                 search_opts={'reservation_id': reservation_id})
         for idx, server in enumerate(servers):
-            servers[idx] = self._wait_for_state_change(self.api, server,
+            servers[idx] = self._wait_for_state_change(server,
                                                        'ACTIVE')
         return servers
 

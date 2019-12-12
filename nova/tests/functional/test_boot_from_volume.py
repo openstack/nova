@@ -79,7 +79,7 @@ class BootFromVolumeTest(integrated_helpers.InstanceHelperMixin,
         server['block_device_mapping_v2'] = [bdm]
         created_server = self.api.post_server({"server": server})
         server_id = created_server['id']
-        self._wait_for_state_change(self.api, created_server, 'ACTIVE')
+        self._wait_for_state_change(created_server, 'ACTIVE')
 
         # Check that hypervisor local disk reporting is still 0
         self._verify_zero_local_gb_used()
@@ -94,7 +94,7 @@ class BootFromVolumeTest(integrated_helpers.InstanceHelperMixin,
         # Resize
         post_data = {'resize': {'flavorRef': flavor_id_alt}}
         self.api.post_server_action(server_id, post_data)
-        self._wait_for_state_change(self.api, created_server, 'VERIFY_RESIZE')
+        self._wait_for_state_change(created_server, 'VERIFY_RESIZE')
 
         # Check that hypervisor local disk reporting is still 0
         self._verify_zero_local_gb_used()
@@ -106,7 +106,7 @@ class BootFromVolumeTest(integrated_helpers.InstanceHelperMixin,
         # Confirm the resize
         post_data = {'confirmResize': None}
         self.api.post_server_action(server_id, post_data)
-        self._wait_for_state_change(self.api, created_server, 'ACTIVE')
+        self._wait_for_state_change(created_server, 'ACTIVE')
 
         # Check that hypervisor local disk reporting is still 0
         self._verify_zero_local_gb_used()
@@ -118,7 +118,7 @@ class BootFromVolumeTest(integrated_helpers.InstanceHelperMixin,
         # Shelve
         post_data = {'shelve': None}
         self.api.post_server_action(server_id, post_data)
-        self._wait_for_state_change(self.api, created_server,
+        self._wait_for_state_change(created_server,
                                     'SHELVED_OFFLOADED')
 
         # Check that hypervisor local disk reporting is still 0
@@ -131,7 +131,7 @@ class BootFromVolumeTest(integrated_helpers.InstanceHelperMixin,
         # Unshelve
         post_data = {'unshelve': None}
         self.api.post_server_action(server_id, post_data)
-        self._wait_for_state_change(self.api, created_server, 'ACTIVE')
+        self._wait_for_state_change(created_server, 'ACTIVE')
 
         # Check that hypervisor local disk reporting is still 0
         self._verify_zero_local_gb_used()
@@ -146,7 +146,7 @@ class BootFromVolumeTest(integrated_helpers.InstanceHelperMixin,
         image_uuid = '155d900f-4e14-4e4c-a73d-069cbf4541e6'
         post_data = {'rebuild': {'imageRef': image_uuid}}
         self.api.post_server_action(server_id, post_data)
-        self._wait_for_state_change(self.api, created_server, 'ACTIVE')
+        self._wait_for_state_change(created_server, 'ACTIVE')
 
         # Check that hypervisor local disk reporting is still 0
         self._verify_zero_local_gb_used()
@@ -161,7 +161,7 @@ class BootFromVolumeTest(integrated_helpers.InstanceHelperMixin,
         """
         self.flags(max_local_block_devices=0)
         server = self._build_minimal_create_server_request(
-            self.admin_api, 'test_max_local_block_devices_0_force_bfv')
+            'test_max_local_block_devices_0_force_bfv')
         ex = self.assertRaises(api_client.OpenStackApiException,
                                self.admin_api.post_server,
                                {'server': server})
@@ -203,7 +203,7 @@ class BootFromVolumeLargeRequestTest(test.TestCase,
         image1 = 'a2459075-d96c-40d5-893e-577ff92e721c'
         image2 = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         server = self._build_minimal_create_server_request(
-            self.api, 'test_boot_from_volume_10_servers_255_volumes_2_images')
+            'test_boot_from_volume_10_servers_255_volumes_2_images')
         server.pop('imageRef')
         server['min_count'] = 10
         bdms = []

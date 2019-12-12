@@ -57,8 +57,7 @@ class TestEvacuateDeleteServerRestartOriginalCompute(
             server['id'], post)
         expected_params = {'OS-EXT-SRV-ATTR:host': dest_hostname,
                            'status': 'ACTIVE'}
-        server = self._wait_for_server_parameter(self.api, server,
-                                                 expected_params)
+        server = self._wait_for_server_parameter(server, expected_params)
 
         # Expect to have allocation and usages on both computes as the
         # source compute is still down

@@ -55,18 +55,18 @@ class ServerFaultTestCase(test.TestCase,
         """
         # Create the server with the non-admin user.
         server = self._build_minimal_create_server_request(
-            self.api, 'test_server_fault_non_nova_exception',
+            'test_server_fault_non_nova_exception',
             image_uuid=fake_image.get_valid_image_id(),
             networks=[{'port': nova_fixtures.NeutronFixture.port_1['id']}])
         server = self.api.post_server({'server': server})
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
 
         # Stop the server before rebooting it so that after the driver.reboot
         # method raises an exception, the fake driver does not report the
         # instance power state as running - that will make the compute manager
         # set the instance vm_state to error.
         self.api.post_server_action(server['id'], {'os-stop': None})
-        server = self._wait_for_state_change(self.admin_api, server, 'SHUTOFF')
+        server = self._wait_for_state_change(server, 'SHUTOFF')
 
         # Stub out the compute driver reboot method to raise a non-nova
         # exception to simulate some error from the underlying hypervisor
@@ -83,8 +83,8 @@ class ServerFaultTestCase(test.TestCase,
             # decorator runs before the reverts_task_state decorator so we will
             # be sure the fault is set on the server.
             server = self._wait_for_server_parameter(
-                self.api, server, {'status': 'ERROR',
-                                   'OS-EXT-STS:task_state': None})
+                server, {'status': 'ERROR', 'OS-EXT-STS:task_state': None},
+                api=self.api)
             mock_reboot.assert_called_once()
         # The server fault from the non-admin user API response should not
         # have details in it.

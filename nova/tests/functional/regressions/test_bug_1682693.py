@@ -59,10 +59,10 @@ class ServerTagsFilteringTest(test.TestCase,
         for x in range(2):
             server = self.api.post_server(
                 dict(server=self._build_minimal_create_server_request(
-                    self.api, 'test-list-server-tag-filters%i' % x, image_id,
+                    'test-list-server-tag-filters%i' % x, image_id,
                     networks='none')))
             self.addCleanup(self.api.delete_server, server['id'])
-            server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+            server = self._wait_for_state_change(server, 'ACTIVE')
             self.servers.append(server)
 
         # now apply two tags to the first server

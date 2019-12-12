@@ -40,10 +40,10 @@ class ComputeManagerInitHostTestCase(
         # Create a server, it does not matter on which host it lands.
         name = 'test_migrate_disk_and_power_off_crash_finish_revert_migration'
         server = self._build_minimal_create_server_request(
-            self.api, name, image_uuid=fake_image.get_valid_image_id(),
+            name, image_uuid=fake_image.get_valid_image_id(),
             networks='auto')
         server = self.api.post_server({'server': server})
-        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         # Save the source hostname for assertions later.
         source_host = server['OS-EXT-SRV-ATTR:host']
 
@@ -66,8 +66,7 @@ class ComputeManagerInitHostTestCase(
             self.admin_api.post_server_action(server['id'], {'migrate': None})
             # Now wait for the task_state to be reset to None during
             # _init_instance.
-            server = self._wait_for_server_parameter(
-                self.admin_api, server, {
+            server = self._wait_for_server_parameter(server, {
                     'status': 'ACTIVE',
                     'OS-EXT-STS:task_state': None,
                     'OS-EXT-SRV-ATTR:host': source_host
@@ -158,7 +157,7 @@ class TestComputeRestartInstanceStuckInBuild(
         # instance_claim() to stop it. This is less realistic but it works in
         # the test env.
         server_req = self._build_minimal_create_server_request(
-            self.api, 'interrupted-server', flavor_id=self.flavor1['id'],
+            'interrupted-server', flavor_id=self.flavor1['id'],
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             networks='none')
 
@@ -170,7 +169,7 @@ class TestComputeRestartInstanceStuckInBuild(
             mock_instance_claim.side_effect = sleep_forever
 
             server = self.api.post_server({'server': server_req})
-            self._wait_for_state_change(self.admin_api, server, 'BUILD')
+            self._wait_for_state_change(server, 'BUILD')
 
             # the instance.create.start is the closest thing to the
             # instance_claim call we can wait for in the test
@@ -182,7 +181,7 @@ class TestComputeRestartInstanceStuckInBuild(
 
         # We expect that the instance is pushed to ERROR state during the
         # compute restart.
-        self._wait_for_state_change(self.admin_api, server, 'ERROR')
+        self._wait_for_state_change(server, 'ERROR')
         mock_log.assert_called_with(
             'Instance spawn was interrupted before instance_claim, setting '
             'instance to ERROR state',

@@ -354,7 +354,6 @@ class EnforceVolumeBackedForZeroDiskFlavorTestCase(
             servers_policies.ZERO_DISK_FLAVOR: base_policies.RULE_ADMIN_API},
             overwrite=False)
         server_req = self._build_minimal_create_server_request(
-            self.api,
             'test_create_image_backed_server_with_zero_disk_fails',
             fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID,
             self.zero_disk_flavor['id'])
@@ -376,7 +375,6 @@ class EnforceVolumeBackedForZeroDiskFlavorTestCase(
         self.start_service('conductor')
         self.start_service('scheduler')
         server_req = self._build_minimal_create_server_request(
-            self.api,
             'test_create_volume_backed_server_with_zero_disk_allowed',
             flavor_id=self.zero_disk_flavor['id'])
         server_req.pop('imageRef', None)
@@ -387,5 +385,5 @@ class EnforceVolumeBackedForZeroDiskFlavorTestCase(
             'boot_index': 0
         }]
         server = self.admin_api.post_server({'server': server_req})
-        server = self._wait_for_state_change(self.api, server, 'ERROR')
+        server = self._wait_for_state_change(server, 'ERROR')
         self.assertIn('No valid host', server['fault']['message'])

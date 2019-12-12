@@ -62,13 +62,12 @@ class InstanceListWithDeletedServicesTestCase(
     def _migrate_server(self, server, target_host):
         self.admin_api.api_post('/servers/%s/action' % server['id'],
                                 {'migrate': None})
-        server = self._wait_for_state_change(
-            self.admin_api, server, 'VERIFY_RESIZE')
+        server = self._wait_for_state_change(server, 'VERIFY_RESIZE')
         self.assertEqual(target_host, server['OS-EXT-SRV-ATTR:host'])
         self.admin_api.api_post('/servers/%s/action' % server['id'],
                                 {'confirmResize': None},
                                 check_response_status=[204])
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         return server
 
     def test_instance_list_deleted_service_with_no_uuid(self):
@@ -87,10 +86,10 @@ class InstanceListWithDeletedServicesTestCase(
 
         # Create an instance which will be on host1 since it's the only host.
         server_req = self._build_minimal_create_server_request(
-            self.api, 'test_instance_list_deleted_service_with_no_uuid',
+            'test_instance_list_deleted_service_with_no_uuid',
             image_uuid=self.image_id, networks='none')
         server = self.api.post_server({'server': server_req})
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         # Now we start a 2nd compute which is "upgraded" (has a uuid) and
         # we'll migrate the instance to that host.

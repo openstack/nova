@@ -220,7 +220,7 @@ class NotificationSampleTestBase(test.TestCase,
                 actual=fake_notifier.VERSIONED_NOTIFICATIONS.pop(0))
 
         server = self._build_minimal_create_server_request(
-            self.api, 'some-server',
+            'some-server',
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             flavor_id=flavor_id)
 
@@ -246,7 +246,7 @@ class NotificationSampleTestBase(test.TestCase,
         self.assertTrue(created_server['id'])
 
         # Wait for it to finish being created
-        found_server = self._wait_for_state_change(self.api, created_server,
+        found_server = self._wait_for_state_change(created_server,
                                                    expected_status)
         found_server['reservation_id'] = reservation_id
 

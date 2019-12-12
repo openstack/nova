@@ -77,7 +77,7 @@ class SharedStorageProviderUsageTestCase(
         }
         # create server
         server = self.api.post_server(server_req_body)
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         # get shared_rp and cn_rp usages
         shared_rp_usages = self._get_provider_usages(shared_RP['uuid'])
@@ -135,7 +135,7 @@ class SharedStorageProviderUsageTestCase(
         }
         # create server
         server = self.api.post_server(server_req_body)
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         rebuild_image_ref = (
             nova.tests.unit.image.fake.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID)
@@ -152,7 +152,7 @@ class SharedStorageProviderUsageTestCase(
         self.api.api_post('/servers/%s/action' % server['id'],
                           rebuild_req_body)
         self._wait_for_server_parameter(
-            self.api, server, {'OS-EXT-STS:task_state': None})
+            server, {'OS-EXT-STS:task_state': None})
 
         # get shared_rp and cn_rp usages
         shared_rp_usages = self._get_provider_usages(shared_rp_uuid)
@@ -198,7 +198,7 @@ class SharedStorageProviderUsageTestCase(
         }
         # create server
         server = self.api.post_server(server_req_body)
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self._wait_for_state_change(server, 'ACTIVE')
 
         rebuild_image_ref = (
             nova.tests.unit.image.fake.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID)
@@ -216,7 +216,7 @@ class SharedStorageProviderUsageTestCase(
                           rebuild_req_body)
         # Look for the failed rebuild action.
         self._wait_for_action_fail_completion(
-            server, instance_actions.REBUILD, 'rebuild_server', self.admin_api)
+            server, instance_actions.REBUILD, 'rebuild_server')
         # Assert the server image_ref was rolled back on failure.
         server = self.api.get_server(server['id'])
         self.assertEqual(org_image_id, server['image']['id'])

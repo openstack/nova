@@ -57,7 +57,7 @@ class FillVirtualInterfaceListMigration(
                 'imageRef': fake_image.get_valid_image_id()
             }
         })
-        return self._wait_for_state_change(self.api, server, 'ACTIVE')
+        return self._wait_for_state_change(server, 'ACTIVE')
 
     def test_fill_vifs_migration(self):
         # Create a test server.

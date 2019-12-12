@@ -48,13 +48,13 @@ class TestServerResizeReschedule(integrated_helpers.ProviderUsageBaseTestCase):
         supplied host_list, and does not call the scheduler.
         """
         server_req = self._build_minimal_create_server_request(
-                self.api, 'some-server', flavor_id=self.flavor1['id'],
+                'some-server', flavor_id=self.flavor1['id'],
                 image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
                 networks='none')
 
         self.first_attempt = True
         created_server = self.api.post_server({'server': server_req})
-        server = self._wait_for_state_change(self.api, created_server,
+        server = self._wait_for_state_change(created_server,
                 'ACTIVE')
 
         actual_prep_resize = compute_manager.ComputeManager._prep_resize
@@ -74,7 +74,7 @@ class TestServerResizeReschedule(integrated_helpers.ProviderUsageBaseTestCase):
         data = {"resize": {"flavorRef": self.flavor2['id']}}
         self.api.post_server_action(server_uuid, data)
 
-        server = self._wait_for_state_change(self.api, created_server,
+        server = self._wait_for_state_change(created_server,
                 'VERIFY_RESIZE')
         self.assertEqual(self.flavor2['name'],
                          server['flavor']['original_name'])

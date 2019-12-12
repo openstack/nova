@@ -78,7 +78,7 @@ class RescheduleBuildAvailabilityZoneUpCall(
         self.stub_out('nova.compute.manager.ComputeManager.'
                       'build_and_run_instance', wrap_bari)
         server = self._build_minimal_create_server_request(
-            self.api, 'test_server_create_reschedule_blocked_az_up_call')
+            'test_server_create_reschedule_blocked_az_up_call')
         server = self.api.post_server({'server': server})
         # Because we poisoned AggregateList.get_by_host after hitting the
         # compute service we have to wait for the notification that the build
@@ -88,7 +88,7 @@ class RescheduleBuildAvailabilityZoneUpCall(
         # build_and_run_instance twice so we have more than one instance of
         # the mock that needs to be stopped.
         mock.patch.stopall()
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         # We should have rescheduled and the instance AZ should be set from the
         # Selection object. Since neither compute host is in an AZ, the server
         # is in the default AZ from config.
@@ -148,9 +148,9 @@ class RescheduleMigrateAvailabilityZoneUpCall(
         self.stub_out('nova.compute.manager.ComputeManager._prep_resize',
                       wrap_prep_resize)
         server = self._build_minimal_create_server_request(
-            self.api, 'test_migrate_reschedule_blocked_az_up_call')
+            'test_migrate_reschedule_blocked_az_up_call')
         server = self.api.post_server({'server': server})
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(server, 'ACTIVE')
         original_host = server['OS-EXT-SRV-ATTR:host']
 
         # Now cold migrate the server to the other host.
@@ -164,7 +164,7 @@ class RescheduleMigrateAvailabilityZoneUpCall(
         # twice so we have more than one instance of the mock that needs to be
         # stopped.
         mock.patch.stopall()
-        server = self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+        server = self._wait_for_state_change(server, 'VERIFY_RESIZE')
         final_host = server['OS-EXT-SRV-ATTR:host']
         self.assertNotIn(final_host, [original_host, self.rescheduled])
         # We should have rescheduled and the instance AZ should be set from the

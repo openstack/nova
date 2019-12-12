@@ -68,11 +68,9 @@ class ForcedHostMissingReScheduleTestCase(
 
             # We expect that the instance re-scheduled but successfully ended
             # up on the second destination host.
-            self._wait_for_server_parameter(
-                 self.api, server,
-                 {
-                     'OS-EXT-STS:task_state': None,
-                     'status': 'VERIFY_RESIZE'})
+            self._wait_for_server_parameter(server, {
+                 'OS-EXT-STS:task_state': None,
+                 'status': 'VERIFY_RESIZE'})
 
         # we ensure that there was a failed and then a successful claim call
         self.assertEqual(2, len(claim_calls))
