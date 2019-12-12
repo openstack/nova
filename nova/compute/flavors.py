@@ -138,15 +138,6 @@ def get_flavor_by_flavor_id(flavorid, ctxt=None, read_deleted="yes"):
     return objects.Flavor.get_by_flavor_id(ctxt, flavorid, read_deleted)
 
 
-def get_flavor_access_by_flavor_id(flavorid, ctxt=None):
-    """Retrieve flavor access list by flavor id."""
-    if ctxt is None:
-        ctxt = context.get_admin_context()
-
-    flavor = objects.Flavor.get_by_flavor_id(ctxt, flavorid)
-    return flavor.projects
-
-
 # NOTE(danms): This method is deprecated, do not use it!
 # Use instance.{old_,new_,}flavor instead, as instances no longer
 # have flavor information in system_metadata.
