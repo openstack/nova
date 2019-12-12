@@ -684,16 +684,6 @@ explained above.
 Impermanent limitations
 -----------------------
 
-The following image metadata options are incompatible with the feature due to
-`bug #1845986 <https://bugs.launchpad.net/nova/+bug/1845986>`__.
-
-- ``hw_scsi_model=virtio-scsi`` and either ``hw_disk_bus=scsi`` or
-  ``hw_cdrom_bus=scsi``
-- ``hw_video_model=virtio``
-- ``hw_qemu_guest_agent=yes``
-
-This limitation will be resolved in the future.
-
 The following limitations may be removed in the future as the
 hardware, firmware, and various layers of software receive new
 features:
