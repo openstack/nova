@@ -94,30 +94,25 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
         return self._wait_for_server_parameter(
             self.api, server, {'status': expected_status}, max_retries)
 
-    def _wait_for_deletion(self, server_id):
-        # Wait (briefly) for deletion
-        for _retries in range(50):
-            try:
-                found_server = self.api.get_server(server_id)
-            except client.OpenStackApiNotFoundException:
-                found_server = None
-                LOG.debug("Got 404, proceeding")
-                break
+    # TODO(stephenfin): Remove this once we subclass 'InstanceHelperMixin'
+    def _wait_until_deleted(self, server):
+        initially_in_error = server.get('status') == 'ERROR'
+        try:
+            for i in range(40):
+                server = self.api.get_server(server['id'])
+                if not initially_in_error and server['status'] == 'ERROR':
+                    self.fail('Server went to error state instead of'
+                              'disappearing.')
+                time.sleep(0.5)
 
-            LOG.debug("Found_server=%s", found_server)
-
-            # TODO(justinsb): Mock doesn't yet do accurate state changes
-            # if found_server['status'] != 'deleting':
-            #    break
-            time.sleep(.1)
-
-        # Should be gone
-        self.assertFalse(found_server)
+            self.fail('Server failed to delete.')
+        except client.OpenStackApiNotFoundException:
+            return
 
     def _delete_server(self, server):
         # Delete the server
         self.api.delete_server(server['id'])
-        self._wait_for_deletion(server['id'])
+        self._wait_until_deleted(server)
 
     def _get_access_ips_params(self):
         return {self._access_ipv4_parameter: "172.19.0.2",
@@ -359,7 +354,7 @@ class ServersTest(ServersTestBase):
         self._force_reclaim()
 
         # Wait for real deletion
-        self._wait_for_deletion(created_server_id)
+        self._wait_until_deleted(found_server)
 
     def test_deferred_delete_restore(self):
         # Creates, deletes and restores a server.
@@ -457,7 +452,7 @@ class ServersTest(ServersTestBase):
                                     {self._force_delete_parameter: {}})
 
         # Wait for real deletion
-        self._wait_for_deletion(created_server_id)
+        self._wait_until_deleted(found_server)
 
     def test_create_server_with_metadata(self):
         # Creates a server with metadata.
