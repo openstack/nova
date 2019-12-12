@@ -75,20 +75,6 @@ CONF = nova.conf.CONF
 get_engine = sqlalchemy_api.get_engine
 
 
-def _reservation_get(context, uuid):
-    @sqlalchemy_api.pick_context_manager_reader
-    def doit(context):
-        return sqlalchemy_api.model_query(
-            context, models.Reservation, read_deleted="no").filter_by(
-            uuid=uuid).first()
-
-    result = doit(context)
-    if not result:
-        raise exception.ReservationNotFound(uuid=uuid)
-
-    return result
-
-
 def _make_compute_node(host, node, hv_type, service_id):
     compute_node_dict = dict(vcpus=2, memory_mb=1024, local_gb=2048,
                         uuid=uuidutils.generate_uuid(),
