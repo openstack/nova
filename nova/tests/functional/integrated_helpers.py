@@ -96,19 +96,29 @@ class InstanceHelperMixin(object):
         return self._wait_for_server_parameter(
             admin_api, server, {'status': expected_status}, max_retries)
 
-    def _build_minimal_create_server_request(self, api, name, image_uuid=None,
-                                             flavor_id=None, networks=None,
-                                             az=None, host=None):
+    def _build_minimal_create_server_request(self, api, name=None,
+                                             image_uuid=None, flavor_id=None,
+                                             networks=None, az=None,
+                                             host=None):
         server = {}
 
-        # We now have a valid imageId
-        server['imageRef'] = image_uuid or api.get_images()[0]['id']
+        if not image_uuid:
+            # NOTE(takashin): In API version 2.36, image APIs were deprecated.
+            # In API version 2.36 or greater, self.api.get_images() returns
+            # a 404 error. In that case, 'image_uuid' should be specified.
+            image_uuid = api.get_images()[0]['id']
+        server['imageRef'] = image_uuid
+
+        if not name:
+            name = ''.join(
+                random.choice(string.ascii_lowercase) for i in range(10))
+        server['name'] = name
 
         if not flavor_id:
             # Set a valid flavorId
-            flavor_id = api.get_flavors()[1]['id']
-        server['flavorRef'] = ('http://fake.server/%s' % flavor_id)
-        server['name'] = name
+            flavor_id = api.get_flavors()[0]['id']
+        server['flavorRef'] = 'http://fake.server/%s' % flavor_id
+
         if networks is not None:
             server['networks'] = networks
         if az is not None:
@@ -310,24 +320,35 @@ class _IntegratedTestBase(test.TestCase):
     def get_invalid_image(self):
         return uuids.fake
 
-    def _build_minimal_create_server_request(self, image_uuid=None):
+    def _build_minimal_create_server_request(self, name=None, image_uuid=None,
+                                             flavor_id=None, networks=None,
+                                             az=None, host=None):
         server = {}
 
-        # NOTE(takashin): In API version 2.36, image APIs were deprecated.
-        # In API version 2.36 or greater, self.api.get_images() returns
-        # a 404 error. In that case, 'image_uuid' should be specified.
-        server[self._image_ref_parameter] = (image_uuid or
-                                             self.api.get_images()[0]['id'])
+        if not image_uuid:
+            # NOTE(takashin): In API version 2.36, image APIs were deprecated.
+            # In API version 2.36 or greater, self.api.get_images() returns
+            # a 404 error. In that case, 'image_uuid' should be specified.
+            image_uuid = self.api.get_images()[0]['id']
+        server['imageRef'] = image_uuid
 
-        # Set a valid flavorId
-        flavor = self.api.get_flavors()[0]
-        LOG.debug("Using flavor: %s", flavor)
-        server[self._flavor_ref_parameter] = ('http://fake.server/%s'
-                                              % flavor['id'])
+        if not name:
+            name = ''.join(
+                random.choice(string.ascii_lowercase) for i in range(10))
+        server['name'] = name
 
-        # Set a valid server name
-        server_name = self.get_unused_server_name()
-        server['name'] = server_name
+        if not flavor_id:
+            # Set a valid flavorId
+            flavor_id = self.api.get_flavors()[0]['id']
+        server['flavorRef'] = 'http://fake.server/%s' % flavor_id
+
+        if networks is not None:
+            server['networks'] = networks
+        if az is not None:
+            server['availability_zone'] = az
+        # This requires at least microversion 2.74 to work
+        if host is not None:
+            server['host'] = host
         return server
 
     def _create_flavor_body(self, name, ram, vcpus, disk, ephemeral, id, swap,
