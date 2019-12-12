@@ -175,6 +175,8 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.23: Added 'hw_pmu' field
     # Version 1.24: Added 'hw_mem_encryption' field
     # Version 1.25: Added 'hw_pci_numa_affinity_policy' field
+    # NOTE(efried): When bumping this version, the version of
+    # ImageMetaPropsPayload must also be bumped. See its docstring for details.
     VERSION = '1.25'
 
     def obj_make_compatible(self, primitive, target_version):
