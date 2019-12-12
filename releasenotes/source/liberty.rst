@@ -55,7 +55,7 @@ Security Issues
 .. releasenotes/notes/12.0.3-cve-bugs-reno-561a450b346edf5e.yaml @ b'0b194187db9da28225cb5e62be3b45aff5a1c793'
 
 - [OSSA 2016-007] Host data leak during resize/migrate for raw-backed instances  (CVE-2016-2140)
-  
+
   * `Bug 1548450 <https://bugs.launchpad.net/nova/+bug/1548450>`_
   * `Announcement <http://lists.openstack.org/pipermail/openstack-announce/2016-March/001009.html>`__
 
@@ -83,12 +83,12 @@ Security Issues
 .. releasenotes/notes/12.0.1-cve-bugs-7b04b2e34a3e9a70.yaml @ b'9c3cce75de6069edca35ce5046d4ce25a11b6337'
 
 - [OSSA 2016-001] Nova host data leak through snapshot (CVE-2015-7548)
-  
+
   * `Bug 1524274 <https://bugs.launchpad.net/nova/+bug/1524274>`_
   * `Announcement <http://lists.openstack.org/pipermail/openstack-announce/2016-January/000911.html>`__
-  
+
   [OSSA 2016-002] Xen connection password leak in logs via StorageError (CVE-2015-8749)
-  
+
   * `Bug 1516765 <https://bugs.launchpad.net/nova/+bug/1516765>`_
   * `Announcement <http://lists.openstack.org/pipermail/openstack-announce/2016-January/000916.html>`__
 
@@ -103,7 +103,7 @@ Bug Fixes
 - Fixes a bug where Nova services won't recover after a temporary DB
   connection issue, when service group DB driver is used together with
   local conductor, as the driver only handles RPC timeout errors.
-  
+
   For more info see https://bugs.launchpad.net/nova/+bug/1505471
 
 .. releasenotes/notes/bug-1517926-ed0dda23ea525306.yaml @ b'821f644e98475d0af53f621ba13930b3dffc6e7b'
@@ -113,7 +113,7 @@ Bug Fixes
   remote conductor, as the driver only handles RPC timeout errors and does
   not account for other types of errors (e.g. wrapped DB errors on the
   remote conductor transported over RPC)
-  
+
   For more info see https://bugs.launchpad.net/nova/+bug/1517926
 
 

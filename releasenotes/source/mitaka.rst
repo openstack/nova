@@ -25,7 +25,7 @@ Security Issues
 .. releasenotes/notes/bug-1673569-cve-2017-7214-2d7644b356015c93.yaml @ b'e193201fa1de5b08b29adefd8c149935c5529598'
 
 - [CVE-2017-7214] Failed notification payload is dumped in logs with auth secrets
-  
+
   * `Bug 1673569 <https://bugs.launchpad.net/nova/+bug/1673569>`_
 
 
@@ -46,7 +46,7 @@ Bug Fixes
   legacy v2 API. With this fix, requests to create a server with
   ``boot_index=None`` will be treated as if ``boot_index`` was not specified,
   which defaults to meaning a non-bootable block device.
-  
+
   .. _bug 1662699: https://bugs.launchpad.net/nova/+bug/1662699
 
 
@@ -331,7 +331,7 @@ New Features
 
 - For the VMware driver, the flavor extra specs for quotas has been extended
   to support:
-  
+
   - quota:cpu_limit - The cpu of a virtual machine will not
     exceed this limit, even if there are available resources. This is
     typically used to ensure a consistent performance of virtual machines
@@ -498,7 +498,7 @@ Upgrade Notes
   (https://wiki.openstack.org/wiki/ReleaseNotes/Kilo#Upgrade_Notes_2) has
   been completely removed in Mitaka. This has been replaced by the new
   ec2-api project (http://opendev.org/openstack/ec2-api/).
-  
+
   .. warning:: Some installation tools (such as ``packstack``) hardcode the
     value of ``enabled_apis`` in your nova.conf. While the defaults
     for ``enabled_apis`` dropped ``ec2`` as a value, if that is hard
@@ -510,16 +510,16 @@ Upgrade Notes
 - The commit with change-id Idd4bbbe8eea68b9e538fa1567efd304e9115a02a
   requires that the nova_api database is setup and Nova is configured to use
   it.  Instructions on doing that are provided below.
-  
+
   Nova now requires that two databases are available and configured.  The
   existing nova database needs no changes, but a new nova_api database needs
   to be setup.  It is configured and managed very similarly to the nova
   database.  A new connection string configuration option is available in the
   api_database group.  An example::
-  
+
       [api_database]
       connection = mysql+pymysql://user:secret@127.0.0.1/nova_api?charset=utf8
-  
+
   And a new nova-manage command has been added to manage db migrations for
   this database.  "nova-manage api_db sync" and "nova-manage api_db version"
   are available and function like the parallel "nova-manage db ..." version.
@@ -584,7 +584,7 @@ Deprecation Notes
   replaceable components. There are many config options where you can
   replace a manager by specifying a new class. This concept is
   deprecated in Mitaka as are the following config options.
-  
+
     * [cells] manager
     * metadata_manager
     * compute_manager
@@ -592,7 +592,7 @@ Deprecation Notes
     * consoleauth_manager
     * cert_manager
     * scheduler_manager
-  
+
   Many of these will be removed in Newton. Users of these options
   are encouraged to work with Nova upstream on any features missing
   in the default implementations that are needed.
@@ -637,15 +637,15 @@ Deprecation Notes
 .. releasenotes/notes/zookeeper-servicegroup-driver-removed-c3bcaa6f9fe976ed.yaml @ b'7b1fb84f68bbcef0c496d3990e5d6b99a5360bc8'
 
 - The Zookeeper Service Group driver has been removed.
-  
+
   The driver has no known users and is not actively mantained. A warning log
   message about the driver's state was added for the Kilo release. Also,
   evzookeeper library that the driver depends on is unmaintained and
   `incompatible with recent eventlet releases`_.
-  
+
   A future release of Nova will `use the Tooz library to track
   service liveliness`_, and Tooz supports Zookeeper.
-  
+
   .. _`incompatible with recent eventlet releases`: https://bugs.launchpad.net/nova/+bug/1443910
   .. _`use the Tooz library to track service liveliness`: http://specs.openstack.org/openstack/nova-specs/specs/liberty/approved/service-group-using-tooz.html
 
@@ -658,17 +658,17 @@ Security Issues
 .. releasenotes/notes/13.0.0-cve-bugs-fe43ef267a82f304.yaml @ b'9c0bbda07fdcf134308371644d09becbb18c62b1'
 
 - [OSSA 2016-001] Nova host data leak through snapshot (CVE-2015-7548)
-  
+
   * `Bug 1524274 <https://bugs.launchpad.net/nova/+bug/1524274>`_
   * `Announcement <http://lists.openstack.org/pipermail/openstack-announce/2016-January/000911.html>`__
-  
+
   [OSSA 2016-002] Xen connection password leak in logs via StorageError (CVE-2015-8749)
-  
+
   * `Bug 1516765 <https://bugs.launchpad.net/nova/+bug/1516765>`_
   * `Announcement <http://lists.openstack.org/pipermail/openstack-announce/2016-January/000916.html>`__
-  
+
   [OSSA 2016-007] Host data leak during resize/migrate for raw-backed instances  (CVE-2016-2140)
-  
+
   * `Bug 1548450 <https://bugs.launchpad.net/nova/+bug/1548450>`_
   * `Announcement <http://lists.openstack.org/pipermail/openstack-announce/2016-March/001009.html>`__
 
