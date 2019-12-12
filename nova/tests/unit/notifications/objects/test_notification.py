@@ -20,6 +20,7 @@ from oslo_versionedobjects import fixture
 
 from nova import exception
 from nova.notifications.objects import base as notification
+from nova.notifications.objects.image import ImageMetaPropsPayload
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -383,7 +384,7 @@ notification_object_data = {
     'FlavorNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'FlavorPayload': '1.4-2e7011b8b4e59167fe8b7a0a81f0d452',
     'ImageMetaPayload': '1.0-0e65beeacb3393beed564a57bc2bc989',
-    'ImageMetaPropsPayload': '1.2-f237f65e1f14f05a73481dc4192df3ba',
+    'ImageMetaPropsPayload': '1.3-9c200c895932163a4e14e6bb385fa1e0',
     'InstanceActionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'InstanceActionPayload': '1.8-4fa3da9cbf0761f1f700ae578f36dc2f',
     'InstanceActionRebuildNotification':
@@ -477,6 +478,33 @@ class TestNotificationObjectVersions(test.NoDBTestCase):
         new_hash = checker.get_hashes(extra_data_func=get_extra_data)
 
         self.assertNotEqual(old_hash, new_hash)
+
+
+class TestImageMetaPropsPayloadNotifications(test.NoDBTestCase):
+    def setUp(self):
+        super().setUp()
+        base.NovaObjectRegistry.register_notification_objects()
+
+    def test_object_field_sync(self):
+        """Assert the fields of the ImageMetaPropsPayload object are
+        in sync with the fields of the ImageMetaProps object.
+        """
+        self.assertEqual(
+            ImageMetaPropsPayload.fields.keys(),
+            objects.image_meta.ImageMetaProps.fields.keys())
+
+    def test_schema_field_sync(self):
+        """Assert the fields of the ImageMetaPropsPayload object are
+        in sync with schema definition.
+        """
+        self.assertEqual(
+            ImageMetaPropsPayload.fields.keys(),
+            ImageMetaPropsPayload.SCHEMA.keys())
+
+    def test_schema(self):
+        """Assert the schema is generated correctly"""
+        for key, value in ImageMetaPropsPayload.SCHEMA.items():
+            self.assertEqual(('image_meta_props', key), value)
 
 
 def get_extra_data(obj_class):
