@@ -12749,8 +12749,8 @@ class EvacuateHostTestCase(BaseTestCase):
             'nova.compute.manager.ComputeManager._get_request_group_mapping',
             return_value=mock.sentinel.mapping)
         @mock.patch(
-            'nova.compute.manager.ComputeManager'
-            '._update_pci_request_spec_with_allocated_interface_name')
+            'nova.compute.utils.'
+            'update_pci_request_spec_with_allocated_interface_name')
         @mock.patch('nova.compute.utils.notify_about_instance_action')
         @mock.patch('nova.compute.utils.notify_about_instance_rebuild')
         @mock.patch.object(network_api, 'setup_networks_on_host')
@@ -12797,7 +12797,8 @@ class EvacuateHostTestCase(BaseTestCase):
             self.mock_get_allocs.assert_called_once_with(ctxt, self.inst.uuid)
 
             mock_update_pci_req.assert_called_once_with(
-                ctxt, self.inst, mock.sentinel.mapping)
+                ctxt, self.compute.reportclient, self.inst,
+                mock.sentinel.mapping)
 
         _test_rebuild(vm_is_stopped=vm_states_is_stopped)
 

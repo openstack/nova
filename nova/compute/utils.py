@@ -1460,3 +1460,59 @@ def notify_about_instance_delete(notifier, context, instance,
                 source=source,
                 action=delete_type,
                 phase=fields.NotificationPhase.END)
+
+
+def update_pci_request_spec_with_allocated_interface_name(
+        context, report_client, instance, provider_mapping):
+    """Update the instance's PCI request based on the request group -
+    resource provider mapping and the device RP name from placement.
+
+    :param context: the request context
+    :param report_client: a SchedulerReportClient instance
+    :param instance: an Instance object to be updated
+    :param provider_mapping: the request group - resource provider mapping
+        in the form returned by the RequestSpec.get_request_group_mapping()
+        call.
+    :raises AmbigousResourceProviderForPCIRequest: if more than one
+        resource provider provides resource for the given PCI request.
+    :raises UnexpectResourceProviderNameForPCIRequest: if the resource
+        provider, which provides resource for the pci request, does not
+        have a well formatted name so we cannot parse the parent interface
+        name out of it.
+    """
+    if not instance.pci_requests:
+        return
+
+    def needs_update(pci_request, mapping):
+        return (pci_request.requester_id and
+                pci_request.requester_id in mapping)
+
+    modified = False
+    for pci_request in instance.pci_requests.requests:
+        if needs_update(pci_request, provider_mapping):
+
+            provider_uuids = provider_mapping[pci_request.requester_id]
+            if len(provider_uuids) != 1:
+                raise exception.AmbiguousResourceProviderForPCIRequest(
+                    providers=provider_uuids,
+                    requester=pci_request.requester_id)
+
+            dev_rp_name = report_client.get_resource_provider_name(
+                context,
+                provider_uuids[0])
+
+            # NOTE(gibi): the device RP name reported by neutron is
+            # structured like <hostname>:<agentname>:<interfacename>
+            rp_name_pieces = dev_rp_name.split(':')
+            if len(rp_name_pieces) != 3:
+                ex = exception.UnexpectedResourceProviderNameForPCIRequest
+                raise ex(
+                    provider=provider_uuids[0],
+                    requester=pci_request.requester_id,
+                    provider_name=dev_rp_name)
+
+            for spec in pci_request.spec:
+                spec['parent_ifname'] = rp_name_pieces[2]
+                modified = True
+    if modified:
+        instance.save()

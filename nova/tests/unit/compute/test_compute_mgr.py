@@ -10022,8 +10022,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
     @mock.patch('nova.compute.rpcapi.ComputeAPI.resize_instance')
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.resize_claim')
     @mock.patch('nova.objects.Instance.save')
-    @mock.patch('nova.compute.manager.ComputeManager.'
-                '_update_pci_request_spec_with_allocated_interface_name')
+    @mock.patch('nova.compute.utils.'
+                'update_pci_request_spec_with_allocated_interface_name')
     @mock.patch('nova.compute.utils.notify_usage_exists')
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_notify_about_instance_usage')
@@ -10047,7 +10047,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             clean_shutdown=True, migration=self.migration, host_list=[])
 
         mock_update_pci.assert_called_once_with(
-            self.context, instance, {uuids.port_id: [uuids.rp_uuid]})
+            self.context, self.compute.reportclient, instance,
+            {uuids.port_id: [uuids.rp_uuid]})
         mock_save.assert_called_once_with()
 
     @mock.patch('nova.compute.manager.ComputeManager._revert_allocation')
@@ -10055,8 +10056,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
     @mock.patch('nova.compute.rpcapi.ComputeAPI.resize_instance')
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.resize_claim')
     @mock.patch('nova.objects.Instance.save')
-    @mock.patch('nova.compute.manager.ComputeManager.'
-                '_update_pci_request_spec_with_allocated_interface_name')
+    @mock.patch('nova.compute.utils.'
+                'update_pci_request_spec_with_allocated_interface_name')
     @mock.patch('nova.compute.utils.notify_usage_exists')
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_notify_about_instance_usage')
