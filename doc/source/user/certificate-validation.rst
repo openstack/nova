@@ -66,7 +66,8 @@ Limitations
   the ``RBD`` backend avoiding calls to download and verify on the compute.
 
 * As of the 18.0.0 Rocky release, trusted image certification validation is
-  not supported with volume-backed (boot from volume) instances. The block
+  not supported with volume-backed
+  (:term:`boot from volume <Boot From Volume>`) instances. The block
   storage service support may be available in a future release:
 
   https://blueprints.launchpad.net/cinder/+spec/certificate-validate

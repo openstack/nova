@@ -62,6 +62,6 @@ Volume Support
 Volume support is provided for the PowerVM virt driver via Cinder. Currently,
 the only supported volume protocol is `vSCSI`_ Fibre Channel. Attach, detach,
 and extend are the operations supported by the PowerVM vSCSI FC volume adapter.
-Boot from volume is not yet supported.
+:term:`Boot From Volume` is not yet supported.
 
 .. _vSCSI: https://www.ibm.com/support/knowledgecenter/en/POWER8/p8hat/p8hat_virtualscsi.htm
