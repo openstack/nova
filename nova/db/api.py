@@ -1193,33 +1193,6 @@ def quota_destroy_all_by_project(context, project_id):
 ###################
 
 
-def ec2_volume_create(context, volume_id, forced_id=None):
-    return IMPL.ec2_volume_create(context, volume_id, forced_id)
-
-
-def ec2_volume_get_by_id(context, volume_id):
-    return IMPL.ec2_volume_get_by_id(context, volume_id)
-
-
-def ec2_volume_get_by_uuid(context, volume_uuid):
-    return IMPL.ec2_volume_get_by_uuid(context, volume_uuid)
-
-
-def ec2_snapshot_create(context, snapshot_id, forced_id=None):
-    return IMPL.ec2_snapshot_create(context, snapshot_id, forced_id)
-
-
-def ec2_snapshot_get_by_ec2_id(context, ec2_id):
-    return IMPL.ec2_snapshot_get_by_ec2_id(context, ec2_id)
-
-
-def ec2_snapshot_get_by_uuid(context, snapshot_uuid):
-    return IMPL.ec2_snapshot_get_by_uuid(context, snapshot_uuid)
-
-
-####################
-
-
 def block_device_mapping_create(context, values, legacy=True):
     """Create an entry of block device mapping."""
     return IMPL.block_device_mapping_create(context, values, legacy)
