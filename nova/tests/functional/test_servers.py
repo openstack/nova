@@ -27,6 +27,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import base64
 from oslo_serialization import jsonutils
+from oslo_utils import fixture as osloutils_fixture
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 import six
@@ -46,6 +47,7 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit.api.openstack import fakes
+from nova.tests.unit import cast_as_call
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_notifier
 from nova.tests.unit import fake_requests
@@ -3393,6 +3395,70 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         _check_allocation()
 
         self._delete_and_check_allocations(server)
+
+
+class PollUnconfirmedResizesTest(integrated_helpers.ProviderUsageBaseTestCase):
+    """Tests for the _poll_unconfirmed_resizes periodic task."""
+    compute_driver = 'fake.MediumFakeDriver'
+
+    def setUp(self):
+        super(PollUnconfirmedResizesTest, self).setUp()
+        # Start two computes for the resize.
+        self._start_compute('host1')
+        self._start_compute('host2')
+
+    def test_source_host_down_during_confirm(self):
+        """Tests the scenario that between the time that the server goes to
+        VERIFY_RESIZE status and the _poll_unconfirmed_resizes periodic task
+        runs the source compute service goes down so the confirm task fails.
+        """
+        server = self._build_minimal_create_server_request(
+            name='test_source_host_down_during_confirm',
+            image_uuid=nova.tests.unit.image.fake.get_valid_image_id(),
+            networks='none', host='host1')
+        server = self.api.post_server({'server': server})
+        server = self._wait_for_state_change(server, 'ACTIVE')
+        # Cold migrate the server to the other host.
+        self.api.post_server_action(server['id'], {'migrate': None})
+        server = self._wait_for_state_change(server, 'VERIFY_RESIZE')
+        self.assertEqual('host2', server['OS-EXT-SRV-ATTR:host'])
+        # Make sure the migration is finished.
+        self._wait_for_migration_status(server, ['finished'])
+        # Stop and force down the source compute service.
+        self.computes['host1'].stop()
+        source_service = self.api.get_services(
+            binary='nova-compute', host='host1')[0]
+        self.api.put_service(
+            source_service['id'], {'status': 'disabled', 'forced_down': True})
+        # Now configure auto-confirm and call the method on the target compute
+        # so we do not have to wait for the periodic to run. Also configure
+        # the RPC call from the API to the source compute to timeout after 1
+        # second.
+        self.flags(resize_confirm_window=1, rpc_response_timeout=1)
+        # Stub timeutils so the DB API query finds the unconfirmed migration.
+        future = timeutils.utcnow() + datetime.timedelta(hours=1)
+        ctxt = context.get_admin_context()
+        with osloutils_fixture.TimeFixture(future):
+            # Use the CastAsCall fixture since the fake rpc is not going to
+            # simulate a failure from the service being down.
+            with cast_as_call.CastAsCall(self):
+                self.computes['host2'].manager._poll_unconfirmed_resizes(ctxt)
+        self.assertIn('Error auto-confirming resize',
+                      self.stdlog.logger.output)
+        self.assertIn('No reply on topic compute', self.stdlog.logger.output)
+        # FIXME(mriedem): This is bug 1855927 where the migration status is
+        # left in "confirming" so the _poll_unconfirmed_resizes task will not
+        # process it again nor can the user confirm the resize in the API since
+        # the migration status is not "finished".
+        self._wait_for_migration_status(server, ['confirming'])
+        ex = self.assertRaises(client.OpenStackApiException,
+                               self.api.post_server_action,
+                               server['id'], {'confirmResize': None})
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn('Instance has not been resized', six.text_type(ex))
+        # That error message is bogus because the server is resized.
+        server = self.api.get_server(server['id'])
+        self.assertEqual('VERIFY_RESIZE', server['status'])
 
 
 class ServerLiveMigrateForceAndAbort(
