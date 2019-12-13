@@ -383,7 +383,7 @@ notification_object_data = {
     'FlavorNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'FlavorPayload': '1.4-2e7011b8b4e59167fe8b7a0a81f0d452',
     'ImageMetaPayload': '1.0-0e65beeacb3393beed564a57bc2bc989',
-    'ImageMetaPropsPayload': '1.1-789c420945f2cae6ac64ca8dffbcb1b8',
+    'ImageMetaPropsPayload': '1.2-f237f65e1f14f05a73481dc4192df3ba',
     'InstanceActionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'InstanceActionPayload': '1.8-4fa3da9cbf0761f1f700ae578f36dc2f',
     'InstanceActionRebuildNotification':

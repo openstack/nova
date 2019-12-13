@@ -1861,6 +1861,12 @@ class ImageNUMATopologyRebuildConflict(Invalid):
         "The image provided is invalid for this instance.")
 
 
+class ImagePCINUMAPolicyForbidden(Forbidden):
+    msg_fmt = _("Image property 'hw_pci_numa_affinity_policy' is not "
+                "permitted to override the 'hw:pci_numa_affinity_policy' "
+                "flavor extra spec.")
+
+
 class ImageNUMATopologyAsymmetric(Invalid):
     msg_fmt = _("Instance CPUs and/or memory cannot be evenly distributed "
                 "across instance NUMA nodes. Explicit assignment of CPUs "
@@ -2252,6 +2258,10 @@ class BadRequirementEmulatorThreadsPolicy(Invalid):
 
 class InvalidNetworkNUMAAffinity(Invalid):
     msg_fmt = _("Invalid NUMA network affinity configured: %(reason)s")
+
+
+class InvalidPCINUMAAffinity(Invalid):
+    msg_fmt = _("Invalid PCI NUMA affinity configured: %(policy)s")
 
 
 class PowerVMAPIFailed(NovaException):

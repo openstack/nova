@@ -1,0 +1,13 @@
+---
+features:
+  - |
+    Added support for instance-level PCI NUMA policies using the
+    ``hw:pci_numa_affinity_policy`` flavor extra spec and
+    ``hw_pci_numa_affinity_policy`` image metadata property.
+    These apply to both PCI passthrough and SR-IOV devices,
+    unlike host-level PCI NUMA policies configured via the
+    ``alias`` key of the ``[pci] alias`` config option.
+    See the `VM Scoped SR-IOV NUMA Affinity`_ spec for more
+    info.
+
+    .. _`VM Scoped SR-IOV NUMA Affinity` : http://specs.openstack.org/openstack/nova-specs/specs/ussuri/approved/vm-scoped-sriov-numa-affinity.html

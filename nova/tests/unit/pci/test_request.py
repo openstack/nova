@@ -23,6 +23,7 @@ from nova import context
 from nova import exception
 from nova.network import model
 from nova import objects
+from nova.objects import fields
 from nova.pci import request
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -189,6 +190,23 @@ class PciRequestTestCase(test.NoDBTestCase):
         self.assertRaises(exception.PciInvalidAlias,
             request._get_alias_from_config)
 
+    def test_valid_numa_policy(self):
+        for policy in fields.PCINUMAAffinityPolicy.ALL:
+            self.flags(alias=[
+                """{
+                "name": "xxx",
+                "capability_type": "pci",
+                "product_id": "1111",
+                "vendor_id": "8086",
+                "device_type": "type-PCI",
+                "numa_policy": "%s"
+                }""" % policy],
+                       group='pci')
+            aliases = request._get_alias_from_config()
+            self.assertIsNotNone(aliases)
+            self.assertIn("xxx", aliases)
+            self.assertEqual(policy, aliases["xxx"][0])
+
     def test_conflicting_device_type(self):
         """Check behavior when device_type conflicts occur."""
         self.flags(alias=[
@@ -267,6 +285,37 @@ class PciRequestTestCase(test.NoDBTestCase):
         self.assertRaises(exception.PciRequestAliasNotDefined,
                           request._translate_alias_to_requests,
                           "QuicAssistX : 3")
+
+    def test_alias_2_request_affinity_policy(self):
+        # _fake_alias1 requests the legacy policy and _fake_alias3
+        # has no numa_policy set so it will default to legacy.
+        self.flags(alias=[_fake_alias1, _fake_alias3], group='pci')
+        # so to test that the flavor/image policy takes precedence
+        # set use the preferred policy.
+        policy = fields.PCINUMAAffinityPolicy.PREFERRED
+        expect_request = [
+            {'count': 3,
+             'requester_id': None,
+             'spec': [{'vendor_id': '8086', 'product_id': '4443',
+                       'dev_type': 'type-PCI',
+                       'capability_type': 'pci'}],
+             'alias_name': 'QuicAssist',
+             'numa_policy': policy
+             },
+
+            {'count': 1,
+             'requester_id': None,
+             'spec': [{'vendor_id': '8086', 'product_id': '1111',
+                       'dev_type': "type-PF",
+                       'capability_type': 'pci'}],
+             'alias_name': 'IntelNIC',
+             'numa_policy': policy
+             }, ]
+
+        requests = request._translate_alias_to_requests(
+            "QuicAssist : 3, IntelNIC: 1", affinity_policy=policy)
+        self.assertEqual(set([p['count'] for p in requests]), set([1, 3]))
+        self._verify_result(expect_request, requests)
 
     @mock.patch.object(objects.compute_node.ComputeNode,
                        'get_by_host_and_nodename')
@@ -410,3 +459,14 @@ class PciRequestTestCase(test.NoDBTestCase):
         flavor = {}
         requests = request.get_pci_requests_from_flavor(flavor)
         self.assertEqual([], requests.requests)
+
+    @mock.patch.object(
+        request, "_translate_alias_to_requests", return_value=[])
+    def test_get_pci_requests_from_flavor_affinity_policy(
+            self, mock_translate):
+        self.flags(alias=[_fake_alias1, _fake_alias3], group='pci')
+        flavor = {'extra_specs': {"pci_passthrough:alias":
+                                  "QuicAssist:3, IntelNIC: 1"}}
+        policy = fields.PCINUMAAffinityPolicy.PREFERRED
+        request.get_pci_requests_from_flavor(flavor, affinity_policy=policy)
+        mock_translate.assert_called_with(mock.ANY, affinity_policy=policy)

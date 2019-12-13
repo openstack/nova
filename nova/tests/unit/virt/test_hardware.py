@@ -16,6 +16,7 @@ import collections
 import copy
 
 import mock
+import testtools
 
 from nova import exception
 from nova import objects
@@ -4184,3 +4185,73 @@ class MemEncryptionRequiredTestCase(test.NoDBTestCase):
                     "hw_mem_encryption property of image %s" %
                     (self.flavor_name, self.image_name)
                 )
+
+
+class PCINUMAAffinityPolicyTest(test.NoDBTestCase):
+
+    def test_get_pci_numa_policy_flavor(self):
+
+        for policy in fields.PCINUMAAffinityPolicy.ALL:
+            extra_specs = {
+                "hw:pci_numa_affinity_policy": policy,
+            }
+            image_meta = objects.ImageMeta.from_dict({"properties": {}})
+            flavor = objects.Flavor(
+                vcpus=16, memory_mb=2048, extra_specs=extra_specs)
+            self.assertEqual(
+                policy, hw.get_pci_numa_policy_constraint(flavor, image_meta))
+
+    def test_get_pci_numa_policy_image(self):
+        for policy in fields.PCINUMAAffinityPolicy.ALL:
+            props = {
+                "hw_pci_numa_affinity_policy": policy,
+            }
+            image_meta = objects.ImageMeta.from_dict({"properties": props})
+            flavor = objects.Flavor(
+                vcpus=16, memory_mb=2048, extra_specs={})
+            self.assertEqual(
+                policy, hw.get_pci_numa_policy_constraint(flavor, image_meta))
+
+    def test_get_pci_numa_policy_no_conflict(self):
+
+        for policy in fields.PCINUMAAffinityPolicy.ALL:
+            extra_specs = {
+                "hw:pci_numa_affinity_policy": policy,
+            }
+            flavor = objects.Flavor(
+                vcpus=16, memory_mb=2048, extra_specs=extra_specs)
+            props = {
+                "hw_pci_numa_affinity_policy": policy,
+            }
+            image_meta = objects.ImageMeta.from_dict({"properties": props})
+            self.assertEqual(
+                policy, hw.get_pci_numa_policy_constraint(flavor, image_meta))
+
+    def test_get_pci_numa_policy_conflict(self):
+        extra_specs = {
+            "hw:pci_numa_affinity_policy":
+                fields.PCINUMAAffinityPolicy.LEGACY,
+        }
+        flavor = objects.Flavor(
+            vcpus=16, memory_mb=2048, extra_specs=extra_specs)
+        props = {
+            "hw_pci_numa_affinity_policy":
+                fields.PCINUMAAffinityPolicy.REQUIRED,
+        }
+        image_meta = objects.ImageMeta.from_dict({"properties": props})
+        self.assertRaises(
+            exception.ImagePCINUMAPolicyForbidden,
+            hw.get_pci_numa_policy_constraint, flavor, image_meta)
+
+    def test_get_pci_numa_policy_invalid(self):
+        extra_specs = {
+            "hw:pci_numa_affinity_policy": "fake",
+        }
+        flavor = objects.Flavor(
+            vcpus=16, memory_mb=2048, extra_specs=extra_specs)
+        image_meta = objects.ImageMeta.from_dict({"properties": {}})
+        self.assertRaises(
+            exception.InvalidPCINUMAAffinity,
+            hw.get_pci_numa_policy_constraint, flavor, image_meta)
+        with testtools.ExpectedException(ValueError):
+            image_meta.properties.hw_pci_numa_affinity_policy = "fake"

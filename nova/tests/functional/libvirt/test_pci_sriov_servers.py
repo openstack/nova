@@ -13,8 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import ddt
 import fixtures
 import mock
+
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
@@ -397,3 +399,121 @@ class PCIServersWithRequiredNUMATest(PCIServersWithPreferredNUMATest):
         }
     )]
     end_status = 'ERROR'
+
+
+@ddt.ddt
+class PCIServersWithSRIOVAffinityPoliciesTest(_PCIServersTestBase):
+
+    # The order of the filters is required to make the assertion that the
+    # PciPassthroughFilter is invoked in _run_build_test pass in the
+    # numa affinity tests otherwise the NUMATopologyFilter will eliminate
+    # all hosts before we execute the PciPassthroughFilter.
+    ADDITIONAL_FILTERS = ['PciPassthroughFilter', 'NUMATopologyFilter']
+    ALIAS_NAME = 'a1'
+    PCI_PASSTHROUGH_WHITELIST = [jsonutils.dumps(
+        {
+            'vendor_id': fakelibvirt.PCI_VEND_ID,
+            'product_id': fakelibvirt.PCI_PROD_ID,
+        }
+    )]
+    # we set the numa_affinity policy to required to ensure strict affinity
+    # between pci devices and the guest cpu and memory will be enforced.
+    PCI_ALIAS = [jsonutils.dumps(
+        {
+            'vendor_id': fakelibvirt.PCI_VEND_ID,
+            'product_id': fakelibvirt.PCI_PROD_ID,
+            'name': ALIAS_NAME,
+            'device_type': fields.PciDeviceType.STANDARD,
+            'numa_policy': fields.PCINUMAAffinityPolicy.REQUIRED,
+        }
+    )]
+
+    # NOTE(sean-k-mooney): i could just apply the ddt decorators
+    # to this function for the most part but i have chosen to
+    # keep one top level function per policy to make documenting
+    # the test cases simpler.
+    def _test_policy(self, pci_numa_node, status, policy):
+        host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
+                                         cpu_cores=2, cpu_threads=2,
+                                         kB_mem=15740000)
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=1, numa_node=pci_numa_node)
+        fake_connection = self._get_connection(host_info, pci_info)
+        self.mock_conn.return_value = fake_connection
+
+        # only allow cpus on numa node 1 to be used for pinning
+        self.flags(cpu_dedicated_set='4-7', group='compute')
+
+        # request cpu pinning to create a numa toplogy and allow the test to
+        # force which numa node the vm would have to be pinned too.
+        extra_spec = {
+            'hw:cpu_policy': 'dedicated',
+            'pci_passthrough:alias': '%s:1' % self.ALIAS_NAME,
+            'hw:pci_numa_affinity_policy': policy
+        }
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        self._run_build_test(flavor_id, end_status=status)
+
+    @ddt.unpack  # unpacks each sub-tuple e.g. *(pci_numa_node, status)
+    # the preferred policy should always pass regardless of numa affinity
+    @ddt.data((-1, 'ACTIVE'), (0, 'ACTIVE'), (1, 'ACTIVE'))
+    def test_create_server_with_sriov_numa_affinity_policy_preferred(
+            self, pci_numa_node, status):
+        """Validate behavior of 'preferred' PCI NUMA affinity policy.
+
+        This test ensures that it *is* possible to allocate CPU and memory
+        resources from one NUMA node and a PCI device from another *if*
+        the SR-IOV NUMA affinity policy is set to preferred.
+        """
+        self._test_policy(pci_numa_node, status, 'preferred')
+
+    @ddt.unpack  # unpacks each sub-tuple e.g. *(pci_numa_node, status)
+    # the legacy policy allow a PCI device to be used if it has NUMA
+    # affinity or if no NUMA info is available so we set the NUMA
+    # node for this device to -1 which is the sentinel value use by the
+    # Linux kernel for a device with no NUMA affinity.
+    @ddt.data((-1, 'ACTIVE'), (0, 'ERROR'), (1, 'ACTIVE'))
+    def test_create_server_with_sriov_numa_affinity_policy_legacy(
+            self, pci_numa_node, status):
+        """Validate behavior of 'legacy' PCI NUMA affinity policy.
+
+        This test ensures that it *is* possible to allocate CPU and memory
+        resources from one NUMA node and a PCI device from another *if*
+        the SR-IOV NUMA affinity policy is set to legacy and the device
+        does not report NUMA information.
+        """
+        self._test_policy(pci_numa_node, status, 'legacy')
+
+    @ddt.unpack  # unpacks each sub-tuple e.g. *(pci_numa_node, status)
+    # The required policy requires a PCI device to both report a NUMA
+    # and for the guest cpus and ram to be affinitized to the same
+    # NUMA node so we create 1 pci device in the first NUMA node.
+    @ddt.data((-1, 'ERROR'), (0, 'ERROR'), (1, 'ACTIVE'))
+    def test_create_server_with_sriov_numa_affinity_policy_required(
+            self, pci_numa_node, status):
+        """Validate behavior of 'required' PCI NUMA affinity policy.
+
+        This test ensures that it *is not* possible to allocate CPU and memory
+        resources from one NUMA node and a PCI device from another *if*
+        the SR-IOV NUMA affinity policy is set to required and the device
+        does reports NUMA information.
+        """
+
+        # we set the numa_affinity policy to preferred to allow the PCI device
+        # to be selected from any numa node so we can prove the flavor
+        # overrides the alias.
+        alias = [jsonutils.dumps(
+            {
+                'vendor_id': fakelibvirt.PCI_VEND_ID,
+                'product_id': fakelibvirt.PCI_PROD_ID,
+                'name': self.ALIAS_NAME,
+                'device_type': fields.PciDeviceType.STANDARD,
+                'numa_policy': fields.PCINUMAAffinityPolicy.PREFERRED,
+            }
+        )]
+
+        self.flags(passthrough_whitelist=self.PCI_PASSTHROUGH_WHITELIST,
+                   alias=alias,
+                   group='pci')
+
+        self._test_policy(pci_numa_node, status, 'required')
