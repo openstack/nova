@@ -21,6 +21,7 @@ from oslo_versionedobjects import base as ovo_base
 
 import nova.conf
 from nova import exception
+from nova.i18n import _
 from nova.objects import base as objects_base
 from nova import profiler
 from nova import rpc
@@ -283,6 +284,7 @@ class ComputeTaskAPI(object):
     1.20 - migrate_server() now gets a 'host_list' parameter that represents
            potential alternate hosts for retries within a cell.
     1.21 - Added cache_images()
+    1.22 - Added confirm_snapshot_based_resize()
     """
 
     def __init__(self):
@@ -452,3 +454,14 @@ class ComputeTaskAPI(object):
         cctxt = self.client.prepare(version=version)
         cctxt.cast(ctxt, 'cache_images', aggregate=aggregate,
                    image_ids=image_ids)
+
+    def confirm_snapshot_based_resize(
+            self, ctxt, instance, migration, do_cast=True):
+        version = '1.22'
+        if not self.client.can_send_version(version):
+            raise exception.ServiceTooOld(_('nova-conductor too old'))
+        kw = {'instance': instance, 'migration': migration}
+        cctxt = self.client.prepare(version=version)
+        if do_cast:
+            return cctxt.cast(ctxt, 'confirm_snapshot_based_resize', **kw)
+        return cctxt.call(ctxt, 'confirm_snapshot_based_resize', **kw)

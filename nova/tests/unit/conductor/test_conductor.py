@@ -1771,6 +1771,18 @@ class _BaseTaskTestCase(object):
             self.context, inst_obj, 'thebesthost', action='rebuild_scheduled',
             source='nova-conductor')
 
+    @mock.patch(
+        'nova.conductor.tasks.cross_cell_migrate.ConfirmResizeTask.execute')
+    def test_confirm_snapshot_based_resize(self, mock_execute):
+        instance = self._create_fake_instance_obj(ctxt=self.context)
+        migration = objects.Migration(
+            context=self.context, source_compute=instance.host,
+            source_node=instance.node, instance_uuid=instance.uuid,
+            status='confirming', migration_type='resize')
+        self.conductor_manager.confirm_snapshot_based_resize(
+            self.context, instance=instance, migration=migration)
+        mock_execute.assert_called_once_with()
+
 
 class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     """ComputeTaskManager Tests."""
@@ -3793,6 +3805,43 @@ class ConductorTaskRPCAPITestCase(_BaseTaskTestCase,
                 self.context, 'migrate_server', **kw)
 
         _test()
+
+    def _test_confirm_snapshot_based_resize(self, do_cast):
+        """Tests how confirm_snapshot_based_resize is called when do_cast is
+        True or False.
+        """
+        instance = objects.Instance()
+        migration = objects.Migration()
+
+        @mock.patch.object(self.conductor.client, 'can_send_version',
+                           return_value=True)
+        @mock.patch.object(self.conductor.client, 'prepare')
+        def _test(prepare_mock, can_send_mock):
+            self.conductor.confirm_snapshot_based_resize(
+                self.context, instance, migration, do_cast=do_cast)
+            kw = {'instance': instance, 'migration': migration}
+            if do_cast:
+                prepare_mock.return_value.cast.assert_called_once_with(
+                    self.context, 'confirm_snapshot_based_resize', **kw)
+            else:
+                prepare_mock.return_value.call.assert_called_once_with(
+                    self.context, 'confirm_snapshot_based_resize', **kw)
+        _test()
+
+    def test_confirm_snapshot_based_resize_cast(self):
+        self._test_confirm_snapshot_based_resize(do_cast=True)
+
+    def test_confirm_snapshot_based_resize_call(self):
+        self._test_confirm_snapshot_based_resize(do_cast=False)
+
+    def test_confirm_snapshot_based_resize_old_service(self):
+        """Tests confirm_snapshot_based_resize when the service is too old."""
+        with mock.patch.object(
+                self.conductor.client, 'can_send_version', return_value=False):
+            self.assertRaises(exc.ServiceTooOld,
+                              self.conductor.confirm_snapshot_based_resize,
+                              self.context, mock.sentinel.instance,
+                              mock.sentinel.migration)
 
 
 class ConductorTaskAPITestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
