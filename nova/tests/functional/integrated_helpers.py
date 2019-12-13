@@ -509,6 +509,10 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         self.assertEqual(old_flavor['disk'] + new_flavor['disk'],
                          allocation['DISK_GB'])
 
+    def assertFlavorMatchesUsage(self, rp_uuid, flavor):
+        usages = self._get_provider_usages(rp_uuid)
+        self.assertFlavorMatchesAllocation(flavor, usages)
+
     def get_migration_uuid_for_instance(self, instance_uuid):
         # NOTE(danms): This is too much introspection for a test like this, but
         # we can't see the migration uuid from the API, so we just encapsulate
