@@ -1205,3 +1205,11 @@ class Semaphores(object):
     def __len__(self):
         """Returns how many semaphores exist at the current time."""
         return len(self._semaphores)
+
+
+def is_baremetal_host(host_state):
+    return host_state.hypervisor_type == 'ironic'
+
+
+def is_baremetal_flavor(flavor):
+    return 'capabilities:cpu_arch' in flavor.extra_specs
