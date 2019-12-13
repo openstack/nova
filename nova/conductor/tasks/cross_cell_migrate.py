@@ -24,6 +24,7 @@ from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova.conductor.tasks import base
+from nova import conf
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
@@ -36,6 +37,7 @@ from nova.scheduler import utils as scheduler_utils
 from nova.volume import cinder
 
 LOG = logging.getLogger(__name__)
+CONF = conf.CONF
 
 
 def clone_creatable_object(ctxt, obj, delete_fields=None):
@@ -967,7 +969,7 @@ class ConfirmResizeTask(base.TaskBase):
             self.legacy_notifier, ctxt, instance, 'resize.confirm.%s' % phase)
         # Send the versioned notification.
         compute_utils.notify_about_instance_action(
-            ctxt, instance, instance.host,  # TODO(mriedem): Use CONF.host?
+            ctxt, instance, CONF.host,
             action=fields.NotificationAction.RESIZE_CONFIRM,
             phase=phase)
 
