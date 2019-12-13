@@ -898,6 +898,25 @@ class _TestRequestSpecObject(object):
         req_obj.create()
         req_obj.save()
 
+    def test_get_request_group_mapping_no_request(self):
+        req_obj = request_spec.RequestSpec()
+        self.assertIsNone(req_obj.get_request_group_mapping())
+
+    def test_get_request_group_mapping(self):
+        req_obj = request_spec.RequestSpec(
+            requested_resources=[
+                request_spec.RequestGroup(
+                    requester_id='requester1',
+                    provider_uuids=[uuids.pr1, uuids.pr2]),
+                request_spec.RequestGroup(
+                    requester_id='requester2',
+                    provider_uuids=[]),
+            ])
+        self.assertEqual(
+            {'requester1': [uuids.pr1, uuids.pr2],
+             'requester2': []},
+            req_obj.get_request_group_mapping())
+
 
 class TestRequestSpecObject(test_objects._LocalTest,
                             _TestRequestSpecObject):
