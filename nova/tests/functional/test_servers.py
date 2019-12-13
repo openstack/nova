@@ -7249,7 +7249,7 @@ class ServerMoveWithPortResourceRequestTest(
         self.addCleanup(patcher.stop)
         patcher.start()
 
-    def test_live_migrate_with_qos_port(self):
+    def test_live_migrate_with_qos_port(self, host=None):
         # TODO(gibi): remove this when live migration is fully supported and
         # therefore the check is removed from the api
         self._turn_off_api_check()
@@ -7270,7 +7270,7 @@ class ServerMoveWithPortResourceRequestTest(
             server['id'],
             {
                 'os-migrateLive': {
-                    'host': None,
+                    'host': host,
                     'block_migration': 'auto'
                 }
             }
@@ -7288,10 +7288,130 @@ class ServerMoveWithPortResourceRequestTest(
         self._delete_server_and_check_allocations(
             server, qos_normal_port, qos_sriov_port)
 
+    def test_live_migrate_with_qos_port_with_target_host(self):
+        self.test_live_migrate_with_qos_port(host='host2')
+
+    def test_live_migrate_with_qos_port_reschedule_success(self):
+        # TODO(gibi): remove this when live migration is fully supported and
+        # therefore the check is removed from the api
+        self._turn_off_api_check()
+
+        self._start_compute('host3')
+        compute3_rp_uuid = self._get_provider_uuid_by_host('host3')
+        self._create_networking_rp_tree('host3', compute3_rp_uuid)
+
+        non_qos_normal_port = self.neutron.port_1
+        qos_normal_port = self.neutron.port_with_resource_request
+        qos_sriov_port = self.neutron.port_with_sriov_resource_request
+
+        server = self._create_server_with_ports(
+            non_qos_normal_port, qos_normal_port, qos_sriov_port)
+
+        # check that the server allocates from the current host properly
+        self._check_allocation(
+            server, self.compute1_rp_uuid, non_qos_normal_port,
+            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
+
+        orig_check = nova.virt.fake.FakeDriver.\
+            check_can_live_migrate_destination
+
+        def fake_check_can_live_migrate_destination(
+                context, instance, src_compute_info, dst_compute_info,
+                block_migration=False, disk_over_commit=False):
+            if dst_compute_info['host'] == 'host2':
+                raise exception.MigrationPreCheckError(
+                    reason='test_live_migrate_pre_check_fails')
+            else:
+                return orig_check(
+                    context, instance, src_compute_info, dst_compute_info,
+                    block_migration, disk_over_commit)
+
+        with mock.patch('nova.virt.fake.FakeDriver.'
+                        'check_can_live_migrate_destination',
+                        side_effect=fake_check_can_live_migrate_destination):
+            self.api.post_server_action(
+                server['id'],
+                {
+                    'os-migrateLive': {
+                        'host': None,
+                        'block_migration': 'auto'
+                    }
+                }
+            )
+            # The first migration attempt was to host2. So we expect that the
+            # instance lands on host3.
+            self._wait_for_server_parameter(
+                server,
+                {'OS-EXT-SRV-ATTR:host': 'host3',
+                 'status': 'ACTIVE'})
+
+        self._check_allocation(
+            server, compute3_rp_uuid, non_qos_normal_port,
+            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
+
+        self._delete_server_and_check_allocations(
+            server, qos_normal_port, qos_sriov_port)
+
+    def test_live_migrate_with_qos_port_reschedule_fails(self):
+        # TODO(gibi): remove this when live migration is fully supported and
+        # therefore the check is removed from the api
+        self._turn_off_api_check()
+
+        non_qos_normal_port = self.neutron.port_1
+        qos_normal_port = self.neutron.port_with_resource_request
+        qos_sriov_port = self.neutron.port_with_sriov_resource_request
+
+        server = self._create_server_with_ports(
+            non_qos_normal_port, qos_normal_port, qos_sriov_port)
+
+        # check that the server allocates from the current host properly
+        self._check_allocation(
+            server, self.compute1_rp_uuid, non_qos_normal_port,
+            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
+
+        with mock.patch(
+                'nova.virt.fake.FakeDriver.check_can_live_migrate_destination',
+                side_effect=exception.MigrationPreCheckError(
+                    reason='test_live_migrate_pre_check_fails')):
+            self.api.post_server_action(
+                server['id'],
+                {
+                    'os-migrateLive': {
+                        'host': None,
+                        'block_migration': 'auto'
+                    }
+                }
+            )
+            # The every migration target host will fail the pre check so
+            # the conductor will run out of target host and the migration will
+            # fail
+            self._wait_for_migration_status(server, ['error'])
+
+        # the server will remain on host1
+        self._wait_for_server_parameter(
+            server,
+            {'OS-EXT-SRV-ATTR:host': 'host1',
+             'status': 'ACTIVE'})
+
+        self._check_allocation(
+            server, self.compute1_rp_uuid, non_qos_normal_port,
+            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
+
+        # Assert that the InstancePCIRequests also rolled back to point to
+        # host1
+        ctxt = context.get_admin_context()
+        pci_requests = objects.InstancePCIRequests.get_by_instance_uuid(
+            ctxt, server['id'])
+        self.assertEqual(1, len(pci_requests.requests))
+        self.assertEqual(1, len(pci_requests.requests[0].spec))
+        self.assertEqual(
+            'host1-ens2',
+            pci_requests.requests[0].spec[0]['parent_ifname'])
+
+        self._delete_server_and_check_allocations(
+            server, qos_normal_port, qos_sriov_port)
+
     # TODO(gibi): add tests for live migration cases:
-    # * with target host
-    # * re-schedule success
-    # * re-schedule fail -> pci request cleanup?
     # * abort / cancel -> dest / pci request cleanup?
 
 

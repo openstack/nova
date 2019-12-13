@@ -7615,7 +7615,7 @@ class ComputeManager(manager.Manager):
         src_compute_info = obj_base.obj_to_primitive(
             self._get_compute_info(ctxt, instance.host))
         dst_compute_info = obj_base.obj_to_primitive(
-            self._get_compute_info(ctxt, CONF.host))
+            self._get_compute_info(ctxt, self.host))
         dest_check_data = self.driver.check_can_live_migrate_destination(ctxt,
             instance, src_compute_info, dst_compute_info,
             block_migration, disk_over_commit)
