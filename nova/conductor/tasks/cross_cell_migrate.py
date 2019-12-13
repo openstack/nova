@@ -856,7 +856,7 @@ class CrossCellMigrationTask(base.TaskBase):
                 LOG.exception('Rollback for task %s failed.', task_name)
 
 
-def get_instance_from_source_cell(
+def get_inst_and_cell_map_from_source(
         target_cell_context, source_compute, instance_uuid):
     """Queries the instance from the source cell database.
 
@@ -1022,7 +1022,7 @@ class ConfirmResizeTask(base.TaskBase):
 
     def _execute(self):
         # First get the instance from the source cell so we can cleanup.
-        source_cell_instance = get_instance_from_source_cell(
+        source_cell_instance = get_inst_and_cell_map_from_source(
             self.context, self.migration.source_compute, self.instance.uuid)[0]
         # Send the resize.confirm.start notification(s) using the source
         # cell instance since we start there.
@@ -1119,13 +1119,17 @@ class RevertResizeTask(base.TaskBase):
             self.legacy_notifier, ctxt, instance, 'resize.revert.%s' % phase)
         # Send the versioned notification.
         compute_utils.notify_about_instance_action(
-            ctxt, instance, instance.host,  # TODO(mriedem): Use CONF.host?
+            ctxt, instance, CONF.host,
             action=fields.NotificationAction.RESIZE_REVERT,
             phase=phase)
 
     @staticmethod
     def _update_source_obj_from_target_cell(source_obj, target_obj):
         """Updates the object from the source cell using the target cell object
+
+        WARNING: This method does not support objects with nested objects, i.e.
+        objects that have fields which are other objects. An error will be
+        raised in that case.
 
         All fields on the source object are updated from the target object
         except for the ``id`` and ``created_at`` fields since those value must
@@ -1142,10 +1146,15 @@ class RevertResizeTask(base.TaskBase):
 
         :param source_obj: Versioned object from the source cell database
         :param target_obj: Versioned object from the target cell database
+        :raises: ObjectActionError if nested object fields are encountered
         """
         ignore_fields = ['created_at', 'id', 'updated_at']
         for field in source_obj.obj_fields:
             if field in target_obj and field not in ignore_fields:
+                if isinstance(source_obj.fields[field], fields.ObjectField):
+                    raise exception.ObjectActionError(
+                        action='_update_source_obj_from_target_cell',
+                        reason='nested objects are not supported')
                 setattr(source_obj, field, getattr(target_obj, field))
 
     def _update_bdms_in_source_cell(self, source_cell_context):
@@ -1351,7 +1360,7 @@ class RevertResizeTask(base.TaskBase):
             self.instance, fields.NotificationPhase.START)
 
         source_cell_instance, source_cell_mapping = (
-            get_instance_from_source_cell(
+            get_inst_and_cell_map_from_source(
                 self.context, self.migration.source_compute,
                 self.instance.uuid))
         self._source_cell_instance = source_cell_instance
@@ -1415,10 +1424,8 @@ class RevertResizeTask(base.TaskBase):
             # cell we update the records in the source cell, otherwise we
             # update the records in the target cell.
             instance_at_source = self._source_cell_migration is not None
-            migration = self._source_cell_migration \
-                if self._source_cell_migration else self.migration
-            instance = self._source_cell_instance \
-                if self._source_cell_instance else self.instance
+            migration = self._source_cell_migration or self.migration
+            instance = self._source_cell_instance or self.instance
             # NOTE(mriedem): This exception log is fairly generic. We could
             # probably make this more targeted based on what we know of the
             # state of the system if we want to make it more detailed, e.g.

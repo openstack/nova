@@ -3737,7 +3737,7 @@ class API(base.Base):
         # compute services.
         if allowed:
             # TODO(mriedem): We can remove this minimum compute version check
-            # in the 21.0.0 "U" release.
+            # in the 22.0.0 "V" release.
             min_compute_version = (
                 objects.service.get_minimum_version_all_cells(
                     context, ['nova-compute']))

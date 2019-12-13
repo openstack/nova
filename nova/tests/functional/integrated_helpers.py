@@ -793,6 +793,8 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         migration-based allocations are also cleaned up.
 
         :param server: The API representation of the instance to be deleted
+        :returns: The uuid of the migration record associated with the resize
+            or cold migrate operation
         """
 
         # First check to see if there is a related migration record so we can
@@ -833,6 +835,7 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
             # and no allocations for the delete migration
             allocations = self._get_allocations_by_server_uuid(migration_uuid)
             self.assertEqual(0, len(allocations))
+        return migration_uuid
 
     def _run_periodics(self):
         """Run the update_available_resource task on every compute manager

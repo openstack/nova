@@ -1063,8 +1063,8 @@ class UtilityTestCase(test.NoDBTestCase):
                 return_value=objects.HostMapping(
                     cell_mapping=objects.CellMapping(uuid=uuids.cell)))
     @mock.patch('nova.objects.Instance.get_by_uuid')
-    def test_get_instance_from_source_cell(self, mock_get_inst,
-                                           mock_get_by_host):
+    def test_get_inst_and_cell_map_from_source(self, mock_get_inst,
+                                               mock_get_by_host):
         target_cell_context = nova_context.get_admin_context()
         # Stub out Instance.get_by_uuid to make sure a copy of the context is
         # targeted at the source cell mapping.
@@ -1074,8 +1074,9 @@ class UtilityTestCase(test.NoDBTestCase):
             self.assertEqual(uuids.cell, ctxt.cell_uuid)
             return mock.sentinel.instance
         mock_get_inst.side_effect = stub_get_by_uuid
-        inst, cell_mapping = cross_cell_migrate.get_instance_from_source_cell(
-            target_cell_context, 'source-host', uuids.instance)
+        inst, cell_mapping = (
+            cross_cell_migrate.get_inst_and_cell_map_from_source(
+                target_cell_context, 'source-host', uuids.instance))
         self.assertIs(inst, mock.sentinel.instance)
         self.assertIs(cell_mapping, mock_get_by_host.return_value.cell_mapping)
         mock_get_by_host.assert_called_once_with(
@@ -1105,7 +1106,7 @@ class ConfirmResizeTaskTestCase(test.NoDBTestCase):
             compute_rpcapi)
 
     @mock.patch('nova.conductor.tasks.cross_cell_migrate.'
-                'get_instance_from_source_cell')
+                'get_inst_and_cell_map_from_source')
     def test_execute(self, mock_get_instance):
         source_cell_instance = objects.Instance(
             mock.MagicMock(), uuid=uuids.instance)
@@ -1134,7 +1135,7 @@ class ConfirmResizeTaskTestCase(test.NoDBTestCase):
         _finish_confirm_in_target_cell.assert_called_once_with()
 
     @mock.patch('nova.conductor.tasks.cross_cell_migrate.'
-                'get_instance_from_source_cell',
+                'get_inst_and_cell_map_from_source',
                 side_effect=exception.InstanceNotFound(
                     instance_id=uuids.instance))
     @mock.patch('nova.objects.Migration.save')
@@ -1259,7 +1260,7 @@ class RevertResizeTaskTestCase(test.NoDBTestCase, ObjectComparatorMixin):
         return source_cell_instance
 
     @mock.patch('nova.conductor.tasks.cross_cell_migrate.'
-                'get_instance_from_source_cell')
+                'get_inst_and_cell_map_from_source')
     @mock.patch('nova.objects.InstanceActionEvent')  # Stub EventReport calls.
     def test_execute(self, mock_action_event, mock_get_instance):
         """Happy path test for the execute method."""
@@ -1392,6 +1393,7 @@ class RevertResizeTaskTestCase(test.NoDBTestCase, ObjectComparatorMixin):
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     def test_send_resize_revert_notification(self, mock_notify_action,
                                              mock_notify_usage):
+        self.flags(host='fake-conductor-host')
         instance = self.task.instance
         self.task._send_resize_revert_notification(instance, 'foo')
         # Assert the legacy notification was sent.
@@ -1400,7 +1402,7 @@ class RevertResizeTaskTestCase(test.NoDBTestCase, ObjectComparatorMixin):
             'resize.revert.foo')
         # Assert the versioned notification was sent.
         mock_notify_action.assert_called_once_with(
-            instance._context, instance, instance.host,
+            instance._context, instance, 'fake-conductor-host',
             action=fields.NotificationAction.RESIZE_REVERT, phase='foo')
 
     def test_update_instance_in_source_cell(self):
@@ -1581,6 +1583,17 @@ class RevertResizeTaskTestCase(test.NoDBTestCase, ObjectComparatorMixin):
                                 getattr(target_obj, field))
         # Now make sure the rest of the fields are the same.
         self._compare_objs(source_obj, target_obj, ignored_keys=ignored_keys)
+
+    def test_update_source_obj_from_target_cell_nested_object(self):
+        """Tests that calling _update_source_obj_from_target_cell with an
+        object that has nested object fields will raise ObjectActionError.
+        """
+        source = objects.Instance(flavor=objects.Flavor(flavorid='a'))
+        target = objects.Instance(flavor=objects.Flavor(flavorid='b'))
+        ex = self.assertRaises(exception.ObjectActionError,
+                               self.task._update_source_obj_from_target_cell,
+                               source, target)
+        self.assertIn('nested objects are not supported', six.text_type(ex))
 
     @mock.patch('nova.objects.Migration.get_by_uuid')
     def test_update_migration_in_source_cell(self, mock_get_migration):

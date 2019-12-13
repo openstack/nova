@@ -128,12 +128,8 @@ class MigrationContext(base.NovaPersistentObject, base.NovaObject):
         Based on the ``migration_id`` in this context, gets the Migration
         object and returns its ``cross_cell_move`` value.
 
-        The result is cached for subsequent lookups.
-
         :return: True if this is a cross cell move migration, False otherwise.
         """
-        if not hasattr(self, '_cached_cross_cell_move'):
-            migration = objects.Migration.get_by_id(
-                self._context, self.migration_id)
-            setattr(self, '_cached_cross_cell_move', migration.cross_cell_move)
-        return self._cached_cross_cell_move
+        migration = objects.Migration.get_by_id(
+            self._context, self.migration_id)
+        return migration.cross_cell_move
