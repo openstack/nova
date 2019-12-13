@@ -207,9 +207,6 @@ valid_name_leading_trailing_spaces_regex = ValidationRegex(
     _("printable characters with at least one non space character"))
 
 
-valid_name_regex_obj = re.compile(valid_name_regex.regex, re.UNICODE)
-
-
 valid_description_regex_base = '^[%s]*$'
 
 

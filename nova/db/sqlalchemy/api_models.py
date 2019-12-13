@@ -284,6 +284,7 @@ class KeyPair(API_BASE):
                   nullable=False, server_default='ssh')
 
 
+# TODO(stephenfin): Remove this as it's now unused post-placement split
 class ResourceClass(API_BASE):
     """Represents the type of resource for an inventory or allocation."""
     __tablename__ = 'resource_classes'
@@ -295,6 +296,7 @@ class ResourceClass(API_BASE):
     name = Column(String(255), nullable=False)
 
 
+# TODO(stephenfin): Remove this as it's now unused post-placement split
 class ResourceProvider(API_BASE):
     """Represents a mapping to a providers of resources."""
 
@@ -325,6 +327,7 @@ class ResourceProvider(API_BASE):
         nullable=True)
 
 
+# TODO(stephenfin): Remove this as it's now unused post-placement split
 class Inventory(API_BASE):
     """Represents a quantity of available resource."""
 
@@ -356,6 +359,7 @@ class Inventory(API_BASE):
         foreign_keys=resource_provider_id)
 
 
+# TODO(stephenfin): Remove this as it's now unused post-placement split
 class Allocation(API_BASE):
     """A use of inventory."""
 
@@ -381,6 +385,7 @@ class Allocation(API_BASE):
         foreign_keys=resource_provider_id)
 
 
+# TODO(stephenfin): Remove this as it's now unused post-placement split
 class ResourceProviderAggregate(API_BASE):
     """Associate a resource provider with an aggregate."""
 
@@ -394,6 +399,7 @@ class ResourceProviderAggregate(API_BASE):
     aggregate_id = Column(Integer, primary_key=True, nullable=False)
 
 
+# TODO(stephenfin): Remove this as it's now unused post-placement split
 class PlacementAggregate(API_BASE):
     """A grouping of resource providers."""
     __tablename__ = 'placement_aggregates'
@@ -597,6 +603,7 @@ class Trait(API_BASE):
     name = Column(Unicode(255), nullable=False)
 
 
+# TODO(stephenfin): Remove this as it's now unused post-placement split
 class ResourceProviderTrait(API_BASE):
     """Represents the relationship between traits and resource provider"""
 
@@ -614,6 +621,7 @@ class ResourceProviderTrait(API_BASE):
                                   nullable=False)
 
 
+# TODO(stephenfin): Remove this as it's unused
 class Project(API_BASE):
     """The project is the Keystone project."""
 
@@ -629,6 +637,7 @@ class Project(API_BASE):
     external_id = Column(String(255), nullable=False)
 
 
+# TODO(stephenfin): Remove this as it's unused
 class User(API_BASE):
     """The user is the Keystone user."""
 
@@ -644,6 +653,7 @@ class User(API_BASE):
     external_id = Column(String(255), nullable=False)
 
 
+# TODO(stephenfin): Remove this as it's unused
 class Consumer(API_BASE):
     """Represents a resource consumer."""
 

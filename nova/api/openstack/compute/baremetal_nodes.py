@@ -30,13 +30,6 @@ from nova.policies import baremetal_nodes as bn_policies
 ironic_client = importutils.try_import('ironicclient.client')
 ironic_exc = importutils.try_import('ironicclient.exc')
 
-node_fields = ['id', 'cpus', 'local_gb', 'memory_mb', 'pm_address',
-               'pm_user', 'service_host', 'terminal_port', 'instance_uuid']
-
-node_ext_fields = ['uuid', 'task_state', 'updated_at', 'pxe_config_path']
-
-interface_fields = ['id', 'address', 'datapath_id', 'port_no']
-
 CONF = nova.conf.CONF
 
 

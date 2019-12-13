@@ -80,7 +80,7 @@ class BaseLoader(object):
         in the directory that defines this class.
         """
         classes = []
-        for dirpath, dirnames, filenames in os.walk(self.path):
+        for dirpath, _, filenames in os.walk(self.path):
             relpath = os.path.relpath(dirpath, self.path)
             if relpath == '.':
                 relpkg = ''
