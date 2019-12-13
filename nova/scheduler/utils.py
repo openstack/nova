@@ -61,7 +61,8 @@ class ResourceRequest(object):
         """Create a new instance of ResourceRequest from a RequestSpec.
 
         Examines the flavor, flavor extra specs, (optional) image metadata,
-        and (optional) requested_resources of the provided ``request_spec``.
+        and (optional) requested_resources and request_level_params of the
+        provided ``request_spec``.
 
         For extra specs, items of the following form are examined:
 
@@ -95,6 +96,9 @@ class ResourceRequest(object):
         image (e.g. from ports) are incorporated as is, but ensuring that they
         get unique group suffixes.
 
+        request_level_params - settings associated with the request as a whole
+        rather than with a specific RequestGroup - are incorporated as is.
+
         :param request_spec: An instance of ``objects.RequestSpec``.
         :param enable_pinning_translate: True if the CPU policy extra specs
             should be translated to placement resources and traits.
@@ -102,6 +106,10 @@ class ResourceRequest(object):
         # { ident: RequestGroup }
         self._rg_by_id = {}
         self._group_policy = None
+        # root_required+=these
+        self._root_required = request_spec.root_required
+        # root_required+=!these
+        self._root_forbidden = request_spec.root_forbidden
         # Default to the configured limit but _limit can be
         # set to None to indicate "no limit".
         self._limit = CONF.scheduler.max_placement_results
@@ -446,6 +454,10 @@ class ResourceRequest(object):
             qparams = []
         if self._group_policy is not None:
             qparams.append(('group_policy', self._group_policy))
+        if self._root_required or self._root_forbidden:
+            vals = sorted(self._root_required) + ['!' + t for t in
+                                                  sorted(self._root_forbidden)]
+            qparams.append(('root_required', ','.join(vals)))
 
         for ident, rg in self._rg_by_id.items():
             # [('resources[$S]', 'rclass:amount,rclass:amount,...'),

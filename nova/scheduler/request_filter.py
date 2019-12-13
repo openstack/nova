@@ -185,11 +185,7 @@ def require_image_type_support(ctxt, request_spec):
                    'is os-traits up to date?'), trait_name)
         return False
 
-    # NOTE(danms): We are using the transient flavor in the request spec
-    # to add the trait that we need. We make sure that we reset the dirty-ness
-    # of this field to avoid persisting it.
-    request_spec.flavor.extra_specs['trait:%s' % trait_name] = 'required'
-    request_spec.obj_reset_changes(fields=['flavor'], recursive=True)
+    request_spec.root_required.add(trait_name)
 
     LOG.debug('require_image_type_support request filter added required '
               'trait %s', trait_name)
@@ -206,13 +202,8 @@ def compute_status_filter(ctxt, request_spec):
     service should have the COMPUTE_STATUS_DISABLED trait set and be excluded
     by this mandatory pre-filter.
     """
-    # We're called before scheduler utils resources_from_request_spec builds
-    # the RequestGroup stuff which gets used to form the
-    # GET /allocation_candidates call, so mutate the flavor for that call but
-    # don't persist the change.
     trait_name = os_traits.COMPUTE_STATUS_DISABLED
-    request_spec.flavor.extra_specs['trait:%s' % trait_name] = 'forbidden'
-    request_spec.obj_reset_changes(fields=['flavor'], recursive=True)
+    request_spec.root_forbidden.add(trait_name)
     LOG.debug('compute_status_filter request filter added forbidden '
               'trait %s', trait_name)
     return True

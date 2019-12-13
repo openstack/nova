@@ -12,9 +12,11 @@
 #    under the License.
 
 import copy
+import ddt
 from keystoneauth1 import exceptions as kse
 import mock
 import os_resource_classes as orc
+import os_traits as ot
 from oslo_config import cfg
 from oslo_config import fixture as config_fixture
 from oslo_utils.fixture import uuidsentinel as uuids
@@ -141,6 +143,7 @@ class SchedulerReportClientTestBase(test.TestCase):
         pass
 
 
+@ddt.ddt
 @mock.patch('nova.compute.utils.is_volume_backed_instance',
             new=mock.Mock(return_value=False))
 @mock.patch('nova.objects.compute_node.ComputeNode.save', new=mock.Mock())
@@ -1298,6 +1301,64 @@ class SchedulerReportClientTests(SchedulerReportClientTestBase):
                 self.assertIn('allocations', ac)
                 self.assertEqual({'_CPU', '_MEM', '_DISK'},
                                  set(ac['mappings']))
+
+    # One data element is:
+    #   root_required: set of traits for root_required
+    #   root_forbidden: set of traits for root_forbidden
+    #   expected_acs: integer expected number of allocation candidates
+    @ddt.data(
+        # With no root_required qparam, we get two candidates involving the
+        # primary compute and one involving `othercn`. (This is covered
+        # elsewhere too, but included here as a baseline).
+        {'root_required': {},
+         'root_forbidden': {},
+         'expected_acs': 3},
+        # Requiring traits that are on our primary compute culls out the result
+        # involving `othercn`.
+        {'root_required': {ot.COMPUTE_VOLUME_EXTEND, 'CUSTOM_FOO'},
+         'root_forbidden': {},
+         'expected_acs': 2},
+        # Forbidding a trait that's absent doesn't matter
+        {'root_required': {ot.COMPUTE_VOLUME_EXTEND, 'CUSTOM_FOO'},
+         'root_forbidden': {ot.COMPUTE_VOLUME_MULTI_ATTACH},
+         'expected_acs': 2},
+        # But forbidding COMPUTE_STATUS_DISABLED kills it
+        {'root_required': {ot.COMPUTE_VOLUME_EXTEND, 'CUSTOM_FOO'},
+         'root_forbidden': {ot.COMPUTE_VOLUME_MULTI_ATTACH,
+                            ot.COMPUTE_STATUS_DISABLED},
+         'expected_acs': 0},
+        # Removing the required traits brings back the candidate involving
+        # `othercn`. But the primary compute is still filtered out by the
+        # root_forbidden.
+        {'root_required': {},
+         'root_forbidden': {ot.COMPUTE_VOLUME_MULTI_ATTACH,
+                            ot.COMPUTE_STATUS_DISABLED},
+         'expected_acs': 1},
+    )
+    def test_allocation_candidates_root_traits(self, data):
+        """Smoke test to ensure root_{required|forbidden} percolates from the
+        RequestSpec through to the GET /allocation_candidates response.
+
+        We're not trying to prove that root_required works -- Placement tests
+        for that -- we're just throwing out enough permutations to prove that
+        we must be building the querystring correctly.
+        """
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0)
+        req_spec = objects.RequestSpec(flavor=flavor, is_bfv=False)
+        req_spec.root_required.update(data['root_required'])
+        req_spec.root_forbidden.update(data['root_forbidden'])
+        with self._interceptor():
+            self._set_up_provider_tree()
+            self.client.set_traits_for_provider(
+                self.context, self.compute_uuid,
+                (ot.COMPUTE_STATUS_DISABLED, ot.COMPUTE_VOLUME_EXTEND,
+                 'CUSTOM_FOO'))
+            acs, _, ver = self.client.get_allocation_candidates(
+                self.context, utils.ResourceRequest(req_spec))
+            self.assertEqual('1.35', ver)
+            # This prints which ddt permutation we're using if it fails.
+            self.assertEqual(data['expected_acs'], len(acs), data)
 
     def test_get_allocations_for_provider_tree(self):
         with self._interceptor():

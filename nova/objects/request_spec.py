@@ -34,7 +34,8 @@ LOG = logging.getLogger(__name__)
 REQUEST_SPEC_OPTIONAL_ATTRS = ['requested_destination',
                                'security_groups',
                                'network_metadata',
-                               'requested_resources']
+                               'requested_resources',
+                               'request_level_params']
 
 
 @base.NovaObjectRegistry.register
@@ -52,7 +53,8 @@ class RequestSpec(base.NovaObject):
     # Version 1.10: Added network_metadata
     # Version 1.11: Added is_bfv
     # Version 1.12: Added requested_resources
-    VERSION = '1.12'
+    # Version 1.13: Added request_level_params
+    VERSION = '1.13'
 
     fields = {
         'id': fields.IntegerField(),
@@ -103,12 +105,16 @@ class RequestSpec(base.NovaObject):
         # NOTE(alex_xu): This field won't be persisted.
         'requested_resources': fields.ListOfObjectsField('RequestGroup',
                                                          nullable=True,
-                                                         default=None)
+                                                         default=None),
+        # NOTE(efried): This field won't be persisted.
+        'request_level_params': fields.ObjectField('RequestLevelParams'),
     }
 
     def obj_make_compatible(self, primitive, target_version):
         super(RequestSpec, self).obj_make_compatible(primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 13) and 'request_level_params' in primitive:
+            del primitive['request_level_params']
         if target_version < (1, 12):
             if 'requested_resources' in primitive:
                 del primitive['requested_resources']
@@ -142,6 +148,10 @@ class RequestSpec(base.NovaObject):
                 physnets=set(), tunneled=False)
             return
 
+        if attrname == 'request_level_params':
+            self.request_level_params = RequestLevelParams()
+            return
+
         # NOTE(sbauza): In case the primitive was not providing that field
         # because of a previous RequestSpec version, we want to default
         # that field in order to have the same behaviour.
@@ -166,6 +176,18 @@ class RequestSpec(base.NovaObject):
     @property
     def swap(self):
         return self.flavor.swap
+
+    @property
+    def root_required(self):
+        # self.request_level_params and .root_required lazy-default via their
+        # respective obj_load_attr methods.
+        return self.request_level_params.root_required
+
+    @property
+    def root_forbidden(self):
+        # self.request_level_params and .root_forbidden lazy-default via their
+        # respective obj_load_attr methods.
+        return self.request_level_params.root_forbidden
 
     def _image_meta_from_image(self, image):
         if isinstance(image, objects.ImageMeta):
@@ -497,6 +519,10 @@ class RequestSpec(base.NovaObject):
         if port_resource_requests:
             spec_obj.requested_resources.extend(port_resource_requests)
 
+        # NOTE(efried): We don't need to handle request_level_params here yet
+        #  because they're set dynamically by the scheduler. That could change
+        #  in the future.
+
         # NOTE(sbauza): Default the other fields that are not part of the
         # original contract
         spec_obj.obj_set_defaults()
@@ -537,11 +563,10 @@ class RequestSpec(base.NovaObject):
             if key in ['id', 'instance_uuid']:
                 setattr(spec, key, db_spec[key])
             elif key in ('requested_destination', 'requested_resources',
-                         'network_metadata'):
+                         'network_metadata', 'request_level_params'):
                 # Do not override what we already have in the object as this
                 # field is not persisted. If save() is called after
-                # requested_resources, requested_destination or
-                # network_metadata is populated, it will reset the field to
+                # one of these fields is populated, it will reset the field to
                 # None and we'll lose what is set (but not persisted) on the
                 # object.
                 continue
@@ -618,10 +643,10 @@ class RequestSpec(base.NovaObject):
             if 'instance_group' in spec and spec.instance_group:
                 spec.instance_group.members = None
                 spec.instance_group.hosts = None
-            # NOTE(mriedem): Don't persist retries, requested_destination,
-            # requested_resources or ignored hosts since those are per-request
+            # NOTE(mriedem): Don't persist these since they are per-request
             for excluded in ('retry', 'requested_destination',
-                             'requested_resources', 'ignore_hosts'):
+                             'requested_resources', 'ignore_hosts',
+                             'request_level_params'):
                 if excluded in spec and getattr(spec, excluded):
                     setattr(spec, excluded, None)
             # NOTE(stephenfin): Don't persist network metadata since we have
@@ -1182,3 +1207,25 @@ class RequestGroup(base.NovaObject):
         for rclass in list(self.resources):
             if self.resources[rclass] == 0:
                 self.resources.pop(rclass)
+
+
+@base.NovaObjectRegistry.register
+class RequestLevelParams(base.NovaObject):
+    """Options destined for the "top level" of the placement allocation
+    candidates query (parallel to, but not including, the list of
+    RequestGroup).
+    """
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        # Traits required on the root provider
+        'root_required': fields.SetOfStringsField(default=set()),
+        # Traits forbidden on the root provider
+        'root_forbidden': fields.SetOfStringsField(default=set()),
+        # NOTE(efried): group_policy would be appropriate to include here, once
+        # we have a use case for it.
+    }
+
+    def obj_load_attr(self, attrname):
+        self.obj_set_defaults(attrname)

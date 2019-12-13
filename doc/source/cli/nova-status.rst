@@ -141,7 +141,7 @@ Upgrade
   * The ``Request Spec Migration`` check was removed.
 
   **21.0.0 (Ussuri)**
-  * Checks for the Placement API are modified to require version 1.34.
+  * Checks for the Placement API are modified to require version 1.35.
 
 See Also
 ========

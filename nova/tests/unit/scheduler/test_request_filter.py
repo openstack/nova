@@ -11,6 +11,7 @@
 #    under the License.
 
 import mock
+import os_traits as ot
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
@@ -339,7 +340,8 @@ class TestRequestFilter(test.NoDBTestCase):
                                       is_bfv=False)
         # Assert that we completely skip the filter if disabled
         request_filter.require_image_type_support(self.context, reqspec)
-        self.assertEqual({}, reqspec.flavor.extra_specs)
+        self.assertEqual(0, len(reqspec.root_required))
+        self.assertEqual(0, len(reqspec.root_forbidden))
 
     def test_require_image_type_support_volume_backed(self):
         self.flags(query_placement_for_image_type_support=True,
@@ -348,7 +350,8 @@ class TestRequestFilter(test.NoDBTestCase):
                                       is_bfv=True)
         # Assert that we completely skip the filter if no image
         request_filter.require_image_type_support(self.context, reqspec)
-        self.assertEqual({}, reqspec.flavor.extra_specs)
+        self.assertEqual(0, len(reqspec.root_required))
+        self.assertEqual(0, len(reqspec.root_forbidden))
 
     def test_require_image_type_support_unknown(self):
         self.flags(query_placement_for_image_type_support=True,
@@ -359,7 +362,8 @@ class TestRequestFilter(test.NoDBTestCase):
             is_bfv=False)
         # Assert that we completely skip the filter if no matching trait
         request_filter.require_image_type_support(self.context, reqspec)
-        self.assertEqual({}, reqspec.flavor.extra_specs)
+        self.assertEqual(0, len(reqspec.root_required))
+        self.assertEqual(0, len(reqspec.root_forbidden))
 
     @mock.patch.object(request_filter, 'LOG')
     def test_require_image_type_support_adds_trait(self, mock_log):
@@ -369,11 +373,13 @@ class TestRequestFilter(test.NoDBTestCase):
             image=objects.ImageMeta(disk_format='raw'),
             flavor=objects.Flavor(extra_specs={}),
             is_bfv=False)
-        # Assert that we add the trait to the flavor as required
+        self.assertEqual(0, len(reqspec.root_required))
+        self.assertEqual(0, len(reqspec.root_forbidden))
+
+        # Request filter puts the trait into the request spec
         request_filter.require_image_type_support(self.context, reqspec)
-        self.assertEqual({'trait:COMPUTE_IMAGE_TYPE_RAW': 'required'},
-                         reqspec.flavor.extra_specs)
-        self.assertEqual(set(), reqspec.flavor.obj_what_changed())
+        self.assertEqual({ot.COMPUTE_IMAGE_TYPE_RAW}, reqspec.root_required)
+        self.assertEqual(0, len(reqspec.root_forbidden))
 
         log_lines = [c[0][0] for c in mock_log.debug.call_args_list]
         self.assertIn('added required trait', log_lines[0])
@@ -382,13 +388,14 @@ class TestRequestFilter(test.NoDBTestCase):
     @mock.patch.object(request_filter, 'LOG')
     def test_compute_status_filter(self, mock_log):
         reqspec = objects.RequestSpec(flavor=objects.Flavor(extra_specs={}))
+        self.assertEqual(0, len(reqspec.root_required))
+        self.assertEqual(0, len(reqspec.root_forbidden))
+
+        # Request filter puts the trait into the request spec
         request_filter.compute_status_filter(self.context, reqspec)
-        # The forbidden trait should be added to the RequestSpec.flavor.
-        self.assertEqual({'trait:COMPUTE_STATUS_DISABLED': 'forbidden'},
-                         reqspec.flavor.extra_specs)
-        # The RequestSpec.flavor changes should be reset so they are not
-        # persisted.
-        self.assertEqual(set(), reqspec.flavor.obj_what_changed())
+        self.assertEqual(0, len(reqspec.root_required))
+        self.assertEqual({ot.COMPUTE_STATUS_DISABLED}, reqspec.root_forbidden)
+
         # Assert both the in-method logging and trace decorator.
         log_lines = [c[0][0] for c in mock_log.debug.call_args_list]
         self.assertIn('added forbidden trait', log_lines[0])

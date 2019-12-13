@@ -734,7 +734,7 @@ class MigrationTaskTestCase(test.NoDBTestCase):
             allocation_request=jsonutils.dumps(
                 {"allocations": {uuids.host1: resources},
                  "mappings": {uuids.port1: [uuids.host1]}}),
-            allocation_request_version='1.34')
+            allocation_request_version='1.35')
         second = objects.Selection(
             service_host="host2",
             nodename="node2",
@@ -742,7 +742,7 @@ class MigrationTaskTestCase(test.NoDBTestCase):
             allocation_request=jsonutils.dumps(
                 {"allocations": {uuids.host2: resources},
                  "mappings": {uuids.port1: [uuids.host2]}}),
-            allocation_request_version='1.34')
+            allocation_request_version='1.35')
 
         first_service = objects.Service(service_host='host1')
         first_service.version = 38
@@ -765,7 +765,7 @@ class MigrationTaskTestCase(test.NoDBTestCase):
             self.context.elevated(), task.reportclient, task.request_spec,
             self.instance.uuid,
             {"allocations": {uuids.host2: resources},
-             "mappings": {uuids.port1: [uuids.host2]}}, '1.34')
+             "mappings": {uuids.port1: [uuids.host2]}}, '1.35')
         mock_debug.assert_has_calls([
             mock.call(
                 'Scheduler returned alternate host %(host)s as a possible '
