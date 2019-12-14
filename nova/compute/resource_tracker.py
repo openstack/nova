@@ -1506,11 +1506,17 @@ class ResourceTracker(object):
                              exc_info=False)
                     continue
 
-            if instance.deleted:
+            # NOTE(mriedem): A cross-cell migration will work with instance
+            # records across two cells once the migration is confirmed/reverted
+            # one of them will be deleted but the instance still exists in the
+            # other cell. Before the instance is destroyed from the old cell
+            # though it is marked hidden=True so if we find a deleted hidden
+            # instance with allocations against this compute node we just
+            # ignore it since the migration operation will handle cleaning up
+            # those allocations.
+            if instance.deleted and not instance.hidden:
                 # The instance is gone, so we definitely want to remove
                 # allocations associated with it.
-                # NOTE(jaypipes): This will not be true if/when we support
-                # cross-cell migrations...
                 LOG.debug("Instance %s has been deleted (perhaps locally). "
                           "Deleting allocations that remained for this "
                           "instance against this compute host: %s.",
