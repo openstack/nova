@@ -107,7 +107,8 @@ class ImageMetaPropsPayload(base.NotificationPayloadBase):
     # Version 1.0: Initial version
     # Version 1.1: Added 'gop', 'virtio' and  'none' to hw_video_model field
     # Version 1.2: Added hw_pci_numa_affinity_policy field
-    VERSION = '1.2'
+    # Version 1.3: Added hw_mem_encryption, hw_pmu and hw_time_hpet fields
+    VERSION = '1.3'
 
     SCHEMA = {
         'hw_architecture': ('image_meta_props', 'hw_architecture'),
@@ -130,12 +131,14 @@ class ImageMetaPropsPayload(base.NotificationPayloadBase):
         'hw_firmware_type': ('image_meta_props', 'hw_firmware_type'),
         'hw_ipxe_boot': ('image_meta_props', 'hw_ipxe_boot'),
         'hw_machine_type': ('image_meta_props', 'hw_machine_type'),
+        'hw_mem_encryption': ('image_meta_props', 'hw_mem_encryption'),
         'hw_mem_page_size': ('image_meta_props', 'hw_mem_page_size'),
         'hw_numa_nodes': ('image_meta_props', 'hw_numa_nodes'),
         'hw_numa_cpus': ('image_meta_props', 'hw_numa_cpus'),
         'hw_numa_mem': ('image_meta_props', 'hw_numa_mem'),
         'hw_pci_numa_affinity_policy': ('image_meta_props',
                                         'hw_pci_numa_affinity_policy'),
+        'hw_pmu': ('image_meta_props', 'hw_pmu'),
         'hw_pointer_model': ('image_meta_props', 'hw_pointer_model'),
         'hw_qemu_guest_agent': ('image_meta_props', 'hw_qemu_guest_agent'),
         'hw_rescue_bus': ('image_meta_props', 'hw_rescue_bus'),
@@ -143,6 +146,7 @@ class ImageMetaPropsPayload(base.NotificationPayloadBase):
         'hw_rng_model': ('image_meta_props', 'hw_rng_model'),
         'hw_serial_port_count': ('image_meta_props', 'hw_serial_port_count'),
         'hw_scsi_model': ('image_meta_props', 'hw_scsi_model'),
+        'hw_time_hpet': ('image_meta_props', 'hw_time_hpet'),
         'hw_video_model': ('image_meta_props', 'hw_video_model'),
         'hw_video_ram': ('image_meta_props', 'hw_video_ram'),
         'hw_vif_model': ('image_meta_props', 'hw_vif_model'),
@@ -209,11 +213,13 @@ class ImageMetaPropsPayload(base.NotificationPayloadBase):
         'hw_firmware_type': fields.FirmwareTypeField(),
         'hw_ipxe_boot': fields.FlexibleBooleanField(),
         'hw_machine_type': fields.StringField(),
+        'hw_mem_encryption': fields.FlexibleBooleanField(),
         'hw_mem_page_size': fields.StringField(),
         'hw_numa_nodes': fields.IntegerField(),
         'hw_numa_cpus': fields.ListOfSetsOfIntegersField(),
         'hw_numa_mem': fields.ListOfIntegersField(),
         'hw_pci_numa_affinity_policy': fields.PCINUMAAffinityPolicyField(),
+        'hw_pmu': fields.FlexibleBooleanField(),
         'hw_pointer_model': fields.PointerModelField(),
         'hw_qemu_guest_agent': fields.FlexibleBooleanField(),
         'hw_rescue_bus': fields.DiskBusField(),
@@ -221,6 +227,7 @@ class ImageMetaPropsPayload(base.NotificationPayloadBase):
         'hw_rng_model': fields.RNGModelField(),
         'hw_serial_port_count': fields.IntegerField(),
         'hw_scsi_model': fields.SCSIModelField(),
+        'hw_time_hpet': fields.FlexibleBooleanField(),
         'hw_video_model': fields.VideoModelField(),
         'hw_video_ram': fields.IntegerField(),
         'hw_vif_model': fields.VIFModelField(),
