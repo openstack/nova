@@ -5755,6 +5755,106 @@ class PortResourceRequestBasedSchedulingTestBase(
                              (port['id'], port_request[rc], rc,
                               amount))
 
+    def _create_server_with_ports(self, *ports):
+        server = self._create_server(
+            flavor=self.flavor_with_group_policy,
+            networks=[{'port': port['id']} for port in ports],
+            host='host1')
+        return self._wait_for_state_change(server, 'ACTIVE')
+
+    def _check_allocation(
+            self, server, compute_rp_uuid, non_qos_port, qos_port,
+            qos_sriov_port, flavor, migration_uuid=None,
+            source_compute_rp_uuid=None, new_flavor=None):
+
+        updated_non_qos_port = self.neutron.show_port(
+            non_qos_port['id'])['port']
+        updated_qos_port = self.neutron.show_port(qos_port['id'])['port']
+        updated_qos_sriov_port = self.neutron.show_port(
+            qos_sriov_port['id'])['port']
+
+        allocations = self.placement_api.get(
+            '/allocations/%s' % server['id']).body['allocations']
+
+        # if there is new_flavor then we either have an in progress resize or
+        # a confirmed resize. In both cases the instance allocation should be
+        # according to the new_flavor
+        current_flavor = (new_flavor if new_flavor else flavor)
+
+        # We expect one set of allocations for the compute resources on the
+        # compute rp and two sets for the networking resources one on the ovs
+        # bridge rp due to the qos_port resource request and one one the
+        # sriov pf2 due to qos_sriov_port resource request
+        self.assertEqual(3, len(allocations))
+        self.assertComputeAllocationMatchesFlavor(
+            allocations, compute_rp_uuid, current_flavor)
+        ovs_allocations = allocations[
+            self.ovs_bridge_rp_per_host[compute_rp_uuid]]['resources']
+        self.assertPortMatchesAllocation(qos_port, ovs_allocations)
+        sriov_allocations = allocations[
+            self.sriov_dev_rp_per_host[compute_rp_uuid][self.PF2]]['resources']
+        self.assertPortMatchesAllocation(qos_sriov_port, sriov_allocations)
+
+        # We expect that only the RP uuid of the networking RP having the port
+        # allocation is sent in the port binding for the port having resource
+        # request
+        qos_binding_profile = updated_qos_port['binding:profile']
+        self.assertEqual(self.ovs_bridge_rp_per_host[compute_rp_uuid],
+                         qos_binding_profile['allocation'])
+        qos_sriov_binding_profile = updated_qos_sriov_port['binding:profile']
+        self.assertEqual(self.sriov_dev_rp_per_host[compute_rp_uuid][self.PF2],
+                         qos_sriov_binding_profile['allocation'])
+
+        # And we expect not to have any allocation set in the port binding for
+        # the port that doesn't have resource request
+        self.assertEqual({}, updated_non_qos_port['binding:profile'])
+
+        if migration_uuid:
+            migration_allocations = self.placement_api.get(
+                '/allocations/%s' % migration_uuid).body['allocations']
+
+            # We expect one set of allocations for the compute resources on the
+            # compute rp and two sets for the networking resources one on the
+            # ovs bridge rp due to the qos_port resource request and one one
+            # the sriov pf2 due to qos_sriov_port resource request
+            self.assertEqual(3, len(migration_allocations))
+            self.assertComputeAllocationMatchesFlavor(
+                migration_allocations, source_compute_rp_uuid, flavor)
+            ovs_allocations = migration_allocations[
+                self.ovs_bridge_rp_per_host[
+                    source_compute_rp_uuid]]['resources']
+            self.assertPortMatchesAllocation(qos_port, ovs_allocations)
+            sriov_allocations = migration_allocations[
+                self.sriov_dev_rp_per_host[
+                    source_compute_rp_uuid][self.PF2]]['resources']
+            self.assertPortMatchesAllocation(qos_sriov_port, sriov_allocations)
+
+    def _delete_server_and_check_allocations(
+            self, server, qos_port, qos_sriov_port):
+        self._delete_and_check_allocations(server)
+
+        # assert that unbind removes the allocation from the binding of the
+        # ports that got allocation during the bind
+        updated_qos_port = self.neutron.show_port(qos_port['id'])['port']
+        binding_profile = updated_qos_port['binding:profile']
+        self.assertNotIn('allocation', binding_profile)
+        updated_qos_sriov_port = self.neutron.show_port(
+            qos_sriov_port['id'])['port']
+        binding_profile = updated_qos_sriov_port['binding:profile']
+        self.assertNotIn('allocation', binding_profile)
+
+    def _turn_off_api_check(self):
+        # The API actively rejecting the move operations with resource
+        # request so we have to turn off that check.
+        # TODO(gibi): Remove this when the move operations are supported and
+        # the API check is removed.
+        patcher = mock.patch(
+            'nova.api.openstack.common.'
+            'supports_port_resource_request_during_move',
+            return_value=True)
+        self.addCleanup(patcher.stop)
+        patcher.start()
+
 
 class UnsupportedPortResourceRequestBasedSchedulingTest(
         PortResourceRequestBasedSchedulingTestBase):
@@ -6385,94 +6485,6 @@ class ServerMoveWithPortResourceRequestTest(
         self.admin_api.post_extra_spec(
             self.flavor_with_group_policy_bigger['id'],
             {'extra_specs': {'group_policy': 'isolate'}})
-
-    def _check_allocation(
-            self, server, compute_rp_uuid, non_qos_port, qos_port,
-            qos_sriov_port, flavor, migration_uuid=None,
-            source_compute_rp_uuid=None, new_flavor=None):
-
-        updated_non_qos_port = self.neutron.show_port(
-            non_qos_port['id'])['port']
-        updated_qos_port = self.neutron.show_port(qos_port['id'])['port']
-        updated_qos_sriov_port = self.neutron.show_port(
-            qos_sriov_port['id'])['port']
-
-        allocations = self.placement_api.get(
-            '/allocations/%s' % server['id']).body['allocations']
-
-        # if there is new_flavor then we either have an in progress resize or
-        # a confirmed resize. In both cases the instance allocation should be
-        # according to the new_flavor
-        current_flavor = (new_flavor if new_flavor else flavor)
-
-        # We expect one set of allocations for the compute resources on the
-        # compute rp and two sets for the networking resources one on the ovs
-        # bridge rp due to the qos_port resource request and one one the
-        # sriov pf2 due to qos_sriov_port resource request
-        self.assertEqual(3, len(allocations))
-        self.assertComputeAllocationMatchesFlavor(
-            allocations, compute_rp_uuid, current_flavor)
-        ovs_allocations = allocations[
-            self.ovs_bridge_rp_per_host[compute_rp_uuid]]['resources']
-        self.assertPortMatchesAllocation(qos_port, ovs_allocations)
-        sriov_allocations = allocations[
-            self.sriov_dev_rp_per_host[compute_rp_uuid][self.PF2]]['resources']
-        self.assertPortMatchesAllocation(qos_sriov_port, sriov_allocations)
-
-        # We expect that only the RP uuid of the networking RP having the port
-        # allocation is sent in the port binding for the port having resource
-        # request
-        qos_binding_profile = updated_qos_port['binding:profile']
-        self.assertEqual(self.ovs_bridge_rp_per_host[compute_rp_uuid],
-                         qos_binding_profile['allocation'])
-        qos_sriov_binding_profile = updated_qos_sriov_port['binding:profile']
-        self.assertEqual(self.sriov_dev_rp_per_host[compute_rp_uuid][self.PF2],
-                         qos_sriov_binding_profile['allocation'])
-
-        # And we expect not to have any allocation set in the port binding for
-        # the port that doesn't have resource request
-        self.assertEqual({}, updated_non_qos_port['binding:profile'])
-
-        if migration_uuid:
-            migration_allocations = self.placement_api.get(
-                '/allocations/%s' % migration_uuid).body['allocations']
-
-            # We expect one set of allocations for the compute resources on the
-            # compute rp and two sets for the networking resources one on the
-            # ovs bridge rp due to the qos_port resource request and one one
-            # the sriov pf2 due to qos_sriov_port resource request
-            self.assertEqual(3, len(migration_allocations))
-            self.assertComputeAllocationMatchesFlavor(
-                migration_allocations, source_compute_rp_uuid, flavor)
-            ovs_allocations = migration_allocations[
-                self.ovs_bridge_rp_per_host[
-                    source_compute_rp_uuid]]['resources']
-            self.assertPortMatchesAllocation(qos_port, ovs_allocations)
-            sriov_allocations = migration_allocations[
-                self.sriov_dev_rp_per_host[
-                    source_compute_rp_uuid][self.PF2]]['resources']
-            self.assertPortMatchesAllocation(qos_sriov_port, sriov_allocations)
-
-    def _create_server_with_ports(self, *ports):
-        server = self._create_server(
-            flavor=self.flavor_with_group_policy,
-            networks=[{'port': port['id']} for port in ports],
-            host='host1')
-        return self._wait_for_state_change(server, 'ACTIVE')
-
-    def _delete_server_and_check_allocations(
-            self, server, qos_port, qos_sriov_port):
-        self._delete_and_check_allocations(server)
-
-        # assert that unbind removes the allocation from the binding of the
-        # ports that got allocation during the bind
-        updated_qos_port = self.neutron.show_port(qos_port['id'])['port']
-        binding_profile = updated_qos_port['binding:profile']
-        self.assertNotIn('allocation', binding_profile)
-        updated_qos_sriov_port = self.neutron.show_port(
-            qos_sriov_port['id'])['port']
-        binding_profile = updated_qos_sriov_port['binding:profile']
-        self.assertNotIn('allocation', binding_profile)
 
     def test_migrate_server_with_qos_port_old_dest_compute_no_alternate(self):
         """Create a situation where the only migration target host returned
@@ -7236,18 +7248,6 @@ class ServerMoveWithPortResourceRequestTest(
         self._check_allocation(
             server, self.compute1_rp_uuid, non_qos_port, qos_port,
             qos_sriov_port, self.flavor_with_group_policy)
-
-    def _turn_off_api_check(self):
-        # The API actively rejecting the move operations with resource
-        # request so we have to turn off that check.
-        # TODO(gibi): Remove this when the move operations are supported and
-        # the API check is removed.
-        patcher = mock.patch(
-            'nova.api.openstack.common.'
-            'supports_port_resource_request_during_move',
-            return_value=True)
-        self.addCleanup(patcher.stop)
-        patcher.start()
 
     def test_live_migrate_with_qos_port(self, host=None):
         # TODO(gibi): remove this when live migration is fully supported and
