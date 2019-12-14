@@ -1474,7 +1474,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                  node.uuid, instance=instance)
 
     def power_on(self, context, instance, network_info,
-                 block_device_info=None):
+                 block_device_info=None, accel_info=None):
         """Power on the specified instance.
 
         NOTE: Unlike the libvirt driver, this method does not delete
@@ -1486,7 +1486,8 @@ class IronicDriver(virt_driver.ComputeDriver):
             this driver.
         :param block_device_info: Instance block device
             information. Ignored by this driver.
-
+        :param accel_info: List of accelerator requests for this instance.
+                           Ignored by this driver.
         """
         LOG.debug('Power on called for instance', instance=instance)
         node = self._validate_instance_and_node(instance)

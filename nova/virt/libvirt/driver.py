@@ -3297,12 +3297,13 @@ class LibvirtDriver(driver.ComputeDriver):
         self._destroy(instance)
 
     def power_on(self, context, instance, network_info,
-                 block_device_info=None):
+                 block_device_info=None, accel_info=None):
         """Power on the specified instance."""
         # We use _hard_reboot here to ensure that all backing files,
         # network, and block device connections, etc. are established
         # and available before we attempt to start the instance.
-        self._hard_reboot(context, instance, network_info, block_device_info)
+        self._hard_reboot(context, instance, network_info, block_device_info,
+                          accel_info)
 
     def trigger_crash_dump(self, instance):
 

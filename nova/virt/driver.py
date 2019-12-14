@@ -889,10 +889,14 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def power_on(self, context, instance, network_info,
-                 block_device_info=None):
+                 block_device_info=None, accel_info=None):
         """Power on the specified instance.
 
         :param instance: nova.objects.instance.Instance
+        :param network_info: instance network information
+        :param block_device_info: instance volume block device info
+        :param accel_info: List of accelerator request dicts. The exact
+            data struct is doc'd in nova/virt/driver.py::spawn().
         """
         raise NotImplementedError()
 

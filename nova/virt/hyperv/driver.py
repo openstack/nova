@@ -224,7 +224,7 @@ class HyperVDriver(driver.ComputeDriver):
         self._vmops.power_off(instance, timeout, retry_interval)
 
     def power_on(self, context, instance, network_info,
-                 block_device_info=None):
+                 block_device_info=None, accel_info=None):
         self._vmops.power_on(instance, block_device_info, network_info)
 
     def resume_state_on_host_boot(self, context, instance, network_info,

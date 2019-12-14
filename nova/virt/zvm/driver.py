@@ -395,7 +395,7 @@ class ZVMDriver(driver.ComputeDriver):
             self._hypervisor.guest_softstop(instance.name)
 
     def power_on(self, context, instance, network_info,
-                 block_device_info=None):
+                 block_device_info=None, accel_info=None):
         self._hypervisor.guest_start(instance.name)
 
     def pause(self, instance):

@@ -7782,8 +7782,10 @@ class AcceleratorServerBase(integrated_helpers.ProviderUsageBaseTestCase):
         self._setup_compute_nodes_and_device_rps()
 
     def _setup_compute_nodes_and_device_rps(self):
+        self.compute_services = []
         for i in range(self.NUM_HOSTS):
-            self._start_compute(host='accel_host' + str(i))
+            svc = self._start_compute(host='accel_host' + str(i))
+            self.compute_services.append(svc)
         self.compute_rp_uuids = [
            rp['uuid'] for rp in self._get_all_providers()
            if rp['uuid'] == rp['root_provider_uuid']]
@@ -7946,6 +7948,30 @@ class AcceleratorServerTest(AcceleratorServerBase):
 
         # Verify that no allocations/usages remain after deletion
         self._check_no_allocs_usage(server_uuid)
+
+    def test_create_server_with_local_delete(self):
+        """Delete the server when compute service is down."""
+        server = self._get_server()
+        server_uuid = server['id']
+
+        # Stop the server.
+        self.api.post_server_action(server_uuid, {'os-stop': {}})
+        self._wait_for_state_change(server, 'SHUTOFF')
+        self._check_allocations_usage(server)
+        # Stop and force down the compute service.
+        compute_id = self.admin_api.get_services(
+            host='accel_host0', binary='nova-compute')[0]['id']
+        self.compute_services[0].stop()
+        self.admin_api.put_service(compute_id, {'forced_down': 'true'})
+
+        # Delete the server with compute service down.
+        self.api.delete_server(server_uuid)
+        self.cyborg.mock_del_arqs.assert_called_once_with(server_uuid)
+        self._check_no_allocs_usage(server_uuid)
+
+        # Restart the compute service to see if anything fails.
+        self.admin_api.put_service(compute_id, {'forced_down': 'false'})
+        self.compute_services[0].start()
 
 
 class AcceleratorServerReschedTest(AcceleratorServerBase):
