@@ -1030,6 +1030,17 @@ class FakeDriverWithPciResources(SmallFakeDriver):
         return host_status
 
 
+class FakeLiveMigrateDriverWithPciResources(
+        FakeLiveMigrateDriver, FakeDriverWithPciResources):
+    """FakeDriver derivative to handle force_complete and abort calls.
+
+    This module serves those tests that need to abort or force-complete
+    the live migration, thus the live migration will never be finished
+    without the force_complete_migration or delete_migration API calls.
+
+    """
+
+
 class FakeDriverWithCaching(FakeDriver):
     def __init__(self, *a, **k):
         super(FakeDriverWithCaching, self).__init__(*a, **k)
