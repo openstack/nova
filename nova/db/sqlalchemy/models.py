@@ -729,6 +729,8 @@ class SecurityGroupIngressDefaultRule(BASE, NovaBase, models.SoftDeleteMixin):
     cidr = Column(types.CIDR())
 
 
+# TODO(stephenfin): Remove this in the V release or later, once we're sure we
+# won't want it back (it's for nova-network, so we won't)
 class ProviderFirewallRule(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a rule in a security group."""
     __tablename__ = 'provider_fw_rules'
