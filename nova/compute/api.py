@@ -3691,10 +3691,21 @@ class API(base.Base):
         self._record_action_start(context, instance,
                                   instance_actions.CONFIRM_RESIZE)
 
-        self.compute_rpcapi.confirm_resize(context,
-                                           instance,
-                                           migration,
-                                           migration.source_compute)
+        # Check to see if this was a cross-cell resize, in which case the
+        # resized instance is in the target cell (the migration and instance
+        # came from the target cell DB in this case), and we need to cleanup
+        # the source host and source cell database records.
+        if migration.cross_cell_move:
+            self.compute_task_api.confirm_snapshot_based_resize(
+                context, instance, migration)
+        else:
+            # It's a traditional resize within a single cell, so RPC cast to
+            # the source compute host to cleanup the host since the instance
+            # is already on the target host.
+            self.compute_rpcapi.confirm_resize(context,
+                                               instance,
+                                               migration,
+                                               migration.source_compute)
 
     @staticmethod
     def _allow_cross_cell_resize(context, instance):
