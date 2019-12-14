@@ -560,7 +560,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='5.9')
+    target = messaging.Target(version='5.10')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -4639,6 +4639,153 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event(prefix='compute')
     @errors_out_migration
     @wrap_instance_fault
+    def finish_revert_snapshot_based_resize_at_source(
+            self, ctxt, instance, migration):
+        """Reverts a snapshot-based resize at the source host.
+
+        Spawn the guest and re-connect volumes/VIFs on the source host and
+        revert the instance to use the old_flavor for resource usage reporting.
+
+        Updates allocations in the placement service to move the source node
+        allocations, held by the migration record, to the instance and drop
+        the allocations held by the instance on the destination node.
+
+        :param ctxt: nova auth request context targeted at the target cell
+        :param instance: Instance object whose vm_state is "resized" and
+            task_state is "resize_reverting".
+        :param migration: Migration object whose status is "reverting".
+        """
+
+        @utils.synchronized(instance.uuid)
+        def do_revert():
+            LOG.info('Reverting resize on source host.', instance=instance)
+            with self._error_out_instance_on_exception(ctxt, instance):
+                self._finish_revert_snapshot_based_resize_at_source(
+                    ctxt, instance, migration)
+        do_revert()
+
+        # Broadcast to all schedulers that the instance is on this host.
+        # This is best effort so if anything fails just log it.
+        try:
+            self._update_scheduler_instance_info(ctxt, instance)
+        except Exception as e:
+            LOG.warning('finish_revert_snapshot_based_resize_at_source failed '
+                        'during post-processing. Error: %s', e,
+                        instance=instance)
+
+    def _finish_revert_snapshot_based_resize_at_source(
+            self, ctxt, instance, migration):
+        """Private version of finish_revert_snapshot_based_resize_at_source.
+
+        This allows the main method to be decorated with error handlers.
+
+        :param ctxt: nova auth request context targeted at the source cell
+        :param instance: Instance object whose vm_state is "resized" and
+            task_state is "resize_reverting".
+        :param migration: Migration object whose status is "reverting".
+        """
+        # Delete stashed old_vm_state information. We will use this to
+        # determine if the guest should be powered on when we spawn it.
+        old_vm_state = instance.system_metadata.pop(
+            'old_vm_state', vm_states.ACTIVE)
+
+        # Update instance host/node and flavor-related fields. After this
+        # if anything fails the instance will get rebuilt/rebooted on this
+        # host.
+        self._finish_revert_resize_update_instance_flavor_host_node(
+            instance, migration)
+
+        # Move the allocations against the source compute node resource
+        # provider, held by the migration, to the instance which will drop
+        # the destination compute node resource provider allocations held by
+        # the instance. This puts the allocations against the source node
+        # back to the old_flavor and owned by the instance.
+        try:
+            self._revert_allocation(ctxt, instance, migration)
+        except exception.AllocationMoveFailed:
+            # Log the error but do not re-raise because we want to continue to
+            # process ports and volumes below.
+            LOG.error('Reverting allocation in placement for migration '
+                      '%(migration_uuid)s failed. You may need to manually '
+                      'remove the allocations for the migration consumer '
+                      'against the source node resource provider '
+                      '%(source_provider)s and the allocations for the '
+                      'instance consumer against the destination node '
+                      'resource provider %(dest_provider)s and then run the '
+                      '"nova-manage placement heal_allocations" command.',
+                      {'instance_uuid': instance.uuid,
+                       'migration_uuid': migration.uuid,
+                       'source_provider': migration.source_node,
+                       'dest_provider': migration.dest_node},
+                      instance=instance)
+
+        bdms = instance.get_bdms()
+        # prep_snapshot_based_resize_at_source created empty volume attachments
+        # that we need to update here to get the connection_info before calling
+        # driver.finish_revert_migration which will connect the volumes to this
+        # host.
+        LOG.debug('Updating volume attachments for target host %s.',
+                  self.host, instance=instance)
+        # TODO(mriedem): We should probably make _update_volume_attachments
+        # (optionally) graceful to errors so we (1) try to process all
+        # attachments and (2) continue to process networking below.
+        self._update_volume_attachments(ctxt, instance, bdms)
+
+        LOG.debug('Updating port bindings for source host %s.',
+                  self.host, instance=instance)
+        # TODO(mriedem): Calculate provider mappings when we support
+        # cross-cell resize/migrate with ports having resource requests.
+        self._finish_revert_resize_network_migrate_finish(
+            ctxt, instance, migration, provider_mappings=None)
+        network_info = self.network_api.get_instance_nw_info(ctxt, instance)
+
+        # Remember that prep_snapshot_based_resize_at_source destroyed the
+        # guest but left the disks intact so we cannot call spawn() here but
+        # finish_revert_migration should do the job.
+        block_device_info = self._get_instance_block_device_info(
+            ctxt, instance, bdms=bdms)
+        power_on = old_vm_state == vm_states.ACTIVE
+        driver_error = None
+        try:
+            self.driver.finish_revert_migration(
+                ctxt, instance, network_info, migration,
+                block_device_info=block_device_info, power_on=power_on)
+        except Exception as e:
+            driver_error = e
+            # Leave a hint about hard rebooting the guest and reraise so the
+            # instance is put into ERROR state.
+            with excutils.save_and_reraise_exception(logger=LOG):
+                LOG.error('An error occurred during finish_revert_migration. '
+                          'The instance may need to be hard rebooted. Error: '
+                          '%s', driver_error, instance=instance)
+        else:
+            # Perform final cleanup of the instance in the database.
+            instance.drop_migration_context()
+            # If the original vm_state was STOPPED, set it back to STOPPED.
+            vm_state = vm_states.ACTIVE if power_on else vm_states.STOPPED
+            self._update_instance_after_spawn(
+                ctxt, instance, vm_state=vm_state)
+            instance.save(expected_task_state=[task_states.RESIZE_REVERTING])
+        finally:
+            # Complete any volume attachments so the volumes are in-use. We
+            # do this regardless of finish_revert_migration failing because
+            # the instance is back on this host now and we do not want to leave
+            # the volumes in a pending state in case the instance is hard
+            # rebooted.
+            LOG.debug('Completing volume attachments for instance on source '
+                      'host.', instance=instance)
+            with excutils.save_and_reraise_exception(
+                    reraise=driver_error is not None, logger=LOG):
+                self._complete_volume_attachments(ctxt, bdms)
+
+        migration.status = 'reverted'
+        migration.save()
+
+    @wrap_exception()
+    @reverts_task_state
+    @wrap_instance_event(prefix='compute')
+    @errors_out_migration
+    @wrap_instance_fault
     def revert_resize(self, context, instance, migration, request_spec=None):
         """Destroys the new instance on the destination machine.
 
@@ -4737,6 +4884,27 @@ class ComputeManager(manager.Manager):
                 LOG.error('Timeout waiting for Neutron events: %s', events,
                           instance=instance)
 
+    def _finish_revert_resize_update_instance_flavor_host_node(self, instance,
+                                                               migration):
+        """Updates host/node and flavor-related fields on the instance.
+
+        This is used when finish the revert resize operation on the source
+        host and updates the instance flavor-related fields back to the old
+        flavor and then nulls out the old/new_flavor fields.
+
+        The instance host/node fields are also set back to the source compute
+        host/node.
+
+        :param instance: Instance object
+        :param migration: Migration object
+        """
+        self._set_instance_info(instance, instance.old_flavor)
+        instance.old_flavor = None
+        instance.new_flavor = None
+        instance.host = migration.source_compute
+        instance.node = migration.source_node
+        instance.save(expected_task_state=[task_states.RESIZE_REVERTING])
+
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event(prefix='compute')
@@ -4765,12 +4933,8 @@ class ComputeManager(manager.Manager):
             old_vm_state = instance.system_metadata.pop('old_vm_state',
                                                         vm_states.ACTIVE)
 
-            self._set_instance_info(instance, instance.old_flavor)
-            instance.old_flavor = None
-            instance.new_flavor = None
-            instance.host = migration.source_compute
-            instance.node = migration.source_node
-            instance.save()
+            self._finish_revert_resize_update_instance_flavor_host_node(
+                instance, migration)
 
             try:
                 source_allocations = self._revert_allocation(
