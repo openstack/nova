@@ -560,7 +560,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='5.8')
+    target = messaging.Target(version='5.9')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -4526,6 +4526,113 @@ class ComputeManager(manager.Manager):
                     LOG.error('Failed to delete volume attachment with ID %s. '
                               'Error: %s', bdm.attachment_id, six.text_type(e),
                               instance_uuid=bdm.instance_uuid)
+
+    @wrap_exception()
+    @reverts_task_state
+    @wrap_instance_event(prefix='compute')
+    @errors_out_migration
+    @wrap_instance_fault
+    def revert_snapshot_based_resize_at_dest(self, ctxt, instance, migration):
+        """Reverts a snapshot-based resize at the destination host.
+
+        Cleans the guest from the destination compute service host hypervisor
+        and related resources (ports, volumes) and frees resource usage from
+        the compute service on that host.
+
+        :param ctxt: nova auth request context targeted at the target cell
+        :param instance: Instance object whose vm_state is "resized" and
+            task_state is "resize_reverting".
+        :param migration: Migration object whose status is "reverting".
+        """
+        # A resize revert is essentially a resize back to the old size, so we
+        # need to send a usage event here.
+        compute_utils.notify_usage_exists(
+            self.notifier, ctxt, instance, self.host, current_period=True)
+
+        @utils.synchronized(instance.uuid)
+        def do_revert():
+            LOG.info('Reverting resize on destination host.',
+                     instance=instance)
+            with self._error_out_instance_on_exception(ctxt, instance):
+                self._revert_snapshot_based_resize_at_dest(
+                    ctxt, instance, migration)
+        do_revert()
+
+        # Broadcast to all schedulers that the instance is no longer on
+        # this host and clear any waiting callback events. This is best effort
+        # so if anything fails just log it.
+        try:
+            self._delete_scheduler_instance_info(ctxt, instance.uuid)
+            self.instance_events.clear_events_for_instance(instance)
+        except Exception as e:
+            LOG.warning('revert_snapshot_based_resize_at_dest failed during '
+                        'post-processing. Error: %s', e, instance=instance)
+
+    def _revert_snapshot_based_resize_at_dest(
+            self, ctxt, instance, migration):
+        """Private version of revert_snapshot_based_resize_at_dest.
+
+        This allows the main method to be decorated with error handlers.
+
+        :param ctxt: nova auth request context targeted at the target cell
+        :param instance: Instance object whose vm_state is "resized" and
+            task_state is "resize_reverting".
+        :param migration: Migration object whose status is "reverting".
+        """
+        # Cleanup the guest from the hypervisor including local disks.
+        network_info = self.network_api.get_instance_nw_info(ctxt, instance)
+        bdms = instance.get_bdms()
+        block_device_info = self._get_instance_block_device_info(
+            ctxt, instance, bdms=bdms)
+        LOG.debug('Destroying guest from destination hypervisor including '
+                  'disks.', instance=instance)
+        self.driver.destroy(
+            ctxt, instance, network_info, block_device_info=block_device_info)
+
+        # Activate source host port bindings. We need to do this before
+        # deleting the (active) dest host port bindings in
+        # setup_networks_on_host otherwise the ports will be unbound and
+        # finish on the source will fail.
+        # migrate_instance_start uses migration.dest_compute for the port
+        # binding host and since we want to activate the source host port
+        # bindings, we need to temporarily mutate the migration object.
+        with utils.temporary_mutation(
+                migration, dest_compute=migration.source_compute):
+            LOG.debug('Activating port bindings for source host %s.',
+                      migration.source_compute, instance=instance)
+            # TODO(mriedem): https://review.opendev.org/#/c/594139/ would allow
+            # us to remove this and make setup_networks_on_host do it.
+            # TODO(mriedem): Should we try/except/log any errors but continue?
+            self.network_api.migrate_instance_start(
+                ctxt, instance, migration)
+
+        # Delete port bindings for the target host. This relies on the
+        # instance.host not being the same as the host we pass in, so we
+        # have to mutate the instance to effectively trick this code.
+        with utils.temporary_mutation(instance, host=migration.source_compute):
+            LOG.debug('Deleting port bindings for target host %s.',
+                      self.host, instance=instance)
+            try:
+                # Note that deleting the destination host port bindings does
+                # not automatically activate the source host port bindings.
+                self.network_api.setup_networks_on_host(
+                    ctxt, instance, host=self.host, teardown=True)
+            except exception.PortBindingDeletionFailed as e:
+                # Do not let this stop us from cleaning up since the guest
+                # is already gone.
+                LOG.error('Failed to delete port bindings from target host. '
+                          'Error: %s', six.text_type(e), instance=instance)
+
+        # Delete any volume attachments remaining for this target host.
+        LOG.debug('Deleting volume attachments for target host.',
+                  instance=instance)
+        self._delete_volume_attachments(ctxt, bdms)
+
+        # Free up the new_flavor usage from the resource tracker for this host.
+        instance.revert_migration_context()
+        instance.save(expected_task_state=task_states.RESIZE_REVERTING)
+        self.rt.drop_move_claim(ctxt, instance, instance.node,
+                                instance_type=instance.new_flavor)
 
     @wrap_exception()
     @reverts_task_state
