@@ -128,18 +128,6 @@ class MigrateServerController(wsgi.Controller):
         instance = common.get_instance(self.compute_api, context, id,
                                        expected_attrs=['numa_topology'])
 
-        # We could potentially move this check to conductor and avoid the
-        # extra API call to neutron when we support move operations with ports
-        # having resource requests.
-        if (common.instance_has_port_with_resource_request(
-                    instance.uuid, self.network_api) and not
-                common.supports_port_resource_request_during_move(req)):
-            msg = _("The os-migrateLive action on a server with ports having "
-                    "resource requests, like a port with a QoS minimum "
-                    "bandwidth policy, is not supported with this "
-                    "microversion")
-            raise exc.HTTPBadRequest(explanation=msg)
-
         try:
             self.compute_api.live_migrate(context, instance, block_migration,
                                           disk_over_commit, host, force,
