@@ -15,6 +15,7 @@
 from nova.notifications.objects import base
 from nova.objects import base as nova_base
 from nova.objects import fields
+from nova.objects import image_meta
 
 
 @nova_base.NovaObjectRegistry.register_notification
@@ -104,6 +105,17 @@ class ImageMetaPayload(base.NotificationPayloadBase):
 
 @nova_base.NovaObjectRegistry.register_notification
 class ImageMetaPropsPayload(base.NotificationPayloadBase):
+    """Built dynamically from ImageMetaProps.
+
+    This has the following implications:
+
+    * When you make a versioned update to ImageMetaProps, you must *also* bump
+      the version of this object, even though you didn't make any explicit
+      changes here. There's an object hash test that should catch this for you.
+    * As currently written, this relies on all of the fields of ImageMetaProps
+      being initialized with no arguments. If you add one with arguments (e.g.
+      ``nullable=True`` or with a ``default``), something needs to change here.
+    """
     # Version 1.0: Initial version
     # Version 1.1: Added 'gop', 'virtio' and  'none' to hw_video_model field
     # Version 1.2: Added hw_pci_numa_affinity_policy field
@@ -111,159 +123,16 @@ class ImageMetaPropsPayload(base.NotificationPayloadBase):
     VERSION = '1.3'
 
     SCHEMA = {
-        'hw_architecture': ('image_meta_props', 'hw_architecture'),
-        'hw_auto_disk_config': ('image_meta_props', 'hw_auto_disk_config'),
-        'hw_boot_menu': ('image_meta_props', 'hw_boot_menu'),
-        'hw_cdrom_bus': ('image_meta_props', 'hw_cdrom_bus'),
-        'hw_cpu_cores': ('image_meta_props', 'hw_cpu_cores'),
-        'hw_cpu_sockets': ('image_meta_props', 'hw_cpu_sockets'),
-        'hw_cpu_max_cores': ('image_meta_props', 'hw_cpu_max_cores'),
-        'hw_cpu_max_sockets': ('image_meta_props', 'hw_cpu_max_sockets'),
-        'hw_cpu_max_threads': ('image_meta_props', 'hw_cpu_max_threads'),
-        'hw_cpu_policy': ('image_meta_props', 'hw_cpu_policy'),
-        'hw_cpu_thread_policy': ('image_meta_props', 'hw_cpu_thread_policy'),
-        'hw_cpu_realtime_mask': ('image_meta_props', 'hw_cpu_realtime_mask'),
-        'hw_cpu_threads': ('image_meta_props', 'hw_cpu_threads'),
-        'hw_device_id': ('image_meta_props', 'hw_device_id'),
-        'hw_disk_bus': ('image_meta_props', 'hw_disk_bus'),
-        'hw_disk_type': ('image_meta_props', 'hw_disk_type'),
-        'hw_floppy_bus': ('image_meta_props', 'hw_floppy_bus'),
-        'hw_firmware_type': ('image_meta_props', 'hw_firmware_type'),
-        'hw_ipxe_boot': ('image_meta_props', 'hw_ipxe_boot'),
-        'hw_machine_type': ('image_meta_props', 'hw_machine_type'),
-        'hw_mem_encryption': ('image_meta_props', 'hw_mem_encryption'),
-        'hw_mem_page_size': ('image_meta_props', 'hw_mem_page_size'),
-        'hw_numa_nodes': ('image_meta_props', 'hw_numa_nodes'),
-        'hw_numa_cpus': ('image_meta_props', 'hw_numa_cpus'),
-        'hw_numa_mem': ('image_meta_props', 'hw_numa_mem'),
-        'hw_pci_numa_affinity_policy': ('image_meta_props',
-                                        'hw_pci_numa_affinity_policy'),
-        'hw_pmu': ('image_meta_props', 'hw_pmu'),
-        'hw_pointer_model': ('image_meta_props', 'hw_pointer_model'),
-        'hw_qemu_guest_agent': ('image_meta_props', 'hw_qemu_guest_agent'),
-        'hw_rescue_bus': ('image_meta_props', 'hw_rescue_bus'),
-        'hw_rescue_device': ('image_meta_props', 'hw_rescue_device'),
-        'hw_rng_model': ('image_meta_props', 'hw_rng_model'),
-        'hw_serial_port_count': ('image_meta_props', 'hw_serial_port_count'),
-        'hw_scsi_model': ('image_meta_props', 'hw_scsi_model'),
-        'hw_time_hpet': ('image_meta_props', 'hw_time_hpet'),
-        'hw_video_model': ('image_meta_props', 'hw_video_model'),
-        'hw_video_ram': ('image_meta_props', 'hw_video_ram'),
-        'hw_vif_model': ('image_meta_props', 'hw_vif_model'),
-        'hw_vm_mode': ('image_meta_props', 'hw_vm_mode'),
-        'hw_watchdog_action': ('image_meta_props', 'hw_watchdog_action'),
-        'hw_vif_multiqueue_enabled': ('image_meta_props',
-                                      'hw_vif_multiqueue_enabled'),
-        'img_bittorrent': ('image_meta_props', 'img_bittorrent'),
-        'img_bdm_v2': ('image_meta_props', 'img_bdm_v2'),
-        'img_block_device_mapping': ('image_meta_props',
-                                     'img_block_device_mapping'),
-        'img_cache_in_nova': ('image_meta_props', 'img_cache_in_nova'),
-        'img_compression_level': ('image_meta_props', 'img_compression_level'),
-        'img_hv_requested_version': ('image_meta_props',
-                                     'img_hv_requested_version'),
-        'img_hv_type': ('image_meta_props', 'img_hv_type'),
-        'img_config_drive': ('image_meta_props', 'img_config_drive'),
-        'img_linked_clone': ('image_meta_props', 'img_linked_clone'),
-        'img_mappings': ('image_meta_props', 'img_mappings'),
-        'img_owner_id': ('image_meta_props', 'img_owner_id'),
-        'img_root_device_name': ('image_meta_props', 'img_root_device_name'),
-        'img_use_agent': ('image_meta_props', 'img_use_agent'),
-        'img_version': ('image_meta_props', 'img_version'),
-        'img_signature': ('image_meta_props', 'img_signature'),
-        'img_signature_hash_method': ('image_meta_props',
-                                      'img_signature_hash_method'),
-        'img_signature_certificate_uuid': ('image_meta_props',
-                                           'img_signature_certificate_uuid'),
-        'img_signature_key_type': ('image_meta_props',
-                                   'img_signature_key_type'),
-        'img_hide_hypervisor_id': ('image_meta_props',
-                                   'img_hide_hypervisor_id'),
-        'os_admin_user': ('image_meta_props', 'os_admin_user'),
-        'os_command_line': ('image_meta_props', 'os_command_line'),
-        'os_distro': ('image_meta_props', 'os_distro'),
-        'os_require_quiesce': ('image_meta_props', 'os_require_quiesce'),
-        'os_secure_boot': ('image_meta_props', 'os_secure_boot'),
-        'os_skip_agent_inject_files_at_boot': (
-            'image_meta_props', 'os_skip_agent_inject_files_at_boot'),
-        'os_skip_agent_inject_ssh': ('image_meta_props',
-                                     'os_skip_agent_inject_ssh'),
-        'os_type': ('image_meta_props', 'os_type'),
-        'traits_required': ('image_meta_props', 'traits_required')
-    }
+        k: ('image_meta_props', k) for k in image_meta.ImageMetaProps.fields}
 
+    # NOTE(efried): This logic currently relies on all of the fields of
+    # ImageMetaProps being initialized with no arguments. See the docstring.
+    # NOTE(efried): It's possible this could just be:
+    #      fields = image_meta.ImageMetaProps.fields
+    #  But it is not clear that OVO can tolerate the same *instance* of a type
+    #  class being used in more than one place.
     fields = {
-        'hw_architecture': fields.ArchitectureField(),
-        'hw_auto_disk_config': fields.StringField(),
-        'hw_boot_menu': fields.FlexibleBooleanField(),
-        'hw_cdrom_bus': fields.DiskBusField(),
-        'hw_cpu_cores': fields.IntegerField(),
-        'hw_cpu_sockets': fields.IntegerField(),
-        'hw_cpu_max_cores': fields.IntegerField(),
-        'hw_cpu_max_sockets': fields.IntegerField(),
-        'hw_cpu_max_threads': fields.IntegerField(),
-        'hw_cpu_policy': fields.CPUAllocationPolicyField(),
-        'hw_cpu_thread_policy': fields.CPUThreadAllocationPolicyField(),
-        'hw_cpu_realtime_mask': fields.StringField(),
-        'hw_cpu_threads': fields.IntegerField(),
-        'hw_device_id': fields.IntegerField(),
-        'hw_disk_bus': fields.DiskBusField(),
-        'hw_disk_type': fields.StringField(),
-        'hw_floppy_bus': fields.DiskBusField(),
-        'hw_firmware_type': fields.FirmwareTypeField(),
-        'hw_ipxe_boot': fields.FlexibleBooleanField(),
-        'hw_machine_type': fields.StringField(),
-        'hw_mem_encryption': fields.FlexibleBooleanField(),
-        'hw_mem_page_size': fields.StringField(),
-        'hw_numa_nodes': fields.IntegerField(),
-        'hw_numa_cpus': fields.ListOfSetsOfIntegersField(),
-        'hw_numa_mem': fields.ListOfIntegersField(),
-        'hw_pci_numa_affinity_policy': fields.PCINUMAAffinityPolicyField(),
-        'hw_pmu': fields.FlexibleBooleanField(),
-        'hw_pointer_model': fields.PointerModelField(),
-        'hw_qemu_guest_agent': fields.FlexibleBooleanField(),
-        'hw_rescue_bus': fields.DiskBusField(),
-        'hw_rescue_device': fields.BlockDeviceTypeField(),
-        'hw_rng_model': fields.RNGModelField(),
-        'hw_serial_port_count': fields.IntegerField(),
-        'hw_scsi_model': fields.SCSIModelField(),
-        'hw_time_hpet': fields.FlexibleBooleanField(),
-        'hw_video_model': fields.VideoModelField(),
-        'hw_video_ram': fields.IntegerField(),
-        'hw_vif_model': fields.VIFModelField(),
-        'hw_vm_mode': fields.VMModeField(),
-        'hw_watchdog_action': fields.WatchdogActionField(),
-        'hw_vif_multiqueue_enabled': fields.FlexibleBooleanField(),
-        'img_bittorrent': fields.FlexibleBooleanField(),
-        'img_bdm_v2': fields.FlexibleBooleanField(),
-        'img_block_device_mapping':
-            fields.ListOfDictOfNullableStringsField(),
-        'img_cache_in_nova': fields.FlexibleBooleanField(),
-        'img_compression_level': fields.IntegerField(),
-        'img_hv_requested_version': fields.VersionPredicateField(),
-        'img_hv_type': fields.HVTypeField(),
-        'img_config_drive': fields.ConfigDrivePolicyField(),
-        'img_linked_clone': fields.FlexibleBooleanField(),
-        'img_mappings': fields.ListOfDictOfNullableStringsField(),
-        'img_owner_id': fields.StringField(),
-        'img_root_device_name': fields.StringField(),
-        'img_use_agent': fields.FlexibleBooleanField(),
-        'img_version': fields.IntegerField(),
-        'img_signature': fields.StringField(),
-        'img_signature_hash_method': fields.ImageSignatureHashTypeField(),
-        'img_signature_certificate_uuid': fields.UUIDField(),
-        'img_signature_key_type': fields.ImageSignatureKeyTypeField(),
-        'img_hide_hypervisor_id': fields.FlexibleBooleanField(),
-        'os_admin_user': fields.StringField(),
-        'os_command_line': fields.StringField(),
-        'os_distro': fields.StringField(),
-        'os_require_quiesce': fields.FlexibleBooleanField(),
-        'os_secure_boot': fields.SecureBootField(),
-        'os_skip_agent_inject_files_at_boot': fields.FlexibleBooleanField(),
-        'os_skip_agent_inject_ssh': fields.FlexibleBooleanField(),
-        'os_type': fields.OSTypeField(),
-        'traits_required': fields.ListOfStringsField()
-    }
+        k: v.__class__() for k, v in image_meta.ImageMetaProps.fields.items()}
 
     def __init__(self, image_meta_props):
         super(ImageMetaPropsPayload, self).__init__()
