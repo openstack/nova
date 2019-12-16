@@ -1413,6 +1413,15 @@ class RevertResizeTask(base.TaskBase):
         # instance so refresh it here so we have the latest copy.
         source_cell_instance.refresh()
 
+        # Finish the conductor_revert_snapshot_based_resize event in the source
+        # cell DB. ComputeTaskManager.revert_snapshot_based_resize uses the
+        # wrap_instance_event decorator to create this action/event in the
+        # target cell DB but now that the target cell instance is gone the
+        # event needs to show up in the source cell DB.
+        objects.InstanceActionEvent.event_finish(
+            source_cell_instance._context, source_cell_instance.uuid,
+            'conductor_revert_snapshot_based_resize', want_result=False)
+
         # Send the resize.revert.end notification using the instance from
         # the source cell since we end there.
         self._send_resize_revert_notification(

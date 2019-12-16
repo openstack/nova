@@ -1783,9 +1783,10 @@ class _BaseTaskTestCase(object):
             self.context, instance=instance, migration=migration)
         mock_execute.assert_called_once_with()
 
+    @mock.patch('nova.compute.utils.EventReporter')
     @mock.patch(
         'nova.conductor.tasks.cross_cell_migrate.RevertResizeTask.execute')
-    def test_revert_snapshot_based_resize(self, mock_execute):
+    def test_revert_snapshot_based_resize(self, mock_execute, mock_er):
         instance = self._create_fake_instance_obj(ctxt=self.context)
         migration = objects.Migration(
             context=self.context, source_compute=instance.host,
@@ -1794,6 +1795,9 @@ class _BaseTaskTestCase(object):
         self.conductor_manager.revert_snapshot_based_resize(
             self.context, instance=instance, migration=migration)
         mock_execute.assert_called_once_with()
+        mock_er.assert_called_once_with(
+            self.context, 'conductor_revert_snapshot_based_resize',
+            self.conductor_manager.host, instance.uuid, graceful_exit=True)
 
 
 class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):

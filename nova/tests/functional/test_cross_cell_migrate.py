@@ -652,6 +652,10 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertEqual('instance.resize_revert.end', end)
 
     def assert_resize_revert_actions(self, server, source_host, dest_host):
+        # There should not be any InstanceActionNotFound errors in the logs
+        # since ComputeTaskManager.revert_snapshot_based_resize passes
+        # graceful_exit=True to wrap_instance_event.
+        self.assertNotIn('InstanceActionNotFound', self.stdlog.logger.output)
         actions = self.api.get_instance_actions(server['id'])
         # The revert instance action should have been copied from the target
         # cell to the source cell and "completed" there, i.e. an event
@@ -675,10 +679,9 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertIn('conductor_revert_snapshot_based_resize', events_by_name)
         conductor_event = events_by_name[
             'conductor_revert_snapshot_based_resize']
-        # The result is None because the actual update for this to set the
-        # result=Success is made on the action event in the target cell
-        # database and not reflected back in the source cell. Do we care?
-        self.assertIsNone(conductor_event['result'])
+        # The RevertResizeTask explicitly finishes this event in the source
+        # cell DB.
+        self.assertEqual('Success', conductor_event['result'])
 
         self.assertIn('compute_revert_snapshot_based_resize_at_dest',
                       events_by_name)
