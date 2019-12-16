@@ -70,7 +70,6 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
-from nova.tests.unit import fake_network
 from nova.tests.unit.image import fake
 from nova.tests.unit import matchers
 from nova import utils as nova_utils
@@ -227,7 +226,6 @@ class ControllerTest(test.TestCase):
 
     def setUp(self):
         super(ControllerTest, self).setUp()
-        self.flags(use_ipv6=False)
         fakes.stub_out_nw_api(self)
         fakes.stub_out_key_pair_funcs(self)
         fake.stub_out_image_service(self)
@@ -261,7 +259,6 @@ class ControllerTest(test.TestCase):
         policy.reset()
         policy.init()
         self.addCleanup(policy.reset)
-        fake_network.stub_out_nw_api_get_instance_nw_info(self)
         # Assume that anything that hits the compute API and looks for a
         # RequestSpec doesn't care about it, since testing logic that deep
         # should be done in nova.tests.unit.compute.test_compute_api.
@@ -464,7 +461,6 @@ class ServersControllerTest(ControllerTest):
         }
 
     def test_get_server_by_id(self):
-        self.flags(use_ipv6=True)
         image_bookmark = "http://localhost/%s/images/10" % self.project_id
         flavor_bookmark = "http://localhost/%s/flavors/2" % self.project_id
 
@@ -4132,8 +4128,6 @@ class ServersControllerCreateTest(test.TestCase):
         self.stub_out('nova.db.api.instance_update', instance_update)
         self.stub_out('nova.db.api.instance_update_and_get_original',
                 server_update_and_get_original)
-        self.stub_out('nova.network.manager.VlanManager.allocate_fixed_ip',
-                      lambda *a, **kw: None)
         self.body = {
             'server': {
                 'name': 'server_test',
@@ -6999,7 +6993,6 @@ class ServersViewBuilderTest(test.TestCase):
 
     def setUp(self):
         super(ServersViewBuilderTest, self).setUp()
-        self.flags(use_ipv6=True)
         fakes.stub_out_nw_api(self)
         self.flags(group='glance', api_servers=['http://localhost:9292'])
         nw_cache_info = self._generate_nw_cache_info()
@@ -7016,19 +7009,6 @@ class ServersViewBuilderTest(test.TestCase):
             task_state=None,
             vm_state=vm_states.ACTIVE,
             power_state=1)
-
-        privates = ['172.19.0.1']
-        publics = ['192.168.0.3']
-        public6s = ['b33f::fdee:ddff:fecc:bbaa']
-
-        def nw_info(*args, **kwargs):
-            return [(None, {'label': 'public',
-                            'ips': [dict(ip=ip) for ip in publics],
-                            'ip6s': [dict(ip=ip) for ip in public6s]}),
-                    (None, {'label': 'private',
-                            'ips': [dict(ip=ip) for ip in privates]})]
-
-        fakes.stub_out_nw_api_get_instance_nw_info(self, nw_info)
 
         fakes.stub_out_secgroup_api(
             self, security_groups=[{'name': 'default'}])

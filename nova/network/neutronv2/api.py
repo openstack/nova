@@ -1151,8 +1151,8 @@ class API(base_api.NetworkAPI):
                 # with neutron's view of the world. Since address is a 255-char
                 # string we can namespace it with our port id. Using '/' should
                 # be safely excluded from MAC address notations as well as
-                # UUIDs. We could stop doing this when we remove
-                # nova-network, but we'd need to leave the read translation in
+                # UUIDs. We can stop doing this now that we've removed
+                # nova-network, but we need to leave the read translation in
                 # for longer than that of course.
                 vifobj.address = '%s/%s' % (updated_port['mac_address'],
                                             updated_port['id'])

@@ -1503,10 +1503,6 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def deallocate_networks_on_reschedule(self, instance):
-        """Does the driver want networks deallocated on reschedule?"""
-        return False
-
     def manage_image_cache(self, context, all_instances):
         """Manage the driver's local image cache.
 

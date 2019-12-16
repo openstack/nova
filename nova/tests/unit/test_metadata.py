@@ -22,10 +22,10 @@ import hmac
 import os
 import re
 
-try:
-    import cPickle as pickle
-except ImportError:
+try:  # python 2
     import pickle
+except ImportError:  # python 3
+    import cPickle as pickle
 
 from keystoneauth1 import exceptions as ks_exceptions
 from keystoneauth1 import session
@@ -268,7 +268,6 @@ class MetadataTestCase(test.TestCase):
         self.instance = fake_inst_obj(self.context)
         self.keypair = fake_keypair_obj(self.instance.key_name,
                                         self.instance.key_data)
-        fake_network.stub_out_nw_api_get_instance_nw_info(self)
         fakes.stub_out_secgroup_api(self)
 
     def test_can_pickle_metadata(self):
@@ -524,8 +523,7 @@ class MetadataTestCase(test.TestCase):
         mock_get.assert_called_once_with(network_info_from_api)
 
     def test_local_ipv4(self):
-        nw_info = fake_network.fake_get_instance_nw_info(self,
-                                                          num_networks=2)
+        nw_info = fake_network.fake_get_instance_nw_info(self)
         expected_local = "192.168.1.100"
         md = fake_InstanceMetadata(self, self.instance,
                                    network_info=nw_info, address="fake")
@@ -533,8 +531,7 @@ class MetadataTestCase(test.TestCase):
         self.assertEqual(expected_local, data['meta-data']['local-ipv4'])
 
     def test_local_ipv4_from_nw_info(self):
-        nw_info = fake_network.fake_get_instance_nw_info(self,
-                                                         num_networks=2)
+        nw_info = fake_network.fake_get_instance_nw_info(self)
         expected_local = "192.168.1.100"
         md = fake_InstanceMetadata(self, self.instance,
                                    network_info=nw_info)
@@ -620,7 +617,6 @@ class OpenStackMetadataTestCase(test.TestCase):
         super(OpenStackMetadataTestCase, self).setUp()
         self.context = context.RequestContext('fake', 'fake')
         self.instance = fake_inst_obj(self.context)
-        fake_network.stub_out_nw_api_get_instance_nw_info(self)
 
     def test_empty_device_metadata(self):
         fakes.stub_out_key_pair_funcs(self)
@@ -1043,7 +1039,6 @@ class MetadataHandlerTestCase(test.TestCase):
     def setUp(self):
         super(MetadataHandlerTestCase, self).setUp()
 
-        fake_network.stub_out_nw_api_get_instance_nw_info(self)
         self.context = context.RequestContext('fake', 'fake')
         self.instance = fake_inst_obj(self.context)
         self.mdinst = fake_InstanceMetadata(self, self.instance,
@@ -1676,7 +1671,6 @@ class MetadataHandlerTestCase(test.TestCase):
 class MetadataPasswordTestCase(test.TestCase):
     def setUp(self):
         super(MetadataPasswordTestCase, self).setUp()
-        fake_network.stub_out_nw_api_get_instance_nw_info(self)
         self.context = context.RequestContext('fake', 'fake')
         self.instance = fake_inst_obj(self.context)
         self.mdinst = fake_InstanceMetadata(self, self.instance,

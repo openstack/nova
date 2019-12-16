@@ -49,6 +49,7 @@ class NetworkRequest(obj_base.NovaObject):
     def obj_load_attr(self, attr):
         setattr(self, attr, None)
 
+    # TODO(stephenfin): Drop the two item tuple case when we drop it entirely
     def to_tuple(self):
         address = str(self.address) if self.address is not None else None
         if utils.is_neutron():
@@ -56,6 +57,7 @@ class NetworkRequest(obj_base.NovaObject):
         else:
             return self.network_id, address
 
+    # TODO(stephenfin): Drop the two item tuple case when we drop it entirely
     @classmethod
     def from_tuple(cls, net_tuple):
         if len(net_tuple) == 4:

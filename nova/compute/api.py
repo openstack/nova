@@ -1854,13 +1854,10 @@ class API(base.Base):
 
         instance.system_metadata.update(system_meta)
 
-        if CONF.use_neutron:
-            # For Neutron we don't actually store anything in the database, we
-            # proxy the security groups on the instance from the ports
-            # attached to the instance.
-            instance.security_groups = objects.SecurityGroupList()
-        else:
-            instance.security_groups = security_groups
+        # Since the removal of nova-network, we don't actually store anything
+        # in the database. Instead, we proxy the security groups on the
+        # instance from the ports attached to the instance.
+        instance.security_groups = objects.SecurityGroupList()
 
         self._populate_instance_names(instance, num_instances, index)
         instance.shutdown_terminate = shutdown_terminate
@@ -1964,9 +1961,8 @@ class API(base.Base):
         if requested_networks and max_count is not None and max_count > 1:
             self._check_multiple_instances_with_specified_ip(
                 requested_networks)
-            if utils.is_neutron():
-                self._check_multiple_instances_with_neutron_ports(
-                    requested_networks)
+            self._check_multiple_instances_with_neutron_ports(
+                requested_networks)
 
         if availability_zone:
             available_zones = availability_zones.\
@@ -2395,15 +2391,6 @@ class API(base.Base):
                 delete_type if delete_type != 'soft_delete' else 'delete'):
 
             elevated = context.elevated()
-            # NOTE(liusheng): In nova-network multi_host scenario,deleting
-            # network info of the instance may need instance['host'] as
-            # destination host of RPC call. If instance in
-            # SHELVED_OFFLOADED state, instance['host'] is None, here, use
-            # shelved_host as host to deallocate network info and reset
-            # instance['host'] after that. Here we shouldn't use
-            # instance.save(), because this will mislead user who may think
-            # the instance's host has been changed, and actually, the
-            # instance.host is always None.
             orig_host = instance.host
             try:
                 if instance.vm_state == vm_states.SHELVED_OFFLOADED:

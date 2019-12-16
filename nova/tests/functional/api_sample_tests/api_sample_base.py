@@ -86,7 +86,6 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
     ]
 
     def setUp(self):
-        self.flags(use_ipv6=False)
         self.flags(glance_link_prefix=self._get_glance_host(),
                    compute_link_prefix=self._get_host(),
                    group='api')

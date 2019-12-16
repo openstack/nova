@@ -252,11 +252,6 @@ class _IntegratedTestBase(test.TestCase):
     def setUp(self):
         super(_IntegratedTestBase, self).setUp()
 
-        # NOTE(mikal): this is used to stub away privsep helpers
-        def fake_noop(*args, **kwargs):
-            return None
-        self.stub_out('nova.privsep.linux_net.bind_ip', fake_noop)
-
         self.fake_image_service =\
             nova.tests.unit.image.fake.stub_out_image_service(self)
 

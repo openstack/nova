@@ -44,9 +44,8 @@ def network_dict(network):
 
 
 class TenantNetworkController(wsgi.Controller):
-    def __init__(self, network_api=None):
+    def __init__(self):
         super(TenantNetworkController, self).__init__()
-        # TODO(stephenfin): 'network_api' is only being passed for use by tests
         self.network_api = nova.network.API()
         self._default_networks = []
 

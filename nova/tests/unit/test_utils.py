@@ -583,16 +583,6 @@ class ValidateIntegerTestCase(test.NoDBTestCase):
                           max_value=1000)
 
 
-class ValidateNeutronConfiguration(test.NoDBTestCase):
-    def test_nova_network(self):
-        self.flags(use_neutron=False)
-        self.assertFalse(utils.is_neutron())
-
-    def test_neutron(self):
-        self.flags(use_neutron=True)
-        self.assertTrue(utils.is_neutron())
-
-
 class AutoDiskConfigUtilTestCase(test.NoDBTestCase):
     def test_is_auto_disk_config_disabled(self):
         self.assertTrue(utils.is_auto_disk_config_disabled("Disabled "))

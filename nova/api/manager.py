@@ -15,22 +15,13 @@
 #    under the License.
 
 from nova import manager
-from nova.network import driver
-from nova import utils
 
 
+# TODO(stephenfin): Remove this as it's no longer necessary.
 class MetadataManager(manager.Manager):
     """Metadata Manager.
 
-    This class manages the Metadata API service initialization. Currently, it
-    just adds an iptables filter rule for the metadata service.
+    This class manages the Metadata API service initialization.
     """
     def __init__(self, *args, **kwargs):
         super(MetadataManager, self).__init__(*args, **kwargs)
-
-        if not utils.is_neutron():
-            # NOTE(mikal): we only add iptables rules if we're running
-            # under nova-network. This code should go away when the
-            # deprecation of nova-network is complete.
-            self.network_driver = driver.load_network_driver()
-            self.network_driver.metadata_accept()

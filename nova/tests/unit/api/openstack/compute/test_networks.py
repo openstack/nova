@@ -94,19 +94,6 @@ FAKE_USER_NETWORKS = [
     },
 ]
 
-NEW_NETWORK = {
-    "network": {
-        "bridge_interface": "eth0",
-        "cidr": "10.20.105.0/24",
-        "label": "new net 111",
-        "vlan_start": 111,
-        "multi_host": False,
-        'dhcp_server': '10.0.0.1',
-        'enable_dhcp': True,
-        'share_address': False,
-    }
-}
-
 
 class FakeNetworkAPI(object):
 
@@ -145,6 +132,7 @@ class FakeNetworkAPI(object):
                     # However, 'injected' value can be None if neutron.
                     # So here changes the value to False just for passing
                     # following _from_db_object().
+                    # TODO(stephenfin): Fix this
                     network['injected'] = False
                 return objects.Network._from_db_object(context,
                                                        objects.Network(),
@@ -161,7 +149,6 @@ class NetworksTestV21(test.NoDBTestCase):
         self.fake_network_api = FakeNetworkAPI()
         self._setup()
         fakes.stub_out_networking(self)
-        self.new_network = copy.deepcopy(NEW_NETWORK)
         self.non_admin_req = fakes.HTTPRequest.blank(
             '', project_id=fakes.FAKE_PROJECT_ID)
         self.admin_req = fakes.HTTPRequest.blank('',

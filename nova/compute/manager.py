@@ -2220,33 +2220,9 @@ class ComputeManager(manager.Manager):
             retry['exc'] = traceback.format_exception(*sys.exc_info())
             # This will be used for setting the instance fault message
             retry['exc_reason'] = e.kwargs['reason']
-            # NOTE(comstud): Deallocate networks if the driver wants
-            # us to do so.
-            # NOTE(mriedem): Always deallocate networking when using Neutron.
-            # This is to unbind any ports that the user supplied in the server
-            # create request, or delete any ports that nova created which were
-            # meant to be bound to this host. This check intentionally bypasses
-            # the result of deallocate_networks_on_reschedule because the
-            # default value in the driver is False, but that method was really
-            # only meant for Ironic and should be removed when nova-network is
-            # removed (since is_neutron() will then always be True).
-            # NOTE(vladikr): SR-IOV ports should be deallocated to
-            # allow new sriov pci devices to be allocated on a new host.
-            # Otherwise, if devices with pci addresses are already allocated
-            # on the destination host, the instance will fail to spawn.
-            # info_cache.network_info should be present at this stage.
-            if (self.driver.deallocate_networks_on_reschedule(instance) or
-                utils.is_neutron() or
-                self.deallocate_sriov_ports_on_reschedule(instance)):
-                self._cleanup_allocated_networks(context, instance,
-                        requested_networks)
-            else:
-                # NOTE(alex_xu): Network already allocated and we don't
-                # want to deallocate them before rescheduling. But we need
-                # to cleanup those network resources setup on this host before
-                # rescheduling.
-                self.network_api.cleanup_instance_network_on_host(
-                    context, instance, self.host)
+
+            self._cleanup_allocated_networks(context, instance,
+                                             requested_networks)
 
             self._nil_out_instance_obj_host_and_node(instance)
             instance.task_state = task_states.SCHEDULING
@@ -2289,24 +2265,6 @@ class ComputeManager(manager.Manager):
             self._set_instance_obj_error_state(context, instance,
                                                clean_task_state=True)
             return build_results.FAILED
-
-    def deallocate_sriov_ports_on_reschedule(self, instance):
-        """Determine if networks are needed to be deallocated before reschedule
-
-        Check the cached network info for any assigned SR-IOV ports.
-        SR-IOV ports should be deallocated prior to rescheduling
-        in order to allow new sriov pci devices to be allocated on a new host.
-        """
-        info_cache = instance.info_cache
-
-        def _has_sriov_port(vif):
-            return vif['vnic_type'] in network_model.VNIC_TYPES_SRIOV
-
-        if (info_cache and info_cache.network_info):
-            for vif in info_cache.network_info:
-                if _has_sriov_port(vif):
-                    return True
-        return False
 
     @staticmethod
     def _get_scheduler_hints(filter_properties, request_spec=None):
@@ -4826,7 +4784,7 @@ class ComputeManager(manager.Manager):
         network_info = instance.get_network_info()
         events = []
         deadline = CONF.vif_plugging_timeout
-        if deadline and utils.is_neutron() and network_info:
+        if deadline and network_info:
             events = network_info.get_bind_time_events(migration)
             if events:
                 LOG.debug('Will wait for bind-time events: %s', events)
@@ -6392,13 +6350,6 @@ class ComputeManager(manager.Manager):
 
         self._power_off_instance(context, instance, clean_shutdown)
         current_power_state = self._get_power_state(context, instance)
-        # NOTE(mriedem): cleanup_instance_network_on_host assumes there are
-        # multiple host bindings per port which is not the case with the
-        # shelve/unshelve flow. Doing so will result in failures to update the
-        # port binding on unshelve (since we would have deleted it here).
-        if not utils.is_neutron():
-            self.network_api.cleanup_instance_network_on_host(
-                context, instance, instance.host)
         network_info = self.network_api.get_instance_nw_info(context, instance)
 
         block_device_info = self._get_instance_block_device_info(context,
@@ -7825,7 +7776,7 @@ class ComputeManager(manager.Manager):
     def _get_neutron_events_for_live_migration(instance):
         # We don't generate events if CONF.vif_plugging_timeout=0
         # meaning that the operator disabled using them.
-        if CONF.vif_plugging_timeout and utils.is_neutron():
+        if CONF.vif_plugging_timeout:
             return [('network-vif-plugged', vif['id'])
                     for vif in instance.get_network_info()]
         else:
@@ -8674,7 +8625,7 @@ class ComputeManager(manager.Manager):
             self.compute_rpcapi.rollback_live_migration_at_destination(
                     context, instance, dest, destroy_disks=destroy_disks,
                     migrate_data=migrate_data)
-        elif utils.is_neutron():
+        else:
             # The port binding profiles need to be cleaned up.
             with errors_out_migration_ctxt(migration):
                 try:
@@ -8798,8 +8749,7 @@ class ComputeManager(manager.Manager):
         # bindings instead of the compute driver. For example IronicDriver
         # manages the port binding for baremetal instance ports, hence,
         # external intervention with the binding is not desired.
-        if (not utils.is_neutron() or
-                self.driver.manages_network_binding_host_id()):
+        if self.driver.manages_network_binding_host_id():
             return False
 
         search_opts = {'device_id': instance.uuid,

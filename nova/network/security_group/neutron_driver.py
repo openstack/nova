@@ -90,10 +90,6 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
         :param allowed:  the range of characters allowed, but not used because
                          Neutron is allowing any characters.
         """
-
-        # NOTE: If using nova-network as the backend, min_length is 1. However
-        # if using Neutron, Nova has allowed empty string as its history.
-        # So this min_length should be 0 for passing the existing requests.
         utils.check_string_length(value, name=property, min_length=0,
                                   max_length=255)
 

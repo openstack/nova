@@ -148,7 +148,6 @@ class BaseTestCase(test.TestCase):
 
     def setUp(self):
         super(BaseTestCase, self).setUp()
-        self.flags(network_manager='nova.network.manager.FlatManager')
 
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
@@ -1801,8 +1800,8 @@ class ComputeTestCase(BaseTestCase,
 
         orig_update = self.compute._instance_update
 
-        # Make this work for both neutron and nova-network by stubbing out
-        # allocate_for_instance to return a fake network_info list of VIFs.
+        # Stub out allocate_for_instance to return a fake network_info list of
+        # VIFs
         ipv4_ip = network_model.IP(version=4, address='192.168.1.100')
         ipv4_subnet = network_model.Subnet(ips=[ipv4_ip])
         ipv6_ip = network_model.IP(version=6, address='2001:db8:0:1::1')
@@ -4637,7 +4636,6 @@ class ComputeTestCase(BaseTestCase,
             ("resume_instance", task_states.RESUMING),
             ]
 
-        self._stub_out_resize_network_methods()
         instance = self._create_fake_instance_obj()
         for operation in actions:
             if 'revert_resize' in operation:
@@ -4695,14 +4693,6 @@ class ComputeTestCase(BaseTestCase,
 
         self.compute.terminate_instance(self.context, instance,
                                         bdms=[])
-
-    def _stub_out_resize_network_methods(self):
-        def fake(cls, ctxt, instance, *args, **kwargs):
-            pass
-
-        self.stub_out('nova.network.api.API.setup_networks_on_host', fake)
-        self.stub_out('nova.network.api.API.migrate_instance_start', fake)
-        self.stub_out('nova.network.api.API.migrate_instance_finish', fake)
 
     def _test_finish_resize(self, power_on, resize_instance=True):
         # Contrived test to ensure finish_resize doesn't raise anything and
@@ -4980,8 +4970,6 @@ class ComputeTestCase(BaseTestCase,
         self.stub_out('nova.volume.cinder.API.terminate_connection',
                        fake_terminate_connection)
 
-        self._stub_out_resize_network_methods()
-
         migration = objects.Migration.get_by_instance_and_status(
                 self.context.elevated(),
                 instance.uuid, 'pre-migrating')
@@ -5050,8 +5038,6 @@ class ComputeTestCase(BaseTestCase,
             raise test.TestingException()
 
         self.stub_out('nova.virt.fake.FakeDriver.finish_migration', throw_up)
-
-        self._stub_out_resize_network_methods()
 
         old_flavor_name = 'm1.tiny'
         instance = self._create_fake_instance_obj(type_name=old_flavor_name)
@@ -5200,8 +5186,6 @@ class ComputeTestCase(BaseTestCase,
                 instance_type=new_type, image={},
                 request_spec={}, filter_properties={}, node=None,
                 clean_shutdown=True, migration=None, host_list=[])
-
-        self._stub_out_resize_network_methods()
 
         migration = objects.Migration.get_by_instance_and_status(
                 self.context.elevated(),
@@ -5422,8 +5406,6 @@ class ComputeTestCase(BaseTestCase,
         sys_meta = instance.system_metadata
         self.assertEqual(vm_states.ACTIVE, sys_meta['old_vm_state'])
 
-        self._stub_out_resize_network_methods()
-
         instance.task_state = task_states.RESIZE_PREP
         instance.save()
 
@@ -5504,8 +5486,6 @@ class ComputeTestCase(BaseTestCase,
         self.stub_out('nova.virt.fake.FakeDriver.finish_migration', fake)
         self.stub_out('nova.virt.fake.FakeDriver.confirm_migration',
                        fake_confirm_migration_driver)
-
-        self._stub_out_resize_network_methods()
 
         # Get initial memory usage
         memory_mb_used = self.rt.compute_nodes[NODENAME].memory_mb_used
@@ -5841,8 +5821,6 @@ class ComputeTestCase(BaseTestCase,
         self.stub_out('nova.virt.fake.FakeDriver.finish_revert_migration',
                       fake_finish_revert_migration_driver)
 
-        self._stub_out_resize_network_methods()
-
         # Get initial memory usage
         memory_mb_used = self.rt.compute_nodes[NODENAME].memory_mb_used
 
@@ -5997,8 +5975,6 @@ class ComputeTestCase(BaseTestCase,
         self.stub_out('nova.virt.fake.FakeDriver.finish_revert_migration',
                       fake)
 
-        self._stub_out_resize_network_methods()
-
         self.compute.build_and_run_instance(self.context, instance, {},
                                             request_spec, {},
                                             block_device_mapping=[])
@@ -6015,7 +5991,6 @@ class ComputeTestCase(BaseTestCase,
         migration = objects.Migration.get_by_instance_and_status(
                 self.context.elevated(),
                 instance.uuid, 'pre-migrating')
-        source_compute = migration.source_compute
         migration.dest_compute = NODENAME2
         migration.dest_node = NODENAME2
         migration.save()
@@ -6039,13 +6014,6 @@ class ComputeTestCase(BaseTestCase,
         self.compute.revert_resize(self.context,
                 migration=migration, instance=instance,
                 request_spec=request_spec)
-
-        # NOTE(hanrong): Prove that we pass the right value to the
-        # "self.network_api.migrate_instance_finish".
-        def fake_migrate_instance_finish(cls, context, instance, migration):
-            self.assertEqual(source_compute, migration.dest_compute)
-        self.stub_out('nova.network.api.API.migrate_instance_finish',
-                      fake_migrate_instance_finish)
 
         self.compute.finish_revert_resize(self.context,
                 migration=migration,
@@ -8492,15 +8460,9 @@ class ComputeTestCase(BaseTestCase,
 @ddt.ddt
 class ComputeAPITestCase(BaseTestCase):
     def setUp(self):
-        def fake_get_nw_info(cls, ctxt, instance):
-            self.assertTrue(ctxt.is_admin)
-            return fake_network.fake_get_instance_nw_info(self, 1, 1)
-
         super(ComputeAPITestCase, self).setUp()
-        self.useFixture(fixtures.SpawnIsSynchronousFixture())
-        self.stub_out('nova.network.api.API.get_instance_nw_info',
-                       fake_get_nw_info)
 
+        self.useFixture(fixtures.SpawnIsSynchronousFixture())
         self.compute_api = compute.API()
         self.fake_image = {
             'id': 'f9000000-0000-0000-0000-000000000000',
@@ -10988,8 +10950,6 @@ class ComputeAPITestCase(BaseTestCase):
     def test_lock(self, mock_event, mock_record, mock_elevate, mock_notify):
         mock_elevate.return_value = self.context
         instance = self._create_fake_instance_obj()
-        self.stub_out('nova.network.api.API.deallocate_for_instance',
-                       lambda *a, **kw: None)
         self.compute_api.lock(self.context, instance)
         mock_record.assert_called_once_with(
             self.context, instance, instance_actions.LOCK
@@ -11033,8 +10993,6 @@ class ComputeAPITestCase(BaseTestCase):
     def test_unlock(self, mock_event, mock_record, mock_elevate, mock_notify):
         mock_elevate.return_value = self.context
         instance = self._create_fake_instance_obj()
-        self.stub_out('nova.network.api.API.deallocate_for_instance',
-                       lambda *a, **kw: None)
         self.compute_api.unlock(self.context, instance)
         mock_record.assert_called_once_with(
             self.context, instance, instance_actions.UNLOCK

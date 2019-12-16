@@ -182,6 +182,7 @@ class Quotas(base.NovaObject):
                             user_id=None):
         # TODO(melwitt): We won't have per project resources after nova-network
         # is removed.
+        # TODO(stephenfin): We need to do something here now...but what?
         per_user = (user_id and
                     resource not in db_api.quota_get_per_project_resources())
         quota_ref = (api_models.ProjectUserQuota() if per_user
@@ -204,6 +205,7 @@ class Quotas(base.NovaObject):
                             user_id=None):
         # TODO(melwitt): We won't have per project resources after nova-network
         # is removed.
+        # TODO(stephenfin): We need to do something here now...but what?
         per_user = (user_id and
                     resource not in db_api.quota_get_per_project_resources())
         model = api_models.ProjectUserQuota if per_user else api_models.Quota

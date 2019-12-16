@@ -877,12 +877,12 @@ def privsep_imports_not_aliased(logical_line, filename):
     """Do not abbreviate or alias privsep module imports.
 
     When accessing symbols under nova.privsep in code or tests, the full module
-    path (e.g. nova.privsep.linux_net.delete_bridge(...)) should be used
+    path (e.g. nova.privsep.path.readfile(...)) should be used
     explicitly rather than importing and using an alias/abbreviation such as:
 
-      from nova.privsep import linux_net
+      from nova.privsep import path
       ...
-      linux_net.delete_bridge(...)
+      path.readfile(...)
 
     See Ief177dbcb018da6fbad13bb0ff153fc47292d5b9.
 
