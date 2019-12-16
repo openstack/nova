@@ -7,6 +7,11 @@ the internal `API code`_, `conductor code`_ and `compute code`_ use the same
 methods. This document explains some of the differences in what
 happens between a resize and cold migrate operation.
 
+For the most part this document describes
+:term:`same-cell resize <Same-Cell Resize>`.
+For details on :term:`cross-cell resize <Cross-Cell Resize>`, refer to
+:doc:`/admin/configuration/cross-cell-resize`.
+
 High level
 ~~~~~~~~~~
 
