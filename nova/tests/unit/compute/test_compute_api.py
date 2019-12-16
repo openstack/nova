@@ -3054,7 +3054,8 @@ class _ComputeAPIUnitTestMixIn(object):
         mock_event.assert_called_once_with(self.context,
                                            'api_snapshot_instance',
                                            CONF.host,
-                                           instance.uuid)
+                                           instance.uuid,
+                                           graceful_exit=False)
 
         bdm = fake_block_device.FakeDbBlockDeviceDict(
                 {'no_device': False, 'volume_id': '1', 'boot_index': 0,
@@ -3102,7 +3103,8 @@ class _ComputeAPIUnitTestMixIn(object):
         mock_event.assert_called_once_with(self.context,
                                            'api_snapshot_instance',
                                            CONF.host,
-                                           instance.uuid)
+                                           instance.uuid,
+                                           graceful_exit=False)
 
         instance.system_metadata['image_mappings'] = jsonutils.dumps(
             [{'virtual': 'ami', 'device': 'vda'},
@@ -3161,7 +3163,8 @@ class _ComputeAPIUnitTestMixIn(object):
         mock_event.assert_called_once_with(self.context,
                                            'api_snapshot_instance',
                                            CONF.host,
-                                           instance.uuid)
+                                           instance.uuid,
+                                           graceful_exit=False)
 
     def test_snapshot_volume_backed(self):
         self._test_snapshot_volume_backed(quiesce_required=False,
