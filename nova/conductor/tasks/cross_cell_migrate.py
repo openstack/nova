@@ -1139,7 +1139,9 @@ class RevertResizeTask(base.TaskBase):
         self.legacy_notifier = legacy_notifier
         self.compute_rpcapi = compute_rpcapi
 
+        # These are used for rollback handling.
         self._source_cell_migration = None
+        self._source_cell_instance = None
 
         self.volume_api = cinder.API()
 
@@ -1395,6 +1397,7 @@ class RevertResizeTask(base.TaskBase):
             get_instance_from_source_cell(
                 self.context, self.migration.source_compute,
                 self.instance.uuid))
+        self._source_cell_instance = source_cell_instance
 
         # Update the source cell database information based on the target cell
         # database, i.e. the instance/migration/BDMs/action records. Do all of
@@ -1450,14 +1453,38 @@ class RevertResizeTask(base.TaskBase):
             source_cell_instance, fields.NotificationPhase.END)
 
     def rollback(self, ex):
-        # If we have updated the instance mapping to point at the source
-        # cell we update the migration from the source cell, otherwise we
-        # update the migration in the target cell.
-        migration = self._source_cell_migration \
-            if self._source_cell_migration else self.migration
-        migration.status = 'error'
-        migration.save()
-
-        # TODO(mriedem): Will have to think about setting the instance to
-        # ERROR status and/or recording a fault and sending an
-        # error notification (create new resize_revert.error notification?).
+        with excutils.save_and_reraise_exception():
+            # If we have updated the instance mapping to point at the source
+            # cell we update the records in the source cell, otherwise we
+            # update the records in the target cell.
+            instance_at_source = self._source_cell_migration is not None
+            migration = self._source_cell_migration \
+                if self._source_cell_migration else self.migration
+            instance = self._source_cell_instance \
+                if self._source_cell_instance else self.instance
+            # NOTE(mriedem): This exception log is fairly generic. We could
+            # probably make this more targeted based on what we know of the
+            # state of the system if we want to make it more detailed, e.g.
+            # the execute method could "record" checkpoints to be used here
+            # or we could check to see if the instance was deleted from the
+            # target cell by trying to refresh it and handle InstanceNotFound.
+            LOG.exception(
+                'An error occurred while reverting the resize for instance. '
+                'The instance is mapped to the %s cell %s. If the instance '
+                'was deleted from the target cell %s then the target host %s '
+                'was already cleaned up. If the instance is back in the '
+                'source cell then you can try hard-rebooting it to recover.',
+                ('source' if instance_at_source else 'target'),
+                migration._context.cell_uuid, self.context.cell_uuid,
+                migration.dest_compute, instance=instance)
+            # If anything failed set the migration status to 'error'.
+            migration.status = 'error'
+            migration.save()
+            # Put the instance into ERROR status, record a fault and send an
+            # error notification.
+            updates = {'vm_state': vm_states.ERROR, 'task_state': None}
+            request_spec = objects.RequestSpec.get_by_instance_uuid(
+                self.context, instance.uuid)
+            scheduler_utils.set_vm_state_and_notify(
+                instance._context, instance.uuid, 'compute_task',
+                'migrate_server', updates, ex, request_spec)
