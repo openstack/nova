@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    The `bug 1856329`_ is fixed where the ``fault`` field was empty in the
+    response of ``GET /servers/detail`` when instances were located in a nova
+    cell DB. The ``InstanceList.fill_faults()`` method has been updated to use
+    ``scatter_gather_all_cells()`` to properly retrieve faults from all cells,
+    ensuring fault information is consistently returned regardless of which
+    cell contains the instance.
+
+    .. _bug 1856329: https://bugs.launchpad.net/nova/+bug/1856329
