@@ -26,14 +26,14 @@ eventlet==0.20.0
 extras==1.0.0
 fasteners==0.14.1
 fixtures==3.0.0
-flake8==2.5.5
+flake8==3.6.0
 future==0.16.0
 futurist==1.8.0
 gabbi==1.35.0
 gitdb2==2.0.3
 GitPython==2.1.8
 greenlet==0.4.10
-hacking==0.12.0
+hacking==2.0
 idna==2.6
 iso8601==0.1.11
 Jinja2==2.10
@@ -50,7 +50,7 @@ linecache2==1.0.0
 lxml==3.4.1
 Mako==1.0.7
 MarkupSafe==1.0
-mccabe==0.2.1
+mccabe==0.6.0
 microversion-parse==0.2.1
 mock==3.0.0
 monotonic==1.4
@@ -109,8 +109,8 @@ pyasn1==0.4.2
 pyasn1-modules==0.2.1
 pycadf==2.7.0
 pycparser==2.18
-pyflakes==0.8.1
-pycodestyle==2.0.0
+pyflakes==2.0.0
+pycodestyle==2.4.0
 pyinotify==0.9.6
 pyroute2==0.5.4
 PyJWT==1.7.0

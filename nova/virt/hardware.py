@@ -17,6 +17,7 @@ import fractions
 import itertools
 import math
 import re
+from typing import List, Optional, Set, Tuple
 
 import os_resource_classes as orc
 import os_traits

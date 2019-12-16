@@ -13,12 +13,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import ast
-import os
-import re
-
-import six
-
 """
 Guidelines for writing new hacking checks
 
@@ -32,6 +26,14 @@ Guidelines for writing new hacking checks
  - Add test cases for each new rule to nova/tests/unit/test_hacking.py
 
 """
+
+import ast
+import os
+import re
+
+from hacking import core
+import six
+
 
 UNDERSCORE_IMPORT_FILES = []
 
@@ -173,6 +175,7 @@ class BaseASTChecker(ast.NodeVisitor):
         return False
 
 
+@core.flake8ext
 def import_no_db_in_virt(logical_line, filename):
     """Check for db calls from nova/virt
 
@@ -186,12 +189,14 @@ def import_no_db_in_virt(logical_line, filename):
             yield (0, "N307: nova.db.api import not allowed in nova/virt/*")
 
 
+@core.flake8ext
 def no_db_session_in_public_api(logical_line, filename):
     if "db/api.py" in filename:
         if session_check.match(logical_line):
             yield (0, "N309: public db api methods may not accept session")
 
 
+@core.flake8ext
 def use_timeutils_utcnow(logical_line, filename):
     # tools are OK to use the standard datetime module
     if "/tools/" in filename:
@@ -218,6 +223,7 @@ def _get_virt_name(regex, data):
     return driver
 
 
+@core.flake8ext
 def import_no_virt_driver_import_deps(physical_line, filename):
     """Check virt drivers' modules aren't imported by other drivers
 
@@ -237,6 +243,7 @@ def import_no_virt_driver_import_deps(physical_line, filename):
         return (0, "N311: importing code from other virt drivers forbidden")
 
 
+@core.flake8ext
 def import_no_virt_driver_config_deps(physical_line, filename):
     """Check virt drivers' config vars aren't used by other drivers
 
@@ -255,6 +262,7 @@ def import_no_virt_driver_config_deps(physical_line, filename):
         return (0, "N312: using config vars from other virt drivers forbidden")
 
 
+@core.flake8ext
 def capital_cfg_help(logical_line, tokens):
     msg = "N313: capitalize help string"
 
@@ -266,6 +274,7 @@ def capital_cfg_help(logical_line, tokens):
                     yield (0, msg)
 
 
+@core.flake8ext
 def assert_true_instance(logical_line):
     """Check for assertTrue(isinstance(a, b)) sentences
 
@@ -275,6 +284,7 @@ def assert_true_instance(logical_line):
         yield (0, "N316: assertTrue(isinstance(a, b)) sentences not allowed")
 
 
+@core.flake8ext
 def assert_equal_type(logical_line):
     """Check for assertEqual(type(A), B) sentences
 
@@ -284,12 +294,14 @@ def assert_equal_type(logical_line):
         yield (0, "N317: assertEqual(type(A), B) sentences not allowed")
 
 
+@core.flake8ext
 def check_python3_xrange(logical_line):
     if re.search(r"\bxrange\s*\(", logical_line):
         yield (0, "N327: Do not use xrange(). 'xrange()' is not compatible "
                   "with Python 3. Use range() or six.moves.range() instead.")
 
 
+@core.flake8ext
 def no_translate_debug_logs(logical_line, filename):
     """Check for 'LOG.debug(_('
 
@@ -307,6 +319,7 @@ def no_translate_debug_logs(logical_line, filename):
         yield (0, "N319 Don't translate debug level logs")
 
 
+@core.flake8ext
 def no_import_translation_in_tests(logical_line, filename):
     """Check for 'from nova.i18n import _'
     N337
@@ -317,6 +330,7 @@ def no_import_translation_in_tests(logical_line, filename):
             yield (0, "N337 Don't import translation in tests")
 
 
+@core.flake8ext
 def no_setting_conf_directly_in_tests(logical_line, filename):
     """Check for setting CONF.* attributes directly in tests
 
@@ -333,12 +347,14 @@ def no_setting_conf_directly_in_tests(logical_line, filename):
                       "forbidden. Use self.flags(option=value) instead")
 
 
+@core.flake8ext
 def no_mutable_default_args(logical_line):
     msg = "N322: Method's default argument shouldn't be mutable!"
     if mutable_default_args.match(logical_line):
         yield (0, msg)
 
 
+@core.flake8ext
 def check_explicit_underscore_import(logical_line, filename):
     """Check for explicit import of the _ function
 
@@ -360,6 +376,7 @@ def check_explicit_underscore_import(logical_line, filename):
         yield (0, "N323: Found use of _() without explicit import of _ !")
 
 
+@core.flake8ext
 def use_jsonutils(logical_line, filename):
     # the code below that path is not meant to be executed from neutron
     # tree where jsonutils module is present, so don't enforce its usage
@@ -381,6 +398,7 @@ def use_jsonutils(logical_line, filename):
                 yield (pos, msg % {'fun': f[:-1]})
 
 
+@core.flake8ext
 def check_api_version_decorator(logical_line, previous_logical, blank_before,
                                 filename):
     msg = ("N332: the api_version decorator must be the first decorator"
@@ -399,6 +417,9 @@ class CheckForStrUnicodeExc(BaseASTChecker):
     used on an exception created in the same scope, this does not
     catch it.
     """
+
+    name = 'check_for_string_unicode_exc'
+    version = '1.0'
 
     CHECK_DESC = ('N325 str() and unicode() cannot be used on an '
                   'exception.  Remove or use six.text_type()')
@@ -446,6 +467,9 @@ class CheckForTransAdd(BaseASTChecker):
     should instead include the string being added to the translated
     string to give the translators the most information.
     """
+
+    name = 'check_for_trans_add'
+    version = '0.1'
 
     CHECK_DESC = ('N326 Translated messages cannot be concatenated.  '
                   'String should be included in translated message.')
@@ -504,6 +528,9 @@ class CheckForUncalledTestClosure(BaseASTChecker):
     N349
     """
 
+    name = 'check_for_uncalled_test_closure'
+    version = '0.1'
+
     def __init__(self, tree, filename):
         super(CheckForUncalledTestClosure, self).__init__(tree, filename)
         self._filename = filename
@@ -532,6 +559,7 @@ class CheckForUncalledTestClosure(BaseASTChecker):
                     % ','.join(missed))
 
 
+@core.flake8ext
 def assert_true_or_false_with_in(logical_line):
     """Check for assertTrue/False(A in B), assertTrue/False(A not in B),
     assertTrue/False(A in B, message) or assertTrue/False(A not in B, message)
@@ -547,6 +575,7 @@ def assert_true_or_false_with_in(logical_line):
                   "contents.")
 
 
+@core.flake8ext
 def assert_raises_regexp(logical_line):
     """Check for usage of deprecated assertRaisesRegexp
 
@@ -558,6 +587,7 @@ def assert_raises_regexp(logical_line):
                   "of assertRaisesRegexp")
 
 
+@core.flake8ext
 def dict_constructor_with_list_copy(logical_line):
     msg = ("N336: Must use a dict comprehension instead of a dict constructor"
            " with a sequence of key-value pairs."
@@ -566,6 +596,7 @@ def dict_constructor_with_list_copy(logical_line):
         yield (0, msg)
 
 
+@core.flake8ext
 def assert_equal_in(logical_line):
     """Check for assertEqual(A in B, True), assertEqual(True, A in B),
     assertEqual(A in B, False) or assertEqual(False, A in B) sentences
@@ -580,7 +611,8 @@ def assert_equal_in(logical_line):
                   "contents.")
 
 
-def check_http_not_implemented(logical_line, physical_line, filename, noqa):
+@core.flake8ext
+def check_http_not_implemented(logical_line, filename, noqa):
     msg = ("N339: HTTPNotImplemented response must be implemented with"
            " common raise_feature_not_supported().")
     if noqa:
@@ -591,7 +623,8 @@ def check_http_not_implemented(logical_line, physical_line, filename, noqa):
         yield (0, msg)
 
 
-def check_greenthread_spawns(logical_line, physical_line, filename):
+@core.flake8ext
+def check_greenthread_spawns(logical_line, filename):
     """Check for use of greenthread.spawn(), greenthread.spawn_n(),
     eventlet.spawn(), and eventlet.spawn_n()
 
@@ -608,6 +641,7 @@ def check_greenthread_spawns(logical_line, physical_line, filename):
         yield (0, msg % {'spawn': match.group('spawn_part')})
 
 
+@core.flake8ext
 def check_no_contextlib_nested(logical_line, filename):
     msg = ("N341: contextlib.nested is deprecated. With Python 2.7 and later "
            "the with-statement supports multiple nested objects. See https://"
@@ -618,6 +652,7 @@ def check_no_contextlib_nested(logical_line, filename):
         yield (0, msg)
 
 
+@core.flake8ext
 def check_config_option_in_central_place(logical_line, filename):
     msg = ("N342: Config options should be in the central location "
            "'/nova/conf/*'. Do not declare new config options outside "
@@ -647,6 +682,7 @@ def check_config_option_in_central_place(logical_line, filename):
         yield (0, msg)
 
 
+@core.flake8ext
 def check_policy_registration_in_central_place(logical_line, filename):
     msg = ('N350: Policy registration should be in the central location(s) '
            '"/nova/policies/*"')
@@ -661,6 +697,7 @@ def check_policy_registration_in_central_place(logical_line, filename):
         yield (0, msg)
 
 
+@core.flake8ext
 def check_policy_enforce(logical_line, filename):
     """Look for uses of nova.policy._ENFORCER.enforce()
 
@@ -679,6 +716,7 @@ def check_policy_enforce(logical_line, filename):
         yield (0, msg)
 
 
+@core.flake8ext
 def check_doubled_words(physical_line, filename):
     """Check for the common doubled-word typos
 
@@ -692,6 +730,7 @@ def check_doubled_words(physical_line, filename):
         return (0, msg % {'word': match.group(1)})
 
 
+@core.flake8ext
 def check_python3_no_iteritems(logical_line):
     msg = ("N344: Use items() instead of dict.iteritems().")
 
@@ -699,6 +738,7 @@ def check_python3_no_iteritems(logical_line):
         yield (0, msg)
 
 
+@core.flake8ext
 def check_python3_no_iterkeys(logical_line):
     msg = ("N345: Use six.iterkeys() instead of dict.iterkeys().")
 
@@ -706,6 +746,7 @@ def check_python3_no_iterkeys(logical_line):
         yield (0, msg)
 
 
+@core.flake8ext
 def check_python3_no_itervalues(logical_line):
     msg = ("N346: Use six.itervalues() instead of dict.itervalues().")
 
@@ -713,6 +754,7 @@ def check_python3_no_itervalues(logical_line):
         yield (0, msg)
 
 
+@core.flake8ext
 def no_os_popen(logical_line):
     """Disallow 'os.popen('
 
@@ -727,6 +769,7 @@ def no_os_popen(logical_line):
                   'Replace it using subprocess module. ')
 
 
+@core.flake8ext
 def no_log_warn(logical_line):
     """Disallow 'LOG.warn('
 
@@ -741,7 +784,8 @@ def no_log_warn(logical_line):
         yield (0, msg)
 
 
-def check_context_log(logical_line, physical_line, filename, noqa):
+@core.flake8ext
+def check_context_log(logical_line, filename, noqa):
     """check whether context is being passed to the logs
 
     Not correct: LOG.info(_LI("Rebooting instance"), context=context)
@@ -764,6 +808,7 @@ def check_context_log(logical_line, physical_line, filename, noqa):
                "kwarg.")
 
 
+@core.flake8ext
 def no_assert_equal_true_false(logical_line):
     """Enforce use of assertTrue/assertFalse.
 
@@ -782,6 +827,7 @@ def no_assert_equal_true_false(logical_line):
                "Use assertTrue(A) or assertFalse(A) instead")
 
 
+@core.flake8ext
 def no_assert_true_false_is_not(logical_line):
     """Enforce use of assertIs/assertIsNot.
 
@@ -797,6 +843,7 @@ def no_assert_true_false_is_not(logical_line):
                "Use assertIs(A, B) or assertIsNot(A, B) instead")
 
 
+@core.flake8ext
 def check_uuid4(logical_line):
     """Generating UUID
 
@@ -813,6 +860,7 @@ def check_uuid4(logical_line):
         yield (0, msg)
 
 
+@core.flake8ext
 def return_followed_by_space(logical_line):
     """Return should be followed by a space.
 
@@ -830,6 +878,7 @@ def return_followed_by_space(logical_line):
                "N358: Return keyword should be followed by a space.")
 
 
+@core.flake8ext
 def no_redundant_import_alias(logical_line):
     """Check for redundant import aliases.
 
@@ -845,6 +894,7 @@ def no_redundant_import_alias(logical_line):
         yield (0, "N359: Import alias should not be redundant.")
 
 
+@core.flake8ext
 def yield_followed_by_space(logical_line):
     """Yield should be followed by a space.
 
@@ -862,6 +912,7 @@ def yield_followed_by_space(logical_line):
                "N360: Yield keyword should be followed by a space.")
 
 
+@core.flake8ext
 def assert_regexpmatches(logical_line):
     """Check for usage of deprecated assertRegexpMatches/assertNotRegexpMatches
 
@@ -873,6 +924,7 @@ def assert_regexpmatches(logical_line):
                   "of assertRegexpMatches/assertNotRegexpMatches.")
 
 
+@core.flake8ext
 def privsep_imports_not_aliased(logical_line, filename):
     """Do not abbreviate or alias privsep module imports.
 
@@ -901,6 +953,7 @@ def privsep_imports_not_aliased(logical_line, filename):
                   "'from nova.privsep import path'.")
 
 
+@core.flake8ext
 def did_you_mean_tuple(logical_line):
     """Disallow ``(not_a_tuple)`` because you meant ``(a_tuple_of_one,)``.
 
@@ -911,6 +964,7 @@ def did_you_mean_tuple(logical_line):
                   "certainly meant ``in (a_tuple_of_one,)``.")
 
 
+@core.flake8ext
 def nonexistent_assertion_methods_and_attributes(logical_line, filename):
     """Check non-existent mock assertion methods and attributes.
 
@@ -944,6 +998,7 @@ def nonexistent_assertion_methods_and_attributes(logical_line, filename):
             yield (0, msg % match.group(1))
 
 
+@core.flake8ext
 def useless_assertion(logical_line, filename):
     """Check useless assertions in tests.
 
@@ -964,53 +1019,3 @@ def useless_assertion(logical_line, filename):
         match = useless_assertion_re.search(logical_line)
         if match:
             yield (0, msg % (match.group(2) or match.group(3)))
-
-
-def factory(register):
-    register(import_no_db_in_virt)
-    register(no_db_session_in_public_api)
-    register(use_timeutils_utcnow)
-    register(import_no_virt_driver_import_deps)
-    register(import_no_virt_driver_config_deps)
-    register(capital_cfg_help)
-    register(no_import_translation_in_tests)
-    register(assert_true_instance)
-    register(assert_equal_type)
-    register(assert_raises_regexp)
-    register(no_translate_debug_logs)
-    register(no_setting_conf_directly_in_tests)
-    register(no_mutable_default_args)
-    register(check_explicit_underscore_import)
-    register(use_jsonutils)
-    register(check_api_version_decorator)
-    register(CheckForStrUnicodeExc)
-    register(CheckForTransAdd)
-    register(assert_true_or_false_with_in)
-    register(dict_constructor_with_list_copy)
-    register(assert_equal_in)
-    register(check_http_not_implemented)
-    register(check_no_contextlib_nested)
-    register(check_greenthread_spawns)
-    register(check_config_option_in_central_place)
-    register(check_policy_registration_in_central_place)
-    register(check_policy_enforce)
-    register(check_doubled_words)
-    register(check_python3_no_iteritems)
-    register(check_python3_no_iterkeys)
-    register(check_python3_no_itervalues)
-    register(check_python3_xrange)
-    register(no_os_popen)
-    register(no_log_warn)
-    register(CheckForUncalledTestClosure)
-    register(check_context_log)
-    register(no_assert_equal_true_false)
-    register(no_assert_true_false_is_not)
-    register(check_uuid4)
-    register(return_followed_by_space)
-    register(no_redundant_import_alias)
-    register(yield_followed_by_space)
-    register(assert_regexpmatches)
-    register(privsep_imports_not_aliased)
-    register(did_you_mean_tuple)
-    register(nonexistent_assertion_methods_and_attributes)
-    register(useless_assertion)
