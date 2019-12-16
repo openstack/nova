@@ -1644,10 +1644,13 @@ class _ComputeAPIUnitTestMixIn(object):
 
         test()
 
+    @mock.patch('nova.compute.api.API._get_source_compute_service')
+    @mock.patch('nova.servicegroup.api.API.service_is_up', return_value=True)
     @mock.patch.object(objects.Migration, 'save')
     @mock.patch.object(objects.Migration, 'get_by_instance_and_status')
     @mock.patch.object(context.RequestContext, 'elevated')
     def _test_confirm_resize(self, mock_elevated, mock_get, mock_save,
+                             mock_service_is_up, mock_get_service,
                              mig_ref_passed=False):
         params = dict(vm_state=vm_states.RESIZED)
         fake_inst = self._create_instance_obj(params=params)
@@ -1678,6 +1681,8 @@ class _ComputeAPIUnitTestMixIn(object):
             self.compute_api.confirm_resize(self.context, fake_inst)
 
         mock_elevated.assert_called_once_with()
+        mock_service_is_up.assert_called_once_with(
+            mock_get_service.return_value)
         mock_save.assert_called_once_with()
         mock_record.assert_called_once_with(self.context, fake_inst,
                                             'confirmResize')
@@ -1693,6 +1698,34 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def test_confirm_resize_with_migration_ref(self):
         self._test_confirm_resize(mig_ref_passed=True)
+
+    @mock.patch('nova.objects.HostMapping.get_by_host',
+                return_value=objects.HostMapping(
+                    cell_mapping=objects.CellMapping(
+                        database_connection='fake://', transport_url='none://',
+                        uuid=uuids.cell_uuid)))
+    @mock.patch('nova.objects.Service.get_by_compute_host')
+    def test_get_source_compute_service(self, mock_service_get, mock_hm_get):
+        # First start with a same-cell migration.
+        migration = objects.Migration(source_compute='source.host',
+                                      cross_cell_move=False)
+        self.compute_api._get_source_compute_service(self.context, migration)
+        mock_hm_get.assert_not_called()
+        mock_service_get.assert_called_once_with(self.context, 'source.host')
+        # Make sure the context was not targeted.
+        ctxt = mock_service_get.call_args[0][0]
+        self.assertIsNone(ctxt.cell_uuid)
+
+        # Now test with a cross-cell migration.
+        mock_service_get.reset_mock()
+        migration.cross_cell_move = True
+        self.compute_api._get_source_compute_service(self.context, migration)
+        mock_hm_get.assert_called_once_with(self.context, 'source.host')
+        mock_service_get.assert_called_once_with(
+            test.MatchType(context.RequestContext), 'source.host')
+        # Make sure the context was targeted.
+        ctxt = mock_service_get.call_args[0][0]
+        self.assertEqual(uuids.cell_uuid, ctxt.cell_uuid)
 
     @mock.patch('nova.virt.hardware.numa_get_constraints')
     @mock.patch('nova.network.neutron.API.get_requested_resource_for_instance',
@@ -7460,8 +7493,10 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         self._test_get_migrations_sorted_filter_duplicates(
             [older, newer], newer)
 
+    @mock.patch('nova.servicegroup.api.API.service_is_up', return_value=True)
     @mock.patch('nova.objects.Migration.get_by_instance_and_status')
-    def test_confirm_resize_cross_cell_move_true(self, mock_migration_get):
+    def test_confirm_resize_cross_cell_move_true(self, mock_migration_get,
+                                                 mock_service_is_up):
         """Tests confirm_resize where Migration.cross_cell_move is True"""
         instance = fake_instance.fake_instance_obj(
             self.context, vm_state=vm_states.RESIZED, task_state=None,
@@ -7475,12 +7510,15 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             mock.patch.object(self.compute_api, '_record_action_start'),
             mock.patch.object(self.compute_api.compute_task_api,
                               'confirm_snapshot_based_resize'),
+            mock.patch.object(self.compute_api, '_get_source_compute_service'),
         ) as (
             mock_elevated, mock_migration_save, mock_record_action,
-            mock_conductor_confirm
+            mock_conductor_confirm, mock_get_service
         ):
             self.compute_api.confirm_resize(self.context, instance)
         mock_elevated.assert_called_once_with()
+        mock_service_is_up.assert_called_once_with(
+            mock_get_service.return_value)
         mock_migration_save.assert_called_once_with()
         self.assertEqual('confirming', migration.status)
         mock_record_action.assert_called_once_with(

@@ -219,7 +219,8 @@ class HostManagerTestCase(test.NoDBTestCase):
         inst2 = objects.Instance(host='host1', uuid=uuids.instance_2)
         inst3 = objects.Instance(host='host2', uuid=uuids.instance_3)
         cell = objects.CellMapping(database_connection='',
-                                   target_url='')
+                                   target_url='',
+                                   uuid=uuids.cell_uuid)
         mock_get_by_filters.return_value = objects.InstanceList(
                 objects=[inst1, inst2, inst3])
         hm = self.host_manager
@@ -589,7 +590,7 @@ class HostManagerTestCase(test.NoDBTestCase):
         mock_get_by_host.return_value = []
         mock_get_all.return_value = fakes.COMPUTE_NODES
         mock_get_by_binary.return_value = fakes.SERVICES
-        context = 'fake_context'
+        context = nova_context.get_admin_context()
         compute_nodes, services = self.host_manager._get_computes_for_cells(
             context, self.host_manager.enabled_cells)
 
@@ -786,7 +787,7 @@ class HostManagerTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
     def test_host_state_not_updated(self, mock_get_by_host):
-        context = 'fake_context'
+        context = nova_context.get_admin_context()
         hm = self.host_manager
         inst1 = objects.Instance(uuid=uuids.instance)
         cn1 = objects.ComputeNode(host='host1')
@@ -806,10 +807,11 @@ class HostManagerTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
     def test_recreate_instance_info(self, mock_get_by_host):
+        context = nova_context.get_admin_context()
         host_name = 'fake_host'
-        inst1 = fake_instance.fake_instance_obj('fake_context',
+        inst1 = fake_instance.fake_instance_obj(context,
                                                 uuid=uuids.instance_1)
-        inst2 = fake_instance.fake_instance_obj('fake_context',
+        inst2 = fake_instance.fake_instance_obj(context,
                                                 uuid=uuids.instance_2)
         orig_inst_dict = {inst1.uuid: inst1, inst2.uuid: inst2}
         mock_get_by_host.return_value = [uuids.instance_1, uuids.instance_2]
@@ -818,7 +820,7 @@ class HostManagerTestCase(test.NoDBTestCase):
                     'instances': orig_inst_dict,
                     'updated': True,
                 }}
-        self.host_manager._recreate_instance_info('fake_context', host_name)
+        self.host_manager._recreate_instance_info(context, host_name)
         new_info = self.host_manager._instance_info[host_name]
         self.assertEqual(len(new_info['instances']),
                          len(mock_get_by_host.return_value))
@@ -1231,7 +1233,7 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
         mock_get_by_host.return_value = []
         mock_get_all.return_value = fakes.COMPUTE_NODES
         mock_get_by_binary.return_value = fakes.SERVICES
-        context = 'fake_context'
+        context = nova_context.get_admin_context()
 
         compute_nodes, services = self.host_manager._get_computes_for_cells(
             context, self.host_manager.enabled_cells)
@@ -1256,7 +1258,7 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
         mock_get_by_host.return_value = []
         mock_get_all.side_effect = [fakes.COMPUTE_NODES, running_nodes]
         mock_get_by_binary.side_effect = [fakes.SERVICES, fakes.SERVICES]
-        context = 'fake_context'
+        context = nova_context.get_admin_context()
 
         # first call: all nodes
         compute_nodes, services = self.host_manager._get_computes_for_cells(
@@ -1286,7 +1288,7 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
         mock_get_by_host.return_value = []
         mock_get_all.side_effect = [fakes.COMPUTE_NODES, []]
         mock_get_by_binary.side_effect = [fakes.SERVICES, fakes.SERVICES]
-        context = 'fake_context'
+        context = nova_context.get_admin_context()
 
         # first call: all nodes
         compute_nodes, services = self.host_manager._get_computes_for_cells(
