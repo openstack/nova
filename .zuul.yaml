@@ -301,7 +301,7 @@
             irrelevant-files: *dsvm-irrelevant-files
         - legacy-grenade-dsvm-neutron-multinode-zero-downtime:
             irrelevant-files: *dsvm-irrelevant-files
-        - legacy-tempest-dsvm-full-devstack-plugin-nfs:
+        - devstack-plugin-nfs-tempest-full:
             irrelevant-files: *dsvm-irrelevant-files
         - tempest-full-py3-opensuse15:
             irrelevant-files: *dsvm-irrelevant-files
