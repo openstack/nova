@@ -488,7 +488,7 @@
               - ^nova/locale/.*$
               - ^nova/tests/.*$
               - ^tests-py3.txt$
-        - legacy-tempest-dsvm-full-devstack-plugin-nfs:
+        - devstack-plugin-nfs-tempest-full:
             irrelevant-files:
               - ^(placement-)?api-.*$
               - ^(test-|)requirements.txt$
