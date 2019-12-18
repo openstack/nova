@@ -399,7 +399,10 @@ class BuildRequestList(base.ObjectListBase, base.NovaObject):
         if marker:
             for i, build_req in enumerate(sorted_build_reqs):
                 if build_req.instance.uuid == marker:
-                    marker_index = i
+                    # The marker is the last seen item in the last page, so
+                    # we increment the index to the next item immediately
+                    # after the marker so the marker is not returned.
+                    marker_index = i + 1
                     break
             else:
                 raise exception.MarkerNotFound(marker=marker)
