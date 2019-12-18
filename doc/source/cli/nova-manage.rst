@@ -643,6 +643,8 @@ Placement
        * - 255
          - An unexpected error occurred.
 
+.. _sync_aggregates_cli:
+
 ``nova-manage placement sync_aggregates [--verbose]``
     Mirrors compute host aggregates to resource provider aggregates
     in the Placement service. Requires the :oslo.config:group:`api_database`
