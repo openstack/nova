@@ -435,3 +435,42 @@ class TestRequestFilter(test.NoDBTestCase):
             request_filter.transform_image_metadata(self.context, reqspec)
         )
         self.assertEqual(set(), reqspec.root_required)
+
+    @mock.patch.object(request_filter, 'LOG')
+    def test_accelerators_filter_with_device_profile(self, mock_log):
+        # First ensure that accelerators_filter is included
+        self.assertIn(request_filter.accelerators_filter,
+                      request_filter.ALL_REQUEST_FILTERS)
+
+        es = {'accel:device_profile': 'mydp'}
+        reqspec = objects.RequestSpec(flavor=objects.Flavor(extra_specs=es))
+        self.assertEqual(set(), reqspec.root_required)
+        self.assertEqual(set(), reqspec.root_forbidden)
+
+        # Request filter puts the trait into the request spec
+        request_filter.accelerators_filter(self.context, reqspec)
+        self.assertEqual({ot.COMPUTE_ACCELERATORS}, reqspec.root_required)
+        self.assertEqual(set(), reqspec.root_forbidden)
+
+        # Assert both the in-method logging and trace decorator.
+        log_lines = [c[0][0] for c in mock_log.debug.call_args_list]
+        self.assertIn('added required trait', log_lines[0])
+        self.assertIn('took %.1f seconds', log_lines[1])
+
+    @mock.patch.object(request_filter, 'LOG')
+    def test_accelerators_filter_no_device_profile(self, mock_log):
+        # First ensure that accelerators_filter is included
+        self.assertIn(request_filter.accelerators_filter,
+                      request_filter.ALL_REQUEST_FILTERS)
+
+        reqspec = objects.RequestSpec(flavor=objects.Flavor(extra_specs={}))
+        self.assertEqual(set(), reqspec.root_required)
+        self.assertEqual(set(), reqspec.root_forbidden)
+
+        # Request filter puts the trait into the request spec
+        request_filter.accelerators_filter(self.context, reqspec)
+        self.assertEqual(set(), reqspec.root_required)
+        self.assertEqual(set(), reqspec.root_forbidden)
+
+        # Assert about logging
+        mock_log.assert_not_called()

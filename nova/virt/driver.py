@@ -110,6 +110,7 @@ CAPABILITY_TRAITS_MAP = {
     "supports_multiattach": os_traits.COMPUTE_VOLUME_MULTI_ATTACH,
     # Added in os-traits 0.8.0.
     "supports_trusted_certs": os_traits.COMPUTE_TRUSTED_CERTS,
+    "supports_accelerators": os_traits.COMPUTE_ACCELERATORS,
 
     # Image type support flags, added in os-traits 0.12.0
     "supports_image_type_aki": os_traits.COMPUTE_IMAGE_TYPE_AKI,
@@ -176,6 +177,7 @@ class ComputeDriver(object):
         "supports_multiattach": False,
         "supports_trusted_certs": False,
         "supports_pcpus": False,
+        "supports_accelerators": False,
 
         # Image type support flags
         "supports_image_type_aki": False,

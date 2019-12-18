@@ -332,6 +332,7 @@ class LibvirtDriver(driver.ComputeDriver):
             "supports_image_type_qcow2": not requires_raw_image,
             "supports_image_type_ploop": requires_ploop_image,
             "supports_pcpus": True,
+            "supports_accelerators": True,
         }
         super(LibvirtDriver, self).__init__(virtapi)
 

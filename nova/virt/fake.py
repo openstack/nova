@@ -113,6 +113,7 @@ class FakeDriver(driver.ComputeDriver):
         "supports_multiattach": True,
         "supports_trusted_certs": True,
         "supports_pcpus": False,
+        "supports_accelerators": True,
 
         # Supported image types
         "supports_image_type_raw": True,
