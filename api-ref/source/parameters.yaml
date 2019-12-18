@@ -3832,7 +3832,7 @@ hypervisors:
 image:
   description: |
     The UUID and links for the image for your server instance. The ``image`` object
-    might be an empty string when you boot the server from a volume.
+    will be an empty string when you boot the server from a volume.
   in: body
   required: true
   type: object
