@@ -285,6 +285,7 @@ class ComputeTaskAPI(object):
            potential alternate hosts for retries within a cell.
     1.21 - Added cache_images()
     1.22 - Added confirm_snapshot_based_resize()
+    1.23 - Added revert_snapshot_based_resize()
     """
 
     def __init__(self):
@@ -465,3 +466,11 @@ class ComputeTaskAPI(object):
         if do_cast:
             return cctxt.cast(ctxt, 'confirm_snapshot_based_resize', **kw)
         return cctxt.call(ctxt, 'confirm_snapshot_based_resize', **kw)
+
+    def revert_snapshot_based_resize(self, ctxt, instance, migration):
+        version = '1.23'
+        if not self.client.can_send_version(version):
+            raise exception.ServiceTooOld(_('nova-conductor too old'))
+        kw = {'instance': instance, 'migration': migration}
+        cctxt = self.client.prepare(version=version)
+        return cctxt.cast(ctxt, 'revert_snapshot_based_resize', **kw)

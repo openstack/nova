@@ -180,3 +180,8 @@ class ComputeTaskAPI(object):
             self, ctxt, instance, migration, do_cast=True):
         self.conductor_compute_rpcapi.confirm_snapshot_based_resize(
             ctxt, instance, migration, do_cast=do_cast)
+
+    def revert_snapshot_based_resize(
+            self, ctxt, instance, migration):
+        self.conductor_compute_rpcapi.revert_snapshot_based_resize(
+            ctxt, instance, migration)
