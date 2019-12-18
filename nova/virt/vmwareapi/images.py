@@ -340,9 +340,10 @@ def _build_import_spec_for_import_vapp(session, vm_name, datastore_name):
 
 
 def fetch_image_stream_optimized(context, instance, session, vm_name,
-                                 ds_name, vm_folder_ref, res_pool_ref):
+                                 ds_name, vm_folder_ref, res_pool_ref,
+                                 image_id=None):
     """Fetch image from Glance to ESX datastore."""
-    image_ref = instance.image_ref
+    image_ref = image_id if image_id else instance.image_ref
     LOG.debug("Downloading image file data %(image_ref)s to the ESX "
               "as VM named '%(vm_name)s'",
               {'image_ref': image_ref, 'vm_name': vm_name},

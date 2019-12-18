@@ -2961,7 +2961,8 @@ class VMwareVMOpsTestCase(test.TestCase):
                 'fake-name',
                 self._ds.name,
                 vi.dc_info.vmFolder,
-                self._vmops._root_resource_pool)
+                self._vmops._root_resource_pool,
+                image_id=self._image_id)
         self.assertEqual(vi.ii.file_size, 123)
 
     @mock.patch.object(images, 'fetch_image_ova', return_value=(123, '123'))
