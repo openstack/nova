@@ -400,8 +400,6 @@ class MigrationTask(base.TaskBase):
             selection = self._reschedule()
 
         scheduler_utils.populate_filter_properties(legacy_props, selection)
-        # context is not serializable
-        legacy_props.pop('context', None)
 
         (host, node) = (selection.service_host, selection.nodename)
 
