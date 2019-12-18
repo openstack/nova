@@ -1,0 +1,10 @@
+---
+fixes:
+  - |
+    `Bug 1811726`_ is fixed by deleting the resource provider (in placement)
+    associated with each compute node record managed by a ``nova-compute``
+    service when that service is deleted via the
+    ``DELETE /os-services/{service_id}`` API. This is particularly important
+    for compute services managing ironic baremetal nodes.
+
+    .. _Bug 1811726: https://bugs.launchpad.net/nova/+bug/1811726
