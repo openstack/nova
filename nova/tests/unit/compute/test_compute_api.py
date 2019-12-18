@@ -3885,6 +3885,22 @@ class _ComputeAPIUnitTestMixIn(object):
         _check_auto_disk_config.assert_called_once_with(
             image=image, auto_disk_config=None)
 
+    @mock.patch('nova.objects.Quotas.limit_check')
+    def test_check_metadata_properties_quota_with_empty_dict(self,
+                                                             limit_check):
+        metadata = {}
+        self.compute_api._check_metadata_properties_quota(self.context,
+                                                          metadata)
+        self.assertEqual(0, limit_check.call_count)
+
+    @mock.patch('nova.objects.Quotas.limit_check')
+    def test_check_injected_file_quota_with_empty_list(self,
+                                                       limit_check):
+        injected_files = []
+        self.compute_api._check_injected_file_quota(self.context,
+                                                    injected_files)
+        self.assertEqual(0, limit_check.call_count)
+
     def _test_check_injected_file_quota_onset_file_limit_exceeded(self,
                                                                   side_effect):
         injected_files = [
