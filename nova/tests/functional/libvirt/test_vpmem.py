@@ -187,6 +187,7 @@ class VPMEMTests(VPMEMTestBase):
 
         # Delete server2, one 'SMALL' VPMEM will be released
         self._delete_server(server2)
+        self._wait_until_deleted(server2)
         server3 = self._create_server(self.flavor, self.compute1.host)
         self._wait_for_state_change(server3, 'ACTIVE')
         self._check_vpmem_allocations({'CUSTOM_PMEM_NAMESPACE_SMALL': 1},
