@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    This release contains a fix for `bug 1856925`_ such that ``resize`` and
+    ``migrate`` server actions will be rejected with a 409 ``HTTPConflict``
+    response if the source compute service is down.
+
+    .. _bug 1856925: https://bugs.launchpad.net/nova/+bug/1856925

@@ -131,9 +131,9 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
                               body={'migrate': None})
             mock_resize.assert_called_once_with(
                 self.context, instance, host_name=self.host_name)
-        self.mock_get.assert_called_once_with(self.context, instance.uuid,
-                                              expected_attrs=['flavor'],
-                                              cell_down_support=False)
+        self.mock_get.assert_called_once_with(
+            self.context, instance.uuid, expected_attrs=['flavor', 'services'],
+            cell_down_support=False)
 
     def test_migrate_too_many_instances(self):
         exc_info = exception.TooManyInstances(overs='', req='', used=0,

@@ -101,9 +101,9 @@ class TestComputeTaskNotificationSample(
                                     'hw:numa_cpus.0': '0',
                                     'hw:numa_mem.0': 512})
         self._wait_for_notification('instance.create.end')
-        # Force down the compute node
+        # Disable the compute node
         service_id = self.api.get_service_id('nova-compute')
-        self.admin_api.put_service_force_down(service_id, True)
+        self.admin_api.put_service(service_id, {'status': 'disabled'})
 
         fake_notifier.reset()
 
