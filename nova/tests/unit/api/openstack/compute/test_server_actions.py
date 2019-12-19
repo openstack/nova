@@ -138,9 +138,11 @@ class ServerActionsControllerTestV21(test.TestCase):
                               eval(controller_function),
                               self.req, instance['uuid'],
                               body=body_map.get(action))
-
+            expected_attrs = ['flavor', 'numa_topology']
+            if method == 'resize':
+                expected_attrs.append('services')
             mock_get.assert_called_once_with(self.context, uuid,
-                expected_attrs=['flavor', 'numa_topology'],
+                expected_attrs=expected_attrs,
                 cell_down_support=False)
             mock_method.assert_called_once_with(self.context, instance,
                                                 *args, **kwargs)

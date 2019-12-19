@@ -686,6 +686,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         # NOTE(gibi): tags are not saved through the instance
         pass
 
+    def _save_services(self, context):
+        # NOTE(mriedem): services are not saved through the instance
+        pass
+
     @staticmethod
     def _nullify_flavor_description(flavor_info):
         """Helper method to nullify descriptions from a set of primitive

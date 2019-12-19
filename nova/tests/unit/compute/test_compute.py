@@ -12509,6 +12509,8 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
         self.assertRaises(exception.FlavorNotFound,
             self.compute_api.create, self.context, self.inst_type, None)
 
+    @mock.patch('nova.compute.api.API.get_instance_host_status',
+                new=mock.Mock(return_value=obj_fields.HostStatus.UP))
     @mock.patch('nova.compute.api.API._validate_flavor_image_nostatus')
     @mock.patch('nova.objects.RequestSpec')
     def test_can_resize_to_visible_instance_type(self, mock_reqspec,
@@ -12531,6 +12533,8 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
         with mock.patch('nova.conductor.api.ComputeTaskAPI.resize_instance'):
             self.compute_api.resize(self.context, instance, '4')
 
+    @mock.patch('nova.compute.api.API.get_instance_host_status',
+                new=mock.Mock(return_value=obj_fields.HostStatus.UP))
     def test_cannot_resize_to_disabled_instance_type(self):
         instance = self._create_fake_instance_obj()
         orig_get_flavor_by_flavor_id = \
