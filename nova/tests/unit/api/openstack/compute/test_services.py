@@ -1201,7 +1201,7 @@ class ServicesTestV253(test.TestCase):
 
     def test_update_policy_failed(self):
         """Tests that policy is checked with microversion 2.53."""
-        rule_name = "os_compute_api:os-services"
+        rule_name = "os_compute_api:os-services:update"
         self.policy.set_rules({rule_name: "project_id:non_fake"})
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,

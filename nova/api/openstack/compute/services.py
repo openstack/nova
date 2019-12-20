@@ -64,7 +64,6 @@ class ServiceController(wsgi.Controller):
         api_services = ('nova-osapi_compute', 'nova-metadata')
 
         context = req.environ['nova.context']
-        context.can(services_policies.BASE_POLICY_NAME)
 
         cell_down_support = api_version_request.is_supported(
             req, min_version=PARTIAL_CONSTRUCT_FOR_CELL_DOWN_MIN_VERSION)
@@ -218,7 +217,6 @@ class ServiceController(wsgi.Controller):
     def _perform_action(self, req, id, body, actions):
         """Calculate action dictionary dependent on provided fields"""
         context = req.environ['nova.context']
-        context.can(services_policies.BASE_POLICY_NAME)
 
         try:
             action = actions[id]
@@ -233,7 +231,7 @@ class ServiceController(wsgi.Controller):
     def delete(self, req, id):
         """Deletes the specified service."""
         context = req.environ['nova.context']
-        context.can(services_policies.BASE_POLICY_NAME)
+        context.can(services_policies.BASE_POLICY_NAME % 'delete')
 
         if api_version_request.is_supported(
                 req, min_version=UUID_FOR_ID_MIN_VERSION):
@@ -348,6 +346,8 @@ class ServiceController(wsgi.Controller):
         """Return a list of all running services. Filter by host & service
         name
         """
+        context = req.environ['nova.context']
+        context.can(services_policies.BASE_POLICY_NAME % 'list')
         if api_version_request.is_supported(req, min_version='2.11'):
             _services = self._get_services_list(req, ['forced_down'])
         else:
@@ -367,6 +367,8 @@ class ServiceController(wsgi.Controller):
         service ID passed on the path, just the action, for example
         PUT /os-services/disable.
         """
+        context = req.environ['nova.context']
+        context.can(services_policies.BASE_POLICY_NAME % 'update')
         if api_version_request.is_supported(req, min_version='2.11'):
             actions = self.actions.copy()
             actions["force-down"] = self._forced_down
@@ -393,7 +395,7 @@ class ServiceController(wsgi.Controller):
 
         # Validate the request context against the policy.
         context = req.environ['nova.context']
-        context.can(services_policies.BASE_POLICY_NAME)
+        context.can(services_policies.BASE_POLICY_NAME % 'update')
 
         # Get the service by uuid.
         try:
