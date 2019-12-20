@@ -168,10 +168,8 @@ class InstanceHelperMixin(object):
                 if action['action'] != action_name:
                     continue
 
-                events = api.api_get(
-                    '/servers/%s/os-instance-actions/%s' % (
-                        server['id'], action['request_id'])
-                ).body['instanceAction']['events']
+                events = api.get_instance_action_details(server['id'],
+                        action['request_id'])['events']
 
                 # Look for the action event being in error state.
                 for event in events:

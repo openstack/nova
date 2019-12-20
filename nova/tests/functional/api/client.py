@@ -403,6 +403,10 @@ class TestOpenStackClient(object):
         return self.api_get('/servers/%s/os-instance-actions' %
                             (server_id)).body['instanceActions']
 
+    def get_instance_action_details(self, server_id, request_id):
+        return self.api_get('/servers/%s/os-instance-actions/%s' %
+                            (server_id, request_id)).body['instanceAction']
+
     def post_aggregate(self, aggregate):
         return self.api_post('/os-aggregates', aggregate).body['aggregate']
 

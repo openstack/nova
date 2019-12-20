@@ -59,10 +59,8 @@ class ServerExternalEventsTestV276(
         acts = {action['action']: action for action in actions}
         self.assertEqual(['create', 'stop'], sorted(acts))
         stop_action = acts[instance_actions.STOP]
-        detail = self.api.api_get(
-            '/servers/%s/os-instance-actions/%s' % (
-                server['id'], stop_action['request_id'])
-        ).body['instanceAction']
+        detail = self.api.get_instance_action_details(server['id'],
+                stop_action['request_id'])
         events_by_name = {event['event']: event for event in detail['events']}
         self.assertEqual(1, len(detail['events']), detail)
         self.assertIn('compute_power_update', events_by_name)
@@ -87,10 +85,8 @@ class ServerExternalEventsTestV276(
         acts = {action['action']: action for action in actions}
         self.assertEqual(['create', 'start', 'stop'], sorted(acts))
         start_action = acts[instance_actions.START]
-        detail = self.api.api_get(
-            '/servers/%s/os-instance-actions/%s' % (
-                server['id'], start_action['request_id'])
-        ).body['instanceAction']
+        detail = self.api.get_instance_action_details(server['id'],
+                start_action['request_id'])
         events_by_name = {event['event']: event for event in detail['events']}
         self.assertEqual(1, len(detail['events']), detail)
         self.assertIn('compute_power_update', events_by_name)
