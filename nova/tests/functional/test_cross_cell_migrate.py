@@ -171,10 +171,10 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         self.addCleanup(_p.stop)
 
     def _resize_and_validate(self, volume_backed=False, stopped=False,
-                             target_host=None):
-        """Creates and resizes the server to another cell. Validates various
-        aspects of the server and its related records (allocations, migrations,
-        actions, VIF tags, etc).
+                             target_host=None, server=None):
+        """Creates (if a server is not provided) and resizes the server to
+        another cell. Validates various aspects of the server and its related
+        records (allocations, migrations, actions, VIF tags, etc).
 
         :param volume_backed: True if the server should be volume-backed, False
             if image-backed.
@@ -182,6 +182,8 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
             False if the server should be ACTIVE
         :param target_host: If not None, triggers a cold migration to the
             specified host.
+        :param server: A pre-existing server to resize. If None this method
+            creates the server.
         :returns: tuple of:
             - server response object
             - source compute node resource provider uuid
@@ -189,10 +191,20 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
             - old flavor
             - new flavor
         """
-        # Create the server.
         flavors = self.api.get_flavors()
-        old_flavor = flavors[0]
-        server = self._create_server(old_flavor, volume_backed=volume_backed)
+        if server is None:
+            # Create the server.
+            old_flavor = flavors[0]
+            server = self._create_server(
+                old_flavor, volume_backed=volume_backed)
+        else:
+            for flavor in flavors:
+                if flavor['name'] == server['flavor']['original_name']:
+                    old_flavor = flavor
+                    break
+            else:
+                self.fail('Unable to find old flavor with name %s. Flavors: '
+                          '%s', server['flavor']['original_name'], flavors)
         original_host = server['OS-EXT-SRV-ATTR:host']
         image_uuid = None if volume_backed else server['image']['id']
 
@@ -247,12 +259,14 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertEqual('finished', migration['status'])
 
         # There should be at least two actions, one for create and one for the
-        # resize. There will be a third action if the server was stopped.
+        # resize. There will be a third action if the server was stopped. Use
+        # assertGreaterEqual in case a test performed some actions on a
+        # pre-created server before resizing it, like attaching a volume.
         actions = self.api.api_get(
             '/servers/%s/os-instance-actions' % server['id']
         ).body['instanceActions']
         expected_num_of_actions = 3 if stopped else 2
-        self.assertEqual(expected_num_of_actions, len(actions), actions)
+        self.assertGreaterEqual(len(actions), expected_num_of_actions, actions)
         # Each action should have events (make sure these were copied from
         # the source cell to the target cell).
         for action in actions:
@@ -313,10 +327,12 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
             # The availability_zone field in the DB should also be updated.
             self.assertEqual(target_cell_name, inst.availability_zone)
 
-        # Assert the VIF tag was carried through to the target cell DB.
-        interface_attachments = self.api.get_port_interfaces(server['id'])
-        self.assertEqual(1, len(interface_attachments))
-        self.assertEqual('private', interface_attachments[0]['tag'])
+        # A pre-created server might not have any ports attached.
+        if server['addresses']:
+            # Assert the VIF tag was carried through to the target cell DB.
+            interface_attachments = self.api.get_port_interfaces(server['id'])
+            self.assertEqual(1, len(interface_attachments))
+            self.assertEqual('private', interface_attachments[0]['tag'])
 
         if volume_backed:
             # Assert the BDM tag was carried through to the target cell DB.
@@ -391,6 +407,15 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         fake_notifier.wait_for_versioned_notifications(
             'instance.volume_attach.end')
 
+    def _detach_volume_from_server(self, server_id, volume_id):
+        """Detaches the volume from the server and waits for the
+        "instance.volume_detach.end" versioned notification.
+        """
+        self.api.api_delete(
+            '/servers/%s/os-volume_attachments/%s' % (server_id, volume_id))
+        fake_notifier.wait_for_versioned_notifications(
+            'instance.volume_detach.end')
+
     def assert_volume_is_attached(self, server_id, volume_id):
         """Asserts the volume is attached to the server."""
         server = self.api.get_server(server_id)
@@ -398,6 +423,14 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         attached_vol_ids = [attachment['id'] for attachment in attachments]
         self.assertIn(volume_id, attached_vol_ids,
                       'Attached volumes: %s' % attachments)
+
+    def assert_volume_is_detached(self, server_id, volume_id):
+        """Asserts the volume is detached from the server."""
+        server = self.api.get_server(server_id)
+        attachments = server['os-extended-volumes:volumes_attached']
+        attached_vol_ids = [attachment['id'] for attachment in attachments]
+        self.assertNotIn(volume_id, attached_vol_ids,
+                         'Attached volumes: %s' % attachments)
 
     def assert_resize_confirm_notifications(self):
         # We should have gotten only two notifications:
@@ -620,10 +653,6 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         # Attach a fake volume to the server to make sure it survives revert.
         self._attach_volume_to_server(server['id'], uuids.fake_volume_id)
 
-        # TODO(mriedem): Need a test wrinkle for revert where a volume is
-        # attached to the server before resize, then it is detached while
-        # resized, and then we revert and make sure it is still detached.
-
         # Reset the fake notifier so we only check revert notifications.
         fake_notifier.reset()
 
@@ -698,6 +727,31 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         self.assert_resize_revert_notifications()
 
         # Explicitly delete the server and make sure it's gone from all cells.
+        self.delete_server_and_assert_cleanup(server)
+
+    def test_resize_revert_detach_volume_while_resized(self):
+        """Test for resize revert where a volume is attached to the server
+        before resize, then it is detached while resized, and then we revert
+        and make sure it is still detached.
+        """
+        # Create the server up-front.
+        server = self._create_server(self.api.get_flavors()[0])
+        # Attach a random fake volume to the server.
+        self._attach_volume_to_server(server['id'], uuids.fake_volume_id)
+        # Resize the server.
+        self._resize_and_validate(server=server)
+        # Ensure the volume is still attached to the server in the target cell.
+        self.assert_volume_is_attached(server['id'], uuids.fake_volume_id)
+        # Detach the volume from the server in the target cell while the
+        # server is in VERIFY_RESIZE status.
+        self._detach_volume_from_server(server['id'], uuids.fake_volume_id)
+        # Revert the resize and assert the volume is still detached from the
+        # server after it has gone back to the source cell.
+        self.api.post_server_action(server['id'], {'revertResize': None})
+        server = self._wait_for_state_change(server, 'ACTIVE')
+        self._wait_for_migration_status(server, ['reverted'])
+        self.assert_volume_is_detached(server['id'], uuids.fake_volume_id)
+        # Delete the server and make sure we did not leak anything.
         self.delete_server_and_assert_cleanup(server)
 
     def test_delete_while_in_verify_resize_status(self):

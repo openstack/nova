@@ -5398,6 +5398,8 @@ class ComputeManager(manager.Manager):
         :raises: nova.exception.InstancePowerOffFailure if stopping the
             instance fails
         """
+        LOG.info('Preparing for snapshot based resize on source host %s.',
+                 self.host, instance=instance)
         # Note that if anything fails here, the migration-based allocations
         # created in conductor should be reverted by conductor as well,
         # see MigrationTask.rollback.

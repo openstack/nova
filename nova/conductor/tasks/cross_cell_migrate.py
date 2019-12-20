@@ -1200,9 +1200,6 @@ class RevertResizeTask(base.TaskBase):
         :param source_cell_context: nova auth request context targeted at the
             source cell database
         """
-        # TODO(mriedem): Need functional test wrinkle for this. Attach volume2
-        # while resized, detach volume1 while resized, and make sure those are
-        # the same when the revert is done.
         bdms_from_source_cell = (
             objects.BlockDeviceMappingList.get_by_instance_uuid(
                 source_cell_context, self.instance.uuid))
