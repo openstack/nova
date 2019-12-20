@@ -513,6 +513,9 @@ class FinishResizeAtDestTask(base.TaskBase):
             self.compute_rpcapi.finish_snapshot_based_resize_at_dest(
                 self.context, self.instance, self.migration, self.snapshot_id,
                 self.request_spec)
+            # finish_snapshot_based_resize_at_dest updates the target cell
+            # instance so we need to refresh it here to have the latest copy.
+            self.instance.refresh()
         except Exception:
             # We need to mimic the error handlers on
             # finish_snapshot_based_resize_at_dest in the destination compute
