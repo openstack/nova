@@ -707,9 +707,10 @@ class HostManager(object):
 
         # Only one cell should have values for the compute nodes
         # so we get them here, or return an empty list if no cell
-        # has a value
+        # has a value; be sure to filter out cell failures.
         nodes = next(
-            (nodes for nodes in nodes_by_cell.values() if nodes),
+            (nodes for nodes in nodes_by_cell.values()
+            if nodes and not context_module.is_cell_failure_sentinel(nodes)),
             objects.ComputeNodeList())
 
         return nodes
