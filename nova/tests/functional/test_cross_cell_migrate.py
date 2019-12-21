@@ -759,24 +759,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         data is cleaned from both the source and target cell.
         """
         server = self._resize_and_validate()[0]
-        self.api.delete_server(server['id'])
-        self._wait_until_deleted(server)
-        # Now list servers to make sure it doesn't show up from the source cell
-        servers = self.api.get_servers()
-        self.assertEqual(0, len(servers), servers)
-        # FIXME(mriedem): Need to cleanup from source cell in API method
-        # _confirm_resize_on_deleting(). The above check passes because the
-        # instance is still hidden in the source cell so the API filters it
-        # out.
-        target_host = server['OS-EXT-SRV-ATTR:host']
-        source_host = 'host1' if target_host == 'host2' else 'host2'
-        source_cell = self.cell_mappings[
-            self.host_to_cell_mappings[source_host]]
-        ctxt = nova_context.get_admin_context()
-        with nova_context.target_cell(ctxt, source_cell) as cctxt:
-            # Once the API is fixed this should raise InstanceNotFound.
-            instance = objects.Instance.get_by_uuid(cctxt, server['id'])
-            self.assertTrue(instance.hidden)
+        self.delete_server_and_assert_cleanup(server)
 
     def test_cold_migrate_target_host_in_other_cell(self):
         """Tests cold migrating to a target host in another cell. This is
