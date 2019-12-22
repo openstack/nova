@@ -906,6 +906,13 @@ Hosts are weighted based on the following options in the
        If the per aggregate ``build_failure_weight_multiplier``
        metadata is set, this multiplier will override the configuration option
        value.
+   * - [filter_scheduler]
+     - ``cross_cell_move_weight_multiplier``
+     - Multiplier used for weighing hosts during a cross-cell move. By default,
+       prefers hosts within the same source cell when migrating a server.
+       If the per aggregate ``cross_cell_move_weight_multiplier``
+       metadata is set, this multiplier will override the configuration option
+       value.
    * - [metrics]
      - ``weight_multiplier``
      - Multiplier for weighting meters. Use a floating-point value.
