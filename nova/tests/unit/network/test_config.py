@@ -15,7 +15,6 @@
 import mock
 
 import nova.network
-import nova.network.security_group.neutron_driver
 import nova.network.security_group.openstack_driver as sgapi
 import nova.test
 
@@ -44,23 +43,8 @@ class NetworkAPIConfigTest(nova.test.NoDBTestCase):
 
 class SecurityGroupAPIConfigTest(nova.test.NoDBTestCase):
 
-    def test_use_neutron(self):
-        self.flags(use_neutron=True)
-        driver = sgapi.get_openstack_security_group_driver()
-        self.assertIsInstance(
-            driver,
-            nova.network.security_group.neutron_driver.SecurityGroupAPI)
-
-    def test_sg_nova(self):
-        self.flags(use_neutron=False)
-        driver = sgapi.get_openstack_security_group_driver()
-        self.assertIsInstance(
-            driver,
-            nova.compute.api.SecurityGroupAPI)
-
     @mock.patch('oslo_utils.importutils.import_object')
     def test_caches(self, mock_import):
-        self.flags(use_neutron=True)
         sgapi.DRIVER_CACHE = None
         for _ in range(2):
             self.assertIsNotNone(sgapi.get_openstack_security_group_driver())

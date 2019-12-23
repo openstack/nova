@@ -647,42 +647,33 @@ class ViewBuilder(common.ViewBuilder):
                            create_request=False):
         if not len(servers):
             return
-        if not openstack_driver.is_neutron_security_groups():
-            instances = {inst['uuid']: inst for inst in instances}
-            for server in servers:
-                instance = instances[server['id']]
-                groups = instance.get('security_groups')
-                if groups:
-                    server['security_groups'] = [{"name": group.name}
-                                                 for group in groups]
-        else:
-            # If request is a POST create server we get the security groups
-            # intended for an instance from the request. The reason for this
-            # is if using neutron security groups the requested security
-            # groups for the instance are not in the db and have not been
-            # sent to neutron yet.
-            # Starting from microversion 2.75, security groups is returned in
-            # PUT and POST Rebuild response also.
-            if not create_request:
-                context = req.environ['nova.context']
-                sg_instance_bindings = (
-                    self.security_group_api
-                    .get_instances_security_groups_bindings(context,
-                                                            servers))
-                for server in servers:
-                    groups = sg_instance_bindings.get(server['id'])
-                    if groups:
-                        server['security_groups'] = groups
 
-            # This section is for POST create server request. There can be
-            # only one security group for POST create server request.
-            else:
-                # try converting to json
-                req_obj = jsonutils.loads(req.body)
-                # Add security group to server, if no security group was in
-                # request add default since that is the group it is part of
-                servers[0]['security_groups'] = req_obj['server'].get(
-                    'security_groups', [{'name': 'default'}])
+        # If request is a POST create server we get the security groups
+        # intended for an instance from the request. This is necessary because
+        # the requested security groups for the instance have not yet been sent
+        # to neutron.
+        # Starting from microversion 2.75, security groups is returned in
+        # PUT and POST Rebuild response also.
+        if not create_request:
+            context = req.environ['nova.context']
+            sg_instance_bindings = (
+                self.security_group_api
+                .get_instances_security_groups_bindings(context,
+                                                        servers))
+            for server in servers:
+                groups = sg_instance_bindings.get(server['id'])
+                if groups:
+                    server['security_groups'] = groups
+
+        # This section is for POST create server request. There can be
+        # only one security group for POST create server request.
+        else:
+            # try converting to json
+            req_obj = jsonutils.loads(req.body)
+            # Add security group to server, if no security group was in
+            # request add default since that is the group it is part of
+            servers[0]['security_groups'] = req_obj['server'].get(
+                'security_groups', [{'name': 'default'}])
 
     @staticmethod
     def _get_instance_bdms_in_multiple_cells(ctxt, instance_uuids):

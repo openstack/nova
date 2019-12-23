@@ -15,24 +15,16 @@
 
 from oslo_utils import importutils
 
-import nova.network
 
-
-NOVA_DRIVER = ('nova.compute.api.SecurityGroupAPI')
 NEUTRON_DRIVER = ('nova.network.security_group.neutron_driver.'
                   'SecurityGroupAPI')
 DRIVER_CACHE = None  # singleton of the driver once loaded
 
 
+# TODO(stephenfin): Remove this since it's not needed with nova-net no longer
+# screwing things up
 def get_openstack_security_group_driver():
     global DRIVER_CACHE
     if DRIVER_CACHE is None:
-        if is_neutron_security_groups():
-            DRIVER_CACHE = importutils.import_object(NEUTRON_DRIVER)
-        else:
-            DRIVER_CACHE = importutils.import_object(NOVA_DRIVER)
+        DRIVER_CACHE = importutils.import_object(NEUTRON_DRIVER)
     return DRIVER_CACHE
-
-
-def is_neutron_security_groups():
-    return nova.network.is_neutron()

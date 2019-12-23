@@ -173,8 +173,7 @@ def make_secgroup_list(security_groups):
             # This is a neutron security group uuid so store in the uuid field.
             secgroup.uuid = sg
         else:
-            # This is either a nova-network security group name, or it's the
-            # special 'default' security group in the case of neutron.
+            # This is neutron's special 'default' security group
             secgroup.name = sg
         secgroups.objects.append(secgroup)
     return secgroups

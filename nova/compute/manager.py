@@ -79,7 +79,6 @@ from nova import manager
 from nova import network
 from nova.network import base_api as base_net_api
 from nova.network import model as network_model
-from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import external_event as external_event_obj
@@ -577,8 +576,6 @@ class ComputeManager(manager.Manager):
         self.compute_api = compute.API()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.compute_task_api = conductor.ComputeTaskAPI()
-        self.is_neutron_security_groups = (
-            openstack_driver.is_neutron_security_groups())
         self.query_client = query.SchedulerQueryClient()
         self.instance_events = InstanceEvents()
         self._sync_power_pool = eventlet.GreenPool(
@@ -1790,9 +1787,6 @@ class ComputeManager(manager.Manager):
             self.network_api.setup_instance_network_on_host(
                 context, instance, instance.host)
             return self.network_api.get_instance_nw_info(context, instance)
-
-        if not self.is_neutron_security_groups:
-            security_groups = []
 
         network_info = self._allocate_network(context, instance,
                 requested_networks, security_groups,
