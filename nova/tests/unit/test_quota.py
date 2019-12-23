@@ -22,7 +22,6 @@ from six.moves import range
 from nova.compute import api as compute
 import nova.conf
 from nova import context
-from nova.db import api as db
 from nova.db.sqlalchemy import models as sqa_models
 from nova import exception
 from nova import objects
@@ -151,58 +150,6 @@ class QuotaIntegrationTestCase(test.TestCase):
         # 8 cores each.
         for i in range(3):
             self._create_instance(flavor_name='m1.xlarge')
-
-    @mock.patch('nova.privsep.linux_net.bind_ip')
-    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
-                return_value=('', ''))
-    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
-                return_value=('', ''))
-    def test_too_many_addresses(self, mock_iptables_set_rules,
-                                mock_iptables_get_rules, mock_bind_ip):
-        # This test is specifically relying on nova-network.
-        self.flags(use_neutron=False,
-                   network_manager='nova.network.manager.FlatDHCPManager')
-        self.flags(floating_ips=1, group='quota')
-        # Apparently needed by the RPC tests...
-        self.network = self.start_service('network',
-                                          manager=CONF.network_manager)
-        address = '192.168.0.100'
-        db.floating_ip_create(context.get_admin_context(),
-                              {'address': address,
-                               'pool': 'nova',
-                               'project_id': self.project_id})
-        self.assertRaises(exception.QuotaError,
-                          self.network.allocate_floating_ip,
-                          self.context,
-                          self.project_id)
-        db.floating_ip_destroy(context.get_admin_context(), address)
-
-    @mock.patch('nova.privsep.linux_net.bind_ip')
-    @mock.patch('nova.privsep.linux_net.iptables_get_rules',
-                return_value=('', ''))
-    @mock.patch('nova.privsep.linux_net.iptables_set_rules',
-                return_value=('', ''))
-    def test_auto_assigned(self, mock_iptables_set_rules,
-                                mock_iptables_get_rules, mock_bind_ip):
-        # This test is specifically relying on nova-network.
-        self.flags(use_neutron=False,
-                   network_manager='nova.network.manager.FlatDHCPManager')
-        self.flags(floating_ips=1, group='quota')
-        # Apparently needed by the RPC tests...
-        self.network = self.start_service('network',
-                                          manager=CONF.network_manager)
-        address = '192.168.0.100'
-        db.floating_ip_create(context.get_admin_context(),
-                              {'address': address,
-                               'pool': 'nova',
-                               'project_id': self.project_id})
-        # auto allocated addresses should not be counted
-        self.assertRaises(exception.NoMoreFloatingIps,
-                          self.network.allocate_floating_ip,
-                          self.context,
-                          self.project_id,
-                          True)
-        db.floating_ip_destroy(context.get_admin_context(), address)
 
     def test_too_many_metadata_items(self):
         metadata = {}

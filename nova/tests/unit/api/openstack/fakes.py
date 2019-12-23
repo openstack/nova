@@ -209,23 +209,15 @@ def stub_out_nw_api(test, cls=None, private=None, publics=None):
 
     if cls is None:
         cls = Fake
-    if CONF.use_neutron:
-        test.stub_out('nova.network.neutronv2.api.API', cls)
-    else:
-        test.stub_out('nova.network.api.API', cls)
-        fake_network.stub_out_nw_api_get_instance_nw_info(test)
+
+    test.stub_out('nova.network.neutronv2.api.API', cls)
 
 
 def stub_out_secgroup_api(test, security_groups=None):
 
     class FakeSecurityGroupAPI(security_group_base.SecurityGroupBase):
-        """This handles both nova-network and neutron style security group APIs
-        """
         def get_instances_security_groups_bindings(
                 self, context, servers, detailed=False):
-            # This method shouldn't be called unless using neutron.
-            if not CONF.use_neutron:
-                raise Exception('Invalid security group API call for nova-net')
             instances_security_group_bindings = {}
             if servers:
                 # we don't get security group information for down cells
@@ -239,13 +231,9 @@ def stub_out_secgroup_api(test, security_groups=None):
                 self, context, instance, detailed=False):
             return security_groups if security_groups is not None else []
 
-    if CONF.use_neutron:
-        test.stub_out(
-            'nova.network.security_group.neutron_driver.SecurityGroupAPI',
-            FakeSecurityGroupAPI)
-    else:
-        test.stub_out(
-            'nova.compute.api.SecurityGroupAPI', FakeSecurityGroupAPI)
+    test.stub_out(
+        'nova.network.security_group.neutron_driver.SecurityGroupAPI',
+        FakeSecurityGroupAPI)
 
 
 class FakeToken(object):

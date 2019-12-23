@@ -318,7 +318,6 @@ class _ComputeAPIUnitTestMixIn(object):
         # Tests that if port is specified there is only one instance booting
         # (i.e max_count == 1) as we can't share the same port across multiple
         # instances.
-        self.flags(use_neutron=True)
         port = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         address = '10.0.0.1'
         min_count = 1
@@ -353,7 +352,6 @@ class _ComputeAPIUnitTestMixIn(object):
             requested_networks)
 
     def test_specified_ip_and_multiple_instances_neutronv2(self):
-        self.flags(use_neutron=True)
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         address = '10.0.0.1'
         requested_networks = objects.NetworkRequestList(
@@ -6147,7 +6145,6 @@ class _ComputeAPIUnitTestMixIn(object):
         """Tests that a list of security groups passed in do not actually get
         stored on with the instance when using neutron.
         """
-        self.flags(use_neutron=True)
         flavor = self._create_flavor()
         params = {'display_name': 'fake-instance'}
         instance = self._create_instance_obj(params, flavor)
@@ -6663,8 +6660,8 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
     @mock.patch.object(neutron_api.API, 'list_ports')
     @mock.patch.object(objects.BuildRequestList, 'get_by_filters',
                        new_callable=mock.NonCallableMock)
-    def test_get_all_ip_filter_use_neutron(self, mock_buildreq_get,
-                                           mock_list_port, mock_check_ext):
+    def test_get_all_ip_filter(self, mock_buildreq_get, mock_list_port,
+                               mock_check_ext):
         mock_check_ext.return_value = True
         cell_instances = self._list_of_instances(2)
         mock_list_port.return_value = {
@@ -6691,8 +6688,8 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
     @mock.patch.object(neutron_api.API, 'list_ports')
     @mock.patch.object(objects.BuildRequestList, 'get_by_filters',
                        new_callable=mock.NonCallableMock)
-    def test_get_all_ip6_filter_use_neutron(self, mock_buildreq_get,
-                                            mock_list_port, mock_check_ext):
+    def test_get_all_ip6_filter(self, mock_buildreq_get, mock_list_port,
+                                mock_check_ext):
         mock_check_ext.return_value = True
         cell_instances = self._list_of_instances(2)
         mock_list_port.return_value = {
@@ -6719,9 +6716,8 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
     @mock.patch.object(neutron_api.API, 'list_ports')
     @mock.patch.object(objects.BuildRequestList, 'get_by_filters',
                        new_callable=mock.NonCallableMock)
-    def test_get_all_ip_and_ip6_filter_use_neutron(self, mock_buildreq_get,
-                                                   mock_list_port,
-                                                   mock_check_ext):
+    def test_get_all_ip_and_ip6_filter(self, mock_buildreq_get, mock_list_port,
+                                       mock_check_ext):
         mock_check_ext.return_value = True
         cell_instances = self._list_of_instances(2)
         mock_list_port.return_value = {
@@ -6752,8 +6748,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
 
     @mock.patch.object(neutron_api.API, 'has_substr_port_filtering_extension')
     @mock.patch.object(neutron_api.API, 'list_ports')
-    def test_get_all_ip6_filter_use_neutron_exc(self, mock_list_port,
-                                                mock_check_ext):
+    def test_get_all_ip6_filter_exc(self, mock_list_port, mock_check_ext):
         mock_check_ext.return_value = True
         mock_list_port.side_effect = exception.InternalError('fake')
 

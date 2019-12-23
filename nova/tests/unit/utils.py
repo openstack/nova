@@ -166,15 +166,11 @@ def get_test_network_info(count=1):
             vlan=FAKE_NETWORK_VLAN,
             bridge_interface=FAKE_NETWORK_INTERFACE,
             injected=False)
-        if CONF.use_neutron:
-            vif_type = network_model.VIF_TYPE_OVS
-        else:
-            vif_type = network_model.VIF_TYPE_BRIDGE
         vif = network_model.VIF(
             id=FAKE_VIF_UUID,
             address=FAKE_VIF_MAC,
             network=network,
-            type=vif_type,
+            type=network_model.VIF_TYPE_OVS,
             devname=None,
             ovs_interfaceid=None)
 
