@@ -8503,7 +8503,6 @@ class ComputeManager(manager.Manager):
         migration = objects.Migration(source_compute=instance.host,
                                       dest_compute=self.host,
                                       migration_type='live-migration')
-        # TODO(gibi): calculate and pass resource_provider_mapping
         self.network_api.migrate_instance_finish(
             context, instance, migration, provider_mappings=None)
 

@@ -7237,6 +7237,63 @@ class ServerMoveWithPortResourceRequestTest(
             server, self.compute1_rp_uuid, non_qos_port, qos_port,
             qos_sriov_port, self.flavor_with_group_policy)
 
+    def _turn_off_api_check(self):
+        # The API actively rejecting the move operations with resource
+        # request so we have to turn off that check.
+        # TODO(gibi): Remove this when the move operations are supported and
+        # the API check is removed.
+        patcher = mock.patch(
+            'nova.api.openstack.common.'
+            'supports_port_resource_request_during_move',
+            return_value=True)
+        self.addCleanup(patcher.stop)
+        patcher.start()
+
+    def test_live_migrate_with_qos_port(self):
+        # TODO(gibi): remove this when live migration is fully supported and
+        # therefore the check is removed from the api
+        self._turn_off_api_check()
+
+        non_qos_normal_port = self.neutron.port_1
+        qos_normal_port = self.neutron.port_with_resource_request
+        qos_sriov_port = self.neutron.port_with_sriov_resource_request
+
+        server = self._create_server_with_ports(
+            non_qos_normal_port, qos_normal_port, qos_sriov_port)
+
+        # check that the server allocates from the current host properly
+        self._check_allocation(
+            server, self.compute1_rp_uuid, non_qos_normal_port,
+            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
+
+        self.api.post_server_action(
+            server['id'],
+            {
+                'os-migrateLive': {
+                    'host': None,
+                    'block_migration': 'auto'
+                }
+            }
+        )
+
+        self._wait_for_server_parameter(
+            server,
+            {'OS-EXT-SRV-ATTR:host': 'host2',
+             'status': 'ACTIVE'})
+
+        self._check_allocation(
+            server, self.compute2_rp_uuid, non_qos_normal_port,
+            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
+
+        self._delete_server_and_check_allocations(
+            server, qos_normal_port, qos_sriov_port)
+
+    # TODO(gibi): add tests for live migration cases:
+    # * with target host
+    # * re-schedule success
+    # * re-schedule fail -> pci request cleanup?
+    # * abort / cancel -> dest / pci request cleanup?
+
 
 class PortResourceRequestReSchedulingTest(
         PortResourceRequestBasedSchedulingTestBase):
