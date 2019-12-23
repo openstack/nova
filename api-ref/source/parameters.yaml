@@ -4033,8 +4033,8 @@ instance_actions_next_links:
   description: |
     Links pertaining to the instance action.
     This parameter is returned when paging and more data is available.
-    See `API Guide / Links and References
-    <https://docs.openstack.org/api-guide/compute/links_and_references.html>`_
+    See `Paginated collections
+    <https://docs.openstack.org/api-guide/compute/paginated_collections.html>`__
     for more info.
   in: body
   required: false
@@ -4731,8 +4731,8 @@ migration_links_2_23:
     Links to the migration.
     This parameter is returned if the migration type is ``live-migration`` and
     the migration status is one of ``queued``, ``preparing``, ``running``
-    and ``post-migrating``. See `API Guide / Links and References
-    <https://docs.openstack.org/api-guide/compute/links_and_references.html>`_
+    and ``post-migrating``. See `Paginated collections
+    <https://docs.openstack.org/api-guide/compute/paginated_collections.html>`__
     for more info.
   in: body
   required: false
@@ -4754,8 +4754,8 @@ migration_next_links_2_59:
   description: |
     Links pertaining to the migration.
     This parameter is returned when paging and more data is available.
-    See `API Guide / Links and References
-    <https://docs.openstack.org/api-guide/compute/links_and_references.html>`_
+    See `Paginated collections
+    <https://docs.openstack.org/api-guide/compute/paginated_collections.html>`__
     for more info.
   in: body
   required: false
@@ -6551,8 +6551,8 @@ servers_links:
   description: |
     Links to the next server. It is available when the number of servers exceeds
     ``limit`` parameter or ``[api]/max_limit`` in the configuration file.
-    See `API Guide / Links and References
-    <https://docs.openstack.org/api-guide/compute/links_and_references.html>`_
+    See `Paginated collections
+    <https://docs.openstack.org/api-guide/compute/paginated_collections.html>`__
     for more info.
   in: body
   type: array
