@@ -5127,17 +5127,25 @@ class API(base.Base):
             # instance._context is used here since it's already targeted to
             # the cell that the instance lives in, and we need to use that
             # cell context to lookup any migrations associated to the instance.
-            for host in self._get_relevant_hosts(instance._context, instance):
+            hosts, cross_cell_move = self._get_relevant_hosts(
+                instance._context, instance)
+            for host in hosts:
                 # NOTE(danms): All instances on a host must have the same
                 # mapping, so just use that
-                # NOTE(mdbooth): We don't currently support migrations between
-                # cells, and given that the Migration record is hosted in the
-                # cell _get_relevant_hosts will likely have to change before we
-                # do. Consequently we can currently assume that the context for
-                # both the source and destination hosts of a migration is the
-                # same.
                 if host not in cell_contexts_by_host:
-                    cell_contexts_by_host[host] = instance._context
+                    # NOTE(mriedem): If the instance is being migrated across
+                    # cells then we have to get the host mapping to determine
+                    # which cell a given host is in.
+                    if cross_cell_move:
+                        hm = objects.HostMapping.get_by_host(api_context, host)
+                        ctxt = nova_context.get_admin_context()
+                        nova_context.set_target_cell(ctxt, hm.cell_mapping)
+                        cell_contexts_by_host[host] = ctxt
+                    else:
+                        # The instance is not migrating across cells so just
+                        # use the cell-targeted context already in the
+                        # instance since the host has to be in that same cell.
+                        cell_contexts_by_host[host] = instance._context
 
                 instances_by_host[host].append(instance)
                 hosts_by_instance[instance.uuid].append(host)
@@ -5182,18 +5190,35 @@ class API(base.Base):
                 host=host)
 
     def _get_relevant_hosts(self, context, instance):
+        """Get the relevant hosts for an external server event on an instance.
+
+        :param context: nova auth request context targeted at the same cell
+            that the instance lives in
+        :param instance: Instance object which is the target of an external
+            server event
+        :returns: 2-item tuple of:
+            - set of at least one host (the host where the instance lives); if
+              the instance is being migrated the source and dest compute
+              hostnames are in the returned set
+            - boolean indicating if the instance is being migrated across cells
+        """
         hosts = set()
         hosts.add(instance.host)
+        cross_cell_move = False
         if instance.migration_context is not None:
             migration_id = instance.migration_context.migration_id
             migration = objects.Migration.get_by_id(context, migration_id)
+            cross_cell_move = migration.cross_cell_move
             hosts.add(migration.dest_compute)
             hosts.add(migration.source_compute)
-            LOG.debug('Instance %(instance)s is migrating, '
+            cells_msg = (
+                'across cells' if cross_cell_move else 'within the same cell')
+            LOG.debug('Instance %(instance)s is migrating %(cells_msg)s, '
                       'copying events to all relevant hosts: '
-                      '%(hosts)s', {'instance': instance.uuid,
+                      '%(hosts)s', {'cells_msg': cells_msg,
+                                    'instance': instance.uuid,
                                     'hosts': hosts})
-        return hosts
+        return hosts, cross_cell_move
 
     def get_instance_host_status(self, instance):
         if instance.host:
