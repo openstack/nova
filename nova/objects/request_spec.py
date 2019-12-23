@@ -879,8 +879,8 @@ class RequestSpec(base.NovaObject):
         having QoS minimum bandwidth policy rule attached.
 
         :returns: A dict keyed by RequestGroup requester_id, currently Neutron
-        port_id, to resource provider UUID that provides resource for that
-        RequestGroup.
+        port_id, to a list of resource provider UUIDs which provide resource
+        for that RequestGroup.
         """
 
         if ('requested_resources' in self and
