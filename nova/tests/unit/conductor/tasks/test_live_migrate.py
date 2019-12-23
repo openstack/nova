@@ -60,6 +60,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 self.context, objects.Instance(), db_instance)
         self.instance.system_metadata = {'image_hw_disk_bus': 'scsi'}
         self.instance.numa_topology = None
+        self.instance.pci_requests = None
         self.destination = "destination"
         self.block_migration = "bm"
         self.disk_over_commit = "doc"

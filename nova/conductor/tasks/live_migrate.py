@@ -9,6 +9,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import copy
 
 from oslo_log import log as logging
 import oslo_messaging as messaging
@@ -67,6 +68,7 @@ class LiveMigrationTask(base.TaskBase):
         self._source_cn = None
         self._held_allocations = None
         self.network_api = network.API()
+        self.instance_pci_request = None
 
     def _execute(self):
         self._check_instance_is_active()
@@ -81,6 +83,11 @@ class LiveMigrationTask(base.TaskBase):
             migrate.replace_allocation_with_migration(self.context,
                                                       self.instance,
                                                       self.migration))
+
+        # NOTE(gibi): migrating with qos SRIOV ports will update the PCI
+        # request so we saving the request here so that we can roll that change
+        # back if the migration fails.
+        self.instance_pci_request = copy.deepcopy(self.instance.pci_requests)
 
         if not self.destination:
             # Either no host was specified in the API request and the user
@@ -151,6 +158,9 @@ class LiveMigrationTask(base.TaskBase):
                                                     self._source_cn,
                                                     self.instance,
                                                     self.migration)
+        if self.instance_pci_request:
+            self.instance.pci_requests = self.instance_pci_request
+            self.instance.save()
 
     def _check_instance_is_active(self):
         if self.instance.power_state not in (power_state.RUNNING,
