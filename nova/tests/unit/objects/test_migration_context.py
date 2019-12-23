@@ -14,6 +14,7 @@ import mock
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 
+from nova import context
 from nova import exception
 from nova import objects
 from nova.tests.unit.objects import test_instance_numa
@@ -124,6 +125,17 @@ class _TestMigrationContext(object):
             exception.MigrationContextNotFound,
             objects.MigrationContext.get_by_instance_uuid,
             self.context, 'fake_uuid')
+
+    @mock.patch('nova.objects.Migration.get_by_id',
+                return_value=objects.Migration(cross_cell_move=True))
+    def test_is_cross_cell_move(self, mock_get_by_id):
+        ctxt = context.get_admin_context()
+        mig_ctx = get_fake_migration_context_obj(ctxt)
+        self.assertTrue(mig_ctx.is_cross_cell_move())
+        mock_get_by_id.assert_called_once_with(ctxt, mig_ctx.migration_id)
+        # Call it again to make sure the result was cached.
+        self.assertTrue(mig_ctx.is_cross_cell_move())
+        mock_get_by_id.assert_called_once_with(ctxt, mig_ctx.migration_id)
 
 
 class TestMigrationContext(test_objects._LocalTest, _TestMigrationContext):

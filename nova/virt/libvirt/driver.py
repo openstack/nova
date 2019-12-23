@@ -9243,17 +9243,27 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # NOTE(lyarwood): If the instance vm_state is shelved offloaded then we
         # must be unshelving for _try_fetch_image_cache to be called.
-        if instance.vm_state == vm_states.SHELVED_OFFLOADED:
+        # NOTE(mriedem): Alternatively if we are doing a cross-cell move of a
+        # non-volume-backed server and finishing (spawning) on the dest host,
+        # we have to flatten the rbd image so we can delete the temporary
+        # snapshot in the compute manager.
+        mig_context = instance.migration_context
+        cross_cell_move = (
+                mig_context and mig_context.is_cross_cell_move() or False)
+        if instance.vm_state == vm_states.SHELVED_OFFLOADED or cross_cell_move:
             # NOTE(lyarwood): When using the rbd imagebackend the call to cache
             # above will attempt to clone from the shelved snapshot in Glance
             # if available from this compute. We then need to flatten the
             # resulting image to avoid it still referencing and ultimately
             # blocking the removal of the shelved snapshot at the end of the
             # unshelve. This is a no-op for all but the rbd imagebackend.
+            action = (
+                'migrating instance across cells' if cross_cell_move
+                else 'unshelving instance')
             try:
                 image.flatten()
-                LOG.debug('Image %s flattened successfully while unshelving '
-                          'instance.', image.path, instance=instance)
+                LOG.debug('Image %s flattened successfully while %s.',
+                          image.path, action, instance=instance)
             except NotImplementedError:
                 # NOTE(lyarwood): There's an argument to be made for logging
                 # our inability to call flatten here, however given this isn't

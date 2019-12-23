@@ -18,6 +18,7 @@ from oslo_utils import versionutils
 
 from nova.db import api as db
 from nova import exception
+from nova import objects
 from nova.objects import base
 from nova.objects import fields
 
@@ -120,3 +121,19 @@ class MigrationContext(base.NovaPersistentObject, base.NovaObject):
                         for upd_dev in updated_pci_devs
                             if curr_dev.request_id == upd_dev.request_id}
         return {}
+
+    def is_cross_cell_move(self):
+        """Helper to determine if this is a context for a cross-cell move.
+
+        Based on the ``migration_id`` in this context, gets the Migration
+        object and returns its ``cross_cell_move`` value.
+
+        The result is cached for subsequent lookups.
+
+        :return: True if this is a cross cell move migration, False otherwise.
+        """
+        if not hasattr(self, '_cached_cross_cell_move'):
+            migration = objects.Migration.get_by_id(
+                self._context, self.migration_id)
+            setattr(self, '_cached_cross_cell_move', migration.cross_cell_move)
+        return self._cached_cross_cell_move

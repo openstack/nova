@@ -5925,13 +5925,6 @@ class ComputeManager(manager.Manager):
         # If we spawned from a temporary snapshot image we can delete that now,
         # similar to how unshelve works.
         if snapshot_id:
-            # FIXME(mriedem): Need to deal with bug 1653953 for libvirt with
-            # the rbd image backend. I think the cleanest thing we can do is
-            # from the driver check to see if instance.migration_context is not
-            # None and if so, get the Migration record for that context
-            # (instance.migration_context.migration_id) and from that check the
-            # Migration.cross_cell_move flag and if True, then flatten the
-            # image.
             compute_utils.delete_image(
                 ctxt, instance, self.image_api, snapshot_id)
 

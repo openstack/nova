@@ -919,6 +919,7 @@ def _create_test_instance():
         'vm_state': None,
         'trusted_certs': None,
         'resources': None,
+        'migration_context': None,
     }
 
 
@@ -20394,8 +20395,11 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # Attributes which we need to be set so they don't touch the db,
         # but it's not worth the effort to fake properly
         for field in ['numa_topology', 'vcpu_model', 'trusted_certs',
-                      'resources', 'migration_context']:
+                      'resources']:
             setattr(instance, field, None)
+
+        # fake_instance_obj nulls migration_context so set it here.
+        instance.migration_context = params.get('migration_context')
 
         return instance
 
@@ -21421,9 +21425,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         bdm.append({'boot_index': 0})
         self.assertTrue(func(bdi))
 
-    def test_unshelve_noop_flatten_fetch_image_cache(self):
-        instance = self._create_instance(
-            params={'vm_state': vm_states.SHELVED_OFFLOADED})
+    def _test_noop_flatten_fetch_image_cache(self, instance):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         mock_imagebackend = mock.Mock(spec=imagebackend.Lvm)
         mock_imagebackend.flatten.side_effect = NotImplementedError()
@@ -21434,16 +21436,28 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 instance, mock.sentinel.size)
 
         # Assert that we cache and then flatten the image when an instance is
-        # still SHELVED_OFFLOADED during _try_fetch_image_cache.
+        # still SHELVED_OFFLOADED or doing a cross-cell move during
+        # _try_fetch_image_cache.
         mock_imagebackend.cache.assert_called_once_with(
             fetch_func=mock.sentinel.fetch, context=self.context,
             filename=mock.sentinel.filename, image_id=uuids.image_id,
             size=mock.sentinel.size, trusted_certs=instance.trusted_certs)
         mock_imagebackend.flatten.assert_called_once()
 
-    def test_unshelve_rbd_image_flatten_during_fetch_image_cache(self):
+    def test_unshelve_noop_flatten_fetch_image_cache(self):
         instance = self._create_instance(
             params={'vm_state': vm_states.SHELVED_OFFLOADED})
+        self._test_noop_flatten_fetch_image_cache(instance)
+
+    @mock.patch('nova.objects.MigrationContext.is_cross_cell_move',
+                return_value=True)
+    def test_cross_cell_move_noop_flatten_fetch_image_cache(self, mock_is_ccm):
+        instance = self._create_instance(
+            params={'migration_context': objects.MigrationContext()})
+        self._test_noop_flatten_fetch_image_cache(instance)
+        mock_is_ccm.assert_called_once_with()
+
+    def _test_rbd_image_flatten_during_fetch_image_cache(self, instance):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         mock_rbd_driver = mock.Mock(spec=rbd_utils.RBDDriver)
         mock_rbd_driver.pool = mock.sentinel.rbd_pool
@@ -21460,7 +21474,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 instance, mock.sentinel.size)
 
         # Assert that we cache and then flatten the image when an instance is
-        # still SHELVED_OFFLOADED during _try_fetch_image_cache.
+        # still SHELVED_OFFLOADED or doing a cross-cell move during
+        # _try_fetch_image_cache.
         mock_rbd_imagebackend.cache.assert_called_once_with(
             fetch_func=mock.sentinel.fetch, context=self.context,
             filename=mock.sentinel.filename, image_id=uuids.image_id,
@@ -21468,6 +21483,27 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         mock_rbd_imagebackend.flatten.assert_called_once()
         mock_rbd_driver.flatten.assert_called_once_with(
             mock.sentinel.rbd_name, pool=mock.sentinel.rbd_pool)
+
+    @mock.patch('nova.virt.libvirt.driver.LOG.debug')
+    def test_rbd_image_flatten_during_fetch_image_cache(self, mock_debug):
+        instance = self._create_instance(
+            params={'vm_state': vm_states.SHELVED_OFFLOADED})
+        self._test_rbd_image_flatten_during_fetch_image_cache(instance)
+        mock_debug.assert_called_once()
+        self.assertEqual('unshelving instance', mock_debug.call_args[0][2])
+
+    @mock.patch('nova.virt.libvirt.driver.LOG.debug')
+    @mock.patch('nova.objects.MigrationContext.is_cross_cell_move',
+                return_value=True)
+    def test_cross_cell_move_rbd_flatten_fetch_image_cache(self, mock_is_ccm,
+                                                           mock_debug):
+        instance = self._create_instance(
+            params={'migration_context': objects.MigrationContext()})
+        self._test_rbd_image_flatten_during_fetch_image_cache(instance)
+        mock_is_ccm.assert_called_once_with()
+        mock_debug.assert_called_once()
+        self.assertEqual('migrating instance across cells',
+                         mock_debug.call_args[0][2])
 
     @mock.patch('nova.virt.libvirt.driver.imagebackend')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._inject_data')
