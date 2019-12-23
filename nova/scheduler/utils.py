@@ -1094,6 +1094,10 @@ def setup_instance_group(context, request_spec):
         # obj_alternate_context here because the RequestSpec is queried at the
         # start of a move operation in compute/api, before the context has been
         # targeted.
+        # NOTE(mriedem): If doing a cross-cell move and the group policy
+        # is anti-affinity, this could be wrong since there could be
+        # instances in the group on other hosts in other cells. However,
+        # ServerGroupAntiAffinityFilter does not look at group.hosts.
         if context.db_connection:
             with group.obj_alternate_context(context):
                 group.hosts = group.get_hosts()
