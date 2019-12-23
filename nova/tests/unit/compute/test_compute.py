@@ -324,13 +324,6 @@ class BaseTestCase(test.TestCase):
 
         return inst
 
-    def _create_group(self):
-        values = {'name': 'testgroup',
-                  'description': 'testgroup',
-                  'user_id': self.user_id,
-                  'project_id': self.project_id}
-        return db.security_group_create(self.context, values)
-
     def _init_aggregate_with_host(self, aggr, aggr_name, zone, host):
         if not aggr:
             aggr = self.api.create_aggregate(self.context, aggr_name, zone)
@@ -8527,14 +8520,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
         self.stub_out('nova.network.api.API.get_instance_nw_info',
                        fake_get_nw_info)
-        # NOTE(mriedem): Everything in here related to the security group API
-        # is written for nova-network and using the database. Neutron-specific
-        # security group API tests are covered in
-        # nova.tests.unit.network.security_group.test_neutron_driver.
-        self.security_group_api = compute.SecurityGroupAPI()
 
-        self.compute_api = compute.API(
-                                   security_group_api=self.security_group_api)
+        self.compute_api = compute.API()
         self.fake_image = {
             'id': 'f9000000-0000-0000-0000-000000000000',
             'name': 'fake_name',
@@ -8766,10 +8753,14 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_create_instance_associates_security_groups(self):
         # Make sure create associates security groups.
-        group = self._create_group()
-        with mock.patch.object(self.compute_api.compute_task_api,
-                               'schedule_and_build_instances') as mock_sbi:
-            (ref, resv_id) = self.compute_api.create(
+        group = {'id': uuids.secgroup_id, 'name': 'testgroup'}
+        with test.nested(
+                mock.patch.object(self.compute_api.compute_task_api,
+                                  'schedule_and_build_instances'),
+                mock.patch.object(self.compute_api.security_group_api, 'get',
+                                  return_value=group),
+        ) as (mock_sbi, mock_secgroups):
+            self.compute_api.create(
                 self.context,
                 instance_type=self.default_flavor,
                 image_href=uuids.image_href_id,
@@ -8779,18 +8770,25 @@ class ComputeAPITestCase(BaseTestCase):
             reqspec = build_call[1]['request_spec'][0]
 
         self.assertEqual(1, len(reqspec.security_groups))
-        self.assertEqual(group.name, reqspec.security_groups[0].name)
+        self.assertEqual(group['id'], reqspec.security_groups[0].uuid)
+        mock_secgroups.assert_called_once_with(mock.ANY, 'testgroup')
 
     def test_create_instance_with_invalid_security_group_raises(self):
         pre_build_len = len(db.instance_get_all(self.context))
-        self.assertRaises(exception.SecurityGroupNotFoundForProject,
-                          self.compute_api.create,
-                          self.context,
-                          instance_type=self.default_flavor,
-                          image_href=None,
-                          security_groups=['this_is_a_fake_sec_group'])
+        with test.nested(
+                mock.patch.object(self.compute_api.security_group_api, 'get',
+                                  return_value=None),
+        ) as (mock_secgroups, ):
+            self.assertRaises(exception.SecurityGroupNotFoundForProject,
+                              self.compute_api.create,
+                              self.context,
+                              instance_type=self.default_flavor,
+                              image_href=None,
+                              security_groups=['invalid_sec_group'])
+
         self.assertEqual(pre_build_len,
                          len(db.instance_get_all(self.context)))
+        mock_secgroups.assert_called_once_with(mock.ANY, 'invalid_sec_group')
 
     def test_create_with_malformed_user_data(self):
         # Test an instance type with malformed user data.
@@ -11089,21 +11087,6 @@ class ComputeAPITestCase(BaseTestCase):
             self.context, instance, CONF.host, action='unlock',
             source='nova-api')
 
-    def test_add_remove_security_group(self):
-        instance = self._create_fake_instance_obj()
-
-        self.compute.build_and_run_instance(self.context,
-                instance, {}, {}, {}, block_device_mapping=[])
-        instance = self.compute_api.get(self.context, instance.uuid)
-        security_group_name = self._create_group()['name']
-
-        self.security_group_api.add_to_instance(self.context,
-                                                instance,
-                                                security_group_name)
-        self.security_group_api.remove_from_instance(self.context,
-                                                     instance,
-                                                     security_group_name)
-
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'get_diagnostics')
     def test_get_diagnostics(self, mock_get):
         instance = self._create_fake_instance_obj()
@@ -11119,51 +11102,6 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.get_instance_diagnostics(self.context, instance)
 
         mock_get.assert_called_once_with(self.context, instance=instance)
-
-    @mock.patch.object(compute_rpcapi.ComputeAPI,
-                       'refresh_instance_security_rules')
-    def test_refresh_instance_security_rules(self, mock_refresh):
-        inst1 = self._create_fake_instance_obj()
-        inst2 = self._create_fake_instance_obj({'host': None})
-
-        self.security_group_api._refresh_instance_security_rules(
-            self.context, [inst1, inst2])
-        mock_refresh.assert_called_once_with(self.context, inst1, inst1.host)
-
-    @mock.patch.object(compute_rpcapi.ComputeAPI,
-                       'refresh_instance_security_rules')
-    def test_refresh_instance_security_rules_empty(self, mock_refresh):
-        self.security_group_api._refresh_instance_security_rules(self.context,
-                                                                 [])
-        self.assertFalse(mock_refresh.called)
-
-    @mock.patch.object(compute.SecurityGroupAPI,
-                       '_refresh_instance_security_rules')
-    @mock.patch.object(objects.InstanceList,
-                       'get_by_grantee_security_group_ids')
-    def test_secgroup_refresh(self, mock_get, mock_refresh):
-        mock_get.return_value = mock.sentinel.instances
-
-        self.security_group_api.trigger_members_refresh(mock.sentinel.ctxt,
-                                                        mock.sentinel.ids)
-
-        mock_get.assert_called_once_with(mock.sentinel.ctxt, mock.sentinel.ids)
-        mock_refresh.assert_called_once_with(mock.sentinel.ctxt,
-                                             mock.sentinel.instances)
-
-    @mock.patch.object(compute.SecurityGroupAPI,
-                       '_refresh_instance_security_rules')
-    @mock.patch.object(objects.InstanceList,
-                       'get_by_security_group_id')
-    def test_secrule_refresh(self, mock_get, mock_refresh):
-        mock_get.return_value = mock.sentinel.instances
-
-        self.security_group_api.trigger_rules_refresh(mock.sentinel.ctxt,
-                                                      mock.sentinel.id)
-
-        mock_get.assert_called_once_with(mock.sentinel.ctxt, mock.sentinel.id)
-        mock_refresh.assert_called_once_with(mock.sentinel.ctxt,
-                                             mock.sentinel.instances)
 
     def _test_live_migrate(self, force=None):
         instance, instance_uuid = self._run_instance()
