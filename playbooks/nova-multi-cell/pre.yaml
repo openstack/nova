@@ -1,0 +1,7 @@
+- hosts: controller
+  roles:
+    # /etc/nova/policy.yaml is going to be owned by the stack user so we need
+    # to make sure that user exists on the controller host first.
+    - setup-stack-user
+    # Write rules to the /etc/nova/policy.yaml file.
+    - setup-multi-cell-policy
