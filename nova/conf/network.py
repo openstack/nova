@@ -856,12 +856,6 @@ Related options:
 
 * iptables_top_regex
 """),
-    # NOTE(sfinucan): While this is predominantly used by nova-network, there
-    # appears to be a very limited use case where iptables rules are also used
-    # with neutron. Namely, when neutron's port filtering is disabled, security
-    # groups are disabled, and the 'firewall_driver' has been set to the
-    # libvirt IPTables driver. We may wish to remove this functionality in
-    # favour of neutron in the future.
     cfg.StrOpt("iptables_drop_action",
         default="DROP",
         deprecated_for_removal=True,
@@ -879,12 +873,6 @@ Possible values:
 
 * A string representing an iptables chain. The default is DROP.
 """),
-    # NOTE(sfinucan): While this is predominantly used by nova-network, there
-    # appears to be a very limited use case where iptables rules are also used
-    # with neutron. Namely, when neutron's port filtering is disabled, security
-    # groups are disabled, and the 'firewall_driver' has been set to the
-    # libvirt IPTables driver. We may wish to remove this functionality in
-    # favour of neutron in the future.
     cfg.BoolOpt('defer_iptables_apply',
         default=False,
         deprecated_for_removal=True,
@@ -1135,66 +1123,6 @@ of Neutron in your deployment.
 Related options:
 
 * ``use_neutron``
-"""),
-    cfg.StrOpt('firewall_driver',
-        deprecated_for_removal=True,
-        deprecated_since='16.0.0',
-        deprecated_reason="""
-nova-network is deprecated, as are any related configuration options.
-""",
-        default='nova.virt.firewall.NoopFirewallDriver',
-        help="""
-Firewall driver to use with ``nova-network`` service.
-
-This option only applies when using the ``nova-network`` service. When using
-another networking services, such as Neutron, this should be to set to the
-``nova.virt.firewall.NoopFirewallDriver``.
-
-Possible values:
-
-* ``nova.virt.firewall.IptablesFirewallDriver``
-* ``nova.virt.firewall.NoopFirewallDriver``
-* ``nova.virt.libvirt.firewall.IptablesFirewallDriver``
-* [...]
-
-Related options:
-
-* ``use_neutron``: This must be set to ``False`` to enable ``nova-network``
-  networking
-"""),
-    cfg.BoolOpt('allow_same_net_traffic',
-        default=True,
-        deprecated_for_removal=True,
-        deprecated_since='16.0.0',
-        deprecated_reason="""
-nova-network is deprecated, as are any related configuration options.
-""",
-        help="""
-Determine whether to allow network traffic from same network.
-
-When set to true, hosts on the same subnet are not filtered and are allowed
-to pass all types of traffic between them. On a flat network, this allows
-all instances from all projects unfiltered communication. With VLAN
-networking, this allows access between instances within the same project.
-
-This option only applies when using the ``nova-network`` service. When using
-another networking services, such as Neutron, security groups or other
-approaches should be used.
-
-Possible values:
-
-* True: Network traffic should be allowed pass between all instances on the
-  same network, regardless of their tenant and security policies
-* False: Network traffic should not be allowed pass between instances unless
-  it is unblocked in a security group
-
-Related options:
-
-* ``use_neutron``: This must be set to ``False`` to enable ``nova-network``
-  networking
-* ``firewall_driver``: This must be set to
-  ``nova.virt.libvirt.firewall.IptablesFirewallDriver`` to ensure the
-  libvirt firewall driver is enabled.
 """),
 ]
 
