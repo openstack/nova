@@ -52,7 +52,6 @@ from nova.virt import block_device as driver_block_device
 from nova.virt import configdrive
 from nova.virt import driver
 from nova.virt import fake
-from nova.virt import firewall
 from nova.virt import hardware
 from nova.virt.ironic import client_wrapper as cw
 from nova.virt.ironic import driver as ironic_driver
@@ -521,29 +520,6 @@ class IronicDriverTestCase(test.NoDBTestCase):
         # Assert we didn't log any warning since all properties are
         # correct
         self.assertFalse(mock_warning.called)
-
-    @mock.patch.object(firewall.NoopFirewallDriver, 'prepare_instance_filter',
-                       create=True)
-    @mock.patch.object(firewall.NoopFirewallDriver, 'setup_basic_filtering',
-                       create=True)
-    @mock.patch.object(firewall.NoopFirewallDriver, 'apply_instance_filter',
-                       create=True)
-    def test__start_firewall(self, mock_aif, mock_sbf, mock_pif):
-        fake_inst = 'fake-inst'
-        fake_net_info = utils.get_test_network_info()
-        self.driver._start_firewall(fake_inst, fake_net_info)
-
-        mock_aif.assert_called_once_with(fake_inst, fake_net_info)
-        mock_sbf.assert_called_once_with(fake_inst, fake_net_info)
-        mock_pif.assert_called_once_with(fake_inst, fake_net_info)
-
-    @mock.patch.object(firewall.NoopFirewallDriver, 'unfilter_instance',
-                       create=True)
-    def test__stop_firewall(self, mock_ui):
-        fake_inst = 'fake-inst'
-        fake_net_info = utils.get_test_network_info()
-        self.driver._stop_firewall(fake_inst, fake_net_info)
-        mock_ui.assert_called_once_with(fake_inst, fake_net_info)
 
     def test_instance_exists(self):
         instance = fake_instance.fake_instance_obj(self.ctx,
@@ -1261,8 +1237,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(ironic_driver.IronicDriver, '_wait_for_active')
     @mock.patch.object(ironic_driver.IronicDriver,
                        '_add_instance_info_to_node')
-    @mock.patch.object(ironic_driver.IronicDriver, '_start_firewall')
-    def _test_spawn(self, mock_sf, mock_aiitn, mock_wait_active,
+    def _test_spawn(self, mock_aiitn, mock_wait_active,
                     mock_avti, mock_node, mock_looping, mock_save):
         node_id = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         node = _get_cached_node(driver='fake', id=node_id)
@@ -1289,7 +1264,6 @@ class IronicDriverTestCase(test.NoDBTestCase):
                                          test.MatchType(objects.ImageMeta),
                                          fake_flavor, block_device_info=None)
         mock_avti.assert_called_once_with(self.ctx, instance, None)
-        mock_sf.assert_called_once_with(instance, None)
         mock_node.set_provision_state.assert_called_once_with(
             node_id, 'active', configdrive=mock.ANY)
 
@@ -1328,8 +1302,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(ironic_driver.IronicDriver, '_wait_for_active')
     @mock.patch.object(ironic_driver.IronicDriver,
                        '_add_instance_info_to_node')
-    @mock.patch.object(ironic_driver.IronicDriver, '_start_firewall')
-    def test_spawn_destroyed_after_failure(self, mock_sf, mock_aiitn,
+    def test_spawn_destroyed_after_failure(self, mock_aiitn,
                                            mock_wait_active, mock_avti,
                                            mock_destroy, mock_node,
                                            mock_looping, mock_required_by):
@@ -1579,40 +1552,12 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_node.validate.assert_called_once_with(node_id)
 
     @mock.patch.object(configdrive, 'required_by')
-    @mock.patch.object(FAKE_CLIENT, 'node')
-    @mock.patch.object(ironic_driver.IronicDriver, '_add_volume_target_info')
-    @mock.patch.object(ironic_driver.IronicDriver, '_start_firewall')
-    @mock.patch.object(ironic_driver.IronicDriver, '_cleanup_deploy')
-    def test_spawn_node_prepare_for_deploy_fail(self, mock_cleanup_deploy,
-                                                mock_sf, mock_avti,
-                                                mock_node, mock_required_by):
-        mock_required_by.return_value = False
-        node_id = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
-        node = _get_cached_node(driver='fake', id=node_id)
-        flavor = ironic_utils.get_test_flavor()
-        instance = fake_instance.fake_instance_obj(self.ctx, node=node_id)
-        instance.flavor = flavor
-        self.mock_conn.get_node.return_value = node
-        mock_node.validate.return_value = ironic_utils.get_test_validation()
-        image_meta = ironic_utils.get_test_image_meta()
-
-        mock_sf.side_effect = test.TestingException()
-        self.assertRaises(test.TestingException, self.driver.spawn,
-                          self.ctx, instance, image_meta, [], None, {})
-
-        self.mock_conn.get_node.assert_called_once_with(
-            node_id, fields=ironic_driver._NODE_FIELDS)
-        mock_node.validate.assert_called_once_with(node_id)
-        mock_cleanup_deploy.assert_called_with(node, instance, None)
-
-    @mock.patch.object(configdrive, 'required_by')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(FAKE_CLIENT, 'node')
     @mock.patch.object(ironic_driver.IronicDriver, '_add_volume_target_info')
     @mock.patch.object(ironic_driver.IronicDriver, '_generate_configdrive')
-    @mock.patch.object(ironic_driver.IronicDriver, '_start_firewall')
     def test_spawn_node_configdrive_fail(self,
-                                         mock_sf, mock_configdrive,
+                                         mock_configdrive,
                                          mock_avti, mock_node, mock_save,
                                          mock_required_by):
         mock_required_by.return_value = True
@@ -1639,10 +1584,9 @@ class IronicDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(configdrive, 'required_by')
     @mock.patch.object(FAKE_CLIENT, 'node')
     @mock.patch.object(ironic_driver.IronicDriver, '_add_volume_target_info')
-    @mock.patch.object(ironic_driver.IronicDriver, '_start_firewall')
     @mock.patch.object(ironic_driver.IronicDriver, '_cleanup_deploy')
     def test_spawn_node_trigger_deploy_fail(self, mock_cleanup_deploy,
-                                            mock_sf, mock_avti,
+                                            mock_avti,
                                             mock_node, mock_required_by):
         mock_required_by.return_value = False
         node_id = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
@@ -1667,10 +1611,9 @@ class IronicDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(configdrive, 'required_by')
     @mock.patch.object(FAKE_CLIENT, 'node')
     @mock.patch.object(ironic_driver.IronicDriver, '_add_volume_target_info')
-    @mock.patch.object(ironic_driver.IronicDriver, '_start_firewall')
     @mock.patch.object(ironic_driver.IronicDriver, '_cleanup_deploy')
     def test_spawn_node_trigger_deploy_fail2(self, mock_cleanup_deploy,
-                                             mock_sf, mock_avti,
+                                             mock_avti,
                                              mock_node, mock_required_by):
         mock_required_by.return_value = False
         node_id = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
@@ -1696,10 +1639,9 @@ class IronicDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
     @mock.patch.object(FAKE_CLIENT, 'node')
     @mock.patch.object(ironic_driver.IronicDriver, '_add_volume_target_info')
-    @mock.patch.object(ironic_driver.IronicDriver, '_start_firewall')
     @mock.patch.object(ironic_driver.IronicDriver, 'destroy')
     def test_spawn_node_trigger_deploy_fail3(self, mock_destroy,
-                                             mock_sf, mock_avti,
+                                             mock_avti,
                                              mock_node, mock_looping,
                                              mock_required_by):
         mock_required_by.return_value = False
@@ -1729,8 +1671,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(FAKE_CLIENT, 'node')
     @mock.patch.object(ironic_driver.IronicDriver, '_add_volume_target_info')
     @mock.patch.object(ironic_driver.IronicDriver, '_wait_for_active')
-    @mock.patch.object(ironic_driver.IronicDriver, '_start_firewall')
-    def test_spawn_sets_default_ephemeral_device(self, mock_sf,
+    def test_spawn_sets_default_ephemeral_device(self,
                                                  mock_wait, mock_avti,
                                                  mock_node, mock_save,
                                                  mock_looping,
@@ -2233,40 +2174,6 @@ class IronicDriverTestCase(test.NoDBTestCase):
                                      'fake_vif')
         mock_uv.assert_called_once_with('fake_instance', ['fake_vif'])
 
-    @mock.patch.object(firewall.NoopFirewallDriver, 'unfilter_instance',
-                       create=True)
-    def test_unfilter_instance(self, mock_ui):
-        instance = fake_instance.fake_instance_obj(self.ctx)
-        network_info = utils.get_test_network_info()
-        self.driver.unfilter_instance(instance, network_info)
-        mock_ui.assert_called_once_with(instance, network_info)
-
-    @mock.patch.object(firewall.NoopFirewallDriver, 'setup_basic_filtering',
-                       create=True)
-    @mock.patch.object(firewall.NoopFirewallDriver, 'prepare_instance_filter',
-                       create=True)
-    def test_ensure_filtering_rules_for_instance(self, mock_pif, mock_sbf):
-        instance = fake_instance.fake_instance_obj(self.ctx)
-        network_info = utils.get_test_network_info()
-        self.driver.ensure_filtering_rules_for_instance(instance,
-                                                        network_info)
-        mock_sbf.assert_called_once_with(instance, network_info)
-        mock_pif.assert_called_once_with(instance, network_info)
-
-    @mock.patch.object(firewall.NoopFirewallDriver,
-                       'refresh_instance_security_rules', create=True)
-    def test_refresh_instance_security_rules(self, mock_risr):
-        instance = fake_instance.fake_instance_obj(self.ctx)
-        self.driver.refresh_instance_security_rules(instance)
-        mock_risr.assert_called_once_with(instance)
-
-    @mock.patch.object(firewall.NoopFirewallDriver,
-                      'refresh_instance_security_rules', create=True)
-    def test_refresh_security_group_rules(self, mock_risr):
-        fake_group = 'fake-security-group-members'
-        self.driver.refresh_instance_security_rules(fake_group)
-        mock_risr.assert_called_once_with(fake_group)
-
     @mock.patch.object(ironic_driver.IronicDriver, '_wait_for_active')
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
     @mock.patch.object(FAKE_CLIENT.node, 'set_provision_state')
@@ -2658,13 +2565,11 @@ class IronicDriverTestCase(test.NoDBTestCase):
             fields=ironic_driver._NODE_FIELDS)
         self.assertEqual(1, mock_cleanup.call_count)
 
-    @mock.patch.object(ironic_driver.IronicDriver, '_stop_firewall')
     @mock.patch.object(ironic_driver.IronicDriver, '_unplug_vifs')
     @mock.patch.object(ironic_driver.IronicDriver,
                        '_cleanup_volume_target_info')
     @mock.patch.object(cw.IronicClientWrapper, 'call')
-    def test__cleanup_deploy(self, mock_call, mock_vol, mock_unvif,
-                              mock_stop_fw):
+    def test__cleanup_deploy(self, mock_call, mock_vol, mock_unvif):
         # TODO(TheJulia): This REALLY should be updated to cover all of the
         # calls that take place.
         node = ironic_utils.get_test_node(driver='fake')
@@ -2673,19 +2578,17 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.driver._cleanup_deploy(node, instance)
         mock_vol.assert_called_once_with(instance)
         mock_unvif.assert_called_once_with(node, instance, None)
-        mock_stop_fw.assert_called_once_with(instance, None)
         expected_patch = [{'path': '/instance_info', 'op': 'remove'},
                           {'path': '/instance_uuid', 'op': 'remove'}]
         mock_call.assert_called_once_with('node.update', node.uuid,
                                           expected_patch)
 
-    @mock.patch.object(ironic_driver.IronicDriver, '_stop_firewall')
     @mock.patch.object(ironic_driver.IronicDriver, '_unplug_vifs')
     @mock.patch.object(ironic_driver.IronicDriver,
                        '_cleanup_volume_target_info')
     @mock.patch.object(cw.IronicClientWrapper, 'call')
     def test__cleanup_deploy_no_remove_ii(self, mock_call, mock_vol,
-                                          mock_unvif, mock_stop_fw):
+                                          mock_unvif):
         # TODO(TheJulia): This REALLY should be updated to cover all of the
         # calls that take place.
         node = ironic_utils.get_test_node(driver='fake')
@@ -2694,7 +2597,6 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.driver._cleanup_deploy(node, instance, remove_instance_info=False)
         mock_vol.assert_called_once_with(instance)
         mock_unvif.assert_called_once_with(node, instance, None)
-        mock_stop_fw.assert_called_once_with(instance, None)
         self.assertFalse(mock_call.called)
 
 

@@ -52,7 +52,6 @@ from nova import servicegroup
 from nova import utils
 from nova.virt import configdrive
 from nova.virt import driver as virt_driver
-from nova.virt import firewall
 from nova.virt import hardware
 from nova.virt.ironic import client_wrapper
 from nova.virt.ironic import ironic_states
@@ -193,8 +192,6 @@ class IronicDriver(virt_driver.ComputeDriver):
                 ironic.client = importutils.import_module(
                                                     'ironicclient.client')
 
-        self.firewall_driver = firewall.load_driver(
-            default='nova.virt.firewall.NoopFirewallDriver')
         self.node_cache = {}
         self.node_cache_time = 0
         self.servicegroup_api = servicegroup.API()
@@ -380,14 +377,6 @@ class IronicDriver(virt_driver.ComputeDriver):
         }
         return dic
 
-    def _start_firewall(self, instance, network_info):
-        self.firewall_driver.setup_basic_filtering(instance, network_info)
-        self.firewall_driver.prepare_instance_filter(instance, network_info)
-        self.firewall_driver.apply_instance_filter(instance, network_info)
-
-    def _stop_firewall(self, instance, network_info):
-        self.firewall_driver.unfilter_instance(instance, network_info)
-
     def _set_instance_id(self, node, instance):
         try:
             # NOTE(TheJulia): Assert an instance ID to lock the node
@@ -520,7 +509,6 @@ class IronicDriver(virt_driver.ComputeDriver):
                         remove_instance_info=True):
         self._cleanup_volume_target_info(instance)
         self._unplug_vifs(node, instance, network_info)
-        self._stop_firewall(instance, network_info)
         if remove_instance_info:
             self._remove_instance_info_from_node(node, instance)
 
@@ -1228,17 +1216,6 @@ class IronicDriver(virt_driver.ComputeDriver):
                    'power': validate_chk.power,
                    'storage': validate_chk.storage})
 
-        # prepare for the deploy
-        try:
-            self._start_firewall(instance, network_info)
-        except Exception:
-            with excutils.save_and_reraise_exception():
-                LOG.error("Error preparing deploy for instance "
-                          "%(instance)s on baremetal node %(node)s.",
-                          {'instance': instance.uuid,
-                           'node': node_uuid})
-                self._cleanup_deploy(node, instance, network_info)
-
         # Config drive
         configdrive_value = None
         if configdrive.required_by(instance):
@@ -1561,47 +1538,6 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         LOG.info('Successfully triggered crash dump into Ironic node %s',
                  node.uuid, instance=instance)
-
-    def refresh_security_group_rules(self, security_group_id):
-        """Refresh security group rules from data store.
-
-        Invoked when security group rules are updated.
-
-        :param security_group_id: The security group id.
-
-        """
-        self.firewall_driver.refresh_security_group_rules(security_group_id)
-
-    def refresh_instance_security_rules(self, instance):
-        """Refresh security group rules from data store.
-
-        Gets called when an instance gets added to or removed from
-        the security group the instance is a member of or if the
-        group gains or loses a rule.
-
-        :param instance: The instance object.
-
-        """
-        self.firewall_driver.refresh_instance_security_rules(instance)
-
-    def ensure_filtering_rules_for_instance(self, instance, network_info):
-        """Set up filtering rules.
-
-        :param instance: The instance object.
-        :param network_info: Instance network information.
-
-        """
-        self.firewall_driver.setup_basic_filtering(instance, network_info)
-        self.firewall_driver.prepare_instance_filter(instance, network_info)
-
-    def unfilter_instance(self, instance, network_info):
-        """Stop filtering instance.
-
-        :param instance: The instance object.
-        :param network_info: Instance network information.
-
-        """
-        self.firewall_driver.unfilter_instance(instance, network_info)
 
     def _plug_vif(self, node, port_id):
         last_attempt = 5

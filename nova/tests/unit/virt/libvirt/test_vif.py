@@ -515,21 +515,14 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         mac = node.find("mac").get("address")
         self.assertEqual(mac, vif['address'])
 
-    def _assertTypeEquals(self, node, type, attr, source, br_want,
-                          prefix=None):
+    def _assertTypeEquals(self, node, type, attr, source, br_want):
         self.assertEqual(node.get("type"), type)
         br_name = node.find(attr).get(source)
-        if prefix is None:
-            self.assertEqual(br_name, br_want)
-        else:
-            self.assertTrue(br_name.startswith(prefix))
+        self.assertEqual(br_name, br_want)
 
     def _assertTypeAndMacEquals(self, node, type, attr, source, vif,
-                                br_want=None, size=0, prefix=None):
-        ret = node.findall("filterref")
-        self.assertEqual(len(ret), size)
-        self._assertTypeEquals(node, type, attr, source, br_want,
-                               prefix)
+                                br_want=None):
+        self._assertTypeEquals(node, type, attr, source, br_want)
         self._assertMacEquals(node, vif)
 
     def _assertModel(self, xml, model_want=None, driver_want=None):
@@ -901,16 +894,20 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         self.assertIsNone(conf.driver_name)
         self.assertIsNone(conf.model)
 
-    def _test_model_qemu(self, *vif_objs, **kw):
-        libvirt_version = kw.get('libvirt_version')
+    def test_model_qemu(self):
+        vif_objs = [
+            self.vif_bridge,
+            self.vif_8021qbg,
+            self.vif_iovisor,
+            self.vif_ovs,
+        ]
+
         self.flags(use_virtio_for_bridges=True,
                    virt_type='qemu',
                    group='libvirt')
 
         for vif_obj in vif_objs:
             d = vif.LibvirtGenericVIFDriver()
-            if libvirt_version is not None:
-                d.libvirt_version = libvirt_version
 
             xml = self._get_instance_xml(d, vif_obj)
 
@@ -936,23 +933,6 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                              self.bandwidth['quota:vif_outbound_burst'])
 
             self._assertModel(xml, network_model.VIF_MODEL_VIRTIO, "qemu")
-
-    def test_model_qemu_no_firewall(self):
-        self._test_model_qemu(
-            self.vif_bridge,
-            self.vif_8021qbg,
-            self.vif_iovisor,
-            self.vif_ovs,
-        )
-
-    def test_model_qemu_iptables(self):
-        self.flags(firewall_driver="nova.virt.firewall.IptablesFirewallDriver")
-        self._test_model_qemu(
-            self.vif_bridge,
-            self.vif_ovs,
-            self.vif_8021qbg,
-            self.vif_iovisor
-        )
 
     def test_model_xen(self):
         self.flags(use_virtio_for_bridges=True,
@@ -1082,29 +1062,6 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         node = self._get_node(xml)
         self._assertTypeAndMacEquals(node, "bridge", "target", "dev",
                                      self.vif_ovs_filter_cap, br_want)
-
-    def _check_neutron_hybrid_driver(self, d, vif, br_want):
-        self.flags(firewall_driver="nova.virt.firewall.IptablesFirewallDriver")
-        xml = self._get_instance_xml(d, vif)
-        node = self._get_node(xml)
-        self._assertTypeAndMacEquals(node, "bridge", "source", "bridge",
-                                     vif, br_want, 1)
-
-    def test_ivs_hybrid_driver(self):
-        d = vif.LibvirtGenericVIFDriver()
-        br_want = "qbr" + self.vif_ivs['id']
-        br_want = br_want[:network_model.NIC_NAME_LEN]
-        self._check_neutron_hybrid_driver(d,
-                                          self.vif_ivs,
-                                          br_want)
-
-    def test_generic_hybrid_driver(self):
-        d = vif.LibvirtGenericVIFDriver()
-        br_want = "qbr" + self.vif_ovs['id']
-        br_want = br_want[:network_model.NIC_NAME_LEN]
-        self._check_neutron_hybrid_driver(d,
-                                          self.vif_ovs,
-                                          br_want)
 
     def test_ib_hostdev_driver(self):
         d = vif.LibvirtGenericVIFDriver()

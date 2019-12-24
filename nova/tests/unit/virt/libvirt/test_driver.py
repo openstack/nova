@@ -103,7 +103,6 @@ from nova import version
 from nova.virt import block_device as driver_block_device
 from nova.virt import driver
 from nova.virt import fake
-from nova.virt import firewall as base_firewall
 from nova.virt import hardware
 from nova.virt.image import model as imgmodel
 from nova.virt import images
@@ -111,7 +110,6 @@ from nova.virt.libvirt import blockinfo
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import designer
 from nova.virt.libvirt import driver as libvirt_driver
-from nova.virt.libvirt import firewall
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
 from nova.virt.libvirt.host import SEV_KERNEL_PARAM_FILE
@@ -937,8 +935,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.project_id = 'fake'
         self.context = context.get_admin_context()
         temp_dir = self.useFixture(fixtures.TempDir()).path
-        self.flags(instances_path=temp_dir,
-                   firewall_driver=None)
+        self.flags(instances_path=temp_dir)
         self.flags(snapshots_directory=temp_dir, group='libvirt')
 
         self.flags(sysinfo_serial="hardware", group="libvirt")
@@ -6147,7 +6144,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
               mock.patch.object(drvr, '_is_booted_from_volume',
                                 return_value=False),
               mock.patch.object(drvr, 'plug_vifs'),
-              mock.patch.object(drvr, 'firewall_driver'),
               mock.patch.object(drvr, 'cleanup')):
             self.assertRaises(ValueError,
                               drvr._create_domain_and_network,
@@ -9847,15 +9843,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                      '%s != %s failed common check %d' %
                                      (check(tree), expected_result, i))
 
-                filterref = './devices/interface/filterref'
-                vif = network_info[0]
-                nic_id = vif['address'].lower().replace(':', '')
-                fw = firewall.NWFilterFirewall(drvr)
-                instance_filter_name = fw._instance_filter_name(instance_ref,
-                                                                nic_id)
-                self.assertEqual(tree.find(filterref).get('filter'),
-                                 instance_filter_name)
-
         # This test is supposed to make sure we don't
         # override a specifically set uri
         #
@@ -9868,47 +9855,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.flags(virt_type=virt_type, group='libvirt')
             drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
             self.assertEqual(drvr._uri(), testuri)
-
-    def test_ensure_filtering_rules_for_instance_timeout(self):
-        # ensure_filtering_fules_for_instance() finishes with timeout.
-        # Preparing mocks
-        class FakeTime(object):
-            def __init__(self):
-                self.counter = 0
-
-            def sleep(self, t):
-                self.counter += t
-
-        fake_timer = FakeTime()
-
-        # _fake_network_info must be called before create_fake_libvirt_mock(),
-        # as _fake_network_info calls importutils.import_class() and
-        # create_fake_libvirt_mock() mocks importutils.import_class().
-        network_info = _fake_network_info(self, 1)
-        self.create_fake_libvirt_mock()
-        instance_ref = objects.Instance(**self.test_instance)
-
-        # Start test
-        try:
-            drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-            self.stub_out('nova.virt.libvirt.firewall.IptablesFirewallDriver.'
-                          'setup_basic_filtering', lambda *a: None)
-            self.stub_out('nova.virt.libvirt.firewall.IptablesFirewallDriver.'
-                          'prepare_instance_filter', lambda *a: None)
-            self.stub_out('nova.virt.libvirt.firewall.IptablesFirewallDriver.'
-                          'instance_filter_exists', lambda *a: None)
-            self.stub_out('eventlet.greenthread.sleep',
-                          lambda t: fake_timer.sleep(t))
-            drvr.ensure_filtering_rules_for_instance(instance_ref,
-                                                     network_info)
-        except exception.NovaException as e:
-            msg = ('The firewall filter for %s does not exist' %
-                   instance_ref['name'])
-            c1 = (0 <= six.text_type(e).find(msg))
-        self.assertTrue(c1)
-
-        self.assertEqual(29, fake_timer.counter, "Didn't wait the expected "
-                                                 "amount of time")
 
     @mock.patch.object(libvirt_driver.LibvirtDriver,
         '_create_shared_storage_test_file')
@@ -13445,12 +13391,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         with test.nested(
             mock.patch.object(drvr,
                               '_create_images_and_backing'),
-            mock.patch.object(drvr,
-                              'ensure_filtering_rules_for_instance'),
             mock.patch.object(drvr, 'plug_vifs'),
         ) as (
             create_image_mock,
-            rules_mock,
             plug_mock,
         ):
             disk_info_json = jsonutils.dumps({})
@@ -13487,12 +13430,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock.patch.object(drvr,
                               '_create_images_and_backing',
                               side_effect=check_instance_dir),
-            mock.patch.object(drvr,
-                              'ensure_filtering_rules_for_instance'),
             mock.patch.object(drvr, 'plug_vifs'),
         ) as (
             create_image_mock,
-            rules_mock,
             plug_mock,
         ):
             disk_info_json = jsonutils.dumps({})
@@ -13903,14 +13843,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock.patch('nova.virt.libvirt.driver.libvirt'),
             mock.patch.object(drvr, '_build_device_metadata'),
             mock.patch.object(drvr, 'get_info'),
-            mock.patch.object(drvr.firewall_driver, 'setup_basic_filtering'),
-            mock.patch.object(drvr.firewall_driver, 'prepare_instance_filter')
         ) as (
             tmpdir,
             mock_orig_libvirt,
             mock_build_device_metadata,
             mock_get_info,
-            mock_ignored, mock_ignored
         ):
             self.flags(instances_path=tmpdir)
 
@@ -14137,9 +14074,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         with test.nested(
             mock.patch.object(drvr, 'plug_vifs'),
-            mock.patch.object(drvr.firewall_driver, 'setup_basic_filtering'),
-            mock.patch.object(drvr.firewall_driver, 'prepare_instance_filter'),
-            mock.patch.object(drvr.firewall_driver, 'apply_instance_filter'),
             mock.patch.object(drvr, '_create_domain'),
             mock.patch.object(drvr, '_connect_volume',
                               side_effect=_connect_volume_side_effect),
@@ -17717,13 +17651,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             state=power_state.RUNNING)
 
         with test.nested(
-            mock.patch.object(drvr, '_is_booted_from_volume',
-                              return_value=False),
-            mock.patch.object(drvr, '_create_domain'),
-            mock.patch.object(drvr, 'plug_vifs'),
-            mock.patch.object(drvr.firewall_driver, 'setup_basic_filtering'),
-            mock.patch.object(drvr.firewall_driver, 'prepare_instance_filter'),
-            mock.patch.object(drvr.firewall_driver, 'apply_instance_filter')):
+                mock.patch.object(drvr, '_is_booted_from_volume',
+                                  return_value=False),
+                mock.patch.object(drvr, '_create_domain'),
+                mock.patch.object(drvr, 'plug_vifs')):
             drvr._create_domain_and_network(self.context, 'xml',
                                             mock_instance, [])
 
@@ -17784,13 +17715,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                               return_value=False),
             mock.patch.object(drvr, '_create_domain'),
             mock.patch.object(drvr, 'plug_vifs'),
-            mock.patch.object(drvr.firewall_driver, 'setup_basic_filtering'),
-            mock.patch.object(drvr.firewall_driver, 'prepare_instance_filter'),
-            mock.patch.object(drvr.firewall_driver, 'apply_instance_filter')
         ) as (
             mock_is_booted_from_volume, mock_create_domain, mock_plug_vifs,
-            mock_setup_basic_filtering, mock_prepare_instance_filter,
-            mock_apply_instance_filter
         ):
             drvr._create_domain_and_network(self.context, 'xml',
                                             mock_instance, [])
@@ -17834,13 +17760,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             state=power_state.SHUTDOWN)
 
         with test.nested(
-            mock.patch.object(drvr, '_is_booted_from_volume',
-                              return_value=False),
-            mock.patch.object(drvr, '_create_domain'),
-            mock.patch.object(drvr, 'plug_vifs'),
-            mock.patch.object(drvr.firewall_driver, 'setup_basic_filtering'),
-            mock.patch.object(drvr.firewall_driver, 'prepare_instance_filter'),
-            mock.patch.object(drvr.firewall_driver, 'apply_instance_filter')):
+                mock.patch.object(drvr, '_is_booted_from_volume',
+                                  return_value=False),
+                mock.patch.object(drvr, '_create_domain'),
+                mock.patch.object(drvr, 'plug_vifs')):
             drvr._create_domain_and_network(self.context, 'xml',
                                             mock_instance, [])
 
@@ -18033,8 +17956,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             {'id': instance['image_ref']})
 
         if method_name == "attach_interface":
-            mock_setup = self.useFixture(fixtures.MockPatchObject(
-                drvr.firewall_driver, 'setup_basic_filtering')).mock
             mock_build = self.useFixture(fixtures.MockPatchObject(
                 drvr, '_build_device_metadata')).mock
             mock_build.return_value = objects.InstanceDeviceMetadata()
@@ -18053,7 +17974,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         if method_name == "attach_interface":
             drvr.attach_interface(self.context, instance, fake_image_meta,
                                   network_info[0])
-            mock_setup.assert_called_once_with(instance, network_info)
             mock_build.assert_called_once_with(self.context, instance)
             mock_save.assert_called_once_with()
         elif method_name == "detach_interface":
@@ -18254,7 +18174,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
               mock.patch.object(drvr, '_is_booted_from_volume',
                                 return_value=False),
               mock.patch.object(drvr, 'plug_vifs'),
-              mock.patch.object(drvr, 'firewall_driver'),
               mock.patch.object(drvr, '_create_domain',
                                 side_effect=exception.NovaException),
               mock.patch.object(drvr, 'cleanup')):
@@ -18278,10 +18197,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
               mock.patch.object(drvr, '_lxc_disk_handler',
                                 side_effect=fake_lxc_disk_handler),
               mock.patch.object(drvr, 'plug_vifs'),
-              mock.patch.object(drvr, 'firewall_driver'),
               mock.patch.object(drvr, '_create_domain'),
               mock.patch.object(drvr, 'cleanup')) as (
-              _handler, cleanup, firewall_driver, create, plug_vifs):
+              _handler, cleanup, create, plug_vifs):
             domain = drvr._create_domain_and_network(self.context, 'xml',
                                                      instance, None)
             self.assertEqual(0, create.call_args_list[0][1]['pause'])
@@ -18322,10 +18240,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 {'id': uuids.vif_2, 'active': False}]
 
         @mock.patch.object(drvr, 'plug_vifs')
-        @mock.patch.object(drvr, 'firewall_driver')
         @mock.patch.object(drvr, '_create_domain')
         @mock.patch.object(drvr, 'cleanup')
-        def test_create(cleanup, create, fw_driver, plug_vifs):
+        def test_create(cleanup, create, plug_vifs):
             domain = drvr._create_domain_and_network(self.context, 'xml',
                                                      instance, vifs,
                                                      power_on=power_on,
@@ -18401,10 +18318,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(mock.MagicMock(), False)
 
         @mock.patch.object(drvr, 'plug_vifs')
-        @mock.patch.object(drvr, 'firewall_driver')
         @mock.patch.object(drvr, '_create_domain')
         @mock.patch.object(drvr, '_cleanup_failed_start')
-        def the_test(mock_cleanup, mock_create, mock_fw, mock_plug):
+        def the_test(mock_cleanup, mock_create, mock_plug):
             instance = objects.Instance(**self.test_instance)
             mock_create.side_effect = test.TestingException
             self.assertRaises(test.TestingException,
@@ -18513,13 +18429,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         with test.nested(
             mock.patch.object(drvr, 'plug_vifs'),
-            mock.patch.object(drvr.firewall_driver, 'setup_basic_filtering'),
-            mock.patch.object(drvr.firewall_driver,
-                              'prepare_instance_filter'),
             mock.patch.object(drvr, '_create_domain'),
-            mock.patch.object(drvr.firewall_driver, 'apply_instance_filter'),
-        ) as (plug_vifs, setup_basic_filtering, prepare_instance_filter,
-              create_domain, apply_instance_filter):
+        ) as (plug_vifs, create_domain):
             create_domain.return_value = libvirt_guest.Guest(mock_dom)
 
             guest = drvr._create_domain_and_network(
@@ -18527,10 +18438,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     block_device_info=block_device_info)
 
             plug_vifs.assert_called_once_with(instance, network_info)
-            setup_basic_filtering.assert_called_once_with(instance,
-                                                          network_info)
-            prepare_instance_filter.assert_called_once_with(instance,
-                                                          network_info)
             pause = self._get_pause_flag(drvr, network_info)
             create_domain.assert_called_once_with(
                 fake_xml, pause=pause, power_on=True, post_xml_callback=None)
@@ -18609,7 +18516,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._undefine_domain')
     def test_cleanup_pass_with_no_mount_device(self, undefine, unplug):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
-        drvr.firewall_driver = mock.Mock()
         drvr._disconnect_volume = mock.Mock()
         fake_inst = objects.Instance(**self.test_instance)
         fake_bdms = [{'connection_info': 'foo',
@@ -18634,7 +18540,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                               drvr.cleanup, 'ctxt', fake_inst, 'netinfo')
             unplug.assert_called_once_with(fake_inst, 'netinfo', True)
 
-    @mock.patch.object(libvirt_driver.LibvirtDriver, 'unfilter_instance')
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'delete_instance_files',
                        return_value=True)
     @mock.patch.object(objects.Instance, 'save')
@@ -18642,8 +18547,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_cleanup_migrate_data_shared_block_storage(self,
                                                        _undefine_domain,
                                                        save,
-                                                       delete_instance_files,
-                                                       unfilter_instance):
+                                                       delete_instance_files):
         # Tests the cleanup method when migrate_data has
         # is_shared_block_storage=True and destroy_disks=False.
         instance = objects.Instance(self.context, **self.test_instance)
@@ -18658,13 +18562,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertTrue(instance.cleaned)
         save.assert_called_once_with()
 
-    @mock.patch.object(libvirt_driver.LibvirtDriver, 'unfilter_instance')
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'delete_instance_files',
                        return_value=True)
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_undefine_domain')
     def test_cleanup_instance_dir_with_rbd_workaround(self,
-            _undefine_domain, save, delete_instance_files, unfilter_instance):
+            _undefine_domain, save, delete_instance_files):
         self.flags(images_type='rbd', group='libvirt')
         self.flags(ensure_libvirt_rbd_instance_dir_cleanup=True,
                    group='workarounds')
@@ -21016,9 +20919,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.plug_vifs',
                       fake_plug_vifs)
         self.stub_out('oslo_concurrency.processutils.execute', fake_execute)
-        fw = base_firewall.NoopFirewallDriver()
-        self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.firewall_driver',
-                      fw)
         self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.'
                       '_create_domain_and_network', fake_create_domain)
         self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.get_info',
@@ -21271,10 +21171,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                                   new_callable=mock.NonCallableMock),
                 mock.patch.object(drvr, '_undefine_domain'),
                 mock.patch.object(drvr, 'unplug_vifs'),
-                mock.patch.object(drvr, 'unfilter_instance')
         ) as (mock_volume_backed, mock_exists, mock_get_path,
-              mock_rmtree, mock_image_by_name, mock_undef, mock_unplug,
-              mock_unfilter):
+              mock_rmtree, mock_image_by_name, mock_undef, mock_unplug):
             mock_exists.return_value = True
             mock_get_path.return_value = '/fake/inst'
 
@@ -21283,7 +21181,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             self.assertEqual(5, mock_rmtree.call_count)
             mock_undef.assert_called_once_with(ins_ref)
             mock_unplug.assert_called_once_with(ins_ref, fake_net)
-            mock_unfilter.assert_called_once_with(ins_ref, fake_net)
 
     @mock.patch('time.sleep', new=mock.Mock())
     def test_cleanup_resize_not_same_host_volume_backed(self):
@@ -21309,9 +21206,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 mock.patch.object(shutil, 'rmtree'),
                 mock.patch.object(drvr, '_undefine_domain'),
                 mock.patch.object(drvr, 'unplug_vifs'),
-                mock.patch.object(drvr, 'unfilter_instance')
         ) as (mock_volume_backed, mock_exists, mock_get_path,
-              mock_rmtree, mock_undef, mock_unplug, mock_unfilter):
+              mock_rmtree, mock_undef, mock_unplug):
             mock_exists.return_value = True
             mock_get_path.return_value = '/fake/inst'
 
@@ -21320,7 +21216,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             self.assertEqual(5, mock_rmtree.call_count)
             mock_undef.assert_called_once_with(ins_ref)
             mock_unplug.assert_called_once_with(ins_ref, fake_net)
-            mock_unfilter.assert_called_once_with(ins_ref, fake_net)
 
     @mock.patch('time.sleep', new=mock.Mock())
     def test_cleanup_resize_snap_backend(self):
@@ -21667,8 +21562,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             CONF.libvirt.virt_type, self.drvr._host)
         with test.nested(
             mock.patch.object(host.Host, '_get_domain', return_value=domain),
-            mock.patch.object(self.drvr.firewall_driver,
-                              'setup_basic_filtering'),
             mock.patch.object(domain, 'attachDeviceFlags'),
             mock.patch.object(domain, 'info',
                               return_value=[power_state.RUNNING, 1, 2, 3, 4]),
@@ -21678,7 +21571,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                               side_effect=exception.NovaException),
             mock.patch.object(self.drvr, 'detach_interface'),
         ) as (
-            mock_get_domain, mock_setup_basic_filtering,
+            mock_get_domain,
             mock_attach_device_flags, mock_info, mock_get_config,
             mock_build_device_metadata, mock_detach_interface
         ):
@@ -21687,8 +21580,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                               instance, fake_image_meta, network_info[0])
             mock_get_domain.assert_called_with(instance)
             mock_info.assert_called_with()
-            mock_setup_basic_filtering.assert_called_with(
-                instance, [network_info[0]])
             mock_get_config.assert_called_with(
                 instance, network_info[0], fake_image_meta, instance.flavor,
                 CONF.libvirt.virt_type, self.drvr._host)
@@ -21737,9 +21628,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         with test.nested(
             mock.patch.object(self.drvr.vif_driver, 'get_config',
                               return_value=expected),
-            mock.patch.object(self.drvr.firewall_driver,
-                              'setup_basic_filtering')
-        ) as (mock_get_config, mock_setup):
+        ) as (mock_get_config,):
             self.drvr.attach_interface(
                 self.context, instance, fake_image_meta, network_info[0])
 
@@ -21749,7 +21638,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 self.drvr._host)
             mock_get_domain.assert_called_once_with(instance)
             mock_info.assert_called_once_with()
-            mock_setup.assert_called_once_with(instance, [network_info[0]])
             mock_build.assert_called_once_with(self.context, instance)
             mock_save.assert_called_once_with()
             mock_attach.assert_called_once_with(expected.to_xml(),
@@ -21936,9 +21824,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                               side_effect=[expected, expected, None, None]),
             mock.patch.object(self.drvr.vif_driver, 'get_config',
                               return_value=expected),
-            mock.patch.object(self.drvr.firewall_driver,
-                              'setup_basic_filtering')
-        ) as (mock_get_interface, mock_get_config, mock_setup):
+        ) as (mock_get_interface, mock_get_config):
             self.drvr.detach_interface(self.context, instance, network_info[0])
 
             mock_get_interface.assert_has_calls([mock.call(expected)] * 3)
@@ -21947,7 +21833,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 instance, network_info[0], test.MatchType(objects.ImageMeta),
                 test.MatchType(objects.Flavor), CONF.libvirt.virt_type,
                 self.drvr._host)
-            mock_setup.assert_not_called()
             mock_get_domain.assert_called_once_with(instance)
             mock_info.assert_called_once_with()
             mock_detach.assert_called_once_with(expected.to_xml(),
@@ -22509,11 +22394,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     @mock.patch.object(lvm, 'get_volume_size', return_value=10)
     @mock.patch.object(host.Host, "get_guest")
     @mock.patch.object(dmcrypt, 'delete_volume')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.unfilter_instance')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._undefine_domain')
     @mock.patch.object(objects.Instance, 'save')
     def test_cleanup_lvm_encrypted(self, mock_save, mock_undefine_domain,
-                                   mock_unfilter, mock_delete_volume,
+                                   mock_delete_volume,
                                    mock_get_guest, mock_get_lvm_size,
                                    mock_get_size):
         drv = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)

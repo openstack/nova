@@ -472,9 +472,7 @@ class GetInstanceForVdisForSrTestCase(VMUtilsTestBase):
         self.fixture = self.useFixture(config_fixture.Config(lockutils.CONF))
         self.fixture.config(disable_process_locking=True,
                             group='oslo_concurrency')
-        self.flags(instance_name_template='%d',
-                   firewall_driver='nova.virt.xenapi.firewall.'
-                                   'Dom0IptablesFirewallDriver')
+        self.flags(instance_name_template='%d')
         self.flags(connection_url='http://localhost',
                    connection_password='test_pass',
                    group='xenserver')
@@ -1239,9 +1237,7 @@ class VMUtilsSRPath(VMUtilsTestBase):
         self.fixture = self.useFixture(config_fixture.Config(lockutils.CONF))
         self.fixture.config(disable_process_locking=True,
                             group='oslo_concurrency')
-        self.flags(instance_name_template='%d',
-                   firewall_driver='nova.virt.xenapi.firewall.'
-                                   'Dom0IptablesFirewallDriver')
+        self.flags(instance_name_template='%d')
         self.flags(connection_url='http://localhost',
                    connection_password='test_pass',
                    group='xenserver')
@@ -2171,9 +2167,7 @@ class CreateVmRecordTestCase(VMUtilsTestBase):
         self.fixture = self.useFixture(config_fixture.Config(lockutils.CONF))
         self.fixture.config(disable_process_locking=True,
                             group='oslo_concurrency')
-        self.flags(instance_name_template='%d',
-                   firewall_driver='nova.virt.xenapi.firewall.'
-                                   'Dom0IptablesFirewallDriver')
+        self.flags(instance_name_template='%d')
         self.flags(connection_url='http://localhost',
                    connection_password='test_pass',
                    group='xenserver')

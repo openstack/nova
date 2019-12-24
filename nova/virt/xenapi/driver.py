@@ -617,12 +617,6 @@ class XenAPIDriver(driver.ComputeDriver):
 
         return dic
 
-    def ensure_filtering_rules_for_instance(self, instance, network_info):
-        # NOTE(salvatore-orlando): it enforces security groups on
-        # host initialization and live migration.
-        # In XenAPI we do not assume instances running upon host initialization
-        return
-
     def check_can_live_migrate_destination(self, context, instance,
                 src_compute_info, dst_compute_info,
                 block_migration=False, disk_over_commit=False):
@@ -769,26 +763,6 @@ class XenAPIDriver(driver.ComputeDriver):
         """
         self._vmops.post_live_migration_at_destination(context, instance,
                 network_info, block_device_info, block_device_info)
-
-    def unfilter_instance(self, instance, network_info):
-        """Removes security groups configured for an instance."""
-        return self._vmops.unfilter_instance(instance, network_info)
-
-    def refresh_security_group_rules(self, security_group_id):
-        """Updates security group rules for all instances associated with a
-        given security group.
-
-        Invoked when security group rules are updated.
-        """
-        return self._vmops.refresh_security_group_rules(security_group_id)
-
-    def refresh_instance_security_rules(self, instance):
-        """Updates security group rules for specified instance.
-
-        Invoked when instances are added/removed to a security group
-        or when a rule is added/removed to a security group.
-        """
-        return self._vmops.refresh_instance_security_rules(instance)
 
     def get_available_nodes(self, refresh=False):
         stats = self.host_state.get_host_stats(refresh=refresh)

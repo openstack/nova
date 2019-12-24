@@ -284,9 +284,6 @@ class VMwareVCDriver(driver.ComputeDriver):
                                      network_info, image_meta, resize_instance,
                                      block_device_info, power_on)
 
-    def ensure_filtering_rules_for_instance(self, instance, network_info):
-        pass
-
     def pre_live_migration(self, context, instance, block_device_info,
                            network_info, disk_info, migrate_data):
         return migrate_data
@@ -337,9 +334,6 @@ class VMwareVCDriver(driver.ComputeDriver):
         data.cluster_name = CONF.vmware.cluster_name
         data.datastore_regex = CONF.vmware.datastore_regex
         return data
-
-    def unfilter_instance(self, instance, network_info):
-        pass
 
     def rollback_live_migration_at_destination(self, context, instance,
                                                network_info,

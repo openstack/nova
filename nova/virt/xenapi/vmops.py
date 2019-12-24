@@ -55,7 +55,6 @@ from nova.pci import manager as pci_manager
 from nova import utils
 from nova.virt import configdrive
 from nova.virt import driver as virt_driver
-from nova.virt import firewall
 from nova.virt.xenapi import agent as xapi_agent
 from nova.virt.xenapi.image import utils as image_utils
 from nova.virt.xenapi import vif as xapi_vif
@@ -68,10 +67,6 @@ LOG = logging.getLogger(__name__)
 
 
 CONF = nova.conf.CONF
-
-DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
-    firewall.__name__,
-    firewall.IptablesFirewallDriver.__name__)
 
 RESIZE_TOTAL_STEPS = 5
 
@@ -145,9 +140,6 @@ class VMOps(object):
         self._session = session
         self._virtapi = virtapi
         self._volumeops = volumeops.VolumeOps(self._session)
-        self.firewall_driver = firewall.load_driver(
-            DEFAULT_FIREWALL_DRIVER,
-            xenapi_session=self._session)
         self.vif_driver = xapi_vif.XenAPIOpenVswitchDriver(
             xenapi_session=self._session)
         self.default_root_dev = '/dev/sda'
@@ -587,7 +579,6 @@ class VMOps(object):
         @step
         def setup_network_step(undo_mgr, vm_ref):
             self._create_vifs(instance, vm_ref, network_info)
-            self._prepare_instance_filter(instance, network_info)
 
         @step
         def start_paused_step(undo_mgr, vm_ref):
@@ -601,10 +592,6 @@ class VMOps(object):
                 self._configure_new_instance_with_agent(instance, vm_ref,
                         injected_files, admin_password)
                 self._remove_hostname(instance, vm_ref)
-
-        @step
-        def apply_security_group_filters_step(undo_mgr):
-            self.firewall_driver.apply_instance_filter(instance, network_info)
 
         undo_mgr = utils.UndoManager()
         try:
@@ -651,7 +638,6 @@ class VMOps(object):
             except eventlet.timeout.Timeout:
                 self._handle_neutron_event_timeout(instance, undo_mgr)
 
-            apply_security_group_filters_step(undo_mgr)
             boot_and_configure_instance_step(undo_mgr, vm_ref)
             if completed_callback:
                 completed_callback()
@@ -973,19 +959,6 @@ class VMOps(object):
 
         agent.resetnetwork()
         agent.update_if_needed(version)
-
-    def _prepare_instance_filter(self, instance, network_info):
-        try:
-            self.firewall_driver.setup_basic_filtering(
-                    instance, network_info)
-        except NotImplementedError:
-            # NOTE(salvatore-orlando): setup_basic_filtering might be
-            # empty or not implemented at all, as basic filter could
-            # be implemented with VIF rules created by xapi plugin
-            pass
-
-        self.firewall_driver.prepare_instance_filter(instance,
-                                                     network_info)
 
     def _get_vm_opaque_ref(self, instance, check_rescue=False):
         """Get xapi OpaqueRef from a db record.
@@ -1766,8 +1739,6 @@ class VMOps(object):
             self._destroy_kernel_ramdisk(instance, vm_ref)
 
         self.unplug_vifs(instance, network_info, vm_ref)
-        self.firewall_driver.unfilter_instance(
-                instance, network_info=network_info)
         vm_utils.destroy_vm(self._session, instance, vm_ref)
 
     def pause(self, instance):
@@ -2227,19 +2198,6 @@ class VMOps(object):
         """
         self._session.call_xenapi('VM.remove_from_xenstore_data', vm_ref, key)
 
-    def refresh_security_group_rules(self, security_group_id):
-        """recreates security group rules for every instance."""
-        self.firewall_driver.refresh_security_group_rules(security_group_id)
-
-    def refresh_instance_security_rules(self, instance):
-        """recreates security group rules for specified instance."""
-        self.firewall_driver.refresh_instance_security_rules(instance)
-
-    def unfilter_instance(self, instance_ref, network_info):
-        """Removes filters for each VIF of the specified instance."""
-        self.firewall_driver.unfilter_instance(instance_ref,
-                                               network_info=network_info)
-
     def _get_host_opaque_ref(self, hostname):
         host_ref_set = self._session.host.get_by_name_label(hostname)
         # If xenapi can't get host ref by the name label, it means the
@@ -2645,11 +2603,6 @@ class VMOps(object):
     def post_live_migration_at_destination(self, context, instance,
                                            network_info, block_migration,
                                            block_device_info):
-        # FIXME(johngarbutt): we should block all traffic until we have
-        # applied security groups, however this requires changes to XenServer
-        self._prepare_instance_filter(instance, network_info)
-        self.firewall_driver.apply_instance_filter(instance, network_info)
-
         # hook linux bridge and ovs bridge at destination
         self._post_start_actions(instance)
         vm_utils.create_kernel_and_ramdisk(context, self._session, instance,
@@ -2748,8 +2701,6 @@ class VMOps(object):
                 # plug VIF
                 self.vif_driver.plug(instance, vif, vm_ref=vm_ref,
                                      device=device)
-                # set firewall filtering
-                self.firewall_driver.setup_basic_filtering(instance, [vif])
             except exception.NovaException:
                 with excutils.save_and_reraise_exception():
                     LOG.exception(_('attach network interface %s failed.'),

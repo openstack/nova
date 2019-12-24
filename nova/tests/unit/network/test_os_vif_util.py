@@ -38,35 +38,6 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
         self.assertEqual(expect.obj_to_primitive(),
                          actual.obj_to_primitive())
 
-    def _test_is_firewall_required(self, port_filter, driver, expect):
-        vif = model.VIF(
-            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
-            type=model.VIF_TYPE_BRIDGE,
-            address="22:52:25:62:e2:aa",
-            network=model.Network(
-                id="b82c1929-051e-481d-8110-4669916c7915",
-                label="Demo Net",
-                subnets=[]),
-            details={
-                model.VIF_DETAILS_PORT_FILTER: port_filter,
-            }
-        )
-        self.flags(firewall_driver=driver)
-
-        self.assertEqual(expect, os_vif_util._is_firewall_required(vif))
-
-    def test_is_firewall_required_via_vif(self):
-        self._test_is_firewall_required(
-            True, "nova.virt.libvirt.firewall.IptablesFirewallDriver", False)
-
-    def test_is_firewall_required_via_driver(self):
-        self._test_is_firewall_required(
-            False, "nova.virt.libvirt.firewall.IptablesFirewallDriver", True)
-
-    def test_is_firewall_required_not(self):
-        self._test_is_firewall_required(
-            False, "nova.virt.firewall.NoopFirewallDriver", False)
-
     def test_nova_to_osvif_instance(self):
         inst = objects.Instance(
             id="1242",
@@ -643,7 +614,6 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
         self.assertObjEqual(expect, actual)
 
     def test_nova_to_osvif_vif_ovs_hybrid(self):
-        self.flags(firewall_driver=None)
         vif = model.VIF(
             id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
             type=model.VIF_TYPE_OVS,
@@ -654,6 +624,7 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
                 subnets=[]),
             details={
                 model.VIF_DETAILS_PORT_FILTER: False,
+                model.VIF_DETAILS_OVS_HYBRID_PLUG: True,
                 model.VIF_DETAILS_OVS_DATAPATH_TYPE:
                     model.VIF_DETAILS_OVS_DATAPATH_SYSTEM
             },

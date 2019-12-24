@@ -254,17 +254,6 @@ class LibvirtGenericVIFDriver(object):
         return (("qvb%s" % iface_id)[:network_model.NIC_NAME_LEN],
                 ("qvo%s" % iface_id)[:network_model.NIC_NAME_LEN])
 
-    @staticmethod
-    def is_no_op_firewall():
-        return CONF.firewall_driver == "nova.virt.firewall.NoopFirewallDriver"
-
-    def get_firewall_required_os_vif(self, vif):
-        if vif.has_traffic_filtering:
-            return False
-        if self.is_no_op_firewall():
-            return False
-        return True
-
     def get_config_bridge(self, instance, vif, image_meta,
                           inst_type, virt_type, host):
         """Get VIF configurations for bridge type."""
@@ -276,10 +265,6 @@ class LibvirtGenericVIFDriver(object):
             conf, self.get_bridge_name(vif),
             self.get_vif_devname(vif))
 
-        mac_id = vif['address'].replace(':', '')
-        name = "nova-instance-" + instance.name + "-" + mac_id
-        if self.get_firewall_required(vif):
-            conf.filtername = name
         designer.set_vif_bandwidth_config(conf, inst_type)
 
         self._set_mtu_config(vif, host, conf)
@@ -466,11 +451,6 @@ class LibvirtGenericVIFDriver(object):
         conf.net_type = "bridge"
         conf.source_dev = vif.bridge_name
         conf.target_dev = vif.vif_name
-
-        if self.get_firewall_required_os_vif(vif):
-            mac_id = vif.address.replace(':', '')
-            name = "nova-instance-" + instance.name + "-" + mac_id
-            conf.filtername = name
 
     def _set_config_VIFOpenVSwitch(self, instance, vif, conf, host=None):
         conf.net_type = "bridge"
