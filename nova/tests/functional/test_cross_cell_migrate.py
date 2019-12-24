@@ -20,6 +20,8 @@ from nova import context as nova_context
 from nova.db import api as db_api
 from nova import exception
 from nova import objects
+from nova.policies import base as base_policies
+from nova.policies import servers as servers_policies
 from nova.scheduler import utils as scheduler_utils
 from nova.scheduler import weights
 from nova.tests import fixtures as nova_fixtures
@@ -90,15 +92,10 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         # Enable cross-cell resize policy since it defaults to not allow
         # anyone to perform that type of operation. For these tests we'll
         # just allow admins to perform cross-cell resize.
-        # TODO(mriedem): Uncomment this when the policy rule is added and
-        # used in the compute API _allow_cross_cell_resize method. For now
-        # we just stub that method to return True.
-        # self.policy_fixture.set_rules({
-        #     servers_policies.CROSS_CELL_RESIZE:
-        #         base_policies.RULE_ADMIN_API},
-        #     overwrite=False)
-        self.stub_out('nova.compute.api.API._allow_cross_cell_resize',
-                      lambda *a, **kw: True)
+        self.policy.set_rules({
+            servers_policies.CROSS_CELL_RESIZE:
+                base_policies.RULE_ADMIN_API},
+            overwrite=False)
 
     def assertFlavorMatchesAllocation(self, flavor, allocation,
                                       volume_backed=False):

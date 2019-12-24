@@ -21,6 +21,7 @@ SERVERS = 'os_compute_api:servers:%s'
 NETWORK_ATTACH_EXTERNAL = 'network:attach_external_network'
 ZERO_DISK_FLAVOR = SERVERS % 'create:zero_disk_flavor'
 REQUESTED_DESTINATION = 'compute:servers:create:requested_destination'
+CROSS_CELL_RESIZE = 'compute:servers:resize:cross_cell'
 
 rules = [
     policy.DocumentedRuleDefault(
@@ -313,6 +314,19 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
         SERVERS % 'resize',
         RULE_AOO,
         "Resize a server",
+        [
+            {
+                'method': 'POST',
+                'path': '/servers/{server_id}/action (resize)'
+            }
+        ]),
+    policy.DocumentedRuleDefault(
+        CROSS_CELL_RESIZE,
+        base.RULE_NOBODY,
+        "Resize a server across cells. By default, this is disabled for all "
+        "users and recommended to be tested in a deployment for admin users "
+        "before opening it up to non-admin users. Resizing within a cell is "
+        "the default preferred behavior even if this is enabled. ",
         [
             {
                 'method': 'POST',

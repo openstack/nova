@@ -102,6 +102,7 @@ AGGREGATE_ACTION_DELETE = 'Delete'
 AGGREGATE_ACTION_ADD = 'Add'
 
 MIN_COMPUTE_SYNC_COMPUTE_STATUS_DISABLED = 38
+MIN_COMPUTE_CROSS_CELL_RESIZE = 47
 
 # FIXME(danms): Keep a global cache of the cells we find the
 # first time we look. This needs to be refreshed on a timer or
@@ -3715,20 +3716,30 @@ class API(base.Base):
         :param instance: Instance object being resized
         :returns: True if cross-cell resize is allowed, False otherwise
         """
-        # TODO(mriedem): Uncomment this when confirm/revert are done. For now
-        # this method can just be used to internally enable the feature for
-        # functional testing.
-
-        # TODO(mriedem): If true, we should probably check if all of the
-        # computes are running a high enough service version and if not, do
-        # what? Raise an exception or just log something and return False?
-
-        # return context.can(
-        #     server_policies.CROSS_CELL_RESIZE,
-        #     target={'user_id': instance.user_id,
-        #             'project_id': instance.project_id},
-        #     fatal=False)
-        return False
+        # First check to see if the requesting project/user is allowed by
+        # policy to perform cross-cell resize.
+        allowed = context.can(
+            servers_policies.CROSS_CELL_RESIZE,
+            target={'user_id': instance.user_id,
+                    'project_id': instance.project_id},
+            fatal=False)
+        # If the user is allowed by policy, check to make sure the deployment
+        # is upgraded to the point of supporting cross-cell resize on all
+        # compute services.
+        if allowed:
+            # TODO(mriedem): We can remove this minimum compute version check
+            # in the 21.0.0 "U" release.
+            min_compute_version = (
+                objects.service.get_minimum_version_all_cells(
+                    context, ['nova-compute']))
+            if min_compute_version < MIN_COMPUTE_CROSS_CELL_RESIZE:
+                LOG.debug('Request is allowed by policy to perform cross-cell '
+                          'resize but the minimum nova-compute service '
+                          'version in the deployment %s is less than %s so '
+                          'cross-cell resize is not allowed at this time.',
+                          min_compute_version, MIN_COMPUTE_CROSS_CELL_RESIZE)
+                allowed = False
+        return allowed
 
     @staticmethod
     def _validate_host_for_cold_migrate(

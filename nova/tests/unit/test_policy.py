@@ -24,6 +24,7 @@ import requests_mock
 
 from nova import context
 from nova import exception
+from nova.policies import servers as servers_policy
 from nova import policy
 from nova import test
 from nova.tests.unit import fake_policy
@@ -460,6 +461,10 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-services:list",
 )
 
+        self.allow_nobody_rules = (
+            servers_policy.CROSS_CELL_RESIZE,
+        )
+
     def test_all_rules_in_sample_file(self):
         special_rules = ["context_is_admin", "admin_or_owner", "default"]
         for (name, rule) in self.fake_policy.items():
@@ -485,6 +490,12 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
         for rule in self.allow_all_rules:
             policy.authorize(self.non_admin_context, rule, self.target)
 
+    def test_allow_nobody_rules(self):
+        """No one can perform these operations, not even admin."""
+        for rule in self.allow_nobody_rules:
+            self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
+                              self.admin_context, rule, self.target)
+
     def test_rule_missing(self):
         rules = policy.get_rules()
         # eliqiao os_compute_api:os-quota-class-sets:show requires
@@ -497,5 +508,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
                          'system_admin_or_owner', 'system_or_project_reader')
         result = set(rules.keys()) - set(self.admin_only_rules +
             self.admin_or_owner_rules +
-            self.allow_all_rules + self.system_reader_rules + special_rules)
+            self.allow_all_rules + self.system_reader_rules +
+            self.allow_nobody_rules + special_rules)
         self.assertEqual(set([]), result)

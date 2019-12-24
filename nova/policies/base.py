@@ -12,9 +12,10 @@
 
 from oslo_policy import policy
 
-RULE_ADMIN_OR_OWNER = 'rule:admin_or_owner'
-RULE_ADMIN_API = 'rule:admin_api'
-RULE_ANY = '@'
+RULE_ADMIN_OR_OWNER = 'rule:admin_or_owner'  # Admins or owners of the resource
+RULE_ADMIN_API = 'rule:admin_api'  # Allow only users with the admin role
+RULE_ANY = '@'  # Any user is allowed to perform the action.
+RULE_NOBODY = '!'  # No users are allowed to perform the action.
 
 # TODO(gmann): # Special string ``system_scope:all`` is added for system
 # scoped policies for backwards compatibility where ``nova.conf [oslo_policy]

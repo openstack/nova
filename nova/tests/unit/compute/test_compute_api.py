@@ -6982,6 +6982,49 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         mock_conductor_confirm.assert_called_once_with(
             self.context, instance, migration)
 
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells')
+    def test_allow_cross_cell_resize_default_false(self, mock_get_min_ver):
+        """Based on the default policy this asserts nobody is allowed to
+        perform cross-cell resize.
+        """
+        instance = objects.Instance(
+            project_id='fake-project', user_id='fake-user')
+        self.assertFalse(self.compute_api._allow_cross_cell_resize(
+            self.context, instance))
+        # We did not need to check the minimum nova-compute version since the
+        # policy check failed.
+        mock_get_min_ver.assert_not_called()
+
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=compute_api.MIN_COMPUTE_CROSS_CELL_RESIZE - 1)
+    def test_allow_cross_cell_resize_false_old_version(self, mock_get_min_ver):
+        """Policy allows cross-cell resize but minimum nova-compute service
+        version is not new enough.
+        """
+        instance = objects.Instance(
+            project_id='fake-project', user_id='fake-user')
+        with mock.patch.object(self.context, 'can', return_value=True) as can:
+            self.assertFalse(self.compute_api._allow_cross_cell_resize(
+                self.context, instance))
+        can.assert_called_once()
+        mock_get_min_ver.assert_called_once_with(
+            self.context, ['nova-compute'])
+
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=compute_api.MIN_COMPUTE_CROSS_CELL_RESIZE)
+    def test_allow_cross_cell_resize_true(self, mock_get_min_ver):
+        """Policy allows cross-cell resize and minimum nova-compute service
+        version is new enough.
+        """
+        instance = objects.Instance(
+            project_id='fake-project', user_id='fake-user')
+        with mock.patch.object(self.context, 'can', return_value=True) as can:
+            self.assertTrue(self.compute_api._allow_cross_cell_resize(
+                self.context, instance))
+        can.assert_called_once()
+        mock_get_min_ver.assert_called_once_with(
+            self.context, ['nova-compute'])
+
 
 class DiffDictTestCase(test.NoDBTestCase):
     """Unit tests for _diff_dict()."""
