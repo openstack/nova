@@ -138,8 +138,93 @@ resize:
 Sequence diagram
 ~~~~~~~~~~~~~~~~
 
-.. todo:: Add diagrams for what happens with the resize, confirm and revert
-          flows like in https://review.opendev.org/695759/.
+The following diagrams are current as of the 21.0.0 (Ussuri) release.
+
+.. NOTE(mriedem): These diagrams could be more detailed, for example breaking
+   down the individual parts of the conductor tasks and the calls made on
+   the source and dest compute to the virt driver, cinder and neutron, but
+   the diagrams could (1) get really complex and (2) become inaccurate with
+   changes over time. If there are particular sub-sequences that should have
+   diagrams I would suggest putting those into separate focused diagrams.
+
+Resize
+------
+
+This is the sequence of calls to get the server to ``VERIFY_RESIZE`` status.
+
+.. seqdiag::
+
+    seqdiag {
+        API; Conductor; Scheduler; Source; Destination;
+        edge_length = 300;
+        span_height = 15;
+        activation = none;
+        default_note_color = white;
+
+        API ->> Conductor [label = "cast", note = "resize_instance/migrate_server"];
+        Conductor => Scheduler [label = "MigrationTask", note = "select_destinations"];
+        Conductor -> Conductor [label = "TargetDBSetupTask"];
+        Conductor => Destination [label = "PrepResizeAtDestTask", note = "prep_snapshot_based_resize_at_dest"];
+        Conductor => Source [label = "PrepResizeAtSourceTask", note = "prep_snapshot_based_resize_at_source"];
+        Conductor => Destination [label = "FinishResizeAtDestTask", note = "finish_snapshot_based_resize_at_dest"];
+        Conductor -> Conductor [label = "FinishResizeAtDestTask", note = "update instance mapping"];
+    }
+
+Confirm resize
+--------------
+
+This is the sequence of calls when confirming `or deleting`_ a server in
+``VERIFY_RESIZE`` status.
+
+.. seqdiag::
+
+    seqdiag {
+        API; Conductor; Source;
+        edge_length = 300;
+        span_height = 15;
+        activation = none;
+        default_note_color = white;
+
+        API ->> Conductor [label = "cast (or call if deleting)", note = "confirm_snapshot_based_resize"];
+
+        // separator to indicate everything after this is driven by ConfirmResizeTask
+        === ConfirmResizeTask ===
+
+        Conductor => Source [label = "call", note = "confirm_snapshot_based_resize_at_source"];
+        Conductor -> Conductor [note = "hard delete source cell instance"];
+        Conductor -> Conductor [note = "update target cell instance status"];
+
+    }
+
+.. _or deleting: https://opendev.org/openstack/nova/src/tag/20.0.0/nova/compute/api.py#L2171
+
+Revert resize
+-------------
+
+This is the sequence of calls when reverting a server in ``VERIFY_RESIZE``
+status.
+
+.. seqdiag::
+
+    seqdiag {
+        API; Conductor; Source; Destination;
+        edge_length = 300;
+        span_height = 15;
+        activation = none;
+        default_note_color = white;
+
+        API ->> Conductor [label = "cast", note = "revert_snapshot_based_resize"];
+
+        // separator to indicate everything after this is driven by RevertResizeTask
+        === RevertResizeTask ===
+
+        Conductor -> Conductor [note = "update records from target to source cell"];
+        Conductor -> Conductor [note = "update instance mapping"];
+        Conductor => Destination [label = "call", note = "revert_snapshot_based_resize_at_dest"];
+        Conductor -> Conductor [note = "hard delete target cell instance"];
+        Conductor => Source [label = "call", note = "finish_revert_snapshot_based_resize_at_source"];
+
+    }
 
 Limitations
 ~~~~~~~~~~~
