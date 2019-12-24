@@ -1184,14 +1184,6 @@ class ComputeManager(manager.Manager):
 
         if expect_running and CONF.resume_guests_state_on_host_boot:
             self._resume_guests_state(context, instance, net_info)
-        elif drv_state == power_state.RUNNING:
-            # VMwareAPI drivers will raise an exception
-            try:
-                self.driver.ensure_filtering_rules_for_instance(
-                                       instance, net_info)
-            except NotImplementedError:
-                LOG.debug('Hypervisor driver does not support '
-                          'firewall rules', instance=instance)
 
     def _resume_guests_state(self, context, instance, net_info):
         LOG.info('Rebooting instance after nova-compute restart.',
@@ -1406,9 +1398,6 @@ class ComputeManager(manager.Manager):
             context, self.host,
             expected_attrs=['info_cache', 'metadata', 'numa_topology'])
 
-        if CONF.defer_iptables_apply:
-            self.driver.filter_defer_apply_on()
-
         self.init_virt_events()
 
         self._validate_pinning_configuration(instances)
@@ -1446,8 +1435,6 @@ class ComputeManager(manager.Manager):
                 context, already_handled, nodes_by_uuid.keys())
 
         finally:
-            if CONF.defer_iptables_apply:
-                self.driver.filter_defer_apply_off()
             if instances:
                 # We only send the instance info to the scheduler on startup
                 # if there is anything to send, otherwise this host might
@@ -1572,6 +1559,7 @@ class ComputeManager(manager.Manager):
     def get_console_pool_info(self, context, console_type):
         return self.driver.get_console_pool_info(console_type)
 
+    # TODO(stephenfin): Remove this as it's nova-network only
     @wrap_exception()
     def refresh_instance_security_rules(self, context, instance):
         """Tell the virtualization driver to refresh security rules for
@@ -1582,15 +1570,7 @@ class ComputeManager(manager.Manager):
         Synchronize the call because we may still be in the middle of
         creating the instance.
         """
-        @utils.synchronized(instance.uuid)
-        def _sync_refresh():
-            try:
-                return self.driver.refresh_instance_security_rules(instance)
-            except NotImplementedError:
-                LOG.debug('Hypervisor driver does not support '
-                          'security groups.', instance=instance)
-
-        return _sync_refresh()
+        pass
 
     def _await_block_device_map_created(self, context, vol_id):
         # TODO(yamahata): creating volume simultaneously
@@ -7781,9 +7761,7 @@ class ComputeManager(manager.Manager):
                                 context, instance, refresh_conn_info=True,
                                 bdms=bdms)
 
-            # The driver pre_live_migration will plug vifs on the host. We call
-            # plug_vifs before calling ensure_filtering_rules_for_instance, to
-            # ensure bridge is set up.
+            # The driver pre_live_migration will plug vifs on the host
             migrate_data = self.driver.pre_live_migration(context,
                                            instance,
                                            block_device_info,
@@ -7804,14 +7782,6 @@ class ComputeManager(manager.Manager):
             self.network_api.setup_networks_on_host(context, instance,
                                                              self.host)
 
-            # Creating filters to hypervisors and firewalls.
-            # An example is that nova-instance-instance-xxx,
-            # which is written to libvirt.xml(Check "virsh nwfilter-list")
-            # This nwfilter is necessary on the destination host.
-            # In addition, this method is creating filtering rule
-            # onto destination host.
-            self.driver.ensure_filtering_rules_for_instance(instance,
-                                                network_info)
         except Exception:
             # If we raise, migrate_data with the updated attachment ids
             # will not be returned to the source host for rollback.
@@ -8339,11 +8309,6 @@ class ComputeManager(manager.Manager):
             ctxt, instance, self.host,
             action=fields.NotificationAction.LIVE_MIGRATION_POST,
             phase=fields.NotificationPhase.START)
-        # Releasing security group ingress rule.
-        LOG.debug('Calling driver.unfilter_instance from _post_live_migration',
-                  instance=instance)
-        self.driver.unfilter_instance(instance,
-                                      network_info)
 
         migration = {'source_compute': self.host,
                      'dest_compute': dest, }

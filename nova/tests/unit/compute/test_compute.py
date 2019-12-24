@@ -6114,14 +6114,13 @@ class ComputeTestCase(BaseTestCase,
         self.assertEqual(instance.vm_state, vm_states.ERROR)
         self.compute.terminate_instance(self.context, instance, [])
 
-    @mock.patch.object(fake.FakeDriver, 'ensure_filtering_rules_for_instance')
     @mock.patch.object(fake.FakeDriver, 'pre_live_migration')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid',
                 return_value=objects.BlockDeviceMappingList())
     def test_pre_live_migration_works_correctly(self, mock_get_bdms,
                                                 mock_notify,
-                                                mock_pre, mock_ensure):
+                                                mock_pre):
         # Confirm setup_compute_volume is called when volume is mounted.
         def stupid(*args, **kwargs):
             return fake_network.fake_get_instance_nw_info(self)
@@ -6132,7 +6131,6 @@ class ComputeTestCase(BaseTestCase,
         # creating instance testdata
         instance = self._create_fake_instance_obj({'host': 'dummy'})
         c = context.get_admin_context()
-        nw_info = fake_network.fake_get_instance_nw_info(self)
         fake_notifier.NOTIFICATIONS = []
         migrate_data = objects.LibvirtLiveMigrateData(
             is_shared_instance_path=False)
@@ -6169,8 +6167,6 @@ class ComputeTestCase(BaseTestCase,
              'root_device_name': None,
              'block_device_mapping': []},
             mock.ANY, mock.ANY, mock.ANY)
-        mock_ensure.assert_called_once_with(test.MatchType(objects.Instance),
-                                            nw_info)
         mock_setup.assert_called_once_with(c, instance, self.compute.host)
 
         # cleanup
@@ -6415,13 +6411,12 @@ class ComputeTestCase(BaseTestCase,
         # cleanup
         instance.destroy()
 
-    @mock.patch.object(fake.FakeDriver, 'unfilter_instance')
     @mock.patch.object(compute_rpcapi.ComputeAPI,
                        'post_live_migration_at_destination')
     @mock.patch.object(compute_manager.InstanceEvents,
                        'clear_events_for_instance')
     def test_post_live_migration_no_shared_storage_working_correctly(self,
-            mock_clear, mock_post, mock_unfilter):
+            mock_clear, mock_post):
         """Confirm post_live_migration() works correctly as expected
            for non shared storage migration.
         """
@@ -6473,7 +6468,6 @@ class ComputeTestCase(BaseTestCase,
 
         self.assertIn('cleanup', result)
         self.assertTrue(result['cleanup'])
-        mock_unfilter.assert_called_once_with(instance, [])
         mock_migrate.assert_called_once_with(c, instance, migration)
         mock_post.assert_called_once_with(c, instance, False, dest)
         mock_clear.assert_called_once_with(mock.ANY)
@@ -6506,7 +6500,6 @@ class ComputeTestCase(BaseTestCase,
         # creating mocks
         with test.nested(
             mock.patch.object(self.compute.driver, 'post_live_migration'),
-            mock.patch.object(self.compute.driver, 'unfilter_instance'),
             mock.patch.object(self.compute.network_api,
                               'migrate_instance_start'),
             mock.patch.object(self.compute.compute_rpcapi,
@@ -6520,7 +6513,7 @@ class ComputeTestCase(BaseTestCase,
             mock.patch.object(self.compute, 'update_available_resource'),
             mock.patch.object(migration_obj, 'save'),
         ) as (
-            post_live_migration, unfilter_instance,
+            post_live_migration,
             migrate_instance_start, post_live_migration_at_destination,
             post_live_migration_at_source, setup_networks_on_host,
             clear_events, update_available_resource, mig_save
@@ -6539,7 +6532,6 @@ class ComputeTestCase(BaseTestCase,
                                         'root_device_name': None,
                                         'block_device_mapping': []},
                                         migrate_data)])
-            unfilter_instance.assert_has_calls([mock.call(instance, [])])
             migration = {'source_compute': srchost,
                          'dest_compute': dest, }
             migrate_instance_start.assert_has_calls([
@@ -6588,7 +6580,6 @@ class ComputeTestCase(BaseTestCase,
         # creating mocks
         with test.nested(
             mock.patch.object(self.compute.driver, 'post_live_migration'),
-            mock.patch.object(self.compute.driver, 'unfilter_instance'),
             mock.patch.object(self.compute.network_api,
                               'migrate_instance_start'),
             mock.patch.object(self.compute.compute_rpcapi,
@@ -6603,7 +6594,7 @@ class ComputeTestCase(BaseTestCase,
             mock.patch.object(self.compute, 'update_available_resource'),
             mock.patch.object(migration_obj, 'save'),
         ) as (
-            post_live_migration, unfilter_instance,
+            post_live_migration,
             migrate_instance_start, post_live_migration_at_destination,
             post_live_migration_at_source, setup_networks_on_host,
             clear_events, update_available_resource, mig_save
