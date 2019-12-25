@@ -509,10 +509,15 @@ class FinishResizeAtDestTask(base.TaskBase):
         # the destination compute.
         self.instance.task_state = task_states.RESIZE_MIGRATED
         self.instance.save()
+        event_name = 'compute_finish_snapshot_based_resize_at_dest'
+        source_cell_context = self.source_cell_instance._context
         try:
-            self.compute_rpcapi.finish_snapshot_based_resize_at_dest(
-                self.context, self.instance, self.migration, self.snapshot_id,
-                self.request_spec)
+            with compute_utils.EventReporter(
+                    source_cell_context, event_name,
+                    self.migration.dest_compute, self.instance.uuid):
+                self.compute_rpcapi.finish_snapshot_based_resize_at_dest(
+                    self.context, self.instance, self.migration,
+                    self.snapshot_id, self.request_spec)
             # finish_snapshot_based_resize_at_dest updates the target cell
             # instance so we need to refresh it here to have the latest copy.
             self.instance.refresh()
@@ -526,14 +531,8 @@ class FinishResizeAtDestTask(base.TaskBase):
                 self.source_cell_instance.task_state = None
                 self.source_cell_instance.vm_state = vm_states.ERROR
                 self.source_cell_instance.save()
-
-                source_cell_context = self.source_cell_instance._context
                 # wrap_instance_fault (this is best effort)
                 self._copy_latest_fault(source_cell_context)
-
-                # wrap_instance_event (this is best effort)
-                self._copy_finish_snapshot_based_resize_at_dest_event(
-                    source_cell_context)
 
     def _copy_latest_fault(self, source_cell_context):
         """Copies the latest instance fault from the target cell to the source
@@ -553,48 +552,6 @@ class FinishResizeAtDestTask(base.TaskBase):
             LOG.exception(
                 'Failed to copy instance fault from target cell DB',
                 instance=self.instance)
-
-    def _copy_finish_snapshot_based_resize_at_dest_event(
-            self, source_cell_context):
-        """Copies the compute_finish_snapshot_based_resize_at_dest event from
-        the target cell database to the source cell database.
-
-        :param source_cell_context: nova auth request context targeted at the
-            source cell
-        """
-        event_name = 'compute_finish_snapshot_based_resize_at_dest'
-        try:
-            # TODO(mriedem): Need a method on InstanceActionEventList to
-            # lookup an event by action request_id and event name.
-            # Get the single action for this request in the target cell DB.
-            action = objects.InstanceAction.get_by_request_id(
-                self.context, self.instance.uuid,
-                self.context.request_id)
-            if action:
-                # Get the events for this action in the target cell DB.
-                events = objects.InstanceActionEventList.get_by_action(
-                    self.context, action.id)
-                # Find the finish_snapshot_based_resize_at_dest event and
-                # create it in the source cell DB.
-                for event in events:
-                    if event.event == event_name:
-                        event_clone = clone_creatable_object(
-                            source_cell_context, event)
-                        event_clone.create(action.instance_uuid,
-                                           action.request_id)
-                        break
-                else:
-                    LOG.warning('Failed to find InstanceActionEvent with '
-                                'name %s in target cell DB', event_name,
-                                instance=self.instance)
-            else:
-                LOG.warning(
-                    'Failed to find InstanceAction by request_id %s',
-                    self.context.request_id, instance=self.instance)
-        except Exception:
-            LOG.exception(
-                'Failed to copy %s instance action event from target cell DB',
-                event_name, instance=self.instance)
 
     def _update_instance_mapping(self):
         """Swaps the hidden field value on the source and target cell instance
