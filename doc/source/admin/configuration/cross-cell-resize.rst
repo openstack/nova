@@ -251,6 +251,11 @@ Other limitations:
   source and destination compute host are not on shared storage or when
   shelve offloading and unshelving a server with a config drive. If necessary,
   the resized server can be rebuilt to regain the personality files.
+* The ``_poll_unconfirmed_resizes`` periodic task, which can be
+  :oslo.config:option:`configured <resize_confirm_window>` to automatically
+  confirm pending resizes on the target host, *might* not support cross-cell
+  resizes because doing so would require an :ref:`up-call <upcall>` to the
+  API to confirm the resize and cleanup the source cell database.
 
 .. _personality files: https://docs.openstack.org/api-guide/compute/server_concepts.html#server-personality
 .. _evacuating: https://docs.openstack.org/api-ref/compute/#evacuate-server-evacuate-action

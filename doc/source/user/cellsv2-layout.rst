@@ -331,6 +331,8 @@ containing the instances for which it is proxying console access.
 .. __: https://specs.openstack.org/openstack/nova-specs/specs/rocky/implemented/convert-consoles-to-objects.html
 
 
+.. _upcall:
+
 Operations Requiring upcalls
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

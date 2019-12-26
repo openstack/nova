@@ -10,9 +10,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
 import mock
 
+from oslo_db import exception as oslo_db_exc
+from oslo_utils import fixture as osloutils_fixture
 from oslo_utils.fixture import uuidsentinel as uuids
+from oslo_utils import timeutils
 
 from nova.compute import instance_actions
 from nova import conf
@@ -24,8 +28,10 @@ from nova.policies import base as base_policies
 from nova.policies import servers as servers_policies
 from nova.scheduler import utils as scheduler_utils
 from nova.scheduler import weights
+from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
+from nova.tests.unit import cast_as_call
 from nova.tests.unit import fake_notifier
 from nova.tests.unit.image import fake as fake_image
 from nova import utils
@@ -538,11 +544,26 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         # record on the source compute node resource provider, should now be
         # gone; there should be a confirmResize instance action record with
         # a successful event.
-        target_host = server['OS-EXT-SRV-ATTR:host']
-        source_host = 'host1' if target_host == 'host2' else 'host2'
         self.api.post_server_action(server['id'], {'confirmResize': None})
         self._wait_for_state_change(server, 'ACTIVE')
 
+        self._assert_confirm(
+            server, source_rp_uuid, target_rp_uuid, new_flavor)
+
+        # Make sure the fake volume is still attached.
+        self.assert_volume_is_attached(server['id'], uuids.fake_volume_id)
+
+        # Explicitly delete the server and make sure it's gone from all cells.
+        self.delete_server_and_assert_cleanup(server)
+
+        # Run the DB archive code in all cells to make sure we did not mess
+        # up some referential constraint.
+        self._archive_cell_dbs()
+
+    def _assert_confirm(self, server, source_rp_uuid, target_rp_uuid,
+                        new_flavor):
+        target_host = server['OS-EXT-SRV-ATTR:host']
+        source_host = 'host1' if target_host == 'host2' else 'host2'
         # The migration should be confirmed.
         migrations = self.api.api_get(
             '/os-migrations?instance_uuid=%s' % server['id']
@@ -591,18 +612,8 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         self.assert_hypervisor_usage(
             source_rp_uuid, no_usage, volume_backed=False)
 
-        # Make sure the fake volume is still attached.
-        self.assert_volume_is_attached(server['id'], uuids.fake_volume_id)
-
         # Make sure we got the expected notifications for the confirm action.
         self.assert_resize_confirm_notifications()
-
-        # Explicitly delete the server and make sure it's gone from all cells.
-        self.delete_server_and_assert_cleanup(server)
-
-        # Run the DB archive code in all cells to make sure we did not mess
-        # up some referential constraint.
-        self._archive_cell_dbs()
 
     def _archive_cell_dbs(self):
         ctxt = nova_context.get_admin_context()
@@ -942,6 +953,71 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         self.admin_api.post_server_action(
             server2['id'], {'migrate': {'host': 'host2'}})
         self._wait_for_migration_status(server2, ['error'])
+
+    def test_poll_unconfirmed_resizes_with_upcall(self):
+        """Tests the _poll_unconfirmed_resizes periodic task with a cross-cell
+        resize once the instance is in VERIFY_RESIZE status on the dest host.
+        In this case _poll_unconfirmed_resizes works because an up-call is
+        possible to the API DB.
+        """
+        server, source_rp_uuid, target_rp_uuid, _, new_flavor = (
+            self._resize_and_validate())
+        # At this point the server is in VERIFY_RESIZE status so enable the
+        # _poll_unconfirmed_resizes periodic task and run it on the target
+        # compute service.
+        # Reset the fake notifier so we only check confirmation notifications.
+        fake_notifier.reset()
+        self.flags(resize_confirm_window=1)
+        # Stub timeutils so the DB API query finds the unconfirmed migration.
+        future = timeutils.utcnow() + datetime.timedelta(hours=1)
+        ctxt = nova_context.get_admin_context()
+        # This works because the test environment is configured with the API DB
+        # connection globally. If the compute service was running with a conf
+        # that did not have access to the API DB this would fail.
+        target_host = server['OS-EXT-SRV-ATTR:host']
+        cell = self.cell_mappings[self.host_to_cell_mappings[target_host]]
+        with nova_context.target_cell(ctxt, cell) as cctxt:
+            with osloutils_fixture.TimeFixture(future):
+                self.computes[target_host].manager._poll_unconfirmed_resizes(
+                    cctxt)
+        self._wait_for_state_change(server, 'ACTIVE')
+        self._assert_confirm(
+            server, source_rp_uuid, target_rp_uuid, new_flavor)
+
+    def test_poll_unconfirmed_resizes_with_no_upcall(self):
+        """Tests the _poll_unconfirmed_resizes periodic task with a cross-cell
+        resize once the instance is in VERIFY_RESIZE status on the dest host.
+        In this case _poll_unconfirmed_resizes fails because an up-call is
+        not possible to the API DB.
+        """
+        server, source_rp_uuid, target_rp_uuid, _, new_flavor = (
+            self._resize_and_validate())
+        # At this point the server is in VERIFY_RESIZE status so enable the
+        # _poll_unconfirmed_resizes periodic task and run it on the target
+        # compute service.
+        self.flags(resize_confirm_window=1)
+        # Stub timeutils so the DB API query finds the unconfirmed migration.
+        future = timeutils.utcnow() + datetime.timedelta(hours=1)
+        ctxt = nova_context.get_admin_context()
+        target_host = server['OS-EXT-SRV-ATTR:host']
+        cell = self.cell_mappings[self.host_to_cell_mappings[target_host]]
+        nova_context.set_target_cell(ctxt, cell)
+        # Simulate not being able to query the API DB by poisoning calls to
+        # the instance_mappings table. Use the CastAsCall fixture so we can
+        # trap and log errors for assertions in the test.
+        with test.nested(
+            osloutils_fixture.TimeFixture(future),
+            cast_as_call.CastAsCall(self),
+            mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid',
+                       side_effect=oslo_db_exc.CantStartEngineError)
+        ) as (
+            _, _, get_im
+        ):
+            self.computes[target_host].manager._poll_unconfirmed_resizes(ctxt)
+        get_im.assert_called()
+        log_output = self.stdlog.logger.output
+        self.assertIn('Error auto-confirming resize', log_output)
+        self.assertIn('CantStartEngineError', log_output)
 
     # TODO(mriedem): Perform a resize with at-capacity computes, meaning that
     # when we revert we can only fit the instance with the old flavor back
