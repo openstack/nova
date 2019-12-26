@@ -4486,20 +4486,16 @@ class ComputeManager(manager.Manager):
         :param instance: Instance object that was resized/cold migrated
         :param migration: Migration object for the resize/cold migrate
         """
-        # setup_networks_on_host relies on the instance.host not being the same
-        # as the host we pass in, so we have to mutate the instance to
-        # effectively trick this code.
-        with utils.temporary_mutation(instance, host=migration.dest_compute):
-            LOG.debug('Deleting port bindings for source host.',
-                      instance=instance)
-            try:
-                self.network_api.setup_networks_on_host(
-                    ctxt, instance, host=self.host, teardown=True)
-            except exception.PortBindingDeletionFailed as e:
-                # Do not let this stop us from cleaning up since the guest
-                # is already gone.
-                LOG.error('Failed to delete port bindings from source host. '
-                          'Error: %s', six.text_type(e), instance=instance)
+        LOG.debug('Deleting port bindings for source host.',
+                  instance=instance)
+        try:
+            self.network_api.cleanup_instance_network_on_host(
+                ctxt, instance, self.host)
+        except exception.PortBindingDeletionFailed as e:
+            # Do not let this stop us from cleaning up since the guest
+            # is already gone.
+            LOG.error('Failed to delete port bindings from source host. '
+                      'Error: %s', six.text_type(e), instance=instance)
 
     def _delete_volume_attachments(self, ctxt, bdms):
         """Deletes volume attachment records for the given bdms.
@@ -4600,22 +4596,19 @@ class ComputeManager(manager.Manager):
             self.network_api.migrate_instance_start(
                 ctxt, instance, migration)
 
-        # Delete port bindings for the target host. This relies on the
-        # instance.host not being the same as the host we pass in, so we
-        # have to mutate the instance to effectively trick this code.
-        with utils.temporary_mutation(instance, host=migration.source_compute):
-            LOG.debug('Deleting port bindings for target host %s.',
-                      self.host, instance=instance)
-            try:
-                # Note that deleting the destination host port bindings does
-                # not automatically activate the source host port bindings.
-                self.network_api.setup_networks_on_host(
-                    ctxt, instance, host=self.host, teardown=True)
-            except exception.PortBindingDeletionFailed as e:
-                # Do not let this stop us from cleaning up since the guest
-                # is already gone.
-                LOG.error('Failed to delete port bindings from target host. '
-                          'Error: %s', six.text_type(e), instance=instance)
+        # Delete port bindings for the target host.
+        LOG.debug('Deleting port bindings for target host %s.',
+                  self.host, instance=instance)
+        try:
+            # Note that deleting the destination host port bindings does
+            # not automatically activate the source host port bindings.
+            self.network_api.cleanup_instance_network_on_host(
+                ctxt, instance, self.host)
+        except exception.PortBindingDeletionFailed as e:
+            # Do not let this stop us from cleaning up since the guest
+            # is already gone.
+            LOG.error('Failed to delete port bindings from target host. '
+                      'Error: %s', six.text_type(e), instance=instance)
 
         # Delete any volume attachments remaining for this target host.
         LOG.debug('Deleting volume attachments for target host.',
@@ -6419,9 +6412,13 @@ class ComputeManager(manager.Manager):
 
         self._power_off_instance(context, instance, clean_shutdown)
         current_power_state = self._get_power_state(context, instance)
-
-        self.network_api.cleanup_instance_network_on_host(context, instance,
-                                                          instance.host)
+        # NOTE(mriedem): cleanup_instance_network_on_host assumes there are
+        # multiple host bindings per port which is not the case with the
+        # shelve/unshelve flow. Doing so will result in failures to update the
+        # port binding on unshelve (since we would have deleted it here).
+        if not utils.is_neutron():
+            self.network_api.cleanup_instance_network_on_host(
+                context, instance, instance.host)
         network_info = self.network_api.get_instance_nw_info(context, instance)
 
         block_device_info = self._get_instance_block_device_info(context,

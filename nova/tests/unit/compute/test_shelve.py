@@ -170,7 +170,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         mock_notify_instance_usage.assert_has_calls(
             mock_notify_instance_usage_call_list)
         mock_power_off.assert_has_calls(mock_power_off_call_list)
-        mock_cleanup.assert_has_calls(mock_cleanup_call_list)
+        mock_cleanup.assert_not_called()
         mock_snapshot.assert_called_once_with(self.context, instance,
                                               'fake_image_id', mock.ANY)
         mock_get_power_state.assert_has_calls(mock_get_power_state_call_list)

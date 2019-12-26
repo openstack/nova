@@ -340,31 +340,40 @@ class API(base_api.NetworkAPI):
                 # the current instance.host.
                 has_binding_ext = self.supports_port_binding_extension(context)
                 if port_migrating and has_binding_ext:
-                    # Attempt to delete all port bindings on the host and raise
-                    # any errors at the end.
-                    failed_port_ids = []
-                    for port in ports:
-                        # This call is safe in that 404s for non-existing
-                        # bindings are ignored.
-                        try:
-                            self.delete_port_binding(
-                                context, port['id'], host)
-                        except exception.PortBindingDeletionFailed:
-                            # delete_port_binding will log an error for each
-                            # failure but since we're iterating a list we want
-                            # to keep track of all failures to build a generic
-                            # exception to raise
-                            failed_port_ids.append(port['id'])
-                    if failed_port_ids:
-                        msg = (_("Failed to delete binding for port(s) "
-                                 "%(port_ids)s and host %(host)s.") %
-                               {'port_ids': ','.join(failed_port_ids),
-                                'host': host})
-                        raise exception.PortBindingDeletionFailed(msg)
+                    self._delete_port_bindings(context, ports, host)
             elif port_migrating:
                 # Setup the port profile
                 self._setup_migration_port_profile(
                     context, instance, host, admin_client, ports)
+
+    def _delete_port_bindings(self, context, ports, host):
+        """Attempt to delete all port bindings on the host.
+
+        :param context: The user request context.
+        :param ports: list of port dicts to cleanup; the 'id' field is required
+            per port dict in the list
+        :param host: host from which to delete port bindings
+        :raises: PortBindingDeletionFailed if port binding deletion fails.
+        """
+        failed_port_ids = []
+        for port in ports:
+            # This call is safe in that 404s for non-existing
+            # bindings are ignored.
+            try:
+                self.delete_port_binding(
+                    context, port['id'], host)
+            except exception.PortBindingDeletionFailed:
+                # delete_port_binding will log an error for each
+                # failure but since we're iterating a list we want
+                # to keep track of all failures to build a generic
+                # exception to raise
+                failed_port_ids.append(port['id'])
+        if failed_port_ids:
+            msg = (_("Failed to delete binding for port(s) "
+                     "%(port_ids)s and host %(host)s.") %
+                   {'port_ids': ','.join(failed_port_ids),
+                    'host': host})
+            raise exception.PortBindingDeletionFailed(msg)
 
     def _get_available_networks(self, context, project_id,
                                 net_ids=None, neutron=None,
@@ -3315,15 +3324,30 @@ class API(base_api.NetworkAPI):
             context, instance, host, migration, provider_mappings)
 
     def cleanup_instance_network_on_host(self, context, instance, host):
-        """Cleanup network for specified instance on host."""
-        # TODO(mriedem): This should likely be implemented at least for the
-        # shelve offload operation because the instance is being removed from
-        # a compute host, VIFs are unplugged, etc, so the ports should also
-        # be unbound, albeit still logically attached to the instance (for the
-        # shelve scenario). If _unbind_ports was going to be leveraged here, it
-        # would have to be adjusted a bit since it currently clears the
-        # device_id field on the port which is not what we'd want for shelve.
-        pass
+        """Cleanup network for specified instance on host.
+
+        Port bindings for the given host are deleted. The ports associated
+        with the instance via the port device_id field are left intact.
+
+        :param context: The user request context.
+        :param instance: Instance object with the associated ports
+        :param host: host from which to delete port bindings
+        :raises: PortBindingDeletionFailed if port binding deletion fails.
+        """
+        # First check to see if the port binding extension is supported.
+        if not self.supports_port_binding_extension(context):
+            LOG.info("Neutron extension '%s' is not supported; not cleaning "
+                     "up port bindings for host %s.",
+                     constants.PORT_BINDING_EXTENDED, host, instance=instance)
+            return
+        # Now get the ports associated with the instance. We go directly to
+        # neutron rather than rely on the info cache just like
+        # setup_networks_on_host.
+        search_opts = {'device_id': instance.uuid,
+                       'tenant_id': instance.project_id,
+                       'fields': ['id']}  # we only need the port id
+        data = self.list_ports(context, **search_opts)
+        self._delete_port_bindings(context, data['ports'], host)
 
     def _get_pci_mapping_for_migration(self, instance, migration):
         if not instance.migration_context:
