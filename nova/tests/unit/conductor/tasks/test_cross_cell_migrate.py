@@ -560,7 +560,7 @@ class CrossCellMigrationTaskTestCase(test.NoDBTestCase):
         # A clone of the MigrationContext returned from execute() should be
         # stored on the source instance with the internal context targeted
         # at the source cell context and the migration_id updated.
-        self.assertIsNotNone('migration_context', self.task.instance)
+        self.assertIsNotNone(self.task.instance.migration_context)
         self.assertEqual(self.task.source_migration.id,
                          self.task.instance.migration_context.migration_id)
         source_inst_save.assert_called_once_with()
