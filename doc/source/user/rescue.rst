@@ -2,9 +2,51 @@
 Rescue an instance
 ==================
 
-Rescue mode provides a mechanism for access, even if an image renders
-the instance inaccessible. By default, it starts an instance from the
-initial image attaching the current boot disk as a secondary one.
+Instance rescue provides a mechanism for access, even if an image renders the
+instance inaccessible. Two rescue modes are currently provided.
+
+Instance rescue
+---------------
+
+By default the instance is booted from the provided rescue image or a fresh
+copy of the original instance image if a rescue image is not provided. The root
+disk and optional regenerated config drive are also attached to the instance
+for data recovery.
+
+.. note::
+
+   Rescuing a volume-backed instance is not supported with this mode.
+
+Stable device instance rescue
+-----------------------------
+
+As of 21.0.0 (Ussuri) an additional stable device rescue mode is available.
+This mode now supports the rescue of volume-backed instances.
+
+This mode keeps all devices both local and remote attached in their original
+order to the instance during the rescue while booting from the provided rescue
+image. This mode is enabled and controlled by the presence of
+``hw_rescue_device`` or ``hw_rescue_bus`` image properties on the provided
+rescue image.
+
+As their names suggest these properties control the rescue device type
+(``cdrom``, ``disk`` or ``floppy``) and bus type (``scsi``, ``virtio``,
+``ide``, or ``usb``) used when attaching the rescue image to the instance.
+
+Support for each combination of the ``hw_rescue_device`` and ``hw_rescue_bus``
+image properties is dependent on the underlying hypervisor and platform being
+used. For example the ``IDE`` bus is not available on POWER KVM based compute
+hosts.
+
+.. note::
+
+   This mode is only supported when using the Libvirt virt driver.
+
+   This mode is not supported when using LXC or Xen hypervisors as enabled by
+   the :oslo.config:option:`libvirt.virt_type` configurable on the computes.
+
+Usage
+-----
 
 .. note::
 
@@ -12,9 +54,6 @@ initial image attaching the current boot disk as a secondary one.
    is running in rescue mode, as triggering these actions causes the
    loss of the original instance state and makes it impossible to
    unrescue the instance.
-
-   As of the 20.0.0 (Train) release rescuing a volume-backed server
-   is not supported.
 
 To perform an instance rescue, use the :command:`openstack server rescue`
 command:
