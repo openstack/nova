@@ -32,7 +32,7 @@ class ComputeManagerInitHostTestCase(
         driver's migrate_disk_and_power_off method is running (we could be
         slow transferring disks or something when it crashed) and on restart
         of the compute service the driver's finish_revert_migration method
-        is called to cleanup the source host and reset the instnace task_state.
+        is called to cleanup the source host and reset the instance task_state.
         """
         # Start two compute service so we migrate across hosts.
         for x in range(2):

@@ -1169,7 +1169,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         instance_3 = fake_instance.fake_instance_obj(
             self.context, uuid=uuids.instance_3)
         instance_4 = fake_instance.fake_instance_obj(
-            self.context, uuid=uuids.instnace_4)
+            self.context, uuid=uuids.instance_4)
 
         instance_1.numa_topology = None
 
