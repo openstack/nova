@@ -287,9 +287,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         # resize. There will be a third action if the server was stopped. Use
         # assertGreaterEqual in case a test performed some actions on a
         # pre-created server before resizing it, like attaching a volume.
-        actions = self.api.api_get(
-            '/servers/%s/os-instance-actions' % server['id']
-        ).body['instanceActions']
+        actions = self.api.get_instance_actions(server['id'])
         expected_num_of_actions = 3 if stopped else 2
         self.assertGreaterEqual(len(actions), expected_num_of_actions, actions)
         # Each action should have events (make sure these were copied from
@@ -470,7 +468,8 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         end = fake_notifier.VERSIONED_NOTIFICATIONS[1]['event_type']
         self.assertEqual('instance.resize_confirm.end', end)
 
-    def delete_server_and_assert_cleanup(self, server):
+    def delete_server_and_assert_cleanup(self, server,
+                                         assert_confirmed_migration=False):
         """Deletes the server and makes various cleanup checks.
 
         - makes sure allocations from placement are gone
@@ -478,6 +477,10 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         - makes sure there are no leaked volume attachments
 
         :param server: dict of the server resource to delete
+        :param assert_confirmed_migration: If True, asserts that the Migration
+            record for the server has status "confirmed". This is useful when
+            testing that deleting a resized server automatically confirms the
+            resize.
         """
         # Determine which cell the instance was in when the server was deleted
         # in the API so we can check hard vs soft delete in the DB.
@@ -485,9 +488,16 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
             server['OS-EXT-SRV-ATTR:host']]
         # Delete the server and check that the allocations are gone from
         # the placement service.
-        self._delete_and_check_allocations(server)
-        # Make sure the instance record is gone from both cell databases.
+        mig_uuid = self._delete_and_check_allocations(server)
         ctxt = nova_context.get_admin_context()
+        if assert_confirmed_migration:
+            # Get the Migration object from the last cell the instance was in
+            # and assert its status is "confirmed".
+            cell = self.cell_mappings[current_cell]
+            with nova_context.target_cell(ctxt, cell) as cctxt:
+                migration = objects.Migration.get_by_uuid(cctxt, mig_uuid)
+                self.assertEqual('confirmed', migration.status)
+        # Make sure the instance record is gone from both cell databases.
         for cell_name in self.host_to_cell_mappings.values():
             cell = self.cell_mappings[cell_name]
             with nova_context.target_cell(ctxt, cell) as cctxt:
@@ -507,9 +517,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
                          self.cinder.volume_to_attachment)
 
     def assert_resize_confirm_actions(self, server):
-        actions = self.api.api_get(
-            '/servers/%s/os-instance-actions' % server['id']
-        ).body['instanceActions']
+        actions = self.api.get_instance_actions(server['id'])
         actions_by_action = {action['action']: action for action in actions}
         self.assertIn(instance_actions.CONFIRM_RESIZE, actions_by_action)
         confirm_action = actions_by_action[instance_actions.CONFIRM_RESIZE]
@@ -644,9 +652,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertEqual('instance.resize_revert.end', end)
 
     def assert_resize_revert_actions(self, server, source_host, dest_host):
-        actions = self.api.api_get(
-            '/servers/%s/os-instance-actions' % server['id']
-        ).body['instanceActions']
+        actions = self.api.get_instance_actions(server['id'])
         # The revert instance action should have been copied from the target
         # cell to the source cell and "completed" there, i.e. an event
         # should show up under that revert action.
@@ -802,10 +808,12 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
 
     def test_delete_while_in_verify_resize_status(self):
         """Tests that when deleting a server in VERIFY_RESIZE status, the
-        data is cleaned from both the source and target cell.
+        data is cleaned from both the source and target cell and the resize
+        is automatically confirmed.
         """
         server = self._resize_and_validate()[0]
-        self.delete_server_and_assert_cleanup(server)
+        self.delete_server_and_assert_cleanup(server,
+                                              assert_confirmed_migration=True)
 
     def test_cold_migrate_target_host_in_other_cell(self):
         """Tests cold migrating to a target host in another cell. This is

@@ -133,9 +133,6 @@ class _TestMigrationContext(object):
         mig_ctx = get_fake_migration_context_obj(ctxt)
         self.assertTrue(mig_ctx.is_cross_cell_move())
         mock_get_by_id.assert_called_once_with(ctxt, mig_ctx.migration_id)
-        # Call it again to make sure the result was cached.
-        self.assertTrue(mig_ctx.is_cross_cell_move())
-        mock_get_by_id.assert_called_once_with(ctxt, mig_ctx.migration_id)
 
 
 class TestMigrationContext(test_objects._LocalTest, _TestMigrationContext):
