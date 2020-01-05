@@ -24,6 +24,7 @@ import traceback
 import netifaces
 from oslo_log import log
 from oslo_serialization import jsonutils
+from oslo_utils import excutils
 import six
 
 from nova import block_device
@@ -1364,13 +1365,19 @@ def get_stashed_volume_connector(bdm, instance):
 
 
 class EventReporter(object):
-    """Context manager to report instance action events."""
+    """Context manager to report instance action events.
 
-    def __init__(self, context, event_name, host, *instance_uuids):
+    If constructed with ``graceful_exit=True`` the __exit__ function will
+    handle and not re-raise on InstanceActionNotFound.
+    """
+
+    def __init__(self, context, event_name, host, *instance_uuids,
+                 graceful_exit=False):
         self.context = context
         self.event_name = event_name
         self.instance_uuids = instance_uuids
         self.host = host
+        self.graceful_exit = graceful_exit
 
     def __enter__(self):
         for uuid in self.instance_uuids:
@@ -1382,17 +1389,31 @@ class EventReporter(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         for uuid in self.instance_uuids:
-            objects.InstanceActionEvent.event_finish_with_failure(
-                self.context, uuid, self.event_name, exc_val=exc_val,
-                exc_tb=exc_tb, want_result=False)
+            try:
+                objects.InstanceActionEvent.event_finish_with_failure(
+                    self.context, uuid, self.event_name, exc_val=exc_val,
+                    exc_tb=exc_tb, want_result=False)
+            except exception.InstanceActionNotFound:
+                # If the instance action was not found then determine if we
+                # should re-raise based on the graceful_exit attribute.
+                with excutils.save_and_reraise_exception(
+                        reraise=not self.graceful_exit):
+                    if self.graceful_exit:
+                        return True
         return False
 
 
-def wrap_instance_event(prefix):
+def wrap_instance_event(prefix, graceful_exit=False):
     """Wraps a method to log the event taken on the instance, and result.
 
     This decorator wraps a method to log the start and result of an event, as
     part of an action taken on an instance.
+
+    :param prefix: prefix for the event name, usually a service binary like
+        "compute" or "conductor" to indicate the origin of the event.
+    :param graceful_exit: True if the decorator should gracefully handle
+        InstanceActionNotFound errors, False otherwise. This should rarely be
+        True.
     """
     @utils.expects_func_args('instance')
     def helper(function):
@@ -1406,7 +1427,8 @@ def wrap_instance_event(prefix):
 
             event_name = '{0}_{1}'.format(prefix, function.__name__)
             host = self.host if hasattr(self, 'host') else None
-            with EventReporter(context, event_name, host, instance_uuid):
+            with EventReporter(context, event_name, host, instance_uuid,
+                               graceful_exit=graceful_exit):
                 return function(self, context, *args, **kwargs)
         return decorated_function
     return helper

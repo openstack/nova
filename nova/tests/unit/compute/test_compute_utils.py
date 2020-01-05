@@ -1076,7 +1076,8 @@ class ComputeUtilsTestCase(test.NoDBTestCase):
         fake_event(self.compute, self.context, instance=inst)
         # if the class doesn't include a self.host, the default host is None
         mock_event.assert_called_once_with(self.context, 'compute_fake_event',
-                                           None, uuids.instance)
+                                           None, uuids.instance,
+                                           graceful_exit=False)
 
     @mock.patch.object(objects.InstanceActionEvent, 'event_start')
     @mock.patch.object(objects.InstanceActionEvent,
@@ -1126,6 +1127,37 @@ class ComputeUtilsTestCase(test.NoDBTestCase):
         self.assertTrue(mock_finish.called)
         args, kwargs = mock_finish.call_args
         self.assertIsInstance(kwargs['exc_val'], exception.NovaException)
+
+    @mock.patch('nova.objects.InstanceActionEvent.event_start')
+    @mock.patch('nova.objects.InstanceActionEvent.event_finish_with_failure')
+    def _test_event_reporter_graceful_exit(self, error, mock_event_finish,
+                                           mock_event_start):
+        with compute_utils.EventReporter(self.context, 'fake_event',
+                                         'fake.host', uuids.instance,
+                                         graceful_exit=True):
+            mock_event_finish.side_effect = error
+        mock_event_start.assert_called_once_with(
+            self.context, uuids.instance, 'fake_event', want_result=False,
+            host='fake.host')
+        mock_event_finish.assert_called_once_with(
+            self.context, uuids.instance, 'fake_event', exc_val=None,
+            exc_tb=None, want_result=False)
+
+    def test_event_reporter_graceful_exit_action_not_found(self):
+        """Tests that when graceful_exit=True and InstanceActionNotFound is
+        raised it is handled and not re-raised.
+        """
+        error = exception.InstanceActionNotFound(
+            request_id=self.context.request_id, instance_uuid=uuids.instance)
+        self._test_event_reporter_graceful_exit(error)
+
+    def test_event_reporter_graceful_exit_unexpected_error(self):
+        """Tests that even if graceful_exit=True the EventReporter will
+        re-raise an unexpected exception.
+        """
+        error = test.TestingException('uh oh')
+        self.assertRaises(test.TestingException,
+                          self._test_event_reporter_graceful_exit, error)
 
     @mock.patch('netifaces.interfaces')
     def test_get_machine_ips_value_error(self, mock_interfaces):

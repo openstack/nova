@@ -2405,7 +2405,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                               mock.ANY)])
             event.assert_called_once_with(
                 self.context, 'compute_attach_interface', CONF.host,
-                f_instance.uuid)
+                f_instance.uuid, graceful_exit=False)
 
         with mock.patch.dict(self.compute.driver.capabilities,
                              supports_attach_interface=True):
@@ -2432,7 +2432,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                    [mock.call(self.context, f_instance, mock.ANY, mock.ANY)])
             event.assert_called_once_with(
                 self.context, 'compute_detach_interface', CONF.host,
-                f_instance.uuid)
+                f_instance.uuid, graceful_exit=False)
 
         do_test()
 
@@ -2581,7 +2581,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_event.assert_called_once_with(self.context,
                                            'compute_swap_volume',
                                            CONF.host,
-                                           instance1.uuid)
+                                           instance1.uuid,
+                                           graceful_exit=False)
 
     def _assert_volume_api(self, context, volume, *args):
         self.assertTrue(uuidutils.is_uuid_like(volume))
@@ -3108,7 +3109,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.context, dest_check_data, drvr_check_result)
         mock_event.assert_called_once_with(
             self.context, 'compute_check_can_live_migrate_source', CONF.host,
-            instance.uuid)
+            instance.uuid, graceful_exit=False)
         mock_check.assert_called_once_with(self.context, instance,
                                            dest_check_data,
                                            {'block_device_mapping': 'fake'})
@@ -3209,7 +3210,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
             mock_event.assert_called_once_with(
                 self.context, 'compute_check_can_live_migrate_destination',
-                CONF.host, instance.uuid)
+                CONF.host, instance.uuid, graceful_exit=False)
 
     def test_check_can_live_migrate_destination_success(self):
         self._test_check_can_live_migrate_destination()

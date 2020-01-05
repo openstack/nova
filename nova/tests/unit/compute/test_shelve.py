@@ -267,7 +267,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         mock_event.assert_called_once_with(self.context,
                                            'compute_shelve_offload_instance',
                                            CONF.host,
-                                           instance.uuid)
+                                           instance.uuid,
+                                           graceful_exit=False)
 
         return instance
 
