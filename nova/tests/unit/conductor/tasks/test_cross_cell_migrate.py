@@ -1322,6 +1322,9 @@ class RevertResizeTaskTestCase(test.NoDBTestCase, ObjectComparatorMixin):
         mock_action_event.event_finish_with_failure.assert_called_once_with(
             source_cell_context, source_cell_instance.uuid, event_name,
             exc_val=None, exc_tb=None, want_result=False)
+        mock_action_event.event_finish.assert_called_once_with(
+            source_cell_context, source_cell_instance.uuid,
+            'conductor_revert_snapshot_based_resize', want_result=False)
         # Destroy the instance in the target cell.
         mock_inst_destroy.assert_called_once_with(hard_delete=True)
         # Cleanup at source host.

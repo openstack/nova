@@ -1875,11 +1875,11 @@ class ComputeTaskManager(base.Base):
         task.execute()
 
     @targets_cell
-    # FIXME(mriedem): Upon successful completion of RevertResizeTask the
+    # NOTE(mriedem): Upon successful completion of RevertResizeTask the
     # instance is hard-deleted, along with its instance action record(s), from
-    # the target cell database so wrap_instance_event hits
-    # InstanceActionNotFound on __exit__.
-    @wrap_instance_event(prefix='conductor')
+    # the target cell database so EventReporter hits InstanceActionNotFound on
+    # __exit__. Pass graceful_exit=True to avoid an ugly traceback.
+    @wrap_instance_event(prefix='conductor', graceful_exit=True)
     def revert_snapshot_based_resize(self, context, instance, migration):
         """Executes the RevertResizeTask
 
