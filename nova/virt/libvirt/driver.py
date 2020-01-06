@@ -8442,7 +8442,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 if "source_vif" in vif and vif.source_vif]
         for vif in vifs:
             if vif['vnic_type'] in direct_vnics:
-                LOG.info("Detaching vif %s from instnace "
+                LOG.info("Detaching vif %s from instance "
                          "%s for live migration", vif['id'], instance.id)
                 self.detach_interface(context, instance, vif)
 
