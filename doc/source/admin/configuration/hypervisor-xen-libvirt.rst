@@ -160,7 +160,7 @@ Use the following as a guideline for configuring Xen for use in OpenStack:
 
       $ openstack image set --property hypervisor_type=xen vm_mode=hvm IMAGE
 
-   For more more information on image metadata, refer to the `OpenStack Virtual
+   For more information on image metadata, refer to the `OpenStack Virtual
    Image Guide <https://docs.openstack.org/image-guide/image-metadata.html>`__.
 
 #. **Libguestfs file injection**: OpenStack compute nodes can use `libguestfs

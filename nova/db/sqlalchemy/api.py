@@ -1824,7 +1824,7 @@ def instance_destroy(context, instance_uuid, constraint=None,
     if constraint is not None:
         query = constraint.apply(models.Instance, query)
     # Either in hard or soft delete, we soft delete the instance first
-    # to make sure that that the constraints were met.
+    # to make sure that the constraints were met.
     count = query.soft_delete()
     if count == 0:
         raise exception.ConstraintNotMet()

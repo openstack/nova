@@ -599,7 +599,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         VCPU/RAM/disk. By adding just the custom RC to the existing flavor
         extra_specs, the periodic call to update_available_resources() will add
         an allocation against the custom resource class, and prevent placement
-        from thinking that that node is available. This code can be removed in
+        from thinking that node is available. This code can be removed in
         Queens, and will need to be updated to also alter extra_specs to
         zero-out the old-style standard resource classes of VCPU, MEMORY_MB,
         and DISK_GB.
