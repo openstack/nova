@@ -15,6 +15,9 @@
 import mock
 import webob
 
+from oslo_utils.fixture import uuidsentinel as uuids
+
+from nova.api.openstack import api_version_request
 from nova.api.openstack.compute import rescue as rescue_v21
 from nova import compute
 import nova.conf
@@ -28,7 +31,7 @@ UUID = '70f6db34-de8d-4fbd-aafb-4065bdfa6114'
 
 
 def rescue(self, context, instance, rescue_password=None,
-           rescue_image_ref=None):
+           rescue_image_ref=None, allow_bfv_rescue=False):
     pass
 
 
@@ -56,6 +59,9 @@ class RescueTestV21(test.NoDBTestCase):
 
     def _set_up_controller(self):
         return rescue_v21.RescueController()
+
+    def _allow_bfv_rescue(self):
+        return api_version_request.is_supported(self.fake_req, '2.87')
 
     @mock.patch.object(compute.api.API, "rescue")
     def test_rescue_from_locked_server(self, mock_rescue):
@@ -173,7 +179,8 @@ class RescueTestV21(test.NoDBTestCase):
             mock.ANY,
             instance,
             rescue_password=u'ABC123',
-            rescue_image_ref=self.image_uuid)
+            rescue_image_ref=self.image_uuid,
+            allow_bfv_rescue=self._allow_bfv_rescue())
 
     @mock.patch('nova.compute.api.API.rescue')
     @mock.patch('nova.api.openstack.common.get_instance')
@@ -187,9 +194,9 @@ class RescueTestV21(test.NoDBTestCase):
         resp_json = self.controller._rescue(self.fake_req, UUID, body=body)
         self.assertEqual("ABC123", resp_json['adminPass'])
 
-        mock_compute_api_rescue.assert_called_with(mock.ANY, instance,
-                                                   rescue_password=u'ABC123',
-                                                   rescue_image_ref=None)
+        mock_compute_api_rescue.assert_called_with(
+            mock.ANY, instance, rescue_password=u'ABC123',
+            rescue_image_ref=None, allow_bfv_rescue=self._allow_bfv_rescue())
 
     def test_rescue_with_none(self):
         body = dict(rescue=None)
@@ -212,3 +219,28 @@ class RescueTestV21(test.NoDBTestCase):
         self.assertRaises(exception.ValidationError,
                           self.controller._rescue,
                           self.fake_req, UUID, body=body)
+
+
+class RescueTestV287(RescueTestV21):
+
+    def setUp(self):
+        super(RescueTestV287, self).setUp()
+        v287_req = api_version_request.APIVersionRequest('2.87')
+        self.fake_req.api_version_request = v287_req
+
+    @mock.patch('nova.compute.api.API.rescue')
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_allow_bfv_rescue(self, mock_get_instance, mock_compute_rescue):
+        instance = fake_instance.fake_instance_obj(
+            self.fake_req.environ['nova.context'])
+        mock_get_instance.return_value = instance
+
+        body = {"rescue": {"adminPass": "ABC123"}}
+        self.controller._rescue(self.fake_req, uuids.instance, body=body)
+
+        # Assert that allow_bfv_rescue is True for this 2.87 request
+        mock_get_instance.assert_called_once_with(
+            mock.ANY, mock.ANY, uuids.instance)
+        mock_compute_rescue.assert_called_with(
+            mock.ANY, instance, rescue_image_ref=None,
+            rescue_password=u'ABC123', allow_bfv_rescue=True)

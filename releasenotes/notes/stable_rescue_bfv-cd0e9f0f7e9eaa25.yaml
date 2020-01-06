@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    Stable device rescue for boot from volume instances is now supported
+    through the use of the 2.87 microversion when the compute hosting the
+    instance also reports the ``COMPUTE_RESCUE_BFV`` trait such as the libvirt
+    driver.
+
+    No changes have been made to the request or reponse parameters of the
+    rescue API itself.

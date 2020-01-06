@@ -1134,3 +1134,9 @@ Validation is only used for recognized extra spec namespaces, namely:
 ``accel``, ``aggregate_instance_extra_specs``, ``capabilities``, ``hw``,
 ``hw_rng``, ``hw_video``, ``os``, ``pci_passthrough``, ``powervm``, ``quota``,
 ``resources``, ``trait``, and ``vmware``.
+
+2.87
+----
+
+Adds support for rescuing boot from volume instances when the compute host
+reports the ``COMPUTE_BFV_RESCUE`` capability trait.
