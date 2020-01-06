@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    This release contains a fix for a `regression`__ introduced in 15.0.0
+    (Ocata) where server create failing during scheduling would not result in
+    an instance action record being created in the cell0 database. Now when
+    creating a server fails during scheduling and is "buried" in cell0 a
+    ``create`` action will be created with an event named
+    ``conductor_schedule_and_build_instances``.
+
+    .. __: https://bugs.launchpad.net/nova/+bug/1852458
