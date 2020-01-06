@@ -278,7 +278,7 @@ class FCVscsiVolumeAdapter(object):
         """Update the stg_ftsk to append the mapping to the VIOS.
 
         :param vios_uuid: The UUID of the vios for the pypowervm adapter.
-        :param device_name: The The hdisk device name.
+        :param device_name: The hdisk device name.
         :param tag: String tag to set on the physical volume.
         """
         def add_func(vios_w):
@@ -400,7 +400,7 @@ class FCVscsiVolumeAdapter(object):
 
         :param vm_uuid: The UUID of the VM instance
         :param vios_uuid: The UUID of the vios for the pypowervm adapter.
-        :param device_name: The The hdisk device name.
+        :param device_name: The hdisk device name.
         """
         def rm_func(vios_w):
             LOG.info("Removing vSCSI mapping from physical volume %(dev)s "

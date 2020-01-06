@@ -243,7 +243,7 @@ behavior are described below:
     in the boot-from-volume case, this value will be an empty string.
   - flavor: The flavor details of the server.
   - availability_zone: The availability_zone of the server if it was specified
-    during during boot time and "UNKNOWN" otherwise.
+    during boot time and "UNKNOWN" otherwise.
   - power_state: Its value will be 0 (``NOSTATE``).
   - links: Links to the servers in question.
   - server_groups: The UUIDs of the server groups to which the server belongs.
