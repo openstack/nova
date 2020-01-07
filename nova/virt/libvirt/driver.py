@@ -310,6 +310,7 @@ class LibvirtDriver(driver.ComputeDriver):
         raw_only = ('rbd', 'lvm')
         requires_raw_image = (CONF.libvirt.images_type in raw_only and
                               not CONF.force_raw_images)
+        requires_ploop_image = CONF.libvirt.virt_type == 'parallels'
 
         self.capabilities = {
             "has_imagecache": True,
@@ -339,6 +340,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # formats. If we are configured for those backends, then we
             # should not expose the corresponding support traits.
             "supports_image_type_qcow2": not requires_raw_image,
+            "supports_image_type_ploop": requires_ploop_image,
             "supports_pcpus": True,
         }
         super(LibvirtDriver, self).__init__(virtapi)
