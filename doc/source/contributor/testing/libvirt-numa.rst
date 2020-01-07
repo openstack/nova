@@ -55,13 +55,13 @@ guest with 8 virtual CPUs, 8 GB of RAM and 20 GB of disk space:
 .. code-block:: bash
 
  # cd /var/lib/libvirt/images
- # wget https://download.fedoraproject.org/pub/fedora/linux/releases/24/Server/x86_64/iso/Fedora-Server-netinst-x86_64-24-1.2.iso
+ # wget https://download.fedoraproject.org/pub/fedora/linux/releases/29/Server/x86_64/iso/Fedora-Server-netinst-x86_64-29-1.2.iso
 
  # virt-install \
-    --name f24x86_64 \
+    --name f29x86_64 \
     --ram 8000 \
     --vcpus 8 \
-    --file /var/lib/libvirt/images/f24x86_64.img \
+    --file /var/lib/libvirt/images/f29x86_64.img \
     --file-size 20
     --cdrom /var/lib/libvirt/images/Fedora-Server-netinst-x86_64-24-1.2.iso \
     --os-variant fedora23
@@ -164,7 +164,7 @@ of nova libvirt guests boot a tiny instance:
 .. code-block:: bash
 
   $ . openrc admin
-  $ openstack server create --image cirros-0.3.4-x86_64-uec --flavor m1.tiny \
+  $ openstack server create --image cirros-0.4.0-x86_64-disk --flavor m1.tiny \
       cirros1
 
 The host will be reporting NUMA topology, but there should only be a single
@@ -173,57 +173,87 @@ example (with object versioning fields removed):
 
 .. code-block:: bash
 
-  $ mysql -u root -p123456 nova
+  $ mysql -u root -p123456 nova_cell1
   MariaDB [nova]> select numa_topology from compute_nodes;
   +----------------------------------------------------------------------------+
   | numa_topology                                                              |
   +----------------------------------------------------------------------------+
   | {
   |     "nova_object.name": "NUMATopology",
+  |     "nova_object.namespace": "nova",
+  |     "nova_object.version": "1.2",
   |     "nova_object.data": {
   |         "cells": [{
-  |                 "nova_object.name": "NUMACell",
-  |                 "nova_object.data": {
-  |                     "cpu_usage": 0,
-  |                     "memory_usage": 0,
-  |                     "cpuset": [0, 1, 2, 3, 4, 5, 6, 7],
-  |                     "pinned_cpus": [],
-  |                     "siblings": [],
-  |                     "memory": 7793,
-  |                     "mempages": [
-  |                         {
-  |                             "nova_object.name": "NUMAPagesTopology",
-  |                             "nova_object.data": {
-  |                                 "used": 0,
-  |                                 "total": 987430,
-  |                                 "reserved":0,
-  |                                 "size_kb": 4
-  |                             },
-  |                         },
-  |                         {
-  |                             "nova_object.name": "NUMAPagesTopology",
-  |                             "nova_object.data": {
-  |                                 "used": 0,
-  |                                 "total": 0,
-  |                                 "reserved":0,
-  |                                 "size_kb": 2048
-  |                             },
-  |                         },
-  |                         {
-  |                             "nova_object.name": "NUMAPagesTopology",
-  |                             "nova_object.data": {
-  |                                 "used": 0,
-  |                                 "total": 0,
-  |                                 "reserved": 0,
-  |                                 "size_kb": 1048576
-  |                             },
-  |                         }
-  |                     ],
-  |                     "id": 0
-  |                 },
+  |             "nova_object.name": "NUMACell",
+  |             "nova_object.namespace": "nova",
+  |             "nova_object.version": "1.4",
+  |             "nova_object.data": {
+  |                 "id": 0,
+  |                 "cpuset": [0, 1, 2, 3, 4, 5, 6, 7],
+  |                 "pcpuset": [0, 1, 2, 3, 4, 5, 6, 7],
+  |                 "memory": 7975,
+  |                 "cpu_usage": 0,
+  |                 "memory_usage": 0,
+  |                 "pinned_cpus": [],
+  |                 "siblings": [
+  |                     [0],
+  |                     [1],
+  |                     [2],
+  |                     [3],
+  |                     [4],
+  |                     [5],
+  |                     [6],
+  |                     [7]
+  |                 ],
+  |                 "mempages": [{
+  |                     "nova_object.name": "NUMAPagesTopology",
+  |                     "nova_object.namespace": "nova",
+  |                     "nova_object.version": "1.1",
+  |                     "nova_object.data": {
+  |                         "size_kb": 4,
+  |                         "total": 2041795,
+  |                         "used": 0,
+  |                         "reserved": 0
+  |                     },
+  |                     "nova_object.changes": ["size_kb", "total", "reserved", "used"]
+  |                 }, {
+  |                     "nova_object.name": "NUMAPagesTopology",
+  |                     "nova_object.namespace": "nova",
+  |                     "nova_object.version": "1.1",
+  |                     "nova_object.data": {
+  |                         "size_kb": 2048,
+  |                         "total": 0,
+  |                         "used": 0,
+  |                         "reserved": 0
+  |                     },
+  |                     "nova_object.changes": ["size_kb", "total", "reserved", "used"]
+  |                 }, {
+  |                     "nova_object.name": "NUMAPagesTopology",
+  |                     "nova_object.namespace": "nova",
+  |                     "nova_object.version": "1.1",
+  |                     "nova_object.data": {
+  |                         "size_kb": 1048576,
+  |                         "total": 0,
+  |                         "used": 0,
+  |                         "reserved": 0
+  |                     },
+  |                     "nova_object.changes": ["size_kb", "total", "reserved", "used"]
+  |                 }],
+  |                 "network_metadata": {
+  |                     "nova_object.name": "NetworkMetadata",
+  |                     "nova_object.namespace": "nova",
+  |                     "nova_object.version": "1.0",
+  |                     "nova_object.data": {
+  |                         "physnets": [],
+  |                         "tunneled": false
+  |                     },
+  |                     "nova_object.changes": ["tunneled", "physnets"]
+  |                 }
   |             },
-  |         ]
+  |             "nova_object.changes": ["pinned_cpus", "memory_usage", "siblings", "mempages", "memory", "id", "network_metadata", "cpuset", "cpu_usage", "pcpuset"]
+  |         }]
   |     },
+  |     "nova_object.changes": ["cells"]
   | }
   +----------------------------------------------------------------------------+
 
@@ -255,7 +285,7 @@ And now back on the physical host edit the guest config as root:
 
 .. code-block:: bash
 
-  $ sudo virsh edit f21x86_64
+  $ sudo virsh edit f29x86_64
 
 The first thing is to change the `<cpu>` block to do passthrough of the host
 CPU. In particular this exposes the "SVM" or "VMX" feature bits to the guest so
@@ -279,7 +309,7 @@ Now start the guest again:
 
 .. code-block:: bash
 
-  # virsh start f24x86_64
+  # virsh start f29x86_64
 
 ...and login back in:
 
@@ -307,141 +337,207 @@ topology setup for the guest:
 
 .. code-block:: bash
 
-  $ mysql -u root -p123456 nova
+  $ mysql -u root -p123456 nova_cell1
   MariaDB [nova]> select numa_topology from compute_nodes;
   +----------------------------------------------------------------------------+
   | numa_topology                                                              |
   +----------------------------------------------------------------------------+
   | {
   |     "nova_object.name": "NUMATopology",
+  |     "nova_object.namespace": "nova",
+  |     "nova_object.version": "1.2",
   |     "nova_object.data": {
-  |         "cells": [
-  |             {
-  |                 "nova_object.name": "NUMACell",
-  |                 "nova_object.data": {
-  |                     "cpu_usage": 0,
-  |                     "memory_usage": 0,
-  |                     "cpuset": [0, 1, 2, 3],
-  |                     "pinned_cpus": [],
-  |                     "siblings": [],
-  |                     "memory": 3856,
-  |                     "mempages": [
-  |                         {
-  |                             "nova_object.name": "NUMAPagesTopology",
-  |                             "nova_object.data": {
-  |                                 "used": 0,
-  |                                 "total": 987231,
-  |                                 "reserved": 0,
-  |                                 "size_kb": 4
-  |                             },
-  |                         },
-  |                         {
-  |                             "nova_object.name": "NUMAPagesTopology",
-  |                             "nova_object.data": {
-  |                                 "used": 0,
-  |                                 "total": 0,
-  |                                 "reserved": 0,
-  |                                 "size_kb": 2048
-  |                             },
-  |                         },
-  |                         {
-  |                             "nova_object.name": "NUMAPagesTopology",
-  |                             "nova_object.data": {
-  |                                 "used": 0,
-  |                                 "total": 0,
-  |                                 "reserved": 0,
-  |                                 "size_kb": 1048576
-  |                             },
-  |                         }
-  |                     ],
-  |                     "id": 0
-  |                 },
+  |         "cells": [{
+  |             "nova_object.name": "NUMACell",
+  |             "nova_object.namespace": "nova",
+  |             "nova_object.version": "1.4",
+  |             "nova_object.data": {
+  |                 "id": 0,
+  |                 "cpuset": [0, 1, 2, 3],
+  |                 "pcpuset": [0, 1, 2, 3],
+  |                 "memory": 3966,
+  |                 "cpu_usage": 0,
+  |                 "memory_usage": 0,
+  |                 "pinned_cpus": [],
+  |                 "siblings": [
+  |                     [2],
+  |                     [0],
+  |                     [3],
+  |                     [1]
+  |                 ],
+  |                 "mempages": [{
+  |                     "nova_object.name": "NUMAPagesTopology",
+  |                     "nova_object.namespace": "nova",
+  |                     "nova_object.version": "1.1",
+  |                     "nova_object.data": {
+  |                         "size_kb": 4,
+  |                         "total": 1015418,
+  |                         "used": 0,
+  |                         "reserved": 0
+  |                     },
+  |                     "nova_object.changes": ["total", "size_kb", "used", "reserved"]
+  |                 }, {
+  |                     "nova_object.name": "NUMAPagesTopology",
+  |                     "nova_object.namespace": "nova",
+  |                     "nova_object.version": "1.1",
+  |                     "nova_object.data": {
+  |                         "size_kb": 2048,
+  |                         "total": 0,
+  |                         "used": 0,
+  |                         "reserved": 0
+  |                     },
+  |                     "nova_object.changes": ["total", "size_kb", "used", "reserved"]
+  |                 }, {
+  |                     "nova_object.name": "NUMAPagesTopology",
+  |                     "nova_object.namespace": "nova",
+  |                     "nova_object.version": "1.1",
+  |                     "nova_object.data": {
+  |                         "size_kb": 1048576,
+  |                         "total": 0,
+  |                         "used": 0,
+  |                         "reserved": 0
+  |                     },
+  |                     "nova_object.changes": ["total", "size_kb", "used", "reserved"]
+  |                 }],
+  |                 "network_metadata": {
+  |                     "nova_object.name": "NetworkMetadata",
+  |                     "nova_object.namespace": "nova",
+  |                     "nova_object.version": "1.0",
+  |                     "nova_object.data": {
+  |                         "physnets": [],
+  |                         "tunneled": false
+  |                     },
+  |                     "nova_object.changes": ["physnets", "tunneled"]
+  |                 }
   |             },
-  |             {
-  |                 "nova_object.name": "NUMACell",
-  |                 "nova_object.data": {
-  |                     "cpu_usage": 0,
-  |                     "memory_usage": 0,
-  |                     "cpuset": [4, 5],
-  |                     "pinned_cpus": [],
-  |                     "siblings": [],
-  |                     "memory": 1969,
-  |                     "mempages": [
-  |                         {
-  |                             "nova_object.name": "NUMAPagesTopology",
-  |                             "nova_object.data": {
-  |                                 "used": 0,
-  |                                 "total": 504202,
-  |                                 "reserved": 0,
-  |                                 "size_kb": 4
-  |                             },
-  |                         },
-  |                         {
-  |                             "nova_object.name": "NUMAPagesTopology",
-  |                             "nova_object.data": {
-  |                                 "used": 0,
-  |                                 "total": 0,
-  |                                 "reserved": 0,
-  |                                 "size_kb": 2048
-  |                             },
-  |                         },
-  |                         {
-  |                             "nova_object.name": "NUMAPagesTopology",
-  |                             "nova_object.data": {
-  |                                 "used": 0,
-  |                                 "total": 0,
-  |                                 "reserved": 0,
-  |                                 "size_kb": 1048576
-  |                             },
-  |                         }
-  |                     ],
-  |                     "id": 1
-  |                 },
+  |             "nova_object.changes": ["pinned_cpus", "siblings", "memory", "id", "cpuset", "network_metadata", "pcpuset", "mempages", "cpu_usage", "memory_usage"]
+  |         }, {
+  |             "nova_object.name": "NUMACell",
+  |             "nova_object.namespace": "nova",
+  |             "nova_object.version": "1.4",
+  |             "nova_object.data": {
+  |                 "id": 1,
+  |                 "cpuset": [4, 5],
+  |                 "pcpuset": [4, 5],
+  |                 "memory": 1994,
+  |                 "cpu_usage": 0,
+  |                 "memory_usage": 0,
+  |                 "pinned_cpus": [],
+  |                 "siblings": [
+  |                     [5],
+  |                     [4]
+  |                 ],
+  |                 "mempages": [{
+  |                     "nova_object.name": "NUMAPagesTopology",
+  |                     "nova_object.namespace": "nova",
+  |                     "nova_object.version": "1.1",
+  |                     "nova_object.data": {
+  |                         "size_kb": 4,
+  |                         "total": 510562,
+  |                         "used": 0,
+  |                         "reserved": 0
+  |                     },
+  |                     "nova_object.changes": ["total", "size_kb", "used", "reserved"]
+  |                 }, {
+  |                     "nova_object.name": "NUMAPagesTopology",
+  |                     "nova_object.namespace": "nova",
+  |                     "nova_object.version": "1.1",
+  |                     "nova_object.data": {
+  |                         "size_kb": 2048,
+  |                         "total": 0,
+  |                         "used": 0,
+  |                         "reserved": 0
+  |                     },
+  |                     "nova_object.changes": ["total", "size_kb", "used", "reserved"]
+  |                 }, {
+  |                     "nova_object.name": "NUMAPagesTopology",
+  |                     "nova_object.namespace": "nova",
+  |                     "nova_object.version": "1.1",
+  |                     "nova_object.data": {
+  |                         "size_kb": 1048576,
+  |                         "total": 0,
+  |                         "used": 0,
+  |                         "reserved": 0
+  |                     },
+  |                     "nova_object.changes": ["total", "size_kb", "used", "reserved"]
+  |                 }],
+  |                 "network_metadata": {
+  |                     "nova_object.name": "NetworkMetadata",
+  |                     "nova_object.namespace": "nova",
+  |                     "nova_object.version": "1.0",
+  |                     "nova_object.data": {
+  |                         "physnets": [],
+  |                         "tunneled": false
+  |                     },
+  |                     "nova_object.changes": ["physnets", "tunneled"]
+  |                 }
   |             },
-  |             {
-  |                 "nova_object.name": "NUMACell",
-  |                 "nova_object.data": {
-  |                     "cpu_usage": 0,
-  |                     "memory_usage": 0,
-  |                     "cpuset": [6, 7],
-  |                     "pinned_cpus": [],
-  |                     "siblings": [],
-  |                     "memory": 1967,
-  |                     "mempages": [
-  |                         {
-  |                             "nova_object.name": "NUMAPagesTopology",
-  |                             "nova_object.data": {
-  |                                 "used": 0,
-  |                                 "total": 503565,
-  |                                 "reserved": 0,
-  |                                 "size_kb": 4
-  |                             },
-  |                         },
-  |                         {
-  |                             "nova_object.name": "NUMAPagesTopology",
-  |                             "nova_object.data": {
-  |                                 "used": 0,
-  |                                 "total": 0,
-  |                                 "reserved": 0,
-  |                                 "size_kb": 2048
-  |                             },
-  |                         },
-  |                         {
-  |                             "nova_object.name": "NUMAPagesTopology",
-  |                             "nova_object.data": {
-  |                                 "used": 0,
-  |                                 "total": 0,
-  |                                 "reserved": 0,
-  |                                 "size_kb": 1048576
-  |                             },
-  |                         }
-  |                     ],
-  |                     "id": 2
-  |                 },
-  |             }
-  |         ]
+  |             "nova_object.changes": ["pinned_cpus", "siblings", "memory", "id", "cpuset", "network_metadata", "pcpuset", "mempages", "cpu_usage", "memory_usage"]
+  |         }, {
+  |             "nova_object.name": "NUMACell",
+  |             "nova_object.namespace": "nova",
+  |             "nova_object.version": "1.4",
+  |             "nova_object.data": {
+  |                 "id": 2,
+  |                 "cpuset": [6, 7],
+  |                 "pcpuset": [6, 7],
+  |                 "memory": 2014,
+  |                 "cpu_usage": 0,
+  |                 "memory_usage": 0,
+  |                 "pinned_cpus": [],
+  |                 "siblings": [
+  |                     [7],
+  |                     [6]
+  |                 ],
+  |                 "mempages": [{
+  |                     "nova_object.name": "NUMAPagesTopology",
+  |                     "nova_object.namespace": "nova",
+  |                     "nova_object.version": "1.1",
+  |                     "nova_object.data": {
+  |                         "size_kb": 4,
+  |                         "total": 515727,
+  |                         "used": 0,
+  |                         "reserved": 0
+  |                     },
+  |                     "nova_object.changes": ["total", "size_kb", "used", "reserved"]
+  |                 }, {
+  |                     "nova_object.name": "NUMAPagesTopology",
+  |                     "nova_object.namespace": "nova",
+  |                     "nova_object.version": "1.1",
+  |                     "nova_object.data": {
+  |                         "size_kb": 2048,
+  |                         "total": 0,
+  |                         "used": 0,
+  |                         "reserved": 0
+  |                     },
+  |                     "nova_object.changes": ["total", "size_kb", "used", "reserved"]
+  |                 }, {
+  |                     "nova_object.name": "NUMAPagesTopology",
+  |                     "nova_object.namespace": "nova",
+  |                     "nova_object.version": "1.1",
+  |                     "nova_object.data": {
+  |                         "size_kb": 1048576,
+  |                         "total": 0,
+  |                         "used": 0,
+  |                         "reserved": 0
+  |                     },
+  |                     "nova_object.changes": ["total", "size_kb", "used", "reserved"]
+  |                 }],
+  |                 "network_metadata": {
+  |                     "nova_object.name": "NetworkMetadata",
+  |                     "nova_object.namespace": "nova",
+  |                     "nova_object.version": "1.0",
+  |                     "nova_object.data": {
+  |                         "physnets": [],
+  |                         "tunneled": false
+  |                     },
+  |                     "nova_object.changes": ["physnets", "tunneled"]
+  |                 }
+  |             },
+  |             "nova_object.changes": ["pinned_cpus", "siblings", "memory", "id", "cpuset", "network_metadata", "pcpuset", "mempages", "cpu_usage", "memory_usage"]
+  |         }]
   |     },
-  | }
+  |     "nova_object.changes": ["cells"]
   +----------------------------------------------------------------------------+
 
 This indeed shows that there are now 3 NUMA nodes for the "host" machine, the
@@ -460,7 +556,7 @@ condition:
 .. code-block:: bash
 
   $ . openrc admin admin
-  $ openstack server create --image cirros-0.3.4-x86_64-uec --flavor m1.tiny \
+  $ openstack server create --image cirros-0.4.0-x86_64-disk --flavor m1.tiny \
       cirros1
 
 Now look at the libvirt guest XML:
@@ -498,7 +594,7 @@ Now boot the guest using this new flavor:
 
 .. code-block:: bash
 
-  $ openstack server create --image cirros-0.3.4-x86_64-uec --flavor m1.numa \
+  $ openstack server create --image cirros-0.4.0-x86_64-disk --flavor m1.numa \
       cirros2
 
 Looking at the resulting guest XML from libvirt:
@@ -551,30 +647,35 @@ database. This should match the ``<numatune>`` information:
 
 .. code-block:: bash
 
-  $ mysql -u root -p123456 nova
+  $ mysql -u root -p123456 nova_cell1
   MariaDB [nova]> select numa_topology from instance_extra;
   +----------------------------------------------------------------------------+
   | numa_topology                                                              |
   +----------------------------------------------------------------------------+
   | {
   |     "nova_object.name": "InstanceNUMATopology",
+  |     "nova_object.namespace": "nova",
+  |     "nova_object.version": "1.3",
   |     "nova_object.data": {
-  |         "cells": [
-  |             {
-  |                 "nova_object.name": "InstanceNUMACell",
-  |                 "nova_object.data": {
-  |                     "pagesize": null,
-  |                     "cpu_topology": null,
-  |                     "cpuset": [0, 1, 2, 3],
-  |                     "cpu_policy": null,
-  |                     "memory": 1024,
-  |                     "cpu_pinning_raw": null,
-  |                     "id": 0,
-  |                     "cpu_thread_policy": null
-  |                 },
-  |             }
-  |         ]
+  |         "cells": [{
+  |             "nova_object.name": "InstanceNUMACell",
+  |             "nova_object.namespace": "nova",
+  |             "nova_object.version": "1.4",
+  |             "nova_object.data": {
+  |                 "id": 0,
+  |                 "cpuset": [0, 1, 2, 3],
+  |                 "memory": 1024,
+  |                 "pagesize": null,
+  |                 "cpu_pinning_raw": null,
+  |                 "cpu_policy": null,
+  |                 "cpu_thread_policy": null,
+  |                 "cpuset_reserved": null
+  |             },
+  |             "nova_object.changes": ["id"]
+  |         }],
+  |         "emulator_threads_policy": null
   |     },
+  |     "nova_object.changes": ["cells", "emulator_threads_policy"]
   | }
   +----------------------------------------------------------------------------+
 
@@ -600,7 +701,7 @@ Now boot the guest using this changed flavor:
 
 .. code-block:: bash
 
-  $ openstack server create --image cirros-0.3.4-x86_64-uec --flavor m1.numa \
+  $ openstack server create --image cirros-0.4.0-x86_64-disk --flavor m1.numa \
       cirros2
 
 Looking at the resulting guest XML from libvirt:
@@ -661,35 +762,42 @@ database. This should match the ``<numatune>`` information:
   +----------------------------------------------------------------------------+
   | {
   |     "nova_object.name": "InstanceNUMATopology",
+  |     "nova_object.namespace": "nova",
+  |     "nova_object.version": "1.3",
   |     "nova_object.data": {
-  |         "cells": [
-  |             {
-  |                 "nova_object.name": "InstanceNUMACell",
-  |                 "nova_object.data": {
-  |                     "pagesize": null,
-  |                     "cpu_topology": null,
-  |                     "cpuset": [0, 1],
-  |                     "cpu_policy": null,
-  |                     "memory": 512,
-  |                     "cpu_pinning_raw": null,
-  |                     "id": 0,
-  |                     "cpu_thread_policy": null
-  |                 },
+  |         "cells": [{
+  |             "nova_object.name": "InstanceNUMACell",
+  |             "nova_object.namespace": "nova",
+  |             "nova_object.version": "1.4",
+  |             "nova_object.data": {
+  |                 "id": 0,
+  |                 "cpuset": [0, 1],
+  |                 "memory": 512,
+  |                 "pagesize": null,
+  |                 "cpu_pinning_raw": null,
+  |                 "cpu_policy": null,
+  |                 "cpu_thread_policy": null,
+  |                 "cpuset_reserved": null
   |             },
-  |             {
-  |                 "nova_object.name": "InstanceNUMACell",
-  |                 "nova_object.data": {
-  |                     "pagesize": null,
-  |                     "cpu_topology": null,
-  |                     "cpuset": [2, 3],
-  |                     "cpu_policy": null,
-  |                     "memory": 512,
-  |                     "cpu_pinning_raw": null,
-  |                     "id": 1,
-  |                     "cpu_thread_policy": null
-  |                 },
-  |             }
-  |         ]
+  |             "nova_object.changes": ["id"]
+  |         }, {
+  |             "nova_object.name": "InstanceNUMACell",
+  |             "nova_object.namespace": "nova",
+  |             "nova_object.version": "1.4",
+  |             "nova_object.data": {
+  |                 "id": 1,
+  |                 "cpuset": [2, 3],
+  |                 "memory": 512,
+  |                 "pagesize": null,
+  |                 "cpu_pinning_raw": null,
+  |                 "cpu_policy": null,
+  |                 "cpu_thread_policy": null,
+  |                 "cpuset_reserved": null
+  |             },
+  |             "nova_object.changes": ["id"]
+  |         }],
+  |         "emulator_threads_policy": null
   |     },
+  |     "nova_object.changes": ["cells", "emulator_threads_policy"]
   | }
   +----------------------------------------------------------------------------+
