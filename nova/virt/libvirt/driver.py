@@ -333,6 +333,7 @@ class LibvirtDriver(driver.ComputeDriver):
             "supports_image_type_ploop": requires_ploop_image,
             "supports_pcpus": True,
             "supports_accelerators": True,
+            "supports_bfv_rescue": True,
         }
         super(LibvirtDriver, self).__init__(virtapi)
 
@@ -3462,7 +3463,14 @@ class LibvirtDriver(driver.ComputeDriver):
                 image_meta = objects.ImageMeta.from_image_ref(
                     context, self._image_api, instance.image_ref)
             else:
-                image_meta = objects.ImageMeta.from_dict({})
+                # NOTE(lyarwood): If instance.image_ref isn't set attempt to
+                # lookup the original image_meta from the bdms. This will
+                # return an empty dict if no valid image_meta is found.
+                image_meta_dict = utils.get_bdm_image_metadata(
+                    context, self._image_api, self._volume_api,
+                    block_device_info['block_device_mapping'],
+                    legacy_bdm=False)
+                image_meta = objects.ImageMeta.from_dict(image_meta_dict)
 
         else:
             LOG.info("Attempting an unstable device rescue", instance=instance)

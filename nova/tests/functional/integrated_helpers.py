@@ -460,6 +460,7 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
             os_traits.COMPUTE_IMAGE_TYPE_ISO,
             os_traits.COMPUTE_IMAGE_TYPE_QCOW2,
             os_traits.COMPUTE_IMAGE_TYPE_RAW,
+            os_traits.COMPUTE_RESCUE_BFV,
         ]
     ])
 

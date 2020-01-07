@@ -22792,6 +22792,141 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         query = "devices/disk[source/@file = '%s']/boot/@order" % disk_path
         self.assertEqual('1', domain.xpath(query)[0])
 
+    def test_supports_bfv_rescue_capability(self):
+        """Assert that the supports_bfv_rescue capability is set"""
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertTrue(drvr.capabilities.get('supports_bfv_rescue'))
+
+    def test_rescue_stable_device_bfv_without_instance_image_ref(self):
+        """Assert that image_meta is fetched from the bdms for bfv instances"""
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        # Set instance.image_ref to None for this BFV instance
+        instance = self._create_instance({'config_drive': str(True)})
+        instance.image_ref = None
+
+        rescue_image_meta = objects.ImageMeta.from_dict(
+            {'id': uuids.rescue_image_id,
+             'name': 'rescue',
+             'properties': {'hw_rescue_device': 'disk',
+                            'hw_rescue_bus': 'virtio'}})
+        bdm = objects.BlockDeviceMapping(self.context,
+            **fake_block_device.FakeDbBlockDeviceDict({
+                'id': 1,
+                'image_id': uuids.bdm_image_id,
+                'source_type': 'image',
+                'destination_type': 'volume',
+                'device_name': '/dev/vda',
+                'boot_index': 0}))
+        bdms = driver_block_device.convert_images([bdm])
+        block_device_info = {'root_device_name': '/dev/vda',
+                             'ephemerals': [],
+                             'swap': None,
+                             'block_device_mapping': bdms}
+        network_info = _fake_network_info(self)
+        disk_info = {'mapping': {}}
+
+        with test.nested(
+            mock.patch.object(drvr, '_create_domain'),
+            mock.patch.object(drvr, '_destroy'),
+            mock.patch.object(drvr, '_get_guest_xml'),
+            mock.patch.object(drvr, '_create_image'),
+            mock.patch.object(drvr, '_get_existing_domain_xml'),
+            mock.patch.object(libvirt_utils, 'write_to_file'),
+            mock.patch.object(libvirt_utils, 'get_instance_path'),
+            mock.patch('nova.virt.libvirt.blockinfo.get_disk_info'),
+            mock.patch('nova.image.glance.API.get'),
+            mock.patch('nova.objects.image_meta.ImageMeta.from_dict')
+        ) as (mock_create, mock_destroy, mock_get_guest_xml, mock_create_image,
+              mock_get_existing_xml, mock_write, mock_inst_path,
+              mock_get_disk_info, mock_image_get, mock_from_dict):
+
+            self.flags(virt_type='kvm', group='libvirt')
+            mock_image_get.return_value = mock.sentinel.bdm_image_meta_dict
+            mock_from_dict.return_value = mock.sentinel.bdm_image_meta
+            mock_get_disk_info.return_value = disk_info
+
+            drvr.rescue(self.context, instance, network_info,
+                        rescue_image_meta, mock.sentinel.rescue_password,
+                        block_device_info)
+
+            # Assert that we fetch image metadata from Glance using the image
+            # uuid stashed in the BDM and build an image_meta object using the
+            # returned dict.
+            mock_image_get.assert_called_once_with(
+                self.context, uuids.bdm_image_id)
+            mock_from_dict.assert_called_once_with(
+                mock.sentinel.bdm_image_meta_dict)
+
+            # Assert that get_disk_info is then called using this object
+            mock_get_disk_info.assert_called_once_with(
+                'kvm', instance, mock.sentinel.bdm_image_meta, rescue=True,
+                block_device_info=block_device_info,
+                rescue_image_meta=rescue_image_meta)
+
+            # Assert that this object is also used when building guest XML
+            mock_get_guest_xml.assert_called_once_with(
+                self.context, instance, network_info, disk_info,
+                mock.sentinel.bdm_image_meta, rescue=mock.ANY, mdevs=mock.ANY,
+                block_device_info=block_device_info)
+
+    def test_rescue_stable_device_bfv(self):
+        """Assert the disk layout when rescuing BFV instances"""
+
+        # NOTE(lyarwood): instance.image_ref is left in place here to allow us
+        # to reuse the _test_rescue test method as we only care about the
+        # eventual disk layout and not how we get the image_meta in this test.
+        instance = self._create_instance({'config_drive': str(True)})
+
+        # Set ephemeral_gb to 0 to avoid any disk.local disks for being used
+        instance.ephemeral_gb = 0
+        inst_image_meta_dict = {'id': uuids.image_id, 'name': 'fake'}
+        rescue_image_meta_dict = {
+            'id': uuids.rescue_image_id,
+            'name': 'rescue',
+            'properties': {'hw_rescue_device': 'disk',
+                           'hw_rescue_bus': 'virtio'}}
+        conn_info = {
+            'driver_volume_type': 'iscsi',
+            'data': {'device_path': '/dev/sdb'}}
+        bdm = objects.BlockDeviceMapping(
+            self.context,
+            **fake_block_device.FakeDbBlockDeviceDict({
+                   'id': 1,
+                   'source_type': 'volume',
+                   'destination_type': 'volume',
+                   'device_name': '/dev/vda'}))
+        bdms = driver_block_device.convert_volumes([bdm])
+        block_device_info = {'root_device_name': '/dev/vda',
+                             'ephemerals': [],
+                             'swap': None,
+                             'block_device_mapping': bdms}
+        bdm = block_device_info['block_device_mapping'][0]
+        bdm['connection_info'] = conn_info
+
+        backend, domain = self._test_rescue(
+                                instance,
+                                image_meta_dict=rescue_image_meta_dict,
+                                instance_image_meta_dict=inst_image_meta_dict,
+                                block_device_info=block_device_info)
+
+        # Assert that we created the expected set of disks, and no others
+        self.assertEqual(['disk.rescue', 'kernel.rescue', 'ramdisk.rescue'],
+                         sorted(backend.created_disks.keys()))
+
+        # Assert that the original disks are presented first with the rescue
+        # disk attached as the final device in the domain.
+        expected_disk_paths = [backend.disks['disk.config'].path,
+            '/dev/sdb', backend.disks['disk.rescue'].path]
+        query = 'devices/disk/source/@*[name()="file" or name()="dev"]'
+        disk_paths = domain.xpath(query)
+        self.assertEqual(expected_disk_paths, disk_paths)
+
+        # Assert that the disk.rescue device has a boot order of 1
+        disk_path = backend.disks['disk.rescue'].path
+        query = "devices/disk[source/@file = '%s']/boot/@order" % disk_path
+        self.assertEqual('1', domain.xpath(query)[0])
+
     @mock.patch.object(libvirt_utils, 'get_instance_path')
     @mock.patch.object(libvirt_utils, 'load_file')
     @mock.patch.object(host.Host, '_get_domain')
