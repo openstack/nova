@@ -141,7 +141,6 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         mock_power_off_call_list = []
         mock_get_power_state_call_list = [
             mock.call(self.context, instance)]
-        mock_cleanup_call_list = []
 
         if clean_shutdown:
             if guest_power_state == power_state.PAUSED:
@@ -160,12 +159,6 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             mock_power_off_call_list.append(mock.call(instance, 0, 0))
             mock_get_power_state_call_list.append(mock.call(self.context,
                                                             instance))
-            # instance.host is replaced with host because
-            # original instance.host is clear after
-            # ComputeManager.shelve_instance execute with
-            # shelved_offload_time == 0
-            mock_cleanup_call_list.append(mock.call(self.context, instance,
-                                                    host))
 
         mock_notify_instance_usage.assert_has_calls(
             mock_notify_instance_usage_call_list)
