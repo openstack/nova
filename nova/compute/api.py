@@ -184,13 +184,34 @@ def reject_instance_state(vm_state=None, task_state=None):
     return outer
 
 
-def check_instance_host(function):
-    @six.wraps(function)
-    def wrapped(self, context, instance, *args, **kwargs):
-        if not instance.host:
-            raise exception.InstanceNotReady(instance_id=instance.uuid)
-        return function(self, context, instance, *args, **kwargs)
-    return wrapped
+def check_instance_host(check_is_up=False):
+    """Validate the instance.host before performing the operation.
+
+    At a minimum this method will check that the instance.host is set.
+
+    :param check_is_up: If True, check that the instance.host status is UP
+        or MAINTENANCE (disabled but not down).
+    :raises: InstanceNotReady if the instance.host is not set
+    :raises: ServiceUnavailable if check_is_up=True and the instance.host
+        compute service status is not UP or MAINTENANCE
+    """
+    def outer(function):
+        @six.wraps(function)
+        def wrapped(self, context, instance, *args, **kwargs):
+            if not instance.host:
+                raise exception.InstanceNotReady(instance_id=instance.uuid)
+            if check_is_up:
+                # Make sure the source compute service is not down otherwise we
+                # cannot proceed.
+                host_status = self.get_instance_host_status(instance)
+                if host_status not in (fields_obj.HostStatus.UP,
+                                       fields_obj.HostStatus.MAINTENANCE):
+                    # ComputeServiceUnavailable would make more sense here but
+                    # we do not want to leak hostnames to end users.
+                    raise exception.ServiceUnavailable()
+            return function(self, context, instance, *args, **kwargs)
+        return wrapped
+    return outer
 
 
 def check_instance_lock(function):
@@ -2512,14 +2533,14 @@ class API(base.Base):
                                           clean_shutdown=clean_shutdown)
 
     @check_instance_lock
-    @check_instance_host
+    @check_instance_host()
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.ERROR])
     def stop(self, context, instance, do_cast=True, clean_shutdown=True):
         """Stop an instance."""
         self.force_stop(context, instance, do_cast, clean_shutdown)
 
     @check_instance_lock
-    @check_instance_host
+    @check_instance_host()
     @check_instance_state(vm_state=[vm_states.STOPPED])
     def start(self, context, instance):
         """Start an instance."""
@@ -2532,7 +2553,7 @@ class API(base.Base):
         self.compute_rpcapi.start_instance(context, instance)
 
     @check_instance_lock
-    @check_instance_host
+    @check_instance_host()
     @check_instance_state(vm_state=vm_states.ALLOW_TRIGGER_CRASH_DUMP)
     def trigger_crash_dump(self, context, instance):
         """Trigger crash dump in an instance."""
@@ -3787,6 +3808,7 @@ class API(base.Base):
 
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
+    @check_instance_host(check_is_up=True)
     def resize(self, context, instance, flavor_id=None, clean_shutdown=True,
                host_name=None, auto_disk_config=None):
         """Resize (ie, migrate) a running instance.
@@ -4078,12 +4100,12 @@ class API(base.Base):
         self._record_action_start(context, instance, instance_actions.UNPAUSE)
         self.compute_rpcapi.unpause_instance(context, instance)
 
-    @check_instance_host
+    @check_instance_host()
     def get_diagnostics(self, context, instance):
         """Retrieve diagnostics for the given instance."""
         return self.compute_rpcapi.get_diagnostics(context, instance=instance)
 
-    @check_instance_host
+    @check_instance_host()
     def get_instance_diagnostics(self, context, instance):
         """Retrieve diagnostics for the given instance."""
         return self.compute_rpcapi.get_instance_diagnostics(context,
@@ -4165,7 +4187,7 @@ class API(base.Base):
                                                instance=instance,
                                                new_pass=password)
 
-    @check_instance_host
+    @check_instance_host()
     @reject_instance_state(
         task_state=[task_states.DELETING, task_states.MIGRATING])
     def get_vnc_console(self, context, instance, console_type):
@@ -4174,7 +4196,7 @@ class API(base.Base):
                 instance=instance, console_type=console_type)
         return {'url': connect_info['access_url']}
 
-    @check_instance_host
+    @check_instance_host()
     @reject_instance_state(
         task_state=[task_states.DELETING, task_states.MIGRATING])
     def get_spice_console(self, context, instance, console_type):
@@ -4183,7 +4205,7 @@ class API(base.Base):
                 instance=instance, console_type=console_type)
         return {'url': connect_info['access_url']}
 
-    @check_instance_host
+    @check_instance_host()
     @reject_instance_state(
         task_state=[task_states.DELETING, task_states.MIGRATING])
     def get_rdp_console(self, context, instance, console_type):
@@ -4192,7 +4214,7 @@ class API(base.Base):
                 instance=instance, console_type=console_type)
         return {'url': connect_info['access_url']}
 
-    @check_instance_host
+    @check_instance_host()
     @reject_instance_state(
         task_state=[task_states.DELETING, task_states.MIGRATING])
     def get_serial_console(self, context, instance, console_type):
@@ -4201,7 +4223,7 @@ class API(base.Base):
                 instance=instance, console_type=console_type)
         return {'url': connect_info['access_url']}
 
-    @check_instance_host
+    @check_instance_host()
     @reject_instance_state(
         task_state=[task_states.DELETING, task_states.MIGRATING])
     def get_mks_console(self, context, instance, console_type):
@@ -4210,7 +4232,7 @@ class API(base.Base):
                 instance=instance, console_type=console_type)
         return {'url': connect_info['access_url']}
 
-    @check_instance_host
+    @check_instance_host()
     def get_console_output(self, context, instance, tail_length=None):
         """Get console output for an instance."""
         return self.compute_rpcapi.get_console_output(context,
@@ -5086,7 +5108,7 @@ class API(base.Base):
 
         # We allow creating the snapshot in any vm_state as long as there is
         # no task being performed on the instance and it has a host.
-        @check_instance_host
+        @check_instance_host()
         @check_instance_state(vm_state=None)
         def do_volume_snapshot_create(self, context, instance):
             self.compute_rpcapi.volume_snapshot_create(context, instance,
@@ -5108,7 +5130,7 @@ class API(base.Base):
 
         # We allow deleting the snapshot in any vm_state as long as there is
         # no task being performed on the instance and it has a host.
-        @check_instance_host
+        @check_instance_host()
         @check_instance_state(vm_state=None)
         def do_volume_snapshot_delete(self, context, instance):
             self.compute_rpcapi.volume_snapshot_delete(context, instance,

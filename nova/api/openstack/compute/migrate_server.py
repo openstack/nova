@@ -56,7 +56,7 @@ class MigrateServerController(wsgi.Controller):
             host_name = body['migrate'].get('host')
 
         instance = common.get_instance(self.compute_api, context, id,
-                                       expected_attrs=['flavor'])
+                                       expected_attrs=['flavor', 'services'])
 
         if common.instance_has_port_with_resource_request(
                 instance.uuid, self.network_api):
@@ -76,7 +76,9 @@ class MigrateServerController(wsgi.Controller):
                                     host_name=host_name)
         except (exception.TooManyInstances, exception.QuotaError) as e:
             raise exc.HTTPForbidden(explanation=e.format_message())
-        except exception.InstanceIsLocked as e:
+        except (exception.InstanceIsLocked,
+                exception.InstanceNotReady,
+                exception.ServiceUnavailable) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,

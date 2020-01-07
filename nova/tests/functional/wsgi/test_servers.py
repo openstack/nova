@@ -387,3 +387,65 @@ class EnforceVolumeBackedForZeroDiskFlavorTestCase(
         server = self.admin_api.post_server({'server': server_req})
         server = self._wait_for_state_change(server, 'ERROR')
         self.assertIn('No valid host', server['fault']['message'])
+
+
+class ResizeCheckInstanceHostTestCase(
+        integrated_helpers.ProviderUsageBaseTestCase):
+    """Tests for the check_instance_host decorator used during resize/migrate.
+    """
+    compute_driver = 'fake.MediumFakeDriver'
+
+    def test_resize_source_compute_validation(self, resize=True):
+        flavors = self.api.get_flavors()
+        # Start up a compute on which to create a server.
+        self._start_compute('host1')
+        # Create a server on host1.
+        server = self._build_minimal_create_server_request(
+            name='test_resize_source_compute_validation',
+            image_uuid=fake_image.get_valid_image_id(),
+            flavor_id=flavors[0]['id'],
+            networks='none')
+        server = self.api.post_server({'server': server})
+        server = self._wait_for_state_change(server, 'ACTIVE')
+        # Check if we're cold migrating.
+        if resize:
+            req = {'resize': {'flavorRef': flavors[1]['id']}}
+        else:
+            req = {'migrate': None}
+        # Start up a destination compute.
+        self._start_compute('host2')
+        # First, force down the source compute service.
+        source_service = self.api.get_services(
+            binary='nova-compute', host='host1')[0]
+        self.api.put_service(source_service['id'], {'forced_down': True})
+        # Try the operation and it should fail with a 409 response.
+        ex = self.assertRaises(api_client.OpenStackApiException,
+                               self.api.post_server_action, server['id'], req)
+        self.assertEqual(409, ex.response.status_code)
+        self.assertIn('Service is unavailable at this time', six.text_type(ex))
+        # Now bring the source compute service up but disable it. The operation
+        # should be allowed in this case since the service is up.
+        self.api.put_service(source_service['id'],
+                             {'forced_down': False, 'status': 'disabled'})
+        self.api.post_server_action(server['id'], req)
+        server = self._wait_for_state_change(server, 'VERIFY_RESIZE')
+        # Revert the resize to get the server back to host1.
+        self.api.post_server_action(server['id'], {'revertResize': None})
+        server = self._wait_for_state_change(server, 'ACTIVE')
+        # Now shelve offload the server so it does not have a host.
+        self.api.post_server_action(server['id'], {'shelve': None})
+        self._wait_for_server_parameter(server,
+                                        {'status': 'SHELVED_OFFLOADED',
+                                         'OS-EXT-SRV-ATTR:host': None})
+        # Now try the operation again and it should fail with a different
+        # 409 response.
+        ex = self.assertRaises(api_client.OpenStackApiException,
+                               self.api.post_server_action, server['id'], req)
+        self.assertEqual(409, ex.response.status_code)
+        # This error comes from check_instance_state which is processed before
+        # check_instance_host.
+        self.assertIn('while it is in vm_state shelved_offloaded',
+                      six.text_type(ex))
+
+    def test_cold_migrate_source_compute_validation(self):
+        self.test_resize_source_compute_validation(resize=False)
