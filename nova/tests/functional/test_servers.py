@@ -6509,13 +6509,8 @@ class ServerMoveWithPortResourceRequestTest(
         qos_normal_port = self.neutron.port_with_resource_request
         qos_sriov_port = self.neutron.port_with_sriov_resource_request
 
-        server = self._create_server_with_ports(
+        server = self._create_server_with_ports_and_check_allocation(
             non_qos_normal_port, qos_normal_port, qos_sriov_port)
-
-        # check that the server allocates from the current host properly
-        self._check_allocation(
-            server, self.compute1_rp_uuid, non_qos_normal_port,
-            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
 
         orig_get_service = nova.objects.Service.get_by_host_and_binary
 
@@ -6568,13 +6563,8 @@ class ServerMoveWithPortResourceRequestTest(
         qos_normal_port = self.neutron.port_with_resource_request
         qos_sriov_port = self.neutron.port_with_sriov_resource_request
 
-        server = self._create_server_with_ports(
+        server = self._create_server_with_ports_and_check_allocation(
             non_qos_normal_port, qos_normal_port, qos_sriov_port)
-
-        # check that the server allocates from the current host properly
-        self._check_allocation(
-            server, self.compute1_rp_uuid, non_qos_normal_port,
-            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
 
         orig_get_service = nova.objects.Service.get_by_host_and_binary
 
@@ -6628,13 +6618,8 @@ class ServerMoveWithPortResourceRequestTest(
         qos_normal_port = self.neutron.port_with_resource_request
         qos_sriov_port = self.neutron.port_with_sriov_resource_request
 
-        server = self._create_server_with_ports(
+        server = self._create_server_with_ports_and_check_allocation(
             non_qos_normal_port, qos_normal_port, qos_sriov_port)
-
-        # check that the server allocates from the current host properly
-        self._check_allocation(
-            server, self.compute1_rp_uuid, non_qos_normal_port,
-            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
 
         if new_flavor:
             self.api_fixture.api.post_server_action(
@@ -6681,13 +6666,8 @@ class ServerMoveWithPortResourceRequestTest(
         qos_port = self.neutron.port_with_resource_request
         qos_sriov_port = self.neutron.port_with_sriov_resource_request
 
-        server = self._create_server_with_ports(
+        server = self._create_server_with_ports_and_check_allocation(
             non_qos_port, qos_port, qos_sriov_port)
-
-        # check that the server allocates from the current host properly
-        self._check_allocation(
-            server, self.compute1_rp_uuid, non_qos_port, qos_port,
-            qos_sriov_port, self.flavor_with_group_policy)
 
         if new_flavor:
             self.api_fixture.api.post_server_action(
@@ -6743,13 +6723,8 @@ class ServerMoveWithPortResourceRequestTest(
         qos_port = self.neutron.port_with_resource_request
         qos_sriov_port = self.neutron.port_with_sriov_resource_request
 
-        server = self._create_server_with_ports(
+        server = self._create_server_with_ports_and_check_allocation(
             non_qos_port, qos_port, qos_sriov_port)
-
-        # check that the server allocates from the current host properly
-        self._check_allocation(
-            server, self.compute1_rp_uuid, non_qos_port, qos_port,
-            qos_sriov_port, self.flavor_with_group_policy)
 
         # Yes this isn't great in a functional test, but it's simple.
         original_prep_resize = compute_manager.ComputeManager._prep_resize
@@ -6819,13 +6794,8 @@ class ServerMoveWithPortResourceRequestTest(
         qos_port = self.neutron.port_with_resource_request
         qos_sriov_port = self.neutron.port_with_sriov_resource_request
 
-        server = self._create_server_with_ports(
+        server = self._create_server_with_ports_and_check_allocation(
             non_qos_port, qos_port, qos_sriov_port)
-
-        # check that the server allocates from the current host properly
-        self._check_allocation(
-            server, self.compute1_rp_uuid, non_qos_port, qos_port,
-            qos_sriov_port, self.flavor_with_group_policy)
 
         # The patched compute manager on host2 will raise from _prep_resize.
         # Then the migration is reschedule but there is no other host to
@@ -6883,13 +6853,8 @@ class ServerMoveWithPortResourceRequestTest(
         qos_port = self.neutron.port_with_resource_request
         qos_sriov_port = self.neutron.port_with_sriov_resource_request
 
-        server = self._create_server_with_ports(
+        server = self._create_server_with_ports_and_check_allocation(
             non_qos_port, qos_port, qos_sriov_port)
-
-        # check that the server allocates from the current host properly
-        self._check_allocation(
-            server, self.compute1_rp_uuid, non_qos_port, qos_port,
-            qos_sriov_port, self.flavor_with_group_policy)
 
         # The compute manager on host2 will raise from
         # update_pci_request_spec_with_allocated_interface_name which will
@@ -7118,13 +7083,8 @@ class ServerMoveWithPortResourceRequestTest(
         qos_normal_port = self.neutron.port_with_resource_request
         qos_sriov_port = self.neutron.port_with_sriov_resource_request
 
-        server = self._create_server_with_ports(
+        server = self._create_server_with_ports_and_check_allocation(
             non_qos_normal_port, qos_normal_port, qos_sriov_port)
-
-        # check that the server allocates from the current host properly
-        self._check_allocation(
-            server, self.compute1_rp_uuid, non_qos_normal_port,
-            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
 
         # force source compute down
         self.compute1.stop()
@@ -7169,13 +7129,8 @@ class ServerMoveWithPortResourceRequestTest(
         qos_normal_port = self.neutron.port_with_resource_request
         qos_sriov_port = self.neutron.port_with_sriov_resource_request
 
-        server = self._create_server_with_ports(
+        server = self._create_server_with_ports_and_check_allocation(
             non_qos_normal_port, qos_normal_port, qos_sriov_port)
-
-        # check that the server allocates from the current host properly
-        self._check_allocation(
-            server, self.compute1_rp_uuid, non_qos_normal_port,
-            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
 
         # force source compute down
         self.compute1.stop()
@@ -7231,13 +7186,8 @@ class ServerMoveWithPortResourceRequestTest(
         qos_port = self.neutron.port_with_resource_request
         qos_sriov_port = self.neutron.port_with_sriov_resource_request
 
-        server = self._create_server_with_ports(
+        server = self._create_server_with_ports_and_check_allocation(
             non_qos_port, qos_port, qos_sriov_port)
-
-        # check that the server allocates from the current host properly
-        self._check_allocation(
-            server, self.compute1_rp_uuid, non_qos_port, qos_port,
-            qos_sriov_port, self.flavor_with_group_policy)
 
         # force source compute down
         self.compute1.stop()
@@ -7279,13 +7229,8 @@ class ServerMoveWithPortResourceRequestTest(
         qos_normal_port = self.neutron.port_with_resource_request
         qos_sriov_port = self.neutron.port_with_sriov_resource_request
 
-        server = self._create_server_with_ports(
+        server = self._create_server_with_ports_and_check_allocation(
             non_qos_normal_port, qos_normal_port, qos_sriov_port)
-
-        # check that the server allocates from the current host properly
-        self._check_allocation(
-            server, self.compute1_rp_uuid, non_qos_normal_port,
-            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
 
         self.api.post_server_action(
             server['id'],
@@ -7327,13 +7272,8 @@ class ServerMoveWithPortResourceRequestTest(
         qos_normal_port = self.neutron.port_with_resource_request
         qos_sriov_port = self.neutron.port_with_sriov_resource_request
 
-        server = self._create_server_with_ports(
+        server = self._create_server_with_ports_and_check_allocation(
             non_qos_normal_port, qos_normal_port, qos_sriov_port)
-
-        # check that the server allocates from the current host properly
-        self._check_allocation(
-            server, self.compute1_rp_uuid, non_qos_normal_port,
-            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
 
         orig_check = nova.virt.fake.FakeDriver.\
             check_can_live_migrate_destination
@@ -7386,13 +7326,8 @@ class ServerMoveWithPortResourceRequestTest(
         qos_normal_port = self.neutron.port_with_resource_request
         qos_sriov_port = self.neutron.port_with_sriov_resource_request
 
-        server = self._create_server_with_ports(
+        server = self._create_server_with_ports_and_check_allocation(
             non_qos_normal_port, qos_normal_port, qos_sriov_port)
-
-        # check that the server allocates from the current host properly
-        self._check_allocation(
-            server, self.compute1_rp_uuid, non_qos_normal_port,
-            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
 
         with mock.patch(
                 'nova.virt.fake.FakeDriver.check_can_live_migrate_destination',
