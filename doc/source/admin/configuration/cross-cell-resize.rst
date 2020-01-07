@@ -2,6 +2,10 @@
 Cross-cell resize
 =================
 
+This document describes how to configure nova for cross-cell resize.
+For information on :term:`same-cell resize <Same-Cell Resize>`, refer to
+:doc:`/admin/configuration/resize`.
+
 Historically resizing and cold migrating a server has been explicitly
 `restricted`_ to within the same cell in which the server already exists.
 The cross-cell resize feature allows configuring nova to allow resizing
@@ -15,7 +19,7 @@ a summit talk with a high-level overview.
 .. _video: https://www.openstack.org/videos/summits/denver-2019/whats-new-in-nova-cellsv2
 
 Use case
-~~~~~~~~
+--------
 
 There are many reasons to use multiple cells in a nova deployment beyond just
 scaling the database and message queue. Cells can also be used to shard a
@@ -29,18 +33,19 @@ could also just cold migrate the servers during a maintenance window to the
 new cell.
 
 Requirements
-~~~~~~~~~~~~
+------------
 
 To enable cross-cell resize functionality the following conditions must be met.
 
 Minimum compute versions
-------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-All compute services must be upgraded to Ussuri or later and not be pinned
-to older RPC API versions in :oslo.config:option:`upgrade_levels.compute`.
+All compute services must be upgraded to 21.0.0 (Ussuri) or later and not be
+pinned to older RPC API versions in
+:oslo.config:option:`upgrade_levels.compute`.
 
 Policy configuration
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
 The policy rule ``compute:servers:resize:cross_cell`` controls who can perform
 a cross-cell resize or cold migrate operation. By default the policy disables
@@ -52,7 +57,7 @@ some other rule for test teams but not normal users until you are comfortable
 supporting the feature.
 
 Compute driver
---------------
+~~~~~~~~~~~~~~
 
 There are no special compute driver implementations required to support the
 feature, it is built on existing driver interfaces used during resize and
@@ -60,13 +65,13 @@ shelve/unshelve. However, only the libvirt compute driver has integration
 testing in the ``nova-multi-cell`` CI job.
 
 Networking
-----------
+~~~~~~~~~~
 
 The networking API must expose the ``Port Bindings Extended`` API extension
 which was added in the 13.0.0 (Rocky) release for Neutron.
 
 Notifications
-~~~~~~~~~~~~~
+-------------
 
 The types of events and their payloads remain unchanged. The major difference
 from same-cell resize is the *publisher_id* may be different in some cases
@@ -82,7 +87,7 @@ for the source and target cells assuming they use separate transports.
 .. _finish_revert_resize: https://opendev.org/openstack/nova/src/tag/20.0.0/nova/compute/manager.py#L4326
 
 Instance actions
-~~~~~~~~~~~~~~~~
+----------------
 
 The overall instance actions named ``resize``, ``confirmResize`` and
 ``revertResize`` are the same as same-cell resize. However, the *events* which
@@ -92,19 +97,18 @@ operation and there are different methods involved in a cross-cell resize.
 This is important for triage when a cross-cell resize operation fails.
 
 Scheduling
-~~~~~~~~~~
+----------
 
-.. TODO: link to CrossCellWeigher docs when published.
-
-A ``CrossCellWeigher`` is enabled by default. When a scheduling request
-allows selecting compute nodes from another cell the weigher will by default
-*prefer* hosts within the source cell over hosts from another cell. However,
-this behavior is configurable using the
-``[filter_scheduler]/cross_cell_move_weight_multiplier`` configuration option
-if, for example, you want to drain old cells when resizing or cold migrating.
+The :ref:`CrossCellWeigher <cross-cell-weigher>` is enabled by default. When a
+scheduling request allows selecting compute nodes from another cell the weigher
+will by default *prefer* hosts within the source cell over hosts from another
+cell. However, this behavior is configurable using the
+:oslo.config:option:`filter_scheduler.cross_cell_move_weight_multiplier`
+configuration option if, for example, you want to drain old cells when resizing
+or cold migrating.
 
 Code flow
-~~~~~~~~~
+---------
 
 The end user experience is meant to not change, i.e. status transitions. A
 successfully cross-cell resized server will go to ``VERIFY_RESIZE`` status
@@ -136,7 +140,7 @@ resize:
 .. _shelveOffload: https://docs.openstack.org/api-ref/compute/#shelf-offload-remove-server-shelveoffload-action
 
 Sequence diagram
-~~~~~~~~~~~~~~~~
+----------------
 
 The following diagrams are current as of the 21.0.0 (Ussuri) release.
 
@@ -148,7 +152,7 @@ The following diagrams are current as of the 21.0.0 (Ussuri) release.
    diagrams I would suggest putting those into separate focused diagrams.
 
 Resize
-------
+~~~~~~
 
 This is the sequence of calls to get the server to ``VERIFY_RESIZE`` status.
 
@@ -171,7 +175,7 @@ This is the sequence of calls to get the server to ``VERIFY_RESIZE`` status.
     }
 
 Confirm resize
---------------
+~~~~~~~~~~~~~~
 
 This is the sequence of calls when confirming `or deleting`_ a server in
 ``VERIFY_RESIZE`` status.
@@ -199,7 +203,7 @@ This is the sequence of calls when confirming `or deleting`_ a server in
 .. _or deleting: https://opendev.org/openstack/nova/src/tag/20.0.0/nova/compute/api.py#L2171
 
 Revert resize
--------------
+~~~~~~~~~~~~~
 
 This is the sequence of calls when reverting a server in ``VERIFY_RESIZE``
 status.
@@ -227,7 +231,7 @@ status.
     }
 
 Limitations
-~~~~~~~~~~~
+-----------
 
 These are known to not yet be supported in the code:
 
@@ -261,10 +265,10 @@ Other limitations:
 .. _evacuating: https://docs.openstack.org/api-ref/compute/#evacuate-server-evacuate-action
 
 Troubleshooting
-~~~~~~~~~~~~~~~
+---------------
 
 Timeouts
---------
+~~~~~~~~
 
 Configure a :ref:`service user <user_token_timeout>` in case the user token
 times out, e.g. during the snapshot and download of a large server image.
@@ -274,7 +278,7 @@ check the :oslo.config:option:`long_rpc_timeout` option to see if it is high
 enough though the default value (30 minutes) should be sufficient.
 
 Recovering from failure
------------------------
+~~~~~~~~~~~~~~~~~~~~~~~
 
 The orchestration tasks in conductor that drive the operation are built with
 rollbacks so each part of the operation can be rolled back in order if a

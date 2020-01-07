@@ -1,12 +1,14 @@
-================
-Configure resize
-================
+======
+Resize
+======
 
 Resize (or Server resize) is the ability to change the flavor of a server, thus
 allowing it to upscale or downscale according to user needs.  For this feature
 to work properly, you might need to configure some underlying virt layers.
 
-For cross-cell resize, refer to :doc:`/admin/configuration/cross-cell-resize`.
+This document describes how to configure hosts for standard resize.
+For information on :term:`cross-cell resize <Cross-Cell Resize>`, refer to
+:doc:`/admin/configuration/cross-cell-resize`.
 
 Virt drivers
 ------------

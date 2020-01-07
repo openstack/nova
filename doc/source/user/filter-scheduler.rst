@@ -529,6 +529,8 @@ The Filter Scheduler weighs hosts based on the config option
   If more than one value is found for a host in aggregate metadata, the
   minimum value will be used.
 
+.. _cross-cell-weigher:
+
 * |CrossCellWeigher| Weighs hosts based on which cell they are in. "Local"
   cells are preferred when moving an instance. Use configuration option
   :oslo.config:option:`filter_scheduler.cross_cell_move_weight_multiplier` to
