@@ -68,21 +68,6 @@ def _get_hybrid_bridge_name(vif):
     return ('qbr' + vif['id'])[:model.NIC_NAME_LEN]
 
 
-def _is_firewall_required(vif):
-    """Check if local firewall is required
-
-    :param vif: the nova.network.model.VIF instance
-
-    :returns: True if local firewall is required
-    """
-
-    if vif.is_neutron_filtering_enabled():
-        return False
-    if CONF.firewall_driver != "nova.virt.firewall.NoopFirewallDriver":
-        return True
-    return False
-
-
 def _set_vhostuser_settings(vif, obj):
     """Set vhostuser socket mode and path
 
@@ -353,7 +338,7 @@ def _nova_to_osvif_vif_ovs(vif):
             port_profile=_get_ovs_representor_port_profile(vif),
             plugin="ovs")
         _set_representor_datapath_offload_settings(vif, obj)
-    elif _is_firewall_required(vif) or vif.is_hybrid_plug_enabled():
+    elif vif.is_hybrid_plug_enabled():
         obj = _get_vif_instance(
             vif,
             objects.vif.VIFBridge,
@@ -407,7 +392,7 @@ def _nova_to_osvif_vif_vhostuser(vif):
                 interface_id=vif.get('ovs_interfaceid') or vif['id'],
                 datapath_type=vif['details'].get(
                     model.VIF_DETAILS_OVS_DATAPATH_TYPE))
-            if _is_firewall_required(vif) or vif.is_hybrid_plug_enabled():
+            if vif.is_hybrid_plug_enabled():
                 profile.bridge_name = _get_hybrid_bridge_name(vif)
                 profile.hybrid_plug = True
             else:
@@ -453,7 +438,7 @@ def _nova_to_osvif_vif_vhostuser(vif):
 
 # VIF_TYPE_IVS = 'ivs'
 def _nova_to_osvif_vif_ivs(vif):
-    if _is_firewall_required(vif) or vif.is_hybrid_plug_enabled():
+    if vif.is_hybrid_plug_enabled():
         obj = _get_vif_instance(
             vif,
             objects.vif.VIFBridge,

@@ -386,11 +386,6 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
         self.driver._vmops.unplug_vifs.assert_called_once_with(
             mock.sentinel.instance, mock.sentinel.network_info)
 
-    def test_refresh_instance_security_rules(self):
-        self.assertRaises(NotImplementedError,
-                          self.driver.refresh_instance_security_rules,
-                          instance=mock.sentinel.instance)
-
     def test_migrate_disk_and_power_off(self):
         self.driver.migrate_disk_and_power_off(
             mock.sentinel.context, mock.sentinel.instance, mock.sentinel.dest,

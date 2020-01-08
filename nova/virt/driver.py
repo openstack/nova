@@ -1301,67 +1301,10 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def refresh_security_group_rules(self, security_group_id):
-        """This method is called after a change to security groups.
-
-        All security groups and their associated rules live in the datastore,
-        and calling this method should apply the updated rules to instances
-        running the specified security group.
-
-        An error should be raised if the operation cannot complete.
-
-        """
-        # TODO(Vek): Need to pass context in for access to auth_token
-        raise NotImplementedError()
-
-    def refresh_instance_security_rules(self, instance):
-        """Refresh security group rules
-
-        Gets called when an instance gets added to or removed from
-        the security group the instance is a member of or if the
-        group gains or loses a rule.
-        """
-        raise NotImplementedError()
-
     def reset_network(self, instance):
         """reset networking for specified instance."""
         # TODO(Vek): Need to pass context in for access to auth_token
         pass
-
-    def ensure_filtering_rules_for_instance(self, instance, network_info):
-        """Setting up filtering rules and waiting for its completion.
-
-        To migrate an instance, filtering rules to hypervisors
-        and firewalls are inevitable on destination host.
-        ( Waiting only for filtering rules to hypervisor,
-        since filtering rules to firewall rules can be set faster).
-
-        Concretely, the below method must be called.
-        - setup_basic_filtering (for nova-basic, etc.)
-        - prepare_instance_filter(for nova-instance-instance-xxx, etc.)
-
-        Don't use thread for this method since migration should
-        not be started when setting-up filtering rules operations
-        are not completed.
-
-        :param instance: nova.objects.instance.Instance object
-
-        """
-        # TODO(Vek): Need to pass context in for access to auth_token
-        raise NotImplementedError()
-
-    def filter_defer_apply_on(self):
-        """Defer application of IPTables rules."""
-        pass
-
-    def filter_defer_apply_off(self):
-        """Turn off deferral of IPTables rules and apply the rules now."""
-        pass
-
-    def unfilter_instance(self, instance, network_info):
-        """Stop filtering instance."""
-        # TODO(Vek): Need to pass context in for access to auth_token
-        raise NotImplementedError()
 
     def set_admin_password(self, instance, new_pass):
         """Set the root password on the specified instance.

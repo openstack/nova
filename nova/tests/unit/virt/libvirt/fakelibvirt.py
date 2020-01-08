@@ -1670,7 +1670,7 @@ class FakeLibvirtFixture(fixtures.Fixture):
         super(FakeLibvirtFixture, self).setUp()
 
         # Some modules load the libvirt library in a strange way
-        for module in ('driver', 'host', 'guest', 'firewall', 'migration'):
+        for module in ('driver', 'host', 'guest', 'migration'):
             i = 'nova.virt.libvirt.{module}.libvirt'.format(module=module)
             # NOTE(mdbooth): The strange incantation below means 'this module'
             self.useFixture(fixtures.MonkeyPatch(i, sys.modules[__name__]))

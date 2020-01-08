@@ -133,9 +133,6 @@ For example:
   RABBIT_PASSWORD=123456
 
   [[post-config|$NOVA_CONF]]
-  [DEFAULT]
-  firewall_driver=nova.virt.firewall.NoopFirewallDriver
-
   [filter_scheduler]
   enabled_filters=ComputeFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,PciPassthroughFilter,NUMATopologyFilter
   EOF

@@ -1944,11 +1944,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         self.assertEqual('iscsi-name', connector['initiator'])
         self.assertNotIn('instance', connector)
 
-    def test_refresh_instance_security_rules(self):
-        self.assertRaises(NotImplementedError,
-                          self.conn.refresh_instance_security_rules,
-                          instance=None)
-
     @mock.patch.object(objects.block_device.BlockDeviceMappingList,
                        'get_by_instance_uuids')
     def test_image_aging_image_used(self, mock_get_by_inst):

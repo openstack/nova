@@ -487,12 +487,6 @@ class FakeDriver(driver.ComputeDriver):
                 'username': 'fakeuser',
                 'password': 'fakepassword'}
 
-    def refresh_security_group_rules(self, security_group_id):
-        return True
-
-    def refresh_instance_security_rules(self, instance):
-        return True
-
     def get_available_resource(self, nodename):
         """Updates compute manager resource info on ComputeNode table.
 
@@ -555,9 +549,6 @@ class FakeDriver(driver.ComputeDriver):
             },
         }
         provider_tree.update_inventory(nodename, inventory)
-
-    def ensure_filtering_rules_for_instance(self, instance, network_info):
-        return
 
     def get_instance_disk_info(self, instance, block_device_info=None):
         return
@@ -632,9 +623,6 @@ class FakeDriver(driver.ComputeDriver):
                                                block_device_info,
                                                destroy_disks=True,
                                                migrate_data=None):
-        return
-
-    def unfilter_instance(self, instance, network_info):
         return
 
     def _test_remove_vm(self, instance_uuid):

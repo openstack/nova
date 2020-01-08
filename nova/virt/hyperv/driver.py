@@ -299,13 +299,6 @@ class HyperVDriver(driver.ComputeDriver):
         """Unplug VIFs from networks."""
         self._vmops.unplug_vifs(instance, network_info)
 
-    def ensure_filtering_rules_for_instance(self, instance, network_info):
-        LOG.debug("ensure_filtering_rules_for_instance called",
-                  instance=instance)
-
-    def unfilter_instance(self, instance, network_info):
-        LOG.debug("unfilter_instance called", instance=instance)
-
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    flavor, network_info,
                                    block_device_info=None,

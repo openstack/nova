@@ -104,14 +104,12 @@ from nova.virt import configdrive
 from nova.virt.disk import api as disk_api
 from nova.virt.disk.vfs import guestfs
 from nova.virt import driver
-from nova.virt import firewall
 from nova.virt import hardware
 from nova.virt.image import model as imgmodel
 from nova.virt import images
 from nova.virt.libvirt import blockinfo
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import designer
-from nova.virt.libvirt import firewall as libvirt_firewall
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
 from nova.virt.libvirt import imagebackend
@@ -135,10 +133,6 @@ uefi_logged = False
 LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
-
-DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
-    libvirt_firewall.__name__,
-    libvirt_firewall.IptablesFirewallDriver.__name__)
 
 DEFAULT_UEFI_LOADER_PATH = {
     "x86_64": ['/usr/share/OVMF/OVMF_CODE.fd',
@@ -358,9 +352,6 @@ class LibvirtDriver(driver.ComputeDriver):
         self._fc_wwpns = None
         self._supported_perf_events = []
         self.__has_hyperthreading = None
-        self.firewall_driver = firewall.load_driver(
-            DEFAULT_FIREWALL_DRIVER,
-            host=self._host)
 
         self.vif_driver = libvirt_vif.LibvirtGenericVIFDriver()
 
@@ -1339,35 +1330,6 @@ class LibvirtDriver(driver.ComputeDriver):
         if destroy_vifs:
             self._unplug_vifs(instance, network_info, True)
 
-        # Continue attempting to remove firewall filters for the instance
-        # until it's done or there is a failure to remove the filters. If
-        # unfilter fails because the instance is not yet shutdown, try to
-        # destroy the guest again and then retry the unfilter.
-        while True:
-            try:
-                self.unfilter_instance(instance, network_info)
-                break
-            except libvirt.libvirtError as e:
-                try:
-                    state = self.get_info(instance).state
-                except exception.InstanceNotFound:
-                    state = power_state.SHUTDOWN
-
-                if state != power_state.SHUTDOWN:
-                    LOG.warning("Instance may be still running, destroy "
-                                "it again.", instance=instance)
-                    self._destroy(instance)
-                else:
-                    errcode = e.get_error_code()
-                    LOG.exception(_('Error from libvirt during unfilter. '
-                                    'Code=%(errcode)s Error=%(e)s'),
-                                  {'errcode': errcode, 'e': e},
-                                  instance=instance)
-                    reason = _("Error unfiltering instance.")
-                    raise exception.InstanceTerminationFailure(reason=reason)
-            except Exception:
-                raise
-
         # FIXME(wangpan): if the instance is booted again here, such as the
         #                 soft reboot operation boot it here, it will become
         #                 "running deleted", should we check and destroy it
@@ -1561,7 +1523,6 @@ class LibvirtDriver(driver.ComputeDriver):
         if instance.host != CONF.host:
             self._undefine_domain(instance)
             self.unplug_vifs(instance, network_info)
-            self.unfilter_instance(instance, network_info)
 
     def _get_volume_driver(self, connection_info):
         driver_type = connection_info.get('driver_volume_type')
@@ -2048,7 +2009,6 @@ class LibvirtDriver(driver.ComputeDriver):
         guest = self._host.get_guest(instance)
 
         self.vif_driver.plug(instance, vif)
-        self.firewall_driver.setup_basic_filtering(instance, [vif])
         cfg = self.vif_driver.get_config(instance, vif, image_meta,
                                          instance.flavor,
                                          CONF.libvirt.virt_type,
@@ -6213,19 +6173,12 @@ class LibvirtDriver(driver.ComputeDriver):
                     instance, events, deadline=timeout,
                     error_callback=self._neutron_failed_callback):
                 self.plug_vifs(instance, network_info)
-                self.firewall_driver.setup_basic_filtering(instance,
-                                                           network_info)
-                self.firewall_driver.prepare_instance_filter(instance,
-                                                             network_info)
                 with self._lxc_disk_handler(context, instance,
                                             instance.image_meta,
                                             block_device_info):
                     guest = self._create_domain(
                         xml, pause=pause, power_on=power_on,
                         post_xml_callback=post_xml_callback)
-
-                self.firewall_driver.apply_instance_filter(instance,
-                                                           network_info)
         except exception.VirtualInterfaceCreateException:
             # Neutron reported failure and we didn't swallow it, so
             # bail here
@@ -7168,12 +7121,6 @@ class LibvirtDriver(driver.ComputeDriver):
         return {'address': '127.0.0.1',
                 'username': 'fakeuser',
                 'password': 'fakepassword'}
-
-    def refresh_security_group_rules(self, security_group_id):
-        self.firewall_driver.refresh_security_group_rules(security_group_id)
-
-    def refresh_instance_security_rules(self, instance):
-        self.firewall_driver.refresh_instance_security_rules(instance)
 
     def update_provider_tree(self, provider_tree, nodename, allocations=None):
         """Update a ProviderTree object with current resource provider,
@@ -8336,40 +8283,6 @@ class LibvirtDriver(driver.ComputeDriver):
         """Removes existence of the tmpfile under CONF.instances_path."""
         tmp_file = os.path.join(CONF.instances_path, filename)
         os.remove(tmp_file)
-
-    def ensure_filtering_rules_for_instance(self, instance, network_info):
-        """Ensure that an instance's filtering rules are enabled.
-
-        When migrating an instance, we need the filtering rules to
-        be configured on the destination host before starting the
-        migration.
-
-        Also, when restarting the compute service, we need to ensure
-        that filtering rules exist for all running services.
-        """
-
-        self.firewall_driver.setup_basic_filtering(instance, network_info)
-        self.firewall_driver.prepare_instance_filter(instance,
-                network_info)
-
-        # nwfilters may be defined in a separate thread in the case
-        # of libvirt non-blocking mode, so we wait for completion
-        timeout_count = list(range(CONF.live_migration_retry_count))
-        while timeout_count:
-            if self.firewall_driver.instance_filter_exists(instance,
-                                                           network_info):
-                break
-            timeout_count.pop()
-            if len(timeout_count) == 0:
-                msg = _('The firewall filter for %s does not exist')
-                raise exception.InternalError(msg % instance.name)
-            greenthread.sleep(1)
-
-    def filter_defer_apply_on(self):
-        self.firewall_driver.filter_defer_apply_on()
-
-    def filter_defer_apply_off(self):
-        self.firewall_driver.filter_defer_apply_off()
 
     def live_migration(self, context, instance, dest,
                        post_method, recover_method, block_migration=False,
@@ -9621,11 +9534,6 @@ class LibvirtDriver(driver.ComputeDriver):
             greenthread.sleep(0)
         return disk_over_committed_size
 
-    def unfilter_instance(self, instance, network_info):
-        """See comments of same method in firewall_driver."""
-        self.firewall_driver.unfilter_instance(instance,
-                                               network_info=network_info)
-
     def get_available_nodes(self, refresh=False):
         return [self._host.get_hostname()]
 
@@ -10335,7 +10243,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return shared_instance_path or shared_block_storage
 
     def inject_network_info(self, instance, nw_info):
-        self.firewall_driver.setup_basic_filtering(instance, nw_info)
+        pass
 
     def delete_instance_files(self, instance):
         target = libvirt_utils.get_instance_path(instance)
