@@ -94,5 +94,6 @@ class MultiCellSchedulerTestCase(test.TestCase,
 
         # Force the server onto compute1 in cell1 so we do not accidentally
         # land on compute3 in cell2 and fail to migrate.
-        self._test_create_and_migrate(expected_status=202,
+        _, server = self._test_create_and_migrate(expected_status=202,
                                       az='nova:compute1')
+        self._wait_for_state_change(server, 'VERIFY_RESIZE')
