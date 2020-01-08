@@ -25,14 +25,9 @@ DEPRECATED_SERVICE_POLICY = policy.DeprecatedRule(
 )
 
 DEPRECATED_REASON = """
-Since Ussuri release, nova API policies are introducing new default roles
-with scope_type capabilities. These new changes improve the security level
-and manageability. New policies are more rich in term of handling access
-at system and project level token with read, write roles.
-Start using the new policies and enable the scope checks via config option
-``nova.conf [oslo_policy] enforce_scope=True`` which is False by default.
-Old policies are marked as deprecated and silently going to be ignored
-in nova 23.0.0 (OpenStack W) release
+Nova API policies are introducing new default roles with scope_type
+capabilities. Old policies are deprecated and silently going to be ignored
+in nova 23.0.0 release.
 """
 
 services_policies = [
@@ -49,7 +44,7 @@ services_policies = [
         scope_types=['system'],
         deprecated_rule=DEPRECATED_SERVICE_POLICY,
         deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='20.0.0'),
+        deprecated_since='21.0.0'),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'update',
         check_str=base.SYSTEM_ADMIN,
@@ -64,7 +59,7 @@ services_policies = [
         scope_types=['system'],
         deprecated_rule=DEPRECATED_SERVICE_POLICY,
         deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='20.0.0'),
+        deprecated_since='21.0.0'),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'delete',
         check_str=base.SYSTEM_ADMIN,
@@ -78,7 +73,7 @@ services_policies = [
         scope_types=['system'],
         deprecated_rule=DEPRECATED_SERVICE_POLICY,
         deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='20.0.0'),
+        deprecated_since='21.0.0'),
 ]
 
 
