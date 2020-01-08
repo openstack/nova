@@ -99,6 +99,7 @@ import nova.privsep.path
 import nova.privsep.utils
 from nova import utils
 from nova import version
+from nova.virt import arch
 from nova.virt import block_device as driver_block_device
 from nova.virt import configdrive
 from nova.virt.disk import api as disk_api
@@ -8217,6 +8218,17 @@ class LibvirtDriver(driver.ComputeDriver):
             cpu = guest_cpu
         else:
             cpu = self._vcpu_model_to_cpu_config(guest_cpu)
+
+        # s390x doesn't support cpu model in host info, so compare
+        # cpu info will raise an error anyway, thus have to avoid check
+        # see bug 1854126 for more info
+        min_libvirt_version = (5, 9, 0)
+        if (cpu.arch in (arch.S390X, arch.S390) and
+                not self._host.has_min_version(min_libvirt_version)):
+            LOG.debug("on s390x platform, the min libvirt version "
+                      "support cpu model compare is %s",
+                      min_libvirt_version)
+            return
 
         u = ("http://libvirt.org/html/libvirt-libvirt-host.html#"
              "virCPUCompareResult")
