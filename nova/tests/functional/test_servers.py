@@ -6653,6 +6653,8 @@ class ServerMoveWithPortResourceRequestTest(
             migration_uuid, source_compute_rp_uuid=self.compute1_rp_uuid,
             new_flavor=new_flavor)
 
+        self._assert_pci_request_pf_device_name(server, 'host2-ens2')
+
         self._confirm_resize(server)
 
         # check that allocation is still OK
@@ -6788,6 +6790,8 @@ class ServerMoveWithPortResourceRequestTest(
             self.flavor_with_group_policy, migration_uuid,
             source_compute_rp_uuid=self.compute1_rp_uuid,
             new_flavor=new_flavor)
+
+        self._assert_pci_request_pf_device_name(server, 'host3-ens2')
 
         self._confirm_resize(server)
 
@@ -7141,6 +7145,8 @@ class ServerMoveWithPortResourceRequestTest(
             self.compute2_rp_uuid, non_qos_normal_port, qos_normal_port,
             qos_sriov_port)
 
+        self._assert_pci_request_pf_device_name(server, 'host2-ens2')
+
         # recover source compute
         self.admin_api.put_service(
             self.compute1_service_id, {'forced_down': 'false'})
@@ -7300,6 +7306,8 @@ class ServerMoveWithPortResourceRequestTest(
             server, self.compute2_rp_uuid, non_qos_normal_port,
             qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
 
+        self._assert_pci_request_pf_device_name(server, 'host2-ens2')
+
         self._delete_server_and_check_allocations(
             server, qos_normal_port, qos_sriov_port)
 
@@ -7363,6 +7371,8 @@ class ServerMoveWithPortResourceRequestTest(
         self._check_allocation(
             server, compute3_rp_uuid, non_qos_normal_port,
             qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
+
+        self._assert_pci_request_pf_device_name(server, 'host3-ens2')
 
         self._delete_server_and_check_allocations(
             server, qos_normal_port, qos_sriov_port)
@@ -7529,10 +7539,7 @@ class LiveMigrateAbortWithPortResourceRequestTest(
             qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
 
         # Assert that the InstancePCIRequests rolled back to point to host1
-        # This assert is fails now as the abort does not change the PCI device
-        # back
-        # TODO(gibi): come up with an idea to fix this
-        # self._assert_pci_request_pf_device_name(server, 'host1-ens2')
+        self._assert_pci_request_pf_device_name(server, 'host1-ens2')
 
         self._delete_server_and_check_allocations(
             server, qos_normal_port, qos_sriov_port)

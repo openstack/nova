@@ -9545,6 +9545,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         bdm.connection_info = new_attachment_id
         bdms = objects.BlockDeviceMappingList(objects=[bdm])
 
+        @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
         @mock.patch.object(compute.volume_api, 'attachment_delete')
         @mock.patch.object(compute_utils, 'notify_about_instance_action')
         @mock.patch.object(instance, 'save')
@@ -9556,11 +9557,12 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         @mock.patch.object(objects.Instance, 'drop_migration_context')
         def _test(mock_drop_mig_ctxt, mock_get_bdms, mock_net_api,
                   mock_remove_conn, mock_usage, mock_instance_save,
-                  mock_action, mock_attach_delete):
+                  mock_action, mock_attach_delete, mock_get_pci):
             # this tests that _rollback_live_migration replaces the bdm's
             # attachment_id with the original attachment id that is in
             # migrate_data.
             mock_get_bdms.return_value = bdms
+            mock_get_pci.return_value = objects.InstancePCIRequests()
 
             compute._rollback_live_migration(self.context, instance, None,
                                              migrate_data=migrate_data,
@@ -9574,6 +9576,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             self.assertEqual(orig_attachment_id, bdm.connection_info)
             bdm.save.assert_called_once_with()
             mock_drop_mig_ctxt.assert_called_once_with()
+            mock_get_pci.assert_called_once_with(self.context, instance.uuid)
+            self.assertEqual(mock_get_pci.return_value, instance.pci_requests)
 
         _test()
 
@@ -9590,13 +9594,14 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             migration=self.migration, is_shared_instance_path=True,
             is_shared_block_storage=True)
 
+        @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
         @mock.patch.object(self.compute, '_revert_allocation')
         @mock.patch.object(self.instance, 'save')
         @mock.patch.object(self.compute, 'network_api')
         @mock.patch.object(self.compute, '_notify_about_instance_usage')
         @mock.patch.object(objects.Instance, 'drop_migration_context')
         def _do_test(drop_mig_ctxt, legacy_notify, network_api, instance_save,
-                     _revert_allocation):
+                     _revert_allocation, mock_get_pci):
             # setup_networks_on_host is called two times:
             # 1. set the migrating_to attribute in the port binding profile,
             #    which is a no-op in this case for neutron
@@ -9605,6 +9610,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 None,
                 exception.PortBindingDeletionFailed(
                     port_id=uuids.port_id, host='fake-dest-host')]
+            mock_get_pci.return_value = objects.InstancePCIRequests()
             self.compute._rollback_live_migration(
                 self.context, self.instance, 'fake-dest-host', migrate_data,
                 source_bdms=objects.BlockDeviceMappingList())
@@ -9612,6 +9618,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             self.assertIn('Network cleanup failed for destination host',
                           mock_log_error.call_args[0][0])
             drop_mig_ctxt.assert_called_once_with()
+            mock_get_pci.assert_called_once_with(
+                self.context, self.instance.uuid)
+            self.assertEqual(
+                mock_get_pci.return_value, self.instance.pci_requests)
 
         _do_test()
 

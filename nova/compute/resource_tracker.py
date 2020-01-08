@@ -156,8 +156,7 @@ class ResourceTracker(object):
                         instance=instance)
 
         cn = self.compute_nodes[nodename]
-        pci_requests = objects.InstancePCIRequests.get_by_instance_uuid(
-            context, instance.uuid)
+        pci_requests = instance.pci_requests
         claim = claims.Claim(context, instance, nodename, self, cn,
                              pci_requests, limits=limits)
 
