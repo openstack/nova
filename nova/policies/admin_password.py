@@ -24,7 +24,7 @@ BASE_POLICY_NAME = 'os_compute_api:os-admin-password'
 admin_password_policies = [
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_OR_OWNER,
+        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
         description="Change the administrative password for a server",
         operations=[
             {
