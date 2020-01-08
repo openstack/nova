@@ -417,8 +417,9 @@ availability_zone_query_server:
   description: |
     Filter the server list result by server availability zone.
 
-    This parameter is only valid when specified by administrators.
-    If non-admin users specify this parameter, it is ignored.
+    This parameter is restricted to administrators until microversion 2.82.
+    If non-admin users specify this parameter before microversion 2.83, it
+    is ignored.
   in: query
   required: false
   type: string
@@ -579,8 +580,9 @@ config_drive_query_server:
   description: |
     Filter the server list result by the config drive setting of the server.
 
-    This parameter is only valid when specified by administrators.
-    If non-admin users specify this parameter, it is ignored.
+    This parameter is restricted to administrators until microversion 2.82.
+    If non-admin users specify this parameter before microversion 2.83, it
+    is ignored.
   in: query
   required: false
   type: string
@@ -597,8 +599,9 @@ created_at_query_server:
     For example, ``2015-08-27T09:49:58-05:00``.
     If you omit the time zone, the UTC time zone is assumed.
 
-    This parameter is only valid when specified by administrators.
-    If non-admin users specify this parameter, it is ignored.
+    This parameter is restricted to administrators until microversion 2.82.
+    If non-admin users specify this parameter before microversion 2.83, it
+    is ignored.
   in: query
   required: false
   type: string
@@ -888,8 +891,9 @@ key_name_query_server:
   description: |
     Filter the server list result by keypair name.
 
-    This parameter is only valid when specified by administrators.
-    If non-admin users specify this parameter, it is ignored.
+    This parameter is restricted to administrators until microversion 2.82.
+    If non-admin users specify this parameter before microversion 2.83, it
+    is ignored.
   in: query
   required: false
   type: string
@@ -942,8 +946,9 @@ launched_at_query_server:
     For example, ``2015-08-27T09:49:58-05:00``.
     If you omit the time zone, the UTC time zone is assumed.
 
-    This parameter is only valid when specified by administrators.
-    If non-admin users specify this parameter, it is ignored.
+    This parameter is restricted to administrators until microversion 2.82.
+    If non-admin users specify this parameter before microversion 2.83, it
+    is ignored.
   in: query
   required: false
   type: string
@@ -1121,15 +1126,17 @@ power_state_query_server:
       6: CRASHED
       7: SUSPENDED
 
-    This parameter is only valid when specified by administrators.
-    If non-admin users specify this parameter, it is ignored.
+      This parameter is restricted to administrators until microversion 2.82.
+      If non-admin users specify this parameter before microversion 2.83, it
+      is ignored.
 progress_query_server:
   description: |
     Filter the server list result by the progress of the server.
     The value could be from 0 to 100 as integer.
 
-    This parameter is only valid when specified by administrators.
-    If non-admin users specify this parameter, it is ignored.
+    This parameter is restricted to administrators until microversion 2.82.
+    If non-admin users specify this parameter before microversion 2.83, it
+    is ignored.
   in: query
   required: false
   type: integer
@@ -1371,8 +1378,9 @@ task_state_query_server:
   description: |
     Filter the server list result by task state.
 
-    This parameter is only valid when specified by administrators.
-    If non-admin users specify this parameter, it is ignored.
+    This parameter is restricted to administrators until microversion 2.82.
+    If non-admin users specify this parameter before microversion 2.83, it
+    is ignored.
 tenant_id_query:
   description: |
     Specify the project ID (tenant ID) to show the rate and absolute limits.
@@ -1392,8 +1400,9 @@ terminated_at_query_server:
     For example, ``2015-08-27T09:49:58-05:00``.
     If you omit the time zone, the UTC time zone is assumed.
 
-    This parameter is only valid when specified by administrators.
-    If non-admin users specify this parameter, it is ignored.
+    This parameter is restricted to administrators until microversion 2.82.
+    If non-admin users specify this parameter before microversion 2.83, it
+    is ignored.
   in: query
   required: false
   type: string
@@ -1439,8 +1448,9 @@ user_id_query_server:
   description: |
     Filter the list of servers by the given user ID.
 
-    This parameter is only valid when specified by administrators.
-    If non-admin users specify this parameter, it is ignored.
+    This parameter is restricted to administrators until microversion 2.82.
+    If non-admin users specify this parameter before microversion 2.83, it
+    is ignored.
   in: query
   required: false
   type: string
@@ -1469,8 +1479,9 @@ vm_state_query_server:
     - ``STOPPED``
     - ``SUSPENDED``
 
-    This parameter is only valid when specified by administrators.
-    If non-admin users specify this parameter, it is ignored.
+    This parameter is restricted to administrators until microversion 2.82.
+    If non-admin users specify this parameter before microversion 2.83, it
+    is ignored.
   in: query
   required: false
   type: string

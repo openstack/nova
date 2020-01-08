@@ -1087,3 +1087,21 @@ Adds support for image cache management by aggregate by adding
 Adds ``accelerator-request-bound`` event to ``os-server-external-events``
 API. This event is sent by Cyborg to indicate completion of the binding
 event for one accelerator request (ARQ) associated with an instance.
+
+2.83
+----
+
+Allow the following filter parameters for ``GET /servers/detail``
+and ``GET /servers`` for non-admin :
+
+* ``availability_zone``
+* ``config_drive``
+* ``key_name``
+* ``created_at``
+* ``launched_at``
+* ``terminated_at``
+* ``power_state``
+* ``task_state``
+* ``vm_state``
+* ``progress``
+* ``user_id``

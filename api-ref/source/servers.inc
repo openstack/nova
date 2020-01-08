@@ -173,7 +173,17 @@ whitelist will be silently ignored.
   - ``tags-any`` (New in version 2.26)
   - ``changes-before`` (New in version 2.66)
   - ``locked`` (New in version 2.73)
-
+  - ``availability_zone`` (New in version 2.83)
+  - ``config_drive`` (New in version 2.83)
+  - ``key_name`` (New in version 2.83)
+  - ``created_at`` (New in version 2.83)
+  - ``launched_at`` (New in version 2.83)
+  - ``terminated_at`` (New in version 2.83)
+  - ``power_state`` (New in version 2.83)
+  - ``task_state`` (New in version 2.83)
+  - ``vm_state`` (New in version 2.83)
+  - ``progress`` (New in version 2.83)
+  - ``user_id`` (New in version 2.83)
 
 - For admin user, whitelist includes all filter keys mentioned in
   :ref:`list-server-request` Section.
