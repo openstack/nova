@@ -3862,20 +3862,6 @@ class ComputeTestCase(BaseTestCase,
             context=self.context, instance=instance, port="wrongport",
             console_type="spice-html5"))
 
-    def test_xvpvnc_vnc_console(self):
-        # Make sure we can a vnc console for an instance.
-        self.flags(enabled=True, group='vnc')
-        self.flags(enabled=False, group='spice')
-
-        instance = self._create_fake_instance_obj()
-        self.compute.build_and_run_instance(self.context,
-            instance, {}, {}, {}, block_device_mapping=[])
-
-        console = self.compute.get_vnc_console(self.context, 'xvpvnc',
-                                               instance=instance)
-        self.assertTrue(console)
-        self.compute.terminate_instance(self.context, instance, [])
-
     def test_invalid_vnc_console_type(self):
         # Raise useful error if console type is an unrecognised string.
         self.flags(enabled=True, group='vnc')

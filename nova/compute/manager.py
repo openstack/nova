@@ -6636,8 +6636,6 @@ class ComputeManager(manager.Manager):
             # For essex, novncproxy_base_url must include the full path
             # including the html file (like http://myhost/vnc_auto.html)
             access_url_base = CONF.vnc.novncproxy_base_url
-        elif console_type == 'xvpvnc':
-            access_url_base = CONF.vnc.xvpvncproxy_base_url
         else:
             raise exception.ConsoleTypeInvalid(console_type=console_type)
 

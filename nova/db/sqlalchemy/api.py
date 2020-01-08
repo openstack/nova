@@ -4461,18 +4461,6 @@ def migration_migrate_to_uuid(context, count):
     return done, done
 
 
-##################
-
-
-@pick_context_manager_reader
-def console_pool_get_all_by_host_type(context, host, console_type):
-    return model_query(context, models.ConsolePool, read_deleted="no").\
-                   filter_by(host=host).\
-                   filter_by(console_type=console_type).\
-                   options(joinedload('consoles')).\
-                   all()
-
-
 ########################
 # User-provided metadata
 

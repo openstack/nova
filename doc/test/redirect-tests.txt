@@ -41,7 +41,6 @@
 /nova/latest/man/nova-serialproxy.html 301 /nova/latest/cli/nova-serialproxy.html
 /nova/latest/man/nova-spicehtml5proxy.html 301 /nova/latest/cli/nova-spicehtml5proxy.html
 /nova/latest/man/nova-status.html 301 /nova/latest/cli/nova-status.html
-/nova/latest/man/nova-xvpvncproxy.html 301 /nova/latest/cli/nova-xvpvncproxy.html
 /nova/latest/notifications.html 301 /nova/latest/reference/notifications.html
 /nova/latest/placement.html 301 /nova/latest/user/placement.html
 /nova/latest/placement_dev.html 301 /nova/latest/contributor/placement.html

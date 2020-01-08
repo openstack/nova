@@ -93,7 +93,6 @@ _man_pages = [
     ('nova-serialproxy', u'Cloud controller fabric'),
     ('nova-spicehtml5proxy', u'Cloud controller fabric'),
     ('nova-status', u'Cloud controller fabric'),
-    ('nova-xvpvncproxy', u'Cloud controller fabric'),
 ]
 
 man_pages = [

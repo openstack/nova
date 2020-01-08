@@ -1398,16 +1398,6 @@ def project_get_networks(context, project_id, associate=True):
 ##################
 
 
-def console_pool_get_all_by_host_type(context, host, console_type):
-    """Fetch all pools for given proxy host and type."""
-    return IMPL.console_pool_get_all_by_host_type(context,
-                                                  host,
-                                                  console_type)
-
-
-##################
-
-
 def pci_device_get_by_addr(context, node_id, dev_addr):
     """Get PCI device by address."""
     return IMPL.pci_device_get_by_addr(context, node_id, dev_addr)

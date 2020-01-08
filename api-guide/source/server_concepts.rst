@@ -783,12 +783,11 @@ Server Consoles
 Server Consoles can also be supplied after server launched. There are several
 server console services available. First, users can get the console output
 from the specified server and can limit the lines of console text by setting
-the length. Second, users can access multiple types of remote consoles. The
-user can use novnc, xvpvnc, rdp-html5, spice-html5, serial, and webmks(start
-from microversion 2.8) through either the OpenStack dashboard or the command
-line. Refer to :nova-doc:`Configure remote console access
-<admin/remote-console-access.html>`.  Specifically for Xenserver, it provides
-the ability to create, delete, detail, list specified server vnc consoles.
+the length. Secondly, users can access multiple types of remote consoles. The
+user can use ``novnc``, ``rdp-html5``, ``spice-html5``, ``serial``, and
+``webmks`` (starting from microversion 2.8) through either the OpenStack
+dashboard or the command line. Refer to :nova-doc:`Configure remote console
+access <admin/remote-console-access.html>`.
 
 Server networks
 ~~~~~~~~~~~~~~~

@@ -526,68 +526,6 @@ For example, to configure this via a ``nova.conf`` file:
    mksproxy_base_url = https://127.0.0.1:6090/
 
 
-XVP-based VNC console
----------------------
-
-VNC is a graphical console with wide support among many hypervisors and
-clients. Xen VNC Proxy (XVP) provides VNC support via a simple Java client.
-
-.. deprecated:: 19.0.0
-
-   :program:`nova-xvpvnxproxy` is deprecated since 19.0.0 (Stein) and will be
-   removed in an upcoming release.
-
-Configuration
-~~~~~~~~~~~~~
-
-To enable the XVP VNC console service, you must configure both the
-:program:`nova-xvpvncproxy` service and the :program:`nova-compute` service.
-Most options are defined in the :oslo.config:group:`vnc` group.
-
-The :program:`nova-xvpvncproxy` service accepts the following options.
-
-- :oslo.config:option:`daemon`
-- :oslo.config:option:`ssl_only`
-- :oslo.config:option:`source_is_ipv6`
-- :oslo.config:option:`cert`
-- :oslo.config:option:`key`
-- :oslo.config:option:`web`
-- :oslo.config:option:`vnc.xvpvncproxy_host`
-- :oslo.config:option:`vnc.xvpvncproxy_port`
-
-For example, to configure this via a ``nova-xvpvncproxy.conf`` file:
-
-.. code-block:: ini
-
-   [vnc]
-   xvpvncproxy_host = 0.0.0.0
-   xvpvncproxy_port = 6081
-
-The :program:`nova-compute` service requires the following options to configure
-XVP-based VNC support.
-
-- :oslo.config:option:`vnc.enabled`
-- :oslo.config:option:`vnc.xvpvncproxy_base_url`
-- :oslo.config:option:`vnc.server_listen`
-- :oslo.config:option:`vnc.server_proxyclient_address`
-- :oslo.config:option:`vnc.keymap`
-
-For example, to configure this via a ``nova.conf`` file:
-
-.. code-block:: ini
-
-   [vnc]
-   enabled = True
-   xvpvncproxy_base_url = http://IP_ADDRESS:6081/console
-   server_listen = 127.0.0.1
-   server_proxyclient_address = 127.0.0.1
-   keymap = en-us
-
-Replace ``IP_ADDRESS`` with the IP address from which the proxy is accessible
-by the outside world. For example, this may be the management interface IP
-address of the controller or the VIP.
-
-
 .. _about-nova-consoleauth:
 
 About ``nova-consoleauth``
@@ -601,13 +539,6 @@ outlined below could leverage. Token authentication was moved to the database in
 
 Frequently Asked Questions
 --------------------------
-
-- **Q: What is the difference between ``nova-xvpvncproxy`` and
-  ``nova-novncproxy``?**
-
-  A: ``nova-xvpvncproxy``, which ships with OpenStack Compute, is a proxy that
-  supports a simple Java client. ``nova-novncproxy`` uses noVNC to provide VNC
-  support through a web browser.
 
 - **Q: I want VNC support in the OpenStack dashboard. What services do I
   need?**
@@ -634,7 +565,6 @@ Frequently Asked Questions
      # These flags help construct a connection data structure
      server_proxyclient_address=192.168.1.2
      novncproxy_base_url=http://172.24.1.1:6080/vnc_auto.html
-     xvpvncproxy_base_url=http://172.24.1.1:6081/console
 
      # This is the address where the underlying vncserver (not the proxy)
      # will listen for connections.
@@ -642,11 +572,11 @@ Frequently Asked Questions
 
   .. note::
 
-     ``novncproxy_base_url`` and ``xvpvncproxy_base_url`` use a public IP; this
-     is the URL that is ultimately returned to clients, which generally do not
-     have access to your private network. Your PROXYSERVER must be able to
-     reach ``server_proxyclient_address``, because that is the address over
-     which the VNC connection is proxied.
+     ``novncproxy_base_url`` uses a public IP; this is the URL that is
+     ultimately returned to clients, which generally do not have access to your
+     private network. Your PROXYSERVER must be able to reach
+     ``server_proxyclient_address``, because that is the address over which the
+     VNC connection is proxied.
 
 - **Q: My noVNC does not work with recent versions of web browsers. Why?**
 

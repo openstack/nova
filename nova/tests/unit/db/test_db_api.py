@@ -8192,9 +8192,6 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.dns_domains = models.DNSDomain.__table__
         self.shadow_dns_domains = sqlalchemyutils.get_table(
             self.engine, "shadow_dns_domains")
-        self.console_pools = models.ConsolePool.__table__
-        self.shadow_console_pools = sqlalchemyutils.get_table(
-            self.engine, "shadow_console_pools")
         self.instances = models.Instance.__table__
         self.shadow_instances = sqlalchemyutils.get_table(
             self.engine, "shadow_instances")
