@@ -709,6 +709,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 timeout=1234, call_monitor_timeout=60,
                 _return_value=objects_block_dev.BlockDeviceMapping())
 
+    # TODO(stephenfin): Remove this since it's nova-network only
     def test_refresh_instance_security_rules(self):
         expected_args = {'instance': self.fake_instance_obj}
         self._test_compute_api('refresh_instance_security_rules', 'cast',

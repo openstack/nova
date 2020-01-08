@@ -1120,6 +1120,7 @@ class ComputeAPI(object):
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'rescue_instance', **msg_args)
 
+    # Remove as it only supports nova network
     def reset_network(self, ctxt, instance):
         version = '5.0'
         cctxt = self.router.client(ctxt).prepare(
@@ -1452,6 +1453,7 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'unquiesce_instance', instance=instance,
                    mapping=mapping)
 
+    # TODO(stephenfin): Remove this as it's nova-network only
     def refresh_instance_security_rules(self, ctxt, instance, host):
         version = '5.0'
         client = self.router.client(ctxt)

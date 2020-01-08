@@ -734,8 +734,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         @mock.patch.object(manager.ComputeManager,
                            '_error_out_instances_whose_build_was_interrupted')
         @mock.patch.object(fake_driver.FakeDriver, 'init_host')
-        @mock.patch.object(fake_driver.FakeDriver, 'filter_defer_apply_on')
-        @mock.patch.object(fake_driver.FakeDriver, 'filter_defer_apply_off')
         @mock.patch.object(objects.InstanceList, 'get_by_host')
         @mock.patch.object(context, 'get_admin_context')
         @mock.patch.object(manager.ComputeManager,
@@ -747,9 +745,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         def _do_mock_calls(mock_update_scheduler, mock_inst_init,
                            mock_validate_pinning,
                            mock_destroy, mock_admin_ctxt, mock_host_get,
-                           mock_filter_off, mock_filter_on, mock_init_host,
-                           mock_error_interrupted, mock_get_nodes,
-                           defer_iptables_apply):
+                           mock_init_host,
+                           mock_error_interrupted, mock_get_nodes):
             mock_admin_ctxt.return_value = self.context
             inst_list = _make_instance_list(startup_instances)
             mock_host_get.return_value = inst_list
@@ -760,9 +757,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
             self.compute.init_host()
 
-            if defer_iptables_apply:
-                self.assertTrue(mock_filter_on.called)
-
             mock_validate_pinning.assert_called_once_with(inst_list)
             mock_destroy.assert_called_once_with(
                 self.context, {uuids.our_node_uuid: our_node})
@@ -771,8 +765,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                  mock.call(self.context, inst_list[1]),
                  mock.call(self.context, inst_list[2])])
 
-            if defer_iptables_apply:
-                self.assertTrue(mock_filter_off.called)
             mock_init_host.assert_called_once_with(host=our_host)
             mock_host_get.assert_called_once_with(self.context, our_host,
                 expected_attrs=['info_cache', 'metadata', 'numa_topology'])
@@ -784,13 +776,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 self.context, {inst.uuid for inst in inst_list},
                 mock_get_nodes.return_value.keys())
 
-        # Test with defer_iptables_apply
-        self.flags(defer_iptables_apply=True)
-        _do_mock_calls(defer_iptables_apply=True)
-
-        # Test without defer_iptables_apply
-        self.flags(defer_iptables_apply=False)
-        _do_mock_calls(defer_iptables_apply=False)
+        _do_mock_calls()
 
     @mock.patch('nova.compute.manager.ComputeManager._get_nodes')
     @mock.patch('nova.compute.manager.ComputeManager.'
@@ -5506,14 +5492,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         self.assertFalse(mock_update.called)
         self.assertFalse(mock_delete.called)
         self.assertFalse(mock_sync.called)
-
-    def test_refresh_instance_security_rules_takes_non_object(self):
-        inst = objects.Instance(uuid=uuids.instance)
-        with mock.patch.object(self.compute.driver,
-                               'refresh_instance_security_rules') as mock_r:
-            self.compute.refresh_instance_security_rules(self.context, inst)
-            self.assertIsInstance(mock_r.call_args_list[0][0][0],
-                                  objects.Instance)
 
     def test_set_instance_obj_error_state_with_clean_task_state(self):
         instance = fake_instance.fake_instance_obj(self.context,
