@@ -23,14 +23,14 @@ BASE_POLICY_NAME = 'os_compute_api:os-agents'
 
 agents_policies = [
     policy.DocumentedRuleDefault(
-        BASE_POLICY_NAME,
-        base.RULE_ADMIN_API,
-        """Create, list, update, and delete guest agent builds
+        name=BASE_POLICY_NAME,
+        check_str=base.RULE_ADMIN_API,
+        description="""Create, list, update, and delete guest agent builds
 
 This is XenAPI driver specific.
 It is used to force the upgrade of the XenAPI guest agent on instance boot.
 """,
-        [
+        operations=[
             {
                 'path': '/os-agents',
                 'method': 'GET'
@@ -47,7 +47,8 @@ It is used to force the upgrade of the XenAPI guest agent on instance boot.
                 'path': '/os-agents/{agent_build_id}',
                 'method': 'DELETE'
             }
-        ]),
+        ],
+        scope_types=['system']),
 ]
 
 
