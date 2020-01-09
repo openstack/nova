@@ -14,8 +14,7 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
 
 
-class MultiCellEvacuateTestCase(integrated_helpers._IntegratedTestBase,
-                                integrated_helpers.InstanceHelperMixin):
+class MultiCellEvacuateTestCase(integrated_helpers._IntegratedTestBase):
     """Recreate test for bug 1823370 which was introduced in Pike.
 
     When evacuating a server, the request to the scheduler should be restricted

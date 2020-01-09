@@ -15,11 +15,9 @@
 
 from nova.tests import fixtures
 from nova.tests.functional.api_sample_tests import api_sample_base
-from nova.tests.functional import integrated_helpers
 
 
-class MultinicSampleJsonTest(integrated_helpers.InstanceHelperMixin,
-                             api_sample_base.ApiSampleTestBaseV21):
+class MultinicSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     sample_dir = "os-multinic"
 

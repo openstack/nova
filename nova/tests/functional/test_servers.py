@@ -75,43 +75,6 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
         self.computes = {}
         super(ServersTestBase, self).setUp()
 
-    def _wait_for_server_parameter(self, server, expected_params,
-                                   max_retries=10):
-        api = getattr(self, 'admin_api', self.api)
-        retry_count = 0
-        while True:
-            server = api.get_server(server['id'])
-            if all([server[attr] == expected_params[attr]
-                    for attr in expected_params]):
-                break
-            retry_count += 1
-            if retry_count == max_retries:
-                self.fail('Wait for state change failed, '
-                          'expected_params=%s, server=%s' % (
-                              expected_params, server))
-            time.sleep(0.5)
-
-        return server
-
-    def _wait_for_state_change(self, server, expected_status, max_retries=10):
-        return self._wait_for_server_parameter(
-            server, {'status': expected_status}, max_retries)
-
-    # TODO(stephenfin): Remove this once we subclass 'InstanceHelperMixin'
-    def _wait_until_deleted(self, server):
-        initially_in_error = server.get('status') == 'ERROR'
-        try:
-            for i in range(40):
-                server = self.api.get_server(server['id'])
-                if not initially_in_error and server['status'] == 'ERROR':
-                    self.fail('Server went to error state instead of'
-                              'disappearing.')
-                time.sleep(0.5)
-
-            self.fail('Server failed to delete.')
-        except client.OpenStackApiNotFoundException:
-            return
-
     def _delete_server(self, server):
         # Delete the server
         self.api.delete_server(server['id'])
@@ -1366,8 +1329,7 @@ class ServerTestV269(ServersTestBase):
                 self.assertIn('image', server)
 
 
-class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
-                            integrated_helpers.InstanceHelperMixin):
+class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase):
     api_major_version = 'v2.1'
     # We have to cap the microversion at 2.38 because that's the max we
     # can use to update image metadata via our compute images proxy API.

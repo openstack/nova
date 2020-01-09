@@ -25,8 +25,7 @@ from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import policy_fixture
 
 
-class BootFromVolumeTest(integrated_helpers.InstanceHelperMixin,
-                         test_servers.ServersTestBase):
+class BootFromVolumeTest(test_servers.ServersTestBase):
 
     def _get_hypervisor_stats(self):
         response = self.admin_api.api_get('/os-hypervisors/statistics')
@@ -118,8 +117,7 @@ class BootFromVolumeTest(integrated_helpers.InstanceHelperMixin,
         # Shelve
         post_data = {'shelve': None}
         self.api.post_server_action(server_id, post_data)
-        self._wait_for_state_change(created_server,
-                                    'SHELVED_OFFLOADED')
+        self._wait_for_state_change(created_server, 'SHELVED_OFFLOADED')
 
         # Check that hypervisor local disk reporting is still 0
         self._verify_zero_local_gb_used()

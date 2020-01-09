@@ -838,7 +838,7 @@ class TestAggregateFiltersTogether(AggregateRequestFiltersTest):
 
 
 class TestAggregateMultiTenancyIsolationFilter(
-    test.TestCase, integrated_helpers.InstanceHelperMixin):
+        test.TestCase, integrated_helpers.InstanceHelperMixin):
 
     def _start_compute(self, host):
         self.start_service('compute', host=host)

@@ -15,11 +15,10 @@
 
 from nova.tests.functional.api_sample_tests import test_servers
 from nova.tests.functional import api_samples_test_base
-from nova.tests.functional import integrated_helpers
 
 
-class ServerActionsSampleJsonTest(test_servers.ServersSampleBase,
-                                  integrated_helpers.InstanceHelperMixin):
+class ServerActionsSampleJsonTest(test_servers.ServersSampleBase):
+
     microversion = None
     ADMIN_API = True
     sample_dir = 'os-instance-actions'

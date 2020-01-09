@@ -19,8 +19,7 @@ from nova.tests.functional import integrated_helpers
 CONF = nova.conf.CONF
 
 
-class RebuildVolumeBackedSameImage(integrated_helpers._IntegratedTestBase,
-                                   integrated_helpers.InstanceHelperMixin):
+class RebuildVolumeBackedSameImage(integrated_helpers._IntegratedTestBase):
     """Tests the regression in bug 1732947 where rebuilding a volume-backed
     instance with the original image still results in conductor calling the
     scheduler to validate the image. This is because the instance.image_ref

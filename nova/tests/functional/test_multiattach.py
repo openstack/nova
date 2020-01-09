@@ -15,8 +15,7 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
 
 
-class TestMultiattachVolumes(integrated_helpers._IntegratedTestBase,
-                             integrated_helpers.InstanceHelperMixin):
+class TestMultiattachVolumes(integrated_helpers._IntegratedTestBase):
     """Functional tests for creating a server from a multiattach volume
     and attaching a multiattach volume to a server.
 
