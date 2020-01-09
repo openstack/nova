@@ -10,7 +10,7 @@ user documentation.
 ---
 
 This is the initial version of the v2.1 API which supports
-microversions. The V2.1 API is from the REST API users's point of
+microversions. The V2.1 API is from the REST API users' point of
 view exactly the same as v2.0 except with strong input validation.
 
 A user can specify a header in the API request::
@@ -433,19 +433,19 @@ API endpoints as below::
 
     The ``os-security-group-default-rules`` API was completely removed in the
     21.0.0 (Ussuri) release. On deployments newer than this, the APIs will
-    return HTTP 410 (Gone) regadless of the requested microversion.
+    return HTTP 410 (Gone) regardless of the requested microversion.
 
 .. versionchanged:: 21.0.0
 
     The ``os-networks`` API was partially removed in the 21.0.0 (Ussuri)
     release. On deployments newer than this, some endpoints of the API will
-    return HTTP 410 (Gone) regadless of the requested microversion.
+    return HTTP 410 (Gone) regardless of the requested microversion.
 
 .. versionchanged:: 21.0.0
 
     The ``os-tenant-networks`` API was partially removed in the 21.0.0 (Ussuri)
     release. On deployments newer than this, some endpoints of the API will
-    return HTTP 410 (Gone) regadless of the requested microversion.
+    return HTTP 410 (Gone) regardless of the requested microversion.
 
 2.37
 ----
