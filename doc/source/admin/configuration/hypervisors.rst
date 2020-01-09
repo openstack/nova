@@ -19,6 +19,7 @@ Hypervisors
    hypervisor-virtuozzo
    hypervisor-powervm
    hypervisor-zvm
+   hypervisor-ironic
 
 OpenStack Compute supports many hypervisors, which might make it difficult for
 you to choose one. Most installations use only one hypervisor.  However, you
