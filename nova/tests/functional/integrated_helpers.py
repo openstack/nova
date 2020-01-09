@@ -27,6 +27,7 @@ import nova.conf
 from nova import context
 from nova.db import api as db
 import nova.image.glance
+from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client as api_client
@@ -647,3 +648,50 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
                 compute.manager.host)
             compute.manager.update_available_resource(ctx)
         LOG.info('Finished with periodics')
+
+    def _move_and_check_allocations(self, server, request, old_flavor,
+                                    new_flavor, source_rp_uuid, dest_rp_uuid):
+        self.api.post_server_action(server['id'], request)
+        self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+
+        def _check_allocation():
+            source_usages = self._get_provider_usages(source_rp_uuid)
+            self.assertFlavorMatchesAllocation(old_flavor, source_usages)
+            dest_usages = self._get_provider_usages(dest_rp_uuid)
+            self.assertFlavorMatchesAllocation(new_flavor, dest_usages)
+
+            # The instance should own the new_flavor allocation against the
+            # destination host created by the scheduler
+            allocations = self._get_allocations_by_server_uuid(server['id'])
+            self.assertEqual(1, len(allocations))
+            dest_alloc = allocations[dest_rp_uuid]['resources']
+            self.assertFlavorMatchesAllocation(new_flavor, dest_alloc)
+
+            # The migration should own the old_flavor allocation against the
+            # source host created by conductor
+            migration_uuid = self.get_migration_uuid_for_instance(server['id'])
+            allocations = self._get_allocations_by_server_uuid(migration_uuid)
+            source_alloc = allocations[source_rp_uuid]['resources']
+            self.assertFlavorMatchesAllocation(old_flavor, source_alloc)
+
+        # OK, so the move operation has run, but we have not yet confirmed or
+        # reverted the move operation. Before we run periodics, make sure
+        # that we have allocations/usages on BOTH the source and the
+        # destination hosts.
+        _check_allocation()
+        self._run_periodics()
+        _check_allocation()
+
+        # Make sure the RequestSpec.flavor matches the new_flavor.
+        ctxt = context.get_admin_context()
+        reqspec = objects.RequestSpec.get_by_instance_uuid(ctxt, server['id'])
+        self.assertEqual(new_flavor['id'], reqspec.flavor.flavorid)
+
+    def _migrate_and_check_allocations(self, server, flavor, source_rp_uuid,
+                                       dest_rp_uuid):
+        request = {
+            'migrate': None
+        }
+        self._move_and_check_allocations(
+            server, request=request, old_flavor=flavor, new_flavor=flavor,
+            source_rp_uuid=source_rp_uuid, dest_rp_uuid=dest_rp_uuid)
