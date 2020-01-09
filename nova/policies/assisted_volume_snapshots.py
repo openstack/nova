@@ -24,7 +24,7 @@ POLICY_ROOT = 'os_compute_api:os-assisted-volume-snapshots:%s'
 assisted_volume_snapshots_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'create',
-        check_str=base.RULE_ADMIN_API,
+        check_str=base.SYSTEM_ADMIN,
         description="Create an assisted volume snapshot",
         operations=[
             {
@@ -35,7 +35,7 @@ assisted_volume_snapshots_policies = [
         scope_types=['system']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'delete',
-        check_str=base.RULE_ADMIN_API,
+        check_str=base.SYSTEM_ADMIN,
         description="Delete an assisted volume snapshot",
         operations=[
             {
