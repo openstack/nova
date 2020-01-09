@@ -40,7 +40,7 @@ class AssistedVolumeSnapshotsController(wsgi.Controller):
     def create(self, req, body):
         """Creates a new snapshot."""
         context = req.environ['nova.context']
-        context.can(avs_policies.POLICY_ROOT % 'create')
+        context.can(avs_policies.POLICY_ROOT % 'create', target={})
 
         snapshot = body['snapshot']
         create_info = snapshot['create_info']
@@ -70,7 +70,7 @@ class AssistedVolumeSnapshotsController(wsgi.Controller):
     def delete(self, req, id):
         """Delete a snapshot."""
         context = req.environ['nova.context']
-        context.can(avs_policies.POLICY_ROOT % 'delete')
+        context.can(avs_policies.POLICY_ROOT % 'delete', target={})
 
         delete_metadata = {}
         delete_metadata.update(req.GET)
