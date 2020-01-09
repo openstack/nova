@@ -59,4 +59,6 @@ upgrade:
     network driver which has now been removed. The config options have
     therefore been removed also.
 
-    * ``vmware.vlan_interface``
+    * ``[DEFAULT] firewall_driver``
+    * ``[DEFAULT] allow_same_net_traffic``
+    * ``[vmware] vlan_interface``
