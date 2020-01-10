@@ -21454,6 +21454,52 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                                     None)
         self.assertFalse(mock_inject.called)
 
+    @mock.patch('nova.virt.libvirt.utils.fetch_image')
+    @mock.patch('nova.virt.libvirt.storage.rbd_utils.RBDDriver')
+    @mock.patch.object(imagebackend, 'IMAGE_API')
+    def test_create_fetch_image_ceph_workaround(self, mock_image, mock_rbd,
+                                                mock_fetch):
+        # Make sure that rbd clone will fail as un-clone-able
+        mock_rbd.is_cloneable.return_value = False
+        # Make sure the rbd code thinks the image does not already exist
+        mock_rbd.return_value.exists.return_value = False
+        # Make sure the rbd code says the image is small
+        mock_rbd.return_value.size.return_value = 128 * units.Mi
+        # Make sure IMAGE_API.get() returns a raw image
+        mock_image.get.return_value = {'locations': [], 'disk_format': 'raw'}
+
+        instance = self._create_instance()
+        disk_images = {'image_id': 'foo'}
+        self.flags(images_type='rbd', group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        def do_create():
+            # Reset the fetch mock and run our driver method so we can
+            # check for called-ness after each attempt
+            mock_fetch.reset_mock()
+            drvr._create_and_inject_local_root(self.context,
+                                               instance,
+                                               False,
+                                               '',
+                                               disk_images,
+                                               get_injection_info(),
+                                               None)
+
+        # Do an image create with rbd
+        do_create()
+        # Make sure it tried fetch, which implies that it tried and
+        # failed to clone.
+        mock_fetch.assert_called()
+
+        # Enable the workaround
+        self.flags(never_download_image_if_on_rbd=True,
+                   group='workarounds')
+        # Ensure that we raise the original ImageUnacceptable from the
+        # failed clone...
+        self.assertRaises(exception.ImageUnacceptable, do_create)
+        # ...and ensure that we did _not_ try to fetch
+        mock_fetch.assert_not_called()
+
     @mock.patch('nova.virt.netutils.get_injected_network_template')
     @mock.patch('nova.virt.disk.api.inject_data')
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_conn")

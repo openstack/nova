@@ -3867,9 +3867,24 @@ class LibvirtDriver(driver.ComputeDriver):
                 backend.create_snap(libvirt_utils.RESIZE_SNAPSHOT_NAME)
             if backend.SUPPORTS_CLONE:
                 def clone_fallback_to_fetch(*args, **kwargs):
+                    refuse_fetch = (
+                        CONF.libvirt.images_type == 'rbd' and
+                        CONF.workarounds.never_download_image_if_on_rbd)
                     try:
                         backend.clone(context, disk_images['image_id'])
                     except exception.ImageUnacceptable:
+                        if refuse_fetch:
+                            # Re-raise the exception from the failed
+                            # ceph clone.  The compute manager expects
+                            # ImageUnacceptable as a possible result
+                            # of spawn(), from which this is called.
+                            with excutils.save_and_reraise_exception():
+                                LOG.warning(
+                                    'Image %s is not on my ceph and '
+                                    '[workarounds]/'
+                                    'never_download_image_if_on_rbd=True;'
+                                    ' refusing to fetch and upload.',
+                                    disk_images['image_id'])
                         libvirt_utils.fetch_image(*args, **kwargs)
                 fetch_func = clone_fallback_to_fetch
             else:
