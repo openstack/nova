@@ -252,7 +252,7 @@ associating it with an AZ in the process, and add host to it using the
 .. note::
 
     While it is possible to add a host to multiple host aggregates, it is not
-    possile to add them to multiple availability zones. Attempting to add a
+    possible to add them to multiple availability zones. Attempting to add a
     host to multiple host aggregates associated with differing availability
     zones will result in a failure.
 

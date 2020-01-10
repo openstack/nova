@@ -85,7 +85,7 @@ server status is one of the following values:
 -  ``VERIFY_RESIZE``: System is awaiting confirmation that the server is
    operational after a move or resize.
 
-Server status is caculated from vm_state and task_state, which
+Server status is calculated from vm_state and task_state, which
 are exposed to administrators:
 
 - vm_state describes a VM's current stable (not transition) state. That is, if
