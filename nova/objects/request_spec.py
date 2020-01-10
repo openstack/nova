@@ -1072,7 +1072,7 @@ class SchedulerLimits(base.NovaObject):
 
 
 @base.NovaObjectRegistry.register
-class RequestGroup(base.NovaObject):
+class RequestGroup(base.NovaEphemeralObject):
     """Versioned object based on the unversioned
     nova.api.openstack.placement.lib.RequestGroup object.
     """
@@ -1108,10 +1108,6 @@ class RequestGroup(base.NovaObject):
         'provider_uuids': fields.ListOfUUIDField(default=[]),
         'in_tree': fields.UUIDField(nullable=True, default=None),
     }
-
-    def __init__(self, context=None, **kwargs):
-        super(RequestGroup, self).__init__(context=context, **kwargs)
-        self.obj_set_defaults()
 
     @classmethod
     def from_port_request(cls, context, port_uuid, port_resource_request):

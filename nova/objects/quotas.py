@@ -64,18 +64,23 @@ class Quotas(base.NovaObject):
 
     fields = {
         # TODO(melwitt): Remove this field in version 2.0 of the object.
-        'reservations': fields.ListOfStringsField(nullable=True),
-        'project_id': fields.StringField(nullable=True),
-        'user_id': fields.StringField(nullable=True),
+        'reservations': fields.ListOfStringsField(nullable=True,
+                                                  default=[]),
+        'project_id': fields.StringField(nullable=True,
+                                         default=None),
+        'user_id': fields.StringField(nullable=True,
+                                      default=None),
     }
 
-    def __init__(self, *args, **kwargs):
-        super(Quotas, self).__init__(*args, **kwargs)
-        # Set up defaults.
-        self.reservations = []
-        self.project_id = None
-        self.user_id = None
-        self.obj_reset_changes()
+    def obj_load_attr(self, attr):
+        self.obj_set_defaults(attr)
+        # NOTE(danms): This is strange because resetting these would cause
+        # them not to be saved to the database. I would imagine this is
+        # from overzealous defaulting and that all three fields ultimately
+        # get set all the time. However, quotas are weird, so replicate the
+        # longstanding behavior of setting defaults and clearing their
+        # dirty bit.
+        self.obj_reset_changes(fields=[attr])
 
     @staticmethod
     @db_api.api_context_manager.reader

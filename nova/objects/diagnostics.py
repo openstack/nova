@@ -79,7 +79,7 @@ class MemoryDiagnostics(base.NovaObject):
 
 
 @base.NovaObjectRegistry.register
-class Diagnostics(base.NovaObject):
+class Diagnostics(base.NovaEphemeralObject):
 
     # Version 1.0: Initial version
     VERSION = '1.0'
@@ -104,7 +104,6 @@ class Diagnostics(base.NovaObject):
 
     def __init__(self, *args, **kwargs):
         super(Diagnostics, self).__init__(*args, **kwargs)
-        self.obj_set_defaults()
 
         self.num_cpus = len(self.cpu_details)
         self.num_nics = len(self.nic_details)
