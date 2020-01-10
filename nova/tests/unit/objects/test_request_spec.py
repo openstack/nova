@@ -307,7 +307,8 @@ class _TestRequestSpecObject(object):
         spec = objects.RequestSpec.from_primitives(ctxt, spec_dict, filt_props)
         mock_limits.assert_called_once_with({})
         # Make sure that all fields are set using that helper method
-        skip = ['id', 'security_groups', 'network_metadata', 'is_bfv']
+        skip = ['id', 'security_groups', 'network_metadata', 'is_bfv',
+                'request_level_params']
         for field in [f for f in spec.obj_fields if f not in skip]:
             self.assertTrue(spec.obj_attr_is_set(field),
                              'Field: %s is not set' % field)
@@ -338,7 +339,7 @@ class _TestRequestSpecObject(object):
                 filter_properties, instance_group, instance.availability_zone,
                 objects.SecurityGroupList())
         # Make sure that all fields are set using that helper method
-        skip = ['id', 'network_metadata', 'is_bfv']
+        skip = ['id', 'network_metadata', 'is_bfv', 'request_level_params']
         for field in [f for f in spec.obj_fields if f not in skip]:
             self.assertTrue(spec.obj_attr_is_set(field),
                             'Field: %s is not set' % field)
