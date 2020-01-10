@@ -752,7 +752,7 @@ def destroy_cached_images(session, sr_ref, all_cached=False, dry_run=False,
     destroyed = set()
 
     def destroy_cached_vdi(vdi_uuid, vdi_ref):
-        LOG.debug("Destroying cached VDI '%(vdi_uuid)s'")
+        LOG.debug("Destroying cached VDI '%s'", vdi_uuid)
         if not dry_run:
             destroy_vdi(session, vdi_ref)
         destroyed.add(vdi_uuid)
