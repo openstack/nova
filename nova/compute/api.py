@@ -2136,6 +2136,23 @@ class API(base.Base):
             return True
         return False
 
+    def _local_delete_cleanup(self, context, instance):
+        # NOTE(aarents) Ensure instance allocation is cleared and instance
+        # mapping queued as deleted before _delete() return
+        try:
+            self.placementclient.delete_allocation_for_instance(
+                context, instance.uuid)
+        except exception.AllocationDeleteFailed:
+            LOG.info("Allocation delete failed during local delete cleanup.",
+                     instance=instance)
+
+        try:
+            self._update_queued_for_deletion(context, instance, True)
+        except exception.InstanceMappingNotFound:
+            LOG.info("Instance Mapping does not exist while attempting"
+                     "local delete cleanup.",
+                     instance=instance)
+
     def _attempt_delete_of_buildrequest(self, context, instance):
         # If there is a BuildRequest then the instance may not have been
         # written to a cell db yet. Delete the BuildRequest here, which
@@ -2171,6 +2188,7 @@ class API(base.Base):
         if not instance.host and not may_have_ports_or_volumes:
             try:
                 if self._delete_while_booting(context, instance):
+                    self._local_delete_cleanup(context, instance)
                     return
                 # If instance.host was not set it's possible that the Instance
                 # object here was pulled from a BuildRequest object and is not
@@ -2189,9 +2207,11 @@ class API(base.Base):
                     except exception.InstanceNotFound:
                         pass
                     # The instance was deleted or is already gone.
+                    self._local_delete_cleanup(context, instance)
                     return
                 if not instance:
                     # Instance is already deleted.
+                    self._local_delete_cleanup(context, instance)
                     return
             except exception.ObjectActionError:
                 # NOTE(melwitt): This means the instance.host changed
@@ -2204,6 +2224,7 @@ class API(base.Base):
                 cell, instance = self._lookup_instance(context, instance.uuid)
                 if not instance:
                     # Instance is already deleted
+                    self._local_delete_cleanup(context, instance)
                     return
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
@@ -2247,6 +2268,7 @@ class API(base.Base):
                              'field, its vm_state is %(state)s.',
                              {'state': instance.vm_state},
                               instance=instance)
+                    self._local_delete_cleanup(context, instance)
                     return
                 except exception.ObjectActionError as ex:
                     # The instance's host likely changed under us as

@@ -534,6 +534,19 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         return self.placement_api.get(
             '/allocations/%s' % server_uuid).body['allocations']
 
+    def _wait_for_server_allocations(self, consumer_id, max_retries=20):
+        retry_count = 0
+        while True:
+            alloc = self._get_allocations_by_server_uuid(consumer_id)
+            if alloc:
+                break
+            retry_count += 1
+            if retry_count == max_retries:
+                self.fail('Wait for server allocations failed, '
+                          'server=%s' % (consumer_id))
+            time.sleep(0.5)
+        return alloc
+
     def _get_allocations_by_provider_uuid(self, rp_uuid):
         return self.placement_api.get(
             '/resource_providers/%s/allocations' % rp_uuid).body['allocations']

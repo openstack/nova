@@ -3662,6 +3662,58 @@ class ServerBuildAbortTests(integrated_helpers.ProviderUsageBaseTestCase):
                                         'DISK_GB': 0}, failed_rp_uuid)
 
 
+class ServerDeleteBuildTests(integrated_helpers.ProviderUsageBaseTestCase):
+    """Tests server delete during instance in build and validates that
+        allocations in Placement are properly cleaned up.
+    """
+    compute_driver = 'fake.SmallFakeDriver'
+
+    def setUp(self):
+        super(ServerDeleteBuildTests, self).setUp()
+        self.compute1 = self._start_compute(host='host1')
+        flavors = self.api.get_flavors()
+        self.flavor1 = flavors[0]
+
+    def test_delete_stuck_build_instance_after_claim(self):
+        """Test for bug 1859496 where an instance allocation can leaks after
+        deletion if build process have been interrupted after resource claim
+        """
+
+        # To reproduce the issue we need to interrupt instance spawn
+        # when build request has already reached the scheduler service,
+        # so that instance resource get claims.
+        # Real case can typically be a conductor restart during
+        # instance claim.
+        # To emulate conductor restart we raise an Exception in
+        # filter_scheduler after instance is claimed and mock
+        # _bury_in_cell0 in that case conductor thread return.
+        # Then we delete server after ensuring allocation is made and check
+        # There is no leak.
+        # Note that because deletion occurs early, conductor did not populate
+        # instance DB entries in cells, preventing the compute
+        # update_available_resource periodic task to heal leaked allocations.
+
+        server_req = self._build_server(
+            'interrupted-server', flavor_id=self.flavor1['id'],
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            networks='none')
+
+        with test.nested(
+                 mock.patch.object(nova.scheduler.filter_scheduler.
+                                       FilterScheduler,
+                                       '_ensure_sufficient_hosts'),
+                 mock.patch.object(nova.conductor.manager.
+                                   ComputeTaskManager,
+                                       '_bury_in_cell0')
+                 ) as (mock_suff_hosts, mock_bury):
+            mock_suff_hosts.side_effect = test.TestingException('oops')
+            server = self.api.post_server({'server': server_req})
+            self._wait_for_server_allocations(server['id'])
+            self.api.api_delete('/servers/%s' % server['id'])
+            allocations = self._get_allocations_by_server_uuid(server['id'])
+            self.assertEqual({}, allocations)
+
+
 class ServerBuildAbortTestsWithNestedResourceRequest(ServerBuildAbortTests):
     compute_driver = 'fake.FakeBuildAbortDriverWithNestedCustomResources'
 
