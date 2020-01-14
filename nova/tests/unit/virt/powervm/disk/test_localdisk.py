@@ -171,7 +171,7 @@ class TestLocalDisk(test.NoDBTestCase):
         mock_upload_image.assert_called_once_with(
             'context', 'instance', mock_image_meta)
 
-    @mock.patch('nova.image.api.API.download')
+    @mock.patch('nova.image.glance.API.download')
     @mock.patch('nova.virt.powervm.disk.driver.IterableToFileAdapter')
     @mock.patch('pypowervm.tasks.storage.upload_new_vdisk')
     @mock.patch('nova.virt.powervm.disk.driver.DiskAdapter._get_disk_name')

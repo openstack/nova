@@ -32,13 +32,13 @@ from nova.compute import utils as compute_utils
 import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova import image
+from nova.image import glance
 import nova.privsep.qemu
 
 LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
-IMAGE_API = image.API()
+IMAGE_API = glance.API()
 
 QEMU_IMG_LIMITS = processutils.ProcessLimits(
     cpu_time=30,

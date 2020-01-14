@@ -24,7 +24,7 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import exception
 from nova.i18n import _
-import nova.image
+from nova.image import glance
 
 
 class ImageMetadataController(wsgi.Controller):
@@ -32,7 +32,7 @@ class ImageMetadataController(wsgi.Controller):
 
     def __init__(self):
         super(ImageMetadataController, self).__init__()
-        self.image_api = nova.image.API()
+        self.image_api = glance.API()
 
     def _get_image(self, context, image_id):
         try:

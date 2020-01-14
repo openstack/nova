@@ -82,7 +82,7 @@ class TestPowerVMDriver(test.NoDBTestCase):
         self.assertTrue(self.drv.capabilities['supports_extend_volume'])
         self.assertFalse(self.drv.capabilities['supports_multiattach'])
 
-    @mock.patch('nova.image.API')
+    @mock.patch('nova.image.glance.API')
     @mock.patch('pypowervm.tasks.storage.ComprehensiveScrub', autospec=True)
     @mock.patch('oslo_utils.importutils.import_object_ns', autospec=True)
     @mock.patch('pypowervm.wrappers.managed_system.System', autospec=True)

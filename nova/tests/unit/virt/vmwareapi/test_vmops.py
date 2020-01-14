@@ -383,7 +383,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_get_datacenter_ref_and_name_with_no_datastore(self):
         self._test_get_datacenter_ref_and_name()
 
-    @mock.patch('nova.image.api.API.get')
+    @mock.patch('nova.image.glance.API.get')
     @mock.patch.object(vm_util, 'power_off_instance')
     @mock.patch.object(ds_util, 'disk_copy')
     @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake-ref')
@@ -1138,7 +1138,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         mock_attach_cdrom_to_vm.assert_called_once_with(
                 vm_ref, self._instance, self._ds.ref, str(upload_iso_path))
 
-    @mock.patch('nova.image.api.API.get')
+    @mock.patch('nova.image.glance.API.get')
     @mock.patch.object(vmops.LOG, 'debug')
     @mock.patch.object(vmops.VMwareVMOps, '_fetch_image_if_missing')
     @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
@@ -1650,7 +1650,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 mock.patch.object(uuidutils, 'generate_uuid',
                                   return_value='tmp-uuid'),
                 mock.patch.object(images, 'fetch_image'),
-                mock.patch('nova.image.api.API.get'),
+                mock.patch('nova.image.glance.API.get'),
                 mock.patch.object(vutil, 'get_inventory_path',
                                   return_value=self._dc_info.name),
                 mock.patch.object(self._vmops, '_get_extra_specs',

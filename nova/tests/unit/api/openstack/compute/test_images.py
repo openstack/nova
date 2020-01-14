@@ -144,7 +144,7 @@ class ImagesControllerTestV21(test.NoDBTestCase):
             },
         }
 
-    @mock.patch('nova.image.api.API.get', return_value=IMAGE_FIXTURES[0])
+    @mock.patch('nova.image.glance.API.get', return_value=IMAGE_FIXTURES[0])
     def test_get_image(self, get_mocked):
         request = self.http_request.blank(self.url_base + 'images/123')
         actual_image = self.controller.show(request, '123')
@@ -152,7 +152,7 @@ class ImagesControllerTestV21(test.NoDBTestCase):
                         matchers.DictMatches(self.expected_image_123))
         get_mocked.assert_called_once_with(mock.ANY, '123')
 
-    @mock.patch('nova.image.api.API.get', return_value=IMAGE_FIXTURES[1])
+    @mock.patch('nova.image.glance.API.get', return_value=IMAGE_FIXTURES[1])
     def test_get_image_with_custom_prefix(self, _get_mocked):
         self.flags(compute_link_prefix='https://zoo.com:42',
                    glance_link_prefix='http://circus.com:34',
@@ -176,14 +176,14 @@ class ImagesControllerTestV21(test.NoDBTestCase):
 
         self.assertThat(actual_image, matchers.DictMatches(expected_image))
 
-    @mock.patch('nova.image.api.API.get',
+    @mock.patch('nova.image.glance.API.get',
                 side_effect=exception.ImageNotFound(image_id=''))
     def test_get_image_404(self, _get_mocked):
         fake_req = self.http_request.blank(self.url_base + 'images/unknown')
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.show, fake_req, 'unknown')
 
-    @mock.patch('nova.image.api.API.get_all', return_value=IMAGE_FIXTURES)
+    @mock.patch('nova.image.glance.API.get_all', return_value=IMAGE_FIXTURES)
     def test_get_image_details(self, get_all_mocked):
         request = self.http_request.blank(self.url_base + 'images/detail')
         response = self.controller.detail(request)
@@ -270,14 +270,14 @@ class ImagesControllerTestV21(test.NoDBTestCase):
 
         self.assertThat(expected, matchers.DictListMatches(response_list))
 
-    @mock.patch('nova.image.api.API.get_all')
+    @mock.patch('nova.image.glance.API.get_all')
     def test_get_image_details_with_limit(self, get_all_mocked):
         request = self.http_request.blank(self.url_base +
                                           'images/detail?limit=2')
         self.controller.detail(request)
         get_all_mocked.assert_called_once_with(mock.ANY, limit=2, filters={})
 
-    @mock.patch('nova.image.api.API.get_all')
+    @mock.patch('nova.image.glance.API.get_all')
     def test_get_image_details_with_limit_and_page_size(self, get_all_mocked):
         request = self.http_request.blank(
             self.url_base + 'images/detail?limit=2&page_size=1')
@@ -285,7 +285,7 @@ class ImagesControllerTestV21(test.NoDBTestCase):
         get_all_mocked.assert_called_once_with(mock.ANY, limit=2, filters={},
                                                page_size=1)
 
-    @mock.patch('nova.image.api.API.get_all')
+    @mock.patch('nova.image.glance.API.get_all')
     def _detail_request(self, filters, request, get_all_mocked):
         self.controller.detail(request)
         get_all_mocked.assert_called_once_with(mock.ANY, filters=filters)
@@ -344,7 +344,7 @@ class ImagesControllerTestV21(test.NoDBTestCase):
         request = self.http_request.blank(self.url_base + 'images/detail')
         self._detail_request(filters, request)
 
-    @mock.patch('nova.image.api.API.get_all', side_effect=exception.Invalid)
+    @mock.patch('nova.image.glance.API.get_all', side_effect=exception.Invalid)
     def test_image_detail_invalid_marker(self, _get_all_mocked):
         request = self.http_request.blank(self.url_base + '?marker=invalid')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.detail,
@@ -360,7 +360,7 @@ class ImagesControllerTestV21(test.NoDBTestCase):
     def _check_response(self, controller_method, response, expected_code):
         self.assertEqual(expected_code, controller_method.wsgi_code)
 
-    @mock.patch('nova.image.api.API.delete')
+    @mock.patch('nova.image.glance.API.delete')
     def test_delete_image(self, delete_mocked):
         request = self.http_request.blank(self.url_base + 'images/124')
         request.method = 'DELETE'
@@ -369,7 +369,7 @@ class ImagesControllerTestV21(test.NoDBTestCase):
         self._check_response(delete_method, response, 204)
         delete_mocked.assert_called_once_with(mock.ANY, '124')
 
-    @mock.patch('nova.image.api.API.delete',
+    @mock.patch('nova.image.glance.API.delete',
                 side_effect=exception.ImageNotAuthorized(image_id='123'))
     def test_delete_deleted_image(self, _delete_mocked):
         # If you try to delete a deleted image, you get back 403 Forbidden.
@@ -378,7 +378,7 @@ class ImagesControllerTestV21(test.NoDBTestCase):
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.delete,
                           request, '123')
 
-    @mock.patch('nova.image.api.API.delete',
+    @mock.patch('nova.image.glance.API.delete',
                 side_effect=exception.ImageNotFound(image_id='123'))
     def test_delete_image_not_found(self, _delete_mocked):
         request = self.http_request.blank(self.url_base + 'images/300')
@@ -386,7 +386,8 @@ class ImagesControllerTestV21(test.NoDBTestCase):
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.delete, request, '300')
 
-    @mock.patch('nova.image.api.API.get_all', return_value=[IMAGE_FIXTURES[0]])
+    @mock.patch('nova.image.glance.API.get_all',
+                return_value=[IMAGE_FIXTURES[0]])
     def test_get_image_next_link(self, get_all_mocked):
         request = self.http_request.blank(
             self.url_base + 'imagesl?limit=1')
@@ -398,7 +399,8 @@ class ImagesControllerTestV21(test.NoDBTestCase):
         self.assertThat({'limit': ['1'], 'marker': [IMAGE_FIXTURES[0]['id']]},
                         matchers.DictMatches(params))
 
-    @mock.patch('nova.image.api.API.get_all', return_value=[IMAGE_FIXTURES[0]])
+    @mock.patch('nova.image.glance.API.get_all',
+                return_value=[IMAGE_FIXTURES[0]])
     def test_get_image_details_next_link(self, get_all_mocked):
         request = self.http_request.blank(
             self.url_base + 'images/detail?limit=1')

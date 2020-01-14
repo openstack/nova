@@ -34,7 +34,7 @@ import six
 import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova import image
+from nova.image import glance
 import nova.privsep.libvirt
 import nova.privsep.path
 from nova import utils
@@ -50,7 +50,7 @@ from nova.virt.libvirt import utils as libvirt_utils
 CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
-IMAGE_API = image.API()
+IMAGE_API = glance.API()
 
 
 # NOTE(neiljerram): Don't worry if this fails. This sometimes happens, with

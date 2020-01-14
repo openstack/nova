@@ -20,7 +20,7 @@ import oslo_messaging as messaging
 from nova import baserpc
 from nova.conductor import rpcapi
 import nova.conf
-from nova import image
+from nova.image import glance
 
 CONF = nova.conf.CONF
 
@@ -84,7 +84,7 @@ class ComputeTaskAPI(object):
 
     def __init__(self):
         self.conductor_compute_rpcapi = rpcapi.ComputeTaskAPI()
-        self.image_api = image.API()
+        self.image_api = glance.API()
 
     # TODO(stephenfin): Remove the 'reservations' parameter since we don't use
     # reservations anymore

@@ -22,8 +22,7 @@ from nova.api.openstack.compute.views import images as views_images
 from nova.api.openstack import wsgi
 from nova import exception
 from nova.i18n import _
-import nova.image
-import nova.utils
+from nova.image import glance
 
 
 SUPPORTED_FILTERS = {
@@ -44,7 +43,7 @@ class ImagesController(wsgi.Controller):
 
     def __init__(self):
         super(ImagesController, self).__init__()
-        self._image_api = nova.image.API()
+        self._image_api = glance.API()
 
     def _get_filters(self, req):
         """Return a dictionary of query param filters from the request.

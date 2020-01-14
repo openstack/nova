@@ -194,7 +194,7 @@ class BootFromVolumeLargeRequestTest(test.TestCase,
         self.useFixture(nova_fixtures.NoopConductorFixture())
         # NOTE(gibi): Do not use 'c905cedb-7281-47e4-8a62-f26bc5fc4c77' image
         # as that is defined with a separate kernel image, leading to one extra
-        # call to nova.image.api.API.get from compute.api
+        # call to nova.image.glance.API.get from compute.api
         # _handle_kernel_and_ramdisk()
         image1 = 'a2459075-d96c-40d5-893e-577ff92e721c'
         image2 = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
@@ -217,7 +217,7 @@ class BootFromVolumeLargeRequestTest(test.TestCase,
 
         # Wrap the image service get method to check how many times it was
         # called.
-        with mock.patch('nova.image.api.API.get',
+        with mock.patch('nova.image.glance.API.get',
                         wraps=self.image_service.show) as mock_image_get:
             self.api.post_server({'server': server})
             # Assert that there was caching of the GET /v2/images/{image_id}

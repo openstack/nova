@@ -41,7 +41,7 @@ import nova.conf
 from nova import context
 from nova.db import api as db
 from nova import exception
-from nova.image import api as image_api
+from nova.image import glance as image_api
 from nova.network import constants
 from nova.network import model
 from nova.network import neutron as neutron_api
@@ -3100,7 +3100,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.stub_out('nova.objects.BlockDeviceMappingList'
                       '.get_by_instance_uuid',
                       fake_bdm_list_get_by_instance_uuid)
-        self.stub_out('nova.image.api.API.create', fake_image_create)
+        self.stub_out('nova.image.glance.API.create', fake_image_create)
         self.stub_out('nova.volume.cinder.API.get',
                       lambda self, context, volume_id:
                           {'id': volume_id, 'display_description': ''})

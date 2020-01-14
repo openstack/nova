@@ -20,7 +20,7 @@ from os_xenapi.client import image
 
 from nova import context
 from nova import exception
-from nova.image.api import API as image_api
+from nova.image.glance import API as image_api
 from nova.tests.unit.virt.xenapi import stubs
 from nova.virt.xenapi.image import utils
 from nova.virt.xenapi.image import vdi_stream

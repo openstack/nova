@@ -74,7 +74,7 @@ from nova import exception
 from nova import exception_wrapper
 from nova import hooks
 from nova.i18n import _
-from nova import image
+from nova.image import glance
 from nova import manager
 from nova.network import model as network_model
 from nova.network import neutron
@@ -569,7 +569,7 @@ class ComputeManager(manager.Manager):
         self.virtapi = ComputeVirtAPI(self)
         self.network_api = neutron.API()
         self.volume_api = cinder.API()
-        self.image_api = image.API()
+        self.image_api = glance.API()
         self._last_bw_usage_poll = 0
         self._bw_usage_supported = True
         self.compute_api = compute.API()

@@ -8956,7 +8956,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         migration.id = 0
 
         @mock.patch('nova.compute.utils.notify_about_instance_action')
-        @mock.patch('nova.image.api.API.generate_image_url',
+        @mock.patch('nova.image.glance.API.generate_image_url',
                     return_value='fake-url')
         @mock.patch.object(objects.Migration, 'get_by_id',
                            return_value=migration)

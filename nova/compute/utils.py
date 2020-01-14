@@ -1214,7 +1214,7 @@ def create_image(context, instance, name, image_type, image_api,
     :param instance: nova.objects.instance.Instance object
     :param name: string for name of the snapshot
     :param image_type: snapshot | backup
-    :param image_api: instance of nova.image.API
+    :param image_api: instance of nova.image.glance.API
     :param extra_properties: dict of extra image properties to include
 
     """

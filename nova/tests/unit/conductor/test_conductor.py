@@ -42,7 +42,7 @@ from nova.db import api as db
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
 from nova import exception as exc
-from nova.image import api as image_api
+from nova.image import glance as image_api
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
