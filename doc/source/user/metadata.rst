@@ -337,6 +337,8 @@ example:
    }
 
 
+::download:`Download</../../doc/api_schemas/network_data.json>` network_data.json JSON schema.
+
 .. _metadata-ec2-format:
 
 EC2-compatible metadata
