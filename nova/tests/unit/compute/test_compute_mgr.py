@@ -336,8 +336,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         get_db_nodes.return_value = db_nodes
         get_avail_nodes.return_value = avail_nodes
         self.compute.update_available_resource(self.context, startup=True)
-        get_db_nodes.assert_called_once_with(self.context, use_slave=True,
-                                             startup=True)
+        get_db_nodes.assert_called_once_with(self.context, avail_nodes,
+                                             use_slave=True, startup=True)
         self.assertEqual(len(avail_nodes_l), update_mock.call_count)
         update_mock.assert_has_calls(
             [mock.call(self.context, node, startup=True)
@@ -398,11 +398,26 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         compute node on startup since this may be expected.
         """
         self.assertEqual([], self.compute._get_compute_nodes_in_db(
-            self.context, startup=True))
+            self.context, {'fake-node'}, startup=True))
         get_all_by_host.assert_called_once_with(
             self.context, self.compute.host, use_slave=False)
         self.assertTrue(mock_log.warning.called)
         self.assertFalse(mock_log.error.called)
+
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host',
+                       side_effect=exception.NotFound)
+    @mock.patch('nova.compute.manager.LOG')
+    def test_get_compute_nodes_in_db_not_found_no_nodenames(
+            self, mock_log, get_all_by_host):
+        """Tests to make sure that _get_compute_nodes_in_db does not log
+        anything when ComputeNodeList.get_all_by_host raises NotFound and the
+        driver did not report any nodenames.
+        """
+        self.assertEqual([], self.compute._get_compute_nodes_in_db(
+            self.context, set()))
+        get_all_by_host.assert_called_once_with(
+            self.context, self.compute.host, use_slave=False)
+        mock_log.assert_not_called()
 
     def _trusted_certs_setup_instance(self, include_trusted_certs=True):
         instance = fake_instance.fake_instance_obj(self.context)

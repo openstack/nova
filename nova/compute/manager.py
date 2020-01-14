@@ -9604,15 +9604,16 @@ class ComputeManager(manager.Manager):
         :param startup: True if this is being called when the nova-compute
             service is starting, False otherwise.
         """
-
-        compute_nodes_in_db = self._get_compute_nodes_in_db(context,
-                                                            use_slave=True,
-                                                            startup=startup)
         try:
             nodenames = set(self.driver.get_available_nodes())
         except exception.VirtDriverNotReady:
             LOG.warning("Virt driver is not ready.")
             return
+
+        compute_nodes_in_db = self._get_compute_nodes_in_db(context,
+                                                            nodenames,
+                                                            use_slave=True,
+                                                            startup=startup)
 
         # Delete orphan compute node not reported by driver but still in db
         for cn in compute_nodes_in_db:
@@ -9638,19 +9639,24 @@ class ComputeManager(manager.Manager):
             self._update_available_resource_for_node(context, nodename,
                                                      startup=startup)
 
-    def _get_compute_nodes_in_db(self, context, use_slave=False,
+    def _get_compute_nodes_in_db(self, context, nodenames, use_slave=False,
                                  startup=False):
         try:
             return objects.ComputeNodeList.get_all_by_host(context, self.host,
                                                            use_slave=use_slave)
         except exception.NotFound:
-            if startup:
-                LOG.warning(
-                    "No compute node record found for host %s. If this is "
-                    "the first time this service is starting on this "
-                    "host, then you can ignore this warning.", self.host)
-            else:
-                LOG.error("No compute node record for host %s", self.host)
+            # If the driver is not reporting any nodenames we should not
+            # expect there to be compute nodes so we just return in that case.
+            # For example, this could be an ironic compute and it is not
+            # managing any nodes yet.
+            if nodenames:
+                if startup:
+                    LOG.warning(
+                        "No compute node record found for host %s. If this is "
+                        "the first time this service is starting on this "
+                        "host, then you can ignore this warning.", self.host)
+                else:
+                    LOG.error("No compute node record for host %s", self.host)
             return []
 
     @periodic_task.periodic_task(
