@@ -236,9 +236,6 @@ NEXT_MIN_QEMU_VERSION = (4, 0, 0)
 # Virtuozzo driver support
 MIN_VIRTUOZZO_VERSION = (7, 0, 0)
 
-# aarch64 architecture with KVM
-# 'chardev' support got sorted out in 3.6.0
-MIN_LIBVIRT_KVM_AARCH64_VERSION = (3, 6, 0)
 
 # Names of the types that do not get compressed during migration
 NO_COMPRESSION_TYPES = ('qcow2',)
@@ -249,9 +246,6 @@ QEMU_MAX_SERIAL_PORTS = 4
 # Qemu supports 4 serial consoles, we remove 1 because of the PTY one defined
 ALLOWED_QEMU_SERIAL_PORTS = QEMU_MAX_SERIAL_PORTS - 1
 
-MIN_LIBVIRT_OTHER_ARCH = {
-    fields.Architecture.AARCH64: MIN_LIBVIRT_KVM_AARCH64_VERSION,
-}
 
 LIBVIRT_PERF_EVENT_PREFIX = 'VIR_PERF_PARAM_'
 
@@ -690,18 +684,6 @@ class LibvirtDriver(driver.ComputeDriver):
                         'in the next release.',
                         {'version': libvirt_utils.version_to_string(
                             NEXT_MIN_QEMU_VERSION)})
-
-        kvm_arch = fields.Architecture.from_host()
-        if (CONF.libvirt.virt_type in ('kvm', 'qemu') and
-            kvm_arch in MIN_LIBVIRT_OTHER_ARCH and
-                not self._host.has_min_version(
-                    MIN_LIBVIRT_OTHER_ARCH.get(kvm_arch))):
-            raise exception.InternalError(
-                _('Running Nova with qemu/kvm virt_type on %(arch)s '
-                  'requires libvirt version %(libvirt_ver)s or greater') %
-                {'arch': kvm_arch,
-                 'libvirt_ver': libvirt_utils.version_to_string(
-                     MIN_LIBVIRT_OTHER_ARCH.get(kvm_arch))})
 
         # Allowing both "tunnelling via libvirtd" (which will be
         # deprecated once the MIN_{LIBVIRT,QEMU}_VERSION is sufficiently
