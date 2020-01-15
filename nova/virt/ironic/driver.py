@@ -586,7 +586,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         extra_specs. Since existing ironic instances will not have this in
         their extra_specs, they will only have allocations against
         VCPU/RAM/disk. By adding just the custom RC to the existing flavor
-        extra_specs, the periodic call to update_available_resources() will add
+        extra_specs, the periodic call to update_available_resource() will add
         an allocation against the custom resource class, and prevent placement
         from thinking that node is available. This code can be removed in
         Queens, and will need to be updated to also alter extra_specs to
