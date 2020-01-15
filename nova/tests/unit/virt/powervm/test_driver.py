@@ -559,10 +559,6 @@ class TestPowerVMDriver(test.NoDBTestCase):
         self.assertRaises(exception.InstanceNotFound, self.drv.get_vnc_console,
                           mock.ANY, self.inst)
 
-    def test_deallocate_networks_on_reschedule(self):
-        candeallocate = self.drv.deallocate_networks_on_reschedule(mock.Mock())
-        self.assertTrue(candeallocate)
-
     @mock.patch('nova.virt.powervm.volume.fcvscsi.FCVscsiVolumeAdapter')
     def test_attach_volume(self, mock_vscsi_adpt):
         """Validates the basic PowerVM attach volume."""

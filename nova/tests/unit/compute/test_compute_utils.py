@@ -392,19 +392,12 @@ class UsageInfoTestCase(test.TestCase):
         self.public_key = fake_crypto.get_ssh_public_key()
         self.fingerprint = '1e:2c:9b:56:79:4b:45:77:f9:ca:7a:98:2c:b0:d5:3c'
 
-        def fake_get_nw_info(cls, ctxt, instance):
-            self.assertTrue(ctxt.is_admin)
-            return fake_network.fake_get_instance_nw_info(self, 1, 1)
-
         super(UsageInfoTestCase, self).setUp()
-        self.stub_out('nova.network.api.get_instance_nw_info',
-                      fake_get_nw_info)
 
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
 
-        self.flags(compute_driver='fake.FakeDriver',
-                   network_manager='nova.network.manager.FlatManager')
+        self.flags(compute_driver='fake.FakeDriver')
         self.compute = manager.ComputeManager()
         self.user_id = 'fake'
         self.project_id = 'fake'

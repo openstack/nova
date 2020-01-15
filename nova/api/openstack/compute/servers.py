@@ -383,10 +383,7 @@ class ServersController(wsgi.Controller):
     def _validate_network_id(net_id, network_uuids):
         """Validates that a requested network id.
 
-        This method performs two checks:
-
-        1. That the network id is in the proper uuid format.
-        2. That the network is not a duplicate when using nova-network.
+        This method checks that the network id is in the proper UUID format.
 
         :param net_id: The network id to validate.
         :param network_uuids: A running list of requested network IDs that have
@@ -397,11 +394,6 @@ class ServersController(wsgi.Controller):
             msg = _("Bad networks format: network uuid is "
                     "not in proper format (%s)") % net_id
             raise exc.HTTPBadRequest(explanation=msg)
-
-        # duplicate networks are allowed only for neutron v2.0
-        if net_id in network_uuids and not utils.is_neutron():
-            expl = _("Duplicate networks (%s) are not allowed") % net_id
-            raise exc.HTTPBadRequest(explanation=expl)
 
     def _get_requested_networks(self, requested_networks):
         """Create a list of requested networks from the networks attribute."""
@@ -429,10 +421,6 @@ class ServersController(wsgi.Controller):
 
                 if request.port_id:
                     request.network_id = None
-                    if not utils.is_neutron():
-                        # port parameter is only for neutron v2.0
-                        msg = _("Unknown argument: port")
-                        raise exc.HTTPBadRequest(explanation=msg)
                     if request.address is not None:
                         msg = _("Specified Fixed IP '%(addr)s' cannot be used "
                                 "with port '%(port)s': the two cannot be "

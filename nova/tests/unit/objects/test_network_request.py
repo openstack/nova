@@ -12,8 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
-
 from nova import objects
 from nova.objects import network_request
 from nova.tests.unit.objects import test_objects
@@ -37,24 +35,15 @@ class _TestNetworkRequestObject(object):
         self.assertFalse(request.auto_allocate)
         self.assertFalse(request.no_allocate)
 
-    def test_to_tuple_neutron(self):
+    def test_to_tuple(self):
         request = objects.NetworkRequest(network_id='123',
                                          address='1.2.3.4',
                                          port_id=FAKE_UUID,
                                      )
-        with mock.patch('nova.utils.is_neutron', return_value=True):
-            self.assertEqual(('123', '1.2.3.4', FAKE_UUID, None),
-                             request.to_tuple())
+        self.assertEqual(('123', '1.2.3.4', FAKE_UUID, None),
+                         request.to_tuple())
 
-    def test_to_tuple_nova(self):
-        request = objects.NetworkRequest(network_id='123',
-                                         address='1.2.3.4',
-                                         port_id=FAKE_UUID)
-        with mock.patch('nova.utils.is_neutron', return_value=False):
-            self.assertEqual(('123', '1.2.3.4'),
-                             request.to_tuple())
-
-    def test_from_tuples_neutron(self):
+    def test_from_tuples(self):
         requests = objects.NetworkRequestList.from_tuples(
             [('123', '1.2.3.4', FAKE_UUID, None)])
         self.assertEqual(1, len(requests))
@@ -63,16 +52,7 @@ class _TestNetworkRequestObject(object):
         self.assertEqual(FAKE_UUID, requests[0].port_id)
         self.assertIsNone(requests[0].pci_request_id)
 
-    def test_from_tuples_nova(self):
-        requests = objects.NetworkRequestList.from_tuples(
-            [('123', '1.2.3.4')])
-        self.assertEqual(1, len(requests))
-        self.assertEqual('123', requests[0].network_id)
-        self.assertEqual('1.2.3.4', str(requests[0].address))
-        self.assertIsNone(requests[0].port_id)
-
-    @mock.patch('nova.utils.is_neutron', return_value=True)
-    def test_list_as_tuples(self, is_neutron):
+    def test_list_as_tuples(self):
         requests = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(network_id='123'),
                      objects.NetworkRequest(network_id='456')])

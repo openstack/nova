@@ -1037,14 +1037,6 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         return hardware.InstanceInfo(state=map_power_state(node.power_state))
 
-    def deallocate_networks_on_reschedule(self, instance):
-        """Does the driver want networks deallocated on reschedule?
-
-        :param instance: the instance object.
-        :returns: Boolean value. If True deallocate networks on reschedule.
-        """
-        return True
-
     def _get_network_metadata(self, node, network_info):
         """Gets a more complete representation of the instance network info.
 

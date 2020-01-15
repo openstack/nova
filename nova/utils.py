@@ -360,19 +360,17 @@ def make_dev_path(dev, partition=None, base='/dev'):
 
 
 def sanitize_hostname(hostname, default_name=None):
-    """Return a hostname which conforms to RFC-952 and RFC-1123 specs except
-       the length of hostname.
+    """Sanitize a given hostname.
 
-       Window, Linux, and Dnsmasq has different limitation:
+    Return a hostname which conforms to RFC-952 and RFC-1123 specs except the
+    length of hostname. Window, Linux, and dnsmasq has different limitation:
 
-       Windows: 255 (net_bios limits to 15, but window will truncate it)
-       Linux: 64
-       Dnsmasq: 63
+    - Windows: 255 (net_bios limits to 15, but window will truncate it)
+    - Linux: 64
+    - dnsmasq: 63
 
-       Due to nova-network will leverage dnsmasq to set hostname, so we chose
-       63.
-
-       """
+    We choose the lowest of these (so 63).
+    """
 
     def truncate_hostname(name):
         if len(name) > 63:

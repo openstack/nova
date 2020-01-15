@@ -483,8 +483,8 @@ class PowerVMDriver(driver.ComputeDriver):
         is paused or halted/stopped.
 
         :param instance: nova.objects.instance.Instance
-        :param network_info:
-           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param network_info: `nova.network.models.NetworkInfo` object
+            describing the network metadata.
         :param reboot_type: Either a HARD or SOFT reboot
         :param block_device_info: Info pertaining to attached volumes
         :param bad_volumes_callback: Function to handle any bad volumes
@@ -579,14 +579,6 @@ class PowerVMDriver(driver.ComputeDriver):
                 if e.response.status == 404:
                     sare.reraise = False
                     raise exc.InstanceNotFound(instance_id=instance.uuid)
-
-    def deallocate_networks_on_reschedule(self, instance):
-        """Does the driver want networks deallocated on reschedule?
-
-        :param instance: the instance object.
-        :returns: Boolean value. If True deallocate networks on reschedule.
-        """
-        return True
 
     def attach_volume(self, context, connection_info, instance, mountpoint,
                       disk_bus=None, device_type=None, encryption=None):

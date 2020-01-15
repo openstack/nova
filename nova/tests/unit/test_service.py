@@ -94,9 +94,6 @@ class ServiceTestCase(test.NoDBTestCase):
         self.topic = 'fake'
 
     def test_create(self):
-
-        # NOTE(vish): Create was moved out of mox replay to make sure that
-        #             the looping calls are created in StartService.
         app = service.Service.create(host=self.host, binary=self.binary,
                 topic=self.topic,
                 manager='nova.tests.unit.test_service.FakeManager')

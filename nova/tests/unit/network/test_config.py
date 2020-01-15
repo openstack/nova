@@ -19,28 +19,6 @@ import nova.network.security_group.openstack_driver as sgapi
 import nova.test
 
 
-class NetworkAPIConfigTest(nova.test.NoDBTestCase):
-    """Test the transition from legacy to use_neutron config options."""
-
-    def setUp(self):
-        super(NetworkAPIConfigTest, self).setUp()
-        self.flags(use_neutron=False)
-
-    def test_default(self):
-        netapi = nova.network.API()
-        self.assertIsInstance(netapi, nova.network.api.API)
-
-    def test_use_neutron(self):
-        self.flags(use_neutron=True)
-        netapi = nova.network.API()
-        self.assertIsInstance(netapi, nova.network.neutronv2.api.API)
-
-    def test_dont_use_neutron(self):
-        self.flags(use_neutron=False)
-        netapi = nova.network.API()
-        self.assertIsInstance(netapi, nova.network.api.API)
-
-
 class SecurityGroupAPIConfigTest(nova.test.NoDBTestCase):
 
     @mock.patch('oslo_utils.importutils.import_object')

@@ -45,16 +45,7 @@ class NotificationsTestCase(test.TestCase):
         super(NotificationsTestCase, self).setUp()
         self.fixture = self.useFixture(o_fixture.ClearRequestContext())
 
-        self.net_info = fake_network.fake_get_instance_nw_info(self, 1,
-                                                               1)
-
-        def fake_get_nw_info(cls, ctxt, instance):
-            self.assertTrue(ctxt.is_admin)
-            return self.net_info
-
-        self.stub_out('nova.network.api.API.get_instance_nw_info',
-                fake_get_nw_info)
-
+        self.net_info = fake_network.fake_get_instance_nw_info(self, 1, 1)
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
 

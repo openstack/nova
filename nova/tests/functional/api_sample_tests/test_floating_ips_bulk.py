@@ -38,9 +38,9 @@ class FloatingIpsBulkTest(api_sample_base.ApiSampleTestBaseV21):
         ex = self.assertRaises(api_client.OpenStackApiException,
                                self.api.api_post,
                                '/os-floating-ips-bulk',
-                               {"ip_range": "192.168.1.0/24",
-                                "pool": CONF.default_floating_pool,
-                                "interface": CONF.public_interface})
+                               {'ip_range': '192.168.1.0/24',
+                                'pool': 'nova',
+                                'interface': 'eth0'})
         self.assertEqual(410, ex.response.status_code)
 
     def test_floating_ips_bulk_delete(self):

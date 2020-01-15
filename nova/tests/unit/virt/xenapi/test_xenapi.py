@@ -31,7 +31,6 @@ from oslo_config import fixture as config_fixture
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
-from oslo_utils import importutils
 from oslo_utils import uuidutils
 import testtools
 
@@ -283,7 +282,6 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
     """Unit tests for VM operations."""
     def setUp(self):
         super(XenAPIVMTestCase, self).setUp()
-        self.network = importutils.import_object(CONF.network_manager)
         self.fixture = self.useFixture(config_fixture.Config(lockutils.CONF))
         self.fixture.config(disable_process_locking=True,
                             group='oslo_concurrency')

@@ -221,23 +221,12 @@ service.
         help="""
 Domain name used to configure FQDN for instances.
 
-This option has two purposes:
-
-#. For *neutron* and *nova-network* users, it is used to configure a
-   fully-qualified domain name for instance hostnames. If unset, only the
-   hostname without a domain will be configured.
-#. (Deprecated) For *nova-network* users, this option configures the DNS
-   domains used for the DHCP server. Refer to the ``--domain`` option of the
-   ``dnsmasq`` utility for more information. Like *nova-network* itself, this
-   purpose is deprecated.
+Configure a fully-qualified domain name for instance hostnames. If unset, only
+the hostname without a domain will be configured.
 
 Possible values:
 
 * Any string that is a valid domain name.
-
-Related options:
-
-* ``use_neutron``
 """),
 ]
 

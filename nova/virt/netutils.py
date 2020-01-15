@@ -61,8 +61,8 @@ def get_injected_network_template(network_info, template=None,
                                   libvirt_virt_type=None):
     """Returns a rendered network template for the given network_info.
 
-    :param network_info:
-        :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+    :param network_info: `nova.network.models.NetworkInfo` object describing
+        the network metadata.
     :param template: Path to the interfaces template file.
     :param libvirt_virt_type: The Libvirt `virt_type`, will be `None` for
         other hypervisors..

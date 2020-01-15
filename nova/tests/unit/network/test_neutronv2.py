@@ -1286,11 +1286,11 @@ class TestNeutronv2(TestNeutronv2Base):
     @mock.patch('nova.network.neutronv2.api.API._unbind_ports')
     def test_allocate_for_instance_ex1(self, mock_unbind, mock_create_ports,
             mock_populate, mock_get_client):
-        """verify we will delete created ports
-        if we fail to allocate all net resources.
+        """Verify we will delete created ports if we fail to allocate all net
+        resources.
 
-        Mox to raise exception when creating a second port.
-        In this case, the code should delete the first created port.
+        We mock to raise an exception when creating a second port.  In this
+        case, the code should delete the first created port.
         """
         self.instance = fake_instance.fake_instance_obj(self.context,
                                                         **self.instance)
@@ -1531,9 +1531,7 @@ class TestNeutronv2(TestNeutronv2Base):
         ret_data = copy.deepcopy(port_data)
         if requested_networks:
             if isinstance(requested_networks, objects.NetworkRequestList):
-                # NOTE(danms): Temporary and transitional
-                with mock.patch('nova.utils.is_neutron', return_value=True):
-                    requested_networks = requested_networks.as_tuples()
+                requested_networks = requested_networks.as_tuples()
             for net, fip, port, request_id in requested_networks:
                 ret_data.append({'network_id': net,
                                  'device_id': self.instance.uuid,
@@ -5096,7 +5094,6 @@ class TestNeutronv2(TestNeutronv2Base):
         req_nets_in_call = mock_allocate.call_args[1]['requested_networks']
         self.assertEqual('foo', req_nets_in_call.objects[0].tag)
 
-    @mock.patch('nova.objects.network_request.utils')
     @mock.patch('nova.network.neutronv2.api.LOG')
     @mock.patch('nova.network.neutronv2.api.base_api')
     @mock.patch('nova.network.neutronv2.api.API._delete_ports')
@@ -5110,9 +5107,7 @@ class TestNeutronv2(TestNeutronv2Base):
                                                  mock_unbind,
                                                  mock_deletep,
                                                  mock_baseapi,
-                                                 mock_log,
-                                                 req_utils):
-        req_utils.is_neutron.return_value = True
+                                                 mock_log):
         mock_inst = mock.Mock(project_id="proj-1",
                               availability_zone='zone-1',
                               uuid='inst-1')
