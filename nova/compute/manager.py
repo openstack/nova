@@ -641,6 +641,9 @@ class ComputeManager(manager.Manager):
         compared to the instances for the migration records and those local
         guests are destroyed, along with instance allocation records in
         Placement for this node.
+        Then allocations are removed from Placement for every instance that is
+        evacuated from this host regardless if the instance is reported by the
+        hypervisor or not.
         """
         filters = {
             'source_compute': self.host,
@@ -672,18 +675,14 @@ class ComputeManager(manager.Manager):
         # we know we'll use, like info_cache and flavor. We can also replace
         # this with a generic solution: https://review.openstack.org/575190/
         local_instances = self._get_instances_on_driver(read_deleted_context)
-        evacuated = [inst for inst in local_instances
-                     if inst.uuid in evacuations]
+        evacuated_local_instances = {inst.uuid: inst
+                                     for inst in local_instances
+                                     if inst.uuid in evacuations}
 
-        # NOTE(gibi): We are called from init_host and at this point the
-        # compute_nodes of the resource tracker has not been populated yet so
-        # we cannot rely on the resource tracker here.
-        compute_nodes = {}
-
-        for instance in evacuated:
-            migration = evacuations[instance.uuid]
-            LOG.info('Deleting instance as it has been evacuated from '
-                     'this host', instance=instance)
+        for instance in evacuated_local_instances.values():
+            LOG.info('Destroying instance as it has been evacuated from '
+                     'this host but still exists in the hypervisor',
+                     instance=instance)
             try:
                 network_info = self.network_api.get_instance_nw_info(
                     context, instance)
@@ -703,7 +702,28 @@ class ComputeManager(manager.Manager):
                                 network_info,
                                 bdi, destroy_disks)
 
-            # delete the allocation of the evacuated instance from this host
+        # NOTE(gibi): We are called from init_host and at this point the
+        # compute_nodes of the resource tracker has not been populated yet so
+        # we cannot rely on the resource tracker here.
+        compute_nodes = {}
+
+        for instance_uuid, migration in evacuations.items():
+            try:
+                if instance_uuid in evacuated_local_instances:
+                    # Avoid the db call if we already have the instance loaded
+                    # above
+                    instance = evacuated_local_instances[instance_uuid]
+                else:
+                    instance = objects.Instance.get_by_uuid(
+                        context, instance_uuid)
+            except exception.InstanceNotFound:
+                # The instance already deleted so we expect that every
+                # allocation of that instance has already been cleaned up
+                continue
+
+            LOG.info('Cleaning up allocations of the instance as it has been '
+                     'evacuated from this host',
+                     instance=instance)
             if migration.source_node not in compute_nodes:
                 try:
                     cn_uuid = objects.ComputeNode.get_by_host_and_nodename(
