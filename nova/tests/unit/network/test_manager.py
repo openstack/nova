@@ -38,7 +38,6 @@ from nova import ipv6
 from nova.network import floating_ips
 from nova.network import linux_net
 from nova.network import manager as network_manager
-from nova.network import model as net_model
 from nova.network import rpcapi as network_rpcapi
 from nova import objects
 from nova.objects import network as network_obj
@@ -48,12 +47,10 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_ldap
 from nova.tests.unit import fake_network
-from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_fixed_ip
 from nova.tests.unit.objects import test_floating_ip
 from nova.tests.unit.objects import test_network
 from nova.tests.unit.objects import test_service
-from nova.tests.unit import utils as test_utils
 from nova import utils
 
 
@@ -196,91 +193,6 @@ class FlatNetworkTestCase(test.TestCase):
         self.context = context.RequestContext('testuser',
                                               fakes.FAKE_PROJECT_ID,
                                               is_admin=False)
-
-    @testtools.skipIf(test_utils.is_osx(),
-                      'IPv6 pretty-printing broken on OSX, see bug 1409135')
-    def test_get_instance_nw_info_fake(self):
-        fake_get_instance_nw_info = fake_network.fake_get_instance_nw_info
-
-        nw_info = fake_get_instance_nw_info(self, 0, 2)
-        self.assertFalse(nw_info)
-
-        nw_info = fake_get_instance_nw_info(self, 1, 2)
-
-        for i, vif in enumerate(nw_info):
-            nid = i + 1
-            check = {'bridge': 'fake_br%d' % nid,
-                     'cidr': '192.168.%s.0/24' % nid,
-                     'cidr_v6': '2001:db8:0:%x::/64' % nid,
-                     'id': getattr(uuids, 'vif%i' % nid),
-                     'multi_host': False,
-                     'injected': False,
-                     'bridge_interface': None,
-                     'vlan': None,
-                     'broadcast': '192.168.%d.255' % nid,
-                     'dhcp_server': '192.168.1.1',
-                     'dns': ['192.168.%d.3' % nid, '192.168.%d.4' % nid],
-                     'gateway': '192.168.%d.1' % nid,
-                     'gateway_v6': '2001:db8:0:1::1',
-                     'label': 'test%d' % nid,
-                     'mac': 'DE:AD:BE:EF:00:%02x' % nid,
-                     'rxtx_cap': 30,
-                     'vif_type': net_model.VIF_TYPE_BRIDGE,
-                     'vif_devname': None,
-                     'vif_uuid': getattr(uuids, 'vif%i' % nid),
-                     'ovs_interfaceid': None,
-                     'qbh_params': None,
-                     'qbg_params': None,
-                     'should_create_vlan': False,
-                     'should_create_bridge': False,
-                     'ip': '192.168.%d.%03d' % (nid, nid + 99),
-                     'ip_v6': '2001:db8:0:1:dcad:beff:feef:%x' % nid,
-                     'netmask': '255.255.255.0',
-                     'netmask_v6': 64,
-                     'physical_network': None,
-                      }
-
-            network = vif['network']
-            net_v4 = vif['network']['subnets'][0]
-            net_v6 = vif['network']['subnets'][1]
-
-            vif_dict = dict(bridge=network['bridge'],
-                            cidr=net_v4['cidr'],
-                            cidr_v6=net_v6['cidr'],
-                            id=vif['id'],
-                            multi_host=network.get_meta('multi_host', False),
-                            injected=network.get_meta('injected', False),
-                            bridge_interface=
-                                network.get_meta('bridge_interface'),
-                            vlan=network.get_meta('vlan'),
-                            broadcast=str(net_v4.as_netaddr().broadcast),
-                            dhcp_server=network.get_meta('dhcp_server',
-                                net_v4['gateway']['address']),
-                            dns=[ip['address'] for ip in net_v4['dns']],
-                            gateway=net_v4['gateway']['address'],
-                            gateway_v6=net_v6['gateway']['address'],
-                            label=network['label'],
-                            mac=vif['address'],
-                            rxtx_cap=vif.get_meta('rxtx_cap'),
-                            vif_type=vif['type'],
-                            vif_devname=vif.get('devname'),
-                            vif_uuid=vif['id'],
-                            ovs_interfaceid=vif.get('ovs_interfaceid'),
-                            qbh_params=vif.get('qbh_params'),
-                            qbg_params=vif.get('qbg_params'),
-                            should_create_vlan=
-                                network.get_meta('should_create_vlan', False),
-                            should_create_bridge=
-                                network.get_meta('should_create_bridge',
-                                                  False),
-                            ip=net_v4['ips'][i]['address'],
-                            ip_v6=net_v6['ips'][i]['address'],
-                            netmask=str(net_v4.as_netaddr().netmask),
-                            netmask_v6=net_v6.as_netaddr()._prefixlen,
-                            physical_network=
-                                network.get_meta('physical_network', None))
-
-            self.assertThat(vif_dict, matchers.DictMatches(check))
 
     def test_validate_networks(self):
         self.mox.StubOutWithMock(db, 'fixed_ip_get_by_address')

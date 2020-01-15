@@ -45,7 +45,7 @@ class NotificationsTestCase(test.TestCase):
         super(NotificationsTestCase, self).setUp()
         self.fixture = self.useFixture(o_fixture.ClearRequestContext())
 
-        self.net_info = fake_network.fake_get_instance_nw_info(self, 1, 1)
+        self.net_info = fake_network.fake_get_instance_nw_info(self)
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
 
@@ -213,7 +213,7 @@ class NotificationsTestCase(test.TestCase):
     @mock.patch.object(objects.BandwidthUsageList, 'get_by_uuids')
     def test_vm_update_with_states(self, mock_bandwidth_list):
         mock_bandwidth_list.return_value = [self.get_fake_bandwidth()]
-        fake_net_info = fake_network.fake_get_instance_nw_info(self, 1, 1)
+        fake_net_info = fake_network.fake_get_instance_nw_info(self)
         self.instance.info_cache.network_info = fake_net_info
 
         notifications.send_update_with_states(self.context, self.instance,
@@ -290,7 +290,7 @@ class NotificationsTestCase(test.TestCase):
         self.flags(notify_on_state_change="vm_and_task_state",
                    group='notifications')
         mock_bandwidth_list.return_value = [self.get_fake_bandwidth()]
-        fake_net_info = fake_network.fake_get_instance_nw_info(self, 1, 1)
+        fake_net_info = fake_network.fake_get_instance_nw_info(self)
         self.instance.info_cache.network_info = fake_net_info
 
         notifications.send_update_with_states(self.context, self.instance,

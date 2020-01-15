@@ -251,7 +251,7 @@ class ExtendedFloatingIpTestV21(test.TestCase):
         super(ExtendedFloatingIpTestV21, self).tearDown()
 
     def test_extended_floating_ip_associate_fixed(self):
-        fixed_address = '192.168.1.101'
+        fixed_address = '192.168.1.100'
 
         def fake_associate_floating_ip(*args, **kwargs):
             self.assertEqual(fixed_address, kwargs['fixed_address'])
