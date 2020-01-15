@@ -25,7 +25,6 @@ from oslo_utils.fixture import uuidsentinel as uuids
 import six
 
 from nova import exception
-from nova.network import linux_net
 from nova.network import model as network_model
 from nova import objects
 from nova.pci import utils as pci_utils
@@ -1000,13 +999,13 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         d = vif.LibvirtGenericVIFDriver()
         self._test_hw_veb_op(d.unplug, 0)
 
-    @mock.patch('nova.network.linux_net.set_vf_trusted')
+    @mock.patch('nova.virt.libvirt.vif.set_vf_trusted')
     def test_plug_hw_veb_trusted(self, mset_vf_trusted):
         d = vif.LibvirtGenericVIFDriver()
         d.plug(self.instance, self.vif_hw_veb_trusted)
         mset_vf_trusted.assert_called_once_with('0000:0a:00.1', True)
 
-    @mock.patch('nova.network.linux_net.set_vf_trusted')
+    @mock.patch('nova.virt.libvirt.vif.set_vf_trusted')
     def test_unplug_hw_veb_trusted(self, mset_vf_trusted):
         d = vif.LibvirtGenericVIFDriver()
         d.unplug(self.instance, self.vif_hw_veb_trusted)
@@ -1186,13 +1185,13 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         self.assertIn('macvtap_mode', six.text_type(e))
         self.assertIn('physical_interface', six.text_type(e))
 
-    @mock.patch.object(linux_net.LinuxBridgeInterfaceDriver, 'ensure_vlan')
+    @mock.patch('nova.virt.libvirt.vif.ensure_vlan')
     def test_macvtap_plug_vlan(self, ensure_vlan_mock):
         d = vif.LibvirtGenericVIFDriver()
         d.plug(self.instance, self.vif_macvtap_vlan)
         ensure_vlan_mock.assert_called_once_with(1, 'eth0', interface='eth0.1')
 
-    @mock.patch.object(linux_net.LinuxBridgeInterfaceDriver, 'ensure_vlan')
+    @mock.patch('nova.virt.libvirt.vif.ensure_vlan')
     def test_macvtap_plug_flat(self, ensure_vlan_mock):
         d = vif.LibvirtGenericVIFDriver()
         d.plug(self.instance, self.vif_macvtap_flat)
