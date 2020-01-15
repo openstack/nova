@@ -48,16 +48,13 @@ from oslo_utils import timeutils
 from oslo_versionedobjects import fixture as ovo_fixture
 from oslotest import base
 from oslotest import mock_fixture
-from oslotest import moxstubout
 import six
 from six.moves import builtins
 import testtools
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
-from nova.db import api as db
 from nova import exception
-from nova.network import manager as network_manager
 from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import base as objects_base
@@ -87,36 +84,6 @@ CELL1_NAME = 'cell1'
 
 # For compatibility with the large number of tests which use test.nested
 nested = utils.nested_contexts
-
-
-class SampleNetworks(fixtures.Fixture):
-
-    """Create sample networks in the database."""
-
-    def __init__(self, host=None):
-        self.host = host
-
-    def setUp(self):
-        super(SampleNetworks, self).setUp()
-        ctxt = context.get_admin_context()
-        network = network_manager.VlanManager(host=self.host)
-        bridge_interface = CONF.flat_interface or CONF.vlan_interface
-        network.create_networks(ctxt,
-                                label='test',
-                                cidr='10.0.0.0/8',
-                                multi_host=CONF.multi_host,
-                                num_networks=CONF.num_networks,
-                                network_size=CONF.network_size,
-                                cidr_v6=CONF.fixed_range_v6,
-                                gateway=CONF.gateway,
-                                gateway_v6=CONF.gateway_v6,
-                                bridge=CONF.flat_network_bridge,
-                                bridge_interface=bridge_interface,
-                                vpn_start=CONF.vpn_start,
-                                vlan_start=CONF.vlan_start,
-                                dns1=CONF.flat_network_dns)
-        for net in db.network_get_all(ctxt):
-            network.set_network_host(ctxt, net)
 
 
 class TestingException(Exception):
@@ -257,28 +224,12 @@ class TestCase(base.BaseTestCase):
 
         self.useFixture(ovo_fixture.StableObjectJsonFixture())
 
-        # NOTE(mnaser): All calls to utils.is_neutron() are cached in
-        # nova.utils._IS_NEUTRON.  We set it to None to avoid any
-        # caching of that value.
-        utils._IS_NEUTRON = None
-
         # Reset the global QEMU version flag.
         images.QEMU_VERSION = None
 
         # Reset the compute RPC API globals (mostly the _ROUTER).
         compute_rpcapi.reset_globals()
 
-        # TODO(takashin): Remove MoxStubout fixture
-        # after removing tests which uses mox and are related to
-        # nova-network in the following files.
-        #
-        # - nova/tests/unit/api/openstack/compute/test_floating_ips.py
-        # - nova/tests/unit/api/openstack/compute/test_security_groups.py
-        # - nova/tests/unit/fake_network.py
-        # - nova/tests/unit/network/test_manager.py
-        mox_fixture = self.useFixture(moxstubout.MoxStubout())
-        self.mox = mox_fixture.mox
-        self.stubs = mox_fixture.stubs
         self.addCleanup(self._clear_attrs)
         self.useFixture(fixtures.EnvironmentVariable('http_proxy'))
         self.policy = self.useFixture(policy_fixture.PolicyFixture())
@@ -363,9 +314,6 @@ class TestCase(base.BaseTestCase):
         Use the monkey patch fixture to replace a function for the
         duration of a test. Useful when you want to provide fake
         methods instead of mocks during testing.
-
-        This should be used instead of self.stubs.Set (which is based
-        on mox) going forward.
         """
         self.useFixture(fixtures.MonkeyPatch(old, new))
 
@@ -747,12 +695,9 @@ class BaseHookTestCase(NoDBTestCase):
 class MatchType(object):
     """Matches any instance of a specified type
 
-    The MatchType class is a helper for use with the
-    mock.assert_called_with() method that lets you
-    assert that a particular parameter has a specific
-    data type. It enables strict check than the built
-    in mock.ANY helper, and is the equivalent of the
-    mox.IsA() function from the legacy mox library
+    The MatchType class is a helper for use with the mock.assert_called_with()
+    method that lets you assert that a particular parameter has a specific data
+    type. It enables stricter checking than the built in mock.ANY helper.
 
     Example usage could be:
 
@@ -794,11 +739,9 @@ class MatchObjPrims(object):
 class ContainKeyValue(object):
     """Checks whether a key/value pair is in a dict parameter.
 
-    The ContainKeyValue class is a helper for use with the
-    mock.assert_*() method that lets you assert that a particular
-    dict contain a key/value pair. It enables strict check than
-    the built in mock.ANY helper, and is the equivalent of the
-    mox.ContainsKeyValue() function from the legacy mox library
+    The ContainKeyValue class is a helper for use with the mock.assert_*()
+    method that lets you assert that a particular dict contain a key/value
+    pair. It enables stricter checking than the built in mock.ANY helper.
 
     Example usage could be:
 

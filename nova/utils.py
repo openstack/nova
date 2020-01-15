@@ -53,7 +53,6 @@ from six.moves import range
 import nova.conf
 from nova import exception
 from nova.i18n import _, _LE, _LW
-import nova.network
 from nova import safe_utils
 
 profiler = importutils.try_import('osprofiler.profiler')
@@ -62,8 +61,6 @@ profiler = importutils.try_import('osprofiler.profiler')
 CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
-
-_IS_NEUTRON = None
 
 synchronized = lockutils.synchronized_with_prefix('nova-')
 
@@ -707,16 +704,6 @@ def is_none_string(val):
         return False
 
     return val.lower() == 'none'
-
-
-def is_neutron():
-    global _IS_NEUTRON
-
-    if _IS_NEUTRON is not None:
-        return _IS_NEUTRON
-
-    _IS_NEUTRON = nova.network.is_neutron()
-    return _IS_NEUTRON
 
 
 def is_auto_disk_config_disabled(auto_disk_config_raw):

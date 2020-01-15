@@ -34,10 +34,7 @@ Possible values:
 
 Related options:
 
-* metadata_host
 * my_block_storage_ip
-* routing_source_ip
-* vpn_ip
 """),
     cfg.StrOpt("my_block_storage_ip",
         default="$my_ip",
@@ -70,6 +67,21 @@ Must be valid within AMQP key.
 Possible values:
 
 * String with hostname, FQDN or IP address. Default is hostname of this host.
+"""),
+    # TODO(sfinucan): This option is tied into the XenAPI, VMWare and Libvirt
+    # drivers.
+    # We should remove this dependency by either adding a new opt for each
+    # driver or simply removing the offending code. Until then we cannot
+    # deprecate this option.
+    cfg.BoolOpt("flat_injected",
+        default=False,
+        help="""
+This option determines whether the network setup information is injected into
+the VM before it is booted. While it was originally designed to be used only
+by nova-network, it is also used by the vmware and xenapi virt drivers to
+control whether network information is injected into a VM. The libvirt virt
+driver also uses it when we use config_drive to configure network to control
+whether network information is injected into a VM.
 """),
 ]
 

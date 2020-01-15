@@ -16,28 +16,8 @@
 
 from oslo_utils import importutils
 
-import nova.conf
 
-NOVA_NET_API = 'nova.network.api.API'
-NEUTRON_NET_API = 'nova.network.neutronv2.api.API'
-
-
-CONF = nova.conf.CONF
-
-
-def is_neutron():
-    """Does this configuration mean we're neutron.
-
-    This logic exists as a separate config option
-    """
-    return CONF.use_neutron
-
-
+# TODO(stephenfin): Remove this layer of indirection
 def API():
-    if is_neutron():
-        network_api_class = NEUTRON_NET_API
-    else:
-        network_api_class = NOVA_NET_API
-
-    cls = importutils.import_class(network_api_class)
+    cls = importutils.import_class('nova.network.neutronv2.api.API')
     return cls()

@@ -102,18 +102,6 @@ class NetworkAPI(base.Base):
         """Get specific network for client."""
         raise NotImplementedError()
 
-    def create(self, context, **kwargs):
-        """Create a network."""
-        raise NotImplementedError()
-
-    def delete(self, context, network_uuid):
-        """Delete a specific network."""
-        raise NotImplementedError()
-
-    def get_fixed_ip(self, context, id):
-        """Get fixed IP by id."""
-        raise NotImplementedError()
-
     def get_fixed_ip_by_address(self, context, address):
         """Get fixed IP by address."""
         raise NotImplementedError()
@@ -147,10 +135,6 @@ class NetworkAPI(base.Base):
         fields address, uuid and net_uuid should be set for each VIF object
         in the returned list.
         """
-        raise NotImplementedError()
-
-    def get_vif_by_mac_address(self, context, mac_address):
-        """Get vif mac address."""
         raise NotImplementedError()
 
     def allocate_floating_ip(self, context, pool=None):
@@ -279,44 +263,6 @@ class NetworkAPI(base.Base):
                   use by the scheduler or None and a list of RequestGroup
                   objects representing the resource needs of each request ports
         """
-        raise NotImplementedError()
-
-    def get_dns_domains(self, context):
-        """Returns a list of available dns domains.
-        These can be used to create DNS entries for floating IPs.
-        """
-        raise NotImplementedError()
-
-    def add_dns_entry(self, context, address, name, dns_type, domain):
-        """Create specified DNS entry for address."""
-        raise NotImplementedError()
-
-    def modify_dns_entry(self, context, name, address, domain):
-        """Create specified DNS entry for address."""
-        raise NotImplementedError()
-
-    def delete_dns_entry(self, context, name, domain):
-        """Delete the specified dns entry."""
-        raise NotImplementedError()
-
-    def delete_dns_domain(self, context, domain):
-        """Delete the specified dns domain."""
-        raise NotImplementedError()
-
-    def get_dns_entries_by_address(self, context, address, domain):
-        """Get entries for address and domain."""
-        raise NotImplementedError()
-
-    def get_dns_entries_by_name(self, context, name, domain):
-        """Get entries for name and domain."""
-        raise NotImplementedError()
-
-    def create_private_dns_domain(self, context, domain, availability_zone):
-        """Create a private DNS domain with nova availability zone."""
-        raise NotImplementedError()
-
-    def create_public_dns_domain(self, context, domain, project=None):
-        """Create a public DNS domain with optional nova project."""
         raise NotImplementedError()
 
     def setup_networks_on_host(self, context, instance, host=None,

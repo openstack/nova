@@ -19,11 +19,7 @@ from oslo_utils.fixture import uuidsentinel as uuids
 import webob
 
 from nova.api.openstack.compute import floating_ips as fips_v21
-from nova import compute
-from nova import context
-from nova.db import api as db
 from nova import exception
-from nova import network
 from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -193,94 +189,6 @@ class FloatingIpTestV21(test.NoDBTestCase):
         expected_exc = webob.exc.HTTPNotFound
         self._test_floatingip_delete_error_disassociate(raised_exc,
                                                         expected_exc)
-
-
-class ExtendedFloatingIpTestV21(test.TestCase):
-    floating_ip = "10.10.10.10"
-    floating_ip_2 = "10.10.10.11"
-    floating_ips = fips_v21
-
-    def _create_floating_ips(self, floating_ips=None):
-        """Create a floating IP object."""
-        if floating_ips is None:
-            floating_ips = [self.floating_ip]
-        elif not isinstance(floating_ips, (list, tuple)):
-            floating_ips = [floating_ips]
-
-        dict_ = {'pool': 'nova', 'host': 'fake_host'}
-        return db.floating_ip_bulk_create(
-            self.context, [dict(address=ip, **dict_) for ip in floating_ips],
-        )
-
-    def _delete_floating_ip(self):
-        db.floating_ip_destroy(self.context, self.floating_ip)
-
-    def setUp(self):
-        super(ExtendedFloatingIpTestV21, self).setUp()
-        self.stubs.Set(compute.api.API, "get",
-                       compute_api_get)
-        self.stubs.Set(network.api.API, "get_floating_ip",
-                       network_api_get_floating_ip)
-        self.stubs.Set(network.api.API, "get_floating_ip_by_address",
-                       network_api_get_floating_ip_by_address)
-        self.stubs.Set(network.api.API, "get_floating_ips_by_project",
-                       network_api_get_floating_ips_by_project)
-        self.stubs.Set(network.api.API, "release_floating_ip",
-                       network_api_release)
-        self.stubs.Set(network.api.API, "disassociate_floating_ip",
-                       network_api_disassociate)
-        self.stubs.Set(network.api.API, "get_instance_id_by_floating_address",
-                       get_instance_by_floating_ip_addr)
-        self.stubs.Set(objects.Instance, "get_network_info",
-                       stub_nw_info(self))
-
-        fake_network.stub_out_nw_api_get_instance_nw_info(self)
-        self.stub_out('nova.db.api.instance_get',
-                      fake_instance_get)
-
-        self.context = context.get_admin_context()
-        self._create_floating_ips()
-
-        self.controller = self.floating_ips.FloatingIPController()
-        self.manager = self.floating_ips.\
-                       FloatingIPActionController()
-        self.fake_req = fakes.HTTPRequest.blank('')
-
-    def tearDown(self):
-        self._delete_floating_ip()
-        super(ExtendedFloatingIpTestV21, self).tearDown()
-
-    def test_extended_floating_ip_associate_fixed(self):
-        fixed_address = '192.168.1.100'
-
-        def fake_associate_floating_ip(*args, **kwargs):
-            self.assertEqual(fixed_address, kwargs['fixed_address'])
-
-        body = dict(addFloatingIp=dict(address=self.floating_ip,
-                                       fixed_address=fixed_address))
-
-        with mock.patch.object(self.manager.network_api,
-                               'associate_floating_ip',
-                               fake_associate_floating_ip):
-            rsp = self.manager._add_floating_ip(self.fake_req, TEST_INST,
-                                                body=body)
-        self.assertEqual(202, rsp.status_int)
-
-    def test_extended_floating_ip_associate_fixed_not_allocated(self):
-        def fake_associate_floating_ip(*args, **kwargs):
-            pass
-
-        self.stubs.Set(network.api.API, "associate_floating_ip",
-                       fake_associate_floating_ip)
-        body = dict(addFloatingIp=dict(address=self.floating_ip,
-                                       fixed_address='11.11.11.11'))
-
-        ex = self.assertRaises(webob.exc.HTTPBadRequest,
-                               self.manager._add_floating_ip,
-                               self.fake_req, TEST_INST, body=body)
-
-        self.assertIn("Specified fixed address not assigned to instance",
-                      ex.explanation)
 
 
 class FloatingIPPolicyEnforcementV21(test.NoDBTestCase):

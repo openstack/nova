@@ -42,7 +42,6 @@ from nova.conf import keystone
 from nova.conf import libvirt
 from nova.conf import mks
 from nova.conf import netconf
-from nova.conf import network
 from nova.conf import neutron
 from nova.conf import notifications
 from nova.conf import novnc
@@ -94,7 +93,6 @@ key_manager.register_opts(CONF)
 keystone.register_opts(CONF)
 libvirt.register_opts(CONF)
 netconf.register_opts(CONF)
-network.register_opts(CONF)
 neutron.register_opts(CONF)
 notifications.register_opts(CONF)
 novnc.register_opts(CONF)
