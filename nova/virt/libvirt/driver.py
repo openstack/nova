@@ -264,7 +264,6 @@ MIN_LIBVIRT_FILE_BACKED_VERSION = (4, 0, 0)
 MIN_QEMU_FILE_BACKED_VERSION = (2, 6, 0)
 
 MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION = (4, 4, 0)
-MIN_QEMU_FILE_BACKED_DISCARD_VERSION = (2, 10, 0)
 
 MIN_LIBVIRT_NATIVE_TLS_VERSION = (4, 4, 0)
 MIN_QEMU_NATIVE_TLS_VERSION = (2, 11, 0)
@@ -5165,8 +5164,7 @@ class LibvirtDriver(driver.ComputeDriver):
             membacking.sharedaccess = True
             membacking.allocateimmediate = True
             if self._host.has_min_version(
-                    MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION,
-                    MIN_QEMU_FILE_BACKED_DISCARD_VERSION):
+                    MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION):
                 membacking.discard = True
         if self._sev_enabled(flavor, image_meta):
             if not membacking:
@@ -7949,8 +7947,8 @@ class LibvirtDriver(driver.ComputeDriver):
         data.disk_available_mb = disk_available_mb
         data.dst_wants_file_backed_memory = CONF.libvirt.file_backed_memory > 0
         data.file_backed_memory_discard = (CONF.libvirt.file_backed_memory and
-            self._host.has_min_version(MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION,
-                                       MIN_QEMU_FILE_BACKED_DISCARD_VERSION))
+            self._host.has_min_version(
+                MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION))
 
         # TODO(artom) Set to indicate that the destination (us) can perform a
         # NUMA-aware live migration. NUMA-aware live migration will become
