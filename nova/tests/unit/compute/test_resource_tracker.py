@@ -2660,7 +2660,10 @@ class TestUpdateUsageFromMigrations(BaseTestCase):
         self.rt._update_usage_from_migrations(mock.sentinel.ctx, [migration],
                                               _NODENAME)
         mock_get_instance.assert_called_once_with(mock.sentinel.ctx,
-                                                  'some_uuid')
+                                                  'some_uuid',
+                                                  expected_attrs=[
+                                                      'migration_context',
+                                                      'flavor'])
         self.assertFalse(mock_update_usage.called)
 
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
