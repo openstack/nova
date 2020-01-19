@@ -171,21 +171,14 @@ class TestComputeRestartInstanceStuckInBuild(
             # instance_claim call we can wait for in the test
             fake_notifier.wait_for_versioned_notification(
                 'instance.create.start')
-            self.restart_compute_service(self.compute1)
 
-        # This is bug 1833581 as the server remains in BUILD state after the
-        # compute restart.
-        self._wait_for_state_change(self.admin_api, server, 'BUILD')
-
-        # Not even the periodic task push this server to ERROR because the
-        # server host is still None since the instance_claim didn't set it.
-        self.flags(instance_build_timeout=1)
-        self.compute1.manager._check_instance_build_time(
-            nova_context.get_admin_context())
-        server = self.admin_api.get_server(server['id'])
-        self.assertEqual('BUILD', server['status'])
-        self.assertIsNone(server['OS-EXT-SRV-ATTR:host'])
+            with mock.patch('nova.compute.manager.LOG.debug') as mock_log:
+                self.restart_compute_service(self.compute1)
 
         # We expect that the instance is pushed to ERROR state during the
         # compute restart.
-        # self._wait_for_state_change(self.admin_api, server, 'ERROR')
+        self._wait_for_state_change(self.admin_api, server, 'ERROR')
+        mock_log.assert_called_with(
+            'Instance spawn was interrupted before instance_claim, setting '
+            'instance to ERROR state',
+            instance=mock.ANY)
