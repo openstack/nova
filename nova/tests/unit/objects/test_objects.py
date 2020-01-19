@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
 import contextlib
 import copy
 import datetime
@@ -1083,7 +1084,7 @@ object_data = {
     'InstanceList': '2.6-238f125650c25d6d12722340d726f723',
     'InstanceMapping': '1.2-3bd375e65c8eb9c45498d2f87b882e03',
     'InstanceMappingList': '1.3-d34b6ebb076d542ae0f8b440534118da',
-    'InstanceNUMACell': '1.4-7c1eb9a198dee076b4de0840e45f4f55',
+    'InstanceNUMACell': '1.4-b68e13eacba363ae8f196abf0ffffb5b',
     'InstanceNUMATopology': '1.3-ec0030cb0402a49c96da7051c037082a',
     'InstancePCIRequest': '1.3-f6d324f1c337fad4f34892ed5f484c9a',
     'InstancePCIRequests': '1.1-65e38083177726d806684cb1cc0136d2',
@@ -1110,13 +1111,13 @@ object_data = {
     'NetworkRequestList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
     'NicDiagnostics': '1.0-895e9ad50e0f56d5258585e3e066aea5',
     'PCIDeviceBus': '1.0-2b891cb77e42961044689f3dc2718995',
-    'PciDevice': '1.6-2a2612baaa1786679e52084e82ca7e66',
+    'PciDevice': '1.6-25ca0542a22bc25386a72c0065a79c01',
     'PciDeviceList': '1.3-52ff14355491c8c580bdc0ba34c26210',
     'PciDevicePool': '1.1-3f5ddc3ff7bfa14da7f6c7e9904cc000',
     'PciDevicePoolList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
     'PowerVMLiveMigrateData': '1.4-a745f4eda16b45e1bc5686a0c498f27e',
-    'Quotas': '1.3-40fcefe522111dddd3e5e6155702cf4e',
-    'QuotasNoOp': '1.3-347a039fc7cfee7b225b68b5181e0733',
+    'Quotas': '1.3-3b2b91371f60e788035778fc5f87797d',
+    'QuotasNoOp': '1.3-d1593cf969c81846bc8192255ea95cce',
     'RequestGroup': '1.3-0458d350a8ec9d0673f9be5640a990ce',
     'RequestLevelParams': '1.0-1e5c8c18bd44cd233c8b32509c99d06f',
     'RequestSpec': '1.13-e1aa38b2bf3f8547474ee9e4c0aa2745',
@@ -1169,10 +1170,16 @@ def get_nova_objects():
     nova_classes = {}
     for name in all_classes:
         objclasses = all_classes[name]
-        if (objclasses[0].OBJ_PROJECT_NAMESPACE !=
-            base.NovaObject.OBJ_PROJECT_NAMESPACE):
-            continue
-        nova_classes[name] = objclasses
+        # NOTE(danms): All object registries that inherit from the
+        # base VersionedObjectRegistry share a common list of classes.
+        # That means even things like os_vif objects will be in our
+        # registry, and for any of them that share the same name
+        # (i.e. Network), we need to keep ours and exclude theirs.
+        our_ns = [cls for cls in objclasses
+                  if (cls.OBJ_PROJECT_NAMESPACE ==
+                      base.NovaObject.OBJ_PROJECT_NAMESPACE)]
+        if our_ns:
+            nova_classes[name] = our_ns
     return nova_classes
 
 
@@ -1317,3 +1324,40 @@ class TestObjMethodOverrides(test.NoDBTestCase):
             obj_class = obj_classes[obj_name][0]
             self.assertEqual(args,
                 utils.getargspec(obj_class.obj_reset_changes))
+
+
+class TestObjectsDefaultingOnInit(test.NoDBTestCase):
+    def test_init_behavior_policy(self):
+        all_objects = get_nova_objects()
+
+        violations = collections.defaultdict(list)
+
+        # NOTE(danms): Do not add things to this list!
+        #
+        # There is one known exception to this init policy, and that
+        # is the Service object because of the special behavior of the
+        # version field. We *want* to counteract the usual non-clobber
+        # behavior of that field specifically. See the comments in
+        # Service.__init__ for more details. This will likely never
+        # apply to any other non-ephemeral object, so this list should
+        # never grow.
+        exceptions = [objects.Service]
+
+        for name, objclasses in all_objects.items():
+            for objcls in objclasses:
+                if objcls in exceptions:
+                    continue
+
+                key = '%s-%s' % (name, objcls.VERSION)
+                obj = objcls()
+                if isinstance(obj, base.NovaEphemeralObject):
+                    # Skip ephemeral objects, which are allowed to
+                    # set fields at init time
+                    continue
+                for field in objcls.fields:
+                    if field in obj:
+                        violations[key].append(field)
+
+        self.assertEqual({}, violations,
+                         'Some non-ephemeral objects set fields during '
+                         'initialization; This is not allowed.')

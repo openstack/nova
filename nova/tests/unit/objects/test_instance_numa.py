@@ -126,10 +126,6 @@ class _TestInstanceNUMATopology(object):
         inst_cell.pin_vcpus((0, 14), (1, 15), (2, 16), (3, 17))
         self.assertEqual({0: 14, 1: 15, 2: 16, 3: 17}, inst_cell.cpu_pinning)
 
-    def test_default_behavior(self):
-        inst_cell = objects.InstanceNUMACell()
-        self.assertEqual(0, len(inst_cell.obj_get_changes()))
-
     def test_cpu_pinning_requested_cell(self):
         inst_cell = objects.InstanceNUMACell(cpuset=set([0, 1, 2, 3]),
                                              cpu_pinning=None)

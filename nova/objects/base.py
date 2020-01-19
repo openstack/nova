@@ -145,6 +145,49 @@ class NovaPersistentObject(object):
         }
 
 
+# NOTE(danms): This is copied from oslo.versionedobjects ahead of
+#              a release. Do not use it directly or modify it.
+# TODO(danms): Remove this when we can get it from oslo.versionedobjects
+class EphemeralObject(object):
+    """Mix-in to provide more recognizable field defaulting.
+
+    If an object should have all fields with a default= set to
+    those values during instantiation, inherit from this class.
+
+    The base VersionedObject class is designed in such a way that all
+    fields are optional, which makes sense when representing a remote
+    database row where not all columns are transported across RPC and
+    not all columns should be set during an update operation. This is
+    why fields with default= are not set implicitly during object
+    instantiation, to avoid clobbering existing fields in the
+    database. However, objects based on VersionedObject are also used
+    to represent all-or-nothing blobs stored in the database, or even
+    used purely in RPC to represent things that are not ever stored in
+    the database. Thus, this mix-in is provided for these latter
+    object use cases where the desired behavior is to always have
+    default= fields be set at __init__ time.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(EphemeralObject, self).__init__(*args, **kwargs)
+        # Not specifying any fields causes all defaulted fields to be set
+        self.obj_set_defaults()
+
+
+class NovaEphemeralObject(EphemeralObject,
+                          NovaObject):
+    """Base class for objects that are not row-column in the DB.
+
+    Objects that are used purely over RPC (i.e. not persisted) or are
+    written to the database in blob form or otherwise do not represent
+    rows directly as fields should inherit from this object.
+
+    The principal difference is that fields with a default value will
+    be set at __init__ time instead of requiring manual intervention.
+    """
+    pass
+
+
 class ObjectListBase(ovoo_base.ObjectListBase):
     # NOTE(danms): These are for transition to using the oslo
     # base object and can be removed when we move to it.

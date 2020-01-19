@@ -26,7 +26,7 @@ from nova.virt import hardware
 
 # TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register
-class InstanceNUMACell(base.NovaObject,
+class InstanceNUMACell(base.NovaEphemeralObject,
                        base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Add pagesize field
@@ -50,36 +50,22 @@ class InstanceNUMACell(base.NovaObject,
         'id': obj_fields.IntegerField(),
         'cpuset': obj_fields.SetOfIntegersField(),
         'memory': obj_fields.IntegerField(),
-        'pagesize': obj_fields.IntegerField(nullable=True),
+        'pagesize': obj_fields.IntegerField(nullable=True,
+                                            default=None),
         'cpu_topology': obj_fields.ObjectField('VirtCPUTopology',
                                                nullable=True),
-        'cpu_pinning_raw': obj_fields.DictOfIntegersField(nullable=True),
-        'cpu_policy': obj_fields.CPUAllocationPolicyField(nullable=True),
+        'cpu_pinning_raw': obj_fields.DictOfIntegersField(nullable=True,
+                                                          default=None),
+        'cpu_policy': obj_fields.CPUAllocationPolicyField(nullable=True,
+                                                          default=None),
         'cpu_thread_policy': obj_fields.CPUThreadAllocationPolicyField(
-            nullable=True),
+            nullable=True, default=None),
         # These physical CPUs are reserved for use by the hypervisor
-        'cpuset_reserved': obj_fields.SetOfIntegersField(nullable=True),
+        'cpuset_reserved': obj_fields.SetOfIntegersField(nullable=True,
+                                                         default=None),
     }
 
     cpu_pinning = obj_fields.DictProxyField('cpu_pinning_raw')
-
-    def __init__(self, **kwargs):
-        super(InstanceNUMACell, self).__init__(**kwargs)
-        if 'pagesize' not in kwargs:
-            self.pagesize = None
-            self.obj_reset_changes(['pagesize'])
-        if 'cpu_pinning' not in kwargs:
-            self.cpu_pinning = None
-            self.obj_reset_changes(['cpu_pinning_raw'])
-        if 'cpu_policy' not in kwargs:
-            self.cpu_policy = None
-            self.obj_reset_changes(['cpu_policy'])
-        if 'cpu_thread_policy' not in kwargs:
-            self.cpu_thread_policy = None
-            self.obj_reset_changes(['cpu_thread_policy'])
-        if 'cpuset_reserved' not in kwargs:
-            self.cpuset_reserved = None
-            self.obj_reset_changes(['cpuset_reserved'])
 
     def __len__(self):
         return len(self.cpuset)

@@ -112,7 +112,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         'label': fields.StringField(nullable=True),
         'instance_uuid': fields.StringField(nullable=True),
         'request_id': fields.StringField(nullable=True),
-        'extra_info': fields.DictOfStringsField(),
+        'extra_info': fields.DictOfStringsField(default={}),
         'numa_node': fields.IntegerField(nullable=True),
         'parent_addr': fields.StringField(nullable=True),
     }
@@ -173,13 +173,22 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
 
     def __init__(self, *args, **kwargs):
         super(PciDevice, self).__init__(*args, **kwargs)
-        self.obj_reset_changes()
-        self.extra_info = {}
+
         # NOTE(ndipanov): These are required to build an in-memory device tree
         # but don't need to be proper fields (and can't easily be as they would
         # hold circular references)
         self.parent_device = None
         self.child_devices = []
+
+    def obj_load_attr(self, attr):
+        if attr in ['extra_info']:
+            # NOTE(danms): extra_info used to be defaulted during init,
+            # so make sure any bare instantiations of this object can
+            # rely on the expectation that referencing that field will
+            # not fail.
+            self.obj_set_defaults(attr)
+        else:
+            super(PciDevice, self).obj_load_attr(attr)
 
     def __eq__(self, other):
         return compare_pci_device_attributes(self, other)
@@ -231,6 +240,10 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         thus we should not reset changes here for fields from dict.
         """
         pci_device = cls()
+        # NOTE(danms): extra_info used to always be defaulted during init,
+        # so make sure we replicate that behavior outside of init here
+        # for compatibility reasons.
+        pci_device.obj_set_defaults('extra_info')
         pci_device.update_device(dev_dict)
         pci_device.status = fields.PciDeviceStatus.AVAILABLE
         pci_device.uuid = uuidutils.generate_uuid()
