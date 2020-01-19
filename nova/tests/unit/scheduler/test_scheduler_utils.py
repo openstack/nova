@@ -153,7 +153,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         self.assertNotIn('forced_host', filt_props)
         self.assertNotIn('forced_node', filt_props)
 
-    def _test_populate_filter_props(self, selection_obj=True,
+    def _test_populate_filter_props(self,
                                     with_retry=True,
                                     force_hosts=None,
                                     force_nodes=None,
@@ -183,9 +183,6 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
                     memory_mb=3, numa_topology=None)
         selection = objects.Selection(service_host="fake-host",
                 nodename="fake-node", limits=fake_limits)
-        if not selection_obj:
-            selection = selection.to_dict()
-            fake_limits = fake_limits.to_dict()
 
         scheduler_utils.populate_filter_properties(filter_properties,
                                                    selection)
@@ -218,9 +215,6 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
 
     def test_populate_filter_props(self):
         self._test_populate_filter_props()
-
-    def test_populate_filter_props_host_dict(self):
-        self._test_populate_filter_props(selection_obj=False)
 
     def test_populate_filter_props_no_retry(self):
         self._test_populate_filter_props(with_retry=False)

@@ -861,20 +861,18 @@ def build_filter_properties(scheduler_hints, forced_host,
 def populate_filter_properties(filter_properties, selection):
     """Add additional information to the filter properties after a node has
     been selected by the scheduling process.
+
+    :param filter_properties: dict of filter properties (the legacy form of
+        the RequestSpec)
+    :param selection: Selection object
     """
-    if isinstance(selection, dict):
-        # TODO(edleafe): remove support for dicts
-        host = selection['host']
-        nodename = selection['nodename']
-        limits = selection['limits']
+    host = selection.service_host
+    nodename = selection.nodename
+    # Need to convert SchedulerLimits object to older dict format.
+    if "limits" in selection and selection.limits is not None:
+        limits = selection.limits.to_dict()
     else:
-        host = selection.service_host
-        nodename = selection.nodename
-        # Need to convert SchedulerLimits object to older dict format.
-        if "limits" in selection and selection.limits is not None:
-            limits = selection.limits.to_dict()
-        else:
-            limits = {}
+        limits = {}
     # Adds a retry entry for the selected compute host and node:
     _add_retry_host(filter_properties, host, nodename)
 
