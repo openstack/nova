@@ -1517,7 +1517,7 @@ class _BaseTaskTestCase(object):
                               'select_destinations'),
             mock.patch('nova.scheduler.utils.fill_provider_mapping',
                        new_callable=mock.NonCallableMock),
-            mock.patch('nova.network.neutronv2.api.API.'
+            mock.patch('nova.network.neutron.API.'
                        'get_requested_resource_for_instance',
                        new_callable=mock.NonCallableMock)
         ) as (rebuild_mock, select_dest_mock, fill_provider_mock,
@@ -1736,10 +1736,9 @@ class _BaseTaskTestCase(object):
                               return_value=[[fake_selection]]),
             mock.patch.object(fake_spec, 'reset_forced_destinations'),
             mock.patch('nova.scheduler.utils.fill_provider_mapping'),
-            mock.patch(
-                'nova.network.neutronv2.api.API.'
-                'get_requested_resource_for_instance',
-                return_value=[])
+            mock.patch('nova.network.neutron.API.'
+                       'get_requested_resource_for_instance',
+                       return_value=[])
         ) as (rebuild_mock, sig_mock, select_dest_mock, reset_fd,
               fill_rp_mapping_mock, get_req_res_mock):
             self.conductor_manager.rebuild_instance(context=self.context,

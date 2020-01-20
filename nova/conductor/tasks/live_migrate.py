@@ -23,7 +23,7 @@ from nova.conductor.tasks import migrate
 import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova import network
+from nova.network import neutron
 from nova import objects
 from nova.objects import fields as obj_fields
 from nova.objects import migrate_data as migrate_data_obj
@@ -67,7 +67,7 @@ class LiveMigrationTask(base.TaskBase):
         self.request_spec = request_spec
         self._source_cn = None
         self._held_allocations = None
-        self.network_api = network.API()
+        self.network_api = neutron.API()
         self.instance_pci_request = None
 
     def _execute(self):

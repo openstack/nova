@@ -2335,8 +2335,7 @@ class TestNovaManagePlacement(test.NoDBTestCase):
         self.output = StringIO()
         self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
         self.cli = manage.PlacementCommands()
-        self.useFixture(
-            fixtures.MockPatch('nova.network.neutronv2.api.get_client'))
+        self.useFixture(fixtures.MockPatch('nova.network.neutron.get_client'))
 
     @ddt.data(-1, 0, "one")
     def test_heal_allocations_invalid_max_count(self, max_count):

@@ -34,7 +34,7 @@ import nova.conf
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
-from nova.network.neutronv2 import api as neutronapi
+from nova.network import neutron as neutronapi
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)

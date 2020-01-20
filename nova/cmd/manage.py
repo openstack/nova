@@ -54,8 +54,8 @@ from nova.db import migration
 from nova.db.sqlalchemy import api as sa_db
 from nova import exception
 from nova.i18n import _
-from nova.network.neutronv2 import api as neutron_api
-from nova.network.neutronv2 import constants
+from nova.network import constants
+from nova.network import neutron as neutron_api
 from nova import objects
 from nova.objects import block_device as block_device_obj
 from nova.objects import compute_node as compute_node_obj
@@ -1493,7 +1493,7 @@ class PlacementCommands(object):
 
         :param ctxt: nova.context.RequestContext
         :param instance: the instance to return the ports for
-        :param neutron: nova.network.neutronv2.api.ClientWrapper to
+        :param neutron: nova.network.neutron.ClientWrapper to
             communicate with Neutron
         :return: a list of neutron port dict objects
         :raise UnableToQueryPorts: If the neutron list ports query fails.
@@ -1648,7 +1648,7 @@ class PlacementCommands(object):
             values; this cache is updated if a new node is processed.
         :param placement: nova.scheduler.client.report.SchedulerReportClient
             to communicate with the Placement service API.
-        :param neutron: nova.network.neutronv2.api.ClientWrapper to
+        :param neutron: nova.network.neutron.ClientWrapper to
             communicate with Neutron
         :param output: function that takes a single message for verbose output
         :raise UnableToQueryPorts: If the neutron list ports query fails.
@@ -1815,7 +1815,7 @@ class PlacementCommands(object):
             any changes.
         :param heal_port_allocations: True if healing port allocation is
             requested, False otherwise.
-        :param neutron: nova.network.neutronv2.api.ClientWrapper to
+        :param neutron: nova.network.neutron.ClientWrapper to
             communicate with Neutron
         :return: True if allocations were created or updated for the instance,
             None if nothing needed to be done
@@ -1965,7 +1965,7 @@ class PlacementCommands(object):
         :param instance_uuid: UUID of a specific instance to process.
         :param heal_port_allocations: True if healing port allocation is
             requested, False otherwise.
-        :param neutron: nova.network.neutronv2.api.ClientWrapper to
+        :param neutron: nova.network.neutron.ClientWrapper to
             communicate with Neutron
         :return: Number of instances that had allocations created.
         :raises: nova.exception.ComputeHostNotFound if a compute node for a

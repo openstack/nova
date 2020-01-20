@@ -69,8 +69,7 @@ class EvacuateTestV21(test.NoDBTestCase):
         self.stub_out('nova.compute.api.HostAPI.service_get_by_compute_host',
                       fake_service_get_by_compute_host)
         self.mock_list_port = self.useFixture(
-            fixtures.MockPatch(
-                'nova.network.neutronv2.api.API.list_ports')).mock
+            fixtures.MockPatch('nova.network.neutron.API.list_ports')).mock
         self.mock_list_port.return_value = {'ports': []}
         self.UUID = uuids.fake
         for _method in self._methods:
@@ -263,8 +262,7 @@ class EvacuatePolicyEnforcementv21(test.NoDBTestCase):
         self.stub_out(
             'nova.api.openstack.common.get_instance', fake_get_instance)
         self.mock_list_port = self.useFixture(
-            fixtures.MockPatch(
-                'nova.network.neutronv2.api.API.list_ports')).mock
+            fixtures.MockPatch('nova.network.neutron.API.list_ports')).mock
         self.mock_list_port.return_value = {'ports': []}
 
     def test_evacuate_policy_failed_with_other_project(self):

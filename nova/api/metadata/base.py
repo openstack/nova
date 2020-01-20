@@ -32,7 +32,7 @@ from nova import block_device
 import nova.conf
 from nova import context
 from nova import exception
-from nova import network
+from nova.network import neutron
 from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import virt_device_metadata as metadata_obj
@@ -645,7 +645,7 @@ class RouteConfiguration(object):
 
 def get_metadata_by_address(address):
     ctxt = context.get_admin_context()
-    fixed_ip = network.API().get_fixed_ip_by_address(ctxt, address)
+    fixed_ip = neutron.API().get_fixed_ip_by_address(ctxt, address)
     LOG.info('Fixed IP %(ip)s translates to instance UUID %(uuid)s',
              {'ip': address, 'uuid': fixed_ip['instance_uuid']})
 

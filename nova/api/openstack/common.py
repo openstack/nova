@@ -31,7 +31,7 @@ import nova.conf
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
-from nova.network.neutronv2 import constants
+from nova.network import constants
 from nova import objects
 from nova import quota
 from nova import utils

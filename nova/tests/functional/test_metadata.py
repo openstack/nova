@@ -71,7 +71,7 @@ class MetadataTest(test.TestCase):
 
         self.useFixture(
             fixtures.MonkeyPatch(
-                'nova.network.neutronv2.api.API.get_fixed_ip_by_address',
+                'nova.network.neutron.API.get_fixed_ip_by_address',
                 fake_get_fixed_ip_by_address))
 
         def fake_get_ec2_ip_info(nw_info):

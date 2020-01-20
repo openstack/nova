@@ -48,8 +48,7 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
                       'MigrateServerController',
                       lambda *a, **kw: self.controller)
         self.mock_list_port = self.useFixture(
-            fixtures.MockPatch(
-                'nova.network.neutronv2.api.API.list_ports')).mock
+            fixtures.MockPatch('nova.network.neutron.API.list_ports')).mock
         self.mock_list_port.return_value = {'ports': []}
 
     def _get_migration_body(self, **kwargs):

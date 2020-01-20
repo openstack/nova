@@ -23,7 +23,7 @@ import nova.conf
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
-import nova.network
+from nova.network import neutron
 from nova.policies import tenant_networks as tn_policies
 from nova import quota
 
@@ -46,7 +46,7 @@ def network_dict(network):
 class TenantNetworkController(wsgi.Controller):
     def __init__(self):
         super(TenantNetworkController, self).__init__()
-        self.network_api = nova.network.API()
+        self.network_api = neutron.API()
         self._default_networks = []
 
     def _refresh_default_networks(self):

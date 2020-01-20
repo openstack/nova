@@ -13,14 +13,19 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-#
+
+"""
+API and utilities for nova-network interactions.
+"""
 
 import copy
+import functools
 import time
 
 from keystoneauth1 import loading as ks_loading
 from neutronclient.common import exceptions as neutron_client_exc
 from neutronclient.v2_0 import client as clientv20
+from oslo_concurrency import lockutils
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import strutils
@@ -30,11 +35,12 @@ import six
 from nova.compute import utils as compute_utils
 import nova.conf
 from nova import context as nova_context
+from nova.db import base
 from nova import exception
+from nova import hooks
 from nova.i18n import _
-from nova.network import base_api
+from nova.network import constants
 from nova.network import model as network_model
-from nova.network.neutronv2 import constants
 from nova import objects
 from nova.objects import fields as obj_fields
 from nova.pci import manager as pci_manager
@@ -94,6 +100,63 @@ def get_binding_profile(port):
     :returns: The port binding:profile dict; empty if not set on the port
     """
     return port.get(constants.BINDING_PROFILE, {}) or {}
+
+
+@hooks.add_hook('instance_network_info')
+def update_instance_cache_with_nw_info(impl, context, instance, nw_info=None):
+    if instance.deleted:
+        LOG.debug('Instance is deleted, no further info cache update',
+                  instance=instance)
+        return
+
+    try:
+        if not isinstance(nw_info, network_model.NetworkInfo):
+            nw_info = None
+        if nw_info is None:
+            nw_info = impl._get_instance_nw_info(context, instance)
+
+        LOG.debug('Updating instance_info_cache with network_info: %s',
+                  nw_info, instance=instance)
+
+        # NOTE(comstud): The save() method actually handles updating or
+        # creating the instance.  We don't need to retrieve the object
+        # from the DB first.
+        ic = objects.InstanceInfoCache.new(context, instance.uuid)
+        ic.network_info = nw_info
+        ic.save()
+        instance.info_cache = ic
+    except Exception:
+        with excutils.save_and_reraise_exception():
+            LOG.exception('Failed storing info cache', instance=instance)
+
+
+def refresh_cache(f):
+    """Decorator to update the instance_info_cache
+
+    Requires context and instance as function args
+    """
+    argspec = utils.getargspec(f)
+
+    @functools.wraps(f)
+    def wrapper(self, context, *args, **kwargs):
+        try:
+            # get the instance from arguments (or raise ValueError)
+            instance = kwargs.get('instance')
+            if not instance:
+                instance = args[argspec.args.index('instance') - 2]
+        except ValueError:
+            msg = _('instance is a required argument to use @refresh_cache')
+            raise Exception(msg)
+
+        with lockutils.lock('refresh_cache-%s' % instance.uuid):
+            # We need to call the wrapped function with the lock held to ensure
+            # that it can call _get_instance_nw_info safely.
+            res = f(self, context, *args, **kwargs)
+            update_instance_cache_with_nw_info(self, context, instance,
+                                               nw_info=res)
+        # return the original function's return value
+        return res
+    return wrapper
 
 
 @profiler.trace_cls("neutron_api")
@@ -235,7 +298,7 @@ def _ensure_no_port_binding_failure(port):
         raise exception.PortBindingFailed(port_id=port['id'])
 
 
-class API(base_api.NetworkAPI):
+class API(base.Base):
     """API for interacting with the neutron 2.x API."""
 
     def __init__(self):
@@ -1629,8 +1692,8 @@ class API(base_api.NetworkAPI):
         # hasn't already been deleted. This is needed when an instance fails to
         # launch and is rescheduled onto another compute node. If the instance
         # has already been deleted this call does nothing.
-        base_api.update_instance_cache_with_nw_info(self, context, instance,
-                                            network_model.NetworkInfo([]))
+        update_instance_cache_with_nw_info(self, context, instance,
+                                           network_model.NetworkInfo([]))
 
     def allocate_port_for_instance(self, context, instance, port_id,
                                    network_id=None, requested_ip=None,
@@ -1772,6 +1835,14 @@ class API(base_api.NetworkAPI):
                    {'port_id': port_id, 'reason': exc})
             raise exception.NovaException(message=msg)
 
+    def get_instance_nw_info(self, context, instance, **kwargs):
+        """Returns all network info related to an instance."""
+        with lockutils.lock('refresh_cache-%s' % instance.uuid):
+            result = self._get_instance_nw_info(context, instance, **kwargs)
+            update_instance_cache_with_nw_info(self, context, instance,
+                                               nw_info=result)
+        return result
+
     def _get_instance_nw_info(self, context, instance, networks=None,
                               port_ids=None, admin_client=None,
                               preexisting_port_ids=None,
@@ -1856,7 +1927,7 @@ class API(base_api.NetworkAPI):
 
         return networks, port_ids
 
-    @base_api.refresh_cache
+    @refresh_cache
     def add_fixed_ip_to_instance(self, context, instance, network_id):
         """Add a fixed IP to the instance from specified network."""
         neutron = get_client(context)
@@ -1891,7 +1962,7 @@ class API(base_api.NetworkAPI):
         raise exception.NetworkNotFoundForInstance(
                 instance_id=instance.uuid)
 
-    @base_api.refresh_cache
+    @refresh_cache
     def remove_fixed_ip_from_instance(self, context, instance, address):
         """Remove a fixed IP from the instance."""
         neutron = get_client(context)
@@ -2360,7 +2431,7 @@ class API(base_api.NetworkAPI):
             raise exception.FixedIpNotFoundForAddress(address=address)
         return port_id
 
-    @base_api.refresh_cache
+    @refresh_cache
     def associate_floating_ip(self, context, instance,
                               floating_address, fixed_address,
                               affect_auto_assigned=False):
@@ -2421,7 +2492,7 @@ class API(base_api.NetworkAPI):
         if orig_instance:
             # purge cached nw info for the original instance; pass the
             # context from the instance in case we found it in another cell
-            base_api.update_instance_cache_with_nw_info(
+            update_instance_cache_with_nw_info(
                 self, orig_instance._context, orig_instance)
         else:
             # Leave a breadcrumb about not being able to refresh the
@@ -2723,7 +2794,7 @@ class API(base_api.NetworkAPI):
         if using neutron.
         """
 
-        @base_api.refresh_cache
+        @refresh_cache
         def _release_floating_ip_and_refresh_cache(self, context, instance,
                                                    floating_ip):
             self._release_floating_ip(context, floating_ip['address'],
@@ -2749,7 +2820,7 @@ class API(base_api.NetworkAPI):
                 address=address
             )
 
-    @base_api.refresh_cache
+    @refresh_cache
     def disassociate_floating_ip(self, context, instance, address,
                                  affect_auto_assigned=False):
         """Disassociate a floating IP from the instance."""
@@ -3250,7 +3321,16 @@ class API(base_api.NetworkAPI):
     def setup_instance_network_on_host(
             self, context, instance, host, migration=None,
             provider_mappings=None):
-        """Setup network for specified instance on host."""
+        """Setup network for specified instance on host.
+
+        :param context: The request context.
+        :param instance: nova.objects.instance.Instance object.
+        :param host: The host which network should be setup for instance.
+        :param migration: The migration object if the instance is being
+                          tracked with a migration.
+        :param provider_mappings: a dict of lists of resource provider uuids
+            keyed by port uuid
+        """
         self._update_port_binding_for_instance(
             context, instance, host, migration, provider_mappings)
 
@@ -3409,7 +3489,13 @@ class API(base_api.NetworkAPI):
         """Update instance vnic index.
 
         When the 'VNIC index' extension is supported this method will update
-        the vnic index of the instance on the port.
+        the vnic index of the instance on the port. An instance may have more
+        than one vnic.
+
+        :param context: The request context.
+        :param instance: nova.objects.instance.Instance object.
+        :param vif: The VIF in question.
+        :param index: The index on the instance for the VIF.
         """
         self._refresh_neutron_extensions_cache(context)
         if constants.VNIC_INDEX_EXT in self.extensions:

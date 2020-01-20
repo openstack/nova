@@ -25,7 +25,7 @@ from nova.compute import api as compute
 from nova.compute import vm_states
 from nova import exception
 from nova.i18n import _
-from nova import network
+from nova.network import neutron
 from nova.policies import shelve as shelve_policies
 
 
@@ -33,7 +33,7 @@ class ShelveController(wsgi.Controller):
     def __init__(self):
         super(ShelveController, self).__init__()
         self.compute_api = compute.API()
-        self.network_api = network.API()
+        self.network_api = neutron.API()
 
     @wsgi.response(202)
     @wsgi.expected_errors((404, 409))

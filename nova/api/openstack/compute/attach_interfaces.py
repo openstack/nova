@@ -26,7 +26,7 @@ from nova.api import validation
 from nova.compute import api as compute
 from nova import exception
 from nova.i18n import _
-from nova import network
+from nova.network import neutron
 from nova import objects
 from nova.policies import attach_interfaces as ai_policies
 
@@ -61,7 +61,7 @@ class InterfaceAttachmentController(wsgi.Controller):
     def __init__(self):
         super(InterfaceAttachmentController, self).__init__()
         self.compute_api = compute.API()
-        self.network_api = network.API()
+        self.network_api = neutron.API()
 
     @wsgi.expected_errors((404, 501))
     def index(self, req, server_id):

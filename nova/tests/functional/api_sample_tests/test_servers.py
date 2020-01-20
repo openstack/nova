@@ -769,7 +769,7 @@ class ServersActionsJsonTest(ServersSampleBase, _ServersActionsJsonTestMixin):
         # This is gross, but we need to stub out the associate_floating_ip
         # call in the FloatingIPActionController since we don't have a real
         # networking service backing this up, just the fake neutron stubs.
-        self.stub_out('nova.network.neutronv2.api.API.associate_floating_ip',
+        self.stub_out('nova.network.neutron.API.associate_floating_ip',
                       lambda *a, **k: None)
         self._test_server_action(uuid, 'addFloatingIp',
                                  'server-action-addfloatingip-req', subs)
@@ -783,15 +783,15 @@ class ServersActionsJsonTest(ServersSampleBase, _ServersActionsJsonTestMixin):
         }
 
         self.stub_out(
-            'nova.network.neutronv2.api.API.get_floating_ip_by_address',
+            'nova.network.neutron.API.get_floating_ip_by_address',
             lambda *a, **k: {
                 'fixed_ip_id': 'a0c566f0-faab-406f-b77f-2b286dc6dd7e'})
         self.stub_out(
-            'nova.network.neutronv2.api.API.'
+            'nova.network.neutron.API.'
             'get_instance_id_by_floating_address',
             lambda *a, **k: server_uuid)
         self.stub_out(
-            'nova.network.neutronv2.api.API.disassociate_floating_ip',
+            'nova.network.neutron.API.disassociate_floating_ip',
             lambda *a, **k: None)
 
         self._test_server_action(server_uuid, 'removeFloatingIp',

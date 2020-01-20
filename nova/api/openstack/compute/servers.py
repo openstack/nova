@@ -41,7 +41,7 @@ from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova.image import api as image_api
-from nova import network as network_api
+from nova.network import neutron
 from nova import objects
 from nova.policies import servers as server_policies
 from nova import utils
@@ -111,7 +111,7 @@ class ServersController(wsgi.Controller):
     def __init__(self):
         super(ServersController, self).__init__()
         self.compute_api = compute.API()
-        self.network_api = network_api.API()
+        self.network_api = neutron.API()
 
     @wsgi.expected_errors((400, 403))
     @validation.query_schema(schema_servers.query_params_v275, '2.75')

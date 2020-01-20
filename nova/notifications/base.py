@@ -29,8 +29,8 @@ import nova.conf
 import nova.context
 from nova import exception
 from nova import image as image_api
-from nova import network
 from nova.network import model as network_model
+from nova.network import neutron
 from nova.notifications.objects import base as notification_base
 from nova.notifications.objects import instance as instance_notification
 from nova import objects
@@ -287,7 +287,7 @@ def bandwidth_usage(context, instance_ref, audit_start,
                 return cached_info
             return network_model.NetworkInfo.hydrate(cached_info)
         try:
-            return network.API().get_instance_nw_info(admin_context,
+            return neutron.API().get_instance_nw_info(admin_context,
                                                       instance_ref)
         except Exception:
             try:

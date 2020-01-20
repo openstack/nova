@@ -49,7 +49,7 @@ from nova import context
 from nova.db import api as db
 from nova import exception
 from nova.network import model as network_model
-from nova.network.neutronv2 import api as neutronv2_api
+from nova.network import neutron as neutronv2_api
 from nova import objects
 from nova.objects import base as base_obj
 from nova.objects import block_device as block_device_obj
@@ -3441,7 +3441,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         inst_obj = objects.Instance(id=3, uuid=uuids.instance,
                                     info_cache=info_cache)
 
-        @mock.patch.object(manager.base_net_api,
+        @mock.patch.object(manager.neutron,
                            'update_instance_cache_with_nw_info')
         @mock.patch.object(self.compute.driver, 'detach_interface')
         def do_test(detach_interface, update_instance_cache_with_nw_info):
@@ -3468,7 +3468,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         inst_obj = objects.Instance(id=3, uuid=uuids.instance,
                                     info_cache=info_cache)
 
-        @mock.patch.object(manager.base_net_api,
+        @mock.patch.object(manager.neutron,
                            'update_instance_cache_with_nw_info')
         @mock.patch.object(self.compute.driver, 'detach_interface',
                            side_effect=NotImplementedError)
@@ -3496,7 +3496,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         inst_obj = objects.Instance(id=3, uuid=uuids.instance,
                                     info_cache=info_cache)
 
-        @mock.patch.object(manager.base_net_api,
+        @mock.patch.object(manager.neutron,
                            'update_instance_cache_with_nw_info')
         @mock.patch.object(self.compute.driver, 'detach_interface',
                            side_effect=exception.InstanceNotFound(
@@ -3818,7 +3818,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         @mock.patch.object(instances[3], 'obj_load_attr',
                            side_effect=exception.InstanceNotFound(
                                instance_id=uuids.instance_4))
-        @mock.patch.object(manager.base_net_api,
+        @mock.patch.object(manager.neutron,
                            'update_instance_cache_with_nw_info')
         @mock.patch.object(self.compute.driver, 'detach_interface',
                            side_effect=exception.NovaException)
@@ -5046,9 +5046,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
     @mock.patch('nova.objects.instance.Instance.apply_migration_context')
     @mock.patch('nova.objects.instance.Instance.mutated_migration_context')
     @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
-    @mock.patch('nova.network.neutronv2.api.API.'
-                'setup_instance_network_on_host')
-    @mock.patch('nova.network.neutronv2.api.API.setup_networks_on_host')
+    @mock.patch('nova.network.neutron.API.setup_instance_network_on_host')
+    @mock.patch('nova.network.neutron.API.setup_networks_on_host')
     @mock.patch('nova.objects.instance.Instance.save')
     @mock.patch('nova.compute.utils.notify_about_instance_rebuild')
     @mock.patch('nova.compute.utils.notify_about_instance_usage')

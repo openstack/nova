@@ -62,7 +62,7 @@ class AttachInterfacesSampleJsonTest(test_servers.ServersSampleBase):
         def fake_detach_interface(self, context, instance, port_id):
             pass
 
-        self.stub_out('nova.network.neutronv2.api.API.list_ports',
+        self.stub_out('nova.network.neutron.API.list_ports',
                       fake_list_ports)
         self.stub_out('nova.compute.api.API.attach_interface',
                       fake_attach_interface)
@@ -101,7 +101,7 @@ class AttachInterfacesSampleJsonTest(test_servers.ServersSampleBase):
     def _stub_show_for_instance(self, instance_uuid, port_id):
         show_port = self.neutron.show_port(port_id)
         show_port['port']['device_id'] = instance_uuid
-        self.stub_out('nova.network.neutronv2.api.API.show_port',
+        self.stub_out('nova.network.neutron.API.show_port',
                       lambda *a, **k: show_port)
 
     def test_show_interfaces(self):
@@ -176,7 +176,7 @@ class AttachInterfacesSampleV249JsonTest(test_servers.ServersSampleBase):
     def _stub_show_for_instance(self, instance_uuid, port_id):
         show_port = self.neutron.show_port(port_id)
         show_port['port']['device_id'] = instance_uuid
-        self.stub_out('nova.network.neutronv2.api.API.show_port',
+        self.stub_out('nova.network.neutron.API.show_port',
                       lambda *a, **k: show_port)
 
     def test_create_interfaces(self, instance_uuid=None):

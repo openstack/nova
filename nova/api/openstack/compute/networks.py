@@ -21,7 +21,7 @@ from nova.api.openstack.api_version_request \
 from nova.api.openstack import wsgi
 from nova import exception
 from nova.i18n import _
-from nova import network
+from nova.network import neutron
 from nova.objects import base as base_obj
 from nova.objects import fields as obj_fields
 from nova.policies import networks as net_policies
@@ -77,7 +77,7 @@ class NetworkController(wsgi.Controller):
     def __init__(self, network_api=None):
         super(NetworkController, self).__init__()
         # TODO(stephenfin): 'network_api' is only being passed for use by tests
-        self.network_api = network_api or network.API()
+        self.network_api = network_api or neutron.API()
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(())

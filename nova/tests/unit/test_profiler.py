@@ -55,7 +55,7 @@ class TestProfiler(test.NoDBTestCase):
             'nova.conductor.rpcapi.ComputeTaskAPI',
             'nova.conductor.rpcapi.ConductorAPI',
             'nova.image.api.API',
-            'nova.network.neutronv2.api.ClientWrapper',
+            'nova.network.neutron.ClientWrapper',
             'nova.scheduler.manager.SchedulerManager',
             'nova.scheduler.rpcapi.SchedulerAPI',
             'nova.virt.libvirt.vif.LibvirtGenericVIFDriver',

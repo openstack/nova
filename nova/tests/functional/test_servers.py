@@ -37,8 +37,8 @@ from nova.compute import instance_actions
 from nova.compute import manager as compute_manager
 from nova import context
 from nova import exception
-from nova.network.neutronv2 import api as neutronapi
-from nova.network.neutronv2 import constants
+from nova.network import constants
+from nova.network import neutron as neutronapi
 from nova import objects
 from nova.objects import block_device as block_device_obj
 from nova.scheduler import utils

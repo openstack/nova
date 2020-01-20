@@ -34,7 +34,7 @@ from nova import conductor
 from nova import context
 from nova.db.sqlalchemy import api as session
 from nova import exception
-from nova.network.neutronv2 import api as neutron_api
+from nova.network import neutron as neutron_api
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import service as service_obj

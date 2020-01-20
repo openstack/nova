@@ -42,9 +42,9 @@ from nova import context
 from nova.db import api as db
 from nova import exception
 from nova.image import api as image_api
+from nova.network import constants
 from nova.network import model
-from nova.network.neutronv2 import api as neutron_api
-from nova.network.neutronv2 import constants
+from nova.network import neutron as neutron_api
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
@@ -314,7 +314,7 @@ class _ComputeAPIUnitTestMixIn(object):
         max_count = 3
         self._test_create_max_net_count(max_net_count, min_count, max_count)
 
-    def test_specified_port_and_multiple_instances_neutronv2(self):
+    def test_specified_port_and_multiple_instances(self):
         # Tests that if port is specified there is only one instance booting
         # (i.e max_count == 1) as we can't share the same port across multiple
         # instances.
@@ -343,15 +343,6 @@ class _ComputeAPIUnitTestMixIn(object):
             requested_networks=requested_networks)
 
     def test_specified_ip_and_multiple_instances(self):
-        network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
-        address = '10.0.0.1'
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(network_id=network,
-                                            address=address)])
-        self._test_specified_ip_and_multiple_instances_helper(
-            requested_networks)
-
-    def test_specified_ip_and_multiple_instances_neutronv2(self):
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         address = '10.0.0.1'
         requested_networks = objects.NetworkRequestList(
@@ -1648,8 +1639,7 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_confirm_resize_with_migration_ref(self):
         self._test_confirm_resize(mig_ref_passed=True)
 
-    @mock.patch('nova.network.neutronv2.api.API.'
-                'get_requested_resource_for_instance',
+    @mock.patch('nova.network.neutron.API.get_requested_resource_for_instance',
                 return_value=mock.sentinel.res_req)
     @mock.patch('nova.availability_zones.get_host_availability_zone',
                 return_value='nova')
@@ -1710,8 +1700,7 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_revert_resize(self):
         self._test_revert_resize()
 
-    @mock.patch('nova.network.neutronv2.api.API.'
-                'get_requested_resource_for_instance')
+    @mock.patch('nova.network.neutron.API.get_requested_resource_for_instance')
     @mock.patch('nova.availability_zones.get_host_availability_zone',
                 return_value='nova')
     @mock.patch('nova.objects.Quotas.check_deltas')

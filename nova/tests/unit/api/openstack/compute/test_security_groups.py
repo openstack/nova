@@ -28,7 +28,7 @@ from nova import context as context_maker
 import nova.db.api
 from nova import exception
 from nova.network import model
-from nova.network.neutronv2 import api as neutron_api
+from nova.network import neutron as neutron_api
 from nova import objects
 from nova.objects import instance as instance_obj
 from nova import test
@@ -279,7 +279,7 @@ class MockClient(object):
         return {'security_groups': ret}
 
     def list_networks(self, **_params):
-        # neutronv2/api.py _get_available_networks calls this assuming
+        # network/api.py _get_available_networks calls this assuming
         # search_opts filter "shared" is implemented and not ignored
         shared = _params.get("shared", None)
         if shared:

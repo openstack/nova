@@ -25,7 +25,7 @@ from nova.compute import api as compute
 import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova import network
+from nova.network import neutron
 from nova.policies import evacuate as evac_policies
 from nova import utils
 
@@ -37,7 +37,7 @@ class EvacuateController(wsgi.Controller):
         super(EvacuateController, self).__init__()
         self.compute_api = compute.API()
         self.host_api = compute.HostAPI()
-        self.network_api = network.API()
+        self.network_api = neutron.API()
 
     def _get_on_shared_storage(self, req, evacuate_body):
         if api_version_request.is_supported(req, min_version='2.14'):
