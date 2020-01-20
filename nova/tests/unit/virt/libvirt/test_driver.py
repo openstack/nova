@@ -1269,52 +1269,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             drvr.init_host("dummyhost")
             self.assertTrue(mock_check_fb_support.called)
 
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
-                       return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_LIBVIRT_FILE_BACKED_VERSION))
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
-                       return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_QEMU_FILE_BACKED_VERSION))
-    def test_min_version_file_backed_ok(self, mock_libv, mock_qemu):
+    def test_min_version_file_backed_ok(self):
         self.flags(file_backed_memory=1024, group='libvirt')
         self.flags(ram_allocation_ratio=1.0)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr._check_file_backed_memory_support()
 
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
-                       return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_LIBVIRT_FILE_BACKED_VERSION) - 1)
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
-                       return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_QEMU_FILE_BACKED_VERSION))
-    def test_min_version_file_backed_old_libvirt(self, mock_libv, mock_qemu):
-        self.flags(file_backed_memory=1024, group="libvirt")
-        self.flags(ram_allocation_ratio=1.0)
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.assertRaises(exception.InternalError,
-                          drvr._check_file_backed_memory_support)
-
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
-                       return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_LIBVIRT_FILE_BACKED_VERSION))
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
-                       return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_QEMU_FILE_BACKED_VERSION) - 1)
-    def test_min_version_file_backed_old_qemu(self, mock_libv, mock_qemu):
-        self.flags(file_backed_memory=1024, group="libvirt")
-        self.flags(ram_allocation_ratio=1.0)
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.assertRaises(exception.InternalError,
-                          drvr._check_file_backed_memory_support)
-
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
-                       return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_LIBVIRT_FILE_BACKED_VERSION))
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
-                       return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_QEMU_FILE_BACKED_VERSION))
-    def test_min_version_file_backed_bad_ram_allocation_ratio(self, mock_libv,
-                                                     mock_qemu):
+    def test_min_version_file_backed_bad_ram_allocation_ratio(self):
         self.flags(file_backed_memory=1024, group="libvirt")
         self.flags(ram_allocation_ratio=1.5)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
