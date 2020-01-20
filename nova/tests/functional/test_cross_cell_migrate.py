@@ -33,7 +33,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import cast_as_call
 from nova.tests.unit import fake_notifier
-from nova.tests.unit.image import fake as fake_image
 from nova import utils
 
 CONF = conf.CONF
@@ -150,12 +149,8 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
                 'port': self.neutron.port_1['id'],
                 'tag': 'private'
             }]
-        image_uuid = fake_image.get_valid_image_id()
-        server = self._build_minimal_create_server_request(
-            'test_cross_cell_resize',
-            image_uuid=image_uuid,
-            flavor_id=flavor['id'],
-            networks=networks)
+        server = self._build_server(
+            flavor_id=flavor['id'], networks=networks)
         # Put a tag on the server to make sure that survives the resize.
         server['tags'] = ['test']
         if volume_backed:

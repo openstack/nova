@@ -101,10 +101,11 @@ class TestRequestSpecRetryReschedule(test.TestCase,
             flavor1, flavor2 = flavor2, flavor1
 
         # create the instance which should go to host1
-        server = self.admin_api.post_server(
-            dict(server=self._build_minimal_create_server_request(
-                'test_resize_with_reschedule_then_live_migrate',
-                self.image_id, flavor_id=flavor1['id'], networks='none')))
+        server = self._build_server(
+            image_uuid=self.image_id,
+            flavor_id=flavor1['id'],
+            networks='none')
+        server = self.admin_api.post_server({'server': server})
         server = self._wait_for_state_change(server, 'ACTIVE')
         self.assertEqual('host1', server['OS-EXT-SRV-ATTR:host'])
 

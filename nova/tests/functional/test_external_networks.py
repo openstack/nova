@@ -66,9 +66,7 @@ class TestNeutronExternalNetworks(test.TestCase,
         ComputeManager._build_resources method and abort the build which is
         not how ExternalNetworkAttachForbidden is really handled in reality.
         """
-        server = self._build_minimal_create_server_request(
-            'test_non_admin_create_server_on_external_network',
-            image_uuid=fake_image.get_valid_image_id(),
+        server = self._build_server(
             networks=[{'uuid': uuids.external_network}])
         server = self.api.post_server({'server': server})
         server = self._wait_for_state_change(server, 'ERROR')

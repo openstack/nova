@@ -91,7 +91,7 @@ class VGPUReshapeTests(base.ServersTestBase):
         extra_spec = {"resources:VGPU": 1}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
 
-        server_req = self._build_server(flavor_id)
+        server_req = self._build_server(flavor_id=flavor_id)
 
         # NOTE(gibi): during instance_claim() there is a
         # driver.update_provider_tree() call that would detect the old tree and

@@ -66,9 +66,6 @@ class FailedEvacuateStateTests(test.TestCase,
         self.compute1 = self.start_service('compute', host=self.hostname)
         fake_network.set_stub_network_methods(self)
 
-        flavors = self.api.get_flavors()
-        self.flavor1 = flavors[0]
-
     def _wait_for_notification_event_type(self, event_type, max_retries=10):
         retry_counter = 0
         while True:
@@ -83,8 +80,7 @@ class FailedEvacuateStateTests(test.TestCase,
             time.sleep(0.5)
 
     def _boot_a_server(self):
-        server_req = self._build_minimal_create_server_request(
-            'some-server', flavor_id=self.flavor1['id'],
+        server_req = self._build_server(
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             networks='none')
         LOG.info('booting on %s', self.hostname)

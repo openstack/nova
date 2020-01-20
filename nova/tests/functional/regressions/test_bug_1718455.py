@@ -65,12 +65,8 @@ class TestLiveMigrateOneOfConcurrentlyCreatedInstances(
 
         fake_network.set_stub_network_methods(self)
 
-        flavors = self.api.get_flavors()
-        self.flavor1 = flavors[0]
-
     def _boot_servers(self, num_servers=1):
-        server_req = self._build_minimal_create_server_request(
-            'some-server', flavor_id=self.flavor1['id'],
+        server_req = self._build_server(
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             networks='none')
         server_req.update({'min_count': str(num_servers),

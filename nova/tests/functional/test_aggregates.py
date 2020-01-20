@@ -214,9 +214,9 @@ class AggregateRequestFiltersTest(
                      end_status='ACTIVE'):
         flavor_id = flavor_id or self.flavors[0]['id']
         image_uuid = image_id or '155d900f-4e14-4e4c-a73d-069cbf4541e6'
-        server_req = self._build_minimal_create_server_request(
-            'test-instance', flavor_id=flavor_id,
+        server_req = self._build_server(
             image_uuid=image_uuid,
+            flavor_id=flavor_id,
             networks='none', az=az)
 
         created_server = self.api.post_server({'server': server_req})
@@ -854,6 +854,9 @@ class TestAggregateMultiTenancyIsolationFilter(
         self.start_service('conductor')
         self.admin_api = self.useFixture(
             nova_fixtures.OSAPIFixture(api_version='v2.1')).admin_api
+        self.api = self.useFixture(
+            nova_fixtures.OSAPIFixture(api_version='v2.1',
+                                       project_id=uuids.non_admin)).api
         # Add the AggregateMultiTenancyIsolation to the list of enabled
         # filters since it is not enabled by default.
         enabled_filters = CONF.filter_scheduler.enabled_filters
@@ -874,9 +877,6 @@ class TestAggregateMultiTenancyIsolationFilter(
           aggregate
         """
         # Create a tenant-isolated aggregate for the non-admin user.
-        self.api = self.useFixture(
-            nova_fixtures.OSAPIFixture(api_version='v2.1',
-                                       project_id=uuids.non_admin)).api
         agg_id = self.admin_api.post_aggregate(
             {'aggregate': {'name': 'non_admin_agg'}})['id']
         meta_req = {'set_metadata': {
@@ -897,11 +897,9 @@ class TestAggregateMultiTenancyIsolationFilter(
         self.stub_out(
             'nova.scheduler.host_manager.HostManager.get_filtered_hosts',
             spy_get_filtered_hosts)
+
         # Create a server for the admin - should only have one host candidate.
-        server_req = self._build_minimal_create_server_request(
-            'test_aggregate_multitenancy_isolation_filter-admin',
-            networks='none')  # requires microversion 2.37
-        server_req = {'server': server_req}
+        server_req = {'server': self._build_server(networks='none')}
         with utils.temporary_mutation(self.admin_api, microversion='2.37'):
             server = self.admin_api.post_server(server_req)
         server = self._wait_for_state_change(server, 'ACTIVE')
@@ -913,10 +911,7 @@ class TestAggregateMultiTenancyIsolationFilter(
         # candidate. We don't assert that the non-admin tenant server shows
         # up on host2 because the other host, which is not isolated to the
         # aggregate, is still a candidate.
-        server_req = self._build_minimal_create_server_request(
-            'test_aggregate_multitenancy_isolation_filter-user',
-            networks='none')  # requires microversion 2.37
-        server_req = {'server': server_req}
+        server_req = {'server': self._build_server(networks='none')}
         with utils.temporary_mutation(self.api, microversion='2.37'):
             server = self.api.post_server(server_req)
         self._wait_for_state_change(server, 'ACTIVE')
@@ -1023,8 +1018,8 @@ class AggregateMultiTenancyIsolationColdMigrateTest(
         isolated host aggregate via the AggregateMultiTenancyIsolation filter.
         """
         img = nova.tests.unit.image.fake.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID
-        server_req_body = self._build_minimal_create_server_request(
-            'test_cold_migrate_server', image_uuid=img,
+        server_req_body = self._build_server(
+            image_uuid=img,
             networks='none')
         server = self.api.post_server({'server': server_req_body})
         server = self._wait_for_state_change(server, 'ACTIVE')

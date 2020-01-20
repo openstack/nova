@@ -44,9 +44,7 @@ class ServerListLimitMarkerCell0Test(test.TestCase,
         # the image fake backend needed for image discovery
         image_fake.stub_out_image_service(self)
         self.addCleanup(image_fake.FakeImageService_reset)
-        # We have to get the image before we use 2.latest otherwise we'll get
-        # a 404 on the /images proxy API because of 2.36.
-        self.image_id = self.api.get_images()[0]['id']
+
         # Use the latest microversion available to make sure something does
         # not regress in new microversions; cap as necessary.
         self.api.microversion = 'latest'
@@ -64,10 +62,8 @@ class ServerListLimitMarkerCell0Test(test.TestCase,
         """
         # create three test servers
         for x in range(3):
-            server = self.api.post_server(
-                dict(server=self._build_minimal_create_server_request(
-                    'test-list-server-limit%i' % x, self.image_id,
-                    networks='none')))
+            server_req = self._build_server(networks='none')
+            server = self.api.post_server({'server': server_req})
             self.addCleanup(self.api.delete_server, server['id'])
             self._wait_for_state_change(server, 'ERROR')
 

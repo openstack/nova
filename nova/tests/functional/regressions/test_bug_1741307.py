@@ -76,9 +76,9 @@ class TestResizeWithNoAllocationScheduler(
 
     def test_resize(self):
         # Create our server without networking just to keep things simple.
-        server_req = self._build_minimal_create_server_request(
-            'test-resize', flavor_id=self.old_flavor['id'],
+        server_req = self._build_server(
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id=self.old_flavor['id'],
             networks='none')
         server = self.api.post_server({'server': server_req})
         server = self._wait_for_state_change(server, 'ACTIVE')

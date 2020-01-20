@@ -26,10 +26,8 @@ class ServerExternalEventsTestV276(
         super(ServerExternalEventsTestV276, self).setUp()
         self.compute = self.start_service('compute', host='compute')
 
-        flavors = self.api.get_flavors()
-        server_req = self._build_minimal_create_server_request(
-            "some-server", flavor_id=flavors[0]["id"],
-            image_uuid="155d900f-4e14-4e4c-a73d-069cbf4541e6",
+        server_req = self._build_server(
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             networks='none')
         created_server = self.api.post_server({'server': server_req})
         self.server = self._wait_for_state_change(created_server, 'ACTIVE')

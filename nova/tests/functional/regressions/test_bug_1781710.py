@@ -102,8 +102,7 @@ class AntiAffinityMultiCreateRequest(test.TestCase,
                       '_get_alternate_hosts', stub_get_alternate_hosts)
 
         # Now create two servers in that group.
-        server_req = self._build_minimal_create_server_request(
-            'test_anti_affinity_multi_create',
+        server_req = self._build_server(
             image_uuid=image_fake.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID,
             networks='none')
         server_req['min_count'] = 2

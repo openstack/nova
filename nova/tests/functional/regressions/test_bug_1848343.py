@@ -14,7 +14,6 @@ from nova.compute import instance_actions
 from nova.compute import manager as compute_manager
 from nova.scheduler.client import query as query_client
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit.image import fake as fake_image
 
 
 class DeletedServerAllocationRevertTest(
@@ -32,13 +31,11 @@ class DeletedServerAllocationRevertTest(
         self._start_compute('host1')
         self._start_compute('host2')
 
-    def _create_server(self, name):
-        """Creates a server with the given name and returns the server,
-        source host and target host.
+    def _create_server(self):
+        """Creates and return a server along with a source host and target
+        host.
         """
-        server = self._build_minimal_create_server_request(
-            name, image_uuid=fake_image.get_valid_image_id(),
-            networks='none')
+        server = self._build_server(networks='none')
         server = self.api.post_server({'server': server})
         server = self._wait_for_state_change(server, 'ACTIVE')
         source_host = server['OS-EXT-SRV-ATTR:host']
@@ -90,8 +87,7 @@ class DeletedServerAllocationRevertTest(
         rolls back allocations before RPC casting to prep_resize on the dest
         host.
         """
-        server, source_host, target_host = self._create_server(
-            'test_migration_task_rollback')
+        server, source_host, target_host = self._create_server()
         self._disable_target_host(target_host)
         self._stub_delete_server_during_scheduling(server)
 
@@ -114,8 +110,7 @@ class DeletedServerAllocationRevertTest(
         for a live migration and then fails and rolls back allocations before
         RPC casting to live_migration on the source host.
         """
-        server, source_host, target_host = self._create_server(
-            'test_live_migration_task_rollback')
+        server, source_host, target_host = self._create_server()
         self._disable_target_host(target_host)
         self._stub_delete_server_during_scheduling(server)
 
@@ -135,8 +130,7 @@ class DeletedServerAllocationRevertTest(
         the instance is gone which triggers a failure and revert of the
         migration-based allocations created in conductor.
         """
-        server, source_host, target_host = self._create_server(
-            'test_resize_on_compute_fail')
+        server, source_host, target_host = self._create_server()
 
         # Wrap _prep_resize so we can concurrently delete the server.
         original_prep_resize = compute_manager.ComputeManager._prep_resize

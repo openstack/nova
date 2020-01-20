@@ -16,7 +16,6 @@ from nova import exception
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_notifier
-from nova.tests.unit.image import fake as fake_image
 
 
 class PinnedComputeRpcTests(integrated_helpers.ProviderUsageBaseTestCase):
@@ -36,17 +35,10 @@ class PinnedComputeRpcTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.compute2 = self._start_compute(host='host2')
         self.compute3 = self._start_compute(host='host3')
 
-        flavors = self.api.get_flavors()
-        self.flavor1 = flavors[0]
-
     def _test_reschedule_migration_with_compute_rpc_pin(self, version_cap):
         self.flags(compute=version_cap, group='upgrade_levels')
 
-        server_req = self._build_minimal_create_server_request(
-            'server1',
-            networks=[],
-            image_uuid=fake_image.get_valid_image_id(),
-            flavor_id=self.flavor1['id'])
+        server_req = self._build_server(networks='none')
         server = self.api.post_server({'server': server_req})
         server = self._wait_for_state_change(server, 'ACTIVE')
 

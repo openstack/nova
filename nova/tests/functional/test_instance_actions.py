@@ -29,7 +29,7 @@ class InstanceActionsTestV2(test_servers.ServersTestBase):
         """
 
         # Create a server
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
         created_server = self.api.post_server({'server': server})
         self.assertTrue(created_server['id'])
         created_server_id = created_server['id']

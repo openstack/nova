@@ -131,7 +131,7 @@ class ServersTest(ServersTestBase):
 
         self.stub_out('nova.virt.fake.FakeDriver.spawn', throw_error)
 
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
         created_server = self.api.post_server({"server": server})
         created_server_id = created_server['id']
 
@@ -156,15 +156,13 @@ class ServersTest(ServersTestBase):
         raw_image = '155d900f-4e14-4e4c-a73d-069cbf4541e6'
         vhd_image = 'a440c04b-79fa-479c-bed1-0b816eaec379'
 
-        server = self._build_minimal_create_server_request(
-            image_uuid=vhd_image)
+        server = self._build_server(image_uuid=vhd_image)
         server = self.api.post_server({'server': server})
         server = self.api.get_server(server['id'])
         errored_server = self._wait_for_state_change(server, 'ERROR')
         self.assertIn('No valid host', errored_server['fault']['message'])
 
-        server = self._build_minimal_create_server_request(
-            image_uuid=raw_image)
+        server = self._build_server(image_uuid=raw_image)
         server = self.api.post_server({'server': server})
         server = self.api.get_server(server['id'])
         created_server = self._wait_for_state_change(server, 'ACTIVE')
@@ -186,7 +184,7 @@ class ServersTest(ServersTestBase):
 
         self.stub_out('nova.virt.fake.FakeDriver.spawn', throw_error)
 
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
         created_server = self.api.post_server({"server": server})
         created_server_id = created_server['id']
 
@@ -222,7 +220,7 @@ class ServersTest(ServersTestBase):
         # Create server
         # Build the server data gradually, checking errors along the way
         server = {}
-        good_server = self._build_minimal_create_server_request()
+        good_server = self._build_server()
 
         post = {'server': server}
 
@@ -295,7 +293,7 @@ class ServersTest(ServersTestBase):
         self.flags(reclaim_instance_interval=1)
 
         # Create server
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
 
         created_server = self.api.post_server({'server': server})
         LOG.debug("created_server: %s", created_server)
@@ -327,7 +325,7 @@ class ServersTest(ServersTestBase):
         self.flags(reclaim_instance_interval=3600)
 
         # Create server
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
 
         created_server = self.api.post_server({'server': server})
         LOG.debug("created_server: %s", created_server)
@@ -357,7 +355,7 @@ class ServersTest(ServersTestBase):
         self.flags(reclaim_instance_interval=3600)
 
         # Create server
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
 
         created_server1 = self.api.post_server({'server': server})
         LOG.debug("created_server: %s", created_server1)
@@ -375,7 +373,7 @@ class ServersTest(ServersTestBase):
                                                     'SOFT_DELETED')
 
         # Create a second server
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
 
         created_server2 = self.api.post_server({'server': server})
         LOG.debug("created_server: %s", created_server2)
@@ -396,7 +394,7 @@ class ServersTest(ServersTestBase):
         self.flags(reclaim_instance_interval=3600)
 
         # Create server
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
 
         created_server = self.api.post_server({'server': server})
         LOG.debug("created_server: %s", created_server)
@@ -424,7 +422,7 @@ class ServersTest(ServersTestBase):
         # Creates a server with metadata.
 
         # Build the server data gradually, checking errors along the way
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
 
         metadata = {}
         for i in range(30):
@@ -463,7 +461,7 @@ class ServersTest(ServersTestBase):
 
     def test_server_metadata_actions_negative_invalid_state(self):
         # Create server with metadata
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
 
         metadata = {'key_1': 'value_1'}
 
@@ -504,7 +502,7 @@ class ServersTest(ServersTestBase):
         # Rebuild a server with metadata.
 
         # create a server with initially has no metadata
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
         server_post = {'server': server}
 
         metadata = {}
@@ -569,7 +567,7 @@ class ServersTest(ServersTestBase):
         # Test building and renaming a server.
 
         # Create a server
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
         created_server = self.api.post_server({'server': server})
         LOG.debug("created_server: %s", created_server)
         server_id = created_server['id']
@@ -590,7 +588,7 @@ class ServersTest(ServersTestBase):
 
         # Create 2 servers, setting 'return_reservation_id, which should
         # return a reservation_id
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
         server[self._min_count_parameter] = 2
         server[self._return_resv_id_parameter] = True
         post = {'server': server}
@@ -602,7 +600,7 @@ class ServersTest(ServersTestBase):
         self.assertRegex(reservation_id, 'r-[0-9a-zA-Z]{8}')
 
         # Create 1 more server, which should not return a reservation_id
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
         post = {'server': server}
         created_server = self.api.post_server(post)
         self.assertTrue(created_server['id'])
@@ -642,7 +640,7 @@ class ServersTest(ServersTestBase):
         })
 
         # Create server
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
         server['personality'] = personality
 
         post = {'server': server}
@@ -663,7 +661,7 @@ class ServersTest(ServersTestBase):
 
     def test_stop_start_servers_negative_invalid_state(self):
         # Create server
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
         created_server = self.api.post_server({"server": server})
         created_server_id = created_server['id']
 
@@ -703,7 +701,7 @@ class ServersTest(ServersTestBase):
 
     def test_revert_resized_server_negative_invalid_state(self):
         # Create server
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
         created_server = self.api.post_server({"server": server})
         created_server_id = created_server['id']
         found_server = self._wait_for_state_change(created_server, 'ACTIVE')
@@ -728,7 +726,7 @@ class ServersTest(ServersTestBase):
         self.flags(allow_resize_to_same_host=True)
 
         # Create server
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
         created_server = self.api.post_server({"server": server})
         created_server_id = created_server['id']
         found_server = self._wait_for_state_change(created_server, 'ACTIVE')
@@ -756,7 +754,7 @@ class ServersTest(ServersTestBase):
 
     def test_confirm_resized_server_negative_invalid_state(self):
         # Create server
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
         created_server = self.api.post_server({"server": server})
         created_server_id = created_server['id']
         found_server = self._wait_for_state_change(created_server, 'ACTIVE')
@@ -780,7 +778,7 @@ class ServersTest(ServersTestBase):
         self.flags(cores=1, group='quota')
         self.flags(ram=512, group='quota')
         # Create server with default flavor, 1 core, 512 ram
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
         created_server = self.api.post_server({"server": server})
         created_server_id = created_server['id']
 
@@ -796,7 +794,7 @@ class ServersTest(ServersTestBase):
     def test_attach_vol_maximum_disk_devices_exceeded(self):
         self.useFixture(nova_fixtures.CinderFixture(self))
 
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
         created_server = self.api.post_server({"server": server})
         server_id = created_server['id']
         self._wait_for_state_change(created_server, 'ACTIVE')
@@ -827,7 +825,7 @@ class ServersTestV219(ServersTestBase):
     api_major_version = 'v2.1'
 
     def _create_server(self, set_desc = True, desc = None):
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
         if set_desc:
             server['description'] = desc
         post = {'server': server}
@@ -1037,7 +1035,7 @@ class ServerTestV220(ServersTestBase):
         self.ctxt = context.get_admin_context()
 
     def _create_server(self):
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
         post = {'server': server}
         response = self.api.api_post('/servers', post).body
         return (server, response['server'])
@@ -3048,9 +3046,9 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
     def _server_created_with_host(self):
         hostname = self.compute1.host
-        server_req = self._build_minimal_create_server_request(
-            "some-server", flavor_id=self.flavor1["id"],
+        server_req = self._build_server(
             image_uuid="155d900f-4e14-4e4c-a73d-069cbf4541e6",
+            flavor_id=self.flavor1["id"],
             networks='none')
         server_req['host'] = hostname
 
@@ -3174,10 +3172,10 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         """Test that when a resize attempt fails, the retry comes from the
         supplied host_list, and does not call the scheduler.
         """
-        server_req = self._build_minimal_create_server_request(
-                "some-server", flavor_id=self.flavor1["id"],
-                image_uuid="155d900f-4e14-4e4c-a73d-069cbf4541e6",
-                networks='none')
+        server_req = self._build_server(
+            image_uuid="155d900f-4e14-4e4c-a73d-069cbf4541e6",
+            flavor_id=self.flavor1["id"],
+            networks='none')
 
         created_server = self.api.post_server({"server": server_req})
         server = self._wait_for_state_change(created_server,
@@ -3374,10 +3372,7 @@ class PollUnconfirmedResizesTest(integrated_helpers.ProviderUsageBaseTestCase):
         VERIFY_RESIZE status and the _poll_unconfirmed_resizes periodic task
         runs the source compute service goes down so the confirm task fails.
         """
-        server = self._build_minimal_create_server_request(
-            name='test_source_host_down_during_confirm',
-            image_uuid=nova.tests.unit.image.fake.get_valid_image_id(),
-            networks='none', host='host1')
+        server = self._build_server(networks='none', host='host1')
         server = self.api.post_server({'server': server})
         server = self._wait_for_state_change(server, 'ACTIVE')
         # Cold migrate the server to the other host.
@@ -3567,10 +3562,10 @@ class ServerRescheduleTests(integrated_helpers.ProviderUsageBaseTestCase):
         from the source node when the build fails on that node and is
         rescheduled to another node.
         """
-        server_req = self._build_minimal_create_server_request(
-                'some-server', flavor_id=self.flavor1['id'],
-                image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
-                networks='none')
+        server_req = self._build_server(
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id=self.flavor1['id'],
+            networks='none')
 
         created_server = self.api.post_server({'server': server_req})
         server = self._wait_for_state_change(created_server, 'ACTIVE')
@@ -3597,9 +3592,9 @@ class ServerRescheduleTests(integrated_helpers.ProviderUsageBaseTestCase):
         then the server is put into ERROR state properly.
         """
 
-        server_req = self._build_minimal_create_server_request(
-            'some-server', flavor_id=self.flavor1['id'],
+        server_req = self._build_server(
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id=self.flavor1['id'],
             networks='none')
 
         orig_claim = utils.claim_resources
@@ -3655,10 +3650,10 @@ class ServerBuildAbortTests(integrated_helpers.ProviderUsageBaseTestCase):
         """Tests that allocations, created by the scheduler, are cleaned
         from the source node when the build is aborted on that node.
         """
-        server_req = self._build_minimal_create_server_request(
-                'some-server', flavor_id=self.flavor1['id'],
-                image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
-                networks='none')
+        server_req = self._build_server(
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id=self.flavor1['id'],
+            networks='none')
 
         created_server = self.api.post_server({'server': server_req})
         self._wait_for_state_change(created_server, 'ERROR')
@@ -3716,9 +3711,9 @@ class ServerUnshelveSpawnFailTests(
              'MEMORY_MB': 0,
              'DISK_GB': 0}, rp_uuid)
 
-        server_req = self._build_minimal_create_server_request(
-            'unshelve-spawn-fail', flavor_id=self.flavor1['id'],
+        server_req = self._build_server(
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id=self.flavor1['id'],
             networks='none')
 
         server = self.api.post_server({'server': server_req})
@@ -3917,12 +3912,9 @@ class VolumeBackedServerTest(integrated_helpers.ProviderUsageBaseTestCase):
         return body['flavor']['id']
 
     def _create_server(self):
-        with nova.utils.temporary_mutation(self.api, microversion='2.35'):
-            image_id = self.api.get_images()[0]['id']
-        server_req = self._build_minimal_create_server_request(
-            'trait-based-server',
-            image_uuid=image_id,
-            flavor_id=self.flavor_id, networks='none')
+        server_req = self._build_server(
+            flavor_id=self.flavor_id,
+            networks='none')
         server = self.api.post_server({'server': server_req})
         server = self._wait_for_state_change(server, 'ACTIVE')
         return server
@@ -4075,10 +4067,10 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
         :return: create server response
         """
 
-        server_req = self._build_minimal_create_server_request(
-            'trait-based-server',
+        server_req = self._build_server(
             image_uuid=image_id,
-            flavor_id=flavor_id, networks='none')
+            flavor_id=flavor_id,
+            networks='none')
         return self.api.post_server({'server': server_req})
 
     def _create_volume_backed_server_with_traits(self, flavor_id, volume_id):
@@ -4530,7 +4522,7 @@ class ServerTestV256Common(ServersTestBase):
             self.start_service('compute', host=host)
 
     def _create_server(self, target_host=None):
-        server = self._build_minimal_create_server_request(
+        server = self._build_server(
             image_uuid='a2459075-d96c-40d5-893e-577ff92e721c')
         server.update({'networks': 'auto'})
         if target_host is not None:
@@ -4636,9 +4628,9 @@ class ConsumerGenerationConflictTest(
         self.compute2 = self._start_compute('compute2')
 
     def test_create_server_fails_as_placement_reports_consumer_conflict(self):
-        server_req = self._build_minimal_create_server_request(
-            'some-server', flavor_id=self.flavor['id'],
+        server_req = self._build_server(
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id=self.flavor['id'],
             networks='none')
 
         # We cannot pre-create a consumer with the uuid of the instance created
@@ -5630,10 +5622,10 @@ class PortResourceRequestBasedSchedulingTestBase(
             compute_allocations)
 
     def _create_server(self, flavor, networks, host=None):
-        server_req = self._build_minimal_create_server_request(
-            'bandwidth-aware-server',
+        server_req = self._build_server(
             image_uuid='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
-            flavor_id=flavor['id'], networks=networks,
+            flavor_id=flavor['id'],
+            networks=networks,
             host=host)
         return self.api.post_server({'server': server_req})
 

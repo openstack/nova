@@ -56,7 +56,7 @@ class MultiCellEvacuateTestCase(integrated_helpers._IntegratedTestBase):
     def test_evacuate_multi_cell(self):
         # Create a server which should land on host1 since it has the highest
         # weight.
-        server = self._build_server(self.api.get_flavors()[0]['id'])
+        server = self._build_server()
         server = self.api.post_server({'server': server})
         server = self._wait_for_state_change(server, 'ACTIVE')
         self.assertEqual('host1', server['OS-EXT-SRV-ATTR:host'])

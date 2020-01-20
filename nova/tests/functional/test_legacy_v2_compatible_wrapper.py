@@ -49,7 +49,7 @@ class LegacyV2CompatibleTestBase(test_servers.ServersTestBase):
         self.assertNotIn('type', response.body["keypair"])
 
     def test_request_with_pattern_properties_check(self):
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
         post = {'server': server}
         created_server = self.api.post_server(post)
         self._wait_for_state_change(created_server, 'ACTIVE')
@@ -58,7 +58,7 @@ class LegacyV2CompatibleTestBase(test_servers.ServersTestBase):
         self.assertEqual(response, {'a': 'b'})
 
     def test_request_with_pattern_properties_with_avoid_metadata(self):
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
         post = {'server': server}
         created_server = self.api.post_server(post)
         exc = self.assertRaises(client.OpenStackApiException,

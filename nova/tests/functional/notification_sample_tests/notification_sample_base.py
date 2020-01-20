@@ -214,8 +214,8 @@ class NotificationSampleTestBase(test.TestCase,
                 notification,
                 actual=fake_notifier.VERSIONED_NOTIFICATIONS.pop(0))
 
-        server = self._build_minimal_create_server_request(
-            'some-server',
+        server = self._build_server(
+            name='some-server',
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             flavor_id=flavor_id)
 

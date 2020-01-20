@@ -353,10 +353,9 @@ class EnforceVolumeBackedForZeroDiskFlavorTestCase(
         self.policy_fixture.set_rules({
             servers_policies.ZERO_DISK_FLAVOR: base_policies.RULE_ADMIN_API},
             overwrite=False)
-        server_req = self._build_minimal_create_server_request(
-            'test_create_image_backed_server_with_zero_disk_fails',
-            fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID,
-            self.zero_disk_flavor['id'])
+        server_req = self._build_server(
+            image_uuid=fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID,
+            flavor_id=self.zero_disk_flavor['id'])
         ex = self.assertRaises(api_client.OpenStackApiException,
                                self.api.post_server, {'server': server_req})
         self.assertIn('Only volume-backed servers are allowed for flavors '
@@ -374,8 +373,7 @@ class EnforceVolumeBackedForZeroDiskFlavorTestCase(
         self.useFixture(nova_fixtures.CinderFixture(self))
         self.start_service('conductor')
         self.start_service('scheduler')
-        server_req = self._build_minimal_create_server_request(
-            'test_create_volume_backed_server_with_zero_disk_allowed',
+        server_req = self._build_server(
             flavor_id=self.zero_disk_flavor['id'])
         server_req.pop('imageRef', None)
         server_req['block_device_mapping_v2'] = [{
@@ -400,11 +398,8 @@ class ResizeCheckInstanceHostTestCase(
         # Start up a compute on which to create a server.
         self._start_compute('host1')
         # Create a server on host1.
-        server = self._build_minimal_create_server_request(
-            name='test_resize_source_compute_validation',
-            image_uuid=fake_image.get_valid_image_id(),
-            flavor_id=flavors[0]['id'],
-            networks='none')
+        server = self._build_server(
+            flavor_id=flavors[0]['id'], networks='none')
         server = self.api.post_server({'server': server})
         server = self._wait_for_state_change(server, 'ACTIVE')
         # Check if we're cold migrating.

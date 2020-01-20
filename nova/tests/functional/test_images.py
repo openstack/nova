@@ -21,7 +21,7 @@ class ImagesTest(test_servers.ServersTestBase):
 
     def test_create_images_negative_invalid_state(self):
         # Create server
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
         created_server = self.api.post_server({"server": server})
         server_id = created_server['id']
         found_server = self._wait_for_state_change(created_server, 'ACTIVE')
@@ -66,7 +66,7 @@ class ImagesTest(test_servers.ServersTestBase):
         project B is the owner of the image.
         """
         # Create a server using the tenant user project.
-        server = self._build_minimal_create_server_request()
+        server = self._build_server()
         server = self.api.post_server({"server": server})
         server = self._wait_for_state_change(server, 'ACTIVE')
 

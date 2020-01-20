@@ -13,12 +13,10 @@
 import mock
 import time
 
-
 from nova import context as nova_context
 from nova import objects
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_notifier
-from nova.tests.unit.image import fake as fake_image
 
 
 class ComputeManagerInitHostTestCase(
@@ -38,10 +36,7 @@ class ComputeManagerInitHostTestCase(
         for x in range(2):
             self._start_compute('host%d' % x)
         # Create a server, it does not matter on which host it lands.
-        name = 'test_migrate_disk_and_power_off_crash_finish_revert_migration'
-        server = self._build_minimal_create_server_request(
-            name, image_uuid=fake_image.get_valid_image_id(),
-            networks='auto')
+        server = self._build_server(networks='auto')
         server = self.api.post_server({'server': server})
         server = self._wait_for_state_change(server, 'ACTIVE')
         # Save the source hostname for assertions later.
@@ -132,9 +127,6 @@ class TestComputeRestartInstanceStuckInBuild(
         super(TestComputeRestartInstanceStuckInBuild, self).setUp()
         self.compute1 = self._start_compute(host='host1')
 
-        flavors = self.api.get_flavors()
-        self.flavor1 = flavors[0]
-
     def test_restart_compute_while_instance_waiting_for_resource_claim(self):
         """Test for bug 1833581 where an instance is stuck in
         BUILD state forever due to compute service is restarted before the
@@ -156,8 +148,7 @@ class TestComputeRestartInstanceStuckInBuild(
         # There is another way to trigger the issue. We can inject a sleep into
         # instance_claim() to stop it. This is less realistic but it works in
         # the test env.
-        server_req = self._build_minimal_create_server_request(
-            'interrupted-server', flavor_id=self.flavor1['id'],
+        server_req = self._build_server(
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             networks='none')
 

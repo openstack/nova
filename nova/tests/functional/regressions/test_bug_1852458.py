@@ -49,10 +49,7 @@ class TestInstanceActionBuryInCell0(test.TestCase,
         no compute service and result in the instance being created (buried)
         in cell0.
         """
-        server = self._build_minimal_create_server_request(
-            'test_bury_in_cell0_instance_create_action',
-            image_uuid=fake_image.get_valid_image_id(),
-            networks='none')
+        server = self._build_server(networks='none')
         # Use microversion 2.37 to create a server without any networking.
         with utils.temporary_mutation(self.api, microversion='2.37'):
             server = self.api.post_server({'server': server})

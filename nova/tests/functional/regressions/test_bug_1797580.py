@@ -64,8 +64,7 @@ class ColdMigrateTargetHostThenLiveMigrateTest(
 
     def test_cold_migrate_target_host_then_live_migrate(self):
         # Create a server, it doesn't matter on which host it builds.
-        server = self._build_minimal_create_server_request(
-            'test_cold_migrate_target_host_then_live_migrate',
+        server = self._build_server(
             image_uuid=image_fake.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID,
             networks='none')
         server = self.api.post_server({'server': server})

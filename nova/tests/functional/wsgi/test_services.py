@@ -19,7 +19,6 @@ from nova import exception
 from nova import objects
 from nova.tests.functional.api import client as api_client
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit.image import fake as fake_image
 from nova import utils
 
 
@@ -323,9 +322,7 @@ class ComputeStatusFilterTest(integrated_helpers.ProviderUsageBaseTestCase):
 
         # Try creating a server which should fail because nothing is available.
         networks = [{'port': self.neutron.port_1['id']}]
-        server_req = self._build_minimal_create_server_request(
-            'test_compute_status_filter',
-            image_uuid=fake_image.get_valid_image_id(), networks=networks)
+        server_req = self._build_server(networks=networks)
         server = self.api.post_server({'server': server_req})
         server = self._wait_for_state_change(server, 'ERROR')
         # There should be a NoValidHost fault recorded.

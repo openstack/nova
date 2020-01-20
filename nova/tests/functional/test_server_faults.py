@@ -54,9 +54,7 @@ class ServerFaultTestCase(test.TestCase,
         admin user.
         """
         # Create the server with the non-admin user.
-        server = self._build_minimal_create_server_request(
-            'test_server_fault_non_nova_exception',
-            image_uuid=fake_image.get_valid_image_id(),
+        server = self._build_server(
             networks=[{'port': nova_fixtures.NeutronFixture.port_1['id']}])
         server = self.api.post_server({'server': server})
         server = self._wait_for_state_change(server, 'ACTIVE')

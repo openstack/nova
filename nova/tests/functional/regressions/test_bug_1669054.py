@@ -39,7 +39,7 @@ class ResizeEvacuateTestCase(integrated_helpers._IntegratedTestBase):
         # Create a server. At this point there is only one compute service.
         flavors = self.api.get_flavors()
         flavor1 = flavors[0]['id']
-        server = self._build_server(flavor1)
+        server = self._build_server(flavor_id=flavor1)
         server = self.api.post_server({'server': server})
         self._wait_for_state_change(server, 'ACTIVE')
 

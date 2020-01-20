@@ -64,10 +64,6 @@ class SchedulerOnlyChecksTargetTest(test.TestCase,
 
         self.start_service('conductor')
 
-        # We have to get the image before we use 2.latest otherwise we'll get
-        # a 404 on the /images proxy API because of 2.36.
-        self.image_id = self.api.get_images()[0]['id']
-
         # Use the latest microversion available to make sure something does
         # not regress in new microversions; cap as necessary.
         self.admin_api.microversion = 'latest'
@@ -93,10 +89,8 @@ class SchedulerOnlyChecksTargetTest(test.TestCase,
 
     def test_evacuate_server(self):
         # We first create the instance
-        server = self.admin_api.post_server(
-            dict(server=self._build_minimal_create_server_request(
-                'my-pretty-instance-to-evacuate', self.image_id,
-                networks='none')))
+        server = self._build_server(networks='none')
+        server = self.admin_api.post_server({'server': server})
         server_id = server['id']
         self.addCleanup(self.api.delete_server, server_id)
         self._wait_for_state_change(server, 'ACTIVE')

@@ -47,10 +47,10 @@ class TestServerResizeReschedule(integrated_helpers.ProviderUsageBaseTestCase):
         """Test that when a resize attempt fails, the retry comes from the
         supplied host_list, and does not call the scheduler.
         """
-        server_req = self._build_minimal_create_server_request(
-                'some-server', flavor_id=self.flavor1['id'],
-                image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
-                networks='none')
+        server_req = self._build_server(
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id=self.flavor1['id'],
+            networks='none')
 
         self.first_attempt = True
         created_server = self.api.post_server({'server': server_req})
