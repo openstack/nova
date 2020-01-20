@@ -95,8 +95,7 @@ class TestLocalDeleteAllocations(test.TestCase,
                                        {'forced_down': True})
 
         # Delete the server (will be a local delete because compute is down).
-        self.api.delete_server(server['id'])
-        self._wait_until_deleted(server)
+        self._delete_server(server)
 
         with func_fixtures.PlacementFixture(
                 conf_fixture=placement_config, db=False,
@@ -148,8 +147,7 @@ class TestLocalDeleteAllocations(test.TestCase,
         self.admin_api.put_service(compute_service_id, {'forced_down': True})
 
         # Delete the server (will be a local delete because compute is down).
-        self.api.delete_server(server['id'])
-        self._wait_until_deleted(server)
+        self._delete_server(server)
 
         # Get the allocations again to make sure they were deleted.
         usages_after = self._get_usages(placement_api, rp_uuid)

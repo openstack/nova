@@ -131,8 +131,7 @@ class BootFromVolumeOverQuotaRaceDeleteTest(
 
         # Now delete the server which, since it does not have a host, will be
         # deleted "locally" from the API.
-        self.api.delete_server(server['id'])
-        self._wait_until_deleted(server)
+        self._delete_server(server)
 
         # The volume should have been detached by the API.
         attached_volumes = self.cinder_fixture.volume_ids_for_instance(

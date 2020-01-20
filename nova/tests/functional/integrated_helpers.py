@@ -321,6 +321,11 @@ class InstanceHelperMixin(object):
 
         return server
 
+    def _delete_server(self, server):
+        """Delete a server."""
+        self.api.delete_server(server['id'])
+        self._wait_until_deleted(server)
+
 
 class _IntegratedTestBase(test.TestCase, InstanceHelperMixin):
     REQUIRES_LOCKING = True
@@ -785,8 +790,8 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         else:
             migration_uuid = None
 
-        self.api.delete_server(server['id'])
-        self._wait_until_deleted(server)
+        self._delete_server(server)
+
         # NOTE(gibi): The resource allocation is deleted after the instance is
         # destroyed in the db so wait_until_deleted might return before the
         # the resource are deleted in placement. So we need to wait for the

@@ -402,8 +402,7 @@ class TestInstanceNotificationSample(
                           'tags': ['tag'],
                           'trusted_image_certificates': fake_trusted_certs})
         self._attach_volume_to_server(server, self.cinder.SWAP_OLD_VOL)
-        self.api.delete_server(server['id'])
-        self._wait_until_deleted(server)
+        self._delete_server(server)
         # NOTE(gibi): The wait_unit_deleted() call polls the REST API to see if
         # the instance is disappeared however the _delete_instance() in
         # compute/manager destroys the instance first then send the
@@ -474,8 +473,7 @@ class TestInstanceNotificationSample(
 
         fake_notifier.reset()
 
-        self.api.delete_server(server['id'])
-        self._wait_until_deleted(server)
+        self._delete_server(server)
 
         self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
                          fake_notifier.VERSIONED_NOTIFICATIONS)
@@ -541,8 +539,7 @@ class TestInstanceNotificationSample(
         self.admin_api.put_service_force_down(service_id, True)
         fake_notifier.reset()
 
-        self.api.delete_server(server['id'])
-        self._wait_until_deleted(server)
+        self._delete_server(server)
 
         self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
                          fake_notifier.VERSIONED_NOTIFICATIONS)
@@ -678,8 +675,7 @@ class TestInstanceNotificationSample(
         # Just call the periodic task directly for simplicity
         self.compute.manager._poll_bandwidth_usage(context.get_admin_context())
 
-        self.api.delete_server(server['id'])
-        self._wait_until_deleted(server)
+        self._delete_server(server)
 
         instance_updates = self._get_notifications('instance.update')
         self.assertEqual(2, len(instance_updates),

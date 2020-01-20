@@ -45,8 +45,7 @@ class ListDeletedServersWithMarker(test.TestCase,
         server = self.api.post_server({'server': server})
         server = self._wait_for_state_change(server, 'ACTIVE')
         # Now delete the server and wait for it to be gone.
-        self.api.delete_server(server['id'])
-        self._wait_until_deleted(server)
+        self._delete_server(server)
         # List deleted servers, we should get the one back.
         servers = self.api.get_servers(detail=False,
                                        search_opts={'deleted': True})
