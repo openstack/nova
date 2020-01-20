@@ -209,6 +209,70 @@ class InstanceHelperMixin(object):
         }
         return api.post_aggregate(body)['id']
 
+    def _build_flavor(self, id=None, name=None, memory_mb=2048, vcpu=2,
+                      disk=10, ephemeral=10, swap=0, rxtx_factor=1.0,
+                      is_public=True):
+        """Build a request for the flavor create API.
+
+        :param id: An ID for the flavor.
+        :param name: A name for the flavor.
+        :param memory_mb: The flavor memory.
+        :param vcpu: The flavor vcpus.
+        :param disk: The flavor disk.
+        :param ephemeral: The flavor ephemeral.
+        :param swap: The flavor swap.
+        :param rxtx_factor: (DEPRECATED) The flavor RX-TX factor.
+        :param is_public: Whether the flavor is public or not.
+        :returns: The generated request body.
+        """
+        if not id:
+            id = random.randint(0, 10000)
+
+        if not name:
+            name = ''.join(
+                random.choice(string.ascii_lowercase) for i in range(20))
+
+        return {
+            "flavor": {
+                "id": id,
+                "name": name,
+                "ram": memory_mb,
+                "vcpus": vcpu,
+                "disk": disk,
+                "OS-FLV-EXT-DATA:ephemeral": ephemeral,
+                "swap": swap,
+                "rxtx_factor": rxtx_factor,
+                "os-flavor-access:is_public": is_public,
+            }
+        }
+
+    def _create_flavor(self, id=None, name=None, memory_mb=2048, vcpu=2,
+                       disk=10, ephemeral=10, swap=0, rxtx_factor=1.0,
+                       is_public=True, extra_spec=None):
+        """Build and submit a request to the flavor create API.
+
+        :param id: An ID for the flavor.
+        :param name: A name for the flavor.
+        :param memory_mb: The flavor memory.
+        :param vcpu: The flavor vcpus.
+        :param disk: The flavor disk.
+        :param ephemeral: The flavor ephemeral.
+        :param swap: The flavor swap.
+        :param rxtx_factor: (DEPRECATED) The flavor RX-TX factor.
+        :param is_public: Whether the flavor is public or not.
+        :returns: The ID of the created flavor.
+        """
+        body = self._build_flavor(
+            id, name, memory_mb, vcpu, disk, ephemeral, swap, rxtx_factor,
+            is_public)
+        flavor = self.api_fixture.admin_api.post_flavor(body)
+
+        if extra_spec is not None:
+            spec = {"extra_specs": extra_spec}
+            self.api_fixture.admin_api.post_extra_spec(flavor['id'], spec)
+
+        return flavor['id']
+
     def _build_server(self, name=None, image_uuid=None, flavor_id=None,
                       networks=None, az=None, host=None):
         """Build a request for the server create API.
@@ -315,45 +379,6 @@ class _IntegratedTestBase(test.TestCase, InstanceHelperMixin):
 
             if not self.ADMIN_API:
                 self.admin_api.microversion = self.microversion
-
-    def get_unused_flavor_name_id(self):
-        flavors = self.api.get_flavors()
-        flavor_names = list()
-        flavor_ids = list()
-        [(flavor_names.append(flavor['name']),
-         flavor_ids.append(flavor['id']))
-         for flavor in flavors]
-        return (generate_new_element(flavor_names, 'flavor'),
-                int(generate_new_element(flavor_ids, '', True)))
-
-    def _create_flavor_body(self, name, ram, vcpus, disk, ephemeral, id, swap,
-                            rxtx_factor, is_public):
-        return {
-            "flavor": {
-                "name": name,
-                "ram": ram,
-                "vcpus": vcpus,
-                "disk": disk,
-                "OS-FLV-EXT-DATA:ephemeral": ephemeral,
-                "id": id,
-                "swap": swap,
-                "rxtx_factor": rxtx_factor,
-                "os-flavor-access:is_public": is_public,
-            }
-        }
-
-    def _create_flavor(self, memory_mb=2048, vcpu=2, disk=10, ephemeral=10,
-                       swap=0, rxtx_factor=1.0, is_public=True,
-                       extra_spec=None):
-        flv_name, flv_id = self.get_unused_flavor_name_id()
-        body = self._create_flavor_body(flv_name, memory_mb, vcpu, disk,
-                                        ephemeral, flv_id, swap, rxtx_factor,
-                                        is_public)
-        self.api_fixture.admin_api.post_flavor(body)
-        if extra_spec is not None:
-            spec = {"extra_specs": extra_spec}
-            self.api_fixture.admin_api.post_extra_spec(flv_id, spec)
-        return flv_id
 
     def _check_api_endpoint(self, endpoint, expected_middleware):
         app = self.api_fixture.app().get((None, '/v2'))

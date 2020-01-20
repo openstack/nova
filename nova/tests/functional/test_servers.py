@@ -3892,24 +3892,8 @@ class VolumeBackedServerTest(integrated_helpers.ProviderUsageBaseTestCase):
     def setUp(self):
         super(VolumeBackedServerTest, self).setUp()
         self.compute1 = self._start_compute('host1')
-        self.flavor_id = self._create_flavor()
-
-    def _create_flavor(self):
-        body = {
-            'flavor': {
-                'id': 'vbst',
-                'name': 'special',
-                'ram': 512,
-                'vcpus': 1,
-                'disk': 10,
-                'OS-FLV-EXT-DATA:ephemeral': 20,
-                'swap': 5 * 1024,
-                'rxtx_factor': 1.0,
-                'os-flavor-access:is_public': True,
-            },
-        }
-        self.admin_api.post_flavor(body)
-        return body['flavor']['id']
+        self.flavor_id = self._create_flavor(
+            disk=10, ephemeral=20, swap=5 * 1024)
 
     def _create_server(self):
         server_req = self._build_server(

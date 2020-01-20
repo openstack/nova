@@ -137,21 +137,6 @@ class VPMEMTestBase(integrated_helpers.LibvirtProviderUsageBaseTestCase):
     def _delete_server(self, server):
         self.api.delete_server(server['id'])
 
-    def _create_flavor(self, extra_spec=None):
-        flv_name, flv_id = self.get_unused_flavor_name_id()
-        flavor_body = {'flavor':
-                           {'name': flv_name,
-                            'id': flv_id,
-                            'ram': 1024,
-                            'vcpus': 1,
-                            'disk': 1,
-                            }}
-        self.api.post_flavor(flavor_body)
-        if extra_spec:
-            spec = {"extra_specs": extra_spec}
-            self.api.post_extra_spec(flv_id, spec)
-        return flv_id
-
     def _check_vpmem_allocations(self, vpmem_allocs, server_id, cn_uuid):
         cn_allocs = self._get_allocations_by_server_uuid(
             server_id)[cn_uuid]['resources']
