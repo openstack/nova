@@ -848,6 +848,127 @@ class VCPUTopologyTest(test.NoDBTestCase):
 
 class NUMATopologyTest(test.NoDBTestCase):
 
+    def test_cpu_policy_constraint(self):
+        testdata = [
+            {
+                "flavor": objects.Flavor(extra_specs={
+                    "hw:cpu_policy": "dedicated"
+                }),
+                "image": {
+                    "properties": {
+                        "hw_cpu_policy": "dedicated"
+                    }
+                },
+                "expect": fields.CPUAllocationPolicy.DEDICATED
+            },
+            {
+                "flavor": objects.Flavor(extra_specs={
+                    "hw:cpu_policy": "dedicated"
+                }),
+                "image": {
+                    "properties": {
+                        "hw_cpu_policy": "shared"
+                    }
+                },
+                "expect": fields.CPUAllocationPolicy.DEDICATED
+            },
+            {
+                "flavor": objects.Flavor(extra_specs={
+                    "hw:cpu_policy": "dedicated"
+                }),
+                "image": {
+                    "properties": {
+                    }
+                },
+                "expect": fields.CPUAllocationPolicy.DEDICATED
+            },
+            {
+                "flavor": objects.Flavor(extra_specs={
+                    "hw:cpu_policy": "shared"
+                }),
+                "image": {
+                    "properties": {
+                        "hw_cpu_policy": "dedicated"
+                    }
+                },
+                "expect": exception.ImageCPUPinningForbidden
+            },
+            {
+                "flavor": objects.Flavor(extra_specs={
+                    "hw:cpu_policy": "shared"
+                }),
+                "image": {
+                    "properties": {
+                        "hw_cpu_policy": "shared"
+                    }
+                },
+                "expect": fields.CPUAllocationPolicy.SHARED
+            },
+            {
+                "flavor": objects.Flavor(extra_specs={
+                    "hw:cpu_policy": "shared"
+                }),
+                "image": {
+                    "properties": {
+                    }
+                },
+                "expect": fields.CPUAllocationPolicy.SHARED
+            },
+            {
+                "flavor": objects.Flavor(),
+                "image": {
+                    "properties": {
+                        "hw_cpu_policy": "dedicated"
+                    }
+                },
+                "expect": fields.CPUAllocationPolicy.DEDICATED
+            },
+            {
+                "flavor": objects.Flavor(),
+                "image": {
+                    "properties": {
+                        "hw_cpu_policy": "shared"
+                    }
+                },
+                "expect": fields.CPUAllocationPolicy.SHARED
+            },
+            {
+                "flavor": objects.Flavor(),
+                "image": {
+                    "properties": {
+                    }
+                },
+                "expect": None
+            },
+            {
+                "flavor": objects.Flavor(extra_specs={
+                    "hw:cpu_policy": "invalid"
+                }),
+                "image": {
+                    "properties": {
+                    }
+                },
+                "expect": exception.InvalidCPUAllocationPolicy
+            },
+        ]
+
+        for testitem in testdata:
+            image_meta = objects.ImageMeta.from_dict(testitem["image"])
+            if testitem["expect"] is None:
+                cpu_policy = hw.get_cpu_policy_constraint(
+                    testitem["flavor"], image_meta)
+                self.assertIsNone(cpu_policy)
+            elif type(testitem["expect"]) == type:
+                self.assertRaises(testitem["expect"],
+                                  hw.get_cpu_policy_constraint,
+                                  testitem["flavor"],
+                                  image_meta)
+            else:
+                cpu_policy = hw.get_cpu_policy_constraint(
+                    testitem["flavor"], image_meta)
+                self.assertIsNotNone(cpu_policy)
+                self.assertEqual(testitem["expect"], cpu_policy)
+
     def test_topology_constraints(self):
         testdata = [
             {

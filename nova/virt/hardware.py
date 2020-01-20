@@ -1512,7 +1512,7 @@ def get_cpu_policy_constraint(flavor, image_meta):
         if image_policy == fields.CPUAllocationPolicy.DEDICATED:
             raise exception.ImageCPUPinningForbidden()
         cpu_policy = flavor_policy
-    elif image_policy == fields.CPUAllocationPolicy.DEDICATED:
+    elif image_policy in fields.CPUAllocationPolicy.ALL:
         cpu_policy = image_policy
     else:
         cpu_policy = None
