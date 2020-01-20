@@ -179,7 +179,6 @@ class AggregateController(wsgi.Controller):
             aggregate = self.api.remove_host_from_aggregate(context, id, host)
         except (exception.AggregateNotFound,
                 exception.AggregateHostNotFound,
-                exception.HostMappingNotFound,
                 exception.ComputeHostNotFound) as e:
             LOG.error('Failed to remove host %s from aggregate %s. Error: %s',
                       host, id, six.text_type(e))
