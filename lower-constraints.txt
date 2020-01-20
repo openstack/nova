@@ -15,6 +15,7 @@ colorama==0.3.9
 coverage==4.0
 cryptography==2.7
 cursive==0.2.1
+dataclasses==0.7
 ddt==1.0.1
 debtcollector==1.19.0
 decorator==3.4.0
