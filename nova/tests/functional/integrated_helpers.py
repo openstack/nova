@@ -225,9 +225,6 @@ class InstanceHelperMixin(object):
         :param is_public: Whether the flavor is public or not.
         :returns: The generated request body.
         """
-        if not id:
-            id = random.randint(0, 10000)
-
         if not name:
             name = ''.join(
                 random.choice(string.ascii_lowercase) for i in range(20))
@@ -985,13 +982,3 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         fake_notifier.wait_for_versioned_notifications(
             'instance.resize_revert.end')
         return server
-
-    def get_unused_flavor_name_id(self):
-        flavors = self.api.get_flavors()
-        flavor_names = list()
-        flavor_ids = list()
-        [(flavor_names.append(flavor['name']),
-         flavor_ids.append(flavor['id']))
-         for flavor in flavors]
-        return (generate_new_element(flavor_names, 'flavor'),
-                int(generate_new_element(flavor_ids, '', True)))
