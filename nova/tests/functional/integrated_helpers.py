@@ -318,6 +318,36 @@ class InstanceHelperMixin(object):
 
         return server
 
+    def _create_server(self, name=None, image_uuid=None, flavor_id=None,
+                       networks=None, az=None, host=None,
+                       expected_state='ACTIVE', api=None):
+        """Build and submit a request to the server create API.
+
+        :param name: A name for the server.
+        :param image_uuid: The ID of an existing image.
+        :param flavor_id: The ID of an existing flavor.
+        :param networks: A dict of networks to attach or a string of 'none' or
+            'auto'.
+        :param az: The name of the availability zone the instance should
+            request.
+        :param host: The host to boot the instance on. Requires API
+            microversion 2.74 or greater.
+        :param expected_state: The expected end state.
+        :param api: An API client to create the server with; defaults to
+            'self.api'
+        :returns: The response from the API containing the created server.
+        """
+        # if forcing the server onto a host, we have to use the admin API
+        if not api:
+            api = self.api if not az else getattr(self, 'admin_api', self.api)
+
+        body = self._build_server(
+            name, image_uuid, flavor_id, networks, az, host)
+
+        server = api.post_server({'server': body})
+
+        return self._wait_for_state_change(server, expected_state)
+
     def _delete_server(self, server):
         """Delete a server."""
         self.api.delete_server(server['id'])

@@ -70,23 +70,9 @@ class NUMAServersTest(NUMAServersTestBase):
             'resource_providers'][0]['uuid']
 
         # Create server
-        good_server = self._build_server(flavor_id=flavor_id)
-
-        post = {'server': good_server}
-
-        created_server = self.api.post_server(post)
-        LOG.debug("created_server: %s", created_server)
-        self.assertTrue(created_server['id'])
-        created_server_id = created_server['id']
-
-        # Validate that the server has been created
-        found_server = self.api.get_server(created_server_id)
-        self.assertEqual(created_server_id, found_server['id'])
-
-        # It should also be in the all-servers list
-        servers = self.api.get_servers()
-        server_ids = [s['id'] for s in servers]
-        self.assertIn(created_server_id, server_ids)
+        created_server = self._create_server(
+            flavor_id=flavor_id,
+            expected_state=end_status)
 
         # Validate the quota usage
         if filter_called_on_error and end_status == 'ACTIVE':
@@ -104,15 +90,13 @@ class NUMAServersTest(NUMAServersTestBase):
         else:
             self.assertFalse(self.mock_filter.called)
 
-        found_server = self._wait_for_state_change(found_server, end_status)
-
         if expected_usage:
             compute_usage = self.placement_api.get(
                 '/resource_providers/%s/usages' % compute_rp_uuid).body[
                     'usages']
             self.assertEqual(expected_usage, compute_usage)
 
-        self.addCleanup(self._delete_server, found_server)
+        self.addCleanup(self._delete_server, created_server)
         return created_server
 
     def test_create_server_with_numa_topology(self):
@@ -376,12 +360,7 @@ class NUMAServersTest(NUMAServersTestBase):
 
         # Create server
         flavor_a_id = self._create_flavor(extra_spec={})
-        good_server = self._build_server(flavor_id=flavor_a_id)
-
-        post = {'server': good_server}
-
-        created_server = self.api.post_server(post)
-        server = self._wait_for_state_change(created_server, 'ACTIVE')
+        server = self._create_server(flavor_id=flavor_a_id)
 
         original_host = server['OS-EXT-SRV-ATTR:host']
 
@@ -760,16 +739,10 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         self.compute = self.start_service('compute', host='test_compute0')
 
         # Create server
-        good_server = self._build_server(flavor_id=flavor_id)
-        good_server['networks'] = networks
-        post = {'server': good_server}
-
-        created_server = self.api.post_server(post)
-        LOG.debug("created_server: %s", created_server)
-
-        found_server = self.api.get_server(created_server['id'])
-
-        return self._wait_for_state_change(found_server, end_status)
+        return self._create_server(
+            flavor_id=flavor_id,
+            networks=networks,
+            expected_state=end_status)
 
     def test_create_server_with_single_physnet(self):
         extra_spec = {'hw:numa_nodes': '1'}
@@ -908,12 +881,9 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
             {'uuid': base.LibvirtNeutronFixture.network_1['id']},
         ]
 
-        good_server = self._build_server(flavor_id=flavor_id)
-        good_server['networks'] = networks
-        post = {'server': good_server}
-
-        created_server = self.api.post_server(post)
-        server = self._wait_for_state_change(created_server, 'ACTIVE')
+        server = self._create_server(
+            flavor_id=flavor_id,
+            networks=networks)
 
         original_host = server['OS-EXT-SRV-ATTR:host']
 
@@ -928,7 +898,7 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
                         '.migrate_disk_and_power_off', return_value='{}'):
             self.api.post_server_action(server['id'], {'migrate': None})
 
-        server = self._wait_for_state_change(created_server, 'VERIFY_RESIZE')
+        server = self._wait_for_state_change(server, 'VERIFY_RESIZE')
 
         # We don't bother confirming the resize as we expect this to have
         # landed and all we want to know is whether the filter was correct

@@ -35,9 +35,7 @@ class DeletedServerAllocationRevertTest(
         """Creates and return a server along with a source host and target
         host.
         """
-        server = self._build_server(networks='none')
-        server = self.api.post_server({'server': server})
-        server = self._wait_for_state_change(server, 'ACTIVE')
+        server = super()._create_server(networks='none')
         source_host = server['OS-EXT-SRV-ATTR:host']
         target_host = 'host2' if source_host == 'host1' else 'host1'
         return server, source_host, target_host

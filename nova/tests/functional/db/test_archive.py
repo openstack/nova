@@ -50,27 +50,6 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
                     'sqlite version too old for reliable SQLA foreign_keys')
             engine.connect().execute("PRAGMA foreign_keys = ON")
 
-    def _create_server(self):
-        """Creates a minimal test server via the compute API
-
-        Ensures the server is created and can be retrieved from the compute API
-        and waits for it to be ACTIVE.
-
-        :returns: created server (dict)
-        """
-        # Create a server
-        server = self._build_server()
-        created_server = self.api.post_server({'server': server})
-        self.assertTrue(created_server['id'])
-        created_server_id = created_server['id']
-
-        # Check it's there
-        found_server = self.api.get_server(created_server_id)
-        self.assertEqual(created_server_id, found_server['id'])
-
-        found_server = self._wait_for_state_change(found_server, 'ACTIVE')
-        return found_server
-
     def test_archive_deleted_rows(self):
         # Boots a server, deletes it, and then tries to archive it.
         server = self._create_server()

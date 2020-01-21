@@ -60,11 +60,10 @@ class TestMultiattachVolumes(integrated_helpers._IntegratedTestBase):
         self.assertEqual(volume_id, attachments[0]['volumeId'])
 
         # Now create a second server and attach the same volume to that.
-        create_req = self._build_server(
-            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6', flavor_id='1',
+        server2 = self._create_server(
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id='1',
             networks='none')
-        server2 = self.api.post_server({'server': create_req})
-        self._wait_for_state_change(server2, 'ACTIVE')
         # Attach the volume to the second server.
         self.api.api_post('/servers/%s/os-volume_attachments' % server2['id'],
                           {'volumeAttachment': {'volumeId': volume_id}})

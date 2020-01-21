@@ -79,16 +79,6 @@ class NonPersistentFieldNotResetTest(
                        'host3': 'host1'}
         return target_host[host]
 
-    def _create_server(self):
-        # Create a server, it doesn't matter on which host it builds.
-        server = self._build_server(
-            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
-            networks='none')
-        server = self.api.post_server({'server': server})
-        server = self._wait_for_state_change(server, 'ACTIVE')
-
-        return server
-
     def _remove_is_bfv_in_request_spec(self, server_id):
         # Now let's hack the RequestSpec.is_bfv field to mimic migrating an
         # old instance created before RequestSpec.is_bfv was set in the API,
@@ -102,7 +92,9 @@ class NonPersistentFieldNotResetTest(
         self.assertNotIn('is_bfv', reqspec)
 
     def test_cold_migrate(self):
-        server = self._create_server()
+        server = self._create_server(
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            networks='none')
         original_host = server['OS-EXT-SRV-ATTR:host']
         target_host = self._get_target_host(original_host)
         self._remove_is_bfv_in_request_spec(server['id'])
@@ -132,7 +124,9 @@ class NonPersistentFieldNotResetTest(
         self.assertIs(reqspec.is_bfv, False)
 
     def test_evacuate(self):
-        server = self._create_server()
+        server = self._create_server(
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            networks='none')
         original_host = server['OS-EXT-SRV-ATTR:host']
         target_host = self._get_target_host(original_host)
         self._remove_is_bfv_in_request_spec(server['id'])

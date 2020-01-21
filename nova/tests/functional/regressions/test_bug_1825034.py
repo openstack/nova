@@ -46,22 +46,14 @@ class FillVirtualInterfaceListMigration(
         fake_image.stub_out_image_service(self)
         self.addCleanup(fake_image.FakeImageService_reset)
 
-    def _create_server(self):
-        server = self.api.post_server({
-            'server': {
-                'flavorRef': '1',
-                'name': 'test_fill_vifs_migration',
-                'networks': [{
-                    'uuid': nova_fixtures.NeutronFixture.network_1['id']
-                }],
-                'imageRef': fake_image.get_valid_image_id()
-            }
-        })
-        return self._wait_for_state_change(server, 'ACTIVE')
-
     def test_fill_vifs_migration(self):
         # Create a test server.
-        self._create_server()
+        self._create_server(
+            flavor_id=1,
+            networks=[{
+                'uuid': nova_fixtures.NeutronFixture.network_1['id'],
+            }],
+        )
         # Run the online data migration which will create a (soft-deleted)
         # marker record.
         ctxt = nova_context.get_admin_context()
