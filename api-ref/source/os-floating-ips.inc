@@ -62,7 +62,7 @@ Response
   - id: floating_ip_id_value
   - instance_id: server_id
   - ip: floating_ip
-  - pool: floating_ip_pool_name
+  - pool: floating_ip_pool_name_or_id
 
 **Example List Floating Ip Addresses**
 
@@ -94,7 +94,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - pool: floating_ip_pool_name
+  - pool: floating_ip_pool_name_or_id
 
 **Example Create (Allocate) Floating Ip Address**
 
@@ -111,7 +111,7 @@ Response
   - id: floating_ip_id_value
   - instance_id: server_id
   - ip: floating_ip
-  - pool: floating_ip_pool_name
+  - pool: floating_ip_pool_name_or_id
 
 **Example Create (Allocate) Floating Ip Address: JSON response**
 
@@ -151,7 +151,7 @@ Response
   - id: floating_ip_id_value
   - instance_id: server_id
   - ip: floating_ip
-  - pool: floating_ip_pool_name
+  - pool: floating_ip_pool_name_or_id
 
 **Example Show Floating Ip Address Details: JSON response**
 

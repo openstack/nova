@@ -3213,15 +3213,21 @@ floating_ip_obj:
   type: object
 floating_ip_pool_name:
   description: |
-    The name of the floating ip pool.
+    The name of the floating IP pool.
   in: body
   required: true
   type: string
 floating_ip_pool_name_optional:
   description: |
-    The name of the floating ip pool
+    The name of the floating IP pool
   in: body
   required: false
+  type: string
+floating_ip_pool_name_or_id:
+  description: |
+    The name or ID of the floating IP pool.
+  in: body
+  required: true
   type: string
 floating_ip_pools:
   description: |

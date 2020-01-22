@@ -38,7 +38,7 @@ Response
 .. rest_parameters:: parameters.yaml
 
   - floating_ip_pools: floating_ip_pools
-  - name: floating_ip_pool_name
+  - name: floating_ip_pool_name_or_id
 
 **Example List Floating Ip Pools: JSON response**
 
