@@ -56,6 +56,7 @@ from nova import utils
 from nova.virt import event as virtevent
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import guest as libvirt_guest
+from nova.virt.libvirt import migration as libvirt_migrate
 
 libvirt = None
 
@@ -174,12 +175,27 @@ class Host(object):
         elif event == libvirt.VIR_DOMAIN_EVENT_SUSPENDED:
             if detail == libvirt.VIR_DOMAIN_EVENT_SUSPENDED_POSTCOPY:
                 transition = virtevent.EVENT_LIFECYCLE_POSTCOPY_STARTED
-            # FIXME(mriedem): VIR_DOMAIN_EVENT_SUSPENDED_MIGRATED is also sent
-            # when live migration of the guest fails, so we cannot simply rely
-            # on the event itself but need to check if the job itself was
-            # successful.
-            # elif detail == libvirt.VIR_DOMAIN_EVENT_SUSPENDED_MIGRATED:
-            #     transition = virtevent.EVENT_LIFECYCLE_MIGRATION_COMPLETED
+            elif detail == libvirt.VIR_DOMAIN_EVENT_SUSPENDED_MIGRATED:
+                # VIR_DOMAIN_EVENT_SUSPENDED_MIGRATED is also sent when live
+                # migration of the guest fails, so we cannot simply rely
+                # on the event itself but need to check if the job itself was
+                # successful.
+                # NOTE(mriedem): The job check logic here is copied from
+                # LibvirtDriver._live_migration_monitor.
+                guest = libvirt_guest.Guest(dom)
+                info = guest.get_job_info()
+                if info.type == libvirt.VIR_DOMAIN_JOB_NONE:
+                    # Either still running, or failed or completed,
+                    # lets untangle the mess.
+                    info.type = libvirt_migrate.find_job_type(
+                        guest, instance=None, logging_ok=False)
+
+                if info.type == libvirt.VIR_DOMAIN_JOB_COMPLETED:
+                    transition = virtevent.EVENT_LIFECYCLE_MIGRATION_COMPLETED
+                else:
+                    # Failed or some other status we don't know about, so just
+                    # opt to report the guest is paused.
+                    transition = virtevent.EVENT_LIFECYCLE_PAUSED
             else:
                 transition = virtevent.EVENT_LIFECYCLE_PAUSED
         elif event == libvirt.VIR_DOMAIN_EVENT_RESUMED:

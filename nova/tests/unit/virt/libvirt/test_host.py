@@ -210,7 +210,8 @@ class HostTestCase(test.NoDBTestCase):
         self.assertEqual(event.EVENT_LIFECYCLE_POSTCOPY_STARTED,
                          expected_event.transition)
 
-    def test_event_lifecycle_callback_suspended_migrated(self):
+    @mock.patch('nova.virt.libvirt.guest.Guest.get_job_info')
+    def test_event_lifecycle_callback_suspended_migrated(self, get_job_info):
         """Tests the suspended lifecycle event with libvirt with migrated"""
         hostimpl = mock.MagicMock()
         conn = mock.MagicMock()
@@ -220,22 +221,47 @@ class HostTestCase(test.NoDBTestCase):
                 </domain>
             """
         dom = fakelibvirt.Domain(conn, fake_dom_xml, running=True)
-        # See https://libvirt.org/html/libvirt-libvirt-domain.html for values.
-        VIR_DOMAIN_EVENT_SUSPENDED_MIGRATED = 1
-        with mock.patch.object(host.libvirt,
-                               'VIR_DOMAIN_EVENT_SUSPENDED_MIGRATED', new=1,
-                               create=True):
-            host.Host._event_lifecycle_callback(
-                conn, dom, fakelibvirt.VIR_DOMAIN_EVENT_SUSPENDED,
-                detail=VIR_DOMAIN_EVENT_SUSPENDED_MIGRATED, opaque=hostimpl)
+        jobinfo = libvirt_guest.JobInfo(
+            type=fakelibvirt.VIR_DOMAIN_JOB_COMPLETED)
+        get_job_info.return_value = jobinfo
+        host.Host._event_lifecycle_callback(
+            conn, dom, fakelibvirt.VIR_DOMAIN_EVENT_SUSPENDED,
+            detail=fakelibvirt.VIR_DOMAIN_EVENT_SUSPENDED_MIGRATED,
+            opaque=hostimpl)
         expected_event = hostimpl._queue_event.call_args[0][0]
-        # FIXME(mriedem): This should be EVENT_LIFECYCLE_MIGRATION_COMPLETED
-        # once bug 1788014 is fixed and we properly check job status for the
-        # VIR_DOMAIN_EVENT_SUSPENDED_MIGRATED case.
-        # self.assertEqual(event.EVENT_LIFECYCLE_MIGRATION_COMPLETED,
-        #                  expected_event.transition)
+        self.assertEqual(event.EVENT_LIFECYCLE_MIGRATION_COMPLETED,
+                         expected_event.transition)
+        get_job_info.assert_called_once_with()
+
+    @mock.patch('nova.virt.libvirt.guest.Guest.get_job_info')
+    @mock.patch('nova.virt.libvirt.migration.find_job_type')
+    def test_event_lifecycle_callback_suspended_migrated_job_failed(
+            self, find_job_type, get_job_info):
+        """Tests the suspended lifecycle event with libvirt with migrated"""
+        hostimpl = mock.MagicMock()
+        conn = mock.MagicMock()
+        fake_dom_xml = """
+                <domain type='kvm'>
+                  <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+                </domain>
+            """
+        dom = fakelibvirt.Domain(conn, fake_dom_xml, running=True)
+        jobinfo = libvirt_guest.JobInfo(type=fakelibvirt.VIR_DOMAIN_JOB_NONE)
+        get_job_info.return_value = jobinfo
+        # If the job type is VIR_DOMAIN_JOB_NONE we'll attempt to figure out
+        # the actual job status, so in this case we mock it to be a failure.
+        find_job_type.return_value = fakelibvirt.VIR_DOMAIN_JOB_FAILED
+        host.Host._event_lifecycle_callback(
+            conn, dom, fakelibvirt.VIR_DOMAIN_EVENT_SUSPENDED,
+            detail=fakelibvirt.VIR_DOMAIN_EVENT_SUSPENDED_MIGRATED,
+            opaque=hostimpl)
+        expected_event = hostimpl._queue_event.call_args[0][0]
         self.assertEqual(event.EVENT_LIFECYCLE_PAUSED,
                          expected_event.transition)
+        get_job_info.assert_called_once_with()
+        find_job_type.assert_called_once_with(
+            test.MatchType(libvirt_guest.Guest), instance=None,
+            logging_ok=False)
 
     def test_event_emit_delayed_call_delayed(self):
         ev = event.LifecycleEvent(
