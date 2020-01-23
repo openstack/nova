@@ -1042,10 +1042,6 @@ class QuotaClassExists(NovaException):
     msg_fmt = _("Quota class %(class_name)s exists for resource %(resource)s")
 
 
-class ReservationNotFound(QuotaNotFound):
-    msg_fmt = _("Quota reservation %(uuid)s could not be found.")
-
-
 class OverQuota(NovaException):
     msg_fmt = _("Quota exceeded for resources: %(overs)s")
 
