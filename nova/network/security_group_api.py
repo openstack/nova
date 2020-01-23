@@ -31,6 +31,7 @@ import six
 from six.moves import urllib
 from webob import exc
 
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova.network import neutron as neutronapi
@@ -51,6 +52,33 @@ def validate_id(id):
         msg = _("Security group id should be uuid")
         raise exception.Invalid(msg)
     return id
+
+
+def validate_name(
+        context: nova_context.RequestContext,
+        name: str):
+    """Validate a security group name and return the corresponding UUID.
+
+    :param context: The nova request context.
+    :param name: The name of the security group.
+    :raises NoUniqueMatch: If there is no unique match for the provided name.
+    :raises SecurityGroupNotFound: If there's no match for the provided name.
+    :raises NeutronClientException: For all other exceptions.
+    """
+    neutron = neutronapi.get_client(context)
+    try:
+        return neutronv20.find_resourceid_by_name_or_id(
+            neutron, 'security_group', name, context.project_id)
+    except n_exc.NeutronClientNoUniqueMatch as e:
+        raise exception.NoUniqueMatch(six.text_type(e))
+    except n_exc.NeutronClientException as e:
+        exc_info = sys.exc_info()
+        if e.status_code == 404:
+            LOG.debug('Neutron security group %s not found', name)
+            raise exception.SecurityGroupNotFound(six.text_type(e))
+        else:
+            LOG.error('Neutron Error: %s', e)
+            six.reraise(*exc_info)
 
 
 def parse_cidr(cidr):
@@ -280,44 +308,26 @@ def _convert_to_nova_security_group_rule_format(rule):
     return nova_rule
 
 
-def get(context, name=None, id=None, map_exception=False):
+def get(context, id):
     neutron = neutronapi.get_client(context)
     try:
-        if not id and name:
-            # NOTE(flwang): The project id should be honoured so as to get
-            # the correct security group id when user(with admin role but
-            # non-admin project) try to query by name, so as to avoid
-            # getting more than duplicated records with the same name.
-            id = neutronv20.find_resourceid_by_name_or_id(
-                neutron, 'security_group', name, context.project_id)
         group = neutron.show_security_group(id).get('security_group')
         return _convert_to_nova_security_group_format(group)
-    except n_exc.NeutronClientNoUniqueMatch as e:
-        raise exception.NoUniqueMatch(six.text_type(e))
     except n_exc.NeutronClientException as e:
         exc_info = sys.exc_info()
         if e.status_code == 404:
-            LOG.debug("Neutron security group %s not found", name)
+            LOG.debug('Neutron security group %s not found', id)
             raise exception.SecurityGroupNotFound(six.text_type(e))
         else:
             LOG.error("Neutron Error: %s", e)
             six.reraise(*exc_info)
-    except TypeError as e:
-        LOG.error("Neutron Error: %s", e)
-        msg = _("Invalid security group name: %(name)s.") % {"name": name}
-        raise exception.SecurityGroupNotFound(six.text_type(msg))
 
 
-def list(context, names=None, ids=None, project=None,
-         search_opts=None):
+def list(context, project, search_opts=None):
     """Returns list of security group rules owned by tenant."""
     neutron = neutronapi.get_client(context)
     params = {}
     search_opts = search_opts if search_opts else {}
-    if names:
-        params['name'] = names
-    if ids:
-        params['id'] = ids
 
     # NOTE(jeffrey4l): list all the security groups when following
     # conditions are met
@@ -325,23 +335,25 @@ def list(context, names=None, ids=None, project=None,
     #   * it is admin context and all_tenants exist in search_opts.
     #   * project is not specified.
     list_all_tenants = (context.is_admin and
-                        'all_tenants' in search_opts and
-                        not any([names, ids]))
-    # NOTE(jeffrey4l): The neutron doesn't have `all-tenants` concept.
+                        'all_tenants' in search_opts)
+    # NOTE(jeffrey4l): neutron doesn't have `all-tenants` concept.
     # All the security group will be returned if the project/tenant
     # id is not passed.
-    if project and not list_all_tenants:
+    if not list_all_tenants:
         params['tenant_id'] = project
+
     try:
         security_groups = neutron.list_security_groups(**params).get(
             'security_groups')
     except n_exc.NeutronClientException:
         with excutils.save_and_reraise_exception():
             LOG.exception("Neutron Error getting security groups")
+
     converted_rules = []
     for security_group in security_groups:
         converted_rules.append(
             _convert_to_nova_security_group_format(security_group))
+
     return converted_rules
 
 

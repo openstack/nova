@@ -8702,12 +8702,11 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_create_instance_associates_security_groups(self):
         # Make sure create associates security groups.
-        group = {'id': uuids.secgroup_id, 'name': 'testgroup'}
         with test.nested(
                 mock.patch.object(self.compute_api.compute_task_api,
                                   'schedule_and_build_instances'),
-                mock.patch('nova.network.security_group_api.get',
-                          return_value=group),
+                mock.patch('nova.network.security_group_api.validate_name',
+                           return_value=uuids.secgroup_id),
         ) as (mock_sbi, mock_secgroups):
             self.compute_api.create(
                 self.context,
@@ -8719,14 +8718,16 @@ class ComputeAPITestCase(BaseTestCase):
             reqspec = build_call[1]['request_spec'][0]
 
         self.assertEqual(1, len(reqspec.security_groups))
-        self.assertEqual(group['id'], reqspec.security_groups[0].uuid)
+        self.assertEqual(uuids.secgroup_id, reqspec.security_groups[0].uuid)
         mock_secgroups.assert_called_once_with(mock.ANY, 'testgroup')
 
     def test_create_instance_with_invalid_security_group_raises(self):
         pre_build_len = len(db.instance_get_all(self.context))
-        with mock.patch('nova.network.security_group_api.get',
-                        return_value=None) as mock_secgroups:
-            self.assertRaises(exception.SecurityGroupNotFoundForProject,
+        with mock.patch(
+            'nova.network.security_group_api.validate_name',
+            side_effect=exception.SecurityGroupNotFound('foo'),
+        ) as mock_secgroups:
+            self.assertRaises(exception.SecurityGroupNotFound,
                               self.compute_api.create,
                               self.context,
                               instance_type=self.default_flavor,

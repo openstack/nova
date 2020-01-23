@@ -78,47 +78,6 @@ class TestNeutronDriver(test.NoDBTestCase):
 
             mock_list_secgroup.assert_called_once_with(tenant_id=project_id)
 
-    def test_list_with_all_tenants_sec_name_and_admin_context(self):
-        project_id = '0af70a4d22cf4652824ddc1f2435dd85'
-        search_opts = {'all_tenants': 1}
-        security_group_names = ['secgroup_ssh']
-        security_groups_list = {'security_groups': []}
-        admin_context = context.RequestContext('user1', project_id, True)
-
-        with mock.patch.object(
-                self.mocked_client,
-                'list_security_groups',
-                return_value=security_groups_list) as mock_list_secgroup:
-            sg_api.list(admin_context, project=project_id,
-                        names=security_group_names,
-                        search_opts=search_opts)
-
-            mock_list_secgroup.assert_called_once_with(
-                name=security_group_names,
-                tenant_id=project_id)
-
-    def test_list_with_all_tenants_sec_name_ids_and_admin_context(self):
-        project_id = '0af70a4d22cf4652824ddc1f2435dd85'
-        search_opts = {'all_tenants': 1}
-        security_group_names = ['secgroup_ssh']
-        security_group_ids = ['id1']
-        security_groups_list = {'security_groups': []}
-        admin_context = context.RequestContext('user1', project_id, True)
-
-        with mock.patch.object(
-                self.mocked_client,
-                'list_security_groups',
-                return_value=security_groups_list) as mock_list_secgroup:
-            sg_api.list(admin_context, project=project_id,
-                        names=security_group_names,
-                        ids=security_group_ids,
-                        search_opts=search_opts)
-
-            mock_list_secgroup.assert_called_once_with(
-                name=security_group_names,
-                id=security_group_ids,
-                tenant_id=project_id)
-
     def test_list_with_all_tenants_not_admin(self):
         search_opts = {'all_tenants': 1}
         security_groups_list = {'security_groups': []}
@@ -132,36 +91,6 @@ class TestNeutronDriver(test.NoDBTestCase):
 
             mock_list_secgroup.assert_called_once_with(
                 tenant_id=self.context.project_id)
-
-    def test_get_with_name_duplicated(self):
-        sg_name = 'web_server'
-        expected_sg_id = '85cc3048-abc3-43cc-89b3-377341426ac5'
-        expected_sg = {'security_group': {'name': sg_name,
-                                 'id': expected_sg_id,
-                                 'tenant_id': self.context.project_id,
-                                 'description': 'server', 'rules': []}}
-        self.mocked_client.show_security_group.return_value = expected_sg
-
-        with mock.patch.object(neutronv20, 'find_resourceid_by_name_or_id',
-                               return_value=expected_sg_id):
-            observed_sg = sg_api.get(self.context, name=sg_name)
-        expected_sg['security_group']['project_id'] = self.context.project_id
-        del expected_sg['security_group']['tenant_id']
-        self.assertEqual(expected_sg['security_group'], observed_sg)
-        self.mocked_client.show_security_group.assert_called_once_with(
-            expected_sg_id)
-
-    def test_get_with_invalid_name(self):
-        sg_name = 'invalid_name'
-        expected_sg_id = '85cc3048-abc3-43cc-89b3-377341426ac5'
-        self.mocked_client.show_security_group.side_effect = TypeError
-
-        with mock.patch.object(neutronv20, 'find_resourceid_by_name_or_id',
-                               return_value=expected_sg_id):
-            self.assertRaises(exception.SecurityGroupNotFound,
-                              sg_api.get, self.context, name=sg_name)
-        self.mocked_client.show_security_group.assert_called_once_with(
-            expected_sg_id)
 
     def test_create_security_group_with_bad_request(self):
         name = 'test-security-group'
@@ -228,6 +157,7 @@ class TestNeutronDriver(test.NoDBTestCase):
             body)
 
     def test_list_security_group_with_no_port_range_and_not_tcp_udp_icmp(self):
+        project_id = '0af70a4d22cf4652824ddc1f2435dd85'
         sg1 = {'description': 'default',
                'id': '07f1362f-34f6-4136-819a-2dcde112269e',
                'name': 'default',
@@ -247,7 +177,7 @@ class TestNeutronDriver(test.NoDBTestCase):
 
         self.mocked_client.list_security_groups.return_value = (
             {'security_groups': [sg1]})
-        result = sg_api.list(self.context)
+        result = sg_api.list(self.context, project=project_id)
         expected = [{'rules':
             [{'from_port': -1, 'protocol': '51', 'to_port': -1,
               'parent_group_id': '07f1362f-34f6-4136-819a-2dcde112269e',
@@ -257,7 +187,8 @@ class TestNeutronDriver(test.NoDBTestCase):
             'id': '07f1362f-34f6-4136-819a-2dcde112269e',
             'name': 'default', 'description': 'default'}]
         self.assertEqual(expected, result)
-        self.mocked_client.list_security_groups.assert_called_once_with()
+        self.mocked_client.list_security_groups.assert_called_once_with(
+            tenant_id=project_id)
 
     def test_instances_security_group_bindings(self, detailed=False):
         server_id = 'c5a20e8d-c4b0-47cf-9dca-ebe4f758acb1'

@@ -384,13 +384,10 @@ class API(base.Base):
 
         :param context: The nova request context.
         :type context: nova.context.RequestContext
-        :param secgroups: list of requested security group names, or uuids in
-            the case of Neutron.
+        :param secgroups: list of requested security group names
         :type secgroups: list
-        :returns: list of requested security group names unmodified if using
-            nova-network. If using Neutron, the list returned is all uuids.
-            Note that 'default' is a special case and will be unmodified if
-            it's requested.
+        :returns: list of requested security group UUIDs; note that 'default'
+            is a special case and will be unmodified if it's requested.
         """
         security_groups = []
         for secgroup in secgroups:
@@ -398,12 +395,8 @@ class API(base.Base):
             if secgroup == "default":
                 security_groups.append(secgroup)
                 continue
-            secgroup_dict = security_group_api.get(context, secgroup)
-            if not secgroup_dict:
-                raise exception.SecurityGroupNotFoundForProject(
-                    project_id=context.project_id, security_group_id=secgroup)
-
-            security_groups.append(secgroup_dict['id'])
+            secgroup_uuid = security_group_api.validate_name(context, secgroup)
+            security_groups.append(secgroup_uuid)
 
         return security_groups
 
@@ -895,17 +888,17 @@ class API(base.Base):
 
         # When using Neutron, _check_requested_secgroups will translate and
         # return any requested security group names to uuids.
-        security_groups = (
-            self._check_requested_secgroups(context, security_groups))
+        security_groups = self._check_requested_secgroups(
+            context, security_groups)
 
         # Note:  max_count is the number of instances requested by the user,
         # max_network_count is the maximum number of instances taking into
         # account any network quotas
-        max_network_count = self._check_requested_networks(context,
-                                     requested_networks, max_count)
+        max_network_count = self._check_requested_networks(
+            context, requested_networks, max_count)
 
         kernel_id, ramdisk_id = self._handle_kernel_and_ramdisk(
-                context, kernel_id, ramdisk_id, boot_meta)
+            context, kernel_id, ramdisk_id, boot_meta)
 
         config_drive = self._check_config_drive(config_drive)
 
