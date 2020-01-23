@@ -134,7 +134,7 @@ class FixedIpTestV21(test.NoDBTestCase):
                           UUID, body=body)
 
     @mock.patch.object(compute.api.API, 'remove_fixed_ip',
-        side_effect=exception.FixedIpNotFoundForSpecificInstance(
+        side_effect=exception.FixedIpNotFoundForInstance(
             instance_uuid=UUID, ip='10.10.10.1'))
     def test_remove_fixed_ip_not_found(self, _remove_fixed_ip):
 

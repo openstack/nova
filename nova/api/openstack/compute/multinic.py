@@ -65,5 +65,5 @@ class MultinicController(wsgi.Controller):
 
         try:
             self.compute_api.remove_fixed_ip(context, instance, address)
-        except exception.FixedIpNotFoundForSpecificInstance as e:
+        except exception.FixedIpNotFoundForInstance as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
