@@ -5838,6 +5838,26 @@ class PortResourceRequestBasedSchedulingTestBase(
         binding_profile = updated_qos_sriov_port['binding:profile']
         self.assertNotIn('allocation', binding_profile)
 
+    def _create_server_with_ports_and_check_allocation(
+            self, non_qos_normal_port, qos_normal_port, qos_sriov_port):
+        server = self._create_server_with_ports(
+            non_qos_normal_port, qos_normal_port, qos_sriov_port)
+        # check that the server allocates from the current host properly
+        self._check_allocation(
+            server, self.compute1_rp_uuid, non_qos_normal_port,
+            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
+        return server
+
+    def _assert_pci_request_pf_device_name(self, server, device_name):
+        ctxt = context.get_admin_context()
+        pci_requests = objects.InstancePCIRequests.get_by_instance_uuid(
+            ctxt, server['id'])
+        self.assertEqual(1, len(pci_requests.requests))
+        self.assertEqual(1, len(pci_requests.requests[0].spec))
+        self.assertEqual(
+            device_name,
+            pci_requests.requests[0].spec[0]['parent_ifname'])
+
     def _turn_off_api_check(self):
         # The API actively rejecting the move operations with resource
         # request so we have to turn off that check.
@@ -7394,20 +7414,128 @@ class ServerMoveWithPortResourceRequestTest(
 
         # Assert that the InstancePCIRequests also rolled back to point to
         # host1
-        ctxt = context.get_admin_context()
-        pci_requests = objects.InstancePCIRequests.get_by_instance_uuid(
-            ctxt, server['id'])
-        self.assertEqual(1, len(pci_requests.requests))
-        self.assertEqual(1, len(pci_requests.requests[0].spec))
-        self.assertEqual(
-            'host1-ens2',
-            pci_requests.requests[0].spec[0]['parent_ifname'])
+        self._assert_pci_request_pf_device_name(server, 'host1-ens2')
 
         self._delete_server_and_check_allocations(
             server, qos_normal_port, qos_sriov_port)
 
-    # TODO(gibi): add tests for live migration cases:
-    # * abort / cancel -> dest / pci request cleanup?
+    def test_live_migrate_with_qos_port_pci_update_fails(self):
+        # TODO(gibi): remove this when live migration is fully supported and
+        # therefore the check is removed from the api
+        self._turn_off_api_check()
+
+        # Update the name of the network device RP of PF2 on host2 to something
+        # unexpected. This will cause
+        # update_pci_request_spec_with_allocated_interface_name() to raise
+        # when the instance is live migrated to the host2.
+        rsp = self.placement_api.put(
+            '/resource_providers/%s'
+            % self.sriov_dev_rp_per_host[self.compute2_rp_uuid][self.PF2],
+            {"name": "invalid-device-rp-name"})
+        self.assertEqual(200, rsp.status)
+
+        non_qos_normal_port = self.neutron.port_1
+        qos_normal_port = self.neutron.port_with_resource_request
+        qos_sriov_port = self.neutron.port_with_sriov_resource_request
+
+        server = self._create_server_with_ports_and_check_allocation(
+            non_qos_normal_port, qos_normal_port, qos_sriov_port)
+
+        self.api.post_server_action(
+            server['id'],
+            {
+                'os-migrateLive': {
+                    'host': None,
+                    'block_migration': 'auto'
+                }
+            }
+        )
+
+        # pci update will fail after scheduling to host2
+        self._wait_for_migration_status(server, ['error'])
+        server = self._wait_for_server_parameter(
+            server,
+            {'OS-EXT-SRV-ATTR:host': 'host1',
+             'status': 'ERROR'})
+        self.assertIn(
+            'does not have a properly formatted name',
+            server['fault']['message'])
+
+        self._check_allocation(
+            server, self.compute1_rp_uuid, non_qos_normal_port,
+            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
+
+        # Assert that the InstancePCIRequests still point to host1
+        self._assert_pci_request_pf_device_name(server, 'host1-ens2')
+
+        self._delete_server_and_check_allocations(
+            server, qos_normal_port, qos_sriov_port)
+
+
+class LiveMigrateAbortWithPortResourceRequestTest(
+        PortResourceRequestBasedSchedulingTestBase):
+
+    compute_driver = "fake.FakeLiveMigrateDriverWithPciResources"
+
+    def setUp(self):
+        # Use a custom weigher to make sure that we have a predictable host
+        # order in the alternate list returned by the scheduler for migration.
+        self.useFixture(nova_fixtures.HostNameWeigherFixture())
+        super(LiveMigrateAbortWithPortResourceRequestTest, self).setUp()
+        self.compute2 = self._start_compute('host2')
+        self.compute2_rp_uuid = self._get_provider_uuid_by_host('host2')
+        self._create_networking_rp_tree('host2', self.compute2_rp_uuid)
+        self.compute2_service_id = self.admin_api.get_services(
+            host='host2', binary='nova-compute')[0]['id']
+
+    def test_live_migrate_with_qos_port_abort_migration(self):
+        # TODO(gibi): remove this when live migration is fully supported and
+        # therefore the check is removed from the api
+        self._turn_off_api_check()
+
+        non_qos_normal_port = self.neutron.port_1
+        qos_normal_port = self.neutron.port_with_resource_request
+        qos_sriov_port = self.neutron.port_with_sriov_resource_request
+
+        server = self._create_server_with_ports_and_check_allocation(
+            non_qos_normal_port, qos_normal_port, qos_sriov_port)
+
+        # The special virt driver will keep the live migration running until it
+        # is aborted.
+        self.api.post_server_action(
+            server['id'],
+            {
+                'os-migrateLive': {
+                    'host': None,
+                    'block_migration': 'auto'
+                }
+            }
+        )
+
+        # wait for the migration to start
+        migration = self._wait_for_migration_status(server, ['running'])
+
+        # delete the migration to abort it
+        self.api.delete_migration(server['id'], migration['id'])
+
+        self._wait_for_migration_status(server, ['cancelled'])
+        self._wait_for_server_parameter(
+            server,
+            {'OS-EXT-SRV-ATTR:host': 'host1',
+             'status': 'ACTIVE'})
+
+        self._check_allocation(
+            server, self.compute1_rp_uuid, non_qos_normal_port,
+            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
+
+        # Assert that the InstancePCIRequests rolled back to point to host1
+        # This assert is fails now as the abort does not change the PCI device
+        # back
+        # TODO(gibi): come up with an idea to fix this
+        # self._assert_pci_request_pf_device_name(server, 'host1-ens2')
+
+        self._delete_server_and_check_allocations(
+            server, qos_normal_port, qos_sriov_port)
 
 
 class PortResourceRequestReSchedulingTest(
