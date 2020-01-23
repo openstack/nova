@@ -5076,21 +5076,23 @@ class LibvirtDriver(driver.ComputeDriver):
         guest.add_device(qga)
 
     def _add_rng_device(self, guest, flavor, image_meta):
-        rng_is_virtio = image_meta.properties.get('hw_rng_model') == 'virtio'
-        rng_allowed_str = flavor.extra_specs.get('hw_rng:allowed', '')
+        rng_allowed_str = flavor.extra_specs.get('hw_rng:allowed', 'True')
         rng_allowed = strutils.bool_from_string(rng_allowed_str)
-        if rng_is_virtio and rng_allowed:
-            rng_device = vconfig.LibvirtConfigGuestRng()
-            rate_bytes = flavor.extra_specs.get('hw_rng:rate_bytes', 0)
-            period = flavor.extra_specs.get('hw_rng:rate_period', 0)
-            if rate_bytes:
-                rng_device.rate_bytes = int(rate_bytes)
-                rng_device.rate_period = int(period)
-            rng_path = CONF.libvirt.rng_dev_path
-            if (rng_path and not os.path.exists(rng_path)):
-                raise exception.RngDeviceNotExist(path=rng_path)
-            rng_device.backend = rng_path
-            guest.add_device(rng_device)
+
+        if not rng_allowed:
+            return
+
+        rng_device = vconfig.LibvirtConfigGuestRng()
+        rate_bytes = flavor.extra_specs.get('hw_rng:rate_bytes', 0)
+        period = flavor.extra_specs.get('hw_rng:rate_period', 0)
+        if rate_bytes:
+            rng_device.rate_bytes = int(rate_bytes)
+            rng_device.rate_period = int(period)
+        rng_path = CONF.libvirt.rng_dev_path
+        if (rng_path and not os.path.exists(rng_path)):
+            raise exception.RngDeviceNotExist(path=rng_path)
+        rng_device.backend = rng_path
+        guest.add_device(rng_device)
 
     def _add_virtio_serial_controller(self, guest, instance):
         virtio_controller = vconfig.LibvirtConfigGuestController()

@@ -480,6 +480,20 @@ class OSType(BaseNovaEnum):
 
 class RNGModel(BaseNovaEnum):
 
+    # NOTE(kchamart): Along with "virtio", we may need to extend this (if a
+    # good reason shows up) to allow two more values for VirtIO
+    # transitional and non-transitional devices (available since libvirt
+    # 5.2.0):
+    #
+    #   - virtio-transitional
+    #   - virtio-nontransitional
+    #
+    # This allows one to choose whether you want to have compatibility
+    # with older guest operating systems.  The value you select will in
+    # turn decide the kind of PCI topology the guest will get.
+    #
+    # Details:
+    # https://libvirt.org/formatdomain.html#elementsVirtioTransitional
     VIRTIO = "virtio"
 
     ALL = (VIRTIO,)
