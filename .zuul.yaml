@@ -403,6 +403,9 @@
             irrelevant-files: *dsvm-irrelevant-files
         - openstacksdk-functional-devstack:
             irrelevant-files: *dsvm-irrelevant-files
+        - cyborg-tempest:
+            irrelevant-files: *dsvm-irrelevant-files
+            voting: false
     gate:
       jobs:
         - nova-grenade-multinode
