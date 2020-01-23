@@ -4119,8 +4119,6 @@ class ServersControllerCreateTest(test.TestCase):
 
         fakes.stub_out_key_pair_funcs(self)
         fake.stub_out_image_service(self)
-        self.stub_out('nova.db.api.project_get_networks',
-                      lambda c, u: dict(id='1', host='localhost'))
         self.stub_out('nova.db.api.instance_create', instance_create)
         self.stub_out('nova.db.api.instance_system_metadata_update',
                       lambda *a, **kw: None)

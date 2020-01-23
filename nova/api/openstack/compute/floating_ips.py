@@ -72,9 +72,6 @@ def disassociate_floating_ip(self, context, instance, address):
         self.network_api.disassociate_floating_ip(context, instance, address)
     except exception.Forbidden:
         raise webob.exc.HTTPForbidden()
-    except exception.CannotDisassociateAutoAssignedFloatingIP:
-        msg = _('Cannot disassociate auto assigned floating IP')
-        raise webob.exc.HTTPForbidden(explanation=msg)
 
 
 class FloatingIPController(wsgi.Controller):
@@ -170,9 +167,6 @@ class FloatingIPController(wsgi.Controller):
                 context, instance, floating_ip)
         except exception.Forbidden:
             raise webob.exc.HTTPForbidden()
-        except exception.CannotDisassociateAutoAssignedFloatingIP:
-            msg = _('Cannot disassociate auto assigned floating IP')
-            raise webob.exc.HTTPForbidden(explanation=msg)
         except exception.FloatingIpNotFoundForAddress as exc:
             raise webob.exc.HTTPNotFound(explanation=exc.format_message())
 
@@ -288,11 +282,7 @@ class FloatingIPActionController(wsgi.Controller):
 
         # disassociate if associated
         if instance and floating_ip['port_id'] and instance.uuid == id:
-            try:
-                disassociate_floating_ip(self, context, instance, address)
-            except exception.FloatingIpNotAssociated:
-                msg = _('Floating IP is not associated')
-                raise webob.exc.HTTPBadRequest(explanation=msg)
+            disassociate_floating_ip(self, context, instance, address)
             return webob.Response(status_int=202)
         else:
             msg = _("Floating IP %(address)s is not associated with instance "

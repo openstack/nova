@@ -942,10 +942,6 @@ class FloatingIpAssociated(NovaException):
     msg_fmt = _("Floating IP %(address)s is associated.")
 
 
-class FloatingIpNotAssociated(NovaException):
-    msg_fmt = _("Floating IP %(address)s is not associated.")
-
-
 class NoFloatingIpsDefined(NotFound):
     msg_fmt = _("Zero floating IPs exist.")
 
@@ -964,10 +960,6 @@ class FloatingIpAssociateFailed(NovaException):
 
 class FloatingIpBadRequest(Invalid):
     msg_fmt = _("The floating IP request failed with a BadRequest")
-
-
-class CannotDisassociateAutoAssignedFloatingIP(NovaException):
-    msg_fmt = _("Cannot disassociate auto assigned floating IP")
 
 
 class KeypairNotFound(NotFound):
@@ -1062,16 +1054,6 @@ class SecurityGroupNotFoundForRule(SecurityGroupNotFound):
 class SecurityGroupExists(Invalid):
     msg_fmt = _("Security group %(security_group_name)s already exists "
                 "for project %(project_id)s.")
-
-
-class SecurityGroupExistsForInstance(Invalid):
-    msg_fmt = _("Security group %(security_group_id)s is already associated"
-                " with the instance %(instance_id)s")
-
-
-class SecurityGroupNotExistsForInstance(Invalid):
-    msg_fmt = _("Security group %(security_group_id)s is not associated with"
-                " the instance %(instance_id)s")
 
 
 class SecurityGroupCannotBeApplied(Invalid):
@@ -1311,10 +1293,6 @@ class TooManyInstances(QuotaError):
 
 class FloatingIpLimitExceeded(QuotaError):
     msg_fmt = _("Maximum number of floating IPs exceeded")
-
-
-class FixedIpLimitExceeded(QuotaError):
-    msg_fmt = _("Maximum number of fixed IPs exceeded")
 
 
 class MetadataLimitExceeded(QuotaError):
