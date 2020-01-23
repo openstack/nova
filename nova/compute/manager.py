@@ -559,7 +559,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='5.10')
+    target = messaging.Target(version='5.11')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2075,7 +2075,7 @@ class ComputeManager(manager.Manager):
                      filter_properties, admin_password=None,
                      injected_files=None, requested_networks=None,
                      security_groups=None, block_device_mapping=None,
-                     node=None, limits=None, host_list=None):
+                     node=None, limits=None, host_list=None, accel_uuids=None):
 
         @utils.synchronized(instance.uuid)
         def _locked_do_build_and_run_instance(*args, **kwargs):
@@ -2127,7 +2127,8 @@ class ComputeManager(manager.Manager):
                       context, instance, image, request_spec,
                       filter_properties, admin_password, injected_files,
                       requested_networks, security_groups,
-                      block_device_mapping, node, limits, host_list)
+                      block_device_mapping, node, limits, host_list,
+                      accel_uuids)
 
     def _check_device_tagging(self, requested_networks, block_device_mapping):
         tagging_requested = False
@@ -2164,7 +2165,7 @@ class ComputeManager(manager.Manager):
     def _do_build_and_run_instance(self, context, instance, image,
             request_spec, filter_properties, admin_password, injected_files,
             requested_networks, security_groups, block_device_mapping,
-            node=None, limits=None, host_list=None):
+            node=None, limits=None, host_list=None, accel_uuids=None):
 
         try:
             LOG.debug('Starting instance...', instance=instance)
@@ -2194,7 +2195,7 @@ class ComputeManager(manager.Manager):
                 self._build_and_run_instance(context, instance, image,
                         decoded_files, admin_password, requested_networks,
                         security_groups, block_device_mapping, node, limits,
-                        filter_properties, request_spec)
+                        filter_properties, request_spec, accel_uuids)
             LOG.info('Took %0.2f seconds to build instance.',
                      timer.elapsed(), instance=instance)
             return build_results.ACTIVE
@@ -2304,7 +2305,7 @@ class ComputeManager(manager.Manager):
     def _build_and_run_instance(self, context, instance, image, injected_files,
             admin_password, requested_networks, security_groups,
             block_device_mapping, node, limits, filter_properties,
-            request_spec=None):
+            request_spec=None, accel_uuids=None):
 
         image_name = image.get('name')
         self._notify_about_instance_usage(context, instance, 'create.start',
@@ -2353,7 +2354,8 @@ class ComputeManager(manager.Manager):
 
                 with self._build_resources(context, instance,
                         requested_networks, security_groups, image_meta,
-                        block_device_mapping, provider_mapping) as resources:
+                        block_device_mapping, provider_mapping,
+                        accel_uuids) as resources:
                     instance.vm_state = vm_states.BUILDING
                     instance.task_state = task_states.SPAWNING
                     # NOTE(JoshNang) This also saves the changes to the
@@ -2526,7 +2528,7 @@ class ComputeManager(manager.Manager):
     @contextlib.contextmanager
     def _build_resources(self, context, instance, requested_networks,
                          security_groups, image_meta, block_device_mapping,
-                         resource_provider_mapping):
+                         resource_provider_mapping, accel_uuids):
         resources = {}
         network_info = None
         try:
@@ -2596,7 +2598,7 @@ class ComputeManager(manager.Manager):
         try:
             if dp_name:
                 arqs = self._get_bound_arq_resources(
-                        context, dp_name, instance)
+                        context, dp_name, instance, accel_uuids)
         except (Exception, eventlet.timeout.Timeout) as exc:
             LOG.exception(exc.format_message())
             self._build_resources_cleanup(instance, network_info)
@@ -2639,7 +2641,7 @@ class ComputeManager(manager.Manager):
                     # Call Cyborg to delete accelerator requests
                     compute_utils.delete_arqs_if_needed(context, instance)
 
-    def _get_bound_arq_resources(self, context, dp_name, instance):
+    def _get_bound_arq_resources(self, context, dp_name, instance, arq_uuids):
         """Get bound accelerator requests.
 
         The ARQ binding was kicked off in the conductor as an async
@@ -2653,13 +2655,18 @@ class ComputeManager(manager.Manager):
 
         :param dp_name: Device profile name. Caller ensures this is valid.
         :param instance: instance object
+        :param arq_uuids: List of accelerator request (ARQ) UUIDs.
         :returns: List of ARQs for which bindings have completed,
                   successfully or otherwise
         """
 
         cyclient = cyborg.get_client(context)
-        arqs = cyclient.get_arqs_for_instance(instance.uuid)
-        events = [('accelerator-request-bound', arq['uuid']) for arq in arqs]
+        if arq_uuids is None:
+            arqs = cyclient.get_arqs_for_instance(instance.uuid)
+            arq_uuids = [arq['uuid'] for arq in arqs]
+        events = [('accelerator-request-bound', arq_uuid)
+                  for arq_uuid in arq_uuids]
+
         timeout = CONF.arq_binding_timeout
         with self.virtapi.wait_for_instance_event(
                 instance, events, deadline=timeout):
@@ -2674,11 +2681,12 @@ class ComputeManager(manager.Manager):
 
         # Since a timeout in wait_for_instance_event will raise, we get
         # here only if all binding events have been received.
-        if sorted(resolved_arqs) != sorted(arqs):
+        resolved_uuids = [arq['uuid'] for arq in resolved_arqs]
+        if sorted(resolved_uuids) != sorted(arq_uuids):
             # Query Cyborg to get all.
             arqs = cyclient.get_arqs_for_instance(instance.uuid)
         else:
-            arqs = resolved_arqs  # latter has the right arq.state
+            arqs = resolved_arqs
         return arqs
 
     def _cleanup_allocated_networks(self, context, instance,

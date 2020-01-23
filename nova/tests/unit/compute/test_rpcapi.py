@@ -933,13 +933,48 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                                version='5.0')
 
     def test_build_and_run_instance(self):
+        # With rpcapi 5.11, when a list of accel_uuids is passed as a param,
+        # that list must be passed to the client. That is tested in
+        # _test_compute_api with rpc_mock.assert, where expected_kwargs
+        # must have the accel_uuids.
+        accel_uuids = ['938af7f9-f136-4e5a-bdbe-3b6feab54311']
         self._test_compute_api('build_and_run_instance', 'cast',
                 instance=self.fake_instance_obj, host='host', image='image',
                 request_spec={'request': 'spec'}, filter_properties=[],
                 admin_password='passwd', injected_files=None,
                 requested_networks=['network1'], security_groups=None,
                 block_device_mapping=None, node='node', limits=[],
-                host_list=None, version='5.0')
+                host_list=None, accel_uuids=accel_uuids, version='5.11')
+
+    def test_build_and_run_instance_old_rpcapi(self):
+        # With rpcapi < 5.11, accel_uuids must be dropped in the client call.
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        compute_api = compute_rpcapi.ComputeAPI()
+        compute_api.router.client = mock.Mock()
+        mock_client = mock.MagicMock()
+        compute_api.router.client.return_value = mock_client
+        # Force can_send_version to False, so that 5.0 version is used.
+        mock_client.can_send_version.return_value = False
+        mock_cctx = mock.MagicMock()
+        mock_client.prepare.return_value = mock_cctx
+        compute_api.build_and_run_instance(
+                ctxt, instance=self.fake_instance_obj,
+                host='host', image='image',
+                request_spec=self.fake_request_spec_obj,
+                filter_properties={},
+                accel_uuids=['938af7f9-f136-4e5a-bdbe-3b6feab54311'])
+
+        mock_client.can_send_version.assert_called_once_with('5.11')
+        mock_client.prepare.assert_called_with(
+                server='host', version='5.0')
+        mock_cctx.cast.assert_called_with(  # No accel_uuids
+                ctxt, 'build_and_run_instance',
+                instance=self.fake_instance_obj,
+                image='image', request_spec=self.fake_request_spec_obj,
+                filter_properties={}, admin_password=None,
+                injected_files=None, requested_networks=None,
+                security_groups=None, block_device_mapping=None,
+                node=None, limits=None, host_list=None)
 
     def test_quiesce_instance(self):
         self._test_compute_api('quiesce_instance', 'call',

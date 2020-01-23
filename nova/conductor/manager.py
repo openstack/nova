@@ -840,7 +840,7 @@ class ComputeTaskManager(base.Base):
             try:
                 resource_provider_mapping = (
                     local_reqspec.get_request_group_mapping())
-                self._create_and_bind_arqs(
+                accel_uuids = self._create_and_bind_arqs(
                     context, instance.uuid, instance.flavor.extra_specs,
                     host.nodename, resource_provider_mapping)
             except Exception as exc:
@@ -858,7 +858,8 @@ class ComputeTaskManager(base.Base):
                     requested_networks=requested_networks,
                     security_groups=security_groups,
                     block_device_mapping=bdms, node=host.nodename,
-                    limits=host.limits, host_list=host_list)
+                    limits=host.limits, host_list=host_list,
+                    accel_uuids=accel_uuids)
 
     def _schedule_instances(self, context, request_spec,
                             instance_uuids=None, return_alternates=False):
@@ -1618,12 +1619,13 @@ class ComputeTaskManager(base.Base):
                 # this one.
                 continue
 
+            accel_uuids = []
             try:
                 resource_provider_mapping = (
                     request_spec.get_request_group_mapping())
                 # Using nodename instead of hostname. See:
                 # http://lists.openstack.org/pipermail/openstack-discuss/2019-November/011044.html  # noqa
-                self._create_and_bind_arqs(
+                accel_uuids = self._create_and_bind_arqs(
                     context, instance.uuid, instance.flavor.extra_specs,
                     host.nodename, resource_provider_mapping)
             except Exception as exc:
@@ -1649,7 +1651,8 @@ class ComputeTaskManager(base.Base):
                     security_groups=legacy_secgroups,
                     block_device_mapping=instance_bdms,
                     host=host.service_host, node=host.nodename,
-                    limits=host.limits, host_list=host_list)
+                    limits=host.limits, host_list=host_list,
+                    accel_uuids=accel_uuids)
 
     def _create_and_bind_arqs(self, context, instance_uuid, extra_specs,
                               hostname, resource_provider_mapping):
@@ -1660,7 +1663,7 @@ class ComputeTaskManager(base.Base):
         """
         dp_name = extra_specs.get('accel:device_profile')
         if not dp_name:
-            return
+            return []
 
         LOG.debug('Calling Cyborg to get ARQs. dp_name=%s instance=%s',
                   dp_name, instance_uuid)
@@ -1677,6 +1680,7 @@ class ComputeTaskManager(base.Base):
                     for arq in arqs}
         # Initiate Cyborg binding asynchronously
         cyclient.bind_arqs(bindings=bindings)
+        return [arq['uuid'] for arq in arqs]
 
     @staticmethod
     def _map_instance_to_cell(context, instance, cell):

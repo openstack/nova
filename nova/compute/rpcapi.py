@@ -376,6 +376,8 @@ class ComputeAPI(object):
         * 5.8 - Add confirm_snapshot_based_resize_at_source()
         * 5.9 - Add revert_snapshot_based_resize_at_dest()
         * 5.10 - Add finish_revert_snapshot_based_resize_at_source()
+        * 5.11 - Add accel_uuids (accelerator requests) parameter to
+                 build_and_run_instance()
     '''
 
     VERSION_ALIASES = {
@@ -1418,7 +1420,7 @@ class ComputeAPI(object):
             filter_properties, admin_password=None, injected_files=None,
             requested_networks=None, security_groups=None,
             block_device_mapping=None, node=None, limits=None,
-            host_list=None):
+            host_list=None, accel_uuids=None):
         # NOTE(edleafe): compute nodes can only use the dict form of limits.
         if isinstance(limits, objects.SchedulerLimits):
             limits = limits.to_dict()
@@ -1434,9 +1436,13 @@ class ComputeAPI(object):
                   "node": node,
                   "limits": limits,
                   "host_list": host_list,
+                  "accel_uuids": accel_uuids,
                  }
         client = self.router.client(ctxt)
-        version = '5.0'
+        version = '5.11'
+        if not client.can_send_version(version):
+            kwargs.pop('accel_uuids')
+            version = '5.0'
         cctxt = client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'build_and_run_instance', **kwargs)
 

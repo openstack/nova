@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 49
+SERVICE_VERSION = 50
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -180,6 +180,9 @@ SERVICE_VERSION_HISTORY = (
     {'compute_rpc': '5.10'},
     # Version 49: Compute now support server move operations with qos ports
     {'compute_rpc': '5.10'},
+    # Version 50: Compute RPC v5.11:
+    # Add accel_uuids (accelerator requests) param to build_and_run_instance
+    {'compute_rpc': '5.11'},
 )
 
 

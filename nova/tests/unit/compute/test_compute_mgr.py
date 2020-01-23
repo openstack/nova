@@ -5958,6 +5958,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.requested_networks = []
         self.security_groups = []
         self.block_device_mapping = []
+        self.accel_uuids = None
         self.filter_properties = {'retry': {'num_attempts': 1,
                                             'hosts': [[self.compute.host,
                                                        'fake-node']]}}
@@ -6035,12 +6036,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                        '_build_networks_for_instance')
     @mock.patch.object(virt_driver.ComputeDriver,
                        'prepare_networks_before_block_device_mapping')
-    def _test_accel_build_resources(self, mock_prep_net, mock_build_net,
-            mock_prep_spawn, mock_prep_bd, mock_bdnames, mock_save):
+    def _test_accel_build_resources(self, accel_uuids,
+            mock_prep_net, mock_build_net, mock_prep_spawn,
+            mock_prep_bd, mock_bdnames, mock_save):
 
         args = (self.context, self.instance, self.requested_networks,
                 self.security_groups, self.image, self.block_device_mapping,
-                self.resource_provider_mapping)
+                self.resource_provider_mapping, accel_uuids)
 
         resources = []
         with self.compute._build_resources(*args) as resources:
@@ -6053,7 +6055,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def test_accel_build_resources_no_device_profile(self, mock_get_arqs):
         # If dp_name is None, accel path is a no-op.
         self.instance.flavor.extra_specs = {}
-        self._test_accel_build_resources()
+        self._test_accel_build_resources(None)
         mock_get_arqs.assert_not_called()
 
     @mock.patch.object(nova.compute.manager.ComputeManager,
@@ -6064,11 +6066,12 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.instance.flavor.extra_specs = {"accel:device_profile": dp_name}
         arq_list = fixtures.CyborgFixture.bound_arq_list
         mock_get_arqs.return_value = arq_list
+        arq_uuids = [arq['uuid'] for arq in arq_list]
 
-        resources = self._test_accel_build_resources()
+        resources = self._test_accel_build_resources(arq_uuids)
 
         mock_get_arqs.assert_called_once_with(self.context,
-            dp_name, self.instance)
+            dp_name, self.instance, arq_uuids)
         self.assertEqual(sorted(resources['accel_info']), sorted(arq_list))
 
     @mock.patch.object(virt_driver.ComputeDriver,
@@ -6083,7 +6086,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             exception.AcceleratorRequestOpFailed(op='get', msg=''))
 
         self.assertRaises(exception.NovaException,
-                          self._test_accel_build_resources)
+                          self._test_accel_build_resources, None)
         mock_clean_net.assert_called_once()
 
     @mock.patch.object(nova.compute.manager.ComputeVirtAPI,
@@ -6100,13 +6103,42 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.instance.flavor.extra_specs = {"accel:device_profile": dp_name}
         arq_events = [('accelerator-request-bound', arq['uuid'])
                       for arq in arq_list]
+        arq_uuids = [arq['uuid'] for arq in arq_list]
 
-        # get_arqs_for_instance() is called twice, once to get all ARQs
-        # for the instance, once to get only the resolved ARQs
         mock_get_arqs.return_value = arq_list
 
         ret_arqs = self.compute._get_bound_arq_resources(
-            self.context, dp_name, self.instance)
+            self.context, dp_name, self.instance, arq_uuids)
+
+        mock_wait_inst_ev.assert_called_once_with(
+            self.instance, arq_events, deadline=mock.ANY)
+        mock_exit_wait_early.assert_called_once_with(arq_events)
+
+        mock_get_arqs.assert_has_calls([
+            mock.call(self.instance.uuid, only_resolved=True)])
+
+        self.assertEqual(sorted(ret_arqs), sorted(arq_list))
+
+    @mock.patch.object(nova.compute.manager.ComputeVirtAPI,
+                       'exit_wait_early')
+    @mock.patch.object(nova.compute.manager.ComputeVirtAPI,
+                       'wait_for_instance_event')
+    @mock.patch('nova.accelerator.cyborg._CyborgClient.'
+                'get_arqs_for_instance')
+    def test_arq_bind_wait_exit_early_no_arq_uuids(self, mock_get_arqs,
+            mock_wait_inst_ev, mock_exit_wait_early):
+        # If no ARQ UUIDs are passed in, call Cyborg to get the ARQs.
+        # Then, if bound ARQs available on first query, quit early.
+        dp_name = fixtures.CyborgFixture.dp_name
+        arq_list = fixtures.CyborgFixture.bound_arq_list
+        self.instance.flavor.extra_specs = {"accel:device_profile": dp_name}
+        arq_events = [('accelerator-request-bound', arq['uuid'])
+                      for arq in arq_list]
+
+        mock_get_arqs.side_effect = [arq_list, arq_list]
+
+        ret_arqs = self.compute._get_bound_arq_resources(
+            self.context, dp_name, self.instance, arq_uuids=None)
 
         mock_wait_inst_ev.assert_called_once_with(
             self.instance, arq_events, deadline=mock.ANY)
@@ -6132,19 +6164,19 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.instance.flavor.extra_specs = {"accel:device_profile": dp_name}
         arq_events = [('accelerator-request-bound', arq['uuid'])
                       for arq in arq_list]
-        # get_arqs_for_instance gets called 3 times, returning the full
-        # ARQ list first, [] as resolved ARQs next, and the full list finally
-        mock_get_arqs.side_effect = [arq_list, [], arq_list]
+        arq_uuids = [arq['uuid'] for arq in arq_list]
+        # get_arqs_for_instance gets called 2 times, returning the
+        # resolved ARQs first, and the full list finally
+        mock_get_arqs.side_effect = [[], arq_list]
 
         ret_arqs = self.compute._get_bound_arq_resources(
-            self.context, dp_name, self.instance)
+            self.context, dp_name, self.instance, arq_uuids)
 
         mock_wait_inst_ev.assert_called_once_with(
             self.instance, arq_events, deadline=mock.ANY)
         mock_exit_wait_early.assert_not_called()
         self.assertEqual(sorted(ret_arqs), sorted(arq_list))
         mock_get_arqs.assert_has_calls([
-            mock.call(self.instance.uuid),
             mock.call(self.instance.uuid, only_resolved=True),
             mock.call(self.instance.uuid)])
 
@@ -6162,18 +6194,19 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.instance.flavor.extra_specs = {"accel:device_profile": dp_name}
         arq_events = [('accelerator-request-bound', arq['uuid'])
                       for arq in arq_list]
+        arq_uuids = [arq['uuid'] for arq in arq_list]
 
         mock_get_arqs.return_value = arq_list
         mock_wait_inst_ev.side_effect = eventlet_timeout.Timeout
 
         self.assertRaises(eventlet_timeout.Timeout,
             self.compute._get_bound_arq_resources,
-            self.context, dp_name, self.instance)
+            self.context, dp_name, self.instance, arq_uuids)
 
         mock_wait_inst_ev.assert_called_once_with(
             self.instance, arq_events, deadline=mock.ANY)
         mock_exit_wait_early.assert_not_called()
-        mock_get_arqs.assert_called_once_with(self.instance.uuid)
+        mock_get_arqs.assert_not_called()
 
     @mock.patch.object(nova.compute.manager.ComputeVirtAPI,
                        'exit_wait_early')
@@ -6190,21 +6223,20 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.instance.flavor.extra_specs = {"accel:device_profile": dp_name}
         arq_events = [('accelerator-request-bound', arq['uuid'])
                       for arq in arq_list]
+        arq_uuids = [arq['uuid'] for arq in arq_list]
 
-        mock_get_arqs.side_effect = [
-            arq_list,
-            exception.AcceleratorRequestOpFailed(op='', msg='')]
+        mock_get_arqs.side_effect = (
+            exception.AcceleratorRequestOpFailed(op='', msg=''))
 
         self.assertRaises(exception.AcceleratorRequestOpFailed,
             self.compute._get_bound_arq_resources,
-            self.context, dp_name, self.instance)
+            self.context, dp_name, self.instance, arq_uuids)
 
         mock_wait_inst_ev.assert_called_once_with(
             self.instance, arq_events, deadline=mock.ANY)
         mock_exit_wait_early.assert_not_called()
-        mock_get_arqs.assert_has_calls([
-            mock.call(self.instance.uuid),
-            mock.call(self.instance.uuid, only_resolved=True)])
+        mock_get_arqs.assert_called_once_with(
+            self.instance.uuid, only_resolved=True)
 
     @mock.patch.object(fake_driver.FakeDriver, 'spawn')
     @mock.patch('nova.objects.Instance.save')
@@ -6266,7 +6298,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             mock_bdnames, mock_build_net, mock_save):
         args = (self.context, self.instance, self.requested_networks,
                 self.security_groups, self.image, self.block_device_mapping,
-                self.resource_provider_mapping)
+                self.resource_provider_mapping, self.accel_uuids)
         mock_get_arqs.side_effect = (
             exception.AcceleratorRequestOpFailed(op='get', msg=''))
 
@@ -6331,7 +6363,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.image, self.injected_files, self.admin_pass,
                 self.requested_networks, self.security_groups,
                 self.block_device_mapping, self.node, self.limits,
-                self.filter_properties, {})
+                self.filter_properties, {}, self.accel_uuids)
 
     # This test when sending an icehouse compatible rpc call to juno compute
     # node, NetworkRequest object can load from three items tuple.
@@ -6397,7 +6429,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.image, self.injected_files, self.admin_pass,
                 self.requested_networks, self.security_groups,
                 self.block_device_mapping, self.node, self.limits,
-                self.filter_properties, {})
+                self.filter_properties, {}, self.accel_uuids)
         mock_clean_net.assert_called_once_with(self.context, self.instance,
                 self.requested_networks)
         mock_clean_vol.assert_called_once_with(self.context,
@@ -6448,7 +6480,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.image, self.injected_files, self.admin_pass,
                 self.requested_networks, self.security_groups,
                 self.block_device_mapping, self.node, self.limits,
-                self.filter_properties, {})
+                self.filter_properties, {}, self.accel_uuids)
         mock_nil.assert_called_once_with(self.instance)
         mock_build.assert_called_once_with(self.context,
                 [self.instance], self.image, self.filter_properties,
@@ -6474,7 +6506,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                           self.injected_files, self.admin_pass,
                           self.requested_networks, self.security_groups,
                           self.block_device_mapping, self.node,
-                          self.limits, self.filter_properties)
+                          self.limits, self.filter_properties,
+                          self.accel_uuids)
         mock_save.assert_has_calls([
             mock.call(),
             mock.call(),
@@ -6532,7 +6565,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             self.image, self.injected_files, self.admin_pass,
             self.requested_networks, self.security_groups,
             self.block_device_mapping, self.node, self.limits,
-            self.filter_properties, {})
+            self.filter_properties, {}, self.accel_uuids)
         mock_build_ins.assert_called_once_with(self.context,
             [instance], self.image, self.filter_properties,
             self.admin_pass, self.injected_files, self.requested_networks,
@@ -6576,7 +6609,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             self.image, self.injected_files, self.admin_pass,
             self.requested_networks, self.security_groups,
             self.block_device_mapping, self.node, self.limits,
-            self.filter_properties, {})
+            self.filter_properties, {}, self.accel_uuids)
         mock_cleanup_network.assert_called_once_with(
             self.context, instance, self.requested_networks)
         mock_build_ins.assert_called_once_with(self.context,
@@ -6630,7 +6663,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             self.image, self.injected_files, self.admin_pass,
             self.requested_networks, self.security_groups,
             self.block_device_mapping, self.node, self.limits,
-            self.filter_properties, {})
+            self.filter_properties, {}, self.accel_uuids)
         mock_cleanup_network.assert_called_once_with(
             self.context, instance, self.requested_networks)
         mock_build_ins.assert_called_once_with(self.context,
@@ -6675,7 +6708,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_build_run.assert_called_once_with(self.context, self.instance,
                 self.image, self.injected_files, self.admin_pass,
                 self.requested_networks, self.security_groups,
-                self.block_device_mapping, self.node, self.limits, {}, {})
+                self.block_device_mapping, self.node, self.limits, {}, {},
+                self.accel_uuids)
         mock_clean_net.assert_called_once_with(self.context, self.instance,
                 self.requested_networks)
         mock_clean_vol.assert_called_once_with(self.context,
@@ -6724,7 +6758,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.image, self.injected_files, self.admin_pass,
                 self.requested_networks, self.security_groups,
                 self.block_device_mapping, self.node, self.limits,
-                self.filter_properties, {})
+                self.filter_properties, {}, self.accel_uuids)
         mock_nil.assert_called_once_with(self.instance)
         mock_build.assert_called_once_with(self.context,
                 [self.instance], self.image, self.filter_properties,
@@ -6767,7 +6801,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.image, self.injected_files, self.admin_pass,
                 self.requested_networks, self.security_groups,
                 self.block_device_mapping, self.node, self.limits,
-                self.filter_properties, {})
+                self.filter_properties, {}, self.accel_uuids)
         mock_clean.assert_called_once_with(self.context, self.instance,
                 self.requested_networks)
         mock_nil.assert_called_once_with(self.instance)
@@ -6827,7 +6861,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.image, self.injected_files, self.admin_pass,
                 self.requested_networks, self.security_groups,
                 self.block_device_mapping, self.node, self.limits,
-                self.filter_properties, {})
+                self.filter_properties, {}, self.accel_uuids)
         mock_clean_net.assert_called_once_with(self.context, self.instance,
                 self.requested_networks)
 
@@ -6963,7 +6997,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                           self.injected_files, self.admin_pass,
                           self.requested_networks, self.security_groups,
                           self.block_device_mapping, self.node,
-                          self.limits, self.filter_properties)
+                          self.limits, self.filter_properties,
+                          self.accel_uuids)
 
         mock_save.assert_has_calls([
             mock.call(),
@@ -7088,7 +7123,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     self.instance, self.image, self.injected_files,
                     self.admin_pass, self.requested_networks,
                     self.security_groups, self.block_device_mapping, self.node,
-                    self.limits, self.filter_properties)
+                    self.limits, self.filter_properties, self.accel_uuids)
 
             _validate_instance_group_policy.assert_called_once_with(
                     self.context, self.instance, {})
@@ -7187,7 +7222,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                           self.instance, self.image, self.injected_files,
                           self.admin_pass, self.requested_networks,
                           self.security_groups, self.block_device_mapping,
-                          self.node, self.limits, self.filter_properties)
+                          self.node, self.limits, self.filter_properties,
+                          self.accel_uuids)
 
         mock_save.assert_called_once_with()
         mock_notify.assert_has_calls([
@@ -7198,7 +7234,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_build.assert_called_once_with(self.context, self.instance,
             self.requested_networks, self.security_groups,
             test.MatchType(objects.ImageMeta), self.block_device_mapping,
-            self.resource_provider_mapping)
+            self.resource_provider_mapping, self.accel_uuids)
 
     @mock.patch.object(virt_driver.ComputeDriver, 'failed_spawn_cleanup')
     @mock.patch.object(virt_driver.ComputeDriver, 'prepare_for_spawn')
@@ -7220,7 +7256,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             with self.compute._build_resources(self.context, self.instance,
                     self.requested_networks, self.security_groups,
                     self.image, self.block_device_mapping,
-                    self.resource_provider_mapping):
+                    self.resource_provider_mapping, self.accel_uuids):
                 pass
         except Exception as e:
             self.assertIsInstance(e, exception.BuildAbortException)
@@ -7339,7 +7375,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 with self.compute._build_resources(self.context, self.instance,
                         self.requested_networks, self.security_groups,
                         self.image, self.block_device_mapping,
-                        self.resource_provider_mapping):
+                        self.resource_provider_mapping, self.accel_uuids):
                     pass
             except Exception as e:
                 self.assertIsInstance(e,
@@ -7367,7 +7403,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         try:
             with self.compute._build_resources(self.context, self.instance,
                     self.requested_networks, self.security_groups, self.image,
-                    self.block_device_mapping, self.resource_provider_mapping):
+                    self.block_device_mapping, self.resource_provider_mapping,
+                    self.accel_uuids):
                 pass
         except Exception as e:
             self.assertIsInstance(e, exception.BuildAbortException)
@@ -7398,7 +7435,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 with self.compute._build_resources(self.context, self.instance,
                         self.requested_networks, self.security_groups,
                         self.image, self.block_device_mapping,
-                        self.resource_provider_mapping):
+                        self.resource_provider_mapping, self.accel_uuids):
                     pass
             except Exception as e:
                 self.assertIsInstance(e, exc)
@@ -7429,7 +7466,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             with self.compute._build_resources(self.context, self.instance,
                     self.requested_networks, self.security_groups,
                     self.image, self.block_device_mapping,
-                    self.resource_provider_mapping):
+                    self.resource_provider_mapping, self.accel_uuids):
                 fake_spawn()
         except Exception as e:
             self.assertEqual(test_exception, e)
@@ -7463,7 +7500,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             with self.compute._build_resources(self.context, self.instance,
                     self.requested_networks, self.security_groups,
                     self.image, self.block_device_mapping,
-                    self.resource_provider_mapping):
+                    self.resource_provider_mapping, self.accel_uuids):
                 raise test.TestingException()
         except Exception as e:
             self.assertEqual(expected_exc, e)
@@ -7494,7 +7531,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             with self.compute._build_resources(self.context, self.instance,
                     self.requested_networks, self.security_groups,
                     self.image, self.block_device_mapping,
-                    self.resource_provider_mapping):
+                    self.resource_provider_mapping, self.accel_uuids):
                 raise test.TestingException()
         except exception.BuildAbortException:
             pass
@@ -7522,7 +7559,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             with self.compute._build_resources(self.context, self.instance,
                     self.requested_networks, self.security_groups,
                     self.image, self.block_device_mapping,
-                    self.resource_provider_mapping):
+                    self.resource_provider_mapping, self.accel_uuids):
                 raise test.TestingException()
         except exception.BuildAbortException:
             pass
@@ -7554,7 +7591,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             with self.compute._build_resources(self.context, self.instance,
                     self.requested_networks, self.security_groups,
                     self.image, self.block_device_mapping,
-                    self.resource_provider_mapping):
+                    self.resource_provider_mapping, self.accel_uuids):
                 fake_spawn()
 
         self.assertTrue(mock_log.warning.called)
@@ -7766,7 +7803,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     self.image, self.injected_files, self.admin_pass,
                     self.requested_networks, self.security_groups,
                     self.block_device_mapping, self.node, self.limits,
-                    self.filter_properties)
+                    self.filter_properties, self.accel_uuids)
             expected_call = mock.call(self.context, self.instance,
                     'create.end', extra_usage_info={'message': u'Success'},
                     network_info=[])
@@ -7798,7 +7835,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     self.image, self.injected_files, self.admin_pass,
                     self.requested_networks, self.security_groups,
                     self.block_device_mapping, self.node, self.limits,
-                    self.filter_properties)
+                    self.filter_properties, self.accel_uuids)
 
             updates = {'vm_state': u'active', 'access_ip_v6':
                     netaddr.IPAddress('2001:db8:0:1:dcad:beff:feef:1'),
@@ -7838,7 +7875,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     self.instance, self.image, self.injected_files,
                     self.admin_pass, self.requested_networks,
                     self.security_groups, self.block_device_mapping, self.node,
-                    self.limits, self.filter_properties)
+                    self.limits, self.filter_properties, self.accel_uuids)
             expected_call = mock.call(self.context, self.instance,
                     'create.error', fault=exc)
             create_error_call = mock_notify.call_args_list[
@@ -7862,7 +7899,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.instance, self.image, self.injected_files,
                 self.admin_pass, self.requested_networks,
                 self.security_groups, self.block_device_mapping, self.node,
-                self.limits, self.filter_properties, request_spec)
+                self.limits, self.filter_properties, request_spec,
+                self.accel_uuids)
 
         mock_networks.assert_called_once_with(
             self.context, self.instance, self.requested_networks,
@@ -7908,7 +7946,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.instance, self.image, self.injected_files,
                 self.admin_pass, self.requested_networks,
                 self.security_groups, self.block_device_mapping, self.node,
-                self.limits, self.filter_properties, request_spec)
+                self.limits, self.filter_properties, request_spec,
+                self.accel_uuids)
 
         mock_networks.assert_called_once_with(
             self.context, self.instance, self.requested_networks,
@@ -7946,7 +7985,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.instance, self.image, self.injected_files,
                 self.admin_pass, self.requested_networks,
                 self.security_groups, self.block_device_mapping, self.node,
-                self.limits, self.filter_properties, request_spec)
+                self.limits, self.filter_properties, request_spec,
+                self.accel_uuids)
 
     def test_build_with_resource_request_sriov_rp_wrongly_formatted_name(self):
         request_spec = objects.RequestSpec(
@@ -7970,7 +8010,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.instance, self.image, self.injected_files,
                 self.admin_pass, self.requested_networks,
                 self.security_groups, self.block_device_mapping, self.node,
-                self.limits, self.filter_properties, request_spec)
+                self.limits, self.filter_properties, request_spec,
+                self.accel_uuids)
 
     def test_build_with_resource_request_more_than_one_providers(self):
         request_spec = objects.RequestSpec(
@@ -7989,7 +8030,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             self.instance, self.image, self.injected_files,
             self.admin_pass, self.requested_networks,
             self.security_groups, self.block_device_mapping, self.node,
-            self.limits, self.filter_properties, request_spec)
+            self.limits, self.filter_properties, request_spec,
+            self.accel_uuids)
 
 
 class ComputeManagerErrorsOutMigrationTestCase(test.NoDBTestCase):
