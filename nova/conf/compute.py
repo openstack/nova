@@ -1150,7 +1150,7 @@ Related options:
         help="""
 Interval for updating compute resources.
 
-This option specifies how often the update_available_resources
+This option specifies how often the update_available_resource
 periodic task should run. A number less than 0 means to disable the
 task completely. Leaving this at the default of 0 will cause this to
 run at the default periodic interval. Setting it to any positive

@@ -266,7 +266,7 @@ The creation of this caveat section was inspired by issues experienced while
 profiling ``nova-compute``. The ``nova-compute`` process is not allowed to
 speak with a database server directly. Instead communication is mediated
 through the conductor, communication happening via ``oslo.versionedobjects``
-and remote calls. Profiling methods such as ``_update_available_resources`` in
+and remote calls. Profiling methods such as ``update_available_resource`` in
 the ResourceTracker, which needs information from the database, results in
 profile data that can be analyzed but is incorrect and misleading.
 
