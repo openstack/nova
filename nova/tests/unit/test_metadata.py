@@ -1401,6 +1401,45 @@ class MetadataHandlerTestCase(test.TestCase):
         self.assertEqual(200, response.status_int)
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_metadata_lb_proxy_many_networks(self, mock_get_client):
+
+        def fake_list_ports(context, fixed_ips, network_id, fields):
+            if 'f-f-f-f' in network_id:
+                return {'ports':
+                            [{'device_id': 'a-b-c-d', 'tenant_id': 'test'}]}
+            return {'ports': []}
+
+        self.flags(service_metadata_proxy=True, group='neutron')
+        handler.MAX_QUERY_NETWORKS = 10
+
+        self.expected_instance_id = b'a-b-c-d'
+
+        # with X-Metadata-Provider
+        proxy_lb_id = 'edge-x'
+
+        mock_client = mock_get_client.return_value
+        subnet_list = [{'network_id': 'f-f-f-' + chr(c)}
+                       for c in range(ord('a'), ord('z'))]
+        mock_client.list_subnets.return_value = {
+            'subnets': subnet_list}
+
+        with mock.patch.object(
+                mock_client, 'list_ports',
+                side_effect=fake_list_ports) as mock_list_ports:
+
+            response = fake_request(
+                self, self.mdinst,
+                relpath="/2009-04-04/user-data",
+                address="192.192.192.2",
+                fake_get_metadata_by_instance_id=self._fake_x_get_metadata,
+                headers={'X-Forwarded-For': '192.192.192.2',
+                         'X-Metadata-Provider': proxy_lb_id})
+
+            self.assertEqual(3, mock_list_ports.call_count)
+
+        self.assertEqual(200, response.status_int)
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def _metadata_handler_with_provider_id(self, hnd, mock_get_client):
         # with X-Metadata-Provider
         proxy_lb_id = 'edge-x'

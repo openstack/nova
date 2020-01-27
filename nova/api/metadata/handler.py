@@ -39,6 +39,12 @@ from nova.network import neutron as neutronapi
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
+# 160 networks is large enough to satisfy most cases.
+# Yet while reaching 182 networks Neutron server will break as URL length
+# exceeds the maximum. Left this at 160 to allow additional parameters when
+# they're needed.
+MAX_QUERY_NETWORKS = 160
+
 
 class MetadataRequestHandler(wsgi.Application):
     """Serve metadata."""
@@ -219,11 +225,14 @@ class MetadataRequestHandler(wsgi.Application):
 
         try:
             # Retrieve the instance data from the instance's port
-            ports = neutron.list_ports(
-                context,
-                fixed_ips='ip_address=' + instance_address,
-                network_id=md_networks,
-                fields=['device_id', 'tenant_id'])['ports']
+            ports = []
+            while md_networks:
+                ports.extend(neutron.list_ports(
+                    context,
+                    fixed_ips='ip_address=' + instance_address,
+                    network_id=md_networks[:MAX_QUERY_NETWORKS],
+                    fields=['device_id', 'tenant_id'])['ports'])
+                md_networks = md_networks[MAX_QUERY_NETWORKS:]
         except Exception as e:
             LOG.error('Failed to get instance id for metadata '
                       'request, provider %(provider)s '
