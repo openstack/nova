@@ -26,12 +26,12 @@ class QuotaClassSetsTestV21(test.TestCase):
     validation_error = exception.ValidationError
     api_version = '2.1'
     quota_resources = {'metadata_items': 128,
-                       'ram': 51200, 'floating_ips': 10,
+                       'ram': 51200, 'floating_ips': -1,
                        'fixed_ips': -1, 'instances': 10,
                        'injected_files': 5, 'cores': 20,
                        'injected_file_content_bytes': 10240,
-                       'security_groups': 10,
-                       'security_group_rules': 20, 'key_pairs': 100,
+                       'security_groups': -1,
+                       'security_group_rules': -1, 'key_pairs': 100,
                        'injected_file_path_bytes': 255}
     filtered_quotas = None
 
@@ -51,10 +51,10 @@ class QuotaClassSetsTestV21(test.TestCase):
     def _check_filtered_extended_quota(self, quota_set):
         self.assertNotIn('server_groups', quota_set)
         self.assertNotIn('server_group_members', quota_set)
-        self.assertEqual(10, quota_set['floating_ips'])
+        self.assertEqual(-1, quota_set['floating_ips'])
         self.assertEqual(-1, quota_set['fixed_ips'])
-        self.assertEqual(10, quota_set['security_groups'])
-        self.assertEqual(20, quota_set['security_group_rules'])
+        self.assertEqual(-1, quota_set['security_groups'])
+        self.assertEqual(-1, quota_set['security_group_rules'])
 
     def test_format_quota_set(self):
         quota_set = self.controller._format_quota_set('test_class',

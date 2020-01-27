@@ -1,5 +1,5 @@
 {
     "quota_set": {
-        "security_groups": 45
+        "cores": 45
     }
 }
