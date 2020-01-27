@@ -397,7 +397,7 @@
               - ^setup.cfg$
               - ^tools/.*$
               - ^tox.ini$
-        - grenade-py3:
+        - grenade:
             irrelevant-files: *policies-irrelevant-files
         - tempest-ipv6-only:
             irrelevant-files: *dsvm-irrelevant-files
@@ -415,7 +415,7 @@
         - nova-next
         - tempest-integrated-compute:
             irrelevant-files: *policies-irrelevant-files
-        - grenade-py3:
+        - grenade:
             irrelevant-files: *policies-irrelevant-files
         - tempest-ipv6-only:
             irrelevant-files: *dsvm-irrelevant-files
