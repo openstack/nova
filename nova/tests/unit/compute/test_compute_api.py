@@ -3516,11 +3516,14 @@ class _ComputeAPIUnitTestMixIn(object):
                                side_effect=get_vol_data):
             if not is_bootable:
                 self.assertRaises(exception.InvalidBDMVolumeNotBootable,
-                                  self.compute_api._get_bdm_image_metadata,
-                                  self.context, block_device_mapping)
+                                  utils.get_bdm_image_metadata,
+                                  self.context, self.compute_api.image_api,
+                                  self.compute_api.volume_api,
+                                  block_device_mapping)
             else:
-                meta = self.compute_api._get_bdm_image_metadata(self.context,
-                                    block_device_mapping)
+                meta = utils.get_bdm_image_metadata(
+                    self.context, self.compute_api.image_api,
+                    self.compute_api.volume_api, block_device_mapping)
                 self.assertEqual(expected_meta, meta)
 
     def test_boot_volume_non_bootable(self):
@@ -3543,8 +3546,9 @@ class _ComputeAPIUnitTestMixIn(object):
                        {"min_ram": 256, "min_disk": 128, "foo": "bar"}}
         with mock.patch.object(self.compute_api.volume_api, 'get',
                                return_value=fake_volume):
-            meta = self.compute_api._get_bdm_image_metadata(
-                self.context, block_device_mapping)
+            meta = utils.get_bdm_image_metadata(
+                self.context, self.compute_api.image_api,
+                self.compute_api.volume_api, block_device_mapping)
             self.assertEqual(256, meta['min_ram'])
             self.assertEqual(128, meta['min_disk'])
             self.assertEqual('active', meta['status'])
@@ -3569,8 +3573,9 @@ class _ComputeAPIUnitTestMixIn(object):
                 mock.patch.object(self.compute_api.volume_api, 'get_snapshot',
                     return_value=fake_snapshot)) as (
                             volume_get, volume_get_snapshot):
-            meta = self.compute_api._get_bdm_image_metadata(
-                self.context, block_device_mapping)
+            meta = utils.get_bdm_image_metadata(
+                self.context, self.compute_api.image_api,
+                self.compute_api.volume_api, block_device_mapping)
             self.assertEqual(256, meta['min_ram'])
             self.assertEqual(128, meta['min_disk'])
             self.assertEqual('active', meta['status'])
@@ -4443,8 +4448,10 @@ class _ComputeAPIUnitTestMixIn(object):
                  'device_name': 'vda',
                  }))]
         self.assertRaises(exception.CinderConnectionFailed,
-                          self.compute_api._get_bdm_image_metadata,
+                          utils.get_bdm_image_metadata,
                           self.context,
+                          self.compute_api.image_api,
+                          self.compute_api.volume_api,
                           bdms, legacy_bdm=True)
 
     def test_get_volumes_for_bdms_errors(self):

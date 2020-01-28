@@ -4685,7 +4685,7 @@ class ServersControllerCreateTest(test.TestCase):
 
     @mock.patch('nova.compute.api.API._get_volumes_for_bdms')
     @mock.patch.object(compute_api.API, '_validate_bdm')
-    @mock.patch.object(compute_api.API, '_get_bdm_image_metadata')
+    @mock.patch('nova.utils.get_bdm_image_metadata')
     def test_create_instance_with_bdms_and_no_image(
             self, mock_bdm_image_metadata, mock_validate_bdm, mock_get_vols):
         mock_bdm_image_metadata.return_value = {}
@@ -4706,11 +4706,11 @@ class ServersControllerCreateTest(test.TestCase):
 
         mock_validate_bdm.assert_called_once()
         mock_bdm_image_metadata.assert_called_once_with(
-            mock.ANY, mock.ANY, False)
+            mock.ANY, mock.ANY, mock.ANY, mock.ANY, False)
 
     @mock.patch('nova.compute.api.API._get_volumes_for_bdms')
     @mock.patch.object(compute_api.API, '_validate_bdm')
-    @mock.patch.object(compute_api.API, '_get_bdm_image_metadata')
+    @mock.patch('nova.utils.get_bdm_image_metadata')
     def test_create_instance_with_bdms_and_empty_imageRef(
         self, mock_bdm_image_metadata, mock_validate_bdm, mock_get_volumes):
         mock_bdm_image_metadata.return_value = {}
@@ -4971,7 +4971,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._test_create, params, no_image=True)
 
-    @mock.patch('nova.compute.api.API._get_bdm_image_metadata')
+    @mock.patch('nova.utils.get_bdm_image_metadata')
     def test_create_instance_non_bootable_volume_fails(self, fake_bdm_meta):
         params = {'block_device_mapping_v2': self.bdm_v2}
         fake_bdm_meta.side_effect = exception.InvalidBDMVolumeNotBootable(id=1)
@@ -5042,7 +5042,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.stub_out('nova.compute.api.API.create', create)
         self._test_create_bdm(params)
 
-    @mock.patch.object(compute_api.API, '_get_bdm_image_metadata')
+    @mock.patch('nova.utils.get_bdm_image_metadata')
     def test_create_instance_with_volumes_enabled_and_bdms_no_image(
         self, mock_get_bdm_image_metadata):
         """Test that the create works if there is no image supplied but
@@ -5066,9 +5066,9 @@ class ServersControllerCreateTest(test.TestCase):
         self.stub_out('nova.compute.api.API.create', create)
         self._test_create_bdm(params, no_image=True)
         mock_get_bdm_image_metadata.assert_called_once_with(
-            mock.ANY, self.bdm, True)
+            mock.ANY, mock.ANY, mock.ANY, self.bdm, True)
 
-    @mock.patch.object(compute_api.API, '_get_bdm_image_metadata')
+    @mock.patch('nova.utils.get_bdm_image_metadata')
     def test_create_instance_with_imageRef_as_empty_string(
         self, mock_bdm_image_metadata):
         volume = {
@@ -5111,7 +5111,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(exception.ValidationError,
                           self._test_create_bdm, params)
 
-    @mock.patch('nova.compute.api.API._get_bdm_image_metadata')
+    @mock.patch('nova.utils.get_bdm_image_metadata')
     def test_create_instance_non_bootable_volume_fails_legacy_bdm(
         self, fake_bdm_meta):
         bdm = [{

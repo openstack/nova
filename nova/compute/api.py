@@ -1382,53 +1382,6 @@ class API(base.Base):
 
         return certs_to_return
 
-    def _get_bdm_image_metadata(self, context, block_device_mapping,
-                                legacy_bdm=True):
-        """If we are booting from a volume, we need to get the
-        volume details from Cinder and make sure we pass the
-        metadata back accordingly.
-        """
-        if not block_device_mapping:
-            return {}
-
-        for bdm in block_device_mapping:
-            if (legacy_bdm and
-                    block_device.get_device_letter(
-                       bdm.get('device_name', '')) != 'a'):
-                continue
-            elif not legacy_bdm and bdm.get('boot_index') != 0:
-                continue
-
-            volume_id = bdm.get('volume_id')
-            snapshot_id = bdm.get('snapshot_id')
-            if snapshot_id:
-                # NOTE(alaski): A volume snapshot inherits metadata from the
-                # originating volume, but the API does not expose metadata
-                # on the snapshot itself.  So we query the volume for it below.
-                snapshot = self.volume_api.get_snapshot(context, snapshot_id)
-                volume_id = snapshot['volume_id']
-
-            if bdm.get('image_id'):
-                try:
-                    image_id = bdm['image_id']
-                    image_meta = self.image_api.get(context, image_id)
-                    return image_meta
-                except Exception:
-                    raise exception.InvalidBDMImage(id=image_id)
-            elif volume_id:
-                try:
-                    volume = self.volume_api.get(context, volume_id)
-                except exception.CinderConnectionFailed:
-                    raise
-                except Exception:
-                    raise exception.InvalidBDMVolume(id=volume_id)
-
-                if not volume.get('bootable', True):
-                    raise exception.InvalidBDMVolumeNotBootable(id=volume_id)
-
-                return utils.get_image_metadata_from_volume(volume)
-        return {}
-
     @staticmethod
     def _get_requested_instance_group(context, filter_properties):
         if (not filter_properties or
@@ -1481,8 +1434,9 @@ class API(base.Base):
                         "when booting from volume")
                 raise exception.CertificateValidationFailed(message=msg)
             image_id = None
-            boot_meta = self._get_bdm_image_metadata(
-                context, block_device_mapping, legacy_bdm)
+            boot_meta = utils.get_bdm_image_metadata(
+                context, self.image_api, self.volume_api, block_device_mapping,
+                legacy_bdm)
 
         self._check_auto_disk_config(image=boot_meta,
                                      auto_disk_config=auto_disk_config)
