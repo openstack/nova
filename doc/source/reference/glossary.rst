@@ -13,6 +13,16 @@ Glossary
 
         For more information, refer to :doc:`/admin/aggregates`.
 
+    Boot From Volume
+        A server that is created with a
+        :doc:`Block Device Mapping </user/block-device-mapping>` with
+        ``boot_index=0`` and ``destination_type=volume``. The root volume can
+        already exist when the server is created or be created by the compute
+        service as part of the server creation. Note that a server can have
+        volumes attached and not be boot-from-volume. A boot from volume server
+        has an empty ("") ``image`` parameter in ``GET /servers/{server_id}``
+        responses.
+
     Cross-Cell Resize
         A resize (or cold migrate) operation where the source and destination
         compute hosts are mapped to different cells. By default, resize and

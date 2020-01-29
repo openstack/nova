@@ -23,8 +23,8 @@ to the :cinder-doc:`block storage admin guide
 <admin/blockstorage-volume-multiattach.html>` for more details about creating
 multiattach-capable volumes.
 
-Boot from volume and attaching a volume to a server that is not
-SHELVED_OFFLOADED is supported. Ultimately the ability to perform
+:term:`Boot from volume <Boot From Volume>` and attaching a volume to a server
+that is not SHELVED_OFFLOADED is supported. Ultimately the ability to perform
 these actions depends on the compute host and hypervisor driver that
 is being used.
 
