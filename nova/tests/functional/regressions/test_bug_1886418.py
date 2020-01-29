@@ -58,16 +58,9 @@ class TestServices(integrated_helpers._IntegratedTestBase):
         self._create_server(networks=[])
 
         self._disable_compute()
-        # FIXME(gibi): Check that COMPUTE_STATUS_DISABLED is now on the
-        # compute. Unfortunately it is not true as the compute manager failed
-        # to update the traits in placement due to a stale provide tree cache.
-        # It is stale because a server is booted on the compute since the last
-        # update_available_resource periodic was run.
-        self.assertIn(
-            'An error occurred while updating COMPUTE_STATUS_DISABLED trait '
-            'on compute node resource provider',
-            self.stdlog.logger.output)
-        self.assertFalse(self._has_disabled_trait())
+
+        # Check that COMPUTE_STATUS_DISABLED is now on the compute.
+        self.assertTrue(self._has_disabled_trait())
 
         # This would be the expected behavior
         #
@@ -82,3 +75,8 @@ class TestServices(integrated_helpers._IntegratedTestBase):
         self._enable_compute()
         # Check that COMPUTE_STATUS_DISABLED is removed from the compute
         self.assertFalse(self._has_disabled_trait())
+        self.assertNotIn(
+            'An error occurred while updating COMPUTE_STATUS_DISABLED trait '
+            'on compute node resource provider',
+            self.stdlog.logger.output,
+            "This is probably bug 1886418.")

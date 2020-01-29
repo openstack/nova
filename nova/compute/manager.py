@@ -507,7 +507,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 
         if new_traits is not None:
             self.reportclient.set_traits_for_provider(
-                context, rp_uuid, new_traits)
+                context, rp_uuid, new_traits, generation=trait_info.generation)
 
 
 class ComputeManager(manager.Manager):

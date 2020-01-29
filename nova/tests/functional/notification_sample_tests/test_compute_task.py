@@ -109,9 +109,7 @@ class TestComputeTaskNotificationSample(
         # NoValidHost asynchronously.
         self.admin_api.post_server_action(server['id'], {'migrate': None})
         self._wait_for_notification('compute_task.migrate_server.error')
-        # 0. scheduler.select_destinations.start
-        # 1. compute_task.migrate_server.error
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS),
                          fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification(
             'compute_task-migrate_server-error',
@@ -121,8 +119,9 @@ class TestComputeTaskNotificationSample(
                 'request_spec.security_groups': [],
                 'request_spec.numa_topology.instance_uuid': server['id'],
                 'request_spec.pci_requests.instance_uuid': server['id'],
+                'reason.exception_message': 'No valid host was found. ',
                 'reason.function_name': self.ANY,
                 'reason.module_name': self.ANY,
                 'reason.traceback': self.ANY
             },
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])

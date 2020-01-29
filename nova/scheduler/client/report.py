@@ -19,6 +19,7 @@ import copy
 import functools
 import random
 import time
+import typing as ty
 
 from keystoneauth1 import exceptions as ks_exc
 import os_resource_classes as orc
@@ -32,6 +33,7 @@ import six
 
 from nova.compute import provider_tree
 import nova.conf
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -998,7 +1000,13 @@ class SchedulerReportClient(object):
         raise exception.TraitRetrievalFailed(error=resp.text)
 
     @safe_connect
-    def set_traits_for_provider(self, context, rp_uuid, traits):
+    def set_traits_for_provider(
+        self,
+        context: nova_context.RequestContext,
+        rp_uuid: str,
+        traits: ty.Iterable[str],
+        generation: int = None
+    ):
         """Replace a provider's traits with those specified.
 
         The provider must exist - this method does not attempt to create it.
@@ -1006,6 +1014,9 @@ class SchedulerReportClient(object):
         :param context: The security context
         :param rp_uuid: The UUID of the provider whose traits are to be updated
         :param traits: Iterable of traits to set on the provider
+        :param generation: The resource provider generation if known. If not
+                           provided then the value from the provider tree cache
+                           will be used.
         :raises: ResourceProviderUpdateConflict if the provider's generation
                  doesn't match the generation in the cache.  Callers may choose
                  to retrieve the provider and its associations afresh and
@@ -1028,7 +1039,8 @@ class SchedulerReportClient(object):
         # that method doesn't return content, and we need to update the cached
         # provider tree with the new generation.
         traits = list(traits) if traits else []
-        generation = self._provider_tree.data(rp_uuid).generation
+        if generation is None:
+            generation = self._provider_tree.data(rp_uuid).generation
         payload = {
             'resource_provider_generation': generation,
             'traits': traits,

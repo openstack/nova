@@ -2938,6 +2938,45 @@ class TestTraits(SchedulerReportClientTestCase):
         self.assertEqual(
             1, self.client._provider_tree.data(uuids.rp).generation)
 
+    def test_set_traits_for_provider_with_generation(self):
+        traits = ['HW_NIC_OFFLOAD_UCS', 'HW_NIC_OFFLOAD_RDMA']
+
+        # Make _ensure_traits succeed without PUTting
+        get_mock = mock.Mock(status_code=200)
+        get_mock.json.return_value = {'traits': traits}
+        self.ks_adap_mock.get.return_value = get_mock
+
+        # Prime the provider tree cache
+        self.client._provider_tree.new_root('rp', uuids.rp, generation=0)
+
+        # Mock the /rp/{u}/traits PUT to succeed
+        put_mock = mock.Mock(status_code=200)
+        put_mock.json.return_value = {'traits': traits,
+                                      'resource_provider_generation': 2}
+        self.ks_adap_mock.put.return_value = put_mock
+
+        # Invoke
+        self.client.set_traits_for_provider(
+            self.context, uuids.rp, traits, generation=1)
+
+        # Verify API calls
+        self.ks_adap_mock.get.assert_called_once_with(
+            '/traits?name=in:' + ','.join(traits),
+            global_request_id=self.context.global_id,
+            **self.trait_api_kwargs)
+        self.ks_adap_mock.put.assert_called_once_with(
+            '/resource_providers/%s/traits' % uuids.rp,
+            json={'traits': traits, 'resource_provider_generation': 1},
+            global_request_id=self.context.global_id,
+            **self.trait_api_kwargs)
+
+        # And ensure the provider tree cache was updated appropriately
+        self.assertFalse(
+            self.client._provider_tree.have_traits_changed(uuids.rp, traits))
+        # Validate the generation
+        self.assertEqual(
+            2, self.client._provider_tree.data(uuids.rp).generation)
+
     def test_set_traits_for_provider_fail(self):
         traits = ['HW_NIC_OFFLOAD_UCS', 'HW_NIC_OFFLOAD_RDMA']
         get_mock = mock.Mock()
