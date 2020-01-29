@@ -935,9 +935,14 @@ class ComputeTaskManager(base.Base):
                     filter_properties = request_spec.\
                         to_legacy_filter_properties_dict()
 
-                    # TODO(gibi): We need to make sure that the
-                    # requested_resources field is re calculated based on
-                    # neutron ports.
+                    port_res_req = (
+                        self.network_api.get_requested_resource_for_instance(
+                            context, instance.uuid))
+                    # NOTE(gibi): When cyborg or other module wants to handle
+                    # similar non-nova resources then here we have to collect
+                    # all the external resource requests in a single list and
+                    # add them to the RequestSpec.
+                    request_spec.requested_resources = port_res_req
 
                     # NOTE(cfriesen): Ensure that we restrict the scheduler to
                     # the cell specified by the instance mapping.
@@ -959,6 +964,10 @@ class ComputeTaskManager(base.Base):
                     instance.availability_zone = (
                         availability_zones.get_host_availability_zone(
                             context, host))
+
+                    scheduler_utils.fill_provider_mapping(
+                        request_spec, selection)
+
                     self.compute_rpcapi.unshelve_instance(
                         context, instance, host, request_spec, image=image,
                         filter_properties=filter_properties, node=node)

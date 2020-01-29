@@ -22,6 +22,7 @@ import zlib
 
 from keystoneauth1 import adapter
 import mock
+from neutronclient.common import exceptions as neutron_exception
 import os_resource_classes as orc
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -7404,6 +7405,191 @@ class ServerMoveWithPortResourceRequestTest(
 
         # Assert that the InstancePCIRequests still point to host1
         self._assert_pci_request_pf_device_name(server, 'host1-ens2')
+
+        self._delete_server_and_check_allocations(
+            server, qos_normal_port, qos_sriov_port)
+
+    def _turn_off_api_check(self):
+        # The API actively rejecting the move operations with resource
+        # request so we have to turn off that check.
+        # TODO(gibi): Remove this when the move operations are supported and
+        # the API check is removed.
+        patcher = mock.patch(
+            'nova.api.openstack.common.'
+            'supports_port_resource_request_during_move',
+            return_value=True)
+        self.addCleanup(patcher.stop)
+        patcher.start()
+
+    def test_unshelve_offloaded_server_with_qos_port(self):
+        # TODO(gibi): remove this when live migration is fully supported and
+        # therefore the check is removed from the api
+        self._turn_off_api_check()
+
+        non_qos_normal_port = self.neutron.port_1
+        qos_normal_port = self.neutron.port_with_resource_request
+        qos_sriov_port = self.neutron.port_with_sriov_resource_request
+
+        server = self._create_server_with_ports_and_check_allocation(
+            non_qos_normal_port, qos_normal_port, qos_sriov_port)
+
+        # with default config shelve means immediate offload as well
+        req = {
+            'shelve': {}
+        }
+        self.api.post_server_action(server['id'], req)
+        self._wait_for_server_parameter(
+            server, {'status': 'SHELVED_OFFLOADED'})
+        allocations = self.placement_api.get(
+            '/allocations/%s' % server['id']).body['allocations']
+        self.assertEqual(0, len(allocations))
+
+        self.api.post_server_action(server['id'], {'unshelve': None})
+        self._wait_for_server_parameter(
+            server,
+            {'OS-EXT-SRV-ATTR:host': 'host1',
+             'status': 'ACTIVE'})
+        self._check_allocation(
+            server, self.compute1_rp_uuid, non_qos_normal_port,
+            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
+
+        self._assert_pci_request_pf_device_name(server, 'host1-ens2')
+
+        # shelve offload again and then make host1 unusable so the subsequent
+        # unshelve needs to select host2
+        req = {
+            'shelve': {}
+        }
+        self.api.post_server_action(server['id'], req)
+        self._wait_for_server_parameter(
+            server, {'status': 'SHELVED_OFFLOADED'})
+        allocations = self.placement_api.get(
+            '/allocations/%s' % server['id']).body['allocations']
+        self.assertEqual(0, len(allocations))
+
+        self.admin_api.put_service(
+            self.compute1_service_id, {"status": "disabled"})
+
+        self.api.post_server_action(server['id'], {'unshelve': None})
+        self._wait_for_server_parameter(
+            server,
+            {'OS-EXT-SRV-ATTR:host': 'host2',
+             'status': 'ACTIVE'})
+
+        self._check_allocation(
+            server, self.compute2_rp_uuid, non_qos_normal_port,
+            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
+
+        self._assert_pci_request_pf_device_name(server, 'host2-ens2')
+
+        self._delete_server_and_check_allocations(
+            server, qos_normal_port, qos_sriov_port)
+
+    def test_unshelve_offloaded_server_with_qos_port_pci_update_fails(self):
+        # TODO(gibi): remove this when live migration is fully supported and
+        # therefore the check is removed from the api
+        self._turn_off_api_check()
+
+        # Update the name of the network device RP of PF2 on host2 to something
+        # unexpected. This will cause
+        # update_pci_request_spec_with_allocated_interface_name() to raise
+        # when the instance is unshelved to the host2.
+        rsp = self.placement_api.put(
+            '/resource_providers/%s'
+            % self.sriov_dev_rp_per_host[self.compute2_rp_uuid][self.PF2],
+            {"name": "invalid-device-rp-name"})
+        self.assertEqual(200, rsp.status)
+
+        non_qos_normal_port = self.neutron.port_1
+        qos_normal_port = self.neutron.port_with_resource_request
+        qos_sriov_port = self.neutron.port_with_sriov_resource_request
+
+        server = self._create_server_with_ports_and_check_allocation(
+            non_qos_normal_port, qos_normal_port, qos_sriov_port)
+
+        # with default config shelve means immediate offload as well
+        req = {
+            'shelve': {}
+        }
+        self.api.post_server_action(server['id'], req)
+        self._wait_for_server_parameter(
+            server, {'status': 'SHELVED_OFFLOADED'})
+        allocations = self.placement_api.get(
+            '/allocations/%s' % server['id']).body['allocations']
+        self.assertEqual(0, len(allocations))
+
+        # make host1 unusable so the subsequent unshelve needs to select host2
+        self.admin_api.put_service(
+            self.compute1_service_id, {"status": "disabled"})
+
+        self.api.post_server_action(server['id'], {'unshelve': None})
+
+        # Unshelve fails on host2 due to
+        # update_pci_request_spec_with_allocated_interface_name fails so the
+        # instance goes back to shelve offloaded state
+        fake_notifier.wait_for_versioned_notifications(
+            'instance.unshelve.start')
+        error_notification = fake_notifier.wait_for_versioned_notifications(
+            'compute.exception')[0]
+        self.assertEqual(
+            'UnexpectedResourceProviderNameForPCIRequest',
+            error_notification['payload']['nova_object.data']['exception'])
+        server = self._wait_for_server_parameter(
+            server,
+            {'OS-EXT-STS:task_state': None,
+             'status': 'SHELVED_OFFLOADED'})
+
+        allocations = self.placement_api.get(
+            '/allocations/%s' % server['id']).body['allocations']
+        self.assertEqual(0, len(allocations))
+
+        self._delete_server_and_check_allocations(
+            server, qos_normal_port, qos_sriov_port)
+
+    def test_unshelve_offloaded_server_with_qos_port_fails_due_to_neutron(
+            self):
+        # TODO(gibi): remove this when live migration is fully supported and
+        # therefore the check is removed from the api
+        self._turn_off_api_check()
+
+        non_qos_normal_port = self.neutron.port_1
+        qos_normal_port = self.neutron.port_with_resource_request
+        qos_sriov_port = self.neutron.port_with_sriov_resource_request
+
+        server = self._create_server_with_ports_and_check_allocation(
+            non_qos_normal_port, qos_normal_port, qos_sriov_port)
+
+        # with default config shelve means immediate offload as well
+        req = {
+            'shelve': {}
+        }
+        self.api.post_server_action(server['id'], req)
+        self._wait_for_server_parameter(
+            server, {'status': 'SHELVED_OFFLOADED'})
+        allocations = self.placement_api.get(
+            '/allocations/%s' % server['id']).body['allocations']
+        self.assertEqual(0, len(allocations))
+
+        # Simulate that port update fails during unshelve due to neutron is
+        # unavailable
+        with mock.patch(
+                'nova.tests.fixtures.NeutronFixture.'
+                'update_port') as mock_update_port:
+            mock_update_port.side_effect = neutron_exception.ConnectionFailed(
+                reason='test')
+            req = {'unshelve': None}
+            self.api.post_server_action(server['id'], req)
+            fake_notifier.wait_for_versioned_notifications(
+                'instance.unshelve.start')
+            self._wait_for_server_parameter(
+                server,
+                {'status': 'SHELVED_OFFLOADED',
+                 'OS-EXT-STS:task_state': None})
+
+        # As the instance went back to offloaded state we expect no allocation
+        allocations = self.placement_api.get(
+            '/allocations/%s' % server['id']).body['allocations']
+        self.assertEqual(0, len(allocations))
 
         self._delete_server_and_check_allocations(
             server, qos_normal_port, qos_sriov_port)
