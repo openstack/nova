@@ -1195,6 +1195,24 @@ class HostManagerTestCase(test.NoDBTestCase):
 
         self.assertEqual(0, len(result))
 
+    @mock.patch('nova.context.scatter_gather_cells',
+                side_effect=(  # called twice, different return values
+                        {uuids.cell1: test.TestingException('conn fail')},
+                        {uuids.cell1: nova_context.did_not_respond_sentinel}))
+    def test_get_compute_nodes_by_host_or_node_filter_errors(self, mock_sgc):
+        """Make sure get_compute_nodes_by_host_or_node filters out exception
+        and cell timeout results from scatter_gather_cells.
+        """
+        ctxt = nova_context.get_context()
+        cell1 = objects.CellMapping(uuid=uuids.cell1)
+        for x in range(2):  # run twice because we have two side effects
+            nodes = self.host_manager.get_compute_nodes_by_host_or_node(
+                ctxt, 'host1', None, cell=cell1)
+            self.assertEqual(0, len(nodes), nodes)
+        self.assertEqual(2, mock_sgc.call_count, mock_sgc.mock_calls)
+        mock_sgc.assert_has_calls([mock.call(
+            ctxt, [cell1], nova_context.CELL_TIMEOUT, mock.ANY)] * 2)
+
 
 class HostManagerChangedNodesTestCase(test.NoDBTestCase):
     """Test case for HostManager class."""
