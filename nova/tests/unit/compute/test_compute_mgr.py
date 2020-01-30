@@ -7705,6 +7705,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         super(ComputeManagerMigrationTestCase, self).setUp()
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
+        self.flags(compute_driver='fake.SameHostColdMigrateDriver')
         self.compute = manager.ComputeManager()
         self.context = context.RequestContext(fakes.FAKE_USER_ID,
                                               fakes.FAKE_PROJECT_ID)
@@ -9658,7 +9659,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
 
     @mock.patch.object(manager.ComputeManager, '_notify_about_instance_usage')
     @mock.patch.object(objects.Migration, 'get_by_id')
-    @mock.patch.object(nova.virt.fake.SmallFakeDriver, 'live_migration_abort')
+    @mock.patch.object(nova.virt.fake.FakeDriver, 'live_migration_abort')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     def test_live_migration_abort(self, mock_notify_action, mock_driver,
                                    mock_get_migration, mock_notify):
@@ -9711,7 +9712,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
     @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
     @mock.patch.object(manager.ComputeManager, '_notify_about_instance_usage')
     @mock.patch.object(objects.Migration, 'get_by_id')
-    @mock.patch.object(nova.virt.fake.SmallFakeDriver, 'live_migration_abort')
+    @mock.patch.object(nova.virt.fake.FakeDriver, 'live_migration_abort')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     def test_live_migration_abort_not_supported(self, mock_notify_action,
                                                 mock_driver,

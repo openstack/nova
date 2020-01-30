@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 47
+SERVICE_VERSION = 48
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -175,6 +175,8 @@ SERVICE_VERSION_HISTORY = (
     {'compute_rpc': '5.9'},
     # Version 47: Compute RPC v5.10:
     # finish_revert_snapshot_based_resize_at_source
+    {'compute_rpc': '5.10'},
+    # Version 48: Drivers report COMPUTE_SAME_HOST_COLD_MIGRATE trait.
     {'compute_rpc': '5.10'},
 )
 

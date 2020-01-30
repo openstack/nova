@@ -25,6 +25,7 @@ import re
 import string
 
 from castellan import key_manager
+import os_traits
 from oslo_log import log as logging
 from oslo_messaging import exceptions as oslo_exceptions
 from oslo_serialization import base64 as base64utils
@@ -103,6 +104,7 @@ AGGREGATE_ACTION_ADD = 'Add'
 
 MIN_COMPUTE_SYNC_COMPUTE_STATUS_DISABLED = 38
 MIN_COMPUTE_CROSS_CELL_RESIZE = 47
+MIN_COMPUTE_SAME_HOST_COLD_MIGRATE = 48
 
 # FIXME(danms): Keep a global cache of the cells we find the
 # first time we look. This needs to be refreshed on a timer or
@@ -3881,8 +3883,7 @@ class API(base.Base):
                     validate_pci=True)
 
         filter_properties = {'ignore_hosts': []}
-
-        if not CONF.allow_resize_to_same_host:
+        if not self._allow_resize_to_same_host(same_instance_type, instance):
             filter_properties['ignore_hosts'].append(instance.host)
 
         request_spec = objects.RequestSpec.get_by_instance_uuid(
@@ -3930,6 +3931,57 @@ class API(base.Base):
             clean_shutdown=clean_shutdown,
             request_spec=request_spec,
             do_cast=True)
+
+    def _allow_resize_to_same_host(self, cold_migrate, instance):
+        """Contains logic for excluding the instance.host on resize/migrate.
+
+        If performing a cold migration and the compute node resource provider
+        reports the COMPUTE_SAME_HOST_COLD_MIGRATE trait then same-host cold
+        migration is allowed otherwise it is not and the current instance.host
+        should be excluded as a scheduling candidate.
+
+        :param cold_migrate: true if performing a cold migration, false
+            for resize
+        :param instance: Instance object being resized or cold migrated
+        :returns: True if same-host resize/cold migrate is allowed, False
+            otherwise
+        """
+        if cold_migrate:
+            # Check to see if the compute node resource provider on which the
+            # instance is running has the COMPUTE_SAME_HOST_COLD_MIGRATE
+            # trait.
+            # Note that we check this here in the API since we cannot
+            # pre-filter allocation candidates in the scheduler using this
+            # trait as it would not work. For example, libvirt nodes will not
+            # report the trait but using it as a forbidden trait filter when
+            # getting allocation candidates would still return libvirt nodes
+            # which means we could attempt to cold migrate to the same libvirt
+            # node, which would fail.
+            ctxt = instance._context
+            cn = objects.ComputeNode.get_by_host_and_nodename(
+                ctxt, instance.host, instance.node)
+            traits = self.placementclient.get_provider_traits(
+                ctxt, cn.uuid).traits
+            # If the provider has the trait it is (1) new enough to report that
+            # trait and (2) supports cold migration on the same host.
+            if os_traits.COMPUTE_SAME_HOST_COLD_MIGRATE in traits:
+                allow_same_host = True
+            else:
+                # TODO(mriedem): Remove this compatibility code after one
+                # release. If the compute is old we will not know if it
+                # supports same-host cold migration so we fallback to config.
+                service = objects.Service.get_by_compute_host(ctxt, cn.host)
+                if service.version >= MIN_COMPUTE_SAME_HOST_COLD_MIGRATE:
+                    # The compute is new enough to report the trait but does
+                    # not so same-host cold migration is not allowed.
+                    allow_same_host = False
+                else:
+                    # The compute is not new enough to report the trait so we
+                    # fallback to config.
+                    allow_same_host = CONF.allow_resize_to_same_host
+        else:
+            allow_same_host = CONF.allow_resize_to_same_host
+        return allow_same_host
 
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
