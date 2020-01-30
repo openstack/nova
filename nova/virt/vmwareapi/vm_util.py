@@ -21,6 +21,7 @@ The VMware API VM utility module to build SOAP object specs.
 import collections
 import copy
 import functools
+import operator
 
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -126,12 +127,14 @@ class ExtraSpecs(object):
 class HistoryCollectorItems(object):
 
     def __init__(self, session, history_collector, read_page_method,
-                 reverse_page_order=False, max_page_size=10):
+                 reverse_page_order=False, max_page_size=10,
+                 page_sort_key_func=None):
         self.session = session
         self.history_collector = history_collector
         self.read_page_method = read_page_method
         self.reverse_page_order = reverse_page_order
         self.max_page_size = max_page_size
+        self.page_sort_key_func = page_sort_key_func
 
     def __iter__(self):
         self._latest_page_read = False
@@ -166,6 +169,10 @@ class HistoryCollectorItems(object):
                 self.session.vim, self.read_page_method,
                 self.history_collector, maxCount=self.max_page_size)
 
+        if self._page_items and self.page_sort_key_func:
+            self._page_items.sort(reverse=self.reverse_page_order,
+                                  key=self.page_sort_key_func)
+
     def _load_latest_page(self):
         self._latest_page_read = True
         latest_page = vutil.get_object_property(self.session.vim,
@@ -191,11 +198,13 @@ class TaskHistoryCollectorItems(HistoryCollectorItems):
             filter=task_filter_spec)
         read_page_method = ("ReadPreviousTasks" if reverse_page_order
                             else "ReadNextTasks")
+        page_sort_key_func = operator.attrgetter('queueTime')
         super(TaskHistoryCollectorItems, self).__init__(session,
                                                         task_collector,
                                                         read_page_method,
                                                         reverse_page_order,
-                                                        max_page_size)
+                                                        max_page_size,
+                                                        page_sort_key_func)
 
     def __del__(self):
         self.destroy_collector()
@@ -211,11 +220,13 @@ class EventHistoryCollectorItems(HistoryCollectorItems):
             filter=event_filter_spec)
         read_page_method = ("ReadPreviousEvents" if reverse_page_order
                             else "ReadNextEvents")
+        page_sort_key_func = operator.attrgetter('createdTime')
         super(EventHistoryCollectorItems, self).__init__(session,
                                                          event_collector,
                                                          read_page_method,
                                                          reverse_page_order,
-                                                         max_page_size)
+                                                         max_page_size,
+                                                         page_sort_key_func)
 
     def __del__(self):
         self.destroy_collector()
