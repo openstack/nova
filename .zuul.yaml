@@ -1,10 +1,6 @@
 # See https://docs.openstack.org/infra/manual/drivers.html#naming-with-zuul-v3
 # for job naming conventions.
 
-# TODO(stephenfin): Remove 'USE_PYTHON3' once [1] or similar merges
-#
-# [1] https://review.opendev.org/#/c/649097/
-#
 - job:
     name: nova-dsvm-multinode-base
     parent: legacy-dsvm-base-multinode
@@ -136,7 +132,6 @@
               resize: false
               cold_migration: false
       devstack_localrc:
-        USE_PYTHON3: True
         NOVA_BACKEND: LVM
         # Do not waste time clearing volumes.
         LVM_VOLUME_CLEAR: none
@@ -202,7 +197,6 @@
             network-feature-enabled:
               qos_placement_physnet: public
       devstack_localrc:
-        USE_PYTHON3: True
         # Added in Pike.
         NOVA_USE_SERVICE_TOKEN: True
         # Enable TLS between the noVNC proxy & compute nodes; this requires
@@ -225,7 +219,6 @@
     group-vars:
       subnode:
         devstack_localrc:
-          USE_PYTHON3: True
           NOVA_USE_SERVICE_TOKEN: True
           NOVA_CONSOLE_PROXY_COMPUTE_TLS: True
           FORCE_CONFIG_DRIVE: True
@@ -246,7 +239,6 @@
       tox_envlist: all
       tempest_test_regex: api.*compute
       devstack_localrc:
-        USE_PYTHON3: True
         TEMPEST_COMPUTE_TYPE: compute_legacy
 
 - job:
@@ -311,7 +303,6 @@
         # Disable other non-essential services that we don't need for this job.
         c-bak: false
       devstack_localrc:
-        USE_PYTHON3: True
         # Setup two non-cell0 cells (cell1 and cell2).
         NOVA_NUM_CELLS: 2
         # Disable resize to the same host so all resizes will move across
@@ -323,12 +314,10 @@
     group-vars:
       peers:
         devstack_localrc:
-          USE_PYTHON3: True
           NOVA_ALLOW_MOVE_TO_SAME_HOST: true
           LIVE_MIGRATION_AVAILABLE: false
       subnode:
         devstack_localrc:
-          USE_PYTHON3: True
           # The subnode compute will get registered with cell2.
           NOVA_CPU_CELL: 2
         devstack_services:
