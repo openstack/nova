@@ -16,18 +16,20 @@
 import mock
 import six
 
+from testtools import skip
+
 from oslo_config import cfg
 from oslo_log import log as logging
 
 from nova.conf import neutron as neutron_conf
 from nova import context as nova_context
 from nova import objects
-
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.functional.libvirt import base
 from nova.tests.unit import fake_notifier
 from nova.tests.unit.virt.libvirt import fakelibvirt
+
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
@@ -251,7 +253,17 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         self.assertTrue(self.mock_filter.called)
         self.assertEqual('ACTIVE', status)
 
-    def test_rebuild_server_with_network_affinity(self):
+    # FIXME(sean-k-mooney): The logic of this test is incorrect.
+    # The test was written to assert that we failed to rebuild
+    # because the NUMA constraints were violated due to the attachment
+    # of an interface from a second host NUMA node to an instance with
+    # a NUMA topology of 1 that is affined to a different NUMA node.
+    # Nova should reject the interface attachment if the NUMA constraints
+    # would be violated and it should fail at that point not when the
+    # instance is rebuilt. This is a latent bug which will be addressed
+    # in a separate patch.
+    @skip("bug 1855332")
+    def test_attach_interface_with_network_affinity_violation(self):
         extra_spec = {'hw:numa_nodes': '1'}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
         networks = [
@@ -286,10 +298,15 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
                 'net_id': base.LibvirtNeutronFixture.network_2['id'],
             }
         }
+        # FIXME(sean-k-mooney): This should raise an exception as this
+        # interface attachment would violate the NUMA constraints.
         self.api.attach_interface(server['id'], post)
         post = {'rebuild': {
             'imageRef': 'a2459075-d96c-40d5-893e-577ff92e721c',
         }}
+        # NOTE(sean-k-mooney): the rest of the test is incorrect but
+        # is left to show the currently broken behavior.
+
         # Now this should fail because we've violated the NUMA requirements
         # with the latest attachment
         ex = self.assertRaises(client.OpenStackApiException,
@@ -446,12 +463,8 @@ class NUMAServersRebuildTests(NUMAServersTestBase):
         server = self._create_active_server(
             server_args={"flavorRef": flavor_id})
 
-        # TODO(sean-k-mooney): this should pass but i currently expect it to
-        # fail because the NUMA topology filter does not support in place
-        # rebuild and we have used all the resources on the compute node.
-        self.assertRaises(
-            client.OpenStackApiException, self._rebuild_server,
-            server, self.image_ref_1)
+        # This should succeed as the numa constraints do not change.
+        self._rebuild_server(server, self.image_ref_1)
 
     def test_rebuild_server_with_different_numa_topology_fails(self):
         """Create a NUMA instance and ensure inplace rebuild fails.
