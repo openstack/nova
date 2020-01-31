@@ -25,6 +25,7 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
+from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_network_cache_model
 
 
@@ -109,8 +110,10 @@ def fake_detach_interface(self, context, instance, port_id):
     raise exception.PortNotFound(port_id=port_id)
 
 
-def fake_get_instance(self, *args, **kwargs):
-    return objects.Instance(uuid=FAKE_UUID1)
+def fake_get_instance(self, context, instance_id, expected_attrs=None,
+                      cell_down_support=False):
+    return fake_instance.fake_instance_obj(
+            context, id=1, uuid=instance_id, project_id=context.project_id)
 
 
 class InterfaceAttachTestsV21(test.NoDBTestCase):
@@ -178,8 +181,9 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
     def test_delete(self):
         self.stub_out('nova.compute.api.API.detach_interface',
                       fake_detach_interface)
-
-        inst = objects.Instance(uuid=FAKE_UUID1)
+        req_context = self.req.environ['nova.context']
+        inst = objects.Instance(uuid=FAKE_UUID1,
+                                project_id=req_context.project_id)
         with mock.patch.object(common, 'get_instance',
                                return_value=inst) as mock_get_instance:
             result = self.attachments.delete(self.req, FAKE_UUID1,
@@ -360,7 +364,9 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
     def test_attach_interface_fixed_ip_already_in_use(self,
                                                       attach_mock,
                                                       get_mock):
-        fake_instance = objects.Instance(uuid=FAKE_UUID1)
+        req_context = self.req.environ['nova.context']
+        fake_instance = objects.Instance(uuid=FAKE_UUID1,
+                                         project_id=req_context.project_id)
         get_mock.return_value = fake_instance
         attach_mock.side_effect = exception.FixedIpAlreadyInUse(
             address='10.0.2.2', instance_uuid=FAKE_UUID1)
@@ -380,7 +386,9 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
     def test_attach_interface_port_in_use(self,
                                           attach_mock,
                                           get_mock):
-        fake_instance = objects.Instance(uuid=FAKE_UUID1)
+        req_context = self.req.environ['nova.context']
+        fake_instance = objects.Instance(uuid=FAKE_UUID1,
+                                         project_id=req_context.project_id)
         get_mock.return_value = fake_instance
         attach_mock.side_effect = exception.PortInUse(
             port_id=FAKE_PORT_ID1)
@@ -400,7 +408,9 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
     def test_attach_interface_port_not_usable(self,
                                               attach_mock,
                                               get_mock):
-        fake_instance = objects.Instance(uuid=FAKE_UUID1)
+        req_context = self.req.environ['nova.context']
+        fake_instance = objects.Instance(uuid=FAKE_UUID1,
+                                         project_id=req_context.project_id)
         get_mock.return_value = fake_instance
         attach_mock.side_effect = exception.PortNotUsable(
             port_id=FAKE_PORT_ID1,
@@ -419,8 +429,9 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
     @mock.patch.object(compute_api.API, 'get')
     @mock.patch.object(compute_api.API, 'attach_interface')
     def test_attach_interface_failed_no_network(self, attach_mock, get_mock):
+        req_context = self.req.environ['nova.context']
         fake_instance = objects.Instance(uuid=FAKE_UUID1,
-                                         project_id=FAKE_UUID2)
+                                         project_id=req_context.project_id)
         get_mock.return_value = fake_instance
         attach_mock.side_effect = (
             exception.InterfaceAttachFailedNoNetwork(project_id=FAKE_UUID2))
@@ -438,7 +449,9 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
     def test_attach_interface_no_more_fixed_ips(self,
                                           attach_mock,
                                           get_mock):
-        fake_instance = objects.Instance(uuid=FAKE_UUID1)
+        req_context = self.req.environ['nova.context']
+        fake_instance = objects.Instance(uuid=FAKE_UUID1,
+                                         project_id=req_context.project_id)
         get_mock.return_value = fake_instance
         attach_mock.side_effect = exception.NoMoreFixedIps(
               net=FAKE_NET_ID1)
@@ -457,8 +470,9 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
     @mock.patch.object(compute_api.API, 'attach_interface')
     def test_attach_interface_failed_securitygroup_cannot_be_applied(
         self, attach_mock, get_mock):
+        req_context = self.req.environ['nova.context']
         fake_instance = objects.Instance(uuid=FAKE_UUID1,
-                                         project_id=FAKE_UUID2)
+                                         project_id=req_context.project_id)
         get_mock.return_value = fake_instance
         attach_mock.side_effect = (
             exception.SecurityGroupCannotBeApplied())
@@ -579,6 +593,8 @@ class AttachInterfacesPolicyEnforcementv21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('')
         self.rule_name = "os_compute_api:os-attach-interfaces"
         self.policy.set_rules({self.rule_name: "project:non_fake"})
+
+        self.stub_out('nova.compute.api.API.get', fake_get_instance)
 
     def test_index_attach_interfaces_policy_failed(self):
         exc = self.assertRaises(
