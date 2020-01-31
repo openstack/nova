@@ -9021,7 +9021,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         guest = mock.Mock(spec=libvirt_guest.Guest)
         # block_device
-        block_device = mock.Mock(spec=libvirt_guest.BlockDevice)
+        block_device = mock.Mock(spec=libvirt_guest.BlockDevice,
+                                 _disk=mock.sentinel.disk)
+
         block_device.resize = mock.Mock()
         guest.get_block_device = mock.Mock(return_value=block_device)
         drvr._host.get_guest = mock.Mock(return_value=guest)
@@ -9095,7 +9097,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         guest = mock.Mock(spec=libvirt_guest.Guest)
         guest.get_power_state = mock.Mock(return_value=power_state.RUNNING)
         # block_device
-        block_device = mock.Mock(spec=libvirt_guest.BlockDevice)
+        block_device = mock.Mock(spec=libvirt_guest.BlockDevice,
+                                 _disk=mock.sentinel.disk)
         block_device.resize = mock.Mock(
             side_effect=fakelibvirt.libvirtError('ERR'))
         guest.get_block_device = mock.Mock(return_value=block_device)
@@ -9121,7 +9124,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         guest = mock.Mock(spec=libvirt_guest.Guest)
         # block_device
-        block_device = mock.Mock(spec=libvirt_guest.BlockDevice)
+        block_device = mock.Mock(spec=libvirt_guest.BlockDevice,
+                                 _disk=mock.sentinel.disk)
+
         block_device.resize = mock.Mock()
         disk = mock.Mock(
             spec=vconfig.LibvirtConfigGuestDisk,
@@ -9157,7 +9162,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         guest = mock.Mock(spec=libvirt_guest.Guest)
         # block_device
-        block_device = mock.Mock(spec=libvirt_guest.BlockDevice)
+        block_device = mock.Mock(spec=libvirt_guest.BlockDevice,
+                                 _disk=mock.sentinel.disk)
         block_device.resize = mock.Mock()
         disk = mock.Mock(
             spec=vconfig.LibvirtConfigGuestDisk,
@@ -9177,6 +9183,204 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             instance,
             new_size_in_kb * 1024
         )
+
+    @mock.patch('os_brick.encryptors.get_encryption_metadata')
+    def test_extend_volume_luksv1_unknown_path(self,
+                                               mock_get_encryption_metadata):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(**self.test_instance)
+        connection_info = {
+            'serial': uuids.volume_id,
+            'driver_volume_type': 'fake',
+            'data': {'access_mode': 'rw'}
+        }
+
+        disk_1 = mock.Mock(spec=vconfig.LibvirtConfigGuestDisk,
+                           serial=uuids.volume_id,
+                           target_dev=mock.sentinel.disk_1_target_dev)
+        block_device = mock.Mock(spec=libvirt_guest.BlockDevice,
+                                 _disk=mock.sentinel.disk)
+        guest = mock.Mock(spec=libvirt_guest.Guest)
+        guest.get_block_device.return_value = block_device
+        guest.get_power_state.return_value = power_state.RUNNING
+        guest.get_all_disks.return_value = [disk_1]
+
+        # The requested_size is provided to extend_volume in bytes.
+        new_size = 20 * units.Gi
+
+        drvr._host.get_guest = mock.Mock(return_value=guest)
+        drvr._extend_volume = mock.Mock(return_value=new_size)
+
+        mock_get_encryption_metadata.return_value = {
+            'provider': 'luks',
+            'control_location': 'front-end'}
+
+        # Assert that DiskNotFound is raised
+        self.assertRaises(exception.DiskNotFound, drvr.extend_volume,
+                          self.context, connection_info, instance, new_size)
+
+        # Assert that resize is not called
+        block_device.resize.assert_not_called()
+
+    @mock.patch('os_brick.encryptors.get_encryption_metadata')
+    @mock.patch('nova.privsep.qemu.privileged_qemu_img_info')
+    def test_extend_volume_luksv1_DiskNotFound(self, mock_qemu_img_info,
+                                               mock_get_encryption_metadata):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(**self.test_instance)
+        connection_info = {
+            'serial': uuids.volume_id,
+            'driver_volume_type': 'fake',
+            'data': {'device_path': mock.sentinel.device_path,
+                     'access_mode': 'rw'}
+        }
+
+        block_device = mock.Mock(spec=libvirt_guest.BlockDevice,
+                                 _disk=mock.sentinel.disk)
+        guest = mock.Mock(spec=libvirt_guest.Guest)
+        guest.get_block_device.return_value = block_device
+        guest.get_power_state.return_value = power_state.RUNNING
+
+        # The requested_size is provided to extend_volume in bytes.
+        new_size = 20 * units.Gi
+
+        drvr._host.get_guest = mock.Mock(return_value=guest)
+        drvr._extend_volume = mock.Mock(return_value=new_size)
+
+        mock_qemu_img_info.side_effect = exception.DiskNotFound(
+            location=mock.sentinel.device_path)
+        mock_get_encryption_metadata.return_value = {
+            'provider': 'luks',
+            'control_location': 'front-end'}
+
+        # Assert that DiskNotFound is raised
+        self.assertRaises(exception.DiskNotFound, drvr.extend_volume,
+                          self.context, connection_info, instance, new_size)
+
+        # Assert that resize is not called
+        block_device.resize.assert_not_called()
+
+    @mock.patch('os_brick.encryptors.get_encryption_metadata')
+    @mock.patch('nova.privsep.qemu.privileged_qemu_img_info')
+    def test_extend_volume_luksv1_block(self, mock_qemu_img_info,
+                                        mock_get_encryption_metadata):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(**self.test_instance)
+        connection_info = {
+            'serial': uuids.volume_id,
+            'driver_volume_type': 'fake',
+            'data': {'device_path': mock.sentinel.device_path,
+                     'access_mode': 'rw'}
+        }
+
+        block_device = mock.Mock(spec=libvirt_guest.BlockDevice,
+                                 _disk=mock.sentinel.disk)
+        guest = mock.Mock(spec=libvirt_guest.Guest)
+        guest.get_block_device.return_value = block_device
+        guest.get_power_state.return_value = power_state.RUNNING
+
+        conn = mock.Mock()
+        conn.getVersion = mock.Mock(return_value=mock.sentinel.qemu_version)
+
+        # The requested_size is provided to extend_volume in bytes.
+        new_size = 20 * units.Gi
+        # The LUKSv1 payload offset as reported by qemu-img info in bytes.
+        payload_offset = 2048 * units.Ki
+        # The new size is provided to Libvirt virDomainBlockResize in units.Ki.
+        new_size_minus_offset_kb = (new_size - payload_offset) // units.Ki
+
+        drvr._host.get_connection = mock.Mock(return_value=conn)
+        drvr._host.get_guest = mock.Mock(return_value=guest)
+        drvr._extend_volume = mock.Mock(return_value=new_size)
+
+        info_dict = {
+            'format-specific': {'data': {'payload-offset': payload_offset}}}
+        mock_qemu_img_info.return_value = jsonutils.dumps(info_dict)
+        mock_get_encryption_metadata.return_value = {
+            'provider': 'luks',
+            'control_location': 'front-end'}
+
+        # Extend the volume to new_size
+        drvr.extend_volume(self.context, connection_info, instance, new_size)
+
+        # Assert that the expected calls are made prior to the device resize.
+        drvr._host.get_guest.assert_called_once_with(instance)
+        guest.get_power_state.assert_called_once_with(drvr._host)
+        guest.get_block_device(mock.sentinel.device_path)
+
+        mock_get_encryption_metadata.assert_called_once_with(
+            self.context, drvr._volume_api, uuids.volume_id, connection_info)
+        mock_qemu_img_info.assert_called_once_with(
+            mock.sentinel.device_path, output_format='json',
+            qemu_version=mock.sentinel.qemu_version)
+
+        # Assert that the Libvirt call to resize the device within the instance
+        # is called with the LUKSv1 payload offset taken into account.
+        block_device.resize.assert_called_once_with(new_size_minus_offset_kb)
+
+    @mock.patch('os_brick.encryptors.get_encryption_metadata')
+    @mock.patch('nova.privsep.qemu.privileged_qemu_img_info')
+    def test_extend_volume_luksv1_rbd(self, mock_qemu_img_info,
+                                        mock_get_encryption_metadata):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(**self.test_instance)
+        connection_info = {
+            'serial': uuids.volume_id,
+            'driver_volume_type': 'rbd',
+            'data': {'name': 'pool/volume',
+                     'access_mode': 'rw'}
+        }
+        disk_1 = mock.Mock(spec=vconfig.LibvirtConfigGuestDisk,
+                           serial=uuids.volume_id,
+                           target_dev=mock.sentinel.disk_1_target_dev)
+        disk_2 = mock.Mock(spec=vconfig.LibvirtConfigGuestDisk,
+                           serial=uuids.extra_volume_id,
+                           target_dev=mock.sentinel.disk_2_target_dev)
+        block_device = mock.Mock(spec=libvirt_guest.BlockDevice,
+                                 _disk=mock.sentinel.disk_1_target_dev)
+        guest = mock.Mock(spec=libvirt_guest.Guest)
+        guest.get_block_device.return_value = block_device
+        guest.get_power_state.return_value = power_state.RUNNING
+        guest.get_all_disks.return_value = [disk_1, disk_2]
+
+        conn = mock.Mock()
+        conn.getVersion = mock.Mock(return_value=mock.sentinel.qemu_version)
+
+        # The requested_size is provided to extend_volume in bytes.
+        new_size = 20 * units.Gi
+        # The LUKSv1 payload offset as reported by qemu-img info in bytes.
+        payload_offset = 2048 * units.Ki
+        # The new size is provided to Libvirt virDomainBlockResize in units.Ki.
+        new_size_minus_offset_kb = (new_size - payload_offset) // units.Ki
+
+        drvr._host.get_connection = mock.Mock(return_value=conn)
+        drvr._host.get_guest = mock.Mock(return_value=guest)
+        drvr._extend_volume = mock.Mock(return_value=new_size)
+
+        info_dict = {
+            'format-specific': {'data': {'payload-offset': payload_offset}}}
+        mock_qemu_img_info.return_value = jsonutils.dumps(info_dict)
+        mock_get_encryption_metadata.return_value = {
+            'provider': 'luks',
+            'control_location': 'front-end'}
+
+        # Extend the volume to new_size
+        drvr.extend_volume(self.context, connection_info, instance, new_size)
+
+        # Assert that the expected calls are made prior to the device resize.
+        drvr._host.get_guest.assert_called_once_with(instance)
+        guest.get_power_state.assert_called_once_with(drvr._host)
+        guest.get_block_device(mock.sentinel.disk_1_target_dev)
+
+        mock_get_encryption_metadata.assert_called_once_with(
+            self.context, drvr._volume_api, uuids.volume_id, connection_info)
+        mock_qemu_img_info.assert_called_once_with(
+            'rbd:pool/volume', output_format='json',
+            qemu_version=mock.sentinel.qemu_version)
+
+        # Assert that the Libvirt call to resize the device within the instance
+        # is called with the LUKSv1 payload offset taken into account.
+        block_device.resize.assert_called_once_with(new_size_minus_offset_kb)
 
     @mock.patch('os_brick.encryptors.get_encryption_metadata')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')

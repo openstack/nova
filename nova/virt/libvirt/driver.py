@@ -1927,6 +1927,73 @@ class LibvirtDriver(driver.ComputeDriver):
         self._disconnect_volume(context, connection_info, instance,
                                 encryption=encryption)
 
+    def _resize_attached_volume(self, new_size, block_device, instance):
+        LOG.debug('Resizing target device %(dev)s to %(size)u',
+                  {'dev': block_device._disk, 'size': new_size},
+                  instance=instance)
+        block_device.resize(new_size // units.Ki)
+
+    def _resize_attached_encrypted_volume(self, original_new_size,
+                                          block_device, instance,
+                                          connection_info, encryption):
+        # TODO(lyarwood): Also handle the dm-crpyt encryption providers of
+        # plain and LUKSv2, for now just use the original_new_size.
+        decrypted_device_new_size = original_new_size
+
+        # NOTE(lyarwood): original_new_size currently refers to the total size
+        # of the extended volume in bytes. With natively decrypted LUKSv1
+        # volumes we need to ensure this now takes the LUKSv1 header and key
+        # material into account. Otherwise QEMU will attempt and fail to grow
+        # host block devices and remote RBD volumes.
+        if self._is_luks_v1(encryption):
+            try:
+                # NOTE(lyarwood): Find the path to provide to qemu-img
+                if 'device_path' in connection_info['data']:
+                    path = connection_info['data']['device_path']
+                elif connection_info['driver_volume_type'] == 'rbd':
+                    path = 'rbd:%s' % (connection_info['data']['name'])
+                else:
+                    path = 'unknown'
+                    raise exception.DiskNotFound(location='unknown')
+
+                # TODO(lyarwood): The following direct call to privsep instead
+                # of images.qemu_img_info avoids the need to bump
+                # requirements.txt to depend on a new version of oslo.utils
+                # that provides a version of QemuImgInfo that includes the
+                # format_specific attribute allowing this bugfix to be
+                # backported. Once landed we can replace this with the
+                # following and require oslo.utils >= 4.1.0:
+                #
+                #  info = images.qemu_img_info(path, output_format='json',
+                #                              run_as_root=True)
+                #  format_specific_data = info.format_specific['data']
+                info_dict = nova.privsep.qemu.privileged_qemu_img_info(
+                    path, output_format='json',
+                    qemu_version=self._host.get_connection().getVersion())
+                info = jsonutils.loads(info_dict)
+                format_specific_data = info['format-specific']['data']
+                payload_offset = format_specific_data['payload-offset']
+
+                # NOTE(lyarwood): Ensure the underlying device is not resized
+                # by subtracting the LUKSv1 payload_offset (where the users
+                # encrypted data starts) from the original_new_size (the total
+                # size of the underlying volume). Both are reported in bytes.
+                decrypted_device_new_size = original_new_size - payload_offset
+
+            except exception.DiskNotFound:
+                with excutils.save_and_reraise_exception():
+                    LOG.exception('Unable to access the encrypted disk %s.',
+                                  path, instance=instance)
+            except Exception:
+                with excutils.save_and_reraise_exception():
+                    LOG.exception('Unknown error when attempting to find the '
+                                  'payload_offset for LUKSv1 encrypted disk '
+                                  '%s.', path, instance=instance)
+        # NOTE(lyarwood): Resize the decrypted device within the instance to
+        # the calculated size as with normal volumes.
+        self._resize_attached_volume(
+            decrypted_device_new_size, block_device, instance)
+
     def extend_volume(self, context, connection_info, instance,
                       requested_size):
         try:
@@ -1940,6 +2007,7 @@ class LibvirtDriver(driver.ComputeDriver):
         try:
             guest = self._host.get_guest(instance)
             state = guest.get_power_state(self._host)
+            volume_id = driver_block_device.get_volume_id(connection_info)
             active_state = state in (power_state.RUNNING, power_state.PAUSED)
             if active_state:
                 if 'device_path' in connection_info['data']:
@@ -1948,8 +2016,6 @@ class LibvirtDriver(driver.ComputeDriver):
                     # Some drivers (eg. net) don't put the device_path
                     # into the connection_info. Match disks by their serial
                     # number instead
-                    volume_id = driver_block_device.get_volume_id(
-                        connection_info)
                     disk = next(iter([
                         d for d in guest.get_all_disks()
                         if d.serial == volume_id
@@ -1957,11 +2023,16 @@ class LibvirtDriver(driver.ComputeDriver):
                     if not disk:
                         raise exception.VolumeNotFound(volume_id=volume_id)
                     disk_path = disk.target_dev
-
-                LOG.debug('resizing block device %(dev)s to %(size)u kb',
-                          {'dev': disk_path, 'size': new_size})
                 dev = guest.get_block_device(disk_path)
-                dev.resize(new_size // units.Ki)
+                encryption = encryptors.get_encryption_metadata(
+                    context, self._volume_api, volume_id, connection_info)
+                if encryption:
+                    self._resize_attached_encrypted_volume(
+                        new_size, dev, instance,
+                        connection_info, encryption)
+                else:
+                    self._resize_attached_volume(
+                        new_size, dev, instance)
             else:
                 LOG.debug('Skipping block device resize, guest is not running',
                           instance=instance)
