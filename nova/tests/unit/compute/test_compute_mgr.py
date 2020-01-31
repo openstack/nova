@@ -3670,7 +3670,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 self.context, inst_obj, uuids.volume_id)
             bdm_save.assert_called_once_with()
             extend_volume.assert_called_once_with(
-                connection_info, inst_obj, new_size * pow(1024, 3))
+                self.context, connection_info, inst_obj,
+                new_size * pow(1024, 3))
 
         do_test()
 

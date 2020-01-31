@@ -577,9 +577,11 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def extend_volume(self, connection_info, instance, requested_size):
+    def extend_volume(self, context, connection_info, instance,
+                      requested_size):
         """Extend the disk attached to the instance.
 
+        :param context: The request context.
         :param dict connection_info:
             The connection for the extended volume.
         :param nova.objects.instance.Instance instance:

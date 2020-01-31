@@ -1927,7 +1927,8 @@ class LibvirtDriver(driver.ComputeDriver):
         self._disconnect_volume(context, connection_info, instance,
                                 encryption=encryption)
 
-    def extend_volume(self, connection_info, instance, requested_size):
+    def extend_volume(self, context, connection_info, instance,
+                      requested_size):
         try:
             new_size = self._extend_volume(connection_info, instance,
                                            requested_size)
