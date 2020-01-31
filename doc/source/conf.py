@@ -197,6 +197,7 @@ def monkey_patch_blockdiag():
     from codecs import getreader
 
     from blockdiag.imagedraw import textfolder
+    from blockdiag.utils import compat  # noqa
 
     # oh, blockdiag. Let's undo the mess you made.
     codecs.getreader = getreader
