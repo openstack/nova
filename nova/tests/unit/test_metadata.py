@@ -1580,21 +1580,16 @@ class MetadataHandlerTestCase(test.TestCase):
         self.assertEqual(403, response.status_int)
 
     @mock.patch.object(context, 'get_admin_context')
-    @mock.patch('nova.network.neutron.API')
-    def test_get_metadata_by_address(self, mock_net_api, mock_get_context):
+    @mock.patch('nova.network.neutron.API.get_fixed_ip_by_address')
+    def test_get_metadata_by_address(self, mock_get_fip, mock_get_context):
         mock_get_context.return_value = 'CONTEXT'
-        api = mock.Mock()
-        fixed_ip = objects.FixedIP(
-            instance_uuid='2bfd8d71-6b69-410c-a2f5-dbca18d02966')
-        api.get_fixed_ip_by_address.return_value = fixed_ip
-        mock_net_api.return_value = api
+        mock_get_fip.return_value = {'instance_uuid': 'bar'}
 
         with mock.patch.object(base, 'get_metadata_by_instance_id') as gmd:
             base.get_metadata_by_address('foo')
 
-        api.get_fixed_ip_by_address.assert_called_once_with(
-            'CONTEXT', 'foo')
-        gmd.assert_called_once_with(fixed_ip.instance_uuid, 'foo', 'CONTEXT')
+        mock_get_fip.assert_called_once_with('CONTEXT', 'foo')
+        gmd.assert_called_once_with('bar', 'foo', 'CONTEXT')
 
     @mock.patch.object(context, 'get_admin_context')
     @mock.patch.object(objects.Instance, 'get_by_uuid')

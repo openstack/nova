@@ -2578,27 +2578,6 @@ class API(base.Base):
             raise exception.FixedIpAssociatedWithMultipleInstances(
                 address=address)
 
-    def _setup_net_dict(self, client, network_id):
-        if not network_id:
-            return {}
-        pool = client.show_network(network_id)['network']
-        return {pool['id']: pool}
-
-    def _setup_port_dict(self, context, client, port_id):
-        if not port_id:
-            return {}
-        port = self._show_port(context, port_id, neutron_client=client)
-        return {port['id']: port}
-
-    def _setup_pools_dict(self, client):
-        pools = self._get_floating_ip_pools(client)
-        return {i['id']: i for i in pools}
-
-    def _setup_ports_dict(self, client, project_id=None):
-        search_opts = {'tenant_id': project_id} if project_id else {}
-        ports = client.list_ports(**search_opts)['ports']
-        return {p['id']: p for p in ports}
-
     def get_floating_ip(self, context, id):
         """Return floating IP object given the floating IP id."""
         client = get_client(context)
@@ -2607,72 +2586,64 @@ class API(base.Base):
         except neutron_client_exc.NeutronClientException as e:
             if e.status_code == 404:
                 raise exception.FloatingIpNotFound(id=id)
-            else:
-                with excutils.save_and_reraise_exception():
-                    LOG.exception('Unable to access floating IP %s', id)
-        pool_dict = self._setup_net_dict(client,
-                                         fip['floating_network_id'])
-        port_dict = self._setup_port_dict(context, client, fip['port_id'])
-        return self._make_floating_ip_obj(context, fip, pool_dict, port_dict)
 
-    def _get_floating_ip_pools(self, client, project_id=None):
-        search_opts = {constants.NET_EXTERNAL: True}
-        if project_id:
-            search_opts.update({'tenant_id': project_id})
-        data = client.list_networks(**search_opts)
-        return data['networks']
+            with excutils.save_and_reraise_exception():
+                LOG.exception('Unable to access floating IP %s', id)
+
+        # retrieve and cache the network details now since many callers need
+        # the network name which isn't present in the response from neutron
+        network_uuid = fip['floating_network_id']
+        try:
+            fip['network_details'] = client.show_network(
+                network_uuid)['network']
+        except neutron_client_exc.NetworkNotFoundClient:
+            raise exception.NetworkNotFound(network_id=network_uuid)
+
+        return fip
 
     def get_floating_ip_pools(self, context):
-        """Return floating IP pool names."""
+        """Return floating IP pools a.k.a. external networks."""
         client = get_client(context)
-        pools = self._get_floating_ip_pools(client)
-        return [n['name'] or n['id'] for n in pools]
-
-    def _make_floating_ip_obj(self, context, fip, pool_dict, port_dict):
-        pool = pool_dict[fip['floating_network_id']]
-        # NOTE(danms): Don't give these objects a context, since they're
-        # not lazy-loadable anyway
-        floating = objects.floating_ip.NeutronFloatingIP(
-            id=fip['id'], address=fip['floating_ip_address'],
-            pool=(pool['name'] or pool['id']), project_id=fip['tenant_id'],
-            fixed_ip_id=fip['port_id'])
-        # In Neutron v2 API fixed_ip_address and instance uuid
-        # (= device_id) are known here, so pass it as a result.
-        if fip['fixed_ip_address']:
-            floating.fixed_ip = objects.FixedIP(
-                address=fip['fixed_ip_address'])
-        else:
-            floating.fixed_ip = None
-        if fip['port_id']:
-            instance_uuid = port_dict[fip['port_id']]['device_id']
-            # NOTE(danms): This could be .refresh()d, so give it context
-            floating.instance = objects.Instance(context=context,
-                                                 uuid=instance_uuid)
-            if floating.fixed_ip:
-                floating.fixed_ip.instance_uuid = instance_uuid
-        else:
-            floating.instance = None
-        return floating
+        data = client.list_networks(**{constants.NET_EXTERNAL: True})
+        return data['networks']
 
     def get_floating_ip_by_address(self, context, address):
         """Return a floating IP given an address."""
         client = get_client(context)
         fip = self._get_floating_ip_by_address(client, address)
-        pool_dict = self._setup_net_dict(client,
-                                         fip['floating_network_id'])
-        port_dict = self._setup_port_dict(context, client, fip['port_id'])
-        return self._make_floating_ip_obj(context, fip, pool_dict, port_dict)
+
+        # retrieve and cache the network details now since many callers need
+        # the network name which isn't present in the response from neutron
+        network_uuid = fip['floating_network_id']
+        try:
+            fip['network_details'] = client.show_network(
+                network_uuid)['network']
+        except neutron_client_exc.NetworkNotFoundClient:
+            raise exception.NetworkNotFound(network_id=network_uuid)
+
+        return fip
 
     def get_floating_ips_by_project(self, context):
         client = get_client(context)
         project_id = context.project_id
         fips = self._safe_get_floating_ips(client, tenant_id=project_id)
-        if not fips:
-            return []
-        pool_dict = self._setup_pools_dict(client)
-        port_dict = self._setup_ports_dict(client, project_id)
-        return [self._make_floating_ip_obj(context, fip, pool_dict, port_dict)
-                for fip in fips]
+
+        # retrieve and cache the network details now since many callers need
+        # the network name which isn't present in the response from neutron
+        networks = {}
+        for fip in fips:
+            network_uuid = fip['floating_network_id']
+            if network_uuid not in networks:
+                try:
+                    network = client.show_network(network_uuid)['network']
+                except neutron_client_exc.NetworkNotFoundClient:
+                    raise exception.NetworkNotFound(network_id=network_uuid)
+
+                networks[network['id']] = network
+
+            fip['network_details'] = networks[network_uuid]
+
+        return fips
 
     def get_instance_id_by_floating_address(self, context, address):
         """Return the instance id a floating IP's fixed IP is allocated to."""
@@ -2787,7 +2758,7 @@ class API(base.Base):
         self._release_floating_ip(context, address)
 
     def disassociate_and_release_floating_ip(self, context, instance,
-                                           floating_ip):
+                                             floating_ip):
         """Removes (deallocates) and deletes the floating IP.
 
         This api call was added to allow this to be done in one operation
@@ -2797,14 +2768,17 @@ class API(base.Base):
         @refresh_cache
         def _release_floating_ip_and_refresh_cache(self, context, instance,
                                                    floating_ip):
-            self._release_floating_ip(context, floating_ip['address'],
-                                      raise_if_associated=False)
+            self._release_floating_ip(
+                context, floating_ip['floating_ip_address'],
+                raise_if_associated=False)
+
         if instance:
             _release_floating_ip_and_refresh_cache(self, context, instance,
                                                    floating_ip)
         else:
-            self._release_floating_ip(context, floating_ip['address'],
-                                      raise_if_associated=False)
+            self._release_floating_ip(
+                context, floating_ip['floating_ip_address'],
+                raise_if_associated=False)
 
     def _release_floating_ip(self, context, address,
                              raise_if_associated=True):

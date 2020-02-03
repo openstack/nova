@@ -24,7 +24,10 @@ from nova.tests.unit.api.openstack import fakes
 
 
 def fake_get_floating_ip_pools(*args, **kwargs):
-    return ['nova', 'other']
+    return [
+        {'name': 'nova'},
+        {'name': 'other'},
+    ]
 
 
 class FloatingIpPoolTestV21(test.NoDBTestCase):
@@ -42,9 +45,9 @@ class FloatingIpPoolTestV21(test.NoDBTestCase):
         view = self.floating_ip_pools._translate_floating_ip_pools_view(pools)
         self.assertIn('floating_ip_pools', view)
         self.assertEqual(view['floating_ip_pools'][0]['name'],
-                         pools[0])
+                         pools[0]['name'])
         self.assertEqual(view['floating_ip_pools'][1]['name'],
-                         pools[1])
+                         pools[1]['name'])
 
     def test_floating_ips_pools_list(self):
         with mock.patch.object(self.controller.network_api,
@@ -53,8 +56,10 @@ class FloatingIpPoolTestV21(test.NoDBTestCase):
             res_dict = self.controller.index(self.req)
 
         pools = fake_get_floating_ip_pools(None, self.context)
-        response = {'floating_ip_pools': [{'name': name} for name in pools]}
-        self.assertEqual(res_dict, response)
+        response = {
+            'floating_ip_pools': [{'name': pool['name']} for pool in pools],
+        }
+        self.assertEqual(response, res_dict)
 
 
 class FloatingIPPoolsPolicyEnforcementV21(test.NoDBTestCase):
