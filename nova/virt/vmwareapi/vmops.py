@@ -2506,17 +2506,56 @@ class VMwareVMOps(object):
         self._imagecache.update(context, instances, datastores_info)
 
         if CONF.vmware.image_as_template:
-            self._age_cached_image_templates(dc_info, instances)
+            self._age_cached_image_templates(dc_info)
 
-    def _age_cached_image_templates(self, dc_info, instances):
-        project_ids = set()
-        for inst in instances:
-            project_ids.add(inst.project_id)
-        for project_id in project_ids:
-            folder_ref = self._get_project_folder(dc_info,
-                                                  project_id=project_id,
-                                                  type_='Images')
+    def _age_cached_image_templates(self, dc_info):
+        images_folders = self._get_all_images_folders(dc_info)
+        for folder_ref in images_folders:
             self._destroy_expired_image_templates(folder_ref)
+
+    def _get_all_images_folders(self, dc_info):
+        """Return all Folder morefs containing image templates
+
+        folder structure is
+         OpenStack
+           -> Project (<uuid>)
+             -> Images
+           -> Project (<uuid>)
+           ....
+        """
+        os_folder_moref = None
+        image_folder_to_parent = {}
+        prj_folder_to_parent = {}
+        retr_res = vim_util.get_objects(self._session.vim, 'Folder',
+                                        properties_to_collect=['name',
+                                                               'parent'])
+        with vutil.WithRetrieval(self._session.vim, retr_res) as retr_objects:
+            for obj_content in retr_objects:
+                prop_dict = vutil.propset_dict(obj_content.propSet)
+                parent = prop_dict.get('parent', None)
+                if not parent:
+                    continue
+                parent = parent.value
+                name = prop_dict['name']
+                moref = obj_content.obj.value
+                if name == 'OpenStack' and parent == dc_info.vmFolder.value:
+                    os_folder_moref = moref
+                elif name == 'Images':
+                    image_folder_to_parent[moref] = parent
+                elif re.match(r'Project \([0-9a-f]+\)', name):
+                    prj_folder_to_parent[moref] = parent
+
+        images_folders = []
+        if os_folder_moref:
+            # find all "Project (<uuid>)" having "OpenStack" as parent
+            prj_folders = [prj_ref for prj_ref in prj_folder_to_parent
+                           if prj_folder_to_parent[prj_ref] == os_folder_moref]
+            # find all "Images" folders of above's folders
+            images_folders = [vutil.get_moref(img_ref, 'Folder')
+                for img_ref in image_folder_to_parent
+                if image_folder_to_parent[img_ref] in prj_folders]
+
+        return images_folders
 
     def _destroy_expired_image_templates(self, templ_vm_folder_ref):
         all_templ_vms = vutil.get_object_property(self._session.vim,

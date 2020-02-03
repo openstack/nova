@@ -82,7 +82,8 @@ class VMwareVMOpsTestCase(test.TestCase):
                 freespace=10 * units.Gi)
         self._dc_info = ds_util.DcInfo(
                 ref='fake_dc_ref', name='fake_dc',
-                vmFolder='fake_vm_folder')
+                vmFolder=vmwareapi_fake.ManagedObjectReference(
+                    name='Folder', value='fake_vm_folder'))
         cluster = vmwareapi_fake.create_cluster('fake_cluster', fake_ds_ref)
         self._uuid = uuids.foo
         fake_info_cache = {
@@ -1423,6 +1424,54 @@ class VMwareVMOpsTestCase(test.TestCase):
                  for i in range(2, 7)]
         fake_progress.assert_has_calls(calls)
 
+    @mock.patch.object(vutil, 'WithRetrieval')
+    @mock.patch.object(vim_util, 'get_objects')
+    def test_get_all_images_folders(self, mock_get_obj, mock_with_ret):
+        # fake folder result
+        def _ffr(moref, name, parent):
+            name_prop = mock.Mock(val=name)
+            name_prop.name = 'name'
+            parent_prop = mock.Mock(val=vutil.get_moref(parent, 'Folder'))
+            parent_prop.name = 'parent'
+            return mock.Mock(
+                propSet=[name_prop, parent_prop],
+                obj=vutil.get_moref(moref, 'Folder')
+            )
+        missing_parent_ref = 'missing-parent'
+        os_ref = 'os'
+        bad_prj_name = 'bad-prj-name'
+        bad_prj_parent = 'bad-prj-parent'
+        bad_os_parent = 'bad-os-parent'
+        prj_1 = 'prj-1'
+        prj_c = 'prj-c'
+        results_to_filter_out = [
+            _ffr(os_ref, 'OpenStack', self._dc_info.vmFolder.value),
+            _ffr(prj_1, 'Project (1)', os_ref),
+            _ffr(prj_c, 'Project (c)', os_ref),
+            _ffr(bad_os_parent, 'OpenStack', missing_parent_ref),
+            _ffr(bad_prj_name, 'Project (x)', os_ref),  # non-hex ID
+            _ffr(bad_prj_parent, 'Project (a)', bad_os_parent),
+            _ffr('bad-img-name', 'ImagesX', prj_1),
+            _ffr('bad-img-parent1', 'Images', bad_prj_name),
+            _ffr('bad-img-parent2', 'Images', bad_prj_parent)
+        ]
+        in_scope_results = [
+            _ffr('img-1', 'Images', prj_1),
+            _ffr('img-2', 'Images', prj_c)
+        ]
+
+        mock_get_obj.return_value = results_to_filter_out + in_scope_results
+
+        def _mock_with_ret(vim, ret_res):
+            return mock.Mock(__enter__=mock.Mock(return_value=ret_res),
+                             __exit__=mock.Mock(return_value=None))
+        mock_with_ret.side_effect = _mock_with_ret
+
+        images_folders = self._vmops._get_all_images_folders(self._dc_info)
+        img_folder_refs = [img.value for img in images_folders]
+        in_scope_refs = [res.obj.value for res in in_scope_results]
+        self.assertEqual(sorted(in_scope_refs), sorted(img_folder_refs))
+
     @mock.patch.object(vm_util, 'destroy_vm')
     @mock.patch.object(vutil, 'get_object_property')
     @mock.patch.object(vm_util, 'TaskHistoryCollectorItems')
@@ -1474,8 +1523,8 @@ class VMwareVMOpsTestCase(test.TestCase):
         fake_instances = [self._instance]
         with test.nested(
                 mock.patch.object(self._vmops, '_imagecache'),
-                mock.patch.object(self._vmops, '_get_project_folder',
-                                  return_value='fake-folder'),
+                mock.patch.object(self._vmops, '_get_all_images_folders',
+                                  return_value=['fake-folder']),
                 mock.patch.object(self._session, '_call_method'),
                 mock.patch.object(self._session, '_wait_for_task')):
             self._vmops.manage_image_cache(self._context, fake_instances)
