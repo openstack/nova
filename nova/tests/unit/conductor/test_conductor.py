@@ -2051,8 +2051,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         params = self.params
 
         # The cells are created in the base TestCase setup.
-        self.start_service('compute', host='host1', cell='cell1')
-        self.start_service('compute', host='host2', cell='cell2')
+        self.start_service('compute', host='host1', cell_name='cell1')
+        self.start_service('compute', host='host2', cell_name='cell2')
 
         get_hostmapping.side_effect = self.host_mappings.values()
 

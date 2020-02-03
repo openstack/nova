@@ -377,7 +377,7 @@ class _IntegratedTestBase(test.TestCase, InstanceHelperMixin):
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
 
     def _setup_compute_service(self):
-        return self.start_service('compute')
+        return self._start_compute('compute')
 
     def _setup_scheduler_service(self):
         return self.start_service('scheduler')
@@ -503,21 +503,6 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         self.scheduler_service = self.start_service('scheduler')
 
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
-
-        self.computes = {}
-
-    def _start_compute(self, host, cell_name=None):
-        """Start a nova compute service on the given host
-
-        :param host: the name of the host that will be associated to the
-                     compute service.
-        :param cell_name: optional name of the cell in which to start the
-                          compute service (defaults to cell1)
-        :return: the nova compute service object
-        """
-        compute = self.start_service('compute', host=host, cell=cell_name)
-        self.computes[host] = compute
-        return compute
 
     def _get_provider_uuid_by_host(self, host):
         # NOTE(gibi): the compute node id is the same as the compute node
@@ -855,23 +840,6 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
             allocations = self._get_allocations_by_server_uuid(migration_uuid)
             self.assertEqual(0, len(allocations))
         return migration_uuid
-
-    def _run_periodics(self):
-        """Run the update_available_resource task on every compute manager
-
-        This runs periodics on the computes in an undefined order; some child
-        class redefined this function to force a specific order.
-        """
-
-        ctx = context.get_admin_context()
-        for host, compute in self.computes.items():
-            LOG.info('Running periodic for compute (%s)', host)
-            # Make sure the context is targeted to the proper cell database
-            # for multi-cell tests.
-            with context.target_cell(
-                    ctx, self.host_mappings[host].cell_mapping) as cctxt:
-                compute.manager.update_available_resource(cctxt)
-        LOG.info('Finished with periodics')
 
     def _move_and_check_allocations(self, server, request, old_flavor,
                                     new_flavor, source_rp_uuid, dest_rp_uuid):

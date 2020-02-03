@@ -74,7 +74,6 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
     _min_count_parameter = 'min_count'
 
     def setUp(self):
-        self.computes = {}
         super(ServersTestBase, self).setUp()
 
     def _get_access_ips_params(self):
@@ -101,23 +100,6 @@ class ServersTest(ServersTestBase):
         return {
             node.hypervisor_hostname: int(node.stats.get('failed_builds', 0))
             for node in computes}
-
-    def _run_periodics(self):
-        """Run the update_available_resource task on every compute manager
-
-        This runs periodics on the computes in an undefined order; some child
-        class redefined this function to force a specific order.
-        """
-
-        if self.compute.host not in self.computes:
-            self.computes[self.compute.host] = self.compute
-
-        ctx = context.get_admin_context()
-        for compute in self.computes.values():
-            LOG.info('Running periodic for compute (%s)',
-                compute.manager.host)
-            compute.manager.update_available_resource(ctx)
-        LOG.info('Finished with periodics')
 
     def test_create_server_with_error(self):
         # Create a server which will enter error state.
@@ -170,8 +152,7 @@ class ServersTest(ServersTestBase):
     def _test_create_server_with_error_with_retries(self):
         # Create a server which will enter error state.
 
-        self.compute2 = self.start_service('compute', host='host2')
-        self.computes['compute2'] = self.compute2
+        self._start_compute('host2')
 
         fails = []
 
@@ -4580,7 +4561,7 @@ class ServerTestV256MultiCellTestCase(ServerTestV256Common):
             'host2': 'cell2'}
         for host in sorted(host_to_cell_mappings):
             self.start_service('compute', host=host,
-                               cell=host_to_cell_mappings[host])
+                               cell_name=host_to_cell_mappings[host])
 
     def test_migrate_server_to_host_in_different_cell(self):
         # We target host1 specifically so that we have a predictable target for

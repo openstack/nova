@@ -64,8 +64,8 @@ class MultiCellSchedulerTestCase(test.TestCase,
         in different cells and make sure that migration fails with NoValidHost.
         """
         # Hosts in different cells
-        self.start_service('compute', host='compute1', cell=CELL1_NAME)
-        self.start_service('compute', host='compute2', cell=CELL2_NAME)
+        self.start_service('compute', host='compute1', cell_name=CELL1_NAME)
+        self.start_service('compute', host='compute2', cell_name=CELL2_NAME)
 
         _, server = self._test_create_and_migrate(expected_status=202)
         # The instance action should have failed with details.
@@ -79,11 +79,11 @@ class MultiCellSchedulerTestCase(test.TestCase,
         migration is allowed.
         """
         # Hosts in the same cell
-        self.start_service('compute', host='compute1', cell=CELL1_NAME)
-        self.start_service('compute', host='compute2', cell=CELL1_NAME)
+        self.start_service('compute', host='compute1', cell_name=CELL1_NAME)
+        self.start_service('compute', host='compute2', cell_name=CELL1_NAME)
         # Create another host just so it looks like we have hosts in
         # both cells
-        self.start_service('compute', host='compute3', cell=CELL2_NAME)
+        self.start_service('compute', host='compute3', cell_name=CELL2_NAME)
 
         # Force the server onto compute1 in cell1 so we do not accidentally
         # land on compute3 in cell2 and fail to migrate.

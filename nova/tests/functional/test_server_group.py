@@ -867,9 +867,9 @@ class ServerGroupTestMultiCell(ServerGroupTestBase):
         super(ServerGroupTestMultiCell, self).setUp()
         # Start two compute services, one per cell
         self.compute1 = self.start_service('compute', host='host1',
-                                           cell='cell1')
+                                           cell_name='cell1')
         self.compute2 = self.start_service('compute', host='host2',
-                                           cell='cell2')
+                                           cell_name='cell2')
         # This is needed to find a server that is still booting with multiple
         # cells, while waiting for the state change to ACTIVE. See the
         # _get_instance method in the compute/api for details.

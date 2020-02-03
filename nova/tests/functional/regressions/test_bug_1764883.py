@@ -60,11 +60,8 @@ class TestEvacuationWithSourceReturningDuringRebuild(
         self.start_service('scheduler')
 
         # Start two computes
-        self.computes = {}
-
-        self.computes['host1'] = self.start_service('compute', host='host1')
-
-        self.computes['host2'] = self.start_service('compute', host='host2')
+        self._start_compute('host1')
+        self._start_compute('host2')
 
         self.image_id = self.api.get_images()[0]['id']
         self.flavor_id = self.api.get_flavors()[0]['id']

@@ -49,9 +49,7 @@ class MultiCellEvacuateTestCase(integrated_helpers._IntegratedTestBase):
         """
         host_to_cell = {'host1': 'cell1', 'host2': 'cell2', 'host3': 'cell1'}
         for host, cell in host_to_cell.items():
-            svc = self.start_service('compute', host=host, cell=cell)
-            # Set an attribute so we can access this service later.
-            setattr(self, host, svc)
+            self._start_compute(host, cell_name=cell)
 
     def test_evacuate_multi_cell(self):
         # Create a server which should land on host1 since it has the highest
@@ -62,7 +60,7 @@ class MultiCellEvacuateTestCase(integrated_helpers._IntegratedTestBase):
         self.assertEqual('host1', server['OS-EXT-SRV-ATTR:host'])
 
         # Disable the host on which the server is now running.
-        self.host1.stop()
+        self.computes['host1'].stop()
         self.api.force_down_service('host1', 'nova-compute', forced_down=True)
 
         # Now evacuate the server which should send it to host3 since it is
