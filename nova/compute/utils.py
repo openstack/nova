@@ -1509,7 +1509,6 @@ def update_pci_request_spec_with_allocated_interface_name(
         return (pci_request.requester_id and
                 pci_request.requester_id in mapping)
 
-    modified = False
     for pci_request in instance.pci_requests.requests:
         if needs_update(pci_request, provider_mapping):
 
@@ -1535,6 +1534,3 @@ def update_pci_request_spec_with_allocated_interface_name(
 
             for spec in pci_request.spec:
                 spec['parent_ifname'] = rp_name_pieces[2]
-                modified = True
-    if modified:
-        instance.save()

@@ -8552,6 +8552,18 @@ class ComputeManager(manager.Manager):
                             None
 
         """
+        # NOTE(gibi): We need to refresh pci_requests of the instance as it
+        # might be changed by the conductor during scheduling based on the
+        # selected destination host. If the instance has SRIOV ports with
+        # resource request then the LiveMigrationTask._find_destination call
+        # updated the instance.pci_requests.requests[].spec with the SRIOV PF
+        # device name to be used on the destination host. As the migration is
+        # rolling back to the source host now we don't want to persist the
+        # destination host related changes in the DB.
+        instance.pci_requests = \
+            objects.InstancePCIRequests.get_by_instance_uuid(
+                context, instance.uuid)
+
         if (isinstance(migrate_data, migrate_data_obj.LiveMigrateData) and
               migrate_data.obj_attr_is_set('migration')):
             migration = migrate_data.migration

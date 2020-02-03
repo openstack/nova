@@ -6578,6 +6578,7 @@ class ComputeTestCase(BaseTestCase,
         bdms = objects.BlockDeviceMappingList()
         mock_bdms.return_value = bdms
 
+        @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
         @mock.patch('nova.compute.utils.notify_about_instance_action')
         @mock.patch.object(migration, 'save')
         @mock.patch.object(self.compute, '_revert_allocation')
@@ -6586,7 +6587,8 @@ class ComputeTestCase(BaseTestCase,
         @mock.patch.object(compute_rpcapi.ComputeAPI,
                            'drop_move_claim_at_destination')
         def _test(mock_drop_claim, mock_nw_api, mock_lmcf, mock_ra,
-                  mock_mig_save, mock_notify):
+                  mock_mig_save, mock_notify, mock_get_pci):
+            mock_get_pci.return_value = objects.InstancePCIRequests()
             mock_lmcf.return_value = False, False
             if migration_status:
                 self.compute._rollback_live_migration(
@@ -6611,6 +6613,8 @@ class ComputeTestCase(BaseTestCase,
             ])
             mock_ra.assert_called_once_with(mock.ANY, instance, migration)
             mock_mig_save.assert_called_once_with()
+            mock_get_pci.assert_called_once_with(c, instance.uuid)
+            self.assertEqual(mock_get_pci.return_value, instance.pci_requests)
 
         _test()
 
@@ -6637,6 +6641,7 @@ class ComputeTestCase(BaseTestCase,
         migrate_data = objects.LibvirtLiveMigrateData(migration=migration)
         source_bdms = objects.BlockDeviceMappingList()
 
+        @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
         @mock.patch.object(self.compute, '_notify_about_instance_usage')
         @mock.patch('nova.compute.utils.notify_about_instance_action')
         @mock.patch.object(instance, 'save')
@@ -6647,7 +6652,10 @@ class ComputeTestCase(BaseTestCase,
         @mock.patch.object(self.compute.network_api, 'setup_networks_on_host',
                            side_effect=(None, test.TestingException))
         def _test(mock_nw_setup, _mock_lmcf, mock_ra, mock_mig_save,
-                  mock_inst_save, _mock_notify_action, mock_notify_usage):
+                  mock_inst_save, _mock_notify_action, mock_notify_usage,
+                  mock_get_pci):
+            mock_get_pci.return_value = objects.InstancePCIRequests()
+
             self.assertRaises(test.TestingException,
                               self.compute._rollback_live_migration,
                               ctxt, instance, 'dest-host', migrate_data,
@@ -6672,6 +6680,8 @@ class ComputeTestCase(BaseTestCase,
             # Since we failed during rollback, the migration status gets set
             # to 'error' instead of 'goofballs'.
             self.assertEqual('error', migration.status)
+            mock_get_pci.assert_called_once_with(ctxt, instance.uuid)
+            self.assertEqual(mock_get_pci.return_value, instance.pci_requests)
 
         _test()
 
