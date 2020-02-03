@@ -572,6 +572,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
 
     @catch_notimplementederror
     def test_get_serial_console(self):
+        self.flags(enabled=True, group='serial_console')
         instance_ref, network_info = self._get_running_instance()
         serial_console = self.connection.get_serial_console(self.ctxt,
                                                             instance_ref)

@@ -21,6 +21,7 @@ from lxml import etree
 from oslo_log import log as logging
 from oslo_utils.fixture import uuidsentinel as uuids
 
+from nova import conf
 from nova.objects import fields as obj_fields
 from nova.tests.unit.virt.libvirt import fake_libvirt_data
 from nova.virt.libvirt import config as vconfig
@@ -40,6 +41,7 @@ def _reset():
 
 
 LOG = logging.getLogger(__name__)
+CONF = conf.CONF
 
 # virDomainState
 VIR_DOMAIN_NOSTATE = 0
@@ -1066,6 +1068,12 @@ class Domain(object):
     </memory>
             ''' % vpmem
 
+        serial_console = ''
+        if CONF.serial_console.enabled:
+            serial_console = """<serial type="tcp">
+                <source host="-1" service="-1" mode="bind"/>
+                </serial>"""
+
         return '''<domain type='kvm'>
   <name>%(name)s</name>
   <uuid>%(uuid)s</uuid>
@@ -1093,17 +1101,7 @@ class Domain(object):
                function='0x1'/>
     </controller>
     %(nics)s
-    <serial type='file'>
-      <source path='dummy.log'/>
-      <target port='0'/>
-    </serial>
-    <serial type='pty'>
-      <source pty='/dev/pts/27'/>
-      <target port='1'/>
-    </serial>
-    <serial type='tcp'>
-      <source host="-1" service="-1" mode="bind"/>
-    </serial>
+    %(serial_console)s
     <console type='file'>
       <source path='dummy.log'/>
       <target port='0'/>
@@ -1132,7 +1130,8 @@ class Domain(object):
                 'disks': disks,
                 'nics': nics,
                 'hostdevs': hostdevs,
-                'vpmems': vpmems}
+                'vpmems': vpmems,
+                'serial_console': serial_console}
 
     def managedSave(self, flags):
         self._connection._mark_not_running(self)
