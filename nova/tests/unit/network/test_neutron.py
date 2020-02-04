@@ -2345,6 +2345,51 @@ class TestAPI(TestAPIBase):
         mock_get_client.assert_called_once_with(self.context)
         mocked_client.show_floatingip.assert_called_once_with(floating_ip_id)
 
+    @mock.patch.object(neutronapi.API, '_refresh_neutron_extensions_cache')
+    @mock.patch.object(neutronapi, 'get_client')
+    def _test_get_floating_ip(
+            self, fip_ext_enabled, mock_ntrn, mock_refresh):
+        mock_nc = mock.Mock()
+        mock_ntrn.return_value = mock_nc
+        # NOTE(stephenfin): These are clearly not full responses
+        mock_nc.show_floatingip.return_value = {
+            'floatingip': {
+                'id': uuids.fip_id,
+                'floating_network_id': uuids.fip_net_id,
+                'port_id': uuids.fip_port_id,
+            }
+        }
+        mock_nc.show_network.return_value = {
+            'network': {
+                'id': uuids.fip_net_id,
+            },
+        }
+        mock_nc.show_port.return_value = {
+            'port': {
+                'id': uuids.fip_port_id,
+            },
+        }
+
+        if fip_ext_enabled:
+            self.api.extensions = [constants.FIP_PORT_DETAILS]
+        else:
+            self.api.extensions = []
+
+        fip = self.api.get_floating_ip(self.context, uuids.fip_id)
+
+        if fip_ext_enabled:
+            mock_nc.show_port.assert_not_called()
+            self.assertNotIn('port_details', fip)
+        else:
+            mock_nc.show_port.assert_called_once_with(uuids.fip_port_id)
+            self.assertIn('port_details', fip)
+
+    def test_get_floating_ip_with_fip_port_details_ext(self):
+        self._test_get_floating_ip(True)
+
+    def test_get_floating_ip_without_fip_port_details_ext(self):
+        self._test_get_floating_ip(False)
+
     @mock.patch.object(neutronapi, 'get_client')
     def test_get_floating_ip_by_address_multiple_found(self, mock_get_client):
         mocked_client = mock.create_autospec(client.Client)
@@ -2358,6 +2403,53 @@ class TestAPI(TestAPIBase):
         mock_get_client.assert_called_once_with(self.context)
         mocked_client.list_floatingips.assert_called_once_with(
             floating_ip_address=address)
+
+    @mock.patch.object(neutronapi.API, '_refresh_neutron_extensions_cache')
+    @mock.patch.object(neutronapi, 'get_client')
+    def _test_get_floating_ip_by_address(
+            self, fip_ext_enabled, mock_ntrn, mock_refresh):
+        mock_nc = mock.Mock()
+        mock_ntrn.return_value = mock_nc
+        # NOTE(stephenfin): These are clearly not full responses
+        mock_nc.list_floatingips.return_value = {
+            'floatingips': [
+                {
+                    'id': uuids.fip_id,
+                    'floating_network_id': uuids.fip_net_id,
+                    'port_id': uuids.fip_port_id,
+                },
+            ]
+        }
+        mock_nc.show_network.return_value = {
+            'network': {
+                'id': uuids.fip_net_id,
+            },
+        }
+        mock_nc.show_port.return_value = {
+            'port': {
+                'id': uuids.fip_port_id,
+            },
+        }
+
+        if fip_ext_enabled:
+            self.api.extensions = [constants.FIP_PORT_DETAILS]
+        else:
+            self.api.extensions = []
+
+        fip = self.api.get_floating_ip_by_address(self.context, '172.1.2.3')
+
+        if fip_ext_enabled:
+            mock_nc.show_port.assert_not_called()
+            self.assertNotIn('port_details', fip)
+        else:
+            mock_nc.show_port.assert_called_once_with(uuids.fip_port_id)
+            self.assertIn('port_details', fip)
+
+    def test_get_floating_ip_by_address_with_fip_port_details_ext(self):
+        self._test_get_floating_ip_by_address(True)
+
+    def test_get_floating_ip_by_address_without_fip_port_details_ext(self):
+        self._test_get_floating_ip_by_address(False)
 
     @mock.patch.object(neutronapi, 'get_client')
     def _test_get_instance_id_by_floating_address(self, fip_data,
@@ -5303,6 +5395,58 @@ class TestAPI(TestAPIBase):
         self.assertRaises(exceptions.InternalServerError,
                           self.api.get_floating_ips_by_project,
                           self.context)
+
+    @mock.patch.object(neutronapi.API, '_refresh_neutron_extensions_cache')
+    @mock.patch.object(neutronapi, 'get_client')
+    def _test_get_floating_ips_by_project(
+            self, fip_ext_enabled, mock_ntrn, mock_refresh):
+        mock_nc = mock.Mock()
+        mock_ntrn.return_value = mock_nc
+        # NOTE(stephenfin): These are clearly not full responses
+        mock_nc.list_floatingips.return_value = {
+            'floatingips': [
+                {
+                    'id': uuids.fip_id,
+                    'floating_network_id': uuids.fip_net_id,
+                    'port_id': uuids.fip_port_id,
+                }
+            ]
+        }
+        mock_nc.show_network.return_value = {
+            'network': {
+                'id': uuids.fip_net_id,
+            },
+        }
+        mock_nc.list_ports.return_value = {
+            'ports': [
+                {
+                    'id': uuids.fip_port_id,
+                },
+            ],
+        }
+
+        if fip_ext_enabled:
+            self.api.extensions = [constants.FIP_PORT_DETAILS]
+        else:
+            self.api.extensions = []
+
+        fips = self.api.get_floating_ips_by_project(self.context)
+
+        self.assertEqual(1, len(fips))
+
+        if fip_ext_enabled:
+            mock_nc.list_ports.assert_not_called()
+            self.assertNotIn('port_details', fips[0])
+        else:
+            mock_nc.list_ports.assert_called_once_with(
+                tenant_id=self.context.project_id)
+            self.assertIn('port_details', fips[0])
+
+    def test_get_floating_ips_by_project_with_fip_port_details_ext(self):
+        self._test_get_floating_ips_by_project(True)
+
+    def test_get_floating_ips_by_project_without_fip_port_details_ext(self):
+        self._test_get_floating_ips_by_project(False)
 
     @mock.patch('nova.network.neutron.API._show_port')
     def test_unbind_ports_reset_dns_name_by_admin(self, mock_show):

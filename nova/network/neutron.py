@@ -1265,6 +1265,10 @@ class API(base.Base):
         self._refresh_neutron_extensions_cache(context, neutron=neutron)
         return constants.QOS_QUEUE in self.extensions
 
+    def _has_fip_port_details_extension(self, context, neutron=None):
+        self._refresh_neutron_extensions_cache(context, neutron=neutron)
+        return constants.FIP_PORT_DETAILS in self.extensions
+
     def has_substr_port_filtering_extension(self, context):
         self._refresh_neutron_extensions_cache(context)
         return constants.SUBSTR_PORT_FILTERING in self.extensions
@@ -2599,13 +2603,18 @@ class API(base.Base):
         except neutron_client_exc.NetworkNotFoundClient:
             raise exception.NetworkNotFound(network_id=network_uuid)
 
-        return fip
+        # ...and retrieve the port details for the same reason, but only if
+        # they're not already there because the fip-port-details extension is
+        # present
+        if not self._has_fip_port_details_extension(context, client):
+            port_id = fip['port_id']
+            try:
+                fip['port_details'] = client.show_port(
+                    port_id)['port']
+            except neutron_client_exc.PortNotFoundClient:
+                raise exception.PortNotFound(port_id=port_id)
 
-    def get_floating_ip_pools(self, context):
-        """Return floating IP pools a.k.a. external networks."""
-        client = get_client(context)
-        data = client.list_networks(**{constants.NET_EXTERNAL: True})
-        return data['networks']
+        return fip
 
     def get_floating_ip_by_address(self, context, address):
         """Return a floating IP given an address."""
@@ -2621,12 +2630,31 @@ class API(base.Base):
         except neutron_client_exc.NetworkNotFoundClient:
             raise exception.NetworkNotFound(network_id=network_uuid)
 
+        # ...and retrieve the port details for the same reason, but only if
+        # they're not already there because the fip-port-details extension is
+        # present
+        if not self._has_fip_port_details_extension(context, client):
+            port_id = fip['port_id']
+            try:
+                fip['port_details'] = client.show_port(
+                    port_id)['port']
+            except neutron_client_exc.PortNotFoundClient:
+                raise exception.PortNotFound(port_id=port_id)
+
         return fip
+
+    def get_floating_ip_pools(self, context):
+        """Return floating IP pools a.k.a. external networks."""
+        client = get_client(context)
+        data = client.list_networks(**{constants.NET_EXTERNAL: True})
+        return data['networks']
 
     def get_floating_ips_by_project(self, context):
         client = get_client(context)
         project_id = context.project_id
         fips = self._safe_get_floating_ips(client, tenant_id=project_id)
+        if not fips:
+            return fips
 
         # retrieve and cache the network details now since many callers need
         # the network name which isn't present in the response from neutron
@@ -2642,6 +2670,19 @@ class API(base.Base):
                 networks[network['id']] = network
 
             fip['network_details'] = networks[network_uuid]
+
+        # ...and retrieve the port details for the same reason, but only if
+        # they're not already there because the fip-port-details extension is
+        # present
+        if not self._has_fip_port_details_extension(context, client):
+            ports = {port['id']: port for port in client.list_ports(
+                **{'tenant_id': project_id})['ports']}
+            for fip in fips:
+                port_id = fip['port_id']
+                if port_id not in ports:
+                    raise exception.PortNotFound(port_id=port_id)
+
+                fip['port_details'] = ports[port_id]
 
         return fips
 

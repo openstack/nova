@@ -15,6 +15,7 @@
 import copy
 
 import nova.conf
+from nova.network import constants
 from nova.tests import fixtures
 from nova.tests.functional.api_sample_tests import api_sample_base
 
@@ -159,6 +160,21 @@ class NeutronFixture(fixtures.NeutronFixture):
 
     def list_floatingips(self, retrieve_all=True, **_params):
         return {'floatingips': copy.deepcopy(list(self._floatingips.values()))}
+
+    def list_extensions(self, *args, **kwargs):
+        extensions = super().list_extensions(*args, **kwargs)
+        extensions['extensions'].append(
+            {
+                # Copied from neutron-lib fip_port_details.py
+                'updated': '2018-04-09T10:00:00-00:00',
+                'name': constants.FIP_PORT_DETAILS,
+                'links': [],
+                'alias': 'fip-port-details',
+                'description': 'Add port_details attribute to Floating IP '
+                               'resource',
+            },
+        )
+        return extensions
 
 
 class FloatingIpsTest(api_sample_base.ApiSampleTestBaseV21):
