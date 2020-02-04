@@ -11644,7 +11644,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                     'foo_key2': 'foo_value2',
                     'availability_zone': 'fake_zone'}
         fake_notifier.NOTIFICATIONS = []
-        availability_zones._get_cache().add('fake_key', 'fake_value')
+        availability_zones._get_cache().region.get_or_create(
+            'fake_ky', lambda: 'fake_value')
         aggr = self.api.update_aggregate_metadata(self.context, aggr.id,
                                                   metadata)
         self.assertIsNone(availability_zones._get_cache().get('fake_key'))
