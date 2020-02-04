@@ -44,9 +44,9 @@ class AvailabilityZoneController(wsgi.Controller):
 
     def _describe_availability_zones(self, context, **kwargs):
         ctxt = context.elevated()
-        available_zones, not_available_zones = \
+        available_zones, not_available_zones = (
             availability_zones.get_availability_zones(
-                ctxt, self.host_api)
+                ctxt, self.host_api))
 
         filtered_available_zones = \
             self._get_filtered_availability_zones(available_zones, True)
@@ -58,18 +58,16 @@ class AvailabilityZoneController(wsgi.Controller):
     def _describe_availability_zones_verbose(self, context, **kwargs):
         ctxt = context.elevated()
 
-        # Available services
-        enabled_services = self.host_api.service_get_all(
-            context, {'disabled': False}, set_zones=True, all_cells=True)
-
+        services = self.host_api.service_get_all(
+            context, set_zones=True, all_cells=True)
         available_zones, not_available_zones = (
             availability_zones.get_availability_zones(
-                ctxt, self.host_api, enabled_services=enabled_services))
+                ctxt, self.host_api, services=services))
 
         zone_hosts = {}
         host_services = {}
         api_services = ('nova-osapi_compute', 'nova-metadata')
-        for service in enabled_services:
+        for service in filter(lambda x: not x.disabled, services):
             if service.binary in api_services:
                 # Skip API services in the listing since they are not
                 # maintained in the same way as other services

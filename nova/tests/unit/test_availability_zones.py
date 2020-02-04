@@ -215,7 +215,7 @@ class AvailabilityZoneTestCases(test.TestCase):
         zones, not_zones = az.get_availability_zones(self.context, host_api)
 
         self.assertEqual(['nova-test', 'nova-test2'], zones)
-        self.assertEqual(['nova-test3', 'nova'], not_zones)
+        self.assertEqual(['nova', 'nova-test3'], not_zones)
 
         zones = az.get_availability_zones(self.context, host_api,
                                           get_only_available=True)

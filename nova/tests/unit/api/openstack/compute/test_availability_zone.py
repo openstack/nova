@@ -38,7 +38,6 @@ FAKE_UUID = fakes.FAKE_UUID
 
 
 def fake_service_get_all(context, filters=None, **kwargs):
-    disabled = filters.get('disabled') if filters else None
 
     def __fake_service(binary, availability_zone,
                        created_at, updated_at, host, disabled):
@@ -54,30 +53,32 @@ def fake_service_get_all(context, filters=None, **kwargs):
         db_s.pop('version', None)
         return objects.Service(context, **db_s)
 
-    if disabled:
-        svcs = [__fake_service("nova-compute", "zone-2",
-                               datetime.datetime(2012, 11, 14, 9, 53, 25, 0),
-                               datetime.datetime(2012, 12, 26, 14, 45, 25, 0),
-                               "fake_host-1", True),
-                __fake_service("nova-scheduler", "internal",
-                               datetime.datetime(2012, 11, 14, 9, 57, 3, 0),
-                               datetime.datetime(2012, 12, 26, 14, 45, 25, 0),
-                               "fake_host-1", True)]
-    else:
-        svcs = [__fake_service("nova-compute", "zone-1",
-                               datetime.datetime(2012, 11, 14, 9, 53, 25, 0),
-                               datetime.datetime(2012, 12, 26, 14, 45, 25, 0),
-                               "fake_host-1", False),
-                __fake_service("nova-sched", "internal",
-                               datetime.datetime(2012, 11, 14, 9, 57, 3, 0),
-                               datetime.datetime(2012, 12, 26, 14, 45, 25, 0),
-                               "fake_host-1", False),
-                # nova-conductor is in the same zone and host as nova-sched
-                # and is here to make sure /detail filters out duplicates.
-                __fake_service("nova-conductor", "internal",
-                               datetime.datetime(2012, 11, 14, 9, 57, 3, 0),
-                               datetime.datetime(2012, 12, 26, 14, 45, 25, 0),
-                               "fake_host-1", False)]
+    svcs = [__fake_service("nova-compute", "zone-2",
+                           datetime.datetime(2012, 11, 14, 9, 53, 25, 0),
+                           datetime.datetime(2012, 12, 26, 14, 45, 25, 0),
+                           "fake_host-1", True),
+            __fake_service("nova-scheduler", "internal",
+                           datetime.datetime(2012, 11, 14, 9, 57, 3, 0),
+                           datetime.datetime(2012, 12, 26, 14, 45, 25, 0),
+                           "fake_host-1", True),
+            __fake_service("nova-compute", "zone-1",
+                           datetime.datetime(2012, 11, 14, 9, 53, 25, 0),
+                           datetime.datetime(2012, 12, 26, 14, 45, 25, 0),
+                           "fake_host-1", False),
+            __fake_service("nova-sched", "internal",
+                           datetime.datetime(2012, 11, 14, 9, 57, 3, 0),
+                           datetime.datetime(2012, 12, 26, 14, 45, 25, 0),
+                           "fake_host-1", False),
+            # nova-conductor is in the same zone and host as nova-sched
+            # and is here to make sure /detail filters out duplicates.
+            __fake_service("nova-conductor", "internal",
+                           datetime.datetime(2012, 11, 14, 9, 57, 3, 0),
+                           datetime.datetime(2012, 12, 26, 14, 45, 25, 0),
+                           "fake_host-1", False)]
+
+    if filters and 'disabled' in filters:
+        svcs = [svc for svc in svcs if svc.disabled == filters['disabled']]
+
     return objects.ServiceList(objects=svcs)
 
 
@@ -137,19 +138,6 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
         timestamp = iso8601.parse_date("2012-12-26T14:45:25Z")
         expected = [
             {
-                'zoneName': 'zone-1',
-                'zoneState': {'available': True},
-                'hosts': {
-                    'fake_host-1': {
-                        'nova-compute': {
-                            'active': True,
-                            'available': True,
-                            'updated_at': timestamp
-                        }
-                    }
-                }
-            },
-            {
                 'zoneName': 'internal',
                 'zoneState': {'available': True},
                 'hosts': {
@@ -168,15 +156,26 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
                 }
             },
             {
+                'zoneName': 'zone-1',
+                'zoneState': {'available': True},
+                'hosts': {
+                    'fake_host-1': {
+                        'nova-compute': {
+                            'active': True,
+                            'available': True,
+                            'updated_at': timestamp
+                        }
+                    }
+                }
+            },
+            {
                 'zoneName': 'zone-2',
                 'zoneState': {'available': False},
                 'hosts': None
             }
         ]
         self.assertEqual(expected, zones)
-        # We get both enabled and disabled services per cell (just one in this
-        # test case) so we'll query the services table twice.
-        self.assertEqual(2, self.mock_service_get_all.call_count,
+        self.assertEqual(1, self.mock_service_get_all.call_count,
                          self.mock_service_get_all.call_args_list)
 
     @mock.patch.object(availability_zones, 'get_availability_zones',
