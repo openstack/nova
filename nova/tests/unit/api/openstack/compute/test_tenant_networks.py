@@ -16,6 +16,7 @@ import copy
 
 import mock
 from oslo_config import cfg
+from oslo_utils.fixture import uuidsentinel as uuids
 import webob
 
 from nova.api.openstack.compute import tenant_networks \
@@ -28,22 +29,19 @@ CONF = cfg.CONF
 
 NETWORKS = [
     {
-        "id": 1,
-        "cidr": "10.20.105.0/24",
-        "label": "new net 1"
+        "id": uuids.fake_net1,
+        "name": "fake_net1",
     },
     {
-        "id": 2,
-        "cidr": "10.20.105.0/24",
-        "label": "new net 2"
+        "id": uuids.fake_net2,
+        "name": "fake_net2",
     }
 ]
 
 DEFAULT_NETWORK = [
     {
-        "id": 3,
-        "cidr": "None",
-        "label": "default"
+        "id": uuids.fake_net3,
+        "name": "default",
     }
 ]
 
@@ -54,7 +52,7 @@ DEFAULT_TENANT_ID = CONF.api.neutron_default_tenant_id
 
 
 def fake_network_api_get_all(context):
-    if (context.project_id == DEFAULT_TENANT_ID):
+    if context.project_id == DEFAULT_TENANT_ID:
         return DEFAULT_NETWORK
     else:
         return NETWORKS
@@ -83,7 +81,13 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         with mock.patch.object(self.controller.network_api, 'get',
                                return_value=NETWORKS[0]):
             res = self.controller.show(self.req, 1)
-        self.assertEqual(NETWORKS[0], res['network'])
+
+        expected = {
+            'id': NETWORKS[0]['id'],
+            'label': NETWORKS[0]['name'],
+            'cidr': str(None),
+        }
+        self.assertEqual(expected, res['network'])
 
     def test_network_show_not_found(self):
         ctxt = self.req.environ['nova.context']
@@ -97,9 +101,17 @@ class TenantNetworksTestV21(test.NoDBTestCase):
     def _test_network_index(self, default_net=True):
         CONF.set_override("use_neutron_default_nets", default_net, group='api')
 
-        expected = NETWORKS
+        networks = NETWORKS
         if default_net:
-            expected = NETWORKS_WITH_DEFAULT_NET
+            networks = NETWORKS_WITH_DEFAULT_NET
+
+        expected = []
+        for network in networks:
+            expected.append({
+                'id': network['id'],
+                'label': network['name'],
+                'cidr': str(None),
+            })
 
         with mock.patch.object(self.controller.network_api, 'get_all',
                                side_effect=fake_network_api_get_all):

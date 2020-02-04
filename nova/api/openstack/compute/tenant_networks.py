@@ -35,12 +35,16 @@ LOG = logging.getLogger(__name__)
 
 
 def network_dict(network):
-    # NOTE(danms): Here, network should be an object, which could have come
-    # from neutron and thus be missing most of the attributes. Providing a
-    # default to get() avoids trying to lazy-load missing attributes.
-    return {"id": network.get("uuid", None) or network.get("id", None),
-                        "cidr": str(network.get("cidr", None)),
-                        "label": network.get("label", None)}
+    # convert from a neutron response to something resembling what we used to
+    # produce with nova-network
+    return {
+        'id': network.get('id'),
+        # yes, this is bananas, but this is what the API returned historically
+        # when using neutron instead of nova-network, so we keep on returning
+        # that
+        'cidr': str(None),
+        'label': network.get('name'),
+    }
 
 
 class TenantNetworkController(wsgi.Controller):
@@ -61,10 +65,7 @@ class TenantNetworkController(wsgi.Controller):
         project_id = CONF.api.neutron_default_tenant_id
         ctx = nova_context.RequestContext(user_id=None,
                                           project_id=project_id)
-        networks = {}
-        for n in self.network_api.get_all(ctx):
-            networks[n['id']] = n['label']
-        return [{'id': k, 'label': v} for k, v in networks.items()]
+        return self.network_api.get_all(ctx)
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors(())

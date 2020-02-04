@@ -3301,17 +3301,6 @@ class TestAPI(TestAPIBase):
         self.assertEqual(subnet_data1[0]['gateway_ip'],
                          subnets[0]['meta']['dhcp_server'])
 
-    @mock.patch.object(neutronapi, 'get_client')
-    def test_get_all_empty_list_networks(self, mock_get_client):
-        mocked_client = mock.create_autospec(client.Client)
-        mock_get_client.return_value = mocked_client
-        mocked_client.list_networks.return_value = {'networks': []}
-        networks = self.api.get_all(self.context)
-        self.assertIsInstance(networks, objects.NetworkList)
-        self.assertEqual(0, len(networks))
-        mock_get_client.assert_called_once_with(self.context)
-        mocked_client.list_networks.assert_called_once_with()
-
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_get_physnet_tunneled_info_multi_segment(self, mock_get_client):
         test_net = {'network': {'segments':
@@ -4092,30 +4081,27 @@ class TestAPI(TestAPIBase):
 
     def test_get_network(self):
         api = neutronapi.API()
+        fake_network = {
+            'network': {'id': uuids.instance, 'name': 'fake-network'}
+        }
+
         with mock.patch.object(client.Client, 'show_network') as mock_show:
-            mock_show.return_value = {
-                'network': {'id': uuids.instance, 'name': 'fake-network'}
-            }
-            net_obj = api.get(self.context, uuids.instance)
-            self.assertEqual('fake-network', net_obj.label)
-            self.assertEqual('fake-network', net_obj.name)
-            self.assertEqual(uuids.instance, net_obj.uuid)
+            mock_show.return_value = fake_network
+            rsp = api.get(self.context, uuids.instance)
+            self.assertEqual(fake_network['network'], rsp)
 
     def test_get_all_networks(self):
         api = neutronapi.API()
+        fake_networks = {
+            'networks': [
+                {'id': uuids.network_1, 'name': 'fake-network1'},
+                {'id': uuids.network_2, 'name': 'fake-network2'},
+            ],
+        }
         with mock.patch.object(client.Client, 'list_networks') as mock_list:
-            mock_list.return_value = {
-                'networks': [
-                    {'id': uuids.network_1, 'name': 'fake-network1'},
-                    {'id': uuids.network_2, 'name': 'fake-network2'},
-                    ]}
-            net_objs = api.get_all(self.context)
-            self.assertIsInstance(net_objs, objects.NetworkList)
-            self.assertEqual(2, len(net_objs))
-            self.assertEqual((uuids.network_1, 'fake-network1'),
-                             (net_objs[0].uuid, net_objs[0].name))
-            self.assertEqual((uuids.network_2, 'fake-network2'),
-                             (net_objs[1].uuid, net_objs[1].name))
+            mock_list.return_value = fake_networks
+            rsp = api.get_all(self.context)
+            self.assertEqual(fake_networks['networks'], rsp)
 
     @mock.patch.object(neutronapi.API, "_refresh_neutron_extensions_cache")
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
