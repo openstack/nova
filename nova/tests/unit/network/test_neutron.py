@@ -5412,10 +5412,12 @@ class TestAPI(TestAPIBase):
                 }
             ]
         }
-        mock_nc.show_network.return_value = {
-            'network': {
-                'id': uuids.fip_net_id,
-            },
+        mock_nc.list_networks.return_value = {
+            'networks': [
+                {
+                    'id': uuids.fip_net_id,
+                },
+            ],
         }
         mock_nc.list_ports.return_value = {
             'ports': [
@@ -5432,6 +5434,8 @@ class TestAPI(TestAPIBase):
 
         fips = self.api.get_floating_ips_by_project(self.context)
 
+        mock_nc.list_networks.assert_called_once_with(
+            id=[uuids.fip_net_id])
         self.assertEqual(1, len(fips))
 
         if fip_ext_enabled:
