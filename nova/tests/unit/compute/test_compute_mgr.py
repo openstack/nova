@@ -3454,7 +3454,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         side_effect=exception.InstanceGroupNotFound(group_uuid='')))
     def test_check_can_live_migrate_destination_success(self):
         self.useFixture(std_fixtures.MonkeyPatch(
-            'nova.network.neutron.API.supports_port_binding_extension',
+            'nova.network.neutron.API.has_port_binding_extension',
             lambda *args: True))
         self._test_check_can_live_migrate_destination()
 
@@ -3462,7 +3462,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         side_effect=exception.InstanceGroupNotFound(group_uuid='')))
     def test_check_can_live_migrate_destination_fail(self):
         self.useFixture(std_fixtures.MonkeyPatch(
-            'nova.network.neutron.API.supports_port_binding_extension',
+            'nova.network.neutron.API.has_port_binding_extension',
             lambda *args: True))
         self.assertRaises(
             test.TestingException,
@@ -3473,7 +3473,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         side_effect=exception.InstanceGroupNotFound(group_uuid='')))
     def test_check_can_live_migrate_destination_contains_vifs(self):
         self.useFixture(std_fixtures.MonkeyPatch(
-            'nova.network.neutron.API.supports_port_binding_extension',
+            'nova.network.neutron.API.has_port_binding_extension',
             lambda *args: True))
         migrate_data = self._test_check_can_live_migrate_destination()
         self.assertIn('vifs', migrate_data)
@@ -3483,7 +3483,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         side_effect=exception.InstanceGroupNotFound(group_uuid='')))
     def test_check_can_live_migrate_destination_no_binding_extended(self):
         self.useFixture(std_fixtures.MonkeyPatch(
-            'nova.network.neutron.API.supports_port_binding_extension',
+            'nova.network.neutron.API.has_port_binding_extension',
             lambda *args: False))
         migrate_data = self._test_check_can_live_migrate_destination()
         self.assertNotIn('vifs', migrate_data)
@@ -3492,7 +3492,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         side_effect=exception.InstanceGroupNotFound(group_uuid='')))
     def test_check_can_live_migrate_destination_src_numa_lm_false(self):
         self.useFixture(std_fixtures.MonkeyPatch(
-            'nova.network.neutron.API.supports_port_binding_extension',
+            'nova.network.neutron.API.has_port_binding_extension',
             lambda *args: True))
         self._test_check_can_live_migrate_destination(src_numa_lm=False)
 
@@ -3500,7 +3500,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         side_effect=exception.InstanceGroupNotFound(group_uuid='')))
     def test_check_can_live_migrate_destination_src_numa_lm_true(self):
         self.useFixture(std_fixtures.MonkeyPatch(
-            'nova.network.neutron.API.supports_port_binding_extension',
+            'nova.network.neutron.API.has_port_binding_extension',
             lambda *args: True))
         self._test_check_can_live_migrate_destination(src_numa_lm=True)
 

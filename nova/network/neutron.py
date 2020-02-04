@@ -381,7 +381,8 @@ class API:
                 # If a host was provided, delete any bindings between that
                 # host and the ports as long as the host isn't the same as
                 # the current instance.host.
-                has_binding_ext = self.supports_port_binding_extension(context)
+                has_binding_ext = self.has_port_binding_extension(
+                    client=admin_client)
                 if port_migrating and has_binding_ext:
                     self._delete_port_bindings(context, ports, host)
             elif port_migrating:
@@ -674,8 +675,12 @@ class API:
             # NOTE: For internal DNS integration (network does not have a
             # dns_domain), or if we cannot retrieve network info, we use the
             # admin client to reset dns_name.
-            if self._has_dns_extension() and not network.get('dns_domain'):
+            if (
+                self.has_dns_extension(client=port_client) and
+                not network.get('dns_domain')
+            ):
                 port_req_body['port']['dns_name'] = ''
+
             try:
                 port_client.update_port(port_id, port_req_body)
             except neutron_client_exc.PortNotFoundClient:
@@ -1329,62 +1334,112 @@ class API:
         return (nets_in_requested_order, ports_in_requested_order,
             preexisting_port_ids, created_port_ids)
 
-    def _refresh_neutron_extensions_cache(self, context, neutron=None):
+    def _refresh_neutron_extensions_cache(self, client):
         """Refresh the neutron extensions cache when necessary."""
         if (not self.last_neutron_extension_sync or
             ((time.time() - self.last_neutron_extension_sync) >=
              CONF.neutron.extension_sync_interval)):
-            if neutron is None:
-                neutron = get_client(context)
-            extensions_list = neutron.list_extensions()['extensions']
+            extensions_list = client.list_extensions()['extensions']
             self.last_neutron_extension_sync = time.time()
             self.extensions.clear()
-            self.extensions = {ext['name']: ext for ext in extensions_list}
+            self.extensions = {ext['alias']: ext for ext in extensions_list}
 
-    def _has_multi_provider_extension(self, context, neutron=None):
-        self._refresh_neutron_extensions_cache(context, neutron=neutron)
-        return constants.MULTI_NET_EXT in self.extensions
+    def _has_extension(self, extension, context=None, client=None):
+        """Check if the provided neutron extension is enabled.
 
-    def _has_dns_extension(self):
-        return constants.DNS_INTEGRATION in self.extensions
+        :param extension: The alias of the extension to check
+        :param client: keystoneauth1.adapter.Adapter
+        :param context: nova.context.RequestContext
+        :returns: True if the neutron extension is available, else False
+        """
+        if client is None:
+            client = get_client(context)
 
-    def _has_qos_queue_extension(self, context, neutron=None):
-        self._refresh_neutron_extensions_cache(context, neutron=neutron)
-        return constants.QOS_QUEUE in self.extensions
+        self._refresh_neutron_extensions_cache(client)
+        return extension in self.extensions
 
-    def _has_fip_port_details_extension(self, context, neutron=None):
-        self._refresh_neutron_extensions_cache(context, neutron=neutron)
-        return constants.FIP_PORT_DETAILS in self.extensions
+    def has_multi_provider_extension(self, context=None, client=None):
+        """Check if the 'multi-provider' extension is enabled.
 
-    def has_substr_port_filtering_extension(self, context):
-        self._refresh_neutron_extensions_cache(context)
-        return constants.SUBSTR_PORT_FILTERING in self.extensions
+        This extension allows administrative users to define multiple physical
+        bindings for a logical network.
+        """
+        return self._has_extension(constants.MULTI_PROVIDER, context, client)
 
-    def _has_segment_extension(self, context, neutron=None):
-        self._refresh_neutron_extensions_cache(context, neutron=neutron)
-        return constants.SEGMENT in self.extensions
+    def has_dns_extension(self, context=None, client=None):
+        """Check if the 'dns-integration' extension is enabled.
+
+        This extension adds the 'dns_name' and 'dns_assignment' attributes to
+        port resources.
+        """
+        return self._has_extension(constants.DNS_INTEGRATION, context, client)
 
     # TODO(gibi): Remove all branches where this is False after Neutron made
     # the this extension mandatory. In Xena this extension will be optional to
     # support the scenario where Neutron upgraded first. So Neutron can mark
     # this mandatory earliest in Yoga.
-    def has_extended_resource_request_extension(self, context, neutron=None):
-        self._refresh_neutron_extensions_cache(context, neutron=neutron)
-        return constants.RESOURCE_REQUEST_GROUPS_EXTENSION in self.extensions
+    def has_extended_resource_request_extension(
+        self, context=None, client=None,
+    ):
+        return self._has_extension(
+            constants.RESOURCE_REQUEST_GROUPS, context, client,
+        )
 
-    def supports_port_binding_extension(self, context):
-        """This is a simple check to see if the neutron "binding-extended"
-        extension exists and is enabled.
+    # TODO(stephenfin): This is optionally used by the XenAPI virt driver, but
+    # I can't find what defines it and suspect it's dead code. Consider
+    # removing the functionality
+    def has_qos_queue_extension(self, context=None, client=None):
+        """Check if the 'qos-queue' extension is enabled.
 
-        The "binding-extended" extension allows nova to bind a port to multiple
-        hosts at the same time, like during live migration.
-
-        :param context: the user request context
-        :returns: True if the binding-extended API extension is available,
-                  False otherwise
+        This extension is provided by a XenServer neutron plugin...we think.
         """
-        self._refresh_neutron_extensions_cache(context)
-        return constants.PORT_BINDING_EXTENDED in self.extensions
+        return self._has_extension(constants.QOS_QUEUE, context, client)
+
+    def has_vnic_index_extension(self, context=None, client=None):
+        """Check if the 'vnic-index' extension is enabled.
+
+        This extension is provided by the VMWare NSX neutron plugin.
+        """
+        return self._has_extension(constants.VNIC_INDEX, context, client)
+
+    def has_fip_port_details_extension(self, context=None, client=None):
+        """Check if the 'fip-port-details' extension is enabled.
+
+        This extension adds the 'port_details' attribute to floating IPs.
+        """
+        return self._has_extension(constants.FIP_PORT_DETAILS, context, client)
+
+    def has_substr_port_filtering_extension(self, context=None, client=None):
+        """Check if the 'ip-substring-filtering' extension is enabled.
+
+        This extension adds support for filtering ports by using part of an IP
+        address.
+        """
+        return self._has_extension(
+            constants.SUBSTR_PORT_FILTERING, context, client
+        )
+
+    def has_segment_extension(self, context=None, client=None):
+        """Check if the neutron 'segment' extension is enabled.
+
+        This extension exposes information about L2 segments of a network.
+        """
+        return self._has_extension(
+            constants.SEGMENT, context, client,
+        )
+
+    def has_port_binding_extension(self, context=None, client=None):
+        """Check if the neutron 'binding-extended' extension is enabled.
+
+        This extensions exposes port bindings of a virtual port to external
+        application.
+
+        This extension allows nova to bind a port to multiple hosts at the same
+        time, like during live migration.
+        """
+        return self._has_extension(
+            constants.PORT_BINDING_EXTENDED, context, client
+        )
 
     def bind_ports_to_host(self, context, instance, host,
                            vnic_types=None, port_profiles=None):
@@ -1398,7 +1453,7 @@ class API:
         In the event of an error, any ports which were successfully bound to
         the host should have those host bindings removed from the ports.
 
-        This method should not be used if "supports_port_binding_extension"
+        This method should not be used if "has_port_binding_extension"
         returns False.
 
         :param context: the user request context
@@ -1477,7 +1532,7 @@ class API:
     def delete_port_binding(self, context, port_id, host):
         """Delete the port binding for the given port ID and host
 
-        This method should not be used if "supports_port_binding_extension"
+        This method should not be used if "has_port_binding_extension"
         returns False.
 
         :param context: The request context for the operation.
@@ -1586,7 +1641,10 @@ class API:
 
         If the extensions loaded contain QOS_QUEUE then pass the rxtx_factor.
         """
-        if self._has_qos_queue_extension(context, neutron=neutron):
+        if neutron is None:
+            neutron = get_client(context)
+
+        if self.has_qos_queue_extension(client=neutron):
             flavor = instance.get_flavor()
             rxtx_factor = flavor.get('rxtx_factor')
             port_req_body['port']['rxtx_factor'] = rxtx_factor
@@ -1596,7 +1654,7 @@ class API:
                                                port_req_body,
                                                port_arq)
 
-        if self._has_dns_extension():
+        if self.has_dns_extension(client=neutron):
             # If the DNS integration extension is enabled in Neutron, most
             # ports will get their dns_name attribute set in the port create or
             # update requests in allocate_for_instance. So we just add the
@@ -1622,7 +1680,8 @@ class API:
         an additional update request. Only a very small fraction of ports will
         require this additional update request.
         """
-        if self._has_dns_extension() and network.get('dns_domain'):
+        if self.has_dns_extension(client=neutron) and network.get(
+                'dns_domain'):
             try:
                 port_req_body = {'port': {'dns_name': instance.hostname}}
                 neutron.update_port(port_id, port_req_body)
@@ -1634,7 +1693,7 @@ class API:
                          'name') % {'hostname': instance.hostname})
                 raise exception.InvalidInput(reason=msg)
 
-    def _reset_port_dns_name(self, network, port_id, neutron_client):
+    def _reset_port_dns_name(self, network, port_id, client):
         """Reset an instance port dns_name attribute to empty when using
         external DNS service.
 
@@ -1644,10 +1703,11 @@ class API:
         request with a Neutron client using user's context, so that the DNS
         record can be found under user's zone and domain.
         """
-        if self._has_dns_extension() and network.get('dns_domain'):
+        if self.has_dns_extension(client=client) and network.get(
+                'dns_domain'):
             try:
                 port_req_body = {'port': {'dns_name': ''}}
-                neutron_client.update_port(port_id, port_req_body)
+                client.update_port(port_id, port_req_body)
             except neutron_client_exc.NeutronClientException:
                 LOG.exception("Failed to reset dns_name for port %s", port_id)
 
@@ -2006,7 +2066,7 @@ class API:
             segments, the first segment that defines a physnet value will be
             used for the physnet name.
         """
-        if self._has_multi_provider_extension(context, neutron=neutron):
+        if self.has_multi_provider_extension(client=neutron):
             network = neutron.show_network(net_id,
                                            fields='segments').get('network')
             segments = network.get('segments', {})
@@ -2681,7 +2741,7 @@ class API:
         # ...and retrieve the port details for the same reason, but only if
         # they're not already there because the fip-port-details extension is
         # present
-        if not self._has_fip_port_details_extension(context, client):
+        if not self.has_fip_port_details_extension(client=client):
             port_id = fip['port_id']
             try:
                 fip['port_details'] = client.show_port(
@@ -2709,7 +2769,7 @@ class API:
         # ...and retrieve the port details for the same reason, but only if
         # they're not already there because the fip-port-details extension is
         # present
-        if not self._has_fip_port_details_extension(context, client):
+        if not self.has_fip_port_details_extension(client=client):
             port_id = fip['port_id']
             try:
                 fip['port_details'] = client.show_port(
@@ -2748,7 +2808,7 @@ class API:
         # ...and retrieve the port details for the same reason, but only if
         # they're not already there because the fip-port-details extension is
         # present
-        if not self._has_fip_port_details_extension(context, client):
+        if not self.has_fip_port_details_extension(client=client):
             ports = {port['id']: port for port in client.list_ports(
                 **{'tenant_id': project_id})['ports']}
             for fip in fips:
@@ -2944,7 +3004,7 @@ class API:
         :raises: nova.exception.PortBindingActivationFailed if any port binding
             activation fails
         """
-        if not self.supports_port_binding_extension(context):
+        if not self.has_port_binding_extension(context):
             # If neutron isn't new enough yet for the port "binding-extended"
             # API extension, we just no-op. The port binding host will be
             # be updated in migrate_instance_finish, which is functionally OK,
@@ -3470,7 +3530,8 @@ class API:
         :raises: PortBindingDeletionFailed if port binding deletion fails.
         """
         # First check to see if the port binding extension is supported.
-        if not self.supports_port_binding_extension(context):
+        client = get_client(context)
+        if not self.has_port_binding_extension(client=client):
             LOG.info("Neutron extension '%s' is not supported; not cleaning "
                      "up port bindings for host %s.",
                      constants.PORT_BINDING_EXTENDED, host, instance=instance)
@@ -3661,9 +3722,8 @@ class API:
         :param vif: The VIF in question.
         :param index: The index on the instance for the VIF.
         """
-        self._refresh_neutron_extensions_cache(context)
-        if constants.VNIC_INDEX_EXT in self.extensions:
-            neutron = get_client(context)
+        neutron = get_client(context)
+        if self.has_vnic_index_extension(client=neutron):
             port_req_body = {'port': {'vnic_index': index}}
             try:
                 neutron.update_port(vif['id'], port_req_body)
@@ -3686,10 +3746,11 @@ class API:
             either Segment extension isn't enabled in Neutron or if the network
             isn't configured for routing.
         """
-        if not self._has_segment_extension(context):
+        client = get_client(context)
+
+        if not self.has_segment_extension(client=client):
             return []
 
-        client = get_client(context)
         try:
             # NOTE(sbauza): We can't use list_segments() directly because the
             # API is borked and returns both segments but also segmentation IDs
@@ -3716,10 +3777,11 @@ class API:
             extension isn't enabled in Neutron or the provided subnet doesn't
             have segments (if the related network isn't configured for routing)
         """
-        if not self._has_segment_extension(context):
+        client = get_client(context)
+
+        if not self.has_segment_extension(client=client):
             return None
 
-        client = get_client(context)
         try:
             subnet = client.show_subnet(subnet_id)['subnet']
         except neutron_client_exc.NeutronClientException as e:

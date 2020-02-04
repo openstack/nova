@@ -697,7 +697,7 @@ class CrossCellMigrationTask(base.TaskBase):
         LOG.debug('Making sure neutron is new enough for cross-cell resize.')
         # Check that the port binding-extended API extension is available in
         # neutron because if it's not we can just fail fast.
-        if not self.network_api.supports_port_binding_extension(self.context):
+        if not self.network_api.has_port_binding_extension(self.context):
             raise exception.MigrationPreCheckError(
                 reason=_("Required networking service API extension '%s' "
                          "not found.") %

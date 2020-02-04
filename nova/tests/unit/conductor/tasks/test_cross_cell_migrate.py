@@ -439,7 +439,7 @@ class CrossCellMigrationTaskTestCase(test.NoDBTestCase):
         what we need.
         """
         with mock.patch.object(
-                self.task.network_api, 'supports_port_binding_extension',
+                self.task.network_api, 'has_port_binding_extension',
                 return_value=True) as mock_neutron_check:
             self.task._perform_external_api_checks()
         mock_neutron_check.assert_called_once_with(self.task.context)
@@ -447,7 +447,7 @@ class CrossCellMigrationTaskTestCase(test.NoDBTestCase):
     def test_perform_external_api_checks_old_neutron(self):
         """Tests the case that neutron API is old."""
         with mock.patch.object(
-                self.task.network_api, 'supports_port_binding_extension',
+                self.task.network_api, 'has_port_binding_extension',
                 return_value=False):
             ex = self.assertRaises(exception.MigrationPreCheckError,
                                    self.task._perform_external_api_checks)
