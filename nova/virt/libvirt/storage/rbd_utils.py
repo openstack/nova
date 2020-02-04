@@ -351,11 +351,13 @@ class RBDDriver(object):
             if retryctx['retries'] <= 0:
                 raise loopingcall.LoopingCallDone()
 
-        # NOTE(danms): We let it go for ten seconds
-        retryctx = {'retries': 10}
+        # NOTE(sandonov): We let it go for:
+        # rbd_destroy_volume_retries*rbd_destroy_volume_retry_interval seconds
+        retryctx = {'retries': CONF.libvirt.rbd_destroy_volume_retries}
         timer = loopingcall.FixedIntervalLoopingCall(
             _cleanup_vol, client.ioctx, volume, retryctx)
-        timed_out = timer.start(interval=1).wait()
+        timed_out = timer.start(
+            interval=CONF.libvirt.rbd_destroy_volume_retry_interval).wait()
         if timed_out:
             # NOTE(danms): Run this again to propagate the error, but
             # if it succeeds, don't raise the loopingcall exception

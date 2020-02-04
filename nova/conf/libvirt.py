@@ -1096,6 +1096,27 @@ The libvirt UUID of the secret for the rbd_user volumes.
                help="""
 The RADOS client timeout in seconds when initially connecting to the cluster.
 """),
+    cfg.IntOpt('rbd_destroy_volume_retry_interval',
+               default=5,
+               min=0,
+               help="""
+Number of seconds to wait between each consecutive retry to destroy a
+RBD volume.
+
+Related options:
+
+* [libvirt]/images_type = 'rbd'
+"""),
+    cfg.IntOpt('rbd_destroy_volume_retries',
+               default=12,
+               min=0,
+               help="""
+Number of retries to destroy a RBD volume.
+
+Related options:
+
+* [libvirt]/images_type = 'rbd'
+"""),
 ]
 
 libvirt_volume_nfs_opts = [

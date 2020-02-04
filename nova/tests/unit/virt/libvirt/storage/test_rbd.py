@@ -435,8 +435,8 @@ class RbdTestCase(test.NoDBTestCase):
             self.driver.cleanup_volumes(filter_fn)
         rbd.remove.assert_any_call(client.__enter__.return_value.ioctx,
                                    '%s_test' % uuids.instance)
-        # NOTE(danms): 10 retries + 1 final attempt to propagate = 11
-        self.assertEqual(11, len(rbd.remove.call_args_list))
+        # NOTE(sandonov): 12 retries + 1 final attempt to propagate = 13
+        self.assertEqual(13, len(rbd.remove.call_args_list))
 
     def test_cleanup_volumes_fail_not_found(self):
         self._test_cleanup_exception('ImageBusy')
@@ -505,6 +505,27 @@ class RbdTestCase(test.NoDBTestCase):
         self.driver.destroy_volume(vol)
         rbd.remove.assert_called_once_with(
             client.__enter__.return_value.ioctx, vol)
+        client.__enter__.assert_called_once_with()
+        client.__exit__.assert_called_once_with(None, None, None)
+
+    @mock.patch.object(rbd_utils, 'RADOSClient')
+    @mock.patch('oslo_service.loopingcall.FixedIntervalLoopingCall')
+    def test_destroy_volume_with_retries(self, mock_loopingcall, mock_client):
+        vol = '12345_test'
+        client = mock_client.return_value
+        loopingcall = mock_loopingcall.return_value
+
+        # Try for sixty seconds: six retries at 10 second interval
+        self.flags(rbd_destroy_volume_retries=6, group='libvirt')
+        self.flags(rbd_destroy_volume_retry_interval=10, group='libvirt')
+        self.driver.destroy_volume(vol)
+
+        # Make sure both params have the expected values
+        retryctx = mock_loopingcall.call_args.args[3]
+        self.assertEqual(retryctx, {'retries': 6})
+        loopingcall.start.assert_called_with(interval=10)
+
+        # Make sure that we entered and exited the RADOSClient
         client.__enter__.assert_called_once_with()
         client.__exit__.assert_called_once_with(None, None, None)
 
