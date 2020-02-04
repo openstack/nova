@@ -43,6 +43,7 @@ CONF = nova.conf.CONF
 MEMORY_MB = fields.ResourceClass.MEMORY_MB
 BIGVM_RESOURCE = special_spawning.BIGVM_RESOURCE
 VMWARE_HV_TYPE = 'VMware vCenter Server'
+SHARD_PREFIX = 'vc-'
 
 
 class BigVmManager(manager.Manager):
@@ -60,16 +61,16 @@ class BigVmManager(manager.Manager):
                                  prepare_empty_host_for_spawning_interval,
                                  run_immediately=True)
     def _prepare_empty_host_for_spawning(self, context):
-        """Handle freeing up hosts per hv_size per az for spawning
+        """Handle freeing up hosts per hv_size per VC for spawning
 
         The general workflow is:
-        1) Find all hypervisor sizes (hv_size) existing in an availability
-           zone (az).
-        2) Choose one host per hv_size per az and create a child resource
+        1) Find all hypervisor sizes (hv_size) existing in a vCenter (VC)
+           within an availability zone (az).
+        2) Choose one host per hv_size per VC and create a child resource
            provider (rp) for it with a well-known name. This marks that
-           host as responsible for the hv_size in that az. The child rp has
-           no resources, yet. This also triggers the vmware-driver to free
-           up a host in the cluster.
+           host as responsible for the hv_size in that VC. The child rp has no
+           resources, yet. This also triggers the vmware-driver to free up a
+           host in the cluster.
         3) Either directly or in the next iteration every host without
            resources is checked for its status by calling the vmware
            driver. If we're done freeing up the host, we add the
@@ -87,7 +88,7 @@ class BigVmManager(manager.Manager):
         """
         client = self.placement_client
 
-        availability_zones, bigvm_providers, vmware_providers = \
+        vcenters, bigvm_providers, vmware_providers = \
             self._get_providers(context)
 
         # check for reserved resources which indicate that the free host was
@@ -119,21 +120,21 @@ class BigVmManager(manager.Manager):
         for rp_uuid in itertools.chain(reserved_providers, overused_providers):
             del bigvm_providers[rp_uuid]
 
-        missing_hv_sizes_per_az = self._get_missing_hv_sizes(context,
-            availability_zones, bigvm_providers, vmware_providers)
+        missing_hv_sizes_per_vc = self._get_missing_hv_sizes(context,
+            vcenters, bigvm_providers, vmware_providers)
 
-        if not any(missing_hv_sizes_per_az.values()):
+        if not any(missing_hv_sizes_per_vc.values()):
             LOG.info('Free host for spawning defined for every '
-                     'availability-zone and hypervisor-size.')
+                     'vCenter and hypervisor-size.')
             return
 
         def _flatten(list_of_lists):
             return itertools.chain.from_iterable(list_of_lists)
 
         # retrieve allocation candidates for all hv sizes. we later have to
-        # filter them by AZ, because our placement doesn't know about AZs.
+        # filter them by VC, because our placement doesn't know about VCs.
         candidates = {}
-        for hv_size in set(_flatten(missing_hv_sizes_per_az.values())):
+        for hv_size in set(_flatten(missing_hv_sizes_per_vc.values())):
             resources = ResourceRequest()
             resources._add_resource(None, MEMORY_MB, hv_size)
             res = client.get_allocation_candidates(context, resources)
@@ -170,14 +171,14 @@ class BigVmManager(manager.Manager):
 
             candidates[hv_size] = (alloc_reqs, filtered_provider_summaries)
 
-        for az in availability_zones:
-            for hv_size in missing_hv_sizes_per_az[az]:
+        for vc in vcenters:
+            for hv_size in missing_hv_sizes_per_vc[vc]:
                 alloc_reqs, provider_summaries = candidates[hv_size]
 
-                # filter providers by AZ, as placement returned all matching
+                # filter providers by VC, as placement returned all matching
                 # providers
                 providers = {p: d for p, d in provider_summaries.items()
-                        if vmware_providers.get(p, {}).get('az') == az}
+                        if vmware_providers.get(p, {}).get('vc') == vc}
 
                 # select the one with the least usage
                 def _free_memory(p):
@@ -199,19 +200,19 @@ class BigVmManager(manager.Manager):
                     # we don't know if the timeout happened after we started
                     # freeing a host already or because we couldn't reach the
                     # nova-compute node. Therefore, we move on to the next HV
-                    # size for that AZ and hope the timeout resolves for the
+                    # size for that VC and hope the timeout resolves for the
                     # next run.
                     LOG.exception(e)
-                    LOG.warning('Skipping HV size %(hv_size)s in AZ %(az)s '
+                    LOG.warning('Skipping HV size %(hv_size)s in VC %(vc)s '
                                 'because of error',
-                                {'hv_size': hv_size, 'az': az})
+                                {'hv_size': hv_size, 'vc': vc})
 
     def _get_providers(self, context):
         """Return our special and the basic vmware resource-providers
 
-        This returns a list of availability zones and two dicts, where the
+        This returns a list of vcenters and two dicts, where the
         resource-provider uuid is the key.  The value contains a dict with the
-        important information for each resource-provider, like host, az and
+        important information for each resource-provider, like host, az, vc and
         cell_mapping + either the hypervisor size (vmware provider) or the
         resource-provider dict (special provider).
         """
@@ -225,13 +226,19 @@ class BigVmManager(manager.Manager):
                                                            VMWARE_HV_TYPE)})
 
         host_azs = {}
+        host_vcs = {}
         for agg in AggregateList.get_all(context):
-            if agg.name != agg.availability_zone:
+            if not agg.availability_zone:
                 continue
 
-            for host in agg.hosts:
-                host_azs[host] = agg.name
-        availability_zones = set(host_azs.values())
+            if agg.name == agg.availability_zone:
+                for host in agg.hosts:
+                    host_azs[host] = agg.name
+            elif agg.name.startswith(SHARD_PREFIX):
+                for host in agg.hosts:
+                    host_vcs[host] = agg.name
+
+        vcenters = set(host_vcs.values())
 
         host_mappings = {hm.host: hm.cell_mapping
                          for hm in HostMappingList.get_all(context)}
@@ -249,6 +256,7 @@ class BigVmManager(manager.Manager):
                 bigvm_providers[rp['uuid']] = {'rp': rp,
                                                'host': host,
                                                'az': host_azs[host],
+                                               'vc': host_vcs[host],
                                                'cell_mapping': cell_mapping}
             elif rp['uuid'] not in vmware_hvs:  # ignore baremetal
                 continue
@@ -290,6 +298,7 @@ class BigVmManager(manager.Manager):
                 vmware_providers[rp['uuid']] = {'hv_size': hv_size,
                                                 'host': host,
                                                 'az': host_azs[host],
+                                                'vc': host_vcs[host],
                                                 'cell_mapping': cell_mapping,
                                                 'memory_mb_used_percent':
                                                     memory_mb_used_percent}
@@ -303,7 +312,7 @@ class BigVmManager(manager.Manager):
             inventory = client._get_inventory(context, rp_uuid)
             rp['inventory'] = inventory['inventories']
 
-        return (availability_zones, bigvm_providers, vmware_providers)
+        return (vcenters, bigvm_providers, vmware_providers)
 
     def _get_allocations_for_consumer(self, context, consumer_uuid):
         """Same as SchedulerReportClient.get_allocations_for_consumer() but
@@ -418,19 +427,19 @@ class BigVmManager(manager.Manager):
         LOG.info('Removed resource-provider %(rp_uuid)s.',
                  {'rp_uuid': rp_uuid})
 
-    def _get_missing_hv_sizes(self, context, availability_zones,
+    def _get_missing_hv_sizes(self, context, vcenters,
                               bigvm_providers, vmware_providers):
         """Search and return hypervisor sizes having no freed-up host
 
         Returns a dict containing a set of hv sizes missing a freed-up host for
-        each availability zone.
+        each vCenter.
         """
-        found_hv_sizes_per_az = {az: set() for az in availability_zones}
+        found_hv_sizes_per_vc = {vc: set() for vc in vcenters}
 
         for rp_uuid, rp in bigvm_providers.items():
             parent_uuid = rp['rp']['parent_provider_uuid']
             hv_size = vmware_providers[parent_uuid]['hv_size']
-            found_hv_sizes_per_az[rp['az']].add(hv_size)
+            found_hv_sizes_per_vc[rp['vc']].add(hv_size)
 
             # if there are no resources in that resource-provider, it means,
             # that we started freeing up a host. We have to check the process
@@ -447,22 +456,22 @@ class BigVmManager(manager.Manager):
                                 '%(host)s.',
                                 {'host': rp['host']})
                     # do some cleanup, so another compute-node is used
-                    found_hv_sizes_per_az[rp['az']].remove(hv_size)
+                    found_hv_sizes_per_vc[rp['vc']].remove(hv_size)
                     self._clean_up_consumed_provider(context, rp_uuid, rp)
                 else:
                     LOG.info('Waiting for host on %(host)s to free up.',
                              {'host': rp['host']})
 
-        hv_sizes_per_az = {
-            az: set(rp['hv_size'] for rp in vmware_providers.values()
-                    if rp['az'] == az)
-            for az in availability_zones}
+        hv_sizes_per_vc = {
+            vc: set(rp['hv_size'] for rp in vmware_providers.values()
+                    if rp['vc'] == vc)
+            for vc in vcenters}
 
-        missing_hv_sizes_per_az = {
-            az: hv_sizes_per_az[az] - found_hv_sizes_per_az[az]
-            for az in availability_zones}
+        missing_hv_sizes_per_vc = {
+            vc: hv_sizes_per_vc[vc] - found_hv_sizes_per_vc[vc]
+            for vc in vcenters}
 
-        return missing_hv_sizes_per_az
+        return missing_hv_sizes_per_vc
 
     def _add_resources_to_provider(self, context, rp_uuid, rp):
         """Add our custom resources to the provider so they can be consumed.
