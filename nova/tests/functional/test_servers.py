@@ -5858,18 +5858,6 @@ class PortResourceRequestBasedSchedulingTestBase(
             device_name,
             pci_requests.requests[0].spec[0]['parent_ifname'])
 
-    def _turn_off_api_check(self):
-        # The API actively rejecting the move operations with resource
-        # request so we have to turn off that check.
-        # TODO(gibi): Remove this when the move operations are supported and
-        # the API check is removed.
-        patcher = mock.patch(
-            'nova.api.openstack.common.'
-            'supports_port_resource_request_during_move',
-            return_value=True)
-        self.addCleanup(patcher.stop)
-        patcher.start()
-
 
 class UnsupportedPortResourceRequestBasedSchedulingTest(
         PortResourceRequestBasedSchedulingTestBase):
@@ -5967,33 +5955,6 @@ class UnsupportedPortResourceRequestBasedSchedulingTest(
             "port with a QoS minimum bandwidth policy, is not supported "
             "until microversion 2.72.",
             six.text_type(ex))
-
-    def test_live_migrate_server_with_port_resource_request_old_microversion(
-            self):
-        server = self._create_server(
-            flavor=self.flavor,
-            networks=[{'port': self.neutron.port_1['id']}])
-        self._wait_for_state_change(server, 'ACTIVE')
-
-        # We need to simulate that the above server has a port that has
-        # resource request; we cannot boot with such a port but legacy servers
-        # can exist with such a port.
-        self._add_resource_request_to_a_bound_port(self.neutron.port_1['id'])
-
-        post = {
-            'os-migrateLive': {
-                'host': None,
-                'block_migration': False,
-            }
-        }
-        ex = self.assertRaises(
-            client.OpenStackApiException,
-            self.api.post_server_action, server['id'], post)
-
-        self.assertEqual(400, ex.response.status_code)
-        self.assertIn(
-            'The os-migrateLive action on a server with ports having resource '
-            'requests', six.text_type(ex))
 
     def test_unshelve_offloaded_server_with_port_resource_request_old_version(
             self):
@@ -7221,10 +7182,6 @@ class ServerMoveWithPortResourceRequestTest(
             qos_sriov_port, self.flavor_with_group_policy)
 
     def test_live_migrate_with_qos_port(self, host=None):
-        # TODO(gibi): remove this when live migration is fully supported and
-        # therefore the check is removed from the api
-        self._turn_off_api_check()
-
         non_qos_normal_port = self.neutron.port_1
         qos_normal_port = self.neutron.port_with_resource_request
         qos_sriov_port = self.neutron.port_with_sriov_resource_request
@@ -7260,10 +7217,6 @@ class ServerMoveWithPortResourceRequestTest(
         self.test_live_migrate_with_qos_port(host='host2')
 
     def test_live_migrate_with_qos_port_reschedule_success(self):
-        # TODO(gibi): remove this when live migration is fully supported and
-        # therefore the check is removed from the api
-        self._turn_off_api_check()
-
         self._start_compute('host3')
         compute3_rp_uuid = self._get_provider_uuid_by_host('host3')
         self._create_networking_rp_tree('host3', compute3_rp_uuid)
@@ -7318,10 +7271,6 @@ class ServerMoveWithPortResourceRequestTest(
             server, qos_normal_port, qos_sriov_port)
 
     def test_live_migrate_with_qos_port_reschedule_fails(self):
-        # TODO(gibi): remove this when live migration is fully supported and
-        # therefore the check is removed from the api
-        self._turn_off_api_check()
-
         non_qos_normal_port = self.neutron.port_1
         qos_normal_port = self.neutron.port_with_resource_request
         qos_sriov_port = self.neutron.port_with_sriov_resource_request
@@ -7365,10 +7314,6 @@ class ServerMoveWithPortResourceRequestTest(
             server, qos_normal_port, qos_sriov_port)
 
     def test_live_migrate_with_qos_port_pci_update_fails(self):
-        # TODO(gibi): remove this when live migration is fully supported and
-        # therefore the check is removed from the api
-        self._turn_off_api_check()
-
         # Update the name of the network device RP of PF2 on host2 to something
         # unexpected. This will cause
         # update_pci_request_spec_with_allocated_interface_name() to raise
@@ -7434,10 +7379,6 @@ class LiveMigrateAbortWithPortResourceRequestTest(
             host='host2', binary='nova-compute')[0]['id']
 
     def test_live_migrate_with_qos_port_abort_migration(self):
-        # TODO(gibi): remove this when live migration is fully supported and
-        # therefore the check is removed from the api
-        self._turn_off_api_check()
-
         non_qos_normal_port = self.neutron.port_1
         qos_normal_port = self.neutron.port_with_resource_request
         qos_sriov_port = self.neutron.port_with_sriov_resource_request
