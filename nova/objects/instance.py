@@ -1446,9 +1446,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     # TODO(stephenfin): Remove this as it's related to nova-network
     @base.remotable_classmethod
     def get_by_grantee_security_group_ids(cls, context, security_group_ids):
-        db_instances = db.instance_get_all_by_grantee_security_groups(
-            context, security_group_ids)
-        return _make_instance_list(context, cls(), db_instances, [])
+        raise NotImplementedError()
 
     def fill_faults(self):
         """Batch query the database for our instances' faults.
