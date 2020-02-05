@@ -39,6 +39,7 @@ from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova.objects import base as obj_base
+from nova.objects import fields
 from nova.objects import migration as migration_obj
 from nova.pci import manager as pci_manager
 from nova.pci import request as pci_request
@@ -191,9 +192,10 @@ class ResourceTracker(object):
                       limits=None, image_meta=None, migration=None):
         """Create a claim for a rebuild operation."""
         instance_type = instance.flavor
-        return self._move_claim(context, instance, instance_type, nodename,
-                                migration, allocations, move_type='evacuation',
-                                limits=limits, image_meta=image_meta)
+        return self._move_claim(
+            context, instance, instance_type, nodename, migration, allocations,
+            move_type=fields.MigrationType.EVACUATION,
+            image_meta=image_meta, limits=limits)
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, fair=True)
     def resize_claim(self, context, instance, instance_type, nodename,
@@ -225,9 +227,11 @@ class ResourceTracker(object):
         # Flavor and image cannot change during a live migration.
         instance_type = instance.flavor
         image_meta = instance.image_meta
-        return self._move_claim(context, instance, instance_type, nodename,
-                                migration, allocs, move_type='live-migration',
-                                image_meta=image_meta, limits=limits)
+        return self._move_claim(
+            context, instance, instance_type, nodename, migration, allocs,
+            move_type=fields.MigrationType.LIVE_MIGRATION,
+            image_meta=image_meta, limits=limits,
+        )
 
     def _move_claim(self, context, instance, new_instance_type, nodename,
                     migration, allocations, move_type=None,
@@ -293,7 +297,7 @@ class ResourceTracker(object):
         # migration to avoid stepping on that code's toes. Ideally,
         # MoveClaim/this method would be used for all live migration resource
         # claims.
-        if self.pci_tracker and migration.migration_type != 'live-migration':
+        if self.pci_tracker and not migration.is_live_migration:
             # NOTE(jaypipes): ComputeNode.pci_device_pools is set below
             # in _update_usage_from_instance().
             claimed_pci_devices_objs = self.pci_tracker.claim_instance(
@@ -369,7 +373,7 @@ class ResourceTracker(object):
         # NOTE(artom) Migration objects for live migrations are created with
         # status 'accepted' by the conductor in live_migrate_instance() and do
         # not have a 'pre-migrating' status.
-        if migration.migration_type != 'live-migration':
+        if not migration.is_live_migration:
             migration.status = 'pre-migrating'
         migration.save()
 
@@ -1637,8 +1641,7 @@ class ResourceTracker(object):
 
     def _get_instance_type(self, instance, prefix, migration):
         """Get the instance type from instance."""
-        stashed_flavors = migration.migration_type in ('resize',)
-        if stashed_flavors:
+        if migration.is_resize:
             return getattr(instance, '%sflavor' % prefix)
         else:
             # NOTE(ndipanov): Certain migration types (all but resize)

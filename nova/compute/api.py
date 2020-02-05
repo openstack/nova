@@ -5036,12 +5036,10 @@ class API(base.Base):
 
         # NOTE(danms): Create this as a tombstone for the source compute
         # to find and cleanup. No need to pass it anywhere else.
-        migration = objects.Migration(context,
-                                      source_compute=instance.host,
-                                      source_node=instance.node,
-                                      instance_uuid=instance.uuid,
-                                      status='accepted',
-                                      migration_type='evacuation')
+        migration = objects.Migration(
+            context, source_compute=instance.host, source_node=instance.node,
+            instance_uuid=instance.uuid, status='accepted',
+            migration_type=fields_obj.MigrationType.EVACUATION)
         if host:
             migration.dest_compute = host
         migration.create()

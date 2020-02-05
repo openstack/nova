@@ -3415,7 +3415,7 @@ class API(base.Base):
             vnic_type = p.get('binding:vnic_type')
             if (vnic_type in network_model.VNIC_TYPES_SRIOV and
                     migration is not None and
-                    migration['migration_type'] != constants.LIVE_MIGRATION):
+                    not migration.is_live_migration):
                 # Note(adrianc): for live migration binding profile was already
                 # updated in conductor when calling bind_ports_to_host()
                 if not pci_mapping:
@@ -3437,9 +3437,9 @@ class API(base.Base):
             # allocation key in the port binding. However during resize, cold
             # migrate, evacuate and unshelve we have to set the binding here.
             # Also note that during unshelve no migration object is created.
-            if (p.get('resource_request') and
-                    (migration is None or
-                     migration['migration_type'] != constants.LIVE_MIGRATION)):
+            if p.get('resource_request') and (
+                migration is None or not migration.is_live_migration
+            ):
                 if not provider_mappings:
                     # TODO(gibi): Remove this check when compute RPC API is
                     # bumped to 6.0

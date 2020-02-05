@@ -4382,8 +4382,8 @@ class TestAPI(TestAPIBase):
                              'pci_vendor_info': 'old_pci_vendor_info'}},
                         {'id': 'fake-port-2',
                          constants.BINDING_HOST_ID: instance.host}]}
-        migration = {'status': 'confirmed',
-                     'migration_type': "migration"}
+        migration = objects.Migration(
+            status='confirmed', migration_type='migration')
         list_ports_mock = mock.Mock(return_value=fake_ports)
         get_client_mock.return_value.list_ports = list_ports_mock
 
@@ -4439,8 +4439,8 @@ class TestAPI(TestAPIBase):
                             {'pci_slot': '0000:0a:00.1',
                              'physical_network': 'old_phys_net',
                              'pci_vendor_info': 'old_pci_vendor_info'}}]}
-        migration = {'status': 'confirmed',
-                     'migration_type': "migration"}
+        migration = objects.Migration(
+            status='confirmed', migration_type='migration')
         list_ports_mock = mock.Mock(return_value=fake_ports)
         get_client_mock.return_value.list_ports = list_ports_mock
 
@@ -4595,8 +4595,8 @@ class TestAPI(TestAPIBase):
                  {'pci_slot': '0000:0a:00.1',
                   'physical_network': 'phys_net',
                   'pci_vendor_info': 'vendor_info'}}]}
-        migration = {'status': 'confirmed',
-                     'migration_type': "live-migration"}
+        migration = objects.Migration(
+            status='confirmed', migration_type='live-migration')
         list_ports_mock = mock.Mock(return_value=fake_ports)
         get_client_mock.return_value.list_ports = list_ports_mock
         update_port_mock = mock.Mock()
@@ -4727,7 +4727,7 @@ class TestAPI(TestAPIBase):
     def test_get_pci_mapping_for_migration(self):
         instance = fake_instance.fake_instance_obj(self.context)
         instance.migration_context = objects.MigrationContext()
-        migration = {'status': 'confirmed'}
+        migration = objects.Migration(status='confirmed')
 
         with mock.patch.object(instance.migration_context,
                                'get_pci_mapping_for_migration') as map_func:
@@ -4737,7 +4737,7 @@ class TestAPI(TestAPIBase):
     def test_get_pci_mapping_for_migration_reverted(self):
         instance = fake_instance.fake_instance_obj(self.context)
         instance.migration_context = objects.MigrationContext()
-        migration = {'status': 'reverted'}
+        migration = objects.Migration(status='reverted')
 
         with mock.patch.object(instance.migration_context,
                                'get_pci_mapping_for_migration') as map_func:
@@ -6132,7 +6132,8 @@ class TestAPI(TestAPIBase):
         # Just create a simple instance with a single port.
         instance = objects.Instance(info_cache=objects.InstanceInfoCache(
             network_info=model.NetworkInfo([model.VIF(uuids.port_id)])))
-        migration = {'source_compute': 'source', 'dest_compute': 'dest'}
+        migration = objects.Migration(
+            source_compute='source', dest_compute='dest')
         with mock.patch.object(self.api, 'activate_port_binding') as activate:
             with mock.patch.object(self.api, 'supports_port_binding_extension',
                                    return_value=True):
@@ -6155,7 +6156,8 @@ class TestAPI(TestAPIBase):
         # Just create a simple instance with a single port.
         instance = objects.Instance(info_cache=objects.InstanceInfoCache(
             network_info=model.NetworkInfo([model.VIF(uuids.port_id)])))
-        migration = {'source_compute': 'source', 'dest_compute': 'dest'}
+        migration = objects.Migration(
+            source_compute='source', dest_compute='dest')
         with mock.patch.object(self.api, 'activate_port_binding',
                                new_callable=mock.NonCallableMock):
             with mock.patch.object(self.api, 'supports_port_binding_extension',
@@ -6180,7 +6182,8 @@ class TestAPI(TestAPIBase):
         instance = objects.Instance(info_cache=objects.InstanceInfoCache(
             network_info=model.NetworkInfo([
                 model.VIF(uuids.port1), model.VIF(uuids.port2)])))
-        migration = {'source_compute': 'source', 'dest_compute': 'dest'}
+        migration = objects.Migration(
+            source_compute='source', dest_compute='dest')
         with mock.patch.object(self.api, 'activate_port_binding',
                                new_callable=mock.NonCallableMock):
             with mock.patch.object(self.api, 'supports_port_binding_extension',
@@ -6202,7 +6205,8 @@ class TestAPI(TestAPIBase):
         instance = objects.Instance(info_cache=objects.InstanceInfoCache(
             network_info=model.NetworkInfo([
                 model.VIF(uuids.port1), model.VIF(uuids.port2)])))
-        migration = {'source_compute': 'source', 'dest_compute': 'dest'}
+        migration = objects.Migration(
+            source_compute='source', dest_compute='dest')
         with mock.patch.object(self.api, 'activate_port_binding',
                                new_callable=mock.NonCallableMock):
             with mock.patch.object(self.api, 'supports_port_binding_extension',

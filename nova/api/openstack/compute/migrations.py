@@ -23,6 +23,7 @@ from nova.compute import api as compute
 from nova import exception
 from nova.i18n import _
 from nova.objects import base as obj_base
+from nova.objects import fields
 from nova.policies import migrations as migrations_policies
 
 
@@ -72,7 +73,9 @@ class MigrationsController(wsgi.Controller):
             # NOTE(Shaohe Feng) above version 2.23, add migration_type for all
             # kinds of migration, but we only add links just for in-progress
             # live-migration.
-            if add_link and obj['migration_type'] == "live-migration" and (
+            if (add_link and
+                    obj['migration_type'] ==
+                        fields.MigrationType.LIVE_MIGRATION and
                     obj["status"] in live_migration_in_progress):
                 obj["links"] = self._view_builder._get_links(
                     req, obj["id"],

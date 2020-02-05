@@ -464,6 +464,16 @@ class ImageSignatureKeyType(BaseNovaEnum):
     )
 
 
+class MigrationType(BaseNovaEnum):
+
+    MIGRATION = 'migration'  # cold migration
+    RESIZE = 'resize'
+    LIVE_MIGRATION = 'live-migration'
+    EVACUATION = 'evacuation'
+
+    ALL = (MIGRATION, RESIZE, LIVE_MIGRATION, EVACUATION)
+
+
 class OSType(BaseNovaEnum):
 
     LINUX = "linux"
@@ -1205,6 +1215,10 @@ class ImageSignatureHashTypeField(BaseEnumField):
 
 class ImageSignatureKeyTypeField(BaseEnumField):
     AUTO_TYPE = ImageSignatureKeyType()
+
+
+class MigrationTypeField(BaseEnumField):
+    AUTO_TYPE = MigrationType()
 
 
 class OSTypeField(BaseEnumField):

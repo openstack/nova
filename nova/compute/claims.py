@@ -194,9 +194,10 @@ class MoveClaim(Claim):
         migration, all types of PCI requests are supported, so we just call up
         to normal Claim's _test_pci().
         """
-        if self.migration.migration_type != 'live-migration':
+        if not self.migration.is_live_migration:
             return super(MoveClaim, self)._test_pci()
-        elif self._pci_requests.requests:
+
+        if self._pci_requests.requests:
             for pci_request in self._pci_requests.requests:
                 if (pci_request.source !=
                         objects.InstancePCIRequest.NEUTRON_PORT):
@@ -225,7 +226,7 @@ class MoveClaim(Claim):
         something we want to support, so fail the claim if the page sizes are
         different.
         """
-        if (self.migration.migration_type == 'live-migration' and
+        if (self.migration.is_live_migration and
                 self.instance.numa_topology and
                 # NOTE(artom) We only support a single page size across all
                 # cells, checking cell 0 is sufficient.

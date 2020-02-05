@@ -1103,7 +1103,7 @@ object_data = {
     'LibvirtLiveMigrateData': '1.10-348cf70ea44d3b985f45f64725d6f6a7',
     'LibvirtLiveMigrateNUMAInfo': '1.0-0e777677f3459d0ed1634eabbdb6c22f',
     'MemoryDiagnostics': '1.0-2c995ae0f2223bb0f8e523c5cc0b83da',
-    'Migration': '1.7-b77066a88d08bdb0b05d7bc18780c55a',
+    'Migration': '1.7-bd45b232fd7c95cd79ae9187e10ef582',
     'MigrationContext': '1.2-89f10a83999f852a489962ae37d8a026',
     'MigrationList': '1.4-983a9c29d4f1e747ce719dc9063b729b',
     'MonitorMetric': '1.1-53b1db7c4ae2c531db79761e7acc52ba',

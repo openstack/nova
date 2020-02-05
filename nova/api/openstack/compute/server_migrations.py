@@ -132,7 +132,7 @@ class ServerMigrationsController(wsgi.Controller):
                     " server %(uuid)s.") % {"id": id, "uuid": server_id}
             raise exc.HTTPNotFound(explanation=msg)
 
-        if migration.get("migration_type") != "live-migration":
+        if not migration.is_live_migration:
             msg = _("Migration %(id)s for server %(uuid)s is not"
                     " live-migration.") % {"id": id, "uuid": server_id}
             raise exc.HTTPNotFound(explanation=msg)
