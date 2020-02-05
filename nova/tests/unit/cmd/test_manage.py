@@ -640,8 +640,8 @@ Cell %s: 456
             mock_target_cell.assert_called_once_with(ctxt, 'map')
 
             db_sync_calls = [
-                    mock.call(4, context=cell_ctxt),
-                    mock.call(4)
+                mock.call(4, context=cell_ctxt),
+                mock.call(4)
             ]
             mock_db_sync.assert_has_calls(db_sync_calls)
 
@@ -1689,7 +1689,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
 
         status = self.commands.create_cell(verbose=True)
         self.assertEqual(0, status)
-        cell1_uuid = self.output.getvalue().strip()
+        cell1_uuid = self.output.getvalue().split('\n')[-2].strip()
         cell1 = objects.CellMapping.get_by_uuid(ctxt, cell1_uuid)
         self.assertIsNone(cell1.name)
         self.assertEqual(settings['database_connection'],
@@ -2033,7 +2033,10 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         expected_db_connection = CONF.database.connection or 'fake:///db'
         self.assertEqual(expected_db_connection, cm.database_connection)
         output = self.output.getvalue().strip()
-        self.assertEqual('', output)
+        lines = output.split('\n')
+        self.assertIn('using the value [DEFAULT]/transport_url', lines[0])
+        self.assertIn('using the value [database]/connection', lines[1])
+        self.assertEqual(2, len(lines))
 
     def test_update_cell_disable_and_enable(self):
         ctxt = context.get_admin_context()
@@ -2045,8 +2048,8 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
                                                       disable=True,
                                                       enable=True))
         output = self.output.getvalue().strip()
-        self.assertEqual('Cell cannot be disabled and enabled at the same '
-                         'time.', output)
+        self.assertIn('Cell cannot be disabled and enabled at the same '
+                      'time.', output)
 
     def test_update_cell_disable_cell0(self):
         ctxt = context.get_admin_context()
@@ -2056,7 +2059,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
                             database_connection='fake:///db').create()
         self.assertEqual(5, self.commands.update_cell(uuid0, disable=True))
         output = self.output.getvalue().strip()
-        self.assertEqual('Cell0 cannot be disabled.', output)
+        self.assertIn('Cell0 cannot be disabled.', output)
 
     def test_update_cell_disable_success(self):
         ctxt = context.get_admin_context()
@@ -2071,7 +2074,10 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         cm = objects.CellMapping.get_by_uuid(ctxt, uuid)
         self.assertTrue(cm.disabled)
         output = self.output.getvalue().strip()
-        self.assertEqual('', output)
+        lines = output.split('\n')
+        self.assertIn('using the value [DEFAULT]/transport_url', lines[0])
+        self.assertIn('using the value [database]/connection', lines[1])
+        self.assertEqual(2, len(lines))
 
     def test_update_cell_enable_success(self):
         ctxt = context.get_admin_context()
@@ -2087,7 +2093,10 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         cm = objects.CellMapping.get_by_uuid(ctxt, uuid)
         self.assertFalse(cm.disabled)
         output = self.output.getvalue().strip()
-        self.assertEqual('', output)
+        lines = output.split('\n')
+        self.assertIn('using the value [DEFAULT]/transport_url', lines[0])
+        self.assertIn('using the value [database]/connection', lines[1])
+        self.assertEqual(2, len(lines))
 
     def test_update_cell_disable_already_disabled(self):
         ctxt = context.get_admin_context()
