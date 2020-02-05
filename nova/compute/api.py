@@ -65,7 +65,6 @@ from nova.network import model as network_model
 from nova.network import neutron
 from nova.network import security_group_api
 from nova import objects
-from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
 from nova.objects import external_event as external_event_obj
 from nova.objects import fields as fields_obj
@@ -2390,17 +2389,7 @@ class API(base.Base):
                 delete_type if delete_type != 'soft_delete' else 'delete'):
 
             elevated = context.elevated()
-            orig_host = instance.host
-            try:
-                if instance.vm_state == vm_states.SHELVED_OFFLOADED:
-                    sysmeta = getattr(instance,
-                                      obj_base.get_attrname(
-                                          'system_metadata'))
-                    instance.host = sysmeta.get('shelved_host')
-                self.network_api.deallocate_for_instance(elevated,
-                                                         instance)
-            finally:
-                instance.host = orig_host
+            self.network_api.deallocate_for_instance(elevated, instance)
 
             # cleanup volumes
             self._local_cleanup_bdm_volumes(bdms, instance, context)
