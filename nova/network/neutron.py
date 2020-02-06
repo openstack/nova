@@ -2645,16 +2645,13 @@ class API(base.Base):
 
         # retrieve and cache the network details now since many callers need
         # the network name which isn't present in the response from neutron
-        networks = {}
+        networks = {net['id']: net for net in self._get_available_networks(
+            context, project_id, [fip['floating_network_id'] for fip in fips],
+            client)}
         for fip in fips:
             network_uuid = fip['floating_network_id']
             if network_uuid not in networks:
-                try:
-                    network = client.show_network(network_uuid)['network']
-                except neutron_client_exc.NetworkNotFoundClient:
-                    raise exception.NetworkNotFound(network_id=network_uuid)
-
-                networks[network['id']] = network
+                raise exception.NetworkNotFound(network_id=network_uuid)
 
             fip['network_details'] = networks[network_uuid]
 
