@@ -154,3 +154,12 @@ class ServerActionsV266SampleJsonTest(ServerActionsV262SampleJsonTest):
         self._verify_response(
             'instance-actions-list-with-changes-before',
             self._get_subs(), response, 200)
+
+
+class ServerActionsV284SampleJsonTest(ServerActionsV266SampleJsonTest):
+    microversion = '2.84'
+    scenarios = [('2.84', {'api_major_version': 'v2.1'})]
+
+
+class ServerActionsV284NonAdminSampleJsonTest(ServerActionsV284SampleJsonTest):
+    ADMIN_API = False

@@ -2611,6 +2611,13 @@ event:
   in: body
   required: true
   type: string
+event_details:
+  min_version: 2.84
+  description: |
+    Details of the event. May be ``null``.
+  in: body
+  required: true
+  type: string
 event_finish_time:
   description: |
     The date and time when the event was finished. The date and time

@@ -114,6 +114,7 @@ Response
   - events.traceback: event_traceback
   - events.hostId: event_hostId
   - events.host: event_host
+  - events.details: event_details
   - updated_at: updated_instance_action
 
 **Example Show Server Action Details For Admin (v2.62)**
@@ -125,3 +126,8 @@ Response
 
 .. literalinclude:: ../../doc/api_samples/os-instance-actions/v2.62/instance-action-get-non-admin-resp.json
    :language: javascript
+
+**Example Show Server Action Details For System Reader (v2.84)**
+
+.. literalinclude:: ../../doc/api_samples/os-instance-actions/v2.84/instance-action-get-resp.json
+  :language: javascript
