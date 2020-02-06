@@ -2348,7 +2348,7 @@ class TestAPI(TestAPIBase):
     @mock.patch.object(neutronapi.API, '_refresh_neutron_extensions_cache')
     @mock.patch.object(neutronapi, 'get_client')
     def _test_get_floating_ip(
-            self, fip_ext_enabled, mock_ntrn, mock_refresh):
+            self, fip_ext_enabled, has_port, mock_ntrn, mock_refresh):
         mock_nc = mock.Mock()
         mock_ntrn.return_value = mock_nc
         # NOTE(stephenfin): These are clearly not full responses
@@ -2364,11 +2364,14 @@ class TestAPI(TestAPIBase):
                 'id': uuids.fip_net_id,
             },
         }
-        mock_nc.show_port.return_value = {
-            'port': {
-                'id': uuids.fip_port_id,
-            },
-        }
+        if has_port:
+            mock_nc.show_port.return_value = {
+                'port': {
+                    'id': uuids.fip_port_id,
+                },
+            }
+        else:
+            mock_nc.show_port.side_effect = exceptions.PortNotFoundClient
 
         if fip_ext_enabled:
             self.api.extensions = [constants.FIP_PORT_DETAILS]
@@ -2384,11 +2387,22 @@ class TestAPI(TestAPIBase):
             mock_nc.show_port.assert_called_once_with(uuids.fip_port_id)
             self.assertIn('port_details', fip)
 
+            if has_port:
+                self.assertIsNotNone(fip['port_details'])
+            else:
+                self.assertIsNone(fip['port_details'])
+
     def test_get_floating_ip_with_fip_port_details_ext(self):
-        self._test_get_floating_ip(True)
+        """Make sure we used embedded port details if available."""
+        self._test_get_floating_ip(True, True)
 
     def test_get_floating_ip_without_fip_port_details_ext(self):
-        self._test_get_floating_ip(False)
+        """Make sure we make a second request for port details if necessary."""
+        self._test_get_floating_ip(False, True)
+
+    def test_get_floating_ip_without_port(self):
+        """Make sure we don't fail for floating IPs without attached ports."""
+        self._test_get_floating_ip(False, False)
 
     @mock.patch.object(neutronapi, 'get_client')
     def test_get_floating_ip_by_address_multiple_found(self, mock_get_client):
@@ -2407,7 +2421,7 @@ class TestAPI(TestAPIBase):
     @mock.patch.object(neutronapi.API, '_refresh_neutron_extensions_cache')
     @mock.patch.object(neutronapi, 'get_client')
     def _test_get_floating_ip_by_address(
-            self, fip_ext_enabled, mock_ntrn, mock_refresh):
+            self, fip_ext_enabled, has_port, mock_ntrn, mock_refresh):
         mock_nc = mock.Mock()
         mock_ntrn.return_value = mock_nc
         # NOTE(stephenfin): These are clearly not full responses
@@ -2425,11 +2439,14 @@ class TestAPI(TestAPIBase):
                 'id': uuids.fip_net_id,
             },
         }
-        mock_nc.show_port.return_value = {
-            'port': {
-                'id': uuids.fip_port_id,
-            },
-        }
+        if has_port:
+            mock_nc.show_port.return_value = {
+                'port': {
+                    'id': uuids.fip_port_id,
+                },
+            }
+        else:
+            mock_nc.show_port.side_effect = exceptions.PortNotFoundClient
 
         if fip_ext_enabled:
             self.api.extensions = [constants.FIP_PORT_DETAILS]
@@ -2445,11 +2462,22 @@ class TestAPI(TestAPIBase):
             mock_nc.show_port.assert_called_once_with(uuids.fip_port_id)
             self.assertIn('port_details', fip)
 
+            if has_port:
+                self.assertIsNotNone(fip['port_details'])
+            else:
+                self.assertIsNone(fip['port_details'])
+
     def test_get_floating_ip_by_address_with_fip_port_details_ext(self):
-        self._test_get_floating_ip_by_address(True)
+        """Make sure we used embedded port details if available."""
+        self._test_get_floating_ip_by_address(True, True)
 
     def test_get_floating_ip_by_address_without_fip_port_details_ext(self):
-        self._test_get_floating_ip_by_address(False)
+        """Make sure we make a second request for port details if necessary."""
+        self._test_get_floating_ip_by_address(False, True)
+
+    def test_get_floating_ip_by_address_without_port(self):
+        """Make sure we don't fail for floating IPs without attached ports."""
+        self._test_get_floating_ip_by_address(False, False)
 
     @mock.patch.object(neutronapi, 'get_client')
     def _test_get_instance_id_by_floating_address(self, fip_data,
@@ -5385,7 +5413,7 @@ class TestAPI(TestAPIBase):
     @mock.patch.object(neutronapi.API, '_refresh_neutron_extensions_cache')
     @mock.patch.object(neutronapi, 'get_client')
     def _test_get_floating_ips_by_project(
-            self, fip_ext_enabled, mock_ntrn, mock_refresh):
+            self, fip_ext_enabled, has_ports, mock_ntrn, mock_refresh):
         mock_nc = mock.Mock()
         mock_ntrn.return_value = mock_nc
         # NOTE(stephenfin): These are clearly not full responses
@@ -5405,13 +5433,16 @@ class TestAPI(TestAPIBase):
                 },
             ],
         }
-        mock_nc.list_ports.return_value = {
-            'ports': [
-                {
-                    'id': uuids.fip_port_id,
-                },
-            ],
-        }
+        if has_ports:
+            mock_nc.list_ports.return_value = {
+                'ports': [
+                    {
+                        'id': uuids.fip_port_id,
+                    },
+                ],
+            }
+        else:
+            mock_nc.list_ports.return_value = {'ports': []}
 
         if fip_ext_enabled:
             self.api.extensions = [constants.FIP_PORT_DETAILS]
@@ -5432,11 +5463,22 @@ class TestAPI(TestAPIBase):
                 tenant_id=self.context.project_id)
             self.assertIn('port_details', fips[0])
 
+            if has_ports:
+                self.assertIsNotNone(fips[0]['port_details'])
+            else:
+                self.assertIsNone(fips[0]['port_details'])
+
     def test_get_floating_ips_by_project_with_fip_port_details_ext(self):
-        self._test_get_floating_ips_by_project(True)
+        """Make sure we used embedded port details if available."""
+        self._test_get_floating_ips_by_project(True, True)
 
     def test_get_floating_ips_by_project_without_fip_port_details_ext(self):
-        self._test_get_floating_ips_by_project(False)
+        """Make sure we make a second request for port details if necessary."""
+        self._test_get_floating_ips_by_project(False, True)
+
+    def test_get_floating_ips_by_project_without_ports(self):
+        """Make sure we don't fail for floating IPs without attached ports."""
+        self._test_get_floating_ips_by_project(False, False)
 
     @mock.patch('nova.network.neutron.API._show_port')
     def test_unbind_ports_reset_dns_name_by_admin(self, mock_show):
