@@ -1517,7 +1517,9 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         # NOTE(mriedem): Filter out hidden instances since there should be a
         # non-hidden version of the instance in another cell database and the
         # API will only show one of them, so we don't count the hidden copy.
-        project_query = project_query.filter_by(hidden=false())
+        project_query = project_query.filter(
+            or_(models.Instance.hidden == false(),
+                models.Instance.hidden == null()))
 
         project_result = project_query.first()
         fields = ('instances', 'cores', 'ram')

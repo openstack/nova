@@ -1,0 +1,19 @@
+---
+upgrade:
+  - |
+    Upgrading to Train on a deployment with a large database may hit
+    `bug 1862205`_, which results in instance records left in a bad
+    state, and manifests as instances not being shown in list
+    operations. Users upgrading to Train for the first time will
+    definitely want to apply a version which includes this fix.  Users
+    already on Train should upgrade to a version including this fix to
+    ensure the problem is addressed.
+
+    .. _bug 1862205: https://launchpad.net/bugs/1862205
+fixes:
+  - |
+    A fix for serious `bug 1862205`_ is provided which addresses both
+    the performance aspect of schema migration 399, as well as the
+    potential fallout for cases where this migration silently fails
+    and leaves large numbers of instances hidden from view from the
+    API.
