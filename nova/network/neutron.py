@@ -2599,7 +2599,8 @@ class API(base.Base):
                 fip['port_details'] = client.show_port(
                     port_id)['port']
             except neutron_client_exc.PortNotFoundClient:
-                raise exception.PortNotFound(port_id=port_id)
+                # it's possible to create floating IPs without a port
+                fip['port_details'] = None
 
         return fip
 
@@ -2626,7 +2627,8 @@ class API(base.Base):
                 fip['port_details'] = client.show_port(
                     port_id)['port']
             except neutron_client_exc.PortNotFoundClient:
-                raise exception.PortNotFound(port_id=port_id)
+                # it's possible to create floating IPs without a port
+                fip['port_details'] = None
 
         return fip
 
@@ -2663,10 +2665,11 @@ class API(base.Base):
                 **{'tenant_id': project_id})['ports']}
             for fip in fips:
                 port_id = fip['port_id']
-                if port_id not in ports:
-                    raise exception.PortNotFound(port_id=port_id)
-
-                fip['port_details'] = ports[port_id]
+                if port_id in ports:
+                    fip['port_details'] = ports[port_id]
+                else:
+                    # it's possible to create floating IPs without a port
+                    fip['port_details'] = None
 
         return fips
 
