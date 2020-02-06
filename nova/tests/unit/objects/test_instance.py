@@ -27,6 +27,8 @@ from oslo_versionedobjects import base as ovo_base
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova.db import api as db
+from nova.db.sqlalchemy import api as sql_api
+from nova.db.sqlalchemy import models as sql_models
 from nova import exception
 from nova.network import model as network_model
 from nova import notifications
@@ -1981,7 +1983,53 @@ class _TestInstanceListObject(object):
 
 class TestInstanceListObject(test_objects._LocalTest,
                              _TestInstanceListObject):
-    pass
+    # No point in doing this db-specific test twice for remote
+    def test_hidden_filter_query(self):
+        """Check that our instance_get_by_filters() honors hidden properly
+
+        As reported in bug #1862205, we need to properly handle instances
+        with the hidden field set to NULL and not expect SQLAlchemy to
+        translate those values on SELECT.
+        """
+        values = {'user_id': self.context.user_id,
+                  'project_id': self.context.project_id,
+                  'host': 'foo'}
+
+        for hidden_value in (True, False):
+            db.instance_create(self.context,
+                               dict(values, hidden=hidden_value))
+
+        # NOTE(danms): Because the model has default=False, we can not use
+        # it to create an instance with a hidden value of NULL. So, do it
+        # manually here.
+        engine = sql_api.get_engine()
+        table = sql_models.Instance.__table__
+        with engine.connect() as conn:
+            update = table.insert().values(user_id=self.context.user_id,
+                                           project_id=self.context.project_id,
+                                           uuid=uuids.nullinst,
+                                           host='foo',
+                                           hidden=None)
+            conn.execute(update)
+
+        insts = objects.InstanceList.get_by_filters(self.context,
+                                                    {'hidden': True})
+        # We created one hidden instance above, so expect only that one
+        # to come out of this query.
+        self.assertEqual(1, len(insts))
+
+        # We created one unhidden instance above, and one specifically
+        # with a NULL value to represent an unmigrated instance, which
+        # defaults to hidden=False, so expect both of those here.
+        insts = objects.InstanceList.get_by_filters(self.context,
+                                                    {'hidden': False})
+        self.assertEqual(2, len(insts))
+
+        # Do the same check as above, but make sure hidden=False is the
+        # default behavior.
+        insts = objects.InstanceList.get_by_filters(self.context,
+                                                    {})
+        self.assertEqual(2, len(insts))
 
 
 class TestRemoteInstanceListObject(test_objects._RemoteTest,

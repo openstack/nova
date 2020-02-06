@@ -20,5 +20,9 @@ def upgrade(migrate_engine):
     for prefix in ('', 'shadow_'):
         instances = Table('%sinstances' % prefix, meta, autoload=True)
         if not hasattr(instances.c, 'hidden'):
-            hidden = Column('hidden', Boolean, default=False)
+            # NOTE(danms): This column originally included default=False. We
+            # discovered in bug #1862205 that this will attempt to rewrite
+            # the entire instances table with that value, which can time out
+            # for large data sets (and does not even abort).
+            hidden = Column('hidden', Boolean)
             instances.create_column(hidden)

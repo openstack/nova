@@ -2257,9 +2257,15 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
         else:
             filters['user_id'] = context.user_id
 
-    if 'hidden' not in filters:
-        # Filter out hidden instances by default.
-        filters['hidden'] = False
+    if filters.pop('hidden', False):
+        query_prefix = query_prefix.filter(models.Instance.hidden == true())
+    else:
+        # If the query should not include hidden instances, then
+        # filter instances with hidden=False or hidden=NULL because
+        # older records may have no value set.
+        query_prefix = query_prefix.filter(or_(
+            models.Instance.hidden == false(),
+            models.Instance.hidden == null()))
 
     # Filters for exact matches that we can do along with the SQL query...
     # For other filters that don't match this, we will do regexp matching
