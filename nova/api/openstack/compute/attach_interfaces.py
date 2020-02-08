@@ -68,7 +68,7 @@ class InterfaceAttachmentController(wsgi.Controller):
         """Returns the list of interface attachments for a given instance."""
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, server_id)
-        context.can(ai_policies.BASE_POLICY_NAME,
+        context.can(ai_policies.POLICY_ROOT % 'list',
                     target={'project_id': instance.project_id})
 
         search_opts = {'device_id': instance.uuid}
@@ -110,7 +110,7 @@ class InterfaceAttachmentController(wsgi.Controller):
         """Return data about the given interface attachment."""
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, server_id)
-        context.can(ai_policies.BASE_POLICY_NAME,
+        context.can(ai_policies.POLICY_ROOT % 'show',
                     target={'project_id': instance.project_id})
 
         port_id = id

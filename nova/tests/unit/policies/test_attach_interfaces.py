@@ -17,9 +17,13 @@ from oslo_utils import timeutils
 
 from nova.api.openstack.compute import attach_interfaces
 from nova.compute import vm_states
+from nova import exception
+from nova.policies import attach_interfaces as ai_policies
+from nova.policies import base as base_policy
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
 from nova.tests.unit.policies import base
+from nova.tests.unit import policy_fixture
 
 
 class AttachInterfacesPolicyTest(base.BasePolicyTest):
@@ -55,19 +59,31 @@ class AttachInterfacesPolicyTest(base.BasePolicyTest):
             self.other_project_member_context
         ]
 
+        self.reader_authorized_contexts = [
+            self.legacy_admin_context, self.system_admin_context,
+            self.project_admin_context, self.system_member_context,
+            self.system_reader_context, self.project_reader_context,
+            self.project_member_context, self.project_foo_context
+        ]
+
+        self.reader_unauthorized_contexts = [
+            self.system_foo_context,
+            self.other_project_member_context
+        ]
+
     @mock.patch('nova.compute.api.API.get')
     @mock.patch('nova.network.neutron.API.list_ports')
     def test_index_interfaces_policy(self, mock_port, mock_get):
-        rule_name = "os_compute_api:os-attach-interfaces"
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
+        rule_name = "os_compute_api:os-attach-interfaces:list"
+        self.common_policy_check(self.reader_authorized_contexts,
+                                 self.reader_unauthorized_contexts,
                                  rule_name, self.controller.index,
                                  self.req, uuids.fake_id)
 
     @mock.patch('nova.compute.api.API.get')
     @mock.patch('nova.network.neutron.API.show_port')
     def test_show_interface_policy(self, mock_port, mock_get):
-        rule_name = "os_compute_api:os-attach-interfaces"
+        rule_name = "os_compute_api:os-attach-interfaces:show"
         server_id = uuids.fake_id
         port_id = uuids.fake_id
         mock_port.return_value = {'port': {
@@ -79,8 +95,8 @@ class AttachInterfacesPolicyTest(base.BasePolicyTest):
             "fixed_ips": ["10.0.2.2"],
             "device_id": server_id,
         }}
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
+        self.common_policy_check(self.reader_authorized_contexts,
+                                 self.reader_unauthorized_contexts,
                                  rule_name,
                                  self.controller.show,
                                  self.req, server_id, port_id)
@@ -120,3 +136,106 @@ class AttachInterfacesScopeTypePolicyTest(AttachInterfacesPolicyTest):
     def setUp(self):
         super(AttachInterfacesScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+
+
+class AttachInterfacesDeprecatedPolicyTest(base.BasePolicyTest):
+    """Test Attach Interfaces APIs Deprecated policies.
+    This class checks if deprecated policy rules are
+    overridden by user on policy.json file then they
+    still work because oslo.policy add deprecated rules
+    in logical OR condition and enforce them for policy
+    checks if overridden.
+    """
+
+    def setUp(self):
+        super(AttachInterfacesDeprecatedPolicyTest, self).setUp()
+        self.controller = attach_interfaces.InterfaceAttachmentController()
+        self.admin_req = fakes.HTTPRequest.blank('')
+        self.admin_req.environ['nova.context'] = self.project_admin_context
+        self.reader_req = fakes.HTTPRequest.blank('')
+        self.reader_req.environ['nova.context'] = self.project_reader_context
+        self.deprecated_policy = "os_compute_api:os-attach-interfaces"
+        # Overridde rule with different checks than defaults so that we can
+        # verify the rule overridden case.
+        override_rules = {self.deprecated_policy: base_policy.RULE_ADMIN_API}
+        # NOTE(gmann): Only override the deprecated rule in policy file so
+        # that
+        # we can verify if overridden checks are considered by oslo.policy.
+        # Oslo.policy will consider the overridden rules if:
+        #  1. overridden deprecated rule's checks are different than defaults
+        #  2. new rules are not present in policy file
+        self.policy = self.useFixture(policy_fixture.OverridePolicyFixture(
+                                      rules_in_file=override_rules))
+
+    @mock.patch('nova.compute.api.API.get')
+    @mock.patch('nova.network.neutron.API.list_ports')
+    def test_deprecated_policy_overridden_rule_is_checked(self, mock_port,
+                                                          mock_get):
+        # Test to verify if deprecatd overridden policy is working.
+
+        # check for success as admin role. Deprecated rule
+        # has been overridden with admin checks in policy.json
+        # If admin role pass it means overridden rule is enforced by
+        # olso.policy because new default is system or project reader and the
+        # old default is admin.
+        self.controller.index(self.admin_req, uuids.fake_id)
+
+        # check for failure with reader context.
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller.index, self.reader_req,
+                                uuids.fake_id)
+        self.assertEqual(
+            "Policy doesn't allow os_compute_api:os-attach-interfaces:list"
+            " to be performed.",
+            exc.format_message())
+
+
+class AttachInterfacesNoLegacyPolicyTest(AttachInterfacesPolicyTest):
+    """Test Attach Interfaces APIs policies with system scope enabled,
+    and no more deprecated rules that allow the legacy admin API to
+    access system_admin_or_owner APIs.
+    """
+    without_deprecated_rules = True
+    rules_without_deprecation = {
+        ai_policies.POLICY_ROOT % 'list':
+            base_policy.PROJECT_READER_OR_SYSTEM_READER,
+        ai_policies.POLICY_ROOT % 'show':
+            base_policy.PROJECT_READER_OR_SYSTEM_READER,
+        ai_policies.POLICY_ROOT % 'create':
+            base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        ai_policies.POLICY_ROOT % 'delete':
+            base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN}
+
+    def setUp(self):
+        super(AttachInterfacesNoLegacyPolicyTest, self).setUp()
+        self.flags(enforce_scope=True, group="oslo_policy")
+
+        # Check that system or projct admin or owner is able to
+        # create or delete interfaces.
+        self.admin_authorized_contexts = [
+            self.system_admin_context,
+            self.project_admin_context, self.project_member_context]
+        # Check that non-system and non-admin/owner is not able to
+        # create or delete interfaces.
+        self.admin_unauthorized_contexts = [
+            self.legacy_admin_context, self.project_reader_context,
+            self.project_foo_context,
+            self.system_member_context, self.system_reader_context,
+            self.system_foo_context,
+            self.other_project_member_context]
+
+        # Check that system reader or projct is able to
+        # create or delete interfaces.
+        self.reader_authorized_contexts = [
+            self.system_admin_context,
+            self.project_admin_context, self.system_member_context,
+            self.system_reader_context, self.project_reader_context,
+            self.project_member_context,
+        ]
+
+        # Check that non-system reader nd non-admin/owner is not able to
+        # create or delete interfaces.
+        self.reader_unauthorized_contexts = [
+            self.legacy_admin_context, self.project_foo_context,
+            self.system_foo_context, self.other_project_member_context
+        ]

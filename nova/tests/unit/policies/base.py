@@ -103,6 +103,8 @@ class BasePolicyTest(test.TestCase):
             self.rules_without_deprecation.update({
                 "system_admin_or_owner":
                     "rule:system_admin_api or rule:project_member_api",
+                "system_or_project_reader":
+                    "rule:system_reader_api or rule:project_reader_api",
                 "system_admin_api":
                     "role:admin and system_scope:all",
                 "system_reader_api":
