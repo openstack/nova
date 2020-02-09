@@ -23,16 +23,17 @@ BASE_POLICY_NAME = 'os_compute_api:os-console-auth-tokens'
 
 console_auth_tokens_policies = [
     policy.DocumentedRuleDefault(
-        BASE_POLICY_NAME,
-        base.RULE_ADMIN_API,
-        "Show console connection information for a given console "
+        name=BASE_POLICY_NAME,
+        check_str=base.RULE_ADMIN_API,
+        description="Show console connection information for a given console "
         "authentication token",
-        [
+        operations=[
             {
                 'method': 'GET',
                 'path': '/os-console-auth-tokens/{console_token}'
             }
-        ])
+        ],
+        scope_types=['system'])
 ]
 
 
