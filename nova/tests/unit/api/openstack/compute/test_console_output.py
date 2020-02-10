@@ -156,6 +156,7 @@ class ConsoleOutputPolicyEnforcementV21(test.NoDBTestCase):
     def setUp(self):
         super(ConsoleOutputPolicyEnforcementV21, self).setUp()
         self.controller = console_output_v21.ConsoleOutputController()
+        self.stub_out('nova.compute.api.API.get', fake_get)
 
     def test_get_console_output_policy_failed(self):
         rule_name = "os_compute_api:os-console-output"
