@@ -88,11 +88,6 @@ class UnshelveNeutronErrorTest(
                  'OS-EXT-STS:task_state': None})
 
         # As the instance went back to offloaded state we expect no allocation
-        # allocations = self.placement_api.get(
-        #     '/allocations/%s' % server['id']).body['allocations']
-        # self.assertEqual(0, len(allocations))
-        #
-        # but the allocation is leaked this is bug 1862633
         allocations = self.placement_api.get(
             '/allocations/%s' % server['id']).body['allocations']
-        self.assertEqual(1, len(allocations))
+        self.assertEqual(0, len(allocations))
