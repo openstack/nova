@@ -136,6 +136,7 @@ class TestZVMDriver(test.NoDBTestCase):
         self.assertEqual(0, results['vcpus'])
         self.assertEqual(0, results['memory_mb_used'])
         self.assertEqual(0, results['disk_available_least'])
+        self.assertEqual(0, results['hypervisor_version'])
         self.assertEqual('TESTHOST', results['hypervisor_hostname'])
 
     def test_driver_template_validation(self):
