@@ -47,7 +47,9 @@ class CreateBackupController(wsgi.Controller):
 
         """
         context = req.environ["nova.context"]
-        context.can(cb_policies.BASE_POLICY_NAME)
+        instance = common.get_instance(self.compute_api, context, id)
+        context.can(cb_policies.BASE_POLICY_NAME,
+                    target={'project_id': instance.project_id})
         entity = body["createBackup"]
 
         image_name = common.normalize_name(entity["name"])
@@ -62,8 +64,6 @@ class CreateBackupController(wsgi.Controller):
                 api_version_request.MAX_IMAGE_META_PROXY_API_VERSION):
             common.check_img_metadata_properties_quota(context, metadata)
         props.update(metadata)
-
-        instance = common.get_instance(self.compute_api, context, id)
 
         try:
             image = self.compute_api.backup(context, instance, image_name,

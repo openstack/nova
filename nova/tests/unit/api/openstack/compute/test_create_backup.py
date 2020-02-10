@@ -340,8 +340,7 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
         self.assertIn("Cannot 'createBackup' instance %(id)s"
                       % {'id': instance.uuid}, ex.explanation)
 
-    @mock.patch.object(common, 'check_img_metadata_properties_quota')
-    def test_create_backup_with_non_existed_instance(self, mock_check_image):
+    def test_create_backup_with_non_existed_instance(self):
         body_map = {
             'createBackup': {
                 'name': 'Backup 1',
@@ -355,7 +354,6 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller._create_backup,
                           self.req, uuid, body=body_map)
-        mock_check_image.assert_called_once_with(self.context, {})
 
     def test_create_backup_with_invalid_create_backup(self):
         body = {
@@ -404,6 +402,9 @@ class CreateBackupPolicyEnforcementv21(test.NoDBTestCase):
         super(CreateBackupPolicyEnforcementv21, self).setUp()
         self.controller = create_backup_v21.CreateBackupController()
         self.req = fakes.HTTPRequest.blank('')
+        patch_get = mock.patch.object(self.controller.compute_api, 'get')
+        self.mock_get = patch_get.start()
+        self.addCleanup(patch_get.stop)
 
     def test_create_backup_policy_failed(self):
         rule_name = "os_compute_api:os-create-backup"
