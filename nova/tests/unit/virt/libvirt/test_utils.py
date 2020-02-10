@@ -153,6 +153,30 @@ disk size: 96K
 
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('oslo_concurrency.processutils.execute')
+    def test_qemu_img_info_json(self, mock_execute, mock_exists):
+        path = "disk.config"
+        example_output = """{
+    "virtual-size": 67108864,
+    "filename": "disk.config",
+    "cluster-size": 65536,
+    "format": "raw",
+    "actual-size": 98304
+}
+"""
+        mock_execute.return_value = (example_output, '')
+        image_info = images.qemu_img_info(path, output_format='json')
+        mock_execute.assert_called_once_with(
+            'env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'info', path,
+            '--output=json', prlimit=nova.privsep.qemu.QEMU_IMG_LIMITS)
+        mock_exists.assert_called_once_with(path)
+        self.assertEqual('disk.config', image_info.image)
+        self.assertEqual('raw', image_info.file_format)
+        self.assertEqual(67108864, image_info.virtual_size)
+        self.assertEqual(98304, image_info.disk_size)
+        self.assertEqual(65536, image_info.cluster_size)
+
+    @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_qemu_info_canon(self, mock_execute, mock_exists):
         path = "disk.config"
         example_output = """image: disk.config
