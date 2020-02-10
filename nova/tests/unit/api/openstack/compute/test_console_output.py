@@ -149,24 +149,3 @@ class ConsoleOutputExtensionTestV21(test.NoDBTestCase):
     def test_get_console_output_not_available(self, mock_get_console_output):
         body = {'os-getConsoleOutput': {}}
         self._check_console_output_failure(webob.exc.HTTPNotFound, body)
-
-
-class ConsoleOutputPolicyEnforcementV21(test.NoDBTestCase):
-
-    def setUp(self):
-        super(ConsoleOutputPolicyEnforcementV21, self).setUp()
-        self.controller = console_output_v21.ConsoleOutputController()
-        self.stub_out('nova.compute.api.API.get', fake_get)
-
-    def test_get_console_output_policy_failed(self):
-        rule_name = "os_compute_api:os-console-output"
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        req = fakes.HTTPRequest.blank('')
-        body = {'os-getConsoleOutput': {}}
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.get_console_output, req, fakes.FAKE_UUID,
-            body=body)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
