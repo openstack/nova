@@ -396,37 +396,6 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
                       six.text_type(ex))
 
 
-class CreateBackupPolicyEnforcementv21(test.NoDBTestCase):
-
-    def setUp(self):
-        super(CreateBackupPolicyEnforcementv21, self).setUp()
-        self.controller = create_backup_v21.CreateBackupController()
-        self.req = fakes.HTTPRequest.blank('')
-        patch_get = mock.patch.object(self.controller.compute_api, 'get')
-        self.mock_get = patch_get.start()
-        self.addCleanup(patch_get.stop)
-
-    def test_create_backup_policy_failed(self):
-        rule_name = "os_compute_api:os-create-backup"
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        metadata = {'123': 'asdf'}
-        body = {
-            'createBackup': {
-                'name': 'Backup 1',
-                'backup_type': 'daily',
-                'rotation': 1,
-                'metadata': metadata,
-            },
-        }
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller._create_backup, self.req, fakes.FAKE_UUID,
-            body=body)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-
 class CreateBackupTestsV239(test.NoDBTestCase):
 
     def setUp(self):
