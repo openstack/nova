@@ -5443,10 +5443,11 @@ class ComputeManager(manager.Manager):
                 utils.get_image_from_system_metadata(
                     instance.system_metadata))
 
-        self.network_api.setup_instance_network_on_host(context, instance,
-                                                        self.host)
-        network_info = self.network_api.get_instance_nw_info(context, instance)
         try:
+            self.network_api.setup_instance_network_on_host(context, instance,
+                                                            self.host)
+            network_info = self.network_api.get_instance_nw_info(
+                context, instance)
             with self.rt.instance_claim(context, instance, node, limits):
                 self.driver.spawn(context, instance, image_meta,
                                   injected_files=[],
