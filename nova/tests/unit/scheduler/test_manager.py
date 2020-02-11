@@ -27,7 +27,6 @@ from nova import objects
 from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
 from nova.scheduler import manager
-from nova import servicegroup
 from nova import test
 from nova.tests.unit import fake_server_actions
 from nova.tests.unit.scheduler import fakes
@@ -60,25 +59,17 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
     """Test case for scheduler manager."""
 
     manager_cls = manager.SchedulerManager
-    driver_cls = fakes.FakeScheduler
-    driver_plugin_name = 'fake_scheduler'
 
     @mock.patch.object(host_manager.HostManager, '_init_instance_info')
     @mock.patch.object(host_manager.HostManager, '_init_aggregates')
     def setUp(self, mock_init_agg, mock_init_inst):
         super(SchedulerManagerTestCase, self).setUp()
-        self.flags(driver=self.driver_plugin_name, group='scheduler')
         self.manager = self.manager_cls()
         self.context = context.RequestContext('fake_user', 'fake_project')
         self.topic = 'fake_topic'
         self.fake_args = (1, 2, 3)
         self.fake_kwargs = {'cat': 'meow', 'dog': 'woof'}
         fake_server_actions.stub_out_action_events(self)
-
-    def test_1_correct_init(self):
-        # Correct scheduler driver
-        manager = self.manager
-        self.assertIsInstance(manager.driver, self.driver_cls)
 
     @mock.patch('nova.scheduler.request_filter.process_reqspec')
     @mock.patch('nova.scheduler.utils.resources_from_request_spec')
@@ -448,36 +439,3 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         self.manager._discover_hosts_in_cells(mock.sentinel.context)
         mock_log_warning.assert_not_called()
         mock_log_debug.assert_called_once_with(msg)
-
-
-class SchedulerTestCase(test.NoDBTestCase):
-    """Test case for base scheduler driver class."""
-
-    # So we can subclass this test and re-use tests if we need.
-    driver_cls = fakes.FakeScheduler
-
-    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
-    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
-    def setUp(self, mock_init_agg, mock_init_inst):
-        super(SchedulerTestCase, self).setUp()
-        self.driver = self.driver_cls()
-        self.context = context.RequestContext('fake_user', 'fake_project')
-        self.topic = 'fake_topic'
-        self.servicegroup_api = servicegroup.API()
-
-    @mock.patch('nova.objects.ServiceList.get_by_topic')
-    @mock.patch('nova.servicegroup.API.service_is_up')
-    def test_hosts_up(self, mock_service_is_up, mock_get_by_topic):
-        service1 = objects.Service(host='host1')
-        service2 = objects.Service(host='host2')
-        services = objects.ServiceList(objects=[service1, service2])
-
-        mock_get_by_topic.return_value = services
-        mock_service_is_up.side_effect = [False, True]
-
-        result = self.driver.hosts_up(self.context, self.topic)
-        self.assertEqual(result, ['host2'])
-
-        mock_get_by_topic.assert_called_once_with(self.context, self.topic)
-        calls = [mock.call(service1), mock.call(service2)]
-        self.assertEqual(calls, mock_service_is_up.call_args_list)

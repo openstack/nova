@@ -55,16 +55,17 @@ class SchedulerManager(manager.Manager):
 
     _sentinel = object()
 
-    def __init__(self, scheduler_driver=None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         self.placement_client = report.SchedulerReportClient()
-        if not scheduler_driver:
-            scheduler_driver = CONF.scheduler.driver
         self.driver = driver.DriverManager(
-                "nova.scheduler.driver",
-                scheduler_driver,
-                invoke_on_load=True).driver
-        super(SchedulerManager, self).__init__(service_name='scheduler',
-                                               *args, **kwargs)
+            'nova.scheduler.driver',
+            CONF.scheduler.driver,
+            invoke_on_load=True
+        ).driver
+
+        super(SchedulerManager, self).__init__(
+            service_name='scheduler', *args, **kwargs
+        )
 
     @periodic_task.periodic_task(
         spacing=CONF.scheduler.discover_hosts_in_cells_interval,
