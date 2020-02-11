@@ -73,7 +73,7 @@ class ConsoleOutputScopeTypePolicyTest(ConsoleOutputPolicyTest):
 
     This class set the nova.conf [oslo_policy] enforce_scope to True
     so that we can switch on the scope checking on oslo policy side.
-    It defines the set of context with scopped token
+    It defines the set of context with scoped token
     which are allowed and not allowed to pass the policy checks.
     With those set of context, it will run the API operation and
     verify the expected behaviour.
