@@ -358,38 +358,68 @@ capability or resource calculating filters can be useful.
 Writing Your Own Filter
 -----------------------
 
-To create **your own filter** you must inherit from
-|BaseHostFilter| and implement one method: ``host_passes``.
-This method should return ``True`` if a host passes the filter and return
-``False`` elsewhere.
-It takes two parameters (named arbitrarily as ``host_state`` and ``spec_obj``):
+To create **your own filter**, you must inherit from |BaseHostFilter| and
+implement one method: ``host_passes``. This method should return ``True`` if a
+host passes the filter and return ``False`` elsewhere. It takes two parameters:
 
-* the ``HostState`` object allows to get attributes of the host.
+* the ``HostState`` object allows to get attributes of the host
 * the ``RequestSpec`` object describes the user request, including the flavor,
-  the image and the scheduler hints.
+  the image and the scheduler hints
 
 For further details about each of those objects and their corresponding
-attributes, please refer to the codebase (at least by looking at the other
-filters code) or ask for help in the #openstack-nova IRC channel.
+attributes, refer to the codebase (at least by looking at the other filters
+code) or ask for help in the #openstack-nova IRC channel.
 
-As an example, nova.conf could contain the following scheduler-related
-settings:
+The module containing your custom filter(s) must be packaged and available in
+the same environment that nova, or specifically the :program:`nova-scheduler`
+service, is available in. As an example, consider the following sample package,
+which is the `minimal structure`__ for a standard, setuptools-based Python
+package:
 
-::
+__ https://python-packaging.readthedocs.io/en/latest/minimal.html
 
-    --scheduler.driver=nova.scheduler.FilterScheduler
-    --filter_scheduler.available_filters=nova.scheduler.filters.all_filters
-    --filter_scheduler.available_filters=myfilter.MyFilter
-    --filter_scheduler.enabled_filters=ComputeFilter,MyFilter
+.. code-block:: none
 
-.. note:: When writing your own filter, be sure to add it to the list of available filters
-   and enable it in the default filters. The "all_filters" setting  only includes the
-   filters shipped with nova.
+    myfilter/
+        myfilter/
+            __init__.py
+        setup.py
+
+The ``myfilter/myfilter/__init__.py`` could contain something like so:
+
+.. code-block:: python
+
+    from nova.scheduler import filters
+
+
+    class MyFilter(filters.BaseHostFilter):
+
+        def host_passes(self, host_state, spec_obj):
+            # do stuff here...
+            return True
+
+To enable this, you would set the following in :file:`nova.conf`:
+
+.. code-block:: ini
+
+    [filter_scheduler]
+    available_filters = nova.scheduler.filters.all_filters
+    available_filters = myfilter.MyFilter
+    enabled_filters = ComputeFilter,MyFilter
+
+.. note::
+
+    You **must** add custom filters to the list of available filters using the
+    :oslo.config:option:`filter_scheduler.available_filters` config option in
+    addition to enabling them via the
+    :oslo.config:option:`filter_scheduler.enabled_filters` config option. The
+    default ``nova.scheduler.filters.all_filters`` value for the former only
+    includes the filters shipped with nova.
 
 With these settings, nova will use the ``FilterScheduler`` for the scheduler
-driver. All of the standard nova filters and MyFilter are available to the
-FilterScheduler, but just the ``ComputeFilter`` and ``MyFilter`` will be
-used on each request.
+driver. All of the standard nova filters and the custom ``MyFilter`` filter are
+available to the ``FilterScheduler``, but just the ``ComputeFilter`` and
+``MyFilter`` will be used on each request.
 
 Weights
 -------
