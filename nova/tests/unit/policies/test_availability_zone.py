@@ -40,17 +40,21 @@ class AvailabilityZonePolicyTest(base.BasePolicyTest):
             self.project_foo_context, self.project_reader_context]
         self.everyone_unauthorized_contexts = []
 
-        # Check that admin is able to list the AZ Detail
-        self.admin_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+        # Check that system reader is able to list the AZ Detail
+        # NOTE(gmann): Until old default rule which is admin_api is
+        # deprecated and not removed, project admin and legacy admin
+        # will be able to list the AZ. This make sure that existing
+        # tokens will keep working even we have changed this policy defaults
+        # to reader role.
+        self.reader_authorized_contexts = [
+            self.system_admin_context, self.system_member_context,
+            self.system_reader_context, self.legacy_admin_context,
             self.project_admin_context]
-        # Check that non-admin is not able to list AZ Detail
-        self.admin_unauthorized_contexts = [
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context, self.project_member_context,
-            self.other_project_member_context,
-            self.project_foo_context, self.project_reader_context
-        ]
+        # Check that non-system-reader are not able to list the AZ.
+        self.reader_unauthorized_contexts = [
+            self.system_foo_context, self.other_project_member_context,
+            self.project_foo_context, self.project_member_context,
+            self.project_reader_context]
 
     @mock.patch('nova.objects.Instance.save')
     def test_availability_zone_list_policy(self, mock_save):
@@ -62,8 +66,8 @@ class AvailabilityZonePolicyTest(base.BasePolicyTest):
 
     def test_availability_zone_detail_policy(self):
         rule_name = "os_compute_api:os-availability-zone:detail"
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
+        self.common_policy_check(self.reader_authorized_contexts,
+                                 self.reader_unauthorized_contexts,
                                  rule_name, self.controller.detail,
                                  self.req)
 
@@ -83,13 +87,13 @@ class AvailabilityZoneScopeTypePolicyTest(AvailabilityZonePolicyTest):
         super(AvailabilityZoneScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
 
-        # Check that system admin is able to list the AZ detail.
-        self.admin_authorized_contexts = [
-            self.system_admin_context]
-        # Check that non-system or non-admin is not able to list the AZ detail.
-        self.admin_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_member_context,
-            self.system_reader_context, self.system_foo_context,
+        # Check that system reader is able to list the AZ.
+        self.reader_authorized_contexts = [
+            self.system_admin_context, self.system_member_context,
+            self.system_reader_context]
+        # Check that non-system-reader is not able to list AZ.
+        self.reader_unauthorized_contexts = [
+            self.system_foo_context, self.legacy_admin_context,
             self.project_admin_context, self.project_member_context,
             self.other_project_member_context,
             self.project_foo_context, self.project_reader_context
