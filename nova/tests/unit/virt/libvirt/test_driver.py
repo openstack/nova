@@ -9141,7 +9141,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                      'access_mode': 'rw'}
         }
 
-        new_size_in_kb = 20 * 1024 * 1024
+        new_size = 20 * units.Gi
 
         guest = mock.Mock(spec=libvirt_guest.Guest)
         # block_device
@@ -9151,17 +9151,17 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         block_device.resize = mock.Mock()
         guest.get_block_device = mock.Mock(return_value=block_device)
         drvr._host.get_guest = mock.Mock(return_value=guest)
-        drvr._extend_volume = mock.Mock(return_value=new_size_in_kb)
+        drvr._extend_volume = mock.Mock(return_value=new_size)
 
         for state in (power_state.RUNNING, power_state.PAUSED):
             guest.get_power_state = mock.Mock(return_value=state)
             drvr.extend_volume(
-                self.context, connection_info, instance, new_size_in_kb * 1024)
+                self.context, connection_info, instance, new_size)
             drvr._extend_volume.assert_called_with(connection_info,
                                                    instance,
-                                                   new_size_in_kb * 1024)
+                                                   new_size)
             guest.get_block_device.assert_called_with('/fake')
-            block_device.resize.assert_called_with(20480)
+            block_device.resize.assert_called_with(new_size)
 
     def test_extend_volume_with_volume_driver_without_support(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -9182,16 +9182,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'data': {'device_path': '/fake',
                      'access_mode': 'rw'}
         }
-        new_size_in_kb = 20 * 1024 * 1024
+        new_size = 20 * units.Gi
 
         xml_no_disk = "<domain><devices></devices></domain>"
         dom = fakelibvirt.Domain(drvr._get_connection(), xml_no_disk, False)
         guest = libvirt_guest.Guest(dom)
         guest.get_power_state = mock.Mock(return_value=power_state.RUNNING)
         drvr._host.get_guest = mock.Mock(return_value=guest)
-        drvr._extend_volume = mock.Mock(return_value=new_size_in_kb)
-        drvr.extend_volume(self.context, connection_info, instance,
-                           new_size_in_kb * 1024)
+        drvr._extend_volume = mock.Mock(return_value=new_size)
+        drvr.extend_volume(self.context, connection_info, instance, new_size)
 
     def test_extend_volume_with_instance_not_found(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -9216,7 +9215,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'data': {'device_path': '/fake',
                      'access_mode': 'rw'}
         }
-        new_size_in_kb = 20 * 1024 * 1024
+        new_size = 20 * units.Gi
 
         guest = mock.Mock(spec=libvirt_guest.Guest)
         guest.get_power_state = mock.Mock(return_value=power_state.RUNNING)
@@ -9227,11 +9226,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             side_effect=fakelibvirt.libvirtError('ERR'))
         guest.get_block_device = mock.Mock(return_value=block_device)
         drvr._host.get_guest = mock.Mock(return_value=guest)
-        drvr._extend_volume = mock.Mock(return_value=new_size_in_kb)
+        drvr._extend_volume = mock.Mock(return_value=new_size)
 
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr.extend_volume, self.context,
-                          connection_info, instance, new_size_in_kb * 1024)
+                          connection_info, instance, new_size)
 
     def test_extend_volume_with_no_device_path_attribute(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -9244,7 +9243,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                      'volume_id': '58a84f6d-3f0c-4e19-a0af-eb657b790657',
                      'access_mode': 'rw'}
         }
-        new_size_in_kb = 20 * 1024 * 1024
+        new_size = 20 * units.Gi
 
         guest = mock.Mock(spec=libvirt_guest.Guest)
         # block_device
@@ -9259,17 +9258,16 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         guest.get_block_device = mock.Mock(return_value=block_device)
         guest.get_all_disks = mock.Mock(return_value=[disk])
         drvr._host.get_guest = mock.Mock(return_value=guest)
-        drvr._extend_volume = mock.Mock(return_value=new_size_in_kb)
+        drvr._extend_volume = mock.Mock(return_value=new_size)
 
         for state in (power_state.RUNNING, power_state.PAUSED):
             guest.get_power_state = mock.Mock(return_value=state)
             drvr.extend_volume(self.context, connection_info, instance,
-                               new_size_in_kb * 1024)
-            drvr._extend_volume.assert_called_with(connection_info,
-                                                   instance,
-                                                   new_size_in_kb * 1024)
+                               new_size)
+            drvr._extend_volume.assert_called_with(connection_info, instance,
+                                                   new_size)
             guest.get_block_device.assert_called_with('vdb')
-            block_device.resize.assert_called_with(20480)
+            block_device.resize.assert_called_with(new_size)
 
     def test_extend_volume_no_disk_found_by_serial(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -9282,7 +9280,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                      'volume_id': '58a84f6d-3f0c-4e19-a0af-eb657b790657',
                      'access_mode': 'rw'}
         }
-        new_size_in_kb = 20 * 1024 * 1024
+        new_size = 20 * units.Gi
 
         guest = mock.Mock(spec=libvirt_guest.Guest)
         # block_device
@@ -9296,7 +9294,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         guest.get_block_device = mock.Mock(return_value=block_device)
         guest.get_all_disks = mock.Mock(return_value=[disk])
         drvr._host.get_guest = mock.Mock(return_value=guest)
-        drvr._extend_volume = mock.Mock(return_value=new_size_in_kb)
+        drvr._extend_volume = mock.Mock(return_value=new_size)
         guest.get_power_state = mock.Mock(return_value=power_state.RUNNING)
 
         self.assertRaises(
@@ -9305,7 +9303,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.context,
             connection_info,
             instance,
-            new_size_in_kb * 1024
+            new_size
         )
 
     @mock.patch('os_brick.encryptors.get_encryption_metadata')
@@ -9407,8 +9405,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         new_size = 20 * units.Gi
         # The LUKSv1 payload offset as reported by qemu-img info in bytes.
         payload_offset = 2048 * units.Ki
-        # The new size is provided to Libvirt virDomainBlockResize in units.Ki.
-        new_size_minus_offset_kb = (new_size - payload_offset) // units.Ki
+        # The new size is provided to Libvirt virDomainBlockResize
+        new_size_minus_offset = new_size - payload_offset
 
         drvr._host.get_guest = mock.Mock(return_value=guest)
         drvr._extend_volume = mock.Mock(return_value=new_size)
@@ -9434,7 +9432,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         # Assert that the Libvirt call to resize the device within the instance
         # is called with the LUKSv1 payload offset taken into account.
-        block_device.resize.assert_called_once_with(new_size_minus_offset_kb)
+        block_device.resize.assert_called_once_with(new_size_minus_offset)
 
     @mock.patch('os_brick.encryptors.get_encryption_metadata')
     @mock.patch('nova.virt.images.privileged_qemu_img_info')
@@ -9465,8 +9463,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         new_size = 20 * units.Gi
         # The LUKSv1 payload offset as reported by qemu-img info in bytes.
         payload_offset = 2048 * units.Ki
-        # The new size is provided to Libvirt virDomainBlockResize in units.Ki.
-        new_size_minus_offset_kb = (new_size - payload_offset) // units.Ki
+        # The new size is provided to Libvirt virDomainBlockResize
+        new_size_minus_offset = new_size - payload_offset
 
         drvr._host.get_guest = mock.Mock(return_value=guest)
         drvr._extend_volume = mock.Mock(return_value=new_size)
@@ -9492,7 +9490,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         # Assert that the Libvirt call to resize the device within the instance
         # is called with the LUKSv1 payload offset taken into account.
-        block_device.resize.assert_called_once_with(new_size_minus_offset_kb)
+        block_device.resize.assert_called_once_with(new_size_minus_offset)
 
     @mock.patch('os_brick.encryptors.get_encryption_metadata')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
@@ -18997,7 +18995,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_conf.to_xml.return_value = mock.sentinel.conf_xml
 
         resize_to = 1
-        expected_resize_to = resize_to * units.Gi / units.Ki
+        expected_resize_to = resize_to * units.Gi
 
         drvr._swap_volume(mock_guest, 'vdb', mock_conf, resize_to, None)
 
@@ -19137,7 +19135,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             # Verify we called resize with the correct args.
             if resize:
                 mock_dom.blockResize.assert_called_once_with(
-                    srcfile, 1 * units.Gi / units.Ki)
+                    srcfile, 1 * units.Gi, flags=1)
 
     def test_swap_volume_rebase_file(self):
         self._test_swap_volume_rebase('file')
