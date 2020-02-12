@@ -175,7 +175,8 @@ class DeferredDeletePolicyEnforcementV21(test.NoDBTestCase):
         self.controller = dd_v21.DeferredDeleteController()
         self.req = fakes.HTTPRequest.blank('')
 
-    def test_restore_policy_failed(self):
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_restore_policy_failed(self, get_instance_mock):
         rule_name = "os_compute_api:os-deferred-delete"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(

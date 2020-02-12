@@ -35,8 +35,9 @@ class DeferredDeleteController(wsgi.Controller):
     def _restore(self, req, id, body):
         """Restore a previously deleted instance."""
         context = req.environ["nova.context"]
-        context.can(dd_policies.BASE_POLICY_NAME)
         instance = common.get_instance(self.compute_api, context, id)
+        context.can(dd_policies.BASE_POLICY_NAME,
+                    target={'project_id': instance.project_id})
         try:
             self.compute_api.restore(context, instance)
         except exception.QuotaError as error:
