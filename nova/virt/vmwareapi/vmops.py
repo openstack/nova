@@ -2505,8 +2505,7 @@ class VMwareVMOps(object):
             datastores_info.append((ds, dc_info))
         self._imagecache.update(context, instances, datastores_info)
 
-        if CONF.vmware.image_as_template:
-            self._age_cached_image_templates(dc_info)
+        self._age_cached_image_templates(dc_info)
 
     def _age_cached_image_templates(self, dc_info):
         images_folders = self._get_all_images_folders(dc_info)

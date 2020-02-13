@@ -1514,7 +1514,6 @@ class VMwareVMOpsTestCase(test.TestCase):
             mock_older_than_results.append(expired)
         mock_older_than.side_effect = mock_older_than_results
 
-        self.flags(group='vmware', image_as_template=True)
         # any instance just to ensure calling _destroy_expired_image_templates
         fake_instances = [self._instance]
         with test.nested(
