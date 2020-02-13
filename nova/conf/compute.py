@@ -55,9 +55,7 @@ the same host to the destination options. Also set to true
 if you allow the ServerGroupAffinityFilter and need to resize.
 """),
     cfg.ListOpt('non_inheritable_image_properties',
-        default=['cache_in_nova', 'bittorrent',
-                 'img_signature_hash_method', 'img_signature',
-                 'img_signature_key_type', 'img_signature_certificate_uuid'],
+        default=['cache_in_nova', 'bittorrent'],
         help="""
 Image properties that should not be inherited from the instance
 when taking a snapshot.
@@ -65,15 +63,25 @@ when taking a snapshot.
 This option gives an opportunity to select which image-properties
 should not be inherited by newly created snapshots.
 
+.. note::
+
+   The following image properties are *never* inherited regardless of
+   whether they are listed in this configuration option or not:
+
+   * cinder_encryption_key_id
+   * cinder_encryption_key_deletion_policy
+   * img_signature
+   * img_signature_hash_method
+   * img_signature_key_type
+   * img_signature_certificate_uuid
+
 Possible values:
 
 * A comma-separated list whose item is an image property. Usually only
   the image properties that are only needed by base images can be included
   here, since the snapshots that are created from the base images don't
   need them.
-* Default list: cache_in_nova, bittorrent, img_signature_hash_method,
-                img_signature, img_signature_key_type,
-                img_signature_certificate_uuid
+* Default list: cache_in_nova, bittorrent
 
 """),
     cfg.IntOpt('max_local_block_devices',
