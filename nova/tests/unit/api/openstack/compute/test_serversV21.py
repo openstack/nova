@@ -4119,6 +4119,22 @@ class ServersControllerCreateTest(test.TestCase):
                 "Flavor's disk is too small for requested image."):
             self.controller.create(self.req, body=self.body)
 
+    @mock.patch.object(fake._FakeImageService, 'show',
+                       return_value=dict(
+                           id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
+                           status='active',
+                           properties=dict(
+                               cinder_encryption_key_id=fakes.FAKE_UUID)))
+    def test_create_server_image_nonbootable(self, mock_show):
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+
+        expected_msg = ("Image {} is unacceptable: Direct booting of an image "
+                        "uploaded from an encrypted volume is unsupported.")
+        with testtools.ExpectedException(
+                webob.exc.HTTPBadRequest,
+                expected_msg.format(self.image_uuid)):
+            self.controller.create(self.req, body=self.body)
+
     def test_create_instance_with_image_non_uuid(self):
         self.body['server']['imageRef'] = 'not-uuid'
         self.assertRaises(exception.ValidationError,
