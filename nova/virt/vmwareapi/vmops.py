@@ -2557,15 +2557,36 @@ class VMwareVMOps(object):
 
         return images_folders
 
-    def _destroy_expired_image_templates(self, templ_vm_folder_ref):
-        all_templ_vms = vutil.get_object_property(self._session.vim,
-                                                  templ_vm_folder_ref,
-                                                  "childEntity")
+    def _get_image_template_vms(self, templ_vm_folder_ref):
+        try:
+            all_vms_retr_res = vim_util.get_inner_objects(self._session.vim,
+                templ_vm_folder_ref, 'childEntity',
+                'VirtualMachine', properties_to_collect=['name'])
+            uuid_ptrn = '-'.join(5 * ['[0-9a-f]{{{}}}']).format(8, 4, 4, 4, 12)
+            img_templ_ptrn = r'^{} \([^)]+\)$'.format(uuid_ptrn)
+            templ_vms = []
+            with vutil.WithRetrieval(self._session.vim,
+                                     all_vms_retr_res) as retr_objects:
+                for oc in retr_objects:
+                    vm_name = oc.propSet[0].val
+                    if re.match(img_templ_ptrn, vm_name):
+                        templ_vms.append(oc.obj)
+            return templ_vms
+        except vexc.VimFaultException as excep:
+            if vexc.NOT_AUTHENTICATED in excep.fault_list:
+                # Check if session is active to decide if NotAuthenticated
+                # indicates empty result returned by RetrievePropertiesEx (as
+                # implemented in oslo.vmware) or it's a real exception.
+                if self._session.is_current_session_active():
+                    return []
+                else:
+                    raise
 
-        expired_templ_vms = {}
-        if all_templ_vms:
-            expired_templ_vms = {ref.value: ref for ref in
-                                 all_templ_vms.ManagedObjectReference}
+    def _destroy_expired_image_templates(self, templ_vm_folder_ref):
+        templ_vms = self._get_image_template_vms(templ_vm_folder_ref)
+        if not templ_vms:
+            return
+        expired_templ_vms = {moref.value: moref for moref in templ_vms}
 
         client_factory = self._session.vim.client.factory
         task_filter_spec = client_factory.create('ns0:TaskFilterSpec')

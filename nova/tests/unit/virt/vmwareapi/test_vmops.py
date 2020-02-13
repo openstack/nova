@@ -1473,14 +1473,12 @@ class VMwareVMOpsTestCase(test.TestCase):
         self.assertEqual(sorted(in_scope_refs), sorted(img_folder_refs))
 
     @mock.patch.object(vm_util, 'destroy_vm')
-    @mock.patch.object(vutil, 'get_object_property')
     @mock.patch.object(vm_util, 'TaskHistoryCollectorItems')
     @mock.patch('oslo_utils.timeutils.is_older_than')
     @mock.patch.object(ds_util, 'get_available_datastores')
     def test_manage_image_cache_templates(self, mock_get_avlbl_ds,
                                           mock_older_than,
                                           mock_task_it,
-                                          mock_get_obj_prop,
                                           mock_destroy_vm):
         # any DS just to ensure dc_info is initialized
         mock_get_avlbl_ds.return_value = [mock.Mock(
@@ -1490,9 +1488,6 @@ class VMwareVMOpsTestCase(test.TestCase):
             value='fake-vm-1')
         used_templ_vm_ref = vmwareapi_fake.ManagedObjectReference(
             value='fake-vm-2')
-        templ_list = mock.Mock(ManagedObjectReference = [expired_templ_vm_ref,
-                                                         used_templ_vm_ref])
-        mock_get_obj_prop.return_value = templ_list
 
         EXPIRED = True
 
@@ -1525,12 +1520,41 @@ class VMwareVMOpsTestCase(test.TestCase):
                 mock.patch.object(self._vmops, '_imagecache'),
                 mock.patch.object(self._vmops, '_get_all_images_folders',
                                   return_value=['fake-folder']),
+                mock.patch.object(self._vmops, '_get_image_template_vms',
+                                  return_value=[expired_templ_vm_ref,
+                                                used_templ_vm_ref]),
                 mock.patch.object(self._session, '_call_method'),
                 mock.patch.object(self._session, '_wait_for_task')):
             self._vmops.manage_image_cache(self._context, fake_instances)
             mock_destroy_vm.assert_called_once_with(self._session,
                                                     None,
                                                     expired_templ_vm_ref)
+
+    @mock.patch.object(vutil, 'WithRetrieval')
+    @mock.patch.object(vim_util, 'get_inner_objects')
+    def test_get_image_template_vms(self, mock_get_inner, mock_with_ret):
+        # fake image result
+        def _fir(moref, name):
+            return mock.Mock(propSet=[mock.Mock(val=name)],
+                             obj=moref)
+
+        fake_ref_ok1 = 'fake-moref-OK1'
+        fake_ref_ok2 = 'fake-moref-OK2'
+        ret_res = [
+            _fir(fake_ref_ok1, '{} (ds)'.format(uuidutils.generate_uuid())),
+            _fir('fake-moref-NOK1', 'non-uuid-name (ds)'),
+            _fir('fake-moref-NOK2', '{} ()'.format(uuidutils.generate_uuid())),
+            _fir(fake_ref_ok2, '{} (ds)'.format(uuidutils.generate_uuid()))
+        ]
+        mock_get_inner.return_value = ret_res
+
+        def _mock_with_ret(vim, ret_res):
+            return mock.Mock(__enter__=mock.Mock(return_value=ret_res),
+                             __exit__=mock.Mock(return_value=None))
+        mock_with_ret.side_effect = _mock_with_ret
+
+        actual_result = self._vmops._get_image_template_vms(None)
+        self.assertEqual([fake_ref_ok1, fake_ref_ok2], sorted(actual_result))
 
     @mock.patch.object(vutil, 'get_inventory_path', return_value='fake_path')
     @mock.patch.object(vmops.VMwareVMOps, '_attach_cdrom_to_vm')
