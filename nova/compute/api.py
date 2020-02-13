@@ -557,6 +557,31 @@ class API(base.Base):
         # reason, we rely on the DB to cast True to a String.
         return True if bool_val else ''
 
+    @staticmethod
+    def _detect_nonbootable_image_from_properties(image_id, image):
+        """Check image for a property indicating it's nonbootable.
+
+        This is called from the API service to ensure that there are
+        no known image properties indicating that this image is of a
+        type that we do not support booting from.
+
+        Currently the only such property is 'cinder_encryption_key_id'.
+
+        :param image_id: UUID of the image
+        :param image: a dict representation of the image including properties
+        :raises: ImageUnacceptable if the image properties indicate
+                 that booting this image is not supported
+        """
+        if not image:
+            return
+
+        image_properties = image.get('properties', {})
+        if image_properties.get('cinder_encryption_key_id'):
+            reason = _('Direct booting of an image uploaded from an '
+                       'encrypted volume is unsupported.')
+            raise exception.ImageUnacceptable(image_id=image_id,
+                                              reason=reason)
+
     def _check_requested_image(self, context, image_id, image,
                                instance_type, root_bdm):
         if not image:
@@ -773,6 +798,7 @@ class API(base.Base):
         self._check_injected_file_quota(context, files_to_inject)
         self._check_requested_image(context, image_id, image,
                                     instance_type, root_bdm)
+        self._detect_nonbootable_image_from_properties(image_id, image)
 
     def _validate_and_build_base_options(self, context, instance_type,
                                          boot_meta, image_href, image_id,
