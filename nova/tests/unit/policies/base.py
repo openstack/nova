@@ -88,11 +88,22 @@ class BasePolicyTest(test.TestCase):
                             unauthorized_contexts, rule_name,
                             func, req, *arg, **kwarg):
 
+        # NOTE(brinzhang): When fatal=False is passed as a parameter in
+        # context.can(), we cannot get the desired assurance_raises().
+        # At this time, we can assert the func's response to ensure
+        # that changes is right.
+        fatal = kwarg.pop('fatal', True)
+        authorized_response = []
+        unauthorize_response = []
+
         self.assertEqual(len(self.all_contexts),
                          len(authorized_contexts) + len(
                              unauthorized_contexts),
                          "Few context are missing. check all contexts "
                          "mentioned in self.all_contexts are tested")
+
+        def ensure_return(req, *args, **kwargs):
+            return func(req, *arg, **kwargs)
 
         def ensure_raises(req, *args, **kwargs):
             exc = self.assertRaises(
@@ -107,7 +118,12 @@ class BasePolicyTest(test.TestCase):
             req.environ['nova.context'] = context
             args1 = copy.deepcopy(arg)
             kwargs1 = copy.deepcopy(kwarg)
-            func(req, *args1, **kwargs1)
+            if not fatal:
+                authorized_response.append(
+                    ensure_return(req, *args1, **kwargs1))
+            else:
+                func(req, *args1, **kwargs1)
+
         # Verify all the context not having allowed scope or roles fail
         # the policy check.
         for context in unauthorized_contexts:
@@ -115,4 +131,10 @@ class BasePolicyTest(test.TestCase):
             req.environ['nova.context'] = context
             args1 = copy.deepcopy(arg)
             kwargs1 = copy.deepcopy(kwarg)
-            ensure_raises(req, *args1, **kwargs1)
+            if not fatal:
+                unauthorize_response.append(
+                    ensure_return(req, *args1, **kwargs1))
+            else:
+                ensure_raises(req, *args1, **kwargs1)
+
+        return authorized_response, unauthorize_response
