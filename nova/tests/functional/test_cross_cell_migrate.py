@@ -869,8 +869,11 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
             'disk': old_flavor['disk']
         }
         self.admin_api.post_flavor({'flavor': new_flavor})
-        self.admin_api.post_extra_spec(new_flavor['id'],
-                                       {'extra_specs': {'foo': 'bar'}})
+        # TODO(stephenfin): What do I do with this???
+        self.admin_api.post_extra_spec(
+            new_flavor['id'],
+            {'extra_specs': {'aggregate_instance_extra_specs:foo': 'bar'}}
+        )
         # Enable AggregateInstanceExtraSpecsFilter and restart the scheduler.
         enabled_filters = CONF.filter_scheduler.enabled_filters
         if 'AggregateInstanceExtraSpecsFilter' not in enabled_filters:

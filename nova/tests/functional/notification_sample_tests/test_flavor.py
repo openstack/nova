@@ -67,8 +67,7 @@ class TestFlavorNotificationSample(
 
         body = {
             "extra_specs": {
-                "key1": "value1",
-                "key2": "value2"
+                "hw:numa_nodes": "2",
             }
         }
         self.admin_api.api_post(

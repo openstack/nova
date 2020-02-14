@@ -11,8 +11,7 @@
             "disabled": false,
             "vcpus": 2,
             "extra_specs": {
-                "key1": "value1",
-                "key2": "value2"
+                "hw:numa_nodes": "2"
             },
             "projects": ["fake_tenant"],
             "swap": 0,

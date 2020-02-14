@@ -1,3 +1,3 @@
 {
-    "key1": "new_value1"
+    "hw:numa_nodes": "2"
 }
