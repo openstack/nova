@@ -173,6 +173,12 @@ class BigVmManager(manager.Manager):
 
         for vc in vcenters:
             for hv_size in missing_hv_sizes_per_vc[vc]:
+                if hv_size not in candidates:
+                    LOG.warning('Could not find a resource-provider to free '
+                                'up a host for hypervisor size %(hv_size)d in '
+                                '%(vc)s.',
+                                {'hv_size': hv_size, 'vc': vc})
+                    continue
                 alloc_reqs, provider_summaries = candidates[hv_size]
 
                 # filter providers by VC, as placement returned all matching
