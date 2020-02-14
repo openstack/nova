@@ -44,6 +44,7 @@ MEMORY_MB = fields.ResourceClass.MEMORY_MB
 BIGVM_RESOURCE = special_spawning.BIGVM_RESOURCE
 VMWARE_HV_TYPE = 'VMware vCenter Server'
 SHARD_PREFIX = 'vc-'
+HV_SIZE_BUCKET_THRESHOLD_PERCENT = 10
 
 
 class BigVmManager(manager.Manager):
@@ -323,6 +324,28 @@ class BigVmManager(manager.Manager):
         for rp_uuid, rp in bigvm_providers.items():
             inventory = client._get_inventory(context, rp_uuid)
             rp['inventory'] = inventory['inventories']
+
+        # make sure grouping by hv_size works properly later on, even if there
+        # are marginal differences in the reported hv_size. we need to have all
+        # vmware_providers to have the same hv_size if they're in the same
+        # "bucket", e.g. they're supposed to be 3 TB HVs. To make sure the
+        # placement query for allocation-candidates works, we use the smallest
+        # size and assign it to all in the same bucket.
+        hv_size_bucket = None
+        for rp_uuid, rp in sorted(vmware_providers.items(),
+                                  key=lambda x: x[1]['hv_size']):
+            if hv_size_bucket is None:
+                # first one is always a new bucket
+                hv_size_bucket = rp['hv_size']
+                continue
+
+            threshold = HV_SIZE_BUCKET_THRESHOLD_PERCENT * hv_size_bucket / 100
+            if rp['hv_size'] - hv_size_bucket > threshold:
+                # set key if the difference to the last key is over the
+                # threshold
+                hv_size_bucket = rp['hv_size']
+
+            rp['hv_size'] = hv_size_bucket
 
         return (vcenters, bigvm_providers, vmware_providers)
 
