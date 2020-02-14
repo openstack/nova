@@ -295,6 +295,12 @@ class BigVmManager(manager.Manager):
                     continue
 
                 cell_mapping = host_mappings[host]
+                if host not in host_azs or host not in host_vcs:
+                    # seen this happening during buildup
+                    LOG.debug('Ignoring %(host)s as it is not assigned to an '
+                              'AZ or VC.',
+                              {'host': host})
+                    continue
                 vmware_providers[rp['uuid']] = {'hv_size': hv_size,
                                                 'host': host,
                                                 'az': host_azs[host],
