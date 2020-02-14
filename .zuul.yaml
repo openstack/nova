@@ -21,6 +21,7 @@
       - ^doc/.*$
       - ^nova/hacking/.*$
       - ^nova/locale/.*$
+      - ^nova/policies/.*$
       - ^nova/tests/.*$
       - ^nova/test.py$
       - ^releasenotes/.*$
@@ -378,9 +379,26 @@
         - nova-next
         - nova-tox-functional-py36
         - tempest-integrated-compute:
-            irrelevant-files: *dsvm-irrelevant-files
+            # NOTE(gmann): Policies changes do not need to run all the
+            # integration test jobs. Running only tempest and grenade
+            # common jobs will be enough along with nova functional
+            # and unit tests.
+            irrelevant-files: &policies-irrelevant-files
+              - ^api-.*$
+              - ^(test-|)requirements.txt$
+              - ^.*\.rst$
+              - ^.git.*$
+              - ^doc/.*$
+              - ^nova/hacking/.*$
+              - ^nova/locale/.*$
+              - ^nova/tests/.*$
+              - ^nova/test.py$
+              - ^releasenotes/.*$
+              - ^setup.cfg$
+              - ^tools/.*$
+              - ^tox.ini$
         - grenade-py3:
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files: *policies-irrelevant-files
         - tempest-ipv6-only:
             irrelevant-files: *dsvm-irrelevant-files
     gate:
@@ -391,9 +409,9 @@
         - nova-multi-cell
         - nova-next
         - tempest-integrated-compute:
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files: *policies-irrelevant-files
         - grenade-py3:
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files: *policies-irrelevant-files
         - tempest-ipv6-only:
             irrelevant-files: *dsvm-irrelevant-files
     experimental:
