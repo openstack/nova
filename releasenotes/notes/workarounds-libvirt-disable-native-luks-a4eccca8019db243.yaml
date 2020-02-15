@@ -1,0 +1,26 @@
+---
+other:
+  - |
+    The ``[workarounds]/disable_native_luksv1`` configuration option has
+    been introduced. This can be used by operators to workaround recently
+    discovered performance issues found within the `libgcrypt library`__ used
+    by QEMU when natively decrypting LUKSv1 encrypted disks. Enabling this
+    option will result in the use of the legacy ``dm-crypt`` based os-brick
+    provided encryptors.
+
+    Operators should be aware that this workaround only applies when using the
+    libvirt compute driver with attached encrypted Cinder volumes using the
+    ``luks`` encryption provider. The ``luks2`` encryption provider will
+    continue to use the ``dm-crypt`` based os-brick encryptors regardless of
+    what this configurable is set to.
+
+    This workaround is temporary and will be removed during the W release once
+    all impacted distributions have been able to update their versions of the
+    libgcrypt library.
+
+    .. warning:: Operators must ensure no instances are running on the compute
+      host before enabling this workaround. Any instances with encrypted LUKSv1
+      disks left running on the hosts will fail to migrate or stop after this
+      workaround has been enabled.
+
+    .. __: https://bugzilla.redhat.com/show_bug.cgi?id=1762765
