@@ -221,7 +221,9 @@ class LibvirtNetVolumeDriverTestCase(
 
     def test_extend_volume(self):
         device_path = '/dev/fake-dev'
-        connection_info = {'data': {'device_path': device_path}}
+        connection_info = {
+            'driver_volume_type': 'net',
+            'data': {'device_path': device_path}}
 
         requested_size = 20 * pow(1024, 3)  # 20GiB
 
@@ -231,3 +233,49 @@ class LibvirtNetVolumeDriverTestCase(
                                                 requested_size)
 
         self.assertEqual(requested_size, new_size)
+
+    def test_libvirt_rbd_driver_block_connect(self):
+        self.flags(rbd_volume_local_attach=True, group='workarounds')
+        connection_info = self.rbd_connection(self.vol)
+        libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_host)
+        libvirt_driver.connector.connect_volume = mock.MagicMock(
+            return_value = {'path': mock.sentinel.rbd_dev})
+        libvirt_driver.connect_volume(connection_info, mock.sentinel.instance)
+
+        # Assert that the connector is called correctly and device_path updated
+        libvirt_driver.connector.connect_volume.assert_called_once_with(
+            connection_info['data'])
+
+    def test_libvirt_rbd_driver_block_disconnect(self):
+        self.flags(rbd_volume_local_attach=True, group='workarounds')
+        connection_info = self.rbd_connection(self.vol)
+        libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_host)
+        libvirt_driver.connector.disconnect_volume = mock.MagicMock()
+        libvirt_driver.disconnect_volume(connection_info,
+                                         mock.sentinel.instance)
+
+        # Assert that the connector is called correctly
+        libvirt_driver.connector.disconnect_volume.assert_called_once_with(
+            connection_info['data'], None)
+
+    def test_libvirt_rbd_driver_block_config(self):
+        self.flags(rbd_volume_local_attach=True, group='workarounds')
+        connection_info = self.rbd_connection(self.vol)
+        connection_info['data']['device_path'] = '/dev/rbd0'
+        libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_host)
+        conf = libvirt_driver.get_config(connection_info, self.disk_info)
+
+        # Assert that the returned config is for a RBD block device
+        self.assertEqual('block', conf.source_type)
+        self.assertEqual('/dev/rbd0', conf.source_path)
+        self.assertEqual('native', conf.driver_io)
+
+    def test_libvirt_rbd_driver_block_extend(self):
+        self.flags(rbd_volume_local_attach=True, group='workarounds')
+        connection_info = self.rbd_connection(self.vol)
+        libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_host)
+
+        # Assert NotImplementedError is raised for extend_volume
+        self.assertRaises(NotImplementedError, libvirt_driver.extend_volume,
+                          connection_info, mock.sentinel.instance,
+                          mock.sentinel.requested_size)
