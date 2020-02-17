@@ -192,13 +192,6 @@ class EvacuateTestV21(test.NoDBTestCase):
         self._get_evacuate_response({'host': 'my-host',
                                      'onSharedStorage': 'True'})
 
-    def test_not_admin(self):
-        body = {'evacuate': {'host': 'my-host',
-                             'onSharedStorage': 'False'}}
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller._evacuate,
-                          self.req, self.UUID, body=body)
-
     def test_evacuate_to_same_host(self):
         self._check_evacuate_failure(webob.exc.HTTPBadRequest,
                                      {'host': 'host1',
@@ -315,12 +308,6 @@ class EvacuateTestV214(EvacuateTestV21):
             self._get_evacuate_response({'adminPass': admin_pass})
             self.assertEqual(admin_pass,
                              mock_evacuate.call_args_list[0][0][4])
-
-    def test_not_admin(self):
-        body = {'evacuate': {'host': 'my-host'}}
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller._evacuate,
-                          self.req, self.UUID, body=body)
 
     @testtools.skip('onSharedStorage was removed from Microversion 2.14')
     @mock.patch('nova.objects.Instance.save')
