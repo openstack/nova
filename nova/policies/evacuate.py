@@ -23,15 +23,16 @@ BASE_POLICY_NAME = 'os_compute_api:os-evacuate'
 
 evacuate_policies = [
     policy.DocumentedRuleDefault(
-        BASE_POLICY_NAME,
-        base.RULE_ADMIN_API,
-        "Evacuate a server from a failed host to a new host",
-        [
+        name=BASE_POLICY_NAME,
+        check_str=base.RULE_ADMIN_API,
+        description="Evacuate a server from a failed host to a new host",
+        operations=[
             {
                 'path': '/servers/{server_id}/action (evacuate)',
                 'method': 'POST'
             }
-        ]),
+        ],
+        scope_types=['system']),
 ]
 
 
