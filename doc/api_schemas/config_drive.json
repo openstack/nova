@@ -1,0 +1,30 @@
+{
+  "anyOf": [
+        {
+            "type": "object",
+            "properties": {
+                "meta_data": {
+                  "type": "object"
+                },
+                "network_data": {
+                  "type": "object"
+                },
+                "user_data": {
+                    "type": [
+                      "object",
+                      "array",
+                      "string",
+                      "null"
+                    ]
+                }
+            },
+            "additionalProperties": false
+        },
+        {
+            "type": [
+              "string",
+              "null"
+            ]
+        }
+    ]
+}

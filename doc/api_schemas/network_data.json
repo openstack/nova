@@ -1,0 +1,580 @@
+{
+  "$schema": "http://openstack.org/nova/network_data.json#",
+  "id": "http://openstack.org/nova/network_data.json",
+  "type": "object",
+  "title": "OpenStack Nova network metadata schema",
+  "description": "Schema of Nova instance network configuration information",
+  "required": [
+    "links",
+    "networks",
+    "services"
+  ],
+  "properties": {
+    "links": {
+      "$id": "#/properties/links",
+      "type": "array",
+      "title": "L2 interfaces settings",
+      "items": {
+        "$id": "#/properties/links/items",
+        "oneOf": [
+          {
+            "$ref": "#/definitions/l2_link"
+          },
+          {
+            "$ref": "#/definitions/l2_bond"
+          },
+          {
+            "$ref": "#/definitions/l2_vlan"
+          }
+        ]
+      }
+    },
+    "networks": {
+      "$id": "#/properties/networks",
+      "type": "array",
+      "title": "L3 networks",
+      "items": {
+        "$id": "#/properties/networks/items",
+        "oneOf": [
+          {
+            "$ref": "#/definitions/l3_ipv4_network"
+          },
+          {
+            "$ref": "#/definitions/l3_ipv6_network"
+          }
+        ]
+      }
+    },
+    "services": {
+      "$ref": "#/definitions/services"
+    }
+  },
+  "definitions": {
+    "l2_address": {
+      "$id": "#/definitions/l2_address",
+      "type": "string",
+      "pattern": "(?i)^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$",
+      "title": "L2 interface address",
+      "examples": [
+        "fa:16:3e:9c:bf:3d"
+      ]
+    },
+    "l2_id": {
+      "$id": "#/definitions/l2_id",
+      "type": "string",
+      "title": "L2 interface ID",
+      "examples": [
+        "eth0"
+      ]
+    },
+    "l2_mtu": {
+      "$id": "#/definitions/l2_mtu",
+      "title": "L2 interface MTU",
+      "anyOf": [
+        {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "examples": [
+        1500
+      ]
+    },
+    "l2_vif_id": {
+      "$id": "#/definitions/l2_vif_id",
+      "type": "string",
+      "title": "Virtual interface ID",
+      "examples": [
+        "cd9f6d46-4a3a-43ab-a466-994af9db96fc"
+      ]
+    },
+    "l2_link": {
+      "$id": "#/definitions/l2_link",
+      "type": "object",
+      "title": "L2 interface configuration settings",
+      "required": [
+        "ethernet_mac_address",
+        "id",
+        "type"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/l2_id"
+        },
+        "ethernet_mac_address": {
+          "$ref": "#/definitions/l2_address"
+        },
+        "mtu": {
+          "$ref": "#/definitions/l2_mtu"
+        },
+        "type": {
+          "$id": "#/definitions/l2_link/properties/type",
+          "type": "string",
+          "enum": [
+            "bridge",
+            "dvs",
+            "hw_veb",
+            "hyperv",
+            "ovs",
+            "tap",
+            "vhostuser",
+            "vif",
+            "phy"
+          ],
+          "title": "Interface type",
+          "examples": [
+            "bridge"
+          ]
+        },
+        "vif_id": {
+          "$ref": "#/definitions/l2_vif_id"
+        }
+      }
+    },
+    "l2_bond": {
+      "$id": "#/definitions/l2_bond",
+      "type": "object",
+      "title": "L2 bonding interface configuration settings",
+      "required": [
+        "ethernet_mac_address",
+        "id",
+        "type",
+        "bond_mode",
+        "bond_links"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/l2_id"
+        },
+        "ethernet_mac_address": {
+          "$ref": "#/definitions/l2_address"
+        },
+        "mtu": {
+          "$ref": "#/definitions/l2_mtu"
+        },
+        "type": {
+          "$id": "#/definitions/l2_bond/properties/type",
+          "type": "string",
+          "enum": [
+            "bond"
+          ],
+          "title": "Interface type",
+          "examples": [
+            "bond"
+          ]
+        },
+        "vif_id": {
+          "$ref": "#/definitions/l2_vif_id"
+        },
+        "bond_mode": {
+          "$id": "#/definitions/bond/properties/bond_mode",
+          "type": "string",
+          "title": "Port bonding type",
+          "enum": [
+            "802.1ad",
+            "balance-rr",
+            "active-backup",
+            "balance-xor",
+            "broadcast",
+            "balance-tlb",
+            "balance-alb"
+          ],
+          "examples": [
+            "802.1ad"
+          ]
+        },
+        "bond_links": {
+          "$id": "#/definitions/bond/properties/bond_links",
+          "type": "array",
+          "title": "Port bonding links",
+          "items": {
+            "$id": "#/definitions/bond/properties/bond_links/items",
+            "type": "string"
+          }
+        }
+      }
+    },
+    "l2_vlan": {
+      "$id": "#/definitions/l2_vlan",
+      "type": "object",
+      "title": "L2 VLAN interface configuration settings",
+      "required": [
+        "vlan_mac_address",
+        "id",
+        "type",
+        "vlan_link",
+        "vlan_id"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/l2_id"
+        },
+        "vlan_mac_address": {
+          "$ref": "#/definitions/l2_address"
+        },
+        "mtu": {
+          "$ref": "#/definitions/l2_mtu"
+        },
+        "type": {
+          "$id": "#/definitions/l2_vlan/properties/type",
+          "type": "string",
+          "enum": [
+            "vlan"
+          ],
+          "title": "VLAN interface type",
+          "examples": [
+            "vlan"
+          ]
+        },
+        "vif_id": {
+          "$ref": "#/definitions/l2_vif_id"
+        },
+        "vlan_id": {
+          "$id": "#/definitions/l2_vlan/properties/vlan_id",
+          "type": "integer",
+          "title": "VLAN ID"
+        },
+        "vlan_link": {
+          "$id": "#/definitions/l2_vlan/properties/vlan_link",
+          "type": "string",
+          "title": "VLAN link name"
+        }
+      }
+    },
+    "l3_id": {
+      "$id": "#/definitions/l3_id",
+      "type": "string",
+      "title": "Network name",
+      "examples": [
+        "network0"
+      ]
+    },
+    "l3_link": {
+      "$id": "#/definitions/l3_link",
+      "type": "string",
+      "title": "L2 network link to use for L3 interface",
+      "examples": [
+        "99e88329-f20d-4741-9593-25bf07847b16"
+      ]
+    },
+    "l3_network_id": {
+      "$id": "#/definitions/l3_network_id",
+      "type": "string",
+      "title": "Network ID",
+      "examples": [
+        "99e88329-f20d-4741-9593-25bf07847b16"
+      ]
+    },
+    "l3_ipv4_type": {
+      "$id": "#/definitions/l3_ipv4_type",
+      "type": "string",
+      "enum": [
+        "ipv4",
+        "ipv4_dhcp"
+      ],
+      "title": "L3 IPv4 network type",
+      "examples": [
+        "ipv4_dhcp"
+      ]
+    },
+    "l3_ipv6_type": {
+      "$id": "#/definitions/l3_ipv6_type",
+      "type": "string",
+      "enum": [
+        "ipv6",
+        "ipv6_dhcp",
+        "ipv6_slaac"
+      ],
+      "title": "L3 IPv6 network type",
+      "examples": [
+        "ipv6_dhcp"
+      ]
+    },
+    "l3_ipv4_host": {
+      "$id": "#/definitions/l3_ipv4_host",
+      "type": "string",
+      "pattern": "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$",
+      "title": "L3 IPv4 host address",
+      "examples": [
+        "192.168.81.99"
+      ]
+    },
+    "l3_ipv6_host": {
+      "$id": "#/definitions/l3_ipv6_host",
+      "type": "string",
+      "pattern": "^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))(/[0-9]{1,2})?$",
+      "title": "L3 IPv6 host address",
+      "examples": [
+        "2001:db8:3:4::192.168.81.99"
+      ]
+    },
+    "l3_ipv4_netmask": {
+      "$id": "#/definitions/l3_ipv4_netmask",
+      "type": "string",
+      "pattern": "^(254|252|248|240|224|192|128|0)\\.0\\.0\\.0|255\\.(254|252|248|240|224|192|128|0)\\.0\\.0|255\\.255\\.(254|252|248|240|224|192|128|0)\\.0|255\\.255\\.255\\.(254|252|248|240|224|192|128|0)$",
+      "title": "L3 IPv4 network mask",
+      "examples": [
+        "255.255.252.0"
+      ]
+    },
+    "l3_ipv6_netmask": {
+      "$id": "#/definitions/l3_ipv6_netmask",
+      "type": "string",
+      "pattern": "^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7})|(::))$",
+      "title": "L3 IPv6 network mask",
+      "examples": [
+        "ffff:ffff:ffff:ffff::"
+      ]
+    },
+    "l3_ipv4_nw": {
+      "$id": "#/definitions/l3_ipv4_nw",
+      "type": "string",
+      "pattern": "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$",
+      "title": "L3 IPv4 network address",
+      "examples": [
+        "0.0.0.0"
+      ]
+    },
+    "l3_ipv6_nw": {
+      "$id": "#/definitions/l3_ipv6_nw",
+      "type": "string",
+      "pattern": "^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7})|(::))$",
+      "title": "L3 IPv6 network address",
+      "examples": [
+        "8000::"
+      ]
+    },
+    "l3_ipv4_gateway": {
+      "$id": "#/definitions/l3_ipv4_gateway",
+      "type": "string",
+      "pattern": "^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$",
+      "title": "L3 IPv4 gateway address",
+      "examples": [
+        "192.168.200.1"
+      ]
+    },
+    "l3_ipv6_gateway": {
+      "$id": "#/definitions/l3_ipv6_gateway",
+      "type": "string",
+      "pattern": "^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$",
+      "title": "L3 IPv6 gateway address",
+      "examples": [
+        "2001:db8:3:4::192.168.81.99"
+      ]
+    },
+    "l3_ipv4_network_route": {
+      "$id": "#/definitions/l3_ipv4_network_route",
+      "type": "object",
+      "title": "L3 IPv4 routing configuration item",
+      "required": [
+        "gateway",
+        "netmask",
+        "network"
+      ],
+      "properties": {
+        "network": {
+          "$ref": "#/definitions/l3_ipv4_nw"
+        },
+        "netmask": {
+          "$ref": "#/definitions/l3_ipv4_netmask"
+        },
+        "gateway": {
+          "$ref": "#/definitions/l3_ipv4_gateway"
+        },
+        "services": {
+          "$ref": "#/definitions/ipv4_services"
+        }
+      }
+    },
+    "l3_ipv6_network_route": {
+      "$id": "#/definitions/l3_ipv6_network_route",
+      "type": "object",
+      "title": "L3 IPv6 routing configuration item",
+      "required": [
+        "gateway",
+        "netmask",
+        "network"
+      ],
+      "properties": {
+        "network": {
+          "$ref": "#/definitions/l3_ipv6_nw"
+        },
+        "netmask": {
+          "$ref": "#/definitions/l3_ipv6_netmask"
+        },
+        "gateway": {
+          "$ref": "#/definitions/l3_ipv6_gateway"
+        },
+        "services": {
+          "$ref": "#/definitions/ipv6_services"
+        }
+      }
+    },
+    "l3_ipv4_network": {
+      "$id": "#/definitions/l3_ipv4_network",
+      "type": "object",
+      "title": "L3 IPv4 network configuration",
+      "required": [
+        "id",
+        "link",
+        "network_id",
+        "type"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/l3_id"
+        },
+        "link": {
+          "$ref": "#/definitions/l3_link"
+        },
+        "network_id": {
+          "$ref": "#/definitions/l3_network_id"
+        },
+        "type": {
+          "$ref": "#/definitions/l3_ipv4_type"
+        },
+        "ip_address": {
+          "$ref": "#/definitions/l3_ipv4_host"
+        },
+        "netmask": {
+          "$ref": "#/definitions/l3_ipv4_netmask"
+        },
+        "routes": {
+          "$id": "#/definitions/l3_ipv4_network/routes",
+          "type": "array",
+          "title": "L3 IPv4 network routes",
+          "items": {
+            "$ref": "#/definitions/l3_ipv4_network_route"
+          }
+        }
+      }
+    },
+    "l3_ipv6_network": {
+      "$id": "#/definitions/l3_ipv6_network",
+      "type": "object",
+      "title": "L3 IPv6 network configuration",
+      "required": [
+        "id",
+        "link",
+        "network_id",
+        "type"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/l3_id"
+        },
+        "link": {
+          "$ref": "#/definitions/l3_link"
+        },
+        "network_id": {
+          "$ref": "#/definitions/l3_network_id"
+        },
+        "type": {
+          "$ref": "#/definitions/l3_ipv6_type"
+        },
+        "ip_address": {
+          "$ref": "#/definitions/l3_ipv6_host"
+        },
+        "netmask": {
+          "$ref": "#/definitions/l3_ipv6_netmask"
+        },
+        "routes": {
+          "$id": "#/definitions/properties/l3_ipv6_network/routes",
+          "type": "array",
+          "title": "L3 IPv6 network routes",
+          "items": {
+            "$ref": "#/definitions/l3_ipv6_network_route"
+          }
+        }
+      }
+    },
+    "ipv4_service": {
+      "$id": "#/definitions/ipv4_service",
+      "type": "object",
+      "title": "Service on a IPv4 network",
+      "required": [
+        "address",
+        "type"
+      ],
+      "properties": {
+        "address": {
+          "$ref": "#/definitions/l3_ipv4_host"
+        },
+        "type": {
+          "$id": "#/definitions/ipv4_service/properties/type",
+          "type": "string",
+          "enum": [
+            "dns"
+          ],
+          "title": "Service type",
+          "examples": [
+            "dns"
+          ]
+        }
+      }
+    },
+    "ipv6_service": {
+      "$id": "#/definitions/ipv6_service",
+      "type": "object",
+      "title": "Service on a IPv6 network",
+      "required": [
+        "address",
+        "type"
+      ],
+      "properties": {
+        "address": {
+          "$ref": "#/definitions/l3_ipv6_host"
+        },
+        "type": {
+          "$id": "#/definitions/ipv4_service/properties/type",
+          "type": "string",
+          "enum": [
+            "dns"
+          ],
+          "title": "Service type",
+          "examples": [
+            "dns"
+          ]
+        }
+      }
+    },
+    "ipv4_services": {
+      "$id": "#/definitions/ipv4_services",
+      "type": "array",
+      "title": "Network services on IPv4 network",
+      "items": {
+        "$id": "#/definitions/ipv4_services/items",
+        "$ref": "#/definitions/ipv4_service"
+      }
+    },
+    "ipv6_services": {
+      "$id": "#/definitions/ipv6_services",
+      "type": "array",
+      "title": "Network services on IPv6 network",
+      "items": {
+        "$id": "#/definitions/ipv6_services/items",
+        "$ref": "#/definitions/ipv6_service"
+      }
+    },
+    "services": {
+      "$id": "#/definitions/services",
+      "type": "array",
+      "title": "Network services",
+      "items": {
+        "$id": "#/definitions/services/items",
+        "anyOf": [
+          {
+            "$ref": "#/definitions/ipv4_service"
+          },
+          {
+            "$ref": "#/definitions/ipv6_service"
+          }
+        ]
+      }
+    }
+  }
+}

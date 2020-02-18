@@ -15,15 +15,18 @@
 from __future__ import absolute_import
 
 import fixtures
+import jsonschema
+import os
 import requests
 
 from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 
-from nova import context
-from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.functional import fixtures as func_fixtures
+from nova.tests.functional import integrated_helpers
+from nova.tests.unit.image import fake as fake_image
 
 
 class fake_result(object):
@@ -45,44 +48,37 @@ def fake_request(obj, url, method, **kwargs):
     return real_request(method, url, **kwargs)
 
 
-class MetadataTest(test.TestCase):
+class MetadataTest(test.TestCase, integrated_helpers.InstanceHelperMixin):
     def setUp(self):
         super(MetadataTest, self).setUp()
+
+        fake_image.stub_out_image_service(self)
+        self.addCleanup(fake_image.FakeImageService_reset)
+        self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.useFixture(func_fixtures.PlacementFixture())
+        self.start_service('conductor')
+        self.start_service('scheduler')
+        self.api = self.useFixture(
+            nova_fixtures.OSAPIFixture(api_version='v2.1')).api
+        self.start_service('compute')
+
+        # create a server for the tests
+        server = self._build_server(name='test')
+        server = self.api.post_server({'server': server})
+        self.server = self._wait_for_state_change(server, 'ACTIVE')
+
         self.api_fixture = self.useFixture(nova_fixtures.OSMetadataServer())
         self.md_url = self.api_fixture.md_url
 
-        ctxt = context.RequestContext('fake', 'fake')
-        flavor = objects.Flavor(
-                id=1, name='flavor1', memory_mb=256, vcpus=1, root_gb=1,
-                ephemeral_gb=1, flavorid='1', swap=0, rxtx_factor=1.0,
-                vcpu_weight=1, disabled=False, is_public=True, extra_specs={},
-                projects=[])
-        instance = objects.Instance(ctxt, flavor=flavor, vcpus=1,
-                                    memory_mb=256, root_gb=0, ephemeral_gb=0,
-                                    project_id='fake', hostname='test')
-        instance.create()
-
-        # The NeutronFixture is needed to provide the fixed IP for the metadata
-        # service
-        self.useFixture(nova_fixtures.NeutronFixture(self))
-
+        # make sure that the metadata service returns information about the
+        # server we created above
         def fake_get_fixed_ip_by_address(self, ctxt, address):
-            return {'instance_uuid': instance.uuid}
+            return {'instance_uuid': server['id']}
 
         self.useFixture(
             fixtures.MonkeyPatch(
                 'nova.network.neutron.API.get_fixed_ip_by_address',
                 fake_get_fixed_ip_by_address))
-
-        def fake_get_ec2_ip_info(nw_info):
-            return {'fixed_ips': ['127.0.0.2'],
-                    'fixed_ip6s': [],
-                    'floating_ips': []}
-
-        self.useFixture(
-            fixtures.MonkeyPatch(
-                'nova.virt.netutils.get_ec2_ip_info',
-                fake_get_ec2_ip_info))
 
     def test_lookup_metadata_root_url(self):
         res = requests.request('GET', self.md_url, timeout=5)
@@ -174,7 +170,25 @@ class MetadataTest(test.TestCase):
         self.assertIn('instance-id', j['testing'])
         self.assertTrue(uuidutils.is_uuid_like(j['testing']['instance-id']))
         self.assertIn('hostname', j['testing'])
-        self.assertEqual('fake', j['testing']['project-id'])
+        self.assertEqual(self.server['tenant_id'], j['testing']['project-id'])
         self.assertIn('metadata', j['testing'])
         self.assertIn('image-id', j['testing'])
         self.assertIn('user-data', j['testing'])
+
+    def test_network_data_matches_schema(self):
+        self.useFixture(fixtures.MonkeyPatch(
+                'keystoneauth1.session.Session.request', fake_request))
+
+        url = '%sopenstack/latest/network_data.json' % self.md_url
+
+        res = requests.request('GET', url, timeout=5)
+        self.assertEqual(200, res.status_code)
+
+        # load the jsonschema for network_data
+        schema_file = os.path.normpath(os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "../../../doc/api_schemas/network_data.json"))
+        with open(schema_file, 'rb') as f:
+            schema = jsonutils.load(f)
+
+        jsonschema.validate(res.json(), schema)
