@@ -119,7 +119,7 @@ class ZVMDriver(driver.ComputeDriver):
             'local_gb_used': host_stats.get('disk_used', 0),
             'hypervisor_type': host_stats.get('hypervisor_type',
                                               obj_fields.HVType.ZVM),
-            'hypervisor_version': host_stats.get('hypervisor_version', ''),
+            'hypervisor_version': host_stats.get('hypervisor_version', 0),
             'hypervisor_hostname': host_stats.get('hypervisor_hostname',
                                                   hypervisor_hostname),
             'cpu_info': jsonutils.dumps(host_stats.get('cpu_info', {})),
