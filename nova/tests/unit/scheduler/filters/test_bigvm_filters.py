@@ -231,51 +231,8 @@ class TestBigVmFlavorHostSizeFilter(test.NoDBTestCase):
         self.assertTrue(call(1024, 512))
         self.assertFalse(call(1024, 511))
 
-    def test_big_vm_with_matching_full_size(self):
-        """Test automatic full size matching."""
-        spec_obj = objects.RequestSpec(
-            flavor=objects.Flavor(memory_mb=CONF.bigvm_mb, extra_specs={}))
-        host = fakes.FakeHostState('host1', 'compute',
-                {'uuid': uuidsentinel.host1})
-        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
-
-    def test_big_vm_with_matching_half_size(self):
-        """Test automatic full size matching."""
-        CONF.set_override('bigvm_host_size_filter_host_fractions',
-                          {'full': '1', 'half': '0.5'}, 'filter_scheduler')
-        spec_obj = objects.RequestSpec(
-            flavor=objects.Flavor(memory_mb=CONF.bigvm_mb, extra_specs={}))
-        host = fakes.FakeHostState('host1', 'compute',
-                {'uuid': uuidsentinel.host1})
-        self.filt_cls._HV_SIZE_CACHE[host.uuid] = CONF.bigvm_mb * 2 + 1024
-        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
-
-    def test_big_vm_with_half_size_not_defined(self):
-        """Test automatic full size matching."""
-        CONF.set_override('bigvm_host_size_filter_host_fractions',
-                          {'full': '1'}, 'filter_scheduler')
-        spec_obj = objects.RequestSpec(
-            flavor=objects.Flavor(memory_mb=CONF.bigvm_mb, extra_specs={}))
-        host = fakes.FakeHostState('host1', 'compute',
-                {'uuid': uuidsentinel.host1})
-        self.filt_cls._HV_SIZE_CACHE[host.uuid] = CONF.bigvm_mb * 2 + 1024
-        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
-
-    def test_big_vm_without_matching_size(self):
-        """Fails both half and full size test"""
-        CONF.set_override('bigvm_host_size_filter_host_fractions',
-                          {'full': '1', 'half': '0.5'}, 'filter_scheduler')
-        spec_obj = objects.RequestSpec(
-            flavor=objects.Flavor(memory_mb=CONF.bigvm_mb, extra_specs={}))
-        host = fakes.FakeHostState('host1', 'compute',
-                {'uuid': uuidsentinel.host1})
-        self.filt_cls._HV_SIZE_CACHE[host.uuid] = CONF.bigvm_mb * 1.5 + 1024
-        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
-
-    def test_extra_specs_without_key(self):
-        """If we don't have the extra spec set, we fail"""
-        CONF.set_override('bigvm_host_size_filter_uses_flavor_extra_specs',
-                          True, 'filter_scheduler')
+    def test_big_vm_with_empty_extra_specs(self):
+        """If the extra spec is empty, we fail."""
         spec_obj = objects.RequestSpec(
             flavor=objects.Flavor(memory_mb=CONF.bigvm_mb, extra_specs={},
                                   name='random-name'))
@@ -283,15 +240,11 @@ class TestBigVmFlavorHostSizeFilter(test.NoDBTestCase):
                 {'uuid': uuidsentinel.host1})
         self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
 
-    def test_extra_specs_invalid_value(self):
-        """invalid value in extra specs makes it unscheduleable"""
-        CONF.set_override('bigvm_host_size_filter_uses_flavor_extra_specs',
-                          True, 'filter_scheduler')
-        CONF.set_override('bigvm_host_size_filter_host_fractions',
-                          {'full': '1', 'half': '0.5'}, 'filter_scheduler')
+    def test_extra_specs_invalid_values(self):
+        """Invalid values in extra specs make it unscheduleable."""
         spec_obj = objects.RequestSpec(
             flavor=objects.Flavor(memory_mb=CONF.bigvm_mb,
-                                  extra_specs={'host_fraction': 'any'},
+                                  extra_specs={'host_fraction': '-1,1.5'},
                                   name='random-name'))
         host = fakes.FakeHostState('host1', 'compute',
                 {'uuid': uuidsentinel.host1})
@@ -299,13 +252,9 @@ class TestBigVmFlavorHostSizeFilter(test.NoDBTestCase):
 
     def test_extra_specs_full_positive(self):
         """test specified full size"""
-        CONF.set_override('bigvm_host_size_filter_uses_flavor_extra_specs',
-                          True, 'filter_scheduler')
-        CONF.set_override('bigvm_host_size_filter_host_fractions',
-                          {'full': '1', 'half': '0.5'}, 'filter_scheduler')
         spec_obj = objects.RequestSpec(
             flavor=objects.Flavor(memory_mb=CONF.bigvm_mb,
-                                  extra_specs={'host_fraction': 'full'},
+                                  extra_specs={'host_fraction': '1'},
                                   name='random-name'))
         host = fakes.FakeHostState('host1', 'compute',
                 {'uuid': uuidsentinel.host1})
@@ -313,13 +262,9 @@ class TestBigVmFlavorHostSizeFilter(test.NoDBTestCase):
 
     def test_extra_specs_full_negative(self):
         """test specified full size"""
-        CONF.set_override('bigvm_host_size_filter_uses_flavor_extra_specs',
-                          True, 'filter_scheduler')
-        CONF.set_override('bigvm_host_size_filter_host_fractions',
-                          {'full': '1', 'half': '0.5'}, 'filter_scheduler')
         spec_obj = objects.RequestSpec(
             flavor=objects.Flavor(memory_mb=CONF.bigvm_mb,
-                                  extra_specs={'host_fraction': 'full'},
+                                  extra_specs={'host_fraction': '1'},
                                   name='random-name'))
         host = fakes.FakeHostState('host1', 'compute',
                 {'uuid': uuidsentinel.host1})
@@ -328,13 +273,9 @@ class TestBigVmFlavorHostSizeFilter(test.NoDBTestCase):
 
     def test_extra_specs_half_positive(self):
         """test specified half size"""
-        CONF.set_override('bigvm_host_size_filter_uses_flavor_extra_specs',
-                          True, 'filter_scheduler')
-        CONF.set_override('bigvm_host_size_filter_host_fractions',
-                          {'full': '1', 'half': '0.5'}, 'filter_scheduler')
         spec_obj = objects.RequestSpec(
             flavor=objects.Flavor(memory_mb=CONF.bigvm_mb,
-                                  extra_specs={'host_fraction': 'full,half'},
+                                  extra_specs={'host_fraction': '0.5,1'},
                                   name='random-name'))
         host = fakes.FakeHostState('host1', 'compute',
                 {'uuid': uuidsentinel.host1})
@@ -343,13 +284,9 @@ class TestBigVmFlavorHostSizeFilter(test.NoDBTestCase):
 
     def test_extra_specs_half_positive_with_unknown(self):
         """test specified half size"""
-        CONF.set_override('bigvm_host_size_filter_uses_flavor_extra_specs',
-                          True, 'filter_scheduler')
-        CONF.set_override('bigvm_host_size_filter_host_fractions',
-                          {'full': '1', 'half': '0.5'}, 'filter_scheduler')
         spec_obj = objects.RequestSpec(
             flavor=objects.Flavor(memory_mb=CONF.bigvm_mb,
-                                  extra_specs={'host_fraction': 'broken,half'},
+                                  extra_specs={'host_fraction': 'broken,0.5'},
                                   name='random-name'))
         host = fakes.FakeHostState('host1', 'compute',
                 {'uuid': uuidsentinel.host1})
@@ -358,13 +295,9 @@ class TestBigVmFlavorHostSizeFilter(test.NoDBTestCase):
 
     def test_extra_specs_half_negative(self):
         """test specified half size"""
-        CONF.set_override('bigvm_host_size_filter_uses_flavor_extra_specs',
-                          True, 'filter_scheduler')
-        CONF.set_override('bigvm_host_size_filter_host_fractions',
-                          {'full': '1', 'half': '0.5'}, 'filter_scheduler')
         spec_obj = objects.RequestSpec(
             flavor=objects.Flavor(memory_mb=CONF.bigvm_mb,
-                                  extra_specs={'host_fraction': 'half'},
+                                  extra_specs={'host_fraction': '0.5'},
                                   name='random-name'))
         host = fakes.FakeHostState('host1', 'compute',
                 {'uuid': uuidsentinel.host1})

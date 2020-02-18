@@ -105,41 +105,25 @@ class BigVmFlavorHostSizeFilter(BigVmBaseFilter):
     """Filter out hosts not matching the flavor's property for supported
     host-sizes.
 
-    This is used to align with NUMA-properties of a host. We will have flavors
-    for half a host and a full host. We allow some tolerance below the exact
+    This is used to align with NUMA-properties of a host. The flavor supports a
+    "host_fraction" RAM fill ratio. We allow some tolerance below the exact
     values to account for reserved values.
     """
     _EXTRA_SPECS_KEY = 'host_fraction'
     _HV_SIZE_TOLERANCE_PERCENT = 10
 
-    def _get_supported_fractions(self, hypervisor_ram_mb):
-        supported_fractions = {}
-        config_fractions = CONF.filter_scheduler.\
-                                        bigvm_host_size_filter_host_fractions
-        for name, ratio in config_fractions.items():
-            ratio = float(ratio)
-            if ratio > 1:
-                LOG.error('Amount of memory cannot exceed hypervisor memory. '
-                          'Wrong configuration in filter_scheduler.'
-                          'bigvm_host_size_filter_host_fractions: '
-                          '%(config_dict)s.',
-                          {'config_dict': config_fractions})
-                raise TypeError('bigvm_host_size_filter_host_fractions '
-                                'contains invalid values.')
-            supported_fractions[name] = hypervisor_ram_mb * ratio
-
-        return supported_fractions
-
     def _memory_match_with_tolerance(self, memory_mb, requested_ram_mb):
+        """Return True if requested_ram_mb is equal to memory_mb or down to
+        _HV_SIZE_TOLERANCE_PERCENT *below* that.
+        """
         tolerance = memory_mb * self._HV_SIZE_TOLERANCE_PERCENT / 100.0
         return memory_mb - tolerance <= requested_ram_mb <= memory_mb
 
     def _check_flavor_extra_specs(self, host_state, flavor,
-                                  supported_fractions, requested_ram_mb):
+                                  hypervisor_ram_mb, requested_ram_mb):
         """Use a flavor attribute to define the fraction of the host this VM
         should match.
         """
-        # get the flavor property
         extra_specs = flavor.extra_specs
         # if there's no definition in the big VM flavor, we cannot make an
         # informed decision and bail out
@@ -151,49 +135,36 @@ class BigVmFlavorHostSizeFilter(BigVmBaseFilter):
                        'flavor_name': flavor.name})
             return False
 
-        host_fractions = set(
-            x.strip() for x in extra_specs[self._EXTRA_SPECS_KEY].split(','))
-        known_host_fractions = set(supported_fractions) & host_fractions
-        if not known_host_fractions:
-            LOG.warning('Flavor attribute %(specs_key)s does not have a '
-                        'supported value (%(specs_values)s). Cannot schedule '
-                        'on %(host_state)s.',
+        host_fractions = set()
+        for x in extra_specs[self._EXTRA_SPECS_KEY].split(','):
+            try:
+                ratio = float(x)
+            except ValueError:
+                continue
+            if 0.0 <= ratio <= 1.0:
+                host_fractions.add(ratio * hypervisor_ram_mb)
+        if not host_fractions:
+            LOG.warning('Flavor attribute %(specs_key)s does not have any '
+                        'supported value (\'%(specs_ratio_values)s\' => '
+                        '%(specs_fraction_values)s). Cannot schedule on '
+                        '%(host_state)s.',
                         {'host_state': host_state,
                          'specs_key': self._EXTRA_SPECS_KEY,
-                         'specs_values': host_fractions})
+                         'specs_ratio_values':
+                            extra_specs[self._EXTRA_SPECS_KEY],
+                         'specs_fraction_values': list(host_fractions)})
             return False
 
-        if known_host_fractions != host_fractions:
-            LOG.warning('Flavor attribute %(specs_key)s has unsupported '
-                        'fractions defined in its values %(specs_values)s.',
-                        {'specs_key': self._EXTRA_SPECS_KEY,
-                         'specs_values': host_fractions})
-
-        for host_fraction in known_host_fractions:
-            memory_mb = supported_fractions[host_fraction]
-            if self._memory_match_with_tolerance(memory_mb, requested_ram_mb):
+        for host_fraction in host_fractions:
+            if self._memory_match_with_tolerance(
+                    host_fraction, requested_ram_mb):
                 return True
 
         LOG.info('%(host_state)s does not match %(requested_ram_mb)s for any '
-                 'of the requested fractions %(known_host_fractions)s.',
+                 'of the requested fractions %(host_fractions)s.',
                  {'host_state': host_state,
                   'requested_ram_mb': requested_ram_mb,
-                  'known_host_fractions': known_host_fractions})
-        return False
-
-    def _check_no_flavor_extra_specs(self, host_state, supported_fractions,
-                                     requested_ram_mb):
-        """Check if the VM matches any of the configured fractions."""
-        for fraction_ram_mb in supported_fractions.values():
-            if self._memory_match_with_tolerance(fraction_ram_mb,
-                                                 requested_ram_mb):
-                return True
-
-        LOG.info('%(host_state)s does not match %(requested_ram_mb)s for any '
-                 'of configured fraction %(supported_fractions)s.',
-                 {'host_state': host_state,
-                  'requested_ram_mb': requested_ram_mb,
-                  'supported_fractions': supported_fractions})
+                  'host_fractions': host_fractions})
         return False
 
     def host_passes(self, host_state, spec_obj):
@@ -209,16 +180,7 @@ class BigVmFlavorHostSizeFilter(BigVmBaseFilter):
                       {'host_state': host_state})
             return False
 
-        supported_fractions = self._get_supported_fractions(hypervisor_ram_mb)
-
-        flavor_specs_enabled = CONF.filter_scheduler.\
-                               bigvm_host_size_filter_uses_flavor_extra_specs
-        if flavor_specs_enabled:
-            return self._check_flavor_extra_specs(host_state,
-                                                  spec_obj.flavor,
-                                                  supported_fractions,
-                                                  requested_ram_mb)
-        else:
-            return self._check_no_flavor_extra_specs(host_state,
-                                                     supported_fractions,
-                                                     requested_ram_mb)
+        return self._check_flavor_extra_specs(host_state,
+                                              spec_obj.flavor,
+                                              hypervisor_ram_mb,
+                                              requested_ram_mb)
