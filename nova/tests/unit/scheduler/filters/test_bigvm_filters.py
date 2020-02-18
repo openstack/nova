@@ -302,3 +302,37 @@ class TestBigVmFlavorHostSizeFilter(test.NoDBTestCase):
         host = fakes.FakeHostState('host1', 'compute',
                 {'uuid': uuidsentinel.host1})
         self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_extra_specs_rough_float_third_negative(self):
+        """test 0.33 not precise enough for 1/3 (and thus fractional notation
+        support is actually useful)
+        """
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(memory_mb=CONF.bigvm_mb,
+                                  extra_specs={'host_fraction': '0.33'},
+                                  name='random-name'))
+        host = fakes.FakeHostState('host1', 'compute',
+                {'uuid': uuidsentinel.host1})
+        self.filt_cls._HV_SIZE_CACHE[host.uuid] = CONF.bigvm_mb * 3 + 1024
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_extra_specs_fractional_third(self):
+        """test fractional 1/3 size"""
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(memory_mb=CONF.bigvm_mb,
+                                  extra_specs={'host_fraction': '1/3'},
+                                  name='random-name'))
+        host = fakes.FakeHostState('host1', 'compute',
+                {'uuid': uuidsentinel.host1})
+        self.filt_cls._HV_SIZE_CACHE[host.uuid] = CONF.bigvm_mb * 3 + 1024
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_extra_specs_fractional_divbyzero(self):
+        """test division by zero fails"""
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(memory_mb=CONF.bigvm_mb,
+                                  extra_specs={'host_fraction': '1/0'},
+                                  name='random-name'))
+        host = fakes.FakeHostState('host1', 'compute',
+                {'uuid': uuidsentinel.host1})
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))

@@ -137,10 +137,17 @@ class BigVmFlavorHostSizeFilter(BigVmBaseFilter):
 
         host_fractions = set()
         for x in extra_specs[self._EXTRA_SPECS_KEY].split(','):
-            try:
-                ratio = float(x)
-            except ValueError:
-                continue
+            if '/' in x:
+                x, y = x.split('/')
+                try:
+                    ratio = float(x) / float(y)
+                except (ValueError, ZeroDivisionError):
+                    continue
+            else:
+                try:
+                    ratio = float(x)
+                except ValueError:
+                    continue
             if 0.0 <= ratio <= 1.0:
                 host_fractions.add(ratio * hypervisor_ram_mb)
         if not host_fractions:
