@@ -353,16 +353,21 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
 
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('oslo_concurrency.processutils.execute')
-    def test_create_cow_image(self, mock_execute, mock_exists):
+    @mock.patch('nova.virt.images.qemu_img_info')
+    def test_create_cow_image(self, mock_info, mock_execute, mock_exists):
         mock_execute.return_value = ('stdout', None)
-        libvirt_utils.create_cow_image('/some/path', '/the/new/cow')
-        expected_args = [(('env', 'LC_ALL=C', 'LANG=C',
-                           'qemu-img', 'info', '/some/path'),
-                           {'prlimit': images.QEMU_IMG_LIMITS}),
-                         (('qemu-img', 'create', '-f', 'qcow2',
-                           '-o', 'backing_file=/some/path',
-                           '/the/new/cow'),)]
-        self.assertEqual(expected_args, mock_execute.call_args_list)
+        mock_info.return_value = mock.Mock(
+            file_format=mock.sentinel.backing_fmt,
+            cluster_size=mock.sentinel.cluster_size)
+        libvirt_utils.create_cow_image(mock.sentinel.backing_path,
+                                       mock.sentinel.new_path)
+        mock_info.assert_called_once_with(mock.sentinel.backing_path)
+        mock_execute.assert_has_calls([mock.call(
+            'qemu-img', 'create', '-f', 'qcow2', '-o',
+            'backing_file=%s,backing_fmt=%s,cluster_size=%s' % (
+                mock.sentinel.backing_path, mock.sentinel.backing_fmt,
+                mock.sentinel.cluster_size),
+             mock.sentinel.new_path)])
 
     @ddt.unpack
     @ddt.data({'fs_type': 'some_fs_type',
