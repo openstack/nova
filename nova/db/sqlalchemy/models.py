@@ -308,7 +308,7 @@ class Instance(BASE, NovaBase, models.SoftDeleteMixin):
     # locked is superseded by locked_by and locked is not really
     # necessary but still used in API code so it remains.
     locked = Column(Boolean)
-    locked_by = Column(Enum('owner', 'admin'))
+    locked_by = Column(Enum('owner', 'admin', name='instances0locked_by'))
 
     os_type = Column(String(255))
     architecture = Column(String(255))
@@ -792,7 +792,7 @@ class Migration(BASE, NovaBase, models.SoftDeleteMixin):
     # TODO(_cerberus_): enum
     status = Column(String(255))
     migration_type = Column(Enum('migration', 'resize', 'live-migration',
-                                 'evacuation'),
+                                 'evacuation', name='migration_type'),
                             nullable=True)
     hidden = Column(Boolean, default=False)
     memory_total = Column(BigInteger, nullable=True)
