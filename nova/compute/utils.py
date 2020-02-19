@@ -57,6 +57,18 @@ from nova.virt import driver
 CONF = nova.conf.CONF
 LOG = log.getLogger(__name__)
 
+# These properties are specific to a particular image by design.  It
+# does not make sense for them to be inherited by server snapshots.
+# This list is distinct from the configuration option of the same
+# (lowercase) name.
+NON_INHERITABLE_IMAGE_PROPERTIES = frozenset([
+    'cinder_encryption_key_id',
+    'cinder_encryption_key_deletion_policy',
+    'img_signature',
+    'img_signature_hash_method',
+    'img_signature_key_type',
+    'img_signature_certificate_uuid'])
+
 
 def exception_to_dict(fault, message=None):
     """Converts exceptions to a dict for use in notifications.
@@ -1276,7 +1288,9 @@ def initialize_instance_snapshot_metadata(context, instance, name,
 
     # Delete properties that are non-inheritable
     properties = image_meta['properties']
-    for key in CONF.non_inheritable_image_properties:
+    keys_to_pop = set(CONF.non_inheritable_image_properties).union(
+        NON_INHERITABLE_IMAGE_PROPERTIES)
+    for key in keys_to_pop:
         properties.pop(key, None)
 
     # The properties in extra_properties have precedence

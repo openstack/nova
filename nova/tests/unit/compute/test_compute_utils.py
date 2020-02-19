@@ -1511,3 +1511,40 @@ class IsVolumeBackedInstanceTestCase(test.TestCase):
         self.assertFalse(
             compute_utils.is_volume_backed_instance(ctxt, instance, None))
         mock_bdms.assert_called_with(ctxt, instance.uuid)
+
+
+class ComputeUtilsImageFunctionsTestCase(test.TestCase):
+    def setUp(self):
+        super(ComputeUtilsImageFunctionsTestCase, self).setUp()
+        self.context = context.RequestContext('fake', 'fake')
+
+    def test_initialize_instance_snapshot_metadata_no_metadata(self):
+        # show no borkage from empty system meta
+        ctxt = self.context
+        instance = create_instance(ctxt)
+        image_meta = compute_utils.initialize_instance_snapshot_metadata(
+            ctxt, instance, 'empty properties')
+        self.assertEqual({}, image_meta['properties'])
+
+    def test_initialize_instance_snapshot_metadata_removed_metadata(self):
+        # show non-inheritable properties are excluded
+        ctxt = self.context
+        instance = create_instance(ctxt)
+        instance.system_metadata = {
+            'image_img_signature': 'an-image-signature',
+            'image_cinder_encryption_key_id':
+            'deeeeeac-d75e-11e2-8271-1234567897d6',
+            'image_some_key': 'some_value',
+            'image_fred': 'barney',
+            'image_cache_in_nova': 'true'
+        }
+        image_meta = compute_utils.initialize_instance_snapshot_metadata(
+            ctxt, instance, 'removed properties')
+        properties = image_meta['properties']
+        self.assertGreater(len(properties), 0)
+        self.assertIn('some_key', properties)
+        self.assertIn('fred', properties)
+        for p in compute_utils.NON_INHERITABLE_IMAGE_PROPERTIES:
+            self.assertNotIn(p, properties)
+        for p in CONF.non_inheritable_image_properties:
+            self.assertNotIn(p, properties)

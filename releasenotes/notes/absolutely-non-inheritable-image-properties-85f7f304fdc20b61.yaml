@@ -1,0 +1,37 @@
+---
+issues:
+  - |
+    In prior releases, an attempt to boot an instance directly from an image
+    that was created by the Block Storage Service from an encrypted volume
+    resulted in the instance going ACTIVE but being unusable.  If a user then
+    performed the image-create action on such an instance, the new image would
+    inherit the ``cinder_encryption_key_id`` and, beginning with the 20.0.0
+    (Train) release, the ``cinder_encryption_key_deletion_policy`` image
+    properties, assuming these were not included in the
+    ``non_inheritable_image_properties`` configuration option.  (The default
+    setting for that option does *not* include these.)  Beginning with 20.0.0
+    (Train), when the new image was deleted, the encryption key for the
+    *original* image would be deleted, thereby rendering it unusable for the
+    normal workflow of creating a volume from the image and booting an instance
+    from the volume.  Beginning with this release:
+
+    * The Compute API will return a 400 (Bad Request) response to a request
+      to directly boot an image created from an encrypted volume.
+    * The image properties ``cinder_encryption_key_id`` and
+      ``cinder_encryption_key_deletion_policy`` are absolutely non-inheritable
+      regardless of the ``non_inheritable_image_properties`` setting.
+upgrade:
+  - |
+    The ``non_inheritable_image_properties`` configuration option inhibits
+    the transfer of image properties from the image an instance was created
+    from to images created from that instance.  There are, however, image
+    properties (for example, the properties used for image signature
+    validation) that should *never* be transferred to an instance snapshot.
+    Prior to this release, such properties were included in the default
+    setting for this configuration option, but this allowed the possibility
+    that they might be removed by mistake, thereby resulting in a poor user
+    experience.  To prevent that from happening, nova now maintains an
+    internal list of image properties that are absolutely non-inheritable
+    regardless of the setting of the configuration option.  See the help
+    text for ``non_inheritable_image_properties`` in the sample nova
+    configuration file for details.
