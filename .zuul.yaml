@@ -244,7 +244,7 @@
 
 - job:
     name: nova-tempest-full-oslo.versionedobjects
-    parent: tempest-full
+    parent: tempest-full-py3
     description: |
       Run test with git version of oslo.versionedobjects to check that
       changes to nova will work with the next released version of
