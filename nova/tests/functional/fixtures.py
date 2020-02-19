@@ -92,28 +92,27 @@ class PlacementFixture(placement_fixtures.PlacementFixture):
         self.api = PlacementApiClient(self)
 
     @staticmethod
-    def _update_headers_with_version(headers, **kwargs):
-        version = kwargs.get("version")
+    def _update_headers_with_version(headers, version):
         if version is not None:
             # TODO(mriedem): Perform some version discovery at some point.
             headers.update({
                 'OpenStack-API-Version': 'placement %s' % version
             })
 
-    def _fake_get(self, *args, **kwargs):
-        (url,) = args[1:]
+    def _fake_get(self, client, url, version=None, global_request_id=None):
         # TODO(sbauza): The current placement NoAuthMiddleware returns a 401
         # in case a token is not provided. We should change that by creating
         # a fake token so we could remove adding the header below.
         headers = {'x-auth-token': self.token}
-        self._update_headers_with_version(headers, **kwargs)
+        self._update_headers_with_version(headers, version)
         return self._client.get(
             url,
             endpoint_override=self.endpoint,
             headers=headers)
 
-    def _fake_post(self, *args, **kwargs):
-        (url, data) = args[1:]
+    def _fake_post(
+        self, client, url, data, version=None, global_request_id=None
+    ):
         # NOTE(sdague): using json= instead of data= sets the
         # media type to application/json for us. Placement API is
         # more sensitive to this than other APIs in the OpenStack
@@ -122,14 +121,15 @@ class PlacementFixture(placement_fixtures.PlacementFixture):
         # in case a token is not provided. We should change that by creating
         # a fake token so we could remove adding the header below.
         headers = {'x-auth-token': self.token}
-        self._update_headers_with_version(headers, **kwargs)
+        self._update_headers_with_version(headers, version)
         return self._client.post(
             url, json=data,
             endpoint_override=self.endpoint,
             headers=headers)
 
-    def _fake_put(self, *args, **kwargs):
-        (url, data) = args[1:]
+    def _fake_put(
+        self, client, url, data, version=None, global_request_id=None
+    ):
         # NOTE(sdague): using json= instead of data= sets the
         # media type to application/json for us. Placement API is
         # more sensitive to this than other APIs in the OpenStack
@@ -138,19 +138,20 @@ class PlacementFixture(placement_fixtures.PlacementFixture):
         # in case a token is not provided. We should change that by creating
         # a fake token so we could remove adding the header below.
         headers = {'x-auth-token': self.token}
-        self._update_headers_with_version(headers, **kwargs)
+        self._update_headers_with_version(headers, version)
         return self._client.put(
             url, json=data,
             endpoint_override=self.endpoint,
             headers=headers)
 
-    def _fake_delete(self, *args, **kwargs):
-        (url,) = args[1:]
+    def _fake_delete(
+        self, client, url, version=None, global_request_id=None
+    ):
         # TODO(sbauza): The current placement NoAuthMiddleware returns a 401
         # in case a token is not provided. We should change that by creating
         # a fake token so we could remove adding the header below.
         headers = {'x-auth-token': self.token}
-        self._update_headers_with_version(headers, **kwargs)
+        self._update_headers_with_version(headers, version)
         return self._client.delete(
             url,
             endpoint_override=self.endpoint,
