@@ -58,41 +58,46 @@ MIN_QEMU_INTERFACE_MTU = (2, 9, 0)
 MIN_LIBVIRT_TX_QUEUE_SIZE = (3, 7, 0)
 MIN_QEMU_TX_QUEUE_SIZE = (2, 10, 0)
 
+SUPPORTED_VIF_MODELS = {
+    'qemu': [
+        network_model.VIF_MODEL_VIRTIO,
+        network_model.VIF_MODEL_NE2K_PCI,
+        network_model.VIF_MODEL_PCNET,
+        network_model.VIF_MODEL_RTL8139,
+        network_model.VIF_MODEL_E1000,
+        network_model.VIF_MODEL_LAN9118,
+        network_model.VIF_MODEL_SPAPR_VLAN],
+    'kvm': [
+        network_model.VIF_MODEL_VIRTIO,
+        network_model.VIF_MODEL_NE2K_PCI,
+        network_model.VIF_MODEL_PCNET,
+        network_model.VIF_MODEL_RTL8139,
+        network_model.VIF_MODEL_E1000,
+        network_model.VIF_MODEL_SPAPR_VLAN],
+    'xen': [
+        network_model.VIF_MODEL_NETFRONT,
+        network_model.VIF_MODEL_NE2K_PCI,
+        network_model.VIF_MODEL_PCNET,
+        network_model.VIF_MODEL_RTL8139,
+        network_model.VIF_MODEL_E1000],
+    'lxc': [],
+    'uml': [],
+    'parallels': [
+        network_model.VIF_MODEL_VIRTIO,
+        network_model.VIF_MODEL_RTL8139,
+        network_model.VIF_MODEL_E1000],
+}
+
 
 def is_vif_model_valid_for_virt(virt_type, vif_model):
-    valid_models = {
-        'qemu': [network_model.VIF_MODEL_VIRTIO,
-                 network_model.VIF_MODEL_NE2K_PCI,
-                 network_model.VIF_MODEL_PCNET,
-                 network_model.VIF_MODEL_RTL8139,
-                 network_model.VIF_MODEL_E1000,
-                 network_model.VIF_MODEL_LAN9118,
-                 network_model.VIF_MODEL_SPAPR_VLAN],
-        'kvm': [network_model.VIF_MODEL_VIRTIO,
-                network_model.VIF_MODEL_NE2K_PCI,
-                network_model.VIF_MODEL_PCNET,
-                network_model.VIF_MODEL_RTL8139,
-                network_model.VIF_MODEL_E1000,
-                network_model.VIF_MODEL_SPAPR_VLAN],
-        'xen': [network_model.VIF_MODEL_NETFRONT,
-                network_model.VIF_MODEL_NE2K_PCI,
-                network_model.VIF_MODEL_PCNET,
-                network_model.VIF_MODEL_RTL8139,
-                network_model.VIF_MODEL_E1000],
-        'lxc': [],
-        'uml': [],
-        'parallels': [network_model.VIF_MODEL_VIRTIO,
-                      network_model.VIF_MODEL_RTL8139,
-                      network_model.VIF_MODEL_E1000],
-        }
 
     if vif_model is None:
         return True
 
-    if virt_type not in valid_models:
+    if virt_type not in SUPPORTED_VIF_MODELS:
         raise exception.UnsupportedVirtType(virt=virt_type)
 
-    return vif_model in valid_models[virt_type]
+    return vif_model in SUPPORTED_VIF_MODELS[virt_type]
 
 
 def set_vf_interface_vlan(pci_addr, mac_addr, vlan=0):

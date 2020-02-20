@@ -122,6 +122,7 @@ class LibvirtConfigDomainCaps(LibvirtConfigObject):
         self._features = None
         self._machine = None
         self._alias = None
+        self._devices = None
 
     def parse_dom(self, xmldoc):
         super(LibvirtConfigDomainCaps, self).parse_dom(xmldoc)
@@ -133,6 +134,10 @@ class LibvirtConfigDomainCaps(LibvirtConfigObject):
                 self._features = features
             elif c.tag == "machine":
                 self._machine = c.text
+            elif c.tag == "devices":
+                devices = LibvirtConfigDomainCapsDevices()
+                devices.parse_dom(c)
+                self._devices = devices
 
     @property
     def features(self):
@@ -155,6 +160,79 @@ class LibvirtConfigDomainCaps(LibvirtConfigObject):
     @machine_type_alias.setter
     def machine_type_alias(self, alias):
         self._alias = alias
+
+    @property
+    def devices(self):
+        if self._devices is None:
+            return []
+        return self._devices
+
+
+class LibvirtConfigDomainCapsVideoModels(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super().__init__(root_name='video', **kwargs)
+        self.supported = False
+        self.models = set()
+
+    def parse_dom(self, xmldoc):
+        super().parse_dom(xmldoc)
+
+        if xmldoc.get('supported') == 'yes':
+            self.supported = True
+        self.models = {str(node) for node in
+                       xmldoc.xpath("//enum[@name='modelType']/value/text()")}
+
+
+class LibvirtConfigDomainCapsDiskBuses(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super().__init__(root_name='disk', **kwargs)
+        self.supported = False
+        self.buses = set()
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigDomainCapsDiskBuses, self).parse_dom(xmldoc)
+
+        if xmldoc.get('supported') == 'yes':
+            self.supported = True
+        self.buses = {str(node) for node in
+                      xmldoc.xpath("//enum[@name='bus']/value/text()")}
+
+
+class LibvirtConfigDomainCapsDevices(LibvirtConfigObject):
+    DEVICE_PARSERS = {
+        'video': LibvirtConfigDomainCapsVideoModels,
+        'disk': LibvirtConfigDomainCapsDiskBuses,
+    }
+
+    def __init__(self, **kwargs):
+        super().__init__(root_name='devices', **kwargs)
+        self.devices = set()
+
+    def parse_dom(self, xmldoc):
+        super().parse_dom(xmldoc)
+
+        for c in xmldoc.getchildren():
+            device = self.DEVICE_PARSERS.get(c.tag)
+            if device:
+                device = device()
+                device.parse_dom(c)
+                self.devices.add(device)
+
+    def _get_device(self, device_type):
+        for device in self.devices:
+            if type(device) == self.DEVICE_PARSERS.get(device_type):
+                return device
+        return None
+
+    @property
+    def disk(self):
+        return self._get_device('disk')
+
+    @property
+    def video(self):
+        return self._get_device('video')
 
 
 class LibvirtConfigDomainCapsFeatures(LibvirtConfigObject):

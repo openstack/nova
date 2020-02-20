@@ -120,6 +120,7 @@ from nova.virt.libvirt.storage import dmcrypt
 from nova.virt.libvirt.storage import lvm
 from nova.virt.libvirt.storage import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
+from nova.virt.libvirt import vif as libvirt_vif
 from nova.virt.libvirt.volume import volume as volume_drivers
 
 
@@ -1106,6 +1107,82 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_legacy_block_device_info(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         self.assertFalse(drvr.need_legacy_block_device_info)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_cpu_traits')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_storage_bus_traits')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_video_model_traits')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_vif_model_traits')
+    def test_static_traits(
+        self, mock_vif_traits, mock_video_traits, mock_storage_traits,
+        mock_cpu_traits,
+    ):
+        """Ensure driver capabilities are correctly retrieved and cached."""
+
+        # we don't mock out calls to os_traits intentionally, so we need to
+        # return valid traits here
+        mock_cpu_traits.return_value = {'HW_CPU_HYPERTHREADING': True}
+        mock_storage_traits.return_value = {'COMPUTE_STORAGE_BUS_VIRTIO': True}
+        mock_video_traits.return_value = {'COMPUTE_GRAPHICS_MODEL_VGA': True}
+        mock_vif_traits.return_value = {'COMPUTE_NET_VIF_MODEL_VIRTIO': True}
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        expected = {
+            'HW_CPU_HYPERTHREADING': True,
+            'COMPUTE_STORAGE_BUS_VIRTIO': True,
+            'COMPUTE_GRAPHICS_MODEL_VGA': True,
+            'COMPUTE_NET_VIF_MODEL_VIRTIO': True,
+        }
+
+        static_traits = drvr.static_traits
+
+        # check that results are as expected and the individual helper
+        # functions were called once each
+        self.assertEqual(expected, static_traits)
+        for mock_traits in (
+            mock_vif_traits, mock_video_traits, mock_storage_traits,
+            mock_cpu_traits,
+        ):
+            mock_traits.assert_called_once_with()
+            mock_traits.reset_mock()
+
+        static_traits = drvr.static_traits
+
+        # now check that the results are still as expected but the helpers
+        # weren't called since the value was cached
+        self.assertEqual(expected, static_traits)
+        for mock_traits in (
+            mock_vif_traits, mock_video_traits, mock_storage_traits,
+            mock_cpu_traits,
+        ):
+            mock_traits.assert_not_called()
+
+    @mock.patch.object(libvirt_driver.LOG, 'debug')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_cpu_traits')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_storage_bus_traits')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_video_model_traits')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_vif_model_traits')
+    def test_static_traits__invalid_trait(
+        self, mock_vif_traits, mock_video_traits, mock_storage_traits,
+        mock_cpu_traits, mock_log,
+    ):
+        """Ensure driver capabilities are correctly retrieved and cached."""
+        mock_cpu_traits.return_value = {'foo': True}
+        mock_storage_traits.return_value = {'bar': True}
+        mock_video_traits.return_value = {'baz': True}
+        mock_vif_traits.return_value = {'COMPUTE_NET_VIF_MODEL_VIRTIO': True}
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        expected = {'COMPUTE_NET_VIF_MODEL_VIRTIO': True}
+
+        static_traits = drvr.static_traits
+
+        self.assertEqual(expected, static_traits)
+        mock_log.assert_has_calls([
+            mock.call("Trait '%s' is not valid; ignoring.", "foo"),
+            mock.call("Trait '%s' is not valid; ignoring.", "bar"),
+            mock.call("Trait '%s' is not valid; ignoring.", "baz"),
+        ],
+        any_order=True)
 
     @mock.patch.object(host.Host, "has_min_version")
     def test_min_version_start_ok(self, mock_version):
@@ -23330,16 +23407,35 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.assertRaises(test.TestingException,
                           self._test_detach_mediated_devices, exc)
 
-    def test_storage_bus_traits(self):
+    def test_storage_bus_traits__qemu_kvm(self):
         """Test getting storage bus traits per virt type.
-
-        This also ensures that nova and os-traits are in sync with respect to
-        COMPUTE_STORAGE_BUS_*.
         """
-        all_traits = set(ot.get_traits('COMPUTE_STORAGE_BUS_'))
+        self.flags(hw_machine_type='pc', group='libvirt')
+        for virt_type in ('qemu', 'kvm'):
+            self.flags(virt_type=virt_type, group='libvirt')
+            bus_traits = self.drvr._get_storage_bus_traits()
+            dom_caps = self.drvr._host.get_domain_capabilities()
+            buses = dom_caps['x86_64']['pc'].devices.disk.buses
+            for bus in buses:
+                name = bus.replace('-', '_').upper()
+                trait = f'COMPUTE_STORAGE_BUS_{name}'
+                self.assertIn(trait, bus_traits)
+                self.assertTrue(bus_traits[trait])
+                bus_traits.pop(trait)
+            self.assertTrue(all(not bus for bus in bus_traits.values()))
 
+            valid_traits = ot.check_traits(bus_traits)
+            self.assertEqual(len(bus_traits), len(valid_traits[0]))
+            self.assertEqual(0, len(valid_traits[1]))
+
+    def test_storage_bus_traits__non_qemu_kvm(self):
+        """Test getting storage bus traits per virt type."""
+        all_traits = set(ot.get_traits('COMPUTE_STORAGE_BUS_'))
         # ensure each virt type reports the correct bus types
         for virt_type, buses in blockinfo.SUPPORTED_STORAGE_BUSES.items():
+            if virt_type in ('qemu', 'kvm'):
+                continue
+
             self.flags(virt_type=virt_type, group='libvirt')
             bus_traits = self.drvr._get_storage_bus_traits()
             # Ensure all bus traits are accounted for
@@ -23347,6 +23443,32 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             for trait, val in bus_traits.items():
                 bus_from_trait = trait.rsplit('_', 1)[1].lower()
                 self.assertEqual(bus_from_trait in buses, bus_traits[trait])
+
+    def test_vif_model_traits(self):
+        """Test getting vif model traits per virt type."""
+        for virt_type, models in libvirt_vif.SUPPORTED_VIF_MODELS.items():
+            self.flags(virt_type=virt_type, group='libvirt')
+            vif_models = self.drvr._get_vif_model_traits()
+            for model in models:
+                trait = 'COMPUTE_NET_VIF_MODEL_%s' % (
+                    model.replace('-', '_').upper()
+                )
+                self.assertIn(trait, vif_models)
+                self.assertTrue(vif_models[trait])
+                vif_models.pop(trait)
+            self.assertTrue(all(not model for model in vif_models.values()))
+
+    def test_video_model_traits(self):
+        """Test getting video model traits per virt type."""
+        # NOTE(sean-k-mooney): we do not have a static tables of which video
+        # models are supported by each virt type so just assert that traits are
+        # available for all models but not if the traits are mapped to true or
+        # false.
+        self.flags(virt_type='qemu', group='libvirt')
+        model_traits = self.drvr._get_video_model_traits()
+        for model in fields.VideoModel.ALL:
+            trait = f'COMPUTE_GRAPHICS_MODEL_{model.upper()}'
+            self.assertIn(trait, model_traits)
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_cpu_feature_traits',
                        new=mock.Mock(return_value={}))

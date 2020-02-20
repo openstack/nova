@@ -133,6 +133,9 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
         ) as (mock_exists, mock_open, mock_features):
             # Retrigger the detection code.  In the real world this
             # would be a restart of the compute service.
+            # As we are changing the domain caps we need to clear the
+            # cache in the host object.
+            self.compute.driver._host._domain_caps = None
             self.compute.driver._host._set_amd_sev_support()
             self.assertTrue(self.compute.driver._host.supports_amd_sev)
 
@@ -142,6 +145,8 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
             # However it won't disappear in the provider tree and get synced
             # back to placement until we force a reinventory:
             self.compute.manager.reset()
+            # reset cached traits so they are recalculated.
+            self.compute.driver._static_traits = None
             self._run_periodics()
 
             traits = self._get_provider_traits(self.host_uuid)
@@ -200,6 +205,7 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
         with self.patch_exists(SEV_KERNEL_PARAM_FILE, False) as mock_exists:
             # Retrigger the detection code.  In the real world this
             # would be a restart of the compute service.
+            self.compute.driver._host._domain_caps = None
             self.compute.driver._host._set_amd_sev_support()
             self.assertFalse(self.compute.driver._host.supports_amd_sev)
 
@@ -208,6 +214,8 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
             # However it won't disappear in the provider tree and get synced
             # back to placement until we force a reinventory:
             self.compute.manager.reset()
+            # reset cached traits so they are recalculated.
+            self.compute.driver._static_traits = None
             self._run_periodics()
 
             traits = self._get_provider_traits(self.host_uuid)
