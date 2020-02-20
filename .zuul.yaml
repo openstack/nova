@@ -448,3 +448,7 @@
         # NOTE(mriedem): Consider moving nova-tox-functional-py37 to the
         # check and gate queues once it's stable (like openstack-python37-jobs)
         - nova-tox-functional-py37
+        - devstack-platform-fedora-latest:
+            irrelevant-files: *dsvm-irrelevant-files
+        - devstack-platform-fedora-latest-virt-preview:
+            irrelevant-files: *dsvm-irrelevant-files
