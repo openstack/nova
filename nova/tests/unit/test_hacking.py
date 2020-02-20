@@ -1030,3 +1030,16 @@ class HackingTestCase(test.NoDBTestCase):
         """
         errors = [(x + 1, 0, 'N370') for x in range(4)]
         self._assert_has_errors(code, checks.check_six, expected_errors=errors)
+
+    def test_import_stock_mock(self):
+        self._assert_has_errors(
+            "import mock",
+            checks.import_stock_mock, expected_errors=[(1, 0, 'N371')])
+        self._assert_has_errors(
+            "from mock import patch",
+            checks.import_stock_mock, expected_errors=[(1, 0, 'N371')])
+        code = """
+                    from unittest import mock
+                    import unittest.mock
+               """
+        self._assert_has_no_errors(code, checks.import_stock_mock)
