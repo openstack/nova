@@ -109,22 +109,8 @@ class CacheClient(object):
             return None
         return value
 
-    def get_or_create(self, key, creator):
-        return self.region.get_or_create(key, creator)
-
     def set(self, key, value):
         return self.region.set(key, value)
 
-    def add(self, key, value):
-        return self.region.get_or_create(key, lambda: value)
-
     def delete(self, key):
         return self.region.delete(key)
-
-    def get_multi(self, keys):
-        values = self.region.get_multi(keys)
-        return [None if value is cache.NO_VALUE else value for value in
-                values]
-
-    def delete_multi(self, keys):
-        return self.region.delete_multi(keys)
