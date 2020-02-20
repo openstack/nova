@@ -209,6 +209,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              request body to
              ``POST /servers/{server_id}/os-volume_attachments`` and exposes
              this via the response from
+             ``POST /servers/{server_id}/os-volume_attachments``,
              ``GET /servers/{server_id}/os-volume_attachments`` and
              ``GET /servers/{server_id}/os-volume_attachments/{volume_id}``.
     * 2.80 - Adds support for optional query parameters ``user_id`` and

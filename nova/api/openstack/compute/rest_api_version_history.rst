@@ -1047,7 +1047,8 @@ API microversion 2.79 adds support for specifying the ``delete_on_termination``
 field in the request body when attaching a volume to a server, to support
 configuring whether to delete the data volume when the server is destroyed.
 Also, ``delete_on_termination`` is added to the GET responses when showing
-attached volumes.
+attached volumes, and the ``delete_on_termination`` field is contained
+in the POST API response body when attaching a volume.
 
 The affected APIs are as follows:
 
