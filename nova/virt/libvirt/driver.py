@@ -10359,7 +10359,7 @@ class LibvirtDriver(driver.ComputeDriver):
         """Get CPU-related traits to be set and unset on the host's resource
         provider.
 
-        :return: A dict of trait names mapped to boolean values or None.
+        :return: A dict of trait names mapped to boolean values.
         """
         traits = self._get_cpu_feature_traits()
         traits[ot.HW_CPU_X86_AMD_SEV] = self._host.supports_amd_sev
@@ -10368,16 +10368,19 @@ class LibvirtDriver(driver.ComputeDriver):
         return traits
 
     def _get_cpu_feature_traits(self):
-        """Get CPU traits of VMs based on guest CPU model config:
-        1. if mode is 'host-model' or 'host-passthrough', use host's
-        CPU features.
-        2. if mode is None, choose a default CPU model based on CPU
-        architecture.
-        3. if mode is 'custom', use cpu_models to generate CPU features.
+        """Get CPU traits of VMs based on guest CPU model config.
+
+        1. If mode is 'host-model' or 'host-passthrough', use host's
+           CPU features.
+        2. If mode is None, choose a default CPU model based on CPU
+           architecture.
+        3. If mode is 'custom', use cpu_models to generate CPU features.
+
         The code also accounts for cpu_model_extra_flags configuration when
         cpu_mode is 'host-model', 'host-passthrough' or 'custom', this
         ensures user specified CPU feature flags to be included.
-        :return: A dict of trait names mapped to boolean values or None.
+
+        :return: A dict of trait names mapped to boolean values.
         """
         cpu = self._get_guest_cpu_model_config()
         if not cpu:
