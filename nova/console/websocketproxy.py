@@ -94,11 +94,6 @@ class TenantSock(object):
 
 
 class NovaProxyRequestHandlerBase(object):
-    def address_string(self):
-        # NOTE(rpodolyaka): override the superclass implementation here and
-        # explicitly disable the reverse DNS lookup, which might fail on some
-        # deployments due to DNS configuration and break VNC access completely
-        return str(self.client_address[0])
 
     def verify_origin_proto(self, connect_info, origin_proto):
         if 'access_url_base' not in connect_info:
@@ -294,16 +289,7 @@ class NovaProxyRequestHandler(NovaProxyRequestHandlerBase,
         return self._compute_rpcapi
 
     def socket(self, *args, **kwargs):
-        # TODO(melwitt): The try_import and if-else condition can be removed
-        # when we get to the point where we're requiring at least websockify
-        # v.0.9.0 in our lower-constraints.
-        if websockifyserver is not None:
-            # In websockify v0.9.0, the 'socket' method moved to the
-            # websockify.websockifyserver.WebSockifyServer class.
-            return websockifyserver.WebSockifyServer.socket(*args, **kwargs)
-        else:
-            # Fall back to the websockify <= v0.8.0 'socket' method location.
-            return websockify.WebSocketServer.socket(*args, **kwargs)
+        return websockifyserver.WebSockifyServer.socket(*args, **kwargs)
 
 
 class NovaWebSocketProxy(websockify.WebSocketProxy):
