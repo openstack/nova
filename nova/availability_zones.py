@@ -110,7 +110,7 @@ def update_host_availability_zone_cache(context, host, availability_zone=None):
 
 
 def get_availability_zones(context, hostapi, get_only_available=False,
-                           with_hosts=False, enabled_services=None):
+                           with_hosts=False, services=None):
     """Return available and unavailable zones on demand.
 
     :param context: nova auth RequestContext
@@ -121,50 +121,65 @@ def get_availability_zones(context, hostapi, get_only_available=False,
         available zones only
     :param with_hosts: whether to return hosts part of the AZs
     :type with_hosts: bool
-    :param enabled_services: list of enabled services to use; if None
-        enabled services will be retrieved from all cells with zones set
+    :param services: list of services to use; if None, enabled services will be
+        retrieved from all cells with zones set
     """
-    if enabled_services is None:
-        enabled_services = hostapi.service_get_all(
-            context, {'disabled': False}, set_zones=True, all_cells=True)
+    if services is None:
+        services = hostapi.service_get_all(
+            context, set_zones=True, all_cells=True)
 
-    available_zones = []
-    for (zone, host) in [(service['availability_zone'], service['host'])
-                         for service in enabled_services]:
-        if not with_hosts and zone not in available_zones:
-            available_zones.append(zone)
-        elif with_hosts:
-            _available_zones = dict(available_zones)
-            zone_hosts = _available_zones.setdefault(zone, set())
-            zone_hosts.add(host)
-            # .items() returns a view in Py3, casting it to list for Py2 compat
-            available_zones = list(_available_zones.items())
+    enabled_services = []
+    disabled_services = []
+    for service in services:
+        if not service.disabled:
+            enabled_services.append(service)
+        else:
+            disabled_services.append(service)
 
-    if not get_only_available:
-        # TODO(mriedem): We could probably optimize if we know that we're going
-        # to get both enabled and disabled services and just pull them all from
-        # the cell DBs at the same time and then filter into enabled/disabled
-        # lists in python.
-        disabled_services = hostapi.service_get_all(
-            context, {'disabled': True}, set_zones=True, all_cells=True)
-        not_available_zones = []
-        azs = available_zones if not with_hosts else dict(available_zones)
-        zones = [(service['availability_zone'], service['host'])
-                 for service in disabled_services
-                 if service['availability_zone'] not in azs]
-        for (zone, host) in zones:
-            if not with_hosts and zone not in not_available_zones:
-                not_available_zones.append(zone)
-            elif with_hosts:
-                _not_available_zones = dict(not_available_zones)
-                zone_hosts = _not_available_zones.setdefault(zone, set())
-                zone_hosts.add(host)
-                # .items() returns a view in Py3, casting it to list for Py2
-                #   compat
-                not_available_zones = list(_not_available_zones.items())
-        return (available_zones, not_available_zones)
+    if with_hosts:
+        return _get_availability_zones_with_hosts(
+            enabled_services, disabled_services, get_only_available)
     else:
-        return available_zones
+        return _get_availability_zones(
+            enabled_services, disabled_services, get_only_available)
+
+
+def _get_availability_zones(
+        enabled_services, disabled_services, get_only_available=False):
+
+    available_zones = {
+        service['availability_zone'] for service in enabled_services
+    }
+
+    if get_only_available:
+        return sorted(available_zones)
+
+    not_available_zones = {
+        service['availability_zone'] for service in disabled_services
+        if service['availability_zone'] not in available_zones
+    }
+
+    return sorted(available_zones), sorted(not_available_zones)
+
+
+def _get_availability_zones_with_hosts(
+        enabled_services, disabled_services, get_only_available=False):
+
+    available_zones = collections.defaultdict(set)
+    for service in enabled_services:
+        available_zones[service['availability_zone']].add(service['host'])
+
+    if get_only_available:
+        return sorted(available_zones.items())
+
+    not_available_zones = collections.defaultdict(set)
+    for service in disabled_services:
+        if service['availability_zone'] in available_zones:
+            continue
+
+        not_available_zones[service['availability_zone']].add(service['host'])
+
+    return sorted(available_zones.items()), sorted(not_available_zones.items())
 
 
 def get_instance_availability_zone(context, instance):

@@ -2401,7 +2401,7 @@ class AvailabilityZoneFixture(fixtures.Fixture):
 
         def fake_get_availability_zones(
                 ctxt, hostapi, get_only_available=False,
-                with_hosts=False, enabled_services=None):
+                with_hosts=False, services=None):
             # A 2-item tuple is returned if get_only_available=False.
             if not get_only_available:
                 return self.zones, []
