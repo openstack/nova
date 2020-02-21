@@ -145,7 +145,7 @@ class VGPUReshapeTests(base.ServersTestBase):
             enabled_vgpu_types=fakelibvirt.NVIDIA_11_VGPU_TYPE,
             group='devices')
         # restart compute which will trigger a reshape
-        self.restart_compute_service(self.compute)
+        self.compute = self.restart_compute_service(self.compute)
 
         # verify that the inventory, usages and allocation are correct after
         # the reshape

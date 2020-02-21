@@ -33,6 +33,7 @@ import pprint
 import sys
 
 import fixtures
+import mock
 from oslo_cache import core as cache
 from oslo_concurrency import lockutils
 from oslo_config import cfg
@@ -48,7 +49,6 @@ from oslotest import moxstubout
 import six
 import testtools
 
-from nova.compute import resource_tracker
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
 from nova.db import api as db
@@ -397,20 +397,29 @@ class TestCase(testtools.TestCase):
             ctxt = context.get_context()
             cell_name = kwargs.pop('cell', CELL1_NAME) or CELL1_NAME
             cell = self.cell_mappings[cell_name]
-            hm = objects.HostMapping(context=ctxt,
-                                     host=host or name,
-                                     cell_mapping=cell)
-            hm.create()
-            self.host_mappings[hm.host] = hm
+            if (host or name) not in self.host_mappings:
+                # NOTE(gibi): If the HostMapping does not exists then this is
+                # the first start of the service so we create the mapping.
+                hm = objects.HostMapping(context=ctxt,
+                                         host=host or name,
+                                         cell_mapping=cell)
+                hm.create()
+                self.host_mappings[hm.host] = hm
         svc = self.useFixture(
             nova_fixtures.ServiceFixture(name, host, cell=cell, **kwargs))
 
         return svc.service
 
-    def restart_compute_service(self, compute):
-        """Restart a compute service in a realistic way.
+    def restart_compute_service(self, compute, keep_hypervisor_state=True):
+        """Stops the service and starts a new one to have realistic restart
 
         :param:compute: the nova-compute service to be restarted
+        :param:keep_hypervisor_state: If true then already defined instances
+                                      will survive the compute service restart.
+                                      If false then the new service will see
+                                      an empty hypervisor
+        :returns: a new compute service instance serving the same host and
+                  and node
         """
 
         # NOTE(gibi): The service interface cannot be used to simulate a real
@@ -420,13 +429,36 @@ class TestCase(testtools.TestCase):
         # a stop start. The service.kill() call cannot help as it deletes
         # the service from the DB which is unrealistic and causes that some
         # operation that refers to the killed host (e.g. evacuate) fails.
-        # So this helper method tries to simulate a better compute service
-        # restart by cleaning up some of the internal state of the compute
-        # manager.
-        host, driver = compute.manager.host, compute.manager.driver
+        # So this helper method will stop the original service and then starts
+        # a brand new compute service for the same host and node. This way
+        # a new ComputeManager instance will be created and initialized during
+        # the service startup.
         compute.stop()
-        compute.manager.rt = resource_tracker.ResourceTracker(host, driver)
-        compute.start()
+
+        # this service was running previously so we have to make sure that
+        # we restart it in the same cell
+        cell_name = self.host_mappings[compute.host].cell_mapping.name
+
+        if keep_hypervisor_state:
+            # NOTE(gibi): FakeDriver does not provide a meaningful way to
+            # define some servers that exists already on the hypervisor when
+            # the driver is (re)created during the service startup. This means
+            # that we cannot simulate that the definition of a server
+            # survives a nova-compute service restart on the hypervisor.
+            # Instead here we save the FakeDriver instance that knows about
+            # the defined servers and inject that driver into the new Manager
+            # class during the startup of the compute service.
+            old_driver = compute.manager.driver
+            with mock.patch(
+                    'nova.virt.driver.load_compute_driver') as load_driver:
+                load_driver.return_value = old_driver
+                new_compute = self.start_service(
+                    'compute', host=compute.host, cell=cell_name)
+        else:
+            new_compute = self.start_service(
+                'compute', host=compute.host, cell=cell_name)
+
+        return new_compute
 
     def assertJsonEqual(self, expected, observed, message=''):
         """Asserts that 2 complex data structures are json equivalent.
