@@ -1079,49 +1079,6 @@ else:
             yield [stack.enter_context(c) for c in contexts]
 
 
-def run_once(message, logger, cleanup=None):
-    """This is a utility function decorator to ensure a function
-    is run once and only once in an interpreter instance.
-    The decorated function object can be reset by calling its
-    reset function. All exceptions raised by the wrapped function,
-    logger and cleanup function will be propagated to the caller.
-    """
-    def outer_wrapper(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            if not wrapper.called:
-                # Note(sean-k-mooney): the called state is always
-                # updated even if the wrapped function completes
-                # by raising an exception. If the caller catches
-                # the exception it is their responsibility to call
-                # reset if they want to re-execute the wrapped function.
-                try:
-                    return func(*args, **kwargs)
-                finally:
-                    wrapper.called = True
-            else:
-                logger(message)
-
-        wrapper.called = False
-
-        def reset(wrapper, *args, **kwargs):
-            # Note(sean-k-mooney): we conditionally call the
-            # cleanup function if one is provided only when the
-            # wrapped function has been called previously. We catch
-            # and reraise any exception that may be raised and update
-            # the called state in a finally block to ensure its
-            # always updated if reset is called.
-            try:
-                if cleanup and wrapper.called:
-                    return cleanup(*args, **kwargs)
-            finally:
-                wrapper.called = False
-
-        wrapper.reset = functools.partial(reset, wrapper)
-        return wrapper
-    return outer_wrapper
-
-
 def normalize_rc_name(rc_name):
     """Normalize a resource class name to standard form."""
     if rc_name is None:
