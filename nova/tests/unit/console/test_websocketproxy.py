@@ -125,10 +125,10 @@ class NovaProxyRequestHandlerDBTestCase(test.TestCase):
         self.test_new_websocket_client_db(instance_not_found=True)
 
 
-class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
+class NovaProxyRequestHandlerTestCase(test.NoDBTestCase):
 
     def setUp(self):
-        super(NovaProxyRequestHandlerBaseTestCase, self).setUp()
+        super(NovaProxyRequestHandlerTestCase, self).setUp()
 
         self.flags(allowed_origins=['allowed-origin-example-1.net',
                                     'allowed-origin-example-2.net'],
@@ -195,7 +195,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         'Host': 'example.net:6080',
     }
 
-    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandlerBase.'
+    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandler.'
                 '_check_console_port')
     @mock.patch('nova.objects.ConsoleAuthToken.validate')
     def test_new_websocket_client(self, validate, check_port):
@@ -223,7 +223,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         connection_info = self.wh.msg.mock_calls[0][1][1]
         self.assertEqual('***', connection_info.token)
 
-    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandlerBase.'
+    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandler.'
                 '_check_console_port')
     @mock.patch('nova.objects.ConsoleAuthToken.validate')
     def test_new_websocket_client_ipv6_url(self, validate, check_port):
@@ -259,7 +259,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
                           self.wh.new_websocket_client)
         validate.assert_called_with(mock.ANY, "XXX")
 
-    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandlerBase.'
+    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandler.'
                 '_check_console_port')
     @mock.patch('nova.objects.ConsoleAuthToken.validate')
     def test_new_websocket_client_internal_access_path(self, validate,
@@ -290,7 +290,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         tsock.send.assert_called_with(test.MatchType(bytes))
         self.wh.do_proxy.assert_called_with(tsock)
 
-    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandlerBase.'
+    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandler.'
                 '_check_console_port')
     @mock.patch('nova.objects.ConsoleAuthToken.validate')
     def test_new_websocket_client_internal_access_path_err(self, validate,
@@ -320,7 +320,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
                           self.wh.new_websocket_client)
         validate.assert_called_with(mock.ANY, "123-456-789")
 
-    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandlerBase.'
+    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandler.'
                 '_check_console_port')
     @mock.patch('nova.objects.ConsoleAuthToken.validate')
     def test_new_websocket_client_internal_access_path_rfb(self, validate,
@@ -357,7 +357,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         self.wh.do_proxy.assert_called_with(tsock)
 
     @mock.patch.object(websocketproxy, 'sys')
-    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandlerBase.'
+    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandler.'
                 '_check_console_port')
     @mock.patch('nova.objects.ConsoleAuthToken.validate')
     def test_new_websocket_client_py273_good_scheme(
@@ -401,7 +401,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         self.assertFalse(getfqdn.called)  # no reverse dns look up
         self.assertEqual(handler.address_string(), '8.8.8.8')  # plain address
 
-    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandlerBase.'
+    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandler.'
                 '_check_console_port')
     @mock.patch('nova.objects.ConsoleAuthToken.validate')
     def test_new_websocket_client_novnc_bad_origin_header(self, validate,
@@ -422,7 +422,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         self.assertRaises(exception.ValidationError,
                           self.wh.new_websocket_client)
 
-    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandlerBase.'
+    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandler.'
                 '_check_console_port')
     @mock.patch('nova.objects.ConsoleAuthToken.validate')
     def test_new_websocket_client_novnc_allowed_origin_header(self, validate,
@@ -448,7 +448,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         self.wh.socket.assert_called_with('node1', 10000, connect=True)
         self.wh.do_proxy.assert_called_with('<socket>')
 
-    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandlerBase.'
+    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandler.'
                 '_check_console_port')
     @mock.patch('nova.objects.ConsoleAuthToken.validate')
     def test_new_websocket_client_novnc_blank_origin_header(self, validate,
@@ -469,7 +469,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         self.assertRaises(exception.ValidationError,
                           self.wh.new_websocket_client)
 
-    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandlerBase.'
+    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandler.'
                 '_check_console_port')
     @mock.patch('nova.objects.ConsoleAuthToken.validate')
     def test_new_websocket_client_novnc_no_origin_header(self, validate,
@@ -494,7 +494,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         self.wh.socket.assert_called_with('node1', 10000, connect=True)
         self.wh.do_proxy.assert_called_with('<socket>')
 
-    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandlerBase.'
+    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandler.'
                 '_check_console_port')
     @mock.patch('nova.objects.ConsoleAuthToken.validate')
     def test_new_websocket_client_novnc_https_origin_proto_http(
@@ -516,7 +516,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         self.assertRaises(exception.ValidationError,
                           self.wh.new_websocket_client)
 
-    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandlerBase.'
+    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandler.'
                 '_check_console_port')
     @mock.patch('nova.objects.ConsoleAuthToken.validate')
     def test_new_websocket_client_novnc_https_origin_proto_ws(self, validate,
@@ -538,7 +538,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         self.assertRaises(exception.ValidationError,
                           self.wh.new_websocket_client)
 
-    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandlerBase.'
+    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandler.'
                 '_check_console_port')
     @mock.patch('nova.objects.ConsoleAuthToken.validate')
     def test_new_websocket_client_http_forwarded_proto_https(self, validate,
@@ -570,7 +570,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         self.wh.socket.assert_called_with('node1', 10000, connect=True)
         self.wh.do_proxy.assert_called_with('<socket>')
 
-    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandlerBase.'
+    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandler.'
                 '_check_console_port')
     @mock.patch('nova.objects.ConsoleAuthToken.validate')
     def test_new_websocket_client_novnc_bad_console_type(self, validate,
@@ -591,7 +591,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         self.assertRaises(exception.ValidationError,
                           self.wh.new_websocket_client)
 
-    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandlerBase.'
+    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandler.'
                 '_check_console_port')
     @mock.patch('nova.objects.ConsoleAuthToken.validate')
     def test_malformed_cookie(self, validate, check_port):

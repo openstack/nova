@@ -93,7 +93,20 @@ class TenantSock(object):
         self.reqhandler.send_close()
 
 
-class NovaProxyRequestHandlerBase(object):
+class NovaProxyRequestHandler(websockify.ProxyRequestHandler):
+
+    def __init__(self, *args, **kwargs):
+        self._compute_rpcapi = None
+        websockify.ProxyRequestHandler.__init__(self, *args, **kwargs)
+
+    @property
+    def compute_rpcapi(self):
+        # Lazy load the rpcapi/ComputeAPI upon first use for this connection.
+        # This way, if we receive a TCP RST, we will not create a ComputeAPI
+        # object we won't use.
+        if not self._compute_rpcapi:
+            self._compute_rpcapi = compute_rpcapi.ComputeAPI()
+        return self._compute_rpcapi
 
     def verify_origin_proto(self, connect_info, origin_proto):
         if 'access_url_base' not in connect_info:
@@ -271,22 +284,6 @@ class NovaProxyRequestHandlerBase(object):
                           "Websocket client or target closed") %
                           {'host': host, 'port': port})
             raise
-
-
-class NovaProxyRequestHandler(NovaProxyRequestHandlerBase,
-                              websockify.ProxyRequestHandler):
-    def __init__(self, *args, **kwargs):
-        self._compute_rpcapi = None
-        websockify.ProxyRequestHandler.__init__(self, *args, **kwargs)
-
-    @property
-    def compute_rpcapi(self):
-        # Lazy load the rpcapi/ComputeAPI upon first use for this connection.
-        # This way, if we receive a TCP RST, we will not create a ComputeAPI
-        # object we won't use.
-        if not self._compute_rpcapi:
-            self._compute_rpcapi = compute_rpcapi.ComputeAPI()
-        return self._compute_rpcapi
 
     def socket(self, *args, **kwargs):
         return websockifyserver.WebSockifyServer.socket(*args, **kwargs)
