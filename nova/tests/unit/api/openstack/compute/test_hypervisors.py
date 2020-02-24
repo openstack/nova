@@ -746,7 +746,7 @@ class HypervisorsTestV233(HypervisorsTestV228):
                  'status': 'enabled'}
             ],
             'hypervisors_links': [
-                {'href': 'http://localhost/v2/hypervisors?limit=1&marker=2',
+                {'href': 'http://localhost/v2/os-hypervisors?limit=1&marker=2',
                  'rel': 'next'}
             ]
         }
@@ -807,7 +807,7 @@ class HypervisorsTestV233(HypervisorsTestV228):
                  'status': 'enabled'}
             ],
             'hypervisors_links': [
-                {'href': 'http://localhost/v2/hypervisors?limit=1&marker=2',
+                {'href': 'http://localhost/v2/os-hypervisors?limit=1&marker=2',
                  'rel': 'next'}
             ]
         }
@@ -820,7 +820,7 @@ class HypervisorsTestV233(HypervisorsTestV228):
         req = self._get_request(
             True, '/v2/1234/os-hypervisors/detail?limit=1&marker=1')
         result = self.controller.detail(req)
-        link = 'http://localhost/v2/hypervisors/detail?limit=1&marker=2'
+        link = 'http://localhost/v2/os-hypervisors/detail?limit=1&marker=2'
         expected = {
             'hypervisors': [
                 {'cpu_info': {'arch': 'x86_64',
@@ -922,7 +922,7 @@ class HypervisorsTestV233(HypervisorsTestV228):
             self.assertEqual(expected, result['hypervisors'])
 
     def test_detail_pagination_with_additional_filter(self):
-        link = 'http://localhost/v2/hypervisors/detail?limit=1&marker=2'
+        link = 'http://localhost/v2/os-hypervisors/detail?limit=1&marker=2'
         expected = {
             'hypervisors': [
                 {'cpu_info': {'arch': 'x86_64',
@@ -1256,7 +1256,7 @@ class HypervisorsTestV253(HypervisorsTestV252):
             url='/os-hypervisors/detail?limit=1&marker=%s' %
                 TEST_HYPERS_OBJ[0].uuid)
         result = self.controller.detail(req)
-        link = ('http://localhost/v2/hypervisors/detail?limit=1&marker=%s' %
+        link = ('http://localhost/v2/os-hypervisors/detail?limit=1&marker=%s' %
                 TEST_HYPERS_OBJ[1].uuid)
         expected = {
             'hypervisors': [
@@ -1332,7 +1332,7 @@ class HypervisorsTestV253(HypervisorsTestV252):
             url='/os-hypervisors?limit=1&marker=%s' %
                 TEST_HYPERS_OBJ[0].uuid)
         result = self.controller.index(req)
-        link = ('http://localhost/v2/hypervisors?limit=1&marker=%s' %
+        link = ('http://localhost/v2/os-hypervisors?limit=1&marker=%s' %
                 TEST_HYPERS_OBJ[1].uuid)
         expected = {
             'hypervisors': [{
