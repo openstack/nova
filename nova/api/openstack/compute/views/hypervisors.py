@@ -17,7 +17,7 @@ from nova.api.openstack import common
 
 
 class ViewBuilder(common.ViewBuilder):
-    _collection_name = "hypervisors"
+    _collection_name = "os-hypervisors"
 
     def get_links(self, request, hypervisors, detail=False):
         coll_name = (self._collection_name + '/detail' if detail else
