@@ -626,6 +626,22 @@ class NovaProxyRequestHandlerTestCase(test.NoDBTestCase):
         self.wh.server.top_new_client(conn, address)
         self.assertIsNone(self.wh._compute_rpcapi)
 
+    @mock.patch('websockify.websocketproxy.select_ssl_version')
+    def test_ssl_min_version_is_not_set(self, mock_select_ssl):
+        websocketproxy.NovaWebSocketProxy()
+        self.assertFalse(mock_select_ssl.called)
+
+    @mock.patch('websockify.websocketproxy.select_ssl_version')
+    def test_ssl_min_version_not_set_by_default(self, mock_select_ssl):
+        websocketproxy.NovaWebSocketProxy(ssl_minimum_version='default')
+        self.assertFalse(mock_select_ssl.called)
+
+    @mock.patch('websockify.websocketproxy.select_ssl_version')
+    def test_non_default_ssl_min_version_is_set(self, mock_select_ssl):
+        minver = 'tlsv1_3'
+        websocketproxy.NovaWebSocketProxy(ssl_minimum_version=minver)
+        mock_select_ssl.assert_called_once_with(minver)
+
 
 class NovaWebsocketSecurityProxyTestCase(test.NoDBTestCase):
 

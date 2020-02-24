@@ -57,17 +57,20 @@ class BaseProxyTestCase(test.NoDBTestCase):
     @mock.patch.object(logging, 'setup')
     @mock.patch.object(gmr.TextGuruMeditation, 'setup_autorun')
     @mock.patch('nova.console.websocketproxy.NovaWebSocketProxy.__init__',
-                       return_value=None)
+                return_value=None)
     @mock.patch('nova.console.websocketproxy.NovaWebSocketProxy.start_server')
-    def test_proxy(self, mock_start, mock_init, mock_gmr, mock_log,
-                   mock_exists):
+    @mock.patch('websockify.websocketproxy.select_ssl_version',
+                return_value=None)
+    def test_proxy(self, mock_select_ssl_version, mock_start, mock_init,
+                   mock_gmr, mock_log, mock_exists):
         baseproxy.proxy('0.0.0.0', '6080')
         mock_log.assert_called_once_with(baseproxy.CONF, 'nova')
         mock_gmr.assert_called_once_with(version, conf=baseproxy.CONF)
         mock_init.assert_called_once_with(
             listen_host='0.0.0.0', listen_port='6080', source_is_ipv6=False,
-            cert='self.pem', key=None, ssl_only=False,
-            daemon=False, record=None, security_proxy=None, traffic=True,
+            cert='self.pem', key=None, ssl_only=False, ssl_ciphers=None,
+            ssl_minimum_version='default', daemon=False, record=None,
+            security_proxy=None, traffic=True,
             web='/usr/share/spice-html5', file_only=True,
             RequestHandlerClass=websocketproxy.NovaProxyRequestHandler)
         mock_start.assert_called_once_with()
@@ -81,3 +84,19 @@ class BaseProxyTestCase(test.NoDBTestCase):
         self.assertEqual(self.stderr.getvalue(),
                          "SSL only and self.pem not found\n")
         mock_exit.assert_called_once_with(-1)
+
+    @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('nova.console.websocketproxy.NovaWebSocketProxy.__init__',
+                return_value=None)
+    @mock.patch('nova.console.websocketproxy.NovaWebSocketProxy.start_server')
+    def test_proxy_ssl_settings(self, mock_start, mock_init, mock_exists):
+        self.flags(ssl_minimum_version='tlsv1_3', group='console')
+        self.flags(ssl_ciphers='ALL:!aNULL', group='console')
+        baseproxy.proxy('0.0.0.0', '6080')
+        mock_init.assert_called_once_with(
+            listen_host='0.0.0.0', listen_port='6080', source_is_ipv6=False,
+            cert='self.pem', key=None, ssl_only=False,
+            ssl_ciphers='ALL:!aNULL', ssl_minimum_version='tlsv1_3',
+            daemon=False, record=None, security_proxy=None, traffic=True,
+            web='/usr/share/spice-html5', file_only=True,
+            RequestHandlerClass=websocketproxy.NovaProxyRequestHandler)

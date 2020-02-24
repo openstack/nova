@@ -27,15 +27,37 @@ If this is not set, no recording will be done.
                 help="Run as a background process."),
     cfg.BoolOpt('ssl_only',
                 default=False,
-                help="Disallow non-encrypted connections."),
+                help="""
+Disallow non-encrypted connections.
+
+Related options:
+
+* cert
+* key
+"""),
     cfg.BoolOpt('source_is_ipv6',
                 default=False,
                 help="Set to True if source host is addressed with IPv6."),
     cfg.StrOpt('cert',
                default='self.pem',
-               help="Path to SSL certificate file."),
+               help="""
+Path to SSL certificate file.
+
+Related options:
+
+* key
+* ssl_only
+* [console] ssl_ciphers
+* [console] ssl_minimum_version
+"""),
     cfg.StrOpt('key',
-               help="SSL key file (if separate from cert)."),
+               help="""
+SSL key file (if separate from cert).
+
+Related options:
+
+* cert
+"""),
     cfg.StrOpt('web',
                default='/usr/share/spice-html5',
                help="""

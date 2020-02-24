@@ -299,6 +299,17 @@ class NovaWebSocketProxy(websockify.WebSocketProxy):
         with the compute node.
         """
         self.security_proxy = kwargs.pop('security_proxy', None)
+
+        # If 'default' was specified as the ssl_minimum_version, we leave
+        # ssl_options unset to default to the underlying system defaults.
+        # We do this to avoid using websockify's behaviour for 'default'
+        # in select_ssl_version(), which hardcodes the versions to be
+        # quite relaxed and prevents us from using sytem crypto policies.
+        ssl_min_version = kwargs.pop('ssl_minimum_version', None)
+        if ssl_min_version and ssl_min_version != 'default':
+            kwargs['ssl_options'] = websockify.websocketproxy. \
+                                    select_ssl_version(ssl_min_version)
+
         super(NovaWebSocketProxy, self).__init__(*args, **kwargs)
 
     @staticmethod
