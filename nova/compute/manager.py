@@ -2321,15 +2321,13 @@ class ComputeManager(manager.Manager):
         self._check_device_tagging(requested_networks, block_device_mapping)
         self._check_trusted_certs(instance)
 
-        request_group_resource_providers_mapping = \
-            self._get_request_group_mapping(request_spec)
+        provider_mapping = self._get_request_group_mapping(request_spec)
 
-        if request_group_resource_providers_mapping:
+        if provider_mapping:
             try:
                 compute_utils\
                     .update_pci_request_spec_with_allocated_interface_name(
-                        context, self.reportclient, instance,
-                        request_group_resource_providers_mapping)
+                        context, self.reportclient, instance, provider_mapping)
             except (exception.AmbiguousResourceProviderForPCIRequest,
                     exception.UnexpectedResourceProviderNameForPCIRequest
                     ) as e:
@@ -2352,13 +2350,9 @@ class ComputeManager(manager.Manager):
                                                      scheduler_hints)
                 image_meta = objects.ImageMeta.from_dict(image)
 
-                request_group_resource_providers_mapping = \
-                    self._get_request_group_mapping(request_spec)
-
                 with self._build_resources(context, instance,
                         requested_networks, security_groups, image_meta,
-                        block_device_mapping,
-                        request_group_resource_providers_mapping) as resources:
+                        block_device_mapping, provider_mapping) as resources:
                     instance.vm_state = vm_states.BUILDING
                     instance.task_state = task_states.SPAWNING
                     # NOTE(JoshNang) This also saves the changes to the
@@ -3354,16 +3348,14 @@ class ComputeManager(manager.Manager):
             allocations, rebuild_claim, scheduled_node, limits):
         """Helper to avoid deep nesting in the top-level method."""
 
-        request_group_resource_providers_mapping = None
+        provider_mapping = None
         if evacuate:
-            request_group_resource_providers_mapping = \
-                self._get_request_group_mapping(request_spec)
+            provider_mapping = self._get_request_group_mapping(request_spec)
 
-            if request_group_resource_providers_mapping:
+            if provider_mapping:
                 compute_utils.\
                     update_pci_request_spec_with_allocated_interface_name(
-                        context, self.reportclient, instance,
-                        request_group_resource_providers_mapping)
+                        context, self.reportclient, instance, provider_mapping)
 
         claim_context = rebuild_claim(
             context, instance, scheduled_node, allocations,
@@ -3374,7 +3366,7 @@ class ComputeManager(manager.Manager):
                 context, instance, orig_image_ref, image_meta, injected_files,
                 new_pass, orig_sys_metadata, bdms, evacuate, on_shared_storage,
                 preserve_ephemeral, migration, request_spec, allocations,
-                request_group_resource_providers_mapping)
+                provider_mapping)
 
     @staticmethod
     def _get_image_name(image_meta):
@@ -5035,15 +5027,13 @@ class ComputeManager(manager.Manager):
             # the request spec would already have the new flavor in it from the
             # else block below.
 
-        request_group_resource_providers_mapping = \
-            self._get_request_group_mapping(request_spec)
+        provider_mapping = self._get_request_group_mapping(request_spec)
 
-        if request_group_resource_providers_mapping:
+        if provider_mapping:
             try:
                 compute_utils.\
                     update_pci_request_spec_with_allocated_interface_name(
-                        context, self.reportclient, instance,
-                        request_group_resource_providers_mapping)
+                        context, self.reportclient, instance, provider_mapping)
             except (exception.AmbiguousResourceProviderForPCIRequest,
                     exception.UnexpectedResourceProviderNameForPCIRequest
                     ) as e:
