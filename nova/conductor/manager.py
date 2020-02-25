@@ -1247,6 +1247,29 @@ class ComputeTaskManager(base.Base):
         else:
             return tags
 
+    def _create_instance_action_for_cell0(self, context, instance, exc):
+        """Create a failed "create" instance action for the instance in cell0.
+
+        :param context: nova auth RequestContext targeted at cell0
+        :param instance: Instance object being buried in cell0
+        :param exc: Exception that occurred which resulted in burial
+        """
+        # First create the action record.
+        objects.InstanceAction.action_start(
+            context, instance.uuid, instance_actions.CREATE, want_result=False)
+        # Now create an event for that action record.
+        event_name = 'conductor_schedule_and_build_instances'
+        objects.InstanceActionEvent.event_start(
+            context, instance.uuid, event_name, want_result=False,
+            host=self.host)
+        # And finish the event with the exception. Note that we expect this
+        # method to be called from _bury_in_cell0 which is called from within
+        # an exception handler so sys.exc_info should return values but if not
+        # it's not the end of the world - this is best effort.
+        objects.InstanceActionEvent.event_finish_with_failure(
+            context, instance.uuid, event_name, exc_val=exc,
+            exc_tb=sys.exc_info()[2], want_result=False)
+
     def _bury_in_cell0(self, context, request_spec, exc,
                        build_requests=None, instances=None,
                        block_device_mapping=None,
@@ -1286,6 +1309,10 @@ class ComputeTaskManager(base.Base):
         for instance in instances_by_uuid.values():
             with obj_target_cell(instance, cell0) as cctxt:
                 instance.create()
+
+                # Record an instance action with a failed event.
+                self._create_instance_action_for_cell0(
+                    cctxt, instance, exc)
 
                 # NOTE(mnaser): In order to properly clean-up volumes after
                 #               being buried in cell0, we need to store BDMs.
