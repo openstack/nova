@@ -10,7 +10,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import functools
 import mock
+
+from oslo_serialization import jsonutils
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova.conductor.tasks import migrate
@@ -123,7 +126,14 @@ class MigrationTaskTestCase(test.NoDBTestCase):
                 self.request_spec.requested_destination)
 
         task = self._generate_task()
-        legacy_request_spec = self.request_spec.to_legacy_request_spec_dict()
+        legacy_request_spec = jsonutils.loads(
+            jsonutils.dumps(
+                self.request_spec.to_legacy_request_spec_dict(),
+                default=functools.partial(
+                    jsonutils.to_primitive, convert_instances=True
+                ),
+            )
+        )
         gmv_mock.return_value = 23
 
         # We just need this hook point to set a uuid on the
@@ -229,6 +239,18 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         mock_ra.assert_called_once_with(task.context, task._source_cn,
                                         task.instance, task._migration,
                                         task._held_allocations)
+
+    def test_execute_with_cpu_topoloy(self):
+        self.request_spec = objects.RequestSpec(
+            numa_topology=objects.InstanceNUMATopology(
+                cells=[
+                    objects.InstanceNUMACell(
+                        cpu_topology=objects.VirtCPUTopology()
+                    )
+                ]
+            )
+        )
+        self._test_execute()
 
 
 class MigrationTaskAllocationUtils(test.NoDBTestCase):
