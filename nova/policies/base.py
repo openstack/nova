@@ -17,6 +17,22 @@ RULE_ADMIN_API = 'rule:admin_api'  # Allow only users with the admin role
 RULE_ANY = '@'  # Any user is allowed to perform the action.
 RULE_NOBODY = '!'  # No users are allowed to perform the action.
 
+DEPRECATED_ADMIN_POLICY = policy.DeprecatedRule(
+    name=RULE_ADMIN_API,
+    check_str='is_admin:True',
+)
+
+DEPRECATED_ADMIN_OR_OWNER_POLICY = policy.DeprecatedRule(
+    name=RULE_ADMIN_OR_OWNER,
+    check_str='is_admin:True or project_id:%(project_id)s',
+)
+
+DEPRECATED_REASON = """
+Nova API policies are introducing new default roles with scope_type
+capabilities. Old policies are deprecated and silently going to be ignored
+in nova 23.0.0 release.
+"""
+
 # TODO(gmann): # Special string ``system_scope:all`` is added for system
 # scoped policies for backwards compatibility where ``nova.conf [oslo_policy]
 # enforce_scope = False``.
@@ -71,19 +87,31 @@ rules = [
     policy.RuleDefault(
         "admin_or_owner",
         "is_admin:True or project_id:%(project_id)s",
-        "Default rule for most non-Admin APIs."),
+        "Default rule for most non-Admin APIs.",
+        deprecated_for_removal=True,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='21.0.0'),
     policy.RuleDefault(
         "admin_api",
         "is_admin:True",
-        "Default rule for most Admin APIs."),
+        "Default rule for most Admin APIs.",
+        deprecated_for_removal=True,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='21.0.0'),
     policy.RuleDefault(
-        "system_admin_api",
-        'role:admin and system_scope:all',
-        "Default rule for System Admin APIs."),
+        name="system_admin_api",
+        check_str='role:admin and system_scope:all',
+        description="Default rule for System Admin APIs.",
+        deprecated_rule=DEPRECATED_ADMIN_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='21.0.0'),
     policy.RuleDefault(
-        "system_reader_api",
-        "role:reader and system_scope:all",
-        "Default rule for System level read only APIs."),
+        name="system_reader_api",
+        check_str="role:reader and system_scope:all",
+        description="Default rule for System level read only APIs.",
+        deprecated_rule=DEPRECATED_ADMIN_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='21.0.0'),
     policy.RuleDefault(
         "project_member_api",
         "role:member and project_id:%(project_id)s",
@@ -93,9 +121,12 @@ rules = [
         "role:reader and project_id:%(project_id)s",
         "Default rule for Project level read only APIs."),
     policy.RuleDefault(
-        "system_admin_or_owner",
-        "rule:system_admin_api or rule:project_member_api",
-        "Default rule for System admin+owner APIs."),
+        name="system_admin_or_owner",
+        check_str="rule:system_admin_api or rule:project_member_api",
+        description="Default rule for System admin+owner APIs.",
+        deprecated_rule=DEPRECATED_ADMIN_OR_OWNER_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='21.0.0'),
     policy.RuleDefault(
         "system_or_project_reader",
         "rule:system_reader_api or rule:project_reader_api",
