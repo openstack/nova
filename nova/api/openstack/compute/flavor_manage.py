@@ -32,7 +32,7 @@ class FlavorManageController(wsgi.Controller):
     # 204 as this operation complete the deletion of aggregate resource and
     # return no response body.
     @wsgi.response(202)
-    @wsgi.expected_errors((404))
+    @wsgi.expected_errors(404)
     @wsgi.action("delete")
     def _delete(self, req, id):
         context = req.environ['nova.context']
