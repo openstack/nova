@@ -24,7 +24,7 @@ class ServerTopologyController(wsgi.Controller):
         self.compute_api = compute.API()
 
     @wsgi.Controller.api_version("2.78")
-    @wsgi.expected_errors((404))
+    @wsgi.expected_errors(404)
     def index(self, req, server_id):
         context = req.environ["nova.context"]
         context.can(st_policies.BASE_POLICY_NAME % 'index')

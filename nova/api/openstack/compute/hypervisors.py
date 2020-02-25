@@ -210,7 +210,7 @@ class HypervisorsController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.33", "2.52")  # noqa
     @validation.query_schema(hyper_schema.list_query_schema_v233)
-    @wsgi.expected_errors((400))
+    @wsgi.expected_errors(400)
     def index(self, req):
         limit, marker = common.get_limit_and_marker(req)
         return self._index(req, limit=limit, marker=marker, links=True)
