@@ -9,6 +9,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import functools
 
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -288,7 +289,17 @@ class MigrationTask(base.TaskBase):
         # oslo.messaging #1529084 to transform datetime values into strings.
         # tl;dr: datetimes in dicts are not accepted as correct values by the
         # rpc fake driver.
-        legacy_spec = jsonutils.loads(jsonutils.dumps(legacy_spec))
+        # NOTE(gibi): convert_instances=True is needed as the legacy_spec might
+        # contain ovo instances in the numa_topology field and those are
+        # causing circular reference during serialization otherwise.
+        legacy_spec = jsonutils.loads(
+            jsonutils.dumps(
+                legacy_spec,
+                default=functools.partial(
+                    jsonutils.to_primitive, convert_instances=True
+                ),
+            )
+        )
 
         LOG.debug("Calling prep_resize with selected host: %s; "
                   "Selected node: %s; Alternates: %s", host, node,
