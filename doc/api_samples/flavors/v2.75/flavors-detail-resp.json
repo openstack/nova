@@ -169,8 +169,8 @@
             "rxtx_factor": 1.0,
             "description": "test description",
             "extra_specs": {
-                "key1": "value1",
-                "key2": "value2"
+                "hw:cpu_policy": "shared",
+                "hw:numa_nodes": "1"
             }
         }
     ]

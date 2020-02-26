@@ -1,3 +1,3 @@
 {
-    "key1": "%(value1)s"
+    "hw:numa_nodes": "%(value1)s"
 }

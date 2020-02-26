@@ -48,11 +48,9 @@ def delete_flavor_extra_specs(context, flavor_id, key):
 
 def stub_flavor_extra_specs():
     specs = {
-            "key1": "value1",
-            "key2": "value2",
-            "key3": "value3",
-            "key4": "value4",
-            "key5": "value5"}
+        'hw:cpu_policy': 'shared',
+        'hw:numa_nodes': '1',
+    }
     return specs
 
 
@@ -60,10 +58,14 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
     bad_request = exception.ValidationError
     flavorextraspecs = flavorextraspecs_v21
 
-    def _get_request(self, url, use_admin_context=False):
+    def _get_request(self, url, use_admin_context=False, version=None):
+        kwargs = {}
+        if version:
+            kwargs['version'] = version
         req_url = '/v2/%s/flavors/%s' % (fakes.FAKE_PROJECT_ID, url)
-        return fakes.HTTPRequest.blank(req_url,
-                                       use_admin_context=use_admin_context)
+        return fakes.HTTPRequest.blank(
+            req_url, use_admin_context=use_admin_context, **kwargs,
+        )
 
     def setUp(self):
         super(FlavorsExtraSpecsTestV21, self).setUp()
@@ -72,15 +74,16 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
 
     def test_index(self):
         flavor = dict(test_flavor.fake_flavor,
-                      extra_specs={'key1': 'value1'})
+                      extra_specs={'hw:numa_nodes': '1'})
 
         req = self._get_request('1/os-extra_specs')
-        with mock.patch('nova.objects.Flavor._flavor_get_by_flavor_id_from_db'
-                ) as mock_get:
+        with mock.patch(
+            'nova.objects.Flavor._flavor_get_by_flavor_id_from_db'
+        ) as mock_get:
             mock_get.return_value = flavor
             res_dict = self.controller.index(req, 1)
 
-        self.assertEqual('value1', res_dict['extra_specs']['key1'])
+        self.assertEqual('1', res_dict['extra_specs']['hw:numa_nodes'])
 
     @mock.patch('nova.objects.Flavor.get_by_flavor_id')
     def test_index_no_data(self, mock_get):
@@ -101,57 +104,61 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
                           req, 1)
 
     def test_show(self):
-        flavor = objects.Flavor(flavorid='1', extra_specs={'key5': 'value5'})
-        req = self._get_request('1/os-extra_specs/key5')
+        flavor = objects.Flavor(
+            flavorid='1', extra_specs={'hw:numa_nodes': '1'}
+        )
+        req = self._get_request('1/os-extra_specs/hw:numa_nodes')
         with mock.patch('nova.objects.Flavor.get_by_flavor_id') as mock_get:
             mock_get.return_value = flavor
-            res_dict = self.controller.show(req, 1, 'key5')
+            res_dict = self.controller.show(req, 1, 'hw:numa_nodes')
 
-        self.assertEqual('value5', res_dict['key5'])
+        self.assertEqual('1', res_dict['hw:numa_nodes'])
 
     @mock.patch('nova.objects.Flavor.get_by_flavor_id')
     def test_show_spec_not_found(self, mock_get):
         mock_get.return_value = objects.Flavor(extra_specs={})
 
-        req = self._get_request('1/os-extra_specs/key6')
+        req = self._get_request('1/os-extra_specs/hw:cpu_thread_policy')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.show,
-                          req, 1, 'key6')
+                          req, 1, 'hw:cpu_thread_policy')
 
     def test_not_found_because_flavor(self):
-        req = self._get_request('1/os-extra_specs/key5',
+        req = self._get_request('1/os-extra_specs/hw:numa_nodes',
                                 use_admin_context=True)
         with mock.patch('nova.objects.Flavor.get_by_flavor_id') as mock_get:
             mock_get.side_effect = exception.FlavorNotFound(flavor_id='1')
             self.assertRaises(webob.exc.HTTPNotFound, self.controller.show,
-                              req, 1, 'key5')
+                              req, 1, 'hw:numa_nodes')
             self.assertRaises(webob.exc.HTTPNotFound, self.controller.update,
-                              req, 1, 'key5', body={'key5': 'value5'})
+                              req, 1, 'hw:numa_nodes',
+                              body={'hw:numa_nodes': '1'})
             self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
-                              req, 1, 'key5')
+                              req, 1, 'hw:numa_nodes')
 
         req = self._get_request('1/os-extra_specs', use_admin_context=True)
         with mock.patch('nova.objects.Flavor.get_by_flavor_id') as mock_get:
             mock_get.side_effect = exception.FlavorNotFound(flavor_id='1')
             self.assertRaises(webob.exc.HTTPNotFound, self.controller.create,
-                              req, 1, body={'extra_specs': {'key5': 'value5'}})
+                              req, 1, body={'extra_specs': {
+                                  'hw:numa_nodes': '1'}})
 
     @mock.patch('nova.objects.Flavor._flavor_get_by_flavor_id_from_db')
     def test_delete(self, mock_get):
         flavor = dict(test_flavor.fake_flavor,
-                      extra_specs={'key5': 'value5'})
-        req = self._get_request('1/os-extra_specs/key5',
+                      extra_specs={'hw:numa_nodes': '1'})
+        req = self._get_request('1/os-extra_specs/hw:numa_nodes',
                                 use_admin_context=True)
         mock_get.return_value = flavor
         with mock.patch('nova.objects.Flavor.save'):
-            self.controller.delete(req, 1, 'key5')
+            self.controller.delete(req, 1, 'hw:numa_nodes')
 
     def test_delete_no_admin(self):
         self.stub_out('nova.objects.flavor._flavor_extra_specs_del',
                       delete_flavor_extra_specs)
 
-        req = self._get_request('1/os-extra_specs/key5')
+        req = self._get_request('1/os-extra_specs/hw:numa_nodes')
         self.assertRaises(exception.Forbidden, self.controller.delete,
-                          req, 1, 'key 5')
+                          req, 1, 'hw numa nodes')
 
     def test_delete_spec_not_found(self):
         req = self._get_request('1/os-extra_specs/key6',
@@ -160,24 +167,28 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
                           req, 1, 'key6')
 
     def test_create(self):
-        body = {"extra_specs": {"key1": "value1", "key2": 0.5, "key3": 5}}
+        body = {
+            'extra_specs': {
+                'hw:cpu_policy': 'shared',
+                'hw:numa_nodes': '1',
+            }
+        }
 
         req = self._get_request('1/os-extra_specs', use_admin_context=True)
         res_dict = self.controller.create(req, 1, body=body)
 
-        self.assertEqual('value1', res_dict['extra_specs']['key1'])
-        self.assertEqual(0.5, res_dict['extra_specs']['key2'])
-        self.assertEqual(5, res_dict['extra_specs']['key3'])
+        self.assertEqual('shared', res_dict['extra_specs']['hw:cpu_policy'])
+        self.assertEqual('1', res_dict['extra_specs']['hw:numa_nodes'])
 
     def test_create_no_admin(self):
-        body = {"extra_specs": {"key1": "value1"}}
+        body = {'extra_specs': {'hw:numa_nodes': '1'}}
 
         req = self._get_request('1/os-extra_specs')
         self.assertRaises(exception.Forbidden, self.controller.create,
                           req, 1, body=body)
 
     def test_create_flavor_not_found(self):
-        body = {"extra_specs": {"key1": "value1"}}
+        body = {'extra_specs': {'hw:numa_nodes': '1'}}
         req = self._get_request('1/os-extra_specs', use_admin_context=True)
         with mock.patch('nova.objects.Flavor.save',
                         side_effect=exception.FlavorNotFound(flavor_id='')):
@@ -185,7 +196,7 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
                               req, 1, body=body)
 
     def test_create_flavor_db_duplicate(self):
-        body = {"extra_specs": {"key1": "value1"}}
+        body = {'extra_specs': {'hw:numa_nodes': '1'}}
         req = self._get_request('1/os-extra_specs', use_admin_context=True)
         with mock.patch(
                 'nova.objects.Flavor.save',
@@ -212,7 +223,7 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
         self._test_create_bad_request({"extra_specs": {None: "value1"}})
 
     def test_create_non_string_value(self):
-        self._test_create_bad_request({"extra_specs": {"key1": None}})
+        self._test_create_bad_request({"extra_specs": {"hw:numa_nodes": None}})
 
     def test_create_zero_length_key(self):
         self._test_create_bad_request({"extra_specs": {"": "value1"}})
@@ -223,7 +234,9 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
 
     def test_create_long_value(self):
         value = "a" * 256
-        self._test_create_bad_request({"extra_specs": {"key1": value}})
+        self._test_create_bad_request(
+            {"extra_specs": {"hw_numa_nodes": value}}
+        )
 
     def test_create_really_long_integer_value(self):
         value = 10 ** 1000
@@ -232,55 +245,69 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, 1, body={"extra_specs": {"key1": value}})
 
-    def test_create_invalid_specs_key(self):
-        invalid_keys = ("key1/", "<key>", "$$akey$", "!akey", "")
+    def test_create_invalid_specs(self):
+        """Test generic invalid specs.
 
-        for key in invalid_keys:
-            body = {"extra_specs": {key: "value1"}}
+        These are invalid regardless of the validation scheme, if any, in use.
+        """
+        invalid_specs = {
+            'key1/': 'value1',
+            '<key>': 'value1',
+            '$$akey$': 'value1',
+            '!akey': 'value1',
+            '': 'value1',
+        }
+
+        for key, value in invalid_specs.items():
+            body = {"extra_specs": {key: value}}
             req = self._get_request('1/os-extra_specs', use_admin_context=True)
             self.assertRaises(self.bad_request, self.controller.create,
                               req, 1, body=body)
 
     @mock.patch('nova.objects.flavor._flavor_extra_specs_add')
-    def test_create_valid_specs_key(self, mock_flavor_extra_specs):
-        valid_keys = ("key1", "month.price", "I_am-a Key", "finance:g2")
+    def test_create_valid_specs(self, mock_flavor_extra_specs):
+        valid_specs = {
+            'hide_hypervisor_id': 'true',
+            'hw:numa_nodes': '1',
+            'hw:numa_cpus.0': '0-3,8-9,11,10',
+        }
         mock_flavor_extra_specs.side_effect = return_create_flavor_extra_specs
 
-        for key in valid_keys:
-            body = {"extra_specs": {key: "value1"}}
+        for key, value in valid_specs.items():
+            body = {"extra_specs": {key: value}}
             req = self._get_request('1/os-extra_specs', use_admin_context=True)
             res_dict = self.controller.create(req, 1, body=body)
-            self.assertEqual('value1', res_dict['extra_specs'][key])
+            self.assertEqual(value, res_dict['extra_specs'][key])
 
     @mock.patch('nova.objects.flavor._flavor_extra_specs_add')
     def test_update_item(self, mock_add):
         mock_add.side_effect = return_create_flavor_extra_specs
-        body = {"key1": "value1"}
+        body = {'hw:cpu_policy': 'shared'}
 
-        req = self._get_request('1/os-extra_specs/key1',
+        req = self._get_request('1/os-extra_specs/hw:cpu_policy',
                                 use_admin_context=True)
-        res_dict = self.controller.update(req, 1, 'key1', body=body)
+        res_dict = self.controller.update(req, 1, 'hw:cpu_policy', body=body)
 
-        self.assertEqual('value1', res_dict['key1'])
+        self.assertEqual('shared', res_dict['hw:cpu_policy'])
 
     def test_update_item_no_admin(self):
-        body = {"key1": "value1"}
+        body = {'hw:cpu_policy': 'shared'}
 
-        req = self._get_request('1/os-extra_specs/key1')
+        req = self._get_request('1/os-extra_specs/hw:cpu_policy')
         self.assertRaises(exception.Forbidden, self.controller.update,
                           req, 1, 'key1', body=body)
 
     def _test_update_item_bad_request(self, body):
-        req = self._get_request('1/os-extra_specs/key1',
+        req = self._get_request('1/os-extra_specs/hw:cpu_policy',
                                 use_admin_context=True)
         self.assertRaises(self.bad_request, self.controller.update,
-                          req, 1, 'key1', body=body)
+                          req, 1, 'hw:cpu_policy', body=body)
 
     def test_update_item_empty_body(self):
         self._test_update_item_bad_request('')
 
     def test_update_item_too_many_keys(self):
-        body = {"key1": "value1", "key2": "value2"}
+        body = {"hw:cpu_policy": "dedicated", "hw:numa_nodes": "2"}
         self._test_update_item_bad_request(body)
 
     def test_update_item_non_dict_extra_specs(self):
@@ -290,7 +317,7 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
         self._test_update_item_bad_request({None: "value1"})
 
     def test_update_item_non_string_value(self):
-        self._test_update_item_bad_request({"key1": None})
+        self._test_update_item_bad_request({"hw:cpu_policy": None})
 
     def test_update_item_zero_length_key(self):
         self._test_update_item_bad_request({"": "value1"})
@@ -304,38 +331,38 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
         self._test_update_item_bad_request({"key1": value})
 
     def test_update_item_body_uri_mismatch(self):
-        body = {"key1": "value1"}
+        body = {'hw:cpu_policy': 'shared'}
 
         req = self._get_request('1/os-extra_specs/bad', use_admin_context=True)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, 1, 'bad', body=body)
 
     def test_update_flavor_not_found(self):
-        body = {"key1": "value1"}
+        body = {'hw:cpu_policy': 'shared'}
 
-        req = self._get_request('1/os-extra_specs/key1',
+        req = self._get_request('1/os-extra_specs/hw:cpu_policy',
                                 use_admin_context=True)
         with mock.patch('nova.objects.Flavor.save',
                         side_effect=exception.FlavorNotFound(flavor_id='')):
             self.assertRaises(webob.exc.HTTPNotFound, self.controller.update,
-                              req, 1, 'key1', body=body)
+                              req, 1, 'hw:cpu_policy', body=body)
 
     def test_update_flavor_db_duplicate(self):
-        body = {"key1": "value1"}
+        body = {'hw:cpu_policy': 'shared'}
 
-        req = self._get_request('1/os-extra_specs/key1',
+        req = self._get_request('1/os-extra_specs/hw:cpu_policy',
                                 use_admin_context=True)
         with mock.patch(
                 'nova.objects.Flavor.save',
                 side_effect=exception.FlavorExtraSpecUpdateCreateFailed(
                     id=1, retries=5)):
             self.assertRaises(webob.exc.HTTPConflict, self.controller.update,
-                              req, 1, 'key1', body=body)
+                              req, 1, 'hw:cpu_policy', body=body)
 
     def test_update_really_long_integer_value(self):
-        value = 10 ** 1000
+        body = {'hw:numa_nodes': 10 ** 1000}
 
-        req = self._get_request('1/os-extra_specs/key1',
+        req = self._get_request('1/os-extra_specs/hw:numa_nodes',
                                 use_admin_context=True)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          req, 1, 'key1', body={"key1": value})
+                          req, 1, 'hw:numa_nodes', body=body)

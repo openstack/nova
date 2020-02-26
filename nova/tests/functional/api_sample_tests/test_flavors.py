@@ -121,7 +121,10 @@ class FlavorsSampleJsonTest2_61(FlavorsSampleJsonTest):
         new_flavor = objects.Flavor(
             ctxt, memory_mb=2048, vcpus=1, root_gb=20, flavorid=new_flavor_id,
             name='m1.small.description', description='test description',
-            extra_specs={"key1": "value1", "key2": "value2"})
+            extra_specs={
+                'hw:numa_nodes': '1',
+                'hw:cpu_policy': 'shared',
+            })
         new_flavor.create()
         self.flavor_show_id = new_flavor_id
         self.subs = {'flavorid': new_flavor_id}

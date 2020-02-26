@@ -1,6 +1,6 @@
 {
     "extra_specs": {
-        "key1": "%(value1)s",
-        "key2": "%(value2)s"
+        "hw:cpu_policy": "%(value1)s",
+        "hw:numa_nodes": "%(value2)s"
     }
 }

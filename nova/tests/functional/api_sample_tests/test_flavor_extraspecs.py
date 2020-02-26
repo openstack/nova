@@ -21,8 +21,9 @@ class FlavorExtraSpecsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
     sample_dir = 'flavor-extra-specs'
 
     def _flavor_extra_specs_create(self):
-        subs = {'value1': 'value1',
-                'value2': 'value2'
+        subs = {
+            'value1': 'shared',
+            'value2': '1',
         }
         response = self._do_post('flavors/1/os-extra_specs',
                                  'flavor-extra-specs-create-req', subs)
@@ -30,15 +31,18 @@ class FlavorExtraSpecsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
                               subs, response, 200)
 
     def test_flavor_extra_specs_get(self):
-        subs = {'value1': 'value1'}
+        subs = {
+            'value1': '1',
+        }
         self._flavor_extra_specs_create()
-        response = self._do_get('flavors/1/os-extra_specs/key1')
+        response = self._do_get('flavors/1/os-extra_specs/hw:numa_nodes')
         self._verify_response('flavor-extra-specs-get-resp',
                               subs, response, 200)
 
     def test_flavor_extra_specs_list(self):
-        subs = {'value1': 'value1',
-                'value2': 'value2'
+        subs = {
+            'value1': 'shared',
+            'value2': '1',
         }
         self._flavor_extra_specs_create()
         response = self._do_get('flavors/1/os-extra_specs')
@@ -49,15 +53,17 @@ class FlavorExtraSpecsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
         self._flavor_extra_specs_create()
 
     def test_flavor_extra_specs_update(self):
-        subs = {'value1': 'new_value1'}
+        subs = {
+            'value1': '2',
+        }
         self._flavor_extra_specs_create()
-        response = self._do_put('flavors/1/os-extra_specs/key1',
+        response = self._do_put('flavors/1/os-extra_specs/hw:numa_nodes',
                                 'flavor-extra-specs-update-req', subs)
         self._verify_response('flavor-extra-specs-update-resp',
                               subs, response, 200)
 
     def test_flavor_extra_specs_delete(self):
         self._flavor_extra_specs_create()
-        response = self._do_delete('flavors/1/os-extra_specs/key1')
+        response = self._do_delete('flavors/1/os-extra_specs/hw:numa_nodes')
         self.assertEqual(200, response.status_code)
         self.assertEqual('', response.text)
