@@ -41,6 +41,7 @@ extensions = [
     'oslo_policy.sphinxext',
     'ext.versioned_notifications',
     'ext.feature_matrix',
+    'ext.extra_specs',
     'sphinxcontrib.actdiag',
     'sphinxcontrib.seqdiag',
     'sphinxcontrib.rsvgconverter',
@@ -148,6 +149,7 @@ latex_use_xindy = False
 openstack_projects = [
     'ceilometer',
     'cinder',
+    'cyborg',
     'glance',
     'horizon',
     'ironic',

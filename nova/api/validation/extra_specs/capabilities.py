@@ -18,17 +18,8 @@ These are used by the ``ComputeCapabilitiesFilter`` scheduler filter. Note that
 we explicitly do not allow the unnamespaced variant of extra specs since this
 has been deprecated since Grizzly (commit 8ce8e4b6c0d). Users that insist on
 using these can disable extra spec validation.
-"""
 
-from nova.api.validation.extra_specs import base
-
-
-DESCRIPTION = """\
-Specify that the '{capability}' capability provided by the host compute service
-satisfy the provided filter value. Requires the ``ComputeCapabilitiesFilter``
-scheduler filter.
-
-The value can be one of the following:
+For all extra specs, the value can be one of the following:
 
 * ``=`` (equal to or greater than as a number; same as vcpus case)
 * ``==`` (equal to as a number)
@@ -48,6 +39,15 @@ The value can be one of the following:
 
 Examples are: ``>= 5``, ``s== 2.1.0``, ``<in> gcc``, ``<all-in> aes mmx``, and
 ``<or> fpu <or> gpu``
+"""
+
+from nova.api.validation.extra_specs import base
+
+
+DESCRIPTION = """\
+Specify that the '{capability}' capability provided by the host compute service
+satisfy the provided filter value. Requires the ``ComputeCapabilitiesFilter``
+scheduler filter.
 """
 
 EXTRA_SPEC_VALIDATORS = []

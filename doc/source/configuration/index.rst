@@ -75,3 +75,19 @@ permissions on REST API actions.
       :hidden:
 
       sample-policy
+
+Extra Specs
+-----------
+
+Nova uses *flavor extra specs* as a way to provide additional information to
+instances beyond basic information like amount of RAM or disk. This information
+can range from hints for the scheduler to hypervisor-specific configuration
+instructions for the instance.
+
+* :doc:`Extra Spec Reference <extra-specs>`: A complete reference for all extra
+  specs currently recognized and supported by nova.
+
+.. toctree::
+   :hidden:
+
+   extra-specs
