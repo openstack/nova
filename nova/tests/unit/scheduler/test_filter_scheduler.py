@@ -20,14 +20,15 @@ import mock
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 
+from nova import context
 from nova import exception
 from nova import objects
 from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
 from nova.scheduler import utils as scheduler_utils
 from nova.scheduler import weights
+from nova import servicegroup
 from nova import test  # noqa
-from nova.tests.unit.scheduler import test_scheduler
 
 
 fake_numa_limit = objects.NUMATopologyLimits(cpu_allocation_ratio=1.0,
@@ -50,18 +51,41 @@ fake_selection = objects.Selection(service_host="fake_host",
         allocation_request_version=fake_alloc_version)
 
 
-class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
+class FilterSchedulerTestCase(test.NoDBTestCase):
     """Test case for Filter Scheduler."""
 
-    driver_cls = filter_scheduler.FilterScheduler
-
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info',
+                       new=mock.Mock())
+    @mock.patch.object(host_manager.HostManager, '_init_aggregates',
+                       new=mock.Mock())
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient',
+                autospec=True, new=mock.Mock())
+    @mock.patch('nova.scheduler.client.query.SchedulerQueryClient',
+                autospec=True, new=mock.Mock())
     def setUp(self):
-        with mock.patch(
-                'nova.scheduler.client.report.SchedulerReportClient',
-                autospec=True), mock.patch(
-                'nova.scheduler.client.query.SchedulerQueryClient',
-                autospec=True):
-            super(FilterSchedulerTestCase, self).setUp()
+        super(FilterSchedulerTestCase, self).setUp()
+
+        self.driver = filter_scheduler.FilterScheduler()
+        self.context = context.RequestContext('fake_user', 'fake_project')
+        self.topic = 'fake_topic'
+        self.servicegroup_api = servicegroup.API()
+
+    @mock.patch('nova.objects.ServiceList.get_by_topic')
+    @mock.patch('nova.servicegroup.API.service_is_up')
+    def test_hosts_up(self, mock_service_is_up, mock_get_by_topic):
+        service1 = objects.Service(host='host1')
+        service2 = objects.Service(host='host2')
+        services = objects.ServiceList(objects=[service1, service2])
+
+        mock_get_by_topic.return_value = services
+        mock_service_is_up.side_effect = [False, True]
+
+        result = self.driver.hosts_up(self.context, self.topic)
+        self.assertEqual(result, ['host2'])
+
+        mock_get_by_topic.assert_called_once_with(self.context, self.topic)
+        calls = [mock.call(service1), mock.call(service2)]
+        self.assertEqual(calls, mock_service_is_up.call_args_list)
 
     @mock.patch('nova.scheduler.utils.claim_resources')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'

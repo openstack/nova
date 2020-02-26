@@ -46,16 +46,3 @@ class TestScheduler(test.NoDBTestCase):
         mock_serve.assert_called_once_with(
             service_create.return_value, workers=4)
         mock_wait.assert_called_once_with()
-
-    @mock.patch('nova.service.Service.create')
-    @mock.patch('nova.service.serve')
-    @mock.patch('nova.service.wait')
-    @mock.patch('oslo_concurrency.processutils.get_worker_count')
-    def test_workers_fake_scheduler(self, get_worker_count, mock_wait,
-                                    mock_serve, service_create):
-        self.flags(driver='fake_scheduler', group='scheduler')
-        scheduler.main()
-        get_worker_count.assert_not_called()
-        mock_serve.assert_called_once_with(
-            service_create.return_value, workers=1)
-        mock_wait.assert_called_once_with()
