@@ -1,0 +1,11 @@
+---
+deprecations:
+  - |
+    The ``[scheduler] driver`` config option has been deprecated. This was
+    previously used to switch between different scheduler drivers including
+    custom, out-of-tree ones. However, only the ``FilterScheduler`` has been
+    supported in-tree since 19.0.0 (Stein) and nova increasingly relies on
+    placement for basic functionality, meaning developing and maintaining
+    out-of-tree drivers is increasingly difficult. Users who still rely on a
+    custom scheduler driver should migrate to the filter scheduler, using
+    custom filters and weighters where necessary.
