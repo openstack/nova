@@ -254,13 +254,6 @@ PERF_EVENTS_CPU_FLAG_MAPPING = {'cmt': 'cmt',
                                 'mbmt': 'mbm_total',
                                }
 
-
-# libvirt>=3.10 is required for volume multiattach unless qemu<2.10.
-# See https://bugzilla.redhat.com/show_bug.cgi?id=1378242
-# for details.
-MIN_LIBVIRT_MULTIATTACH = (3, 10, 0)
-
-
 MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION = (4, 4, 0)
 
 MIN_LIBVIRT_NATIVE_TLS_VERSION = (4, 4, 0)
@@ -311,9 +304,7 @@ class LibvirtDriver(driver.ComputeDriver):
             "supports_tagged_attach_interface": True,
             "supports_tagged_attach_volume": True,
             "supports_extend_volume": True,
-            # Multiattach support is conditional on qemu and libvirt versions
-            # determined in init_host.
-            "supports_multiattach": False,
+            "supports_multiattach": True,
             "supports_trusted_certs": True,
             # Supported image types
             "supports_image_type_aki": True,
@@ -637,8 +628,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._supported_perf_events = self._get_supported_perf_events()
 
-        self._set_multiattach_support()
-
         self._check_file_backed_memory_support()
 
         self._check_my_ip()
@@ -812,20 +801,6 @@ class LibvirtDriver(driver.ComputeDriver):
                             'type': dev_info['type']})
                     raise exception.InvalidLibvirtGPUConfig(reason=msg)
                 self._create_new_mediated_device(parent, uuid=mdev_uuid)
-
-    def _set_multiattach_support(self):
-        # Check to see if multiattach is supported. Based on bugzilla
-        # https://bugzilla.redhat.com/show_bug.cgi?id=1378242 and related
-        # clones, the shareable flag on a disk device will only work with
-        # qemu<2.10 or libvirt>=3.10. So check those versions here and set
-        # the capability appropriately.
-        if (self._host.has_min_version(lv_ver=MIN_LIBVIRT_MULTIATTACH) or
-                not self._host.has_min_version(hv_ver=(2, 10, 0))):
-            self.capabilities['supports_multiattach'] = True
-        else:
-            LOG.debug('Volume multiattach is not supported based on current '
-                      'versions of QEMU and libvirt. QEMU must be less than '
-                      '2.10 or libvirt must be greater than or equal to 3.10.')
 
     def _check_file_backed_memory_support(self):
         if CONF.libvirt.file_backed_memory:
