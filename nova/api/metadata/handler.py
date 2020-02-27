@@ -248,10 +248,10 @@ class MetadataRequestHandler(wsgi.Application):
 
         if len(ports) != 1:
             msg = _('Expected a single port matching provider %(pr)s '
-                    'and IP %(ip)s. Found %(count)d.' % {
+                    'and IP %(ip)s. Found %(count)d.') % {
                         'pr': provider_id,
                         'ip': instance_address,
-                        'count': len(ports)})
+                        'count': len(ports)}
 
             LOG.error(msg)
             raise webob.exc.HTTPBadRequest(explanation=msg)
