@@ -16,7 +16,6 @@
 Helpers for qemu tasks.
 """
 
-import operator
 import os
 
 from oslo_concurrency import processutils
@@ -32,8 +31,6 @@ LOG = logging.getLogger(__name__)
 QEMU_IMG_LIMITS = processutils.ProcessLimits(
     cpu_time=30,
     address_space=1 * units.Gi)
-
-QEMU_VERSION_REQ_SHARED = 2010000
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
@@ -85,20 +82,17 @@ def unprivileged_convert_image(source, dest, in_format, out_format,
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
-def privileged_qemu_img_info(path, format=None, qemu_version=None,
-                             output_format=None):
+def privileged_qemu_img_info(path, format=None, output_format=None):
     """Return an oject containing the parsed output from qemu-img info
 
     This is a privileged call to qemu-img info using the sys_admin_pctxt
     entrypoint allowing host block devices etc to be accessed.
     """
     return unprivileged_qemu_img_info(
-        path, format=format, qemu_version=qemu_version,
-        output_format=output_format)
+        path, format=format, output_format=output_format)
 
 
-def unprivileged_qemu_img_info(path, format=None, qemu_version=None,
-                               output_format=None):
+def unprivileged_qemu_img_info(path, format=None, output_format=None):
     """Return an object containing the parsed output from qemu-img info."""
     try:
         # The following check is about ploop images that reside within
@@ -107,15 +101,14 @@ def unprivileged_qemu_img_info(path, format=None, qemu_version=None,
             os.path.exists(os.path.join(path, "DiskDescriptor.xml"))):
             path = os.path.join(path, "root.hds")
 
-        cmd = ('env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'info', path)
+        cmd = (
+            'env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'info', path,
+            '--force-share',
+        )
         if format is not None:
             cmd = cmd + ('-f', format)
         if output_format is not None:
             cmd = cmd + ("--output=%s" % (output_format),)
-        # Check to see if the qemu version is >= 2.10 because if so, we need
-        # to add the --force-share flag.
-        if qemu_version and operator.ge(qemu_version, QEMU_VERSION_REQ_SHARED):
-            cmd = cmd + ('--force-share',)
         out, err = processutils.execute(*cmd, prlimit=QEMU_IMG_LIMITS)
     except processutils.ProcessExecutionError as exp:
         if exp.exit_code == -9:

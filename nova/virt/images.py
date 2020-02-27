@@ -33,10 +33,6 @@ from nova.i18n import _
 from nova.image import glance
 import nova.privsep.qemu
 
-# This is set by the libvirt driver on startup. The version is used to
-# determine what flags need to be set on the command line.
-QEMU_VERSION = None
-
 LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
@@ -49,8 +45,7 @@ def qemu_img_info(path, format=None, output_format=None):
         raise exception.DiskNotFound(location=path)
 
     info = nova.privsep.qemu.unprivileged_qemu_img_info(
-        path, format=format, qemu_version=QEMU_VERSION,
-        output_format=output_format)
+        path, format=format, output_format=output_format)
     if output_format:
         return imageutils.QemuImgInfo(info, format=output_format)
     else:
@@ -63,8 +58,7 @@ def privileged_qemu_img_info(path, format=None, output_format=None):
         raise exception.DiskNotFound(location=path)
 
     info = nova.privsep.qemu.privileged_qemu_img_info(
-        path, format=format, qemu_version=QEMU_VERSION,
-        output_format=output_format)
+        path, format=format, output_format=output_format)
     if output_format:
         return imageutils.QemuImgInfo(info, format=output_format)
     else:

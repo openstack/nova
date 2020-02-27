@@ -105,7 +105,6 @@ from nova.virt import driver
 from nova.virt import fake
 from nova.virt import hardware
 from nova.virt.image import model as imgmodel
-from nova.virt import images
 from nova.virt.libvirt import blockinfo
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import designer
@@ -1309,23 +1308,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 version_arg_found = True
                 break
         self.assertFalse(version_arg_found)
-
-    # NOTE(sdague): python2.7 and python3.5 have different behaviors
-    # when it comes to comparing against the sentinel, so
-    # has_min_version is needed to pass python3.5.
-    @mock.patch.object(nova.virt.libvirt.host.Host, "has_min_version",
-                       return_value=True)
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
-                       return_value=mock.sentinel.qemu_version)
-    def test_qemu_image_version(self, mock_get_libversion, min_ver):
-        """Test that init_host sets qemu image version
-
-        A sentinel is used here so that we aren't chasing this value
-        against minimums that get raised over time.
-        """
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        drvr.init_host("dummyhost")
-        self.assertEqual(images.QEMU_VERSION, mock.sentinel.qemu_version)
 
     @mock.patch.object(fields.Architecture, "from_host",
                        return_value=fields.Architecture.PPC64)
