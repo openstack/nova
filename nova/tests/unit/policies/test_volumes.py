@@ -19,6 +19,7 @@ from nova.api.openstack.compute import volumes as volumes_v21
 from nova.compute import vm_states
 from nova import exception
 from nova import objects
+from nova.policies import volumes_attachments as va_policies
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
@@ -74,6 +75,7 @@ class VolumeAttachPolicyTest(base.BasePolicyTest):
         super(VolumeAttachPolicyTest, self).setUp()
         self.controller = volumes_v21.VolumeAttachmentController()
         self.req = fakes.HTTPRequest.blank('')
+        self.policy_root = va_policies.POLICY_ROOT
         self.stub_out('nova.objects.BlockDeviceMapping'
                       '.get_by_volume_and_instance',
                       fake_bdm_get_by_volume_and_instance)
@@ -109,7 +111,8 @@ class VolumeAttachPolicyTest(base.BasePolicyTest):
             self.system_admin_context,
             self.project_admin_context
         ]
-        # Check that non-admin is not able to change the service
+        # Check that non-admin is not able to update the attached
+        # volume
         self.admin_unauthorized_contexts = [
             self.system_member_context,
             self.system_reader_context,
@@ -120,24 +123,36 @@ class VolumeAttachPolicyTest(base.BasePolicyTest):
             self.project_reader_context
         ]
 
+        self.reader_authorized_contexts = [
+            self.legacy_admin_context, self.system_admin_context,
+            self.system_reader_context, self.system_member_context,
+            self.project_admin_context, self.project_reader_context,
+            self.project_member_context, self.project_foo_context
+        ]
+
+        self.reader_unauthorized_contexts = [
+            self.system_foo_context,
+            self.other_project_member_context
+        ]
+
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     def test_index_volume_attach_policy(self, mock_get_instance):
-        rule_name = "os_compute_api:os-volumes-attachments:index"
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
+        rule_name = self.policy_root % "index"
+        self.common_policy_check(self.reader_authorized_contexts,
+                                 self.reader_unauthorized_contexts,
                                  rule_name, self.controller.index,
                                  self.req, FAKE_UUID)
 
     def test_show_volume_attach_policy(self):
-        rule_name = "os_compute_api:os-volumes-attachments:show"
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
+        rule_name = self.policy_root % "show"
+        self.common_policy_check(self.reader_authorized_contexts,
+                                 self.reader_unauthorized_contexts,
                                  rule_name, self.controller.show,
                                  self.req, FAKE_UUID, FAKE_UUID_A)
 
     @mock.patch('nova.compute.api.API.attach_volume')
     def test_create_volume_attach_policy(self, mock_attach_volume):
-        rule_name = "os_compute_api:os-volumes-attachments:create"
+        rule_name = self.policy_root % "create"
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_B,
                                      'device': '/dev/fake'}}
         self.common_policy_check(self.admin_or_owner_authorized_contexts,
@@ -147,7 +162,7 @@ class VolumeAttachPolicyTest(base.BasePolicyTest):
 
     @mock.patch('nova.compute.api.API.detach_volume')
     def test_delete_volume_attach_policy(self, mock_detach_volume):
-        rule_name = "os_compute_api:os-volumes-attachments:delete"
+        rule_name = self.policy_root % "delete"
         self.common_policy_check(self.admin_or_owner_authorized_contexts,
                                  self.admin_or_owner_unauthorized_contexts,
                                  rule_name, self.controller.delete,
@@ -155,7 +170,7 @@ class VolumeAttachPolicyTest(base.BasePolicyTest):
 
     @mock.patch('nova.compute.api.API.swap_volume')
     def test_update_volume_attach_policy(self, mock_swap_volume):
-        rule_name = "os_compute_api:os-volumes-attachments:update"
+        rule_name = self.policy_root % "update"
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_B}}
         self.common_policy_check(self.admin_authorized_contexts,
                                  self.admin_unauthorized_contexts,
@@ -189,4 +204,59 @@ class VolumeAttachScopeTypePolicyTest(VolumeAttachPolicyTest):
             self.project_admin_context, self.project_member_context,
             self.other_project_member_context,
             self.project_foo_context, self.project_reader_context
+        ]
+
+
+class VolumeAttachNoLegacyPolicyTest(VolumeAttachPolicyTest):
+    """Test os-volume-attachments APIs policies with system scope enabled,
+    and no more deprecated rules that allow the legacy admin API to access
+    system_admin_or_owner APIs.
+    """
+    without_deprecated_rules = True
+
+    def setUp(self):
+        super(VolumeAttachNoLegacyPolicyTest, self).setUp()
+        self.flags(enforce_scope=True, group="oslo_policy")
+
+        # Check that system or projct admin or owner is able to
+        # list/create/show/delete the attached volume.
+        self.admin_or_owner_authorized_contexts = [
+            self.system_admin_context,
+            self.project_admin_context,
+            self.project_member_context
+        ]
+
+        # Check that non-system and non-admin/owner is not able to
+        # list/create/show/delete the attached volume.
+        self.admin_or_owner_unauthorized_contexts = [
+            self.legacy_admin_context, self.system_member_context,
+            self.system_reader_context, self.project_reader_context,
+            self.project_foo_context, self.system_foo_context,
+            self.other_project_member_context
+        ]
+
+        # Check that admin is able to update the attached volume
+        self.admin_authorized_contexts = [
+            self.system_admin_context
+        ]
+        # Check that non-admin is not able to update the attached
+        # volume
+        self.admin_unauthorized_contexts = [
+            self.legacy_admin_context, self.system_member_context,
+            self.system_reader_context, self.system_foo_context,
+            self.project_admin_context, self.project_member_context,
+            self.other_project_member_context,
+            self.project_foo_context, self.project_reader_context
+        ]
+
+        self.reader_authorized_contexts = [
+            self.system_admin_context, self.system_reader_context,
+            self.system_member_context, self.project_admin_context,
+            self.project_reader_context, self.project_member_context
+        ]
+
+        self.reader_unauthorized_contexts = [
+            self.legacy_admin_context, self.system_foo_context,
+            self.project_foo_context,
+            self.other_project_member_context
         ]

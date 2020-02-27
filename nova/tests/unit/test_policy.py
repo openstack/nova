@@ -446,8 +446,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-shelve:shelve",
 "os_compute_api:os-shelve:unshelve",
 "os_compute_api:os-volumes",
-"os_compute_api:os-volumes-attachments:index",
-"os_compute_api:os-volumes-attachments:show",
 "os_compute_api:os-volumes-attachments:create",
 "os_compute_api:os-volumes-attachments:delete",
 )
@@ -462,6 +460,8 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 )
 
         self.system_reader_or_owner_rules = (
+"os_compute_api:os-volumes-attachments:index",
+"os_compute_api:os-volumes-attachments:show",
 "os_compute_api:os-attach-interfaces:list",
 "os_compute_api:os-attach-interfaces:show",
 )
