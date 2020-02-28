@@ -8406,6 +8406,7 @@ class ComputeTestCase(BaseTestCase,
             legacy_notify, notify, instance.uuid, self.compute_api.notifier,
             self.context)
 
+    @mock.patch('nova.compute.api.API._local_delete_cleanup')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     @mock.patch('nova.objects.Instance.destroy')
     @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
@@ -8413,7 +8414,7 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch('nova.objects.BuildRequest.get_by_instance_uuid')
     def test_delete_while_booting_instance_not_scheduled_cellv1(
             self, br_get_by_instance, legacy_notify, im_get_by_instance,
-            instance_destroy, notify):
+            instance_destroy, notify, api_del_cleanup):
 
         instance = self._create_fake_instance_obj()
         instance.host = None
@@ -8433,6 +8434,7 @@ class ComputeTestCase(BaseTestCase,
             self.context)
 
         instance_destroy.assert_called_once_with()
+        api_del_cleanup.assert_called_once()
 
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     @mock.patch('nova.objects.Instance.destroy')
