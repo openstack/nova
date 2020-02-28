@@ -132,7 +132,8 @@ class InstanceActionsTestV21(test.NoDBTestCase):
 
     def fake_get(self, context, instance_uuid, expected_attrs=None,
                  cell_down_support=False):
-        return objects.Instance(uuid=instance_uuid)
+        return objects.Instance(
+            context, id=1, uuid=instance_uuid, project_id=context.project_id)
 
     def setUp(self):
         super(InstanceActionsTestV21, self).setUp()
@@ -273,7 +274,8 @@ class InstanceActionsTestV221(InstanceActionsTestV21):
     def fake_get(self, context, instance_uuid, expected_attrs=None,
                  cell_down_support=False):
         self.assertEqual('yes', context.read_deleted)
-        return objects.Instance(uuid=instance_uuid)
+        return objects.Instance(
+            context, id=1, uuid=instance_uuid, project_id=context.project_id)
 
 
 class InstanceActionsTestV251(InstanceActionsTestV221):
