@@ -82,3 +82,15 @@ class AvailabilityZoneScopeTypePolicyTest(AvailabilityZonePolicyTest):
     def setUp(self):
         super(AvailabilityZoneScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+
+        # Check that system admin is able to list the AZ detail.
+        self.admin_authorized_contexts = [
+            self.system_admin_context]
+        # Check that non-system or non-admin is not able to list the AZ detail.
+        self.admin_unauthorized_contexts = [
+            self.legacy_admin_context, self.system_member_context,
+            self.system_reader_context, self.system_foo_context,
+            self.project_admin_context, self.project_member_context,
+            self.other_project_member_context,
+            self.project_foo_context, self.project_reader_context
+        ]
