@@ -1505,41 +1505,6 @@ class AssistedSnapshotDeleteTestCaseV275(AssistedSnapshotDeleteTestCaseV21):
                           self.controller.delete, req, 1)
 
 
-class TestAssistedVolumeSnapshotsPolicyEnforcementV21(test.NoDBTestCase):
-
-    def setUp(self):
-        super(TestAssistedVolumeSnapshotsPolicyEnforcementV21, self).setUp()
-        self.controller = (
-            assisted_snaps_v21.AssistedVolumeSnapshotsController())
-        self.req = fakes.HTTPRequest.blank('')
-
-    def test_create_assisted_volumes_snapshots_policy_failed(self):
-        rule_name = "os_compute_api:os-assisted-volume-snapshots:create"
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        body = {'snapshot':
-                   {'volume_id': '1',
-                    'create_info': {'type': 'qcow2',
-                                    'new_file': 'new_file',
-                                    'snapshot_id': 'snapshot_id'}}}
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.create, self.req, body=body)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-    def test_delete_assisted_volumes_snapshots_policy_failed(self):
-        rule_name = "os_compute_api:os-assisted-volume-snapshots:delete"
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.delete, self.req, '5')
-
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-
 class TestVolumeAttachPolicyEnforcementV21(test.NoDBTestCase):
 
     def setUp(self):
