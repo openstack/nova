@@ -9,6 +9,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import copy
 
 from oslo_log import log as logging
 from oslo_utils.fixture import uuidsentinel as uuids
@@ -93,7 +94,7 @@ class BasePolicyTest(test.TestCase):
                          "Few context are missing. check all contexts "
                          "mentioned in self.all_contexts are tested")
 
-        def ensure_raises(req):
+        def ensure_raises(req, *args, **kwargs):
             exc = self.assertRaises(
                 exception.PolicyNotAuthorized, func, req, *arg, **kwarg)
             self.assertEqual(
@@ -104,10 +105,14 @@ class BasePolicyTest(test.TestCase):
         for context in authorized_contexts:
             LOG.info("Testing authorized context: %s", context)
             req.environ['nova.context'] = context
-            func(req, *arg, **kwarg)
+            args1 = copy.deepcopy(arg)
+            kwargs1 = copy.deepcopy(kwarg)
+            func(req, *args1, **kwargs1)
         # Verify all the context not having allowed scope or roles fail
         # the policy check.
         for context in unauthorized_contexts:
             LOG.info("Testing unauthorized context: %s", context)
             req.environ['nova.context'] = context
-            ensure_raises(req)
+            args1 = copy.deepcopy(arg)
+            kwargs1 = copy.deepcopy(kwarg)
+            ensure_raises(req, *args1, **kwargs1)
