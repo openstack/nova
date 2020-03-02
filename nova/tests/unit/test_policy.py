@@ -450,11 +450,11 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-volumes-attachments:show",
 "os_compute_api:os-volumes-attachments:create",
 "os_compute_api:os-volumes-attachments:delete",
-"os_compute_api:os-availability-zone:list",
 )
 
         self.allow_all_rules = (
 "os_compute_api:os-quota-sets:defaults",
+"os_compute_api:os-availability-zone:list",
 )
 
         self.system_reader_rules = (

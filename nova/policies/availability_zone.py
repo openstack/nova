@@ -24,7 +24,7 @@ POLICY_ROOT = 'os_compute_api:os-availability-zone:%s'
 availability_zone_policies = [
     policy.DocumentedRuleDefault(
         POLICY_ROOT % 'list',
-        base.RULE_ADMIN_OR_OWNER,
+        base.RULE_ANY,
         "List availability zone information without host information",
         [
             {
