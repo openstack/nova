@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    Handling accelerator requests for an instance is now supported (where
+    supported by the underlying virt driver) as of microversion
+    2.82. The Cyborg service generates an event for the binding
+    completion for each accelerator request for an instance.
+    Adds a new event ``accelerator_request_bound`` for this to the API:
+
+    * ``POST /os-server-external-events``

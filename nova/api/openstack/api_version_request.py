@@ -220,6 +220,10 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              ``GET /servers/{server_id}/migrations/{migration_id}``.
     * 2.81 - Adds support for image cache management by aggregate by adding
              ``POST /os-aggregates/{aggregate_id}/images``.
+    * 2.82 - Adds ``accelerator-request-bound`` event to
+             ``os-server-external-events`` API. This event is sent by Cyborg
+             to indicate completion of ARQ binding. The ARQs can be obtained
+             from Cyborg with ``GET /v2/accelerator_requests?instance={uuid}``
 """
 
 # The minimum and maximum versions of the API supported
@@ -228,7 +232,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.81"
+_MAX_API_VERSION = "2.82"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which are related to network, images and baremetal
