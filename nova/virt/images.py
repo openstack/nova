@@ -59,6 +59,22 @@ def qemu_img_info(path, format=None, output_format=None):
         return imageutils.QemuImgInfo(info)
 
 
+def privileged_qemu_img_info(path, format=None, output_format=None):
+    """Return an object containing the parsed output from qemu-img info."""
+    # TODO(mikal): this code should not be referring to a libvirt specific
+    # flag.
+    if not os.path.exists(path) and CONF.libvirt.images_type != 'rbd':
+        raise exception.DiskNotFound(location=path)
+
+    info = nova.privsep.qemu.privileged_qemu_img_info(
+        path, format=format, qemu_version=QEMU_VERSION,
+        output_format=output_format)
+    if output_format:
+        return imageutils.QemuImgInfo(info, format=output_format)
+    else:
+        return imageutils.QemuImgInfo(info)
+
+
 def convert_image(source, dest, in_format, out_format, run_as_root=False,
                   compress=False):
     """Convert image to other format."""
