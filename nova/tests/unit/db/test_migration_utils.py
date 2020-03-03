@@ -13,11 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_db.sqlalchemy.compat import utils as compat_utils
 from oslo_db.sqlalchemy import enginefacade
 from oslo_db.sqlalchemy import test_base
 from oslo_db.sqlalchemy import test_fixtures
-from oslo_db.sqlalchemy import utils as oslodbutils
 from oslo_utils import uuidutils
 from sqlalchemy import Integer, String
 from sqlalchemy import MetaData, Table, Column
@@ -30,8 +28,6 @@ from nova.db.sqlalchemy import utils
 from nova import exception
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-
-SA_VERSION = compat_utils.SQLA_VERSION
 
 
 class CustomType(UserDefinedType):
@@ -187,12 +183,6 @@ class TestMigrationUtilsSQLite(
                       Column('id', Integer, primary_key=True),
                       Column('a', CustomType))
         table.create()
-
-        # reflection of custom types has been fixed upstream
-        if SA_VERSION < (0, 9, 0):
-            self.assertRaises(oslodbutils.ColumnError,
-                              utils.create_shadow_table,
-                              self.engine, table_name=table_name)
 
         utils.create_shadow_table(self.engine,
                                   table_name=table_name,
