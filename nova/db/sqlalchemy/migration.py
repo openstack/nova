@@ -62,6 +62,40 @@ def db_sync(version=None, database='main', context=None):
 
 def db_version(database='main', context=None):
     repository = _find_migrate_repo(database)
+
+    # NOTE(mdbooth): This is a crude workaround for races in _db_version. The 2
+    # races we have seen in practise are:
+    # * versioning_api.db_version() fails because the migrate_version table
+    #   doesn't exist, but meta.tables subsequently contains tables because
+    #   another thread has already started creating the schema. This results in
+    #   the 'Essex' error.
+    # * db_version_control() fails with pymysql.error.InternalError(1050)
+    #   (Create table failed) because of a race in sqlalchemy-migrate's
+    #   ControlledSchema._create_table_version, which does:
+    #     if not table.exists(): table.create()
+    #   This means that it doesn't raise the advertised
+    #   DatabaseAlreadyControlledError, which we could have handled explicitly.
+    #
+    # I believe the correct fix should be:
+    # * Delete the Essex-handling code as unnecessary complexity which nobody
+    #   should still need.
+    # * Fix the races in sqlalchemy-migrate such that version_control() always
+    #   raises a well-defined error, and then handle that error here.
+    #
+    # Until we do that, though, we should be able to just try again if we
+    # failed for any reason. In both of the above races, trying again should
+    # succeed the second time round.
+    #
+    # For additional context, see:
+    # * https://bugzilla.redhat.com/show_bug.cgi?id=1652287
+    # * https://bugs.launchpad.net/nova/+bug/1804652
+    try:
+        return _db_version(repository, database, context)
+    except Exception:
+        return _db_version(repository, database, context)
+
+
+def _db_version(repository, database, context):
     try:
         return versioning_api.db_version(get_engine(database, context=context),
                                          repository)

@@ -159,6 +159,51 @@ class TestDbVersion(test.NoDBTestCase):
         engine_calls = [mock.call(database, context=None)] * 3
         self.assertEqual(engine_calls, mock_get_engine.call_args_list)
 
+    def test_db_version_init_race(self, mock_get_engine, mock_db_version,
+            mock_find_repo):
+        # This test exercises bug 1804652 by causing
+        # versioning_api.version_contro() to raise an unhandleable error the
+        # first time it is called.
+        database = 'api'
+        mock_get_engine.return_value = 'engine'
+        exc = versioning_exceptions.DatabaseNotControlledError()
+        mock_db_version.side_effect = [exc, '']
+        metadata = mock.MagicMock()
+        metadata.tables.return_value = []
+        with mock.patch.object(sqlalchemy, 'MetaData',
+                metadata), mock.patch.object(migration,
+                        'db_version_control') as mock_version_control:
+            # db_version_control raises an unhandleable error because we were
+            # racing to initialise with another process.
+            mock_version_control.side_effect = test.TestingException
+            migration.db_version(database)
+            mock_version_control.assert_called_once_with(0,
+                                                         database,
+                                                         context=None)
+            db_version_calls = [mock.call('engine', 'repo')] * 2
+            self.assertEqual(db_version_calls, mock_db_version.call_args_list)
+        engine_calls = [mock.call(database, context=None)] * 3
+        self.assertEqual(engine_calls, mock_get_engine.call_args_list)
+
+    def test_db_version_raise_on_error(self, mock_get_engine, mock_db_version,
+            mock_find_repo):
+        # This test asserts that we will still raise a persistent error after
+        # working around bug 1804652.
+        database = 'api'
+        mock_get_engine.return_value = 'engine'
+        mock_db_version.side_effect = \
+                versioning_exceptions.DatabaseNotControlledError
+        metadata = mock.MagicMock()
+        metadata.tables.return_value = []
+        with mock.patch.object(sqlalchemy, 'MetaData',
+                metadata), mock.patch.object(migration,
+                        'db_version_control') as mock_version_control:
+            # db_version_control raises an unhandleable error because we were
+            # racing to initialise with another process.
+            mock_version_control.side_effect = test.TestingException
+            self.assertRaises(test.TestingException,
+                              migration.db_version, database)
+
 
 @mock.patch.object(migration, '_find_migrate_repo', return_value='repo')
 @mock.patch.object(migration, 'get_engine', return_value='engine')
