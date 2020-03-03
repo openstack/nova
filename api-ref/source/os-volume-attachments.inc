@@ -34,10 +34,10 @@ Response
 .. rest_parameters:: parameters.yaml
 
   - volumeAttachments: volumeAttachments
-  - device: device_resp
   - id: attachment_id_required
   - serverId: server_id
   - volumeId: volumeId_resp
+  - device: attachment_device_resp
   - tag: device_tag_bdm_attachment_resp
   - delete_on_termination: delete_on_termination_attachments_resp
 
@@ -150,10 +150,10 @@ Response
 .. rest_parameters:: parameters.yaml
 
   - volumeAttachment: volumeAttachment
-  - device: device_resp
   - id: attachment_id_required
   - serverId: server_id
   - volumeId: volumeId_resp
+  - device: attachment_device_resp
   - tag: device_tag_bdm_attachment_resp
   - delete_on_termination: delete_on_termination_attachments_resp
 
