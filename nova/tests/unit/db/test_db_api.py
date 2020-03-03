@@ -3554,7 +3554,8 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             _make_compute_node('host2', 'node3', 'ironic', services[1]['id']),
             _make_compute_node('host3', 'host3', 'kvm', services[2]['id']),
         ]
-        [db.compute_node_create(self.ctxt, cn) for cn in compute_nodes]
+        for cn in compute_nodes:
+            db.compute_node_create(self.ctxt, cn)
 
         expected = services[:1]
         real = db.service_get_all_computes_by_hv_type(self.ctxt,
@@ -3576,7 +3577,8 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             _make_compute_node('host2', 'node3', 'ironic', services[1]['id']),
             _make_compute_node('host3', 'host3', 'kvm', services[2]['id']),
         ]
-        [db.compute_node_create(self.ctxt, cn) for cn in compute_nodes]
+        for cn in compute_nodes:
+            db.compute_node_create(self.ctxt, cn)
 
         expected = services[:2]
         real = db.service_get_all_computes_by_hv_type(self.ctxt,
