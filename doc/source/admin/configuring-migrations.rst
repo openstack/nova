@@ -234,10 +234,12 @@ memory-intensive instances succeed.
 
 #. **Live migration completion timeout**
 
-   The Compute service aborts a migration when it has been running for too
-   long.  The timeout is calculated based on the instance size, which is the
-   instance's memory size in GiB. In the case of block migration, the size of
-   ephemeral storage in GiB is added.
+   The Compute service will either abort or force complete a migration
+   when it has been running too long. This behavior is configurable
+   using the :oslo.config:option:`libvirt.live_migration_timeout_action`
+   config option. The timeout is calculated based on the instance size, which
+   is the instance's memory size in GiB. In the case of block migration, the
+   size of ephemeral storage in GiB is added.
 
    The timeout in seconds is the instance size multiplied by the configurable
    parameter :oslo.config:option:`libvirt.live_migration_completion_timeout`,
