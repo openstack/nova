@@ -25,7 +25,6 @@ from nova.compute import task_states
 from nova.compute import vm_states
 import nova.conf
 from nova import exception
-from nova import image
 from nova.image import glance
 from nova import objects
 from nova import test
@@ -85,7 +84,7 @@ class ServerActionsControllerTestV21(test.TestCase):
                                            project_id=fakes.FAKE_PROJECT_ID)
         self.context = self.req.environ['nova.context']
 
-        self.image_api = image.API()
+        self.image_api = glance.API()
         # Assume that anything that hits the compute API and looks for a
         # RequestSpec doesn't care about it, since testing logic that deep
         # should be done in nova.tests.unit.compute.test_compute_api.

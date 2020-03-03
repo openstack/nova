@@ -34,7 +34,7 @@ from nova import conf as cfg
 from nova.console import type as console_type
 from nova import exception as exc
 from nova.i18n import _
-from nova import image
+from nova.image import glance
 from nova.virt import configdrive
 from nova.virt import driver
 from nova.virt.powervm import host as pvm_host
@@ -118,7 +118,7 @@ class PowerVMDriver(driver.ComputeDriver):
         self.disk_dvr = importutils.import_object_ns(
             DISK_ADPT_NS, DISK_ADPT_MAPPINGS[CONF.powervm.disk_driver.lower()],
             self.adapter, self.host_wrapper.uuid)
-        self.image_api = image.API()
+        self.image_api = glance.API()
 
         LOG.info("The PowerVM compute driver has been initialized.")
 

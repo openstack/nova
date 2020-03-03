@@ -164,7 +164,7 @@ class TestSSPDiskAdapter(test.NoDBTestCase):
                 new_callable=mock.PropertyMock)
     @mock.patch('pypowervm.util.sanitize_file_name_for_api', autospec=True)
     @mock.patch('pypowervm.tasks.storage.crt_lu', autospec=True)
-    @mock.patch('nova.image.api.API.download')
+    @mock.patch('nova.image.glance.API.download')
     @mock.patch('nova.virt.powervm.disk.driver.IterableToFileAdapter',
                 autospec=True)
     def test_create_disk_from_image(self, mock_it2f, mock_dl, mock_crt_lu,

@@ -86,7 +86,7 @@ class TestSendInstanceUpdateNotification(test.NoDBTestCase):
             mock.sentinel.ctxt, mock.sentinel.instance, None,
             populate_image_ref_url=True)
 
-    @mock.patch('nova.image.api.API.generate_image_url',
+    @mock.patch('nova.image.glance.API.generate_image_url',
                 side_effect=ks_exc.EndpointNotFound)
     def test_info_from_instance_image_api_endpoint_not_found_no_token(
             self, mock_gen_image_url):
@@ -105,7 +105,7 @@ class TestSendInstanceUpdateNotification(test.NoDBTestCase):
         self.assertEqual(instance.image_ref, payload['image_ref_url'])
         mock_gen_image_url.assert_called_once_with(instance.image_ref, ctxt)
 
-    @mock.patch('nova.image.api.API.generate_image_url',
+    @mock.patch('nova.image.glance.API.generate_image_url',
                 side_effect=ks_exc.EndpointNotFound)
     def test_info_from_instance_image_api_endpoint_not_found_with_token(
             self, mock_gen_image_url):
@@ -121,7 +121,7 @@ class TestSendInstanceUpdateNotification(test.NoDBTestCase):
                           populate_image_ref_url=True)
         mock_gen_image_url.assert_called_once_with(instance.image_ref, ctxt)
 
-    @mock.patch('nova.image.api.API.generate_image_url')
+    @mock.patch('nova.image.glance.API.generate_image_url')
     def test_info_from_instance_not_call_generate_image_url(
             self, mock_gen_image_url):
         ctxt = nova_context.get_admin_context()

@@ -26,13 +26,13 @@ import pypowervm.wrappers.cluster as pvm_clust
 import pypowervm.wrappers.storage as pvm_stg
 
 from nova import exception
-from nova import image
+from nova.image import glance
 from nova.virt.powervm.disk import driver as disk_drv
 from nova.virt.powervm import vm
 
 LOG = logging.getLogger(__name__)
 
-IMAGE_API = image.API()
+IMAGE_API = glance.API()
 
 
 class SSPDiskAdapter(disk_drv.DiskAdapter):

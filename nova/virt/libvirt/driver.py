@@ -87,7 +87,7 @@ from nova import crypto
 from nova.db import constants as db_const
 from nova import exception
 from nova.i18n import _
-from nova import image
+from nova.image import glance
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import diagnostics as diagnostics_obj
@@ -379,7 +379,7 @@ class LibvirtDriver(driver.ComputeDriver):
             self.disk_cachemodes[disk_type] = cache_mode
 
         self._volume_api = cinder.API()
-        self._image_api = image.API()
+        self._image_api = glance.API()
 
         # The default choice for the sysinfo_serial config option is "unique"
         # which does not have a special function since the value is just the

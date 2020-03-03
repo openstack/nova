@@ -22,7 +22,7 @@ from oslo_log import log as logging
 
 import nova.conf
 from nova import exception
-from nova import image
+from nova.image import glance
 from nova import utils as nova_utils
 from nova.virt.xenapi.image import utils
 from nova.virt.xenapi import vm_utils
@@ -30,7 +30,7 @@ from nova.virt.xenapi import vm_utils
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
-IMAGE_API = image.API()
+IMAGE_API = glance.API()
 
 
 class VdiStreamStore(object):

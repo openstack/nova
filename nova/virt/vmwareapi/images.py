@@ -32,7 +32,7 @@ from oslo_vmware import rw_handles
 
 from nova import exception
 from nova.i18n import _
-from nova import image
+from nova.image import glance
 from nova.objects import fields
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import vm_util
@@ -45,7 +45,7 @@ from nova.virt.vmwareapi import vm_util
 CONF = cfg.CONF
 
 LOG = logging.getLogger(__name__)
-IMAGE_API = image.API()
+IMAGE_API = glance.API()
 
 QUEUE_BUFFER_SIZE = 10
 NFC_LEASE_UPDATE_PERIOD = 60  # update NFC lease every 60sec.

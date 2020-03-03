@@ -28,7 +28,7 @@ from nova import conf
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
-from nova import image as nova_image
+from nova.image import glance
 from nova.network import constants as neutron_constants
 from nova.network import neutron
 from nova import objects
@@ -401,7 +401,7 @@ class PrepResizeAtSourceTask(base.TaskBase):
         :param migration: Migration object from the source cell
         :param request_spec: RequestSpec object for the resize operation
         :param compute_rpcapi: instance of nova.compute.rpcapi.ComputeAPI
-        :param image_api: instance of nova.image.api.API
+        :param image_api: instance of nova.image.glance.API
         """
         super(PrepResizeAtSourceTask, self).__init__(context, instance)
         self.migration = migration
@@ -636,7 +636,7 @@ class CrossCellMigrationTask(base.TaskBase):
 
         self.network_api = neutron.API()
         self.volume_api = cinder.API()
-        self.image_api = nova_image.API()
+        self.image_api = glance.API()
 
         # Keep an ordered dict of the sub-tasks completed so we can call their
         # rollback routines if something fails.

@@ -25,7 +25,7 @@ from nova.virt.powervm import image
 class TestImage(test.TestCase):
 
     @mock.patch('nova.utils.temporary_chown', autospec=True)
-    @mock.patch('nova.image.api.API', autospec=True)
+    @mock.patch('nova.image.glance.API', autospec=True)
     def test_stream_blockdev_to_glance(self, mock_api, mock_chown):
         mock_open = mock.mock_open()
         with mock.patch.object(six.moves.builtins, 'open', new=mock_open):
@@ -36,7 +36,7 @@ class TestImage(test.TestCase):
         mock_api.update.assert_called_with('context', 'image_id', 'metadata',
                                            mock_open.return_value)
 
-    @mock.patch('nova.image.api.API', autospec=True)
+    @mock.patch('nova.image.glance.API', autospec=True)
     def test_generate_snapshot_metadata(self, mock_api):
         mock_api.get.return_value = {'name': 'image_name'}
         mock_instance = mock.Mock()

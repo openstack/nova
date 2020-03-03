@@ -24,13 +24,13 @@ from pypowervm.wrappers import virtual_io_server as pvm_vios
 
 from nova import conf
 from nova import exception
-from nova import image
+from nova.image import glance
 from nova.virt.powervm.disk import driver as disk_dvr
 from nova.virt.powervm import vm
 
 LOG = logging.getLogger(__name__)
 CONF = conf.CONF
-IMAGE_API = image.API()
+IMAGE_API = glance.API()
 
 
 class LocalStorage(disk_dvr.DiskAdapter):

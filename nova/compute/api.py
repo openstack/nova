@@ -59,7 +59,7 @@ from nova import exception
 from nova import exception_wrapper
 from nova import hooks
 from nova.i18n import _
-from nova import image
+from nova.image import glance
 from nova.network import constants
 from nova.network import model as network_model
 from nova.network import neutron
@@ -289,7 +289,7 @@ class API(base.Base):
 
     def __init__(self, image_api=None, network_api=None, volume_api=None,
                  **kwargs):
-        self.image_api = image_api or image.API()
+        self.image_api = image_api or glance.API()
         self.network_api = network_api or neutron.API()
         self.volume_api = volume_api or cinder.API()
         self._placementclient = None  # Lazy-load on first access.
@@ -462,7 +462,7 @@ class API(base.Base):
             # image (below) and not any image URIs that might have been
             # supplied.
             # TODO(jaypipes): Get rid of this silliness once we move to a real
-            # Image object and hide all of that stuff within nova.image.api.
+            # Image object and hide all of that stuff within nova.image.glance
             kernel_id = kernel_image['id']
 
         if ramdisk_id is not None:

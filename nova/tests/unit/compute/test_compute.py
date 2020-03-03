@@ -58,7 +58,7 @@ from nova.console import type as ctype
 from nova import context
 from nova.db import api as db
 from nova import exception
-from nova.image import api as image_api
+from nova.image import glance as image_api
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import block_device as block_device_obj
@@ -724,7 +724,7 @@ class ComputeVolumeTestCase(BaseTestCase):
             else:
                 return {}
 
-        self.stub_out('nova.image.api.API.get', image_api_get)
+        self.stub_out('nova.image.glance.API.get', image_api_get)
 
         block_device_mapping = [{
             'boot_index': 0,
@@ -3558,8 +3558,8 @@ class ComputeTestCase(BaseTestCase,
             self.assertEqual(state_dict['power_state'],
                              instances[0]['power_state'])
 
-    @mock.patch('nova.image.api.API.get_all')
-    @mock.patch('nova.image.api.API.delete')
+    @mock.patch('nova.image.glance.API.get_all')
+    @mock.patch('nova.image.glance.API.delete')
     def test_rotate_backups(self, mock_delete, mock_get_all_images):
         instance = self._create_fake_instance_obj()
         instance_uuid = instance['uuid']
@@ -3604,7 +3604,7 @@ class ComputeTestCase(BaseTestCase,
                                      rotation=1)
         self.assertEqual(2, mock_delete.call_count)
 
-    @mock.patch('nova.image.api.API.get_all')
+    @mock.patch('nova.image.glance.API.get_all')
     def test_rotate_backups_with_image_delete_failed(self,
             mock_get_all_images):
         instance = self._create_fake_instance_obj()
@@ -3664,7 +3664,7 @@ class ComputeTestCase(BaseTestCase,
             if image_id == uuids.image_id_4:
                 raise exception.ImageDeleteConflict(reason='image is in use')
 
-        with mock.patch.object(nova.image.api.API, 'delete',
+        with mock.patch.object(nova.image.glance.API, 'delete',
                                side_effect=_check_image_id) as mock_delete:
             # Fake images 4,3,2 should be rotated in sequence
             self.compute._rotate_backups(self.context, instance=instance,

@@ -54,7 +54,7 @@ class TestProfiler(test.NoDBTestCase):
             'nova.conductor.manager.ConductorManager',
             'nova.conductor.rpcapi.ComputeTaskAPI',
             'nova.conductor.rpcapi.ConductorAPI',
-            'nova.image.api.API',
+            'nova.image.glance.API',
             'nova.network.neutron.ClientWrapper',
             'nova.scheduler.manager.SchedulerManager',
             'nova.scheduler.rpcapi.SchedulerAPI',
