@@ -3359,6 +3359,12 @@ class API(base.Base):
                                             block_device_info=None,
                                             reboot_type='HARD')
 
+    def _check_image_arch(self, image=None):
+        if image:
+            img_arch = image.get("properties", {}).get('hw_architecture')
+            if img_arch:
+                fields_obj.Architecture.canonicalize(img_arch)
+
     # TODO(stephenfin): We should expand kwargs out to named args
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
@@ -3405,6 +3411,7 @@ class API(base.Base):
         image_id, image = self._get_image(context, image_href)
         self._check_auto_disk_config(image=image,
                                      auto_disk_config=auto_disk_config)
+        self._check_image_arch(image=image)
 
         flavor = instance.get_flavor()
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(

@@ -658,6 +658,20 @@ class ServerActionsControllerTestV21(test.TestCase):
                           self.controller._action_rebuild,
                           self.req, FAKE_UUID, body=body)
 
+    @mock.patch.object(compute_api.API, 'rebuild')
+    def test_rebuild_raise_invalid_architecture_exc(self, mock_rebuild):
+        body = {
+            "rebuild": {
+                "imageRef": self._image_href,
+            },
+        }
+
+        mock_rebuild.side_effect = exception.InvalidArchitectureName('arm64')
+
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._action_rebuild,
+                          self.req, FAKE_UUID, body=body)
+
     def test_resize_server(self):
 
         body = dict(resize=dict(flavorRef="http://localhost/3"))
