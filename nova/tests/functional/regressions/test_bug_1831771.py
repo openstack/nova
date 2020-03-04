@@ -32,7 +32,6 @@ class TestDelete(integrated_helpers.ProviderUsageBaseTestCase):
         def delete_race(instance):
             self.api.delete_server(instance.uuid)
             self._wait_for_server_parameter(
-                self.api,
                 {'id': instance.uuid},
                 {'OS-EXT-STS:task_state': task_states.DELETING},
             )
@@ -60,8 +59,6 @@ class TestDelete(integrated_helpers.ProviderUsageBaseTestCase):
             # the previous instance.save()
             expected_task_state = wrap_kwargs.get('expected_task_state')
             if (
-                instance.vm_state == vm_states.ACTIVE and
-                instance.task_state is None and
                 expected_task_state == task_states.SPAWNING
             ):
                 delete_race(instance)
