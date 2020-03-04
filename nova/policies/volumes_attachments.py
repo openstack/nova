@@ -57,8 +57,24 @@ volumes_attachments_policies = [
         scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'update',
+        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        description="""Update a volume attachment.
+New 'update' policy about 'swap + update' request (which is possible
+only >2.85) only <swap policy> is checked. We expect <swap policy> to be
+always superset of this policy permission.
+""",
+        operations=[
+            {
+                'method': 'PUT',
+                'path':
+                 '/servers/{server_id}/os-volume_attachments/{volume_id}'
+            }
+        ],
+        scope_types=['system', 'project']),
+    policy.DocumentedRuleDefault(
+        name=POLICY_ROOT % 'swap',
         check_str=base.SYSTEM_ADMIN,
-        description="Update a volume attachment",
+        description="Update a volume attachment with a different volumeId",
         operations=[
             {
                 'method': 'PUT',

@@ -465,23 +465,26 @@ class VolumeAttachmentController(wsgi.Controller):
     def update(self, req, server_id, id, body):
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, server_id)
-        # TODO(danms): For now, use the existing admin-only policy for update.
-        # Later, split off the swap_volume permission and check the correct
-        # policy based on what is being asked by the client.
-        context.can(va_policies.POLICY_ROOT % 'update',
-                    target={'project_id': instance.project_id})
-
         attachment = body['volumeAttachment']
         volume_id = attachment['volumeId']
         only_swap = not api_version_request.is_supported(req, '2.85')
+
+        # NOTE(brinzhang): If the 'volumeId' requested by the user is
+        # different from the 'id' in the url path, or only swap is allowed by
+        # the microversion, we should check the swap volume policy.
+        # otherwise, check the volume update policy.
+        if only_swap or id != volume_id:
+            context.can(va_policies.POLICY_ROOT % 'swap', target={})
+        else:
+            context.can(va_policies.POLICY_ROOT % 'update',
+                        target={'project_id': instance.project_id})
+
         if only_swap:
             # NOTE(danms): Original behavior is always call swap on PUT
-            # FIXME(danms): Check the swap volume policy here
             self._update_volume_swap(req, instance, id, body)
         else:
             # NOTE(danms): New behavior is update any supported attachment
             # properties first, and then call swap if volumeId differs
-            # FIXME(danms): Check the volume attachment update policy here
             self._update_volume_regular(req, instance, id, body)
             if id != volume_id:
                 self._update_volume_swap(req, instance, id, body)

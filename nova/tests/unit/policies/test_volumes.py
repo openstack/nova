@@ -19,6 +19,7 @@ from nova.api.openstack.compute import volumes as volumes_v21
 from nova.compute import vm_states
 from nova import exception
 from nova import objects
+from nova.objects import block_device as block_device_obj
 from nova.policies import volumes_attachments as va_policies
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
@@ -160,6 +161,19 @@ class VolumeAttachPolicyTest(base.BasePolicyTest):
                                  rule_name, self.controller.create,
                                  self.req, FAKE_UUID, body=body)
 
+    @mock.patch.object(block_device_obj.BlockDeviceMapping, 'save')
+    def test_update_volume_attach_policy(self, mock_bdm_save):
+        rule_name = self.policy_root % "update"
+        req = fakes.HTTPRequest.blank('', version='2.85')
+        body = {'volumeAttachment': {
+            'volumeId': FAKE_UUID_A,
+            'delete_on_termination': True}}
+        self.common_policy_check(self.admin_or_owner_authorized_contexts,
+                                 self.admin_or_owner_unauthorized_contexts,
+                                 rule_name, self.controller.update,
+                                 req, FAKE_UUID,
+                                 FAKE_UUID_A, body=body)
+
     @mock.patch('nova.compute.api.API.detach_volume')
     def test_delete_volume_attach_policy(self, mock_detach_volume):
         rule_name = self.policy_root % "delete"
@@ -169,13 +183,51 @@ class VolumeAttachPolicyTest(base.BasePolicyTest):
                                  self.req, FAKE_UUID, FAKE_UUID_A)
 
     @mock.patch('nova.compute.api.API.swap_volume')
-    def test_update_volume_attach_policy(self, mock_swap_volume):
-        rule_name = self.policy_root % "update"
+    def test_swap_volume_attach_policy(self, mock_swap_volume):
+        rule_name = self.policy_root % "swap"
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_B}}
         self.common_policy_check(self.admin_authorized_contexts,
                                  self.admin_unauthorized_contexts,
                                  rule_name, self.controller.update,
                                  self.req, FAKE_UUID, FAKE_UUID_A, body=body)
+
+    @mock.patch.object(block_device_obj.BlockDeviceMapping, 'save')
+    @mock.patch('nova.compute.api.API.swap_volume')
+    def test_swap_volume_attach_policy_failed(self,
+                                              mock_swap_volume,
+                                              mock_bdm_save):
+        """Policy check fails for swap + update due to swap policy failure.
+        """
+        rule_name = self.policy_root % "swap"
+        req = fakes.HTTPRequest.blank('', version='2.85')
+        req.environ['nova.context'].user_id = 'other-user'
+        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
+        body = {'volumeAttachment': {'volumeId': FAKE_UUID_B,
+            'delete_on_termination': True}}
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized, self.controller.update,
+            req, FAKE_UUID, FAKE_UUID_A, body=body)
+        self.assertEqual(
+            "Policy doesn't allow %s to be performed." % rule_name,
+            exc.format_message())
+        mock_swap_volume.assert_not_called()
+        mock_bdm_save.assert_not_called()
+
+    @mock.patch.object(block_device_obj.BlockDeviceMapping, 'save')
+    @mock.patch('nova.compute.api.API.swap_volume')
+    def test_pass_swap_and_update_volume_attach_policy(self,
+                                                       mock_swap_volume,
+                                                       mock_bdm_save):
+        rule_name = self.policy_root % "swap"
+        req = fakes.HTTPRequest.blank('', version='2.85')
+        body = {'volumeAttachment': {'volumeId': FAKE_UUID_B,
+            'delete_on_termination': True}}
+        self.common_policy_check(self.admin_authorized_contexts,
+                                 self.admin_unauthorized_contexts,
+                                 rule_name, self.controller.update,
+                                 req, FAKE_UUID, FAKE_UUID_A, body=body)
+        mock_swap_volume.assert_called()
+        mock_bdm_save.assert_called()
 
 
 class VolumeAttachScopeTypePolicyTest(VolumeAttachPolicyTest):
