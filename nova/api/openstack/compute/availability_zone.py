@@ -106,7 +106,7 @@ class AvailabilityZoneController(wsgi.Controller):
     def index(self, req):
         """Returns a summary list of availability zone."""
         context = req.environ['nova.context']
-        context.can(az_policies.POLICY_ROOT % 'list')
+        context.can(az_policies.POLICY_ROOT % 'list', target={})
 
         return self._describe_availability_zones(context)
 
@@ -114,6 +114,6 @@ class AvailabilityZoneController(wsgi.Controller):
     def detail(self, req):
         """Returns a detailed list of availability zone."""
         context = req.environ['nova.context']
-        context.can(az_policies.POLICY_ROOT % 'detail')
+        context.can(az_policies.POLICY_ROOT % 'detail', target={})
 
         return self._describe_availability_zones_verbose(context)
