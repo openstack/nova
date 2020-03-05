@@ -8448,7 +8448,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_volume_driver.connect_volume.assert_called_once_with(
             connection_info, instance)
         mock_attach_encryptor.assert_called_once_with(
-            self.context, connection_info, encryption, True)
+            self.context, connection_info, encryption)
         mock_volume_driver.disconnect_volume.assert_not_called()
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_volume_driver')
@@ -8479,18 +8479,18 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_volume_driver.connect_volume.assert_called_once_with(
             connection_info, instance)
         mock_attach_encryptor.assert_called_once_with(
-            self.context, connection_info, encryption, True)
+            self.context, connection_info, encryption)
         mock_volume_driver.disconnect_volume.assert_called_once_with(
             connection_info, instance)
 
     @mock.patch.object(key_manager, 'API')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_volume_encryption')
-    @mock.patch.object(libvirt_driver.LibvirtDriver, '_use_native_luks')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_is_luks_v1')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_volume_encryptor')
     @mock.patch('nova.virt.libvirt.host.Host')
     @mock.patch('os_brick.encryptors.luks.is_luks')
-    def test_connect_volume_native_luks(self, mock_is_luks, mock_host,
-            mock_get_volume_encryptor, mock_use_native_luks,
+    def test_connect_volume_luks(self, mock_is_volume_luks, mock_host,
+            mock_get_volume_encryptor, mock_is_luks_v1,
             mock_get_volume_encryption, mock_get_key_mgr):
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -8505,7 +8505,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         # Mock out the encryptors
         mock_encryptor = mock.Mock()
         mock_get_volume_encryptor.return_value = mock_encryptor
-        mock_is_luks.return_value = True
+        mock_is_volume_luks.return_value = True
 
         # Mock out the key manager
         key = u'3734363537333734'
@@ -8517,9 +8517,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_key.get_encoded.return_value = key_encoded
 
         # assert that the secret is created for the encrypted volume during
-        # _connect_volume when use_native_luks is True
+        # _connect_volume when _is_luks_v1 is True
         mock_get_volume_encryption.return_value = encryption
-        mock_use_native_luks.return_value = True
+        mock_is_luks_v1.return_value = True
 
         drvr._connect_volume(self.context, connection_info, instance,
                              encryption=encryption)
@@ -8527,10 +8527,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     uuids.volume_id, password=key)
         mock_encryptor.attach_volume.assert_not_called()
 
-        # assert that the encryptor is used if use_native_luks is False
+        # assert that the encryptor is used if is_luks is False
         drvr._host.create_secret.reset_mock()
         mock_get_volume_encryption.reset_mock()
-        mock_use_native_luks.return_value = False
+        mock_is_luks_v1.return_value = False
 
         drvr._connect_volume(self.context, connection_info, instance,
                              encryption=encryption)
@@ -8538,26 +8538,17 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_encryptor.attach_volume.assert_called_once_with(self.context,
                                                              **encryption)
 
-        # assert that we format the volume if is_luks is False
-        mock_use_native_luks.return_value = True
-        mock_is_luks.return_value = False
+        # assert that we format the volume if it is not already formatted
+        mock_is_luks_v1.return_value = True
+        mock_is_volume_luks.return_value = False
 
         drvr._connect_volume(self.context, connection_info, instance,
                              encryption=encryption)
         mock_encryptor._format_volume.assert_called_once_with(key,
                                                               **encryption)
 
-        # assert that os-brick is used when allow_native_luks is False
-        mock_encryptor.attach_volume.reset_mock()
-        mock_is_luks.return_value = True
-
-        drvr._connect_volume(self.context, connection_info, instance,
-                             encryption=encryption, allow_native_luks=False)
-        mock_encryptor.attach_volume.assert_called_once_with(self.context,
-                                                             **encryption)
-
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_volume_encryptor')
-    def test_disconnect_volume_native_luks(self, mock_get_volume_encryptor):
+    def test_disconnect_volume_luks(self, mock_get_volume_encryptor):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr._host = mock.Mock()
         drvr._host.find_secret.return_value = mock.Mock()
@@ -9195,7 +9186,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         connection_info = {'data': {}}
 
-        drvr._attach_encryptor(self.context, connection_info, None, False)
+        drvr._attach_encryptor(self.context, connection_info, None)
 
         mock_get_metadata.assert_not_called()
         mock_get_encryptor.assert_not_called()
@@ -9213,7 +9204,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         connection_info = {'data': {'volume_id': uuids.volume_id}}
         mock_get_metadata.return_value = encryption
 
-        drvr._attach_encryptor(self.context, connection_info, None, False)
+        drvr._attach_encryptor(self.context, connection_info, None)
 
         mock_get_metadata.assert_called_once_with(self.context,
                 drvr._volume_api, uuids.volume_id, connection_info)
@@ -9231,8 +9222,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         encryption = {}
         connection_info = {'data': {'volume_id': uuids.volume_id}}
 
-        drvr._attach_encryptor(self.context, connection_info, encryption,
-                               False)
+        drvr._attach_encryptor(self.context, connection_info, encryption)
 
         mock_get_metadata.assert_not_called()
         mock_get_encryptor.assert_not_called()
@@ -9247,11 +9237,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         mock_encryptor = mock.MagicMock()
         mock_get_encryptor.return_value = mock_encryptor
-        encryption = {'provider': 'luks', 'control_location': 'front-end'}
+        encryption = {'provider': encryptors.PLAIN,
+                      'control_location': 'front-end'}
         mock_get_metadata.return_value = encryption
         connection_info = {'data': {'volume_id': uuids.volume_id}}
 
-        drvr._attach_encryptor(self.context, connection_info, None, False)
+        drvr._attach_encryptor(self.context, connection_info, None)
 
         mock_get_metadata.assert_called_once_with(self.context,
                 drvr._volume_api, uuids.volume_id, connection_info)
@@ -9271,11 +9262,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         mock_encryptor = mock.MagicMock()
         mock_get_encryptor.return_value = mock_encryptor
-        encryption = {'provider': 'luks', 'control_location': 'front-end'}
+        encryption = {'provider': encryptors.PLAIN,
+                      'control_location': 'front-end'}
         connection_info = {'data': {'volume_id': uuids.volume_id}}
 
-        drvr._attach_encryptor(self.context, connection_info,
-                               encryption, False)
+        drvr._attach_encryptor(self.context, connection_info, encryption)
 
         mock_get_metadata.assert_not_called()
         mock_get_encryptor.assert_called_once_with(connection_info,
@@ -9307,10 +9298,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_key_mgr.get.return_value = mock_key
         mock_key.get_encoded.return_value = key_encoded
 
-        with mock.patch.object(drvr, '_use_native_luks', return_value=True):
+        with mock.patch.object(drvr, '_is_luks_v1', return_value=True):
             with mock.patch.object(drvr._host, 'create_secret') as crt_scrt:
                 drvr._attach_encryptor(self.context, connection_info,
-                                       encryption, allow_native_luks=True)
+                                       encryption)
 
         mock_get_metadata.assert_not_called()
         mock_get_encryptor.assert_not_called()
@@ -9369,9 +9360,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch('os_brick.encryptors.get_encryption_metadata')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._use_native_luks')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._is_luks_v1')
     def test_detach_encryptor_encrypted_volume_meta_missing(self,
-            mock_use_native_luks, mock_get_encryptor, mock_get_metadata):
+            mock_is_luks_v1, mock_get_encryptor, mock_get_metadata):
         """Assert that if missing the encryption metadata of an encrypted
         volume is fetched and then used to detach the encryptor for the volume.
         """
@@ -9381,7 +9372,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         encryption = {'provider': 'luks', 'control_location': 'front-end'}
         mock_get_metadata.return_value = encryption
         connection_info = {'data': {'volume_id': uuids.volume_id}}
-        mock_use_native_luks.return_value = False
+        mock_is_luks_v1.return_value = False
 
         drvr._detach_encryptor(self.context, connection_info, None)
 
@@ -9393,9 +9384,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch('os_brick.encryptors.get_encryption_metadata')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._use_native_luks')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._is_luks_v1')
     def test_detach_encryptor_encrypted_volume_meta_provided(self,
-            mock_use_native_luks, mock_get_encryptor, mock_get_metadata):
+            mock_is_luks_v1, mock_get_encryptor, mock_get_metadata):
         """Assert that when provided there are no further attempts to fetch the
         encryption metadata for the volume and that the provided metadata is
         then used to detach the volume.
@@ -9405,7 +9396,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_get_encryptor.return_value = mock_encryptor
         encryption = {'provider': 'luks', 'control_location': 'front-end'}
         connection_info = {'data': {'volume_id': uuids.volume_id}}
-        mock_use_native_luks.return_value = False
+        mock_is_luks_v1.return_value = False
 
         drvr._detach_encryptor(self.context, connection_info, encryption)
 
@@ -9415,10 +9406,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_encryptor.detach_volume.assert_called_once_with(**encryption)
 
     @mock.patch('nova.virt.libvirt.host.Host.find_secret')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._use_native_luks')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._is_luks_v1')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
     def test_detach_encryptor_native_luks_device_path_secret_missing(self,
-            mock_get_encryptor, mock_use_native_luks, mock_find_secret):
+            mock_get_encryptor, mock_is_luks_v1, mock_find_secret):
         """Assert that the encryptor is not built when native LUKS is
         available, the associated volume secret is missing and device_path is
         also missing from the connection_info.
@@ -9428,33 +9419,28 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                       'encryption_key_id': uuids.encryption_key_id}
         connection_info = {'data': {'volume_id': uuids.volume_id}}
         mock_find_secret.return_value = False
-        mock_use_native_luks.return_value = True
+        mock_is_luks_v1.return_value = True
 
         drvr._detach_encryptor(self.context, connection_info, encryption)
 
         mock_find_secret.assert_called_once_with('volume', uuids.volume_id)
         mock_get_encryptor.assert_not_called()
 
-    @mock.patch.object(host.Host, "has_min_version")
-    def test_use_native_luks(self, mock_has_min_version):
+    def test_is_luks_v1(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        # The required QEMU and Libvirt versions are always available
-        # on the host and a valid LUKS provider is present within the
-        # encryption metadata dict.
-        mock_has_min_version.return_value = True
-        self.assertFalse(drvr._use_native_luks({}))
-        self.assertFalse(drvr._use_native_luks({
+        self.assertFalse(drvr._is_luks_v1({}))
+        self.assertFalse(drvr._is_luks_v1({
             'provider': 'nova.volume.encryptors.cryptsetup.CryptSetupEncryptor'
         }))
-        self.assertFalse(drvr._use_native_luks({
+        self.assertFalse(drvr._is_luks_v1({
             'provider': 'CryptSetupEncryptor'}))
-        self.assertFalse(drvr._use_native_luks({
+        self.assertFalse(drvr._is_luks_v1({
             'provider': encryptors.PLAIN}))
-        self.assertTrue(drvr._use_native_luks({
+        self.assertTrue(drvr._is_luks_v1({
             'provider': 'nova.volume.encryptors.luks.LuksEncryptor'}))
-        self.assertTrue(drvr._use_native_luks({
+        self.assertTrue(drvr._is_luks_v1({
             'provider': 'LuksEncryptor'}))
-        self.assertTrue(drvr._use_native_luks({
+        self.assertTrue(drvr._is_luks_v1({
             'provider': encryptors.LUKS}))
 
     def test_multi_nic(self):
@@ -12887,7 +12873,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             is_shared_block_storage=False,
             is_shared_instance_path=False,
             serial_listen_ports=[],
-            src_supports_native_luks=True,
             supported_perf_events=[],
             graphics_listen_addr_spice='127.0.0.1',
             graphics_listen_addr_vnc='127.0.0.1',
@@ -12921,21 +12906,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self._test_pre_live_migration_works_correctly_mocked(
             target_ret=target_ret)
 
-    def test_pre_live_migration_only_dest_supports_native_luks(self):
-        # Assert that allow_native_luks is False when src_supports_native_luks
-        # is missing from migrate data during a P to Q LM.
-        self._test_pre_live_migration_works_correctly_mocked(
-                src_supports_native_luks=None, dest_supports_native_luks=True,
-                allow_native_luks=False)
-
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'plug_vifs')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_connect_volume')
     @mock.patch('nova.virt.libvirt.utils.file_open',
                 side_effect=[io.BytesIO(b''), io.BytesIO(b'')])
     def _test_pre_live_migration_works_correctly_mocked(
             self, mock_file_open, mock_connect, mock_plug,
-            target_ret=None, src_supports_native_luks=True,
-            dest_supports_native_luks=True, allow_native_luks=True):
+            target_ret=None):
         # Creating testdata
         c = context.get_admin_context()
         instance = objects.Instance(root_device_name='/dev/vda',
@@ -12989,8 +12966,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         expected_connect_calls = []
         for v in block_device_info['block_device_mapping']:
             expected_connect_calls.append(
-                mock.call(c, v['connection_info'], instance,
-                          allow_native_luks=allow_native_luks))
+                mock.call(c, v['connection_info'], instance))
 
         migrate_data = migrate_data_obj.LibvirtLiveMigrateData(
             block_migration=False,
@@ -13004,10 +12980,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         if not target_ret:
             target_ret = self._generate_target_ret()
-        if src_supports_native_luks:
-            migrate_data.src_supports_native_luks = True
-        else:
-            target_ret.pop('src_supports_native_luks')
         result = drvr.pre_live_migration(
             c, instance, block_device_info, nw_info, None,
             migrate_data=migrate_data)
@@ -13168,7 +13140,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 disk_available_mb=123,
                 image_type='qcow2',
                 filename='foo',
-                src_supports_native_luks=True,
             )
 
             expected_migrate_data = migrate_data_obj.LibvirtLiveMigrateData(
@@ -13184,7 +13155,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 serial_listen_ports=[],
                 supported_perf_events=[],
                 target_connect_addr=None,
-                src_supports_native_luks=True
             )
 
             bdmi_vol1 = migrate_data_obj.LibvirtLiveMigrateBDMInfo()
@@ -13222,7 +13192,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             expected_connect_volume_calls = []
             for bdm in block_device_info['block_device_mapping']:
                 expected_call = mock.call(self.context, bdm['connection_info'],
-                                          inst_ref, allow_native_luks=True)
+                                          inst_ref)
                 expected_connect_volume_calls.append(expected_call)
             mock_connect_volume.assert_has_calls(expected_connect_volume_calls)
 
@@ -18566,11 +18536,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         save.assert_called_once_with()
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_volume_encryption')
-    @mock.patch.object(libvirt_driver.LibvirtDriver, '_use_native_luks')
-    def test_swap_volume_native_luks_blocked(self, mock_use_native_luks,
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_is_luks_v1')
+    def test_swap_volume_native_luks_blocked(self, mock_is_luks_v1,
                                              mock_get_encryption):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
-        mock_use_native_luks.return_value = True
+        mock_is_luks_v1.return_value = True
 
         # dest volume is encrypted
         mock_get_encryption.side_effect = [{}, {'provider': 'luks'}]
