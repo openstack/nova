@@ -23,15 +23,16 @@ BASE_POLICY_NAME = 'os_compute_api:os-admin-password'
 
 admin_password_policies = [
     policy.DocumentedRuleDefault(
-        BASE_POLICY_NAME,
-        base.RULE_ADMIN_OR_OWNER,
-        "Change the administrative password for a server",
-        [
+        name=BASE_POLICY_NAME,
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="Change the administrative password for a server",
+        operations=[
             {
                 'path': '/servers/{server_id}/action (changePassword)',
                 'method': 'POST'
             }
-        ])
+        ],
+        scope_types=['system', 'project'])
 ]
 
 
