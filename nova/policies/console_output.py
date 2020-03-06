@@ -24,7 +24,7 @@ BASE_POLICY_NAME = 'os_compute_api:os-console-output'
 console_output_policies = [
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_OR_OWNER,
+        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
         description='Show console output for a server',
         operations=[
             {
