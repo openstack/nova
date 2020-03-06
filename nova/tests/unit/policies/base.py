@@ -24,6 +24,19 @@ LOG = logging.getLogger(__name__)
 
 
 class BasePolicyTest(test.TestCase):
+    # NOTE(gmann): Set this flag to True if you would like to tests the
+    # new behaviour of policy without deprecated rules.
+    # This means you can simulate the phase when policies completely
+    # switch to new behaviour by removing the support of old rules.
+    without_deprecated_rules = False
+
+    # Add rules here other than base rules which need to override
+    # to remove the deprecated rules.
+    # For Example:
+    # rules_without_deprecation{
+    #    "os_compute_api:os-deferred-delete:restore":
+    #        "rule:system_admin_or_owner"}
+    rules_without_deprecation = {}
 
     def setUp(self):
         super(BasePolicyTest, self).setUp()
@@ -83,6 +96,20 @@ class BasePolicyTest(test.TestCase):
             self.project_reader_context, self.other_project_member_context,
             self.project_foo_context,
         ]
+
+        if self.without_deprecated_rules:
+            # To simulate the new world, remove deprecations by overriding
+            # rules which has the deprecated rules.
+            self.rules_without_deprecation.update({
+                "system_admin_or_owner":
+                    "rule:system_admin_api or rule:project_member_api",
+                "system_admin_api":
+                    "role:admin and system_scope:all",
+                "system_reader_api":
+                    "role:reader and system_scope:all",
+            })
+            self.policy.set_rules(self.rules_without_deprecation,
+                                  overwrite=False)
 
     def common_policy_check(self, authorized_contexts,
                             unauthorized_contexts, rule_name,
