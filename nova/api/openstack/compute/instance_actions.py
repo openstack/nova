@@ -84,7 +84,8 @@ class InstanceActionsController(wsgi.Controller):
         """Returns the list of actions recorded for a given instance."""
         context = req.environ["nova.context"]
         instance = self._get_instance(req, context, server_id)
-        context.can(ia_policies.BASE_POLICY_NAME, instance)
+        context.can(ia_policies.BASE_POLICY_NAME,
+                    target={'project_id': instance.project_id})
         actions_raw = self.action_api.actions_get(context, instance)
         actions = [self._format_action(action, ACTION_KEYS)
                    for action in actions_raw]
@@ -100,7 +101,8 @@ class InstanceActionsController(wsgi.Controller):
         """Returns the list of actions recorded for a given instance."""
         context = req.environ["nova.context"]
         instance = self._get_instance(req, context, server_id)
-        context.can(ia_policies.BASE_POLICY_NAME, instance)
+        context.can(ia_policies.BASE_POLICY_NAME,
+                    target={'project_id': instance.project_id})
         search_opts = {}
         search_opts.update(req.GET)
         if 'changes-since' in search_opts:
@@ -138,7 +140,8 @@ class InstanceActionsController(wsgi.Controller):
         """Return data about the given instance action."""
         context = req.environ['nova.context']
         instance = self._get_instance(req, context, server_id)
-        context.can(ia_policies.BASE_POLICY_NAME, instance)
+        context.can(ia_policies.BASE_POLICY_NAME,
+                    target={'project_id': instance.project_id})
         action = self.action_api.action_get_by_request_id(context, instance,
                                                           id)
         if action is None:
@@ -158,7 +161,9 @@ class InstanceActionsController(wsgi.Controller):
         show_events = False
         show_traceback = False
         show_host = False
-        if context.can(ia_policies.POLICY_ROOT % 'events', fatal=False):
+        if context.can(ia_policies.POLICY_ROOT % 'events',
+                       target={'project_id': instance.project_id},
+                       fatal=False):
             # For all microversions, the user can see all event details
             # including the traceback.
             show_events = show_traceback = True
