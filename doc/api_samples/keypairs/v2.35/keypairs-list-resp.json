@@ -11,7 +11,7 @@
     ],
     "keypairs_links": [
         {
-            "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/keypairs?limit=1&marker=keypair-5d935425-31d5-48a7-a0f1-e76e9813f2c3",
+            "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/os-keypairs?limit=1&marker=keypair-5d935425-31d5-48a7-a0f1-e76e9813f2c3",
             "rel": "next"
         }
     ]
