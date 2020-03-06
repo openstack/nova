@@ -24,95 +24,104 @@ NEW_POLICY_ROOT = 'compute:aggregates:%s'
 
 aggregates_policies = [
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'set_metadata',
-        base.RULE_ADMIN_API,
-        "Create or replace metadata for an aggregate",
-        [
+        name=POLICY_ROOT % 'set_metadata',
+        check_str=base.RULE_ADMIN_API,
+        description="Create or replace metadata for an aggregate",
+        operations=[
             {
                 'path': '/os-aggregates/{aggregate_id}/action (set_metadata)',
                 'method': 'POST'
             }
-        ]),
+        ],
+        scope_types=['system']),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'add_host',
-        base.RULE_ADMIN_API,
-        "Add a host to an aggregate",
-        [
+        name=POLICY_ROOT % 'add_host',
+        check_str=base.RULE_ADMIN_API,
+        description="Add a host to an aggregate",
+        operations=[
             {
                 'path': '/os-aggregates/{aggregate_id}/action (add_host)',
                 'method': 'POST'
             }
-        ]),
+        ],
+        scope_types=['system']),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'create',
-        base.RULE_ADMIN_API,
-        "Create an aggregate",
-        [
+        name=POLICY_ROOT % 'create',
+        check_str=base.RULE_ADMIN_API,
+        description="Create an aggregate",
+        operations=[
             {
                 'path': '/os-aggregates',
                 'method': 'POST'
             }
-        ]),
+        ],
+        scope_types=['system']),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'remove_host',
-        base.RULE_ADMIN_API,
-        "Remove a host from an aggregate",
-        [
+        name=POLICY_ROOT % 'remove_host',
+        check_str=base.RULE_ADMIN_API,
+        description="Remove a host from an aggregate",
+        operations=[
             {
                 'path': '/os-aggregates/{aggregate_id}/action (remove_host)',
                 'method': 'POST'
             }
-        ]),
+        ],
+        scope_types=['system']),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'update',
-        base.RULE_ADMIN_API,
-        "Update name and/or availability zone for an aggregate",
-        [
+        name=POLICY_ROOT % 'update',
+        check_str=base.RULE_ADMIN_API,
+        description="Update name and/or availability zone for an aggregate",
+        operations=[
             {
                 'path': '/os-aggregates/{aggregate_id}',
                 'method': 'PUT'
             }
-        ]),
+        ],
+        scope_types=['system']),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'index',
-        base.RULE_ADMIN_API,
-        "List all aggregates",
-        [
+        name=POLICY_ROOT % 'index',
+        check_str=base.RULE_ADMIN_API,
+        description="List all aggregates",
+        operations=[
             {
                 'path': '/os-aggregates',
                 'method': 'GET'
             }
-        ]),
+        ],
+        scope_types=['system']),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'delete',
-        base.RULE_ADMIN_API,
-        "Delete an aggregate",
-        [
+        name=POLICY_ROOT % 'delete',
+        check_str=base.RULE_ADMIN_API,
+        description="Delete an aggregate",
+        operations=[
             {
                 'path': '/os-aggregates/{aggregate_id}',
                 'method': 'DELETE'
             }
-        ]),
+        ],
+        scope_types=['system']),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'show',
-        base.RULE_ADMIN_API,
-        "Show details for an aggregate",
-        [
+        name=POLICY_ROOT % 'show',
+        check_str=base.RULE_ADMIN_API,
+        description="Show details for an aggregate",
+        operations=[
             {
                 'path': '/os-aggregates/{aggregate_id}',
                 'method': 'GET'
             }
-        ]),
+        ],
+        scope_types=['system']),
     policy.DocumentedRuleDefault(
-        NEW_POLICY_ROOT % 'images',
-        base.RULE_ADMIN_API,
-        "Request image caching for an aggregate",
-        [
+        name=NEW_POLICY_ROOT % 'images',
+        check_str=base.RULE_ADMIN_API,
+        description="Request image caching for an aggregate",
+        operations=[
             {
                 'path': '/os-aggregates/{aggregate_id}/images',
                 'method': 'POST'
             }
-        ]),
+        ],
+        scope_types=['system']),
 ]
 
 
