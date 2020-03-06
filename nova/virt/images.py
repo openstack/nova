@@ -39,30 +39,22 @@ CONF = nova.conf.CONF
 IMAGE_API = glance.API()
 
 
-def qemu_img_info(path, format=None, output_format=None):
+def qemu_img_info(path, format=None):
     """Return an object containing the parsed output from qemu-img info."""
     if not os.path.exists(path) and not path.startswith('rbd:'):
         raise exception.DiskNotFound(location=path)
 
-    info = nova.privsep.qemu.unprivileged_qemu_img_info(
-        path, format=format, output_format=output_format)
-    if output_format:
-        return imageutils.QemuImgInfo(info, format=output_format)
-    else:
-        return imageutils.QemuImgInfo(info)
+    info = nova.privsep.qemu.unprivileged_qemu_img_info(path, format=format)
+    return imageutils.QemuImgInfo(info, format='json')
 
 
-def privileged_qemu_img_info(path, format=None, output_format=None):
+def privileged_qemu_img_info(path, format=None, output_format='json'):
     """Return an object containing the parsed output from qemu-img info."""
     if not os.path.exists(path) and not path.startswith('rbd:'):
         raise exception.DiskNotFound(location=path)
 
-    info = nova.privsep.qemu.privileged_qemu_img_info(
-        path, format=format, output_format=output_format)
-    if output_format:
-        return imageutils.QemuImgInfo(info, format=output_format)
-    else:
-        return imageutils.QemuImgInfo(info)
+    info = nova.privsep.qemu.privileged_qemu_img_info(path, format=format)
+    return imageutils.QemuImgInfo(info, format='json')
 
 
 def convert_image(source, dest, in_format, out_format, run_as_root=False,

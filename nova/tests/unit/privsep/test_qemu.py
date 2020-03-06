@@ -52,3 +52,27 @@ class QemuTestCase(test.NoDBTestCase):
 
     def test_convert_image_unprivileged(self):
         self._test_convert_image(nova.privsep.qemu.unprivileged_convert_image)
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    @mock.patch('os.path.isdir')
+    def _test_qemu_img_info(self, method, mock_isdir, mock_execute):
+        mock_isdir.return_value = False
+        mock_execute.return_value = (mock.sentinel.out, None)
+        expected_cmd = (
+            'env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'info',
+            mock.sentinel.path, '--force-share', '--output=json', '-f',
+            mock.sentinel.format)
+
+        # Assert that the output from processutils is returned
+        self.assertEqual(
+            mock.sentinel.out,
+            method(mock.sentinel.path, format=mock.sentinel.format))
+        # Assert that the expected command is used
+        mock_execute.assert_called_once_with(
+            *expected_cmd, prlimit=nova.privsep.qemu.QEMU_IMG_LIMITS)
+
+    def test_privileged_qemu_img_info(self):
+        self._test_qemu_img_info(nova.privsep.qemu.privileged_qemu_img_info)
+
+    def test_unprivileged_qemu_img_info(self):
+        self._test_qemu_img_info(nova.privsep.qemu.unprivileged_qemu_img_info)
