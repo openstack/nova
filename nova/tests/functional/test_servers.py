@@ -12,6 +12,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
 import collections
 import copy
 import datetime
@@ -8383,10 +8384,11 @@ class CrossCellResizeWithQoSPort(PortResourceRequestBasedSchedulingTestBase):
         server = self._create_server_with_ports_and_check_allocation(
             non_qos_normal_port, qos_normal_port, qos_sriov_port)
 
-        orig_create_binding = neutronapi.API._create_port_binding
+        orig_create_binding = self.neutron.create_port_binding
 
         hosts = {
-            'host1': self.compute1_rp_uuid, 'host2': self.compute2_rp_uuid}
+            'host1': self.compute1_rp_uuid, 'host2': self.compute2_rp_uuid,
+        }
 
         # Add an extra check to our neutron fixture. This check makes sure that
         # the RP sent in the binding corresponds to host of the binding. In a
@@ -8394,21 +8396,23 @@ class CrossCellResizeWithQoSPort(PortResourceRequestBasedSchedulingTestBase):
         # 1907522 showed we fail this check for cross cell migration with qos
         # ports in a real deployment. So to reproduce that bug we need to have
         # the same check in our test env too.
-        def spy_on_create_binding(context, client, port_id, data):
+        def spy_on_create_binding(port_id, data):
             host_rp_uuid = hosts[data['binding']['host']]
             device_rp_uuid = data['binding']['profile'].get('allocation')
             if port_id == qos_normal_port['id']:
                 if device_rp_uuid != self.ovs_bridge_rp_per_host[host_rp_uuid]:
                     raise exception.PortBindingFailed(port_id=port_id)
             elif port_id == qos_sriov_port['id']:
-                if (device_rp_uuid not in
-                        self.sriov_dev_rp_per_host[host_rp_uuid].values()):
+                if (
+                    device_rp_uuid not in
+                    self.sriov_dev_rp_per_host[host_rp_uuid].values()
+                ):
                     raise exception.PortBindingFailed(port_id=port_id)
 
-            return orig_create_binding(context, client, port_id, data)
+            return orig_create_binding(port_id, data)
 
         with mock.patch(
-            'nova.network.neutron.API._create_port_binding',
+            'nova.tests.fixtures.NeutronFixture.create_port_binding',
             side_effect=spy_on_create_binding, autospec=True
         ):
             # We expect the migration to fail as the only available target
@@ -8440,8 +8444,8 @@ class CrossCellResizeWithQoSPort(PortResourceRequestBasedSchedulingTestBase):
         self._create_networking_rp_tree('host3', self.compute3_rp_uuid)
 
         with mock.patch(
-                'nova.network.neutron.API._create_port_binding',
-                side_effect=spy_on_create_binding, autospec=True
+            'nova.tests.fixtures.NeutronFixture.create_port_binding',
+            side_effect=spy_on_create_binding, autospec=True
         ):
             server = self._migrate_server(server)
             self.assertEqual('host3', server['OS-EXT-SRV-ATTR:host'])

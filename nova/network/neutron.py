@@ -255,26 +255,6 @@ def get_client(context, admin=False):
                          admin=admin or context.is_admin)
 
 
-def _get_ksa_client(context, admin=False):
-    """Returns a keystoneauth Adapter
-
-    This method should only be used if python-neutronclient does not yet
-    provide the necessary API bindings.
-
-    :param context: User request context
-    :param admin: If True, uses the configured credentials, else uses the
-        existing auth_token in the context (the user token).
-    :returns: keystoneauth1 Adapter object
-    """
-    auth_plugin = _get_auth_plugin(context, admin=admin)
-    session = _get_session()
-    client = utils.get_ksa_adapter(
-        'network', ksa_auth=auth_plugin, ksa_session=session)
-    client.additional_headers = {'accept': 'application/json'}
-    client.connect_retries = CONF.neutron.http_retries
-    return client
-
-
 def _is_not_duplicate(item, items, items_list_name, instance):
     present = item in items
 
@@ -417,25 +397,29 @@ class API:
         :param host: host from which to delete port bindings
         :raises: PortBindingDeletionFailed if port binding deletion fails.
         """
+        client = get_client(context, admin=True)
         failed_port_ids = []
+
         for port in ports:
             # This call is safe in that 404s for non-existing
             # bindings are ignored.
             try:
-                self.delete_port_binding(
-                    context, port['id'], host)
-            except exception.PortBindingDeletionFailed:
-                # delete_port_binding will log an error for each
-                # failure but since we're iterating a list we want
-                # to keep track of all failures to build a generic
-                # exception to raise
+                client.delete_port_binding(port['id'], host)
+            except neutron_client_exc.NeutronClientException as exc:
+                # We can safely ignore 404s since we're trying to delete
+                # the thing that wasn't found anyway, but for everything else
+                # we should log an error
+                if exc.status_code == 404:
+                    continue
+
                 failed_port_ids.append(port['id'])
+                LOG.exception(
+                    "Failed to delete binding for port %(port_id)s on host "
+                    "%(host)s", {'port_id': port['id'], 'host': host})
+
         if failed_port_ids:
-            msg = (_("Failed to delete binding for port(s) "
-                     "%(port_ids)s and host %(host)s.") %
-                   {'port_ids': ','.join(failed_port_ids),
-                    'host': host})
-            raise exception.PortBindingDeletionFailed(msg)
+            raise exception.PortBindingDeletionFailed(
+                port_id=','.join(failed_port_ids), host=host)
 
     def _get_available_networks(self, context, project_id,
                                 net_ids=None, neutron=None,
@@ -1329,9 +1313,9 @@ class API:
             LOG.debug('Instance does not have any ports.', instance=instance)
             return {}
 
-        client = _get_ksa_client(context, admin=True)
+        client = get_client(context, admin=True)
 
-        bindings_by_port_id = {}
+        bindings_by_port_id: ty.Dict[str, ty.Any] = {}
         for vif in network_info:
             # Now bind each port to the destination host and keep track of each
             # port that is bound to the resulting binding so we can rollback in
@@ -1348,45 +1332,27 @@ class API:
             else:
                 binding['profile'] = port_profiles[port_id]
 
-            data = dict(binding=binding)
-            resp = self._create_port_binding(context, client, port_id, data)
-            if resp:
-                bindings_by_port_id[port_id] = resp.json()['binding']
-            else:
+            data = {'binding': binding}
+            try:
+                binding = client.create_port_binding(port_id, data)['binding']
+            except neutron_client_exc.NeutronClientException:
                 # Something failed, so log the error and rollback any
                 # successful bindings.
-                LOG.error('Binding failed for port %s and host %s. '
-                          'Error: (%s %s)',
-                          port_id, host, resp.status_code, resp.text,
-                          instance=instance)
+                LOG.error('Binding failed for port %s and host %s.',
+                          port_id, host, instance=instance, exc_info=True)
                 for rollback_port_id in bindings_by_port_id:
                     try:
-                        self.delete_port_binding(
-                            context, rollback_port_id, host)
-                    except exception.PortBindingDeletionFailed:
-                        LOG.warning('Failed to remove binding for port %s on '
-                                    'host %s.', rollback_port_id, host,
-                                    instance=instance)
+                        client.delete_port_binding(rollback_port_id, host)
+                    except neutron_client_exc.NeutronClientException as exc:
+                        if exc.status_code != 404:
+                            LOG.warning('Failed to remove binding for port %s '
+                                        'on host %s.', rollback_port_id, host,
+                                        instance=instance)
                 raise exception.PortBindingFailed(port_id=port_id)
 
+            bindings_by_port_id[port_id] = binding
+
         return bindings_by_port_id
-
-    @staticmethod
-    def _create_port_binding(context, client, port_id, data):
-        """Creates a port binding with the specified data.
-
-        :param context: The request context for the operation.
-        :param client: keystoneauth1.adapter.Adapter
-        :param port_id: The ID of the port on which to create the binding.
-        :param data: dict of port binding data (requires at least the host),
-            for example::
-
-                {'binding': {'host': 'dest.host.com'}}
-        :return: requests.Response object
-        """
-        return client.post(
-            '/v2.0/ports/%s/bindings' % port_id, json=data, raise_exc=False,
-            global_request_id=context.global_id)
 
     def delete_port_binding(self, context, port_id, host):
         """Delete the port binding for the given port ID and host
@@ -1400,103 +1366,18 @@ class API:
         :raises: nova.exception.PortBindingDeletionFailed if a non-404 error
             response is received from neutron.
         """
-        client = _get_ksa_client(context, admin=True)
-        resp = self._delete_port_binding(context, client, port_id, host)
-        if resp:
-            LOG.debug('Deleted binding for port %s and host %s.',
-                      port_id, host)
-        else:
+        client = get_client(context, admin=True)
+        try:
+            client.delete_port_binding(port_id, host)
+        except neutron_client_exc.NeutronClientException as exc:
             # We can safely ignore 404s since we're trying to delete
             # the thing that wasn't found anyway.
-            if resp.status_code != 404:
-                # Log the details, raise an exception.
-                LOG.error('Unexpected error trying to delete binding '
-                          'for port %s and host %s. Code: %s. '
-                          'Error: %s', port_id, host,
-                          resp.status_code, resp.text)
+            if exc.status_code != 404:
+                LOG.error(
+                    'Unexpected error trying to delete binding for port %s '
+                    'and host %s.', port_id, host, exc_info=True)
                 raise exception.PortBindingDeletionFailed(
                     port_id=port_id, host=host)
-
-    @staticmethod
-    def _delete_port_binding(context, client, port_id, host):
-        """Deletes the binding for the given host on the given port.
-
-        :param context: The request context for the operation.
-        :param client: keystoneauth1.adapter.Adapter
-        :param port_id: ID of the port from which to delete the binding
-        :param host: A string name of the host on which the port is bound
-        :return: requests.Response object
-        """
-        return client.delete(
-            '/v2.0/ports/%s/bindings/%s' % (port_id, host), raise_exc=False,
-            global_request_id=context.global_id)
-
-    def activate_port_binding(self, context, port_id, host):
-        """Activates an inactive port binding.
-
-        If there are two port bindings to different hosts, activating the
-        inactive binding atomically changes the other binding to inactive.
-
-        :param context: The request context for the operation.
-        :param port_id: The ID of the port with an inactive binding on the
-                        host.
-        :param host: The host on which the inactive port binding should be
-                     activated.
-        :raises: nova.exception.PortBindingActivationFailed if a non-409 error
-            response is received from neutron.
-        """
-        client = _get_ksa_client(context, admin=True)
-        # This is a bit weird in that we don't PUT and update the status
-        # to ACTIVE, it's more like a POST action method in the compute API.
-        resp = self._activate_port_binding(context, client, port_id, host)
-        if resp:
-            LOG.debug('Activated binding for port %s and host %s.',
-                      port_id, host)
-        # A 409 means the port binding is already active, which shouldn't
-        # happen if the caller is doing things in the correct order.
-        elif resp.status_code == 409:
-            LOG.warning('Binding for port %s and host %s is already '
-                        'active.', port_id, host)
-        else:
-            # Log the details, raise an exception.
-            LOG.error('Unexpected error trying to activate binding '
-                      'for port %s and host %s. Code: %s. '
-                      'Error: %s', port_id, host, resp.status_code,
-                      resp.text)
-            raise exception.PortBindingActivationFailed(
-                port_id=port_id, host=host)
-
-    @staticmethod
-    def _activate_port_binding(context, client, port_id, host):
-        """Activates an inactive port binding.
-
-        :param context: The request context for the operation.
-        :param client: keystoneauth1.adapter.Adapter
-        :param port_id: ID of the port to activate the binding on
-        :param host: A string name of the host identifying the binding to be
-            activated
-        :return: requests.Response object
-        """
-        return client.put(
-            '/v2.0/ports/%s/bindings/%s/activate' % (port_id, host),
-            raise_exc=False,
-            global_request_id=context.global_id)
-
-    @staticmethod
-    def _get_port_binding(context, client, port_id, host):
-        """Returns a port binding of a given port on a given host
-
-        :param context: The request context for the operation.
-        :param client: keystoneauth1.adapter.Adapter
-        :param port_id: ID of the port to get the binding
-        :param host: A string name of the host identifying the binding to be
-            returned
-        :return: requests.Response object
-        """
-        return client.get(
-            '/v2.0/ports/%s/bindings/%s' % (port_id, host),
-            raise_exc=False,
-            global_request_id=context.global_id)
 
     def _get_pci_device_profile(self, pci_dev):
         dev_spec = self.pci_whitelist.get_devspec(pci_dev)
@@ -2865,43 +2746,73 @@ class API:
                       'updated later.', instance=instance)
             return
 
-        client = _get_ksa_client(context, admin=True)
+        client = get_client(context, admin=True)
         dest_host = migration['dest_compute']
         for vif in instance.get_network_info():
             # Not all compute migration flows use the port binding-extended
             # API yet, so first check to see if there is a binding for the
             # port and destination host.
-            resp = self._get_port_binding(
-                context, client, vif['id'], dest_host)
-            if resp:
-                if resp.json()['binding']['status'] != 'ACTIVE':
-                    self.activate_port_binding(context, vif['id'], dest_host)
-                    # TODO(mriedem): Do we need to call
-                    # _clear_migration_port_profile? migrate_instance_finish
-                    # would normally take care of clearing the "migrating_to"
-                    # attribute on each port when updating the port's
-                    # binding:host_id to point to the destination host.
-                else:
-                    # We might be racing with another thread that's handling
-                    # post-migrate operations and already activated the port
-                    # binding for the destination host.
-                    LOG.debug('Port %s binding to destination host %s is '
-                              'already ACTIVE.', vif['id'], dest_host,
-                              instance=instance)
-            elif resp.status_code == 404:
-                # If there is no port binding record for the destination host,
-                # we can safely assume none of the ports attached to the
+            try:
+                binding = client.show_port_binding(
+                    vif['id'], dest_host
+                )['binding']
+            except neutron_client_exc.NeutronClientException as exc:
+                if exc.status_code != 404:
+                    # We don't raise an exception here because we assume that
+                    # port bindings will be updated correctly when
+                    # migrate_instance_finish runs
+                    LOG.error(
+                        'Unexpected error trying to get binding info '
+                        'for port %s and destination host %s.',
+                        vif['id'], dest_host, exc_info=True)
+                    continue
+
+                # ...but if there is no port binding record for the destination
+                # host, we can safely assume none of the ports attached to the
                 # instance are using the binding-extended API in this flow and
                 # exit early.
                 return
-            else:
-                # We don't raise an exception here because we assume that
-                # port bindings will be updated correctly when
-                # migrate_instance_finish runs.
-                LOG.error('Unexpected error trying to get binding info '
-                          'for port %s and destination host %s. Code: %i. '
-                          'Error: %s', vif['id'], dest_host, resp.status_code,
-                          resp.text)
+
+            if binding['status'] == 'ACTIVE':
+                # We might be racing with another thread that's handling
+                # post-migrate operations and already activated the port
+                # binding for the destination host.
+                LOG.debug(
+                    'Port %s binding to destination host %s is already ACTIVE',
+                    vif['id'], dest_host, instance=instance)
+                continue
+
+            try:
+                # This is a bit weird in that we don't PUT and update the
+                # status to ACTIVE, it's more like a POST action method in the
+                # compute API.
+                client.activate_port_binding(vif['id'], dest_host)
+                LOG.debug(
+                    'Activated binding for port %s and host %s',
+                    vif['id'], dest_host)
+            except neutron_client_exc.NeutronClientException as exc:
+                # A 409 means the port binding is already active, which
+                # shouldn't happen if the caller is doing things in the correct
+                # order.
+                if exc.status_code == 409:
+                    LOG.warning(
+                        'Binding for port %s and host %s is already active',
+                        vif['id'], dest_host, exc_info=True)
+                    continue
+
+                # Log the details, raise an exception.
+                LOG.error(
+                    'Unexpected error trying to activate binding '
+                    'for port %s and host %s.',
+                    vif['id'], dest_host, exc_info=True)
+                raise exception.PortBindingActivationFailed(
+                    port_id=vif['id'], host=dest_host)
+
+            # TODO(mriedem): Do we need to call
+            # _clear_migration_port_profile? migrate_instance_finish
+            # would normally take care of clearing the "migrating_to"
+            # attribute on each port when updating the port's
+            # binding:host_id to point to the destination host.
 
     def migrate_instance_finish(
             self, context, instance, migration, provider_mappings):

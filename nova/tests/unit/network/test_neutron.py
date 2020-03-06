@@ -49,7 +49,6 @@ from nova import policy
 from nova import service_auth
 from nova import test
 from nova.tests.unit import fake_instance
-from nova.tests.unit import fake_requests as fake_req
 
 
 CONF = cfg.CONF
@@ -251,8 +250,6 @@ class TestNeutronClient(test.NoDBTestCase):
                                             auth_token='token')
         cl = neutronapi.get_client(my_context)
         self.assertEqual(retries, cl.httpclient.connect_retries)
-        kcl = neutronapi._get_ksa_client(my_context)
-        self.assertEqual(retries, kcl.connect_retries)
 
 
 class TestAPIBase(test.TestCase):
@@ -4894,24 +4891,23 @@ class TestAPI(TestAPIBase):
                          constants.BINDING_PROFILE: migrate_profile,
                          constants.BINDING_HOST_ID: instance.host}]}
         self.api.list_ports = mock.Mock(return_value=get_ports)
-        update_port_mock = mock.Mock()
-        get_client_mock.return_value.update_port = update_port_mock
-        with mock.patch.object(self.api, 'delete_port_binding') as del_binding:
-            with mock.patch.object(self.api, 'supports_port_binding_extension',
-                                   return_value=True):
-                self.api.setup_networks_on_host(self.context,
-                                                instance,
-                                                host='new-host',
-                                                teardown=True)
-        update_port_mock.assert_called_once_with(
-            port_id, {'port': {
-                constants.BINDING_PROFILE: migrate_profile}})
-        del_binding.assert_called_once_with(
-            self.context, port_id, 'new-host')
+        mocked_client = get_client_mock.return_value
 
-    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+        with mock.patch.object(self.api, 'supports_port_binding_extension',
+                               return_value=True):
+            self.api.setup_networks_on_host(self.context,
+                                            instance,
+                                            host='new-host',
+                                            teardown=True)
+
+        mocked_client.update_port.assert_called_once_with(
+            port_id, {'port': {constants.BINDING_PROFILE: migrate_profile}})
+        mocked_client.delete_port_binding.assert_called_once_with(
+            port_id, 'new-host')
+
+    @mock.patch.object(neutronapi, 'get_client')
     def test_update_port_profile_for_migration_teardown_true_with_profile_exc(
-        self, get_client_mock):
+            self, get_client_mock):
         """Tests that delete_port_binding raises PortBindingDeletionFailed
         which is raised through to the caller.
         """
@@ -4930,25 +4926,27 @@ class TestAPI(TestAPIBase):
                  constants.BINDING_HOST_ID: instance.host}]}
         self.api.list_ports = mock.Mock(return_value=get_ports)
         self.api._clear_migration_port_profile = mock.Mock()
-        with mock.patch.object(
-                self.api, 'delete_port_binding',
-                side_effect=exception.PortBindingDeletionFailed(
-                    port_id=uuids.port1, host='new-host')) as del_binding:
-            with mock.patch.object(self.api, 'supports_port_binding_extension',
-                                   return_value=True):
-                ex = self.assertRaises(
-                    exception.PortBindingDeletionFailed,
-                    self.api.setup_networks_on_host,
-                    self.context, instance, host='new-host', teardown=True)
-                # Make sure both ports show up in the exception message.
-                self.assertIn(uuids.port1, str(ex))
-                self.assertIn(uuids.port2, str(ex))
+        NeutronError = exceptions.NeutronClientException(status_code=500)
+        mocked_client = get_client_mock.return_value
+        mocked_client.delete_port_binding.side_effect = NeutronError
+
+        with mock.patch.object(self.api, 'supports_port_binding_extension',
+                               return_value=True):
+            ex = self.assertRaises(
+                exception.PortBindingDeletionFailed,
+                self.api.setup_networks_on_host,
+                self.context, instance, host='new-host', teardown=True)
+            # Make sure both ports show up in the exception message.
+            self.assertIn(uuids.port1, str(ex))
+            self.assertIn(uuids.port2, str(ex))
+
         self.api._clear_migration_port_profile.assert_called_once_with(
             self.context, instance, get_client_mock.return_value,
             get_ports['ports'])
-        del_binding.assert_has_calls([
-            mock.call(self.context, uuids.port1, 'new-host'),
-            mock.call(self.context, uuids.port2, 'new-host')])
+        mocked_client.delete_port_binding.assert_has_calls([
+            mock.call(uuids.port1, 'new-host'),
+            mock.call(uuids.port2, 'new-host'),
+        ])
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_update_port_profile_for_migration_teardown_true_no_profile(
@@ -6101,7 +6099,7 @@ class TestAPI(TestAPIBase):
         mock_get_inst.assert_called_once_with(ctxt, instance.uuid)
         mock_get_map.assert_called_once_with(ctxt, instance.uuid)
 
-    @mock.patch('nova.network.neutron._get_ksa_client',
+    @mock.patch('nova.network.neutron.get_client',
                 new_callable=mock.NonCallableMock)  # asserts not called
     def test_migrate_instance_start_no_binding_ext(self, get_client_mock):
         """Tests that migrate_instance_start exits early if neutron doesn't
@@ -6112,63 +6110,65 @@ class TestAPI(TestAPIBase):
             self.api.migrate_instance_start(
                 self.context, mock.sentinel.instance, {})
 
-    @mock.patch('nova.network.neutron._get_ksa_client')
+    @mock.patch('nova.network.neutron.get_client')
     def test_migrate_instance_start_activate(self, get_client_mock):
         """Tests the happy path for migrate_instance_start where the binding
         for the port(s) attached to the instance are activated on the
         destination host.
         """
         binding = {'binding': {'status': 'INACTIVE'}}
-        resp = fake_req.FakeResponse(200, content=jsonutils.dumps(binding))
-        get_client_mock.return_value.get.return_value = resp
+        mocked_client = get_client_mock.return_value
+        mocked_client.show_port_binding.return_value = binding
         # Just create a simple instance with a single port.
         instance = objects.Instance(info_cache=objects.InstanceInfoCache(
             network_info=model.NetworkInfo([model.VIF(uuids.port_id)])))
         migration = objects.Migration(
             source_compute='source', dest_compute='dest')
-        with mock.patch.object(self.api, 'activate_port_binding') as activate:
-            with mock.patch.object(self.api, 'supports_port_binding_extension',
-                                   return_value=True):
-                self.api.migrate_instance_start(
-                    self.context, instance, migration)
-        activate.assert_called_once_with(self.context, uuids.port_id, 'dest')
-        get_client_mock.return_value.get.assert_called_once_with(
-            '/v2.0/ports/%s/bindings/dest' % uuids.port_id, raise_exc=False,
-            global_request_id=self.context.global_id)
 
-    @mock.patch('nova.network.neutron._get_ksa_client')
+        with mock.patch.object(self.api, 'supports_port_binding_extension',
+                               return_value=True):
+            self.api.migrate_instance_start(
+                self.context, instance, migration)
+
+        mocked_client.show_port_binding.assert_called_once_with(
+            uuids.port_id, 'dest')
+        mocked_client.activate_port_binding.assert_called_once_with(
+            uuids.port_id, 'dest')
+
+    @mock.patch('nova.network.neutron.get_client')
     def test_migrate_instance_start_already_active(self, get_client_mock):
         """Tests the case that the destination host port binding is already
         ACTIVE when migrate_instance_start is called so we don't try to
         activate it again, which would result in a 409 from Neutron.
         """
         binding = {'binding': {'status': 'ACTIVE'}}
-        resp = fake_req.FakeResponse(200, content=jsonutils.dumps(binding))
-        get_client_mock.return_value.get.return_value = resp
+        mocked_client = get_client_mock.return_value
+        mocked_client.show_port_binding.return_value = binding
         # Just create a simple instance with a single port.
         instance = objects.Instance(info_cache=objects.InstanceInfoCache(
             network_info=model.NetworkInfo([model.VIF(uuids.port_id)])))
         migration = objects.Migration(
             source_compute='source', dest_compute='dest')
-        with mock.patch.object(self.api, 'activate_port_binding',
-                               new_callable=mock.NonCallableMock):
-            with mock.patch.object(self.api, 'supports_port_binding_extension',
-                                   return_value=True):
-                self.api.migrate_instance_start(
-                    self.context, instance, migration)
-        get_client_mock.return_value.get.assert_called_once_with(
-            '/v2.0/ports/%s/bindings/dest' % uuids.port_id, raise_exc=False,
-            global_request_id=self.context.global_id)
 
-    @mock.patch('nova.network.neutron._get_ksa_client')
+        with mock.patch.object(self.api, 'supports_port_binding_extension',
+                               return_value=True):
+            self.api.migrate_instance_start(
+                self.context, instance, migration)
+
+        mocked_client.show_port_binding.assert_called_once_with(
+            uuids.port_id, 'dest')
+        mocked_client.activate_port_binding.assert_not_called()
+
+    @mock.patch('nova.network.neutron.get_client')
     def test_migrate_instance_start_no_bindings(self, get_client_mock):
         """Tests the case that migrate_instance_start is running against new
         enough neutron for the binding-extended API but the ports don't have
         a binding resource against the destination host, so no activation
         happens.
         """
-        get_client_mock.return_value.get.return_value = (
-            fake_req.FakeResponse(404))
+        NeutronNotFound = exceptions.NeutronClientException(status_code=404)
+        mocked_client = get_client_mock.return_value
+        mocked_client.show_port_binding.side_effect = NeutronNotFound
         # Create an instance with two ports so we can test the short circuit
         # when we find that the first port doesn't have a dest host binding.
         instance = objects.Instance(info_cache=objects.InstanceInfoCache(
@@ -6176,45 +6176,41 @@ class TestAPI(TestAPIBase):
                 model.VIF(uuids.port1), model.VIF(uuids.port2)])))
         migration = objects.Migration(
             source_compute='source', dest_compute='dest')
-        with mock.patch.object(self.api, 'activate_port_binding',
-                               new_callable=mock.NonCallableMock):
-            with mock.patch.object(self.api, 'supports_port_binding_extension',
-                                   return_value=True):
-                self.api.migrate_instance_start(
-                    self.context, instance, migration)
-        get_client_mock.return_value.get.assert_called_once_with(
-            '/v2.0/ports/%s/bindings/dest' % uuids.port1, raise_exc=False,
-            global_request_id=self.context.global_id)
 
-    @mock.patch('nova.network.neutron._get_ksa_client')
+        with mock.patch.object(self.api, 'supports_port_binding_extension',
+                               return_value=True):
+            self.api.migrate_instance_start(
+                self.context, instance, migration)
+
+        mocked_client.show_port_binding.assert_called_once_with(
+            uuids.port1, 'dest')
+        mocked_client.activate_port_binding.assert_not_called()
+
+    @mock.patch('nova.network.neutron.get_client')
     def test_migrate_instance_start_get_error(self, get_client_mock):
         """Tests the case that migrate_instance_start is running against new
         enough neutron for the binding-extended API but getting the port
         binding information results in an error response from neutron.
         """
-        get_client_mock.return_value.get.return_value = (
-            fake_req.FakeResponse(500))
+        NeutronError = exceptions.NeutronClientException(status_code=500)
+        mocked_client = get_client_mock.return_value
+        mocked_client.show_port_binding.side_effect = NeutronError
         instance = objects.Instance(info_cache=objects.InstanceInfoCache(
             network_info=model.NetworkInfo([
                 model.VIF(uuids.port1), model.VIF(uuids.port2)])))
         migration = objects.Migration(
             source_compute='source', dest_compute='dest')
-        with mock.patch.object(self.api, 'activate_port_binding',
-                               new_callable=mock.NonCallableMock):
-            with mock.patch.object(self.api, 'supports_port_binding_extension',
-                                   return_value=True):
-                self.api.migrate_instance_start(
-                    self.context, instance, migration)
-        self.assertEqual(2, get_client_mock.return_value.get.call_count)
-        get_client_mock.return_value.get.assert_has_calls([
-            mock.call(
-                '/v2.0/ports/%s/bindings/dest' % uuids.port1,
-                raise_exc=False,
-                global_request_id=self.context.global_id),
-            mock.call(
-                '/v2.0/ports/%s/bindings/dest' % uuids.port2,
-                raise_exc=False,
-                global_request_id=self.context.global_id)])
+
+        with mock.patch.object(self.api, 'supports_port_binding_extension',
+                               return_value=True):
+            self.api.migrate_instance_start(
+                self.context, instance, migration)
+
+        self.assertEqual(2, mocked_client.show_port_binding.call_count)
+        mocked_client.show_port_binding.assert_has_calls([
+            mock.call(uuids.port1, 'dest'),
+            mock.call(uuids.port2, 'dest'),
+        ])
 
     @mock.patch('nova.network.neutron.get_client')
     def test_get_requested_resource_for_instance_no_resource_request(
@@ -6778,7 +6774,7 @@ class TestAPIPortbinding(TestAPIBase):
             'fake_host', 'setup_instance_network_on_host',
             self.context, instance, 'fake_host')
 
-    @mock.patch('nova.network.neutron._get_ksa_client',
+    @mock.patch('nova.network.neutron.get_client',
                 new_callable=mock.NonCallableMock)
     def test_bind_ports_to_host_no_ports(self, mock_client):
         self.assertDictEqual({},
@@ -6787,11 +6783,11 @@ class TestAPIPortbinding(TestAPIBase):
                                  objects.Instance(info_cache=None),
                                  'fake-host'))
 
-    @mock.patch('nova.network.neutron._get_ksa_client')
+    @mock.patch('nova.network.neutron.get_client')
     def test_bind_ports_to_host(self, mock_client):
         """Tests a single port happy path where everything is successful."""
-        def post_side_effect(*args, **kwargs):
-            self.assertDictEqual(binding, kwargs['json'])
+        def fake_create(port_id, data):
+            self.assertDictEqual(binding, data)
             return mock.DEFAULT
 
         nwinfo = model.NetworkInfo([model.VIF(uuids.port)])
@@ -6801,21 +6797,22 @@ class TestAPIPortbinding(TestAPIBase):
         binding = {'binding': {'host': 'fake-host',
                                'vnic_type': 'normal',
                                'profile': {'foo': 'bar'}}}
+        mocked_client = mock_client.return_value
+        mocked_client.create_port_binding.return_value = binding
+        mocked_client.create_port_binding.side_effect = fake_create
 
-        resp = fake_req.FakeResponse(200, content=jsonutils.dumps(binding))
-        mock_client.return_value.post.return_value = resp
-        mock_client.return_value.post.side_effect = post_side_effect
         result = self.api.bind_ports_to_host(
             ctxt, inst, 'fake-host', {uuids.port: 'normal'},
             {uuids.port: {'foo': 'bar'}})
-        self.assertEqual(1, mock_client.return_value.post.call_count)
+
+        self.assertEqual(1, mocked_client.create_port_binding.call_count)
         self.assertDictEqual({uuids.port: binding['binding']}, result)
 
-    @mock.patch('nova.network.neutron._get_ksa_client')
+    @mock.patch('nova.network.neutron.get_client')
     def test_bind_ports_to_host_with_vif_profile_and_vnic(self, mock_client):
         """Tests bind_ports_to_host with default/non-default parameters."""
-        def post_side_effect(*args, **kwargs):
-            self.assertDictEqual(binding, kwargs['json'])
+        def fake_create(port_id, data):
+            self.assertDictEqual(binding, data)
             return mock.DEFAULT
 
         ctxt = context.get_context()
@@ -6828,11 +6825,13 @@ class TestAPIPortbinding(TestAPIBase):
         binding = {'binding': {'host': 'fake-host',
                                'vnic_type': 'direct',
                                'profile': vif_profile}}
-        resp = fake_req.FakeResponse(200, content=jsonutils.dumps(binding))
-        mock_client.return_value.post.return_value = resp
-        mock_client.return_value.post.side_effect = post_side_effect
+        mocked_client = mock_client.return_value
+        mocked_client.create_port_binding.return_value = binding
+        mocked_client.create_port_binding.side_effect = fake_create
+
         result = self.api.bind_ports_to_host(ctxt, inst, 'fake-host')
-        self.assertEqual(1, mock_client.return_value.post.call_count)
+
+        self.assertEqual(1, mocked_client.create_port_binding.call_count)
         self.assertDictEqual({uuids.port: binding['binding']}, result)
 
         # assert that that if vnic_type and profile are set in VIF object
@@ -6848,14 +6847,17 @@ class TestAPIPortbinding(TestAPIBase):
         binding = {'binding': {'host': 'fake-host',
                                'vnic_type': 'direct-overridden',
                                'profile': {'foo': 'overridden'}}}
-        resp = fake_req.FakeResponse(200, content=jsonutils.dumps(binding))
-        mock_client.return_value.post.return_value = resp
+        mocked_client = mock_client.return_value
+        mocked_client.create_port_binding.return_value = binding
+        mocked_client.create_port_binding.side_effect = fake_create
+
         result = self.api.bind_ports_to_host(
             ctxt, inst, 'fake-host', vnic_type_per_port, vif_profile_per_port)
-        self.assertEqual(2, mock_client.return_value.post.call_count)
+
+        self.assertEqual(2, mocked_client.create_port_binding.call_count)
         self.assertDictEqual({uuids.port: binding['binding']}, result)
 
-    @mock.patch('nova.network.neutron._get_ksa_client')
+    @mock.patch('nova.network.neutron.get_client')
     def test_bind_ports_to_host_rollback(self, mock_client):
         """Tests a scenario where an instance has two ports, and binding the
         first is successful but binding the second fails, so the code will
@@ -6865,43 +6867,42 @@ class TestAPIPortbinding(TestAPIBase):
             model.VIF(uuids.ok), model.VIF(uuids.fail)])
         inst = objects.Instance(
             info_cache=objects.InstanceInfoCache(network_info=nwinfo))
+        NeutronError = exceptions.NeutronClientException(status_code=500)
 
-        def fake_post(url, *args, **kwargs):
-            if uuids.ok in url:
-                mock_response = fake_req.FakeResponse(
-                    200, content='{"binding": {"host": "fake-host"}}')
-            else:
-                mock_response = fake_req.FakeResponse(500, content='error')
-            return mock_response
+        def fake_create(port_id, host):
+            if port_id == uuids.ok:
+                return {'binding': {'host': 'fake-host'}}
 
-        mock_client.return_value.post.side_effect = fake_post
-        with mock.patch.object(self.api, 'delete_port_binding',
-                               # This will be logged but not re-raised.
-                               side_effect=exception.PortBindingDeletionFailed(
-                                   port_id=uuids.ok, host='fake-host'
-                               )) as mock_delete:
-            self.assertRaises(exception.PortBindingFailed,
-                              self.api.bind_ports_to_host,
-                              self.context, inst, 'fake-host')
-        # assert that post was called twice and delete once
-        self.assertEqual(2, mock_client.return_value.post.call_count)
-        mock_delete.assert_called_once_with(self.context, uuids.ok,
-                                            'fake-host')
+            raise NeutronError
 
-    @mock.patch('nova.network.neutron._get_ksa_client')
+        mocked_client = mock_client.return_value
+        mocked_client.create_port_binding.side_effect = fake_create
+        mocked_client.delete_port_binding.side_effect = NeutronError
+
+        self.assertRaises(exception.PortBindingFailed,
+                          self.api.bind_ports_to_host,
+                          self.context, inst, 'fake-host')
+
+        # assert that create was called twice and delete once
+        self.assertEqual(2, mocked_client.create_port_binding.call_count)
+        self.assertEqual(1, mocked_client.delete_port_binding.call_count)
+        mocked_client.delete_port_binding.assert_called_once_with(
+            uuids.ok, 'fake-host')
+
+    @mock.patch('nova.network.neutron.get_client')
     def test_delete_port_binding(self, mock_client):
         # Create three ports where:
         # - one is successfully unbound
         # - one is not found
         # - one fails to be unbound
-        def fake_delete(url, *args, **kwargs):
-            if uuids.ok in url:
-                return fake_req.FakeResponse(204)
-            else:
-                status_code = 404 if uuids.notfound in url else 500
-                return fake_req.FakeResponse(status_code)
+        def fake_delete(port_id, host):
+            if port_id == uuids.ok:
+                return
 
-        mock_client.return_value.delete.side_effect = fake_delete
+            status_code = 404 if port_id == uuids.notfound else 500
+            raise exceptions.NeutronClientException(status_code=status_code)
+
+        mock_client.return_value.delete_port_binding.side_effect = fake_delete
         for port_id in (uuids.ok, uuids.notfound, uuids.fail):
             if port_id == uuids.fail:
                 self.assertRaises(exception.PortBindingDeletionFailed,
@@ -6910,45 +6911,6 @@ class TestAPIPortbinding(TestAPIBase):
             else:
                 self.api.delete_port_binding(self.context, port_id,
                                              'fake-host')
-
-    @mock.patch('nova.network.neutron._get_ksa_client')
-    def test_activate_port_binding(self, mock_client):
-        """Tests the happy path of activating an inactive port binding."""
-        resp = fake_req.FakeResponse(200)
-        mock_client.return_value.put.return_value = resp
-        self.api.activate_port_binding(self.context, uuids.port_id,
-                                       'fake-host')
-        mock_client.return_value.put.assert_called_once_with(
-            '/v2.0/ports/%s/bindings/fake-host/activate' % uuids.port_id,
-            raise_exc=False,
-            global_request_id=self.context.global_id)
-
-    @mock.patch('nova.network.neutron._get_ksa_client')
-    @mock.patch('nova.network.neutron.LOG.warning')
-    def test_activate_port_binding_already_active(
-            self, mock_log_warning, mock_client):
-        """Tests the 409 case of activating an already active port binding."""
-        mock_client.return_value.put.return_value = fake_req.FakeResponse(409)
-        self.api.activate_port_binding(self.context, uuids.port_id,
-                                       'fake-host')
-        mock_client.return_value.put.assert_called_once_with(
-            '/v2.0/ports/%s/bindings/fake-host/activate' % uuids.port_id,
-            raise_exc=False,
-            global_request_id=self.context.global_id)
-        self.assertEqual(1, mock_log_warning.call_count)
-        self.assertIn('is already active', mock_log_warning.call_args[0][0])
-
-    @mock.patch('nova.network.neutron._get_ksa_client')
-    def test_activate_port_binding_fails(self, mock_client):
-        """Tests the unknown error case of binding activation."""
-        mock_client.return_value.put.return_value = fake_req.FakeResponse(500)
-        self.assertRaises(exception.PortBindingActivationFailed,
-                          self.api.activate_port_binding,
-                          self.context, uuids.port_id, 'fake-host')
-        mock_client.return_value.put.assert_called_once_with(
-            '/v2.0/ports/%s/bindings/fake-host/activate' % uuids.port_id,
-            raise_exc=False,
-            global_request_id=self.context.global_id)
 
 
 class TestAllocateForInstance(test.NoDBTestCase):

@@ -122,7 +122,7 @@ python-glanceclient==2.8.0
 python-ironicclient==3.0.0
 python-keystoneclient==3.15.0
 python-mimeparse==1.6.0
-python-neutronclient==6.7.0
+python-neutronclient==7.1.0
 python-subunit==1.4.0
 pytz==2018.3
 PyYAML==5.1
