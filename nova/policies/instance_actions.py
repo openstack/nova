@@ -24,9 +24,9 @@ POLICY_ROOT = 'os_compute_api:os-instance-actions:%s'
 
 instance_actions_policies = [
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'events',
-        base.RULE_ADMIN_API,
-        """Add events details in action details for a server.
+        name=POLICY_ROOT % 'events',
+        check_str=base.RULE_ADMIN_API,
+        description="""Add events details in action details for a server.
 
 This check is performed only after the check
 os_compute_api:os-instance-actions passes. Beginning with
@@ -35,17 +35,18 @@ information is provided per event if policy enforcement passes.
 Beginning with Microversion 2.62, each event includes a hashed
 host identifier and, if policy enforcement passes, the name of
 the host.""",
-        [
+        operations=[
             {
                 'method': 'GET',
                 'path': '/servers/{server_id}/os-instance-actions/{request_id}'
             }
-        ]),
+        ],
+        scope_types=['system']),
     policy.DocumentedRuleDefault(
-        BASE_POLICY_NAME,
-        base.RULE_ADMIN_OR_OWNER,
-        """List actions and show action details for a server.""",
-        [
+        name=BASE_POLICY_NAME,
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="""List actions and show action details for a server.""",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/servers/{server_id}/os-instance-actions'
@@ -54,7 +55,8 @@ the host.""",
                 'method': 'GET',
                 'path': '/servers/{server_id}/os-instance-actions/{request_id}'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
 ]
 
 
