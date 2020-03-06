@@ -62,7 +62,8 @@ IMAGE_UUID = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
 
 def fake_get_instance(self, context, instance_id, expected_attrs=None,
                       cell_down_support=False):
-    return fake_instance.fake_instance_obj(context, **{'uuid': instance_id})
+    return fake_instance.fake_instance_obj(
+        context, id=1, uuid=instance_id, project_id=context.project_id)
 
 
 def fake_get_volume(self, context, id):
@@ -1511,6 +1512,8 @@ class TestVolumeAttachPolicyEnforcementV21(test.NoDBTestCase):
         super(TestVolumeAttachPolicyEnforcementV21, self).setUp()
         self.controller = volumes_v21.VolumeAttachmentController()
         self.req = fakes.HTTPRequest.blank('')
+
+        self.stub_out('nova.compute.api.API.get', fake_get_instance)
 
     def _common_policy_check(self, rules, rule_name, func, *arg, **kwarg):
         self.policy.set_rules(rules)

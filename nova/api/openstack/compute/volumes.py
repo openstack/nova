@@ -279,9 +279,9 @@ class VolumeAttachmentController(wsgi.Controller):
     def index(self, req, server_id):
         """Returns the list of volume attachments for a given instance."""
         context = req.environ['nova.context']
-        context.can(va_policies.POLICY_ROOT % 'index')
-
         instance = common.get_instance(self.compute_api, context, server_id)
+        context.can(va_policies.POLICY_ROOT % 'index',
+                    target={'project_id': instance.project_id})
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
@@ -304,10 +304,11 @@ class VolumeAttachmentController(wsgi.Controller):
     def show(self, req, server_id, id):
         """Return data about the given volume attachment."""
         context = req.environ['nova.context']
-        context.can(va_policies.POLICY_ROOT % 'show')
+        instance = common.get_instance(self.compute_api, context, server_id)
+        context.can(va_policies.POLICY_ROOT % 'show',
+                    target={'project_id': instance.project_id})
 
         volume_id = id
-        instance = common.get_instance(self.compute_api, context, server_id)
 
         try:
             bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
@@ -334,15 +335,15 @@ class VolumeAttachmentController(wsgi.Controller):
     def create(self, req, server_id, body):
         """Attach a volume to an instance."""
         context = req.environ['nova.context']
-        context.can(va_policies.POLICY_ROOT % 'create')
+        instance = common.get_instance(self.compute_api, context, server_id)
+        context.can(va_policies.POLICY_ROOT % 'create',
+                    target={'project_id': instance.project_id})
 
         volume_id = body['volumeAttachment']['volumeId']
         device = body['volumeAttachment'].get('device')
         tag = body['volumeAttachment'].get('tag')
         delete_on_termination = body['volumeAttachment'].get(
             'delete_on_termination', False)
-
-        instance = common.get_instance(self.compute_api, context, server_id)
 
         if instance.vm_state in (vm_states.SHELVED,
                                  vm_states.SHELVED_OFFLOADED):
@@ -395,7 +396,9 @@ class VolumeAttachmentController(wsgi.Controller):
     @validation.schema(volumes_schema.update_volume_attachment)
     def update(self, req, server_id, id, body):
         context = req.environ['nova.context']
-        context.can(va_policies.POLICY_ROOT % 'update')
+        instance = common.get_instance(self.compute_api, context, server_id)
+        context.can(va_policies.POLICY_ROOT % 'update',
+                    target={'project_id': instance.project_id})
 
         old_volume_id = id
         try:
@@ -416,8 +419,6 @@ class VolumeAttachmentController(wsgi.Controller):
             # NotFound response if that is not existent.
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
-        instance = common.get_instance(self.compute_api, context, server_id)
-
         try:
             self.compute_api.swap_volume(context, instance, old_volume,
                                          new_volume)
@@ -437,12 +438,13 @@ class VolumeAttachmentController(wsgi.Controller):
     def delete(self, req, server_id, id):
         """Detach a volume from an instance."""
         context = req.environ['nova.context']
-        context.can(va_policies.POLICY_ROOT % 'delete')
+        instance = common.get_instance(self.compute_api, context, server_id,
+                                       expected_attrs=['device_metadata'])
+        context.can(va_policies.POLICY_ROOT % 'delete',
+                    target={'project_id': instance.project_id})
 
         volume_id = id
 
-        instance = common.get_instance(self.compute_api, context, server_id,
-                                       expected_attrs=['device_metadata'])
         if instance.vm_state in (vm_states.SHELVED,
                                  vm_states.SHELVED_OFFLOADED):
             _check_request_version(req, '2.20', 'detach_volume',
