@@ -140,8 +140,6 @@ class InterfaceAttachmentController(wsgi.Controller):
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, server_id)
 
-        context.can(ai_policies.BASE_POLICY_NAME,
-                    target={'project_id': instance.project_id})
         context.can(ai_policies.POLICY_ROOT % 'create',
                     target={'project_id': instance.project_id})
 
@@ -205,8 +203,6 @@ class InterfaceAttachmentController(wsgi.Controller):
         instance = common.get_instance(self.compute_api, context, server_id,
                                        expected_attrs=['device_metadata'])
 
-        context.can(ai_policies.BASE_POLICY_NAME,
-                    target={'project_id': instance.project_id})
         context.can(ai_policies.POLICY_ROOT % 'delete',
                     target={'project_id': instance.project_id})
         port_id = id
