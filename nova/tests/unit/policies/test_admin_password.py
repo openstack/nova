@@ -124,6 +124,7 @@ class AdminPasswordNoLegacyPolicyTest(AdminPasswordPolicyTest):
             self.system_admin_context,
             self.project_admin_context, self.project_member_context]
         # Check that non-system and non-admin/owner is not able to change the
+        # password.
         self.admin_unauthorized_contexts = [
             self.legacy_admin_context, self.project_reader_context,
             self.project_foo_context,
