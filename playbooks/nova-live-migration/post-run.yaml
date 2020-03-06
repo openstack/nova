@@ -1,0 +1,10 @@
+---
+- hosts: tempest
+  become: true
+  roles:
+    - role: fetch-subunit-output
+      zuul_work_dir: '{{ devstack_base_dir }}/tempest'
+    - role: process-stackviz
+- hosts: controller
+  roles:
+    - run-evacuate-hook
