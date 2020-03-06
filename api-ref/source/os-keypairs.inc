@@ -41,7 +41,7 @@ Response
 
 **Example List Keypairs (v2.35): JSON response**
 
-.. literalinclude:: ../../doc/api_samples/keypairs/v2.35/keypairs-list-resp.json
+.. literalinclude:: ../../doc/api_samples/os-keypairs/v2.35/keypairs-list-resp.json
    :language: javascript
 
 Create Or Import Keypair
@@ -72,7 +72,7 @@ Request
 
 **Example Create Or Import Keypair (v2.10): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/keypairs/v2.10/keypairs-import-post-req.json
+.. literalinclude:: ../../doc/api_samples/os-keypairs/v2.10/keypairs-import-post-req.json
    :language: javascript
 
 Response
@@ -90,7 +90,7 @@ Response
 
 **Example Create Or Import Keypair (v2.10): JSON response**
 
-.. literalinclude:: ../../doc/api_samples/keypairs/v2.10/keypairs-import-post-resp.json
+.. literalinclude:: ../../doc/api_samples/os-keypairs/v2.10/keypairs-import-post-resp.json
    :language: javascript
 
 Show Keypair Details
@@ -131,7 +131,7 @@ Response
 
 **Example Show Keypair Details (v2.10): JSON response**
 
-.. literalinclude:: ../../doc/api_samples/keypairs/v2.10/keypairs-get-resp.json
+.. literalinclude:: ../../doc/api_samples/os-keypairs/v2.10/keypairs-get-resp.json
    :language: javascript
 
 Delete Keypair

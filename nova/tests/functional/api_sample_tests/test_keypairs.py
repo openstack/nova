@@ -23,7 +23,7 @@ from nova.tests.unit import fake_crypto
 
 class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     microversion = None
-    sample_dir = "keypairs"
+    sample_dir = 'os-keypairs'
     expected_delete_status_code = 202
     expected_post_status_code = 200
 
@@ -246,7 +246,7 @@ class KeyPairsV210SampleJsonTestNotAdmin(KeyPairsV210SampleJsonTest):
 
 class KeyPairsV235SampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    sample_dir = "keypairs"
+    sample_dir = 'os-keypairs'
     microversion = '2.35'
     expected_post_status_code = 201
     scenarios = [('v2_35', {'api_major_version': 'v2.1'})]
