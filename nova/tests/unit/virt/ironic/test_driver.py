@@ -3308,17 +3308,28 @@ class HashRingTestCase(test.NoDBTestCase):
         self.assertEqual(SENTINEL, self.driver.hash_ring)
         self.mock_is_up.assert_has_calls(is_up_calls)
 
+    def test__refresh_hash_ring_same_host_different_case(self):
+        # Test that we treat Host1 and host1 as the same host
+        # CONF.host is set to 'host1' in __test_refresh_hash_ring
+        services = ['Host1']
+        expected_hosts = {'host1'}
+        self.mock_is_up.return_value = True
+        self._test__refresh_hash_ring(services, expected_hosts)
+
     def test__refresh_hash_ring_one_compute(self):
         services = ['host1']
         expected_hosts = {'host1'}
         self.mock_is_up.return_value = True
         self._test__refresh_hash_ring(services, expected_hosts)
 
-    def test__refresh_hash_ring_many_computes(self):
+    @mock.patch('nova.virt.ironic.driver.LOG.debug')
+    def test__refresh_hash_ring_many_computes(self, mock_log_debug):
         services = ['host1', 'host2', 'host3']
         expected_hosts = {'host1', 'host2', 'host3'}
         self.mock_is_up.return_value = True
         self._test__refresh_hash_ring(services, expected_hosts)
+        expected_msg = 'Hash ring members are %s'
+        mock_log_debug.assert_called_once_with(expected_msg, set(services))
 
     def test__refresh_hash_ring_one_compute_new_compute(self):
         services = []
@@ -3442,6 +3453,26 @@ class NodeCacheTestCase(test.NoDBTestCase):
         mock_nodes.assert_called_once_with(fields=ironic_driver._NODE_FIELDS,
                                            limit=0, **kwargs)
         self.assertIsNotNone(self.driver.node_cache_time)
+
+    def test__refresh_cache_same_host_different_case(self):
+        # Test that we treat Host1 and host1 as the same host
+        self.host = 'Host1'
+        self.flags(host=self.host)
+        instances = []
+        nodes = [
+            _get_cached_node(
+                uuid=uuidutils.generate_uuid(), instance_uuid=None),
+            _get_cached_node(
+                uuid=uuidutils.generate_uuid(), instance_uuid=None),
+            _get_cached_node(
+                uuid=uuidutils.generate_uuid(), instance_uuid=None),
+        ]
+        hosts = ['host1', 'host1', 'host1']
+
+        self._test__refresh_cache(instances, nodes, hosts)
+
+        expected_cache = {n.uuid: n for n in nodes}
+        self.assertEqual(expected_cache, self.driver.node_cache)
 
     def test__refresh_cache(self):
         # normal operation, one compute service
