@@ -18,7 +18,7 @@ from nova.api.openstack import common
 
 class ViewBuilder(common.ViewBuilder):
 
-    _collection_name = "keypairs"
+    _collection_name = 'os-keypairs'
     # TODO(takashin): After v2 and v2.1 is no longer supported,
     # 'type' can always be included in the response.
     _index_params = ('name', 'public_key', 'fingerprint')
