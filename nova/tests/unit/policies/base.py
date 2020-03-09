@@ -117,10 +117,10 @@ class BasePolicyTest(test.TestCase):
                             unauthorized_contexts, rule_name,
                             func, req, *arg, **kwarg):
 
-        # NOTE(brinzhang): When fatal=False is passed as a parameter in
-        # context.can(), we cannot get the desired assurance_raises().
-        # At this time, we can assert the func's response to ensure
-        # that changes is right.
+        # NOTE(brinzhang): When fatal=False is passed as a parameter
+        # in context.can(), we cannot get the desired ensure_raises().
+        # At this time, we can call ensure_return() to assert the func's
+        # response to ensure that changes are right.
         fatal = kwarg.pop('fatal', True)
         authorized_response = []
         unauthorize_response = []
