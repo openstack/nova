@@ -2078,6 +2078,13 @@ class LibvirtDriver(driver.ComputeDriver):
                 # then we can just log it as a warning rather than tracing an
                 # error.
                 mac = vif.get('address')
+                # Get a fresh instance of the guest in case it is gone.
+                try:
+                    guest = self._host.get_guest(instance)
+                except exception.InstanceNotFound:
+                    LOG.info("Instance disappeared while detaching interface "
+                             "%s", vif['id'], instance=instance)
+                    return
                 interface = guest.get_interface_by_cfg(cfg)
                 if interface:
                     LOG.error('detaching network adapter failed.',
