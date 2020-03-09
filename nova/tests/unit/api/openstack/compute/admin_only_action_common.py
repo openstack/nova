@@ -52,7 +52,7 @@ class CommonMixin(object):
         if action == '_migrate_live':
             expected_attrs = ['numa_topology']
         elif action == '_migrate':
-            expected_attrs = ['flavor']
+            expected_attrs = ['flavor', 'services']
 
         uuid = uuidutils.generate_uuid()
         self.mock_get.side_effect = exception.InstanceNotFound(
@@ -75,7 +75,7 @@ class CommonMixin(object):
         if action == '_migrate_live':
             expected_attrs = ['numa_topology']
         elif action == '_migrate':
-            expected_attrs = ['flavor']
+            expected_attrs = ['flavor', 'services']
 
         if method is None:
             method = action.replace('_', '')
@@ -139,7 +139,7 @@ class CommonMixin(object):
         if action == '_migrate_live':
             expected_attrs = ['numa_topology']
         elif action == '_migrate':
-            expected_attrs = ['flavor']
+            expected_attrs = ['flavor', 'services']
 
         if method is None:
             method = action.replace('_', '')
@@ -180,7 +180,7 @@ class CommonMixin(object):
         if action == '_migrate_live':
             expected_attrs = ['numa_topology']
         elif action == '_migrate':
-            expected_attrs = ['flavor']
+            expected_attrs = ['flavor', 'services']
 
         if method is None:
             method = action.replace('_', '')
