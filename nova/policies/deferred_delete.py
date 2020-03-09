@@ -18,26 +18,48 @@ from oslo_policy import policy
 from nova.policies import base
 
 
-BASE_POLICY_NAME = 'os_compute_api:os-deferred-delete'
+BASE_POLICY_NAME = 'os_compute_api:os-deferred-delete:%s'
 
+DEPRECATED_POLICY = policy.DeprecatedRule(
+    'os_compute_api:os-deferred-delete',
+    base.RULE_ADMIN_OR_OWNER,
+)
+
+DEPRECATED_REASON = """
+Nova API policies are introducing new default roles with scope_type
+capabilities. Old policies are deprecated and silently going to be ignored
+in nova 23.0.0 release.
+"""
 
 deferred_delete_policies = [
     policy.DocumentedRuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_OR_OWNER,
-        description="Restore a soft deleted server or force delete a server "
-        "before deferred cleanup",
+        name=BASE_POLICY_NAME % 'restore',
+        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        description="Restore a soft deleted server",
         operations=[
             {
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (restore)'
             },
+        ],
+        scope_types=['system', 'project'],
+        deprecated_rule=DEPRECATED_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='21.0.0'),
+    policy.DocumentedRuleDefault(
+        name=BASE_POLICY_NAME % 'force',
+        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        description="Force delete a server before deferred cleanup",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (forceDelete)'
             }
         ],
-        scope_types=['system', 'project'])
+        scope_types=['system', 'project'],
+        deprecated_rule=DEPRECATED_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='21.0.0')
 ]
 
 

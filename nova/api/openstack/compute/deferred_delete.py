@@ -36,7 +36,7 @@ class DeferredDeleteController(wsgi.Controller):
         """Restore a previously deleted instance."""
         context = req.environ["nova.context"]
         instance = common.get_instance(self.compute_api, context, id)
-        context.can(dd_policies.BASE_POLICY_NAME,
+        context.can(dd_policies.BASE_POLICY_NAME % 'restore',
                     target={'project_id': instance.project_id})
         try:
             self.compute_api.restore(context, instance)
@@ -53,7 +53,7 @@ class DeferredDeleteController(wsgi.Controller):
         """Force delete of instance before deferred cleanup."""
         context = req.environ["nova.context"]
         instance = common.get_instance(self.compute_api, context, id)
-        context.can(dd_policies.BASE_POLICY_NAME,
+        context.can(dd_policies.BASE_POLICY_NAME % 'force',
                     target={'user_id': instance.user_id,
                             'project_id': instance.project_id})
         try:

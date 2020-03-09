@@ -18,6 +18,8 @@ from oslo_utils import timeutils
 from nova.api.openstack.compute import deferred_delete
 from nova.compute import vm_states
 from nova import exception
+from nova.policies import base as base_policy
+from nova.policies import deferred_delete as dd_policies
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
 from nova.tests.unit.policies import base
@@ -61,7 +63,7 @@ class DeferredDeletePolicyTest(base.BasePolicyTest):
 
     @mock.patch('nova.compute.api.API.restore')
     def test_restore_server_policy(self, mock_restore):
-        rule_name = "os_compute_api:os-deferred-delete"
+        rule_name = dd_policies.BASE_POLICY_NAME % 'restore'
         self.common_policy_check(self.admin_authorized_contexts,
                                  self.admin_unauthorized_contexts,
                                  rule_name, self.controller._restore,
@@ -69,7 +71,7 @@ class DeferredDeletePolicyTest(base.BasePolicyTest):
                                  body={'restore': {}})
 
     def test_force_delete_server_policy(self):
-        rule_name = "os_compute_api:os-deferred-delete"
+        rule_name = dd_policies.BASE_POLICY_NAME % 'force'
         self.common_policy_check(self.admin_authorized_contexts,
                                  self.admin_unauthorized_contexts,
                                  rule_name, self.controller._force_delete,
@@ -77,7 +79,7 @@ class DeferredDeletePolicyTest(base.BasePolicyTest):
                                  body={'forceDelete': {}})
 
     def test_force_delete_server_policy_failed_with_other_user(self):
-        rule_name = "os_compute_api:os-deferred-delete"
+        rule_name = dd_policies.BASE_POLICY_NAME % 'force'
         # Change the user_id in request context.
         req = fakes.HTTPRequest.blank('')
         req.environ['nova.context'].user_id = 'other-user'
@@ -92,7 +94,7 @@ class DeferredDeletePolicyTest(base.BasePolicyTest):
     @mock.patch('nova.compute.api.API.force_delete')
     def test_force_delete_server_policy_pass_with_same_user(
         self, force_delete_mock):
-        rule_name = "os_compute_api:os-deferred-delete"
+        rule_name = dd_policies.BASE_POLICY_NAME % 'force'
         self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
         self.controller._force_delete(self.req, self.instance.uuid,
                                       body={'forceDelete': {}})
@@ -114,3 +116,34 @@ class DeferredDeleteScopeTypePolicyTest(DeferredDeletePolicyTest):
     def setUp(self):
         super(DeferredDeleteScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+
+
+class DeferredDeleteNoLegacyPolicyTest(DeferredDeletePolicyTest):
+    """Test Deferred Delete APIs policies with system scope enabled,
+    and no more deprecated rules that allow the legacy admin API to
+    access system_admin_or_owner APIs.
+    """
+    without_deprecated_rules = True
+    rules_without_deprecation = {
+        dd_policies.BASE_POLICY_NAME % 'restore':
+            base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        dd_policies.BASE_POLICY_NAME % 'force':
+            base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN}
+
+    def setUp(self):
+        super(DeferredDeleteNoLegacyPolicyTest, self).setUp()
+        self.flags(enforce_scope=True, group="oslo_policy")
+
+        # Check that system or projct admin or owner is able to
+        # force delete or restore server.
+        self.admin_authorized_contexts = [
+            self.system_admin_context,
+            self.project_admin_context, self.project_member_context]
+        # Check that non-system and non-admin/owner is not able to
+        # force delete or restore server.
+        self.admin_unauthorized_contexts = [
+            self.legacy_admin_context, self.project_reader_context,
+            self.project_foo_context,
+            self.system_member_context, self.system_reader_context,
+            self.system_foo_context,
+            self.other_project_member_context]
