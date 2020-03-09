@@ -184,6 +184,12 @@ class ImageBackendFixture(fixtures.Fixture):
         # class.
         image_init.SUPPORTS_CLONE = False
 
+        # Ditto for the 'is_shared_block_storage' function
+        def is_shared_block_storage():
+            return False
+
+        setattr(image_init, 'is_shared_block_storage', is_shared_block_storage)
+
         return image_init
 
     def _fake_cache(self, fetch_func, filename, size=None, *args, **kwargs):

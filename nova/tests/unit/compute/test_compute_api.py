@@ -118,8 +118,14 @@ class _ComputeAPIUnitTestMixIn(object):
                  }
         if updates:
             flavor.update(updates)
+
+        expected_attrs = None
+        if 'extra_specs' in updates and updates['extra_specs']:
+            expected_attrs = ['extra_specs']
+
         return objects.Flavor._from_db_object(
-            self.context, objects.Flavor(extra_specs={}), flavor)
+            self.context, objects.Flavor(extra_specs={}), flavor,
+            expected_attrs=expected_attrs)
 
     def _create_instance_obj(self, params=None, flavor=None):
         """Create a test instance."""
@@ -162,6 +168,7 @@ class _ComputeAPIUnitTestMixIn(object):
         instance.info_cache = objects.InstanceInfoCache()
         instance.flavor = flavor
         instance.old_flavor = instance.new_flavor = None
+        instance.numa_topology = None
 
         if params:
             instance.update(params)
@@ -1650,9 +1657,10 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_confirm_resize_with_migration_ref(self):
         self._test_confirm_resize(mig_ref_passed=True)
 
+    @mock.patch('nova.virt.hardware.numa_get_constraints')
     @mock.patch('nova.network.neutronv2.api.API.'
                 'get_requested_resource_for_instance',
-                return_value=mock.sentinel.res_req)
+                return_value=[])
     @mock.patch('nova.availability_zones.get_host_availability_zone',
                 return_value='nova')
     @mock.patch('nova.objects.Quotas.check_deltas')
@@ -1661,33 +1669,60 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch('nova.objects.RequestSpec.get_by_instance_uuid')
     def _test_revert_resize(
             self, mock_get_reqspec, mock_elevated, mock_get_migration,
-            mock_check, mock_get_host_az, mock_get_requested_resources):
+            mock_check, mock_get_host_az, mock_get_requested_resources,
+            mock_get_numa, same_flavor):
         params = dict(vm_state=vm_states.RESIZED)
         fake_inst = self._create_instance_obj(params=params)
         fake_inst.info_cache.network_info = model.NetworkInfo([
             model.VIF(id=uuids.port1, profile={'allocation': uuids.rp})])
-        fake_inst.old_flavor = fake_inst.flavor
         fake_mig = objects.Migration._from_db_object(
                 self.context, objects.Migration(),
                 test_migration.fake_db_migration())
+        fake_reqspec = objects.RequestSpec()
+        fake_reqspec.flavor = fake_inst.flavor
+        fake_numa_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                id=0, cpuset=set([0]), memory=512, pagesize=None,
+                cpu_pinning_raw=None, cpuset_reserved=None, cpu_policy=None,
+                cpu_thread_policy=None)])
+
+        if same_flavor:
+            fake_inst.old_flavor = fake_inst.flavor
+        else:
+            fake_inst.old_flavor = self._create_flavor(
+                id=200, flavorid='new-flavor-id', name='new_flavor',
+                disabled=False, extra_specs={'hw:numa_nodes': '1'})
 
         mock_elevated.return_value = self.context
         mock_get_migration.return_value = fake_mig
+        mock_get_reqspec.return_value = fake_reqspec
+        mock_get_numa.return_value = fake_numa_topology
+
+        def _check_reqspec():
+            if same_flavor:
+                assert_func = self.assertNotEqual
+            else:
+                assert_func = self.assertEqual
+
+            assert_func(fake_numa_topology, fake_reqspec.numa_topology)
+            assert_func(fake_inst.old_flavor, fake_reqspec.flavor)
 
         def _check_state(expected_task_state=None):
             self.assertEqual(task_states.RESIZE_REVERTING,
                              fake_inst.task_state)
 
-        def _check_mig(expected_task_state=None):
+        def _check_mig():
             self.assertEqual('reverting', fake_mig.status)
 
         with test.nested(
+            mock.patch.object(fake_reqspec, 'save',
+                              side_effect=_check_reqspec),
             mock.patch.object(fake_inst, 'save', side_effect=_check_state),
             mock.patch.object(fake_mig, 'save', side_effect=_check_mig),
             mock.patch.object(self.compute_api, '_record_action_start'),
             mock.patch.object(self.compute_api.compute_rpcapi, 'revert_resize')
-        ) as (mock_inst_save, mock_mig_save, mock_record_action,
-              mock_revert_resize):
+        ) as (mock_reqspec_save, mock_inst_save, mock_mig_save,
+              mock_record_action, mock_revert_resize):
             self.compute_api.revert_resize(self.context, fake_inst)
 
             mock_elevated.assert_called_once_with()
@@ -1697,7 +1732,15 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_mig_save.assert_called_once_with()
             mock_get_reqspec.assert_called_once_with(
                 self.context, fake_inst.uuid)
-            mock_get_reqspec.return_value.save.assert_called_once_with()
+            if same_flavor:
+                # if we are not changing flavors through the revert, we
+                # shouldn't attempt to rebuild the NUMA topology since it won't
+                # have changed
+                mock_get_numa.assert_not_called()
+            else:
+                # not so if the flavor *has* changed though
+                mock_get_numa.assert_called_once_with(
+                    fake_inst.old_flavor, mock.ANY)
             mock_record_action.assert_called_once_with(self.context, fake_inst,
                                                        'revertResize')
             mock_revert_resize.assert_called_once_with(
@@ -1706,11 +1749,17 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_get_requested_resources.assert_called_once_with(
                 self.context, fake_inst.uuid)
             self.assertEqual(
-                mock.sentinel.res_req,
+                [],
                 mock_get_reqspec.return_value.requested_resources)
 
     def test_revert_resize(self):
-        self._test_revert_resize()
+        self._test_revert_resize(same_flavor=False)
+
+    def test_revert_resize_same_flavor(self):
+        """Test behavior when reverting a migration or a resize to the same
+        flavor.
+        """
+        self._test_revert_resize(same_flavor=True)
 
     @mock.patch('nova.network.neutronv2.api.API.'
                 'get_requested_resource_for_instance')
@@ -1754,6 +1803,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
     @mock.patch('nova.compute.api.API.get_instance_host_status',
                 new=mock.Mock(return_value=fields_obj.HostStatus.UP))
+    @mock.patch('nova.virt.hardware.numa_get_constraints')
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)
     @mock.patch('nova.compute.api.API._validate_flavor_image_nostatus')
@@ -1770,6 +1820,7 @@ class _ComputeAPIUnitTestMixIn(object):
                      mock_get_by_instance_uuid, mock_get_flavor, mock_upsize,
                      mock_inst_save, mock_count, mock_limit, mock_record,
                      mock_migration, mock_validate, mock_is_vol_backed,
+                     mock_get_numa,
                      flavor_id_passed=True,
                      same_host=False, allow_same_host=False,
                      project_id=None,
@@ -1786,10 +1837,16 @@ class _ComputeAPIUnitTestMixIn(object):
             # To test instance w/ different project id than context (admin)
             params['project_id'] = project_id
         fake_inst = self._create_instance_obj(params=params)
+        fake_numa_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                id=0, cpuset=set([0]), memory=512, pagesize=None,
+                cpu_pinning_raw=None, cpuset_reserved=None, cpu_policy=None,
+                cpu_thread_policy=None)])
 
         mock_resize = self.useFixture(
             fixtures.MockPatchObject(self.compute_api.compute_task_api,
                                      'resize_instance')).mock
+        mock_get_numa.return_value = fake_numa_topology
 
         if host_name:
             mock_get_all_by_host.return_value = [objects.ComputeNode(
@@ -1797,8 +1854,9 @@ class _ComputeAPIUnitTestMixIn(object):
 
         current_flavor = fake_inst.get_flavor()
         if flavor_id_passed:
-            new_flavor = self._create_flavor(id=200, flavorid='new-flavor-id',
-                                name='new_flavor', disabled=False)
+            new_flavor = self._create_flavor(
+                id=200, flavorid='new-flavor-id', name='new_flavor',
+                disabled=False, extra_specs={'hw:numa_nodes': '1'})
             if same_flavor:
                 new_flavor.id = current_flavor.id
             mock_get_flavor.return_value = new_flavor
@@ -1875,6 +1933,11 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.assertIn('node', fake_spec.requested_destination)
                 self.assertEqual('hypervisor_host',
                                  fake_spec.requested_destination.node)
+
+            if flavor_id_passed and not same_flavor:
+                mock_get_numa.assert_called_once_with(new_flavor, mock.ANY)
+            else:
+                mock_get_numa.assert_not_called()
 
         if host_name:
             mock_get_all_by_host.assert_called_once_with(
