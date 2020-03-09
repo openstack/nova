@@ -130,7 +130,10 @@ rules = [
     policy.RuleDefault(
         "system_or_project_reader",
         "rule:system_reader_api or rule:project_reader_api",
-        "Default rule for System+Project read only APIs.")
+        "Default rule for System+Project read only APIs.",
+        deprecated_rule=DEPRECATED_ADMIN_OR_OWNER_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='21.0.0')
 ]
 
 

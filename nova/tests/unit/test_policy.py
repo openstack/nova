@@ -415,7 +415,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:servers:update",
 "os_compute_api:servers:create_image:allow_volume_backed",
 "os_compute_api:os-admin-password",
-"os_compute_api:os-attach-interfaces",
 "os_compute_api:os-attach-interfaces:create",
 "os_compute_api:os-attach-interfaces:delete",
 "os_compute_api:os-console-output",
@@ -460,6 +459,8 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 
         self.system_reader_rules = (
 "os_compute_api:os-services:list",
+"os_compute_api:os-attach-interfaces:list",
+"os_compute_api:os-attach-interfaces:show",
 )
 
         self.allow_nobody_rules = (
