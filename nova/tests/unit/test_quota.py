@@ -1956,6 +1956,37 @@ class UnifiedLimitsDriverTestCase(NoopQuotaDriverTestCase):
     def setUp(self):
         super(UnifiedLimitsDriverTestCase, self).setUp()
         self.driver = quota.UnifiedLimitsDriver()
+        # Set this so all limits get a different value but we also test as much
+        # as possible with the default config
+        reglimits = {local_limit.SERVER_METADATA_ITEMS: 128,
+                     local_limit.INJECTED_FILES: 5,
+                     local_limit.INJECTED_FILES_CONTENT: 10 * 1024,
+                     local_limit.INJECTED_FILES_PATH: 255,
+                     local_limit.KEY_PAIRS: 100,
+                     local_limit.SERVER_GROUPS: 12,
+                     local_limit.SERVER_GROUP_MEMBERS: 10}
+        self.useFixture(limit_fixture.LimitFixture(reglimits, {}))
+
+    def test_get_class_quotas(self):
+        result = self.driver.get_class_quotas(
+            None, quota.QUOTAS._resources, 'default')
+        expected_limits = {
+            'cores': -1,
+            'fixed_ips': -1,
+            'floating_ips': -1,
+            'injected_file_content_bytes': 10240,
+            'injected_file_path_bytes': 255,
+            'injected_files': 5,
+            'instances': -1,
+            'key_pairs': 100,
+            'metadata_items': 128,
+            'ram': -1,
+            'security_group_rules': -1,
+            'security_groups': -1,
+            'server_group_members': 10,
+            'server_groups': 12,
+        }
+        self.assertEqual(expected_limits, result)
 
 
 @ddt.ddt
