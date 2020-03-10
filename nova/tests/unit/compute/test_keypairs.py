@@ -17,10 +17,12 @@
 import mock
 from oslo_concurrency import processutils
 from oslo_config import cfg
+from oslo_limit import fixture as limit_fixture
 
 from nova.compute import api as compute_api
 from nova import context
 from nova import exception
+from nova.limit import local as local_limit
 from nova.objects import keypair as keypair_obj
 from nova import quota
 from nova.tests.unit.compute import test_compute
@@ -119,7 +121,7 @@ class CreateImportSharedTestMixIn(object):
 
         exc = self.assertRaises(exc_class, func, self.ctxt, self.ctxt.user_id,
                                 name, *args)
-        self.assertEqual(expected_message, str(exc))
+        self.assertIn(expected_message, str(exc))
 
     def assertInvalidKeypair(self, expected_message, name):
         msg = 'Keypair data is invalid: %s' % expected_message
@@ -158,6 +160,48 @@ class CreateImportSharedTestMixIn(object):
         msg = "Quota exceeded, too many key pairs."
         self.assertKeypairRaises(exception.KeypairLimitExceeded, msg, 'foo')
 
+    def _test_quota_during_recheck(self, mock_method, msg):
+        # Skip for import key pair due to bug 1959732.
+        if self.func_name == 'import_key_pair':
+            self.skipTest('bug/1959732: import_key_pair missing quota recheck')
+
+        self.assertKeypairRaises(exception.KeypairLimitExceeded, msg, 'foo')
+        self.assertEqual(2, mock_method.call_count)
+
+    @mock.patch('nova.objects.Quotas.check_deltas')
+    def test_quota_during_recheck(self, mock_check):
+        """Simulate a race where this request initially has enough quota to
+        progress partially through the create path but then fails the quota
+        recheck because a parallel request filled up the quota first.
+        """
+        # First quota check succeeds, second (recheck) fails.
+        mock_check.side_effect = [None,
+                                  exception.OverQuota(overs='key_pairs')]
+        msg = "Quota exceeded, too many key pairs."
+        self._test_quota_during_recheck(mock_check, msg)
+
+    def test_quota_unified_limits(self):
+        self.flags(driver="nova.quota.UnifiedLimitsDriver", group="quota")
+        self.useFixture(limit_fixture.LimitFixture(
+            {'server_key_pairs': 0}, {}))
+        msg = ("Resource %s is over limit" % local_limit.KEY_PAIRS)
+        self.assertKeypairRaises(exception.KeypairLimitExceeded, msg, 'foo')
+
+    @mock.patch('nova.limit.local.enforce_db_limit')
+    def test_quota_during_recheck_unified_limits(self, mock_enforce):
+        """Simulate a race where this request initially has enough quota to
+        progress partially through the create path but then fails the quota
+        recheck because a parallel request filled up the quota first.
+        """
+        self.flags(driver="nova.quota.UnifiedLimitsDriver", group="quota")
+        self.useFixture(limit_fixture.LimitFixture(
+            {'server_key_pairs': 100}, {}))
+        # First quota check succeeds, second (recheck) fails.
+        mock_enforce.side_effect = [
+            None, exception.KeypairLimitExceeded('oslo.limit message')]
+        msg = 'oslo.limit message'
+        self._test_quota_during_recheck(mock_enforce, msg)
+
 
 class CreateKeypairTestCase(KeypairAPITestCase, CreateImportSharedTestMixIn):
     func_name = 'create_key_pair'
@@ -191,6 +235,27 @@ class CreateKeypairTestCase(KeypairAPITestCase, CreateImportSharedTestMixIn):
         self.ctxt.user_id = 'a' * 65
         self.assertRaises(processutils.ProcessExecutionError,
                           self._check_success)
+
+    def test_success_unified_limits(self):
+        self.flags(driver="nova.quota.UnifiedLimitsDriver", group="quota")
+        self.useFixture(limit_fixture.LimitFixture(
+            {'server_key_pairs': 1}, {}))
+        self._check_success()
+
+    @mock.patch('nova.objects.Quotas.check_deltas')
+    def test_quota_recheck_disabled(self, mock_check):
+        self.flags(recheck_quota=False, group="quota")
+        self._check_success()
+        self.assertEqual(1, mock_check.call_count)
+
+    @mock.patch('nova.limit.local.enforce_db_limit')
+    def test_quota_recheck_disabled_unified_limits(self, mock_enforce):
+        self.flags(driver="nova.quota.UnifiedLimitsDriver", group="quota")
+        self.flags(recheck_quota=False, group="quota")
+        self.useFixture(limit_fixture.LimitFixture(
+            {'server_key_pairs': 1}, {}))
+        self._check_success()
+        self.assertEqual(1, mock_enforce.call_count)
 
 
 class ImportKeypairTestCase(KeypairAPITestCase, CreateImportSharedTestMixIn):
@@ -239,6 +304,27 @@ class ImportKeypairTestCase(KeypairAPITestCase, CreateImportSharedTestMixIn):
                                 'bad key data')
         msg = u'Keypair data is invalid: failed to generate fingerprint'
         self.assertEqual(msg, str(exc))
+
+    def test_success_unified_limits(self):
+        self.flags(driver="nova.quota.UnifiedLimitsDriver", group="quota")
+        self.useFixture(limit_fixture.LimitFixture(
+            {'server_key_pairs': 1}, {}))
+        self._check_success()
+
+    @mock.patch('nova.objects.Quotas.check_deltas')
+    def test_quota_recheck_disabled(self, mock_check):
+        self.flags(recheck_quota=False, group="quota")
+        self._check_success()
+        self.assertEqual(1, mock_check.call_count)
+
+    @mock.patch('nova.limit.local.enforce_db_limit')
+    def test_quota_recheck_disabled_unified_limits(self, mock_enforce):
+        self.flags(driver="nova.quota.UnifiedLimitsDriver", group="quota")
+        self.flags(recheck_quota=False, group="quota")
+        self.useFixture(limit_fixture.LimitFixture(
+            {'server_key_pairs': 1}, {}))
+        self._check_success()
+        self.assertEqual(1, mock_enforce.call_count)
 
 
 class GetKeypairTestCase(KeypairAPITestCase):
