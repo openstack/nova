@@ -768,6 +768,19 @@ class NoopQuotaDriver(object):
         pass
 
 
+class UnifiedLimitsDriver(NoopQuotaDriver):
+    """Ease migration to new unified limits code.
+
+    Help ease migration to unified limits by ensuring the old code
+    paths still work with unified limits. Eventually the expectation is
+    all this legacy quota code will go away, leaving the new simpler code
+    """
+
+    def __init__(self):
+        LOG.warning("The Unified Limits Quota Driver is experimental and "
+                    "is under active development. Do not use this driver.")
+
+
 class BaseResource(object):
     """Describe a single resource for quota checking."""
 

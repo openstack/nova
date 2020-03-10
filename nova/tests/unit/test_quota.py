@@ -1871,6 +1871,12 @@ class NoopQuotaDriverTestCase(test.TestCase):
         self.assertEqual(self.expected_settable_quotas, result)
 
 
+class UnifiedLimitsDriverTestCase(NoopQuotaDriverTestCase):
+    def setUp(self):
+        super(UnifiedLimitsDriverTestCase, self).setUp()
+        self.driver = quota.UnifiedLimitsDriver()
+
+
 @ddt.ddt
 class QuotaCountTestCase(test.NoDBTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
