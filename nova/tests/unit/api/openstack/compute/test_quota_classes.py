@@ -13,11 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 import copy
+import mock
 import webob
 
 from nova.api.openstack.compute import quota_classes \
        as quota_classes_v21
 from nova import exception
+from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 
@@ -156,3 +158,107 @@ class QuotaClassSetsTestV257(QuotaClassSetsTestV250):
         for resource in quota_classes_v21.FILTERED_QUOTAS_2_57:
             self.quota_resources.pop(resource, None)
         self.filtered_quotas.extend(quota_classes_v21.FILTERED_QUOTAS_2_57)
+
+
+class NoopQuotaClassesTest(test.NoDBTestCase):
+    quota_driver = "nova.quota.NoopQuotaDriver"
+
+    def setUp(self):
+        super(NoopQuotaClassesTest, self).setUp()
+        self.flags(driver=self.quota_driver, group="quota")
+        self.controller = quota_classes_v21.QuotaClassSetsController()
+
+    def test_show_v21(self):
+        req = fakes.HTTPRequest.blank("")
+        response = self.controller.show(req, "test_class")
+        expected_response = {
+            'quota_class_set': {
+                'id': 'test_class',
+                'cores': -1,
+                'fixed_ips': -1,
+                'floating_ips': -1,
+                'injected_file_content_bytes': -1,
+                'injected_file_path_bytes': -1,
+                'injected_files': -1,
+                'instances': -1,
+                'key_pairs': -1,
+                'metadata_items': -1,
+                'ram': -1,
+                'security_group_rules': -1,
+                'security_groups': -1
+            }
+        }
+        self.assertEqual(expected_response, response)
+
+    def test_show_v257(self):
+        req = fakes.HTTPRequest.blank("", version='2.57')
+        response = self.controller.show(req, "default")
+        expected_response = {
+            'quota_class_set': {
+                'id': 'default',
+                'cores': -1,
+                'instances': -1,
+                'key_pairs': -1,
+                'metadata_items': -1,
+                'ram': -1,
+                'server_group_members': -1,
+                'server_groups': -1,
+            }
+        }
+        self.assertEqual(expected_response, response)
+
+    def test_update_v21_still_rejects_badrequests(self):
+        req = fakes.HTTPRequest.blank("")
+        body = {'quota_class_set': {'instances': 50, 'cores': 50,
+                                    'ram': 51200, 'unsupported': 12}}
+        self.assertRaises(exception.ValidationError, self.controller.update,
+                          req, 'test_class', body=body)
+
+    @mock.patch.object(objects.Quotas, "update_class")
+    def test_update_v21(self, mock_update):
+        req = fakes.HTTPRequest.blank("")
+        body = {'quota_class_set': {'ram': 51200}}
+        response = self.controller.update(req, 'default', body=body)
+        expected_response = {
+            'quota_class_set': {
+                'cores': -1,
+                'fixed_ips': -1,
+                'floating_ips': -1,
+                'injected_file_content_bytes': -1,
+                'injected_file_path_bytes': -1,
+                'injected_files': -1,
+                'instances': -1,
+                'key_pairs': -1,
+                'metadata_items': -1,
+                'ram': -1,
+                'security_group_rules': -1,
+                'security_groups': -1
+            }
+        }
+        self.assertEqual(expected_response, response)
+        mock_update.assert_called_once_with(req.environ['nova.context'],
+                                            "default", "ram", 51200)
+
+    @mock.patch.object(objects.Quotas, "update_class")
+    def test_update_v257(self, mock_update):
+        req = fakes.HTTPRequest.blank("", version='2.57')
+        body = {'quota_class_set': {'ram': 51200}}
+        response = self.controller.update(req, 'default', body=body)
+        expected_response = {
+            'quota_class_set': {
+                'cores': -1,
+                'instances': -1,
+                'key_pairs': -1,
+                'metadata_items': -1,
+                'ram': -1,
+                'server_group_members': -1,
+                'server_groups': -1,
+            }
+        }
+        self.assertEqual(expected_response, response)
+        mock_update.assert_called_once_with(req.environ['nova.context'],
+                                            "default", "ram", 51200)
+
+
+class UnifiedLimitsQuotaClassesTest(NoopQuotaClassesTest):
+    quota_driver = "nova.quota.UnifiedLimitsDriver"

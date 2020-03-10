@@ -477,3 +477,75 @@ class LimitsControllerTestV275(BaseLimitTestSuite):
         self.assertRaises(
             exception.ValidationError,
             self.controller.index, req=req)
+
+
+class NoopLimitsControllerTest(test.NoDBTestCase):
+    quota_driver = "nova.quota.NoopQuotaDriver"
+
+    def setUp(self):
+        super(NoopLimitsControllerTest, self).setUp()
+        self.flags(driver=self.quota_driver, group="quota")
+        self.controller = limits_v21.LimitsController()
+        # remove policy checks
+        patcher = self.mock_can = mock.patch('nova.context.RequestContext.can')
+        self.mock_can = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_index_v21(self):
+        req = fakes.HTTPRequest.blank("/")
+        response = self.controller.index(req)
+        expected_response = {
+            "limits": {
+                "rate": [],
+                "absolute": {
+                    'maxImageMeta': -1,
+                    'maxPersonality': -1,
+                    'maxPersonalitySize': -1,
+                    'maxSecurityGroupRules': -1,
+                    'maxSecurityGroups': -1,
+                    'maxServerGroupMembers': -1,
+                    'maxServerGroups': -1,
+                    'maxServerMeta': -1,
+                    'maxTotalCores': -1,
+                    'maxTotalFloatingIps': -1,
+                    'maxTotalInstances': -1,
+                    'maxTotalKeypairs': -1,
+                    'maxTotalRAMSize': -1,
+                    'totalCoresUsed': -1,
+                    'totalFloatingIpsUsed': -1,
+                    'totalInstancesUsed': -1,
+                    'totalRAMUsed': -1,
+                    'totalSecurityGroupsUsed': -1,
+                    'totalServerGroupsUsed': -1,
+                },
+            },
+        }
+        self.assertEqual(expected_response, response)
+
+    def test_index_v275(self):
+        req = fakes.HTTPRequest.blank("/?tenant_id=faketenant",
+                                      version='2.75')
+        response = self.controller.index(req)
+        expected_response = {
+            "limits": {
+                "rate": [],
+                "absolute": {
+                    'maxServerGroupMembers': -1,
+                    'maxServerGroups': -1,
+                    'maxServerMeta': -1,
+                    'maxTotalCores': -1,
+                    'maxTotalInstances': -1,
+                    'maxTotalKeypairs': -1,
+                    'maxTotalRAMSize': -1,
+                    'totalCoresUsed': -1,
+                    'totalInstancesUsed': -1,
+                    'totalRAMUsed': -1,
+                    'totalServerGroupsUsed': -1,
+                },
+            },
+        }
+        self.assertEqual(expected_response, response)
+
+
+class UnifiedLimitsControllerTest(NoopLimitsControllerTest):
+    quota_driver = "nova.quota.UnifiedLimitsDriver"

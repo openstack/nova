@@ -882,13 +882,23 @@ class QuotaEngine(object):
         }
         # NOTE(mriedem): quota_driver is ever only supplied in tests with a
         # fake driver.
-        self.__driver = quota_driver
+        self.__driver_override = quota_driver
+        self.__driver = None
+        self.__driver_name = None
 
     @property
     def _driver(self):
-        if self.__driver:
-            return self.__driver
-        self.__driver = importutils.import_object(CONF.quota.driver)
+        if self.__driver_override:
+            return self.__driver_override
+
+        # NOTE(johngarbutt) to allow unit tests to change the driver by
+        # simply overriding config, double check if we have the correct
+        # driver cached before we return the currently cached driver
+        driver_name_in_config = CONF.quota.driver
+        if self.__driver_name != driver_name_in_config:
+            self.__driver = importutils.import_object(driver_name_in_config)
+            self.__driver_name = driver_name_in_config
+
         return self.__driver
 
     def get_defaults(self, context):

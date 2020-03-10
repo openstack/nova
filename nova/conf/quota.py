@@ -181,6 +181,8 @@ Possible values:
              'on-demand.'),
             ('nova.quota.NoopQuotaDriver', 'Ignores quota and treats all '
              'resources as unlimited.'),
+            ('nova.quota.UnifiedLimitsDriver', 'Do not use. Still being '
+             'developed.')
         ],
         help="""
 Provides abstraction for quota checks. Users can configure a specific

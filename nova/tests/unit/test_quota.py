@@ -340,6 +340,19 @@ class QuotaEngineTestCase(test.TestCase):
         quota_obj = quota.QuotaEngine(quota_driver=FakeDriver)
         self.assertEqual(quota_obj._driver, FakeDriver)
 
+    def test_init_with_flag_set(self):
+        quota_obj = quota.QuotaEngine()
+        self.assertIsInstance(quota_obj._driver, quota.DbQuotaDriver)
+
+        self.flags(group="quota", driver="nova.quota.NoopQuotaDriver")
+        self.assertIsInstance(quota_obj._driver, quota.NoopQuotaDriver)
+
+        self.flags(group="quota", driver="nova.quota.UnifiedLimitsDriver")
+        self.assertIsInstance(quota_obj._driver, quota.UnifiedLimitsDriver)
+
+        self.flags(group="quota", driver="nova.quota.DbQuotaDriver")
+        self.assertIsInstance(quota_obj._driver, quota.DbQuotaDriver)
+
     def _get_quota_engine(self, driver, resources=None):
         resources = resources or [
             quota.AbsoluteResource('test_resource4'),
