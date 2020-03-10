@@ -53,6 +53,10 @@ class DbQuotaDriver(object):
     """
     UNLIMITED_VALUE = -1
 
+    def get_reserved(self):
+        # Since we stopped reserving the DB, we just return 0
+        return 0
+
     def get_defaults(self, context, resources):
         """Given a list of resources, retrieve the default quotas.
         Use the class quotas named `_DEFAULT_QUOTA_NAME` as default quotas,
@@ -615,6 +619,10 @@ class NoopQuotaDriver(object):
     wish to have any quota checking.
     """
 
+    def get_reserved(self):
+        # Noop has always returned -1 for reserved
+        return -1
+
     def get_defaults(self, context, resources):
         """Given a list of resources, retrieve the default quotas.
 
@@ -779,6 +787,10 @@ class UnifiedLimitsDriver(NoopQuotaDriver):
     def __init__(self):
         LOG.warning("The Unified Limits Quota Driver is experimental and "
                     "is under active development. Do not use this driver.")
+
+    def get_reserved(self):
+        # To make unified limits APIs the same as the DB driver, return 0
+        return 0
 
 
 class BaseResource(object):
@@ -1067,9 +1079,7 @@ class QuotaEngine(object):
         return sorted(self._resources.keys())
 
     def get_reserved(self):
-        if isinstance(self._driver, NoopQuotaDriver):
-            return -1
-        return 0
+        return self._driver.get_reserved()
 
 
 @api_db_api.context_manager.reader

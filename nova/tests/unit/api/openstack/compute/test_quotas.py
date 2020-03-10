@@ -666,6 +666,7 @@ class QuotaSetsTestV275(QuotaSetsTestV257):
 
 class NoopQuotaSetsTest(test.NoDBTestCase):
     quota_driver = "nova.quota.NoopQuotaDriver"
+    expected_detail = {'in_use': -1, 'limit': -1, 'reserved': -1}
 
     def setUp(self):
         super(NoopQuotaSetsTest, self).setUp()
@@ -716,24 +717,24 @@ class NoopQuotaSetsTest(test.NoDBTestCase):
     def test_detail_v21(self):
         req = fakes.HTTPRequest.blank("")
         response = self.controller.detail(req, uuids.project_id)
-        expected_detail = {'in_use': -1, 'limit': -1, 'reserved': -1}
+
         expected_response = {
             'quota_set': {
                 'id': uuids.project_id,
-                'cores': expected_detail,
-                'fixed_ips': expected_detail,
-                'floating_ips': expected_detail,
-                'injected_file_content_bytes': expected_detail,
-                'injected_file_path_bytes': expected_detail,
-                'injected_files': expected_detail,
-                'instances': expected_detail,
-                'key_pairs': expected_detail,
-                'metadata_items': expected_detail,
-                'ram': expected_detail,
-                'security_group_rules': expected_detail,
-                'security_groups': expected_detail,
-                'server_group_members': expected_detail,
-                'server_groups': expected_detail,
+                'cores': self.expected_detail,
+                'fixed_ips': self.expected_detail,
+                'floating_ips': self.expected_detail,
+                'injected_file_content_bytes': self.expected_detail,
+                'injected_file_path_bytes': self.expected_detail,
+                'injected_files': self.expected_detail,
+                'instances': self.expected_detail,
+                'key_pairs': self.expected_detail,
+                'metadata_items': self.expected_detail,
+                'ram': self.expected_detail,
+                'security_group_rules': self.expected_detail,
+                'security_groups': self.expected_detail,
+                'server_group_members': self.expected_detail,
+                'server_groups': self.expected_detail,
             }
         }
         self.assertEqual(expected_response, response)
@@ -741,24 +742,23 @@ class NoopQuotaSetsTest(test.NoDBTestCase):
     def test_detail_v21_user(self):
         req = fakes.HTTPRequest.blank("?user_id=42")
         response = self.controller.detail(req, uuids.project_id)
-        expected_detail = {'in_use': -1, 'limit': -1, 'reserved': -1}
         expected_response = {
             'quota_set': {
                 'id': uuids.project_id,
-                'cores': expected_detail,
-                'fixed_ips': expected_detail,
-                'floating_ips': expected_detail,
-                'injected_file_content_bytes': expected_detail,
-                'injected_file_path_bytes': expected_detail,
-                'injected_files': expected_detail,
-                'instances': expected_detail,
-                'key_pairs': expected_detail,
-                'metadata_items': expected_detail,
-                'ram': expected_detail,
-                'security_group_rules': expected_detail,
-                'security_groups': expected_detail,
-                'server_group_members': expected_detail,
-                'server_groups': expected_detail,
+                'cores': self.expected_detail,
+                'fixed_ips': self.expected_detail,
+                'floating_ips': self.expected_detail,
+                'injected_file_content_bytes': self.expected_detail,
+                'injected_file_path_bytes': self.expected_detail,
+                'injected_files': self.expected_detail,
+                'instances': self.expected_detail,
+                'key_pairs': self.expected_detail,
+                'metadata_items': self.expected_detail,
+                'ram': self.expected_detail,
+                'security_group_rules': self.expected_detail,
+                'security_groups': self.expected_detail,
+                'server_group_members': self.expected_detail,
+                'server_groups': self.expected_detail,
             }
         }
         self.assertEqual(expected_response, response)
@@ -867,3 +867,4 @@ class NoopQuotaSetsTest(test.NoDBTestCase):
 
 class UnifiedLimitsQuotaSetsTest(NoopQuotaSetsTest):
     quota_driver = "nova.quota.UnifiedLimitsDriver"
+    expected_detail = {'in_use': -1, 'limit': -1, 'reserved': 0}
