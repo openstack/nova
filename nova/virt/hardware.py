@@ -1126,7 +1126,7 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None,
 
     # NOTE(stephenfin): As with memory, do not allow an instance to overcommit
     # against itself on any NUMA cell
-    if instance_cell.cpu_pinning_requested:
+    if instance_cell.cpu_policy == fields.CPUAllocationPolicy.DEDICATED:
         # TODO(stephenfin): Is 'cpuset_reserved' present if consuming emulator
         # threads from shared CPU pools? If so, we don't want to add this here
         required_cpus = len(instance_cell.cpuset) + cpuset_reserved
@@ -1151,7 +1151,7 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None,
                       })
             return
 
-    if instance_cell.cpu_pinning_requested:
+    if instance_cell.cpu_policy == fields.CPUAllocationPolicy.DEDICATED:
         LOG.debug('Pinning has been requested')
         new_instance_cell = _numa_fit_instance_cell_with_pinning(
             host_cell, instance_cell, cpuset_reserved)
@@ -2256,7 +2256,9 @@ def numa_usage_from_instance_numa(host_topology, instance_topology,
 
             memory_usage = memory_usage + sign * instance_cell.memory
 
-            if not instance_cell.cpu_pinning_requested:
+            if instance_cell.cpu_policy != (
+                fields.CPUAllocationPolicy.DEDICATED
+            ):
                 shared_cpus_usage += sign * len(instance_cell.cpuset)
                 continue
 

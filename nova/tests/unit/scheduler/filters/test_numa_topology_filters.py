@@ -12,7 +12,6 @@
 
 import itertools
 
-import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import objects
@@ -128,16 +127,24 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
         self.assertEqual(limits.cpu_allocation_ratio, 21)
         self.assertEqual(limits.ram_allocation_ratio, 1.3)
 
-    @mock.patch('nova.objects.instance_numa.InstanceNUMACell'
-                '.cpu_pinning_requested',
-                return_value=True)
     def _do_test_numa_topology_filter_cpu_policy(
-            self, numa_topology, cpu_policy, cpu_thread_policy, passes,
-            mock_pinning_requested):
-        instance_topology = objects.InstanceNUMATopology(
-            cells=[objects.InstanceNUMACell(id=0, cpuset=set([1]), memory=512),
-                   objects.InstanceNUMACell(id=1, cpuset=set([3]), memory=512)
-               ])
+            self, numa_topology, cpu_policy, cpu_thread_policy, passes):
+        instance_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                id=0,
+                cpuset=set([1]),
+                memory=512,
+                cpu_policy=cpu_policy,
+                cpu_thread_policy=cpu_thread_policy,
+            ),
+            objects.InstanceNUMACell(
+                id=1,
+                cpuset=set([3]),
+                memory=512,
+                cpu_policy=cpu_policy,
+                cpu_thread_policy=cpu_thread_policy,
+            ),
+        ])
         spec_obj = objects.RequestSpec(numa_topology=instance_topology,
                                        pci_requests=None,
                                        instance_uuid=uuids.fake)

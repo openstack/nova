@@ -10,11 +10,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import copy
-
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_versionedobjects import base as ovo_base
+import testtools
 
 from nova import exception
 from nova import objects
@@ -93,13 +92,6 @@ class _TestInstanceNUMACell(object):
                                              cpu_pinning=None)
         inst_cell.pin_vcpus((0, 14), (1, 15), (2, 16), (3, 17))
         self.assertEqual({0: 14, 1: 15, 2: 16, 3: 17}, inst_cell.cpu_pinning)
-
-    def test_cpu_pinning_requested(self):
-        inst_cell = objects.InstanceNUMACell(cpuset=set([0, 1, 2, 3]),
-                                             cpu_pinning=None)
-        self.assertFalse(inst_cell.cpu_pinning_requested)
-        inst_cell.cpu_policy = fields.CPUAllocationPolicy.DEDICATED
-        self.assertTrue(inst_cell.cpu_pinning_requested)
 
     def test_cpu_pinning(self):
         topo_obj = get_fake_obj_numa_topology(self.context)
@@ -192,12 +184,46 @@ class _TestInstanceNUMATopology(object):
             objects.InstanceNUMATopology.get_by_instance_uuid,
             self.context, 'fake_uuid')
 
-    def test_cpu_pinning_requested(self):
-        fake_topo_obj = copy.deepcopy(fake_obj_numa_topology)
-        self.assertFalse(fake_topo_obj.cpu_pinning_requested)
-        for cell in fake_topo_obj.cells:
-            cell.cpu_policy = fields.CPUAllocationPolicy.DEDICATED
-        self.assertTrue(fake_topo_obj.cpu_pinning_requested)
+    def test_cpu_policy(self):
+        cpu_policy = fields.CPUAllocationPolicy.SHARED
+        topology = objects.InstanceNUMATopology(
+            instance_uuid=fake_instance_uuid,
+            cells=[
+                objects.InstanceNUMACell(
+                    cpuset=set([0, 1, 2, 3]),
+                    cpu_pinning=None,
+                    cpu_policy=cpu_policy,
+                ),
+                objects.InstanceNUMACell(
+                    cpuset=set([4, 5, 6, 7]),
+                    cpu_pinning=None,
+                    cpu_policy=cpu_policy,
+                ),
+            ],
+        )
+
+        self.assertEqual(cpu_policy, topology.cpu_policy)
+
+    def test_cpu_policy__error(self):
+        """Ensure we raise an error if cells have different values."""
+        topology = objects.InstanceNUMATopology(
+            instance_uuid=fake_instance_uuid,
+            cells=[
+                objects.InstanceNUMACell(
+                    cpuset=set([0, 1, 2, 3]),
+                    cpu_pinning=None,
+                    cpu_policy=None,
+                ),
+                objects.InstanceNUMACell(
+                    cpuset=set([4, 5, 6, 7]),
+                    cpu_pinning=None,
+                    cpu_policy=fields.CPUAllocationPolicy.SHARED
+                ),
+            ],
+        )
+
+        with testtools.ExpectedException(exception.InternalError):
+            topology.cpu_policy
 
     def test_cpuset_reserved(self):
         topology = objects.InstanceNUMATopology(

@@ -8187,7 +8187,9 @@ class LibvirtDriver(driver.ComputeDriver):
             if not instance.numa_topology:
                 continue
 
-            if not instance.numa_topology.cpu_pinning_requested:
+            if instance.numa_topology.cpu_policy != (
+                fields.CPUAllocationPolicy.DEDICATED
+            ):
                 continue
 
             allocations_needing_reshape.append(instance.uuid)
@@ -8209,7 +8211,9 @@ class LibvirtDriver(driver.ComputeDriver):
             if not instance.numa_topology:
                 continue
 
-            if not instance.numa_topology.cpu_pinning_requested:
+            if instance.numa_topology.cpu_policy != (
+                fields.CPUAllocationPolicy.DEDICATED
+            ):
                 continue
 
             allocations_needing_reshape.append(migration.uuid)

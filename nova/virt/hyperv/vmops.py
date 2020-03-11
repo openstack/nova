@@ -464,7 +464,13 @@ class VMOps(object):
         memory_per_numa_node = instance_topology.cells[0].memory
         cpus_per_numa_node = len(instance_topology.cells[0].cpuset)
 
-        if instance_topology.cpu_pinning_requested:
+        # TODO(stephenfin): We can avoid this check entirely if we rely on the
+        # 'supports_pcpus' driver capability (via a trait), but we need to drop
+        # support for the legacy 'vcpu_pin_set' path in the libvirt driver
+        # first
+        if instance_topology.cpu_policy not in (
+            None, fields.CPUAllocationPolicy.SHARED,
+        ):
             raise exception.InstanceUnacceptable(
                 reason=_("Hyper-V does not support CPU pinning."),
                 instance_id=instance.uuid)
