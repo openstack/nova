@@ -459,6 +459,9 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 
         self.system_reader_rules = (
 "os_compute_api:os-services:list",
+)
+
+        self.system_reader_or_owner_rules = (
 "os_compute_api:os-attach-interfaces:list",
 "os_compute_api:os-attach-interfaces:show",
 )
@@ -511,5 +514,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
         result = set(rules.keys()) - set(self.admin_only_rules +
             self.admin_or_owner_rules +
             self.allow_all_rules + self.system_reader_rules +
+            self.system_reader_or_owner_rules +
             self.allow_nobody_rules + special_rules)
         self.assertEqual(set([]), result)
