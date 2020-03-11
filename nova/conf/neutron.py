@@ -77,6 +77,20 @@ needs to create a resource in Neutron it will requery Neutron for the
 extensions that it has loaded.  Setting value to 0 will refresh the
 extensions with no wait.
 """),
+    cfg.IntOpt('http_retries',
+               default=3,
+               min=0,
+               help="""
+Number of times neutronclient should retry on any failed http call.
+
+0 means connection is attempted only once. Setting it to any positive integer
+means that on failure connection is retried that many times e.g. setting it
+to 3 means total attempts to connect will be 4.
+
+Possible values:
+
+* Any integer value. 0 means connection is attempted only once
+"""),
 ]
 
 metadata_proxy_opts = [
