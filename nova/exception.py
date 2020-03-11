@@ -710,21 +710,8 @@ class InstanceMappingNotFound(NotFound):
     msg_fmt = _("Instance %(uuid)s has no mapping to a cell.")
 
 
-class NetworkInUse(NovaException):
-    msg_fmt = _("Network %(network_id)s is still in use.")
-
-
-class NetworkSetHostFailed(NovaException):
-    msg_fmt = _("Network set host failed for network %(network_id)s.")
-
-
 class InvalidCidr(Invalid):
     msg_fmt = _("%(cidr)s is not a valid IP network.")
-
-
-class DuplicateVlan(NovaException):
-    msg_fmt = _("Detected existing vlan with id %(vlan)d")
-    code = 409
 
 
 class NetworkNotFound(NotFound):
@@ -739,29 +726,8 @@ class NetworkNotFoundForBridge(NetworkNotFound):
     msg_fmt = _("Network could not be found for bridge %(bridge)s")
 
 
-class NetworkNotFoundForUUID(NetworkNotFound):
-    msg_fmt = _("Network could not be found for uuid %(uuid)s")
-
-
-class NetworkNotFoundForCidr(NetworkNotFound):
-    msg_fmt = _("Network could not be found with cidr %(cidr)s.")
-
-
 class NetworkNotFoundForInstance(NetworkNotFound):
     msg_fmt = _("Network could not be found for instance %(instance_id)s.")
-
-
-class NoNetworksFound(NotFound):
-    msg_fmt = _("No networks defined.")
-
-
-class NoMoreNetworks(NovaException):
-    msg_fmt = _("No more available networks.")
-
-
-class NetworkNotFoundForProject(NetworkNotFound):
-    msg_fmt = _("Either network uuid %(network_uuid)s is not present or "
-                "is not assigned to the project %(project_id)s.")
 
 
 class NetworkAmbiguous(Invalid):
@@ -847,38 +813,12 @@ class AttachSRIOVPortNotSupported(Invalid):
                 'specified during server creation.')
 
 
-class FixedIpExists(NovaException):
-    msg_fmt = _("Fixed IP %(address)s already exists.")
-
-
-class FixedIpNotFound(NotFound):
-    msg_fmt = _("No fixed IP associated with id %(id)s.")
-
-
-class FixedIpNotFoundForAddress(FixedIpNotFound):
+class FixedIpNotFoundForAddress(NotFound):
     msg_fmt = _("Fixed IP not found for address %(address)s.")
 
 
-class FixedIpNotFoundForInstance(FixedIpNotFound):
-    msg_fmt = _("Instance %(instance_uuid)s has zero fixed IPs.")
-
-
-class FixedIpNotFoundForNetworkHost(FixedIpNotFound):
-    msg_fmt = _("Network host %(host)s has zero fixed IPs "
-                "in network %(network_id)s.")
-
-
-class FixedIpNotFoundForSpecificInstance(FixedIpNotFound):
-    msg_fmt = _("Instance %(instance_uuid)s doesn't have fixed IP '%(ip)s'.")
-
-
-class FixedIpNotFoundForNetwork(FixedIpNotFound):
-    msg_fmt = _("Fixed IP address (%(address)s) does not exist in "
-                "network (%(network_uuid)s).")
-
-
-class FixedIpAssociateFailed(NovaException):
-    msg_fmt = _("Fixed IP associate failed for network: %(net)s.")
+class FixedIpNotFoundForInstance(NotFound):
+    msg_fmt = _("Instance %(instance_uuid)s does not have fixed IP '%(ip)s'.")
 
 
 class FixedIpAlreadyInUse(NovaException):
@@ -891,10 +831,6 @@ class FixedIpAssociatedWithMultipleInstances(NovaException):
                 "'%(address)s'.")
 
 
-class FixedIpInvalid(Invalid):
-    msg_fmt = _("Fixed IP address %(address)s is invalid.")
-
-
 class FixedIpInvalidOnHost(Invalid):
     msg_fmt = _("The fixed IP associated with port %(port_id)s is not "
                 "compatible with the host.")
@@ -904,24 +840,12 @@ class NoMoreFixedIps(NovaException):
     msg_fmt = _("No fixed IP addresses available for network: %(net)s")
 
 
-class NoFixedIpsDefined(NotFound):
-    msg_fmt = _("Zero fixed IPs could be found.")
-
-
-class FloatingIpExists(NovaException):
-    msg_fmt = _("Floating IP %(address)s already exists.")
-
-
 class FloatingIpNotFound(NotFound):
     msg_fmt = _("Floating IP not found for ID %(id)s.")
 
 
 class FloatingIpNotFoundForAddress(FloatingIpNotFound):
     msg_fmt = _("Floating IP not found for address %(address)s.")
-
-
-class FloatingIpNotFoundForHost(FloatingIpNotFound):
-    msg_fmt = _("Floating IP not found for host %(host)s.")
 
 
 class FloatingIpMultipleFoundForAddress(NovaException):
@@ -942,16 +866,8 @@ class FloatingIpAssociated(NovaException):
     msg_fmt = _("Floating IP %(address)s is associated.")
 
 
-class NoFloatingIpsDefined(NotFound):
-    msg_fmt = _("Zero floating IPs exist.")
-
-
 class NoFloatingIpInterface(NotFound):
     msg_fmt = _("Interface %(interface)s not found.")
-
-
-class FloatingIpAllocateFailed(NovaException):
-    msg_fmt = _("Floating IP allocate failed.")
 
 
 class FloatingIpAssociateFailed(NovaException):
@@ -1045,10 +961,6 @@ class SecurityGroupNotFound(NotFound):
 class SecurityGroupNotFoundForProject(SecurityGroupNotFound):
     msg_fmt = _("Security group %(security_group_id)s not found "
                 "for project %(project_id)s.")
-
-
-class SecurityGroupNotFoundForRule(SecurityGroupNotFound):
-    msg_fmt = _("Security group with rule %(rule_id)s not found.")
 
 
 class SecurityGroupExists(Invalid):

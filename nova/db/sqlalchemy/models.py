@@ -689,6 +689,8 @@ class SecurityGroup(BASE, NovaBase, models.SoftDeleteMixin):
                              backref='security_groups')
 
 
+# TODO(stephenfin): Remove this in the V release or later, once we're sure we
+# won't want it back (it's for nova-network, so we won't)
 class SecurityGroupIngressRule(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a rule in a security group."""
     __tablename__ = 'security_group_rules'
@@ -812,6 +814,8 @@ class Migration(BASE, NovaBase, models.SoftDeleteMixin):
                                         '0)')
 
 
+# TODO(stephenfin): Remove this in the V release or later, once we're sure we
+# won't want it back (it's for nova-network, so we won't)
 class Network(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a network."""
     __tablename__ = 'networks'
@@ -882,7 +886,8 @@ class VirtualInterface(BASE, NovaBase, models.SoftDeleteMixin):
     tag = Column(String(255))
 
 
-# TODO(vish): can these both come from the same baseclass?
+# TODO(stephenfin): Remove this in the V release or later, once we're sure we
+# won't want it back (it's for nova-network, so we won't)
 class FixedIp(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a fixed IP for an instance."""
     __tablename__ = 'fixed_ips'
@@ -941,6 +946,8 @@ class FixedIp(BASE, NovaBase, models.SoftDeleteMixin):
                                 'VirtualInterface.deleted == 0)')
 
 
+# TODO(stephenfin): Remove this in the V release or later, once we're sure we
+# won't want it back (it's for nova-network, so we won't)
 class FloatingIp(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a floating IP that dynamically forwards to a fixed IP."""
     __tablename__ = 'floating_ips'

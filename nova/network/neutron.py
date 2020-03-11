@@ -1992,7 +1992,7 @@ class API(base.Base):
                           instance=instance)
             return self._get_instance_nw_info(context, instance)
 
-        raise exception.FixedIpNotFoundForSpecificInstance(
+        raise exception.FixedIpNotFoundForInstance(
                 instance_uuid=instance.uuid, ip=address)
 
     def _get_physnet_tunneled_info(self, context, neutron, net_id):

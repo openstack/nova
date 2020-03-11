@@ -1056,12 +1056,8 @@ object_data = {
     'DiskMetadata': '1.0-e7a0f1ccccf10d26a76b28e7492f3788',
     'EC2Ids': '1.0-474ee1094c7ec16f8ce657595d8c49d9',
     'EC2InstanceMapping': '1.0-a4556eb5c5e94c045fe84f49cf71644f',
-    'FixedIP': '1.14-53e1c10b539f1a82fe83b1af4720efae',
-    'FixedIPList': '1.15-07b6261cef836cb09d2d8673f68ece15',
     'Flavor': '1.2-4ce99b41327bb230262e5a8f45ff0ce3',
     'FlavorList': '1.1-52b5928600e7ca973aa4fc1e46f3934c',
-    'FloatingIP': '1.10-52a67d52d85eb8b3f324a5b7935a335b',
-    'FloatingIPList': '1.12-e4debd21fddb12cf40d36f737225fa9d',
     'HVSpec': '1.2-de06bcec472a2f04966b855a49c46b41',
     'HostMapping': '1.0-1a3390a696792a552ab7bd31a77ba9ac',
     'HostMappingList': '1.1-18ac2bfb8c1eb5545bed856da58a79bc',
@@ -1103,9 +1099,7 @@ object_data = {
     'NUMAPagesTopology': '1.1-edab9fa2dc43c117a38d600be54b4542',
     'NUMATopology': '1.2-c63fad38be73b6afd04715c9c1b29220',
     'NUMATopologyLimits': '1.1-4235c5da7a76c7e36075f0cd2f5cf922',
-    'Network': '1.2-a977ab383aa462a479b2fae8211a5dde',
     'NetworkInterfaceMetadata': '1.2-6f3d480b40fe339067b1c0dd4d656716',
-    'NetworkList': '1.2-69eca910d8fa035dfecd8ba10877ee59',
     'NetworkMetadata': '1.0-2cb8d21b34f87b0261d3e1d1ae5cf218',
     'NetworkRequest': '1.2-af1ff2d986999fbb79377712794d82aa',
     'NetworkRequestList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
@@ -1130,8 +1124,6 @@ object_data = {
     'SchedulerRetries': '1.1-3c9c8b16143ebbb6ad7030e999d14cc0',
     'SecurityGroup': '1.2-86d67d8d3ab0c971e1dc86e02f9524a8',
     'SecurityGroupList': '1.1-c655ed13298e630f4d398152f7d08d71',
-    'SecurityGroupRule': '1.1-ae1da17b79970012e8536f88cb3c6b29',
-    'SecurityGroupRuleList': '1.2-0005c47fcd0fb78dd6d7fd32a1409f5b',
     'Selection': '1.1-548e3c2f04da2a61ceaf9c4e1589f264',
     'Service': '1.22-8a740459ab9bf258a19c8fcb875c2d9a',
     'ServiceList': '1.19-5325bce13eebcbf22edc9678285270cc',
@@ -1221,8 +1213,7 @@ class TestObjectVersions(test.NoDBTestCase):
         init_args = {}
         init_kwargs = {}
 
-        checker = fixture.ObjectVersionChecker(
-            base.NovaObjectRegistry.obj_classes())
+        checker = fixture.ObjectVersionChecker(get_nova_objects())
         checker.test_compatibility_routines(use_manifest=True,
                                             init_args=init_args,
                                             init_kwargs=init_kwargs)
