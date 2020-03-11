@@ -411,7 +411,7 @@ class HostManager(object):
         """
 
         def _async_init_instance_info(computes_by_cell):
-            context = context_module.RequestContext()
+            context = context_module.get_admin_context()
             LOG.debug("START:_async_init_instance_info")
             self._instance_info = {}
 
@@ -442,7 +442,7 @@ class HostManager(object):
                                "deleted": False}
                     with context_module.target_cell(context, cell) as cctxt:
                         result = objects.InstanceList.get_by_filters(
-                            cctxt.elevated(), filters)
+                            cctxt, filters)
                     instances = result.objects
                     LOG.debug("Adding %s instances for hosts %s-%s",
                               len(instances), start_node, end_node)
@@ -718,7 +718,7 @@ class HostManager(object):
     def refresh_cells_caches(self):
         # NOTE(tssurya): This function is called from the scheduler manager's
         # reset signal handler and also upon startup of the scheduler.
-        context = context_module.RequestContext()
+        context = context_module.get_admin_context()
         temp_cells = objects.CellMappingList.get_all(context)
         # NOTE(tssurya): filtering cell0 from the list since it need
         # not be considered for scheduling.
