@@ -439,8 +439,7 @@ class SecurityGroupActionController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=exp.format_message())
         except exception.NoUniqueMatch as exp:
             raise exc.HTTPConflict(explanation=exp.format_message())
-        except (exception.SecurityGroupCannotBeApplied,
-                exception.SecurityGroupExistsForInstance) as exp:
+        except exception.SecurityGroupCannotBeApplied as exp:
             raise exc.HTTPBadRequest(explanation=exp.format_message())
 
     @wsgi.expected_errors((400, 404, 409))
@@ -460,5 +459,3 @@ class SecurityGroupActionController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=exp.format_message())
         except exception.NoUniqueMatch as exp:
             raise exc.HTTPConflict(explanation=exp.format_message())
-        except exception.SecurityGroupNotExistsForInstance as exp:
-            raise exc.HTTPBadRequest(explanation=exp.format_message())

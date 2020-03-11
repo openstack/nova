@@ -6691,11 +6691,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         got_exc = test.TestingException()
         self._test_instance_exception(got_exc, exception.RescheduledException)
 
-    def test_spawn_network_alloc_failure(self):
-        # Because network allocation is asynchronous, failures may not present
-        # themselves until the virt spawn method is called.
-        self._test_build_and_run_spawn_exceptions(exception.NoMoreNetworks())
-
     def test_spawn_network_auto_alloc_failure(self):
         # This isn't really a driver.spawn failure, it's a failure from
         # network_api.allocate_for_instance, but testing it here is convenient.

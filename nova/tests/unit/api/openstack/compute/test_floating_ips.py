@@ -105,12 +105,6 @@ class FloatingIpTestV21(test.NoDBTestCase):
                                                         expected_exc)
 
     def test_floatingip_delete_error_disassociate_2(self):
-        raised_exc = exception.CannotDisassociateAutoAssignedFloatingIP
-        expected_exc = webob.exc.HTTPForbidden
-        self._test_floatingip_delete_error_disassociate(raised_exc,
-                                                        expected_exc)
-
-    def test_floatingip_delete_error_disassociate_3(self):
         raised_exc = exception.FloatingIpNotFoundForAddress(address='1.1.1.1')
         expected_exc = webob.exc.HTTPNotFound
         self._test_floatingip_delete_error_disassociate(raised_exc,
