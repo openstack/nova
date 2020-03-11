@@ -222,6 +222,8 @@ Reference Material
 For Contributors
 ================
 
+* :doc:`contributor/contributing`: If you are a new contributor this should
+  help you to start contributing to Nova.
 * :doc:`contributor/index`: If you are new to Nova, this should help you start
   to understand what Nova actually does, and why.
 * :doc:`reference/index`: There are also a number of technical references on
@@ -234,6 +236,7 @@ For Contributors
    :hidden:
 
    contributor/index
+   contributor/contributing
    reference/index
 
 .. only:: html

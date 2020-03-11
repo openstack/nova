@@ -7,6 +7,14 @@ enhance documentation, and increase testing. Contributions of any type are
 valuable, and part of what keeps the project going. Here are a list of
 resources to get your started.
 
+Basic Information
+=================
+
+.. toctree::
+   :maxdepth: 2
+
+   contributing
+
 Getting Started
 ===============
 
