@@ -401,6 +401,8 @@
             irrelevant-files: *policies-irrelevant-files
         - tempest-ipv6-only:
             irrelevant-files: *dsvm-irrelevant-files
+        - openstacksdk-functional-devstack:
+            irrelevant-files: *dsvm-irrelevant-files
     gate:
       jobs:
         - nova-grenade-multinode
@@ -413,6 +415,8 @@
         - grenade-py3:
             irrelevant-files: *policies-irrelevant-files
         - tempest-ipv6-only:
+            irrelevant-files: *dsvm-irrelevant-files
+        - openstacksdk-functional-devstack:
             irrelevant-files: *dsvm-irrelevant-files
     experimental:
       jobs:
