@@ -1169,16 +1169,16 @@ class LibvirtDriver(driver.ComputeDriver):
         for source in tcp_devices:
             yield (source.get("host"), int(source.get("service")))
 
-    def _get_scsi_controller_max_unit(self, guest):
+    def _get_scsi_controller_next_unit(self, guest):
         """Returns the max disk unit used by scsi controller"""
         xml = guest.get_xml_desc()
         tree = etree.fromstring(xml)
-        addrs = "./devices/disk[@device='disk']/address[@type='drive']"
+        addrs = "./devices/disk[target/@bus='scsi']/address[@type='drive']"
 
         ret = []
-        for obj in tree.findall(addrs):
+        for obj in tree.xpath(addrs):
             ret.append(int(obj.get('unit', 0)))
-        return max(ret)
+        return max(ret) + 1 if ret else 0
 
     @staticmethod
     def _get_rbd_driver():
@@ -1504,7 +1504,7 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_info = blockinfo.get_info_from_bdm(
             instance, CONF.libvirt.virt_type, instance.image_meta, bdm)
         if disk_info['bus'] == 'scsi':
-            disk_info['unit'] = self._get_scsi_controller_max_unit(guest) + 1
+            disk_info['unit'] = self._get_scsi_controller_next_unit(guest)
 
         conf = self._get_volume_config(connection_info, disk_info)
 
