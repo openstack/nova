@@ -1,0 +1,6 @@
+---
+deprecations:
+  - |
+    The vmwareapi driver is deprecated in this release and may be
+    removed in a future one. The driver is not tested by the OpenStack
+    Nova project and does not have a clear maintainer.
