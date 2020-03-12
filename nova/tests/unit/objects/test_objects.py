@@ -28,6 +28,7 @@ from oslo_versionedobjects import fixture
 import six
 
 from nova import context
+from nova import exception
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -975,7 +976,7 @@ class TestArgsSerializer(test.NoDBTestCase):
         super(TestArgsSerializer, self).setUp()
         self.now = timeutils.utcnow()
         self.str_now = utils.strtime(self.now)
-        self.unicode_str = u'\xF0\x9F\x92\xA9'
+        self.exc = exception.NotFound()
 
     @base.serialize_args
     def _test_serialize_args(self, *args, **kwargs):
@@ -984,14 +985,26 @@ class TestArgsSerializer(test.NoDBTestCase):
             self.assertEqual(expected_args[index], val)
 
         expected_kwargs = {'a': 'untouched', 'b': self.str_now,
-                           'c': self.str_now, 'exc_val': self.unicode_str}
+                           'c': self.str_now}
+
+        nonnova = kwargs.pop('nonnova', None)
+        if nonnova:
+            expected_kwargs['exc_val'] = 'TestingException'
+        else:
+            expected_kwargs['exc_val'] = self.exc.format_message()
         for key, val in kwargs.items():
             self.assertEqual(expected_kwargs[key], val)
 
     def test_serialize_args(self):
         self._test_serialize_args('untouched', self.now, self.now,
                                   a='untouched', b=self.now, c=self.now,
-                                  exc_val=self.unicode_str)
+                                  exc_val=self.exc)
+
+    def test_serialize_args_non_nova_exception(self):
+        self._test_serialize_args('untouched', self.now, self.now,
+                                  a='untouched', b=self.now, c=self.now,
+                                  exc_val=test.TestingException('foo'),
+                                  nonnova=True)
 
 
 class TestRegistry(test.NoDBTestCase):
