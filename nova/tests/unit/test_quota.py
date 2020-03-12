@@ -1966,6 +1966,23 @@ class UnifiedLimitsDriverTestCase(NoopQuotaDriverTestCase):
                      local_limit.SERVER_GROUPS: 12,
                      local_limit.SERVER_GROUP_MEMBERS: 10}
         self.useFixture(limit_fixture.LimitFixture(reglimits, {}))
+
+        self.expected_without_dict = {
+            'cores': -1,
+            'fixed_ips': -1,
+            'floating_ips': -1,
+            'injected_file_content_bytes': 10240,
+            'injected_file_path_bytes': 255,
+            'injected_files': 5,
+            'instances': -1,
+            'key_pairs': 100,
+            'metadata_items': 128,
+            'ram': -1,
+            'security_group_rules': -1,
+            'security_groups': -1,
+            'server_group_members': 10,
+            'server_groups': 12,
+        }
         self.expected_without_usages = {
             'cores': {'limit': -1},
             'fixed_ips': {'limit': -1},

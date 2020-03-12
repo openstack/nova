@@ -29,6 +29,7 @@ from nova.api import validation
 import nova.conf
 from nova import exception
 from nova.i18n import _
+from nova.limit import utils as limit_utils
 from nova import objects
 from nova.policies import quota_sets as qs_policies
 from nova import quota
@@ -205,10 +206,16 @@ class QuotaSetsController(wsgi.Controller):
         settable_quotas = QUOTAS.get_settable_quotas(context, project_id,
                                                      user_id=user_id)
 
+        requested_quotas = body['quota_set'].items()
+        if limit_utils.use_unified_limits():
+            # NOTE(johngarbutt) currently all info comes from keystone
+            # we don't update the database.
+            requested_quotas = []
+
         # NOTE(dims): Pass #1 - In this loop for quota_set.items(), we validate
         # min/max values and bail out if any of the items in the set is bad.
         valid_quotas = {}
-        for key, value in body['quota_set'].items():
+        for key, value in requested_quotas:
             if key == 'force' or (not value and value != 0):
                 continue
             # validate whether already used and reserved exceeds the new
@@ -276,8 +283,12 @@ class QuotaSetsController(wsgi.Controller):
         context.can(qs_policies.POLICY_ROOT % 'delete', {'project_id': id})
         params = urlparse.parse_qs(req.environ.get('QUERY_STRING', ''))
         user_id = params.get('user_id', [None])[0]
-        if user_id:
-            objects.Quotas.destroy_all_by_project_and_user(
-                context, id, user_id)
-        else:
-            objects.Quotas.destroy_all_by_project(context, id)
+
+        # NOTE(johngarbutt) with unified limits we only use keystone, not the
+        # db
+        if not limit_utils.use_unified_limits():
+            if user_id:
+                objects.Quotas.destroy_all_by_project_and_user(
+                    context, id, user_id)
+            else:
+                objects.Quotas.destroy_all_by_project(context, id)

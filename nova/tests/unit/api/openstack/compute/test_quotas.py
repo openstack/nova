@@ -1012,9 +1012,7 @@ class UnifiedLimitsQuotaSetsTest(NoopQuotaSetsTest):
             }
         }
         self.assertEqual(expected_response, response)
-        mock_create.assert_called_once_with(req.environ['nova.context'],
-                                            uuids.project_id, "server_groups",
-                                            2, user_id=None)
+        self.assertEqual(0, mock_create.call_count)
 
     @mock.patch.object(objects.Quotas, "create_limit")
     def test_update_v21_user(self, mock_create):
@@ -1040,6 +1038,75 @@ class UnifiedLimitsQuotaSetsTest(NoopQuotaSetsTest):
             }
         }
         self.assertEqual(expected_response, response)
-        mock_create.assert_called_once_with(req.environ['nova.context'],
-                                            uuids.project_id, "key_pairs", 52,
-                                            user_id="42")
+        self.assertEqual(0, mock_create.call_count)
+
+    def test_defaults_v21(self):
+        req = fakes.HTTPRequest.blank("")
+        response = self.controller.defaults(req, uuids.project_id)
+        expected_response = {
+            'quota_set': {
+                'id': uuids.project_id,
+                'cores': -1,
+                'fixed_ips': -1,
+                'floating_ips': -1,
+                'injected_file_content_bytes': 10240,
+                'injected_file_path_bytes': 255,
+                'injected_files': 5,
+                'instances': -1,
+                'key_pairs': 100,
+                'metadata_items': 128,
+                'ram': -1,
+                'security_group_rules': -1,
+                'security_groups': -1,
+                'server_group_members': 10,
+                'server_groups': 12,
+            }
+        }
+        self.assertEqual(expected_response, response)
+
+    def test_defaults_v21_different_limit_values(self):
+        reglimits = {local_limit.SERVER_METADATA_ITEMS: 7,
+                     local_limit.INJECTED_FILES: 6,
+                     local_limit.INJECTED_FILES_CONTENT: 4,
+                     local_limit.INJECTED_FILES_PATH: 5,
+                     local_limit.KEY_PAIRS: 1,
+                     local_limit.SERVER_GROUPS: 3,
+                     local_limit.SERVER_GROUP_MEMBERS: 2}
+        self.useFixture(limit_fixture.LimitFixture(reglimits, {}))
+
+        req = fakes.HTTPRequest.blank("")
+        response = self.controller.defaults(req, uuids.project_id)
+        expected_response = {
+            'quota_set': {
+                'id': uuids.project_id,
+                'cores': -1,
+                'fixed_ips': -1,
+                'floating_ips': -1,
+                'injected_file_content_bytes': 4,
+                'injected_file_path_bytes': 5,
+                'injected_files': 6,
+                'instances': -1,
+                'key_pairs': 1,
+                'metadata_items': 7,
+                'ram': -1,
+                'security_group_rules': -1,
+                'security_groups': -1,
+                'server_group_members': 2,
+                'server_groups': 3,
+            }
+        }
+        self.assertEqual(expected_response, response)
+
+    @mock.patch('nova.objects.Quotas.destroy_all_by_project')
+    def test_quotas_delete(self, mock_destroy_all_by_project):
+        req = fakes.HTTPRequest.blank("")
+        self.controller.delete(req, "1234")
+        # Ensure destroy isn't called for unified limits
+        self.assertEqual(0, mock_destroy_all_by_project.call_count)
+
+    @mock.patch('nova.objects.Quotas.destroy_all_by_project_and_user')
+    def test_user_quotas_delete(self, mock_destroy_all_by_user):
+        req = fakes.HTTPRequest.blank("?user_id=42")
+        self.controller.delete(req, "1234")
+        # Ensure destroy isn't called for unified limits
+        self.assertEqual(0, mock_destroy_all_by_user.call_count)
