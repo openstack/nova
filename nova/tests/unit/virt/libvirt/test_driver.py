@@ -4893,6 +4893,52 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         guest = libvirt_guest.Guest(FakeVirtDomain())
         return drvr._get_serial_ports_from_guest(guest, mode=mode)
 
+    def test_get_scsi_controller_next_unit_from_guest(self):
+        xml = """
+    <domain type='kvm'>
+      <devices>
+        <disk type='file' device='disk'>
+          <target dev='sda' bus='scsi'/>
+          <address type='drive' controller='0' bus='0' target='0' unit='0'/>
+        </disk>
+        <disk type='file' device='disk'>
+          <target dev='vda' bus='virtio'/>
+        </disk>
+        <disk type='file' device='cdrom'>
+          <target dev='sdc' bus='scsi'/>
+          <address type='drive' controller='0' bus='0' target='0' unit='1'/>
+        </disk>
+      </devices>
+    </domain>
+            """
+        self._test_get_scsi_controller_next_unit_from_guest(xml, 2)
+
+    def test_get_scsi_controller_next_unit_from_guest_no_scsi(self):
+        xml = """
+    <domain type='kvm'>
+      <devices>
+        <disk type='file' device='disk'>
+          <target dev='vda' bus='virtio'/>
+        </disk>
+        <disk type='file' device='disk'>
+          <target dev='vdb' bus='virtio'/>
+        </disk>
+      </devices>
+    </domain>
+            """
+        self._test_get_scsi_controller_next_unit_from_guest(xml, 0)
+
+    @mock.patch.object(libvirt_guest.Guest, "get_xml_desc")
+    def _test_get_scsi_controller_next_unit_from_guest(self, xml,
+                                                       expect_num,
+                                                       mock_get_xml_desc):
+        mock_get_xml_desc.return_value = xml
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        guest = libvirt_guest.Guest(FakeVirtDomain())
+        i = drvr._get_scsi_controller_next_unit(guest)
+        self.assertEqual(expect_num, i)
+
     def test_get_guest_config_with_type_xen(self):
         self.flags(enabled=True, group='vnc')
         self.flags(virt_type='xen',
