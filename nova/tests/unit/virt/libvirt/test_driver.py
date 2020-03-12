@@ -21388,6 +21388,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         mock_rename.assert_has_calls([
             mock.call(_path_qcow, path)])
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_allocate_mdevs')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_inject_data')
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'get_info')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
@@ -21408,6 +21409,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                                mock_raw_to_qcow2,
                                mock_create_domain_and_network,
                                mock_get_info, mock_inject_data,
+                               mock_alloc_mdevs,
                                power_on=True, resize_instance=False):
         """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
         .finish_migration.
@@ -21418,6 +21420,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         else:
             state = power_state.SHUTDOWN
         mock_get_info.return_value = hardware.InstanceInfo(state=state)
+        mock_alloc_mdevs.return_value = []
 
         instance = self._create_instance(
             {'config_drive': str(True),
@@ -21478,6 +21481,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # We shouldn't be injecting data during migration
         self.assertFalse(mock_inject_data.called)
 
+        mock_alloc_mdevs.assert_called_once_with(mock.ANY)
         # NOTE(mdbooth): If we wanted to check the generated xml, we could
         #                insert a hook here
         mock_create_domain_and_network.assert_called_once_with(
@@ -21533,7 +21537,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 
         def fake_to_xml(self, context, instance, network_info, disk_info,
                         image_meta=None, rescue=None,
-                        block_device_info=None):
+                        block_device_info=None, mdevs=None):
             return ""
 
         self.stub_out('nova.virt.libvirt.driver.LibvirtDriver._get_guest_xml',
@@ -21573,11 +21577,15 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 self.events_passed_to_fake_create = [
                     ('network-vif-plugged', uuids.normal_vif)]
 
-            self.drvr.finish_revert_migration(
-                context.get_admin_context(), ins_ref, network_info, migration,
-                None, power_on)
+            with mock.patch.object(
+                    self.drvr, '_get_all_assigned_mediated_devices',
+                    return_value={}) as mock_get_a_mdevs:
+                self.drvr.finish_revert_migration(
+                    context.get_admin_context(), ins_ref, network_info,
+                    migration, None, power_on)
 
             self.assertTrue(self.fake_create_domain_called)
+            mock_get_a_mdevs.assert_called_once_with(mock.ANY)
 
     def test_finish_revert_migration_power_on(self):
         migration = objects.Migration(id=42, source_compute='fake-host1',
@@ -21618,8 +21626,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 mock.patch.object(drvr, '_get_guest_xml'),
                 mock.patch.object(shutil, 'rmtree'),
                 mock.patch.object(loopingcall, 'FixedIntervalLoopingCall'),
+                mock.patch.object(drvr, '_get_all_assigned_mediated_devices',
+                                  return_value={}),
         ) as (mock_stat, mock_path, mock_rename, mock_cdn, mock_ggx,
-              mock_rmtree, mock_looping_call):
+              mock_rmtree, mock_looping_call, mock_get_a_mdevs):
             mock_path.return_value = '/fake/foo'
             if del_inst_failed:
                 mock_rmtree.side_effect = OSError(errno.ENOENT,
@@ -21649,7 +21659,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     def test_finish_revert_migration_preserves_disk_bus(self):
 
         def fake_get_guest_xml(context, instance, network_info, disk_info,
-                               image_meta, block_device_info=None):
+                               image_meta, block_device_info=None, mdevs=None):
             self.assertEqual('ide', disk_info['disk_bus'])
 
         image_meta = {"disk_format": "raw",
@@ -21667,7 +21677,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                                   return_value=image_meta),
                 mock.patch.object(drvr, '_get_guest_xml',
                                   side_effect=fake_get_guest_xml),
-        ) as (mock_img_bkend, mock_cdan, mock_gifsm, mock_ggxml):
+                mock.patch.object(drvr, '_get_all_assigned_mediated_devices',
+                                  return_value={}),
+        ) as (mock_img_bkend, mock_cdan, mock_gifsm, mock_ggxml,
+              mock_get_a_mdevs):
             drvr.finish_revert_migration('', instance,
                                          network_model.NetworkInfo(),
                                          migration, power_on=False)
@@ -21683,8 +21696,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         with test.nested(
                 mock.patch.object(utils, 'get_image_from_system_metadata'),
                 mock.patch.object(drvr, '_create_domain_and_network'),
-                mock.patch.object(drvr, '_get_guest_xml')) as (
-                mock_image, mock_cdn, mock_ggx):
+                mock.patch.object(drvr, '_get_guest_xml'),
+                mock.patch.object(drvr, '_get_all_assigned_mediated_devices'),
+        ) as (mock_image, mock_cdn, mock_ggx, mock_get_a_mdevs):
             mock_image.return_value = {'disk_format': 'raw'}
             drvr.finish_revert_migration('', ins_ref,
                                          network_model.NetworkInfo(),
@@ -21706,8 +21720,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         with test.nested(
                 mock.patch.object(utils, 'get_image_from_system_metadata'),
                 mock.patch.object(drvr, '_create_domain_and_network'),
-                mock.patch.object(drvr, '_get_guest_xml')) as (
-                mock_image, mock_cdn, mock_ggx):
+                mock.patch.object(drvr, '_get_guest_xml'),
+                mock.patch.object(drvr, '_get_all_assigned_mediated_devices'),
+        ) as (mock_image, mock_cdn, mock_ggx, mock_get_a_mdevs):
             mock_image.return_value = {'disk_format': 'raw'}
             drvr.image_backend.rollback_to_snap.side_effect = (
                 exception.SnapshotNotFound(snapshot_id='testing'))
@@ -21729,8 +21744,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 mock.patch.object(rbd_utils, 'RBDDriver'),
                 mock.patch.object(utils, 'get_image_from_system_metadata'),
                 mock.patch.object(drvr, '_create_domain_and_network'),
-                mock.patch.object(drvr, '_get_guest_xml')) as (
-                mock_rbd, mock_image, mock_cdn, mock_ggx):
+                mock.patch.object(drvr, '_get_guest_xml'),
+                mock.patch.object(drvr, '_get_all_assigned_mediated_devices'),
+        ) as (mock_rbd, mock_image, mock_cdn, mock_ggx, mock_get_a_mdevs):
             mock_image.return_value = {'disk_format': 'raw'}
             drvr.finish_revert_migration('', ins_ref,
                                          network_model.NetworkInfo(),

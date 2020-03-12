@@ -14,6 +14,7 @@
 import fixtures
 import re
 
+import mock
 import os_resource_classes as orc
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -24,16 +25,24 @@ from nova import context
 from nova import objects
 from nova.tests.functional.libvirt import base
 from nova.tests.unit.virt.libvirt import fakelibvirt
+from nova.virt.libvirt import driver as libvirt_driver
 from nova.virt.libvirt import utils as libvirt_utils
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
+_DEFAULT_HOST = 'host1'
+
+
 class VGPUTestBase(base.ServersTestBase):
 
     FAKE_LIBVIRT_VERSION = 5000000
     FAKE_QEMU_VERSION = 3001000
+
+    # Since we run all computes by a single process, we need to identify which
+    # current compute service we use at the moment.
+    _current_host = _DEFAULT_HOST
 
     def setUp(self):
         super(VGPUTestBase, self).setUp()
@@ -45,6 +54,25 @@ class VGPUTestBase(base.ServersTestBase):
         self.useFixture(fixtures.MockPatch(
             'nova.privsep.libvirt.create_mdev',
             side_effect=self._create_mdev))
+
+        # NOTE(sbauza): Since the fake create_mdev doesn't know which compute
+        # was called, we need to look at a value that can be provided just
+        # before the driver calls create_mdev. That's why we fake the below
+        # method for having the LibvirtDriver instance so we could modify
+        # the self.current_host value.
+        orig_get_vgpu_type_per_pgpu = (
+            libvirt_driver.LibvirtDriver._get_vgpu_type_per_pgpu)
+
+        def fake_get_vgpu_type_per_pgpu(_self, *args):
+            # See, here we look at the hostname from the virt driver...
+            self._current_host = _self._host.get_hostname()
+            # ... and then we call the original method
+            return orig_get_vgpu_type_per_pgpu(_self, *args)
+
+        self.useFixture(fixtures.MockPatch(
+            'nova.virt.libvirt.LibvirtDriver._get_vgpu_type_per_pgpu',
+             new=fake_get_vgpu_type_per_pgpu))
+
         self.context = context.get_admin_context()
 
     def pci2libvirt_address(self, address):
@@ -61,14 +89,18 @@ class VGPUTestBase(base.ServersTestBase):
             uuid = uuidutils.generate_uuid()
         mdev_name = libvirt_utils.mdev_uuid2name(uuid)
         libvirt_parent = self.pci2libvirt_address(physical_device)
-        self.fake_connection.mdev_info.devices.update(
+        # Here, we get the right compute thanks by the self.current_host that
+        # was modified just before
+        connection = self.computes[
+            self._current_host].driver._host.get_connection()
+        connection.mdev_info.devices.update(
             {mdev_name: fakelibvirt.FakeMdevDevice(dev_name=mdev_name,
                                                    type_id=mdev_type,
                                                    parent=libvirt_parent)})
         return uuid
 
     def _start_compute_service(self, hostname):
-        self.fake_connection = self._get_connection(
+        fake_connection = self._get_connection(
             host_info=fakelibvirt.HostInfo(cpu_nodes=2, kB_mem=8192),
             # We want to create two pGPUs but no other PCI devices
             pci_info=fakelibvirt.HostPCIDevicesInfo(num_pci=0,
@@ -76,9 +108,11 @@ class VGPUTestBase(base.ServersTestBase):
                                                     num_vfs=0,
                                                     num_mdevcap=2),
             hostname=hostname)
-
-        self.mock_conn.return_value = self.fake_connection
-        compute = self.start_service('compute', host=hostname)
+        with mock.patch('nova.virt.libvirt.host.Host.get_connection',
+                        return_value=fake_connection):
+            # this method will update a self.computes dict keyed by hostname
+            compute = self._start_compute(hostname)
+            compute.driver._host.get_connection = lambda: fake_connection
         rp_uuid = self._get_provider_uuid_by_name(hostname)
         rp_uuids = self._get_all_rp_uuids_in_a_tree(rp_uuid)
         for rp in rp_uuids:
@@ -94,6 +128,11 @@ class VGPUTestBase(base.ServersTestBase):
 
 class VGPUTests(VGPUTestBase):
 
+    # We want to target some hosts for some created instances
+    api_major_version = 'v2.1'
+    ADMIN_API = True
+    microversion = 'latest'
+
     def setUp(self):
         super(VGPUTests, self).setUp()
         extra_spec = {"resources:VGPU": "1"}
@@ -103,23 +142,86 @@ class VGPUTests(VGPUTestBase):
         self.flags(
             enabled_vgpu_types=fakelibvirt.NVIDIA_11_VGPU_TYPE,
             group='devices')
-        self.compute1 = self._start_compute_service('host1')
+
+        # for the sake of resizing, we need to patch the two methods below
+        self.useFixture(fixtures.MockPatch(
+            'nova.virt.libvirt.LibvirtDriver._get_instance_disk_info',
+             return_value=[]))
+        self.useFixture(fixtures.MockPatch('os.rename'))
+
+        self.compute1 = self._start_compute_service(_DEFAULT_HOST)
+
+    def assert_vgpu_usage_for_compute(self, compute, expected):
+        total_usage = 0
+        # We only want to get mdevs that are assigned to instances
+        mdevs = compute.driver._get_all_assigned_mediated_devices()
+        for mdev in mdevs:
+            mdev_name = libvirt_utils.mdev_uuid2name(mdev)
+            mdev_info = compute.driver._get_mediated_device_information(
+                mdev_name)
+            parent_name = mdev_info['parent']
+            parent_rp_name = compute.host + '_' + parent_name
+            parent_rp_uuid = self._get_provider_uuid_by_name(parent_rp_name)
+            parent_usage = self._get_provider_usages(parent_rp_uuid)
+            if orc.VGPU in parent_usage:
+                total_usage += parent_usage[orc.VGPU]
+        self.assertEqual(expected, len(mdevs))
+        self.assertEqual(expected, total_usage)
 
     def test_create_servers_with_vgpu(self):
         self._create_server(
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             flavor_id=self.flavor, host=self.compute1.host,
-            expected_state='ACTIVE')
-        # Now we should find a new mdev
-        mdevs = self.compute1.driver._get_mediated_devices()
-        self.assertEqual(1, len(mdevs))
+            networks='auto', expected_state='ACTIVE')
+        self.assert_vgpu_usage_for_compute(self.compute1, expected=1)
 
-        # Checking also the allocations for the parent pGPU
-        parent_name = mdevs[0]['parent']
-        parent_rp_name = self.compute1.host + '_' + parent_name
-        parent_rp_uuid = self._get_provider_uuid_by_name(parent_rp_name)
-        usage = self._get_provider_usages(parent_rp_uuid)
-        self.assertEqual(1, usage[orc.VGPU])
+    def _confirm_resize(self, server, host='host1'):
+        # NOTE(sbauza): Unfortunately, _cleanup_resize() in libvirt checks the
+        # host option to know the source hostname but given we have a global
+        # CONF, the value will be the hostname of the last compute service that
+        # was created, so we need to change it here.
+        # TODO(sbauza): Remove the below once we stop using CONF.host in
+        # libvirt and rather looking at the compute host value.
+        orig_host = CONF.host
+        self.flags(host=host)
+        super(VGPUTests, self)._confirm_resize(server)
+        self.flags(host=orig_host)
+        self._wait_for_state_change(server, 'ACTIVE')
+
+    def test_resize_servers_with_vgpu(self):
+        # Add another compute for the sake of resizing
+        self.compute2 = self._start_compute_service('host2')
+        server = self._create_server(
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id=self.flavor, host=self.compute1.host,
+            networks='auto', expected_state='ACTIVE')
+        # Make sure we only have 1 vGPU for compute1
+        self.assert_vgpu_usage_for_compute(self.compute1, expected=1)
+        self.assert_vgpu_usage_for_compute(self.compute2, expected=0)
+
+        extra_spec = {"resources:VGPU": "1"}
+        new_flavor = self._create_flavor(memory_mb=4096,
+                                         extra_spec=extra_spec)
+        # First, resize and then revert.
+        self._resize_server(server, new_flavor)
+        # After resizing, we then have two vGPUs, both for each compute
+        self.assert_vgpu_usage_for_compute(self.compute1, expected=1)
+        self.assert_vgpu_usage_for_compute(self.compute2, expected=1)
+
+        self._revert_resize(server)
+        # We're back to the original resources usage
+        self.assert_vgpu_usage_for_compute(self.compute1, expected=1)
+        self.assert_vgpu_usage_for_compute(self.compute2, expected=0)
+
+        # Now resize and then confirm it.
+        self._resize_server(server, new_flavor)
+        self.assert_vgpu_usage_for_compute(self.compute1, expected=1)
+        self.assert_vgpu_usage_for_compute(self.compute2, expected=1)
+
+        self._confirm_resize(server)
+        # In the last case, the source guest disappeared so we only have 1 vGPU
+        self.assert_vgpu_usage_for_compute(self.compute1, expected=0)
+        self.assert_vgpu_usage_for_compute(self.compute2, expected=1)
 
 
 class VGPUMultipleTypesTests(VGPUTestBase):
@@ -180,7 +282,9 @@ class VGPUMultipleTypesTests(VGPUTestBase):
 
     def test_create_servers_with_specific_type(self):
         # Regenerate the PCI addresses so both pGPUs now support nvidia-12
-        self.fake_connection.pci_info = fakelibvirt.HostPCIDevicesInfo(
+        connection = self.computes[
+            self.compute1.host].driver._host.get_connection()
+        connection.pci_info = fakelibvirt.HostPCIDevicesInfo(
             num_pci=0, num_pfs=0, num_vfs=0, num_mdevcap=2,
             multiple_gpu_types=True)
         # Make a restart to update the Resource Providers
