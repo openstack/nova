@@ -817,6 +817,36 @@ class UnifiedLimitsDriver(NoopQuotaDriver):
 
         return quotas
 
+    def get_project_quotas(self, context, resources, project_id,
+                           quota_class=None,
+                           usages=True, remains=False):
+        if quota_class is not None:
+            raise NotImplementedError("quota_class")
+
+        if remains:
+            raise NotImplementedError("remains")
+
+        local_limits = self.get_class_quotas(context, resources, quota_class)
+        local_in_use = {}
+        if usages:
+            local_in_use = local_limit.get_in_use(context, project_id)
+
+        quotas = {}
+        # As we only apply limits to resources we know about,
+        # we return unlimited (-1) for all other resources
+        for resource in resources.values():
+            quota = {"limit": local_limits.get(resource.name, -1)}
+            if usages:
+                quota["in_use"] = local_in_use.get(resource.name, -1)
+            quotas[resource.name] = quota
+
+        return quotas
+
+    def get_user_quotas(self, context, resources, project_id, user_id,
+                        quota_class=None, usages=True):
+        return self.get_project_quotas(context, resources, project_id,
+                                       quota_class, usages)
+
 
 class BaseResource(object):
     """Describe a single resource for quota checking."""

@@ -21,6 +21,7 @@ from http import client as httplib
 from io import StringIO
 
 import mock
+from oslo_limit import fixture as limit_fixture
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 
@@ -29,6 +30,8 @@ from nova.api.openstack.compute import views
 from nova.api.openstack import wsgi
 import nova.context
 from nova import exception
+from nova.limit import local as local_limit
+from nova import objects
 from nova.policies import limits as l_policies
 from nova import quota
 from nova import test
@@ -549,3 +552,73 @@ class NoopLimitsControllerTest(test.NoDBTestCase):
 
 class UnifiedLimitsControllerTest(NoopLimitsControllerTest):
     quota_driver = "nova.quota.UnifiedLimitsDriver"
+
+    def setUp(self):
+        super(UnifiedLimitsControllerTest, self).setUp()
+        reglimits = {local_limit.SERVER_METADATA_ITEMS: 128,
+                     local_limit.INJECTED_FILES: 5,
+                     local_limit.INJECTED_FILES_CONTENT: 10 * 1024,
+                     local_limit.INJECTED_FILES_PATH: 255,
+                     local_limit.KEY_PAIRS: 100,
+                     local_limit.SERVER_GROUPS: 12,
+                     local_limit.SERVER_GROUP_MEMBERS: 10}
+        self.useFixture(limit_fixture.LimitFixture(reglimits, {}))
+
+    @mock.patch.object(objects.InstanceGroupList, "get_counts")
+    def test_index_v21(self, mock_count):
+        mock_count.return_value = {'project': {'server_groups': 9}}
+        req = fakes.HTTPRequest.blank("/")
+        response = self.controller.index(req)
+        expected_response = {
+            "limits": {
+                "rate": [],
+                "absolute": {
+                    'maxImageMeta': 128,
+                    'maxPersonality': 5,
+                    'maxPersonalitySize': 10240,
+                    'maxSecurityGroupRules': -1,
+                    'maxSecurityGroups': -1,
+                    'maxServerGroupMembers': 10,
+                    'maxServerGroups': 12,
+                    'maxServerMeta': 128,
+                    'maxTotalCores': -1,
+                    'maxTotalFloatingIps': -1,
+                    'maxTotalInstances': -1,
+                    'maxTotalKeypairs': 100,
+                    'maxTotalRAMSize': -1,
+                    'totalCoresUsed': -1,
+                    'totalFloatingIpsUsed': -1,
+                    'totalInstancesUsed': -1,
+                    'totalRAMUsed': -1,
+                    'totalSecurityGroupsUsed': -1,
+                    'totalServerGroupsUsed': 9,
+                },
+            },
+        }
+        self.assertEqual(expected_response, response)
+
+    @mock.patch.object(objects.InstanceGroupList, "get_counts")
+    def test_index_v275(self, mock_count):
+        mock_count.return_value = {'project': {'server_groups': 9}}
+        req = fakes.HTTPRequest.blank("/?tenant_id=faketenant",
+                                      version='2.75')
+        response = self.controller.index(req)
+        expected_response = {
+            "limits": {
+                "rate": [],
+                "absolute": {
+                    'maxServerGroupMembers': 10,
+                    'maxServerGroups': 12,
+                    'maxServerMeta': 128,
+                    'maxTotalCores': -1,
+                    'maxTotalInstances': -1,
+                    'maxTotalKeypairs': 100,
+                    'maxTotalRAMSize': -1,
+                    'totalCoresUsed': -1,
+                    'totalInstancesUsed': -1,
+                    'totalRAMUsed': -1,
+                    'totalServerGroupsUsed': 9,
+                },
+            },
+        }
+        self.assertEqual(expected_response, response)

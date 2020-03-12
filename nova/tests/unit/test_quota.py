@@ -1966,6 +1966,38 @@ class UnifiedLimitsDriverTestCase(NoopQuotaDriverTestCase):
                      local_limit.SERVER_GROUPS: 12,
                      local_limit.SERVER_GROUP_MEMBERS: 10}
         self.useFixture(limit_fixture.LimitFixture(reglimits, {}))
+        self.expected_without_usages = {
+            'cores': {'limit': -1},
+            'fixed_ips': {'limit': -1},
+            'floating_ips': {'limit': -1},
+            'injected_file_content_bytes': {'limit': 10240},
+            'injected_file_path_bytes': {'limit': 255},
+            'injected_files': {'limit': 5},
+            'instances': {'limit': -1},
+            'key_pairs': {'limit': 100},
+            'metadata_items': {'limit': 128},
+            'ram': {'limit': -1},
+            'security_group_rules': {'limit': -1},
+            'security_groups': {'limit': -1},
+            'server_group_members': {'limit': 10},
+            'server_groups': {'limit': 12}
+        }
+        self.expected_with_usages = {
+            'cores': {'in_use': -1, 'limit': -1},
+            'fixed_ips': {'in_use': -1, 'limit': -1},
+            'floating_ips': {'in_use': -1, 'limit': -1},
+            'injected_file_content_bytes': {'in_use': 0, 'limit': 10240},
+            'injected_file_path_bytes': {'in_use': 0, 'limit': 255},
+            'injected_files': {'in_use': 0, 'limit': 5},
+            'instances': {'in_use': -1, 'limit': -1},
+            'key_pairs': {'in_use': 0, 'limit': 100},
+            'metadata_items': {'in_use': 0, 'limit': 128},
+            'ram': {'in_use': -1, 'limit': -1},
+            'security_group_rules': {'in_use': -1, 'limit': -1},
+            'security_groups': {'in_use': -1, 'limit': -1},
+            'server_group_members': {'in_use': 0, 'limit': 10},
+            'server_groups': {'in_use': 9, 'limit': 12}
+        }
 
     def test_get_class_quotas(self):
         result = self.driver.get_class_quotas(
@@ -1987,6 +2019,39 @@ class UnifiedLimitsDriverTestCase(NoopQuotaDriverTestCase):
             'server_groups': 12,
         }
         self.assertEqual(expected_limits, result)
+
+    @mock.patch.object(objects.InstanceGroupList, "get_counts")
+    def test_get_project_quotas(self, mock_count):
+        mock_count.return_value = {'project': {'server_groups': 9}}
+        result = self.driver.get_project_quotas(
+            None, quota.QUOTAS._resources, 'test_project')
+        self.assertEqual(self.expected_with_usages, result)
+        mock_count.assert_called_once_with(None, "test_project")
+
+    @mock.patch.object(objects.InstanceGroupList, "get_counts")
+    def test_get_project_quotas_no_usages(self, mock_count):
+        result = self.driver.get_project_quotas(
+            None, quota.QUOTAS._resources, 'test_project', usages=False)
+        self.assertEqual(self.expected_without_usages, result)
+        # ensure usages not fetched when not required
+        self.assertEqual(0, mock_count.call_count)
+
+    @mock.patch.object(objects.InstanceGroupList, "get_counts")
+    def test_get_user_quotas(self, mock_count):
+        mock_count.return_value = {'project': {'server_groups': 9}}
+        result = self.driver.get_user_quotas(
+            None, quota.QUOTAS._resources, 'test_project', 'fake_user')
+        self.assertEqual(self.expected_with_usages, result)
+        mock_count.assert_called_once_with(None, "test_project")
+
+    @mock.patch.object(objects.InstanceGroupList, "get_counts")
+    def test_get_user_quotas_no_usages(self, mock_count):
+        result = self.driver.get_user_quotas(
+            None, quota.QUOTAS._resources, 'test_project', 'fake_user',
+            usages=False)
+        self.assertEqual(self.expected_without_usages, result)
+        # ensure usages not fetched when not required
+        self.assertEqual(0, mock_count.call_count)
 
 
 @ddt.ddt
