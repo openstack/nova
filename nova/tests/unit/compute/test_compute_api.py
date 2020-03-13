@@ -3579,6 +3579,19 @@ class _ComputeAPIUnitTestMixIn(object):
                       lambda obj, context, image_id, **kwargs: self.fake_image)
         return self.fake_image['id']
 
+    def _setup_fake_image_with_invalid_arch(self):
+        self.fake_image = {
+            'id': 2,
+            'name': 'fake_name',
+            'status': 'active',
+            'properties': {"hw_architecture": "arm64"},
+        }
+
+        fake_image.stub_out_image_service(self)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      lambda obj, context, image_id, **kwargs: self.fake_image)
+        return self.fake_image['id']
+
     @mock.patch('nova.compute.api.API.get_instance_host_status',
                 new=mock.Mock(return_value=fields_obj.HostStatus.UP))
     def test_resize_with_disabled_auto_disk_config_fails(self):
@@ -3608,6 +3621,21 @@ class _ComputeAPIUnitTestMixIn(object):
                           image_id,
                           "new password",
                           auto_disk_config=True)
+
+    def test_rebuild_with_invalid_image_arch(self):
+        instance = fake_instance.fake_instance_obj(
+            self.context, vm_state=vm_states.ACTIVE, cell_name='fake-cell',
+            launched_at=timeutils.utcnow(),
+            system_metadata={}, image_ref='foo',
+            expected_attrs=['system_metadata'])
+        image_id = self._setup_fake_image_with_invalid_arch()
+        self.assertRaises(exception.InvalidArchitectureName,
+                          self.compute_api.rebuild,
+                          self.context,
+                          instance,
+                          image_id,
+                          "new password")
+        self.assertIsNone(instance.task_state)
 
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     @mock.patch.object(objects.Instance, 'save')
