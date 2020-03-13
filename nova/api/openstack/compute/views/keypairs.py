@@ -18,7 +18,7 @@ from nova.api.openstack import common
 
 class ViewBuilder(common.ViewBuilder):
 
-    _collection_name = "keypairs"
+    _collection_name = 'os-keypairs'
 
     def get_links(self, request, keypairs):
         return self._get_collection_links(request, keypairs,
