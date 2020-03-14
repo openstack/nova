@@ -42,7 +42,7 @@
     ],
     "hypervisors_links": [
         {
-            "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/hypervisors/detail?limit=1&marker=%(hypervisor_id)s",
+            "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/os-hypervisors/detail?limit=1&marker=%(hypervisor_id)s",
             "rel": "next"
         }
     ]
