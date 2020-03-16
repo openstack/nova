@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    For AArch64 Nova now sets ``max`` as the default CPU model. It does the
+    right thing in context of both QEMU TCG (plain emulation) and for KVM
+    (hardware acceleration).

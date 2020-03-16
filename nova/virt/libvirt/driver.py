@@ -743,12 +743,6 @@ class LibvirtDriver(driver.ComputeDriver):
         cpu = vconfig.LibvirtConfigGuestCPU()
         for model in models:
             cpu.model = self._get_cpu_model_mapping(model)
-            if not cpu.model:
-                msg = (_("Configured CPU model: %(model)s is not correct, "
-                         "or your host CPU arch does not suuport this "
-                         "model. Please correct your config and try "
-                         "again.") % {'model': model})
-                raise exception.InvalidCPUInfo(msg)
             try:
                 self._compare_cpu(cpu, self._get_cpu_info(), None)
             except exception.InvalidCPUInfo as e:
@@ -4255,14 +4249,32 @@ class LibvirtDriver(driver.ComputeDriver):
         name.
 
         :param model: Case-insensitive CPU model name.
-        :return: Case-sensitive CPU model name, or None(Only when configured
-                 CPU model name not correct)
+        :return: It will validate and return the case-sensitive CPU model name
+                 if on a supported platform, otherwise it will just return
+                 what was provided
+        :raises: exception.InvalidCPUInfo if the CPU model is not supported.
         """
+        cpu_info = self._get_cpu_info()
+        if cpu_info['arch'] not in (fields.Architecture.I686,
+                                    fields.Architecture.X86_64,
+                                    fields.Architecture.PPC64,
+                                    fields.Architecture.PPC64LE,
+                                    fields.Architecture.PPC):
+            return model
+
         if not self.cpu_models_mapping:
             cpu_models = self._host.get_cpu_model_names()
             for cpu_model in cpu_models:
                 self.cpu_models_mapping[cpu_model.lower()] = cpu_model
-        return self.cpu_models_mapping.get(model.lower(), None)
+
+        if model.lower() not in self.cpu_models_mapping:
+            msg = (_("Configured CPU model: %(model)s is not correct, "
+                     "or your host CPU arch does not support this "
+                     "model. Please correct your config and try "
+                     "again.") % {'model': model})
+            raise exception.InvalidCPUInfo(msg)
+
+        return self.cpu_models_mapping.get(model.lower())
 
     def _get_guest_cpu_model_config(self, flavor=None):
         mode = CONF.libvirt.cpu_mode
@@ -4273,8 +4285,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if (CONF.libvirt.virt_type == "kvm" or
             CONF.libvirt.virt_type == "qemu"):
+            caps = self._host.get_capabilities()
             if mode is None:
-                caps = self._host.get_capabilities()
                 # AArch64 lacks 'host-model' support because neither libvirt
                 # nor QEMU are able to tell what the host CPU model exactly is.
                 # And there is no CPU description code for ARM(64) at this
@@ -4293,6 +4305,13 @@ class LibvirtDriver(driver.ComputeDriver):
                     mode = "host-model"
             if mode == "none":
                 return vconfig.LibvirtConfigGuestCPU()
+            # On AArch64 platform the return of _get_cpu_model_mapping will not
+            # return the default CPU model.
+            if mode == "custom":
+                if caps.host.cpu.arch == fields.Architecture.AARCH64:
+                    if not models:
+                        models = ['max']
+
         else:
             if mode is None or mode == "none":
                 return None
@@ -10529,6 +10548,11 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             models = [self._get_cpu_model_mapping(model)
                       for model in CONF.libvirt.cpu_models]
+
+            # Aarch64 platform doesn't return the default CPU models
+            if caps.host.cpu.arch == fields.Architecture.AARCH64:
+                if not models:
+                    models = ['max']
             # For custom mode, iterate through cpu models
             for model in models:
                 caps.host.cpu.model = model
