@@ -1116,14 +1116,6 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None,
                            'actual': host_cell.memory})
                 return
 
-    # The 'pcpuset' field is only set by newer compute nodes, so if it's
-    # not present then we've received this object from a pre-Train compute
-    # node and need to query against the 'cpuset' field instead until the
-    # compute node has been upgraded and starts reporting things properly.
-    # TODO(stephenfin): Remove in U
-    if 'pcpuset' not in host_cell:
-        host_cell.pcpuset = host_cell.cpuset
-
     # NOTE(stephenfin): As with memory, do not allow an instance to overcommit
     # against itself on any NUMA cell
     if instance_cell.cpu_policy == fields.CPUAllocationPolicy.DEDICATED:
@@ -1781,7 +1773,6 @@ def get_pci_numa_policy_constraint(flavor, image_meta):
     return policy
 
 
-# TODO(sahid): Move numa related to hardware/numa.py
 def numa_get_constraints(flavor, image_meta):
     """Return topology related to input request.
 
@@ -1872,7 +1863,6 @@ def numa_get_constraints(flavor, image_meta):
     requested_vcpus, requested_pcpus = _get_vcpu_pcpu_resources(flavor)
 
     if cpu_policy and (requested_vcpus or requested_pcpus):
-        # TODO(stephenfin): Make these custom exceptions
         raise exception.InvalidRequest(
             "It is not possible to use the 'resources:VCPU' or "
             "'resources:PCPU' extra specs in combination with the "
@@ -2086,8 +2076,6 @@ def numa_fit_instance_to_host(
         host_cells = sorted(host_cells, key=lambda cell: cell.id in [
             pool['numa_node'] for pool in pci_stats.pools])
 
-    # TODO(ndipanov): We may want to sort permutations differently
-    # depending on whether we want packing/spreading over NUMA nodes
     for host_cell_perm in itertools.permutations(
             host_cells, len(instance_topology)):
         chosen_instance_cells: ty.List['objects.InstanceNUMACell'] = []
@@ -2216,23 +2204,10 @@ def numa_usage_from_instance_numa(host_topology, instance_topology,
         memory_usage = host_cell.memory_usage
         shared_cpus_usage = host_cell.cpu_usage
 
-        # The 'pcpuset' field is only set by newer compute nodes, so if it's
-        # not present then we've received this object from a pre-Train compute
-        # node and need to dual-report all CPUS listed therein as both
-        # dedicated and shared until the compute node has been upgraded and
-        # starts reporting things properly.
-        # TODO(stephenfin): Remove in U
-        if 'pcpuset' not in host_cell:
-            shared_cpus = host_cell.cpuset
-            dedicated_cpus = host_cell.cpuset
-        else:
-            shared_cpus = host_cell.cpuset
-            dedicated_cpus = host_cell.pcpuset
-
         new_cell = objects.NUMACell(
             id=host_cell.id,
-            cpuset=shared_cpus,
-            pcpuset=dedicated_cpus,
+            cpuset=host_cell.cpuset,
+            pcpuset=host_cell.pcpuset,
             memory=host_cell.memory,
             cpu_usage=0,
             memory_usage=0,

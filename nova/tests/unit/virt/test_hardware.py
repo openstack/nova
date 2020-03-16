@@ -1918,6 +1918,7 @@ class NUMATopologyTest(test.NoDBTestCase):
             objects.NUMACell(
                 id=0,
                 cpuset=set([0, 1]),
+                pcpuset=set(),
                 memory=512,
                 cpu_usage=0,
                 memory_usage=0,
@@ -1929,6 +1930,7 @@ class NUMATopologyTest(test.NoDBTestCase):
             objects.NUMACell(
                 id=1,
                 cpuset=set([2, 3]),
+                pcpuset=set(),
                 memory=512,
                 cpu_usage=0,
                 memory_usage=0,
@@ -1959,7 +1961,7 @@ class NUMATopologyTest(test.NoDBTestCase):
         self.assertEqual({2048: 64}, reserved[6])
         self.assertEqual({1048576: 1}, reserved[9])
 
-    def test_reserved_hugepgaes_success(self):
+    def test_reserved_hugepages_success(self):
         self.flags(reserved_huge_pages=[
             {'node': 0, 'size': 2048, 'count': 128},
             {'node': 1, 'size': 1048576, 'count': 1}])
@@ -3171,41 +3173,6 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
                 cells=[objects.InstanceNUMACell(
                     cpuset=set([0, 1]), memory=2048,
                     cpu_policy=fields.CPUAllocationPolicy.DEDICATED)])
-
-        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
-
-        for cell in inst_topo.cells:
-            self.assertInstanceCellPinned(cell, cell_ids=(0, 1))
-
-    # TODO(stephenfin): Remove in U
-    def test_host_numa_fit_instance_to_host_legacy_object(self):
-        """Check that we're able to fit an instance NUMA topology to a legacy
-        host NUMA topology that doesn't have the 'pcpuset' field present.
-        """
-        host_topo = objects.NUMATopology(cells=[
-            objects.NUMACell(
-                id=0,
-                cpuset=set([0, 1]),
-                # we are explicitly not setting pcpuset here
-                memory=2048,
-                memory_usage=0,
-                pinned_cpus=set(),
-                mempages=[],
-                siblings=[set([0]), set([1])]),
-            objects.NUMACell(
-                id=1,
-                cpuset=set([2, 3]),
-                # we are explicitly not setting pcpuset here
-                memory=2048,
-                memory_usage=0,
-                pinned_cpus=set(),
-                mempages=[],
-                siblings=[set([2]), set([3])])
-        ])
-        inst_topo = objects.InstanceNUMATopology(cells=[
-            objects.InstanceNUMACell(
-                cpuset=set([0, 1]), memory=2048,
-                cpu_policy=fields.CPUAllocationPolicy.DEDICATED)])
 
         inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
 
