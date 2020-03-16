@@ -1,2 +1,3 @@
 nova/virt/hardware.py
 nova/virt/libvirt/__init__.py
+nova/virt/libvirt/driver.py
