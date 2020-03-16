@@ -124,7 +124,7 @@ API responses which are also controlled by this policy rule, like the
             }
         ]),
     policy.DocumentedRuleDefault(
-            SERVERS % 'show:host_status:unknown-only',
+        SERVERS % 'show:host_status:unknown-only',
         base.RULE_ADMIN_API,
         """
 Show a server with additional host status information, only if host status is
@@ -145,6 +145,14 @@ allow everyone.
             {
                 'method': 'GET',
                 'path': '/servers/detail'
+            },
+            {
+                'method': 'PUT',
+                'path': '/servers/{server_id}'
+            },
+            {
+                'method': 'POST',
+                'path': '/servers/{server_id}/action (rebuild)'
             }
         ]),
     policy.DocumentedRuleDefault(
