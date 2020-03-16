@@ -54,7 +54,8 @@ class UnshelveNeutronErrorTest(
         }
         self.api.post_server_action(server['id'], req)
         self._wait_for_server_parameter(
-            server, {'status': 'SHELVED_OFFLOADED'})
+            server, {'status': 'SHELVED_OFFLOADED',
+                     'OS-EXT-SRV-ATTR:host': None})
         allocations = self.placement_api.get(
             '/allocations/%s' % server['id']).body['allocations']
         self.assertEqual(0, len(allocations))
@@ -79,7 +80,8 @@ class UnshelveNeutronErrorTest(
             self._wait_for_server_parameter(
                 server,
                 {'status': 'SHELVED_OFFLOADED',
-                 'OS-EXT-STS:task_state': None})
+                 'OS-EXT-STS:task_state': None,
+                 'OS-EXT-SRV-ATTR:host': None})
 
         # As the instance went back to offloaded state we expect no allocation
         allocations = self.placement_api.get(
