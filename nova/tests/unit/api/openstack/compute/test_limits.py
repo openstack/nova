@@ -31,6 +31,7 @@ from nova.api.openstack import wsgi
 import nova.context
 from nova import exception
 from nova.limit import local as local_limit
+from nova.limit import placement as placement_limit
 from nova import objects
 from nova.policies import limits as l_policies
 from nova import quota
@@ -564,8 +565,12 @@ class UnifiedLimitsControllerTest(NoopLimitsControllerTest):
                      local_limit.SERVER_GROUP_MEMBERS: 10}
         self.useFixture(limit_fixture.LimitFixture(reglimits, {}))
 
+    @mock.patch.object(placement_limit, "get_legacy_counts")
+    @mock.patch.object(placement_limit, "get_legacy_project_limits")
     @mock.patch.object(objects.InstanceGroupList, "get_counts")
-    def test_index_v21(self, mock_count):
+    def test_index_v21(self, mock_count, mock_proj, mock_kcount):
+        mock_proj.return_value = {"instances": 1, "cores": 2, "ram": 3}
+        mock_kcount.return_value = {"instances": 4, "cores": 5, "ram": 6}
         mock_count.return_value = {'project': {'server_groups': 9}}
         req = fakes.HTTPRequest.blank("/")
         response = self.controller.index(req)
@@ -581,24 +586,28 @@ class UnifiedLimitsControllerTest(NoopLimitsControllerTest):
                     'maxServerGroupMembers': 10,
                     'maxServerGroups': 12,
                     'maxServerMeta': 128,
-                    'maxTotalCores': -1,
+                    'maxTotalCores': 2,
                     'maxTotalFloatingIps': -1,
-                    'maxTotalInstances': -1,
+                    'maxTotalInstances': 1,
                     'maxTotalKeypairs': 100,
-                    'maxTotalRAMSize': -1,
-                    'totalCoresUsed': -1,
-                    'totalFloatingIpsUsed': -1,
-                    'totalInstancesUsed': -1,
-                    'totalRAMUsed': -1,
-                    'totalSecurityGroupsUsed': -1,
+                    'maxTotalRAMSize': 3,
+                    'totalCoresUsed': 5,
+                    'totalFloatingIpsUsed': 0,
+                    'totalInstancesUsed': 4,
+                    'totalRAMUsed': 6,
+                    'totalSecurityGroupsUsed': 0,
                     'totalServerGroupsUsed': 9,
                 },
             },
         }
         self.assertEqual(expected_response, response)
 
+    @mock.patch.object(placement_limit, "get_legacy_counts")
+    @mock.patch.object(placement_limit, "get_legacy_project_limits")
     @mock.patch.object(objects.InstanceGroupList, "get_counts")
-    def test_index_v275(self, mock_count):
+    def test_index_v275(self, mock_count, mock_proj, mock_kcount):
+        mock_proj.return_value = {"instances": 1, "cores": 2, "ram": 3}
+        mock_kcount.return_value = {"instances": 4, "cores": 5, "ram": 6}
         mock_count.return_value = {'project': {'server_groups': 9}}
         req = fakes.HTTPRequest.blank("/?tenant_id=faketenant",
                                       version='2.75')
@@ -610,13 +619,13 @@ class UnifiedLimitsControllerTest(NoopLimitsControllerTest):
                     'maxServerGroupMembers': 10,
                     'maxServerGroups': 12,
                     'maxServerMeta': 128,
-                    'maxTotalCores': -1,
-                    'maxTotalInstances': -1,
+                    'maxTotalCores': 2,
+                    'maxTotalInstances': 1,
                     'maxTotalKeypairs': 100,
-                    'maxTotalRAMSize': -1,
-                    'totalCoresUsed': -1,
-                    'totalInstancesUsed': -1,
-                    'totalRAMUsed': -1,
+                    'maxTotalRAMSize': 3,
+                    'totalCoresUsed': 5,
+                    'totalInstancesUsed': 4,
+                    'totalRAMUsed': 6,
                     'totalServerGroupsUsed': 9,
                 },
             },

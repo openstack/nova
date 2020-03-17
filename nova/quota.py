@@ -29,6 +29,7 @@ from nova.db.api import models as api_models
 from nova.db.main import api as main_db_api
 from nova import exception
 from nova.limit import local as local_limit
+from nova.limit import placement as placement_limit
 from nova import objects
 from nova.scheduler.client import report
 from nova import utils
@@ -806,17 +807,17 @@ class UnifiedLimitsDriver(NoopQuotaDriver):
 
     def get_defaults(self, context, resources):
         local_limits = local_limit.get_legacy_default_limits()
-        # TODO(melwitt): This is temporary when we are in a state where cores,
-        # ram, and instances quota limits are not known/enforced with unified
-        # limits yet. This will occur in later patches and when it does, we
-        # will change the default to 0 to signal to operators that they need to
-        # register a limit for a resource before that resource will be
-        # allocated.
-        # Default to unlimited, as per no-op for everything that isn't
-        # a local limit
+        # Note we get 0 if there is no registered limit,
+        # to mirror oslo_limit behaviour when there is no registered limit
+        placement_limits = placement_limit.get_legacy_default_limits()
         quotas = {}
         for resource in resources.values():
-            quotas[resource.name] = local_limits.get(resource.name, -1)
+            if resource.name in placement_limits:
+                quotas[resource.name] = placement_limits[resource.name]
+            else:
+                # return -1 for things like security_group_rules
+                # that are neither a keystone limit or a local limit
+                quotas[resource.name] = local_limits.get(resource.name, -1)
 
         return quotas
 
@@ -829,21 +830,39 @@ class UnifiedLimitsDriver(NoopQuotaDriver):
         if remains:
             raise NotImplementedError("remains")
 
-        local_limits = self.get_class_quotas(context, resources, quota_class)
-        local_in_use = {}
+        local_limits = local_limit.get_legacy_default_limits()
+        # keystone limits always returns core, ram and instances
+        # if nothing set in keystone, we get back 0, i.e. don't allow
+        placement_limits = placement_limit.get_legacy_project_limits(
+            project_id)
+
+        project_quotas = {}
+        for resource in resources.values():
+            if resource.name in placement_limits:
+                limit = placement_limits[resource.name]
+            else:
+                # return -1 for things like security_group_rules
+                # that are neither a keystone limit or a local limit
+                limit = local_limits.get(resource.name, -1)
+            project_quotas[resource.name] = {"limit": limit}
+
         if usages:
             local_in_use = local_limit.get_in_use(context, project_id)
+            p_in_use = placement_limit.get_legacy_counts(context, project_id)
 
-        quotas = {}
-        # As we only apply limits to resources we know about,
-        # we return unlimited (-1) for all other resources
-        for resource in resources.values():
-            quota = {"limit": local_limits.get(resource.name, -1)}
-            if usages:
-                quota["in_use"] = local_in_use.get(resource.name, -1)
-            quotas[resource.name] = quota
+            for resource in resources.values():
+                # default to 0 for resources that are deprecated,
+                # i.e. not in keystone or local limits, such that we
+                # are API compatible with what was returned with
+                # the db driver, even though noop driver returned -1
+                usage_count = 0
+                if resource.name in local_in_use:
+                    usage_count = local_in_use[resource.name]
+                if resource.name in p_in_use:
+                    usage_count = p_in_use[resource.name]
+                project_quotas[resource.name]["in_use"] = usage_count
 
-        return quotas
+        return project_quotas
 
     def get_user_quotas(self, context, resources, project_id, user_id,
                         quota_class=None, usages=True):
