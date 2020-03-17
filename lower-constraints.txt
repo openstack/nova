@@ -72,7 +72,7 @@ os-win==3.0.0
 os-xenapi==0.3.3
 osc-lib==1.10.0
 oslo.cache==1.26.0
-oslo.concurrency==3.26.0
+oslo.concurrency==3.29.0
 oslo.config==6.1.0
 oslo.context==2.21.0
 oslo.db==4.44.0
