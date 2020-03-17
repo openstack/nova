@@ -358,7 +358,8 @@ class VMwareVCDriver(driver.ComputeDriver):
         return self._vmops.get_vnc_console(instance)
 
     def get_mks_console(self, context, instance):
-        if instance.vm_state == vm_states.ACTIVE:
+        valid_states = (vm_states.ACTIVE, vm_states.RESCUED, vm_states.RESIZED)
+        if instance.vm_state in valid_states:
             return self._vmops.get_mks_console(instance)
         raise exception.ConsoleTypeUnavailable(console_type='mks')
 
