@@ -16,13 +16,24 @@
 Helpers for qemu tasks.
 """
 
+import operator
+import os
+
 from oslo_concurrency import processutils
 from oslo_log import log as logging
+from oslo_utils import units
 
+from nova import exception
+from nova.i18n import _
 import nova.privsep.utils
 
-
 LOG = logging.getLogger(__name__)
+
+QEMU_IMG_LIMITS = processutils.ProcessLimits(
+    cpu_time=30,
+    address_space=1 * units.Gi)
+
+QEMU_VERSION_REQ_SHARED = 2010000
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
@@ -71,3 +82,53 @@ def unprivileged_convert_image(source, dest, in_format, out_format,
 
     cmd = cmd + (source, dest)
     processutils.execute(*cmd)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def privileged_qemu_img_info(path, format=None, qemu_version=None):
+    """Return an oject containing the parsed output from qemu-img info
+
+    This is a privileged call to qemu-img info using the sys_admin_pctxt
+    entrypoint allowing host block devices etc to be accessed.
+    """
+    return unprivileged_qemu_img_info(
+        path, format=format, qemu_version=qemu_version)
+
+
+def unprivileged_qemu_img_info(path, format=None, qemu_version=None):
+    """Return an object containing the parsed output from qemu-img info."""
+    try:
+        # The following check is about ploop images that reside within
+        # directories and always have DiskDescriptor.xml file beside them
+        if (os.path.isdir(path) and
+            os.path.exists(os.path.join(path, "DiskDescriptor.xml"))):
+            path = os.path.join(path, "root.hds")
+
+        cmd = ('env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'info', path)
+        if format is not None:
+            cmd = cmd + ('-f', format)
+        # Check to see if the qemu version is >= 2.10 because if so, we need
+        # to add the --force-share flag.
+        if qemu_version and operator.ge(qemu_version, QEMU_VERSION_REQ_SHARED):
+            cmd = cmd + ('--force-share',)
+        out, err = processutils.execute(*cmd, prlimit=QEMU_IMG_LIMITS)
+    except processutils.ProcessExecutionError as exp:
+        if exp.exit_code == -9:
+            # this means we hit prlimits, make the exception more specific
+            msg = (_("qemu-img aborted by prlimits when inspecting "
+                    "%(path)s : %(exp)s") % {'path': path, 'exp': exp})
+        elif exp.exit_code == 1 and 'No such file or directory' in exp.stderr:
+            # The os.path.exists check above can race so this is a simple
+            # best effort at catching that type of failure and raising a more
+            # specific error.
+            raise exception.DiskNotFound(location=path)
+        else:
+            msg = (_("qemu-img failed to execute on %(path)s : %(exp)s") %
+                   {'path': path, 'exp': exp})
+        raise exception.InvalidDiskInfo(reason=msg)
+
+    if not out:
+        msg = (_("Failed to run qemu-img info on %(path)s : %(error)s") %
+               {'path': path, 'error': err})
+        raise exception.InvalidDiskInfo(reason=msg)
+    return out
