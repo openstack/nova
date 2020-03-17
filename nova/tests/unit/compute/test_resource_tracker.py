@@ -43,6 +43,7 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_pci_device as fake_pci_device
 from nova.tests.unit import utils
+from nova import utils as nova_utils
 from nova.virt import driver
 
 _HOSTNAME = 'fake-host'
@@ -3896,3 +3897,21 @@ class ResourceTrackerTestCase(test.NoDBTestCase):
         rt = resource_tracker.ResourceTracker(
             _HOSTNAME, mock.sentinel.driver, mock.sentinel.reportclient)
         self.assertIs(rt.reportclient, mock.sentinel.reportclient)
+
+    def test_that_unfair_usage_of_compute_resource_semaphore_is_caught(self):
+        def _test_explict_unfair():
+            class MyResourceTracker(resource_tracker.ResourceTracker):
+                @nova_utils.synchronized(
+                    resource_tracker.COMPUTE_RESOURCE_SEMAPHORE, fair=False)
+                def foo(self):
+                    pass
+
+        def _test_implicit_unfair():
+            class MyResourceTracker(resource_tracker.ResourceTracker):
+                @nova_utils.synchronized(
+                    resource_tracker.COMPUTE_RESOURCE_SEMAPHORE)
+                def foo(self):
+                    pass
+
+        self.assertRaises(AssertionError, _test_explict_unfair)
+        self.assertRaises(AssertionError, _test_implicit_unfair)

@@ -96,6 +96,39 @@ class TestingException(Exception):
 mock_fixture.patch_mock_module()
 
 
+def _poison_unfair_compute_resource_semaphore_locking():
+    """Ensure that every locking on COMPUTE_RESOURCE_SEMAPHORE is called with
+    fair=True.
+    """
+    orig_synchronized = utils.synchronized
+
+    def poisoned_synchronized(*args, **kwargs):
+        # Only check fairness if the decorator is used with
+        # COMPUTE_RESOURCE_SEMAPHORE. But the name of the semaphore can be
+        # passed as args or as kwargs.
+        # Note that we cannot import COMPUTE_RESOURCE_SEMAPHORE as that would
+        # apply the decorators we want to poison here.
+        if len(args) >= 1:
+            name = args[0]
+        else:
+            name = kwargs.get("name")
+        if name == "compute_resources" and not kwargs.get("fair", False):
+            raise AssertionError(
+                'Locking on COMPUTE_RESOURCE_SEMAPHORE should always be fair. '
+                'See bug 1864122.')
+        # go and act like the original decorator
+        return orig_synchronized(*args, **kwargs)
+
+    # replace the synchronized decorator factory with our own that checks the
+    # params passed in
+    utils.synchronized = poisoned_synchronized
+
+
+# NOTE(gibi): This poisoning needs to be done in import time as decorators are
+# applied in import time on the ResourceTracker
+_poison_unfair_compute_resource_semaphore_locking()
+
+
 class NovaExceptionReraiseFormatError(object):
     real_log_exception = exception.NovaException._log_exception
 
