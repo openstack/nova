@@ -16,6 +16,7 @@ import mock
 
 from oslo_config import cfg
 from oslo_limit import exception as limit_exceptions
+from oslo_limit import fixture as limit_fixture
 from oslo_limit import limit
 from oslo_utils.fixture import uuidsentinel as uuids
 
@@ -309,3 +310,44 @@ class TestEnforce(test.NoDBTestCase):
 
         expected = str(mock_enforcer.enforce.side_effect)
         self.assertEqual(expected, str(e))
+
+
+class GetLegacyLimitsTest(test.NoDBTestCase):
+    def setUp(self):
+        super(GetLegacyLimitsTest, self).setUp()
+        self.new = {"servers": 1, "class:VCPU": 2, "class:MEMORY_MB": 3}
+        self.legacy = {"instances": 1, "cores": 2, "ram": 3}
+        self.resources = ["servers", "class:VCPU", "class:MEMORY_MB"]
+        self.resources.sort()
+        self.flags(driver=limit_utils.UNIFIED_LIMITS_DRIVER, group="quota")
+
+    def test_convert_keys_to_legacy_name(self):
+        limits = placement_limits._convert_keys_to_legacy_name(self.new)
+        self.assertEqual(self.legacy, limits)
+
+    def test_get_legacy_default_limits(self):
+        reglimits = {'servers': 1, 'class:VCPU': 2}
+        self.useFixture(limit_fixture.LimitFixture(reglimits, {}))
+        limits = placement_limits.get_legacy_default_limits()
+        self.assertEqual({'cores': 2, 'instances': 1, 'ram': 0}, limits)
+
+    def test_get_legacy_project_limits(self):
+        reglimits = {'servers': 5, 'class:MEMORY_MB': 7}
+        projlimits = {uuids.project_id: {'servers': 1}}
+        self.useFixture(limit_fixture.LimitFixture(reglimits, projlimits))
+        limits = placement_limits.get_legacy_project_limits(uuids.project_id)
+        self.assertEqual({'instances': 1, 'cores': 0, 'ram': 7}, limits)
+
+    @mock.patch.object(report.SchedulerReportClient,
+                       "get_usages_counts_for_limits")
+    @mock.patch.object(objects.InstanceMappingList, "get_counts")
+    @mock.patch.object(quota, "is_qfd_populated")
+    def test_get_legacy_counts(self, mock_qfd, mock_counts, mock_placement):
+        mock_qfd.return_value = True
+        mock_counts.return_value = {"project": {"instances": 1}}
+        mock_placement.return_value = {
+            "VCPU": 2, "CUSTOM_BAREMETAL": 2, "MEMORY_MB": 3,
+        }
+        counts = placement_limits.get_legacy_counts(
+            "context", uuids.project_id)
+        self.assertEqual(self.legacy, counts)

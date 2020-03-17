@@ -32,6 +32,12 @@ CONF = nova.conf.CONF
 # Cache to avoid repopulating ksa state
 PLACEMENT_CLIENT = None
 
+LEGACY_LIMITS = {
+    "servers": "instances",
+    "class:VCPU": "cores",
+    "class:MEMORY_MB": "ram",
+}
+
 
 def _get_placement_usages(context, project_id):
     global PLACEMENT_CLIENT
@@ -166,3 +172,30 @@ def enforce_num_instances_and_flavor(context, project_id, flavor, is_bfvm,
 
     # no problems with max_count, so we return max count
     return max_count
+
+
+def _convert_keys_to_legacy_name(new_dict):
+    legacy = {}
+    for new_name, old_name in LEGACY_LIMITS.items():
+        # defensive incase oslo or keystone doesn't give us an answer
+        legacy[old_name] = new_dict.get(new_name) or 0
+    return legacy
+
+
+def get_legacy_default_limits():
+    enforcer = limit.Enforcer(lambda: None)
+    new_limits = enforcer.get_registered_limits(LEGACY_LIMITS.keys())
+    return _convert_keys_to_legacy_name(dict(new_limits))
+
+
+def get_legacy_project_limits(project_id):
+    enforcer = limit.Enforcer(lambda: None)
+    new_limits = enforcer.get_project_limits(project_id, LEGACY_LIMITS.keys())
+    return _convert_keys_to_legacy_name(dict(new_limits))
+
+
+def get_legacy_counts(context, project_id):
+    resource_names = list(LEGACY_LIMITS.keys())
+    resource_names.sort()
+    new_usage = _get_usage(context, project_id, resource_names)
+    return _convert_keys_to_legacy_name(new_usage)
