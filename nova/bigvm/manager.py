@@ -77,9 +77,11 @@ class BigVmManager(manager.Manager):
            driver. If we're done freeing up the host, we add the
            BIGVM_RESOURCE to the child rp to make it consumable.
         4) In every iteration, we check for reserved BIGVM_RESOURCEs on a
-           child rp. Reserving a resource happens after consumption, so we know
-           the host is not longer free and have to clean up the child rp and
-           the vmware part.
+           child rp and if the host is still free. Reserving a resource happens
+           after consumption, so we know the host is not longer free and have
+           to clean up the child rp and the vmware part. The host might be used
+           again if a migration happened in the background. We need to clean up
+           the child rp in this case and redo the scheduling.
 
         We only want to fill up clusters to a certain point, configurable via
         bigvm_cluster_max_usage_percent. resource-providers having more RAM
@@ -115,8 +117,42 @@ class BigVmManager(manager.Manager):
                          {'parent_rp_uuid': rp['rp']['parent_provider_uuid'],
                           'rp_uuid': rp_uuid})
 
-        for rp_uuid, rp in itertools.chain(reserved_providers.items(),
-                                           overused_providers.items()):
+        # check if a provider got used in the background without our knowledge
+        unexpectedly_used_providers = {}
+        for rp_uuid, rp in bigvm_providers.items():
+            # no need to look if their host is free. they should be used
+            # anyways
+            if rp_uuid in reserved_providers:
+                continue
+
+            if rp_uuid in overused_providers:
+                # no need to check if we already remove it anyways
+                continue
+
+            # if we have no resources on the resource-provider, we don't expect
+            # it to be free, yet
+            if not rp['inventory'].get(BIGVM_RESOURCE, {}):
+                continue
+
+            # ask the compute-node if the host is still free. anything other
+            # than FREE_HOST_STATE_DONE means we've got an unexpected state and
+            # should re-schedule that size
+            cm = rp['cell_mapping']
+            with nova_context.target_cell(context, cm) as cctxt:
+                state = self.special_spawn_rpc.free_host(cctxt, rp['host'])
+                if state != special_spawning.FREE_HOST_STATE_DONE:
+                    LOG.info('Checking on already freed up host %(host)s '
+                             'returned with state %(state)s. Marking '
+                             '%(rp_uuid)s for deletion.',
+                             {'host': rp['host'],
+                              'state': state,
+                              'rp_uuid': rp_uuid})
+                    unexpectedly_used_providers[rp_uuid] = rp
+
+        _providers = itertools.chain(reserved_providers.items(),
+                                     overused_providers.items(),
+                                     unexpectedly_used_providers.items())
+        for rp_uuid, rp in _providers:
             self._clean_up_consumed_provider(context, rp_uuid, rp)
 
         # clean up our list of resource-providers from consumed or overused
