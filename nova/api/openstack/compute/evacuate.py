@@ -13,6 +13,7 @@
 #   under the License.
 
 
+from oslo_log import log as logging
 from oslo_utils import strutils
 from webob import exc
 
@@ -30,6 +31,8 @@ from nova.policies import evacuate as evac_policies
 from nova import utils
 
 CONF = nova.conf.CONF
+
+LOG = logging.getLogger(__name__)
 
 
 class EvacuateController(wsgi.Controller):
@@ -115,6 +118,22 @@ class EvacuateController(wsgi.Controller):
 
         if instance.host == host:
             msg = _("The target host can't be the same one.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        # We could potentially move this check to conductor and avoid the
+        # extra API call to neutron when we support move operations with ports
+        # having resource requests.
+        if (common.instance_has_port_with_resource_request(
+                instance.uuid, self.network_api) and not
+                common.supports_port_resource_request_during_move()):
+            LOG.warning("The evacuate action on a server with ports "
+                        "having resource requests, like a port with a QoS "
+                        "minimum bandwidth policy, is not supported until "
+                        "every nova-compute is upgraded to Ussuri")
+            msg = _("The evacuate action on a server with ports having "
+                    "resource requests, like a port with a QoS minimum "
+                    "bandwidth policy, is not supported by this cluster right "
+                    "now")
             raise exc.HTTPBadRequest(explanation=msg)
 
         try:
