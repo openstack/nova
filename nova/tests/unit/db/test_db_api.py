@@ -6072,57 +6072,6 @@ class Ec2TestCase(test.TestCase):
         super(Ec2TestCase, self).setUp()
         self.ctxt = context.RequestContext('fake_user', 'fake_project')
 
-    def test_ec2_ids_not_found_are_printable(self):
-        def check_exc_format(method, value):
-            try:
-                method(self.ctxt, value)
-            except exception.NotFound as exc:
-                self.assertIn(six.text_type(value), six.text_type(exc))
-
-        check_exc_format(db.get_instance_uuid_by_ec2_id, 123456)
-        check_exc_format(db.ec2_snapshot_get_by_ec2_id, 123456)
-        check_exc_format(db.ec2_snapshot_get_by_uuid, 'fake')
-
-    def test_ec2_volume_create(self):
-        vol = db.ec2_volume_create(self.ctxt, 'fake-uuid')
-        self.assertIsNotNone(vol['id'])
-        self.assertEqual(vol['uuid'], 'fake-uuid')
-
-    def test_ec2_volume_get_by_id(self):
-        vol = db.ec2_volume_create(self.ctxt, 'fake-uuid')
-        vol2 = db.ec2_volume_get_by_id(self.ctxt, vol['id'])
-        self.assertEqual(vol2['uuid'], vol['uuid'])
-
-    def test_ec2_volume_get_by_uuid(self):
-        vol = db.ec2_volume_create(self.ctxt, 'fake-uuid')
-        vol2 = db.ec2_volume_get_by_uuid(self.ctxt, vol['uuid'])
-        self.assertEqual(vol2['id'], vol['id'])
-
-    def test_ec2_snapshot_create(self):
-        snap = db.ec2_snapshot_create(self.ctxt, 'fake-uuid')
-        self.assertIsNotNone(snap['id'])
-        self.assertEqual(snap['uuid'], 'fake-uuid')
-
-    def test_ec2_snapshot_get_by_ec2_id(self):
-        snap = db.ec2_snapshot_create(self.ctxt, 'fake-uuid')
-        snap2 = db.ec2_snapshot_get_by_ec2_id(self.ctxt, snap['id'])
-        self.assertEqual(snap2['uuid'], 'fake-uuid')
-
-    def test_ec2_snapshot_get_by_uuid(self):
-        snap = db.ec2_snapshot_create(self.ctxt, 'fake-uuid')
-        snap2 = db.ec2_snapshot_get_by_uuid(self.ctxt, 'fake-uuid')
-        self.assertEqual(snap['id'], snap2['id'])
-
-    def test_ec2_snapshot_get_by_ec2_id_not_found(self):
-        self.assertRaises(exception.SnapshotNotFound,
-                          db.ec2_snapshot_get_by_ec2_id,
-                          self.ctxt, 123456)
-
-    def test_ec2_snapshot_get_by_uuid_not_found(self):
-        self.assertRaises(exception.SnapshotNotFound,
-                          db.ec2_snapshot_get_by_uuid,
-                          self.ctxt, 'fake-uuid')
-
     def test_ec2_instance_create(self):
         inst = db.ec2_instance_create(self.ctxt, 'fake-uuid')
         self.assertIsNotNone(inst['id'])
