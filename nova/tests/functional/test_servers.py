@@ -6025,14 +6025,25 @@ class UnsupportedPortResourceRequestBasedSchedulingTest(
         # can exist with such a port.
         self._add_resource_request_to_a_bound_port(self.neutron.port_1['id'])
 
-        ex = self.assertRaises(
-            client.OpenStackApiException,
-            self.api.post_server_action, server['id'], {'unshelve': None})
+        with mock.patch(
+            "nova.objects.service.get_minimum_version_all_cells",
+            return_value=48,
+        ):
+            ex = self.assertRaises(
+                client.OpenStackApiException,
+                self.api.post_server_action, server['id'], {'unshelve': None})
 
         self.assertEqual(400, ex.response.status_code)
         self.assertIn(
-            'The unshelve action on a server with ports having resource '
-            'requests', six.text_type(ex))
+            "The unshelve action on a server with ports having resource "
+            "requests, like a port with a QoS minimum bandwidth policy, is "
+            "not supported by this cluster right now",
+            six.text_type(ex))
+        self.assertIn(
+            "The unshelve action on a server with ports having resource "
+            "requests, like a port with a QoS minimum bandwidth policy, is "
+            "not supported until every nova-compute is upgraded to Ussuri",
+            self.stdlog.logger.output)
 
     def test_unshelve_not_offloaded_server_with_port_resource_request(
             self):
@@ -6076,7 +6087,6 @@ class NonAdminUnsupportedPortResourceRequestBasedSchedulingTest(
 
         # allow non-admin to call the operations
         self.policy.set_rules({
-            'os_compute_api:os-evacuate': '@',
             'os_compute_api:servers:create': '@',
             'os_compute_api:servers:create:attach_network': '@',
             'os_compute_api:servers:show': '@',
@@ -6084,7 +6094,6 @@ class NonAdminUnsupportedPortResourceRequestBasedSchedulingTest(
             'os_compute_api:os-attach-interfaces:create': '@',
             'os_compute_api:os-shelve:shelve': '@',
             'os_compute_api:os-shelve:unshelve': '@',
-            'os_compute_api:os-migrate-server:migrate_live': '@',
         })
 
 
@@ -7409,23 +7418,7 @@ class ServerMoveWithPortResourceRequestTest(
         self._delete_server_and_check_allocations(
             server, qos_normal_port, qos_sriov_port)
 
-    def _turn_off_api_check(self):
-        # The API actively rejecting the move operations with resource
-        # request so we have to turn off that check.
-        # TODO(gibi): Remove this when the move operations are supported and
-        # the API check is removed.
-        patcher = mock.patch(
-            'nova.api.openstack.common.'
-            'supports_port_resource_request_during_move',
-            return_value=True)
-        self.addCleanup(patcher.stop)
-        patcher.start()
-
     def test_unshelve_offloaded_server_with_qos_port(self):
-        # TODO(gibi): remove this when live migration is fully supported and
-        # therefore the check is removed from the api
-        self._turn_off_api_check()
-
         non_qos_normal_port = self.neutron.port_1
         qos_normal_port = self.neutron.port_with_resource_request
         qos_sriov_port = self.neutron.port_with_sriov_resource_request
@@ -7486,10 +7479,6 @@ class ServerMoveWithPortResourceRequestTest(
             server, qos_normal_port, qos_sriov_port)
 
     def test_unshelve_offloaded_server_with_qos_port_pci_update_fails(self):
-        # TODO(gibi): remove this when live migration is fully supported and
-        # therefore the check is removed from the api
-        self._turn_off_api_check()
-
         # Update the name of the network device RP of PF2 on host2 to something
         # unexpected. This will cause
         # update_pci_request_spec_with_allocated_interface_name() to raise
@@ -7548,10 +7537,6 @@ class ServerMoveWithPortResourceRequestTest(
 
     def test_unshelve_offloaded_server_with_qos_port_fails_due_to_neutron(
             self):
-        # TODO(gibi): remove this when live migration is fully supported and
-        # therefore the check is removed from the api
-        self._turn_off_api_check()
-
         non_qos_normal_port = self.neutron.port_1
         qos_normal_port = self.neutron.port_with_resource_request
         qos_sriov_port = self.neutron.port_with_sriov_resource_request

@@ -33,6 +33,7 @@ from nova import exception
 from nova.i18n import _
 from nova.network import constants
 from nova import objects
+from nova.objects import service
 from nova import quota
 from nova import utils
 
@@ -558,20 +559,15 @@ def supports_port_resource_request(req):
     return api_version_request.is_supported(req, '2.72')
 
 
-def supports_port_resource_request_during_move(req):
-    """Check to see if the requested API version is high enough for support
-    port resource request during move operation.
+def supports_port_resource_request_during_move():
+    """Check to see if the global compute service version is high enough to
+    support port resource request during move operation.
 
-    NOTE: At the moment there is no such microversion that supports port
-    resource request during move. This function is added as a preparation for
-    that microversion (assuming there will be a new microversion, which is
-    yet to be decided).
-
-    :param req: The incoming API request
-    :returns: True if the requested API microversion is high enough for
+    :returns: True if the compute service version is high enough for
         port resource request move support, False otherwise.
     """
-    return False
+    return service.get_minimum_version_all_cells(
+        nova_context.get_admin_context(), ['nova-compute']) >= 49
 
 
 def instance_has_port_with_resource_request(instance_uuid, network_api):

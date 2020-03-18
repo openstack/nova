@@ -31,8 +31,8 @@ compute services are upgraded to 20.0.0 (Train) and the
 ``[upgrade_levels]/compute`` configuration does not prevent the computes from
 using the latest RPC version.
 
-As of 21.0.0 (Ussuri), nova supports evacuating and live migrating servers
-with neutron ports having resource requests.
+As of 21.0.0 (Ussuri), nova supports evacuating, live migrating and unshelving
+servers with neutron ports having resource requests.
 
 See :nova-doc:`the admin guide <admin/port_with_resource_request.html>` for
 administrative details.
