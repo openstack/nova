@@ -55,6 +55,11 @@ nova boot --flavor ${flavor_id} --poll \
 --block-device id=${image_id},source=image,dest=volume,size=1,bootindex=0,shutdown=remove \
 --availability-zone nova:${subnode} evacuate-bfv-test
 
+# Fence the subnode
+echo "Stopping n-cpu, q-agt and guest domains on subnode"
+$ANSIBLE subnodes --become -f 5 -i "$WORKSPACE/inventory" -m shell -a "systemctl stop devstack@n-cpu devstack@q-agt"
+$ANSIBLE subnodes --become -f 5 -i "$WORKSPACE/inventory" -m shell -a "for domain in \$(virsh list --all --name); do  virsh destroy \$domain; done"
+
 echo "Forcing down the subnode so we can evacuate from it"
 openstack --os-compute-api-version 2.11 compute service set --down ${subnode} nova-compute
 
