@@ -73,7 +73,7 @@ class ResourceRequest(object):
 
         ...where ``$S`` is a string suffix as supported via Placement
         microversion 1.33
-        https://docs.openstack.org/placement/train/specs/train/implemented/2005575-nested-magic-1.html#arbitrary-group-suffixes  # noqa
+        https://docs.openstack.org/placement/train/specs/train/implemented/2005575-nested-magic-1.html#arbitrary-group-suffixes
 
         .. note::
 
@@ -82,7 +82,7 @@ class ResourceRequest(object):
         The string suffix is used as the RequestGroup.requester_id to
         facilitate mapping of requests to allocation candidates using the
         ``mappings`` piece of the response added in Placement microversion 1.34
-        https://docs.openstack.org/placement/train/specs/train/implemented/placement-resource-provider-request-group-mapping-in-allocation-candidates.html  # noqa
+        https://docs.openstack.org/placement/train/specs/train/implemented/placement-resource-provider-request-group-mapping-in-allocation-candidates.html
 
         For image metadata, traits are extracted from the ``traits_required``
         property, if present.

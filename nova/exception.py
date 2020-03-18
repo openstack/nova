@@ -2274,7 +2274,7 @@ class VPMEMCleanupFailed(NovaException):
 
 
 class RequestGroupSuffixConflict(NovaException):
-    msg_fmt = _("Duplicate request group suffix %(suffix)s!")
+    msg_fmt = _("Duplicate request group suffix %(suffix)s.")
 
 
 class AmbiguousResourceProviderForPCIRequest(NovaException):
