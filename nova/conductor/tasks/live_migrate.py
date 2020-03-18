@@ -241,6 +241,22 @@ class LiveMigrationTask(base.TaskBase):
                        "source and destination nodes do not support "
                        "the operation.")
 
+    def _check_can_migrate_specific_resources(self):
+        """Checks that an instance can migrate with specific resources.
+
+        For virtual persistent memory resource:
+            1. check if Instance contains vpmem resources
+            2. check if live migration with vpmem is supported
+        """
+        if not self.instance.resources:
+            return
+
+        for resource in self.instance.resources:
+            if resource.resource_class.startswith("CUSTOM_PMEM_NAMESPACE_"):
+                raise exception.MigrationPreCheckError(
+                    reason="Cannot live migration with virtual persistent "
+                           "memory, the operation is not supported.")
+
     def _check_host_is_up(self, host):
         service = objects.Service.get_by_compute_host(self.context, host)
 
@@ -322,6 +338,7 @@ class LiveMigrationTask(base.TaskBase):
         return source_info, destination_info
 
     def _call_livem_checks_on_host(self, destination, provider_mapping):
+        self._check_can_migrate_specific_resources()
         self._check_can_migrate_pci(self.source, destination)
         try:
             self.migrate_data = self.compute_rpcapi.\
