@@ -15,6 +15,7 @@ import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.api.openstack.compute import flavor_access
+from nova.policies import base as base_policy
 from nova.policies import flavor_access as fa_policy
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_flavor
@@ -64,7 +65,7 @@ class FlavorAccessPolicyTest(base.BasePolicyTest):
 
         # Check that everyone is able to list flavor access
         # information which is nothing but bug#1867840.
-        self.admin_or_owner_authorized_contexts = [
+        self.reader_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context, self.project_member_context,
             self.project_reader_context, self.project_foo_context,
@@ -72,13 +73,13 @@ class FlavorAccessPolicyTest(base.BasePolicyTest):
             self.system_foo_context,
             self.other_project_member_context]
 
-        self.admin_or_owner_unauthorized_contexts = [
+        self.reader_unauthorized_contexts = [
         ]
 
     def test_list_flavor_access_policy(self):
         rule_name = fa_policy.BASE_POLICY_NAME
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
+        self.common_policy_check(self.reader_authorized_contexts,
+                                 self.reader_unauthorized_contexts,
                                  rule_name, self.controller_index.index,
                                  self.req, '1')
 
@@ -134,13 +135,59 @@ class FlavorAccessScopeTypePolicyTest(FlavorAccessPolicyTest):
 
         # Check that system user is able to list flavor access
         # information.
-        self.admin_or_owner_authorized_contexts = [
+        self.reader_authorized_contexts = [
             self.system_admin_context,
             self.system_member_context, self.system_reader_context,
             self.system_foo_context]
         # Check that non-system is not able to list flavor access
         # information.
-        self.admin_or_owner_unauthorized_contexts = [
+        self.reader_unauthorized_contexts = [
             self.legacy_admin_context, self.other_project_member_context,
             self.project_admin_context, self.project_member_context,
             self.project_reader_context, self.project_foo_context]
+
+
+class FlavorAccessNoLegacyPolicyTest(FlavorAccessPolicyTest):
+    """Test FlavorAccess APIs policies with system scope enabled,
+    and no more deprecated rules that allow the legacy admin API to
+    access system_redear APIs.
+    """
+    without_deprecated_rules = True
+    rules_without_deprecation = {
+        fa_policy.POLICY_ROOT % "add_tenant_access":
+            base_policy.SYSTEM_ADMIN,
+        fa_policy.POLICY_ROOT % "remove_tenant_access":
+            base_policy.SYSTEM_ADMIN,
+        fa_policy.BASE_POLICY_NAME:
+            base_policy.SYSTEM_READER}
+
+    def setUp(self):
+        super(FlavorAccessNoLegacyPolicyTest, self).setUp()
+        self.flags(enforce_scope=True, group="oslo_policy")
+
+        # Check that system admin is able to add/remove flavor access
+        # to a tenant.
+        self.admin_authorized_contexts = [
+            self.system_admin_context]
+        # Check that non-system-admin is not able to add/remove flavor access
+        # to a tenant.
+        self.admin_unauthorized_contexts = [
+            self.legacy_admin_context, self.system_member_context,
+            self.system_reader_context, self.project_admin_context,
+            self.system_foo_context, self.project_member_context,
+            self.other_project_member_context,
+            self.project_foo_context, self.project_reader_context
+        ]
+
+        # Check that system reader is able to list flavor access
+        # information.
+        self.reader_authorized_contexts = [
+            self.system_admin_context,
+            self.system_member_context, self.system_reader_context]
+        # Check that non-system-reader is not able to list flavor access
+        # information.
+        self.reader_unauthorized_contexts = [
+            self.legacy_admin_context, self.other_project_member_context,
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context,
+            self.system_foo_context]
