@@ -1270,7 +1270,10 @@ class LibvirtDriver(driver.ComputeDriver):
         try:
             guest = self._host.get_guest(instance)
             try:
-                support_uefi = self._has_uefi_support()
+                hw_firmware_type = instance.image_meta.properties.get(
+                    'hw_firmware_type')
+                support_uefi = (self._has_uefi_support() and
+                                hw_firmware_type == fields.FirmwareType.UEFI)
                 guest.delete_configuration(support_uefi)
             except libvirt.libvirtError as e:
                 with excutils.save_and_reraise_exception() as ctxt:
@@ -1768,7 +1771,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._disconnect_volume(context, connection_info, instance,
                                         encryption=encryption)
 
-    def _swap_volume(self, guest, disk_path, conf, resize_to):
+    def _swap_volume(self, guest, disk_path,
+                     conf, resize_to, hw_firmware_type):
         """Swap existing disk with a new block device."""
         dev = guest.get_block_device(disk_path)
 
@@ -1789,7 +1793,8 @@ class LibvirtDriver(driver.ComputeDriver):
             #             If any part of this block fails, the domain is
             #             re-defined regardless.
             if guest.has_persistent_configuration():
-                support_uefi = self._has_uefi_support()
+                support_uefi = (self._has_uefi_support() and
+                                hw_firmware_type == fields.FirmwareType.UEFI)
                 guest.delete_configuration(support_uefi)
 
             try:
@@ -1859,8 +1864,12 @@ class LibvirtDriver(driver.ComputeDriver):
             self._disconnect_volume(context, new_connection_info, instance)
             raise NotImplementedError(_("Swap only supports host devices"))
 
+        hw_firmware_type = instance.image_meta.properties.get(
+            'hw_firmware_type')
+
         try:
-            self._swap_volume(guest, disk_dev, conf, resize_to)
+            self._swap_volume(guest, disk_dev, conf,
+                              resize_to, hw_firmware_type)
         except exception.VolumeRebaseFailed:
             with excutils.save_and_reraise_exception():
                 self._disconnect_volume(context, new_connection_info, instance)
@@ -2470,7 +2479,10 @@ class LibvirtDriver(driver.ComputeDriver):
             #             If any part of this block fails, the domain is
             #             re-defined regardless.
             if guest.has_persistent_configuration():
-                support_uefi = self._has_uefi_support()
+                hw_firmware_type = image_meta.properties.get(
+                    'hw_firmware_type')
+                support_uefi = (self._has_uefi_support() and
+                                hw_firmware_type == fields.FirmwareType.UEFI)
                 guest.delete_configuration(support_uefi)
 
             # NOTE (rmk): Establish a temporary mirror of our root disk and

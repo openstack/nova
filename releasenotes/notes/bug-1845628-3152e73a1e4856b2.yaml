@@ -1,0 +1,13 @@
+---
+fixes:
+  - |
+    Prior to this release Nova determined if ``UEFI`` support should be
+    enable solely by checking host support as reported in `bug 1845628`_.
+
+    Nova now correctly check for guest os support via the ``hw_firmware_type``
+    image metadata property when spawning new instance and only
+    enables ``UEFI`` if the guest and host support it.
+    Guest deletion has also been updated to correctly clean up based on
+    the ``UEFI`` or ``BIOS`` configuration of the vm.
+
+    .. _bug 1845628: https://bugs.launchpad.net/nova/+bug/1845628
