@@ -158,3 +158,13 @@ def get_about_info(vim):
 def get_entity_name(session, entity):
     return session._call_method(vutil, 'get_object_property',
                                 entity, 'name')
+
+
+def get_array_items(array_obj):
+    """Get contained items if the object is a vSphere API array."""
+    array_prefix = 'ArrayOf'
+    if array_obj.__class__.__name__.startswith(array_prefix):
+        attr_name = array_obj.__class__.__name__.replace(array_prefix, '', 1)
+        if hasattr(array_obj, attr_name):
+            return getattr(array_obj, attr_name)
+    return array_obj
