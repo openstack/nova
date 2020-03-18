@@ -6005,6 +6005,44 @@ class UnsupportedPortResourceRequestBasedSchedulingTest(
             "until microversion 2.72.",
             six.text_type(ex))
 
+    def test_live_migrate_server_with_port_resource_request_old_version(
+            self):
+        server = self._create_server(
+            flavor=self.flavor,
+            networks=[{'port': self.neutron.port_1['id']}])
+        self._wait_for_state_change(server, 'ACTIVE')
+
+        # We need to simulate that the above server has a port that has
+        # resource request; we cannot boot with such a port but legacy servers
+        # can exist with such a port.
+        self._add_resource_request_to_a_bound_port(self.neutron.port_1['id'])
+
+        post = {
+            'os-migrateLive': {
+                'host': None,
+                'block_migration': False,
+            }
+        }
+        with mock.patch(
+            "nova.objects.service.get_minimum_version_all_cells",
+            return_value=48,
+        ):
+            ex = self.assertRaises(
+                client.OpenStackApiException,
+                self.api.post_server_action, server['id'], post)
+
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn(
+            "The os-migrateLive action on a server with ports having resource "
+            "requests, like a port with a QoS minimum bandwidth policy, is "
+            "not supported by this cluster right now",
+            six.text_type(ex))
+        self.assertIn(
+            "The os-migrateLive action on a server with ports having resource "
+            "requests, like a port with a QoS minimum bandwidth policy, is "
+            "not supported until every nova-compute is upgraded to Ussuri",
+            self.stdlog.logger.output)
+
     def test_unshelve_offloaded_server_with_port_resource_request_old_version(
             self):
         server = self._create_server(
@@ -6094,6 +6132,7 @@ class NonAdminUnsupportedPortResourceRequestBasedSchedulingTest(
             'os_compute_api:os-attach-interfaces:create': '@',
             'os_compute_api:os-shelve:shelve': '@',
             'os_compute_api:os-shelve:unshelve': '@',
+            'os_compute_api:os-migrate-server:migrate_live': '@'
         })
 
 
