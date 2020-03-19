@@ -348,7 +348,8 @@ class FakeDriver(driver.ComputeDriver):
             self._mounts[instance_name] = {}
         self._mounts[instance_name][mountpoint] = new_connection_info
 
-    def extend_volume(self, connection_info, instance, requested_size):
+    def extend_volume(self, context, connection_info, instance,
+                      requested_size):
         """Extend the disk attached to the instance."""
         pass
 

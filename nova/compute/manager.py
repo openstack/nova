@@ -9971,8 +9971,7 @@ class ComputeManager(manager.Manager):
             raise exception.ExtendVolumeNotSupported()
 
         try:
-            self.driver.extend_volume(connection_info,
-                                      instance,
+            self.driver.extend_volume(context, connection_info, instance,
                                       bdm.volume_size * units.Gi)
         except Exception as ex:
             LOG.warning('Extend volume failed, '
