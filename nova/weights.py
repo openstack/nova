@@ -106,17 +106,11 @@ class BaseWeigher(object):
         for obj in weighed_obj_list:
             weight = self._weigh_object(obj.obj, weight_properties)
 
-            # Record the min and max values if they are None. If they are
-            # anything but none, we assume that the weigher had set them.
-            if self.minval is None:
-                self.minval = weight
-            if self.maxval is None:
-                self.maxval = weight
-
-            if weight < self.minval:
-                self.minval = weight
-            elif weight > self.maxval:
-                self.maxval = weight
+            # don't let the weight go beyond the defined max/min
+            if self.minval is not None:
+                weight = max(weight, self.minval)
+            if self.maxval is not None:
+                weight = min(weight, self.maxval)
 
             weights.append(weight)
 

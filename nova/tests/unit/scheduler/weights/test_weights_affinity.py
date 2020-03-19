@@ -29,17 +29,16 @@ class SoftWeigherTestBase(test.NoDBTestCase):
         self.weight_handler = weights.HostWeightHandler()
         self.weighers = []
 
-    def _get_weighed_host(self, hosts, policy):
+    def _get_weighed_host(self, hosts, policy, group='default'):
+        if group == 'default':
+            members = ['member1', 'member2', 'member3', 'member4', 'member5',
+                'member6', 'member7']
+        else:
+            members = ['othermember1', 'othermember2']
         request_spec = objects.RequestSpec(
             instance_group=objects.InstanceGroup(
                 policy=policy,
-                members=['member1',
-                         'member2',
-                         'member3',
-                         'member4',
-                         'member5',
-                         'member6',
-                         'member7']))
+                members=members))
         return self.weight_handler.get_weighed_objects(self.weighers,
                                                        hosts,
                                                        request_spec)[0]
@@ -55,6 +54,8 @@ class SoftWeigherTestBase(test.NoDBTestCase):
                 'member3': mock.sentinel,
                 'member4': mock.sentinel,
                 'member5': mock.sentinel,
+                'othermember1': mock.sentinel,
+                'othermember2': mock.sentinel,
                 'instance14': mock.sentinel
             }}),
             ('host3', 'node3', {'instances': {
@@ -68,11 +69,11 @@ class SoftWeigherTestBase(test.NoDBTestCase):
         return [fakes.FakeHostState(host, node, values)
                 for host, node, values in host_values]
 
-    def _do_test(self, policy, expected_weight,
-                 expected_host):
+    def _do_test(self, policy, expected_weight, expected_host,
+                 group='default'):
         hostinfo_list = self._get_all_hosts()
         weighed_host = self._get_weighed_host(hostinfo_list,
-                                              policy)
+                                              policy, group)
         self.assertEqual(expected_weight, weighed_host.weight)
         if expected_host:
             self.assertEqual(expected_host, weighed_host.obj.host)
@@ -158,6 +159,21 @@ class SoftAffinityWeigherTestCase(SoftWeigherTestBase):
                                               'soft-affinity')
         self.assertEqual(1.5, weighed_host.weight)
         self.assertEqual('host2', weighed_host.obj.host)
+
+    def test_running_twice(self):
+        """Run the weighing twice for different groups each run
+
+        The first run has a group with more members on the same host than the
+        second both. In both cases, most members of their groups are on the
+        same host => weight should be maximum (1 with default multiplier).
+        """
+        self._do_test(policy='soft-affinity',
+                      expected_weight=1.0,
+                      expected_host='host2')
+        self._do_test(policy='soft-affinity',
+                      expected_weight=1.0,
+                      expected_host='host2',
+                      group='other')
 
 
 class SoftAntiAffinityWeigherTestCase(SoftWeigherTestBase):
