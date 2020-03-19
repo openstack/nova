@@ -2131,12 +2131,12 @@ class VirtNUMATopologyCellUsageTestCase(test.NoDBTestCase):
             mempages=[objects.NUMAPagesTopology(
                 size_kb=4, total=524288, used=0)],
             siblings=[set([1]), set([2])])
-        limit_cell = objects.NUMATopologyLimits(
+        limits = objects.NUMATopologyLimits(
             cpu_allocation_ratio=2, ram_allocation_ratio=2)
         instance_cell = objects.InstanceNUMACell(
             id=0, cpuset=set([1, 2]), memory=1024)
         fitted_cell = hw._numa_fit_instance_cell(
-                host_cell, instance_cell, limit_cell=limit_cell)
+            host_cell, instance_cell, limits=limits)
         self.assertIsInstance(fitted_cell, objects.InstanceNUMACell)
         self.assertEqual(host_cell.id, fitted_cell.id)
 
@@ -2151,12 +2151,12 @@ class VirtNUMATopologyCellUsageTestCase(test.NoDBTestCase):
                 size_kb=4, total=524288, used=0)],
             siblings=[set([1]), set([2])],
             pinned_cpus=set())
-        limit_cell = objects.NUMATopologyLimits(
+        limits = objects.NUMATopologyLimits(
             cpu_allocation_ratio=2, ram_allocation_ratio=2)
         instance_cell = objects.InstanceNUMACell(
             id=0, cpuset=set([1, 2, 3]), memory=4096)
         fitted_cell = hw._numa_fit_instance_cell(
-                host_cell, instance_cell, limit_cell=limit_cell)
+            host_cell, instance_cell, limits=limits)
         self.assertIsNone(fitted_cell)
 
     def test_fit_instance_cell_fail_w_limit(self):
@@ -2172,16 +2172,16 @@ class VirtNUMATopologyCellUsageTestCase(test.NoDBTestCase):
             pinned_cpus=set())
         instance_cell = objects.InstanceNUMACell(
             id=0, cpuset=set([1, 2]), memory=4096)
-        limit_cell = objects.NUMATopologyLimits(
+        limits = objects.NUMATopologyLimits(
             cpu_allocation_ratio=2, ram_allocation_ratio=2)
         fitted_cell = hw._numa_fit_instance_cell(
-                host_cell, instance_cell, limit_cell=limit_cell)
+            host_cell, instance_cell, limits=limits)
         self.assertIsNone(fitted_cell)
 
         instance_cell = objects.InstanceNUMACell(
             id=0, cpuset=set([1, 2, 3, 4, 5]), memory=1024)
         fitted_cell = hw._numa_fit_instance_cell(
-                host_cell, instance_cell, limit_cell=limit_cell)
+            host_cell, instance_cell, limits=limits)
         self.assertIsNone(fitted_cell)
 
 
@@ -2671,10 +2671,17 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             mempages=[objects.NUMAPagesTopology(
                 size_kb=4, total=524288, used=0)],
             siblings=[set([0]), set([1]), set([2])])
-        inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1, 2, 3]),
-                                            memory=2048)
+        inst_pin = objects.InstanceNUMACell(
+            cpuset=set([0, 1, 2, 3]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
 
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertIsNone(inst_pin)
 
     def test_get_pinning_inst_too_large_mem(self):
@@ -2687,10 +2694,17 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             pinned_cpus=set(),
             mempages=[],
             siblings=[set([0]), set([1]), set([2])])
-        inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1, 2]),
-                                            memory=2048)
+        inst_pin = objects.InstanceNUMACell(
+            cpuset=set([0, 1, 2]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
 
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertIsNone(inst_pin)
 
     def test_get_pinning_inst_not_avail(self):
@@ -2704,10 +2718,17 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             mempages=[objects.NUMAPagesTopology(
                 size_kb=4, total=524288, used=0)],
             siblings=[set([0]), set([1]), set([2]), set([3])])
-        inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1, 2, 3]),
-                                            memory=2048)
+        inst_pin = objects.InstanceNUMACell(
+            cpuset=set([0, 1, 2, 3]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
 
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertIsNone(inst_pin)
 
     def test_get_pinning_no_sibling_fits_empty(self):
@@ -2721,9 +2742,17 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             mempages=[objects.NUMAPagesTopology(
                 size_kb=4, total=524288, used=0)],
             siblings=[set([0]), set([1]), set([2])])
-        inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1, 2]), memory=2048)
+        inst_pin = objects.InstanceNUMACell(
+            cpuset=set([0, 1, 2]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
 
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertInstanceCellPinned(inst_pin)
         got_topo = objects.VirtCPUTopology(sockets=1, cores=3, threads=1)
         self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
@@ -2741,9 +2770,17 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             mempages=[objects.NUMAPagesTopology(
                 size_kb=4, total=524288, used=0)],
             siblings=[set([0]), set([1]), set([2]), set([3])])
-        inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1, 2]), memory=1024)
+        inst_pin = objects.InstanceNUMACell(
+            cpuset=set([0, 1, 2]),
+            memory=1024,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
 
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertInstanceCellPinned(inst_pin)
         got_pinning = {0: 0, 1: 2, 2: 3}
         self.assertEqual(got_pinning, inst_pin.cpu_pinning)
@@ -2760,9 +2797,16 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             mempages=[objects.NUMAPagesTopology(
                 size_kb=4, total=524288, used=0)])
         inst_pin = objects.InstanceNUMACell(
-                cpuset=set([0, 1, 2, 3]), memory=2048)
+            cpuset=set([0, 1, 2, 3]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
 
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertInstanceCellPinned(inst_pin)
         got_topo = objects.VirtCPUTopology(sockets=1, cores=4, threads=1)
         self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
@@ -2781,9 +2825,16 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             mempages=[objects.NUMAPagesTopology(
                 size_kb=4, total=524288, used=0)])
         inst_pin = objects.InstanceNUMACell(
-                cpuset=set([0, 1, 2, 3]), memory=2048)
+            cpuset=set([0, 1, 2, 3]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
 
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertInstanceCellPinned(inst_pin)
         got_topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=2)
         self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
@@ -2802,9 +2853,16 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             mempages=[objects.NUMAPagesTopology(
                 size_kb=4, total=524288, used=0)])
         inst_pin = objects.InstanceNUMACell(
-                cpuset=set([0, 1, 2, 3, 4, 5, 6, 7]), memory=2048)
+            cpuset=set([0, 1, 2, 3, 4, 5, 6, 7]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
 
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertInstanceCellPinned(inst_pin)
         got_topo = objects.VirtCPUTopology(sockets=1, cores=4, threads=2)
         self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
@@ -2822,9 +2880,16 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             siblings=[set([0, 1, 2, 3]), set([4, 5, 6, 7])],
             mempages=[])
         inst_pin = objects.InstanceNUMACell(
-                cpuset=set([0, 1, 2, 3]), memory=2048)
+            cpuset=set([0, 1, 2, 3]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
 
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertInstanceCellPinned(inst_pin)
         got_topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=2)
         self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
@@ -2841,10 +2906,17 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             pinned_cpus=set(),
             siblings=[set([0, 1, 2, 3]), set([4, 5, 6, 7])],
             mempages=[])
-        inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1, 2, 3]),
-                                            memory=2048)
+        inst_pin = objects.InstanceNUMACell(
+            cpuset=set([0, 1, 2, 3]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
 
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertInstanceCellPinned(inst_pin)
         got_topo = objects.VirtCPUTopology(sockets=1, cores=1, threads=4)
         self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
@@ -2861,9 +2933,17 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             pinned_cpus=set(),
             siblings=[set([0, 1]), set([2, 3])],
             mempages=[])
-        inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1, 2, 3]),
-                                            memory=2048)
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        inst_pin = objects.InstanceNUMACell(
+            cpuset=set([0, 1, 2, 3]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
+
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertInstanceCellPinned(inst_pin)
         got_topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=2)
         self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
@@ -2881,11 +2961,17 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             siblings=[set([x]) for x in range(0, 8)],
             mempages=[])
         inst_pin = objects.InstanceNUMACell(
-                cpuset=set([0, 1, 2, 3]),
-                memory=2048,
-                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
-                cpu_thread_policy=fields.CPUThreadAllocationPolicy.REQUIRE)
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+            cpuset=set([0, 1, 2, 3]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+            cpu_thread_policy=fields.CPUThreadAllocationPolicy.REQUIRE,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
+
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertIsNone(inst_pin)
 
     def test_get_pinning_require_policy_too_few_siblings(self):
@@ -2899,11 +2985,17 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             siblings=[set([0, 4]), set([1, 5]), set([2, 6]), set([3, 7])],
             mempages=[])
         inst_pin = objects.InstanceNUMACell(
-                cpuset=set([0, 1, 2, 3]),
-                memory=2048,
-                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
-                cpu_thread_policy=fields.CPUThreadAllocationPolicy.REQUIRE)
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+            cpuset=set([0, 1, 2, 3]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+            cpu_thread_policy=fields.CPUThreadAllocationPolicy.REQUIRE,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
+
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertIsNone(inst_pin)
 
     def test_get_pinning_require_policy_fits(self):
@@ -2917,11 +3009,17 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             siblings=[set([0, 1]), set([2, 3])],
             mempages=[])
         inst_pin = objects.InstanceNUMACell(
-                cpuset=set([0, 1, 2, 3]),
-                memory=2048,
-                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
-                cpu_thread_policy=fields.CPUThreadAllocationPolicy.REQUIRE)
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+            cpuset=set([0, 1, 2, 3]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+            cpu_thread_policy=fields.CPUThreadAllocationPolicy.REQUIRE,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
+
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertInstanceCellPinned(inst_pin)
         got_topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=2)
         self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
@@ -2937,11 +3035,17 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             siblings=[set([0, 4]), set([1, 5]), set([2, 6]), set([3, 7])],
             mempages=[])
         inst_pin = objects.InstanceNUMACell(
-                cpuset=set([0, 1, 2, 3]),
-                memory=2048,
-                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
-                cpu_thread_policy=fields.CPUThreadAllocationPolicy.REQUIRE)
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+            cpuset=set([0, 1, 2, 3]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+            cpu_thread_policy=fields.CPUThreadAllocationPolicy.REQUIRE,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
+
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertInstanceCellPinned(inst_pin)
         got_topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=2)
         self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
@@ -2956,9 +3060,17 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             pinned_cpus=set(),
             siblings=[set([0, 1]), set([2, 3]), set([4, 5]), set([6, 7])],
             mempages=[])
-        inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1, 2, 3, 4]),
-                                            memory=2048)
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        inst_pin = objects.InstanceNUMACell(
+            cpuset=set([0, 1, 2, 3, 4]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
+
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertInstanceCellPinned(inst_pin)
         got_topo = objects.VirtCPUTopology(sockets=1, cores=5, threads=1)
         self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
@@ -2973,9 +3085,17 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             pinned_cpus=set(),
             siblings=[set([0, 1, 2, 3]), set([4, 5, 6, 7])],
             mempages=[])
-        inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1, 2, 3, 4, 5]),
-                                            memory=2048)
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        inst_pin = objects.InstanceNUMACell(
+            cpuset=set([0, 1, 2, 3, 4, 5]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
+
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertInstanceCellPinned(inst_pin)
         got_topo = objects.VirtCPUTopology(sockets=1, cores=3, threads=2)
         self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
@@ -2990,9 +3110,17 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             pinned_cpus=set([0, 2, 5]),
             siblings=[set([0, 1]), set([2, 3]), set([4, 5]), set([6, 7])],
             mempages=[])
-        inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1, 2]),
-                                            memory=2048)
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        inst_pin = objects.InstanceNUMACell(
+            cpuset=set([0, 1, 2]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
+
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertInstanceCellPinned(inst_pin)
         got_topo = objects.VirtCPUTopology(sockets=1, cores=3, threads=1)
         self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
@@ -3007,9 +3135,17 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             pinned_cpus=set([0, 1, 2, 5]),
             siblings=[set([0, 1]), set([2, 3]), set([4, 5]), set([6, 7])],
             mempages=[])
-        inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1, 2, 3]),
-                                            memory=2048)
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        inst_pin = objects.InstanceNUMACell(
+            cpuset=set([0, 1, 2, 3]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
+
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertInstanceCellPinned(inst_pin)
         got_topo = objects.VirtCPUTopology(sockets=1, cores=4, threads=1)
         self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
@@ -3024,9 +3160,17 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             pinned_cpus=set([0, 2, 5, 6]),
             siblings=[set([0, 1]), set([2, 3]), set([4, 5]), set([6, 7])],
             mempages=[])
-        inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1, 2, 3]),
-                                            memory=2048)
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        inst_pin = objects.InstanceNUMACell(
+            cpuset=set([0, 1, 2, 3]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
+
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertInstanceCellPinned(inst_pin)
         got_topo = objects.VirtCPUTopology(sockets=1, cores=4, threads=1)
         self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
@@ -3043,9 +3187,17 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             siblings=[set([0, 8]), set([1, 9]), set([2, 10]), set([3, 11]),
                       set([4, 12]), set([5, 13]), set([6, 14]), set([7, 15])],
             mempages=[])
-        inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1, 2, 3, 4]),
-                                            memory=2048)
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        inst_pin = objects.InstanceNUMACell(
+            cpuset=set([0, 1, 2, 3, 4]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
+
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertInstanceCellPinned(inst_pin)
         self.assertPinningPreferThreads(inst_pin, host_pin)
         got_topo = objects.VirtCPUTopology(sockets=1, cores=5, threads=1)
@@ -3062,11 +3214,17 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             siblings=[set([0, 1]), set([2, 3])],
             mempages=[])
         inst_pin = objects.InstanceNUMACell(
-                cpuset=set([0, 1]),
-                memory=2048,
-                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
-                cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE)
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+            cpuset=set([0, 1]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+            cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
+
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertIsNone(inst_pin)
 
     def test_get_pinning_isolate_policy_no_fully_free_cores(self):
@@ -3080,11 +3238,17 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             siblings=[set([0, 1]), set([2, 3])],
             mempages=[])
         inst_pin = objects.InstanceNUMACell(
-                cpuset=set([0, 1]),
-                memory=2048,
-                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
-                cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE)
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+            cpuset=set([0, 1]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+            cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
+
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertIsNone(inst_pin)
 
     def test_get_pinning_isolate_policy_fits(self):
@@ -3098,11 +3262,16 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             siblings=[set([0]), set([1]), set([2]), set([3])],
             mempages=[])
         inst_pin = objects.InstanceNUMACell(
-                cpuset=set([0, 1]),
-                memory=2048,
-                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
-                cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE)
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+            cpuset=set([0, 1]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+            cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE)
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
+
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertInstanceCellPinned(inst_pin)
         got_topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=1)
         self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
@@ -3118,11 +3287,17 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             siblings=[set([0, 1]), set([2, 3])],
             mempages=[])
         inst_pin = objects.InstanceNUMACell(
-                cpuset=set([0, 1]),
-                memory=2048,
-                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
-                cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE)
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+            cpuset=set([0, 1]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+            cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
+
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertInstanceCellPinned(inst_pin)
         got_topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=1)
         self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
@@ -3138,11 +3313,17 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             siblings=[set([0, 4]), set([1, 5]), set([2, 6]), set([3, 7])],
             mempages=[])
         inst_pin = objects.InstanceNUMACell(
-                cpuset=set([0, 1]),
-                memory=2048,
-                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
-                cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE)
-        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+            cpuset=set([0, 1]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+            cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
+
+        inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+
         self.assertInstanceCellPinned(inst_pin)
         got_topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=1)
         self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
@@ -3583,9 +3764,18 @@ class CPUSReservedCellTestCase(test.NoDBTestCase):
             siblings=[set([0]), set([1]), set([2])],
             mempages=[objects.NUMAPagesTopology(
                 size_kb=4, total=524288, used=0)])
-        inst_cell = objects.InstanceNUMACell(cpuset=set([0, 1]), memory=2048)
-        return hw._numa_fit_instance_cell_with_pinning(
-            host_cell, inst_cell, reserved)
+        inst_cell = objects.InstanceNUMACell(
+            cpuset=set([0, 1]),
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
+
+        return hw._numa_fit_instance_cell(
+            host_cell, inst_cell, limits, reserved,
+        )
 
     def test_no_reserved(self):
         inst_cell = self._test_reserved(reserved=0)

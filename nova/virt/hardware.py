@@ -31,6 +31,7 @@ from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova.objects import fields
+from nova.pci import stats
 
 
 CONF = nova.conf.CONF
@@ -998,53 +999,12 @@ def _pack_instance_onto_cores(host_cell, instance_cell,
     return instance_cell
 
 
-def _numa_fit_instance_cell_with_pinning(host_cell, instance_cell,
-                                         num_cpu_reserved=0):
-    """Determine if cells can be pinned to a host cell.
-
-    :param host_cell: objects.NUMACell instance - the host cell that
-                      the instance should be pinned to
-    :param instance_cell: objects.InstanceNUMACell instance without any
-                          pinning information
-    :param num_cpu_reserved: int - number of pCPUs reserved for hypervisor
-
-    :returns: objects.InstanceNUMACell instance with pinning information,
-              or None if instance cannot be pinned to the given host
-    """
-    required_cpus = len(instance_cell.cpuset) + num_cpu_reserved
-    if host_cell.avail_pcpus < required_cpus:
-        LOG.debug('Not enough available CPUs to schedule instance. '
-                  'Oversubscription is not possible with pinned instances. '
-                  'Required: %(required)d (%(vcpus)d + %(num_cpu_reserved)d), '
-                  'actual: %(actual)d',
-                  {'required': required_cpus,
-                   'vcpus': len(instance_cell.cpuset),
-                   'actual': host_cell.avail_pcpus,
-                   'num_cpu_reserved': num_cpu_reserved})
-        return
-
-    if host_cell.avail_memory < instance_cell.memory:
-        LOG.debug('Not enough available memory to schedule instance. '
-                  'Oversubscription is not possible with pinned instances. '
-                  'Required: %(required)s, available: %(available)s, '
-                  'total: %(total)s. ',
-                  {'required': instance_cell.memory,
-                   'available': host_cell.avail_memory,
-                   'total': host_cell.memory})
-        return
-
-    # Try to pack the instance cell onto cores
-    numa_cell = _pack_instance_onto_cores(
-        host_cell, instance_cell, num_cpu_reserved=num_cpu_reserved)
-
-    if not numa_cell:
-        LOG.debug('Failed to map instance cell CPUs to host cell CPUs')
-
-    return numa_cell
-
-
-def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None,
-                            cpuset_reserved=0):
+def _numa_fit_instance_cell(
+    host_cell: 'objects.NUMACell',
+    instance_cell: 'objects.InstanceNUMACell',
+    limits: ty.Optional['objects.NUMATopologyLimit'] = None,
+    cpuset_reserved: int = 0,
+) -> ty.Optional['objects.InstanceNUMACell']:
     """Ensure an instance cell can fit onto a host cell
 
     Ensure an instance cell can fit onto a host cell and, if so, return
@@ -1053,7 +1013,7 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None,
 
     :param host_cell: host cell to fit the instance cell onto
     :param instance_cell: instance cell we want to fit
-    :param limit_cell: an objects.NUMATopologyLimit or None
+    :param limits: an objects.NUMATopologyLimit or None
     :param cpuset_reserved: An int to indicate the number of CPUs overhead
 
     :returns: objects.InstanceNUMACell with the id set to that of the
@@ -1072,7 +1032,7 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None,
             LOG.debug('Host does not support requested memory pagesize, '
                       'or not enough free pages of the requested size. '
                       'Requested: %d kB', instance_cell.pagesize)
-            return
+            return None
         LOG.debug('Selected memory pagesize: %(selected_mem_pagesize)d kB. '
                   'Requested memory pagesize: %(requested_mem_pagesize)d '
                   '(small = -1, large = -2, any = -3)',
@@ -1101,7 +1061,7 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None,
                            'available': host_cell.avail_memory,
                            'total': host_cell.memory,
                            'pagesize': pagesize})
-                return
+                return None
         else:
             # The host does not support explicit page sizes. Ignore pagesizes
             # completely.
@@ -1114,7 +1074,7 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None,
                           'Required: %(required)d, actual: %(actual)d',
                           {'required': instance_cell.memory,
                            'actual': host_cell.memory})
-                return
+                return None
 
     # NOTE(stephenfin): As with memory, do not allow an instance to overcommit
     # against itself on any NUMA cell
@@ -1128,7 +1088,7 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None,
                           'actual': len(host_cell.pcpuset),
                           'cpuset_reserved': cpuset_reserved
                       })
-            return
+            return None
     else:
         required_cpus = len(instance_cell.cpuset)
         if required_cpus > len(host_cell.cpuset):
@@ -1137,36 +1097,60 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None,
                           'required': len(instance_cell.cpuset),
                           'actual': len(host_cell.cpuset),
                       })
-            return
+            return None
 
     if instance_cell.cpu_policy == fields.CPUAllocationPolicy.DEDICATED:
         LOG.debug('Pinning has been requested')
-        new_instance_cell = _numa_fit_instance_cell_with_pinning(
-            host_cell, instance_cell, cpuset_reserved)
-        if not new_instance_cell:
-            return
-        new_instance_cell.pagesize = instance_cell.pagesize
-        instance_cell = new_instance_cell
+        required_cpus = len(instance_cell.cpuset) + cpuset_reserved
+        if required_cpus > host_cell.avail_pcpus:
+            LOG.debug('Not enough available CPUs to schedule instance. '
+                      'Oversubscription is not possible with pinned '
+                      'instances. Required: %(required)d (%(vcpus)d + '
+                      '%(num_cpu_reserved)d), actual: %(actual)d',
+                      {'required': required_cpus,
+                       'vcpus': len(instance_cell.cpuset),
+                       'actual': host_cell.avail_pcpus,
+                       'num_cpu_reserved': cpuset_reserved})
+            return None
 
-    elif limit_cell:
+        if instance_cell.memory > host_cell.avail_memory:
+            LOG.debug('Not enough available memory to schedule instance. '
+                      'Oversubscription is not possible with pinned '
+                      'instances. Required: %(required)s, available: '
+                      '%(available)s, total: %(total)s. ',
+                      {'required': instance_cell.memory,
+                       'available': host_cell.avail_memory,
+                       'total': host_cell.memory})
+            return None
+
+        # Try to pack the instance cell onto cores
+        instance_cell = _pack_instance_onto_cores(
+            host_cell, instance_cell, num_cpu_reserved=cpuset_reserved,
+        )
+        if not instance_cell:
+            LOG.debug('Failed to map instance cell CPUs to host cell CPUs')
+            return None
+
+    elif limits:
         LOG.debug('No pinning requested, considering limitations on usable cpu'
                   ' and memory')
-        memory_usage = host_cell.memory_usage + instance_cell.memory
         cpu_usage = host_cell.cpu_usage + len(instance_cell.cpuset)
-        cpu_limit = len(host_cell.cpuset) * limit_cell.cpu_allocation_ratio
-        ram_limit = host_cell.memory * limit_cell.ram_allocation_ratio
-        if memory_usage > ram_limit:
-            LOG.debug('Host cell has limitations on usable memory. There is '
-                      'not enough free memory to schedule this instance. '
-                      'Usage: %(usage)d, limit: %(limit)d',
-                      {'usage': memory_usage, 'limit': ram_limit})
-            return
+        cpu_limit = len(host_cell.cpuset) * limits.cpu_allocation_ratio
         if cpu_usage > cpu_limit:
             LOG.debug('Host cell has limitations on usable CPUs. There are '
                       'not enough free CPUs to schedule this instance. '
                       'Usage: %(usage)d, limit: %(limit)d',
                       {'usage': cpu_usage, 'limit': cpu_limit})
-            return
+            return None
+
+        ram_usage = host_cell.memory_usage + instance_cell.memory
+        ram_limit = host_cell.memory * limits.ram_allocation_ratio
+        if ram_usage > ram_limit:
+            LOG.debug('Host cell has limitations on usable memory. There is '
+                      'not enough free memory to schedule this instance. '
+                      'Usage: %(usage)d, limit: %(limit)d',
+                      {'usage': ram_usage, 'limit': ram_limit})
+            return None
 
     instance_cell.id = host_cell.id
     return instance_cell
@@ -2038,8 +2022,12 @@ def _numa_cells_support_network_metadata(
 
 
 def numa_fit_instance_to_host(
-        host_topology, instance_topology, limits=None,
-        pci_requests=None, pci_stats=None):
+    host_topology: 'objects.NUMATopology',
+    instance_topology: 'objects.InstanceNUMATopology',
+    limits: ty.Optional['objects.NUMATopologyLimit'] = None,
+    pci_requests: ty.Optional['objects.InstancePCIRequests'] = None,
+    pci_stats: ty.Optional[stats.PciDeviceStats] = None,
+):
     """Fit the instance topology onto the host topology.
 
     Given a host, instance topology, and (optional) limits, attempt to
@@ -2084,8 +2072,10 @@ def numa_fit_instance_to_host(
     # devices attached. Presence of a given numa_node in a PCI pool is
     # indicative of a PCI device being associated with that node
     if not pci_requests and pci_stats:
+        # TODO(stephenfin): pci_stats can't be None here but mypy can't figure
+        # that out for some reason
         host_cells = sorted(host_cells, key=lambda cell: cell.id in [
-            pool['numa_node'] for pool in pci_stats.pools])
+            pool['numa_node'] for pool in pci_stats.pools])  # type: ignore
 
     for host_cell_perm in itertools.permutations(
             host_cells, len(instance_topology)):
