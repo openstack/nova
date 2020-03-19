@@ -3612,7 +3612,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         caps.host.cpu = vconfig.LibvirtConfigCPU()
         caps.host.cpu.arch = fields.Architecture.X86_64
         caps.host.topology = fakelibvirt.NUMATopology(
-            sockets_per_cell=4, cores_per_socket=3, threads_per_core=2)
+            cpu_nodes=4, cpu_sockets=1, cpu_cores=4, cpu_threads=2)
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -3628,7 +3628,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 mock.patch.object(host.Host, "get_capabilities",
                                   return_value=caps),
                 mock.patch.object(host.Host, 'get_online_cpus',
-                                  return_value=set(range(8))),
+                                  return_value=set(range(32))),
                 ):
             cfg = conn._get_guest_config(instance_ref, [],
                                          image_meta, disk_info)
