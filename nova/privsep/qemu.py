@@ -85,17 +85,20 @@ def unprivileged_convert_image(source, dest, in_format, out_format,
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
-def privileged_qemu_img_info(path, format=None, qemu_version=None):
+def privileged_qemu_img_info(path, format=None, qemu_version=None,
+                             output_format=None):
     """Return an oject containing the parsed output from qemu-img info
 
     This is a privileged call to qemu-img info using the sys_admin_pctxt
     entrypoint allowing host block devices etc to be accessed.
     """
     return unprivileged_qemu_img_info(
-        path, format=format, qemu_version=qemu_version)
+        path, format=format, qemu_version=qemu_version,
+        output_format=output_format)
 
 
-def unprivileged_qemu_img_info(path, format=None, qemu_version=None):
+def unprivileged_qemu_img_info(path, format=None, qemu_version=None,
+                               output_format=None):
     """Return an object containing the parsed output from qemu-img info."""
     try:
         # The following check is about ploop images that reside within
@@ -107,6 +110,8 @@ def unprivileged_qemu_img_info(path, format=None, qemu_version=None):
         cmd = ('env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'info', path)
         if format is not None:
             cmd = cmd + ('-f', format)
+        if output_format is not None:
+            cmd = cmd + ("--output=%s" % (output_format),)
         # Check to see if the qemu version is >= 2.10 because if so, we need
         # to add the --force-share flag.
         if qemu_version and operator.ge(qemu_version, QEMU_VERSION_REQ_SHARED):

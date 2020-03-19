@@ -43,7 +43,7 @@ CONF = nova.conf.CONF
 IMAGE_API = glance.API()
 
 
-def qemu_img_info(path, format=None):
+def qemu_img_info(path, format=None, output_format=None):
     """Return an object containing the parsed output from qemu-img info."""
     # TODO(mikal): this code should not be referring to a libvirt specific
     # flag.
@@ -51,8 +51,12 @@ def qemu_img_info(path, format=None):
         raise exception.DiskNotFound(location=path)
 
     info = nova.privsep.qemu.unprivileged_qemu_img_info(
-        path, format=format, qemu_version=QEMU_VERSION)
-    return imageutils.QemuImgInfo(info)
+        path, format=format, qemu_version=QEMU_VERSION,
+        output_format=output_format)
+    if output_format:
+        return imageutils.QemuImgInfo(info, format=output_format)
+    else:
+        return imageutils.QemuImgInfo(info)
 
 
 def convert_image(source, dest, in_format, out_format, run_as_root=False,
