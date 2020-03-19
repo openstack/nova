@@ -1162,6 +1162,28 @@ class TestInitComputeNode(BaseTestCase):
                                                  42)
         self.assertTrue(self.sched_client_mock.update_resource_stats.called)
 
+    @mock.patch('nova.objects.ComputeNodeList.get_by_hypervisor')
+    @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
+                return_value=objects.PciDeviceList(objects=[]))
+    @mock.patch('nova.objects.ComputeNode.create')
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_update')
+    def test_node_removed(self, update_mock, get_mock,
+                          create_mock, pci_tracker_mock,
+                          get_by_hypervisor_mock):
+        self._test_compute_node_created(update_mock, get_mock, create_mock,
+                                        pci_tracker_mock,
+                                        get_by_hypervisor_mock)
+        self.rt.old_resources[_NODENAME] = mock.sentinel.foo
+        self.assertIn(_NODENAME, self.rt.compute_nodes)
+        self.assertIn(_NODENAME, self.rt.stats)
+        self.assertIn(_NODENAME, self.rt.old_resources)
+        self.rt.remove_node(_NODENAME)
+        self.assertNotIn(_NODENAME, self.rt.compute_nodes)
+        self.assertNotIn(_NODENAME, self.rt.stats)
+        self.assertNotIn(_NODENAME, self.rt.old_resources)
+
 
 class TestUpdateComputeNode(BaseTestCase):
 

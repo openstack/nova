@@ -542,6 +542,16 @@ class ResourceTracker(object):
         # now copy rest to compute_node
         compute_node.update_from_virt_driver(resources)
 
+    def remove_node(self, nodename):
+        """Handle node removal/rebalance.
+
+        Clean up any stored data about a compute node no longer
+        managed by this host.
+        """
+        self.stats.pop(nodename, None)
+        self.compute_nodes.pop(nodename, None)
+        self.old_resources.pop(nodename, None)
+
     def _get_host_metrics(self, context, nodename):
         """Get the metrics from monitors and
         notify information to message bus.
