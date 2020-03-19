@@ -831,7 +831,9 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
 
     def test_get_disk_bus_for_device_type_cdrom_with_q35_image_meta(self):
         instance = objects.Instance(**self.test_instance)
-        image_meta = {'properties': {'hw_machine_type': 'pc-q35-rhel8.0.0'}}
+        image_meta = {'properties': {
+            'hw_machine_type': 'pc-q35-rhel8.0.0',
+            'hw_architecture': obj_fields.Architecture.X86_64}}
         image_meta = objects.ImageMeta.from_dict(image_meta)
         bus = blockinfo.get_disk_bus_for_device_type(instance, 'kvm',
                                                      image_meta,
