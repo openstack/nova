@@ -58,7 +58,7 @@ class _TestBuildRequestObject(object):
         instance = fake_instance.fake_instance_obj(self.context,
                 objects.Instance, uuid=fake_req['instance_uuid'])
         instance.VERSION = '99'
-        fake_req['instance'] = jsonutils.dumps(instance.obj_to_primitive)
+        fake_req['instance'] = jsonutils.dumps(instance.obj_to_primitive())
         get_by_uuid.return_value = fake_req
 
         self.assertRaises(exception.BuildRequestNotFound,
