@@ -11,7 +11,7 @@
     ],
     "keypairs_links": [
         {
-            "href": "%(versioned_compute_endpoint)s/keypairs?limit=1&marker=%(keypair_name)s&user_id=user2",
+            "href": "%(versioned_compute_endpoint)s/os-keypairs?limit=1&marker=%(keypair_name)s&user_id=user2",
             "rel": "next"
         }
     ]
