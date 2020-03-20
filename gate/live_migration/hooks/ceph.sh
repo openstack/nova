@@ -98,19 +98,56 @@ function _ceph_configure_nova {
     fi
 }
 
+function _wait_for_nova_compute_service_state {
+    source $BASE/new/devstack/openrc admin admin
+    local status=$1
+    local attempt=1
+    local max_attempts=24
+    local attempt_sleep=5
+    local computes_count=$(openstack compute service list | grep -c nova-compute)
+    local computes_ready=$(openstack compute service list | grep nova-compute | grep $status | wc -l)
+
+    echo "Waiting for $computes_count computes to report as $status"
+    while [ "$computes_ready" -ne "$computes_count" ]; do
+        if [ "$attempt" -eq "$max_attempts" ]; then
+            echo "Failed waiting for computes to report as ${status}, ${computes_ready}/${computes_count} ${status} after ${max_attempts} attempts"
+            exit 4
+        fi
+        echo "Waiting ${attempt_sleep} seconds for ${computes_count} computes to report as ${status}, ${computes_ready}/${computes_count} ${status} after ${attempt}/${max_attempts} attempts"
+        sleep $attempt_sleep
+        attempt=$((attempt+1))
+        computes_ready=$(openstack compute service list | grep nova-compute | grep $status | wc -l)
+    done
+    echo "All computes are now reporting as ${status} after ${attempt} attempts"
+}
+
 function configure_and_start_nova {
+
+    echo "Checking all n-cpu services"
+    $ANSIBLE all --become -f 5 -i "$WORKSPACE/inventory" -m shell -a "pgrep -u stack -a nova-compute"
+
+    # stop nova-compute
+    echo "Stopping all n-cpu services"
+    $ANSIBLE all --become -f 5 -i "$WORKSPACE/inventory" -m shell -a "systemctl stop devstack@n-cpu"
+
+    # Wait for the service to be marked as down
+    _wait_for_nova_compute_service_state "down"
+
     _ceph_configure_nova
+
     #import secret to libvirt
     _populate_libvirt_secret
-    echo 'check compute processes before restart'
-    $ANSIBLE all --become -f 5 -i "$WORKSPACE/inventory" -m shell -a "ps aux | grep compute"
 
-    # restart nova-compute
-    $ANSIBLE all --become -f 5 -i "$WORKSPACE/inventory" -m shell -a "systemctl restart devstack@n-cpu"
+    # start nova-compute
+    echo "Starting all n-cpu services"
+    $ANSIBLE all --become -f 5 -i "$WORKSPACE/inventory" -m shell -a "systemctl start devstack@n-cpu"
 
+    echo "Checking all n-cpu services"
     # test that they are all running again
-    $ANSIBLE all --become -f 5 -i "$WORKSPACE/inventory" -m shell -a "ps aux | grep compute"
+    $ANSIBLE all --become -f 5 -i "$WORKSPACE/inventory" -m shell -a "pgrep -u stack -a nova-compute"
 
+    # Wait for the service to be marked as up
+    _wait_for_nova_compute_service_state "up"
 }
 
 function _ceph_configure_cinder {
