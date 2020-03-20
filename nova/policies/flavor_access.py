@@ -25,39 +25,48 @@ POLICY_ROOT = 'os_compute_api:os-flavor-access:%s'
 
 flavor_access_policies = [
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'add_tenant_access',
-        base.RULE_ADMIN_API,
-        "Add flavor access to a tenant",
-        [
+        name=POLICY_ROOT % 'add_tenant_access',
+        check_str=base.RULE_ADMIN_API,
+        description="Add flavor access to a tenant",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/flavors/{flavor_id}/action (addTenantAccess)'
             }
-        ]),
+        ],
+        scope_types=['system']),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'remove_tenant_access',
-        base.RULE_ADMIN_API,
-        "Remove flavor access from a tenant",
-        [
+        name=POLICY_ROOT % 'remove_tenant_access',
+        check_str=base.RULE_ADMIN_API,
+        description="Remove flavor access from a tenant",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/flavors/{flavor_id}/action (removeTenantAccess)'
             }
-        ]),
+        ],
+        scope_types=['system']),
     policy.DocumentedRuleDefault(
-        BASE_POLICY_NAME,
-        base.RULE_ADMIN_OR_OWNER,
-        """List flavor access information
+        name=BASE_POLICY_NAME,
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="""List flavor access information
 
 Allows access to the full list of tenants that have access
 to a flavor via an os-flavor-access API.
 """,
-        [
+        operations=[
             {
                 'method': 'GET',
                 'path': '/flavors/{flavor_id}/os-flavor-access'
             },
-        ]),
+        ],
+        # NOTE(gmann): This policy is admin_or_owner by default but allowed
+        # for everyone, bug#1867840. There can be multiple project with access
+        # to specific flavorso we cannot say there is single owner of flavor.
+        # Only admin should be able to list the projects having access to any
+        # flavor. We should change this policy defaults to admin only. I am
+        # seeting scope as 'system' only and new defaults can be SYSTEM_ADMIN.
+        scope_types=['system']),
 ]
 
 
