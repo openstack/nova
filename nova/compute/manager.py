@@ -6452,8 +6452,9 @@ class ComputeManager(manager.Manager):
 
         @utils.synchronized(instance.uuid)
         def do_unshelve_instance():
-            self._unshelve_instance(context, instance, image,
-                                    filter_properties, node)
+            self._unshelve_instance(
+                context, instance, image, filter_properties, node,
+                request_spec)
         do_unshelve_instance()
 
     def _unshelve_instance_key_scrub(self, instance):
@@ -6470,7 +6471,7 @@ class ComputeManager(manager.Manager):
         instance.update(keys)
 
     def _unshelve_instance(self, context, instance, image, filter_properties,
-                           node):
+                           node, request_spec):
         LOG.info('Unshelving', instance=instance)
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
@@ -6503,9 +6504,18 @@ class ComputeManager(manager.Manager):
                 utils.get_image_from_system_metadata(
                     instance.system_metadata))
 
+        provider_mappings = self._get_request_group_mapping(request_spec)
+
         try:
-            self.network_api.setup_instance_network_on_host(context, instance,
-                                                            self.host)
+            if provider_mappings:
+                update = (
+                    compute_utils.
+                        update_pci_request_spec_with_allocated_interface_name)
+                update(context, self.reportclient, instance, provider_mappings)
+
+            self.network_api.setup_instance_network_on_host(
+                context, instance, self.host,
+                provider_mappings=provider_mappings)
             network_info = self.network_api.get_instance_nw_info(
                 context, instance)
             with self.rt.instance_claim(context, instance, node, allocations,

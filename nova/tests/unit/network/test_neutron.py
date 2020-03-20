@@ -4634,6 +4634,31 @@ class TestAPI(TestAPIBase):
                       'binding:profile': {'allocation': uuids.dest_compute_rp},
                       'binding:host_id': 'new-host'}})
 
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_update_port_bindings_for_instance_with_resource_req_unshelve(
+            self, get_client_mock):
+
+        instance = fake_instance.fake_instance_obj(self.context)
+        fake_ports = {'ports': [
+            {'id': 'fake-port-1',
+             'binding:vnic_type': 'normal',
+             constants.BINDING_HOST_ID: 'old-host',
+             constants.BINDING_PROFILE: {
+                 'allocation': uuids.source_compute_rp},
+             'resource_request': mock.sentinel.resource_request}]}
+        list_ports_mock = mock.Mock(return_value=fake_ports)
+        get_client_mock.return_value.list_ports = list_ports_mock
+
+        # NOTE(gibi): during unshelve migration object is not created
+        self.api._update_port_binding_for_instance(
+            self.context, instance, 'new-host', None,
+            {'fake-port-1': [uuids.dest_compute_rp]})
+        get_client_mock.return_value.update_port.assert_called_once_with(
+            'fake-port-1',
+            {'port': {'device_owner': 'compute:None',
+                      'binding:profile': {'allocation': uuids.dest_compute_rp},
+                      'binding:host_id': 'new-host'}})
+
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_update_port_bindings_for_instance_with_resource_req_no_mapping(
             self, get_client_mock):

@@ -3433,9 +3433,12 @@ class API(base.Base):
                                  pci_slot)
 
             # NOTE(gibi): during live migration the conductor already sets the
-            # allocation key in the port binding
+            # allocation key in the port binding. However during resize, cold
+            # migrate, evacuate and unshelve we have to set the binding here.
+            # Also note that during unshelve no migration object is created.
             if (p.get('resource_request') and
-                    migration['migration_type'] != constants.LIVE_MIGRATION):
+                    (migration is None or
+                     migration['migration_type'] != constants.LIVE_MIGRATION)):
                 if not provider_mappings:
                     # TODO(gibi): Remove this check when compute RPC API is
                     # bumped to 6.0

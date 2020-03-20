@@ -42,6 +42,7 @@ from nova.objects import base
 from nova.objects import block_device as block_device_obj
 from nova.objects import fields
 from nova import rpc
+from nova.scheduler.client import report
 from nova import test
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_crypto
@@ -1548,3 +1549,99 @@ class ComputeUtilsImageFunctionsTestCase(test.TestCase):
             self.assertNotIn(p, properties)
         for p in CONF.non_inheritable_image_properties:
             self.assertNotIn(p, properties)
+
+
+class PciRequestUpdateTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super().setUp()
+        self.context = context.RequestContext('fake', 'fake')
+
+    def test_no_pci_request(self):
+        instance = objects.Instance(
+            pci_requests=objects.InstancePCIRequests(requests=[]))
+        provider_mapping = {}
+
+        compute_utils.update_pci_request_spec_with_allocated_interface_name(
+            self.context, mock.sentinel.report_client, instance,
+            provider_mapping)
+
+    def test_pci_request_from_flavor(self):
+        instance = objects.Instance(
+            pci_requests=objects.InstancePCIRequests(requests=[
+                objects.InstancePCIRequest(requester_id=None)
+            ]))
+        provider_mapping = {}
+
+        compute_utils.update_pci_request_spec_with_allocated_interface_name(
+            self.context, mock.sentinel.report_client, instance,
+            provider_mapping)
+
+    def test_pci_request_has_no_mapping(self):
+        instance = objects.Instance(
+            pci_requests=objects.InstancePCIRequests(requests=[
+                objects.InstancePCIRequest(requester_id=uuids.port_1)
+            ]))
+        provider_mapping = {}
+
+        compute_utils.update_pci_request_spec_with_allocated_interface_name(
+            self.context, mock.sentinel.report_client, instance,
+            provider_mapping)
+
+    def test_pci_request_ambiguous_mapping(self):
+        instance = objects.Instance(
+            pci_requests=objects.InstancePCIRequests(requests=[
+                objects.InstancePCIRequest(requester_id=uuids.port_1)
+            ]))
+        provider_mapping = {uuids.port_1: [uuids.rp1, uuids.rp2]}
+
+        self.assertRaises(
+            exception.AmbiguousResourceProviderForPCIRequest,
+            (compute_utils.
+             update_pci_request_spec_with_allocated_interface_name),
+            self.context, mock.sentinel.report_client, instance,
+            provider_mapping)
+
+    def test_unexpected_provider_name(self):
+        report_client = mock.Mock(spec=report.SchedulerReportClient)
+        report_client.get_resource_provider_name.return_value = 'unexpected'
+        instance = objects.Instance(
+            pci_requests=objects.InstancePCIRequests(requests=[
+                objects.InstancePCIRequest(
+                    requester_id=uuids.port_1,
+                    spec=[{}])
+            ]))
+        provider_mapping = {uuids.port_1: [uuids.rp1]}
+
+        self.assertRaises(
+            exception.UnexpectedResourceProviderNameForPCIRequest,
+            (compute_utils.
+             update_pci_request_spec_with_allocated_interface_name),
+            self.context, report_client, instance,
+            provider_mapping)
+
+        report_client.get_resource_provider_name.assert_called_once_with(
+            self.context, uuids.rp1)
+        self.assertNotIn(
+            'parent_ifname', instance.pci_requests.requests[0].spec[0])
+
+    def test_pci_request_updated(self):
+        report_client = mock.Mock(spec=report.SchedulerReportClient)
+        report_client.get_resource_provider_name.return_value = (
+            'host:agent:enp0s31f6')
+        instance = objects.Instance(
+            pci_requests=objects.InstancePCIRequests(requests=[
+                objects.InstancePCIRequest(
+                    requester_id=uuids.port_1,
+                    spec=[{}],
+                )
+            ]))
+        provider_mapping = {uuids.port_1: [uuids.rp1]}
+
+        compute_utils.update_pci_request_spec_with_allocated_interface_name(
+            self.context, report_client, instance, provider_mapping)
+
+        report_client.get_resource_provider_name.assert_called_once_with(
+            self.context, uuids.rp1)
+        self.assertEqual(
+            'enp0s31f6',
+            instance.pci_requests.requests[0].spec[0]['parent_ifname'])

@@ -1505,6 +1505,39 @@ class _BaseTaskTestCase(object):
             self.context, instance, 'fake_host', fake_spec, image=None,
             filter_properties={'limits': {}}, node='fake_node')
 
+    @mock.patch('nova.scheduler.utils.fill_provider_mapping')
+    @mock.patch('nova.network.neutron.API.get_requested_resource_for_instance')
+    @mock.patch.object(conductor_manager.ComputeTaskManager,
+                       '_schedule_instances', )
+    def test_unshelve_instance_resource_request(
+            self, mock_schedule, mock_get_res_req, mock_fill_provider_mapping):
+        instance = self._create_fake_instance_obj()
+        instance.vm_state = vm_states.SHELVED_OFFLOADED
+        instance.save()
+
+        request_spec = objects.RequestSpec()
+
+        selection = objects.Selection(
+            service_host='fake_host',
+            nodename='fake_node',
+            limits=None)
+        mock_schedule.return_value = [[selection]]
+
+        res_req = [objects.RequestGroup()]
+        mock_get_res_req.return_value = res_req
+
+        self.conductor_manager.unshelve_instance(
+            self.context, instance, request_spec)
+
+        self.assertEqual(res_req, request_spec.requested_resources)
+
+        mock_get_res_req.assert_called_once_with(self.context, instance.uuid)
+        mock_schedule.assert_called_once_with(
+            self.context, request_spec, [instance.uuid],
+            return_alternates=False)
+        mock_fill_provider_mapping.assert_called_once_with(
+            request_spec, selection)
+
     def test_rebuild_instance(self):
         inst_obj = self._create_fake_instance_obj()
         rebuild_args, compute_args = self._prepare_rebuild_args(
