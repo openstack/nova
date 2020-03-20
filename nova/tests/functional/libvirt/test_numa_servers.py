@@ -441,21 +441,8 @@ class NUMAServersTest(NUMAServersTestBase):
                                          kB_mem=15740000)
 
         # Start services
-        self.computes = {}
-        for host in ['test_compute0', 'test_compute1']:
-            fake_connection = self._get_connection(
-                host_info=host_info, hostname=host)
-
-            # This is fun. Firstly we need to do a global'ish mock so we can
-            # actually start the service.
-            with mock.patch('nova.virt.libvirt.host.Host.get_connection',
-                            return_value=fake_connection):
-                compute = self.start_service('compute', host=host)
-
-            # Once that's done, we need to do some tweaks to each individual
-            # compute "service" to make sure they return unique objects
-            compute.driver._host.get_connection = lambda: fake_connection
-            self.computes[host] = compute
+        self.start_computes({'test_compute0': host_info,
+                             'test_compute1': host_info})
 
         # STEP ONE
 
@@ -653,10 +640,6 @@ class ReshapeForPCPUsTest(NUMAServersTestBase):
                    group='compute')
         self.flags(vcpu_pin_set='0-7')
 
-        host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
-                                         cpu_cores=2, cpu_threads=2,
-                                         kB_mem=15740000)
-
         # Start services
         self.start_computes(save_rp_uuids=True)
 
@@ -774,22 +757,10 @@ class ReshapeForPCPUsTest(NUMAServersTestBase):
         self.flags(cpu_dedicated_set='0-7', group='compute')
         self.flags(vcpu_pin_set=None)
 
-        for host in ['test_compute0', 'test_compute1']:
-            self.computes[host].stop()
-
-            fake_connection = self._get_connection(
-                host_info=host_info, hostname=host)
-
-            # This is fun. Firstly we need to do a global'ish mock so we can
-            # actually start the service.
-            with mock.patch('nova.virt.libvirt.host.Host.get_connection',
-                            return_value=fake_connection):
-                compute = self.start_service('compute', host=host)
-
-            # Once that's done, we need to do some tweaks to each individual
-            # compute "service" to make sure they return unique objects
-            compute.driver._host.get_connection = lambda: fake_connection
-            self.computes[host] = compute
+        computes = {}
+        for host, compute in self.computes.items():
+            computes[host] = self.restart_compute_service(compute)
+        self.computes = computes
 
         # verify that the inventory, usages and allocation are correct after
         # the reshape
