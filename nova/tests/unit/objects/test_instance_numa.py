@@ -50,39 +50,7 @@ def get_fake_obj_numa_topology(context):
     return fake_obj_numa_topology_cpy
 
 
-class _TestInstanceNUMATopology(object):
-    @mock.patch('nova.db.api.instance_extra_update_by_uuid')
-    def test_create(self, mock_update):
-        topo_obj = get_fake_obj_numa_topology(self.context)
-        topo_obj.instance_uuid = fake_db_topology['instance_uuid']
-        topo_obj.create()
-        self.assertEqual(1, len(mock_update.call_args_list))
-
-    def _test_get_by_instance_uuid(self):
-        numa_topology = objects.InstanceNUMATopology.get_by_instance_uuid(
-            self.context, fake_db_topology['instance_uuid'])
-        self.assertEqual(fake_db_topology['instance_uuid'],
-                         numa_topology.instance_uuid)
-        for obj_cell, topo_cell in zip(
-                numa_topology.cells, fake_obj_numa_topology['cells']):
-            self.assertIsInstance(obj_cell, objects.InstanceNUMACell)
-            self.assertEqual(topo_cell.id, obj_cell.id)
-            self.assertEqual(topo_cell.cpuset, obj_cell.cpuset)
-            self.assertEqual(topo_cell.memory, obj_cell.memory)
-            self.assertEqual(topo_cell.pagesize, obj_cell.pagesize)
-
-    @mock.patch('nova.db.api.instance_extra_get_by_instance_uuid')
-    def test_get_by_instance_uuid(self, mock_get):
-        mock_get.return_value = fake_db_topology
-        self._test_get_by_instance_uuid()
-
-    @mock.patch('nova.db.api.instance_extra_get_by_instance_uuid')
-    def test_get_by_instance_uuid_missing(self, mock_get):
-        mock_get.return_value = None
-        self.assertRaises(
-            exception.NumaTopologyNotFound,
-            objects.InstanceNUMATopology.get_by_instance_uuid,
-            self.context, 'fake_uuid')
+class _TestInstanceNUMACell(object):
 
     def test_siblings(self):
         inst_cell = objects.InstanceNUMACell(
@@ -126,7 +94,7 @@ class _TestInstanceNUMATopology(object):
         inst_cell.pin_vcpus((0, 14), (1, 15), (2, 16), (3, 17))
         self.assertEqual({0: 14, 1: 15, 2: 16, 3: 17}, inst_cell.cpu_pinning)
 
-    def test_cpu_pinning_requested_cell(self):
+    def test_cpu_pinning_requested(self):
         inst_cell = objects.InstanceNUMACell(cpuset=set([0, 1, 2, 3]),
                                              cpu_pinning=None)
         self.assertFalse(inst_cell.cpu_pinning_requested)
@@ -135,23 +103,13 @@ class _TestInstanceNUMATopology(object):
 
     def test_cpu_pinning(self):
         topo_obj = get_fake_obj_numa_topology(self.context)
-
         self.assertEqual(set(), topo_obj.cpu_pinning)
 
         topo_obj.cells[0].pin_vcpus((1, 10), (2, 11))
-
         self.assertEqual(set([10, 11]), topo_obj.cpu_pinning)
 
         topo_obj.cells[1].pin_vcpus((3, 0), (4, 1))
-
         self.assertEqual(set([0, 1, 10, 11]), topo_obj.cpu_pinning)
-
-    def test_cpu_pinning_requested(self):
-        fake_topo_obj = copy.deepcopy(fake_obj_numa_topology)
-        self.assertFalse(fake_topo_obj.cpu_pinning_requested)
-        for cell in fake_topo_obj.cells:
-            cell.cpu_policy = fields.CPUAllocationPolicy.DEDICATED
-        self.assertTrue(fake_topo_obj.cpu_pinning_requested)
 
     def test_clear_host_pinning(self):
         topo_obj = get_fake_obj_numa_topology(self.context)
@@ -174,33 +132,6 @@ class _TestInstanceNUMATopology(object):
             fields.CPUEmulatorThreadsPolicy.ISOLATE)
         self.assertTrue(topo_obj.emulator_threads_isolated)
 
-    def test_obj_make_compatible_numa_pre_1_3(self):
-        topo_obj = objects.InstanceNUMATopology(
-            emulator_threads_policy=(
-                fields.CPUEmulatorThreadsPolicy.ISOLATE))
-        versions = ovo_base.obj_tree_get_versions('InstanceNUMATopology')
-        primitive = topo_obj.obj_to_primitive(target_version='1.2',
-                                              version_manifest=versions)
-        self.assertNotIn(
-            'emulator_threads_policy', primitive['nova_object.data'])
-
-        topo_obj = objects.InstanceNUMATopology.obj_from_primitive(primitive)
-        self.assertFalse(topo_obj.emulator_threads_isolated)
-
-    def test_cpuset_reserved(self):
-        topology = objects.InstanceNUMATopology(
-            instance_uuid = fake_instance_uuid,
-            cells=[
-                objects.InstanceNUMACell(
-                    id=0, cpuset=set([1, 2]), memory=512, pagesize=2048,
-                    cpuset_reserved=set([3, 7])),
-                objects.InstanceNUMACell(
-                    id=1, cpuset=set([3, 4]), memory=512, pagesize=2048,
-                    cpuset_reserved=set([9, 12]))
-            ])
-        self.assertEqual(set([3, 7]), topology.cells[0].cpuset_reserved)
-        self.assertEqual(set([9, 12]), topology.cells[1].cpuset_reserved)
-
     def test_obj_make_compatible_numa_cell_pre_1_4(self):
         topo_obj = objects.InstanceNUMACell(
             cpuset_reserved=set([1, 2]))
@@ -214,11 +145,95 @@ class _TestInstanceNUMATopology(object):
         self.assertNotIn('cpuset_reserved', primitive)
 
 
-class TestInstanceNUMATopology(test_objects._LocalTest,
-                               _TestInstanceNUMATopology):
+class TestInstanceNUMACell(
+    test_objects._LocalTest, _TestInstanceNUMACell,
+):
     pass
 
 
-class TestInstanceNUMATopologyRemote(test_objects._RemoteTest,
-                                     _TestInstanceNUMATopology):
+class TestInstanceNUMACellRemote(
+    test_objects._RemoteTest, _TestInstanceNUMACell,
+):
+    pass
+
+
+class _TestInstanceNUMATopology(object):
+
+    @mock.patch('nova.db.api.instance_extra_update_by_uuid')
+    def test_create(self, mock_update):
+        topo_obj = get_fake_obj_numa_topology(self.context)
+        topo_obj.instance_uuid = fake_db_topology['instance_uuid']
+        topo_obj.create()
+        self.assertEqual(1, len(mock_update.call_args_list))
+
+    def _test_get_by_instance_uuid(self):
+        numa_topology = objects.InstanceNUMATopology.get_by_instance_uuid(
+            self.context, fake_db_topology['instance_uuid'])
+        self.assertEqual(fake_db_topology['instance_uuid'],
+                         numa_topology.instance_uuid)
+        for obj_cell, topo_cell in zip(
+                numa_topology.cells, fake_obj_numa_topology['cells']):
+            self.assertIsInstance(obj_cell, objects.InstanceNUMACell)
+            self.assertEqual(topo_cell.id, obj_cell.id)
+            self.assertEqual(topo_cell.cpuset, obj_cell.cpuset)
+            self.assertEqual(topo_cell.memory, obj_cell.memory)
+            self.assertEqual(topo_cell.pagesize, obj_cell.pagesize)
+
+    @mock.patch('nova.db.api.instance_extra_get_by_instance_uuid')
+    def test_get_by_instance_uuid(self, mock_get):
+        mock_get.return_value = fake_db_topology
+        self._test_get_by_instance_uuid()
+
+    @mock.patch('nova.db.api.instance_extra_get_by_instance_uuid')
+    def test_get_by_instance_uuid_missing(self, mock_get):
+        mock_get.return_value = None
+        self.assertRaises(
+            exception.NumaTopologyNotFound,
+            objects.InstanceNUMATopology.get_by_instance_uuid,
+            self.context, 'fake_uuid')
+
+    def test_cpu_pinning_requested(self):
+        fake_topo_obj = copy.deepcopy(fake_obj_numa_topology)
+        self.assertFalse(fake_topo_obj.cpu_pinning_requested)
+        for cell in fake_topo_obj.cells:
+            cell.cpu_policy = fields.CPUAllocationPolicy.DEDICATED
+        self.assertTrue(fake_topo_obj.cpu_pinning_requested)
+
+    def test_cpuset_reserved(self):
+        topology = objects.InstanceNUMATopology(
+            instance_uuid=fake_instance_uuid,
+            cells=[
+                objects.InstanceNUMACell(
+                    id=0, cpuset=set([1, 2]), memory=512, pagesize=2048,
+                    cpuset_reserved=set([3, 7])),
+                objects.InstanceNUMACell(
+                    id=1, cpuset=set([3, 4]), memory=512, pagesize=2048,
+                    cpuset_reserved=set([9, 12]))
+            ])
+        self.assertEqual(set([3, 7]), topology.cells[0].cpuset_reserved)
+        self.assertEqual(set([9, 12]), topology.cells[1].cpuset_reserved)
+
+    def test_obj_make_compatible_numa_pre_1_3(self):
+        topo_obj = objects.InstanceNUMATopology(
+            emulator_threads_policy=(
+                fields.CPUEmulatorThreadsPolicy.ISOLATE))
+        versions = ovo_base.obj_tree_get_versions('InstanceNUMATopology')
+        primitive = topo_obj.obj_to_primitive(target_version='1.2',
+                                              version_manifest=versions)
+        self.assertNotIn(
+            'emulator_threads_policy', primitive['nova_object.data'])
+
+        topo_obj = objects.InstanceNUMATopology.obj_from_primitive(primitive)
+        self.assertFalse(topo_obj.emulator_threads_isolated)
+
+
+class TestInstanceNUMATopology(
+    test_objects._LocalTest, _TestInstanceNUMATopology,
+):
+    pass
+
+
+class TestInstanceNUMATopologyRemote(
+    test_objects._RemoteTest, _TestInstanceNUMATopology,
+):
     pass
