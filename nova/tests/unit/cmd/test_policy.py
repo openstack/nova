@@ -117,13 +117,16 @@ class TestPolicyCheck(test.NoDBTestCase):
                 r.name for r in ia_policies.list_rules()]
 
         passing_rules = self.cmd._filter_rules(
-            context, 'os-instance-actions', target)
+                context, 'os-instance-actions:list', target)
+        passing_rules += self.cmd._filter_rules(
+                context, 'os-instance-actions:show', target)
+        passing_rules += self.cmd._filter_rules(
+                context, 'os-instance-actions:events', target)
         self.assertEqual(set(expected_rules), set(passing_rules))
 
     def test_filter_rules_non_admin(self):
         context = nova_context.RequestContext()
-        rule_conditions = [base_policies.RULE_ANY,
-                           base_policies.RULE_ADMIN_OR_OWNER]
+        rule_conditions = [base_policies.PROJECT_READER_OR_SYSTEM_READER]
         expected_rules = [r.name for r in ia_policies.list_rules() if
                           r.check_str in rule_conditions]
         self._check_filter_rules(context, expected_rules=expected_rules)
@@ -150,8 +153,7 @@ class TestPolicyCheck(test.NoDBTestCase):
         db_context = nova_context.RequestContext(user_id='fake-user',
                                                  project_id='fake-project')
         instance = fake_instance.fake_instance_obj(db_context)
-        rule_conditions = [base_policies.RULE_ANY,
-                           base_policies.RULE_ADMIN_OR_OWNER]
+        rule_conditions = [base_policies.PROJECT_READER_OR_SYSTEM_READER]
         expected_rules = [r.name for r in ia_policies.list_rules() if
                           r.check_str in rule_conditions]
         self._check_filter_rules(db_context, instance, expected_rules)

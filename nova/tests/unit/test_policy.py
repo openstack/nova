@@ -426,7 +426,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-flavor-extra-specs:show",
 "os_compute_api:os-floating-ip-pools",
 "os_compute_api:os-floating-ips",
-"os_compute_api:os-instance-actions",
 "os_compute_api:limits",
 "os_compute_api:os-multinic",
 "os_compute_api:os-networks:view",
@@ -464,6 +463,8 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-volumes-attachments:show",
 "os_compute_api:os-attach-interfaces:list",
 "os_compute_api:os-attach-interfaces:show",
+"os_compute_api:os-instance-actions:list",
+"os_compute_api:os-instance-actions:show",
 )
 
         self.allow_nobody_rules = (

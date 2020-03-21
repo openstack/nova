@@ -18,23 +18,31 @@ from oslo_policy import policy
 from nova.policies import base
 
 
-BASE_POLICY_NAME = 'os_compute_api:os-instance-actions'
-POLICY_ROOT = 'os_compute_api:os-instance-actions:%s'
+ROOT_POLICY = 'os_compute_api:os-instance-actions'
+BASE_POLICY_NAME = 'os_compute_api:os-instance-actions:%s'
 
+DEPRECATED_INSTANCE_ACTION_POLICY = policy.DeprecatedRule(
+    ROOT_POLICY,
+    base.RULE_ADMIN_OR_OWNER,
+)
+
+DEPRECATED_REASON = """
+Nova API policies are introducing new default roles with scope_type
+capabilities. Old policies are deprecated and silently going to be ignored
+in nova 23.0.0 release.
+"""
 
 instance_actions_policies = [
     policy.DocumentedRuleDefault(
-        name=POLICY_ROOT % 'events',
-        check_str=base.RULE_ADMIN_API,
+        name=BASE_POLICY_NAME % 'events',
+        check_str=base.SYSTEM_READER,
         description="""Add events details in action details for a server.
-
 This check is performed only after the check
-os_compute_api:os-instance-actions passes. Beginning with
-Microversion 2.51, events details are always included; traceback
-information is provided per event if policy enforcement passes.
-Beginning with Microversion 2.62, each event includes a hashed
-host identifier and, if policy enforcement passes, the name of
-the host.""",
+os_compute_api:os-instance-actions:show passes. Beginning with Microversion
+2.51, events details are always included; traceback information is provided
+per event if policy enforcement passes. Beginning with Microversion 2.62,
+each event includes a hashed host identifier and, if policy enforcement
+passes, the name of the host.""",
         operations=[
             {
                 'method': 'GET',
@@ -43,20 +51,33 @@ the host.""",
         ],
         scope_types=['system']),
     policy.DocumentedRuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_OR_OWNER,
-        description="""List actions and show action details for a server.""",
+        name=BASE_POLICY_NAME % 'list',
+        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        description="""List actions for a server.""",
         operations=[
             {
                 'method': 'GET',
                 'path': '/servers/{server_id}/os-instance-actions'
-            },
+            }
+        ],
+        scope_types=['system', 'project'],
+        deprecated_rule=DEPRECATED_INSTANCE_ACTION_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='21.0.0'),
+    policy.DocumentedRuleDefault(
+        name=BASE_POLICY_NAME % 'show',
+        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        description="""Show action details for a server.""",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/servers/{server_id}/os-instance-actions/{request_id}'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['system', 'project'],
+        deprecated_rule=DEPRECATED_INSTANCE_ACTION_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='21.0.0'),
 ]
 
 

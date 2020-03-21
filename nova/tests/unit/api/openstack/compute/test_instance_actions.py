@@ -121,7 +121,7 @@ class InstanceActionsTestV21(test.NoDBTestCase):
 
     def _set_policy_rules(self):
         rules = {'compute:get': '',
-                 'os_compute_api:os-instance-actions': '',
+                 'os_compute_api:os-instance-actions:show': '',
                  'os_compute_api:os-instance-actions:events': 'is_admin:True'}
         policy.set_rules(oslo_policy.Rules.from_dict(rules))
 
