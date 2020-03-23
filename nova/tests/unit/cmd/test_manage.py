@@ -2346,6 +2346,24 @@ class TestNovaManagePlacement(test.NoDBTestCase):
         self.cli = manage.PlacementCommands()
         self.useFixture(fixtures.MockPatch('nova.network.neutron.get_client'))
 
+    def test_heal_allocations_with_cell_instance_id(self):
+        """Test heal allocation with both cell id and instance id"""
+        cell_uuid = uuidutils.generate_uuid()
+        instance_uuid = uuidutils.generate_uuid()
+        self.assertEqual(127, self.cli.heal_allocations(
+                        instance_uuid=instance_uuid,
+                        cell_uuid=cell_uuid))
+        self.assertIn('The --cell and --instance options',
+        self.output.getvalue())
+
+    @mock.patch('nova.objects.CellMapping.get_by_uuid',
+                side_effect=exception.CellMappingNotFound(uuid='fake'))
+    def test_heal_allocations_with_cell_id_not_found(self, mock_get):
+        """Test the case where cell_id is not found"""
+        self.assertEqual(127, self.cli.heal_allocations(cell_uuid='fake'))
+        output = self.output.getvalue().strip()
+        self.assertEqual('Cell with uuid fake was not found.', output)
+
     @ddt.data(-1, 0, "one")
     def test_heal_allocations_invalid_max_count(self, max_count):
         self.assertEqual(127, self.cli.heal_allocations(max_count=max_count))
