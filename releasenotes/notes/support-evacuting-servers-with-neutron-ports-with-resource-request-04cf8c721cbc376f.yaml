@@ -1,6 +1,0 @@
----
-features:
-  - |
-    The server ``evacute`` action API now supports servers with neutron
-    ports having resource requests, e.g. ports that have QoS minimum bandwidth
-    rules attached.

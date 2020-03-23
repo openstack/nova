@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    The server ``evacuate``, ``os-migrateLive`` and ``unshelve`` action APIs
+    now support servers with neutron ports having resource requests, e.g.
+    ports that have QoS minimum bandwidth rules attached.
