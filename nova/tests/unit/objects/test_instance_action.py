@@ -366,15 +366,16 @@ class _TestInstanceActionEventObject(object):
                                                   mock_pack):
         mock_format.return_value = 'traceback'
         mock_pack.side_effect = test.TestingException
+        exc = exception.NotFound()
         self.assertRaises(
             test.TestingException,
             instance_action.InstanceActionEvent.event_finish_with_failure,
             self.context, 'fake-uuid', 'fake-event',
-            exc_val=mock.sentinel.exc_val,
+            exc_val=exc,
             exc_tb=mock.sentinel.exc_tb)
         mock_pack.assert_called_once_with(self.context, 'fake-uuid',
                                           'fake-event',
-                                          exc_val=str(mock.sentinel.exc_val),
+                                          exc_val=exc.format_message(),
                                           exc_tb='traceback')
         mock_format.assert_called_once_with(mock.sentinel.exc_tb)
 

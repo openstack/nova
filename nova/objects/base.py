@@ -332,7 +332,20 @@ def serialize_args(fn):
                 else arg for arg in args]
         for k, v in kwargs.items():
             if k == 'exc_val' and v:
-                kwargs[k] = six.text_type(v)
+                try:
+                    # NOTE(danms): When we run this for a remotable method,
+                    # we need to attempt to format_message() the exception to
+                    # get the sanitized message, and if it's not a
+                    # NovaException, fall back to just the exception class
+                    # name. However, a remotable will end up calling this again
+                    # on the other side of the RPC call, so we must not try
+                    # to do that again, otherwise we will always end up with
+                    # just str. So, only do that if exc_val is an Exception
+                    # class.
+                    kwargs[k] = (v.format_message() if isinstance(v, Exception)
+                                 else v)
+                except Exception:
+                    kwargs[k] = v.__class__.__name__
             elif k == 'exc_tb' and v and not isinstance(v, six.string_types):
                 kwargs[k] = ''.join(traceback.format_tb(v))
             elif isinstance(v, datetime.datetime):
