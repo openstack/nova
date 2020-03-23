@@ -786,15 +786,16 @@ class LibvirtDriver(driver.ComputeDriver):
         """Recreate assigned mdevs that could have disappeared if we reboot
         the host.
         """
-        # FIXME(sbauza): We blindly recreate mediated devices without checking
-        # which ResourceProvider was allocated for the instance so it would use
-        # another pGPU.
-        # TODO(sbauza): Pass all instances' allocations here.
+        # NOTE(sbauza): This method just calls sysfs to recreate mediated
+        # devices by looking up existing guest XMLs and doesn't use
+        # the Placement API so it works with or without a vGPU reshape.
         mdevs = self._get_all_assigned_mediated_devices()
-        requested_types = self._get_supported_vgpu_types()
         for (mdev_uuid, instance_uuid) in six.iteritems(mdevs):
             if not self._is_existing_mdev(mdev_uuid):
-                self._create_new_mediated_device(requested_types, mdev_uuid)
+                dev_name = libvirt_utils.mdev_uuid2name(mdev_uuid)
+                dev_info = self._get_mediated_device_information(dev_name)
+                parent = dev_info['parent']
+                self._create_new_mediated_device(parent, uuid=mdev_uuid)
 
     def _set_multiattach_support(self):
         # Check to see if multiattach is supported. Based on bugzilla
@@ -6910,53 +6911,53 @@ class LibvirtDriver(driver.ComputeDriver):
                 vgpu_allocations[rp] = {'resources': {RC_VGPU: res[RC_VGPU]}}
         return vgpu_allocations
 
-    def _get_existing_mdevs_not_assigned(self, requested_types=None,
-                                         parent=None):
+    def _get_existing_mdevs_not_assigned(self, parent, requested_types=None):
         """Returns the already created mediated devices that are not assigned
         to a guest yet.
 
+        :param parent: Filter out result for only mdevs from the parent device.
         :param requested_types: Filter out the result for only mediated devices
                                 having those types.
-        :param parent: Filter out result for only mdevs from the parent device.
         """
         allocated_mdevs = self._get_all_assigned_mediated_devices()
         mdevs = self._get_mediated_devices(requested_types)
         available_mdevs = set()
         for mdev in mdevs:
+            # FIXME(sbauza): No longer accept the parent value to be nullable
+            # once we fix the reshape functional test
             if parent is None or mdev['parent'] == parent:
                 available_mdevs.add(mdev["uuid"])
 
         available_mdevs -= set(allocated_mdevs)
         return available_mdevs
 
-    def _create_new_mediated_device(self, requested_types, uuid=None,
-                                    parent=None):
+    def _create_new_mediated_device(self, parent, uuid=None):
         """Find a physical device that can support a new mediated device and
         create it.
 
-        :param requested_types: Filter only capable devices supporting those
-                                types.
+        :param parent: The libvirt name of the parent GPU, eg. pci_0000_06_00_0
         :param uuid: The possible mdev UUID we want to create again
-        :param parent: Only create a mdev for this device
 
         :returns: the newly created mdev UUID or None if not possible
         """
+        supported_types = self._get_supported_vgpu_types()
         # Try to see if we can still create a new mediated device
-        devices = self._get_mdev_capable_devices(requested_types)
+        devices = self._get_mdev_capable_devices(supported_types)
         for device in devices:
+            dev_name = device['dev_id']
+            # FIXME(sbauza): No longer accept the parent value to be nullable
+            # once we fix the reshape functional test
+            if parent is not None and dev_name != parent:
+                # The device is not the one that was called, not creating
+                # the mdev
+                continue
             # For the moment, the libvirt driver only supports one
             # type per host
             # TODO(sbauza): Once we support more than one type, make
-            # sure we look at the flavor/trait for the asked type.
-            asked_type = requested_types[0]
+            # sure we lookup which type the parent pGPU supports.
+            asked_type = supported_types[0]
             if device['types'][asked_type]['availableInstances'] > 0:
                 # That physical GPU has enough room for a new mdev
-                dev_name = device['dev_id']
-                # the parent attribute can be None
-                if parent is not None and dev_name != parent:
-                    # The device is not the one that was called, not creating
-                    # the mdev
-                    continue
                 # We need the PCI address, not the libvirt name
                 # The libvirt name is like 'pci_0000_84_00_0'
                 pci_addr = "{}:{}:{}.{}".format(*dev_name[4:].split('_'))
@@ -7006,8 +7007,12 @@ class LibvirtDriver(driver.ComputeDriver):
             # exception
             raise exception.ComputeResourcesUnavailable(
                 reason='vGPU resource is not available')
-        # TODO(sbauza): Remove this conditional in Train once all VGPU
-        # inventories are related to a child RP
+        # FIXME(sbauza): The functional reshape test assumes that we could
+        # run _allocate_mdevs() against non-nested RPs but this is impossible
+        # as all inventories have been reshaped *before now* since it's done
+        # on init_host() (when the compute restarts or whatever else calls it).
+        # That said, since fixing the functional test isn't easy yet, let's
+        # assume we still support a non-nested RP for now.
         if allocated_rp.parent_uuid is None:
             # We are on a root RP
             parent_device = None
@@ -7033,10 +7038,10 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.ComputeResourcesUnavailable(
                     reason='vGPU resource is not available')
 
-        requested_types = self._get_supported_vgpu_types()
+        supported_types = self._get_supported_vgpu_types()
         # Which mediated devices are created but not assigned to a guest ?
         mdevs_available = self._get_existing_mdevs_not_assigned(
-            requested_types, parent_device)
+            parent_device, supported_types)
 
         chosen_mdevs = []
         for c in six.moves.range(vgpus_asked):
@@ -7045,8 +7050,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 # Take the first available mdev
                 chosen_mdev = mdevs_available.pop()
             else:
-                chosen_mdev = self._create_new_mediated_device(
-                    requested_types, parent=parent_device)
+                chosen_mdev = self._create_new_mediated_device(parent_device)
             if not chosen_mdev:
                 # If we can't find devices having available VGPUs, just raise
                 raise exception.ComputeResourcesUnavailable(

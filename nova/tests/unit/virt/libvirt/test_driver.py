@@ -23505,8 +23505,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         drvr.provider_tree = self._get_fake_provider_tree_with_vgpu()
         self.assertEqual([uuids.mdev1],
                          drvr._allocate_mdevs(allocations=allocations))
-        get_unassigned_mdevs.assert_called_once_with(['nvidia-11'],
-                                                     'pci_0000_06_00_0')
+        get_unassigned_mdevs.assert_called_once_with('pci_0000_06_00_0',
+                                                     ['nvidia-11'])
 
     @mock.patch.object(nova.privsep.libvirt, 'create_mdev')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
@@ -23632,18 +23632,20 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         # Since mdev2 is assigned to inst1, only mdev1 is available
         self.assertEqual(set([uuids.mdev1]),
-                         drvr._get_existing_mdevs_not_assigned())
+                         drvr._get_existing_mdevs_not_assigned(parent=None))
 
     @mock.patch('nova.compute.utils.get_machine_ips',
                 new=mock.Mock(return_value=[]))
     @mock.patch.object(nova.privsep.libvirt, 'create_mdev')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_get_mdev_capable_devices')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_get_mediated_device_information')
     @mock.patch.object(os.path, 'exists')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_get_all_assigned_mediated_devices')
     def test_recreate_mediated_device_on_init_host(
-            self, get_all_assigned_mdevs, exists,
+            self, get_all_assigned_mdevs, exists, mock_get_mdev_info,
             get_mdev_capable_devs, privsep_create_mdev):
         self.flags(enabled_vgpu_types=['nvidia-11'], group='devices')
         get_all_assigned_mdevs.return_value = {uuids.mdev1: uuids.inst1,
@@ -23660,6 +23662,13 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             return True if uuids.mdev1 in path else False
 
         exists.side_effect = _exists
+        mock_get_mdev_info.side_effect = [
+            {"dev_id": "mdev_fake",
+             "uuid": uuids.mdev1,
+             "parent": "pci_0000_06_00_0",
+             "type": "nvidia-11",
+             "iommu_group": 12
+             }]
         get_mdev_capable_devs.return_value = [
             {"dev_id": "pci_0000_06_00_0",
              "vendor_id": 0x10de,
