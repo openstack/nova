@@ -129,7 +129,7 @@ python-ironicclient==2.7.0
 python-keystoneclient==3.15.0
 python-mimeparse==1.6.0
 python-neutronclient==6.7.0
-python-subunit==1.2.0
+python-subunit==1.4.0
 pytz==2018.3
 PyYAML==3.12
 repoze.lru==0.7
