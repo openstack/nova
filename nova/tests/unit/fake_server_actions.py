@@ -73,7 +73,8 @@ FAKE_EVENTS = {
                        'deleted_at': None,
                        'deleted': False,
                        'host': 'host1',
-                       'hostId': FAKE_HOST_ID1
+                       'hostId': FAKE_HOST_ID1,
+                       'details': None
                       },
                       {'id': 2,
                        'action_id': FAKE_ACTION_ID1,
@@ -89,7 +90,8 @@ FAKE_EVENTS = {
                        'deleted_at': None,
                        'deleted': False,
                        'host': 'host1',
-                       'hostId': FAKE_HOST_ID1
+                       'hostId': FAKE_HOST_ID1,
+                       'details': None
                        }
     ],
     FAKE_ACTION_ID2: [{'id': 3,
@@ -106,7 +108,8 @@ FAKE_EVENTS = {
                        'deleted_at': None,
                        'deleted': False,
                        'host': 'host2',
-                       'hostId': FAKE_HOST_ID2
+                       'hostId': FAKE_HOST_ID2,
+                       'details': None
                        }
    ]
 }

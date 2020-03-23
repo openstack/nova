@@ -65,7 +65,7 @@ def format_event(event, project_id, expect_traceback=True, expect_host=False,
                  expect_hostId=False):
     '''Remove keys that aren't serialized.'''
     to_delete = ['id', 'created_at', 'updated_at', 'deleted_at', 'deleted',
-                 'action_id']
+                 'action_id', 'details']
     if not expect_traceback:
         to_delete.append('traceback')
     if not expect_host:
