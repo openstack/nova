@@ -17,6 +17,7 @@
 from oslo_config import fixture as config_fixture
 from oslo_policy import opts as policy_opts
 
+from nova.conf import devices
 from nova.conf import neutron
 from nova.conf import paths
 from nova import config
@@ -64,3 +65,4 @@ class ConfFixture(config_fixture.Config):
                           init_rpc=False)
         policy_opts.set_defaults(self.conf)
         neutron.register_dynamic_opts(self.conf)
+        devices.register_dynamic_opts(self.conf)

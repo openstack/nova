@@ -2297,3 +2297,7 @@ class DeviceProfileError(NovaException):
 
 class AcceleratorRequestOpFailed(NovaException):
     msg_fmt = _("Failed to %(op)s accelerator requests: %(msg)s")
+
+
+class InvalidLibvirtGPUConfig(NovaException):
+    msg_fmt = _('Invalid configuration for GPU devices: %(reason)s')
