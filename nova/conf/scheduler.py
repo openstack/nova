@@ -461,6 +461,25 @@ Possible values:
 * Multiple integer keys mapping to integer or float values, where the value
   corresponds to a weight and the integer to an upper bound of memory.
 """),
+    cfg.FloatOpt("prefer_same_host_resize_weight_multiplier",
+        default=1.0,
+        help="""
+Prefer scheduling on same-host on resize weight multiplier.
+
+This option determines how strongly the previous host should be considered for
+scheduling a resizing instance. A positive value will result in the scheduler
+preferring the same host that the instance was previously running on. A
+negative value would prefer all other hosts over the instance's previous host.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'resize_same_host' weigher is enabled.
+
+Possible values:
+
+* An integer or float value, where the value corresponds to the multipler
+  ratio for this weigher.
+"""),
     cfg.FloatOpt("cpu_weight_multiplier",
         default=1.0,
         help="""
