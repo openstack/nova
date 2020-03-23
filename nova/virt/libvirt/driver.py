@@ -1272,8 +1272,7 @@ class LibvirtDriver(driver.ComputeDriver):
             try:
                 hw_firmware_type = instance.image_meta.properties.get(
                     'hw_firmware_type')
-                support_uefi = (self._has_uefi_support() and
-                                hw_firmware_type == fields.FirmwareType.UEFI)
+                support_uefi = self._check_uefi_support(hw_firmware_type)
                 guest.delete_configuration(support_uefi)
             except libvirt.libvirtError as e:
                 with excutils.save_and_reraise_exception() as ctxt:
@@ -1793,8 +1792,7 @@ class LibvirtDriver(driver.ComputeDriver):
             #             If any part of this block fails, the domain is
             #             re-defined regardless.
             if guest.has_persistent_configuration():
-                support_uefi = (self._has_uefi_support() and
-                                hw_firmware_type == fields.FirmwareType.UEFI)
+                support_uefi = self._check_uefi_support(hw_firmware_type)
                 guest.delete_configuration(support_uefi)
 
             try:
@@ -2553,8 +2551,7 @@ class LibvirtDriver(driver.ComputeDriver):
             if guest.has_persistent_configuration():
                 hw_firmware_type = image_meta.properties.get(
                     'hw_firmware_type')
-                support_uefi = (self._has_uefi_support() and
-                                hw_firmware_type == fields.FirmwareType.UEFI)
+                support_uefi = self._check_uefi_support(hw_firmware_type)
                 guest.delete_configuration(support_uefi)
 
             # NOTE (rmk): Establish a temporary mirror of our root disk and
@@ -5320,6 +5317,12 @@ class LibvirtDriver(driver.ComputeDriver):
         return ((caps.host.cpu.arch in supported_archs) and
                 any((os.path.exists(p)
                      for p in DEFAULT_UEFI_LOADER_PATH[caps.host.cpu.arch])))
+
+    def _check_uefi_support(self, hw_firmware_type):
+        caps = self._host.get_capabilities()
+        return (self._has_uefi_support() and
+                (hw_firmware_type == fields.FirmwareType.UEFI or
+                 caps.host.cpu.arch == fields.Architecture.AARCH64))
 
     def _get_supported_perf_events(self):
 
