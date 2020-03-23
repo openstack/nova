@@ -1342,6 +1342,21 @@ class TestLibvirtSEVUnsupported(TestLibvirtSEV):
     def test_unsupported_with_feature(self, fake_exists):
         self.assertFalse(self.host.supports_amd_sev)
 
+    def test_non_x86_architecture(self):
+        fake_caps_xml = '''
+<capabilities>
+  <host>
+    <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+    <cpu>
+      <arch>aarch64</arch>
+    </cpu>
+  </host>
+</capabilities>'''
+        with mock.patch.object(fakelibvirt.virConnect, 'getCapabilities',
+                               return_value=fake_caps_xml):
+            self.host._set_amd_sev_support()
+            self.assertFalse(self.host.supports_amd_sev)
+
 
 class TestLibvirtSEVSupported(TestLibvirtSEV):
     """Libvirt driver tests for when AMD SEV support is present."""
