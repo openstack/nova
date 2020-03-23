@@ -295,14 +295,11 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
             expected_exc=webob.exc.HTTPInternalServerError,
             check_response=False)
 
-    @mock.patch('nova.api.openstack.common.'
-                'supports_port_resource_request_during_move',
-                return_value=True)
     @mock.patch('nova.objects.Service.get_by_host_and_binary')
     @mock.patch('nova.api.openstack.common.'
                 'instance_has_port_with_resource_request', return_value=True)
     def test_migrate_with_bandwidth_from_old_compute_not_supported(
-            self, mock_has_res_req, mock_get_service, mock_support):
+            self, mock_has_res_req, mock_get_service):
         instance = self._stub_instance_get()
 
         mock_get_service.return_value = objects.Service(host=instance['host'])

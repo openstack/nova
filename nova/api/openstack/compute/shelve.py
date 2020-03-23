@@ -14,6 +14,7 @@
 
 """The shelved mode extension."""
 
+from oslo_log import log as logging
 from webob import exc
 
 from nova.api.openstack import api_version_request
@@ -27,6 +28,8 @@ from nova import exception
 from nova.i18n import _
 from nova.network import neutron
 from nova.policies import shelve as shelve_policies
+
+LOG = logging.getLogger(__name__)
 
 
 class ShelveController(wsgi.Controller):
@@ -98,12 +101,15 @@ class ShelveController(wsgi.Controller):
         if (instance.vm_state == vm_states.SHELVED_OFFLOADED and
                 common.instance_has_port_with_resource_request(
                     instance.uuid, self.network_api) and
-                not common.supports_port_resource_request_during_move(
-                    req)):
+                not common.supports_port_resource_request_during_move()):
+            LOG.warning("The unshelve action on a server with ports having "
+                        "resource requests, like a port with a QoS minimum "
+                        "bandwidth policy, is not supported until every "
+                        "nova-compute is upgraded to Ussuri")
             msg = _("The unshelve action on a server with ports having "
                     "resource requests, like a port with a QoS minimum "
-                    "bandwidth policy, is not supported with this "
-                    "microversion")
+                    "bandwidth policy, is not supported by this cluster right "
+                    "now")
             raise exc.HTTPBadRequest(explanation=msg)
 
         try:
