@@ -14,8 +14,8 @@
 #    under the License.
 
 import socket
+from unittest import mock
 
-import mock
 
 from nova import exception
 from nova.tests.unit.virt.hyperv import test_base

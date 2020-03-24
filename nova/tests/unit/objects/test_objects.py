@@ -19,9 +19,9 @@ import datetime
 import inspect
 import os
 import pprint
+from unittest import mock
 
 import fixtures
-import mock
 from oslo_utils import timeutils
 from oslo_versionedobjects import base as ovo_base
 from oslo_versionedobjects import exception as ovo_exc

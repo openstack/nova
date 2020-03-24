@@ -15,7 +15,8 @@
 
 """Tests for PCI request."""
 
-import mock
+from unittest import mock
+
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel
 

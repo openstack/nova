@@ -12,9 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from unittest import mock
+
 import fixtures
 from lxml import etree
-import mock
 import os_vif
 from os_vif import exception as osv_exception
 from os_vif import objects as osv_objects

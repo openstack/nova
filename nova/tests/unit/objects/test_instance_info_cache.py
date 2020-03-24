@@ -13,8 +13,8 @@
 #    under the License.
 
 import datetime
+from unittest import mock
 
-import mock
 from oslo_db import exception as db_exc
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils

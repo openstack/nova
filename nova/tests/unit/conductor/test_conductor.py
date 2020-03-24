@@ -16,8 +16,8 @@
 """Tests for the conductor service."""
 
 import copy
+from unittest import mock
 
-import mock
 from oslo_db import exception as db_exc
 from oslo_limit import exception as limit_exceptions
 import oslo_messaging as messaging

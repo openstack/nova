@@ -16,7 +16,7 @@
 #    under the License.
 
 import iso8601
-import mock
+from unittest import mock
 
 from nova import servicegroup
 from nova import test

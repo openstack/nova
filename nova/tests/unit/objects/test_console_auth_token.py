@@ -14,7 +14,7 @@
 #    under the License.
 
 import copy
-import mock
+from unittest import mock
 import urllib.parse as urlparse
 
 from oslo_db.exception import DBDuplicateEntry

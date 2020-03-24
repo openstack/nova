@@ -17,6 +17,7 @@ import copy
 import datetime
 import fixtures as std_fixtures
 import time
+from unittest import mock
 
 from cinderclient import exceptions as cinder_exception
 from cursive import exception as cursive_exception
@@ -24,7 +25,6 @@ import ddt
 from eventlet import event as eventlet_event
 from eventlet import timeout as eventlet_timeout
 from keystoneauth1 import exceptions as keystone_exception
-import mock
 import netaddr
 from oslo_log import log as logging
 import oslo_messaging as messaging

@@ -13,10 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 #
-import mock
 from neutronclient.common import exceptions as n_exc
 from neutronclient.neutron import v2_0 as neutronv20
 from neutronclient.v2_0 import client
+from unittest import mock
+
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import context

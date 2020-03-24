@@ -14,8 +14,8 @@
 #    under the License.
 
 import datetime
+from unittest import mock
 
-import mock
 import os_resource_classes as orc
 from os_win import constants as os_win_const
 from oslo_config import cfg

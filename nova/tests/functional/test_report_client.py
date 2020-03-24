@@ -12,10 +12,11 @@
 #    under the License.
 
 import copy
+from unittest import mock
+
 import ddt
 from keystoneauth1 import exceptions as kse
 import microversion_parse
-import mock
 import os_resource_classes as orc
 import os_traits as ot
 from oslo_utils.fixture import uuidsentinel as uuids

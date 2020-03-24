@@ -14,8 +14,8 @@
 
 import os
 import tempfile
+from unittest import mock
 
-import mock
 from oslo_config import cfg
 
 import nova.conf.compute

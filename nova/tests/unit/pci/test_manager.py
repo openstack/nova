@@ -14,8 +14,8 @@
 #    under the License.
 
 import copy
+from unittest import mock
 
-import mock
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel
 

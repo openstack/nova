@@ -13,9 +13,9 @@
 #    under the License.
 
 import collections
+from unittest import mock
 
 from cinderclient.v3 import client as cinder_client_v3
-import mock
 from requests_mock.contrib import fixture
 
 import nova.conf

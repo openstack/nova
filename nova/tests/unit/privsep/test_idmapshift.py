@@ -13,9 +13,9 @@
 # limitations under the License.
 
 from io import StringIO
+from unittest import mock
 
 import fixtures
-import mock
 
 import nova.privsep.idmapshift
 from nova import test

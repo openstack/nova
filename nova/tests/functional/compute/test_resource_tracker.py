@@ -12,9 +12,9 @@
 
 import copy
 import os
+from unittest import mock
 
 import fixtures
-import mock
 import os_resource_classes as orc
 import os_traits
 from oslo_utils.fixture import uuidsentinel as uuids

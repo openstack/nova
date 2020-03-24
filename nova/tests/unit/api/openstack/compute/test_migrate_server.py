@@ -13,8 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from unittest import mock
+
 import fixtures
-import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 import webob

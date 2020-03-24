@@ -12,7 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
+from unittest import mock
+
 import oslo_messaging as messaging
 from oslo_messaging.rpc import dispatcher
 from oslo_serialization import jsonutils

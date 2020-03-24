@@ -14,8 +14,8 @@
 #    under the License.
 
 
-import mock
 import os_traits
+from unittest import mock
 
 from oslo_log import log as logging
 from oslo_utils.fixture import uuidsentinel as uuids

@@ -15,7 +15,7 @@
 """
 Test the base class for the servicegroup API
 """
-import mock
+from unittest import mock
 
 from nova import servicegroup
 from nova import test

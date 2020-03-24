@@ -11,8 +11,7 @@
 #    under the License.
 
 import functools
-
-import mock
+from unittest import mock
 
 from nova.api.openstack.compute import limits
 import nova.conf

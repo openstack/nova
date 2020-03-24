@@ -14,8 +14,8 @@
 #    under the License.
 
 import io
+from unittest import mock
 
-import mock
 import os_traits
 
 from nova import test

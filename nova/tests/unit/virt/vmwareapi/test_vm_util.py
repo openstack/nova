@@ -15,8 +15,8 @@
 #    under the License.
 
 import collections
+from unittest import mock
 
-import mock
 from oslo_service import fixture as oslo_svc_fixture
 from oslo_utils import units
 from oslo_utils import uuidutils

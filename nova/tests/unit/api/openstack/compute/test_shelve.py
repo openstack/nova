@@ -12,10 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import fixtures
-import mock
+from unittest import mock
 
 import ddt
+import fixtures
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 import webob

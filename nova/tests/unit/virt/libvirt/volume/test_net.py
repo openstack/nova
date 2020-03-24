@@ -10,7 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
+from unittest import mock
 
 import nova.conf
 from nova.tests.unit.virt.libvirt.volume import test_volume

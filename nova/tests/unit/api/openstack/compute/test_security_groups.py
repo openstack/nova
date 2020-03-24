@@ -13,8 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
 from neutronclient.common import exceptions as n_exc
+from unittest import mock
+
 from oslo_config import cfg
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils

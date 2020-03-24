@@ -15,9 +15,9 @@
 import collections
 import datetime
 import os
+from unittest import mock
 
 import iso8601
-import mock
 from oslo_serialization import jsonutils
 from oslo_versionedobjects import exception as ovo_exc
 

@@ -22,10 +22,10 @@ import fixtures as std_fixtures
 from itertools import chain
 import operator
 import sys
+from unittest import mock
 
 from castellan import key_manager
 import ddt
-import mock
 from neutronclient.common import exceptions as neutron_exceptions
 from oslo_log import log as logging
 import oslo_messaging as messaging

@@ -19,8 +19,8 @@ Tests For HostManager
 import collections
 import contextlib
 import datetime
+from unittest import mock
 
-import mock
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import versionutils

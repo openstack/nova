@@ -13,10 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
 from os_win import constants
 from os_win import exceptions as os_win_exc
 from os_win import utilsfactory
+from unittest import mock
 
 from nova.tests.unit.virt.hyperv import test_base
 from nova import utils

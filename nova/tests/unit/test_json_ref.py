@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 import copy
-import mock
+from unittest import mock
 
 from nova import test
 from nova.tests import json_ref

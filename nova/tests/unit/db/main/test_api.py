@@ -18,10 +18,10 @@
 
 import copy
 import datetime
+from unittest import mock
 
 from dateutil import parser as dateutil_parser
 import iso8601
-import mock
 import netaddr
 from oslo_db import api as oslo_db_api
 from oslo_db import exception as db_exc

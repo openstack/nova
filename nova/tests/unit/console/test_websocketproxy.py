@@ -17,8 +17,8 @@
 import copy
 import io
 import socket
+from unittest import mock
 
-import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 
 import nova.conf

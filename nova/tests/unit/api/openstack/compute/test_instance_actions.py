@@ -15,9 +15,9 @@
 
 import copy
 import datetime
+from unittest import mock
 
 import iso8601
-import mock
 from oslo_policy import policy as oslo_policy
 from oslo_utils.fixture import uuidsentinel as uuids
 from webob import exc

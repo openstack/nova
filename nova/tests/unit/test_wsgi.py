@@ -19,10 +19,10 @@
 import os.path
 import socket
 import tempfile
+from unittest import mock
 
 import eventlet
 import eventlet.wsgi
-import mock
 from oslo_config import cfg
 import requests
 import testtools

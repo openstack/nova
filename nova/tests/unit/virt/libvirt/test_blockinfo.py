@@ -14,9 +14,9 @@
 #    under the License.
 
 import copy
+from unittest import mock
 
 import fixtures
-import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import block_device

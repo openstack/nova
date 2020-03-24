@@ -35,9 +35,9 @@ import os
 import os.path
 import pprint
 import sys
+from unittest import mock
 
 import fixtures
-import mock
 from oslo_cache import core as cache
 from oslo_concurrency import lockutils
 from oslo_config import cfg

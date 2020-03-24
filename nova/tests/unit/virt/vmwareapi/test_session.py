@@ -21,7 +21,7 @@
 Test suite for VMwareAPI Session
 """
 
-import mock
+from unittest import mock
 
 from oslo_vmware import exceptions as vexec
 

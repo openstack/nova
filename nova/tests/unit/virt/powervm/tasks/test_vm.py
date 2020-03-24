@@ -12,10 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
 from taskflow import engines as tf_eng
 from taskflow.patterns import linear_flow as tf_lf
 from taskflow import task as tf_tsk
+from unittest import mock
 
 from nova import exception
 from nova import test

@@ -15,7 +15,7 @@
 
 """Tests for Compute Driver CPU resource monitor."""
 
-import mock
+from unittest import mock
 
 from nova.compute.monitors.cpu import virt_driver
 from nova import objects

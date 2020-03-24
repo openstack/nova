@@ -15,9 +15,9 @@
 from collections import deque
 import copy
 import textwrap
+from unittest import mock
 
 from lxml import etree
-import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import units
 

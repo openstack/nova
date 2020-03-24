@@ -13,8 +13,8 @@
 #    under the License.
 
 import copy
+from unittest import mock
 
-import mock
 from oslo_config import cfg
 from oslo_utils.fixture import uuidsentinel as uuids
 import webob

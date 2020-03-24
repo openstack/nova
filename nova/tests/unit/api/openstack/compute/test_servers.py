@@ -17,13 +17,14 @@
 import collections
 import copy
 import datetime
+from unittest import mock
+
 import ddt
 import functools
 from urllib import parse as urlparse
 
 import fixtures
 import iso8601
-import mock
 from oslo_policy import policy as oslo_policy
 from oslo_serialization import base64
 from oslo_serialization import jsonutils

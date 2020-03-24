@@ -14,10 +14,10 @@
 #    under the License.
 
 
-import mock
 import os
 import tempfile
 import time
+from unittest import mock
 
 import eventlet
 import fixtures

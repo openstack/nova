@@ -11,9 +11,9 @@
 #    under the License.
 
 import tempfile
+from unittest import mock
 
 import fixtures
-import mock
 from oslo_config import fixture as config_fixture
 from oslotest import base
 

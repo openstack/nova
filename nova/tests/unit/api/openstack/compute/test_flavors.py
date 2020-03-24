@@ -13,9 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from unittest import mock
 from urllib import parse as urlparse
 
-import mock
 import webob
 
 from nova.api.openstack import common

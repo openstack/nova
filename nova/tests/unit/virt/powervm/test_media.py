@@ -14,8 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from unittest import mock
+
 import fixtures
-import mock
 from oslo_utils.fixture import uuidsentinel
 from pypowervm import const as pvm_const
 from pypowervm.tasks import scsi_mapper as tsk_map

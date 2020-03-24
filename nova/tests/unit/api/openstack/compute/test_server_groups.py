@@ -14,7 +14,8 @@
 #    under the License.
 
 import copy
-import mock
+from unittest import mock
+
 from oslo_utils.fixture import uuidsentinel
 from oslo_utils import uuidutils
 import webob

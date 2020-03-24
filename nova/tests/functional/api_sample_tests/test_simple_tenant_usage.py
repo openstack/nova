@@ -13,9 +13,9 @@
 #    under the License.
 
 import datetime
+from unittest import mock
 from urllib import parse
 
-import mock
 from oslo_utils import timeutils
 
 from nova.tests.functional.api_sample_tests import test_servers

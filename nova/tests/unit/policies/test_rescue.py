@@ -10,8 +10,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from unittest import mock
+
 import fixtures
-import mock
 from nova.policies import base as base_policy
 from nova.policies import rescue as rs_policies
 from oslo_utils.fixture import uuidsentinel as uuids

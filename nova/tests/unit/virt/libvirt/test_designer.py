@@ -12,7 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import mock
+from unittest import mock
 
 from nova.pci import utils as pci_utils
 from nova import test

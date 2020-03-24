@@ -13,8 +13,8 @@
 #    under the License.
 #
 
-import mock
 from pypowervm.wrappers import managed_system as pvm_ms
+from unittest import mock
 
 from nova import test
 from nova.virt.powervm import host as pvm_host

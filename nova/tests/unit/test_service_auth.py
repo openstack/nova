@@ -10,9 +10,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from unittest import mock
+
 from keystoneauth1 import loading as ks_loading
 from keystoneauth1 import service_token
-import mock
 
 from nova import context
 from nova import service_auth

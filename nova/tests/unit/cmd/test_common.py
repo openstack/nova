@@ -19,9 +19,9 @@
 
 from io import StringIO
 import sys
+from unittest import mock
 
 import fixtures
-import mock
 
 from nova.cmd import common as cmd_common
 from nova import exception

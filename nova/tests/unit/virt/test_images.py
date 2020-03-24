@@ -13,8 +13,8 @@
 #    under the License.
 
 import os
+from unittest import mock
 
-import mock
 from oslo_concurrency import processutils
 
 from nova.compute import utils as compute_utils

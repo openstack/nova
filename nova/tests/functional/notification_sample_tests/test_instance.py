@@ -11,8 +11,8 @@
 #    under the License.
 
 import time
+from unittest import mock
 
-import mock
 
 from nova import exception
 from nova.tests import fixtures

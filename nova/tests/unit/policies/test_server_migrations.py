@@ -10,9 +10,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import fixtures
-import mock
+from unittest import mock
 
+import fixtures
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.api.openstack.compute import server_migrations

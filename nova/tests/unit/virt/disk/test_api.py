@@ -14,8 +14,8 @@
 #    under the License.
 
 import tempfile
+from unittest import mock
 
-import mock
 from oslo_concurrency import processutils
 from oslo_utils import units
 

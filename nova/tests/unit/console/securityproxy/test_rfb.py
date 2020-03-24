@@ -15,7 +15,7 @@
 
 """Tests the Console Security Proxy Framework."""
 
-import mock
+from unittest import mock
 
 from nova.console.rfb import auth
 from nova.console.rfb import authnone

@@ -13,10 +13,10 @@
 # under the License.
 
 import time
+from unittest import mock
 
 import fixtures
 import io
-import mock
 
 from nova import test
 from nova.tests import fixtures as nova_fixtures

@@ -19,8 +19,8 @@ Tests dealing with HTTP rate-limiting.
 
 from http import client as httplib
 from io import StringIO
+from unittest import mock
 
-import mock
 from oslo_limit import fixture as limit_fixture
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils

@@ -14,8 +14,7 @@
 
 import os
 import time
-
-import mock
+from unittest import mock
 
 from nova import exception
 from nova.tests.unit.virt.hyperv import test_base

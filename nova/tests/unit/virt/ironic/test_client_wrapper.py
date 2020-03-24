@@ -13,11 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from unittest import mock
+
 from ironicclient import client as ironic_client
 from ironicclient import exc as ironic_exception
 from keystoneauth1 import discover as ksa_disc
 import keystoneauth1.session
-import mock
 from oslo_config import cfg
 
 import nova.conf

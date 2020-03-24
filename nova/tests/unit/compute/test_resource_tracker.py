@@ -12,9 +12,9 @@
 
 import copy
 import datetime
+from unittest import mock
 
 from keystoneauth1 import exceptions as ks_exc
-import mock
 import os_resource_classes as orc
 import os_traits
 from oslo_config import cfg

@@ -10,8 +10,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from unittest import mock
+
 import ddt
-import mock
 import os_resource_classes as orc
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids

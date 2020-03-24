@@ -14,10 +14,10 @@
 #    under the License.
 
 import os
+from unittest import mock
 
 import ddt
 import fixtures
-import mock
 from oslo_config import cfg
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import units

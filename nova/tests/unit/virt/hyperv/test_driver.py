@@ -19,8 +19,8 @@ Unit tests for the Hyper-V Driver.
 
 import platform
 import sys
+from unittest import mock
 
-import mock
 from os_win import exceptions as os_win_exc
 
 from nova import exception

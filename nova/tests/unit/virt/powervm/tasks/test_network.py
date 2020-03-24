@@ -15,9 +15,9 @@
 #    under the License.
 
 import copy
+from unittest import mock
 
 import eventlet
-import mock
 from pypowervm.wrappers import network as pvm_net
 
 from nova import exception

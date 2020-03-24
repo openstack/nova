@@ -14,8 +14,8 @@
 #    under the License.
 
 import functools
+from unittest import mock
 
-import mock
 
 from nova.pci import whitelist
 

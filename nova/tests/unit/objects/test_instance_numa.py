@@ -11,7 +11,8 @@
 #    under the License.
 
 import copy
-import mock
+from unittest import mock
+
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_versionedobjects import base as ovo_base
 import testtools

@@ -14,8 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from unittest import mock
+
 import fixtures
-import mock
 from pypowervm import const as pvm_const
 
 from nova import test

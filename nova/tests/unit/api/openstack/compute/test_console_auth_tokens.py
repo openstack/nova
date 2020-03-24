@@ -14,8 +14,8 @@
 #    under the License.
 
 import copy
+from unittest import mock
 
-import mock
 import webob
 
 from nova.api.openstack import api_version_request

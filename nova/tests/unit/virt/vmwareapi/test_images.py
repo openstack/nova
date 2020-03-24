@@ -17,8 +17,8 @@ Test suite for images.
 
 import os
 import tarfile
+from unittest import mock
 
-import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import units
 from oslo_vmware import rw_handles

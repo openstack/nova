@@ -12,8 +12,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from unittest import mock
+
 from cinderclient import exceptions as cinder_exceptions
-import mock
 
 from nova import test
 from nova.tests import fixtures as nova_fixtures

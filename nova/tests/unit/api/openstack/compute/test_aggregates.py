@@ -15,7 +15,8 @@
 
 """Tests for the aggregates admin api."""
 
-import mock
+from unittest import mock
+
 from oslo_utils.fixture import uuidsentinel
 from webob import exc
 

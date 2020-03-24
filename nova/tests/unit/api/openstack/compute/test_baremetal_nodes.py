@@ -13,13 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from unittest import mock
 
 from ironicclient import exc as ironic_exc
-import mock
 from webob import exc
 
-from nova.api.openstack.compute import baremetal_nodes \
-        as b_nodes_v21
+from nova.api.openstack.compute import baremetal_nodes as b_nodes_v21
 from nova import context
 from nova import exception
 from nova import test

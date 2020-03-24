@@ -15,12 +15,12 @@
 #    under the License.
 
 import os
+from unittest import mock
 
 import ddt
 import eventlet
 from eventlet import greenthread
 from eventlet import tpool
-import mock
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils

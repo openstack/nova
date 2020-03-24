@@ -10,7 +10,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
+from unittest import mock
+
 from oslo_utils import uuidutils
 from sqlalchemy.orm import exc as orm_exc
 

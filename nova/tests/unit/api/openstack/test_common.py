@@ -17,7 +17,8 @@
 Test suites for 'common' code used throughout the OpenStack HTTP API.
 """
 
-import mock
+from unittest import mock
+
 from testtools import matchers
 import webob
 import webob.exc

@@ -15,9 +15,9 @@
 
 """Tests for resource tracker claims."""
 
+from unittest import mock
 import uuid
 
-import mock
 
 from nova.compute import claims
 from nova import context

@@ -18,9 +18,9 @@
 """
 
 from io import StringIO
+from unittest import mock
 
 import fixtures
-import mock
 
 from nova.cmd import policy
 import nova.conf

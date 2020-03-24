@@ -14,7 +14,8 @@
 #    under the License.
 
 import binascii
-import mock
+from unittest import mock
+
 from oslo_concurrency import processutils
 
 from nova import test

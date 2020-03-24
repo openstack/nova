@@ -13,10 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
+from unittest import mock
+
 import os_resource_classes as orc
 import os_traits as ost
-
 
 from nova import conf
 from nova.db import constants as db_const

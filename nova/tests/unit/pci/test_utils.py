@@ -16,9 +16,9 @@
 
 import glob
 import os
+from unittest import mock
 
 import fixtures
-import mock
 
 from nova import exception
 from nova.pci import utils

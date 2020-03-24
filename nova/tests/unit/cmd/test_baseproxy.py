@@ -13,9 +13,9 @@
 # limitations under the License.
 
 from io import StringIO
+from unittest import mock
 
 import fixtures
-import mock
 from oslo_log import log as logging
 from oslo_reports import guru_meditation_report as gmr
 

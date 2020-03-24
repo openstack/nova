@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
+from unittest import mock
 
 from nova.api.openstack.compute import server_password \
     as server_password_v21

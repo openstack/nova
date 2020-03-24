@@ -15,10 +15,10 @@
 import os.path
 import threading
 import time
+from unittest import mock
 
 import eventlet
 import fixtures
-import mock
 from oslo_concurrency import processutils
 from oslo_utils.fixture import uuidsentinel as uuids
 

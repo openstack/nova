@@ -12,7 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import mock
+from unittest import mock
 
 from nova import exception as nova_exceptions
 from nova.tests.fixtures import libvirt as fakelibvirt

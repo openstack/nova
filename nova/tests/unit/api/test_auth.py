@@ -12,7 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
+from unittest import mock
+
 from oslo_middleware import request_id
 from oslo_serialization import jsonutils
 import webob

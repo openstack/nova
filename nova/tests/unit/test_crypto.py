@@ -18,11 +18,11 @@ Tests for Crypto module.
 
 import io
 import os
+from unittest import mock
 
 from castellan.common import exception as castellan_exception
 from cryptography.hazmat import backends
 from cryptography.hazmat.primitives import serialization
-import mock
 from oslo_concurrency import processutils
 from oslo_utils.fixture import uuidsentinel as uuids
 import paramiko

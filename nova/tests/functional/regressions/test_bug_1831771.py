@@ -13,8 +13,8 @@
 # under the License.
 
 import collections
+from unittest import mock
 
-import mock
 
 from nova.compute import task_states
 from nova.compute import vm_states

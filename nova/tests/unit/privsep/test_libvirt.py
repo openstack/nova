@@ -15,8 +15,9 @@
 #    under the License.
 
 import binascii
+from unittest import mock
+
 import ddt
-import mock
 import os
 
 import nova.privsep.libvirt

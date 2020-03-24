@@ -11,7 +11,7 @@
 #    under the License.
 
 import datetime
-import mock
+from unittest import mock
 
 from oslo_db import exception as oslo_db_exc
 from oslo_utils import fixture as osloutils_fixture

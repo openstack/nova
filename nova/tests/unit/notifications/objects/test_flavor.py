@@ -11,8 +11,8 @@
 #    under the License.
 
 import copy
+from unittest import mock
 
-import mock
 
 from nova import context
 from nova.notifications.objects import flavor as flavor_notification

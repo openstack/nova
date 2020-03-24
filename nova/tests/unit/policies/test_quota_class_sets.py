@@ -10,7 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
+from unittest import mock
 
 from nova.api.openstack.compute import quota_classes
 from nova.policies import quota_class_sets as policies

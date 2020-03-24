@@ -13,8 +13,8 @@
 # limitations under the License.
 
 import contextlib
+from unittest import mock
 
-import mock
 
 from nova.cmd import compute
 from nova import context

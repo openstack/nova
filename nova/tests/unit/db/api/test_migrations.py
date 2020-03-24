@@ -21,10 +21,11 @@ test will then use that DB and username/password combo to run the tests. Refer
 to the 'tools/test-setup.sh' for an example of how to configure this.
 """
 
+from unittest import mock
+
 from alembic import command as alembic_api
 from alembic import script as alembic_script
 from migrate.versioning import api as migrate_api
-import mock
 from oslo_db.sqlalchemy import enginefacade
 from oslo_db.sqlalchemy import test_fixtures
 from oslo_db.sqlalchemy import test_migrations

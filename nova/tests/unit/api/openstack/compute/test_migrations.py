@@ -13,9 +13,9 @@
 #    under the License.
 
 import datetime
+from unittest import mock
 
 import iso8601
-import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 from webob import exc
 

@@ -17,7 +17,8 @@
 Tests for availability zones
 """
 
-import mock
+from unittest import mock
+
 from oslo_utils.fixture import uuidsentinel
 
 from nova import availability_zones as az

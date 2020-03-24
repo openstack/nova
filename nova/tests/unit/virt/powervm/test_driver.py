@@ -13,9 +13,9 @@
 #    under the License.
 
 import contextlib
+from unittest import mock
 
 import fixtures
-import mock
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from pypowervm import const as pvm_const

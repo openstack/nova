@@ -14,7 +14,8 @@
 #    under the License.
 """Tests for keypair API."""
 
-import mock
+from unittest import mock
+
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_limit import fixture as limit_fixture

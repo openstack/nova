@@ -14,9 +14,9 @@
 
 import collections
 import copy
-import ddt
+from unittest import mock
 
-import mock
+import ddt
 import testtools
 
 import nova.conf

@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
+from unittest import mock
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common

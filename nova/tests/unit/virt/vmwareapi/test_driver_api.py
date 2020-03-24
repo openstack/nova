@@ -21,9 +21,9 @@ Test suite for VMwareAPI.
 
 import collections
 import datetime
+from unittest import mock
 
 from eventlet import greenthread
-import mock
 import os_resource_classes as orc
 from oslo_utils import fixture as utils_fixture
 from oslo_utils.fixture import uuidsentinel

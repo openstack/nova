@@ -17,8 +17,8 @@
 
 import copy
 import datetime
+from unittest import mock
 
-import mock
 from oslo_config import cfg
 from oslo_context import fixture as o_fixture
 from oslo_utils.fixture import uuidsentinel as uuids

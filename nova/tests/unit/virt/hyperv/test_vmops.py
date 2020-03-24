@@ -13,10 +13,10 @@
 #    under the License.
 
 import os
+from unittest import mock
 
 import ddt
 from eventlet import timeout as etimeout
-import mock
 from os_win import constants as os_win_const
 from os_win import exceptions as os_win_exc
 from oslo_concurrency import processutils

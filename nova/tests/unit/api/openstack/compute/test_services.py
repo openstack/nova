@@ -14,9 +14,9 @@
 
 import copy
 import datetime
+from unittest import mock
 
 from keystoneauth1 import exceptions as ks_exc
-import mock
 from oslo_utils import fixture as utils_fixture
 from oslo_utils.fixture import uuidsentinel
 import webob.exc

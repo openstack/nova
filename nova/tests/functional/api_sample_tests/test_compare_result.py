@@ -13,8 +13,8 @@
 #    under the License.
 
 import copy
+from unittest import mock
 
-import mock
 import testtools
 
 from nova import test

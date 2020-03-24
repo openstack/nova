@@ -20,8 +20,8 @@ Test WSGI basics and provide some helper functions for other WSGI tests.
 """
 
 import sys
+from unittest import mock
 
-import mock
 import routes
 import webob
 

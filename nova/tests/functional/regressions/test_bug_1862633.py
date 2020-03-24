@@ -9,8 +9,8 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
-import mock
 from neutronclient.common import exceptions as neutron_exception
+from unittest import mock
 
 from nova import test
 from nova.tests import fixtures as nova_fixtures

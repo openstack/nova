@@ -16,9 +16,9 @@
 import collections
 import functools
 import os
+from unittest import mock
 
 import fixtures
-import mock
 
 from nova.virt.libvirt import config
 from nova.virt.libvirt import driver

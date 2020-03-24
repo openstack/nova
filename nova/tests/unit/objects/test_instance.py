@@ -14,8 +14,8 @@
 
 import collections
 import datetime
+from unittest import mock
 
-import mock
 import netaddr
 from oslo_db import exception as db_exc
 from oslo_serialization import jsonutils

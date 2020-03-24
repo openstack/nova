@@ -14,9 +14,9 @@
 #    under the License.
 
 import datetime
+from unittest import mock
 
 import futurist
-import mock
 
 from nova.conductor import manager as conductor_manager
 from nova import context

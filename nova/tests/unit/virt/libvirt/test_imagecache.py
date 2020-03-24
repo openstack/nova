@@ -18,8 +18,8 @@ import contextlib
 import io
 import os
 import time
+from unittest import mock
 
-import mock
 from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
 from oslo_log import formatters

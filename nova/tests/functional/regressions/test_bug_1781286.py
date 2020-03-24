@@ -10,8 +10,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import fixtures
-import mock
+from unittest import mock
+
 from oslo_db import exception as oslo_db_exc
 
 from nova.compute import manager as compute_manager
@@ -67,10 +67,10 @@ class RescheduleBuildAvailabilityZoneUpCall(
         def wrap_bari(*args, **kwargs):
             # Poison the AZ query to blow up as if the cell conductor does not
             # have access to the API DB.
-            self.useFixture(
-                fixtures.MockPatch(
-                    'nova.objects.AggregateList.get_by_host',
-                    side_effect=oslo_db_exc.CantStartEngineError))
+            patcher = mock.patch('nova.objects.AggregateList.get_by_host',
+                                 side_effect=oslo_db_exc.CantStartEngineError)
+            patcher.start()
+            self.addCleanup(patcher.stop)
             return original_bari(*args, **kwargs)
 
         self.stub_out('nova.compute.manager.ComputeManager.'
@@ -130,10 +130,11 @@ class RescheduleMigrateAvailabilityZoneUpCall(
         def wrap_prep_resize(_self, *args, **kwargs):
             # Poison the AZ query to blow up as if the cell conductor does not
             # have access to the API DB.
-            self.agg_mock = self.useFixture(
-                fixtures.MockPatch(
-                    'nova.objects.AggregateList.get_by_host',
-                    side_effect=oslo_db_exc.CantStartEngineError)).mock
+            patcher = mock.patch('nova.objects.AggregateList.get_by_host',
+                                 side_effect=oslo_db_exc.CantStartEngineError)
+            self.agg_mock = patcher.start()
+            self.addCleanup(patcher.stop)
+
             if self.rescheduled is None:
                 # Track the first host that we rescheduled from.
                 self.rescheduled = _self.host

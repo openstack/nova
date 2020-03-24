@@ -16,11 +16,11 @@
 
 import collections
 import copy
+from unittest import mock
 
 from keystoneauth1.fixture import V2Token
 from keystoneauth1 import loading as ks_loading
 from keystoneauth1 import service_token
-import mock
 from neutronclient.common import exceptions
 from neutronclient.v2_0 import client
 from oslo_config import cfg

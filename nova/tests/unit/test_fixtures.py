@@ -17,10 +17,10 @@
 import copy
 import datetime
 import io
+from unittest import mock
 
 import fixtures as fx
 import futurist
-import mock
 from oslo_config import cfg
 from oslo_db import exception as db_exc
 from oslo_log import log as logging

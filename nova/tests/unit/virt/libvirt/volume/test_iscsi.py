@@ -10,9 +10,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
 from os_brick import exception as os_brick_exception
 from os_brick.initiator import connector
+from unittest import mock
 
 from nova.tests.unit.virt.libvirt.volume import test_volume
 from nova.virt.libvirt.volume import iscsi

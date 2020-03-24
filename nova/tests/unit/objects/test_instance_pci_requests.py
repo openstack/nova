@@ -10,7 +10,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
+from unittest import mock
+
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_versionedobjects import base as ovo_base

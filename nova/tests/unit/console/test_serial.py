@@ -15,8 +15,7 @@
 """Tests for Serial Console."""
 
 import socket
-
-import mock
+from unittest import mock
 
 from nova.console import serial
 from nova import exception

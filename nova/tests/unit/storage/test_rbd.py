@@ -10,9 +10,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from unittest import mock
 
 from eventlet import tpool
-import mock
 from oslo_concurrency import processutils
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
@@ -524,7 +524,7 @@ class RbdTestCase(test.NoDBTestCase):
         self.driver.destroy_volume(vol)
 
         # Make sure both params have the expected values
-        retryctx = mock_loopingcall.call_args.args[3]
+        retryctx = mock_loopingcall.call_args[0][3]
         self.assertEqual(retryctx, {'retries': 6})
         loopingcall.start.assert_called_with(interval=10)
 

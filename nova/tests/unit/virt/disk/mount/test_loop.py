@@ -14,8 +14,9 @@
 #    under the License.
 
 
+from unittest import mock
+
 import fixtures
-import mock
 
 from nova import test
 from nova.virt.disk.mount import loop

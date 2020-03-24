@@ -16,7 +16,7 @@
 Tests For weights.
 """
 
-import mock
+from unittest import mock
 
 from nova.scheduler import weights as scheduler_weights
 from nova.scheduler.weights import ram

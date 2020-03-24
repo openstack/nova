@@ -22,10 +22,10 @@ import hmac
 import os
 import pickle
 import re
+from unittest import mock
 
 from keystoneauth1 import exceptions as ks_exceptions
 from keystoneauth1 import session
-import mock
 from oslo_config import cfg
 from oslo_serialization import base64
 from oslo_serialization import jsonutils

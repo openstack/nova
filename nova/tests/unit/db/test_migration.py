@@ -14,12 +14,12 @@
 
 import glob
 import os
+from unittest import mock
 import urllib
 
 from alembic.runtime import migration as alembic_migration
 from migrate import exceptions as migrate_exceptions
 from migrate.versioning import api as migrate_api
-import mock
 
 from nova.db.api import api as api_db_api
 from nova.db.main import api as main_db_api

@@ -21,10 +21,9 @@ Unit tests for the nova-status CLI interfaces.
 # PlacementFixture, which is only available in functional tests.
 
 from io import StringIO
+from unittest import mock
 
 import fixtures
-import mock
-
 from keystoneauth1 import exceptions as ks_exc
 from keystoneauth1 import loading as keystone
 from keystoneauth1 import session

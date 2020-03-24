@@ -11,9 +11,9 @@
 #    under the License.
 
 import functools
+from unittest import mock
 
 import fixtures
-import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 

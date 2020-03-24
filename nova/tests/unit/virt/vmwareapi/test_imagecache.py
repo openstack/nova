@@ -13,8 +13,8 @@
 #    under the License.
 
 import datetime
+from unittest import mock
 
-import mock
 from oslo_config import cfg
 from oslo_utils import fixture as utils_fixture
 from oslo_utils.fixture import uuidsentinel

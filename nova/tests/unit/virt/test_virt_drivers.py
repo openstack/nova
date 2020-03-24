@@ -15,9 +15,9 @@
 from collections import deque
 import sys
 import traceback
+from unittest import mock
 
 import fixtures
-import mock
 import netaddr
 import os_resource_classes as orc
 import os_vif

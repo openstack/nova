@@ -18,9 +18,9 @@
 
 import os.path
 import tempfile
+from unittest import mock
 import uuid
 
-import mock
 from oslo_log import log as logging
 import oslo_messaging as messaging
 

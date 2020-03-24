@@ -13,8 +13,8 @@
 #    under the License.
 
 import os
+from unittest import mock
 
-import mock
 from os_win import exceptions as os_win_exc
 from oslo_utils import units
 

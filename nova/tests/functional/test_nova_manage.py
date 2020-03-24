@@ -15,9 +15,9 @@ import collections
 import datetime
 from io import StringIO
 import os.path
+from unittest import mock
 
 import fixtures
-import mock
 from neutronclient.common import exceptions as neutron_client_exc
 import os_resource_classes as orc
 from oslo_serialization import jsonutils

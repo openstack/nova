@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
+from unittest import mock
 
 from nova.objects import external_event as external_event_obj
 from nova.tests.unit.objects import test_objects

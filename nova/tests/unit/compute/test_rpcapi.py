@@ -16,7 +16,8 @@
 Unit Tests for nova.compute.rpcapi
 """
 
-import mock
+from unittest import mock
+
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 

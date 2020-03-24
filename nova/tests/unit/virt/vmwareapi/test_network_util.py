@@ -15,8 +15,8 @@
 #    under the License.
 
 import collections
+from unittest import mock
 
-import mock
 from oslo_vmware import vim_util
 
 from nova import test

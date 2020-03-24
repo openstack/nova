@@ -16,7 +16,8 @@
 Unit Tests for nova.scheduler.rpcapi
 """
 
-import mock
+from unittest import mock
+
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import conf

@@ -15,9 +15,10 @@
 
 """Tests for the ironic driver."""
 
+from unittest import mock
+
 import fixtures
 from ironicclient import exc as ironic_exception
-import mock
 from openstack import exceptions as sdk_exc
 from oslo_config import cfg
 from oslo_service import loopingcall

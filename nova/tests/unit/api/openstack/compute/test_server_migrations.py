@@ -15,8 +15,8 @@
 
 import copy
 import datetime
+from unittest import mock
 
-import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 import webob
 

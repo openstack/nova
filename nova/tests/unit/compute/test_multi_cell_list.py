@@ -13,7 +13,8 @@
 from contextlib import contextmanager
 import copy
 import datetime
-import mock
+from unittest import mock
+
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.compute import multi_cell_list

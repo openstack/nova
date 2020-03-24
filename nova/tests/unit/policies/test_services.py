@@ -11,7 +11,7 @@
 #    under the License.
 
 
-import mock
+from unittest import mock
 
 from nova.api.openstack.compute import services as services_v21
 from nova.tests.unit.api.openstack import fakes

@@ -10,7 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
+from unittest import mock
 
 from nova.api.openstack.compute import console_auth_tokens
 from nova.tests.unit.api.openstack import fakes

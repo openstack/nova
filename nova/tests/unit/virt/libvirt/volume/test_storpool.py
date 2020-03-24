@@ -13,8 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
 from os_brick import initiator
+from unittest import mock
 
 from nova.tests.unit.virt.libvirt.volume import test_volume
 from nova.virt.libvirt.volume import storpool as vol_sp

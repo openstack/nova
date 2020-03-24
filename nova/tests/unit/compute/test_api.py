@@ -15,11 +15,11 @@
 
 import contextlib
 import datetime
+from unittest import mock
 
 import ddt
 import fixtures
 import iso8601
-import mock
 import os_traits as ot
 from oslo_limit import exception as limit_exceptions
 from oslo_messaging import exceptions as oslo_exceptions

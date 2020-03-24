@@ -14,8 +14,8 @@
 #    under the License.
 
 import string
+from unittest import mock
 
-import mock
 import webob
 
 from nova.api.openstack.compute import console_output \

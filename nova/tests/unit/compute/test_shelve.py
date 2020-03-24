@@ -10,11 +10,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from unittest import mock
+
 import eventlet
 from oslo_utils import fixture as utils_fixture
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
-from unittest import mock
 
 from nova.compute import api as compute_api
 from nova.compute import claims

@@ -17,7 +17,7 @@
 Unit tests for the Hyper-V RDPConsoleOps.
 """
 
-import mock
+from unittest import mock
 
 from nova.tests.unit.virt.hyperv import test_base
 from nova.virt.hyperv import rdpconsoleops

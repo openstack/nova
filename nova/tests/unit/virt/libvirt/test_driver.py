@@ -31,6 +31,7 @@ import testtools
 import threading
 import time
 import unittest
+from unittest import mock
 
 from castellan import key_manager
 import ddt
@@ -38,7 +39,6 @@ import eventlet
 from eventlet import greenthread
 import fixtures
 from lxml import etree
-import mock
 from os_brick import encryptors
 from os_brick import exception as brick_exception
 from os_brick.initiator import connector

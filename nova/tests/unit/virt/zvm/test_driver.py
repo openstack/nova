@@ -13,8 +13,9 @@
 #    under the License.
 
 import copy
-import mock
 import os
+from unittest import mock
+
 from oslo_utils.fixture import uuidsentinel
 
 from nova.compute import provider_tree

@@ -10,7 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
+from unittest import mock
 
 from nova import objects
 from nova.scheduler.filters import aggregate_instance_extra_specs as agg_specs

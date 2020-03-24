@@ -13,10 +13,10 @@
 # under the License.
 
 import collections
-import fixtures
-import mock
 import os.path
+from unittest import mock
 
+import fixtures
 from oslo_utils import fileutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import units

@@ -11,7 +11,7 @@
 #    under the License.
 
 
-import mock
+from unittest import mock
 
 from nova import objects
 from nova.scheduler.filters import io_ops_filter

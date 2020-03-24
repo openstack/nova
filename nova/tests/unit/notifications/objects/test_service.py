@@ -14,8 +14,8 @@
 #    under the License.
 
 import copy
+from unittest import mock
 
-import mock
 from oslo_utils import timeutils
 
 from nova import context

@@ -16,13 +16,13 @@ import datetime
 import os
 import os.path
 import tempfile
+from unittest import mock
 
 import eventlet
 import fixtures
 from keystoneauth1 import adapter as ks_adapter
 from keystoneauth1.identity import base as ks_identity
 from keystoneauth1 import session as ks_session
-import mock
 import netaddr
 from openstack import exceptions as sdk_exc
 from oslo_config import cfg

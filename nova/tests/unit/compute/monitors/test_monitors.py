@@ -15,7 +15,7 @@
 
 """Tests for resource monitors."""
 
-import mock
+from unittest import mock
 
 from nova.compute import monitors
 from nova import test

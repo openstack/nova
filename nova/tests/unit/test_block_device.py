@@ -17,7 +17,8 @@
 Tests for Block Device utility functions.
 """
 
-import mock
+from unittest import mock
+
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import units
 

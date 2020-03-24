@@ -15,9 +15,9 @@
 
 import copy
 import io
+from unittest import mock
 
 import fixtures
-import mock
 
 from nova import conf
 from nova.tests import fixtures as nova_fixtures

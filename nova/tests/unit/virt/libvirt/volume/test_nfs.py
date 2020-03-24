@@ -11,8 +11,8 @@
 #    under the License.
 
 import os
+from unittest import mock
 
-import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.tests.unit.virt.libvirt.volume import test_mount

@@ -19,11 +19,11 @@ import inspect
 import os
 import shutil
 import tempfile
+from unittest import mock
 
 from castellan import key_manager
 import ddt
 import fixtures
-import mock
 from oslo_concurrency import lockutils
 from oslo_config import fixture as config_fixture
 from oslo_service import loopingcall

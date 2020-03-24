@@ -10,8 +10,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
 import os_traits as ot
+from unittest import mock
 
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils

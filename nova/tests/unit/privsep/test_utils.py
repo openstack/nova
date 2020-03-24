@@ -13,8 +13,8 @@
 #    under the License.
 
 import errno
-import mock
 import os
+from unittest import mock
 
 import nova.privsep.utils
 from nova import test

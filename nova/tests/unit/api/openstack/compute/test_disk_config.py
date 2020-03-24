@@ -14,8 +14,8 @@
 #    under the License.
 
 import datetime
+from unittest import mock
 
-import mock
 from oslo_serialization import jsonutils
 
 from nova.api.openstack import compute

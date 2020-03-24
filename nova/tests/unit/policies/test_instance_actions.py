@@ -11,8 +11,9 @@
 #    under the License.
 
 import copy
+from unittest import mock
+
 import fixtures
-import mock
 
 from nova.api.openstack import api_version_request
 from oslo_policy import policy as oslo_policy

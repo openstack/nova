@@ -13,9 +13,9 @@
 #    under the License.
 
 import collections
+from unittest import mock
 
 import fixtures
-import mock
 
 from nova import exception
 from nova import test

@@ -13,9 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 import datetime
+from unittest import mock
 
 from keystoneauth1 import exceptions as ks_exc
-import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import context as nova_context

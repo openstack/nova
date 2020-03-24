@@ -14,13 +14,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
 from pypowervm import const as pvm_const
 from pypowervm.tasks import hdisk
 from pypowervm.tests import test_fixtures as pvm_fx
 from pypowervm.utils import transaction as pvm_tx
 from pypowervm.wrappers import storage as pvm_stor
 from pypowervm.wrappers import virtual_io_server as pvm_vios
+from unittest import mock
 
 from nova import conf as cfg
 from nova import exception as exc

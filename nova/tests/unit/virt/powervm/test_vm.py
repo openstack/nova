@@ -12,8 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from unittest import mock
+
 import fixtures
-import mock
 from pypowervm import exceptions as pvm_exc
 from pypowervm.helpers import log_helper as pvm_log
 from pypowervm.tests import test_fixtures as pvm_fx

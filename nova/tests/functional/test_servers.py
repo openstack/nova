@@ -17,10 +17,10 @@ import collections
 import copy
 import datetime
 import time
+from unittest import mock
 import zlib
 
 from keystoneauth1 import adapter
-import mock
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import base64

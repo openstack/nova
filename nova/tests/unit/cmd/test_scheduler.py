@@ -10,7 +10,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import mock
+from unittest import mock
 
 from nova.cmd import scheduler
 from nova import config

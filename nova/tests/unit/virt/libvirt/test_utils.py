@@ -18,9 +18,9 @@ import grp
 import os
 import pwd
 import tempfile
+from unittest import mock
 
 import ddt
-import mock
 import os_traits
 from oslo_config import cfg
 from oslo_utils import fileutils

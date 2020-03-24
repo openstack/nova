@@ -17,8 +17,7 @@ import errno
 import platform
 import socket
 import sys
-
-import mock
+from unittest import mock
 
 from nova.compute import flavors
 import nova.conf

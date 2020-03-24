@@ -18,7 +18,8 @@
 Unit Tests for remote procedure calls using queue
 """
 
-import mock
+from unittest import mock
+
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_service import service as _service

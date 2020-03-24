@@ -14,9 +14,9 @@
 
 import copy
 import logging
+from unittest import mock
 
 from keystoneauth1 import adapter
-import mock
 from neutronclient.common import exceptions as neutron_exception
 import os_resource_classes as orc
 from oslo_config import cfg

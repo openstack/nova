@@ -18,6 +18,7 @@ import copy
 import datetime
 import io
 from io import StringIO
+from unittest import mock
 import urllib.parse as urlparse
 
 import cryptography
@@ -28,7 +29,6 @@ import glanceclient.exc
 from glanceclient.v1 import images
 from glanceclient.v2 import schemas
 from keystoneauth1 import loading as ks_loading
-import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 import testtools
 

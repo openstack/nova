@@ -13,9 +13,9 @@
 #    under the License.
 
 import collections
+from unittest import mock
 
 import eventlet.timeout
-import mock
 import os_traits
 from oslo_utils.fixture import uuidsentinel as uuids
 

@@ -14,8 +14,8 @@
 
 import ssl
 import struct
+from unittest import mock
 
-import mock
 
 from nova.console.rfb import auth
 from nova.console.rfb import authvencrypt

@@ -10,8 +10,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import mock
 import time
+from unittest import mock
 
 from nova import context as nova_context
 from nova import objects

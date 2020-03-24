@@ -14,8 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from unittest import mock
+
 import ddt
-import mock
 from oslo_db.sqlalchemy import enginefacade
 from oslo_limit import fixture as limit_fixture
 from oslo_utils.fixture import uuidsentinel as uuids

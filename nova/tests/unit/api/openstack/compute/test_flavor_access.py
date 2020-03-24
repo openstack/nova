@@ -14,8 +14,8 @@
 #    under the License.
 
 import datetime
+from unittest import mock
 
-import mock
 from webob import exc
 
 from nova.api.openstack import api_version_request as api_version

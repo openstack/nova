@@ -23,12 +23,13 @@ import functools
 import logging as std_logging
 import os
 import time
+from unittest import mock
 import warnings
 
 import eventlet
 import fixtures
 import futurist
-import mock
+import mock as mock_the_lib
 from openstack import service_description
 from oslo_concurrency import lockutils
 from oslo_config import cfg
@@ -1607,7 +1608,14 @@ class GenericPoisonFixture(fixtures.Fixture):
                 current = __import__(components[0], {}, {})
                 for component in components[1:]:
                     current = getattr(current, component)
-                if not isinstance(getattr(current, attribute), mock.Mock):
+
+                # TODO(stephenfin): Remove mock_the_lib check once pypowervm is
+                # no longer using mock and we no longer have mock in
+                # requirements
+                if not isinstance(
+                    getattr(current, attribute),
+                    (mock.Mock, mock_the_lib.Mock),
+                ):
                     self.useFixture(fixtures.MonkeyPatch(
                         meth, poison_configure(meth, why)))
             except ImportError:

@@ -12,8 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from unittest import mock
+
 from lxml import etree
-import mock
 from oslo_utils import uuidutils
 
 from nova.objects import fields as obj_fields

@@ -14,7 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
+from unittest import mock
 
 import nova.privsep.fs
 from nova import test

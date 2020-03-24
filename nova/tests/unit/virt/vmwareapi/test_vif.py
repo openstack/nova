@@ -13,7 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
+from unittest import mock
+
 from oslo_vmware import vim_util
 
 from nova import exception

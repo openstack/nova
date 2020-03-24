@@ -14,12 +14,12 @@
 #    under the License.
 
 import copy
+from unittest import mock
 from urllib import parse as urlparse
 
 import ddt
 import fixtures
 from lxml import etree
-import mock
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils

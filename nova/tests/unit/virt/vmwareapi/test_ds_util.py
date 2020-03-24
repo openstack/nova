@@ -14,8 +14,8 @@
 
 from contextlib import contextmanager
 import re
+from unittest import mock
 
-import mock
 from oslo_utils import units
 from oslo_vmware import exceptions as vexc
 from oslo_vmware.objects import datastore as ds_obj

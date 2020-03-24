@@ -11,8 +11,8 @@
 #    under the License.
 
 import os
+from unittest import mock
 
-import mock
 
 from nova.tests.unit.virt.libvirt.volume import test_volume
 from nova import utils

@@ -18,10 +18,10 @@ import sys
 import textwrap
 import time
 import typing as ty
+from unittest import mock
 
 import fixtures
 from lxml import etree
-import mock
 from oslo_log import log as logging
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import versionutils

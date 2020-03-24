@@ -11,8 +11,8 @@
 #    under the License.
 
 import os
+from unittest import mock
 
-import mock
 from os_brick.initiator import connector
 
 from nova import exception

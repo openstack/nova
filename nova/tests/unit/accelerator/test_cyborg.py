@@ -13,7 +13,7 @@
 #    under the License.
 
 import itertools
-import mock
+from unittest import mock
 
 from keystoneauth1 import exceptions as ks_exc
 from requests.models import Response

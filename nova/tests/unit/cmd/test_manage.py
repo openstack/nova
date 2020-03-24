@@ -17,11 +17,11 @@ import datetime
 from io import StringIO
 import sys
 import textwrap
+from unittest import mock
 import warnings
 
 import ddt
 import fixtures
-import mock
 from oslo_db import exception as db_exc
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel
