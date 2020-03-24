@@ -1780,7 +1780,8 @@ class VMwareVMOps(object):
         # Iterate over the network adapters and update the backing
         if network_info:
             spec.deviceChange = []
-            vif_model = image_meta.properties.hw_vif_model
+            vif_model = image_meta.properties.get('hw_vif_model',
+                                                  constants.DEFAULT_VIF_MODEL)
             hardware_devices = self._session._call_method(
                                                     vutil,
                                                     "get_object_property",
