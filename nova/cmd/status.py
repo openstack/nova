@@ -16,8 +16,6 @@
 CLI interface for nova status commands.
 """
 
-from __future__ import print_function
-
 import collections
 import functools
 import sys

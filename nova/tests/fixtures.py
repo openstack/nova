@@ -15,8 +15,6 @@
 #    under the License.
 
 """Fixtures for Nova tests."""
-from __future__ import absolute_import
-
 import collections
 from contextlib import contextmanager
 import copy
