@@ -116,3 +116,11 @@ class FlavorManageScopeTypePolicyTest(FlavorManagePolicyTest):
             self.other_project_member_context,
             self.project_foo_context, self.project_reader_context
         ]
+
+
+class FlavorManageNoLegacyPolicyTest(FlavorManageScopeTypePolicyTest):
+    """Test Flavor Manage APIs policies with system scope enabled,
+    and no more deprecated rules that allow the legacy admin API to
+    access system_admin_or_owner APIs.
+    """
+    without_deprecated_rules = True
