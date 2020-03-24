@@ -47,6 +47,10 @@ class EvacuatePolicyTest(base.BasePolicyTest):
         user_id = self.user_req.environ['nova.context'].user_id
         self.stub_out('nova.compute.api.HostAPI.service_get_by_compute_host',
                       fake_service_get_by_compute_host)
+        self.stub_out(
+            'nova.api.openstack.common.'
+            'instance_has_port_with_resource_request',
+            lambda *args, **kwargs: False)
         self.mock_get = self.useFixture(
             fixtures.MockPatch('nova.compute.api.API.get')).mock
         uuid = uuids.fake_id
