@@ -129,7 +129,6 @@ function _ceph_configure_cinder {
     $ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m ini_file -a  "dest=$CINDER_CONF section=ceph option=rbd_uuid value=$CINDER_CEPH_UUID"
     $ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m ini_file -a  "dest=$CINDER_CONF section=ceph option=rbd_flatten_volume_from_snapshot value=False"
     $ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m ini_file -a  "dest=$CINDER_CONF section=ceph option=rbd_max_clone_depth value=5"
-    $ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m ini_file -a  "dest=$CINDER_CONF section=DEFAULT option=glance_api_version value=2"
     $ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m ini_file -a  "dest=$CINDER_CONF section=DEFAULT option=default_volume_type value=ceph"
     $ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m ini_file -a  "dest=$CINDER_CONF section=DEFAULT option=enabled_backends value=ceph"
 
