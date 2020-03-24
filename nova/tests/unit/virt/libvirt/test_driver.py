@@ -23331,23 +23331,22 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                           self._test_detach_mediated_devices, exc)
 
     def test_storage_bus_traits(self):
-        """Test getting storage bus traits per virt type."""
-        all_traits = set()
+        """Test getting storage bus traits per virt type.
+
+        This also ensures that nova and os-traits are in sync with respect to
+        COMPUTE_STORAGE_BUS_*.
+        """
+        all_traits = set(ot.get_traits('COMPUTE_STORAGE_BUS_'))
 
         # ensure each virt type reports the correct bus types
         for virt_type, buses in blockinfo.SUPPORTED_STORAGE_BUSES.items():
             self.flags(virt_type=virt_type, group='libvirt')
             bus_traits = self.drvr._get_storage_bus_traits()
-            for bus in buses:
-                trait = f'COMPUTE_STORAGE_BUS_{bus.upper()}'
-                self.assertIn(trait, bus_traits)
-                self.assertTrue(bus_traits[trait])
-                all_traits.add(trait)
-
-        # ..and all the traits reported are valid os-trait traits
-        valid_traits = ot.check_traits(all_traits)
-        self.assertEqual(len(all_traits), len(valid_traits[0]))
-        self.assertEqual(0, len(valid_traits[1]))
+            # Ensure all bus traits are accounted for
+            self.assertEqual(all_traits, set(bus_traits))
+            for trait, val in bus_traits.items():
+                bus_from_trait = trait.rsplit('_', 1)[1].lower()
+                self.assertEqual(bus_from_trait in buses, bus_traits[trait])
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_cpu_feature_traits',
                        new=mock.Mock(return_value={}))
