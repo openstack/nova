@@ -147,10 +147,11 @@ class InstanceActionsPolicyTest(base.BasePolicyTest):
 
 class InstanceActionsDeprecatedPolicyTest(base.BasePolicyTest):
     """Test os-instance-actions APIs Deprecated policies.
-    This lass checks if deprecated policy rules are overridden
+
+    This class checks if deprecated policy rules are overridden
     by user on policy.json file then they still work because
     oslo.policy add deprecated rules in logical OR condition
-    and enforce them for policy checks if overridden.
+    and enforces them for policy checks if overridden.
     """
 
     def setUp(self):
@@ -164,8 +165,9 @@ class InstanceActionsDeprecatedPolicyTest(base.BasePolicyTest):
         self.deprecated_policy = ia_policies.ROOT_POLICY
         # Overridde rule with different checks than defaults so that we can
         # verify the rule overridden case.
-        override_rules = {self.deprecated_policy:
-            base_policy.RULE_ADMIN_OR_OWNER}
+        override_rules = {
+            self.deprecated_policy: base_policy.RULE_ADMIN_OR_OWNER,
+        }
         # NOTE(brinzhang): Only override the deprecated rule in policy file
         # so that we can verify if overridden checks are considered by
         # oslo.policy.
@@ -243,7 +245,8 @@ class InstanceActionsNoLegacyPolicyTest(InstanceActionsPolicyTest):
         ia_policies.BASE_POLICY_NAME % 'show':
             base_policy.PROJECT_READER_OR_SYSTEM_READER,
         ia_policies.BASE_POLICY_NAME % 'events':
-            base_policy.SYSTEM_READER}
+            base_policy.SYSTEM_READER,
+    }
 
     def setUp(self):
         super(InstanceActionsNoLegacyPolicyTest, self).setUp()
