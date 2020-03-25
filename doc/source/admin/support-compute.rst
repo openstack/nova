@@ -16,6 +16,7 @@ you how to troubleshoot Compute.
 
    troubleshooting/orphaned-allocations.rst
    troubleshooting/rebuild-placement-db.rst
+   troubleshooting/affinity-policy-violated.rst
 
 
 Compute service logging
