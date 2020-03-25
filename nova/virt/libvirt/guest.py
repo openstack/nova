@@ -756,6 +756,22 @@ class BlockDevice(object):
             cur=status['cur'],
             end=status['end'])
 
+    def copy(self, dest_xml, shallow=False, reuse_ext=False, transient=False):
+        """Copy the guest-visible contents into a new disk
+
+        http://libvirt.org/html/libvirt-libvirt-domain.html#virDomainBlockCopy
+
+        :param: dest_xml: XML describing the destination disk to copy to
+        :param: shallow: Limit copy to top of source backing chain
+        :param: reuse_ext: Reuse existing external file for a copy
+        :param: transient: Don't force usage of recoverable job for the copy
+                           operation
+         """
+        flags = shallow and libvirt.VIR_DOMAIN_BLOCK_COPY_SHALLOW or 0
+        flags |= reuse_ext and libvirt.VIR_DOMAIN_BLOCK_COPY_REUSE_EXT or 0
+        flags |= transient and libvirt.VIR_DOMAIN_BLOCK_COPY_TRANSIENT_JOB or 0
+        return self._guest._domain.blockCopy(self._disk, dest_xml, flags=flags)
+
     def rebase(self, base, shallow=False, reuse_ext=False,
                copy=False, relative=False, copy_dev=False):
         """Copy data from backing chain into a new disk

@@ -282,6 +282,10 @@ MIN_LIBVIRT_VIDEO_MODEL_VERSIONS = {
 MIN_LIBVIRT_PMEM_SUPPORT = (5, 0, 0)
 MIN_QEMU_PMEM_SUPPORT = (3, 1, 0)
 
+# -blockdev support (replacing -drive)
+MIN_LIBVIRT_BLOCKDEV = (6, 0, 0)
+MIN_QEMU_BLOCKDEV = (4, 2, 0)
+
 
 class LibvirtDriver(driver.ComputeDriver):
     def __init__(self, virtapi, read_only=False):
@@ -1771,10 +1775,19 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._disconnect_volume(context, connection_info, instance,
                                         encryption=encryption)
 
-    def _swap_volume(self, guest, disk_path,
-                     conf, resize_to, hw_firmware_type):
-        """Swap existing disk with a new block device."""
-        dev = guest.get_block_device(disk_path)
+    def _swap_volume(self, guest, disk_dev, conf, resize_to, hw_firmware_type):
+        """Swap existing disk with a new block device.
+
+        Call virDomainBlockRebase or virDomainBlockCopy with Libvirt >= 6.0.0
+        to copy and then pivot to a new volume.
+
+        :param: guest: Guest object representing the guest domain
+        :param: disk_dev: Device within the domain that is being swapped
+        :param: conf: LibvirtConfigGuestDisk object representing the new volume
+        :param: resize_to: Size of the dst volume, 0 if the same as the src
+        :param: hw_firmware_type: fields.FirmwareType if set in the imagemeta
+        """
+        dev = guest.get_block_device(disk_dev)
 
         # Save a copy of the domain's persistent XML file. We'll use this
         # to redefine the domain if anything fails during the volume swap.
@@ -1788,32 +1801,46 @@ class LibvirtDriver(driver.ComputeDriver):
             pass
 
         try:
-            # NOTE (rmk): blockRebase cannot be executed on persistent
-            #             domains, so we need to temporarily undefine it.
-            #             If any part of this block fails, the domain is
-            #             re-defined regardless.
+            # NOTE (rmk): virDomainBlockRebase and virDomainBlockCopy cannot be
+            # executed on persistent domains, so we need to temporarily
+            # undefine it. If any part of this block fails, the domain is
+            # re-defined regardless.
             if guest.has_persistent_configuration():
                 support_uefi = (self._has_uefi_support() and
                                 hw_firmware_type == fields.FirmwareType.UEFI)
                 guest.delete_configuration(support_uefi)
 
             try:
-                # Start copy with VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT flag to
-                # allow writing to existing external volume file. Use
-                # VIR_DOMAIN_BLOCK_REBASE_COPY_DEV if it's a block device to
-                # make sure XML is generated correctly (bug 1691195)
-                copy_dev = conf.source_type == 'block'
-                dev.rebase(conf.source_path, copy=True, reuse_ext=True,
-                           copy_dev=copy_dev)
+                # NOTE(lyarwood): Use virDomainBlockCopy from libvirt >= 6.0.0
+                # and QEMU >= 4.2.0 with -blockdev domains allowing QEMU to
+                # copy to remote disks.
+                if self._host.has_min_version(lv_ver=MIN_LIBVIRT_BLOCKDEV,
+                                              hv_ver=MIN_QEMU_BLOCKDEV):
+                    dev.copy(conf.to_xml(), reuse_ext=True)
+                else:
+                    # TODO(lyarwood): Remove the following use of
+                    # virDomainBlockRebase once MIN_LIBVIRT_VERSION hits >=
+                    # 6.0.0 and MIN_QEMU_VERSION hits >= 4.2.0.
+                    # Start copy with VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT flag to
+                    # allow writing to existing external volume file. Use
+                    # VIR_DOMAIN_BLOCK_REBASE_COPY_DEV if it's a block device
+                    # to make sure XML is generated correctly (bug 1691195)
+                    copy_dev = conf.source_type == 'block'
+                    dev.rebase(conf.source_path, copy=True, reuse_ext=True,
+                               copy_dev=copy_dev)
                 while not dev.is_job_complete():
                     time.sleep(0.5)
 
                 dev.abort_job(pivot=True)
 
             except Exception as exc:
+                # NOTE(lyarwood): conf.source_path is not set for RBD disks so
+                # fallback to conf.target_dev when None.
+                new_path = conf.source_path or conf.target_dev
+                old_path = disk_dev
                 LOG.exception("Failure rebasing volume %(new_path)s on "
-                    "%(old_path)s.", {'new_path': conf.source_path,
-                                      'old_path': disk_path})
+                    "%(old_path)s.", {'new_path': new_path,
+                                      'old_path': old_path})
                 raise exception.VolumeRebaseFailed(reason=six.text_type(exc))
 
             if resize_to:
@@ -1860,9 +1887,13 @@ class LibvirtDriver(driver.ComputeDriver):
         # eventually do this for us.
         self._connect_volume(context, new_connection_info, instance)
         conf = self._get_volume_config(new_connection_info, disk_info)
-        if not conf.source_path:
+        if (not conf.source_path and not
+            self._host.has_min_version(lv_ver=MIN_LIBVIRT_BLOCKDEV,
+                                       hv_ver=MIN_QEMU_BLOCKDEV)):
             self._disconnect_volume(context, new_connection_info, instance)
-            raise NotImplementedError(_("Swap only supports host devices"))
+            raise NotImplementedError(_("Swap only supports host devices and "
+                                        "files with Libvirt < 6.0.0 or QEMU "
+                                        "< 4.2.0"))
 
         hw_firmware_type = instance.image_meta.properties.get(
             'hw_firmware_type')
