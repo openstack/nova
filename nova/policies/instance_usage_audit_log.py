@@ -23,12 +23,12 @@ BASE_POLICY_NAME = 'os_compute_api:os-instance-usage-audit-log'
 
 instance_usage_audit_log_policies = [
     policy.DocumentedRuleDefault(
-        BASE_POLICY_NAME,
-        base.RULE_ADMIN_API,
-        "List all usage audits and that occurred before a specified time "
-        "for all servers on all compute hosts where usage auditing is "
-        "configured",
-        [
+        name=BASE_POLICY_NAME,
+        check_str=base.RULE_ADMIN_API,
+        description="List all usage audits and that occurred before "
+        "a specified time for all servers on all compute hosts where "
+        "usage auditing is configured",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/os-instance_usage_audit_log'
@@ -37,7 +37,8 @@ instance_usage_audit_log_policies = [
                 'method': 'GET',
                 'path': '/os-instance_usage_audit_log/{before_timestamp}'
             }
-        ]),
+        ],
+        scope_types=['system']),
 ]
 
 
