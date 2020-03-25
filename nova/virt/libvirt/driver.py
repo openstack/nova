@@ -1996,22 +1996,9 @@ class LibvirtDriver(driver.ComputeDriver):
                     path = 'unknown'
                     raise exception.DiskNotFound(location='unknown')
 
-                # TODO(lyarwood): The following direct call to privsep instead
-                # of images.qemu_img_info avoids the need to bump
-                # requirements.txt to depend on a new version of oslo.utils
-                # that provides a version of QemuImgInfo that includes the
-                # format_specific attribute allowing this bugfix to be
-                # backported. Once landed we can replace this with the
-                # following and require oslo.utils >= 4.1.0:
-                #
-                #  info = images.qemu_img_info(path, output_format='json',
-                #                              run_as_root=True)
-                #  format_specific_data = info.format_specific['data']
-                info_dict = nova.privsep.qemu.privileged_qemu_img_info(
-                    path, output_format='json',
-                    qemu_version=self._host.get_connection().getVersion())
-                info = jsonutils.loads(info_dict)
-                format_specific_data = info['format-specific']['data']
+                info = images.privileged_qemu_img_info(
+                    path, output_format='json')
+                format_specific_data = info.format_specific['data']
                 payload_offset = format_specific_data['payload-offset']
 
                 # NOTE(lyarwood): Ensure the underlying device is not resized
