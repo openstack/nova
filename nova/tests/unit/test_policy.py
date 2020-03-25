@@ -343,7 +343,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-hosts",
 "os_compute_api:os-hypervisors",
 "os_compute_api:os-instance-actions:events",
-"os_compute_api:os-instance-usage-audit-log",
 "os_compute_api:os-lock-server:unlock:unlock_override",
 "os_compute_api:os-migrate-server:migrate",
 "os_compute_api:os-migrate-server:migrate_live",
@@ -457,6 +456,8 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
         self.system_reader_rules = (
 "os_compute_api:os-services:list",
 "os_compute_api:os-instance-actions:events:details",
+"os_compute_api:os-instance-usage-audit-log:list",
+"os_compute_api:os-instance-usage-audit-log:show",
 )
 
         self.system_reader_or_owner_rules = (

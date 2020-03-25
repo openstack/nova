@@ -53,7 +53,8 @@ policy_data = """
     "os_compute_api:os-instance-actions:show": "",
     "os_compute_api:os-instance-actions:events": "",
     "os_compute_api:os-instance-actions:events:details": "",
-    "os_compute_api:os-instance-usage-audit-log": "",
+    "os_compute_api:os-instance-usage-audit-log:list": "",
+    "os_compute_api:os-instance-usage-audit-log:show": "",
 
     "os_compute_api:os-lock-server:lock": "",
     "os_compute_api:os-lock-server:unlock": "",

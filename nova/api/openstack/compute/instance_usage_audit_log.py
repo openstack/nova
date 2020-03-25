@@ -35,14 +35,14 @@ class InstanceUsageAuditLogController(wsgi.Controller):
     @wsgi.expected_errors(())
     def index(self, req):
         context = req.environ['nova.context']
-        context.can(iual_policies.BASE_POLICY_NAME)
+        context.can(iual_policies.BASE_POLICY_NAME % 'list')
         task_log = self._get_audit_task_logs(context)
         return {'instance_usage_audit_logs': task_log}
 
     @wsgi.expected_errors(400)
     def show(self, req, id):
         context = req.environ['nova.context']
-        context.can(iual_policies.BASE_POLICY_NAME)
+        context.can(iual_policies.BASE_POLICY_NAME % 'show')
         try:
             if '.' in id:
                 before_date = datetime.datetime.strptime(str(id),
