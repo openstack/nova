@@ -19,7 +19,6 @@ from oslo_utils import fixture as utils_fixture
 
 from nova.api.openstack.compute import instance_usage_audit_log as v21_ial
 from nova import context
-from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.objects import test_service
@@ -183,31 +182,3 @@ class InstanceUsageAuditLogTestV21(test.NoDBTestCase):
         self.assertEqual(0, logs['num_hosts_not_run'])
         self.assertEqual("ALL hosts done. 3 errors.",
                          logs['overall_status'])
-
-
-class InstanceUsageAuditPolicyEnforcementV21(test.NoDBTestCase):
-
-    def setUp(self):
-        super(InstanceUsageAuditPolicyEnforcementV21, self).setUp()
-        self.controller = v21_ial.InstanceUsageAuditLogController()
-        self.req = fakes.HTTPRequest.blank('')
-
-    def test_index_policy_failed(self):
-        rule_name = "os_compute_api:os-instance-usage-audit-log"
-        self.policy.set_rules({rule_name: "project_id:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.index, self.req)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-    def test_show_policy_failed(self):
-        rule_name = "os_compute_api:os-instance-usage-audit-log"
-        self.policy.set_rules({rule_name: "project_id:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.show, self.req, '2012-07-05 10:00:00')
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
