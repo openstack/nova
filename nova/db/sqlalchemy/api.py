@@ -484,7 +484,7 @@ def service_get_all_computes_by_hv_type(context, hv_type,
     query = query.join(models.ComputeNode,
                        models.Service.host == models.ComputeNode.host).\
                   filter(models.ComputeNode.hypervisor_type == hv_type).\
-                  distinct('host')
+                  distinct()
     return query.all()
 
 
