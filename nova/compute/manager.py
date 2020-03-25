@@ -4221,6 +4221,10 @@ class ComputeManager(manager.Manager):
                     # allocations in placement, delete them here.
                     self._delete_allocation_after_move(
                         context, instance, migration)
+                    # Also as the instance is not any more on this host, update
+                    # the scheduler about the move
+                    self._delete_scheduler_instance_info(
+                        context, instance.uuid)
 
         do_confirm_resize(context, instance, migration.id)
 
