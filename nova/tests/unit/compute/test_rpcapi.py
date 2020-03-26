@@ -693,12 +693,55 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 reboot_type='type')
 
     def test_rebuild_instance(self):
-        self._test_compute_api('rebuild_instance', 'cast', new_pass='None',
-                injected_files='None', image_ref='None', orig_image_ref='None',
-                bdms=[], instance=self.fake_instance_obj, host='new_host',
-                orig_sys_metadata=None, recreate=True, on_shared_storage=True,
-                preserve_ephemeral=True, migration=None, node=None,
-                limits=None, request_spec=None, version='5.0')
+        # With rpcapi 5.12, when a list of accel_uuids is passed as a param,
+        # that list must be passed to the client. That is tested in
+        # _test_compute_api with rpc_mock.assert, where expected_kwargs
+        # must have the accel_uuids.
+        self._test_compute_api(
+            'rebuild_instance', 'cast', new_pass='None',
+            injected_files='None', image_ref='None', orig_image_ref='None',
+            bdms=[], instance=self.fake_instance_obj, host='new_host',
+            orig_sys_metadata=None, recreate=True, on_shared_storage=True,
+            preserve_ephemeral=True, migration=None, node=None,
+            limits=None, request_spec=None, accel_uuids=[], version='5.12')
+
+    def test_rebuild_instance_old_rpcapi(self):
+        # With rpcapi < 5.12, accel_uuids must be dropped in the client call.
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        compute_api = compute_rpcapi.ComputeAPI()
+        compute_api.router.client = mock.Mock()
+        mock_client = mock.MagicMock()
+        compute_api.router.client.return_value = mock_client
+        # Force can_send_version to False, so that 5.0 version is used.
+        mock_client.can_send_version.return_value = False
+        mock_cctx = mock.MagicMock()
+        mock_client.prepare.return_value = mock_cctx
+        rebuild_args = {
+            'new_pass': 'admin_password',
+            'injected_files': 'files_to_inject',
+            'image_ref': uuids.image_ref,
+            'orig_image_ref': uuids.orig_image_ref,
+            'orig_sys_metadata': 'orig_sys_meta',
+            'bdms': {},
+            'recreate': False,
+            'on_shared_storage': False,
+            'preserve_ephemeral': False,
+            'request_spec': None,
+            'migration': None,
+            'limits': None
+        }
+        compute_api.rebuild_instance(
+            ctxt, instance=self.fake_instance_obj,
+            accel_uuids=['938af7f9-f136-4e5a-bdbe-3b6feab54311'],
+            node=None, host=None, **rebuild_args)
+
+        mock_client.can_send_version.assert_called_once_with('5.12')
+        mock_client.prepare.assert_called_with(
+                server=self.fake_instance_obj.host, version='5.0')
+        mock_cctx.cast.assert_called_with(  # No accel_uuids
+                ctxt, 'rebuild_instance',
+                instance=self.fake_instance_obj,
+                scheduled_node=None, **rebuild_args)
 
     def test_reserve_block_device_name(self):
         self.flags(long_rpc_timeout=1234)

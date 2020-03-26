@@ -1147,14 +1147,21 @@ class ComputeTaskManager(base.Base):
                     # is not forced to be the original host
                     request_spec.reset_forced_destinations()
 
-                    port_res_req = (
+                    external_resources = []
+                    external_resources += (
                         self.network_api.get_requested_resource_for_instance(
                             context, instance.uuid))
-                    # NOTE(gibi): When cyborg or other module wants to handle
-                    # similar non-nova resources then here we have to collect
-                    # all the external resource requests in a single list and
+                    extra_specs = request_spec.flavor.extra_specs
+                    device_profile = extra_specs.get('accel:device_profile')
+                    external_resources.extend(
+                        cyborg.get_device_profile_request_groups(
+                            context, device_profile)
+                        if device_profile else [])
+                    # NOTE(gibi): When other modules want to handle similar
+                    # non-nova resources then here we have to collect all
+                    # the external resource requests in a single list and
                     # add them to the RequestSpec.
-                    request_spec.requested_resources = port_res_req
+                    request_spec.requested_resources = external_resources
 
                 try:
                     # if this is a rebuild of instance on the same host with
@@ -1219,21 +1226,49 @@ class ComputeTaskManager(base.Base):
             instance.availability_zone = (
                 availability_zones.get_host_availability_zone(
                     context, host))
+            try:
+                accel_uuids = self._rebuild_cyborg_arq(
+                    context, instance, host, request_spec, evacuate)
+            except exception.AcceleratorRequestBindingFailed as exc:
+                cyclient = cyborg.get_client(context)
+                cyclient.delete_arqs_by_uuid(exc.arqs)
+                LOG.exception('Failed to rebuild. Reason: %s', exc)
+                raise exc
 
-            self.compute_rpcapi.rebuild_instance(context,
-                    instance=instance,
-                    new_pass=new_pass,
-                    injected_files=injected_files,
-                    image_ref=image_ref,
-                    orig_image_ref=orig_image_ref,
-                    orig_sys_metadata=orig_sys_metadata,
-                    bdms=bdms,
-                    recreate=evacuate,
-                    on_shared_storage=on_shared_storage,
-                    preserve_ephemeral=preserve_ephemeral,
-                    migration=migration,
-                    host=host, node=node, limits=limits,
-                    request_spec=request_spec)
+            self.compute_rpcapi.rebuild_instance(
+                context,
+                instance=instance,
+                new_pass=new_pass,
+                injected_files=injected_files,
+                image_ref=image_ref,
+                orig_image_ref=orig_image_ref,
+                orig_sys_metadata=orig_sys_metadata,
+                bdms=bdms,
+                recreate=evacuate,
+                on_shared_storage=on_shared_storage,
+                preserve_ephemeral=preserve_ephemeral,
+                migration=migration,
+                host=host,
+                node=node,
+                limits=limits,
+                request_spec=request_spec,
+                accel_uuids=accel_uuids)
+
+    def _rebuild_cyborg_arq(
+            self, context, instance, host, request_spec, evacuate):
+        dp_name = instance.flavor.extra_specs.get('accel:device_profile')
+        if not dp_name:
+            return []
+
+        cyclient = cyborg.get_client(context)
+        if not evacuate:
+            return cyclient.get_arq_uuids_for_instance(instance)
+
+        cyclient.delete_arqs_for_instance(instance.uuid)
+        resource_provider_mapping = request_spec.get_request_group_mapping()
+        return self._create_and_bind_arqs(
+            context, instance.uuid, instance.flavor.extra_specs,
+            host, resource_provider_mapping)
 
     def _validate_image_traits_for_rebuild(self, context, instance, image_ref):
         """Validates that the traits specified in the image can be satisfied

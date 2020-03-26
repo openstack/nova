@@ -302,3 +302,12 @@ class _CyborgClient(object):
         if err_msg:
             # No point raising an exception.
             LOG.error('Failed to delete ARQs %s', arq_uuid_str)
+
+    def get_arq_uuids_for_instance(self, instance):
+        """Get ARQ UUIDs for the instance.
+
+        :param instance: Instance Object
+        :return: ARQ UUIDs.
+        """
+        return [arq['uuid']
+                for arq in self.get_arqs_for_instance(instance.uuid)]

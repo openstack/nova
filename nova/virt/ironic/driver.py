@@ -1670,7 +1670,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                 admin_password, allocations, bdms, detach_block_devices,
                 attach_block_devices, network_info=None,
                 evacuate=False, block_device_info=None,
-                preserve_ephemeral=False):
+                preserve_ephemeral=False, accel_uuids=None):
         """Rebuild/redeploy an instance.
 
         This version of rebuild() allows for supporting the option to
@@ -1710,7 +1710,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             information. Ignored by this driver.
         :param preserve_ephemeral: Boolean value; if True the ephemeral
             must be preserved on rebuild.
-
+        :param accel_uuids: Accelerator UUIDs. Ignored by this driver.
         """
         LOG.debug('Rebuild called for instance', instance=instance)
 

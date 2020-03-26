@@ -2743,16 +2743,12 @@ class ComputeTestCase(BaseTestCase,
                                             block_device_mapping=[])
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.REBUILDING})
-        self.compute.rebuild_instance(self.context, instance,
-                                      image_ref, image_ref,
-                                      injected_files=[],
-                                      new_pass="new_password",
-                                      orig_sys_metadata=sys_metadata,
-                                      bdms=[], recreate=False,
-                                      on_shared_storage=False,
-                                      preserve_ephemeral=False,
-                                      migration=None, scheduled_node=None,
-                                      limits={}, request_spec=None)
+        self.compute.rebuild_instance(
+            self.context, instance, image_ref, image_ref, injected_files=[],
+            new_pass="new_password", orig_sys_metadata=sys_metadata,
+            bdms=[], recreate=False, on_shared_storage=False,
+            preserve_ephemeral=False, migration=None, scheduled_node=None,
+            limits={}, request_spec=None, accel_uuids=[])
         self.compute.terminate_instance(self.context, instance, [])
 
     def test_rebuild_driver(self):
@@ -2777,16 +2773,12 @@ class ComputeTestCase(BaseTestCase,
                                             block_device_mapping=[])
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.REBUILDING})
-        self.compute.rebuild_instance(self.context, instance,
-                                      image_ref, image_ref,
-                                      injected_files=[],
-                                      new_pass="new_password",
-                                      orig_sys_metadata=sys_metadata,
-                                      bdms=[], recreate=False,
-                                      on_shared_storage=False,
-                                      preserve_ephemeral=False, migration=None,
-                                      scheduled_node=None, limits={},
-                                      request_spec=None)
+        self.compute.rebuild_instance(
+            self.context, instance, image_ref, image_ref, injected_files=[],
+            new_pass="new_password", orig_sys_metadata=sys_metadata,
+            bdms=[], recreate=False, on_shared_storage=False,
+            preserve_ephemeral=False, migration=None, scheduled_node=None,
+            limits={}, request_spec=None, accel_uuids=[])
         self.assertTrue(called['rebuild'])
         self.compute.terminate_instance(self.context, instance, [])
 
@@ -2833,16 +2825,12 @@ class ComputeTestCase(BaseTestCase,
                                             block_device_mapping=[])
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.REBUILDING})
-        self.compute.rebuild_instance(self.context, instance,
-                                      image_ref, image_ref,
-                                      injected_files=[],
-                                      new_pass="new_password",
-                                      orig_sys_metadata=sys_metadata,
-                                      bdms=bdms, recreate=False,
-                                      preserve_ephemeral=False, migration=None,
-                                      scheduled_node=None, limits={},
-                                      on_shared_storage=False,
-                                      request_spec=None)
+        self.compute.rebuild_instance(
+            self.context, instance, image_ref, image_ref, injected_files=[],
+            new_pass="new_password", orig_sys_metadata=sys_metadata,
+            bdms=bdms, recreate=False, preserve_ephemeral=False,
+            migration=None, scheduled_node=None, limits={},
+            on_shared_storage=False, request_spec=None, accel_uuids=[])
         self.assertTrue(called['rebuild'])
         self.compute.terminate_instance(self.context, instance, [])
 
@@ -2856,14 +2844,12 @@ class ComputeTestCase(BaseTestCase,
                                             block_device_mapping=[])
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.REBUILDING})
-        self.compute.rebuild_instance(self.context, instance,
-                                      '', '', injected_files=[],
-                                      new_pass="new_password",
-                                      orig_sys_metadata=sys_metadata, bdms=[],
-                                      recreate=False, on_shared_storage=False,
-                                      preserve_ephemeral=False, migration=None,
-                                      scheduled_node=None, limits=None,
-                                      request_spec=None)
+        self.compute.rebuild_instance(
+            self.context, instance, '', '', injected_files=[],
+            new_pass="new_password", orig_sys_metadata=sys_metadata, bdms=[],
+            recreate=False, on_shared_storage=False, preserve_ephemeral=False,
+            migration=None, scheduled_node=None, limits=None,
+            request_spec=None, accel_uuids=[])
         self.compute.terminate_instance(self.context, instance, [])
 
     def test_rebuild_launched_at_time(self):
@@ -2879,16 +2865,12 @@ class ComputeTestCase(BaseTestCase,
         time_fixture.advance_time_delta(cur_time - old_time)
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.REBUILDING})
-        self.compute.rebuild_instance(self.context, instance,
-                                      image_ref, image_ref,
-                                      injected_files=[],
-                                      new_pass="new_password",
-                                      orig_sys_metadata={},
-                                      bdms=[], recreate=False,
-                                      on_shared_storage=False,
-                                      preserve_ephemeral=False, migration=None,
-                                      scheduled_node=None, limits={},
-                                      request_spec=None)
+        self.compute.rebuild_instance(
+            self.context, instance, image_ref, image_ref, injected_files=[],
+            new_pass="new_password", orig_sys_metadata={}, bdms=[],
+            recreate=False, on_shared_storage=False, preserve_ephemeral=False,
+            migration=None, scheduled_node=None, limits={}, request_spec=None,
+            accel_uuids=[])
         instance.refresh()
         self.assertEqual(cur_time,
                          instance['launched_at'].replace(tzinfo=None))
@@ -2916,16 +2898,12 @@ class ComputeTestCase(BaseTestCase,
                         instance['uuid'])
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.REBUILDING})
-        self.compute.rebuild_instance(self.context, instance,
-                                      image_ref, image_ref,
-                                      injected_files=injected_files,
-                                      new_pass="new_password",
-                                      orig_sys_metadata=sys_metadata,
-                                      bdms=[], recreate=False,
-                                      on_shared_storage=False,
-                                      preserve_ephemeral=False,
-                                      migration=None, scheduled_node=None,
-                                      limits={}, request_spec=None)
+        self.compute.rebuild_instance(
+            self.context, instance, image_ref, image_ref,
+            injected_files=injected_files, new_pass="new_password",
+            orig_sys_metadata=sys_metadata, bdms=[], recreate=False,
+            on_shared_storage=False, preserve_ephemeral=False, migration=None,
+            scheduled_node=None, limits={}, request_spec=None, accel_uuids=[])
         self.compute.terminate_instance(self.context, instance, [])
 
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
@@ -4654,7 +4632,8 @@ class ComputeTestCase(BaseTestCase,
                                   'scheduled_node': None,
                                   'limits': {},
                                   'request_spec': None,
-                                  'on_shared_storage': False}),
+                                  'on_shared_storage': False,
+                                  'accel_uuids': ()}),
             ("set_admin_password", task_states.UPDATING_PASSWORD,
                                    {'new_pass': None}),
             ("rescue_instance", task_states.RESCUING,
@@ -5166,17 +5145,12 @@ class ComputeTestCase(BaseTestCase,
 
         inst_ref.task_state = task_states.REBUILDING
         inst_ref.save()
-        self.compute.rebuild_instance(self.context,
-                                      inst_ref,
-                                      image_ref, new_image_ref,
-                                      injected_files=[],
-                                      new_pass=password,
-                                      orig_sys_metadata=orig_sys_metadata,
-                                      bdms=[], recreate=False,
-                                      on_shared_storage=False,
-                                      preserve_ephemeral=False, migration=None,
-                                      scheduled_node=None, limits={},
-                                      request_spec=None)
+        self.compute.rebuild_instance(
+            self.context, inst_ref, image_ref, new_image_ref,
+            injected_files=[], new_pass=password,
+            orig_sys_metadata=orig_sys_metadata, bdms=[], recreate=False,
+            on_shared_storage=False, preserve_ephemeral=False, migration=None,
+            scheduled_node=None, limits={}, request_spec=None, accel_uuids=[])
 
         inst_ref.refresh()
 
@@ -12818,7 +12792,7 @@ class EvacuateHostTestCase(BaseTestCase):
                 image_ref, injected_files, 'newpass', {}, bdms, recreate=True,
                 on_shared_storage=on_shared_storage, migration=migration,
                 preserve_ephemeral=False, scheduled_node=node, limits=limits,
-                request_spec=None)
+                request_spec=None, accel_uuids=[])
             if vm_states_is_stopped:
                 mock_notify_rebuild.assert_has_calls([
                     mock.call(ctxt, self.inst, self.inst.host, phase='start',
@@ -13007,7 +12981,7 @@ class EvacuateHostTestCase(BaseTestCase):
             test.MatchType(objects.ImageMeta),
             mock.ANY, 'newpass', mock.ANY,
             network_info=mock.ANY,
-            block_device_info=mock.ANY)
+            block_device_info=mock.ANY, accel_info=mock.ANY)
 
     @mock.patch.object(fake.FakeDriver, 'spawn')
     def test_rebuild_on_host_without_shared_storage(self, mock_spawn):
@@ -13025,7 +12999,7 @@ class EvacuateHostTestCase(BaseTestCase):
             test.MatchType(objects.ImageMeta),
             mock.ANY, 'newpass', mock.ANY,
             network_info=mock.ANY,
-            block_device_info=mock.ANY)
+            block_device_info=mock.ANY, accel_info=mock.ANY)
 
     def test_rebuild_on_host_instance_exists(self):
         """Rebuild if instance exists raises an exception."""
@@ -13069,7 +13043,7 @@ class EvacuateHostTestCase(BaseTestCase):
             test.MatchObjPrims(self.inst.image_meta),
             mock.ANY, 'newpass', mock.ANY,
             network_info=mock.ANY,
-            block_device_info=mock.ANY)
+            block_device_info=mock.ANY, accel_info=mock.ANY)
 
     @mock.patch.object(fake.FakeDriver, 'spawn')
     def test_on_shared_storage_not_provided_host_with_shared_storage(self,
@@ -13085,7 +13059,7 @@ class EvacuateHostTestCase(BaseTestCase):
             test.MatchType(objects.ImageMeta),
             mock.ANY, 'newpass', mock.ANY,
             network_info=mock.ANY,
-            block_device_info=mock.ANY)
+            block_device_info=mock.ANY, accel_info=mock.ANY)
 
     def test_rebuild_migration_passed_in(self):
         migration = mock.Mock(spec=objects.Migration)
@@ -13128,7 +13102,7 @@ class EvacuateHostTestCase(BaseTestCase):
             'nova.scheduler.client.report.SchedulerReportClient.'
             'remove_provider_tree_from_instance_allocation')
         with patch_spawn, patch_on_disk, patch_claim, patch_remove_allocs:
-            self.assertRaises(exception.BuildAbortException,
+            self.assertRaises(messaging.ExpectedException,
                               self._rebuild, migration=migration,
                               send_node=True)
         self.assertEqual("failed", migration.status)
@@ -13162,7 +13136,7 @@ class EvacuateHostTestCase(BaseTestCase):
         # NOTE(ndipanov): Make sure that we pass the topology from the context
         def fake_spawn(context, instance, image_meta, injected_files,
                        admin_password, allocations, network_info=None,
-                       block_device_info=None):
+                       block_device_info=None, accel_info=None):
             self.assertIsNone(instance.numa_topology)
 
         self.inst.numa_topology = numa_topology

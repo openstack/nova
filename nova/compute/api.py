@@ -109,6 +109,8 @@ MIN_COMPUTE_SAME_HOST_COLD_MIGRATE = 48
 # TODO(huaqiang): Remove in Wallaby
 MIN_VER_NOVA_COMPUTE_MIXED_POLICY = 52
 
+SUPPORT_ACCELERATOR_SERVICE_FOR_REBUILD = 53
+
 # FIXME(danms): Keep a global cache of the cells we find the
 # first time we look. This needs to be refreshed on a timer or
 # trigger.
@@ -307,14 +309,27 @@ def _get_image_meta_obj(image_meta_dict):
     return image_meta
 
 
-def block_accelerators(func):
-    @functools.wraps(func)
-    def wrapper(self, context, instance, *args, **kwargs):
-        dp_name = instance.flavor.extra_specs.get('accel:device_profile')
-        if dp_name:
-            raise exception.ForbiddenWithAccelerators()
-        return func(self, context, instance, *args, **kwargs)
-    return wrapper
+def block_accelerators(until_service=None):
+    def inner(func):
+        @functools.wraps(func)
+        def wrapper(self, context, instance, *args, **kwargs):
+            # NOTE(brinzhang): Catch a request operating a mixed instance,
+            # make sure all nova-compute services have been upgraded and
+            # support the accelerators.
+            dp_name = instance.flavor.extra_specs.get('accel:device_profile')
+            service_support = False
+            if not dp_name:
+                service_support = True
+            elif until_service:
+                min_version = objects.service.get_minimum_version_all_cells(
+                    nova_context.get_admin_context(), ['nova-compute'])
+                if min_version >= until_service:
+                    service_support = True
+            if not service_support:
+                raise exception.ForbiddenWithAccelerators()
+            return func(self, context, instance, *args, **kwargs)
+        return wrapper
+    return inner
 
 
 @profiler.trace_cls("compute_api")
@@ -3393,7 +3408,7 @@ class API(base.Base):
                 fields_obj.Architecture.canonicalize(img_arch)
 
     @reject_vtpm_instances(instance_actions.REBUILD)
-    @block_accelerators
+    @block_accelerators(until_service=SUPPORT_ACCELERATOR_SERVICE_FOR_REBUILD)
     # TODO(stephenfin): We should expand kwargs out to named args
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
@@ -3930,7 +3945,7 @@ class API(base.Base):
     # finally split resize and cold migration into separate code paths
     # TODO(stephenfin): The 'block_accelerators' decorator doesn't take into
     # account the accelerators requested in the new flavor
-    @block_accelerators
+    @block_accelerators()
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
     @check_instance_host(check_is_up=True)
@@ -4159,7 +4174,7 @@ class API(base.Base):
         return allow_same_host
 
     @reject_vtpm_instances(instance_actions.SHELVE)
-    @block_accelerators
+    @block_accelerators()
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.PAUSED, vm_states.SUSPENDED])
@@ -4324,7 +4339,7 @@ class API(base.Base):
         return self.compute_rpcapi.get_instance_diagnostics(context,
                                                             instance=instance)
 
-    @block_accelerators
+    @block_accelerators()
     @reject_sev_instances(instance_actions.SUSPEND)
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE])
@@ -5028,7 +5043,7 @@ class API(base.Base):
                                                      diff=diff)
         return _metadata
 
-    @block_accelerators
+    @block_accelerators()
     @reject_vtpm_instances(instance_actions.LIVE_MIGRATION)
     @reject_sev_instances(instance_actions.LIVE_MIGRATION)
     @check_instance_lock
@@ -5160,7 +5175,7 @@ class API(base.Base):
                 instance, migration.id)
 
     @reject_vtpm_instances(instance_actions.EVACUATE)
-    @block_accelerators
+    @block_accelerators(until_service=SUPPORT_ACCELERATOR_SERVICE_FOR_REBUILD)
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.ERROR])
     def evacuate(self, context, instance, host, on_shared_storage,

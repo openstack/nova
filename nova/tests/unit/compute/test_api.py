@@ -2122,7 +2122,7 @@ class _ComputeAPIUnitTestMixIn(object):
         fake_inst = self._create_instance_obj()
         fake_inst.flavor = cur_flavor
         new_flavor = objects.Flavor(id=2, name='bar', vcpus=1, memory_mb=2048,
-                                    root_gb=10, disabled=False)
+                                    root_gb=10, disabled=False, extra_specs={})
         mock_get.return_value = new_flavor
         mock_check.side_effect = exception.OverQuota(
                 overs=['ram'], quotas={'cores': 1, 'ram': 2048},
@@ -7569,8 +7569,9 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         mock_get_min_ver.assert_called_once_with(
             self.context, ['nova-compute'])
 
-    def _test_block_accelerators(self, instance, args_info):
-        @compute_api.block_accelerators
+    def _test_block_accelerators(self, instance, args_info,
+                                 until_service=None):
+        @compute_api.block_accelerators(until_service=until_service)
         def myfunc(self, context, instance, *args, **kwargs):
             args_info['args'] = (context, instance, *args)
             args_info['kwargs'] = dict(**kwargs)
@@ -7601,6 +7602,37 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         self.assertRaisesRegex(exception.ForbiddenWithAccelerators,
             'Forbidden with instances that have accelerators.',
             self._test_block_accelerators, instance, args_info)
+        # myfunc was not called
+        self.assertEqual({}, args_info)
+
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=54)
+    def test_block_accelerators_until_service(self, mock_get_min):
+        """Support operating server with acclerators until compute service
+        more than the version of 53.
+        """
+        extra_specs = {'accel:device_profile': 'mydp'}
+        flavor = self._create_flavor(extra_specs=extra_specs)
+        instance = self._create_instance_obj(flavor=flavor)
+        args_info = {}
+        expected_args, kwargs = self._test_block_accelerators(
+                                    instance, args_info, until_service=53)
+        self.assertEqual(expected_args, args_info['args'])
+        self.assertEqual(kwargs, args_info['kwargs'])
+
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=52)
+    def test_block_accelerators_until_service_forbidden(self, mock_get_min):
+        """Ensure a 'ForbiddenWithAccelerators' exception raises if any
+        compute service less than the version of 53.
+        """
+        extra_specs = {'accel:device_profile': 'mydp'}
+        flavor = self._create_flavor(extra_specs=extra_specs)
+        instance = self._create_instance_obj(flavor=flavor)
+        args_info = {}
+        self.assertRaisesRegex(exception.ForbiddenWithAccelerators,
+            'Forbidden with instances that have accelerators.',
+            self._test_block_accelerators, instance, args_info, 53)
         # myfunc was not called
         self.assertEqual({}, args_info)
 

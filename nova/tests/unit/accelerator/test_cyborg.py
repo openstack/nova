@@ -23,6 +23,7 @@ from oslo_serialization import jsonutils
 from nova.accelerator import cyborg
 from nova import context
 from nova import exception
+from nova import objects
 from nova.objects import request_spec
 from nova import test
 from nova.tests.unit import fake_requests
@@ -394,3 +395,25 @@ class CyborgTestCase(test.NoDBTestCase):
             self.client.ARQ_URL, params={'arqs': arq_uuid_str})
         mock_log.assert_called_once_with('Failed to delete ARQs %s',
                                          arq_uuid_str)
+
+    @mock.patch('keystoneauth1.adapter.Adapter.get')
+    def test_get_arq_uuids_for_instance(self, mock_cyborg_get):
+        # Happy path, without only_resolved=True
+        _, bound_arqs = self._get_bound_arqs()
+        instance_uuid = bound_arqs[0]['instance_uuid']
+        flavor = objects.Flavor(extra_specs={'accel:device_profile': 'dp1'})
+        instance = objects.Instance(flavor=flavor,
+                                    uuid=instance_uuid)
+        query = {"instance": instance_uuid}
+        content = jsonutils.dumps({'arqs': bound_arqs})
+        resp = fake_requests.FakeResponse(200, content)
+        mock_cyborg_get.return_value = resp
+
+        ret_arqs = self.client.get_arq_uuids_for_instance(instance)
+
+        mock_cyborg_get.assert_called_once_with(
+            self.client.ARQ_URL, params=query)
+        bound_arqs = [bound_arq['uuid'] for bound_arq in bound_arqs]
+        bound_arqs.sort()
+        ret_arqs.sort()
+        self.assertEqual(bound_arqs, ret_arqs)

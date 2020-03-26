@@ -530,7 +530,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='5.11')
+    target = messaging.Target(version='5.12')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -3256,18 +3256,29 @@ class ComputeManager(manager.Manager):
             migration.status = status
             migration.save()
 
-    def _rebuild_default_impl(self, context, instance, image_meta,
-                              injected_files, admin_password, allocations,
-                              bdms, detach_block_devices, attach_block_devices,
-                              network_info=None,
-                              evacuate=False, block_device_info=None,
-                              preserve_ephemeral=False):
+    def _rebuild_default_impl(
+            self, context, instance, image_meta, injected_files,
+            admin_password, allocations, bdms, detach_block_devices,
+            attach_block_devices, network_info=None, evacuate=False,
+            block_device_info=None, preserve_ephemeral=False,
+            accel_uuids=None):
         if preserve_ephemeral:
             # The default code path does not support preserving ephemeral
             # partitions.
             raise exception.PreserveEphemeralNotSupported()
 
+        accel_info = []
         if evacuate:
+            if instance.flavor.extra_specs.get('accel:device_profile'):
+                try:
+                    accel_info = self._get_bound_arq_resources(
+                        context, instance, accel_uuids or [])
+                except (Exception, eventlet.timeout.Timeout) as exc:
+                    LOG.exception(exc)
+                    self._build_resources_cleanup(instance, network_info)
+                    msg = _('Failure getting accelerator resources.')
+                    raise exception.BuildAbortException(
+                        instance_uuid=instance.uuid, reason=msg)
             detach_block_devices(context, bdms)
         else:
             self._power_off_instance(instance, clean_shutdown=True)
@@ -3275,6 +3286,14 @@ class ComputeManager(manager.Manager):
             self.driver.destroy(context, instance,
                                 network_info=network_info,
                                 block_device_info=block_device_info)
+            try:
+                accel_info = self._get_accel_info(context, instance)
+            except Exception as exc:
+                LOG.exception(exc)
+                self._build_resources_cleanup(instance, network_info)
+                msg = _('Failure getting accelerator resources.')
+                raise exception.BuildAbortException(
+                    instance_uuid=instance.uuid, reason=msg)
 
         instance.task_state = task_states.REBUILD_BLOCK_DEVICE_MAPPING
         instance.save(expected_task_state=[task_states.REBUILDING])
@@ -3289,7 +3308,8 @@ class ComputeManager(manager.Manager):
             self.driver.spawn(context, instance, image_meta, injected_files,
                               admin_password, allocations,
                               network_info=network_info,
-                              block_device_info=new_block_device_info)
+                              block_device_info=new_block_device_info,
+                              accel_info=accel_info)
 
     def _notify_instance_rebuild_error(self, context, instance, error, bdms):
         self._notify_about_instance_usage(context, instance,
@@ -3298,7 +3318,8 @@ class ComputeManager(manager.Manager):
             context, instance, self.host,
             phase=fields.NotificationPhase.ERROR, exception=error, bdms=bdms)
 
-    @messaging.expected_exceptions(exception.PreserveEphemeralNotSupported)
+    @messaging.expected_exceptions(exception.PreserveEphemeralNotSupported,
+                                   exception.BuildAbortException)
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event(prefix='compute')
@@ -3307,7 +3328,7 @@ class ComputeManager(manager.Manager):
                          injected_files, new_pass, orig_sys_metadata,
                          bdms, recreate, on_shared_storage,
                          preserve_ephemeral, migration,
-                         scheduled_node, limits, request_spec):
+                         scheduled_node, limits, request_spec, accel_uuids):
         """Destroy and re-make this instance.
 
         A 'rebuild' effectively purges all existing data from the system and
@@ -3338,6 +3359,7 @@ class ComputeManager(manager.Manager):
         :param limits: Overcommit limits set by the scheduler. If a host was
                        specified by the user, this will be None
         :param request_spec: a RequestSpec object used to schedule the instance
+        :param accel_uuids: a list of cyborg ARQ uuids.
 
         """
         # recreate=True means the instance is being evacuated from a failed
@@ -3402,7 +3424,7 @@ class ComputeManager(manager.Manager):
                     image_meta, injected_files, new_pass, orig_sys_metadata,
                     bdms, evacuate, on_shared_storage, preserve_ephemeral,
                     migration, request_spec, allocs, rebuild_claim,
-                    scheduled_node, limits)
+                    scheduled_node, limits, accel_uuids)
             except (exception.ComputeResourcesUnavailable,
                     exception.RescheduledException) as e:
                 if isinstance(e, exception.ComputeResourcesUnavailable):
@@ -3469,7 +3491,7 @@ class ComputeManager(manager.Manager):
             self, context, instance, orig_image_ref, image_meta,
             injected_files, new_pass, orig_sys_metadata, bdms, evacuate,
             on_shared_storage, preserve_ephemeral, migration, request_spec,
-            allocations, rebuild_claim, scheduled_node, limits):
+            allocations, rebuild_claim, scheduled_node, limits, accel_uuids):
         """Helper to avoid deep nesting in the top-level method."""
 
         provider_mapping = None
@@ -3490,7 +3512,7 @@ class ComputeManager(manager.Manager):
                 context, instance, orig_image_ref, image_meta, injected_files,
                 new_pass, orig_sys_metadata, bdms, evacuate, on_shared_storage,
                 preserve_ephemeral, migration, request_spec, allocations,
-                provider_mapping)
+                provider_mapping, accel_uuids)
 
     @staticmethod
     def _get_image_name(image_meta):
@@ -3499,12 +3521,12 @@ class ComputeManager(manager.Manager):
         else:
             return ''
 
-    def _do_rebuild_instance(self, context, instance, orig_image_ref,
-                             image_meta, injected_files, new_pass,
-                             orig_sys_metadata, bdms, evacuate,
-                             on_shared_storage, preserve_ephemeral,
-                             migration, request_spec, allocations,
-                             request_group_resource_providers_mapping):
+    def _do_rebuild_instance(
+            self, context, instance, orig_image_ref, image_meta,
+            injected_files, new_pass, orig_sys_metadata, bdms, evacuate,
+            on_shared_storage, preserve_ephemeral, migration, request_spec,
+            allocations, request_group_resource_providers_mapping,
+            accel_uuids):
         orig_vm_state = instance.vm_state
 
         if evacuate:
@@ -3645,7 +3667,8 @@ class ComputeManager(manager.Manager):
             block_device_info=block_device_info,
             network_info=network_info,
             preserve_ephemeral=preserve_ephemeral,
-            evacuate=evacuate)
+            evacuate=evacuate,
+            accel_uuids=accel_uuids)
         try:
             with instance.mutated_migration_context():
                 self.driver.rebuild(**kwargs)
