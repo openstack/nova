@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    The 2.86 microversion adds support for flavor extra spec validation when
+    creating or updating flavor extra specs. Use of an unrecognized or invalid
+    flavor extra spec will result in a HTTP 400 response.

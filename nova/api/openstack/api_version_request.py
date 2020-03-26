@@ -231,6 +231,9 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              ``PUT /servers/{server_id}/os-volume_attachments/{volume_id}``
              which supports specifying the ``delete_on_termination`` field in
              the request body to change the attached volume's flag.
+    * 2.86 - Add support for validation of known extra specs to the
+             ``POST /flavors/{flavor_id}/os-extra_specs`` and
+             ``PUT /flavors/{flavor_id}/os-extra_specs/{id}`` APIs.
 """
 
 # The minimum and maximum versions of the API supported
@@ -238,8 +241,8 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # minimum version of the API supported.
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
-_MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.85"
+_MIN_API_VERSION = '2.1'
+_MAX_API_VERSION = '2.86'
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which are related to network, images and baremetal

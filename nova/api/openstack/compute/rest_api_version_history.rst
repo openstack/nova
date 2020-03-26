@@ -1120,3 +1120,17 @@ server with status ``ERROR``.
 Adds the ability to specify ``delete_on_termination`` in the
 ``PUT /servers/{server_id}/os-volume_attachments/{volume_id}`` API, which
 allows changing the behavior of volume deletion on instance deletion.
+
+2.86
+----
+
+Add support for validation of known extra specs. This is enabled by default
+for the following APIs:
+
+* ``POST /flavors/{flavor_id}/os-extra_specs``
+* ``PUT /flavors/{flavor_id}/os-extra_specs/{id}``
+
+Validation is only used for recognized extra spec namespaces, namely:
+``accel``, ``aggregate_instance_extra_specs``, ``capabilities``, ``hw``,
+``hw_rng``, ``hw_video``, ``os``, ``pci_passthrough``, ``powervm``, ``quota``,
+``resources``, ``trait``, and ``vmware``.
