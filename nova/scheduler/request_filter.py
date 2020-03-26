@@ -194,6 +194,47 @@ def require_image_type_support(ctxt, request_spec):
 
 
 @trace_request_filter
+def transform_image_metadata(ctxt, request_spec):
+    """Transform image metadata to required traits.
+
+    This will modify the request_spec to request hosts that support
+    virtualisation capabilities based on the image metadata properties.
+    """
+    if not CONF.scheduler.image_metadata_prefilter:
+        return False
+
+    prefix_map = {
+        'hw_cdrom_bus': 'COMPUTE_STORAGE_BUS',
+        'hw_disk_bus': 'COMPUTE_STORAGE_BUS',
+        'hw_video_model': 'COMPUTE_GRAPHICS_MODEL',
+        'hw_vif_model': 'COMPUTE_NET_VIF_MODEL',
+    }
+
+    trait_names = []
+
+    for key, prefix in prefix_map.items():
+        if key in request_spec.image.properties:
+            value = request_spec.image.properties.get(key).replace(
+                '-', '_').upper()
+            trait_name = f'{prefix}_{value}'
+            if not hasattr(os_traits, trait_name):
+                LOG.error(('Computed trait name %r is not valid; '
+                           'is os-traits up to date?'), trait_name)
+                return False
+
+            trait_names.append(trait_name)
+
+    for trait_name in trait_names:
+        LOG.debug(
+            'transform_image_metadata request filter added required '
+            'trait %s', trait_name
+        )
+        request_spec.root_required.add(trait_name)
+
+    return True
+
+
+@trace_request_filter
 def compute_status_filter(ctxt, request_spec):
     """Pre-filter compute node resource providers using COMPUTE_STATUS_DISABLED
 
@@ -215,6 +256,7 @@ ALL_REQUEST_FILTERS = [
     require_image_type_support,
     compute_status_filter,
     isolate_aggregates,
+    transform_image_metadata,
 ]
 
 

@@ -12,11 +12,13 @@
 
 import mock
 import os_traits as ot
+
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
 from nova import context as nova_context
 from nova import exception
+from nova.network import model as network_model
 from nova import objects
 from nova.scheduler import request_filter
 from nova import test
@@ -400,3 +402,36 @@ class TestRequestFilter(test.NoDBTestCase):
         log_lines = [c[0][0] for c in mock_log.debug.call_args_list]
         self.assertIn('added forbidden trait', log_lines[0])
         self.assertIn('took %.1f seconds', log_lines[1])
+
+    @mock.patch.object(request_filter, 'LOG', new=mock.Mock())
+    def test_transform_image_metadata(self):
+        self.flags(image_metadata_prefilter=True, group='scheduler')
+        properties = objects.ImageMetaProps(
+            hw_disk_bus=objects.fields.DiskBus.SATA,
+            hw_cdrom_bus=objects.fields.DiskBus.IDE,
+            hw_video_model=objects.fields.VideoModel.QXL,
+            hw_vif_model=network_model.VIF_MODEL_VIRTIO
+        )
+        reqspec = objects.RequestSpec(
+            image=objects.ImageMeta(properties=properties),
+            flavor=objects.Flavor(extra_specs={}),
+        )
+        self.assertTrue(
+            request_filter.transform_image_metadata(None, reqspec)
+        )
+        expected = {
+            'COMPUTE_GRAPHICS_MODEL_QXL',
+            'COMPUTE_NET_VIF_MODEL_VIRTIO',
+            'COMPUTE_STORAGE_BUS_IDE',
+            'COMPUTE_STORAGE_BUS_SATA',
+        }
+        self.assertEqual(expected, reqspec.root_required)
+
+    def test_transform_image_metadata__disabled(self):
+        self.flags(image_metadata_prefilter=False, group='scheduler')
+        reqspec = objects.RequestSpec(flavor=objects.Flavor(extra_specs={}))
+        # Assert that we completely skip the filter if disabled
+        self.assertFalse(
+            request_filter.transform_image_metadata(self.context, reqspec)
+        )
+        self.assertEqual(set(), reqspec.root_required)
