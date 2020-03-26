@@ -1,0 +1,43 @@
+---
+other:
+  - |
+    This release includes work in progress support for Keystone's unified
+    limits. This should not be used in production. It is included so we can
+    collect early feedback from operators around the performance of the new
+    limits system. There is currently no way to export your existing quotas
+    and import them into Keystone. There is also no proxy API to allow you
+    to update unified limits via Nova APIs. All the update APIs behave as if
+    you are using the noop driver when the unified limits quota driver is
+    configured.
+
+    When you enable unified limits, those are configured in Keystone against
+    the Nova endpoint, using the names:
+
+    * ``class:VCPU``
+    * ``servers``
+    * ``class:MEMORY_MB``
+    * ``server_metadata_items``
+    * ``server_injected_files``
+    * ``server_injected_file_content_bytes``
+    * ``server_injected_file_path_bytes``
+    * ``server_key_pairs``
+    * ``server_groups``
+    * ``server_group_members``
+
+    All other resources classes requested via flavors are also now supported as
+    unified limits. Note that nova configuration is ignored, as the default
+    limits come from the limits registered for the Nova endpoint in Keystone.
+
+    All previous quotas other than ``cores``, ``instances`` and ``ram`` are
+    still enforced, but the limit can only be changed globally in Keystone as
+    registered limits. There are no per project or per user overrides
+    possible.
+
+    Work in progress support for Keystone's unified limits
+    can be enabled via ``[quota]/driver=nova.quota.UnifiedLimitsDriver``
+
+    A config option ``[workarounds]unified_limits_count_pcpu_as_vcpu`` is
+    available for operators who require the legacy quota usage behavior where
+    VCPU = VCPU + PCPU. Note that if ``PCPU`` is specified in the flavor
+    explicitly, it will be expected to have its own unified limit registered
+    and PCPU usage will *not* be merged into VCPU usage.
