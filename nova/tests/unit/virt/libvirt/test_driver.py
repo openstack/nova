@@ -1431,6 +1431,23 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         self.assertRaises(exception.Invalid, drvr.init_host, "dummyhost")
 
+    def test__check_cpu_compatibility_aarch64_qemu_custom_start_OK(self):
+        """Test getting CPU traits when using a virt_type that doesn't support
+        the feature, only kvm and qemu supports reporting CPU traits.
+        """
+        self.flags(cpu_mode='custom',
+                   cpu_models=['max'],
+                   virt_type='qemu',
+                   group='libvirt')
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = fields.Architecture.AARCH64
+        with mock.patch.object(host.Host, "get_capabilities",
+                               return_value=caps):
+            drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+            drvr.init_host("dummyhost")
+
     @mock.patch.object(libvirt_driver.LOG, 'warning')
     def test_check_cpu_set_configuration__no_configuration(self, mock_log):
         """Test that configuring no CPU option results no errors or logs.
@@ -7533,6 +7550,36 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(conf.cpu.sockets, instance_ref.flavor.vcpus)
         self.assertEqual(conf.cpu.cores, 1)
         self.assertEqual(conf.cpu.threads, 1)
+
+    def test_get_guest_cpu_config_qemu_custom_aarch64(self):
+        self.flags(cpu_mode="custom", group='libvirt',
+                   cpu_models=["max"])
+        expected = {
+            fields.Architecture.AARCH64: "custom",
+        }
+
+        for guestarch, expect_mode in expected.items():
+            caps = vconfig.LibvirtConfigCaps()
+            caps.host = vconfig.LibvirtConfigCapsHost()
+            caps.host.cpu = vconfig.LibvirtConfigCPU()
+            caps.host.cpu.arch = guestarch
+            with mock.patch.object(host.Host, "get_capabilities",
+                                   return_value=caps):
+                drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+                if caps.host.cpu.arch == fields.Architecture.AARCH64:
+                    drvr._has_uefi_support = mock.Mock(return_value=True)
+                instance_ref = objects.Instance(**self.test_instance)
+                image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+
+                disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                                    instance_ref,
+                                                    image_meta)
+                conf = drvr._get_guest_config(instance_ref,
+                                              _fake_network_info(self),
+                                              image_meta, disk_info)
+                self.assertIsInstance(conf.cpu,
+                                      vconfig.LibvirtConfigGuestCPU)
+                self.assertEqual(conf.cpu.mode, expect_mode)
 
     @mock.patch.object(libvirt_driver.LOG, 'warning')
     def test_get_guest_cpu_config_custom_with_extra_flags(self,
@@ -19754,6 +19801,35 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 self.assertEqual("nvdimm", device.model)
                 vpmem_amount += 1
         self.assertEqual(2, vpmem_amount)
+
+    @mock.patch.object(host.Host, "get_capabilities")
+    def test_get_cpu_model_mapping(self, mock_cap):
+        expected = {
+            fields.Architecture.X86_64: ["Haswell", "IvyBridge"],
+            fields.Architecture.I686: ["Haswell"],
+            fields.Architecture.PPC: ["601_v1"],
+            fields.Architecture.PPC64: ["power7"],
+            fields.Architecture.PPC64LE: ["power8"],
+            fields.Architecture.AARCH64: None,
+        }
+        for guestarch, expect_model in expected.items():
+            if guestarch == fields.Architecture.AARCH64:
+                self.flags(cpu_models="max", group='libvirt')
+            caps = vconfig.LibvirtConfigCaps()
+            caps.host = vconfig.LibvirtConfigCapsHost()
+            caps.host.cpu = vconfig.LibvirtConfigCPU()
+            caps.host.cpu.arch = guestarch
+            mock_cap.return_value = caps
+
+            with mock.patch.object(host.Host,
+                                   "get_cpu_model_names",
+                                   return_value=expect_model):
+                drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+                if guestarch == fields.Architecture.AARCH64:
+                    drvr._get_cpu_model_mapping(None)
+                else:
+                    cpu_model = drvr._get_cpu_model_mapping(expect_model[0])
+                    self.assertEqual(cpu_model, expect_model[0])
 
 
 class TestGuestConfigSysinfoSerialOS(test.NoDBTestCase):

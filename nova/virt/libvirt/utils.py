@@ -537,6 +537,10 @@ def get_cpu_model_from_arch(arch):
         mode = 'qemu32'
     elif arch == obj_fields.Architecture.PPC64LE:
         mode = 'POWER8'
+    # NOTE(kevinz): In aarch64, cpu model 'max' will offer the capabilities
+    # that all the stuff it can currently emulate, both for "TCG" and "KVM"
+    elif arch == obj_fields.Architecture.AARCH64:
+        mode = 'max'
     return mode
 
 
