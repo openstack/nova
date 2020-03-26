@@ -2510,3 +2510,30 @@ class HostNameWeigherFixture(fixtures.Fixture):
         self.useFixture(ConfPatcher(
             weight_classes=[__name__ + '.HostNameWeigher'],
             group='filter_scheduler'))
+
+
+def _get_device_profile(dp_name, trait):
+    dp = [
+          {'name': dp_name,
+           'uuid': 'cbec22f3-ac29-444e-b4bb-98509f32faae',
+           'groups': [{
+                'resources:FPGA': '1',
+                'trait:' + trait: 'required',
+            }],
+            # Skipping links key in Cyborg API return value
+           }
+          ]
+    return dp
+
+
+class CyborgFixture(fixtures.Fixture):
+    """Fixture that mocks Cyborg APIs used by nova/accelerator/cyborg.py"""
+
+    dp_name = 'fakedev-dp'
+    trait = 'CUSTOM_FAKE_DEVICE'
+
+    def setUp(self):
+        super(CyborgFixture, self).setUp()
+        self.mock_get_dp = self.useFixture(fixtures.MockPatch(
+            'nova.accelerator.cyborg._CyborgClient._get_device_profile_list',
+            return_value=_get_device_profile(self.dp_name, self.trait))).mock

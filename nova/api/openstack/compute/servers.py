@@ -754,6 +754,7 @@ class ServersController(wsgi.Controller):
                 exception.MultiattachNotSupportedOldMicroversion,
                 exception.CertificateValidationFailed,
                 exception.CreateWithPortResourceRequestOldVersion,
+                exception.DeviceProfileError,
                 exception.ComputeHostNotFound) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except INVALID_FLAVOR_IMAGE_EXCEPTIONS as error:

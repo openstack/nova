@@ -57,6 +57,7 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_build_request
 from nova.tests.unit import fake_instance
+from nova.tests.unit import fake_request_spec
 from nova.tests.unit import fake_volume
 from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import matchers
@@ -4741,6 +4742,7 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_provision_instances_with_keypair(self, mock_im, mock_instance,
                                               mock_br, mock_rs):
         fake_keypair = objects.KeyPair(name='test')
+        inst_type = self._create_flavor()
 
         @mock.patch.object(self.compute_api, '_get_volumes_for_bdms')
         @mock.patch.object(self.compute_api,
@@ -4755,7 +4757,7 @@ class _ComputeAPIUnitTestMixIn(object):
         def do_test(mock_bdm_v, mock_cdb, mock_sg, mock_cniq, mock_get_vols):
             mock_cniq.return_value = 1
             self.compute_api._provision_instances(self.context,
-                                                  mock.sentinel.flavor,
+                                                  inst_type,
                                                   1, 1, mock.MagicMock(),
                                                   {}, None,
                                                   None, None, None, {}, None,
@@ -4766,7 +4768,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 'test',
                 mock_instance.return_value.keypairs.objects[0].name)
             self.compute_api._provision_instances(self.context,
-                                                  mock.sentinel.flavor,
+                                                  inst_type,
                                                   1, 1, mock.MagicMock(),
                                                   {}, None,
                                                   None, None, None, {}, None,
@@ -4777,6 +4779,72 @@ class _ComputeAPIUnitTestMixIn(object):
                 len(mock_instance.return_value.keypairs.objects))
 
         do_test()
+
+    @mock.patch('nova.accelerator.cyborg.get_device_profile_request_groups')
+    @mock.patch('nova.objects.RequestSpec.from_components')
+    @mock.patch('nova.objects.BuildRequest')
+    @mock.patch('nova.objects.Instance')
+    @mock.patch('nova.objects.InstanceMapping.create')
+    def _test_provision_instances_with_accels(self,
+        instance_type, dp_request_groups, prev_request_groups,
+        mock_im, mock_instance, mock_br, mock_rs, mock_get_dp):
+
+        @mock.patch.object(self.compute_api, '_get_volumes_for_bdms')
+        @mock.patch.object(self.compute_api,
+                           '_create_reqspec_buildreq_instmapping',
+                           new=mock.MagicMock())
+        @mock.patch('nova.compute.utils.check_num_instances_quota')
+        @mock.patch('nova.network.security_group_api')
+        @mock.patch.object(self.compute_api,
+                           'create_db_entry_for_new_instance')
+        @mock.patch.object(self.compute_api,
+                           '_bdm_validate_set_size_and_instance')
+        def do_test(mock_bdm_v, mock_cdb, mock_sg, mock_cniq, mock_get_vols):
+            mock_cniq.return_value = 1
+            self.compute_api._provision_instances(self.context,
+                                                  instance_type,
+                                                  1, 1, mock.MagicMock(),
+                                                  {}, None,
+                                                  None, None, None, {}, None,
+                                                  None,
+                                                  objects.TagList(), None,
+                                                  False)
+
+        mock_get_dp.return_value = dp_request_groups
+        fake_rs = fake_request_spec.fake_spec_obj()
+        fake_rs.requested_resources = prev_request_groups
+        mock_rs.return_value = fake_rs
+        do_test()
+        return mock_get_dp, fake_rs
+
+    def test_provision_instances_with_accels_ok(self):
+        # If extra_specs has accel spec, device profile's request_groups
+        # should be obtained, and added to reqspec's requested_resources.
+        dp_name = 'mydp'
+        extra_specs = {'extra_specs': {'accel:device_profile': dp_name}}
+        instance_type = self._create_flavor(**extra_specs)
+
+        prev_groups = [objects.RequestGroup(requester_id='prev0'),
+                       objects.RequestGroup(requester_id='prev1')]
+        dp_groups = [objects.RequestGroup(requester_id='deviceprofile2'),
+                     objects.RequestGroup(requester_id='deviceprofile3')]
+
+        mock_get_dp, fake_rs = self._test_provision_instances_with_accels(
+            instance_type, dp_groups, prev_groups)
+        mock_get_dp.assert_called_once_with(self.context, dp_name)
+        self.assertEqual(prev_groups + dp_groups, fake_rs.requested_resources)
+
+    def test_provision_instances_with_accels_no_dp(self):
+        # If extra specs has no accel spec, no attempt should be made to
+        # get device profile's request_groups, and reqspec.requested_resources
+        # should be left unchanged.
+        instance_type = self._create_flavor()
+        prev_groups = [objects.RequestGroup(requester_id='prev0'),
+                       objects.RequestGroup(requester_id='prev1')]
+        mock_get_dp, fake_rs = self._test_provision_instances_with_accels(
+            instance_type, [], prev_groups)
+        mock_get_dp.assert_not_called()
+        self.assertEqual(prev_groups, fake_rs.requested_resources)
 
     def test_provision_instances_creates_build_request(self):
         @mock.patch.object(self.compute_api, '_get_volumes_for_bdms')
@@ -4872,10 +4940,9 @@ class _ComputeAPIUnitTestMixIn(object):
         @mock.patch.object(objects.Instance, 'create', new=mock.MagicMock())
         @mock.patch.object(self.compute_api, '_validate_bdm',
                 new=mock.MagicMock())
-        @mock.patch.object(objects.RequestSpec, 'from_components',
-                mock.MagicMock())
+        @mock.patch.object(objects.RequestSpec, 'from_components')
         @mock.patch('nova.objects.InstanceMapping')
-        def do_test(mock_inst_mapping, mock_check_num_inst_quota,
+        def do_test(mock_inst_mapping, mock_rs, mock_check_num_inst_quota,
                     mock_get_vols):
             inst_mapping_mock = mock.MagicMock()
 
@@ -4981,7 +5048,7 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_inst_mapping.side_effect = inst_map_mocks
 
             ctxt = context.RequestContext('fake-user', 'fake-project')
-            flavor = self._create_flavor()
+            flavor = self._create_flavor(extra_specs={})
             boot_meta = {
                 'id': 'fake-image-id',
                 'properties': {'mappings': []},
@@ -5061,7 +5128,8 @@ class _ComputeAPIUnitTestMixIn(object):
         def test(mock_objects, mock_secgroup, mock_cniq):
             ctxt = context.RequestContext('fake-user', 'fake-project')
             mock_cniq.return_value = 1
-            self.compute_api._provision_instances(ctxt, None, None, None,
+            inst_type = self._create_flavor()
+            self.compute_api._provision_instances(ctxt, inst_type, None, None,
                                                   mock.MagicMock(), None, None,
                                                   [], None, None, None, None,
                                                   None, objects.TagList(),
