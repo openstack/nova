@@ -185,7 +185,8 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         extra_specs = vm_util.ExtraSpecs()
         fake_factory = fake.FakeFactory()
         result = vm_util.get_vm_resize_spec(fake_factory,
-                                            vcpus, memory_mb, extra_specs)
+                                            vcpus, memory_mb, extra_specs,
+                                            memory_reservation_locked=False)
         expected = fake_factory.create('ns0:VirtualMachineConfigSpec')
         expected.memoryMB = memory_mb
         expected.numCPUs = vcpus
@@ -196,6 +197,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         cpuAllocation.shares.level = 'normal'
         cpuAllocation.shares.shares = 0
         expected.cpuAllocation = cpuAllocation
+        expected.memoryReservationLockedToMax = False
 
         self.assertEqual(expected, result)
 
@@ -207,7 +209,8 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         fake_factory = fake.FakeFactory()
         result = vm_util.get_vm_resize_spec(fake_factory,
-                                            vcpus, memory_mb, extra_specs)
+                                            vcpus, memory_mb, extra_specs,
+                                            memory_reservation_locked=True)
         expected = fake_factory.create('ns0:VirtualMachineConfigSpec')
         expected.memoryMB = memory_mb
         expected.numCPUs = vcpus
@@ -218,6 +221,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         cpuAllocation.shares.level = 'normal'
         cpuAllocation.shares.shares = 0
         expected.cpuAllocation = cpuAllocation
+        expected.memoryReservationLockedToMax = True
 
         self.assertEqual(expected, result)
 

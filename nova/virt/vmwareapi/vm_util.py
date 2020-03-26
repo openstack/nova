@@ -362,7 +362,7 @@ def get_vm_boot_spec(client_factory, device):
 
 
 def get_vm_resize_spec(client_factory, vcpus, memory_mb, extra_specs,
-                       metadata=None):
+                       memory_reservation_locked, metadata=None):
     """Provides updates for a VM spec."""
     resize_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
     resize_spec.numCPUs = vcpus
@@ -370,6 +370,8 @@ def get_vm_resize_spec(client_factory, vcpus, memory_mb, extra_specs,
     resize_spec.cpuAllocation = _get_allocation_info(
         client_factory, extra_specs.cpu_limits,
         'ns0:ResourceAllocationInfo')
+    resize_spec.memoryReservationLockedToMax = memory_reservation_locked
+
     if metadata:
         resize_spec.annotation = metadata
     return resize_spec

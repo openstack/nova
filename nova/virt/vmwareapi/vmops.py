@@ -863,7 +863,8 @@ class VMwareVMOps(object):
             cluster_util.update_cluster_drs_vm_override(self._session,
                                                         self._cluster,
                                                         vm_ref,
-                                                        behavior)
+                                                        operation='add',
+                                                        behavior=behavior)
 
         vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
 
@@ -1421,14 +1422,46 @@ class VMwareVMOps(object):
         """Resizes the VM according to the flavor."""
         client_factory = self._session.vim.client.factory
         extra_specs = self._get_extra_specs(flavor, image_meta)
+        reservation_locked = CONF.vmware.reserve_all_memory \
+                                or utils.is_big_vm(int(flavor.memory_mb),
+                                                   flavor)
         metadata = self._get_instance_metadata(context, instance,
                                                flavor=flavor)
         vm_resize_spec = vm_util.get_vm_resize_spec(client_factory,
                                                     int(flavor.vcpus),
                                                     int(flavor.memory_mb),
                                                     extra_specs,
+                                                    reservation_locked,
                                                     metadata=metadata)
         vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
+
+        old_flavor = instance.old_flavor
+        new_is_big = utils.is_big_vm(int(old_flavor.memory_mb), old_flavor)
+        old_is_big = utils.is_big_vm(int(flavor.memory_mb), flavor)
+
+        if not old_is_big and new_is_big:
+            # Make sure we don't automatically move around "big" VMs
+            behavior = constants.DRS_BEHAVIOR_PARTIALLY_AUTOMATED
+            LOG.debug("Adding DRS override '%s' for big VM.", behavior,
+                      instance=instance)
+            cluster_util.update_cluster_drs_vm_override(self._session,
+                                                        self._cluster,
+                                                        vm_ref,
+                                                        operation='add',
+                                                        behavior=behavior)
+        elif old_is_big and not new_is_big:
+            # remove the old override, if we had one before. make sure we don't
+            # error out if it was already deleted another way
+            LOG.debug("Removing DRS override for former big VM.",
+                      instance=instance)
+            try:
+                cluster_util.update_cluster_drs_vm_override(self._session,
+                                                            self._cluster,
+                                                            vm_ref,
+                                                            operation='remove')
+            except Exception:
+                LOG.exception('Could not remove DRS override.',
+                              instance=instance)
 
     def _resize_disk(self, instance, vm_ref, vmdk, flavor):
         extra_specs = self._get_extra_specs(instance.flavor,
@@ -1605,12 +1638,16 @@ class VMwareVMOps(object):
         # Reconfigure the VM properties
         extra_specs = self._get_extra_specs(instance.flavor,
                                             instance.image_meta)
+        reservation_locked = CONF.vmware.reserve_all_memory \
+                             or utils.is_big_vm(int(instance.flavor.memory_mb),
+                                                instance.flavor)
         metadata = self._get_instance_metadata(context, instance)
         vm_resize_spec = vm_util.get_vm_resize_spec(
             client_factory,
             int(instance.flavor.vcpus),
             int(instance.flavor.memory_mb),
             extra_specs,
+            reservation_locked,
             metadata=metadata)
         vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
 
