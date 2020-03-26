@@ -6708,7 +6708,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             access_ip_v4 = access_ip_v6 = config_drive = \
                 auto_disk_config = reservation_id = None
         # This tests that 'default' is unchanged, but 'fake-security-group'
-        # will be translated to a uuid for Neutron.
+        # will be translated to a UUID for Neutron.
         requested_secgroups = ['default', 'fake-security-group']
         # This will short-circuit _check_requested_networks
         requested_networks = objects.NetworkRequestList(objects=[
@@ -6716,8 +6716,8 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         max_count = 1
         supports_port_resource_request = False
         with mock.patch(
-                'nova.network.security_group_api.get',
-                return_value={'id': uuids.secgroup_uuid}) as scget:
+                'nova.network.security_group_api.validate_name',
+                return_value=uuids.secgroup_uuid) as scget:
             base_options, max_network_count, key_pair, security_groups, \
                     network_metadata = (
                 self.compute_api._validate_and_build_base_options(

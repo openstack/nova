@@ -159,8 +159,7 @@ class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
 
         try:
             id = security_group_api.validate_id(id)
-            security_group = security_group_api.get(
-                context, None, id, map_exception=True)
+            security_group = security_group_api.get(context, id)
         except exception.SecurityGroupNotFound as exp:
             raise exc.HTTPNotFound(explanation=exp.format_message())
         except exception.Invalid as exp:
@@ -178,8 +177,7 @@ class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
 
         try:
             id = security_group_api.validate_id(id)
-            security_group = security_group_api.get(
-                context, None, id, map_exception=True)
+            security_group = security_group_api.get(context, id)
             security_group_api.destroy(context, security_group)
         except exception.SecurityGroupNotFound as exp:
             raise exc.HTTPNotFound(explanation=exp.format_message())
@@ -222,7 +220,7 @@ class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
         try:
             security_group_api.validate_property(group_name, 'name', None)
             security_group_api.validate_property(group_description,
-                                                      'description', None)
+                                                 'description', None)
             group_ref = security_group_api.create_security_group(
                 context, group_name, group_description)
         except exception.Invalid as exp:
@@ -241,8 +239,7 @@ class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
 
         try:
             id = security_group_api.validate_id(id)
-            security_group = security_group_api.get(
-                context, None, id, map_exception=True)
+            security_group = security_group_api.get(context, id)
         except exception.SecurityGroupNotFound as exp:
             raise exc.HTTPNotFound(explanation=exp.format_message())
         except exception.Invalid as exp:
@@ -283,7 +280,7 @@ class SecurityGroupRulesController(SecurityGroupControllerBase,
             parent_group_id = security_group_api.validate_id(
                 sg_rule.get('parent_group_id'))
             security_group = security_group_api.get(
-                context, None, parent_group_id, map_exception=True)
+                context, parent_group_id)
             if group_id is not None:
                 group_id = security_group_api.validate_id(group_id)
 
@@ -354,8 +351,7 @@ class SecurityGroupRulesController(SecurityGroupControllerBase,
             id = security_group_api.validate_id(id)
             rule = security_group_api.get_rule(context, id)
             group_id = rule['parent_group_id']
-            security_group = security_group_api.get(
-                context, None, group_id, map_exception=True)
+            security_group = security_group_api.get(context, group_id)
             security_group_api.remove_rules(
                 context, security_group, [rule['id']])
         except exception.SecurityGroupNotFound as exp:
