@@ -3808,3 +3808,132 @@ class LibvirtConfigGuestVPMEMTest(LibvirtConfigBaseTest):
                 </label>
             </target>
           </memory>""")
+
+
+class LibvirtConfigVideoModelsTests(LibvirtConfigBaseTest):
+
+    def test_parse_video_model(self):
+
+        xml = """
+        <video supported='yes'>
+          <enum name='modelType'>
+            <value>vga</value>
+            <value>cirrus</value>
+            <value>vmvga</value>
+            <value>qxl</value>
+            <value>virtio</value>
+          </enum>
+        </video>
+        """
+        obj = config.LibvirtConfigDomainCapsVideoModels()
+        obj.parse_str(xml)
+        expected_models = ('vga', 'cirrus', 'vmvga', 'qxl', 'virtio')
+        self.assertTrue(obj.supported)
+        for model in expected_models:
+            self.assertIn(model, obj.models)
+        self.assertNotIn('gop', obj.models)
+
+
+class LibvirtConfigDiskBusesTests(LibvirtConfigBaseTest):
+
+    def test_parse_disk_buses(self):
+
+        xml = """
+        <disk supported='yes'>
+          <enum name='diskDevice'>
+            <value>disk</value>
+            <value>cdrom</value>
+            <value>floppy</value>
+            <value>lun</value>
+          </enum>
+          <enum name='bus'>
+            <value>ide</value>
+            <value>scsi</value>
+            <value>virtio</value>
+            <value>usb</value>
+            <value>sata</value>
+          </enum>
+        </disk>
+        """
+        obj = config.LibvirtConfigDomainCapsDiskBuses()
+        obj.parse_str(xml)
+        expected_buses = ('ide', 'scsi', 'virtio', 'usb', 'sata')
+        self.assertTrue(obj.supported)
+        for bus in expected_buses:
+            self.assertIn(bus, obj.buses)
+        self.assertNotIn('fdc', obj.buses)
+
+
+class LibvirtConfigDomainCapsDevicesTests(LibvirtConfigBaseTest):
+
+    def test_parse_domain_caps_devices(self):
+
+        xml = """
+        <devices>
+          <disk supported='yes'>
+            <enum name='diskDevice'>
+              <value>disk</value>
+              <value>cdrom</value>
+              <value>floppy</value>
+              <value>lun</value>
+            </enum>
+            <enum name='bus'>
+              <value>ide</value>
+              <value>fdc</value>
+              <value>scsi</value>
+              <value>virtio</value>
+              <value>usb</value>
+              <value>sata</value>
+            </enum>
+          </disk>
+          <graphics supported='yes'>
+            <enum name='type'>
+              <value>sdl</value>
+              <value>vnc</value>
+              <value>spice</value>
+            </enum>
+          </graphics>
+          <video supported='yes'>
+            <enum name='modelType'>
+              <value>vga</value>
+              <value>cirrus</value>
+              <value>vmvga</value>
+              <value>qxl</value>
+              <value>virtio</value>
+            </enum>
+          </video>
+          <hostdev supported='yes'>
+            <enum name='mode'>
+              <value>subsystem</value>
+            </enum>
+            <enum name='startupPolicy'>
+              <value>default</value>
+              <value>mandatory</value>
+              <value>requisite</value>
+              <value>optional</value>
+            </enum>
+            <enum name='subsysType'>
+              <value>usb</value>
+              <value>pci</value>
+              <value>scsi</value>
+            </enum>
+            <enum name='capsType'/>
+            <enum name='pciBackend'/>
+          </hostdev>
+        </devices>
+        """
+        obj = config.LibvirtConfigDomainCapsDevices()
+        obj.parse_str(xml)
+        # we only use the video and disk devices today.
+        device_types = [config.LibvirtConfigDomainCapsDiskBuses,
+                        config.LibvirtConfigDomainCapsVideoModels]
+        # so we assert there are only two device types parsed
+        self.assertEqual(2, len(obj.devices))
+        # we then assert that the parsed devices are of the correct type
+        for dev in obj.devices:
+            self.assertIn(type(dev), device_types)
+        # and that the sub-devices are accessible directly via properties.
+        self.assertIsInstance(
+            obj.disk, config.LibvirtConfigDomainCapsDiskBuses)
+        self.assertIsInstance(
+            obj.video, config.LibvirtConfigDomainCapsVideoModels)
