@@ -1,0 +1,17 @@
+---
+  features:
+    - |
+      Allow the following filter parameters for ``GET /servers/detail``
+      and ``GET /servers`` for non-admin in microversion 2.83:
+
+      - availability_zone
+      - config_drive
+      - key_name
+      - created_at
+      - launched_at
+      - terminated_at
+      - power_state
+      - task_state
+      - vm_state
+      - progress
+      - user_id

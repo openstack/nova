@@ -1270,6 +1270,11 @@ class ServersController(wsgi.Controller):
             opt_list += ('changes-before',)
         if api_version_request.is_supported(req, min_version='2.73'):
             opt_list += ('locked',)
+        if api_version_request.is_supported(req, min_version='2.83'):
+            opt_list += ('availability_zone', 'config_drive', 'key_name',
+                         'created_at', 'launched_at', 'terminated_at',
+                         'power_state', 'task_state', 'vm_state', 'progress',
+                         'user_id',)
         return opt_list
 
     def _get_instance(self, context, instance_uuid):

@@ -224,6 +224,8 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              ``os-server-external-events`` API. This event is sent by Cyborg
              to indicate completion of ARQ binding. The ARQs can be obtained
              from Cyborg with ``GET /v2/accelerator_requests?instance={uuid}``
+    * 2.83 - Allow more filter parameters for ``GET /servers/detail`` and
+             ``GET /servers`` for non-admin.
 """
 
 # The minimum and maximum versions of the API supported
@@ -232,7 +234,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.82"
+_MAX_API_VERSION = "2.83"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which are related to network, images and baremetal

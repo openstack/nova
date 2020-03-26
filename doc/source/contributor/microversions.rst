@@ -374,8 +374,16 @@ necessary to add changes to other places which describe your change:
 * If the microversion changes the response schema, a new schema and test for
   the microversion must be added to Tempest.
 
+* If applicable, add Functional sample tests under
+  ``nova/tests/functional/api_sample_tests``. Also, add JSON examples to
+  ``doc/api_samples`` directory which can be generated automatically via tox
+  env ``api-samples`` or run test with env var ``GENERATE_SAMPLES`` True.
+
 * Update the `API Reference`_ documentation as appropriate.  The source is
   located under `api-ref/source/`.
+
+* If the microversion changes servers related APIs, update the
+  `api-guide/source/server_concepts.rst` accordingly.
 
 .. _API Reference: https://docs.openstack.org/api-ref/compute/
 

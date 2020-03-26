@@ -159,6 +159,17 @@ For different user roles, the user has different query options set:
   - ``tags-any`` (New in version 2.26)
   - ``changes-before`` (New in version 2.66)
   - ``locked`` (New in version 2.73)
+  - ``availability_zone`` (New in version 2.83)
+  - ``config_drive`` (New in version 2.83)
+  - ``key_name`` (New in version 2.83)
+  - ``created_at`` (New in version 2.83)
+  - ``launched_at`` (New in version 2.83)
+  - ``terminated_at`` (New in version 2.83)
+  - ``power_state`` (New in version 2.83)
+  - ``task_state`` (New in version 2.83)
+  - ``vm_state`` (New in version 2.83)
+  - ``progress`` (New in version 2.83)
+  - ``user_id`` (New in version 2.83)
 
   Other options will be ignored by nova silently.
 
@@ -177,12 +188,12 @@ Precondition: there are 2 servers existing in cloud with following info::
       "servers": [
           {
               "name": "t1",
-              "OS-EXT-STS:vm_state": "active",
+              "OS-EXT-SRV-ATTR:host": "devstack1",
               ...
           },
           {
               "name": "t2",
-              "OS-EXT-STS:vm_state": "stopped",
+              "OS-EXT-SRV-ATTR:host": "devstack2",
               ...
           }
       ]
@@ -190,13 +201,13 @@ Precondition: there are 2 servers existing in cloud with following info::
 
 **Example: General user query server with administrator only options**
 
-Request with non-administrator context: ``GET /servers/detail?vm_state=active``
+Request with non-administrator context: ``GET /servers/detail?host=devstack1``
 
 .. note::
 
-  The ``vm_state`` query parameter is only for administrator users and
+  The ``host`` query parameter is only for administrator users and
   the query parameter is ignored if specified by non-administrator users.
-  Thus the API returns servers of both ``active`` and ``stopped``
+  Thus the API returns servers of both ``devstack1`` and ``devstack2``
   in this example.
 
 Response::
@@ -216,7 +227,7 @@ Response::
 
 **Example: Administrator query server with administrator only options**
 
-Request with administrator context: ``GET /servers/detail?vm_state=active``
+Request with administrator context: ``GET /servers/detail?host=devstack1``
 
 Response::
 

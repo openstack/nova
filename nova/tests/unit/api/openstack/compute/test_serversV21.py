@@ -2739,6 +2739,70 @@ class ServersControllerTestV275(ControllerTest):
                 self.assertIn('OS-EXT-IPS-MAC:mac_addr', item)
 
 
+class ServersControllerTestV283(ControllerTest):
+    filters = ['availability_zone', 'config_drive', 'key_name',
+               'created_at', 'launched_at', 'terminated_at',
+               'power_state', 'task_state', 'vm_state', 'progress',
+               'user_id']
+
+    def test_get_servers_by_new_filter_for_non_admin(self):
+        def fake_get_all(context, search_opts=None, **kwargs):
+            self.assertIsNotNone(search_opts)
+            for f in self.filters:
+                self.assertIn(f, search_opts)
+            return objects.InstanceList(
+                objects=[fakes.stub_instance_obj(100, uuid=uuids.fake)])
+
+        self.mock_get_all.side_effect = fake_get_all
+
+        query_str = '&'.join('%s=test_value' % f for f in self.filters)
+        req = fakes.HTTPRequest.blank(self.path_with_query % query_str,
+                                      version='2.83')
+        servers = self.controller.index(req)['servers']
+
+        self.assertEqual(1, len(servers))
+        self.assertEqual(uuids.fake, servers[0]['id'])
+
+    def test_get_servers_new_filters_for_non_admin_old_version(self):
+        def fake_get_all(context, search_opts=None, **kwargs):
+            self.assertIsNotNone(search_opts)
+            for f in self.filters:
+                self.assertNotIn(f, search_opts)
+            return objects.InstanceList(
+                objects=[])
+
+        # Without policy edition, test will fail and admin filter will work.
+        self.policy.set_rules({'os_compute_api:servers:index': ''})
+        self.mock_get_all.side_effect = fake_get_all
+
+        query_str = '&'.join('%s=test_value' % f for f in self.filters)
+        req = fakes.HTTPRequest.blank(self.path_with_query % query_str,
+                                      version='2.82')
+        servers = self.controller.index(req)['servers']
+
+        self.assertEqual(0, len(servers))
+
+    def test_get_servers_by_node_fail_non_admin(self):
+        def fake_get_all(context, search_opts=None, **kwargs):
+            self.assertIsNotNone(search_opts)
+            self.assertNotIn('node', search_opts)
+            return objects.InstanceList(
+                objects=[fakes.stub_instance_obj(100, uuid=uuids.fake)])
+
+        server_filter_rule = 'os_compute_api:servers:allow_all_filters'
+        self.policy.set_rules({'os_compute_api:servers:index': '',
+                               server_filter_rule: 'role:admin'})
+        self.mock_get_all.side_effect = fake_get_all
+
+        query_str = "node=node1"
+        req = fakes.HTTPRequest.blank(self.path_with_query % query_str,
+                                      version='2.83')
+        servers = self.controller.index(req)['servers']
+
+        self.assertEqual(1, len(servers))
+        self.assertEqual(uuids.fake, servers[0]['id'])
+
+
 class ServersControllerDeleteTest(ControllerTest):
 
     def setUp(self):
