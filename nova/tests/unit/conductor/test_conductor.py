@@ -437,6 +437,8 @@ class _BaseTaskTestCase(object):
     def test_cold_migrate_forced_shutdown(self):
         self._test_cold_migrate(clean_shutdown=False)
 
+    @mock.patch.object(conductor_manager.ComputeTaskManager,
+                       '_create_and_bind_arqs')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'build_and_run_instance')
     @mock.patch.object(db, 'block_device_mapping_get_all_by_instance',
                        return_value=[])
@@ -448,7 +450,7 @@ class _BaseTaskTestCase(object):
     @mock.patch.object(objects.RequestSpec, 'from_primitives')
     def test_build_instances(self, mock_fp, mock_save, mock_getaz,
                              mock_buildreq, mock_schedule, mock_bdm,
-                             mock_build):
+                             mock_build, mock_create_bind_arqs):
         """Tests creating two instances and the scheduler returns a unique
         host/node combo for each instance.
         """
@@ -530,6 +532,86 @@ class _BaseTaskTestCase(object):
                       security_groups='security_groups',
                       block_device_mapping=mock.ANY,
                       node='node2', limits=None, host_list=sched_return[1])])
+        mock_create_bind_arqs.assert_has_calls([
+            mock.call(self.context, instances[0].uuid,
+                      instances[0].flavor.extra_specs, 'node1', mock.ANY),
+            mock.call(self.context, instances[1].uuid,
+                      instances[1].flavor.extra_specs, 'node2', mock.ANY),
+            ])
+
+    @mock.patch.object(conductor_manager.ComputeTaskManager,
+                       '_cleanup_when_reschedule_fails')
+    @mock.patch.object(conductor_manager.ComputeTaskManager,
+                       '_create_and_bind_arqs')
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'build_and_run_instance')
+    @mock.patch.object(db, 'block_device_mapping_get_all_by_instance',
+                       return_value=[])
+    @mock.patch.object(conductor_manager.ComputeTaskManager,
+                       '_schedule_instances')
+    @mock.patch('nova.objects.BuildRequest.get_by_instance_uuid')
+    @mock.patch('nova.availability_zones.get_host_availability_zone')
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch.object(objects.RequestSpec, 'from_primitives')
+    def test_build_instances_arq_failure(self, mock_fp, mock_save, mock_getaz,
+                             mock_buildreq, mock_schedule, mock_bdm,
+                             mock_build, mock_create_bind_arqs, mock_cleanup):
+        """If _create_and_bind_arqs throws an exception,
+           _destroy_build_request must be called for each instance.
+        """
+        fake_spec = objects.RequestSpec()
+        mock_fp.return_value = fake_spec
+        instance_type = objects.Flavor.get_by_name(self.context, 'm1.small')
+        # NOTE(danms): Avoid datetime timezone issues with converted flavors
+        instance_type.created_at = None
+        instances = [objects.Instance(context=self.context,
+                                      id=i,
+                                      uuid=uuids.fake,
+                                      flavor=instance_type) for i in range(2)]
+        instance_properties = obj_base.obj_to_primitive(instances[0])
+        instance_properties['system_metadata'] = flavors.save_flavor_info(
+            {}, instance_type)
+
+        sched_return = copy.deepcopy(fake_host_lists2)
+        mock_schedule.return_value = sched_return
+
+        # build_instances() is a cast, we need to wait for it to complete
+        self.useFixture(cast_as_call.CastAsCall(self))
+
+        mock_getaz.return_value = 'myaz'
+        mock_create_bind_arqs.side_effect = (
+            exc.AcceleratorRequestOpFailed(op='', msg=''))
+
+        self.conductor.build_instances(self.context,
+                instances=instances,
+                image={'fake_data': 'should_pass_silently'},
+                filter_properties={},
+                admin_password='admin_password',
+                injected_files='injected_files',
+                requested_networks=None,
+                security_groups='security_groups',
+                block_device_mapping='block_device_mapping',
+                legacy_bdm=False, host_lists=None)
+        mock_create_bind_arqs.assert_has_calls([
+            mock.call(self.context, instances[0].uuid,
+                      instances[0].flavor.extra_specs, 'node1', mock.ANY),
+            mock.call(self.context, instances[1].uuid,
+                      instances[1].flavor.extra_specs, 'node2', mock.ANY),
+            ])
+        # Comparing instances fails because the instance objects have changed
+        # in the above flow. So, we compare the fields instead.
+        mock_cleanup.assert_has_calls([
+            mock.call(self.context, test.MatchType(objects.Instance),
+                      test.MatchType(exc.AcceleratorRequestOpFailed),
+                      test.MatchType(dict), None),
+            mock.call(self.context, test.MatchType(objects.Instance),
+                      test.MatchType(exc.AcceleratorRequestOpFailed),
+                      test.MatchType(dict), None),
+        ])
+        call_list = mock_cleanup.call_args_list
+        for idx, instance in enumerate(instances):
+            actual_inst = call_list[idx][0][1]
+            self.assertEqual(actual_inst['uuid'], instance['uuid'])
+            self.assertEqual(actual_inst['flavor']['extra_specs'], {})
 
     @mock.patch.object(scheduler_utils, 'build_request_spec')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
@@ -1880,6 +1962,45 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.params = params
         self.flavor = objects.Flavor.get_by_name(self.ctxt, 'm1.tiny')
 
+    @mock.patch('nova.accelerator.cyborg.get_client')
+    def test_create_bind_arqs_no_device_profile(self, mock_get_client):
+        # If no device profile name, it is a no op.
+        hostname = 'myhost'
+        instance = fake_instance.fake_instance_obj(self.context)
+
+        instance.flavor.extra_specs = {}
+        self.conductor._create_and_bind_arqs(self.context,
+            instance.uuid, instance.flavor.extra_specs,
+            hostname, resource_provider_mapping=mock.ANY)
+        mock_get_client.assert_not_called()
+
+    @mock.patch('nova.accelerator.cyborg._CyborgClient.bind_arqs')
+    @mock.patch('nova.accelerator.cyborg._CyborgClient.'
+                'create_arqs_and_match_resource_providers')
+    def test_create_bind_arqs(self, mock_create, mock_bind):
+        # Happy path
+        hostname = 'myhost'
+        instance = fake_instance.fake_instance_obj(self.context)
+        dp_name = 'mydp'
+        instance.flavor.extra_specs = {'accel:device_profile': dp_name}
+
+        in_arq_list, _ = fixtures.get_arqs(dp_name)
+        mock_create.return_value = in_arq_list
+
+        self.conductor._create_and_bind_arqs(self.context,
+            instance.uuid, instance.flavor.extra_specs,
+            hostname, resource_provider_mapping=mock.ANY)
+
+        mock_create.assert_called_once_with(dp_name, mock.ANY)
+
+        expected_bindings = {
+            'b59d34d3-787b-4fb0-a6b9-019cd81172f8':
+                {'hostname': hostname,
+                 'device_rp_uuid': mock.ANY,
+                 'instance_uuid': instance.uuid}
+        }
+        mock_bind.assert_called_once_with(bindings=expected_bindings)
+
     @mock.patch('nova.availability_zones.get_host_availability_zone')
     @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
@@ -2398,6 +2519,44 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         """
         self.params['request_specs'][0].requested_resources = []
         self._do_schedule_and_build_instances_test(self.params)
+
+    @mock.patch.object(conductor_manager.ComputeTaskManager,
+                       '_create_and_bind_arqs')
+    def test_schedule_and_build_instances_with_arqs_bind_ok(
+            self, mock_create_bind_arqs):
+        extra_specs = {'accel:device_profile': 'mydp'}
+        instance = self.params['build_requests'][0].instance
+        instance.flavor.extra_specs = extra_specs
+
+        self._do_schedule_and_build_instances_test(self.params)
+
+        # NOTE(Sundar): At this point, the instance has not been
+        # associated with a host yet. The default host.nodename is
+        # 'node1'.
+        mock_create_bind_arqs.assert_called_once_with(
+            self.params['context'], instance.uuid, extra_specs,
+            'node1', mock.ANY)
+
+    @mock.patch.object(conductor_manager.ComputeTaskManager,
+                       '_cleanup_build_artifacts')
+    @mock.patch.object(conductor_manager.ComputeTaskManager,
+                       '_create_and_bind_arqs')
+    def test_schedule_and_build_instances_with_arqs_bind_exception(
+            self, mock_create_bind_arqs, mock_cleanup):
+        # Exceptions in _create_and_bind_arqs result in cleanup
+        mock_create_bind_arqs.side_effect = (
+            exc.AcceleratorRequestOpFailed(op='', msg=''))
+
+        try:
+            self._do_schedule_and_build_instances_test(self.params)
+        except exc.AcceleratorRequestOpFailed:
+            pass
+
+        mock_cleanup.assert_called_once_with(
+            self.params['context'], mock.ANY, mock.ANY,
+            self.params['build_requests'], self.params['request_specs'],
+            self.params['block_device_mapping'], self.params['tags'],
+            mock.ANY)
 
     def test_map_instance_to_cell_already_mapped(self):
         """Tests a scenario where an instance is already mapped to a cell

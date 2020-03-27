@@ -7892,6 +7892,20 @@ class AcceleratorServerBase(integrated_helpers.ProviderUsageBaseTestCase):
                                         extra_spec=extra_specs)
         return flavor_id
 
+    def _check_allocations_usage(self, server_uuid):
+        host_rp_uuid = self.compute_rp_uuids[0]
+        device_rp_uuid = self.device_rp_map[host_rp_uuid]
+        expected_host_alloc = {
+            'resources': {'VCPU': 2, 'MEMORY_MB': 2048, 'DISK_GB': 20},
+        }
+        expected_device_alloc = {'resources': {'FPGA': 1}}
+
+        host_alloc = self._get_allocations_by_provider_uuid(host_rp_uuid)
+        self.assertEqual(expected_host_alloc, host_alloc[server_uuid])
+
+        device_alloc = self._get_allocations_by_provider_uuid(device_rp_uuid)
+        self.assertEqual(expected_device_alloc, device_alloc[server_uuid])
+
 
 class AcceleratorServerTest(AcceleratorServerBase):
     def setUp(self):
@@ -7901,10 +7915,110 @@ class AcceleratorServerTest(AcceleratorServerBase):
     def test_create_server(self):
         flavor_id = self._create_acc_flavor()
         server_name = 'accel_server1'
-        self._create_server(
+        server = self._create_server(
             server_name, flavor_id=flavor_id,
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             networks='none', expected_state='ACTIVE')
 
-        self.cyborg.mock_get_dp.assert_called_once_with(self.cyborg.dp_name)
-        # TODO(Sundar): Add checks for Placement allocations.
+        # Verify that the host name and the device rp UUID are set properly.
+        # Other fields in the ARQ are hardcoded data from the fixture.
+        arqs = self.cyborg.fake_get_arqs_for_instance(server['id'])
+        self.assertEqual(self.device_rp_uuids[0], arqs[0]['device_rp_uuid'])
+        self.assertEqual(server['OS-EXT-SRV-ATTR:host'], arqs[0]['hostname'])
+
+        # Check allocations and usage
+        self._check_allocations_usage(server['id'])
+
+
+class AcceleratorServerReschedTest(AcceleratorServerBase):
+
+    def setUp(self):
+        self.NUM_HOSTS = 2
+        super(AcceleratorServerReschedTest, self).setUp()
+
+    def _check_allocations_usage_resched(self, server):
+        # Check allocations on host where instance is running
+        server_uuid = server['id']
+
+        hostname = server['OS-EXT-SRV-ATTR:host']
+        server_host_rp_uuid = self._get_provider_uuid_by_host(hostname)
+        expected_host_alloc = {
+            'resources': {'VCPU': 2, 'MEMORY_MB': 2048, 'DISK_GB': 20},
+        }
+        expected_device_alloc = {'resources': {'FPGA': 1}}
+
+        for i in range(self.NUM_HOSTS):
+            compute_uuid = self.compute_rp_uuids[i]
+            device_uuid = self.device_rp_map[compute_uuid]
+            host_alloc = self._get_allocations_by_provider_uuid(compute_uuid)
+            device_alloc = self._get_allocations_by_provider_uuid(device_uuid)
+            if compute_uuid == server_host_rp_uuid:
+                self.assertEqual(expected_host_alloc, host_alloc[server_uuid])
+                self.assertEqual(expected_device_alloc,
+                                 device_alloc[server_uuid])
+            else:
+                self.assertEqual({}, host_alloc)
+                self.assertEqual({}, device_alloc)
+
+        # NOTE(Sundar): ARQs for an instance could come from different
+        # devices in the same host, in general. But, in this test case,
+        # there is only one device in the host. So, we check for that.
+        device_rp_uuid = self.device_rp_map[server_host_rp_uuid]
+        expected_arq_bind_info = set([('Bound', hostname,
+                                       device_rp_uuid, server_uuid)])
+        arqs = nova_fixtures.CyborgFixture.fake_get_arqs_for_instance(
+            server_uuid)
+        # The state is hardcoded but other fields come from the test case.
+        arq_bind_info = {(arq['state'], arq['hostname'],
+                          arq['device_rp_uuid'], arq['instance_uuid'])
+                         for arq in arqs}
+        self.assertSetEqual(expected_arq_bind_info, arq_bind_info)
+
+    def _check_no_allocations(self, server_uuid):
+        allocs = self._get_allocations_by_server_uuid(server_uuid)
+        self.assertEqual(allocs, {})
+
+        for i in range(self.NUM_HOSTS):
+            usage = self._get_provider_usages(
+                self.device_rp_uuids[i]).get('FPGA')
+            self.assertEqual(usage, 0)
+
+    def test_resched(self):
+        orig_spawn = fake.FakeDriver.spawn
+
+        def fake_spawn(*args, **kwargs):
+            fake_spawn.count += 1
+            if fake_spawn.count == 1:
+                raise exception.ComputeResourcesUnavailable(
+                    reason='First host fake fail.', instance_uuid='fake')
+            else:
+                orig_spawn(*args, **kwargs)
+        fake_spawn.count = 0
+
+        with mock.patch('nova.virt.fake.FakeDriver.spawn', new=fake_spawn):
+            flavor_id = self._create_acc_flavor()
+            server_name = 'accel_server1'
+            server = self._create_server(
+                server_name, flavor_id=flavor_id,
+                image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+                networks='none', expected_state='ACTIVE')
+
+        self.assertEqual(2, fake_spawn.count)
+        self._check_allocations_usage_resched(server)
+
+    def test_resched_fails(self):
+
+        def throw_error(*args, **kwargs):
+            raise exception.ComputeResourcesUnavailable(reason='',
+                    instance_uuid='fake')
+
+        self.stub_out('nova.virt.fake.FakeDriver.spawn', throw_error)
+
+        flavor_id = self._create_acc_flavor()
+        server_name = 'accel_server1'
+        server = self._create_server(
+            server_name, flavor_id=flavor_id,
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            networks='none', expected_state='ERROR')
+
+        self._check_no_allocations(server['id'])
