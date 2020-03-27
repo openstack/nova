@@ -140,6 +140,7 @@ def fake_instance_obj(context, obj_instance_class=None, **updates):
     inst.old_flavor = None
     inst.new_flavor = None
     inst.resources = None
+    inst.migration_context = None
     inst.obj_reset_changes()
     return inst
 

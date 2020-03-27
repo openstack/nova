@@ -12,6 +12,7 @@
 
 from oslo_log import log as logging
 import oslo_messaging as messaging
+from oslo_utils import excutils
 import six
 
 from nova import availability_zones
@@ -93,12 +94,12 @@ class LiveMigrationTask(base.TaskBase):
             # live migrating with a specific destination host so the scheduler
             # is bypassed. There are still some minimal checks performed here
             # though.
-            source_node, dest_node = self._check_requested_destination()
-            # Now that we're semi-confident in the force specified host, we
-            # need to copy the source compute node allocations in Placement
-            # to the destination compute node. Normally select_destinations()
-            # in the scheduler would do this for us, but when forcing the
-            # target host we don't call the scheduler.
+            self._check_destination_is_not_source()
+            self._check_host_is_up(self.destination)
+            self._check_destination_has_enough_memory()
+            source_node, dest_node = (
+                self._check_compatible_with_source_hypervisor(
+                    self.destination))
             # TODO(mriedem): Call select_destinations() with a
             # skip_filters=True flag so the scheduler does the work of claiming
             # resources on the destination in Placement but still bypass the
@@ -111,11 +112,20 @@ class LiveMigrationTask(base.TaskBase):
             # this assumption fails then placement will return consumer
             # generation conflict and this call raise a AllocationUpdateFailed
             # exception. We let that propagate here to abort the migration.
+            # NOTE(luyao): When forcing the target host we don't call the
+            # scheduler, that means we need to get allocations from placement
+            # first, then claim resources in resource tracker on the
+            # destination host based on these allocations.
             scheduler_utils.claim_resources_on_destination(
                 self.context, self.report_client,
                 self.instance, source_node, dest_node,
                 source_allocations=self._held_allocations,
                 consumer_generation=None)
+            try:
+                self._check_requested_destination()
+            except Exception:
+                with excutils.save_and_reraise_exception():
+                    self._remove_host_allocations(dest_node.uuid)
 
             # dest_node is a ComputeNode object, so we need to get the actual
             # node name off it to set in the Migration object below.
@@ -264,15 +274,7 @@ class LiveMigrationTask(base.TaskBase):
             raise exception.ComputeServiceUnavailable(host=host)
 
     def _check_requested_destination(self):
-        """Performs basic pre-live migration checks for the forced host.
-
-        :returns: tuple of (source ComputeNode, destination ComputeNode)
-        """
-        self._check_destination_is_not_source()
-        self._check_host_is_up(self.destination)
-        self._check_destination_has_enough_memory()
-        source_node, dest_node = self._check_compatible_with_source_hypervisor(
-            self.destination)
+        """Performs basic pre-live migration checks for the forced host."""
         # NOTE(gibi): This code path is used when the live migration is forced
         # to a target host and skipping the scheduler. Such operation is
         # rejected for servers with nested resource allocations since
@@ -289,7 +291,6 @@ class LiveMigrationTask(base.TaskBase):
             raise exception.MigrationPreCheckError(
                 reason=(_('Unable to force live migrate instance %s '
                           'across cells.') % self.instance.uuid))
-        return source_node, dest_node
 
     def _check_destination_is_not_source(self):
         if self.destination == self.source:

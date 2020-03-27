@@ -3058,10 +3058,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 post_claim_md,
                 self.compute._live_migration_claim(
                     self.context, instance, md, migration,
-                    mock.sentinel.limits))
+                    mock.sentinel.limits, None))
             mock_lm_claim.assert_called_once_with(
                 self.context, instance, 'fake-dest-node', migration,
-                mock.sentinel.limits)
+                mock.sentinel.limits, None)
             mock_post_claim_migrate_data.assert_called_once_with(
                 self.context, instance, md, mock_claim)
 
@@ -3086,10 +3086,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 exception.MigrationPreCheckError,
                 self.compute._live_migration_claim,
                 self.context, instance, objects.LibvirtLiveMigrateData(),
-                migration, mock.sentinel.limits)
+                migration, mock.sentinel.limits, None)
             mock_lm_claim.assert_called_once_with(
                 self.context, instance, 'fake-dest-node', migration,
-                mock.sentinel.limits)
+                mock.sentinel.limits, None)
             mock_get_nodename.assert_called_once_with(instance)
             mock_post_claim_migrate_data.assert_not_called()
 
@@ -3230,7 +3230,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                         'Destination was ready for NUMA live migration'))
             else:
                 mock_lm_claim.assert_called_once_with(
-                    self.context, instance, mig_data, migration, limits)
+                    self.context, instance, mig_data, migration, limits, None)
                 self.assertEqual(post_claim_md, result)
             mock_check_clean.assert_called_once_with(self.context,
                                                      dest_check_data)
@@ -9581,13 +9581,11 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         @mock.patch.object(self.compute, 'compute_rpcapi')
         @mock.patch.object(self.compute, '_notify_about_instance_usage')
         @mock.patch.object(self.compute, 'network_api')
-        @mock.patch.object(objects.Instance, 'refresh')
-        def _do_call(refresh, nwapi, notify, rpc, update):
+        def _do_call(nwapi, notify, rpc, update):
             bdms = objects.BlockDeviceMappingList(objects=[])
             result = self.compute._post_live_migration(
                 self.context, self.instance, 'foo', *args, source_bdms=bdms,
                 **kwargs)
-            refresh.assert_called_once_with()
             return result
 
         mock_rt = self._mock_rt()
@@ -9742,8 +9740,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         @mock.patch.object(self.compute, 'update_available_resource')
         @mock.patch.object(self.compute, '_update_scheduler_instance_info')
         @mock.patch.object(self.compute, '_clean_instance_console_tokens')
-        @mock.patch.object(objects.Instance, 'refresh')
-        def _test(_refresh, _clean_instance_console_tokens,
+        def _test(_clean_instance_console_tokens,
                   _update_scheduler_instance_info, update_available_resource,
                   driver_cleanup, _live_migration_cleanup_flags,
                   post_live_migration_at_destination,
@@ -9757,7 +9754,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             post_live_migration_at_source.assert_called_once_with(
                 self.context, self.instance,
                 test.MatchType(network_model.NetworkInfo))
-            _refresh.assert_called_once_with()
             driver_cleanup.assert_called_once_with(
                 self.context, self.instance,
                 test.MatchType(network_model.NetworkInfo), destroy_disks=False,

@@ -3032,7 +3032,8 @@ class TestLiveMigration(BaseTestCase):
         ) as (mock_from_instance, mock_migration_save, mock_instance_save,
               mock_update, mock_pci_claim_instance, mock_update_usage):
             claim = self.rt.live_migration_claim(ctxt, instance, _NODENAME,
-                                                 migration, limits=None)
+                                                 migration, limits=None,
+                                                 allocs=None)
             self.assertEqual(42, claim.migration.id)
             # Check that we didn't set the status to 'pre-migrating', like we
             # do for cold migrations, but which doesn't exist for live
