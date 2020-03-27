@@ -14144,6 +14144,49 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_spawn_power_on_false(self):
         self.test_spawn_with_network_info(power_on=False)
 
+    @mock.patch('nova.virt.libvirt.blockinfo.get_disk_info')
+    def _test_spawn_accels(self, accel_info, mock_get_disk_info):
+        mock_get_disk_info.return_value = {'mapping': None}
+        self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.'
+                      '_create_image', lambda *a, **kw: None)
+        self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.'
+                      '_ensure_console_log_for_instance',
+                      lambda *a, **kw: None)
+        self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.'
+                      '_allocate_mdevs', lambda *a, **kw: None)
+        self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.'
+                      '_create_domain_and_network', lambda *a, **kw: None)
+
+        instance = objects.Instance(**self.test_instance)
+        instance.image_ref = uuids.image_ref
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        drvr.spawn(self.context, instance, image_meta, [], None, {},
+                   accel_info=accel_info, power_on=False)
+        return instance
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_guest_xml')
+    def test_spawn_accels_no_accel_info(self, mock_get_guest_xml):
+        # accel_info should be passed to get_guest_xml even if it is []
+        accel_info = []
+        instance = self._test_spawn_accels(accel_info)
+        mock_get_guest_xml.assert_called_once_with(
+            self.context, instance, mock.ANY, mock.ANY, mock.ANY,
+            block_device_info=None, mdevs=mock.ANY,
+            accel_info=[])
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_guest_xml')
+    def test_spawn_accels_with_accel_info(self, mock_get_guest_xml):
+        # accel_info should be passed to get_guest_xml if it is not []
+        accel_info = nova_fixtures.CyborgFixture.bound_arq_list
+        instance = self._test_spawn_accels(accel_info)
+        mock_get_guest_xml.assert_called_once_with(
+            self.context, instance, mock.ANY, mock.ANY, mock.ANY,
+            block_device_info=None, mdevs=mock.ANY,
+            accel_info=accel_info)
+
     # Methods called directly by spawn()
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_guest_xml')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
@@ -19632,6 +19675,47 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_get_guest_config_parallels_volume(self):
         self._test_get_guest_config_parallels_volume(fields.VMMode.EXE, 4)
         self._test_get_guest_config_parallels_volume(fields.VMMode.HVM, 6)
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_guest_add_accel_pci_devices')
+    def test_get_guest_config_accel_pci(self, mock_add_accel):
+        # For an ARQ list with attach handle type 'PCI', the list should
+        # be passed intact to _guest_add_accel_pci_devices.
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(**self.test_instance)
+        instance.image_ref = uuids.image_ref
+        instance.config_drive = ''
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        disk_info = {'mapping': {}}
+
+        accel_info = copy.deepcopy(nova_fixtures.CyborgFixture.bound_arq_list)
+        for arq in accel_info:
+            arq['attach_handle_type'] = 'PCI'
+        drvr._get_guest_config(instance, network_info=[],
+            image_meta=image_meta, disk_info=disk_info, accel_info=accel_info)
+        mock_add_accel.assert_called_once_with(mock.ANY, accel_info)
+
+    @mock.patch.object(libvirt_driver.LOG, 'info')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_guest_add_accel_pci_devices')
+    def test_get_guest_config_accel_nonpci(self, mock_add_accel, mock_log):
+        # For an ARQ list with attach handle type != 'PCI',
+        # _guest_add_accel_pci_devices should get [].
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(**self.test_instance)
+        instance.image_ref = uuids.image_ref
+        instance.config_drive = ''
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        disk_info = {'mapping': {}}
+
+        # This list has ARQs with attach handle type 'TEST_PCI'.
+        accel_info = nova_fixtures.CyborgFixture.bound_arq_list
+
+        drvr._get_guest_config(instance, network_info=[],
+            image_meta=image_meta, disk_info=disk_info, accel_info=accel_info)
+        mock_add_accel.assert_called_once_with(mock.ANY, [])
+        self.assertIn('Ignoring accelerator requests for instance',
+                      six.text_type(mock_log.call_args[0]))
 
     def test_get_guest_disk_config_rbd_older_config_drive_fall_back(self):
         # New config drives are stored in rbd but existing instances have
