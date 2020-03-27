@@ -464,7 +464,7 @@ class PowerVMDriver(driver.ComputeDriver):
                      timeout=timeout)
 
     def power_on(self, context, instance, network_info,
-                 block_device_info=None):
+                 block_device_info=None, accel_info=None):
         """Power on the specified instance.
 
         :param instance: nova.objects.instance.Instance

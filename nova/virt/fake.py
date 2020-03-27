@@ -276,7 +276,7 @@ class FakeDriver(driver.ComputeDriver):
             raise exception.InstanceNotFound(instance_id=instance.uuid)
 
     def power_on(self, context, instance, network_info,
-                 block_device_info=None):
+                 block_device_info=None, accel_info=None):
         if instance.uuid in self.instances:
             self.instances[instance.uuid].state = power_state.RUNNING
         else:

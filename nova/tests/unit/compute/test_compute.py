@@ -2493,7 +2493,7 @@ class ComputeTestCase(BaseTestCase,
         called = {'power_on': False}
 
         def fake_driver_power_on(self, context, instance, network_info,
-                                 block_device_info):
+                                 block_device_info, accel_device_info=None):
             called['power_on'] = True
 
         self.stub_out('nova.virt.fake.FakeDriver.power_on',
@@ -2511,6 +2511,25 @@ class ComputeTestCase(BaseTestCase,
         self.compute.start_instance(self.context, instance=inst_obj)
         self.assertTrue(called['power_on'])
         self.compute.terminate_instance(self.context, inst_obj, [])
+
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_get_instance_block_device_info')
+    @mock.patch('nova.network.neutron.API.get_instance_nw_info')
+    @mock.patch.object(fake.FakeDriver, 'power_on')
+    @mock.patch('nova.accelerator.cyborg._CyborgClient.get_arqs_for_instance')
+    def test_power_on_with_accels(self, mock_get_arqs,
+            mock_power_on, mock_nw_info, mock_blockdev):
+        instance = self._create_fake_instance_obj()
+        instance.flavor.extra_specs = {'accel:device_profile': 'mydp'}
+        accel_info = [{'k1': 'v1', 'k2': 'v2'}]
+        mock_get_arqs.return_value = accel_info
+        mock_nw_info.return_value = 'nw_info'
+        mock_blockdev.return_value = 'blockdev_info'
+
+        self.compute._power_on(self.context, instance)
+        mock_get_arqs.assert_called_once_with(instance['uuid'])
+        mock_power_on.assert_called_once_with(self.context,
+            instance, 'nw_info', 'blockdev_info', accel_info)
 
     def test_power_off(self):
         # Ensure instance can be powered off.

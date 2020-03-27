@@ -3099,9 +3099,10 @@ class ComputeManager(manager.Manager):
         network_info = self.network_api.get_instance_nw_info(context, instance)
         block_device_info = self._get_instance_block_device_info(context,
                                                                  instance)
+        accel_info = self._get_accel_info(context, instance)
         self.driver.power_on(context, instance,
                              network_info,
-                             block_device_info)
+                             block_device_info, accel_info)
 
     def _delete_snapshot_of_shelved_instance(self, context, instance,
                                              snapshot_id):
