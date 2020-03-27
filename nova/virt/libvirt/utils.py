@@ -108,8 +108,9 @@ def create_cow_image(backing_file, path, size=None):
     base_cmd = ['qemu-img', 'create', '-f', 'qcow2']
     cow_opts = []
     if backing_file:
-        cow_opts += ['backing_file=%s' % backing_file]
         base_details = images.qemu_img_info(backing_file)
+        cow_opts += ['backing_file=%s' % backing_file]
+        cow_opts += ['backing_fmt=%s' % base_details.file_format]
     else:
         base_details = None
     # Explicitly inherit the value of 'cluster_size' property of a qcow2
