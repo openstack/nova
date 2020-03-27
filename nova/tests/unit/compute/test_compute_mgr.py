@@ -264,6 +264,37 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                       phase='end',
                       bdms=mock_bdms)])
 
+    @mock.patch.object(objects.Instance, 'destroy')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(manager.ComputeManager, '_complete_deletion')
+    @mock.patch.object(manager.ComputeManager, '_cleanup_volumes')
+    @mock.patch.object(manager.ComputeManager, '_shutdown_instance')
+    @mock.patch.object(compute_utils, 'notify_about_instance_action')
+    @mock.patch.object(manager.ComputeManager, '_notify_about_instance_usage')
+    def _test_delete_instance_with_accels(self, instance, mock_inst_usage,
+            mock_inst_action, mock_shutdown, mock_cleanup_vols,
+            mock_complete_del, mock_inst_save, mock_inst_destroy):
+        self.compute._delete_instance(self.context, instance, bdms=None)
+
+    @mock.patch('nova.accelerator.cyborg._CyborgClient.'
+                'delete_arqs_for_instance')
+    def test_delete_instance_with_accels_ok(self, mock_del_arqs):
+        # _delete_instance() calls Cyborg to delete ARQs, if
+        # the extra specs has a device profile name.
+        instance = fake_instance.fake_instance_obj(self.context)
+        instance.flavor.extra_specs = {'accel:device_profile': 'mydp'}
+        self._test_delete_instance_with_accels(instance)
+        mock_del_arqs.assert_called_once_with(instance.uuid)
+
+    @mock.patch('nova.accelerator.cyborg._CyborgClient.'
+                'delete_arqs_for_instance')
+    def test_delete_instance_with_accels_no_dp(self, mock_del_arqs):
+        # _delete_instance() does not call Cyborg to delete ARQs, if
+        # the extra specs has no device profile name.
+        instance = fake_instance.fake_instance_obj(self.context)
+        self._test_delete_instance_with_accels(instance)
+        mock_del_arqs.assert_not_called()
+
     def _make_compute_node(self, hyp_hostname, cn_id):
         cn = mock.Mock(spec_set=['hypervisor_hostname', 'id', 'uuid',
                                  'destroy'])
@@ -6214,6 +6245,55 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_spawn.assert_called_once_with(self.context, self.instance,
             mock.ANY, self.injected_files, self.admin_pass, mock.ANY,
             network_info=None, block_device_info=None, accel_info=accel_info)
+
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_build_networks_for_instance')
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_default_block_device_names')
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_prep_block_device')
+    @mock.patch.object(virt_driver.ComputeDriver,
+                       'prepare_for_spawn')
+    @mock.patch.object(virt_driver.ComputeDriver,
+                       'prepare_networks_before_block_device_mapping')
+    @mock.patch.object(virt_driver.ComputeDriver,
+                       'clean_networks_preparation')
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_get_bound_arq_resources')
+    def _test_delete_arqs_exception(self, mock_get_arqs,
+            mock_clean_net, mock_prep_net, mock_prep_spawn, mock_prep_bd,
+            mock_bdnames, mock_build_net, mock_save):
+        args = (self.context, self.instance, self.requested_networks,
+                self.security_groups, self.image, self.block_device_mapping,
+                self.resource_provider_mapping)
+        mock_get_arqs.side_effect = (
+            exception.AcceleratorRequestOpFailed(op='get', msg=''))
+
+        with self.compute._build_resources(*args):
+            raise test.TestingException()
+
+    @mock.patch('nova.accelerator.cyborg._CyborgClient.'
+                'delete_arqs_for_instance')
+    def test_delete_arqs_if_build_res_exception(self, mock_del_arqs):
+        # Cyborg is called to delete ARQs if exception is thrown inside
+        # the context of # _build_resources().
+        self.instance.flavor.extra_specs = {'accel:device_profile': 'mydp'}
+        self.assertRaisesRegex(exception.BuildAbortException,
+            'Failure getting accelerator requests',
+            self._test_delete_arqs_exception)
+        mock_del_arqs.assert_called_once_with(self.instance.uuid)
+
+    @mock.patch('nova.accelerator.cyborg._CyborgClient.'
+                'delete_arqs_for_instance')
+    def test_delete_arqs_if_build_res_exception_no_dp(self, mock_del_arqs):
+        # Cyborg is not called to delete ARQs, even if an exception is
+        # thrown inside the context of _build_resources(), if there is no
+        # device profile name in the extra specs.
+        self.instance.flavor.extra_specs = {}
+        self.assertRaises(exception.BuildAbortException,
+            self._test_delete_arqs_exception)
+        mock_del_arqs.assert_not_called()
 
     def test_build_and_run_instance_called_with_proper_args(self):
         self._test_build_and_run_instance()

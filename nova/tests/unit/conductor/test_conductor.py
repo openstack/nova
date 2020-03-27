@@ -30,6 +30,7 @@ from nova import block_device
 from nova.compute import flavors
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
+from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova.conductor import api as conductor_api
 from nova.conductor import manager as conductor_manager
@@ -3562,6 +3563,19 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         # Assert that we did not continue processing the instance once we
         # handled the error.
         mock_save.assert_not_called()
+
+    @mock.patch.object(conductor_manager.ComputeTaskManager,
+                       '_cleanup_allocated_networks')
+    @mock.patch.object(conductor_manager.ComputeTaskManager,
+                       '_set_vm_state_and_notify')
+    @mock.patch.object(compute_utils, 'delete_arqs_if_needed')
+    def test_cleanup_arqs_on_reschedule(self, mock_del_arqs,
+            mock_set_vm, mock_clean_net):
+        instance = fake_instance.fake_instance_obj(self.context)
+        self.conductor_manager._cleanup_when_reschedule_fails(
+            self.context, instance, exception=None,
+            legacy_request_spec=None, requested_networks=None)
+        mock_del_arqs.assert_called_once_with(self.context, instance)
 
     def test_cleanup_allocated_networks_none_requested(self):
         # Tests that we don't deallocate networks if 'none' were specifically

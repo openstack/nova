@@ -1296,6 +1296,26 @@ class _ComputeAPIUnitTestMixIn(object):
 
         mock_dealloc.assert_called_once_with(self.context, inst)
 
+    @mock.patch.object(compute_utils, 'notify_about_instance_action')
+    @mock.patch.object(objects.BlockDeviceMapping, 'destroy')
+    @mock.patch.object(cinder.API, 'detach')
+    @mock.patch.object(compute_utils, 'notify_about_instance_usage')
+    @mock.patch.object(neutron_api.API, 'deallocate_for_instance')
+    @mock.patch.object(context.RequestContext, 'elevated')
+    @mock.patch.object(objects.Instance, 'destroy')
+    @mock.patch.object(compute_utils, 'delete_arqs_if_needed')
+    def test_local_delete_for_arqs(
+            self, mock_del_arqs, mock_inst_destroy, mock_elevated,
+            mock_dealloc, mock_notify_legacy, mock_detach,
+            mock_bdm_destroy, mock_notify):
+        inst = self._create_instance_obj()
+        inst._context = self.context
+        mock_elevated.return_value = self.context
+        bdms = []
+        self.compute_api._local_delete(self.context, inst, bdms,
+                                       'delete', self._fake_do_delete)
+        mock_del_arqs.assert_called_once_with(self.context, inst)
+
     @mock.patch.object(objects.BlockDeviceMapping, 'destroy')
     def test_local_cleanup_bdm_volumes_stashed_connector(self, mock_destroy):
         """Tests that we call volume_api.terminate_connection when we found

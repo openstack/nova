@@ -7892,51 +7892,7 @@ class AcceleratorServerBase(integrated_helpers.ProviderUsageBaseTestCase):
                                         extra_spec=extra_specs)
         return flavor_id
 
-    def _check_allocations_usage(self, server_uuid):
-        host_rp_uuid = self.compute_rp_uuids[0]
-        device_rp_uuid = self.device_rp_map[host_rp_uuid]
-        expected_host_alloc = {
-            'resources': {'VCPU': 2, 'MEMORY_MB': 2048, 'DISK_GB': 20},
-        }
-        expected_device_alloc = {'resources': {'FPGA': 1}}
-
-        host_alloc = self._get_allocations_by_provider_uuid(host_rp_uuid)
-        self.assertEqual(expected_host_alloc, host_alloc[server_uuid])
-
-        device_alloc = self._get_allocations_by_provider_uuid(device_rp_uuid)
-        self.assertEqual(expected_device_alloc, device_alloc[server_uuid])
-
-
-class AcceleratorServerTest(AcceleratorServerBase):
-    def setUp(self):
-        self.NUM_HOSTS = 1
-        super(AcceleratorServerTest, self).setUp()
-
-    def test_create_server(self):
-        flavor_id = self._create_acc_flavor()
-        server_name = 'accel_server1'
-        server = self._create_server(
-            server_name, flavor_id=flavor_id,
-            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
-            networks='none', expected_state='ACTIVE')
-
-        # Verify that the host name and the device rp UUID are set properly.
-        # Other fields in the ARQ are hardcoded data from the fixture.
-        arqs = self.cyborg.fake_get_arqs_for_instance(server['id'])
-        self.assertEqual(self.device_rp_uuids[0], arqs[0]['device_rp_uuid'])
-        self.assertEqual(server['OS-EXT-SRV-ATTR:host'], arqs[0]['hostname'])
-
-        # Check allocations and usage
-        self._check_allocations_usage(server['id'])
-
-
-class AcceleratorServerReschedTest(AcceleratorServerBase):
-
-    def setUp(self):
-        self.NUM_HOSTS = 2
-        super(AcceleratorServerReschedTest, self).setUp()
-
-    def _check_allocations_usage_resched(self, server):
+    def _check_allocations_usage(self, server):
         # Check allocations on host where instance is running
         server_uuid = server['id']
 
@@ -7974,14 +7930,86 @@ class AcceleratorServerReschedTest(AcceleratorServerBase):
                          for arq in arqs}
         self.assertSetEqual(expected_arq_bind_info, arq_bind_info)
 
-    def _check_no_allocations(self, server_uuid):
+    def _check_no_allocs_usage(self, server_uuid):
         allocs = self._get_allocations_by_server_uuid(server_uuid)
         self.assertEqual(allocs, {})
 
         for i in range(self.NUM_HOSTS):
+            host_alloc = self._get_allocations_by_provider_uuid(
+                    self.compute_rp_uuids[i])
+            self.assertEqual({}, host_alloc)
+            device_alloc = self._get_allocations_by_provider_uuid(
+                    self.device_rp_uuids[i])
+            self.assertEqual({}, device_alloc)
             usage = self._get_provider_usages(
                 self.device_rp_uuids[i]).get('FPGA')
             self.assertEqual(usage, 0)
+
+
+class AcceleratorServerTest(AcceleratorServerBase):
+    def setUp(self):
+        self.NUM_HOSTS = 1
+        super(AcceleratorServerTest, self).setUp()
+
+    def _get_server(self, expected_state='ACTIVE'):
+        flavor_id = self._create_acc_flavor()
+        server_name = 'accel_server1'
+        server = self._create_server(
+            server_name, flavor_id=flavor_id,
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            networks='none', expected_state=expected_state)
+        return server
+
+    def test_create_delete_server_ok(self):
+        server = self._get_server()
+
+        # Verify that the host name and the device rp UUID are set properly.
+        # Other fields in the ARQ are hardcoded data from the fixture.
+        arqs = self.cyborg.fake_get_arqs_for_instance(server['id'])
+        self.assertEqual(self.device_rp_uuids[0], arqs[0]['device_rp_uuid'])
+        self.assertEqual(server['OS-EXT-SRV-ATTR:host'], arqs[0]['hostname'])
+
+        # Check allocations and usage
+        self._check_allocations_usage(server)
+
+        # Delete server and check that ARQs got deleted
+        self.api.delete_server(server['id'])
+        self._wait_until_deleted(server)
+        self.cyborg.mock_del_arqs.assert_called_once_with(server['id'])
+
+        # Check that resources are freed
+        self._check_no_allocs_usage(server['id'])
+
+    def test_create_server_with_error(self):
+
+        def throw_error(*args, **kwargs):
+            raise exception.BuildAbortException(reason='',
+                    instance_uuid='fake')
+
+        self.stub_out('nova.virt.fake.FakeDriver.spawn', throw_error)
+
+        server = self._get_server(expected_state='ERROR')
+        server_uuid = server['id']
+        # Check that Cyborg was called to delete ARQs
+        self.cyborg.mock_del_arqs.assert_called_once_with(server_uuid)
+        # An instance in error state should consume no resources
+        self._check_no_allocs_usage(server_uuid)
+
+        self.api.delete_server(server_uuid)
+        self._wait_until_deleted(server)
+        # Verify that there is one more call to delete ARQs
+        self.cyborg.mock_del_arqs.assert_has_calls(
+            [mock.call(server_uuid), mock.call(server_uuid)])
+
+        # Verify that no allocations/usages remain after deletion
+        self._check_no_allocs_usage(server_uuid)
+
+
+class AcceleratorServerReschedTest(AcceleratorServerBase):
+
+    def setUp(self):
+        self.NUM_HOSTS = 2
+        super(AcceleratorServerReschedTest, self).setUp()
 
     def test_resched(self):
         orig_spawn = fake.FakeDriver.spawn
@@ -8004,7 +8032,8 @@ class AcceleratorServerReschedTest(AcceleratorServerBase):
                 networks='none', expected_state='ACTIVE')
 
         self.assertEqual(2, fake_spawn.count)
-        self._check_allocations_usage_resched(server)
+        self._check_allocations_usage(server)
+        self.cyborg.mock_del_arqs.assert_called_once_with(server['id'])
 
     def test_resched_fails(self):
 
@@ -8021,4 +8050,9 @@ class AcceleratorServerReschedTest(AcceleratorServerBase):
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             networks='none', expected_state='ERROR')
 
-        self._check_no_allocations(server['id'])
+        server_uuid = server['id']
+        self._check_no_allocs_usage(server_uuid)
+        self.cyborg.mock_del_arqs.assert_has_calls(
+            [mock.call(server_uuid),
+             mock.call(server_uuid),
+             mock.call(server_uuid)])

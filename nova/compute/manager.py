@@ -2600,6 +2600,7 @@ class ComputeManager(manager.Manager):
         except (Exception, eventlet.timeout.Timeout) as exc:
             LOG.exception(exc.format_message())
             self._build_resources_cleanup(instance, network_info)
+            compute_utils.delete_arqs_if_needed(context, instance)
             msg = _('Failure getting accelerator requests.')
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=msg)
@@ -2634,6 +2635,9 @@ class ComputeManager(manager.Manager):
                     raise exception.BuildAbortException(
                             instance_uuid=instance.uuid,
                             reason=six.text_type(exc))
+                finally:
+                    # Call Cyborg to delete accelerator requests
+                    compute_utils.delete_arqs_if_needed(context, instance)
 
     def _get_bound_arq_resources(self, context, dp_name, instance):
         """Get bound accelerator requests.
@@ -2973,6 +2977,8 @@ class ComputeManager(manager.Manager):
 
         self._cleanup_volumes(context, instance, bdms,
                 raise_exc=False, detach=False)
+        # Delete Cyborg ARQs if the instance has a device profile.
+        compute_utils.delete_arqs_if_needed(context, instance)
         # if a delete task succeeded, always update vm state and task
         # state without expecting task state to be DELETING
         instance.vm_state = vm_states.DELETED

@@ -2644,6 +2644,10 @@ class CyborgFixture(fixtures.Fixture):
                 match[0][0], match[0][1], match[0][2])
         return bound_arq_list
 
+    @staticmethod
+    def fake_delete_arqs_for_instance(instance_uuid):
+        return None
+
     def setUp(self):
         super(CyborgFixture, self).setUp()
         self.mock_get_dp = self.useFixture(fixtures.MockPatch(
@@ -2659,3 +2663,7 @@ class CyborgFixture(fixtures.Fixture):
             'nova.accelerator.cyborg._CyborgClient.'
             'get_arqs_for_instance',
             side_effect=self.fake_get_arqs_for_instance)).mock
+        self.mock_del_arqs = self.useFixture(fixtures.MockPatch(
+            'nova.accelerator.cyborg._CyborgClient.'
+            'delete_arqs_for_instance',
+            side_effect=self.fake_delete_arqs_for_instance)).mock

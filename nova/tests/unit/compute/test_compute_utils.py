@@ -27,6 +27,7 @@ from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 import six
 
+from nova.accelerator.cyborg import _CyborgClient as cyborgclient
 from nova.compute import manager
 from nova.compute import power_state
 from nova.compute import task_states
@@ -1645,3 +1646,41 @@ class PciRequestUpdateTestCase(test.NoDBTestCase):
         self.assertEqual(
             'enp0s31f6',
             instance.pci_requests.requests[0].spec[0]['parent_ifname'])
+
+
+class AcceleratorRequestTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super(AcceleratorRequestTestCase, self).setUp()
+        self.context = context.get_admin_context()
+
+    @mock.patch.object(cyborgclient, 'delete_arqs_for_instance')
+    def test_delete_with_device_profile(self, mock_del_arq):
+        flavor = objects.Flavor(**test_flavor.fake_flavor)
+        flavor['extra_specs'] = {'accel:device_profile': 'mydp'}
+        instance = fake_instance.fake_instance_obj(self.context, flavor=flavor)
+        compute_utils.delete_arqs_if_needed(self.context, instance)
+        mock_del_arq.assert_called_once_with(instance.uuid)
+
+    @mock.patch.object(cyborgclient, 'delete_arqs_for_instance')
+    def test_delete_with_no_device_profile(self, mock_del_arq):
+        flavor = objects.Flavor(**test_flavor.fake_flavor)
+        flavor['extra_specs'] = {}
+        instance = fake_instance.fake_instance_obj(self.context, flavor=flavor)
+        compute_utils.delete_arqs_if_needed(self.context, instance)
+        mock_del_arq.assert_not_called()
+
+    @mock.patch('nova.compute.utils.LOG.exception')
+    @mock.patch.object(cyborgclient, 'delete_arqs_for_instance')
+    def test_delete_with_device_profile_exception(self, mock_del_arq,
+                                                  mock_log_exc):
+        flavor = objects.Flavor(**test_flavor.fake_flavor)
+        flavor['extra_specs'] = {'accel:device_profile': 'mydp'}
+        instance = fake_instance.fake_instance_obj(self.context, flavor=flavor)
+        mock_del_arq.side_effect = exception.AcceleratorRequestOpFailed(
+                op='', msg='')
+
+        compute_utils.delete_arqs_if_needed(self.context, instance)
+        mock_del_arq.assert_called_once_with(instance.uuid)
+        mock_log_exc.assert_called_once()
+        self.assertIn('Failed to delete accelerator requests for instance',
+                      mock_log_exc.call_args[0][0])

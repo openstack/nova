@@ -2444,6 +2444,10 @@ class API(base.Base):
 
             # cleanup volumes
             self._local_cleanup_bdm_volumes(bdms, instance, context)
+
+            # cleanup accelerator requests (ARQs)
+            compute_utils.delete_arqs_if_needed(context, instance)
+
             # Cleanup allocations in Placement since we can't do it from the
             # compute service.
             self.placementclient.delete_allocation_for_instance(
