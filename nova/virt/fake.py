@@ -208,7 +208,8 @@ class FakeDriver(driver.ComputeDriver):
         update_task_state(task_state=task_states.IMAGE_UPLOADING)
 
     def reboot(self, context, instance, network_info, reboot_type,
-               block_device_info=None, bad_volumes_callback=None):
+               block_device_info=None, bad_volumes_callback=None,
+               accel_info=None):
         # If the guest is not on the hypervisor and we're doing a hard reboot
         # then mimic the libvirt driver by spawning the guest.
         if (instance.uuid not in self.instances and

@@ -570,7 +570,8 @@ class VMwareVCDriver(driver.ComputeDriver):
         self._vmops.snapshot(context, instance, image_id, update_task_state)
 
     def reboot(self, context, instance, network_info, reboot_type,
-               block_device_info=None, bad_volumes_callback=None):
+               block_device_info=None, bad_volumes_callback=None,
+               accel_info=None):
         """Reboot VM instance."""
         self._vmops.reboot(instance, network_info, reboot_type)
 

@@ -15595,9 +15595,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         backend = self.useFixture(fake_imagebackend.ImageBackendFixture())
 
+        accel_info = [{'k1': 'v1', 'k2': 'v2'}]
         with mock.patch('os.path.exists', return_value=True):
             drvr._hard_reboot(self.context, instance, network_info,
-                              block_device_info)
+                              block_device_info, accel_info=accel_info)
 
         disks = backend.disks
 
@@ -15622,7 +15623,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         mock_get_guest_xml.assert_called_once_with(self.context, instance,
             network_info, mock.ANY, mock.ANY,
-            block_device_info=block_device_info, mdevs=[uuids.mdev1])
+            block_device_info=block_device_info, mdevs=[uuids.mdev1],
+            accel_info=accel_info)
         mock_create_domain_and_network.assert_called_once_with(self.context,
             dummyxml, instance, network_info,
             block_device_info=block_device_info, vifs_already_plugged=True)

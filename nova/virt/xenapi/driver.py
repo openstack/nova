@@ -252,7 +252,8 @@ class XenAPIDriver(driver.ComputeDriver):
         self._vmops.post_interrupted_snapshot_cleanup(context, instance)
 
     def reboot(self, context, instance, network_info, reboot_type,
-               block_device_info=None, bad_volumes_callback=None):
+               block_device_info=None, bad_volumes_callback=None,
+               accel_info=None):
         """Reboot VM instance."""
         self._vmops.reboot(instance, reboot_type,
                            bad_volumes_callback=bad_volumes_callback)

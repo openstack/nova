@@ -3680,6 +3680,15 @@ class ComputeManager(manager.Manager):
                 # Manager-detach
                 self.detach_volume(context, volume_id, instance)
 
+    def _get_accel_info(self, context, instance):
+        dp_name = instance.flavor.extra_specs.get('accel:device_profile')
+        if dp_name:
+            cyclient = cyborg.get_client(context)
+            accel_info = cyclient.get_arqs_for_instance(instance.uuid)
+        else:
+            accel_info = []
+        return accel_info
+
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event(prefix='compute')
@@ -3713,6 +3722,8 @@ class ComputeManager(manager.Manager):
             context, instance, bdms=bdms)
 
         network_info = self.network_api.get_instance_nw_info(context, instance)
+
+        accel_info = self._get_accel_info(context, instance)
 
         self._notify_about_instance_usage(context, instance, "reboot.start")
         compute_utils.notify_about_instance_action(
@@ -3755,6 +3766,7 @@ class ComputeManager(manager.Manager):
                                network_info,
                                reboot_type,
                                block_device_info=block_device_info,
+                               accel_info=accel_info,
                                bad_volumes_callback=bad_volumes_callback)
 
         except Exception as error:

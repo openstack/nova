@@ -3070,7 +3070,8 @@ class LibvirtDriver(driver.ComputeDriver):
         self._volume_refresh_connection_info(context, instance, volume_id)
 
     def reboot(self, context, instance, network_info, reboot_type,
-               block_device_info=None, bad_volumes_callback=None):
+               block_device_info=None, bad_volumes_callback=None,
+               accel_info=None):
         """Reboot a virtual machine, given an instance reference."""
         if reboot_type == 'SOFT':
             # NOTE(vish): This will attempt to do a graceful shutdown/restart.
@@ -3091,7 +3092,7 @@ class LibvirtDriver(driver.ComputeDriver):
                             "Trying hard reboot.",
                             instance=instance)
         return self._hard_reboot(context, instance, network_info,
-                                 block_device_info)
+                                 block_device_info, accel_info)
 
     def _soft_reboot(self, instance):
         """Attempt to shutdown and restart the instance gracefully.
@@ -3143,7 +3144,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return False
 
     def _hard_reboot(self, context, instance, network_info,
-                     block_device_info=None):
+                     block_device_info=None, accel_info=None):
         """Reboot a virtual machine, given an instance reference.
 
         Performs a Libvirt reset (if supported) on the domain.
@@ -3185,7 +3186,7 @@ class LibvirtDriver(driver.ComputeDriver):
         xml = self._get_guest_xml(context, instance, network_info, disk_info,
                                   instance.image_meta,
                                   block_device_info=block_device_info,
-                                  mdevs=mdevs)
+                                  mdevs=mdevs, accel_info=accel_info)
 
         # NOTE(mdbooth): context.auth_token will not be set when we call
         #                _hard_reboot from resume_state_on_host_boot()

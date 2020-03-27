@@ -2975,6 +2975,7 @@ class ComputeTestCase(BaseTestCase,
                    launched_at=timeutils.utcnow()))
         instance = objects.Instance._from_db_object(econtext,
                                 objects.Instance(), db_instance)
+        instance.flavor = self.default_flavor
 
         updated_dbinstance1 = fake_instance.fake_db_instance(
             **dict(uuid=uuids.db_instance_1,
@@ -3042,7 +3043,8 @@ class ComputeTestCase(BaseTestCase,
         expected_call_info = {
             'args': (econtext, instance, expected_nw_info,
                      reboot_type),
-            'kwargs': {'block_device_info': fake_block_dev_info}}
+            'kwargs': {'block_device_info': fake_block_dev_info,
+                       'accel_info': []}}
         fault = exception.InstanceNotFound(instance_id='instance-0000')
 
         def fake_reboot(self, *args, **kwargs):
@@ -3157,6 +3159,58 @@ class ComputeTestCase(BaseTestCase,
 
     def test_reboot_hard_and_delete_and_rescued(self):
         self._test_reboot(False, test_delete=True, test_unrescue=True)
+
+    @mock.patch('nova.virt.fake.FakeDriver.reboot')
+    @mock.patch('nova.objects.instance.Instance.save')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch.object(compute_manager.ComputeManager,
+                           '_get_instance_block_device_info')
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_notify_about_instance_usage')
+    @mock.patch.object(compute_manager.ComputeManager, '_instance_update')
+    @mock.patch.object(db, 'instance_update_and_get_original')
+    @mock.patch.object(compute_manager.ComputeManager, '_get_power_state')
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    def _test_reboot_with_accels(self, mock_notify_action, mock_get_power,
+             mock_get_orig, mock_update, mock_notify_usage,
+             mock_get_blk, mock_get_bdms, mock_inst_save, mock_reboot,
+             extra_specs=None, accel_info=None):
+
+        self.compute.network_api.get_instance_nw_info = mock.Mock()
+
+        reboot_type = 'SOFT'
+        instance = self._create_fake_instance_obj()
+        if extra_specs:
+            instance.flavor.extra_specs = extra_specs
+
+        self.compute.reboot_instance(self.context, instance=instance,
+             block_device_info=None, reboot_type=reboot_type)
+
+        mock_reboot.assert_called_once_with(
+            mock.ANY, instance, mock.ANY, reboot_type,
+            block_device_info=mock.ANY,
+            bad_volumes_callback=mock.ANY,
+            accel_info=accel_info or []
+        )
+
+        return instance['uuid']
+
+    @mock.patch('nova.accelerator.cyborg._CyborgClient.get_arqs_for_instance')
+    def test_reboot_with_accels_ok(self, mock_get_arqs):
+        dp_name = 'mydp'
+        extra_specs = {'accel:device_profile': dp_name}
+        _, accel_info = fixtures.get_arqs(dp_name)
+        mock_get_arqs.return_value = accel_info
+
+        instance_uuid = self._test_reboot_with_accels(
+            extra_specs=extra_specs, accel_info=accel_info)
+
+        mock_get_arqs.assert_called_once_with(instance_uuid)
+
+    @mock.patch('nova.accelerator.cyborg._CyborgClient.get_arqs_for_instance')
+    def test_reboot_with_accels_no_dp(self, mock_get_arqs):
+        self._test_reboot_with_accels(extra_specs=None, accel_info=None)
+        mock_get_arqs.assert_not_called()
 
     @mock.patch.object(jsonutils, 'to_primitive')
     def test_reboot_fail(self, mock_to_primitive):
