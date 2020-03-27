@@ -116,6 +116,70 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
         mock_memory_backing.assert_called_once_with(mock.ANY, data)
         self.assertEqual(1, mock_tostring.called)
 
+    def test_update_device_resources_xml_vpmem(self):
+        # original xml for vpmems, /dev/dax0.1 and /dev/dax0.2 here
+        # are vpmem device path on source host
+        old_xml = textwrap.dedent("""
+            <domain>
+                <devices>
+                    <memory model='nvdimm'>
+                        <source>
+                            <path>/dev/dax0.1</path>
+                            <alignsize>2048</alignsize>
+                            <pmem>on</pmem>
+                        </source>
+                        <target>
+                            <size>4192256</size>
+                            <label>
+                                <size>2048</size>
+                            </label>
+                            <node>0</node>
+                        </target>
+                    </memory>
+                    <memory model='nvdimm'>
+                        <source>
+                            <path>/dev/dax0.2</path>
+                            <alignsize>2048</alignsize>
+                            <pmem>on</pmem>
+                        </source>
+                        <target>
+                            <size>4192256</size>
+                            <label>
+                                <size>2048</size>
+                            </label>
+                            <node>0</node>
+                        </target>
+                    </memory>
+                </devices>
+            </domain>""")
+        doc = etree.fromstring(old_xml)
+        vpmem_resource_0 = objects.Resource(
+            provider_uuid=uuids.rp_uuid,
+            resource_class="CUSTOM_PMEM_NAMESPACE_4GB",
+            identifier='ns_0',
+            metadata= objects.LibvirtVPMEMDevice(
+                label='4GB', name='ns_0', devpath='/dev/dax1.0',
+                size=4292870144, align=2097152))
+        vpmem_resource_1 = objects.Resource(
+            provider_uuid=uuids.rp_uuid,
+            resource_class="CUSTOM_PMEM_NAMESPACE_4GB",
+            identifier='ns_0',
+            metadata= objects.LibvirtVPMEMDevice(
+                label='4GB', name='ns_1', devpath='/dev/dax2.0',
+                size=4292870144, align=2097152))
+        # new_resources contains vpmems claimed on destination,
+        # /dev/dax1.0 and /dev/dax2.0 are where vpmem data is migrated to
+        new_resources = objects.ResourceList(
+                objects=[vpmem_resource_0, vpmem_resource_1])
+        res = etree.tostring(migration._update_device_resources_xml(
+                                copy.deepcopy(doc), new_resources),
+                             encoding='unicode')
+        # we expect vpmem info will be updated in xml after invoking
+        # _update_device_resources_xml
+        new_xml = old_xml.replace("/dev/dax0.1", "/dev/dax1.0")
+        new_xml = new_xml.replace("/dev/dax0.2", "/dev/dax2.0")
+        self.assertXmlEqual(res, new_xml)
+
     def test_update_numa_xml(self):
         xml = textwrap.dedent("""
             <domain>

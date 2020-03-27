@@ -7664,7 +7664,7 @@ class ComputeManager(manager.Manager):
         LOG.debug('destination check data is %s', dest_check_data)
         try:
             allocs = self.reportclient.get_allocations_for_consumer(
-                    ctxt, instance.uuid)
+                ctxt, instance.uuid)
             migrate_data = self.compute_rpcapi.check_can_live_migrate_source(
                 ctxt, instance, dest_check_data)
             if ('src_supports_numa_live_migration' in migrate_data and
@@ -8249,9 +8249,10 @@ class ComputeManager(manager.Manager):
             self.driver.live_migration_abort(instance)
         self._notify_live_migrate_abort_end(context, instance)
 
-    def _live_migration_cleanup_flags(self, migrate_data):
-        """Determine whether disks or instance path need to be cleaned up after
-        live migration (at source on success, at destination on rollback)
+    def _live_migration_cleanup_flags(self, migrate_data, migr_ctxt=None):
+        """Determine whether disks, instance path or other resources
+        need to be cleaned up after live migration (at source on success,
+        at destination on rollback)
 
         Block migration needs empty image at destination host before migration
         starts, so if any failure occurs, any empty images has to be deleted.
@@ -8260,7 +8261,11 @@ class ComputeManager(manager.Manager):
         newly created instance-xxx dir on the destination as a part of its
         rollback process
 
+        There may be other resources which need cleanup; currently this is
+        limited to vPMEM devices with the libvirt driver.
+
         :param migrate_data: implementation specific data
+        :param migr_ctxt: specific resources stored in migration_context
         :returns: (bool, bool) -- do_cleanup, destroy_disks
         """
         # NOTE(pkoniszewski): block migration specific params are set inside
@@ -8270,11 +8275,20 @@ class ComputeManager(manager.Manager):
         do_cleanup = False
         destroy_disks = False
         if isinstance(migrate_data, migrate_data_obj.LibvirtLiveMigrateData):
+            has_vpmem = False
+            if migr_ctxt and migr_ctxt.old_resources:
+                for resource in migr_ctxt.old_resources:
+                    if ('metadata' in resource and
+                        isinstance(resource.metadata,
+                                   objects.LibvirtVPMEMDevice)):
+                        has_vpmem = True
+                        break
             # No instance booting at source host, but instance dir
             # must be deleted for preparing next block migration
             # must be deleted for preparing next live migration w/o shared
             # storage
-            do_cleanup = not migrate_data.is_shared_instance_path
+            # vpmem must be cleanped
+            do_cleanup = not migrate_data.is_shared_instance_path or has_vpmem
             destroy_disks = not migrate_data.is_shared_block_storage
         elif isinstance(migrate_data, migrate_data_obj.XenapiLiveMigrateData):
             do_cleanup = migrate_data.block_migration
@@ -8427,7 +8441,7 @@ class ComputeManager(manager.Manager):
         source_node = instance.node
 
         do_cleanup, destroy_disks = self._live_migration_cleanup_flags(
-                migrate_data)
+            migrate_data, migr_ctxt=instance.migration_context)
 
         if do_cleanup:
             LOG.debug('Calling driver.cleanup from _post_live_migration',
@@ -8727,7 +8741,7 @@ class ComputeManager(manager.Manager):
                 bdms=bdms)
 
         do_cleanup, destroy_disks = self._live_migration_cleanup_flags(
-                migrate_data)
+                migrate_data, migr_ctxt=instance.migration_context)
 
         if do_cleanup:
             self.compute_rpcapi.rollback_live_migration_at_destination(
@@ -8867,6 +8881,9 @@ class ComputeManager(manager.Manager):
             # check_can_live_migrate_destination()
             self.rt.free_pci_device_claims_for_instance(context, instance)
 
+            # NOTE(luyao): Apply migration_context temporarily since it's
+            # on destination host, we rely on instance object to cleanup
+            # specific resources like vpmem
             with instance.mutated_migration_context():
                 self.driver.rollback_live_migration_at_destination(
                     context, instance, network_info, block_device_info,

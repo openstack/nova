@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    The libvirt driver now supports live migration with virtual persistent
+    memory (vPMEM), which requires QEMU as hypervisor. In virtualization layer,
+    QEMU will copy vpmem over the network like volatile memory, due to the
+    typical large capacity of vPMEM, it may takes longer time for live
+    migration.

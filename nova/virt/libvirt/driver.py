@@ -5858,30 +5858,18 @@ class LibvirtDriver(driver.ComputeDriver):
         return guest
 
     def _get_ordered_vpmems(self, instance, flavor):
-        ordered_vpmems = []
-        vpmems = self._get_vpmems(instance)
-        labels = hardware.get_vpmems(flavor)
-        for label in labels:
-            for vpmem in vpmems:
-                if vpmem.label == label:
-                    ordered_vpmems.append(vpmem)
-                    vpmems.remove(vpmem)
-                    break
+        resources = self._get_resources(instance)
+        ordered_vpmem_resources = self._get_ordered_vpmem_resources(
+            resources, flavor)
+        ordered_vpmems = [self._vpmems_by_name[resource.identifier]
+            for resource in ordered_vpmem_resources]
         return ordered_vpmems
 
     def _get_vpmems(self, instance, prefix=None):
-        vpmems = []
-        resources = instance.resources
-        if prefix == 'old' and instance.migration_context:
-            if 'old_resources' in instance.migration_context:
-                resources = instance.migration_context.old_resources
-        if not resources:
-            return vpmems
-        for resource in resources:
-            rc = resource.resource_class
-            if rc.startswith("CUSTOM_PMEM_NAMESPACE_"):
-                vpmem = self._vpmems_by_name[resource.identifier]
-                vpmems.append(vpmem)
+        resources = self._get_resources(instance, prefix=prefix)
+        vpmem_resources = self._get_vpmem_resources(resources)
+        vpmems = [self._vpmems_by_name[resource.identifier]
+            for resource in vpmem_resources]
         return vpmems
 
     def _guest_add_vpmems(self, guest, vpmems):
@@ -8143,6 +8131,53 @@ class LibvirtDriver(driver.ComputeDriver):
                 claim.image_meta)
         return migrate_data
 
+    def _get_resources(self, instance, prefix=None):
+        resources = []
+        if prefix:
+            migr_context = instance.migration_context
+            attr_name = prefix + 'resources'
+            if migr_context and attr_name in migr_context:
+                resources = getattr(migr_context, attr_name) or []
+        else:
+            resources = instance.resources or []
+        return resources
+
+    def _get_vpmem_resources(self, resources):
+        vpmem_resources = []
+        for resource in resources:
+            if 'metadata' in resource and \
+                isinstance(resource.metadata, objects.LibvirtVPMEMDevice):
+                vpmem_resources.append(resource)
+        return vpmem_resources
+
+    def _get_ordered_vpmem_resources(self, resources, flavor):
+        vpmem_resources = self._get_vpmem_resources(resources)
+        ordered_vpmem_resources = []
+        labels = hardware.get_vpmems(flavor)
+        for label in labels:
+            for vpmem_resource in vpmem_resources:
+                if vpmem_resource.metadata.label == label:
+                    ordered_vpmem_resources.append(vpmem_resource)
+                    vpmem_resources.remove(vpmem_resource)
+                    break
+        return ordered_vpmem_resources
+
+    def _sorted_migrating_resources(self, instance, flavor):
+        """This method is used to sort instance.migration_context.new_resources
+        claimed on dest host, then the ordered new resources will be used to
+        update resources info (e.g. vpmems) in the new xml which is used for
+        live migration.
+        """
+        resources = self._get_resources(instance, prefix='new_')
+        if not resources:
+            return
+        ordered_resources = []
+        ordered_vpmem_resources = self._get_ordered_vpmem_resources(
+                resources, flavor)
+        ordered_resources.extend(ordered_vpmem_resources)
+        ordered_resources_obj = objects.ResourceList(objects=ordered_resources)
+        return ordered_resources_obj
+
     def _get_live_migrate_numa_info(self, instance_numa_topology, flavor,
                                     image_meta):
         """Builds a LibvirtLiveMigrateNUMAInfo object to send to the source of
@@ -8614,12 +8649,16 @@ class LibvirtDriver(driver.ComputeDriver):
                         host=self._host)
                     self._detach_direct_passthrough_vifs(context,
                         migrate_data, instance)
+                new_resources = None
+                if isinstance(instance, objects.Instance):
+                    new_resources = self._sorted_migrating_resources(
+                        instance, instance.flavor)
                 new_xml_str = libvirt_migrate.get_updated_guest_xml(
                     # TODO(sahid): It's not a really good idea to pass
                     # the method _get_volume_config and we should to find
                     # a way to avoid this in future.
                     guest, migrate_data, self._get_volume_config,
-                    get_vif_config=get_vif_config)
+                    get_vif_config=get_vif_config, new_resources=new_resources)
 
             # NOTE(pkoniszewski): Because of precheck which blocks
             # tunnelled block live migration with mapped volumes we
@@ -8803,6 +8842,8 @@ class LibvirtDriver(driver.ComputeDriver):
         n = 0
         start = time.time()
         is_post_copy_enabled = self._is_post_copy_enabled(migration_flags)
+        # vpmem does not support post copy
+        is_post_copy_enabled &= not bool(self._get_vpmems(instance))
         while True:
             info = guest.get_job_info()
 

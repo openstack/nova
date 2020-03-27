@@ -10137,6 +10137,25 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                           instance,
                           migration.id)
 
+    def test_live_migration_cleanup_flags_shared_path_and_vpmem_libvirt(self):
+        migrate_data = objects.LibvirtLiveMigrateData(
+            is_shared_block_storage=False,
+            is_shared_instance_path=True)
+        migr_ctxt = objects.MigrationContext()
+        vpmem_resource = objects.Resource(
+            provider_uuid=uuids.rp_uuid,
+            resource_class="CUSTOM_PMEM_NAMESPACE_4GB",
+            identifier='ns_0', metadata=objects.LibvirtVPMEMDevice(
+                label='4GB',
+                name='ns_0', devpath='/dev/dax0.0',
+                size=4292870144, align=2097152))
+        migr_ctxt.old_resources = objects.ResourceList(
+                objects=[vpmem_resource])
+        do_cleanup, destroy_disks = self.compute._live_migration_cleanup_flags(
+                migrate_data, migr_ctxt)
+        self.assertTrue(do_cleanup)
+        self.assertTrue(destroy_disks)
+
     def test_live_migration_cleanup_flags_block_migrate_libvirt(self):
         migrate_data = objects.LibvirtLiveMigrateData(
             is_shared_block_storage=False,
