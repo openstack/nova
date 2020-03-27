@@ -2363,13 +2363,15 @@ class ComputeManager(manager.Manager):
                             task_states.BLOCK_DEVICE_MAPPING)
                     block_device_info = resources['block_device_info']
                     network_info = resources['network_info']
+                    accel_info = resources['accel_info']
                     LOG.debug('Start spawning the instance on the hypervisor.',
                               instance=instance)
                     with timeutils.StopWatch() as timer:
                         self.driver.spawn(context, instance, image_meta,
                                           injected_files, admin_password,
                                           allocs, network_info=network_info,
-                                          block_device_info=block_device_info)
+                                          block_device_info=block_device_info,
+                                          accel_info=accel_info)
                     LOG.info('Took %0.2f seconds to spawn the instance on '
                              'the hypervisor.', timer.elapsed(),
                              instance=instance)
