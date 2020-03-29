@@ -75,7 +75,15 @@ class LimitsController(wsgi.Controller):
         """Return all global limit information."""
         context = req.environ['nova.context']
         context.can(limits_policies.BASE_POLICY_NAME)
-        project_id = req.params.get('tenant_id', context.project_id)
+        project_id = context.project_id
+        if 'tenant_id' in req.GET:
+            project_id = req.GET.get('tenant_id')
+            target = {
+                'project_id': project_id,
+                'user_id': context.user_id
+            }
+            context.can(limits_policies.USED_LIMIT_POLICY_NAME, target)
+
         quotas = QUOTAS.get_project_quotas(context, project_id,
                                            usages=True)
         builder = limits_views.ViewBuilder()

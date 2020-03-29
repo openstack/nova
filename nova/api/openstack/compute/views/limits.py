@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.policies import used_limits as ul_policies
-
 
 class ViewBuilder(object):
     """OpenStack API base limits view builder."""
@@ -79,7 +77,6 @@ class ViewBuilder(object):
         return limits
 
     def _build_used_limits(self, request, quotas, filtered_limits):
-        self._check_requested_project_scope(request)
         quota_map = {
             'totalRAMUsed': 'ram',
             'totalCoresUsed': 'cores',
@@ -94,13 +91,3 @@ class ViewBuilder(object):
                 used_limits[display_name] = quotas[key]['in_use']
 
         return used_limits
-
-    def _check_requested_project_scope(self, request):
-        if 'tenant_id' in request.GET:
-            context = request.environ['nova.context']
-            tenant_id = request.GET.get('tenant_id')
-            target = {
-                'project_id': tenant_id,
-                'user_id': context.user_id
-                }
-            context.can(ul_policies.BASE_POLICY_NAME, target)
