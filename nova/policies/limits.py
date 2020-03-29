@@ -24,7 +24,7 @@ BASE_POLICY_NAME = 'os_compute_api:limits'
 limits_policies = [
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
-        base.RULE_ADMIN_OR_OWNER,
+        base.RULE_ANY,
         "Show rate and absolute limits for the project",
         [
             {
