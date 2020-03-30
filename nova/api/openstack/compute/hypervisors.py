@@ -122,7 +122,6 @@ class HypervisorsController(wsgi.Controller):
         :param links: If True, return links in the response for paging.
         """
         context = req.environ['nova.context']
-        context.can(hv_policies.BASE_POLICY_NAME)
 
         # The 2.53 microversion moves the search and servers routes into
         # GET /os-hypervisors and GET /os-hypervisors/detail with query
@@ -221,6 +220,8 @@ class HypervisorsController(wsgi.Controller):
         return self._index(req)
 
     def _index(self, req, limit=None, marker=None, links=False):
+        context = req.environ['nova.context']
+        context.can(hv_policies.BASE_POLICY_NAME % 'list')
         return self._get_hypervisors(req, detail=False, limit=limit,
                                      marker=marker, links=links)
 
@@ -251,6 +252,8 @@ class HypervisorsController(wsgi.Controller):
         return self._detail(req)
 
     def _detail(self, req, limit=None, marker=None, links=False):
+        context = req.environ['nova.context']
+        context.can(hv_policies.BASE_POLICY_NAME % 'list-detail')
         return self._get_hypervisors(req, detail=True, limit=limit,
                                      marker=marker, links=links)
 
@@ -302,7 +305,7 @@ class HypervisorsController(wsgi.Controller):
 
     def _show(self, req, id, with_servers=False):
         context = req.environ['nova.context']
-        context.can(hv_policies.BASE_POLICY_NAME)
+        context.can(hv_policies.BASE_POLICY_NAME % 'show')
 
         self._validate_id(req, id)
 
@@ -324,7 +327,7 @@ class HypervisorsController(wsgi.Controller):
     @wsgi.expected_errors((400, 404, 501))
     def uptime(self, req, id):
         context = req.environ['nova.context']
-        context.can(hv_policies.BASE_POLICY_NAME)
+        context.can(hv_policies.BASE_POLICY_NAME % 'uptime')
 
         self._validate_id(req, id)
 
@@ -362,7 +365,7 @@ class HypervisorsController(wsgi.Controller):
         index and detail methods.
         """
         context = req.environ['nova.context']
-        context.can(hv_policies.BASE_POLICY_NAME)
+        context.can(hv_policies.BASE_POLICY_NAME % 'search')
         hypervisors = self._get_compute_nodes_by_name_pattern(context, id)
         try:
             return dict(hypervisors=[
@@ -386,7 +389,7 @@ class HypervisorsController(wsgi.Controller):
         GET /os-hypervisors index and detail methods.
         """
         context = req.environ['nova.context']
-        context.can(hv_policies.BASE_POLICY_NAME)
+        context.can(hv_policies.BASE_POLICY_NAME % 'servers')
         compute_nodes = self._get_compute_nodes_by_name_pattern(context, id)
         hypervisors = []
         for compute_node in compute_nodes:
@@ -405,6 +408,6 @@ class HypervisorsController(wsgi.Controller):
     @wsgi.expected_errors(())
     def statistics(self, req):
         context = req.environ['nova.context']
-        context.can(hv_policies.BASE_POLICY_NAME)
+        context.can(hv_policies.BASE_POLICY_NAME % 'statistics')
         stats = self.host_api.compute_node_statistics(context)
         return dict(hypervisor_statistics=stats)
