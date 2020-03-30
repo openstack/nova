@@ -2454,8 +2454,8 @@ class PlacementCommands(object):
         allocations = placement.get_allocs_for_consumer(
             ctxt, consumer_uuid)
         if len(allocations['allocations']) > 1:
-            # This consumer has resources spreaded amongst
-            # multiple RPs (think nested or shared for example)
+            # This consumer has resources spread among multiple RPs (think
+            # nested or shared for example)
             # We then need to just update the usage to remove
             # the orphaned resources on the specific RP
             del allocations['allocations'][provider['uuid']]
@@ -2669,7 +2669,7 @@ class PlacementCommands(object):
             resource_providers = self._get_resource_providers(ctxt, placement)
 
         for provider in resource_providers:
-            (nb_p, faults) = self._check_orphaned_allocations_for_provider(
+            nb_p, faults = self._check_orphaned_allocations_for_provider(
                 ctxt, placement, output, provider, delete)
             num_processed += nb_p
             if faults > 0:
