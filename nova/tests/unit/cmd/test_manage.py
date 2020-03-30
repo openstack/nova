@@ -34,6 +34,7 @@ from nova.db import migration
 from nova.db.sqlalchemy import migration as sqla_migration
 from nova import exception
 from nova import objects
+from nova.scheduler.client import report
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_requests
@@ -2859,6 +2860,142 @@ class TestNovaManagePlacement(test.NoDBTestCase):
         }
         neutron.update_port.assert_called_once_with(
             uuidsentinel.port_id, body=expected_update_body)
+
+    def test_audit_with_wrong_provider_uuid(self):
+        with mock.patch.object(
+                self.cli, '_get_resource_provider',
+                side_effect=exception.ResourceProviderNotFound(
+                    name_or_uuid=uuidsentinel.fake_uuid)):
+            ret = self.cli.audit(
+                provider_uuid=uuidsentinel.fake_uuid)
+        self.assertEqual(127, ret)
+        output = self.output.getvalue()
+        self.assertIn(
+            'Resource provider with UUID %s' % uuidsentinel.fake_uuid,
+            output)
+
+    @mock.patch.object(manage.PlacementCommands,
+                       '_check_orphaned_allocations_for_provider')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.get')
+    def _test_audit(self, get_resource_providers, check_orphaned_allocs,
+                     verbose=False, delete=False, errors=False, found=False):
+        rps = [
+              {"generation": 1,
+               "uuid": uuidsentinel.rp1,
+               "links": None,
+               "name": "rp1",
+               "parent_provider_uuid": None,
+               "root_provider_uuid": uuidsentinel.rp1},
+              {"generation": 1,
+               "uuid": uuidsentinel.rp2,
+               "links": None,
+               "name": "rp2",
+               "parent_provider_uuid": None,
+               "root_provider_uuid": uuidsentinel.rp2},
+              ]
+        get_resource_providers.return_value = fake_requests.FakeResponse(
+            200, content=jsonutils.dumps({"resource_providers": rps}))
+
+        if errors:
+            # We found one orphaned allocation per RP but RP1 got a fault
+            check_orphaned_allocs.side_effect = ((1, 1), (1, 0))
+        elif found:
+            # we found one orphaned allocation per RP and we had no faults
+            check_orphaned_allocs.side_effect = ((1, 0), (1, 0))
+        else:
+            # No orphaned allocations are found for all the RPs
+            check_orphaned_allocs.side_effect = ((0, 0), (0, 0))
+
+        ret = self.cli.audit(verbose=verbose, delete=delete)
+        if errors:
+            # Any fault stops the audit and provides a return code equals to 1
+            expected_ret = 1
+        elif found and delete:
+            # We found orphaned allocations and deleted them
+            expected_ret = 4
+        elif found and not delete:
+            # We found orphaned allocations but we left them
+            expected_ret = 3
+        else:
+            # Nothing was found
+            expected_ret = 0
+        self.assertEqual(expected_ret, ret)
+
+        call1 = mock.call(mock.ANY, mock.ANY, mock.ANY, rps[0], delete)
+        call2 = mock.call(mock.ANY, mock.ANY, mock.ANY, rps[1], delete)
+        if errors:
+            # We stop checking other RPs once we got a fault
+            check_orphaned_allocs.assert_has_calls([call1])
+        else:
+            # All the RPs are checked
+            check_orphaned_allocs.assert_has_calls([call1, call2])
+
+        if verbose and found:
+            output = self.output.getvalue()
+            self.assertIn('Processed 2 allocations', output)
+        if errors:
+            output = self.output.getvalue()
+            self.assertIn(
+                'The Resource Provider %s had problems' % rps[0]["uuid"],
+                output)
+
+    def test_audit_not_found_orphaned_allocs(self):
+        self._test_audit(found=False)
+
+    def test_audit_found_orphaned_allocs_not_verbose(self):
+        self._test_audit(found=True)
+
+    def test_audit_found_orphaned_allocs_verbose(self):
+        self._test_audit(found=True, verbose=True)
+
+    def test_audit_found_orphaned_allocs_and_deleted_them(self):
+        self._test_audit(found=True, delete=True)
+
+    def test_audit_found_orphaned_allocs_but_got_errors(self):
+        self._test_audit(errors=True)
+
+    @mock.patch.object(manage.PlacementCommands,
+                       '_delete_allocations_from_consumer')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocations_for_resource_provider')
+    @mock.patch.object(manage.PlacementCommands,
+                       '_get_instances_and_current_migrations')
+    def test_check_orphaned_allocations_for_provider(self,
+                                                     get_insts_and_migs,
+                                                     get_allocs_for_rp,
+                                                     delete_allocs):
+        provider = {"generation": 1,
+                    "uuid": uuidsentinel.rp1,
+                    "links": None,
+                    "name": "rp1",
+                    "parent_provider_uuid": None,
+                    "root_provider_uuid": uuidsentinel.rp1}
+        compute_resources = {'VCPU': 1, 'MEMORY_MB': 2048, 'DISK_GB': 20}
+        allocations = {
+            # Some orphaned compute allocation
+            uuidsentinel.orphaned_alloc1: {'resources': compute_resources},
+            # Some existing instance allocation
+            uuidsentinel.inst1: {'resources': compute_resources},
+            # Some existing migration allocation
+            uuidsentinel.mig1: {'resources': compute_resources},
+            # Some other allocation not related to Nova
+            uuidsentinel.other_alloc1: {'resources': {'CUSTOM_GOO'}},
+        }
+
+        get_insts_and_migs.return_value = (
+            [uuidsentinel.inst1],
+            [uuidsentinel.mig1])
+        get_allocs_for_rp.return_value = report.ProviderAllocInfo(allocations)
+
+        ctxt = context.RequestContext()
+        placement = report.SchedulerReportClient()
+        ret = self.cli._check_orphaned_allocations_for_provider(
+            ctxt, placement, lambda x: x, provider, True)
+        get_allocs_for_rp.assert_called_once_with(ctxt, uuidsentinel.rp1)
+        delete_allocs.assert_called_once_with(ctxt, placement, provider,
+                                              uuidsentinel.orphaned_alloc1,
+                                              'instance')
+        self.assertEqual((1, 0), ret)
 
 
 class TestNovaManageMain(test.NoDBTestCase):
