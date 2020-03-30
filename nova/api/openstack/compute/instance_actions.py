@@ -53,8 +53,9 @@ class InstanceActionsController(wsgi.Controller):
             action[key] = action_raw.get(key)
         return action
 
-    def _format_event(self, event_raw, project_id, show_traceback=False,
-                      show_host=False, show_hostid=False):
+    @staticmethod
+    def _format_event(event_raw, project_id, show_traceback=False,
+                      show_host=False, show_hostid=False, show_details=False):
         event = {}
         for key in EVENT_KEYS:
             # By default, non-admins are not allowed to see traceback details.
@@ -67,6 +68,8 @@ class InstanceActionsController(wsgi.Controller):
         if show_hostid:
             event['hostId'] = utils.generate_hostid(event_raw['host'],
                                                     project_id)
+        if show_details:
+            event['details'] = event_raw['details']
         return event
 
     @wsgi.Controller.api_version("2.1", "2.20")
@@ -178,6 +181,15 @@ class InstanceActionsController(wsgi.Controller):
         show_hostid = api_version_request.is_supported(req, '2.62')
 
         if show_events:
+            # NOTE(brinzhang): Event details are shown since microversion
+            # 2.84.
+            show_details = False
+            support_v284 = api_version_request.is_supported(req, '2.84')
+            if support_v284:
+                show_details = context.can(
+                    ia_policies.BASE_POLICY_NAME % 'events:details',
+                    target={'project_id': instance.project_id}, fatal=False)
+
             events_raw = self.action_api.action_events_get(context, instance,
                                                            action_id)
             # NOTE(takashin): The project IDs of instance action events
@@ -189,6 +201,7 @@ class InstanceActionsController(wsgi.Controller):
             action['events'] = [self._format_event(
                 evt, action['project_id'] or instance.project_id,
                 show_traceback=show_traceback,
-                show_host=show_host, show_hostid=show_hostid
+                show_host=show_host, show_hostid=show_hostid,
+                show_details=show_details
             ) for evt in events_raw]
         return {'instanceAction': action}

@@ -14,6 +14,7 @@ import copy
 import fixtures
 import mock
 
+from nova.api.openstack import api_version_request
 from oslo_policy import policy as oslo_policy
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
@@ -231,6 +232,50 @@ class InstanceActionsScopeTypePolicyTest(InstanceActionsPolicyTest):
             self.other_project_member_context,
             self.project_foo_context, self.project_reader_context
         ]
+
+    @mock.patch('nova.objects.InstanceActionEventList.get_by_action')
+    @mock.patch('nova.objects.InstanceAction.get_by_request_id')
+    def test_show_instance_action_policy_with_show_details(
+            self, mock_get_action, mock_get_events):
+        """Test to ensure skip checking policy rule
+        'os_compute_api:os-instance-actions:show'.
+        """
+        self.req.api_version_request = api_version_request.APIVersionRequest(
+            '2.84')
+        fake_action = self.fake_actions[FAKE_UUID][FAKE_REQUEST_ID]
+        mock_get_action.return_value = fake_action
+        fake_events = self.fake_events[fake_action['id']]
+        fake_action['events'] = fake_events
+        mock_get_events.return_value = fake_events
+        fake_action_fmt = test_instance_actions.format_action(
+            copy.deepcopy(fake_action))
+
+        self._set_policy_rules(overwrite=False)
+        rule_name = ia_policies.BASE_POLICY_NAME % "events:details"
+        authorize_res, unauthorize_res = self.common_policy_check(
+            self.system_reader_authorized_contexts,
+            self.system_reader_unauthorized_contexts,
+            rule_name, self.controller.show,
+            self.req, self.instance['uuid'],
+            fake_action['request_id'], fatal=False)
+
+        for action in authorize_res:
+            # Ensure the 'details' field in the action events
+            for event in action['instanceAction']['events']:
+                self.assertIn('details', event)
+            # In order to unify the display forms of 'start_time' and
+            # 'finish_time', format the results returned by the show api.
+            res_fmt = test_instance_actions.format_action(
+                action['instanceAction'])
+            self.assertEqual(fake_action_fmt['events'], res_fmt['events'])
+
+        # Because of the microversion > '2.51', that will be contain
+        # 'events' in the os-instance-actions show api response, but the
+        # 'details' should not contain in the action events.
+        for action in unauthorize_res:
+            # Ensure the 'details' field not in the action events
+            for event in action['instanceAction']['events']:
+                self.assertNotIn('details', event)
 
 
 class InstanceActionsNoLegacyPolicyTest(InstanceActionsPolicyTest):

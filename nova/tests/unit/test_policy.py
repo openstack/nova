@@ -456,6 +456,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 
         self.system_reader_rules = (
 "os_compute_api:os-services:list",
+"os_compute_api:os-instance-actions:events:details",
 )
 
         self.system_reader_or_owner_rules = (

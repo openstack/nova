@@ -122,6 +122,8 @@ class TestPolicyCheck(test.NoDBTestCase):
                 context, 'os-instance-actions:show', target)
         passing_rules += self.cmd._filter_rules(
                 context, 'os-instance-actions:events', target)
+        passing_rules += self.cmd._filter_rules(
+                context, 'os-instance-actions:events:details', target)
         self.assertEqual(set(expected_rules), set(passing_rules))
 
     def test_filter_rules_non_admin(self):

@@ -1931,10 +1931,16 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         self.api.post_server_action(
             server['id'], resize_req, check_response_status=[202])
-        self._assert_resize_migrate_action_fail(
+        event = self._assert_resize_migrate_action_fail(
             server, instance_actions.RESIZE, 'NoValidHost')
+        self.assertIn('details', event)
+        # This test case works in microversion 2.84.
+        self.assertIn('No valid host was found', event['details'])
         server = self.admin_api.get_server(server['id'])
         self.assertEqual(source_hostname, server['OS-EXT-SRV-ATTR:host'])
+        # The server is still ACTIVE and thus there is no fault message.
+        self.assertEqual('ACTIVE', server['status'])
+        self.assertNotIn('fault', server)
 
         # only the source host shall have usages after the failed resize
         self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor1)
