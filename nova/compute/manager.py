@@ -852,7 +852,29 @@ class ComputeManager(manager.Manager):
                 msg = _("This host has pinned instances but has no CPUs "
                         "set aside for this purpose; configure '[compute] "
                         "cpu_dedicated_set' instead of, or in addition to, "
-                        "'[compute] cpu_shared_set'")
+                        "'[compute] cpu_shared_set'.")
+                raise exception.InvalidConfiguration(msg)
+
+            # if this is a mixed instance with both pinned and unpinned CPUs,
+            # the host must have both 'cpu_dedicated_set' and 'cpu_shared_set'
+            # configured. check if 'cpu_shared_set' is set.
+            if (instance.numa_topology.cpu_policy ==
+                    fields.CPUAllocationPolicy.MIXED and
+                    not CONF.compute.cpu_shared_set):
+                msg = _("This host has mixed instance requesting both pinned "
+                        "and unpinned CPUs but hasn't set aside unpinned CPUs "
+                        "for this purpose; Configure "
+                        "'[compute] cpu_shared_set'.")
+                raise exception.InvalidConfiguration(msg)
+
+            # for mixed instance check if 'cpu_dedicated_set' is set.
+            if (instance.numa_topology.cpu_policy ==
+                    fields.CPUAllocationPolicy.MIXED and
+                    not CONF.compute.cpu_dedicated_set):
+                msg = _("This host has mixed instance requesting both pinned "
+                        "and unpinned CPUs but hasn't set aside pinned CPUs "
+                        "for this purpose; Configure "
+                        "'[compute] cpu_dedicated_set'")
                 raise exception.InvalidConfiguration(msg)
 
             # also check to make sure the operator hasn't accidentally
