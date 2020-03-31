@@ -23,15 +23,16 @@ POLICY_ROOT = 'os_compute_api:os-migrations:%s'
 
 migrations_policies = [
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'index',
-        base.RULE_ADMIN_API,
-        "List migrations",
-        [
+        name=POLICY_ROOT % 'index',
+        check_str=base.RULE_ADMIN_API,
+        description="List migrations",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/os-migrations'
             }
-        ]),
+        ],
+        scope_types=['system']),
 ]
 
 
