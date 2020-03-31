@@ -487,6 +487,7 @@ class _BaseTaskTestCase(object):
         self.useFixture(cast_as_call.CastAsCall(self))
 
         mock_getaz.return_value = 'myaz'
+        mock_create_bind_arqs.return_value = mock.sentinel
 
         self.conductor.build_instances(self.context,
                 instances=instances,
@@ -522,7 +523,8 @@ class _BaseTaskTestCase(object):
                       requested_networks=None,
                       security_groups='security_groups',
                       block_device_mapping=mock.ANY,
-                      node='node1', limits=None, host_list=sched_return[0]),
+                      node='node1', limits=None, host_list=sched_return[0],
+                      accel_uuids=mock.sentinel),
             mock.call(self.context, instance=mock.ANY, host='host2',
                       image={'fake_data': 'should_pass_silently'},
                       request_spec=fake_spec,
@@ -532,7 +534,8 @@ class _BaseTaskTestCase(object):
                       requested_networks=None,
                       security_groups='security_groups',
                       block_device_mapping=mock.ANY,
-                      node='node2', limits=None, host_list=sched_return[1])])
+                      node='node2', limits=None, host_list=sched_return[1],
+                      accel_uuids=mock.sentinel)])
         mock_create_bind_arqs.assert_has_calls([
             mock.call(self.context, instances[0].uuid,
                       instances[0].flavor.extra_specs, 'node1', mock.ANY),
@@ -1055,7 +1058,8 @@ class _BaseTaskTestCase(object):
                 block_device_mapping=test.MatchType(
                     objects.BlockDeviceMappingList),
                 node='node1', limits=None,
-                host_list=expected_build_run_host_list)
+                host_list=expected_build_run_host_list,
+                accel_uuids=[])
             mock_pop_inst_map.assert_not_called()
             mock_destroy_build_req.assert_not_called()
 
@@ -1125,7 +1129,8 @@ class _BaseTaskTestCase(object):
                     objects.BlockDeviceMappingList),
                 node='node1',
                 limits=None,
-                host_list=expected_build_run_host_list)
+                host_list=expected_build_run_host_list,
+                accel_uuids=[])
 
             mock_rp_mapping.assert_called_once_with(
                 test.MatchType(objects.RequestSpec),
@@ -1207,7 +1212,8 @@ class _BaseTaskTestCase(object):
                     objects.BlockDeviceMappingList),
                 node='node2',
                 limits=None,
-                host_list=expected_build_run_host_list)
+                host_list=expected_build_run_host_list,
+                accel_uuids=[])
 
             # called only once when the claim succeeded
             mock_rp_mapping.assert_called_once_with(
@@ -3386,7 +3392,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             security_groups='security_groups',
             block_device_mapping=test.MatchType(
                 objects.BlockDeviceMappingList),
-            node='node2', limits=None, host_list=[])
+            node='node2', limits=None, host_list=[], accel_uuids=[])
 
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     @mock.patch.object(scheduler_utils, 'build_request_spec')
@@ -3446,7 +3452,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                     requested_networks=None,
                     security_groups='security_groups',
                     block_device_mapping=mock.ANY,
-                    node='node2', limits=None, host_list=[])
+                    node='node2', limits=None, host_list=[], accel_uuids=[])
 
     @mock.patch('nova.compute.utils.notify_about_compute_task_error')
     @mock.patch('nova.objects.Instance.save')
