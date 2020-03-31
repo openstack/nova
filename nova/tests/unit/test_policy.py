@@ -328,7 +328,9 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-aggregates:add_host",
 "os_compute_api:os-aggregates:remove_host",
 "os_compute_api:os-aggregates:set_metadata",
-"os_compute_api:os-agents",
+"os_compute_api:os-agents:create",
+"os_compute_api:os-agents:update",
+"os_compute_api:os-agents:delete",
 "os_compute_api:os-baremetal-nodes",
 "os_compute_api:os-evacuate",
 "os_compute_api:os-extended-server-attributes",
@@ -458,6 +460,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-instance-actions:events:details",
 "os_compute_api:os-instance-usage-audit-log:list",
 "os_compute_api:os-instance-usage-audit-log:show",
+"os_compute_api:os-agents:list",
 )
 
         self.system_reader_or_owner_rules = (
