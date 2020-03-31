@@ -355,7 +355,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-simple-tenant-usage:list",
 "os_compute_api:os-availability-zone:detail",
 "os_compute_api:os-used-limits",
-"os_compute_api:os-migrations:index",
 "os_compute_api:os-assisted-volume-snapshots:create",
 "os_compute_api:os-assisted-volume-snapshots:delete",
 "os_compute_api:os-console-auth-tokens",
@@ -454,6 +453,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 )
 
         self.system_reader_rules = (
+"os_compute_api:os-migrations:index",
 "os_compute_api:os-services:list",
 "os_compute_api:os-instance-actions:events:details",
 "os_compute_api:os-instance-usage-audit-log:list",

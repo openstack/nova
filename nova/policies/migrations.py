@@ -24,7 +24,7 @@ POLICY_ROOT = 'os_compute_api:os-migrations:%s'
 migrations_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'index',
-        check_str=base.RULE_ADMIN_API,
+        check_str=base.SYSTEM_READER,
         description="List migrations",
         operations=[
             {
