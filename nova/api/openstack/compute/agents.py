@@ -52,7 +52,7 @@ class AgentController(wsgi.Controller):
     def index(self, req):
         """Return a list of all agent builds. Filter by hypervisor."""
         context = req.environ['nova.context']
-        context.can(agents_policies.BASE_POLICY_NAME % 'list')
+        context.can(agents_policies.BASE_POLICY_NAME % 'list', target={})
         hypervisor = None
         agents = []
         if 'hypervisor' in req.GET:
@@ -75,7 +75,7 @@ class AgentController(wsgi.Controller):
     def update(self, req, id, body):
         """Update an existing agent build."""
         context = req.environ['nova.context']
-        context.can(agents_policies.BASE_POLICY_NAME % 'update')
+        context.can(agents_policies.BASE_POLICY_NAME % 'update', target={})
 
         # TODO(oomichi): This parameter name "para" is different from the ones
         # of the other APIs. Most other names are resource names like "server"
@@ -118,7 +118,7 @@ class AgentController(wsgi.Controller):
     def delete(self, req, id):
         """Deletes an existing agent build."""
         context = req.environ['nova.context']
-        context.can(agents_policies.BASE_POLICY_NAME % 'delete')
+        context.can(agents_policies.BASE_POLICY_NAME % 'delete', target={})
 
         try:
             utils.validate_integer(id, 'id')
@@ -140,7 +140,7 @@ class AgentController(wsgi.Controller):
     def create(self, req, body):
         """Creates a new agent build."""
         context = req.environ['nova.context']
-        context.can(agents_policies.BASE_POLICY_NAME % 'create')
+        context.can(agents_policies.BASE_POLICY_NAME % 'create', target={})
 
         agent = body['agent']
         hypervisor = agent['hypervisor']
