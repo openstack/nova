@@ -838,15 +838,13 @@ class ComputeTaskManager(base.Base):
                     host.service_host, host.nodename, alts, instance=instance)
 
             try:
-                resource_provider_mapping = (
-                    local_reqspec.get_request_group_mapping())
-                accel_uuids = self._create_and_bind_arqs(
-                    context, instance.uuid, instance.flavor.extra_specs,
-                    host.nodename, resource_provider_mapping)
+                accel_uuids = self._create_and_bind_arq_for_instance(
+                    context, instance, host, local_reqspec)
             except Exception as exc:
                 LOG.exception('Failed to reschedule. Reason: %s', exc)
-                self._cleanup_when_reschedule_fails(context, instance, exc,
-                     legacy_request_spec, requested_networks)
+                self._cleanup_when_reschedule_fails(
+                        context, instance, exc, legacy_request_spec,
+                        requested_networks)
                 continue
 
             self.compute_rpcapi.build_and_run_instance(context,
@@ -860,6 +858,22 @@ class ComputeTaskManager(base.Base):
                     block_device_mapping=bdms, node=host.nodename,
                     limits=host.limits, host_list=host_list,
                     accel_uuids=accel_uuids)
+
+    def _create_and_bind_arq_for_instance(self, context, instance, host,
+                                          request_spec):
+        try:
+            resource_provider_mapping = (
+                request_spec.get_request_group_mapping())
+            # Using nodename instead of hostname. See:
+            # http://lists.openstack.org/pipermail/openstack-discuss/2019-November/011044.html  # noqa
+            return self._create_and_bind_arqs(
+                context, instance.uuid, instance.flavor.extra_specs,
+                host.nodename, resource_provider_mapping)
+        except exception.AcceleratorRequestBindingFailed as exc:
+            # If anything failed here we need to cleanup and bail out.
+            cyclient = cyborg.get_client(context)
+            cyclient.delete_arqs_by_uuid(exc.arqs)
+            raise
 
     def _schedule_instances(self, context, request_spec,
                             instance_uuids=None, return_alternates=False):
@@ -1619,17 +1633,10 @@ class ComputeTaskManager(base.Base):
                 # this one.
                 continue
 
-            accel_uuids = []
             try:
-                resource_provider_mapping = (
-                    request_spec.get_request_group_mapping())
-                # Using nodename instead of hostname. See:
-                # http://lists.openstack.org/pipermail/openstack-discuss/2019-November/011044.html  # noqa
-                accel_uuids = self._create_and_bind_arqs(
-                    context, instance.uuid, instance.flavor.extra_specs,
-                    host.nodename, resource_provider_mapping)
+                accel_uuids = self._create_and_bind_arq_for_instance(
+                        context, instance, host, request_spec)
             except Exception as exc:
-                # If anything failed here we need to cleanup and bail out.
                 with excutils.save_and_reraise_exception():
                     self._cleanup_build_artifacts(
                         context, exc, instances, build_requests, request_specs,

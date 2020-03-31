@@ -2316,6 +2316,14 @@ class AcceleratorRequestOpFailed(NovaException):
     msg_fmt = _("Failed to %(op)s accelerator requests: %(msg)s")
 
 
+class AcceleratorRequestBindingFailed(NovaException):
+    msg_fmt = _("Failed to bind accelerator requests: %(msg)s")
+
+    def __init__(self, arqs, **kwargs):
+        super().__init__(message=self.msg_fmt, **kwargs)
+        self.arqs = arqs or []
+
+
 class InvalidLibvirtGPUConfig(NovaException):
     msg_fmt = _('Invalid configuration for GPU devices: %(reason)s')
 

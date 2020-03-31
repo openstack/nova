@@ -212,10 +212,11 @@ class _CyborgClient(object):
         resp, err_msg = self._call_cyborg(self._client.patch,
              self.ARQ_URL, json=patch_list)
         if err_msg:
+            arq_uuids = bindings.keys()
             msg = _(' Binding failed for ARQ UUIDs: ')
-            err_msg = err_msg + msg + ','.join(bindings.keys())
-            raise exception.AcceleratorRequestOpFailed(
-                op=_('bind'), msg=err_msg)
+            err_msg = err_msg + msg + ','.join(arq_uuids)
+            raise exception.AcceleratorRequestBindingFailed(
+                arqs=arq_uuids, msg=err_msg)
 
     def get_arqs_for_instance(self, instance_uuid, only_resolved=False):
         """Get ARQs for the instance.
@@ -278,3 +279,26 @@ class _CyborgClient(object):
             msg = err_msg + _(' Instance %s') % instance_uuid
             raise exception.AcceleratorRequestOpFailed(
                 op=_('delete'), msg=msg)
+
+    def delete_arqs_by_uuid(self, arq_uuids):
+        """Delete the specified ARQs, unbinding them if needed.
+
+        This is meant to be used to clean up ARQs that have failed to bind
+        to an instance. So delete_arqs_for_instance() is not applicable.
+
+        This Cyborg API call is NOT idempotent, i.e., if called more than
+        once, the 2nd and later calls will throw errors.
+
+        If this fails, an error is logged but no exception is raised
+        because this cleans up Cyborg resources, but should otherwise
+        not affect instance spawn.
+
+        :params arq_uuids: dict_keys() of ARQ UUIDs
+        """
+        arq_uuid_str = ','.join(arq_uuids)
+        params = {'arqs': arq_uuid_str}
+        resp, err_msg = self._call_cyborg(self._client.delete,
+            self.ARQ_URL, params=params)
+        if err_msg:
+            # No point raising an exception.
+            LOG.error('Failed to delete ARQs %s', arq_uuid_str)

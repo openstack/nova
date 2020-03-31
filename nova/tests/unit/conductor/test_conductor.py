@@ -26,6 +26,7 @@ from oslo_utils import timeutils
 from oslo_versionedobjects import exception as ovo_exc
 import six
 
+from nova.accelerator import cyborg
 from nova import block_device
 from nova.compute import flavors
 from nova.compute import rpcapi as compute_rpcapi
@@ -48,6 +49,7 @@ from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
 from nova.objects import fields
+from nova.objects import request_spec
 from nova.scheduler.client import query
 from nova.scheduler import utils as scheduler_utils
 from nova import test
@@ -583,7 +585,7 @@ class _BaseTaskTestCase(object):
 
         mock_getaz.return_value = 'myaz'
         mock_create_bind_arqs.side_effect = (
-            exc.AcceleratorRequestOpFailed(op='', msg=''))
+            exc.AcceleratorRequestBindingFailed(arqs=[], msg=''))
 
         self.conductor.build_instances(self.context,
                 instances=instances,
@@ -605,10 +607,10 @@ class _BaseTaskTestCase(object):
         # in the above flow. So, we compare the fields instead.
         mock_cleanup.assert_has_calls([
             mock.call(self.context, test.MatchType(objects.Instance),
-                      test.MatchType(exc.AcceleratorRequestOpFailed),
+                      test.MatchType(exc.AcceleratorRequestBindingFailed),
                       test.MatchType(dict), None),
             mock.call(self.context, test.MatchType(objects.Instance),
-                      test.MatchType(exc.AcceleratorRequestOpFailed),
+                      test.MatchType(exc.AcceleratorRequestBindingFailed),
                       test.MatchType(dict), None),
         ])
         call_list = mock_cleanup.call_args_list
@@ -2548,11 +2550,11 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             self, mock_create_bind_arqs, mock_cleanup):
         # Exceptions in _create_and_bind_arqs result in cleanup
         mock_create_bind_arqs.side_effect = (
-            exc.AcceleratorRequestOpFailed(op='', msg=''))
+            exc.AcceleratorRequestBindingFailed(arqs=[], msg=''))
 
         try:
             self._do_schedule_and_build_instances_test(self.params)
-        except exc.AcceleratorRequestOpFailed:
+        except exc.AcceleratorRequestBindingFailed:
             pass
 
         mock_cleanup.assert_called_once_with(
@@ -2560,6 +2562,26 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             self.params['build_requests'], self.params['request_specs'],
             self.params['block_device_mapping'], self.params['tags'],
             mock.ANY)
+
+    @mock.patch.object(request_spec.RequestSpec, "get_request_group_mapping")
+    @mock.patch.object(cyborg, "get_client")
+    @mock.patch.object(
+        conductor_manager.ComputeTaskManager, '_create_and_bind_arqs')
+    def test__create_and_bind_arq_for_instance(
+            self, mock_create_bind_arqs, mock_client, mock_request_mappings):
+        # Exceptions in _create_and_bind_arqs result in cleanup
+        arqs = ["fake-arq-uuid"]
+        mock_create_bind_arqs.side_effect = (
+            exc.AcceleratorRequestBindingFailed(arqs=arqs, msg=''))
+        mock_client.return_value = mock.Mock()
+        instance = mock.Mock()
+        instance.uuid = "fake-uuid"
+        ex = self.assertRaises(exc.AcceleratorRequestBindingFailed,
+            self.conductor._create_and_bind_arq_for_instance,
+            None, instance, mock.Mock(), request_spec.RequestSpec())
+
+        self.assertIn('Failed to bind accelerator requests', ex.message)
+        mock_client.return_value.delete_arqs_by_uuid.assert_called_with(arqs)
 
     def test_map_instance_to_cell_already_mapped(self):
         """Tests a scenario where an instance is already mapped to a cell

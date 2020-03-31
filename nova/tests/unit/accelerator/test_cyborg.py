@@ -250,13 +250,15 @@ class CyborgTestCase(test.NoDBTestCase):
         called_params = mock_cyborg_patch.call_args.kwargs['json']
         self.assertEqual(sorted(called_params), sorted(patch_list))
 
+    @mock.patch('nova.accelerator.cyborg._CyborgClient.delete_arqs_by_uuid')
     @mock.patch('nova.accelerator.cyborg._CyborgClient._call_cyborg')
-    def test_bind_arqs_exception(self, mock_call_cyborg):
+    def test_bind_arqs_exception(self, mock_call_cyborg, mock_del_arqs):
         # If Cyborg returns invalid response, raise exception.
         bindings, _ = self._get_bound_arqs()
         mock_call_cyborg.return_value = None, 'Some error'
-        self.assertRaises(exception.AcceleratorRequestOpFailed,
-            self.client.bind_arqs, bindings=bindings)
+        self.assertRaises(exception.AcceleratorRequestBindingFailed,
+             self.client.bind_arqs, bindings=bindings)
+        mock_del_arqs.assert_not_called()
 
     @mock.patch('keystoneauth1.adapter.Adapter.get')
     def test_get_arqs_for_instance(self, mock_cyborg_get):
@@ -368,3 +370,27 @@ class CyborgTestCase(test.NoDBTestCase):
         expected_msg = ('Failed to delete accelerator requests: ' +
                         err_msg + ' Instance ' + instance_uuid)
         self.assertEqual(expected_msg, exc.format_message())
+
+    @mock.patch('nova.accelerator.cyborg._CyborgClient._call_cyborg')
+    def test_delete_arqs_by_uuid(self, mock_call_cyborg):
+        # Happy path
+        mock_call_cyborg.return_value = ('Some Value', None)
+        _, bound_arqs = self._get_bound_arqs()
+        arq_uuids = [arq['uuid'] for arq in bound_arqs]
+        arq_uuid_str = ','.join(arq_uuids)
+        self.client.delete_arqs_by_uuid(arq_uuids)
+        mock_call_cyborg.assert_called_once_with(mock.ANY,
+            self.client.ARQ_URL, params={'arqs': arq_uuid_str})
+
+    @mock.patch('nova.accelerator.cyborg.LOG.error')
+    @mock.patch('nova.accelerator.cyborg._CyborgClient._call_cyborg')
+    def test_delete_arqs_by_uuid_exception(self, mock_call_cyborg, mock_log):
+        mock_call_cyborg.return_value = (None, 'Some error')
+        _, bound_arqs = self._get_bound_arqs()
+        arq_uuids = [arq['uuid'] for arq in bound_arqs]
+        arq_uuid_str = ','.join(arq_uuids)
+        self.client.delete_arqs_by_uuid(arq_uuids)
+        mock_call_cyborg.assert_called_once_with(mock.ANY,
+            self.client.ARQ_URL, params={'arqs': arq_uuid_str})
+        mock_log.assert_called_once_with('Failed to delete ARQs %s',
+                                         arq_uuid_str)
