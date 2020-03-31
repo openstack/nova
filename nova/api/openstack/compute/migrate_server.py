@@ -48,15 +48,16 @@ class MigrateServerController(wsgi.Controller):
     def _migrate(self, req, id, body):
         """Permit admins to migrate a server to a new host."""
         context = req.environ['nova.context']
-        context.can(ms_policies.POLICY_ROOT % 'migrate')
+
+        instance = common.get_instance(self.compute_api, context, id,
+                                       expected_attrs=['flavor', 'services'])
+        context.can(ms_policies.POLICY_ROOT % 'migrate',
+                    target={'project_id': instance.project_id})
 
         host_name = None
         if (api_version_request.is_supported(req, min_version='2.56') and
             body['migrate'] is not None):
             host_name = body['migrate'].get('host')
-
-        instance = common.get_instance(self.compute_api, context, id,
-                                       expected_attrs=['flavor', 'services'])
 
         if common.instance_has_port_with_resource_request(
                 instance.uuid, self.network_api):
@@ -99,7 +100,15 @@ class MigrateServerController(wsgi.Controller):
     def _migrate_live(self, req, id, body):
         """Permit admins to (live) migrate a server to a new host."""
         context = req.environ["nova.context"]
-        context.can(ms_policies.POLICY_ROOT % 'migrate_live')
+
+        # NOTE(stephenfin): we need 'numa_topology' because of the
+        # 'LiveMigrationTask._check_instance_has_no_numa' check in the
+        # conductor
+        instance = common.get_instance(self.compute_api, context, id,
+                                       expected_attrs=['numa_topology'])
+
+        context.can(ms_policies.POLICY_ROOT % 'migrate_live',
+                    target={'project_id': instance.project_id})
 
         host = body["os-migrateLive"]["host"]
         block_migration = body["os-migrateLive"]["block_migration"]
@@ -121,12 +130,6 @@ class MigrateServerController(wsgi.Controller):
                                                         strict=True)
             disk_over_commit = strutils.bool_from_string(disk_over_commit,
                                                          strict=True)
-
-        # NOTE(stephenfin): we need 'numa_topology' because of the
-        # 'LiveMigrationTask._check_instance_has_no_numa' check in the
-        # conductor
-        instance = common.get_instance(self.compute_api, context, id,
-                                       expected_attrs=['numa_topology'])
 
         # We could potentially move this check to conductor and avoid the
         # extra API call to neutron when we support move operations with ports
