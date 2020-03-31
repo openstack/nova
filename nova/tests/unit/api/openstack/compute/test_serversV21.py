@@ -8109,6 +8109,10 @@ class IPsPolicyEnforcementV21(test.NoDBTestCase):
         super(IPsPolicyEnforcementV21, self).setUp()
         self.controller = ips.IPsController()
         self.req = fakes.HTTPRequest.blank("/v2/%s" % fakes.FAKE_PROJECT_ID)
+        self.mock_get = self.useFixture(
+            fixtures.MockPatch('nova.api.openstack.common.get_instance')).mock
+        self.mock_get.return_value = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'])
 
     def test_index_policy_failed(self):
         rule_name = "os_compute_api:ips:index"
