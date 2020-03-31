@@ -8100,41 +8100,6 @@ class ServersInvalidRequestTestCase(test.TestCase):
         self._invalid_server_create(body=body)
 
 
-# TODO(alex_xu): There isn't specified file for ips extension. Most of
-# unittest related to ips extension is in this file. So put the ips policy
-# enforcement tests at here until there is specified file for ips extension.
-class IPsPolicyEnforcementV21(test.NoDBTestCase):
-
-    def setUp(self):
-        super(IPsPolicyEnforcementV21, self).setUp()
-        self.controller = ips.IPsController()
-        self.req = fakes.HTTPRequest.blank("/v2/%s" % fakes.FAKE_PROJECT_ID)
-        self.mock_get = self.useFixture(
-            fixtures.MockPatch('nova.api.openstack.common.get_instance')).mock
-        self.mock_get.return_value = fake_instance.fake_instance_obj(
-            self.req.environ['nova.context'])
-
-    def test_index_policy_failed(self):
-        rule_name = "os_compute_api:ips:index"
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.index, self.req, fakes.FAKE_UUID)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-    def test_show_policy_failed(self):
-        rule_name = "os_compute_api:ips:show"
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.show, self.req, fakes.FAKE_UUID, fakes.FAKE_UUID)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-
 class ServersPolicyEnforcementV21(test.NoDBTestCase):
 
     def setUp(self):
