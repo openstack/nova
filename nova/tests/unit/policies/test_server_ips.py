@@ -51,30 +51,30 @@ class ServerIpsPolicyTest(base.BasePolicyTest):
 
         # Check that admin or and server owner is able to get server
         # IP addresses.
-        self.admin_or_owner_authorized_contexts = [
+        self.reader_or_owner_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context]
+            self.project_reader_context, self.project_foo_context,
+            self.system_member_context, self.system_reader_context]
         # Check that non-admin/owner is not able to get the server IP
         # adderesses
-        self.admin_or_owner_unauthorized_contexts = [
-            self.system_member_context, self.system_reader_context,
+        self.reader_or_owner_unauthorized_contexts = [
             self.system_foo_context,
             self.other_project_member_context
         ]
 
     def test_index_ips_policy(self):
         rule_name = ips_policies.POLICY_ROOT % 'index'
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
+        self.common_policy_check(self.reader_or_owner_authorized_contexts,
+                                 self.reader_or_owner_unauthorized_contexts,
                                  rule_name,
                                  self.controller.index,
                                  self.req, self.instance.uuid)
 
     def test_show_ips_policy(self):
         rule_name = ips_policies.POLICY_ROOT % 'show'
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
+        self.common_policy_check(self.reader_or_owner_authorized_contexts,
+                                 self.reader_or_owner_unauthorized_contexts,
                                  rule_name,
                                  self.controller.show,
                                  self.req, self.instance.uuid,
@@ -94,3 +94,26 @@ class ServerIpsScopeTypePolicyTest(ServerIpsPolicyTest):
     def setUp(self):
         super(ServerIpsScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+
+
+class ServerIpsNoLegacyPolicyTest(ServerIpsScopeTypePolicyTest):
+    """Test Server IPs APIs policies with system scope enabled,
+    and no more deprecated rules that allow the legacy admin API to
+    access system_admin_or_owner APIs.
+    """
+    without_deprecated_rules = True
+
+    def setUp(self):
+        super(ServerIpsNoLegacyPolicyTest, self).setUp()
+
+        # Check that system reader or owner is able to
+        # get the server IP adderesses.
+        self.reader_or_owner_authorized_contexts = [
+            self.system_admin_context, self.system_member_context,
+            self.system_reader_context, self.project_admin_context,
+            self.project_member_context, self.project_reader_context]
+        # Check that non-system and non-owner is not able to
+        # get the server IP adderesses.
+        self.reader_or_owner_unauthorized_contexts = [
+            self.legacy_admin_context, self.project_foo_context,
+            self.system_foo_context, self.other_project_member_context]

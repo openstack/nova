@@ -24,7 +24,7 @@ POLICY_ROOT = 'os_compute_api:ips:%s'
 ips_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'show',
-        check_str=base.RULE_ADMIN_OR_OWNER,
+        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
         description="Show IP addresses details for a network label of a "
         " server",
         operations=[
@@ -36,7 +36,7 @@ ips_policies = [
         scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'index',
-        check_str=base.RULE_ADMIN_OR_OWNER,
+        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
         description="List IP addresses that are assigned to a server",
         operations=[
             {
