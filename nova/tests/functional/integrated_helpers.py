@@ -447,6 +447,7 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
     # nova.virt.libvirt.driver.LibvirtDriver.capabilities
     expected_libvirt_driver_capability_traits = set([
         six.u(trait) for trait in [
+            os_traits.COMPUTE_ACCELERATORS,
             os_traits.COMPUTE_DEVICE_TAGGING,
             os_traits.COMPUTE_NET_ATTACH_INTERFACE,
             os_traits.COMPUTE_NET_ATTACH_INTERFACE_WITH_TAG,
@@ -466,6 +467,7 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
     # nova.virt.fake.FakeDriver.capabilities
     expected_fake_driver_capability_traits = set([
         six.u(trait) for trait in [
+            os_traits.COMPUTE_ACCELERATORS,
             os_traits.COMPUTE_IMAGE_TYPE_RAW,
             os_traits.COMPUTE_DEVICE_TAGGING,
             os_traits.COMPUTE_NET_ATTACH_INTERFACE,

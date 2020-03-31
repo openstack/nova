@@ -250,6 +250,22 @@ def compute_status_filter(ctxt, request_spec):
     return True
 
 
+@trace_request_filter
+def accelerators_filter(ctxt, request_spec):
+    """Allow only compute nodes with accelerator support.
+
+    This filter retains only nodes whose compute manager published the
+    COMPUTE_ACCELERATORS trait, thus indicating the version of n-cpu is
+    sufficient to handle accelerator requests.
+    """
+    trait_name = os_traits.COMPUTE_ACCELERATORS
+    if request_spec.flavor.extra_specs.get('accel:device_profile'):
+        request_spec.root_required.add(trait_name)
+        LOG.debug('accelerators_filter request filter added required '
+                  'trait %s', trait_name)
+    return True
+
+
 ALL_REQUEST_FILTERS = [
     require_tenant_aggregate,
     map_az_to_placement_aggregate,
@@ -257,6 +273,7 @@ ALL_REQUEST_FILTERS = [
     compute_status_filter,
     isolate_aggregates,
     transform_image_metadata,
+    accelerators_filter,
 ]
 
 

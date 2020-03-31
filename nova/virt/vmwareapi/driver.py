@@ -70,6 +70,7 @@ class VMwareVCDriver(driver.ComputeDriver):
         "supports_multiattach": False,
         "supports_trusted_certs": False,
         "supports_pcpus": False,
+        "supports_accelerators": False,
 
         # Image type support flags
         "supports_image_type_aki": False,

@@ -101,6 +101,7 @@ class HyperVDriver(driver.ComputeDriver):
         "supports_multiattach": False,
         "supports_trusted_certs": False,
         "supports_pcpus": False,
+        "supports_accelerators": False,
 
         # Supported image types
         "supports_image_type_vhd": True,
