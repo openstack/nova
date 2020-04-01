@@ -504,36 +504,3 @@ class MigrationsTestCaseV280(MigrationTestCaseV266):
                                self.controller.index, req)
         self.assertIn('Additional properties are not allowed',
                       six.text_type(ex))
-
-
-class MigrationsPolicyEnforcement(test.NoDBTestCase):
-    def setUp(self):
-        super(MigrationsPolicyEnforcement, self).setUp()
-        self.controller = migrations_v21.MigrationsController()
-        self.req = fakes.HTTPRequest.blank('')
-
-    def test_list_policy_failed(self):
-        rule_name = "os_compute_api:os-migrations:index"
-        self.policy.set_rules({rule_name: "project_id:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.index, self.req)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-
-class MigrationsPolicyEnforcementV223(MigrationsPolicyEnforcement):
-    wsgi_api_version = '2.23'
-
-    def setUp(self):
-        super(MigrationsPolicyEnforcementV223, self).setUp()
-        self.req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
-
-
-class MigrationsPolicyEnforcementV259(MigrationsPolicyEnforcementV223):
-    wsgi_api_version = '2.59'
-
-
-class MigrationsPolicyEnforcementV280(MigrationsPolicyEnforcementV259):
-    wsgi_api_version = '2.80'
