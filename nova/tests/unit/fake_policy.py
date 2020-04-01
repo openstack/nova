@@ -84,6 +84,7 @@ policy_data = """
     "os_compute_api:os-quota-class-sets:update": "",
     "os_compute_api:os-quota-class-sets:show": "",
     "os_compute_api:os-rescue": "",
+    "os_compute_api:os-unrescue": "",
     "os_compute_api:os-server-diagnostics": "",
     "os_compute_api:os-server-password": "",
     "os_compute_api:os-server-tags:index": "",
