@@ -225,7 +225,12 @@ class LockServerPolicyEnforcementV21(test.NoDBTestCase):
         lock_mock.assert_called_once_with(self.req.environ['nova.context'],
                                           instance, reason=None)
 
-    def test_unlock_policy_failed(self):
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_unlock_policy_failed(self, get_instance_mock):
+        instance = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'],
+            user_id=self.req.environ['nova.context'].user_id)
+        get_instance_mock.return_value = instance
         rule_name = "os_compute_api:os-lock-server:unlock"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(

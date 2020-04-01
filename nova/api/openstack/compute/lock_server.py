@@ -50,8 +50,9 @@ class LockServerController(wsgi.Controller):
     def _unlock(self, req, id, body):
         """Unlock a server instance."""
         context = req.environ['nova.context']
-        context.can(ls_policies.POLICY_ROOT % 'unlock')
         instance = common.get_instance(self.compute_api, context, id)
+        context.can(ls_policies.POLICY_ROOT % 'unlock',
+                    target={'project_id': instance.project_id})
         if not self.compute_api.is_expected_locked_by(context, instance):
             context.can(ls_policies.POLICY_ROOT % 'unlock:unlock_override',
                         instance)
