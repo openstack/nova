@@ -749,7 +749,7 @@ class GuestBlockTestCase(test.NoDBTestCase):
 
     def test_resize(self):
         self.gblock.resize(10)
-        self.domain.blockResize.assert_called_once_with('vda', 10)
+        self.domain.blockResize.assert_called_once_with('vda', 10, flags=1)
 
     def test_rebase(self):
         self.gblock.rebase("foo")

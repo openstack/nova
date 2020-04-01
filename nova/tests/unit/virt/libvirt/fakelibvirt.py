@@ -61,6 +61,9 @@ VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT = 2
 VIR_DOMAIN_BLOCK_REBASE_COPY = 8
 VIR_DOMAIN_BLOCK_REBASE_COPY_DEV = 32
 
+# virDomainBlockResize
+VIR_DOMAIN_BLOCK_RESIZE_BYTES = 1
+
 VIR_DOMAIN_BLOCK_JOB_ABORT_ASYNC = 1
 VIR_DOMAIN_BLOCK_JOB_ABORT_PIVOT = 2
 
@@ -1173,7 +1176,7 @@ class Domain(object):
     def blockJobAbort(self, disk, flags):
         pass
 
-    def blockResize(self, disk, size):
+    def blockResize(self, disk, size, flags):
         pass
 
     def blockRebase(self, disk, base, bandwidth=0, flags=0):

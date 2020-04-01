@@ -1843,7 +1843,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.VolumeRebaseFailed(reason=six.text_type(exc))
 
             if resize_to:
-                dev.resize(resize_to * units.Gi / units.Ki)
+                dev.resize(resize_to * units.Gi)
 
             # Make sure we will redefine the domain using the updated
             # configuration after the volume was swapped. The dump_inactive
@@ -1970,7 +1970,7 @@ class LibvirtDriver(driver.ComputeDriver):
         LOG.debug('Resizing target device %(dev)s to %(size)u',
                   {'dev': block_device._disk, 'size': new_size},
                   instance=instance)
-        block_device.resize(new_size // units.Ki)
+        block_device.resize(new_size)
 
     def _resize_attached_encrypted_volume(self, original_new_size,
                                           block_device, instance,

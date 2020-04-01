@@ -808,9 +808,15 @@ class BlockDevice(object):
         return self._guest._domain.blockCommit(
             self._disk, base, top, self.COMMIT_DEFAULT_BANDWIDTH, flags=flags)
 
-    def resize(self, size_kb):
-        """Resize block device to KiB size"""
-        self._guest._domain.blockResize(self._disk, size_kb)
+    def resize(self, size):
+        """Resize block device to the given size in bytes.
+
+        This resizes the block device within the instance to the given size.
+
+        :param size: The size to resize the device to in bytes.
+        """
+        flags = libvirt.VIR_DOMAIN_BLOCK_RESIZE_BYTES
+        self._guest._domain.blockResize(self._disk, size, flags=flags)
 
     def is_job_complete(self):
         """Return True if the job is complete, False otherwise
