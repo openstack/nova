@@ -101,3 +101,25 @@ class MigrateServerScopeTypePolicyTest(MigrateServerPolicyTest):
     def setUp(self):
         super(MigrateServerScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+
+
+class MigrateServerNoLegacyPolicyTest(MigrateServerScopeTypePolicyTest):
+    """Test Migrate Server APIs policies with system scope enabled,
+    and no more deprecated rules.
+    """
+    without_deprecated_rules = True
+
+    def setUp(self):
+        super(MigrateServerNoLegacyPolicyTest, self).setUp()
+        # Check that system admin is able to migrate the server.
+        self.admin_authorized_contexts = [
+            self.system_admin_context
+        ]
+        # Check that non system admin is not able to migrate the server
+        self.admin_unauthorized_contexts = [
+            self.legacy_admin_context, self.project_admin_context,
+            self.system_member_context, self.system_reader_context,
+            self.system_foo_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context,
+            self.other_project_member_context
+        ]
