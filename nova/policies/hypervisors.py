@@ -23,9 +23,9 @@ BASE_POLICY_NAME = 'os_compute_api:os-hypervisors'
 
 hypervisors_policies = [
     policy.DocumentedRuleDefault(
-        BASE_POLICY_NAME,
-        base.RULE_ADMIN_API,
-        """Policy rule for hypervisor related APIs.
+        name=BASE_POLICY_NAME,
+        check_str=base.RULE_ADMIN_API,
+        description="""Policy rule for hypervisor related APIs.
 
 This rule will be checked for the following APIs:
 
@@ -35,7 +35,7 @@ show details for a hypervisor, show the uptime of a hypervisor,
 search hypervisor by hypervisor_hostname pattern and list all
 servers on hypervisors that can match the provided
 hypervisor_hostname pattern.""",
-        [
+        operations=[
             {
                 'path': '/os-hypervisors',
                 'method': 'GET'
@@ -65,7 +65,8 @@ hypervisor_hostname pattern.""",
                 '/os-hypervisors/{hypervisor_hostname_pattern}/servers',
                 'method': 'GET'
             }
-        ]
+        ],
+        scope_types=['system']
     ),
 ]
 
