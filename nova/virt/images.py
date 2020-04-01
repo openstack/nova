@@ -45,9 +45,7 @@ IMAGE_API = glance.API()
 
 def qemu_img_info(path, format=None, output_format=None):
     """Return an object containing the parsed output from qemu-img info."""
-    # TODO(mikal): this code should not be referring to a libvirt specific
-    # flag.
-    if not os.path.exists(path) and CONF.libvirt.images_type != 'rbd':
+    if not os.path.exists(path) and not path.startswith('rbd:'):
         raise exception.DiskNotFound(location=path)
 
     info = nova.privsep.qemu.unprivileged_qemu_img_info(
@@ -61,9 +59,7 @@ def qemu_img_info(path, format=None, output_format=None):
 
 def privileged_qemu_img_info(path, format=None, output_format=None):
     """Return an object containing the parsed output from qemu-img info."""
-    # TODO(mikal): this code should not be referring to a libvirt specific
-    # flag.
-    if not os.path.exists(path) and CONF.libvirt.images_type != 'rbd':
+    if not os.path.exists(path) and not path.startswith('rbd:'):
         raise exception.DiskNotFound(location=path)
 
     info = nova.privsep.qemu.privileged_qemu_img_info(

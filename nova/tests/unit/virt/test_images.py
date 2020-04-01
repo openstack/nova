@@ -49,6 +49,15 @@ class QemuTestCase(test.NoDBTestCase):
         self.assertTrue(image_info)
         self.assertTrue(str(image_info))
 
+    @mock.patch('oslo_concurrency.processutils.execute',
+                return_value=('stdout', None))
+    def test_qemu_info_with_rbd_path(self, utils_execute):
+        # Assert that the use of a RBD URI as the path doesn't raise
+        # exception.DiskNotFound
+        image_info = images.qemu_img_info('rbd:volume/pool')
+        self.assertTrue(image_info)
+        self.assertTrue(str(image_info))
+
     @mock.patch.object(compute_utils, 'disk_ops_semaphore')
     @mock.patch('nova.privsep.utils.supports_direct_io', return_value=True)
     @mock.patch.object(processutils, 'execute',
