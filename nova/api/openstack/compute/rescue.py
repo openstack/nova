@@ -83,8 +83,9 @@ class RescueController(wsgi.Controller):
     def _unrescue(self, req, id, body):
         """Unrescue an instance."""
         context = req.environ["nova.context"]
-        context.can(rescue_policies.BASE_POLICY_NAME)
         instance = common.get_instance(self.compute_api, context, id)
+        context.can(rescue_policies.BASE_POLICY_NAME,
+                    target={'project_id': instance.project_id})
         try:
             self.compute_api.unrescue(context, instance)
         except exception.InstanceIsLocked as e:
