@@ -23,10 +23,10 @@ BASE_POLICY_NAME = 'os_compute_api:os-rescue'
 
 rescue_policies = [
     policy.DocumentedRuleDefault(
-        BASE_POLICY_NAME,
-        base.RULE_ADMIN_OR_OWNER,
-        "Rescue/unrescue a server",
-        [
+        name=BASE_POLICY_NAME,
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="Rescue/unrescue a server",
+        operations=[
             {
                 'path': '/servers/{server_id}/action (rescue)',
                 'method': 'POST'
@@ -35,7 +35,8 @@ rescue_policies = [
                 'path': '/servers/{server_id}/action (unrescue)',
                 'method': 'POST'
             }
-        ]
+        ],
+        scope_types=['system', 'project']
     ),
 ]
 
