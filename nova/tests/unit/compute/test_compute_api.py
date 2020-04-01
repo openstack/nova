@@ -2057,7 +2057,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                    'user': user_count}
 
         cur_flavor = objects.Flavor(id=1, name='foo', vcpus=1, memory_mb=512,
-                                    root_gb=10, disabled=False)
+                                    root_gb=10, disabled=False, extra_specs={})
         fake_inst = self._create_instance_obj()
         fake_inst.flavor = cur_flavor
         new_flavor = objects.Flavor(id=2, name='bar', vcpus=1, memory_mb=2048,
@@ -7213,6 +7213,41 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         can.assert_called_once()
         mock_get_min_ver.assert_called_once_with(
             self.context, ['nova-compute'])
+
+    def _test_block_accelerators(self, instance, args_info):
+        @compute_api.block_accelerators
+        def myfunc(self, context, instance, *args, **kwargs):
+            args_info['args'] = (context, instance, *args)
+            args_info['kwargs'] = dict(**kwargs)
+
+        args = ('arg1', 'arg2')
+        kwargs = {'arg3': 'dummy3', 'arg4': 'dummy4'}
+
+        myfunc(mock.ANY, self.context, instance, *args, **kwargs)
+
+        expected_args = (self.context, instance, *args)
+        return expected_args, kwargs
+
+    def test_block_accelerators_no_device_profile(self):
+        instance = self._create_instance_obj()
+        args_info = {}
+
+        expected_args, kwargs = self._test_block_accelerators(
+                                    instance, args_info)
+        self.assertEqual(expected_args, args_info['args'])
+        self.assertEqual(kwargs, args_info['kwargs'])
+
+    def test_block_accelerators_with_device_profile(self):
+        extra_specs = {'accel:device_profile': 'mydp'}
+        flavor = self._create_flavor(extra_specs=extra_specs)
+        instance = self._create_instance_obj(flavor=flavor)
+        args_info = {}
+
+        self.assertRaisesRegex(exception.ForbiddenWithAccelerators,
+            'Forbidden with instances that have accelerators.',
+            self._test_block_accelerators, instance, args_info)
+        # myfunc was not called
+        self.assertEqual({}, args_info)
 
 
 class DiffDictTestCase(test.NoDBTestCase):

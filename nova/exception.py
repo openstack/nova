@@ -156,6 +156,11 @@ class Forbidden(NovaException):
     code = 403
 
 
+class ForbiddenWithAccelerators(NovaException):
+    msg_fmt = _("Forbidden with instances that have accelerators.")
+    code = 403
+
+
 class AdminRequired(Forbidden):
     msg_fmt = _("User does not have admin privileges")
 

@@ -284,6 +284,16 @@ def _get_image_meta_obj(image_meta_dict):
     return image_meta
 
 
+def block_accelerators(func):
+    @functools.wraps(func)
+    def wrapper(self, context, instance, *args, **kwargs):
+        dp_name = instance.flavor.extra_specs.get('accel:device_profile')
+        if dp_name:
+            raise exception.ForbiddenWithAccelerators()
+        return func(self, context, instance, *args, **kwargs)
+    return wrapper
+
+
 @profiler.trace_cls("compute_api")
 class API(base.Base):
     """API for interacting with the compute manager."""
@@ -3372,6 +3382,7 @@ class API(base.Base):
             if img_arch:
                 fields_obj.Architecture.canonicalize(img_arch)
 
+    @block_accelerators
     # TODO(stephenfin): We should expand kwargs out to named args
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
@@ -3850,6 +3861,7 @@ class API(base.Base):
 
         return node
 
+    @block_accelerators
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
     @check_instance_host(check_is_up=True)
@@ -4046,6 +4058,7 @@ class API(base.Base):
             allow_same_host = CONF.allow_resize_to_same_host
         return allow_same_host
 
+    @block_accelerators
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.PAUSED, vm_states.SUSPENDED])
@@ -4210,6 +4223,7 @@ class API(base.Base):
         return self.compute_rpcapi.get_instance_diagnostics(context,
                                                             instance=instance)
 
+    @block_accelerators
     @reject_sev_instances(instance_actions.SUSPEND)
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE])
@@ -4890,6 +4904,7 @@ class API(base.Base):
                                                      diff=diff)
         return _metadata
 
+    @block_accelerators
     @reject_sev_instances(instance_actions.LIVE_MIGRATION)
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED])
@@ -5019,6 +5034,7 @@ class API(base.Base):
         self.compute_rpcapi.live_migration_abort(context,
                 instance, migration.id)
 
+    @block_accelerators
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.ERROR])
     def evacuate(self, context, instance, host, on_shared_storage,

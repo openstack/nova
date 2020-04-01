@@ -946,7 +946,8 @@ class ServersController(wsgi.Controller):
         try:
             self.compute_api.resize(context, instance, flavor_id,
                                     auto_disk_config=auto_disk_config)
-        except exception.QuotaError as error:
+        except (exception.QuotaError,
+                exception.ForbiddenWithAccelerators) as error:
             raise exc.HTTPForbidden(
                 explanation=error.format_message())
         except (exception.InstanceIsLocked,
@@ -1113,7 +1114,8 @@ class ServersController(wsgi.Controller):
         except exception.KeypairNotFound:
             msg = _("Invalid key_name provided.")
             raise exc.HTTPBadRequest(explanation=msg)
-        except exception.QuotaError as error:
+        except (exception.QuotaError,
+                exception.ForbiddenWithAccelerators) as error:
             raise exc.HTTPForbidden(explanation=error.format_message())
         except (exception.AutoDiskConfigDisabledByImage,
                 exception.CertificateValidationFailed,

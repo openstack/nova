@@ -74,7 +74,7 @@ class EvacuateController(wsgi.Controller):
     # TODO(eliqiao): Should be responding here with 202 Accept
     # because evacuate is an async call, but keep to 200 for
     # backwards compatibility reasons.
-    @wsgi.expected_errors((400, 404, 409))
+    @wsgi.expected_errors((400, 403, 404, 409))
     @wsgi.action('evacuate')
     @validation.schema(evacuate.evacuate, "2.0", "2.13")
     @validation.schema(evacuate.evacuate_v214, "2.14", "2.28")
@@ -144,6 +144,8 @@ class EvacuateController(wsgi.Controller):
                     'evacuate', id)
         except exception.ComputeServiceInUse as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
+        except exception.ForbiddenWithAccelerators as e:
+            raise exc.HTTPForbidden(explanation=e.format_message())
 
         if (not api_version_request.is_supported(req, min_version='2.14') and
                 CONF.api.enable_instance_password):
