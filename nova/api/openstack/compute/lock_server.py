@@ -55,6 +55,6 @@ class LockServerController(wsgi.Controller):
                     target={'project_id': instance.project_id})
         if not self.compute_api.is_expected_locked_by(context, instance):
             context.can(ls_policies.POLICY_ROOT % 'unlock:unlock_override',
-                        instance)
+                        target={'project_id': instance.project_id})
 
         self.compute_api.unlock(context, instance)

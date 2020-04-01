@@ -12,6 +12,7 @@
 
 import fixtures
 import mock
+from nova.policies import base as base_policy
 from nova.policies import lock_server as ls_policies
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
@@ -182,3 +183,38 @@ class LockServerNoLegacyPolicyTest(LockServerScopeTypePolicyTest):
             self.other_project_member_context,
             self.project_foo_context, self.project_reader_context
         ]
+
+
+class LockServerOverridePolicyTest(LockServerNoLegacyPolicyTest):
+    """Test Lock Server APIs policies with system and project scoped
+    but default to system roles only are allowed for project roles
+    if override by operators. This test is with system scope enable
+    and no more deprecated rules.
+    """
+
+    def setUp(self):
+        super(LockServerOverridePolicyTest, self).setUp()
+
+        # Check that system admin or project scoped role as override above
+        # is able to unlock the server which is locked by other
+        self.admin_authorized_contexts = [
+            self.system_admin_context,
+            self.project_admin_context, self.project_member_context]
+        # Check that non-system admin or project role is not able to
+        # unlock the server which is locked by other
+        self.admin_unauthorized_contexts = [
+            self.legacy_admin_context, self.system_member_context,
+            self.system_reader_context, self.system_foo_context,
+            self.other_project_member_context,
+            self.project_foo_context, self.project_reader_context
+        ]
+
+    def test_unlock_override_server_policy(self):
+        rule = ls_policies.POLICY_ROOT % 'unlock:unlock_override'
+        self.policy.set_rules({
+        # make unlock allowed for everyone so that we can check unlock
+        # override policy.
+        ls_policies.POLICY_ROOT % 'unlock': "@",
+        rule: base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN}, overwrite=False)
+        super(LockServerOverridePolicyTest,
+              self).test_unlock_override_server_policy()
