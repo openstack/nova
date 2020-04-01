@@ -343,7 +343,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-flavor-manage:update",
 "os_compute_api:os-flavor-manage:delete",
 "os_compute_api:os-hosts",
-"os_compute_api:os-hypervisors",
 "os_compute_api:os-instance-actions:events",
 "os_compute_api:os-lock-server:unlock:unlock_override",
 "os_compute_api:os-migrate-server:migrate",
@@ -461,6 +460,13 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-instance-usage-audit-log:list",
 "os_compute_api:os-instance-usage-audit-log:show",
 "os_compute_api:os-agents:list",
+"os_compute_api:os-hypervisors:list",
+"os_compute_api:os-hypervisors:list-detail",
+"os_compute_api:os-hypervisors:show",
+"os_compute_api:os-hypervisors:statistics",
+"os_compute_api:os-hypervisors:uptime",
+"os_compute_api:os-hypervisors:search",
+"os_compute_api:os-hypervisors:servers",
 )
 
         self.system_reader_or_owner_rules = (

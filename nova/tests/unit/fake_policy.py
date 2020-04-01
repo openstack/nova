@@ -58,6 +58,13 @@ policy_data = """
     "os_compute_api:os-instance-actions:events:details": "",
     "os_compute_api:os-instance-usage-audit-log:list": "",
     "os_compute_api:os-instance-usage-audit-log:show": "",
+    "os_compute_api:os-hypervisors:list": "",
+    "os_compute_api:os-hypervisors:list-detail": "",
+    "os_compute_api:os-hypervisors:statistics": "",
+    "os_compute_api:os-hypervisors:show": "",
+    "os_compute_api:os-hypervisors:uptime": "",
+    "os_compute_api:os-hypervisors:search": "",
+    "os_compute_api:os-hypervisors:servers": "",
 
     "os_compute_api:os-lock-server:lock": "",
     "os_compute_api:os-lock-server:unlock": "",

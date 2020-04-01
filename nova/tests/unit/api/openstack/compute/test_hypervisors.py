@@ -236,7 +236,6 @@ class HypervisorsTestV21(test.NoDBTestCase):
     def setUp(self):
         super(HypervisorsTestV21, self).setUp()
         self._set_up_controller()
-        self.rule_hyp_show = "os_compute_api:os-hypervisors"
 
         host_api = self.controller.host_api
         host_api.compute_node_get_all = mock.MagicMock(
@@ -305,11 +304,6 @@ class HypervisorsTestV21(test.NoDBTestCase):
         result = self.controller.index(req)
 
         self.assertEqual(dict(hypervisors=self.INDEX_HYPER_DICTS), result)
-
-    def test_index_non_admin(self):
-        req = self._get_request(False)
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.index, req)
 
     def test_index_compute_host_not_found(self):
         """Tests that if a service is deleted but the compute node is not we
@@ -386,11 +380,6 @@ class HypervisorsTestV21(test.NoDBTestCase):
         result = self.controller.detail(req)
 
         self.assertEqual(dict(hypervisors=self.DETAIL_HYPERS_DICTS), result)
-
-    def test_detail_non_admin(self):
-        req = self._get_request(False)
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.detail, req)
 
     def test_detail_compute_host_not_found(self):
         """Tests that if a service is deleted but the compute node is not we
@@ -514,12 +503,6 @@ class HypervisorsTestV21(test.NoDBTestCase):
 
         self.assertEqual(dict(hypervisor=self.DETAIL_HYPERS_DICTS[0]), result)
 
-    def test_show_non_admin(self):
-        req = self._get_request(False)
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.show, req,
-                          self._get_hyper_id())
-
     def test_uptime_noid(self):
         req = self._get_request(True)
         hyper_id = uuids.hyper3 if self.expect_uuid_for_id else '3'
@@ -552,12 +535,6 @@ class HypervisorsTestV21(test.NoDBTestCase):
     def test_uptime_non_integer_id(self):
         req = self._get_request(True)
         self.assertRaises(exc.HTTPNotFound, self.controller.uptime, req, 'abc')
-
-    def test_uptime_non_admin(self):
-        req = self._get_request(False)
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.uptime, req,
-                          self.TEST_HYPERS_OBJ[0].id)
 
     def test_uptime_hypervisor_down(self):
         with mock.patch.object(self.controller.host_api, 'get_host_uptime',
@@ -602,12 +579,6 @@ class HypervisorsTestV21(test.NoDBTestCase):
         result = self.controller.search(req, 'hyper')
 
         self.assertEqual(dict(hypervisors=self.INDEX_HYPER_DICTS), result)
-
-    def test_search_non_admin(self):
-        req = self._get_request(False)
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.search, req,
-                          self.TEST_HYPERS_OBJ[0].id)
 
     def test_search_non_exist(self):
         with mock.patch.object(self.controller.host_api,
@@ -673,12 +644,6 @@ class HypervisorsTestV21(test.NoDBTestCase):
                               req, '115')
             self.assertEqual(1, mock_node_search.call_count)
 
-    def test_servers_non_admin(self):
-        req = self._get_request(False)
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.servers, req,
-                          self.TEST_HYPERS_OBJ[0].id)
-
     def test_servers_with_non_integer_hypervisor_id(self):
         with mock.patch.object(self.controller.host_api,
                                'compute_node_search_by_hypervisor',
@@ -715,11 +680,6 @@ class HypervisorsTestV21(test.NoDBTestCase):
                     current_workload=4,
                     running_vms=4,
                     disk_available_least=200)), result)
-
-    def test_statistics_non_admin(self):
-        req = self._get_request(False)
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.statistics, req)
 
 
 class HypervisorsTestV228(HypervisorsTestV21):
@@ -1080,12 +1040,6 @@ class HypervisorsTestV253(HypervisorsTestV252):
             self.assertRaises(exc.HTTPNotFound, self.controller.index, req)
             s.assert_called_once_with(req.environ['nova.context'], 'shenzhen')
 
-    def test_servers_non_admin(self):
-        """There is no reason to test this for 2.53 since the
-        /os-hypervisors/servers route is deprecated.
-        """
-        pass
-
     def test_servers_non_id(self):
         """There is no reason to test this for 2.53 since the
         /os-hypervisors/servers route is deprecated.
@@ -1161,12 +1115,6 @@ class HypervisorsTestV253(HypervisorsTestV252):
 
     def test_search_non_exist(self):
         """This is a duplicate of test_servers_with_non_integer_hypervisor_id.
-        """
-        pass
-
-    def test_search_non_admin(self):
-        """There is no reason to test this for 2.53 since the
-        /os-hypervisors/search route is deprecated.
         """
         pass
 
