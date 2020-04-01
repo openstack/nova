@@ -23,40 +23,43 @@ POLICY_ROOT = 'os_compute_api:os-lock-server:%s'
 
 lock_server_policies = [
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'lock',
-        base.RULE_ADMIN_OR_OWNER,
-        "Lock a server",
-        [
+        name=POLICY_ROOT % 'lock',
+        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        description="Lock a server",
+        operations=[
             {
                 'path': '/servers/{server_id}/action (lock)',
                 'method': 'POST'
             }
-        ]
+        ],
+        scope_types=['system', 'project']
     ),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'unlock',
-        base.RULE_ADMIN_OR_OWNER,
-        "Unlock a server",
-        [
+        name=POLICY_ROOT % 'unlock',
+        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        description="Unlock a server",
+        operations=[
             {
                 'path': '/servers/{server_id}/action (unlock)',
                 'method': 'POST'
             }
-        ]
+        ],
+        scope_types=['system', 'project']
     ),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'unlock:unlock_override',
-        base.RULE_ADMIN_API,
-        """Unlock a server, regardless who locked the server.
+        name=POLICY_ROOT % 'unlock:unlock_override',
+        check_str=base.SYSTEM_ADMIN,
+        description="""Unlock a server, regardless who locked the server.
 
 This check is performed only after the check
 os_compute_api:os-lock-server:unlock passes""",
-        [
+        operations=[
             {
                 'path': '/servers/{server_id}/action (unlock)',
                 'method': 'POST'
             }
-        ]
+        ],
+        scope_types=['system', 'project']
     ),
 ]
 
