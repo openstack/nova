@@ -12,6 +12,7 @@
 
 import fixtures
 import mock
+from nova.policies import base as base_policy
 from nova.policies import rescue as rs_policies
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
@@ -73,7 +74,7 @@ class RescueServerPolicyTest(base.BasePolicyTest):
 
     @mock.patch('nova.compute.api.API.unrescue')
     def test_unrescue_server_policy(self, mock_unrescue):
-        rule_name = rs_policies.BASE_POLICY_NAME
+        rule_name = rs_policies.UNRESCUE_POLICY_NAME
         self.common_policy_check(self.admin_or_owner_authorized_contexts,
                                  self.admin_or_owner_unauthorized_contexts,
                                  rule_name,
@@ -117,3 +118,32 @@ class RescueServerScopeTypePolicyTest(RescueServerPolicyTest):
     def setUp(self):
         super(RescueServerScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+
+
+class RescueServerNoLegacyPolicyTest(RescueServerScopeTypePolicyTest):
+    """Test Rescue Server APIs policies with system scope enabled,
+    and no more deprecated rules that allow the legacy admin API to
+    access system APIs.
+    """
+    without_deprecated_rules = True
+    rules_without_deprecation = {
+        rs_policies.UNRESCUE_POLICY_NAME:
+            base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        rs_policies.BASE_POLICY_NAME:
+            base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN}
+
+    def setUp(self):
+        super(RescueServerNoLegacyPolicyTest, self).setUp()
+        # Check that system admin or and server owner is able to
+        # rescue/unrescue the sevrer
+        self.admin_or_owner_authorized_contexts = [
+            self.system_admin_context,
+            self.project_admin_context, self.project_member_context]
+        # Check that non-system/admin/owner is not able to rescue/unrescue
+        # the server
+        self.admin_or_owner_unauthorized_contexts = [
+            self.legacy_admin_context, self.system_member_context,
+            self.system_reader_context, self.system_foo_context,
+            self.other_project_member_context, self.project_reader_context,
+            self.project_foo_context
+        ]

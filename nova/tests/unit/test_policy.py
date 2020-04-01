@@ -429,6 +429,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-multinic",
 "os_compute_api:os-networks:view",
 "os_compute_api:os-rescue",
+"os_compute_api:os-unrescue",
 "os_compute_api:os-security-groups",
 "os_compute_api:os-server-password",
 "os_compute_api:os-server-tags:delete",
