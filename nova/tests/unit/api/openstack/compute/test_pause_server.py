@@ -13,15 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
-
 from nova.api.openstack.compute import pause_server as \
     pause_server_v21
-from nova import exception
-from nova import test
 from nova.tests.unit.api.openstack.compute import admin_only_action_common
-from nova.tests.unit.api.openstack import fakes
-from nova.tests.unit import fake_instance
 
 
 class PauseServerTestsV21(admin_only_action_common.CommonTests):
@@ -57,75 +51,3 @@ class PauseServerTestsV21(admin_only_action_common.CommonTests):
 
     def test_actions_with_locked_instance(self):
         self._test_actions_with_locked_instance(['_pause', '_unpause'])
-
-
-class PauseServerPolicyEnforcementV21(test.NoDBTestCase):
-
-    def setUp(self):
-        super(PauseServerPolicyEnforcementV21, self).setUp()
-        self.controller = pause_server_v21.PauseServerController()
-        self.req = fakes.HTTPRequest.blank('')
-
-    @mock.patch('nova.api.openstack.common.get_instance')
-    def test_pause_policy_failed_with_other_project(self, get_instance_mock):
-        get_instance_mock.return_value = fake_instance.fake_instance_obj(
-            self.req.environ['nova.context'],
-            project_id=self.req.environ['nova.context'].project_id)
-        rule_name = "os_compute_api:os-pause-server:pause"
-        self.policy.set_rules({rule_name: "project_id:%(project_id)s"})
-        # Change the project_id in request context.
-        self.req.environ['nova.context'].project_id = 'other-project'
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller._pause, self.req, fakes.FAKE_UUID,
-            body={'pause': {}})
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-    @mock.patch('nova.api.openstack.common.get_instance')
-    def test_pause_overridden_policy_failed_with_other_user_in_same_project(
-        self, get_instance_mock):
-        get_instance_mock.return_value = (
-            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
-        rule_name = "os_compute_api:os-pause-server:pause"
-        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
-        # Change the user_id in request context.
-        self.req.environ['nova.context'].user_id = 'other-user'
-        exc = self.assertRaises(exception.PolicyNotAuthorized,
-                                self.controller._pause, self.req,
-                                fakes.FAKE_UUID, body={'pause': {}})
-        self.assertEqual(
-                      "Policy doesn't allow %s to be performed." % rule_name,
-                      exc.format_message())
-
-    @mock.patch('nova.compute.api.API.pause')
-    @mock.patch('nova.api.openstack.common.get_instance')
-    def test_pause_overridden_policy_pass_with_same_user(self,
-                                                        get_instance_mock,
-                                                        pause_mock):
-        instance = fake_instance.fake_instance_obj(
-            self.req.environ['nova.context'],
-            user_id=self.req.environ['nova.context'].user_id)
-        get_instance_mock.return_value = instance
-        rule_name = "os_compute_api:os-pause-server:pause"
-        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
-        self.controller._pause(self.req, fakes.FAKE_UUID, body={'pause': {}})
-        pause_mock.assert_called_once_with(self.req.environ['nova.context'],
-                                          instance)
-
-    @mock.patch('nova.api.openstack.common.get_instance')
-    def test_unpause_policy_failed(self, get_instance_mock):
-        instance = fake_instance.fake_instance_obj(
-            self.req.environ['nova.context'],
-            user_id=self.req.environ['nova.context'].user_id)
-        get_instance_mock.return_value = instance
-        rule_name = "os_compute_api:os-pause-server:unpause"
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller._unpause, self.req, fakes.FAKE_UUID,
-            body={'unpause': {}})
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
