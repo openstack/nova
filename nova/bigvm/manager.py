@@ -103,6 +103,9 @@ class BigVmManager(manager.Manager):
         # bigvm_cluster_max_usage_percent usage
         overused_providers = {}
         for rp_uuid, rp in bigvm_providers.items():
+            if rp_uuid in reserved_providers:
+                # no need to check if we already remove it anyways
+                continue
             parent_rp = vmware_providers[rp['rp']['parent_provider_uuid']]
             used_percent = parent_rp['memory_mb_used_percent']
             if used_percent > CONF.bigvm_cluster_max_usage_percent:
