@@ -9604,7 +9604,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 dk_size = os.stat(path).st_blocks * 512
                 virt_size = os.path.getsize(path)
                 backing_file = ""
-                over_commit_size = 0
+                over_commit_size = int(virt_size) - dk_size
 
             elif disk_type == 'block' and block_device_info:
                 dk_size = lvm.get_volume_size(path)

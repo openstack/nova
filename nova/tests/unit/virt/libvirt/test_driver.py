@@ -16407,10 +16407,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                         'over_committed_disk_size': '10653532160'}],
                       'instance0000002':
                       [{'type': 'raw', 'path': '/somepath/disk2',
-                        'virt_disk_size': '0',
-                        'backing_file': '/somepath/disk2',
-                        'disk_size': '10737418240',
-                        'over_committed_disk_size': '0'}]}
+                        'virt_disk_size': '10737418240',
+                        'backing_file': '',
+                        'disk_size': '5350000000',
+                        'over_committed_disk_size': '5387418240'}]}
 
         def get_info(cfg, block_device_info):
             return fake_disks.get(cfg.name)
@@ -16430,7 +16430,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock_info.side_effect = get_info
 
             result = drvr._get_disk_over_committed_size_total()
-            self.assertEqual(result, 10653532160)
+            self.assertEqual(result, 16040950400)
             mock_list.assert_called_once_with(only_running=False)
             self.assertEqual(2, mock_info.call_count)
 
@@ -16648,6 +16648,35 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_get_volume_size.assert_called_once_with(mock.sentinel.volume_path)
         self.assertEqual(disk_info[0]['disk_size'],
                          disk_info[0]['virt_disk_size'])
+
+    @mock.patch('os.stat')
+    @mock.patch('os.path.getsize')
+    def test_get_instance_disk_info_from_config_raw_files(self,
+            mock_getsize, mock_stat):
+        """Test that over_committed_disk_size are calculated also for raw
+        images_type, since disk can be sparsely allocated if
+        [compute]/preallocate_images option is not set to space.
+        """
+        config = vconfig.LibvirtConfigGuest()
+        disk_config = vconfig.LibvirtConfigGuestDisk()
+        disk_config.source_type = "file"
+        disk_config.source_path = "fake"
+        disk_config.driver_format = "raw"
+        config.devices.append(disk_config)
+
+        disk_virtual_size = 53687091200
+        disk_actual_size = 3687091200
+        disk_actual_size_blocks = disk_actual_size / 512
+        expected_over_committed_disk_size = disk_virtual_size -\
+                                                disk_actual_size
+
+        mock_getsize.return_value = disk_virtual_size
+        mock_stat.return_value = mock.Mock(st_blocks=disk_actual_size_blocks)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        disk_info = drvr._get_instance_disk_info_from_config(config, None)
+
+        self.assertEqual(expected_over_committed_disk_size,
+                         disk_info[0]['over_committed_disk_size'])
 
     def test_cpu_info(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
