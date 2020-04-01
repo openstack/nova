@@ -155,8 +155,9 @@ class RemoteConsolesController(wsgi.Controller):
     @validation.schema(remote_consoles.create_v28, "2.8")
     def create(self, req, server_id, body):
         context = req.environ['nova.context']
-        context.can(rc_policies.BASE_POLICY_NAME)
         instance = common.get_instance(self.compute_api, context, server_id)
+        context.can(rc_policies.BASE_POLICY_NAME,
+                    target={'project_id': instance.project_id})
         protocol = body['remote_console']['protocol']
         console_type = body['remote_console']['type']
         try:
