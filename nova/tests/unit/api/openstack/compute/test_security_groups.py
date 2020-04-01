@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import fixtures
 import mock
 from neutronclient.common import exceptions as n_exc
 from oslo_config import cfg
@@ -34,7 +35,7 @@ from nova import objects
 from nova.objects import instance as instance_obj
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-
+from nova.tests.unit import fake_instance
 
 CONF = cfg.CONF
 FAKE_UUID1 = 'a47ae74e-ab08-447f-8eee-ffd43fc46c16'
@@ -395,13 +396,15 @@ class TestSecurityGroupsV21(test.TestCase):
         self.fake_id = '11111111-1111-1111-1111-111111111111'
 
         self.req = fakes.HTTPRequest.blank('')
+        project_id = self.req.environ['nova.context'].project_id
         self.admin_req = fakes.HTTPRequest.blank('', use_admin_context=True)
         self.stub_out('nova.compute.api.API.get',
                       fakes.fake_compute_get(
                           **{'power_state': 0x01,
                              'host': "localhost",
                              'uuid': UUID_SERVER,
-                             'name': 'asdf'}))
+                             'name': 'asdf',
+                             'project_id': project_id}))
 
         self.original_client = neutron_api.get_client
         neutron_api.get_client = get_client
@@ -1583,6 +1586,12 @@ class PolicyEnforcementV21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('')
         self.rule_name = "os_compute_api:os-security-groups"
         self.rule = {self.rule_name: "project:non_fake"}
+        context = self.req.environ['nova.context']
+        self.mock_get = self.useFixture(
+            fixtures.MockPatch('nova.api.openstack.common.get_instance')).mock
+        self.instance = fake_instance.fake_instance_obj(
+                context, id=1, project_id=context.project_id)
+        self.mock_get.return_value = self.instance
 
     def _common_policy_check(self, func, *arg, **kwarg):
         self.policy.set_rules(self.rule)
