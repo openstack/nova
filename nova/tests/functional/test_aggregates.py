@@ -178,17 +178,6 @@ class AggregateRequestFiltersTest(
         # Aggregate with neither host
         self._create_aggregate('no-hosts')
 
-    def _start_compute(self, host):
-        """Start a nova compute service on the given host
-
-        :param host: the name of the host that will be associated to the
-                     compute service.
-        :return: the nova compute service object
-        """
-        compute = self.start_service('compute', host=host)
-        self.computes[host] = compute
-        return compute
-
     def _create_aggregate(self, name):
         agg = self.admin_api.post_aggregate({'aggregate': {'name': name}})
         self.aggregates[name] = agg
@@ -840,9 +829,6 @@ class TestAggregateFiltersTogether(AggregateRequestFiltersTest):
 class TestAggregateMultiTenancyIsolationFilter(
         test.TestCase, integrated_helpers.InstanceHelperMixin):
 
-    def _start_compute(self, host):
-        self.start_service('compute', host=host)
-
     def setUp(self):
         super(TestAggregateMultiTenancyIsolationFilter, self).setUp()
         # Stub out glance, placement and neutron.
@@ -864,7 +850,7 @@ class TestAggregateMultiTenancyIsolationFilter(
         self.flags(enabled_filters=enabled_filters, group='filter_scheduler')
         self.start_service('scheduler')
         for host in ('host1', 'host2'):
-            self._start_compute(host)
+            self.start_service('compute', host=host)
 
     def test_aggregate_multitenancy_isolation_filter(self):
         """Tests common scenarios with the AggregateMultiTenancyIsolation

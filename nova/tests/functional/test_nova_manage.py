@@ -1693,9 +1693,9 @@ class TestDBArchiveDeletedRowsMultiCell(integrated_helpers.InstanceHelperMixin,
 
         # Start two compute services, one per cell
         self.compute1 = self.start_service('compute', host='host1',
-                                           cell='cell1')
+                                           cell_name='cell1')
         self.compute2 = self.start_service('compute', host='host2',
-                                           cell='cell2')
+                                           cell_name='cell2')
 
     def test_archive_deleted_rows(self):
         admin_context = context.get_admin_context(read_deleted='yes')

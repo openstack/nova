@@ -68,10 +68,8 @@ class MissingReqSpecInstanceGroupUUIDTestCase(
         self.start_service('scheduler')
         # Start two computes, one where the server will be created and another
         # where we'll cold migrate it.
-        self.computes = {}  # keep track of the compute services per host name
-        for host in ('host1', 'host2'):
-            compute_service = self.start_service('compute', host=host)
-            self.computes[host] = compute_service
+        self._start_compute('host1')
+        self._start_compute('host2')
 
     def test_cold_migrate_reschedule(self):
         # Create an anti-affinity group for the server.

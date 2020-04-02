@@ -76,6 +76,7 @@ logging.register_options(CONF)
 CONF.set_override('use_stderr', False)
 logging.setup(CONF, 'nova')
 cache.configure(CONF)
+LOG = logging.getLogger(__name__)
 
 _TRUE_VALUES = ('True', 'true', '1', 'yes')
 CELL1_NAME = 'cell1'
@@ -233,6 +234,7 @@ class TestCase(base.BaseTestCase):
         context.CELL_CACHE = {}
         context.CELLS = []
 
+        self.computes = {}
         self.cell_mappings = {}
         self.host_mappings = {}
         # NOTE(danms): If the test claims to want to set up the database
@@ -376,7 +378,7 @@ class TestCase(base.BaseTestCase):
         for k, v in kw.items():
             CONF.set_override(k, v, group)
 
-    def start_service(self, name, host=None, **kwargs):
+    def start_service(self, name, host=None, cell_name=None, **kwargs):
         # Disallow starting multiple scheduler services
         if name == 'scheduler' and self._service_fixture_count[name]:
             raise TestingException("Duplicate start_service(%s)!" % name)
@@ -393,7 +395,7 @@ class TestCase(base.BaseTestCase):
             # otherwise we'll fail to update the scheduler while running
             # the compute node startup routines below.
             ctxt = context.get_context()
-            cell_name = kwargs.pop('cell', CELL1_NAME) or CELL1_NAME
+            cell_name = cell_name or CELL1_NAME
             cell = self.cell_mappings[cell_name]
             if (host or name) not in self.host_mappings:
                 # NOTE(gibi): If the HostMapping does not exists then this is
@@ -420,6 +422,36 @@ class TestCase(base.BaseTestCase):
             svc.service, 'stop', patch_stop))
 
         return svc.service
+
+    def _start_compute(self, host, cell_name=None):
+        """Start a nova compute service on the given host
+
+        :param host: the name of the host that will be associated to the
+                     compute service.
+        :param cell_name: optional name of the cell in which to start the
+                          compute service
+        :return: the nova compute service object
+        """
+        compute = self.start_service('compute', host=host, cell_name=cell_name)
+        self.computes[host] = compute
+        return compute
+
+    def _run_periodics(self):
+        """Run the update_available_resource task on every compute manager
+
+        This runs periodics on the computes in an undefined order; some child
+        class redefine this function to force a specific order.
+        """
+
+        ctx = context.get_admin_context()
+        for host, compute in self.computes.items():
+            LOG.info('Running periodic for compute (%s)', host)
+            # Make sure the context is targeted to the proper cell database
+            # for multi-cell tests.
+            with context.target_cell(
+                    ctx, self.host_mappings[host].cell_mapping) as cctxt:
+                compute.manager.update_available_resource(cctxt)
+        LOG.info('Finished with periodics')
 
     def restart_compute_service(self, compute, keep_hypervisor_state=True):
         """Stops the service and starts a new one to have realistic restart
@@ -464,10 +496,10 @@ class TestCase(base.BaseTestCase):
                     'nova.virt.driver.load_compute_driver') as load_driver:
                 load_driver.return_value = old_driver
                 new_compute = self.start_service(
-                    'compute', host=compute.host, cell=cell_name)
+                    'compute', host=compute.host, cell_name=cell_name)
         else:
             new_compute = self.start_service(
-                'compute', host=compute.host, cell=cell_name)
+                'compute', host=compute.host, cell_name=cell_name)
 
         return new_compute
 

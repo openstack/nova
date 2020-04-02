@@ -34,11 +34,11 @@ class ImageCacheTest(test.TestCase):
         self.compute1 = self.start_service('compute', host='compute1')
         self.compute2 = self.start_service('compute', host='compute2')
         self.compute3 = self.start_service('compute', host='compute3',
-                                           cell='cell2')
+                                           cell_name='cell2')
         self.compute4 = self.start_service('compute', host='compute4',
-                                           cell='cell2')
+                                           cell_name='cell2')
         self.compute5 = self.start_service('compute', host='compute5',
-                                           cell='cell2')
+                                           cell_name='cell2')
 
         cell2 = self.cell_mappings['cell2']
         with context.target_cell(self.context, cell2) as cctxt:
