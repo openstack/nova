@@ -7922,7 +7922,7 @@ class AcceleratorServerBase(integrated_helpers.ProviderUsageBaseTestCase):
 
     def _check_no_allocs_usage(self, server_uuid):
         allocs = self._get_allocations_by_server_uuid(server_uuid)
-        self.assertEqual(allocs, {})
+        self.assertEqual({}, allocs)
 
         for i in range(self.NUM_HOSTS):
             host_alloc = self._get_allocations_by_provider_uuid(
@@ -7933,7 +7933,7 @@ class AcceleratorServerBase(integrated_helpers.ProviderUsageBaseTestCase):
             self.assertEqual({}, device_alloc)
             usage = self._get_provider_usages(
                 self.device_rp_uuids[i]).get('FPGA')
-            self.assertEqual(usage, 0)
+            self.assertEqual(0, usage)
 
 
 class AcceleratorServerTest(AcceleratorServerBase):
