@@ -143,8 +143,18 @@ class ServersTest(ServersTestBase):
         # We should have no (persisted) build failures until we update
         # resources, after which we should have one
         self.assertEqual([0], list(self._get_node_build_failures().values()))
-        self._run_periodics()
-        self.assertEqual([1], list(self._get_node_build_failures().values()))
+
+        # BuildAbortException will not trigger a reschedule and the build
+        # failure update is the last step in the compute manager after
+        # instance state setting, fault recording and notification sending. So
+        # we have no other way than simply wait to ensure the node build
+        # failure counter updated before we assert it.
+        def failed_counter_updated():
+            self._run_periodics()
+            self.assertEqual(
+                [1], list(self._get_node_build_failures().values()))
+
+        self._wait_for_assert(failed_counter_updated)
 
     def test_create_server_with_image_type_filter(self):
         self.flags(query_placement_for_image_type_support=True,
@@ -207,9 +217,18 @@ class ServersTest(ServersTestBase):
         self.flags(max_attempts=1, group='scheduler')
         fails = self._test_create_server_with_error_with_retries()
         self.assertEqual(1, fails)
-        self._run_periodics()
-        self.assertEqual(
-            [0, 1], list(sorted(self._get_node_build_failures().values())))
+
+        # The build failure update is the last step in build_and_run_instance
+        # in the compute manager after instance state setting, fault
+        # recording and notification sending. So we have no other way than
+        # simply wait to ensure the node build failure counter updated
+        # before we assert it.
+        def failed_counter_updated():
+            self._run_periodics()
+            self.assertEqual(
+                [0, 1], list(sorted(self._get_node_build_failures().values())))
+
+        self._wait_for_assert(failed_counter_updated)
 
     def test_create_and_delete_server(self):
         # Creates and deletes a server.
@@ -3660,11 +3679,18 @@ class ServerBuildAbortTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         failed_hostname = self.compute1.manager.host
 
-        failed_rp_uuid = self._get_provider_uuid_by_host(failed_hostname)
-        # Expects no allocation records on the failed host.
-        self.assertRequestMatchesUsage({'VCPU': 0,
-                                        'MEMORY_MB': 0,
-                                        'DISK_GB': 0}, failed_rp_uuid)
+        # BuildAbortException coming from the FakeBuildAbortDriver will not
+        # trigger a reschedule and the placement cleanup is the last step in
+        # the compute manager after instance state setting, fault recording
+        # and notification sending. So we have no other way than simply wait
+        # to ensure the placement cleanup happens before we assert it.
+        def placement_cleanup():
+            failed_rp_uuid = self._get_provider_uuid_by_host(failed_hostname)
+            # Expects no allocation records on the failed host.
+            self.assertRequestMatchesUsage({'VCPU': 0,
+                                            'MEMORY_MB': 0,
+                                            'DISK_GB': 0}, failed_rp_uuid)
+        self._wait_for_assert(placement_cleanup)
 
 
 class ServerDeleteBuildTests(integrated_helpers.ProviderUsageBaseTestCase):
@@ -8001,8 +8027,17 @@ class AcceleratorServerTest(AcceleratorServerBase):
         server_uuid = server['id']
         # Check that Cyborg was called to delete ARQs
         self.cyborg.mock_del_arqs.assert_called_once_with(server_uuid)
-        # An instance in error state should consume no resources
-        self._check_no_allocs_usage(server_uuid)
+
+        # BuildAbortException will not trigger a reschedule and the placement
+        # cleanup is the last step in the compute manager after instance state
+        # setting, fault recording and notification sending. So we have no
+        # other way than simply wait to ensure the placement cleanup happens
+        # before we assert it.
+        def placement_cleanup():
+            # An instance in error state should consume no resources
+            self._check_no_allocs_usage(server_uuid)
+
+        self._wait_for_assert(placement_cleanup)
 
         self.api.delete_server(server_uuid)
         self._wait_until_deleted(server)

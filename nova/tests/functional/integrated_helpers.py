@@ -195,6 +195,21 @@ class InstanceHelperMixin(object):
 
         self.fail('The line "%(log_line)s" did not appear in the log')
 
+    def _wait_for_assert(self, assert_func, max_retries=10, sleep=0.5):
+        """Waits and retries the assert_func either until it does not raise
+        AssertionError any more or until the max_retries run out.
+        """
+        last_error = None
+        for i in range(max_retries):
+            try:
+                return assert_func()
+            except AssertionError as e:
+                last_error = e
+
+            time.sleep(sleep)
+
+        raise last_error
+
     def _create_aggregate(self, name, availability_zone=None):
         """Creates a host aggregate with the given name and optional AZ
 
