@@ -17,7 +17,6 @@ import mock
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 
-from nova.api.openstack.compute import server_diagnostics
 from nova.api.openstack import wsgi as os_wsgi
 from nova.compute import api as compute_api
 from nova import exception
@@ -172,26 +171,3 @@ class ServerDiagnosticsTestV248(ServerDiagnosticsTestV21):
             'memory_details': {'maximum': 8192, 'used': 3072}}
 
         self._test_get_diagnostics(expected, return_value)
-
-
-class ServerDiagnosticsEnforcementV21(test.NoDBTestCase):
-    api_version = '2.1'
-
-    def setUp(self):
-        super(ServerDiagnosticsEnforcementV21, self).setUp()
-        self.controller = server_diagnostics.ServerDiagnosticsController()
-        self.req = fakes.HTTPRequest.blank('', version=self.api_version)
-
-    def test_get_diagnostics_policy_failed(self):
-        rule_name = "os_compute_api:os-server-diagnostics"
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.index, self.req, fakes.FAKE_UUID)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-
-class ServerDiagnosticsEnforcementV248(ServerDiagnosticsEnforcementV21):
-    api_version = '2.48'
