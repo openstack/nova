@@ -202,10 +202,6 @@ class LimitsControllerTestV21(BaseLimitTestSuite):
         project_id = "123456"
         user_id = "A1234"
         tenant_id = 'abcd'
-        target = {
-            "project_id": tenant_id,
-            "user_id": user_id
-        }
         fake_req = self._get_index_request(tenant_id=tenant_id,
                                            user_id=user_id,
                                            project_id=project_id)
@@ -216,7 +212,7 @@ class LimitsControllerTestV21(BaseLimitTestSuite):
             self.assertEqual(2, self.mock_can.call_count)
             self.mock_can.assert_called_with(
                 l_policies.OTHER_PROJECT_LIMIT_POLICY_NAME,
-                target)
+                target={"project_id": tenant_id})
             mock_get_quotas.assert_called_once_with(context,
                 tenant_id, usages=True)
 
