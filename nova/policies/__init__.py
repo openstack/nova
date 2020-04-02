@@ -66,7 +66,6 @@ from nova.policies import shelve
 from nova.policies import simple_tenant_usage
 from nova.policies import suspend_server
 from nova.policies import tenant_networks
-from nova.policies import used_limits
 from nova.policies import volumes
 from nova.policies import volumes_attachments
 
@@ -126,7 +125,6 @@ def list_rules():
         simple_tenant_usage.list_rules(),
         suspend_server.list_rules(),
         tenant_networks.list_rules(),
-        used_limits.list_rules(),
         volumes.list_rules(),
         volumes_attachments.list_rules()
     )
