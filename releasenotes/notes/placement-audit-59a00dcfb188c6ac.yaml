@@ -1,12 +1,11 @@
 ---
 other:
   - |
-    A new ``nova-manage placement audit`` CLI has been added to help identify
-    orphaned compute allocations in the Placement API that are no longer
-    related to either instances or migrations.
-    Some race conditions in Nova could not remove allocations for some
-    instances or migrations when they're done and then it would create some
-    capacity issues. Thanks to the command, you could know the orphaned
-    allocations and ask to remove them.
+    A new ``nova-manage`` command, ``placement audit``, has been added.
+    This can be used to identify and optionally remove compute allocations in
+    placement that are no longer referenced by existing instances or
+    migrations. These orphaned allocations typically occur due to race
+    conditions during instance migration or removal and will result in capacity
+    issues if not addressed.
     For more details on CLI usage, see the man page entry:
     https://docs.openstack.org/nova/latest/cli/nova-manage.html#placement

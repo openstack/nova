@@ -1417,16 +1417,6 @@ class TestNovaManagePlacementAudit(
 
         self.flavor = self.api.get_flavors()[0]
 
-    def _delete_instance_but_keep_its_allocations(self, server):
-        """Mocks out the call to Placement for deleting the allocations but
-           still performs the instance deletion.
-        """
-
-        with mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                        'delete_allocation_for_instance'):
-            self.api.delete_server(server['id'])
-            self._wait_until_deleted(server)
-
     def test_audit_orphaned_allocation_from_instance_delete(self):
         """Creates a server and deletes it by retaining its allocations so the
            audit command can find it.
@@ -1458,15 +1448,17 @@ class TestNovaManagePlacementAudit(
              'rp_uuid': rp_uuid},
             output)
         self.assertIn('Processed 1 allocation.', output)
+        # Here we don't want to delete the found allocations
+        self.assertNotIn(
+            'Deleted allocations for consumer UUID %s' % server['id'], output)
         self.assertEqual(3, ret)
 
         # Now ask the audit command to delete the rogue allocations.
         ret = self.cli.audit(delete=True, verbose=True)
 
         # The allocations are now deleted
-        self.assertRequestMatchesUsage({'VCPU': 0,
-                                        'MEMORY_MB': 0,
-                                        'DISK_GB': 0}, rp_uuid)
+        self.assertRequestMatchesUsage(
+            {'VCPU': 0, 'MEMORY_MB': 0, 'DISK_GB': 0}, rp_uuid)
 
         output = self.output.getvalue()
         self.assertIn(
@@ -1525,8 +1517,7 @@ class TestNovaManagePlacementAudit(
         self.assertIn(
             'Allocations for consumer UUID %(consumer_uuid)s on '
             'Resource Provider %(rp_uuid)s can be deleted' %
-            {'consumer_uuid': migration_uuid,
-             'rp_uuid': source_rp_uuid},
+            {'consumer_uuid': migration_uuid, 'rp_uuid': source_rp_uuid},
             output)
         self.assertIn('Processed 1 allocation.', output)
         self.assertEqual(3, ret)
@@ -1550,7 +1541,7 @@ class TestNovaManagePlacementAudit(
         self.assertIn('Processed 1 allocation.', output)
         self.assertEqual(4, ret)
 
-    # TODO(sbauza): Mock this test once bug #1829479 is fixed
+    # TODO(sbauza): Remove this test once bug #1829479 is fixed
     def test_audit_orphaned_allocations_from_deleted_compute_evacuate(self):
         """Evacuate a server and the delete the source node so that it will
            leave a source allocation that the audit command will find.

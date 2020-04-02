@@ -685,7 +685,6 @@ Placement
        * - 255
          - An unexpected error occurred.
 
-
 ``nova-manage placement audit [--verbose] [--delete] [--resource_provider <uuid>]``
     Iterates over all the Resource Providers (or just one if you provide the
     UUID) and then verifies if the compute allocations are either related to
