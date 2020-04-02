@@ -24,31 +24,34 @@ USED_LIMIT_POLICY_NAME = 'os_compute_api:os-used-limits'
 
 limits_policies = [
     policy.DocumentedRuleDefault(
-        BASE_POLICY_NAME,
-        base.RULE_ANY,
-        "Show rate and absolute limits for the current user project",
-        [
+        name=BASE_POLICY_NAME,
+        check_str=base.RULE_ANY,
+        description="Show rate and absolute limits for the current user "
+        "project",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/limits'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     # TODO(aunnam): Remove this rule after we separate the scope check from
     # policies, as this is only checking the scope.
     policy.DocumentedRuleDefault(
-        USED_LIMIT_POLICY_NAME,
-        base.RULE_ADMIN_API,
-        """Show rate and absolute limits for the project.
+        name=USED_LIMIT_POLICY_NAME,
+        check_str=base.RULE_ADMIN_API,
+        description="""Show rate and absolute limits for the project.
 
 This policy only checks if the user has access to the requested
 project limits. And this check is performed only after the check
 os_compute_api:limits passes""",
-        [
+        operations=[
             {
                 'method': 'GET',
                 'path': '/limits'
             }
-        ]),
+        ],
+        scope_types=['system']),
 ]
 
 
