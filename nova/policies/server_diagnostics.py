@@ -23,15 +23,16 @@ BASE_POLICY_NAME = 'os_compute_api:os-server-diagnostics'
 
 server_diagnostics_policies = [
     policy.DocumentedRuleDefault(
-        BASE_POLICY_NAME,
-        base.RULE_ADMIN_API,
-        "Show the usage data for a server",
-        [
+        name=BASE_POLICY_NAME,
+        check_str=base.RULE_ADMIN_API,
+        description="Show the usage data for a server",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/servers/{server_id}/diagnostics'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
 ]
 
 
