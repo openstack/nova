@@ -34,9 +34,9 @@ class ServerDiagnosticsController(wsgi.Controller):
     @wsgi.expected_errors((400, 404, 409, 501))
     def index(self, req, server_id):
         context = req.environ["nova.context"]
-        context.can(sd_policies.BASE_POLICY_NAME)
-
         instance = common.get_instance(self.compute_api, context, server_id)
+        context.can(sd_policies.BASE_POLICY_NAME,
+                    target={'project_id': instance.project_id})
 
         try:
             if api_version_request.is_supported(req, min_version='2.48'):

@@ -32,7 +32,9 @@ def fake_instance_get(self, _context, instance_uuid, expected_attrs=None,
                       cell_down_support=False):
     if instance_uuid != UUID:
         raise Exception("Invalid UUID")
-    return objects.Instance(uuid=instance_uuid, host='123')
+    return objects.Instance(uuid=instance_uuid,
+                            project_id=_context.project_id,
+                            host='123')
 
 
 class ServerDiagnosticsTestV21(test.NoDBTestCase):
