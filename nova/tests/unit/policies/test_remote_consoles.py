@@ -87,3 +87,27 @@ class RemoteConsolesScopeTypePolicyTest(RemoteConsolesPolicyTest):
     def setUp(self):
         super(RemoteConsolesScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+
+
+class RemoteConsolesNoLegacyPolicyTest(RemoteConsolesScopeTypePolicyTest):
+    """Test Remote Consoles APIs policies with system scope enabled,
+    and no more deprecated rules that allow the legacy admin API to
+    access system APIs.
+    """
+    without_deprecated_rules = True
+
+    def setUp(self):
+        super(RemoteConsolesNoLegacyPolicyTest, self).setUp()
+        # Check that system admin or and server owner is able to get server
+        # remote consoles.
+        self.admin_or_owner_authorized_contexts = [
+            self.system_admin_context,
+            self.project_admin_context, self.project_member_context]
+        # Check that non-system/admin/owner is not able to get server
+        # remote consoles.
+        self.admin_or_owner_unauthorized_contexts = [
+            self.legacy_admin_context, self.system_member_context,
+            self.system_reader_context, self.system_foo_context,
+            self.other_project_member_context, self.project_reader_context,
+            self.project_foo_context
+        ]
