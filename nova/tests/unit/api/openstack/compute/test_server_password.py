@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import fixtures
 import mock
 
 from nova.api.openstack.compute import server_password \
@@ -69,6 +70,8 @@ class ServerPasswordPolicyEnforcementV21(test.NoDBTestCase):
         super(ServerPasswordPolicyEnforcementV21, self).setUp()
         self.controller = server_password_v21.ServerPasswordController()
         self.req = fakes.HTTPRequest.blank('')
+        self.mock_get = self.useFixture(
+            fixtures.MockPatch('nova.api.openstack.common.get_instance')).mock
 
     def _test_policy_failed(self, method, rule_name):
         self.policy.set_rules({rule_name: "project:non_fake"})
