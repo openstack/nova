@@ -5565,9 +5565,14 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_build_run.side_effect = exception.RescheduledException(reason='',
                 instance_uuid=self.instance.uuid)
 
-        with mock.patch.object(
-                self.compute.network_api,
-                'cleanup_instance_network_on_host') as mock_clean:
+        with test.nested(
+            mock.patch.object(
+                self.compute.network_api, 'cleanup_instance_network_on_host',
+            ),
+            mock.patch.object(
+                self.compute.network_api, 'get_instance_nw_info',
+            ),
+        ) as (mock_clean, _):
             self.compute.build_and_run_instance(self.context, self.instance,
                     self.image, request_spec={},
                     filter_properties=self.filter_properties,
@@ -5657,9 +5662,14 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_build_and_run.side_effect = exception.RescheduledException(
             reason='', instance_uuid=self.instance.uuid)
 
-        with mock.patch.object(
-                self.compute.network_api,
-                'cleanup_instance_network_on_host') as mock_cleanup_network:
+        with test.nested(
+            mock.patch.object(
+                self.compute.network_api, 'cleanup_instance_network_on_host',
+            ),
+            mock.patch.object(
+                self.compute.network_api, 'get_instance_nw_info',
+            ),
+        ) as (mock_cleanup_network, _):
             self.compute._do_build_and_run_instance(self.context, instance,
                 self.image, request_spec={},
                 filter_properties=self.filter_properties,
@@ -6311,9 +6321,14 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_claim.side_effect = exc
         self._do_build_instance_update(mock_save, reschedule_update=True)
 
-        with mock.patch.object(
-                self.compute.network_api,
-                'cleanup_instance_network_on_host') as mock_clean:
+        with test.nested(
+            mock.patch.object(
+                self.compute.network_api, 'cleanup_instance_network_on_host',
+            ),
+            mock.patch.object(
+                self.compute.network_api, 'get_instance_nw_info',
+            ),
+        ) as (mock_clean, _):
             self.compute.build_and_run_instance(self.context, self.instance,
                     self.image, request_spec={},
                     filter_properties=self.filter_properties,
@@ -6830,18 +6845,48 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_setup.assert_called_once_with(self.context, instance,
                                            instance.host)
 
-    def test_cleanup_allocated_networks_instance_not_found(self):
+    def test__cleanup_allocated_networks__instance_not_found(self):
         with test.nested(
-                mock.patch.object(self.compute, '_deallocate_network'),
-                mock.patch.object(self.instance, 'save',
-                    side_effect=exception.InstanceNotFound(instance_id=''))
-        ) as (_deallocate_network, save):
+            mock.patch.object(self.compute.network_api,
+                              'get_instance_nw_info'),
+            mock.patch.object(self.compute.driver, 'unplug_vifs'),
+            mock.patch.object(self.compute, '_deallocate_network'),
+            mock.patch.object(self.instance, 'save',
+                side_effect=exception.InstanceNotFound(instance_id=''))
+        ) as (mock_nwinfo, mock_unplug, mock_deallocate_network, mock_save):
             # Testing that this doesn't raise an exception
-            self.compute._cleanup_allocated_networks(self.context,
-                    self.instance, self.requested_networks)
-            save.assert_called_once_with()
-            self.assertEqual('False',
-                    self.instance.system_metadata['network_allocated'])
+            self.compute._cleanup_allocated_networks(
+                self.context, self.instance, self.requested_networks)
+
+        mock_nwinfo.assert_called_once_with(
+            self.context, self.instance)
+        mock_unplug.assert_called_once_with(
+            self.instance, mock_nwinfo.return_value)
+        mock_deallocate_network.assert_called_once_with(
+            self.context, self.instance, self.requested_networks)
+        mock_save.assert_called_once_with()
+        self.assertEqual(
+            'False', self.instance.system_metadata['network_allocated'])
+
+    @mock.patch('nova.compute.manager.LOG')
+    def test__cleanup_allocated_networks__error(self, mock_log):
+        with test.nested(
+            mock.patch.object(
+                self.compute.network_api, 'get_instance_nw_info',
+                side_effect=Exception('some neutron error')
+            ),
+            mock.patch.object(self.compute.driver, 'unplug_vifs'),
+        ) as (mock_nwinfo, mock_unplug):
+            self.compute._cleanup_allocated_networks(
+                self.context, self.instance, self.requested_networks)
+
+        mock_nwinfo.assert_called_once_with(self.context, self.instance)
+        self.assertEqual(1, mock_log.warning.call_count)
+        self.assertIn(
+            'Failed to update network info cache',
+            mock_log.warning.call_args[0][0],
+        )
+        mock_unplug.assert_not_called()
 
     def test_deallocate_network_none_requested(self):
         # Tests that we don't deallocate networks if 'none' were

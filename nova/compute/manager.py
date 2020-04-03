@@ -2622,6 +2622,50 @@ class ComputeManager(manager.Manager):
 
     def _cleanup_allocated_networks(self, context, instance,
             requested_networks):
+        """Cleanup networks allocated for instance.
+
+        :param context: nova request context
+        :param instance: nova.objects.instance.Instance object
+        :param requested_networks: nova.objects.NetworkRequestList
+        """
+        LOG.debug('Unplugging VIFs for instance', instance=instance)
+
+        network_info = instance.get_network_info()
+
+        # NOTE(stephenfin) to avoid nova destroying the instance without
+        # unplugging the interface, refresh network_info if it is empty.
+        if not network_info:
+            try:
+                network_info = self.network_api.get_instance_nw_info(
+                    context, instance,
+                )
+            except Exception as exc:
+                LOG.warning(
+                    'Failed to update network info cache when cleaning up '
+                    'allocated networks. Stale VIFs may be left on this host.'
+                    'Error: %s', six.text_type(exc)
+                )
+                return
+
+        try:
+            self.driver.unplug_vifs(instance, network_info)
+        except NotImplementedError:
+            # This is an optional method so ignore things if it doesn't exist
+            LOG.debug(
+                'Virt driver does not provide unplug_vifs method, so it '
+                'is not possible determine if VIFs should be unplugged.'
+            )
+        except exception.NovaException as exc:
+            # It's possible that the instance never got as far as plugging
+            # VIFs, in which case we would see an exception which can be
+            # mostly ignored
+            LOG.warning(
+                'Cleaning up VIFs failed for instance. Error: %s',
+                six.text_type(exc), instance=instance,
+            )
+        else:
+            LOG.debug('Unplugged VIFs for instance', instance=instance)
+
         try:
             self._deallocate_network(context, instance, requested_networks)
         except Exception:
