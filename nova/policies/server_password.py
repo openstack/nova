@@ -23,10 +23,11 @@ BASE_POLICY_NAME = 'os_compute_api:os-server-password'
 
 server_password_policies = [
     policy.DocumentedRuleDefault(
-        BASE_POLICY_NAME,
-        base.RULE_ADMIN_OR_OWNER,
-        "Show and clear the encrypted administrative password of a server",
-        [
+        name=BASE_POLICY_NAME,
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="Show and clear the encrypted administrative "
+        "password of a server",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/servers/{server_id}/os-server-password'
@@ -35,7 +36,8 @@ server_password_policies = [
                 'method': 'DELETE',
                 'path': '/servers/{server_id}/os-server-password'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
 ]
 
 
