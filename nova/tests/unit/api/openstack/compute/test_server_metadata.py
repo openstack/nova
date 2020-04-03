@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import fixtures
 import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
@@ -713,76 +712,3 @@ class BadStateServerMetaDataTestV21(test.TestCase):
         req.body = jsonutils.dump_as_bytes(expected)
         self.assertRaises(webob.exc.HTTPConflict, self.controller.update_all,
                 req, self.uuid, body=expected)
-
-
-class ServerMetaPolicyEnforcementV21(test.NoDBTestCase):
-
-    def setUp(self):
-        super(ServerMetaPolicyEnforcementV21, self).setUp()
-        self.controller = server_metadata_v21.ServerMetadataController()
-        self.req = fakes.HTTPRequest.blank('')
-        self.mock_get = self.useFixture(
-            fixtures.MockPatch('nova.api.openstack.common.get_instance')).mock
-
-    def test_create_policy_failed(self):
-        rule_name = "os_compute_api:server-metadata:create"
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.create, self.req, fakes.FAKE_UUID,
-            body={'metadata': {}})
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-    def test_index_policy_failed(self):
-        rule_name = "os_compute_api:server-metadata:index"
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.index, self.req, fakes.FAKE_UUID)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-    def test_update_policy_failed(self):
-        rule_name = "os_compute_api:server-metadata:update"
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.update, self.req, fakes.FAKE_UUID, fakes.FAKE_UUID,
-            body={'meta': {'fake_meta': 'fake_meta'}})
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-    def test_update_all_policy_failed(self):
-        rule_name = "os_compute_api:server-metadata:update_all"
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.update_all, self.req, fakes.FAKE_UUID,
-            body={'metadata': {}})
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-    def test_delete_policy_failed(self):
-        rule_name = "os_compute_api:server-metadata:delete"
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.delete, self.req, fakes.FAKE_UUID, fakes.FAKE_UUID)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-    def test_show_policy_failed(self):
-        rule_name = "os_compute_api:server-metadata:show"
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.show, self.req, fakes.FAKE_UUID, fakes.FAKE_UUID)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
