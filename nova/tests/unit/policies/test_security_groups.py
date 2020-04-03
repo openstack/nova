@@ -17,6 +17,7 @@ from oslo_utils import timeutils
 
 from nova.api.openstack.compute import security_groups
 from nova.compute import vm_states
+from nova.policies import base as base_policy
 from nova.policies import security_groups as policies
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
@@ -57,22 +58,34 @@ class SecurityGroupsPolicyTest(base.BasePolicyTest):
         # server security groups.
         self.admin_or_owner_unauthorized_contexts = [
             self.system_member_context, self.system_reader_context,
-            self.system_foo_context,
-            self.other_project_member_context
+            self.system_foo_context, self.other_project_member_context,
+            self.other_project_reader_context
+        ]
+
+        self.reader_authorized_contexts = [
+            self.legacy_admin_context, self.system_admin_context,
+            self.project_admin_context, self.system_member_context,
+            self.system_reader_context, self.project_reader_context,
+            self.project_member_context, self.project_foo_context
+        ]
+
+        self.reader_unauthorized_contexts = [
+            self.system_foo_context, self.other_project_member_context,
+            self.other_project_reader_context
         ]
 
     @mock.patch('nova.network.security_group_api.get_instance_security_groups')
     def test_get_security_groups_policy(self, mock_get):
-        rule_name = policies.BASE_POLICY_NAME
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
+        rule_name = policies.POLICY_NAME % 'list'
+        self.common_policy_check(self.reader_authorized_contexts,
+                                 self.reader_unauthorized_contexts,
                                  rule_name,
                                  self.controller.index,
                                  self.req, self.instance.uuid)
 
     @mock.patch('nova.network.security_group_api.add_to_instance')
     def test_add_security_groups_policy(self, mock_add):
-        rule_name = policies.BASE_POLICY_NAME
+        rule_name = policies.POLICY_NAME % 'add'
         self.common_policy_check(self.admin_or_owner_authorized_contexts,
                                  self.admin_or_owner_unauthorized_contexts,
                                  rule_name,
@@ -83,7 +96,7 @@ class SecurityGroupsPolicyTest(base.BasePolicyTest):
 
     @mock.patch('nova.network.security_group_api.remove_from_instance')
     def test_remove_security_groups_policy(self, mock_remove):
-        rule_name = policies.BASE_POLICY_NAME
+        rule_name = policies.POLICY_NAME % 'remove'
         self.common_policy_check(self.admin_or_owner_authorized_contexts,
                                  self.admin_or_owner_unauthorized_contexts,
                                  rule_name,
@@ -106,3 +119,52 @@ class SecurityGroupsScopeTypePolicyTest(SecurityGroupsPolicyTest):
     def setUp(self):
         super(SecurityGroupsScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+
+
+class SecurityGroupsNoLegacyPolicyTest(SecurityGroupsScopeTypePolicyTest):
+    """Test Security Groups APIs policies with system scope enabled,
+    and no more deprecated rules that allow the legacy admin API to
+    access system_admin_or_owner APIs.
+    """
+    without_deprecated_rules = True
+    rules_without_deprecation = {
+        policies.POLICY_NAME % 'list':
+            base_policy.PROJECT_READER_OR_SYSTEM_READER,
+        policies.POLICY_NAME % 'add':
+            base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        policies.POLICY_NAME % 'remove':
+            base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN}
+
+    def setUp(self):
+        super(SecurityGroupsNoLegacyPolicyTest, self).setUp()
+
+        # Check that system or projct admin or owner is able to operate
+        # server security groups.
+        self.admin_or_owner_authorized_contexts = [
+            self.system_admin_context,
+            self.project_admin_context, self.project_member_context]
+        # Check that non-system and non-admin/owner is not able to operate
+        # server security groups.
+        self.admin_or_owner_unauthorized_contexts = [
+            self.legacy_admin_context, self.project_reader_context,
+            self.project_foo_context,
+            self.system_member_context, self.system_reader_context,
+            self.system_foo_context, self.other_project_member_context,
+            self.other_project_reader_context]
+
+        # Check that system reader or projct is able to get
+        # server security groups.
+        self.reader_authorized_contexts = [
+            self.system_admin_context,
+            self.project_admin_context, self.system_member_context,
+            self.system_reader_context, self.project_reader_context,
+            self.project_member_context,
+        ]
+
+        # Check that non-system reader nd non-admin/owner is not able to get
+        # server security groups.
+        self.reader_unauthorized_contexts = [
+            self.legacy_admin_context, self.project_foo_context,
+            self.system_foo_context, self.other_project_member_context,
+            self.other_project_reader_context
+        ]
