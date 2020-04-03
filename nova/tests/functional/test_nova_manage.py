@@ -746,6 +746,45 @@ class TestNovaManagePlacementHealAllocations(
         self.assertIn('Unable to find cell for instance %s, is it mapped?' %
                       server['id'], output)
 
+    def test_heal_allocations_specific_cell(self):
+        """Tests the case that a specific cell is processed and only that
+        cell even though there are two which require processing.
+        """
+        # Create one that we won't process.
+        server1, rp_uuid1 = self._boot_and_assert_no_allocations(
+            self.flavor, 'cell1')
+        # Create another that we will process specifically.
+        server2, rp_uuid2 = self._boot_and_assert_no_allocations(
+            self.flavor, 'cell2')
+
+        # Get Cell_id of cell2
+        cell2_id = self.cell_mappings['cell2'].uuid
+
+        # First do a dry run to make sure two instances need processing.
+        result = self.cli.heal_allocations(
+            max_count=2, verbose=True, dry_run=True)
+        # Nothing changed so the return code should be 4.
+        self.assertEqual(4, result, self.output.getvalue())
+        output = self.output.getvalue()
+        self.assertIn('Found 1 candidate instances', output)
+
+        # Now run with our specific cell and it should be the only one
+        # processed.
+        result = self.cli.heal_allocations(verbose=True,
+                                           cell_uuid=cell2_id)
+        output = self.output.getvalue()
+        self.assertEqual(0, result, self.output.getvalue())
+        self.assertIn('Found 1 candidate instances', output)
+        self.assertIn('Processed 1 instances.', output)
+
+        # Now run it again on the specific cell and it should be done.
+        result = self.cli.heal_allocations(
+            verbose=True, cell_uuid=cell2_id)
+        output = self.output.getvalue()
+        self.assertEqual(4, result, self.output.getvalue())
+        self.assertIn('Found 1 candidate instances', output)
+        self.assertIn('Processed 0 instances.', output)
+
 
 class TestNovaManagePlacementHealPortAllocations(
         test_servers.PortResourceRequestBasedSchedulingTestBase):

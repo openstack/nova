@@ -1,0 +1,4 @@
+---
+features:
+  - Add ``--cell`` option to the ``nova-manage placement heal_allocations``
+    command. This option allows healing instance allocations within a specific cell.

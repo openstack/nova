@@ -2090,7 +2090,8 @@ class PlacementCommands(object):
                'changes. The return code should be 4.')
     @args('--instance', metavar='<instance_uuid>', dest='instance_uuid',
           help='UUID of a specific instance to process. If specified '
-               '--max-count has no effect.')
+               '--max-count has no effect. '
+               'The --cell and --instance options are mutually exclusive.')
     @args('--skip-port-allocations', action='store_true',
           dest='skip_port_allocations', default=False,
           help='Skip the healing of the resource allocations of bound ports. '
@@ -2099,8 +2100,12 @@ class PlacementCommands(object):
                'not use such a feature then the performance impact of '
                'querying neutron ports for each instance can be avoided with '
                'this flag.')
+    @args('--cell', metavar='<cell_uuid>', dest='cell_uuid',
+          help='Heal allocations within a specific cell. '
+               'The --cell and --instance options are mutually exclusive.')
     def heal_allocations(self, max_count=None, verbose=False, dry_run=False,
-                         instance_uuid=None, skip_port_allocations=False):
+                         instance_uuid=None, skip_port_allocations=False,
+                         cell_uuid=None):
         """Heals instance allocations in the Placement service
 
         Return codes:
@@ -2117,7 +2122,6 @@ class PlacementCommands(object):
         * 127: Invalid input.
         """
         # NOTE(mriedem): Thoughts on ways to expand this:
-        # - allow passing a specific cell to heal
         # - allow filtering on enabled/disabled cells
         # - add a force option to force allocations for instances which have
         #   task_state is not None (would get complicated during a migration);
@@ -2134,6 +2138,13 @@ class PlacementCommands(object):
         output = lambda msg: None
         if verbose:
             output = lambda msg: print(msg)
+
+        # If user has provided both cell and instance
+        # Throw an error
+        if instance_uuid and cell_uuid:
+            print(_('The --cell and --instance options '
+                    'are mutually exclusive.'))
+            return 127
 
         # TODO(mriedem): Rather than --max-count being both a total and batch
         # count, should we have separate options to be specific, i.e. --total
@@ -2169,6 +2180,15 @@ class PlacementCommands(object):
                       'running "nova-manage cell_v2 verify_instance" or '
                       '"nova-manage cell_v2 map_instances".' %
                       instance_uuid)
+                return 127
+        elif cell_uuid:
+            try:
+                # validate cell_uuid
+                cell = objects.CellMapping.get_by_uuid(ctxt, cell_uuid)
+                # create CellMappingList
+                cells = objects.CellMappingList(objects=[cell])
+            except exception.CellMappingNotFound:
+                print(_('Cell with uuid %s was not found.') % cell_uuid)
                 return 127
         else:
             cells = objects.CellMappingList.get_all(ctxt)

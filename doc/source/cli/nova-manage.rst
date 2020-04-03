@@ -546,7 +546,7 @@ Placement
 
 .. _heal_allocations_cli:
 
-``nova-manage placement heal_allocations [--max-count <max_count>] [--verbose] [--skip-port-allocations] [--dry-run] [--instance <instance_uuid>]``
+``nova-manage placement heal_allocations [--max-count <max_count>] [--verbose] [--skip-port-allocations] [--dry-run] [--instance <instance_uuid>] [--cell <cell_uuid]``
     Iterates over non-cell0 cells looking for instances which do not have
     allocations in the Placement service and which are not undergoing a task
     state transition. For each instance found, allocations are created against
@@ -602,6 +602,9 @@ Placement
     not use such a feature then the performance impact of querying neutron
     ports for each instance can be avoided with this flag.
     *(Since 20.0.0 Train)*
+
+    Specify ``--cell`` to  process heal allocations within a specific cell.
+    This is mutually exclusive with the ``--instance`` option.
 
     This command requires that the
     :oslo.config:option:`api_database.connection` and
