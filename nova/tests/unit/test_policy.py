@@ -355,7 +355,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-shelve:shelve_offload",
 "os_compute_api:os-simple-tenant-usage:list",
 "os_compute_api:os-availability-zone:detail",
-"os_compute_api:os-used-limits",
 "os_compute_api:os-assisted-volume-snapshots:create",
 "os_compute_api:os-assisted-volume-snapshots:delete",
 "os_compute_api:os-console-auth-tokens",
@@ -468,6 +467,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-hypervisors:uptime",
 "os_compute_api:os-hypervisors:search",
 "os_compute_api:os-hypervisors:servers",
+"os_compute_api:limits:other_project",
 )
 
         self.system_reader_or_owner_rules = (

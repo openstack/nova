@@ -19,8 +19,17 @@ from nova.policies import base
 
 
 BASE_POLICY_NAME = 'os_compute_api:limits'
-USED_LIMIT_POLICY_NAME = 'os_compute_api:os-used-limits'
+OTHER_PROJECT_LIMIT_POLICY_NAME = 'os_compute_api:limits:other_project'
+DEPRECATED_POLICY = policy.DeprecatedRule(
+    'os_compute_api:os-used-limits',
+    base.RULE_ADMIN_API,
+)
 
+DEPRECATED_REASON = """
+Nova API policies are introducing new default roles with scope_type
+capabilities. Old policies are deprecated and silently going to be ignored
+in nova 23.0.0 release.
+"""
 
 limits_policies = [
     policy.DocumentedRuleDefault(
@@ -35,12 +44,10 @@ limits_policies = [
             }
         ],
         scope_types=['system', 'project']),
-    # TODO(aunnam): Remove this rule after we separate the scope check from
-    # policies, as this is only checking the scope.
     policy.DocumentedRuleDefault(
-        name=USED_LIMIT_POLICY_NAME,
-        check_str=base.RULE_ADMIN_API,
-        description="""Show rate and absolute limits for the project.
+        name=OTHER_PROJECT_LIMIT_POLICY_NAME,
+        check_str=base.SYSTEM_READER,
+        description="""Show rate and absolute limits of other project.
 
 This policy only checks if the user has access to the requested
 project limits. And this check is performed only after the check
@@ -51,7 +58,10 @@ os_compute_api:limits passes""",
                 'path': '/limits'
             }
         ],
-        scope_types=['system']),
+        scope_types=['system'],
+        deprecated_rule=DEPRECATED_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='21.0.0'),
 ]
 
 
