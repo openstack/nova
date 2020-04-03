@@ -23,70 +23,76 @@ POLICY_ROOT = 'os_compute_api:server-metadata:%s'
 
 server_metadata_policies = [
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'index',
-        base.RULE_ADMIN_OR_OWNER,
-        "List all metadata of a server",
-        [
+        name=POLICY_ROOT % 'index',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="List all metadata of a server",
+        operations=[
             {
                 'path': '/servers/{server_id}/metadata',
                 'method': 'GET'
             }
-        ]
+        ],
+        scope_types=['system', 'project']
     ),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'show',
-        base.RULE_ADMIN_OR_OWNER,
-        "Show metadata for a server",
-        [
+        name=POLICY_ROOT % 'show',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="Show metadata for a server",
+        operations=[
             {
                 'path': '/servers/{server_id}/metadata/{key}',
                 'method': 'GET'
             }
-        ]
+        ],
+        scope_types=['system', 'project']
     ),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'create',
-        base.RULE_ADMIN_OR_OWNER,
-        "Create metadata for a server",
-        [
+        name=POLICY_ROOT % 'create',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="Create metadata for a server",
+        operations=[
             {
                 'path': '/servers/{server_id}/metadata',
                 'method': 'POST'
             }
-        ]
+        ],
+        scope_types=['system', 'project']
     ),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'update_all',
-        base.RULE_ADMIN_OR_OWNER,
-        "Replace metadata for a server",
-        [
+        name=POLICY_ROOT % 'update_all',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="Replace metadata for a server",
+        operations=[
             {
                 'path': '/servers/{server_id}/metadata',
                 'method': 'PUT'
             }
-        ]
+        ],
+        scope_types=['system', 'project']
     ),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'update',
-        base.RULE_ADMIN_OR_OWNER,
-        "Update metadata from a server",
-        [
+        name=POLICY_ROOT % 'update',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="Update metadata from a server",
+        operations=[
             {
                 'path': '/servers/{server_id}/metadata/{key}',
                 'method': 'PUT'
             }
-        ]
+        ],
+        scope_types=['system', 'project']
     ),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'delete',
-        base.RULE_ADMIN_OR_OWNER,
-        "Delete metadata from a server",
-        [
+        name=POLICY_ROOT % 'delete',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="Delete metadata from a server",
+        operations=[
             {
                 'path': '/servers/{server_id}/metadata/{key}',
                 'method': 'DELETE'
             }
-        ]
+        ],
+        scope_types=['system', 'project']
     ),
 ]
 
