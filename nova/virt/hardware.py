@@ -1078,7 +1078,10 @@ def _numa_fit_instance_cell(
 
     # NOTE(stephenfin): As with memory, do not allow an instance to overcommit
     # against itself on any NUMA cell
-    if instance_cell.cpu_policy == fields.CPUAllocationPolicy.DEDICATED:
+    if instance_cell.cpu_policy in (
+        fields.CPUAllocationPolicy.DEDICATED,
+        fields.CPUAllocationPolicy.MIXED,
+    ):
         required_cpus = len(instance_cell.pcpuset) + cpuset_reserved
         if required_cpus > len(host_cell.pcpuset):
             LOG.debug('Not enough host cell CPUs to fit instance cell; '
@@ -1099,7 +1102,10 @@ def _numa_fit_instance_cell(
                       })
             return None
 
-    if instance_cell.cpu_policy == fields.CPUAllocationPolicy.DEDICATED:
+    if instance_cell.cpu_policy in (
+        fields.CPUAllocationPolicy.DEDICATED,
+        fields.CPUAllocationPolicy.MIXED,
+    ):
         LOG.debug('Pinning has been requested')
         required_cpus = len(instance_cell.pcpuset) + cpuset_reserved
         if required_cpus > host_cell.avail_pcpus:
@@ -2305,10 +2311,11 @@ def numa_usage_from_instance_numa(host_topology, instance_topology,
 
             memory_usage = memory_usage + sign * instance_cell.memory
 
-            if instance_cell.cpu_policy != (
-                fields.CPUAllocationPolicy.DEDICATED
+            shared_cpus_usage += sign * len(instance_cell.cpuset)
+
+            if instance_cell.cpu_policy in (
+                None, fields.CPUAllocationPolicy.SHARED,
             ):
-                shared_cpus_usage += sign * len(instance_cell.cpuset)
                 continue
 
             pinned_cpus = set(instance_cell.cpu_pinning.values())

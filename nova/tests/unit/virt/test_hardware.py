@@ -4050,6 +4050,131 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         self.assertEqual(set([3]), new_cell.cells[0].pinned_cpus)
         self.assertEqual(0, new_cell.cells[0].cpu_usage)
 
+    def test_host_usage_from_mixed_instance(self):
+        """Ensure pinned and unpinned CPUs are correctly consumed for a mixed
+        instance without an emulator thread policy.
+        """
+        host_topo = objects.NUMATopology(cells=[
+            objects.NUMACell(
+                id=0,
+                cpuset=set([0, 1, 4, 5]),
+                pcpuset=set([2, 3, 6, 7]),
+                memory=4096,
+                cpu_usage=0,
+                memory_usage=0,
+                pinned_cpus=set([2]),
+                siblings=[set([0, 4]), set([1, 5]), set([2, 6]), set([3, 7])],
+                mempages=[objects.NUMAPagesTopology(
+                    size_kb=4, total=524288, used=0)]
+            ),
+        ])
+        inst_topo = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                cpuset=set([0, 1]), pcpuset=set([2, 3]), memory=2048,
+                id=0, cpu_pinning={2: 3, 3: 6},
+                cpu_policy=fields.CPUAllocationPolicy.MIXED
+            ),
+        ])
+
+        new_cell = hw.numa_usage_from_instance_numa(host_topo, inst_topo)
+        self.assertEqual({2, 3, 6}, new_cell.cells[0].pinned_cpus)
+        self.assertEqual(2, new_cell.cells[0].cpu_usage)
+
+    def test_host_usage_from_mixed_instance_free(self):
+        """Ensure pinned and unpinned CPUs are correctly freed for a mixed
+        instance without an emulator thread policy.
+        """
+        host_topo = objects.NUMATopology(cells=[
+            objects.NUMACell(
+                id=0,
+                cpuset=set([0, 1, 4, 5]),
+                pcpuset=set([2, 3, 6, 7]),
+                memory=4096,
+                cpu_usage=2,
+                memory_usage=0,
+                pinned_cpus=set([2, 6, 7]),
+                siblings=[set([0, 4]), set([1, 5]), set([2, 6]), set([3, 7])],
+                mempages=[objects.NUMAPagesTopology(
+                    size_kb=4, total=524288, used=0)]
+            ),
+        ])
+        inst_topo = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                cpuset=set([0, 1]), pcpuset=set([2, 3]), memory=2048,
+                id=0, cpu_pinning={2: 6, 3: 7},
+                cpu_policy=fields.CPUAllocationPolicy.MIXED
+            ),
+        ])
+
+        new_cell = hw.numa_usage_from_instance_numa(host_topo, inst_topo,
+                                                    free=True)
+        self.assertEqual({2}, new_cell.cells[0].pinned_cpus)
+        self.assertEqual(0, new_cell.cells[0].cpu_usage)
+
+    def test_host_usage_from_mixed_instance_isolate(self):
+        """Ensure pinned and unpinned CPUs are correctly consumed for a mixed
+        instance with an ISOLATE emulator thread policy.
+        """
+        host_topo = objects.NUMATopology(cells=[
+            objects.NUMACell(
+                id=0,
+                cpuset=set([2, 3, 6, 7]),
+                pcpuset=set([0, 1, 4, 5]),
+                memory=4096,
+                cpu_usage=2,
+                memory_usage=0,
+                pinned_cpus=set(),
+                siblings=[set([0, 4]), set([1, 5]), set([2, 6]), set([3, 7])],
+                mempages=[objects.NUMAPagesTopology(
+                    size_kb=4, total=524288, used=0)]
+            ),
+        ])
+        inst_topo = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                cpuset=set([0, 1]), pcpuset=set([2, 3]),
+                memory=2048, id=0, cpu_pinning={2: 0, 3: 1},
+                cpu_policy=fields.CPUAllocationPolicy.MIXED,
+                cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE
+            ),
+        ])
+
+        new_cell = hw.numa_usage_from_instance_numa(host_topo, inst_topo)
+        self.assertEqual({0, 1, 4, 5}, new_cell.cells[0].pinned_cpus)
+        self.assertEqual(4, new_cell.cells[0].cpu_usage)
+
+    def test_host_usage_from_mixed_instance_isolate_free(self):
+        """Ensure pinned and unpinned CPUs are correctly freed for a mixed
+        instance with an ISOLATE emulator thread policy.
+        """
+        host_topo = objects.NUMATopology(cells=[
+            objects.NUMACell(
+                id=0,
+                cpuset=set([2, 3, 6, 7]),
+                pcpuset=set([0, 1, 4, 5]),
+                memory=4096,
+                cpu_usage=2,
+                memory_usage=0,
+                pinned_cpus=set([0, 1, 4, 5]),
+                siblings=[set([0, 4]), set([1, 5]), set([2, 6]), set([3, 7])],
+                mempages=[objects.NUMAPagesTopology(
+                    size_kb=4, total=524288, used=0)]
+            ),
+        ])
+        inst_topo = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                cpuset=set([2, 3]), pcpuset=set([0, 1]),
+                memory=2048, id=0,
+                cpu_pinning={0: 0, 1: 1},
+                cpu_policy=fields.CPUAllocationPolicy.MIXED,
+                cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE
+            ),
+        ])
+
+        new_cell = hw.numa_usage_from_instance_numa(host_topo, inst_topo,
+                                                    free=True)
+        self.assertEqual(set(), new_cell.cells[0].pinned_cpus)
+        self.assertEqual(0, new_cell.cells[0].cpu_usage)
+
 
 class CPUSReservedCellTestCase(test.NoDBTestCase):
     def _test_reserved(self, reserved):
