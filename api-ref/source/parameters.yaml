@@ -1776,12 +1776,26 @@ associate_host:
   in: body
   required: true
   type: string
+attachment_device_put_req:
+  description: |
+    Name of the device in the attachment object, such as, ``/dev/vdb``.
+  in: body
+  required: false
+  type: string
+  min_version: 2.85
 attachment_device_resp:
   description: |
     Name of the device in the attachment object, such as, ``/dev/vdb``.
   in: body
   required: false
   type: string
+attachment_id_put_req:
+  description: |
+    The UUID of the attachment.
+  in: body
+  required: false
+  type: string
+  min_version: 2.85
 attachment_id_required:
   description: |
     The UUID of the attachment.
@@ -1794,6 +1808,13 @@ attachment_id_resp:
   in: body
   required: false
   type: string
+attachment_server_id_put_req:
+  description: |
+    The UUID of the server.
+  in: body
+  required: false
+  type: string
+  min_version: 2.85
 attachment_server_id_resp:
   description: |
     The UUID of the server.
@@ -2294,6 +2315,14 @@ delete_on_termination_attachments_resp:
   required: true
   type: boolean
   min_version: 2.79
+delete_on_termination_put_req:
+  description: |
+    A flag indicating if the attached volume will be deleted when the server is
+    deleted.
+  in: body
+  required: false
+  type: boolean
+  min_version: 2.85
 deleted:
   description: |
     A boolean indicates whether this aggregate is deleted or not, if it has
@@ -2384,6 +2413,13 @@ device_tag_bdm_attachment:
   required: false
   type: string
   min_version: 2.49
+device_tag_bdm_attachment_put_req:
+  description: |
+    The device tag applied to the volume block device or ``null``.
+  in: body
+  required: true
+  type: string
+  min_version: 2.85
 device_tag_bdm_attachment_resp:
   description: |
     The device tag applied to the volume block device or ``null``.
@@ -7370,7 +7406,8 @@ volumeAttachment_post:
 volumeAttachment_put:
   description: |
     A dictionary representation of a volume attachment containing the field
-    ``volumeId`` which is the UUID of the replacement volume.
+    ``volumeId`` which is the UUID of the replacement volume, and other fields
+    to update in the attachment.
   in: body
   required: true
   type: object

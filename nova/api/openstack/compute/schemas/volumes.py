@@ -74,7 +74,7 @@ create_volume_attachment = {
                     # NOTE: The validation pattern from match_device() in
                     #       nova/block_device.py.
                     'pattern': '(^/dev/x{0,1}[a-z]{0,1}d{0,1})([a-z]+)[0-9]*$'
-                }
+                },
             },
             'required': ['volumeId'],
             'additionalProperties': False,
@@ -94,6 +94,35 @@ create_volume_attachment_v279['properties']['volumeAttachment'][
 update_volume_attachment = copy.deepcopy(create_volume_attachment)
 del update_volume_attachment['properties']['volumeAttachment'][
     'properties']['device']
+
+# NOTE(brinzhang): Allow attachment_id, serverId, device, tag, and
+# delete_on_termination to be specified for RESTfulness, even though
+# we will not allow updating all of them.
+update_volume_attachment_v285 = {
+    'type': 'object',
+    'properties': {
+        'volumeAttachment': {
+            'type': 'object',
+            'properties': {
+                'volumeId': parameter_types.volume_id,
+                'device': {
+                    'type': ['string', 'null'],
+                    # NOTE: The validation pattern from match_device() in
+                    #       nova/block_device.py.
+                    'pattern': '(^/dev/x{0,1}[a-z]{0,1}d{0,1})([a-z]+)[0-9]*$'
+                },
+                'tag': parameter_types.tag,
+                'delete_on_termination': parameter_types.boolean,
+                'serverId': parameter_types.server_id,
+                'id': parameter_types.attachment_id
+            },
+            'required': ['volumeId'],
+            'additionalProperties': False,
+        },
+    },
+    'required': ['volumeAttachment'],
+    'additionalProperties': False,
+}
 
 index_query = {
     'type': 'object',

@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    With microversion 2.85 add new API
+    ``PUT /servers/{server_id}/os-volume_attachments/{volume_id}`` which
+    support for specifying ``delete_on_termination`` field in the request
+    body to re-config the attached volume whether to delete when the instance
+    is deleted.

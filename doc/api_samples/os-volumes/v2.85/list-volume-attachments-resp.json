@@ -1,0 +1,20 @@
+{
+    "volumeAttachments": [
+        {
+            "delete_on_termination": false,
+            "device": "/dev/sdc",
+            "id": "227cc671-f30b-4488-96fd-7d0bf13648d8",
+            "serverId": "d5e4ae35-ac0e-4311-a8c5-0ee863e951d9",
+            "tag": null,
+            "volumeId": "227cc671-f30b-4488-96fd-7d0bf13648d8"
+        },
+        {
+            "delete_on_termination": true,
+            "device": "/dev/sdb",
+            "id": "a07f71dc-8151-4e7d-a0cc-cd24a3f11113",
+            "serverId": "d5e4ae35-ac0e-4311-a8c5-0ee863e951d9",
+            "tag": "foo",
+            "volumeId": "a07f71dc-8151-4e7d-a0cc-cd24a3f11113"
+        }
+    ]
+}

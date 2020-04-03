@@ -287,3 +287,33 @@ class VolumeAttachmentsSampleV279(VolumeAttachmentsSampleV270):
     """
     microversion = '2.79'
     scenarios = [('v2_79', {'api_major_version': 'v2.1'})]
+
+
+class UpdateVolumeAttachmentsSampleV285(VolumeAttachmentsSampleV279):
+    """Microversion 2.85 adds the ``PUT
+    /servers/{server_id}/os-volume_attachments/{volume_id}``
+    support for specifying ``delete_on_termination`` field in the request
+    body to re-config the attached volume whether to delete when the instance
+    is deleted.
+    """
+    microversion = '2.85'
+    scenarios = [('v2_85', {'api_major_version': 'v2.1'})]
+
+    def test_volume_attachment_update(self):
+        subs = self.test_attach_volume_to_server()
+        attached_volume_id = subs['volume_id']
+        subs['server_id'] = self.server_id
+        response = self._do_put('servers/%s/os-volume_attachments/%s'
+                                % (self.server_id, attached_volume_id),
+                                'update-volume-attachment-delete-flag-req',
+                                subs)
+        self.assertEqual(202, response.status_code)
+        self.assertEqual('', response.text)
+
+        # Make sure the attached volume was changed
+        attachments = self.api.api_get(
+            '/servers/%s/os-volume_attachments' % self.server_id).body[
+            'volumeAttachments']
+        self.assertEqual(1, len(attachments))
+        self.assertEqual(self.server_id, attachments[0]['serverId'])
+        self.assertTrue(attachments[0]['delete_on_termination'])
