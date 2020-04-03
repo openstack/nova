@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import fixtures
 import mock
 from neutronclient.common import exceptions as n_exc
 from oslo_config import cfg
@@ -35,7 +34,6 @@ from nova import objects
 from nova.objects import instance as instance_obj
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-from nova.tests.unit import fake_instance
 
 CONF = cfg.CONF
 FAKE_UUID1 = 'a47ae74e-ab08-447f-8eee-ffd43fc46c16'
@@ -1577,90 +1575,6 @@ class SecurityGroupsOutputTest(test.TestCase):
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 404)
-
-
-class PolicyEnforcementV21(test.NoDBTestCase):
-
-    def setUp(self):
-        super(PolicyEnforcementV21, self).setUp()
-        self.req = fakes.HTTPRequest.blank('')
-        self.rule_name = "os_compute_api:os-security-groups"
-        self.rule = {self.rule_name: "project:non_fake"}
-        context = self.req.environ['nova.context']
-        self.mock_get = self.useFixture(
-            fixtures.MockPatch('nova.api.openstack.common.get_instance')).mock
-        self.instance = fake_instance.fake_instance_obj(
-                context, id=1, project_id=context.project_id)
-        self.mock_get.return_value = self.instance
-
-    def _common_policy_check(self, func, *arg, **kwarg):
-        self.policy.set_rules(self.rule)
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized, func, *arg, **kwarg)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % self.rule_name,
-            exc.format_message())
-
-
-class SecurityGroupPolicyEnforcementV21(PolicyEnforcementV21):
-
-    def setUp(self):
-        super(SecurityGroupPolicyEnforcementV21, self).setUp()
-        self.controller = secgroups_v21.SecurityGroupController()
-
-    def test_create_policy_failed(self):
-        self._common_policy_check(self.controller.create, self.req, {})
-
-    def test_show_policy_failed(self):
-        self._common_policy_check(self.controller.show, self.req, FAKE_UUID1)
-
-    def test_delete_policy_failed(self):
-        self._common_policy_check(self.controller.delete, self.req, FAKE_UUID1)
-
-    def test_index_policy_failed(self):
-        self._common_policy_check(self.controller.index, self.req)
-
-    def test_update_policy_failed(self):
-        self._common_policy_check(
-            self.controller.update, self.req, FAKE_UUID1, {})
-
-
-class ServerSecurityGroupPolicyEnforcementV21(PolicyEnforcementV21):
-
-    def setUp(self):
-        super(ServerSecurityGroupPolicyEnforcementV21, self).setUp()
-        self.controller = secgroups_v21.ServerSecurityGroupController()
-
-    def test_index_policy_failed(self):
-        self._common_policy_check(self.controller.index, self.req, FAKE_UUID1)
-
-
-class SecurityGroupRulesPolicyEnforcementV21(PolicyEnforcementV21):
-
-    def setUp(self):
-        super(SecurityGroupRulesPolicyEnforcementV21, self).setUp()
-        self.controller = secgroups_v21.SecurityGroupRulesController()
-
-    def test_create_policy_failed(self):
-        self._common_policy_check(self.controller.create, self.req, {})
-
-    def test_delete_policy_failed(self):
-        self._common_policy_check(self.controller.delete, self.req, FAKE_UUID1)
-
-
-class SecurityGroupActionPolicyEnforcementV21(PolicyEnforcementV21):
-
-    def setUp(self):
-        super(SecurityGroupActionPolicyEnforcementV21, self).setUp()
-        self.controller = secgroups_v21.SecurityGroupActionController()
-
-    def test_add_security_group_policy_failed(self):
-        self._common_policy_check(
-            self.controller._addSecurityGroup, self.req, FAKE_UUID1, {})
-
-    def test_remove_security_group_policy_failed(self):
-        self._common_policy_check(
-            self.controller._removeSecurityGroup, self.req, FAKE_UUID1, {})
 
 
 class TestSecurityGroupsDeprecation(test.NoDBTestCase):
