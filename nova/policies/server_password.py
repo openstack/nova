@@ -18,26 +18,51 @@ from oslo_policy import policy
 from nova.policies import base
 
 
-BASE_POLICY_NAME = 'os_compute_api:os-server-password'
+BASE_POLICY_NAME = 'os_compute_api:os-server-password:%s'
+
+DEPRECATED_POLICY = policy.DeprecatedRule(
+    'os_compute_api:os-server-password',
+    base.RULE_ADMIN_OR_OWNER,
+)
+
+DEPRECATED_REASON = """
+Nova API policies are introducing new default roles with scope_type
+capabilities. Old policies are deprecated and silently going to be ignored
+in nova 23.0.0 release.
+"""
 
 
 server_password_policies = [
     policy.DocumentedRuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_OR_OWNER,
-        description="Show and clear the encrypted administrative "
+        name=BASE_POLICY_NAME % 'show',
+        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        description="Show the encrypted administrative "
         "password of a server",
         operations=[
             {
                 'method': 'GET',
                 'path': '/servers/{server_id}/os-server-password'
             },
+        ],
+        scope_types=['system', 'project'],
+        deprecated_rule=DEPRECATED_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='21.0.0'),
+    policy.DocumentedRuleDefault(
+        name=BASE_POLICY_NAME % 'clear',
+        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        description="Clear the encrypted administrative "
+        "password of a server",
+        operations=[
             {
                 'method': 'DELETE',
                 'path': '/servers/{server_id}/os-server-password'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['system', 'project'],
+        deprecated_rule=DEPRECATED_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='21.0.0'),
 ]
 
 
