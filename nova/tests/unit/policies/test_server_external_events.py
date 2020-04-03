@@ -91,3 +91,11 @@ class ServerExternalEventsScopeTypePolicyTest(ServerExternalEventsPolicyTest):
             self.project_reader_context, self.project_foo_context,
             self.other_project_member_context
         ]
+
+
+class ServerExternalEventsNoLegacyPolicyTest(
+        ServerExternalEventsScopeTypePolicyTest):
+    """Test Server External Events APIs policies with system scope enabled,
+    and no more deprecated rules.
+    """
+    without_deprecated_rules = True

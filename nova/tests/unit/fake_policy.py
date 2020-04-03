@@ -96,6 +96,7 @@ policy_data = """
     "os_compute_api:os-server-diagnostics": "",
     "os_compute_api:os-server-password:show": "",
     "os_compute_api:os-server-password:clear": "",
+    "os_compute_api:os-server-external-events:create": "",
     "os_compute_api:os-server-tags:index": "",
     "os_compute_api:os-server-tags:show": "",
     "os_compute_api:os-server-tags:update": "",
