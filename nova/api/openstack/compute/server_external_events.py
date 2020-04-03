@@ -73,7 +73,7 @@ class ServerExternalEventsController(wsgi.Controller):
     def create(self, req, body):
         """Creates a new instance event."""
         context = req.environ['nova.context']
-        context.can(see_policies.POLICY_ROOT % 'create')
+        context.can(see_policies.POLICY_ROOT % 'create', target={})
 
         response_events = []
         accepted_events = []
