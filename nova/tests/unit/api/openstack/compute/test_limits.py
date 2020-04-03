@@ -374,36 +374,6 @@ class LimitsViewBuilderTest(test.NoDBTestCase):
         self.assertThat(output, matchers.DictMatches(expected_limits))
 
 
-class LimitsPolicyEnforcementV21(test.NoDBTestCase):
-
-    def setUp(self):
-        super(LimitsPolicyEnforcementV21, self).setUp()
-        self.controller = limits_v21.LimitsController()
-
-    def test_limits_index_policy_failed(self):
-        rule_name = "os_compute_api:limits"
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        req = fakes.HTTPRequest.blank('')
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.index, req=req)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-    def test_non_admin_cannot_fetch_used_limits_for_any_other_project(self):
-        project_id = "123456"
-        user_id = "A1234"
-        tenant_id = "abcd"
-        req = fakes.HTTPRequest.blank('/?tenant_id=%s' % tenant_id)
-        context = nova.context.RequestContext(user_id, project_id)
-        req.environ["nova.context"] = context
-
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.index,
-                          req)
-
-
 class LimitsControllerTestV236(BaseLimitTestSuite):
 
     def setUp(self):
