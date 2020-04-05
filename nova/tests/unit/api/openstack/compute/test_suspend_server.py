@@ -120,7 +120,11 @@ class SuspendServerPolicyEnforcementV21(test.NoDBTestCase):
         suspend_mock.assert_called_once_with(self.req.environ['nova.context'],
                                           instance)
 
-    def test_resume_policy_failed(self):
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_resume_policy_failed(self, get_instance_mock):
+        get_instance_mock.return_value = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'],
+            project_id=self.req.environ['nova.context'].project_id)
         rule_name = "os_compute_api:os-suspend-server:resume"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(

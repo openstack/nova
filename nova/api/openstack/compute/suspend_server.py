@@ -53,8 +53,9 @@ class SuspendServerController(wsgi.Controller):
     def _resume(self, req, id, body):
         """Permit admins to resume the server from suspend."""
         context = req.environ['nova.context']
-        context.can(ss_policies.POLICY_ROOT % 'resume')
         server = common.get_instance(self.compute_api, context, id)
+        context.can(ss_policies.POLICY_ROOT % 'resume',
+                    target={'project_id': server.project_id})
         try:
             self.compute_api.resume(context, server)
         except exception.InstanceIsLocked as e:
