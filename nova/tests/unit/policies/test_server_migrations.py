@@ -17,6 +17,7 @@ from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.api.openstack.compute import server_migrations
 from nova.compute import vm_states
+from nova.policies import base as base_policy
 from nova.policies import servers_migrations as policies
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
@@ -155,4 +156,53 @@ class ServerMigrationsNoLegacyPolicyTest(ServerMigrationsScopeTypePolicyTest):
             self.system_foo_context, self.project_member_context,
             self.other_project_member_context,
             self.project_foo_context, self.project_reader_context
+        ]
+
+
+class ServerMigrationsOverridePolicyTest(ServerMigrationsNoLegacyPolicyTest):
+    """Test Server Migrations APIs policies with system and project scoped
+    but default to system roles only are allowed for project roles
+    if override by operators. This test is with system scope enable
+    and no more deprecated rules.
+    """
+
+    def setUp(self):
+        super(ServerMigrationsOverridePolicyTest, self).setUp()
+        rule_show = policies.POLICY_ROOT % 'show'
+        rule_list = policies.POLICY_ROOT % 'index'
+        rule_force = policies.POLICY_ROOT % 'force_complete'
+        rule_delete = policies.POLICY_ROOT % 'delete'
+        # NOTE(gmann): override the rule to project member and verify it
+        # work as policy is system and projct scoped.
+        self.policy.set_rules({
+            rule_show: base_policy.PROJECT_READER_OR_SYSTEM_READER,
+            rule_list: base_policy.PROJECT_READER_OR_SYSTEM_READER,
+            rule_force: base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+            rule_delete: base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN},
+            overwrite=False)
+
+        # Check that system admin or project scoped role as override above
+        # is able to migrate the server
+        self.admin_authorized_contexts = [
+            self.system_admin_context,
+            self.project_admin_context, self.project_member_context]
+        # Check that non-system admin or project role is not able to
+        # migrate the server
+        self.admin_unauthorized_contexts = [
+            self.legacy_admin_context, self.system_member_context,
+            self.system_reader_context, self.system_foo_context,
+            self.other_project_member_context,
+            self.project_foo_context, self.project_reader_context
+        ]
+        # Check that system reader is able to perform operations
+        # for server migrations.
+        self.reader_authorized_contexts = [
+            self.system_admin_context, self.system_member_context,
+            self.system_reader_context, self.project_admin_context,
+            self.project_member_context, self.project_reader_context]
+        # Check that non-system-reader is not able to perform operations
+        # for server migrations.
+        self.reader_unauthorized_contexts = [
+            self.legacy_admin_context, self.system_foo_context,
+            self.other_project_member_context, self.project_foo_context
         ]
