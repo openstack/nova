@@ -49,41 +49,42 @@ class ServerTopologyPolicyTest(base.BasePolicyTest):
                     cpu_pinning={},
                     cpuset=set([0, 1]))])
 
-        # Check that admin or and server owner is able to get
+        # Check that system reader or and server owner is able to get
         # the server topology.
-        self.admin_or_owner_authorized_contexts = [
+        self.system_reader_or_owner_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context]
-        # Check that non-admin/owner is not able to get
+            self.project_reader_context, self.project_foo_context,
+            self.system_member_context, self.system_reader_context]
+        # Check that non-stem reader/owner is not able to get
         # the server topology.
-        self.admin_or_owner_unauthorized_contexts = [
-            self.system_member_context, self.system_reader_context,
+        self.system_reader_or_owner_unauthorized_contexts = [
             self.system_foo_context, self.other_project_member_context,
             self.other_project_reader_context,
         ]
-        # Check that admin is able to get the server topology
+        # Check that system reader is able to get the server topology
         # host information.
-        self.admin_authorized_contexts = [
+        self.system_reader_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context]
-        # Check that non-admin is not able to get the server topology
+            self.project_admin_context, self.system_member_context,
+            self.system_reader_context]
+        # Check that non-system reader is not able to get the server topology
         # host information.
-        self.admin_unauthorized_contexts = [
-            self.system_member_context, self.system_reader_context,
+        self.system_reader_unauthorized_contexts = [
             self.system_foo_context, self.project_member_context,
             self.other_project_member_context,
             self.project_foo_context, self.project_reader_context,
-            self.other_project_reader_context,
+            self.other_project_reader_context
         ]
 
     def test_index_server_topology_policy(self):
         rule_name = policies.BASE_POLICY_NAME % 'index'
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller.index,
-                                 self.req, self.instance.uuid)
+        self.common_policy_check(
+            self.system_reader_or_owner_authorized_contexts,
+            self.system_reader_or_owner_unauthorized_contexts,
+            rule_name,
+            self.controller.index,
+            self.req, self.instance.uuid)
 
     def test_index_host_server_topology_policy(self):
         rule_name = policies.BASE_POLICY_NAME % 'host:index'
@@ -93,7 +94,8 @@ class ServerTopologyPolicyTest(base.BasePolicyTest):
         rule = policies.BASE_POLICY_NAME % 'index'
         self.policy.set_rules({rule: "@"}, overwrite=False)
         authorize_res, unauthorize_res = self.common_policy_check(
-            self.admin_authorized_contexts, self.admin_unauthorized_contexts,
+            self.system_reader_authorized_contexts,
+            self.system_reader_unauthorized_contexts,
             rule_name, self.controller.index, self.req, self.instance.uuid,
             fatal=False)
         for resp in authorize_res:
@@ -118,16 +120,42 @@ class ServerTopologyScopeTypePolicyTest(ServerTopologyPolicyTest):
         super(ServerTopologyScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
 
-        # Check that system admin is able to get the server topology
+        # Check that system reader is able to get the server topology
         # host information.
-        self.admin_authorized_contexts = [
-            self.system_admin_context]
-        # Check that non-system/admin is not able to get the server topology
+        self.system_reader_authorized_contexts = [
+            self.system_admin_context, self.system_member_context,
+            self.system_reader_context]
+        # Check that non-system/reader is not able to get the server topology
         # host information.
-        self.admin_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_member_context,
-            self.system_reader_context, self.system_foo_context,
+        self.system_reader_unauthorized_contexts = [
+            self.legacy_admin_context, self.system_foo_context,
             self.project_admin_context, self.project_member_context,
             self.other_project_member_context,
-            self.project_foo_context, self.project_reader_context
+            self.project_foo_context, self.project_reader_context,
+            self.other_project_reader_context,
+        ]
+
+
+class ServerTopologyNoLegacyPolicyTest(ServerTopologyScopeTypePolicyTest):
+    """Test Server Topology APIs policies with system scope enabled,
+    and no more deprecated rules that allow the legacy admin API to
+    access system APIs.
+    """
+    without_deprecated_rules = True
+
+    def setUp(self):
+        super(ServerTopologyNoLegacyPolicyTest, self).setUp()
+        # Check that system reader/owner is able to get
+        # the server topology.
+        self.system_reader_or_owner_authorized_contexts = [
+            self.system_admin_context,
+            self.project_admin_context, self.project_member_context,
+            self.system_member_context, self.system_reader_context,
+            self.project_reader_context]
+        # Check that non-system/reader/owner is not able to get
+        # the server topology.
+        self.system_reader_or_owner_unauthorized_contexts = [
+            self.legacy_admin_context, self.system_foo_context,
+            self.other_project_member_context, self.project_foo_context,
+            self.other_project_reader_context,
         ]
