@@ -20,27 +20,29 @@ BASE_POLICY_NAME = 'compute:server:topology:%s'
 
 server_topology_policies = [
     policy.DocumentedRuleDefault(
-        BASE_POLICY_NAME % 'index',
-        base.RULE_ADMIN_OR_OWNER,
-        "Show the NUMA topology data for a server",
-        [
+        name=BASE_POLICY_NAME % 'index',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="Show the NUMA topology data for a server",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/servers/{server_id}/topology'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
         # Control host NUMA node and cpu pinning information
-        BASE_POLICY_NAME % 'host:index',
-        base.RULE_ADMIN_API,
-        "Show the NUMA topology data for a server with host NUMA ID and CPU "
-        "pinning information",
-        [
+        name=BASE_POLICY_NAME % 'host:index',
+        check_str=base.RULE_ADMIN_API,
+        description="Show the NUMA topology data for a server with host"
+        "NUMA ID and CPU pinning information",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/servers/{server_id}/topology'
             }
-        ]),
+        ],
+        scope_types=['system']),
 ]
 
 
