@@ -181,14 +181,20 @@ class ShelvePolicyEnforcementV21(test.NoDBTestCase):
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
 
-    def test_unshelve_restricted_by_role(self):
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_unshelve_restricted_by_role(self, get_instance_mock):
+        get_instance_mock.return_value = (
+            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
         rules = {'os_compute_api:os-shelve:unshelve': 'role:admin'}
         policy.set_rules(oslo_policy.Rules.from_dict(rules))
 
         self.assertRaises(exception.Forbidden, self.controller._unshelve,
                 self.req, uuidsentinel.fake, body={'unshelve': {}})
 
-    def test_unshelve_policy_failed(self):
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_unshelve_policy_failed(self, get_instance_mock):
+        get_instance_mock.return_value = (
+            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
         rule_name = "os_compute_api:os-shelve:unshelve"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
