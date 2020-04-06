@@ -1186,6 +1186,32 @@ class NUMATopologyTest(test.NoDBTestCase):
                 "expect": exception.ImageNUMATopologyIncomplete,
             },
             {
+                # Request missing mem.1
+                "flavor": objects.Flavor(vcpus=8, memory_mb=2048,
+                                         extra_specs={
+                    "hw:numa_nodes": 2,
+                    "hw:numa_cpus.0": "0-3",
+                    "hw:numa_cpus.1": "4-7",
+                    "hw:numa_mem.0": "1576",
+                }),
+                "image": {
+                },
+                "expect": exception.ImageNUMATopologyIncomplete,
+            },
+            {
+                # Request missing cpu.1
+                "flavor": objects.Flavor(vcpus=8, memory_mb=2048,
+                                         extra_specs={
+                    "hw:numa_nodes": 2,
+                    "hw:numa_cpus.0": "0-3",
+                    "hw:numa_mem.0": "1024",
+                    "hw:numa_mem.1": "1024",
+                }),
+                "image": {
+                },
+                "expect": exception.ImageNUMATopologyIncomplete,
+            },
+            {
                 # Image attempts to override flavor
                 "flavor": objects.Flavor(vcpus=8, memory_mb=2048,
                                          extra_specs={

@@ -1,1 +1,2 @@
+nova/virt/hardware.py
 nova/virt/libvirt/__init__.py

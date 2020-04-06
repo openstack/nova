@@ -17,7 +17,7 @@ import fractions
 import itertools
 import math
 import re
-from typing import List, Optional, Set, Tuple
+import typing as ty
 
 import os_resource_classes as orc
 import os_traits
@@ -90,7 +90,7 @@ def get_cpu_shared_set():
     return shared_ids
 
 
-def parse_cpu_spec(spec):
+def parse_cpu_spec(spec: str) -> ty.Set[int]:
     """Parse a CPU set specification.
 
     Each element in the list is either a single CPU number, a range of
@@ -101,8 +101,8 @@ def parse_cpu_spec(spec):
 
     :returns: a set of CPU indexes
     """
-    cpuset_ids = set()
-    cpuset_reject_ids = set()
+    cpuset_ids: ty.Set[int] = set()
+    cpuset_reject_ids: ty.Set[int] = set()
     for rule in spec.split(','):
         rule = rule.strip()
         # Handle multi ','
@@ -152,7 +152,10 @@ def parse_cpu_spec(spec):
     return cpuset_ids
 
 
-def format_cpu_spec(cpuset, allow_ranges=True):
+def format_cpu_spec(
+    cpuset: ty.Set[int],
+    allow_ranges: bool = True,
+) -> str:
     """Format a libvirt CPU range specification.
 
     Format a set/list of CPU indexes as a libvirt CPU range
@@ -161,6 +164,8 @@ def format_cpu_spec(cpuset, allow_ranges=True):
     index explicitly.
 
     :param cpuset: set (or list) of CPU indexes
+    :param allow_ranges: Whether we should attempt to detect continuous ranges
+        of CPUs.
 
     :returns: a formatted CPU range string
     """
@@ -168,7 +173,7 @@ def format_cpu_spec(cpuset, allow_ranges=True):
     # trying to do range negations to minimize the overall
     # spec string length
     if allow_ranges:
-        ranges = []
+        ranges: ty.List[ty.List[int]] = []
         previndex = None
         for cpuindex in sorted(cpuset):
             if previndex is None or previndex != (cpuindex - 1):
@@ -552,7 +557,9 @@ def _sort_possible_cpu_topologies(possible, wanttopology):
     # We don't use python's sort(), since we want to
     # preserve the sorting done when populating the
     # 'possible' list originally
-    scores = collections.defaultdict(list)
+    scores: ty.Dict[int, ty.List['objects.VirtCPUTopology']] = (
+        collections.defaultdict(list)
+    )
     for topology in possible:
         score = _score_cpu_topology(topology, wanttopology)
         scores[score].append(topology)
@@ -731,7 +738,9 @@ def _pack_instance_onto_cores(host_cell, instance_cell,
     # We build up a data structure that answers the question: 'Given the
     # number of threads I want to pack, give me a list of all the available
     # sibling sets (or groups thereof) that can accommodate it'
-    sibling_sets = collections.defaultdict(list)
+    sibling_sets: ty.Dict[int, ty.List[ty.Set[int]]] = (
+        collections.defaultdict(list)
+    )
     for sib in host_cell.free_siblings:
         for threads_no in range(1, len(sib) + 1):
             sibling_sets[threads_no].append(sib)
@@ -1175,7 +1184,12 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None,
     return instance_cell
 
 
-def _get_flavor_image_meta(key, flavor, image_meta, default=None):
+def _get_flavor_image_meta(
+    key: str,
+    flavor: 'objects.Flavor',
+    image_meta: 'objects.ImageMeta',
+    default: ty.Any = None,
+) -> ty.Tuple[ty.Any, ty.Any]:
     """Extract both flavor- and image-based variants of metadata."""
     flavor_key = ':'.join(['hw', key])
     image_key = '_'.join(['hw', key])
@@ -1186,7 +1200,11 @@ def _get_flavor_image_meta(key, flavor, image_meta, default=None):
     return flavor_policy, image_policy
 
 
-def get_mem_encryption_constraint(flavor, image_meta, machine_type=None):
+def get_mem_encryption_constraint(
+    flavor: 'objects.Flavor',
+    image_meta: 'objects.ImageMeta',
+    machine_type: ty.Optional[str] = None,
+) -> bool:
     """Return a boolean indicating whether encryption of guest memory was
     requested, either via the hw:mem_encryption extra spec or the
     hw_mem_encryption image property (or both).
@@ -1323,7 +1341,10 @@ def _check_mem_encryption_machine_type(image_meta, machine_type=None):
             reason=_("q35 type is required for SEV to work"))
 
 
-def _get_numa_pagesize_constraint(flavor, image_meta):
+def _get_numa_pagesize_constraint(
+    flavor: 'objects.Flavor',
+    image_meta: 'objects.ImageMeta',
+) -> ty.Optional[int]:
     """Return the requested memory page size
 
     :param flavor: a Flavor object to read extra specs from
@@ -1388,8 +1409,10 @@ def _get_constraint_mappings_from_flavor(flavor, key, func):
     return hw_numa_map or None
 
 
-def _get_numa_cpu_constraint(flavor, image_meta):
-    # type: (objects.Flavor, objects.ImageMeta) -> Optional[List[Set[int]]]
+def _get_numa_cpu_constraint(
+    flavor: 'objects.Flavor',
+    image_meta: 'objects.ImageMeta',
+) -> ty.Optional[ty.List[ty.Set[int]]]:
     """Validate and return the requested guest NUMA-guest CPU mapping.
 
     Extract the user-provided mapping of guest CPUs to guest NUMA nodes. For
@@ -1418,8 +1441,10 @@ def _get_numa_cpu_constraint(flavor, image_meta):
     return flavor_cpu_list
 
 
-def _get_numa_mem_constraint(flavor, image_meta):
-    # type: (objects.Flavor, objects.ImageMeta) -> Optional[List[Set[int]]]
+def _get_numa_mem_constraint(
+    flavor: 'objects.Flavor',
+    image_meta: 'objects.ImageMeta',
+) -> ty.Optional[ty.List[int]]:
     """Validate and return the requested guest NUMA-guest memory mapping.
 
     Extract the user-provided mapping of guest memory to guest NUMA nodes. For
@@ -1448,8 +1473,10 @@ def _get_numa_mem_constraint(flavor, image_meta):
     return flavor_mem_list
 
 
-def _get_numa_node_count_constraint(flavor, image_meta):
-    # type: (objects.Flavor, objects.ImageMeta) -> Optional[int]
+def _get_numa_node_count_constraint(
+    flavor: 'objects.Flavor',
+    image_meta: 'objects.ImageMeta',
+) -> ty.Optional[int]:
     """Validate and return the requested NUMA nodes.
 
     :param flavor: ``nova.objects.Flavor`` instance
@@ -1475,8 +1502,10 @@ def _get_numa_node_count_constraint(flavor, image_meta):
 
 
 # NOTE(stephenfin): This must be public as it's used elsewhere
-def get_cpu_policy_constraint(flavor, image_meta):
-    # type: (objects.Flavor, objects.ImageMeta) -> Optional[str]
+def get_cpu_policy_constraint(
+    flavor: 'objects.Flavor',
+    image_meta: 'objects.ImageMeta',
+) -> ty.Optional[str]:
     """Validate and return the requested CPU policy.
 
     :param flavor: ``nova.objects.Flavor`` instance
@@ -1517,8 +1546,10 @@ def get_cpu_policy_constraint(flavor, image_meta):
 
 
 # NOTE(stephenfin): This must be public as it's used elsewhere
-def get_cpu_thread_policy_constraint(flavor, image_meta):
-    # type: (objects.Flavor, objects.ImageMeta) -> Optional[str]
+def get_cpu_thread_policy_constraint(
+    flavor: 'objects.Flavor',
+    image_meta: 'objects.ImageMeta',
+) -> ty.Optional[str]:
     """Validate and return the requested CPU thread policy.
 
     :param flavor: ``nova.objects.Flavor`` instance
@@ -1616,8 +1647,9 @@ def is_realtime_enabled(flavor):
     return strutils.bool_from_string(flavor_rt)
 
 
-def _get_vcpu_pcpu_resources(flavor):
-    # type: (objects.Flavor) -> Tuple[bool, bool]
+def _get_vcpu_pcpu_resources(
+    flavor: 'objects.Flavor',
+) -> ty.Tuple[int, int]:
     requested_vcpu = 0
     requested_pcpu = 0
 
@@ -1635,11 +1667,13 @@ def _get_vcpu_pcpu_resources(flavor):
                 # this is handled elsewhere
                 pass
 
-    return (requested_vcpu, requested_pcpu)
+    return requested_vcpu, requested_pcpu
 
 
-def _get_hyperthreading_trait(flavor, image_meta):
-    # type: (objects.Flavor, objects.ImageMeta) -> Optional[str]
+def _get_hyperthreading_trait(
+    flavor: 'objects.Flavor',
+    image_meta: 'objects.ImageMeta',
+) -> ty.Optional[str]:
     for key, val in flavor.get('extra_specs', {}).items():
         if re.match('trait([1-9][0-9]*)?:%s' % os_traits.HW_CPU_HYPERTHREADING,
                     key):
@@ -1649,9 +1683,13 @@ def _get_hyperthreading_trait(flavor, image_meta):
             'traits_required', []):
         return 'required'
 
+    return None
 
-def _get_realtime_constraint(flavor, image_meta):
-    # type: (objects.Flavor, objects.ImageMeta) -> Optional[str]
+
+def _get_realtime_constraint(
+    flavor: 'objects.Flavor',
+    image_meta: 'objects.ImageMeta',
+) -> ty.Optional[str]:
     """Validate and return the requested realtime CPU mask.
 
     :param flavor: ``nova.objects.Flavor`` instance
@@ -1666,15 +1704,17 @@ def _get_realtime_constraint(flavor, image_meta):
     return image_mask or flavor_mask
 
 
-def vcpus_realtime_topology(flavor, image_meta):
-    # type: (objects.Flavor, objects.ImageMeta) -> List[int]
+def vcpus_realtime_topology(
+    flavor: 'objects.Flavor',
+    image_meta: 'objects.ImageMeta',
+) -> ty.Set[int]:
     """Determines instance vCPUs used as RT for a given spec.
 
     :param flavor: ``nova.objects.Flavor`` instance
     :param image_meta: ``nova.objects.ImageMeta`` instance
     :raises: exception.RealtimeMaskNotFoundOrInvalid if mask was not found or
         is invalid.
-    :returns: The realtime CPU mask requested, else None.
+    :returns: The realtime CPU mask requested.
     """
     mask = _get_realtime_constraint(flavor, image_meta)
     if not mask:
@@ -1688,8 +1728,9 @@ def vcpus_realtime_topology(flavor, image_meta):
 
 
 # NOTE(stephenfin): This must be public as it's used elsewhere
-def get_emulator_thread_policy_constraint(flavor):
-    # type: (objects.Flavor) -> Optional[str]
+def get_emulator_thread_policy_constraint(
+    flavor: 'objects.Flavor',
+) -> ty.Optional[str]:
     """Validate and return the requested emulator threads policy.
 
     :param flavor: ``nova.objects.Flavor`` instance
@@ -1701,7 +1742,7 @@ def get_emulator_thread_policy_constraint(flavor):
         'hw:emulator_threads_policy')
 
     if not emu_threads_policy:
-        return
+        return None
 
     if emu_threads_policy not in fields.CPUEmulatorThreadsPolicy.ALL:
         raise exception.InvalidEmulatorThreadsPolicy(
@@ -1794,22 +1835,20 @@ def numa_get_constraints(flavor, image_meta):
         cpu_list = _get_numa_cpu_constraint(flavor, image_meta)
         mem_list = _get_numa_mem_constraint(flavor, image_meta)
 
-        # If one property list is specified both must be
-        if ((cpu_list is None and mem_list is not None) or
-            (cpu_list is not None and mem_list is None)):
-            raise exception.ImageNUMATopologyIncomplete()
-
-        # If any node has data set, all nodes must have data set
-        if ((cpu_list is not None and len(cpu_list) != nodes) or
-            (mem_list is not None and len(mem_list) != nodes)):
-            raise exception.ImageNUMATopologyIncomplete()
-
-        if cpu_list is None:
+        if cpu_list is None and mem_list is None:
             numa_topology = _get_numa_topology_auto(
                 nodes, flavor)
-        else:
+        elif cpu_list is not None and mem_list is not None:
+            # If any node has data set, all nodes must have data set
+            if len(cpu_list) != nodes or len(mem_list) != nodes:
+                raise exception.ImageNUMATopologyIncomplete()
+
             numa_topology = _get_numa_topology_manual(
-                nodes, flavor, cpu_list, mem_list)
+                nodes, flavor, cpu_list, mem_list
+            )
+        else:
+            # If one property list is specified both must be
+            raise exception.ImageNUMATopologyIncomplete()
 
         # We currently support same pagesize for all cells.
         for c in numa_topology.cells:
@@ -1912,11 +1951,10 @@ def numa_get_constraints(flavor, image_meta):
 
 
 def _numa_cells_support_network_metadata(
-        host_topology,  # type: objects.NUMATopology
-        chosen_host_cells,  # type: List[objects.NUMACell]
-        network_metadata  # type: objects.NetworkMetadata
-        ):
-    # type: (...) -> bool
+    host_topology: 'objects.NUMATopology',
+    chosen_host_cells: ty.List['objects.NUMACell'],
+    network_metadata: 'objects.NetworkMetadata',
+) -> bool:
     """Determine whether the cells can accept the network requests.
 
     :param host_topology: The entire host topology, used to find non-chosen
@@ -1932,12 +1970,12 @@ def _numa_cells_support_network_metadata(
     if not network_metadata:
         return True
 
-    required_physnets = None  # type: Set[str]
+    required_physnets: ty.Set[str] = set()
     if 'physnets' in network_metadata:
         # use set() to avoid modifying the original data structure
         required_physnets = set(network_metadata.physnets)
 
-    required_tunnel = False  # type: bool
+    required_tunnel: bool = False
     if 'tunneled' in network_metadata:
         required_tunnel = network_metadata.tunneled
 
@@ -2045,8 +2083,8 @@ def numa_fit_instance_to_host(
     # depending on whether we want packing/spreading over NUMA nodes
     for host_cell_perm in itertools.permutations(
             host_cells, len(instance_topology)):
-        chosen_instance_cells = []
-        chosen_host_cells = []
+        chosen_instance_cells: ty.List['objects.InstanceNUMACell'] = []
+        chosen_host_cells: ty.List['objects.NUMACell'] = []
         for host_cell, instance_cell in zip(
                 host_cell_perm, instance_topology.cells):
             try:
@@ -2096,14 +2134,14 @@ def numa_get_reserved_huge_pages():
 
     :raises: exception.InvalidReservedMemoryPagesOption when
              reserved_huge_pages option is not correctly set.
-    :returns: a list of dict ordered by NUMA node ids; keys of dict
+    :returns: A dict of dicts keyed by NUMA node IDs; keys of child dict
               are pages size and values of the number reserved.
     """
     if not CONF.reserved_huge_pages:
         return {}
 
     try:
-        bucket = collections.defaultdict(dict)
+        bucket: ty.Dict[int, ty.Dict[int, int]] = collections.defaultdict(dict)
         for cfg in CONF.reserved_huge_pages:
             try:
                 pagesize = int(cfg['size'])
