@@ -1827,7 +1827,8 @@ class PlacementCommands(object):
 
     def _heal_allocations_for_instance(self, ctxt, instance, node_cache,
                                        output, placement, dry_run,
-                                       heal_port_allocations, neutron):
+                                       heal_port_allocations, neutron,
+                                       force):
         """Checks the given instance to see if it needs allocation healing
 
         :param ctxt: cell-targeted nova.context.RequestContext
@@ -1843,6 +1844,8 @@ class PlacementCommands(object):
             requested, False otherwise.
         :param neutron: nova.network.neutron.ClientWrapper to
             communicate with Neutron
+        :param force: True if force healing is requested for particular
+            instance, False otherwise.
         :return: True if allocations were created or updated for the instance,
             None if nothing needed to be done
         :raises: nova.exception.ComputeHostNotFound if a compute node for a
@@ -1906,6 +1909,16 @@ class PlacementCommands(object):
             need_healing = _UPDATE
             allocations = self._heal_missing_project_and_user_id(
                 allocations, instance)
+
+        if force:
+            output(_('Force flag passed for instance %s') % instance.uuid)
+            need_healing = _UPDATE
+            # get default allocations
+            alloc = self._heal_missing_alloc(ctxt, instance, node_cache)
+            # set consumer generation of existing allocations
+            alloc["consumer_generation"] = allocations["consumer_generation"]
+            # set allocations
+            allocations = alloc
 
         if heal_port_allocations:
             to_heal = self._get_port_allocations_to_heal(
@@ -1976,7 +1989,8 @@ class PlacementCommands(object):
 
     def _heal_instances_in_cell(self, ctxt, max_count, unlimited, output,
                                 placement, dry_run, instance_uuid,
-                                heal_port_allocations, neutron):
+                                heal_port_allocations, neutron,
+                                force):
         """Checks for instances to heal in a given cell.
 
         :param ctxt: cell-targeted nova.context.RequestContext
@@ -1993,6 +2007,8 @@ class PlacementCommands(object):
             requested, False otherwise.
         :param neutron: nova.network.neutron.ClientWrapper to
             communicate with Neutron
+        :param force: True if force healing is requested for particular
+            instance, False otherwise.
         :return: Number of instances that had allocations created.
         :raises: nova.exception.ComputeHostNotFound if a compute node for a
             given instance cannot be found
@@ -2046,7 +2062,7 @@ class PlacementCommands(object):
             for instance in instances:
                 if self._heal_allocations_for_instance(
                         ctxt, instance, node_cache, output, placement,
-                        dry_run, heal_port_allocations, neutron):
+                        dry_run, heal_port_allocations, neutron, force):
                     num_processed += 1
 
             # Make sure we don't go over the max count. Note that we
@@ -2103,9 +2119,11 @@ class PlacementCommands(object):
     @args('--cell', metavar='<cell_uuid>', dest='cell_uuid',
           help='Heal allocations within a specific cell. '
                'The --cell and --instance options are mutually exclusive.')
+    @args('--force', action='store_true', dest='force', default=False,
+          help='Force heal allocations. Requires the --instance argument.')
     def heal_allocations(self, max_count=None, verbose=False, dry_run=False,
                          instance_uuid=None, skip_port_allocations=False,
-                         cell_uuid=None):
+                         cell_uuid=None, force=False):
         """Heals instance allocations in the Placement service
 
         Return codes:
@@ -2128,9 +2146,6 @@ class PlacementCommands(object):
         #   for example, this could cleanup ironic instances that have
         #   allocations on VCPU/MEMORY_MB/DISK_GB but are now using a custom
         #   resource class
-        # - add an option to overwrite allocations for instances which already
-        #   have allocations (but the operator thinks might be wrong?); this
-        #   would probably only be safe with a specific instance.
         # - deal with nested resource providers?
 
         heal_port_allocations = not skip_port_allocations
@@ -2144,6 +2159,11 @@ class PlacementCommands(object):
         if instance_uuid and cell_uuid:
             print(_('The --cell and --instance options '
                     'are mutually exclusive.'))
+            return 127
+
+        if force and not instance_uuid:
+            print(_('The --instance flag is required'
+                    'when using --force flag.'))
             return 127
 
         # TODO(mriedem): Rather than --max-count being both a total and batch
@@ -2222,7 +2242,8 @@ class PlacementCommands(object):
                 try:
                     num_processed += self._heal_instances_in_cell(
                         cctxt, limit_per_cell, unlimited, output, placement,
-                        dry_run, instance_uuid, heal_port_allocations, neutron)
+                        dry_run, instance_uuid, heal_port_allocations, neutron,
+                        force)
                 except exception.ComputeHostNotFound as e:
                     print(e.format_message())
                     return 2
