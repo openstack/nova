@@ -37,7 +37,6 @@ class FlavorExtraSpecsController(wsgi.Controller):
     def _check_extra_specs_value(self, req, specs):
         # TODO(stephenfin): Wire this up to check the API microversion
         validation_supported = False
-        validation_mode = 'strict'
 
         for name, value in specs.items():
             # NOTE(gmann): Max length for numeric value is being checked
@@ -53,7 +52,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
                               explanation=error.format_message())
 
             if validation_supported:
-                validators.validate(name, value, validation_mode)
+                validators.validate(name, value)
 
     @wsgi.expected_errors(404)
     def index(self, req, flavor_id):
