@@ -23,15 +23,16 @@ POLICY_ROOT = 'os_compute_api:os-server-external-events:%s'
 
 server_external_events_policies = [
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'create',
-        base.RULE_ADMIN_API,
-        "Create one or more external events",
-        [
+        name=POLICY_ROOT % 'create',
+        check_str=base.RULE_ADMIN_API,
+        description="Create one or more external events",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/os-server-external-events'
             }
-        ]),
+        ],
+        scope_types=['system']),
 ]
 
 
