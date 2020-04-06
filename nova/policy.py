@@ -49,8 +49,10 @@ def reset():
         _ENFORCER = None
 
 
+# TODO(gmann): Make suppress_deprecation_warnings default to False, once
+# we find the way to disable warning for default change on oslo side.
 def init(policy_file=None, rules=None, default_rule=None, use_conf=True,
-         suppress_deprecation_warnings=False):
+         suppress_deprecation_warnings=True):
     """Init an Enforcer class.
 
        :param policy_file: Custom policy file to use, if none is specified,
