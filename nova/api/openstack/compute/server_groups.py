@@ -123,10 +123,10 @@ class ServerGroupController(wsgi.Controller):
         context = req.environ['nova.context']
         try:
             sg = objects.InstanceGroup.get_by_uuid(context, id)
-            context.can(sg_policies.POLICY_ROOT % 'show',
-                        target={'project_id': sg.project_id})
         except nova.exception.InstanceGroupNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
+        context.can(sg_policies.POLICY_ROOT % 'show',
+                    target={'project_id': sg.project_id})
         return {'server_group': self._format_server_group(context, sg, req)}
 
     @wsgi.response(204)
@@ -136,10 +136,10 @@ class ServerGroupController(wsgi.Controller):
         context = req.environ['nova.context']
         try:
             sg = objects.InstanceGroup.get_by_uuid(context, id)
-            context.can(sg_policies.POLICY_ROOT % 'delete',
-                        target={'project_id': sg.project_id})
         except nova.exception.InstanceGroupNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
+        context.can(sg_policies.POLICY_ROOT % 'delete',
+                    target={'project_id': sg.project_id})
         try:
             sg.destroy()
         except nova.exception.InstanceGroupNotFound as e:

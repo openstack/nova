@@ -12,13 +12,13 @@
 
 import fixtures
 import mock
-from nova.policies import pause_server as ps_policies
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
 from nova.api.openstack.compute import pause_server
 from nova.compute import vm_states
 from nova import exception
+from nova.policies import pause_server as ps_policies
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
 from nova.tests.unit.policies import base
@@ -48,7 +48,7 @@ class PauseServerPolicyTest(base.BasePolicyTest):
         self.mock_get.return_value = self.instance
 
         # Check that admin or and server owner is able to pause/unpause
-        # the sevrer
+        # the server
         self.admin_or_owner_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context, self.project_member_context,
@@ -95,7 +95,7 @@ class PauseServerPolicyTest(base.BasePolicyTest):
             exc.format_message())
 
     @mock.patch('nova.compute.api.API.pause')
-    def test_pause_sevrer_overridden_policy_pass_with_same_user(
+    def test_pause_server_overridden_policy_pass_with_same_user(
         self, mock_pause):
         rule_name = ps_policies.POLICY_ROOT % 'pause'
         self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
@@ -129,7 +129,7 @@ class PauseServerNoLegacyPolicyTest(PauseServerScopeTypePolicyTest):
     def setUp(self):
         super(PauseServerNoLegacyPolicyTest, self).setUp()
         # Check that system admin or server owner is able to pause/unpause
-        # the sevrer
+        # the server
         self.admin_or_owner_authorized_contexts = [
             self.system_admin_context,
             self.project_admin_context, self.project_member_context]

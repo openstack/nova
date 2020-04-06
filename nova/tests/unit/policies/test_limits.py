@@ -66,7 +66,7 @@ class LimitsPolicyTest(base.BasePolicyTest):
         # Check that system reader is able to get other projects limit.
         # NOTE(gmann): Until old default rule which is admin_api is
         # deprecated and not removed, project admin and legacy admin
-        # will be able to read the agent data. This make sure that existing
+        # will be able to get limit. This make sure that existing
         # tokens will keep working even we have changed this policy defaults
         # to reader role.
         self.reader_authorized_contexts = [

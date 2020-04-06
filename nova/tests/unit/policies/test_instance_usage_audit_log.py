@@ -38,9 +38,9 @@ class InstanceUsageAuditLogPolicyTest(base.BasePolicyTest):
         # Check that admin is able to get instance usage audit log.
         # NOTE(gmann): Until old default rule which is admin_api is
         # deprecated and not removed, project admin and legacy admin
-        # will be able to read the agent data. This make sure that existing
-        # tokens will keep working even we have changed this policy defaults
-        # to reader role.
+        # will be able to get instance usage audit log. This make sure
+        # that existing tokens will keep working even we have changed
+        # this policy defaults to reader role.
         self.reader_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context, self.system_member_context,
