@@ -23,48 +23,52 @@ POLICY_ROOT = 'os_compute_api:os-server-groups:%s'
 
 server_groups_policies = [
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'create',
-        base.RULE_ADMIN_OR_OWNER,
-        "Create a new server group",
-        [
+        name=POLICY_ROOT % 'create',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="Create a new server group",
+        operations=[
             {
                 'path': '/os-server-groups',
                 'method': 'POST'
             }
-        ]
+        ],
+        scope_types=['system', 'project']
     ),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'delete',
-        base.RULE_ADMIN_OR_OWNER,
-        "Delete a server group",
-        [
+        name=POLICY_ROOT % 'delete',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="Delete a server group",
+        operations=[
             {
                 'path': '/os-server-groups/{server_group_id}',
                 'method': 'DELETE'
             }
-        ]
+        ],
+        scope_types=['system', 'project']
     ),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'index',
-        base.RULE_ADMIN_OR_OWNER,
-        "List all server groups",
-        [
+        name=POLICY_ROOT % 'index',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="List all server groups",
+        operations=[
             {
                 'path': '/os-server-groups',
                 'method': 'GET'
             }
-        ]
+        ],
+        scope_types=['system', 'project']
     ),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'show',
-        base.RULE_ADMIN_OR_OWNER,
-        "Show details of a server group",
-        [
+        name=POLICY_ROOT % 'show',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="Show details of a server group",
+        operations=[
             {
                 'path': '/os-server-groups/{server_group_id}',
                 'method': 'GET'
             }
-        ]
+        ],
+        scope_types=['system', 'project']
     ),
 ]
 
