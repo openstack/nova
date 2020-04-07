@@ -377,6 +377,10 @@ class _IntegratedTestBase(test.TestCase, InstanceHelperMixin):
     # This indicates whether to include the project ID in the URL for API
     # requests through OSAPIFixture. Overridden by subclasses.
     _use_project_id = False
+    # Override this in subclasses to avoid stubbing keystonemiddleware and
+    # NovaKeystoneContext, thus making those middlewares behave as they would
+    # in real life (i.e. try to do real authentication).
+    STUB_KEYSTONE = True
 
     def setUp(self):
         super(_IntegratedTestBase, self).setUp()
@@ -413,7 +417,8 @@ class _IntegratedTestBase(test.TestCase, InstanceHelperMixin):
         self.api_fixture = self.useFixture(
             nova_fixtures.OSAPIFixture(
                 api_version=self.api_major_version,
-                use_project_id_in_urls=self._use_project_id))
+                use_project_id_in_urls=self._use_project_id,
+                stub_keystone=self.STUB_KEYSTONE))
 
         # if the class needs to run as admin, make the api endpoint
         # the admin, otherwise it's safer to run as non admin user.

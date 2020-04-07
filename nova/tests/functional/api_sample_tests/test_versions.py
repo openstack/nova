@@ -12,33 +12,64 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import ddt
+import fixtures
+import webob
 
 from nova.api.openstack import api_version_request as avr
 from nova.tests.functional.api_sample_tests import api_sample_base
 
 
+@ddt.ddt
 class VersionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
+    """Validate that proper version documents can be fetched without auth."""
+
+    # Here we want to avoid stubbing keystone middleware. That will cause
+    # "real" keystone middleware to run (and fail) if it's in the pipeline.
+    # (The point of this test is to prove we do version discovery through
+    # pipelines that *don't* authenticate.)
+    STUB_KEYSTONE = False
+
     sample_dir = 'versions'
     _use_project_id = False
     # NOTE(gmann): Setting empty scenario for 'version' API testing
     # as those does not send request on particular endpoint and running
     # its tests alone is enough.
     scenarios = []
-    max_api_version = avr.max_api_version().get_string()
+    max_api_version = {'max_api_version': avr.max_api_version().get_string()}
 
-    def test_versions_get(self):
-        response = self._do_get('', strip_version=True)
-        self._verify_response('versions-get-resp',
-                              {'max_api_version': self.max_api_version},
+    def setUp(self):
+        super(VersionsSampleJsonTest, self).setUp()
+        # Version documents are supposed to be available without auth, so make
+        # the auth middleware "fail" authentication.
+        self.useFixture(fixtures.MockPatch(
+            # [api]auth_strategy is set to noauth2 by the ConfFixture
+            'nova.api.openstack.auth.NoAuthMiddlewareBase.base_call',
+            return_value=webob.Response(status=401)))
+
+    def _get(self, url):
+        return self._do_get(
+            url,
+            # Since we're explicitly getting discovery endpoints, strip the
+            # automatic /v2[.1] added by the fixture.
+            strip_version=True)
+
+    @ddt.data('', '/')
+    def test_versions_get_base(self, url):
+        response = self._get(url)
+        self._verify_response('versions-get-resp', self.max_api_version,
                               response, 200, update_links=False)
 
-    def test_versions_get_v2(self):
-        response = self._do_get('/v2', strip_version=True)
-        self._verify_response('v2-version-get-resp', {},
-                              response, 200, update_links=False)
-
-    def test_versions_get_v21(self):
-        response = self._do_get('/v2.1', strip_version=True)
-        self._verify_response('v21-version-get-resp',
-                              {'max_api_version': self.max_api_version},
-                              response, 200, update_links=False)
+    @ddt.data(('/v2', 'v2-version-get-resp', {}),
+              ('/v2/', 'v2-version-get-resp', {}),
+              ('/v2.1', 'v21-version-get-resp', max_api_version),
+              ('/v2.1/', 'v21-version-get-resp', max_api_version))
+    @ddt.unpack
+    def test_versions_get_versioned(self, url, tplname, subs):
+        response = self._get(url)
+        # TODO(efried): This is bug 1845530 whereby we try to authenticate at
+        #  the versioned discovery endpoint.
+        self.assertEqual(401, response.status_code)
+        # TODO(efried): Uncomment when bug 1845530 is resolved
+        # self._verify_response(tplname, subs, response, 200,
+        #                       update_links=False)
