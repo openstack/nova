@@ -42,12 +42,6 @@ CONF = nova.conf.CONF
 GROUP_POLICY_OBJ_MICROVERSION = "2.64"
 
 
-def _authorize_context(req, action):
-    context = req.environ['nova.context']
-    context.can(sg_policies.POLICY_ROOT % action)
-    return context
-
-
 def _get_not_deleted(context, uuids):
     mappings = objects.InstanceMappingList.get_by_instance_uuids(
         context, uuids)
@@ -126,9 +120,11 @@ class ServerGroupController(wsgi.Controller):
     @wsgi.expected_errors(404)
     def show(self, req, id):
         """Return data about the given server group."""
-        context = _authorize_context(req, 'show')
+        context = req.environ['nova.context']
         try:
             sg = objects.InstanceGroup.get_by_uuid(context, id)
+            context.can(sg_policies.POLICY_ROOT % 'show',
+                        target={'project_id': sg.project_id})
         except nova.exception.InstanceGroupNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         return {'server_group': self._format_server_group(context, sg, req)}
@@ -137,9 +133,11 @@ class ServerGroupController(wsgi.Controller):
     @wsgi.expected_errors(404)
     def delete(self, req, id):
         """Delete a server group."""
-        context = _authorize_context(req, 'delete')
+        context = req.environ['nova.context']
         try:
             sg = objects.InstanceGroup.get_by_uuid(context, id)
+            context.can(sg_policies.POLICY_ROOT % 'delete',
+                        target={'project_id': sg.project_id})
         except nova.exception.InstanceGroupNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         try:
@@ -152,9 +150,24 @@ class ServerGroupController(wsgi.Controller):
     @validation.query_schema(schema.server_groups_query_param, '2.0', '2.74')
     def index(self, req):
         """Returns a list of server groups."""
-        context = _authorize_context(req, 'index')
+        context = req.environ['nova.context']
         project_id = context.project_id
+        # NOTE(gmann): Using context's project_id as target here so
+        # that when we remove the default target from policy class,
+        # it does not fail if user requesting operation on for their
+        # own server group.
+        context.can(sg_policies.POLICY_ROOT % 'index',
+                    target={'project_id': project_id})
         if 'all_projects' in req.GET and context.is_admin:
+            # TODO(gmann): Remove the is_admin check in the above condition
+            # so that the below policy can raise error if not allowed.
+            # In existing behavior, if non-admin users requesting
+            # all projects server groups they do not get error instead
+            # get their own server groups. Once we switch to policy
+            # new defaults completly then we can remove the above check.
+            # Until then, let's keep the old behaviour.
+            context.can(sg_policies.POLICY_ROOT % 'index:all_projects',
+                        target={})
             sgs = objects.InstanceGroupList.get_all(context)
         else:
             sgs = objects.InstanceGroupList.get_by_project_id(
@@ -171,11 +184,13 @@ class ServerGroupController(wsgi.Controller):
     @validation.schema(schema.create_v264, GROUP_POLICY_OBJ_MICROVERSION)
     def create(self, req, body):
         """Creates a new server group."""
-        context = _authorize_context(req, 'create')
-
+        context = req.environ['nova.context']
+        project_id = context.project_id
+        context.can(sg_policies.POLICY_ROOT % 'create',
+                    target={'project_id': project_id})
         try:
             objects.Quotas.check_deltas(context, {'server_groups': 1},
-                                        context.project_id, context.user_id)
+                                        project_id, context.user_id)
         except nova.exception.OverQuota:
             msg = _("Quota exceeded, too many server groups.")
             raise exc.HTTPForbidden(explanation=msg)
@@ -201,7 +216,7 @@ class ServerGroupController(wsgi.Controller):
             sg = objects.InstanceGroup(context, policy=policies[0])
         try:
             sg.name = vals.get('name')
-            sg.project_id = context.project_id
+            sg.project_id = project_id
             sg.user_id = context.user_id
             sg.create()
         except ValueError as e:
@@ -214,7 +229,7 @@ class ServerGroupController(wsgi.Controller):
         if CONF.quota.recheck_quota:
             try:
                 objects.Quotas.check_deltas(context, {'server_groups': 0},
-                                            context.project_id,
+                                            project_id,
                                             context.user_id)
             except nova.exception.OverQuota:
                 sg.destroy()
