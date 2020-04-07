@@ -24,35 +24,38 @@ POLICY_ROOT = 'os_compute_api:os-flavor-manage:%s'
 
 flavor_manage_policies = [
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'create',
-        base.RULE_ADMIN_API,
-        "Create a flavor",
-        [
+        name=POLICY_ROOT % 'create',
+        check_str=base.RULE_ADMIN_API,
+        description="Create a flavor",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/flavors'
             }
-        ]),
+        ],
+        scope_types=['system']),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'update',
-        base.RULE_ADMIN_API,
-        "Update a flavor",
-        [
+        name=POLICY_ROOT % 'update',
+        check_str=base.RULE_ADMIN_API,
+        description="Update a flavor",
+        operations=[
             {
                 'method': 'PUT',
                 'path': '/flavors/{flavor_id}'
             }
-        ]),
+        ],
+        scope_types=['system']),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'delete',
-        base.RULE_ADMIN_API,
-        "Delete a flavor",
-        [
+        name=POLICY_ROOT % 'delete',
+        check_str=base.RULE_ADMIN_API,
+        description="Delete a flavor",
+        operations=[
             {
                 'method': 'DELETE',
                 'path': '/flavors/{flavor_id}'
             }
-        ]),
+        ],
+        scope_types=['system']),
 ]
 
 
