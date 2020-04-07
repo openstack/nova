@@ -429,7 +429,54 @@ class _IntegratedTestBase(test.TestCase, InstanceHelperMixin):
                          ("The expected wsgi middlewares %s are not "
                           "existed") % expected_middleware)
 
+    # TODO(sbauza): Drop this method once test classes inherit from a mixin
+    def _get_provider_uuid_by_name(self, name):
+        return self.placement_api.get(
+            '/resource_providers?name=%s' % name).body[
+            'resource_providers'][0]['uuid']
 
+    # TODO(sbauza): Drop this method once test classes inherit from a mixin
+    def _get_all_rp_uuids_in_a_tree(self, in_tree_rp_uuid):
+        rps = self.placement_api.get(
+            '/resource_providers?in_tree=%s' % in_tree_rp_uuid,
+            version='1.20').body['resource_providers']
+        return [rp['uuid'] for rp in rps]
+
+    # TODO(sbauza): Drop this method once test classes inherit from a mixin
+    def _get_provider_inventory(self, rp_uuid):
+        return self.placement_api.get(
+            '/resource_providers/%s/inventories' % rp_uuid).body['inventories']
+
+    # TODO(sbauza): Drop this method once test classes inherit from a mixin
+    def _get_provider_usages(self, provider_uuid):
+        return self.placement_api.get(
+            '/resource_providers/%s/usages' % provider_uuid).body['usages']
+
+    # TODO(sbauza): Drop this method once test classes inherit from a mixin
+    def _create_trait(self, trait):
+        return self.placement_api.put('/traits/%s' % trait, {}, version='1.6')
+
+    # TODO(sbauza): Drop this method once test classes inherit from a mixin
+    def _set_provider_traits(self, rp_uuid, traits):
+        """This will overwrite any existing traits.
+
+        :param rp_uuid: UUID of the resource provider to update
+        :param traits: list of trait strings to set on the provider
+        :returns: APIResponse object with the results
+        """
+        provider = self.placement_api.get(
+            '/resource_providers/%s' % rp_uuid).body
+        put_traits_req = {
+            'resource_provider_generation': provider['generation'],
+            'traits': traits
+        }
+        return self.placement_api.put(
+            '/resource_providers/%s/traits' % rp_uuid,
+            put_traits_req, version='1.6')
+
+
+# FIXME(sbauza): There is little value to have this be a whole base testclass
+# instead of a mixin only providing methods for accessing Placement endpoint.
 class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
     """Base test class for functional tests that check provider usage
     and consumer allocations in Placement during various operations.

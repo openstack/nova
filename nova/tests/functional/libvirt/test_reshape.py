@@ -59,10 +59,28 @@ class VGPUReshapeTests(base.ServersTestBase):
         # the old tree as that would be a bad time for reshape. Later when the
         # compute service is restarted the driver will do the reshape.
 
+        mdevs = {
+            'mdev_4b20d080_1b54_4048_85b3_a6a62d165c01':
+                fakelibvirt.FakeMdevDevice(
+                    dev_name='mdev_4b20d080_1b54_4048_85b3_a6a62d165c01',
+                    type_id=fakelibvirt.NVIDIA_11_VGPU_TYPE,
+                    parent=fakelibvirt.PGPU1_PCI_ADDR),
+            'mdev_4b20d080_1b54_4048_85b3_a6a62d165c02':
+                fakelibvirt.FakeMdevDevice(
+                    dev_name='mdev_4b20d080_1b54_4048_85b3_a6a62d165c02',
+                    type_id=fakelibvirt.NVIDIA_11_VGPU_TYPE,
+                    parent=fakelibvirt.PGPU2_PCI_ADDR),
+            'mdev_4b20d080_1b54_4048_85b3_a6a62d165c03':
+                fakelibvirt.FakeMdevDevice(
+                    dev_name='mdev_4b20d080_1b54_4048_85b3_a6a62d165c03',
+                    type_id=fakelibvirt.NVIDIA_11_VGPU_TYPE,
+                    parent=fakelibvirt.PGPU3_PCI_ADDR),
+        }
+
         fake_connection = self._get_connection(
             # We need more RAM or the 3rd server won't be created
             host_info=fakelibvirt.HostInfo(kB_mem=8192),
-            mdev_info=fakelibvirt.HostMdevDevicesInfo())
+            mdev_info=fakelibvirt.HostMdevDevicesInfo(devices=mdevs))
         self.mock_conn.return_value = fake_connection
 
         # start a compute with vgpu support disabled so the driver will

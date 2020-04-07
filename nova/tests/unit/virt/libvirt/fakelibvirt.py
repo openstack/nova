@@ -190,10 +190,18 @@ VF_PROD_NAME = 'X540 Ethernet Controller Virtual Function'
 VF_DRIVER_NAME = 'ixgbevf'
 VF_CAP_TYPE = 'phys_function'
 
+MDEV_CAPABLE_VEND_ID = '10DE'
+MDEV_CAPABLE_VEND_NAME = 'Nvidia'
+MDEV_CAPABLE_PROD_ID = '0FFE'
+MDEV_CAPABLE_PROD_NAME = 'GRID M60-0B'
+MDEV_CAPABLE_DRIVER_NAME = 'nvidia'
+MDEV_CAPABLE_CAP_TYPE = 'mdev_types'
+
 NVIDIA_11_VGPU_TYPE = 'nvidia-11'
-PGPU1_PCI_ADDR = 'pci_0000_06_00_0'
-PGPU2_PCI_ADDR = 'pci_0000_07_00_0'
-PGPU3_PCI_ADDR = 'pci_0000_08_00_0'
+NVIDIA_12_VGPU_TYPE = 'nvidia-12'
+PGPU1_PCI_ADDR = 'pci_0000_81_00_0'
+PGPU2_PCI_ADDR = 'pci_0000_81_01_0'
+PGPU3_PCI_ADDR = 'pci_0000_81_02_0'
 
 
 class FakePCIDevice(object):
@@ -235,9 +243,16 @@ class FakePCIDevice(object):
         </device>""".strip())  # noqa
     cap_templ = "<capability type='%(cap_type)s'>%(addresses)s</capability>"
     addr_templ = "<address domain='0x0000' bus='0x81' slot='%(slot)#02x' function='%(function)#02x'/>"  # noqa
+    mdevtypes_templ = textwrap.dedent("""
+        <type id='%(type_id)s'>
+        <name>GRID M60-0B</name><deviceAPI>vfio-pci</deviceAPI>
+        <availableInstances>%(instances)s</availableInstances>
+        </type>""".strip())  # noqa
+
+    is_capable_of_mdevs = False
 
     def __init__(self, dev_type, slot, function, iommu_group, numa_node,
-                 vf_ratio=None):
+                 vf_ratio=None, multiple_gpu_types=False):
         """Populate pci devices
 
         :param dev_type: (string) Indicates the type of the device (PCI, PF,
@@ -248,8 +263,11 @@ class FakePCIDevice(object):
         :param numa_node: (int) NUMA node of the device.
         :param vf_ratio: (int) Ratio of Virtual Functions on Physical. Only
             applicable if ``dev_type`` is one of: ``PF``, ``VF``.
+        :param multiple_gpu_types: (bool) Supports different vGPU types
         """
 
+        vend_id = PCI_VEND_ID
+        vend_name = PCI_VEND_NAME
         if dev_type == 'PCI':
             if vf_ratio:
                 raise ValueError('vf_ratio does not apply for PCI devices')
@@ -290,14 +308,34 @@ class FakePCIDevice(object):
                     'function': 0,
                 }
             }
+        elif dev_type == 'MDEV_TYPES':
+            prod_id = MDEV_CAPABLE_PROD_ID
+            prod_name = MDEV_CAPABLE_PROD_NAME
+            driver = MDEV_CAPABLE_DRIVER_NAME
+            vend_id = MDEV_CAPABLE_VEND_ID
+            vend_name = MDEV_CAPABLE_VEND_NAME
+            types = [self.mdevtypes_templ % {
+                'type_id': NVIDIA_11_VGPU_TYPE,
+                'instances': 16,
+            }]
+            if multiple_gpu_types:
+                types.append(self.mdevtypes_templ % {
+                    'type_id': NVIDIA_12_VGPU_TYPE,
+                    'instances': 8,
+                })
+            capability = self.cap_templ % {
+                'cap_type': MDEV_CAPABLE_CAP_TYPE,
+                'addresses': '\n'.join(types)
+            }
+            self.is_capable_of_mdevs = True
         else:
             raise ValueError('Expected one of: PCI, VF, PCI')
 
         self.pci_device = self.pci_device_template % {
             'slot': slot,
             'function': function,
-            'vend_id': PCI_VEND_ID,
-            'vend_name': PCI_VEND_NAME,
+            'vend_id': vend_id,
+            'vend_name': vend_name,
             'prod_id': prod_id,
             'prod_name': prod_name,
             'driver': driver,
@@ -321,26 +359,31 @@ class HostPCIDevicesInfo(object):
     TOTAL_NUMA_NODES = 2
     pci_devname_template = 'pci_0000_81_%(slot)02x_%(function)d'
 
-    def __init__(self, num_pci=0, num_pfs=2, num_vfs=8, numa_node=None):
+    def __init__(self, num_pci=0, num_pfs=2, num_vfs=8, num_mdevcap=0,
+                 numa_node=None, multiple_gpu_types=False):
         """Create a new HostPCIDevicesInfo object.
 
-        :param num_pci: (int) The number of (non-SR-IOV) PCI devices.
+        :param num_pci: (int) The number of (non-SR-IOV) and (non-MDEV capable)
+            PCI devices.
         :param num_pfs: (int) The number of PCI SR-IOV Physical Functions.
         :param num_vfs: (int) The number of PCI SR-IOV Virtual Functions.
+        :param num_mdevcap: (int) The number of PCI devices capable of creating
+            mediated devices.
         :param iommu_group: (int) Initial IOMMU group ID.
         :param numa_node: (int) NUMA node of the device; if set all of the
             devices will be assigned to the specified node else they will be
             split between ``$TOTAL_NUMA_NODES`` nodes.
+        :param multiple_gpu_types: (bool) Supports different vGPU types
         """
         self.devices = {}
 
-        if not (num_vfs or num_pfs):
+        if not (num_vfs or num_pfs) and not num_mdevcap:
             return
 
         if num_vfs and not num_pfs:
             raise ValueError('Cannot create VFs without PFs')
 
-        if num_vfs % num_pfs:
+        if num_pfs and num_vfs % num_pfs:
             raise ValueError('num_vfs must be a factor of num_pfs')
 
         slot = 0
@@ -360,6 +403,24 @@ class HostPCIDevicesInfo(object):
                 function=function,
                 iommu_group=iommu_group,
                 numa_node=self._calc_numa_node(dev, numa_node))
+
+            slot += 1
+            iommu_group += 1
+
+        # Generate MDEV capable devs
+        for dev in range(num_mdevcap):
+            pci_dev_name = self.pci_devname_template % {
+                'slot': slot, 'function': function}
+
+            LOG.info('Generating MDEV capable device %r', pci_dev_name)
+
+            self.devices[pci_dev_name] = FakePCIDevice(
+                dev_type='MDEV_TYPES',
+                slot=slot,
+                function=function,
+                iommu_group=iommu_group,
+                numa_node=self._calc_numa_node(dev, numa_node),
+                multiple_gpu_types=multiple_gpu_types)
 
             slot += 1
             iommu_group += 1
@@ -420,6 +481,10 @@ class HostPCIDevicesInfo(object):
         pci_dev = self.devices.get(device_name)
         return pci_dev
 
+    def get_all_mdev_capable_devices(self):
+        return [dev for dev in self.devices
+                if self.devices[dev].is_capable_of_mdevs]
+
 
 class FakeMdevDevice(object):
     template = """
@@ -448,21 +513,11 @@ class FakeMdevDevice(object):
 
 
 class HostMdevDevicesInfo(object):
-    def __init__(self):
-        self.devices = {
-            'mdev_4b20d080_1b54_4048_85b3_a6a62d165c01':
-                FakeMdevDevice(
-                    dev_name='mdev_4b20d080_1b54_4048_85b3_a6a62d165c01',
-                    type_id=NVIDIA_11_VGPU_TYPE, parent=PGPU1_PCI_ADDR),
-            'mdev_4b20d080_1b54_4048_85b3_a6a62d165c02':
-                FakeMdevDevice(
-                    dev_name='mdev_4b20d080_1b54_4048_85b3_a6a62d165c02',
-                    type_id=NVIDIA_11_VGPU_TYPE, parent=PGPU2_PCI_ADDR),
-            'mdev_4b20d080_1b54_4048_85b3_a6a62d165c03':
-                FakeMdevDevice(
-                    dev_name='mdev_4b20d080_1b54_4048_85b3_a6a62d165c03',
-                    type_id=NVIDIA_11_VGPU_TYPE, parent=PGPU3_PCI_ADDR),
-        }
+    def __init__(self, devices=None):
+        if devices is not None:
+            self.devices = devices
+        else:
+            self.devices = {}
 
     def get_all_devices(self):
         return self.devices.keys()
@@ -1266,7 +1321,7 @@ class Connection(object):
         self.pci_info = pci_info or HostPCIDevicesInfo(num_pci=0,
                                                        num_pfs=0,
                                                        num_vfs=0)
-        self.mdev_info = mdev_info or []
+        self.mdev_info = mdev_info or HostMdevDevicesInfo(devices={})
         self.hostname = hostname or 'compute1'
 
     def _add_filter(self, nwfilter):
@@ -1571,10 +1626,7 @@ class Connection(object):
         if cap == 'mdev':
             return self.mdev_info.get_all_devices()
         if cap == 'mdev_types':
-            # TODO(gibi): We should return something like
-            # https://libvirt.org/drvnodedev.html#MDEVCap but I tried and it
-            # did not work for me.
-            return None
+            return self.pci_info.get_all_mdev_capable_devices()
         else:
             raise ValueError('Capability "%s" is not supported' % cap)
 
