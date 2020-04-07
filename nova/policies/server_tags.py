@@ -23,68 +23,76 @@ POLICY_ROOT = 'os_compute_api:os-server-tags:%s'
 
 server_tags_policies = [
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'delete_all',
-        base.RULE_ADMIN_OR_OWNER,
-        "Delete all the server tags",
-        [
+        name=POLICY_ROOT % 'delete_all',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="Delete all the server tags",
+        operations=[
             {
                 'method': 'DELETE',
                 'path': '/servers/{server_id}/tags'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'index',
-        base.RULE_ADMIN_OR_OWNER,
-        "List all tags for given server",
-        [
+        name=POLICY_ROOT % 'index',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="List all tags for given server",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/servers/{server_id}/tags'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'update_all',
-        base.RULE_ADMIN_OR_OWNER,
-        "Replace all tags on specified server with the new set of tags.",
-        [
+        name=POLICY_ROOT % 'update_all',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="Replace all tags on specified server with the new set "
+        "of tags.",
+        operations=[
             {
                 'method': 'PUT',
                 'path': '/servers/{server_id}/tags'
 
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'delete',
-        base.RULE_ADMIN_OR_OWNER,
-        "Delete a single tag from the specified server",
-        [
+        name=POLICY_ROOT % 'delete',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="Delete a single tag from the specified server",
+        operations=[
             {
                 'method': 'DELETE',
                 'path': '/servers/{server_id}/tags/{tag}'
             }
-        ]
+        ],
+        scope_types=['system', 'project']
     ),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'update',
-        base.RULE_ADMIN_OR_OWNER,
-        "Add a single tag to the server if server has no specified tag",
-        [
+        name=POLICY_ROOT % 'update',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="Add a single tag to the server if server has no "
+        "specified tag",
+        operations=[
             {
                 'method': 'PUT',
                 'path': '/servers/{server_id}/tags/{tag}'
             }
-        ]
+        ],
+        scope_types=['system', 'project']
     ),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'show',
-        base.RULE_ADMIN_OR_OWNER,
-        "Check tag existence on the server.",
-        [
+        name=POLICY_ROOT % 'show',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="Check tag existence on the server.",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/servers/{server_id}/tags/{tag}'
             }
-        ]
+        ],
+        scope_types=['system', 'project']
     ),
 ]
 
