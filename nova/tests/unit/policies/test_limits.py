@@ -13,6 +13,7 @@
 import mock
 
 from nova.api.openstack.compute import limits
+from nova.policies import base as base_policy
 from nova.policies import limits as limits_policies
 from nova import quota
 from nova.tests.unit.api.openstack import fakes
@@ -62,13 +63,18 @@ class LimitsPolicyTest(base.BasePolicyTest):
             self.project_foo_context, self.project_reader_context]
         self.everyone_unauthorized_contexts = []
 
-        # Check that admin is able to get other projects limit.
-        self.admin_authorized_contexts = [
+        # Check that system reader is able to get other projects limit.
+        # NOTE(gmann): Until old default rule which is admin_api is
+        # deprecated and not removed, project admin and legacy admin
+        # will be able to read the agent data. This make sure that existing
+        # tokens will keep working even we have changed this policy defaults
+        # to reader role.
+        self.reader_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context]
+            self.project_admin_context, self.system_member_context,
+            self.system_reader_context]
         # Check that non-admin is not able to get other projects limit.
-        self.admin_unauthorized_contexts = [
-            self.system_member_context, self.system_reader_context,
+        self.reader_unauthorized_contexts = [
             self.system_foo_context, self.project_member_context,
             self.other_project_member_context,
             self.project_foo_context, self.project_reader_context
@@ -83,9 +89,9 @@ class LimitsPolicyTest(base.BasePolicyTest):
 
     def test_get_other_limits_policy(self):
         req = fakes.HTTPRequest.blank('/?tenant_id=faketenant')
-        rule_name = limits_policies.USED_LIMIT_POLICY_NAME
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
+        rule_name = limits_policies.OTHER_PROJECT_LIMIT_POLICY_NAME
+        self.common_policy_check(self.reader_authorized_contexts,
+                                 self.reader_unauthorized_contexts,
                                  rule_name, self.controller.index,
                                  req)
 
@@ -105,15 +111,26 @@ class LimitsScopeTypePolicyTest(LimitsPolicyTest):
         super(LimitsScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
 
-        # Check that system admin is able to get other projects limit.
-        self.admin_authorized_contexts = [
-            self.system_admin_context]
-        # Check that non-system or non-admin is not able toget other
+        # Check that system reader is able to get other projects limit.
+        self.reader_authorized_contexts = [
+            self.system_admin_context, self.system_member_context,
+            self.system_reader_context]
+        # Check that non-system reader is not able toget other
         # projects limit.
-        self.admin_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_member_context,
-            self.system_reader_context, self.system_foo_context,
+        self.reader_unauthorized_contexts = [
+            self.legacy_admin_context, self.system_foo_context,
             self.project_admin_context, self.project_member_context,
             self.other_project_member_context,
             self.project_foo_context, self.project_reader_context
         ]
+
+
+class LimitsNoLegacyPolicyTest(LimitsScopeTypePolicyTest):
+    """Test Limits APIs policies with system scope enabled,
+    and no more deprecated rules that allow the legacy admin API to
+    access system APIs.
+    """
+    without_deprecated_rules = True
+    rules_without_deprecation = {
+        limits_policies.OTHER_PROJECT_LIMIT_POLICY_NAME:
+            base_policy.SYSTEM_READER}

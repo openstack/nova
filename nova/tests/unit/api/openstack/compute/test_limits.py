@@ -214,8 +214,9 @@ class LimitsControllerTestV21(BaseLimitTestSuite):
                               return_value={}) as mock_get_quotas:
             fake_req.get_response(self.controller)
             self.assertEqual(2, self.mock_can.call_count)
-            self.mock_can.assert_called_with(l_policies.USED_LIMIT_POLICY_NAME,
-                                             target)
+            self.mock_can.assert_called_with(
+                l_policies.OTHER_PROJECT_LIMIT_POLICY_NAME,
+                target)
             mock_get_quotas.assert_called_once_with(context,
                 tenant_id, usages=True)
 

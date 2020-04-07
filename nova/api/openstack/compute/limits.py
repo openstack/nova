@@ -82,7 +82,8 @@ class LimitsController(wsgi.Controller):
                 'project_id': project_id,
                 'user_id': context.user_id
             }
-            context.can(limits_policies.USED_LIMIT_POLICY_NAME, target)
+            context.can(limits_policies.OTHER_PROJECT_LIMIT_POLICY_NAME,
+                        target)
 
         quotas = QUOTAS.get_project_quotas(context, project_id,
                                            usages=True)
