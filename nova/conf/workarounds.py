@@ -323,6 +323,7 @@ all impacted distributions have been able to update their versions of the
 libgcrypt library.
 
 Related options:
+
 * ``compute_driver`` (libvirt)
 * ``disable_qemu_native_luksv1`` (workarounds)
 """),
