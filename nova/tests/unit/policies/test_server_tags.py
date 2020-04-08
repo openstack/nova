@@ -64,12 +64,25 @@ class ServerTagsPolicyTest(base.BasePolicyTest):
             self.system_foo_context, self.other_project_member_context,
             self.other_project_reader_context
         ]
+        # Check that reader or and server owner is able to perform operations
+        # on server tags.
+        self.reader_or_owner_authorized_contexts = [
+            self.legacy_admin_context, self.system_admin_context,
+            self.system_member_context, self.system_reader_context,
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context]
+        # Check that non-reader/owner is not able to perform operations
+        # on server tags.
+        self.reader_or_owner_unauthorized_contexts = [
+            self.system_foo_context, self.other_project_member_context,
+            self.other_project_reader_context
+        ]
 
     @mock.patch('nova.objects.TagList.get_by_resource_id')
     def test_index_server_tags_policy(self, mock_tag):
         rule_name = policies.POLICY_ROOT % 'index'
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
+        self.common_policy_check(self.reader_or_owner_authorized_contexts,
+                                 self.reader_or_owner_unauthorized_contexts,
                                  rule_name,
                                  self.controller.index,
                                  self.req, self.instance.uuid)
@@ -77,8 +90,8 @@ class ServerTagsPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.objects.Tag.exists')
     def test_show_server_tags_policy(self, mock_exists):
         rule_name = policies.POLICY_ROOT % 'show'
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
+        self.common_policy_check(self.reader_or_owner_authorized_contexts,
+                                 self.reader_or_owner_unauthorized_contexts,
                                  rule_name,
                                  self.controller.show,
                                  self.req, self.instance.uuid, uuids.fake_id)
@@ -143,3 +156,42 @@ class ServerTagsScopeTypePolicyTest(ServerTagsPolicyTest):
     def setUp(self):
         super(ServerTagsScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+
+
+class ServerTagsNoLegacyPolicyTest(ServerTagsScopeTypePolicyTest):
+    """Test Server Tags APIs policies with system scope enabled,
+    and no more deprecated rules that allow the legacy admin API to
+    access system APIs.
+    """
+    without_deprecated_rules = True
+
+    def setUp(self):
+        super(ServerTagsNoLegacyPolicyTest, self).setUp()
+        # Check that system admin or project member is able to
+        # perform operations on server tags.
+        self.admin_or_owner_authorized_contexts = [
+            self.system_admin_context, self.project_admin_context,
+            self.project_member_context]
+        # Check that non-system/admin/member is not able to
+        # perform operations on server tags.
+        self.admin_or_owner_unauthorized_contexts = [
+            self.legacy_admin_context, self.system_reader_context,
+            self.system_foo_context, self.system_member_context,
+            self.project_reader_context, self.project_foo_context,
+            self.other_project_member_context,
+            self.other_project_reader_context
+        ]
+        # Check that system reader or owner is able to
+        # perform operations on server tags.
+        self.reader_or_owner_authorized_contexts = [
+            self.system_admin_context,
+            self.system_member_context, self.system_reader_context,
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context]
+        # Check that non-system/reader/owner is not able to
+        # perform operations on server tags.
+        self.reader_or_owner_unauthorized_contexts = [
+            self.legacy_admin_context, self.system_foo_context,
+            self.project_foo_context, self.other_project_member_context,
+            self.other_project_reader_context
+        ]

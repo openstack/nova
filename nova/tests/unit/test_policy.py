@@ -434,8 +434,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-server-password",
 "os_compute_api:os-server-tags:delete",
 "os_compute_api:os-server-tags:delete_all",
-"os_compute_api:os-server-tags:index",
-"os_compute_api:os-server-tags:show",
 "os_compute_api:os-server-tags:update",
 "os_compute_api:os-server-tags:update_all",
 "os_compute_api:os-server-groups:index",
@@ -480,6 +478,8 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-attach-interfaces:show",
 "os_compute_api:os-instance-actions:list",
 "os_compute_api:os-instance-actions:show",
+"os_compute_api:os-server-tags:index",
+"os_compute_api:os-server-tags:show",
 )
 
         self.allow_nobody_rules = (
