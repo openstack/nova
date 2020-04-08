@@ -132,13 +132,14 @@ class BasePolicyTest(test.TestCase):
 
         # TODO(gmann): we need to add the new context
         # self.other_project_reader_context in all tests and then remove
-        # the todo_add_reader adjusment.
-        test_context = len(authorized_contexts) + len(unauthorized_contexts)
-        equal = len(self.all_contexts) == test_context
-        todo_add_reader = len(self.all_contexts) == (test_context + 1)
-        self.assertTrue(equal or todo_add_reader,
-                        "Few context are missing. check all contexts "
-                        "mentioned in self.all_contexts are tested")
+        # this conditional adjusment.
+        test_context = authorized_contexts + unauthorized_contexts
+        test_context_len = len(test_context)
+        if self.other_project_reader_context not in test_context:
+            test_context_len += 1
+        self.assertEqual(len(self.all_contexts), test_context_len,
+                        "Expected testing context are mismatch. check all "
+                        "contexts mentioned in self.all_contexts are tested")
 
         def ensure_return(req, *args, **kwargs):
             return func(req, *arg, **kwargs)
