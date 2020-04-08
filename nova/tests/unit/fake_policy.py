@@ -119,6 +119,7 @@ policy_data = """
     "os_compute_api:os-volumes-attachments:show": "",
     "os_compute_api:os-volumes-attachments:create": "",
     "os_compute_api:os-volumes-attachments:update": "",
+    "os_compute_api:os-volumes-attachments:swap":"",
     "os_compute_api:os-volumes-attachments:delete": "",
     "os_compute_api:os-availability-zone:list": "",
     "os_compute_api:os-availability-zone:detail": "",

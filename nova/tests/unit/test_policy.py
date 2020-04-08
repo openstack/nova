@@ -360,7 +360,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-console-auth-tokens",
 "os_compute_api:os-quota-class-sets:update",
 "os_compute_api:os-server-external-events:create",
-"os_compute_api:os-volumes-attachments:update",
+"os_compute_api:os-volumes-attachments:swap",
 "os_compute_api:servers:create:zero_disk_flavor",
 )
 
@@ -443,6 +443,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-volumes",
 "os_compute_api:os-volumes-attachments:create",
 "os_compute_api:os-volumes-attachments:delete",
+"os_compute_api:os-volumes-attachments:update",
 )
 
         self.allow_all_rules = (

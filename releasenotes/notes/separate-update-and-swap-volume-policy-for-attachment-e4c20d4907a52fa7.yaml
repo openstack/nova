@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    With microversion 2.85, existing policy ``os-volumes-attachments:update``
+    is used for updating the resources with the change in its default value
+    from ``SYSTEM_ADMIN`` to ``PROJECT_MEMBER_OR_SYSTEM_ADMIN``.
+    New policy ``os-volumes-attachments:swap`` is introduced for swapping
+    the attachment of servers with default to ``SYSTEM_ADMIN``.
