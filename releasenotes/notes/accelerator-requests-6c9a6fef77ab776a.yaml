@@ -4,7 +4,11 @@ features:
     Handling accelerator requests for an instance is now supported (where
     supported by the underlying virt driver) as of microversion
     2.82. The Cyborg service generates an event for the binding
-    completion for each accelerator request for an instance.
-    Adds a new event ``accelerator_request_bound`` for this to the API:
+    completion for each accelerator request (ARQ) for an instance.
+    Adds a new event ``accelerator_request_bound`` for this to the API
+    ``POST /os-server-external-events``
 
-    * ``POST /os-server-external-events``
+    The lists of operations that are supported or unsupported for
+    instances with accelerators are listed in
+    `accelerator operation guide
+    <https://docs.openstack.org/api-guide/compute/accelerator-support.html>`_
