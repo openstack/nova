@@ -429,6 +429,8 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-rescue",
 "os_compute_api:os-unrescue",
 "os_compute_api:os-security-groups",
+"os_compute_api:os-security-groups:add",
+"os_compute_api:os-security-groups:remove",
 "os_compute_api:os-server-password",
 "os_compute_api:os-server-tags:delete",
 "os_compute_api:os-server-tags:delete_all",
@@ -471,6 +473,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 )
 
         self.system_reader_or_owner_rules = (
+"os_compute_api:os-security-groups:list",
 "os_compute_api:os-volumes-attachments:index",
 "os_compute_api:os-volumes-attachments:show",
 "os_compute_api:os-attach-interfaces:list",

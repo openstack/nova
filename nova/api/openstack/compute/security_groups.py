@@ -369,7 +369,7 @@ class ServerSecurityGroupController(SecurityGroupControllerBase):
         """Returns a list of security groups for the given instance."""
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, server_id)
-        context.can(sg_policies.BASE_POLICY_NAME,
+        context.can(sg_policies.POLICY_NAME % 'list',
                     target={'project_id': instance.project_id})
         try:
             groups = security_group_api.get_instance_security_groups(
@@ -422,7 +422,7 @@ class SecurityGroupActionController(wsgi.Controller):
     def _addSecurityGroup(self, req, id, body):
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, id)
-        context.can(sg_policies.BASE_POLICY_NAME,
+        context.can(sg_policies.POLICY_NAME % 'add',
                     target={'project_id': instance.project_id})
 
         group_name = self._parse(body, 'addSecurityGroup')
@@ -443,7 +443,7 @@ class SecurityGroupActionController(wsgi.Controller):
     def _removeSecurityGroup(self, req, id, body):
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, id)
-        context.can(sg_policies.BASE_POLICY_NAME,
+        context.can(sg_policies.POLICY_NAME % 'remove',
                     target={'project_id': instance.project_id})
 
         group_name = self._parse(body, 'removeSecurityGroup')
