@@ -33,8 +33,7 @@ class ServerMetadataController(wsgi.Controller):
         super(ServerMetadataController, self).__init__()
         self.compute_api = compute.API()
 
-    def _get_metadata(self, context, server_id):
-        server = common.get_instance(self.compute_api, context, server_id)
+    def _get_metadata(self, context, server):
         try:
             # NOTE(mikal): get_instance_metadata sometimes returns
             # InstanceNotFound in unit tests, even though the instance is
@@ -52,8 +51,10 @@ class ServerMetadataController(wsgi.Controller):
     def index(self, req, server_id):
         """Returns the list of metadata for a given instance."""
         context = req.environ['nova.context']
-        context.can(sm_policies.POLICY_ROOT % 'index')
-        return {'metadata': self._get_metadata(context, server_id)}
+        server = common.get_instance(self.compute_api, context, server_id)
+        context.can(sm_policies.POLICY_ROOT % 'index',
+                    target={'project_id': server.project_id})
+        return {'metadata': self._get_metadata(context, server)}
 
     @wsgi.expected_errors((403, 404, 409))
     # NOTE(gmann): Returns 200 for backwards compatibility but should be 201
@@ -62,9 +63,11 @@ class ServerMetadataController(wsgi.Controller):
     def create(self, req, server_id, body):
         metadata = body['metadata']
         context = req.environ['nova.context']
-        context.can(sm_policies.POLICY_ROOT % 'create')
+        server = common.get_instance(self.compute_api, context, server_id)
+        context.can(sm_policies.POLICY_ROOT % 'create',
+                    target={'project_id': server.project_id})
         new_metadata = self._update_instance_metadata(context,
-                                                      server_id,
+                                                      server,
                                                       metadata,
                                                       delete=False)
 
@@ -74,14 +77,16 @@ class ServerMetadataController(wsgi.Controller):
     @validation.schema(server_metadata.update)
     def update(self, req, server_id, id, body):
         context = req.environ['nova.context']
-        context.can(sm_policies.POLICY_ROOT % 'update')
+        server = common.get_instance(self.compute_api, context, server_id)
+        context.can(sm_policies.POLICY_ROOT % 'update',
+                    target={'project_id': server.project_id})
         meta_item = body['meta']
         if id not in meta_item:
             expl = _('Request body and URI mismatch')
             raise exc.HTTPBadRequest(explanation=expl)
 
         self._update_instance_metadata(context,
-                                       server_id,
+                                       server,
                                        meta_item,
                                        delete=False)
 
@@ -91,18 +96,19 @@ class ServerMetadataController(wsgi.Controller):
     @validation.schema(server_metadata.update_all)
     def update_all(self, req, server_id, body):
         context = req.environ['nova.context']
-        context.can(sm_policies.POLICY_ROOT % 'update_all')
+        server = common.get_instance(self.compute_api, context, server_id)
+        context.can(sm_policies.POLICY_ROOT % 'update_all',
+                    target={'project_id': server.project_id})
         metadata = body['metadata']
         new_metadata = self._update_instance_metadata(context,
-                                                      server_id,
+                                                      server,
                                                       metadata,
                                                       delete=True)
 
         return {'metadata': new_metadata}
 
-    def _update_instance_metadata(self, context, server_id, metadata,
+    def _update_instance_metadata(self, context, server, metadata,
                                   delete=False):
-        server = common.get_instance(self.compute_api, context, server_id)
         try:
             return self.compute_api.update_instance_metadata(context,
                                                              server,
@@ -114,14 +120,16 @@ class ServerMetadataController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'update metadata', server_id)
+                    'update metadata', server.uuid)
 
     @wsgi.expected_errors(404)
     def show(self, req, server_id, id):
         """Return a single metadata item."""
         context = req.environ['nova.context']
-        context.can(sm_policies.POLICY_ROOT % 'show')
-        data = self._get_metadata(context, server_id)
+        server = common.get_instance(self.compute_api, context, server_id)
+        context.can(sm_policies.POLICY_ROOT % 'show',
+                    target={'project_id': server.project_id})
+        data = self._get_metadata(context, server)
 
         try:
             return {'meta': {id: data[id]}}
@@ -134,14 +142,15 @@ class ServerMetadataController(wsgi.Controller):
     def delete(self, req, server_id, id):
         """Deletes an existing metadata."""
         context = req.environ['nova.context']
-        context.can(sm_policies.POLICY_ROOT % 'delete')
-        metadata = self._get_metadata(context, server_id)
+        server = common.get_instance(self.compute_api, context, server_id)
+        context.can(sm_policies.POLICY_ROOT % 'delete',
+                    target={'project_id': server.project_id})
+        metadata = self._get_metadata(context, server)
 
         if id not in metadata:
             msg = _("Metadata item was not found")
             raise exc.HTTPNotFound(explanation=msg)
 
-        server = common.get_instance(self.compute_api, context, server_id)
         try:
             self.compute_api.delete_instance_metadata(context, server, id)
         except exception.InstanceIsLocked as e:

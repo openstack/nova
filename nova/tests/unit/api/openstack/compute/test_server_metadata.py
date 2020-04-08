@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import fixtures
 import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
@@ -720,6 +721,8 @@ class ServerMetaPolicyEnforcementV21(test.NoDBTestCase):
         super(ServerMetaPolicyEnforcementV21, self).setUp()
         self.controller = server_metadata_v21.ServerMetadataController()
         self.req = fakes.HTTPRequest.blank('')
+        self.mock_get = self.useFixture(
+            fixtures.MockPatch('nova.api.openstack.common.get_instance')).mock
 
     def test_create_policy_failed(self):
         rule_name = "os_compute_api:server-metadata:create"
