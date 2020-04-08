@@ -24,7 +24,7 @@ POLICY_ROOT = 'os_compute_api:servers:migrations:%s'
 servers_migrations_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'show',
-        check_str=base.RULE_ADMIN_API,
+        check_str=base.SYSTEM_READER,
         description="Show details for an in-progress live migration for a "
         "given server",
         operations=[
@@ -36,7 +36,7 @@ servers_migrations_policies = [
         scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'force_complete',
-        check_str=base.RULE_ADMIN_API,
+        check_str=base.SYSTEM_ADMIN,
         description="Force an in-progress live migration for a given server "
         "to complete",
         operations=[
@@ -49,7 +49,7 @@ servers_migrations_policies = [
         scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'delete',
-        check_str=base.RULE_ADMIN_API,
+        check_str=base.SYSTEM_ADMIN,
         description="Delete(Abort) an in-progress live migration",
         operations=[
             {
@@ -60,7 +60,7 @@ servers_migrations_policies = [
         scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'index',
-        check_str=base.RULE_ADMIN_API,
+        check_str=base.SYSTEM_READER,
         description="Lists in-progress live migrations for a given server",
         operations=[
             {

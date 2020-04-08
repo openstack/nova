@@ -362,8 +362,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-server-external-events:create",
 "os_compute_api:os-volumes-attachments:update",
 "os_compute_api:servers:create:zero_disk_flavor",
-"os_compute_api:servers:migrations:index",
-"os_compute_api:servers:migrations:show",
 )
 
         self.admin_or_owner_rules = (
@@ -454,6 +452,8 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 )
 
         self.system_reader_rules = (
+"os_compute_api:servers:migrations:index",
+"os_compute_api:servers:migrations:show",
 "os_compute_api:os-migrations:index",
 "os_compute_api:os-services:list",
 "os_compute_api:os-instance-actions:events:details",
