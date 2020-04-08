@@ -7663,12 +7663,14 @@ class ComputeManager(manager.Manager):
                                                            migration)
         LOG.debug('destination check data is %s', dest_check_data)
         try:
+            allocs = self.reportclient.get_allocations_for_consumer(
+                    ctxt, instance.uuid)
             migrate_data = self.compute_rpcapi.check_can_live_migrate_source(
                 ctxt, instance, dest_check_data)
             if ('src_supports_numa_live_migration' in migrate_data and
                     migrate_data.src_supports_numa_live_migration):
                 migrate_data = self._live_migration_claim(
-                    ctxt, instance, migrate_data, migration, limits)
+                    ctxt, instance, migrate_data, migration, limits, allocs)
             elif 'dst_supports_numa_live_migration' in dest_check_data:
                 LOG.info('Destination was ready for NUMA live migration, '
                          'but source is either too old, or is set to an '
@@ -7688,7 +7690,7 @@ class ComputeManager(manager.Manager):
         return migrate_data
 
     def _live_migration_claim(self, ctxt, instance, migrate_data,
-                              migration, limits):
+                              migration, limits, allocs):
         """Runs on the destination and does a resources claim, if necessary.
         Currently, only NUMA live migrations require it.
 
@@ -7707,7 +7709,7 @@ class ComputeManager(manager.Manager):
             # migration.dest_node here and must use self._get_nodename().
             claim = self.rt.live_migration_claim(
                 ctxt, instance, self._get_nodename(instance), migration,
-                limits)
+                limits, allocs)
             LOG.debug('Created live migration claim.', instance=instance)
         except exception.ComputeResourcesUnavailable as e:
             raise exception.MigrationPreCheckError(
@@ -8424,6 +8426,17 @@ class ComputeManager(manager.Manager):
         # destination, which will update it
         source_node = instance.node
 
+        do_cleanup, destroy_disks = self._live_migration_cleanup_flags(
+                migrate_data)
+
+        if do_cleanup:
+            LOG.debug('Calling driver.cleanup from _post_live_migration',
+                      instance=instance)
+            self.driver.cleanup(ctxt, instance, unplug_nw_info,
+                                destroy_disks=destroy_disks,
+                                migrate_data=migrate_data,
+                                destroy_vifs=destroy_vifs)
+
         # Define domain at destination host, without doing it,
         # pause/suspend/terminate do not work.
         post_at_dest_success = True
@@ -8437,26 +8450,6 @@ class ComputeManager(manager.Manager):
             # affect cleaning up source node.
             LOG.exception("Post live migration at destination %s failed",
                           dest, instance=instance, error=error)
-
-        do_cleanup, destroy_disks = self._live_migration_cleanup_flags(
-                migrate_data)
-
-        if do_cleanup:
-            # NOTE(artom) By this time post_live_migration_at_destination()
-            # will have applied the migration context and saved the instance,
-            # writing a new instance NUMA topology in the process (if the
-            # intance has one). Here on the source, some drivers will call
-            # instance.save() in their cleanup() method, which would clobber
-            # the new instance NUMA topology saved by the destination with the
-            # old fields in our instance object. To prevent this, refresh our
-            # instance.
-            instance.refresh()
-            LOG.debug('Calling driver.cleanup from _post_live_migration',
-                      instance=instance)
-            self.driver.cleanup(ctxt, instance, unplug_nw_info,
-                                destroy_disks=destroy_disks,
-                                migrate_data=migrate_data,
-                                destroy_vifs=destroy_vifs)
 
         self.instance_events.clear_events_for_instance(instance)
 
@@ -8705,28 +8698,6 @@ class ComputeManager(manager.Manager):
                       'rollback; compute driver did not provide migrate_data',
                       instance=instance)
 
-        # TODO(artom) drop_move_claim_at_destination() is new in RPC 5.3, only
-        # call it if we performed a NUMA-aware live migration (which implies us
-        # being able to send RPC 5.3). To check this, we can use the
-        # src_supports_numa_live_migration flag, as it will be set if and only
-        # if:
-        # - dst_supports_numa_live_migration made its way to the source
-        #   (meaning both dest and source are new and conductor can speak
-        #   RPC 5.3)
-        # - src_supports_numa_live_migration was set by the source driver and
-        #   passed the send-RPC-5.3 check.
-        # This check can be removed in RPC 6.0.
-        if ('src_supports_numa_live_migration' in migrate_data and
-                migrate_data.src_supports_numa_live_migration):
-            LOG.debug('Calling destination to drop move claim.',
-                      instance=instance)
-            self.compute_rpcapi.drop_move_claim_at_destination(context,
-                                                               instance, dest)
-        instance.task_state = None
-        instance.progress = 0
-        instance.drop_migration_context()
-        instance.save(expected_task_state=[task_states.MIGRATING])
-
         # NOTE(tr3buchet): setup networks on source host (really it's re-setup
         #                  for nova-network)
         # NOTE(mriedem): This is a no-op for neutron.
@@ -8785,6 +8756,34 @@ class ComputeManager(manager.Manager):
                             'during live migration rollback.',
                             instance=instance)
 
+        # NOTE(luyao): We drop move_claim and migration_context after cleanup
+        # is complete, to ensure the specific resources claimed on destination
+        # are released safely.
+        # TODO(artom) drop_move_claim_at_destination() is new in RPC 5.3, only
+        # call it if we performed a NUMA-aware live migration (which implies us
+        # being able to send RPC 5.3). To check this, we can use the
+        # src_supports_numa_live_migration flag, as it will be set if and only
+        # if:
+        # - dst_supports_numa_live_migration made its way to the source
+        #   (meaning both dest and source are new and conductor can speak
+        #   RPC 5.3)
+        # - src_supports_numa_live_migration was set by the source driver and
+        #   passed the send-RPC-5.3 check.
+        # This check can be removed in RPC 6.0.
+        if ('src_supports_numa_live_migration' in migrate_data and
+                migrate_data.src_supports_numa_live_migration):
+            LOG.debug('Calling destination to drop move claim.',
+                      instance=instance)
+            self.compute_rpcapi.drop_move_claim_at_destination(context,
+                                                               instance, dest)
+
+        # NOTE(luyao): We only update instance info after rollback operations
+        # are complete
+        instance.task_state = None
+        instance.progress = 0
+        instance.drop_migration_context()
+        instance.save(expected_task_state=[task_states.MIGRATING])
+
         self._notify_about_instance_usage(context, instance,
                                           "live_migration._rollback.end")
         compute_utils.notify_about_instance_action(context, instance,
@@ -8793,6 +8792,9 @@ class ComputeManager(manager.Manager):
                 phase=fields.NotificationPhase.END,
                 bdms=bdms)
 
+        # TODO(luyao): set migration status to 'failed' but not 'error'
+        # which means rollback_live_migration is done, we have successfully
+        # cleaned up and returned instance back to normal status.
         self._set_migration_status(migration, migration_status)
 
     @wrap_exception()
@@ -8865,9 +8867,10 @@ class ComputeManager(manager.Manager):
             # check_can_live_migrate_destination()
             self.rt.free_pci_device_claims_for_instance(context, instance)
 
-            self.driver.rollback_live_migration_at_destination(
-                context, instance, network_info, block_device_info,
-                destroy_disks=destroy_disks, migrate_data=migrate_data)
+            with instance.mutated_migration_context():
+                self.driver.rollback_live_migration_at_destination(
+                    context, instance, network_info, block_device_info,
+                    destroy_disks=destroy_disks, migrate_data=migrate_data)
 
         self._notify_about_instance_usage(
                         context, instance, "live_migration.rollback.dest.end",

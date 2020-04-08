@@ -209,7 +209,7 @@ class ResourceTracker(object):
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, fair=True)
     def live_migration_claim(self, context, instance, nodename, migration,
-                             limits):
+                             limits, allocs):
         """Builds a MoveClaim for a live migration.
 
         :param context: The request context.
@@ -219,15 +219,14 @@ class ResourceTracker(object):
                           migration.
         :param limits: A SchedulerLimits object from when the scheduler
                        selected the destination host.
+        :param allocs: The placement allocation records for the instance.
         :returns: A MoveClaim for this live migration.
         """
         # Flavor and image cannot change during a live migration.
         instance_type = instance.flavor
         image_meta = instance.image_meta
-        # TODO(Luyao) will pass allocations to live_migration_claim after the
-        # live migration change is done, now just set it None to _move_claim
         return self._move_claim(context, instance, instance_type, nodename,
-                                migration, None, move_type='live-migration',
+                                migration, allocs, move_type='live-migration',
                                 image_meta=image_meta, limits=limits)
 
     def _move_claim(self, context, instance, new_instance_type, nodename,

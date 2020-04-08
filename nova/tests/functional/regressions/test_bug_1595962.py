@@ -73,6 +73,7 @@ class TestSerialConsoleLiveMigrate(test.TestCase):
         self.image_id = self.api.get_images()[0]['id']
         self.flavor_id = self.api.get_flavors()[0]['id']
 
+    @mock.patch.object(fakelibvirt.Domain, 'undefine')
     @mock.patch('nova.virt.libvirt.LibvirtDriver.get_volume_connector')
     @mock.patch('nova.virt.libvirt.guest.Guest.get_job_info')
     @mock.patch.object(fakelibvirt.Domain, 'migrateToURI3')
@@ -100,7 +101,8 @@ class TestSerialConsoleLiveMigrate(test.TestCase):
                                          mock_host_get_connection,
                                          mock_migrate_to_uri,
                                          mock_get_job_info,
-                                         mock_get_volume_connector):
+                                         mock_get_volume_connector,
+                                         mock_undefine):
         """Regression test for bug #1595962.
 
         If the graphical consoles VNC and SPICE are disabled, the
@@ -120,6 +122,12 @@ class TestSerialConsoleLiveMigrate(test.TestCase):
                                 version=fakelibvirt.FAKE_LIBVIRT_VERSION,
                                 hv_version=fakelibvirt.FAKE_QEMU_VERSION)
         mock_host_get_connection.return_value = fake_connection
+        # We invoke cleanup on source host first which will call undefine
+        # method currently. Since in functional test we make all compute
+        # services linked to the same connection, we need to mock the undefine
+        # method to avoid triggering 'Domain not found' error in subsequent
+        # rpc call post_live_migration_at_destination.
+        mock_undefine.return_value = True
 
         server_attr = dict(name='server1',
                            imageRef=self.image_id,
