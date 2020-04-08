@@ -10634,7 +10634,7 @@ class LibvirtDriver(driver.ComputeDriver):
         :return: A dict of trait names mapped to boolean values.
         """
         all_buses = set(itertools.chain(
-            *blockinfo.SUPPORTED_STORAGE_BUSES.values()
+            *blockinfo.SUPPORTED_DEVICE_BUSES.values()
         ))
 
         if CONF.libvirt.virt_type in ('qemu', 'kvm'):
@@ -10646,7 +10646,7 @@ class LibvirtDriver(driver.ComputeDriver):
                         dom_caps[arch_type][machine_type].devices.disk.buses
                     )
         else:
-            supported_buses = blockinfo.SUPPORTED_STORAGE_BUSES.get(
+            supported_buses = blockinfo.SUPPORTED_DEVICE_BUSES.get(
                 CONF.libvirt.virt_type, []
             )
 

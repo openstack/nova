@@ -23997,7 +23997,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         """Test getting storage bus traits per virt type."""
         all_traits = set(ot.get_traits('COMPUTE_STORAGE_BUS_'))
         # ensure each virt type reports the correct bus types
-        for virt_type, buses in blockinfo.SUPPORTED_STORAGE_BUSES.items():
+        for virt_type, buses in blockinfo.SUPPORTED_DEVICE_BUSES.items():
             if virt_type in ('qemu', 'kvm'):
                 continue
 

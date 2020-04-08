@@ -1304,7 +1304,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         # Assert that all supported device bus types are returned. Stable
         # device rescue is not supported by xen or lxc so ignore these.
         for virt_type in ['qemu', 'kvm', 'uml', 'parallels']:
-            for bus in blockinfo.SUPPORTED_DEVICE_BUS[virt_type]:
+            for bus in blockinfo.SUPPORTED_DEVICE_BUSES[virt_type]:
                 meta = self._get_rescue_image_meta({'hw_rescue_bus': bus})
                 self.assertEqual(bus, blockinfo.get_rescue_bus(None, virt_type,
                                                                meta, None))
