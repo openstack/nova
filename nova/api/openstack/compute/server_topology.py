@@ -27,13 +27,15 @@ class ServerTopologyController(wsgi.Controller):
     @wsgi.expected_errors(404)
     def index(self, req, server_id):
         context = req.environ["nova.context"]
-        context.can(st_policies.BASE_POLICY_NAME % 'index')
-        host_policy = (st_policies.BASE_POLICY_NAME % 'host:index')
-        show_host_info = context.can(host_policy, fatal=False)
-
         instance = common.get_instance(self.compute_api, context, server_id,
                                        expected_attrs=['numa_topology',
                                        'vcpu_model'])
+
+        context.can(st_policies.BASE_POLICY_NAME % 'index',
+                    target={'project_id': instance.project_id})
+
+        host_policy = (st_policies.BASE_POLICY_NAME % 'host:index')
+        show_host_info = context.can(host_policy, fatal=False)
 
         return self._get_numa_topology(context, instance, show_host_info)
 

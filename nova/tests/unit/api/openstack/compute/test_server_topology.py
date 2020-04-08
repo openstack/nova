@@ -11,6 +11,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import fixtures
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 from webob import exc
@@ -22,6 +23,7 @@ from nova import objects
 from nova.objects import instance_numa as numa
 from nova import test
 from nova.tests.unit.api.openstack import fakes
+from nova.tests.unit import fake_instance
 
 
 class ServerTopologyTestV278(test.NoDBTestCase):
@@ -36,6 +38,7 @@ class ServerTopologyTestV278(test.NoDBTestCase):
             version=self.api_version,
             use_admin_context=True)
         self.controller = server_topology.ServerTopologyController()
+        self.context = self.req.environ['nova.context']
 
     def _fake_numa(self, cpu_pinning=None):
         ce0 = numa.InstanceNUMACell(node=0, memory=1024, pagesize=4, id=0,
@@ -57,7 +60,8 @@ class ServerTopologyTestV278(test.NoDBTestCase):
     @mock.patch.object(common, 'get_instance')
     def test_get_topology_with_no_topology(self, fake_get):
         expect = {'nodes': [], 'pagesize_kb': None}
-        inst = objects.instance.Instance(uuid=self.uuid, host='123')
+        inst = objects.instance.Instance(uuid=self.uuid, host='123',
+            project_id=self.context.project_id)
         inst.numa_topology = None
         fake_get.return_value = inst
 
@@ -74,7 +78,8 @@ class ServerTopologyTestV278(test.NoDBTestCase):
                      'cpu_pinning':{}}],
                      'pagesize_kb': 4}
 
-        inst = objects.instance.Instance(uuid=self.uuid, host='123')
+        inst = objects.instance.Instance(uuid=self.uuid, host='123',
+            project_id=self.context.project_id)
         inst.numa_topology = self._fake_numa(cpu_pinning=None)
         fake_get.return_value = inst
 
@@ -104,6 +109,12 @@ class ServerTopologyEnforcementV278(test.NoDBTestCase):
         super(ServerTopologyEnforcementV278, self).setUp()
         self.controller = server_topology.ServerTopologyController()
         self.req = fakes.HTTPRequest.blank('', version=self.api_version)
+        context = self.req.environ['nova.context']
+        self.mock_get = self.useFixture(
+            fixtures.MockPatch('nova.api.openstack.common.get_instance')).mock
+        self.instance = fake_instance.fake_instance_obj(
+                context, id=1, project_id=context.project_id)
+        self.mock_get.return_value = self.instance
 
     def test_get_topology_policy_failed(self):
         rule_name = "compute:server:topology:index"
