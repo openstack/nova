@@ -746,7 +746,14 @@ def get_boot_order(disk_info):
 
 
 def get_rescue_device(rescue_image_meta):
-    # Find and validate the hw_rescue_device rescue device
+    """Find and validate the rescue device
+
+    :param rescue_image_meta: ImageMeta object provided when rescuing
+
+    :raises: UnsupportedRescueDevice if the requested device type is not
+             supported
+    :returns: A valid device type to be used during the rescue
+    """
     rescue_device = rescue_image_meta.properties.get("hw_rescue_device",
                                                      "disk")
     if rescue_device not in SUPPORTED_DEVICE_TYPES:
@@ -755,7 +762,17 @@ def get_rescue_device(rescue_image_meta):
 
 
 def get_rescue_bus(instance, virt_type, rescue_image_meta, rescue_device):
-    # Find and validate the hw_rescue_bus
+    """Find and validate the rescue bus
+
+    :param instance: The instance to be rescued
+    :param virt_type: The hypervisor the instance will run on
+    :param rescue_image_meta: ImageMeta object provided when rescuing
+    :param rescue_device: The rescue device being used
+
+    :raises: UnsupportedRescueBus if the requested bus is not
+             supported by the hypervisor
+    :returns: A valid device bus given virt_type and rescue device
+    """
     rescue_bus = rescue_image_meta.properties.get("hw_rescue_bus")
     if rescue_bus is not None:
         if is_disk_bus_valid_for_virt(virt_type, rescue_bus):
