@@ -23,46 +23,52 @@ POLICY_ROOT = 'os_compute_api:servers:migrations:%s'
 
 servers_migrations_policies = [
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'show',
-        base.RULE_ADMIN_API,
-        "Show details for an in-progress live migration for a given server",
-        [
+        name=POLICY_ROOT % 'show',
+        check_str=base.RULE_ADMIN_API,
+        description="Show details for an in-progress live migration for a "
+        "given server",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/servers/{server_id}/migrations/{migration_id}'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'force_complete',
-        base.RULE_ADMIN_API,
-        "Force an in-progress live migration for a given server to complete",
-        [
+        name=POLICY_ROOT % 'force_complete',
+        check_str=base.RULE_ADMIN_API,
+        description="Force an in-progress live migration for a given server "
+        "to complete",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers/{server_id}/migrations/{migration_id}'
                         '/action (force_complete)'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'delete',
-        base.RULE_ADMIN_API,
-        "Delete(Abort) an in-progress live migration",
-        [
+        name=POLICY_ROOT % 'delete',
+        check_str=base.RULE_ADMIN_API,
+        description="Delete(Abort) an in-progress live migration",
+        operations=[
             {
                 'method': 'DELETE',
                 'path': '/servers/{server_id}/migrations/{migration_id}'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'index',
-        base.RULE_ADMIN_API,
-        "Lists in-progress live migrations for a given server",
-        [
+        name=POLICY_ROOT % 'index',
+        check_str=base.RULE_ADMIN_API,
+        description="Lists in-progress live migrations for a given server",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/servers/{server_id}/migrations'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
 ]
 
 
