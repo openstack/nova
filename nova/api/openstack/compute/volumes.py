@@ -452,7 +452,8 @@ class VolumeAttachmentController(wsgi.Controller):
                 raise exc.HTTPBadRequest(explanation='The tag property is '
                                          'not mutable')
             if 'delete_on_termination' in att:
-                bdm.delete_on_termination = att['delete_on_termination']
+                bdm.delete_on_termination = strutils.bool_from_string(
+                        att['delete_on_termination'], strict=True)
             bdm.save()
         except exception.VolumeBDMNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
