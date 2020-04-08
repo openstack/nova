@@ -65,15 +65,14 @@ class ServerTagsController(wsgi.Controller):
     @wsgi.expected_errors(404)
     def show(self, req, server_id, id):
         context = req.environ["nova.context"]
-        context.can(st_policies.POLICY_ROOT % 'show')
+        im = _get_instance_mapping(context, server_id)
+        context.can(st_policies.POLICY_ROOT % 'show',
+                    target={'project_id': im.project_id})
 
         try:
-            im = objects.InstanceMapping.get_by_instance_uuid(context,
-                                                              server_id)
             with nova_context.target_cell(context, im.cell_mapping) as cctxt:
                 exists = objects.Tag.exists(cctxt, server_id, id)
-        except (exception.InstanceNotFound,
-                exception.InstanceMappingNotFound) as e:
+        except (exception.InstanceNotFound) as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         if not exists:
@@ -85,15 +84,14 @@ class ServerTagsController(wsgi.Controller):
     @wsgi.expected_errors(404)
     def index(self, req, server_id):
         context = req.environ["nova.context"]
-        context.can(st_policies.POLICY_ROOT % 'index')
+        im = _get_instance_mapping(context, server_id)
+        context.can(st_policies.POLICY_ROOT % 'index',
+                    target={'project_id': im.project_id})
 
         try:
-            im = objects.InstanceMapping.get_by_instance_uuid(context,
-                                                              server_id)
             with nova_context.target_cell(context, im.cell_mapping) as cctxt:
                 tags = objects.TagList.get_by_resource_id(cctxt, server_id)
-        except (exception.InstanceNotFound,
-                exception.InstanceMappingNotFound) as e:
+        except (exception.InstanceNotFound) as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         return {'tags': _get_tags_names(tags)}
@@ -103,8 +101,9 @@ class ServerTagsController(wsgi.Controller):
     @validation.schema(schema.update)
     def update(self, req, server_id, id, body):
         context = req.environ["nova.context"]
-        context.can(st_policies.POLICY_ROOT % 'update')
         im = _get_instance_mapping(context, server_id)
+        context.can(st_policies.POLICY_ROOT % 'update',
+                    target={'project_id': im.project_id})
 
         with nova_context.target_cell(context, im.cell_mapping) as cctxt:
             instance = self._check_instance_in_valid_state(
@@ -155,8 +154,9 @@ class ServerTagsController(wsgi.Controller):
     @validation.schema(schema.update_all)
     def update_all(self, req, server_id, body):
         context = req.environ["nova.context"]
-        context.can(st_policies.POLICY_ROOT % 'update_all')
         im = _get_instance_mapping(context, server_id)
+        context.can(st_policies.POLICY_ROOT % 'update_all',
+                    target={'project_id': im.project_id})
 
         with nova_context.target_cell(context, im.cell_mapping) as cctxt:
             instance = self._check_instance_in_valid_state(
@@ -179,8 +179,9 @@ class ServerTagsController(wsgi.Controller):
     @wsgi.expected_errors((404, 409))
     def delete(self, req, server_id, id):
         context = req.environ["nova.context"]
-        context.can(st_policies.POLICY_ROOT % 'delete')
         im = _get_instance_mapping(context, server_id)
+        context.can(st_policies.POLICY_ROOT % 'delete',
+                    target={'project_id': im.project_id})
 
         with nova_context.target_cell(context, im.cell_mapping) as cctxt:
             instance = self._check_instance_in_valid_state(
@@ -203,8 +204,9 @@ class ServerTagsController(wsgi.Controller):
     @wsgi.expected_errors((404, 409))
     def delete_all(self, req, server_id):
         context = req.environ["nova.context"]
-        context.can(st_policies.POLICY_ROOT % 'delete_all')
         im = _get_instance_mapping(context, server_id)
+        context.can(st_policies.POLICY_ROOT % 'delete_all',
+                    target={'project_id': im.project_id})
 
         with nova_context.target_cell(context, im.cell_mapping) as cctxt:
             instance = self._check_instance_in_valid_state(

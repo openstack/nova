@@ -51,6 +51,7 @@ class ServerTagsTest(test.TestCase):
         super(ServerTagsTest, self).setUp()
         self.controller = server_tags.ServerTagsController()
         inst_map = objects.InstanceMapping(
+            project_id=fakes.FAKE_PROJECT_ID,
             cell_mapping=objects.CellMappingList.get_all(
                 context.get_admin_context())[1])
         self.stub_out('nova.objects.InstanceMapping.get_by_instance_uuid',
