@@ -833,6 +833,15 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                           _test, pci_requests, True, True)
 
     def test_check_can_migrate_specific_resources(self):
+        """Test _check_can_migrate_specific_resources allows live migration
+        with vpmem.
+        """
+        @mock.patch.object(live_migrate, 'supports_vpmem_live_migration')
+        def _test(resources, supp_lm_vpmem_retval, mock_support_lm_vpmem):
+            self.instance.resources = resources
+            mock_support_lm_vpmem.return_value = supp_lm_vpmem_retval
+            self.task._check_can_migrate_specific_resources()
+
         vpmem_0 = objects.LibvirtVPMEMDevice(
             label='4GB', name='ns_0', devpath='/dev/dax0.0',
             size=4292870144, align=2097152)
@@ -840,7 +849,11 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             provider_uuid=uuids.rp,
             resource_class="CUSTOM_PMEM_NAMESPACE_4GB",
             identifier='ns_0', metadata=vpmem_0)
-        self.instance.resources = objects.ResourceList(
+        resources = objects.ResourceList(
             objects=[resource_0])
+
+        _test(None, False)
+        _test(None, True)
+        _test(resources, True)
         self.assertRaises(exception.MigrationPreCheckError,
-                          self.task._check_can_migrate_specific_resources)
+                          _test, resources, False)

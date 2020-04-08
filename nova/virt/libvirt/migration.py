@@ -25,6 +25,7 @@ from oslo_log import log as logging
 from nova.compute import power_state
 import nova.conf
 from nova import exception
+from nova import objects
 from nova.virt import hardware
 from nova.virt.libvirt import config as vconfig
 
@@ -80,7 +81,7 @@ def serial_listen_ports(migrate_data):
 
 
 def get_updated_guest_xml(guest, migrate_data, get_volume_config,
-                          get_vif_config=None):
+                          get_vif_config=None, new_resources=None):
     xml_doc = etree.fromstring(guest.get_xml_desc(dump_migratable=True))
     xml_doc = _update_graphics_xml(xml_doc, migrate_data)
     xml_doc = _update_serial_xml(xml_doc, migrate_data)
@@ -91,7 +92,31 @@ def get_updated_guest_xml(guest, migrate_data, get_volume_config,
         xml_doc = _update_vif_xml(xml_doc, migrate_data, get_vif_config)
     if 'dst_numa_info' in migrate_data:
         xml_doc = _update_numa_xml(xml_doc, migrate_data)
+    if new_resources:
+        xml_doc = _update_device_resources_xml(xml_doc, new_resources)
     return etree.tostring(xml_doc, encoding='unicode')
+
+
+def _update_device_resources_xml(xml_doc, new_resources):
+    vpmems = []
+    for resource in new_resources:
+        if 'metadata' in resource:
+            res_meta = resource.metadata
+            if isinstance(res_meta, objects.LibvirtVPMEMDevice):
+                vpmems.append(res_meta)
+    # If there are other resources in the future, the xml should
+    # be updated here like vpmems
+    xml_doc = _update_vpmems_xml(xml_doc, vpmems)
+    return xml_doc
+
+
+def _update_vpmems_xml(xml_doc, vpmems):
+    memory_devices = xml_doc.findall("./devices/memory")
+    for pos, memory_dev in enumerate(memory_devices):
+        if memory_dev.get('model') == 'nvdimm':
+            devpath = memory_dev.find('./source/path')
+            devpath.text = vpmems[pos].devpath
+    return xml_doc
 
 
 def _update_numa_xml(xml_doc, migrate_data):

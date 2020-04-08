@@ -46,6 +46,17 @@ def supports_vif_related_pci_allocations(context, host):
     return svc.version >= 36
 
 
+def supports_vpmem_live_migration(context):
+    """Checks if the commpute host service is new enough to support
+    instance live migration with virtual persistent memory.
+
+    :param context: The user request context.
+    :returns: True if the compute hosts are new enough to support live
+              migration with vpmem
+    """
+    return objects.Service.get_minimum_version(context, 'nova-compute') >= 51
+
+
 class LiveMigrationTask(base.TaskBase):
     def __init__(self, context, instance, destination,
                  block_migration, disk_over_commit, migration, compute_rpcapi,
@@ -261,11 +272,16 @@ class LiveMigrationTask(base.TaskBase):
         if not self.instance.resources:
             return
 
+        has_vpmem = False
         for resource in self.instance.resources:
             if resource.resource_class.startswith("CUSTOM_PMEM_NAMESPACE_"):
-                raise exception.MigrationPreCheckError(
-                    reason="Cannot live migration with virtual persistent "
-                           "memory, the operation is not supported.")
+                has_vpmem = True
+                break
+
+        if has_vpmem and not supports_vpmem_live_migration(self.context):
+            raise exception.MigrationPreCheckError(
+                reason="Cannot live migrate with virtual persistent memory, "
+                       "the operation is not supported.")
 
     def _check_host_is_up(self, host):
         service = objects.Service.get_by_compute_host(self.context, host)

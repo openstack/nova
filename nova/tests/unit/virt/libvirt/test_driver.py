@@ -11198,7 +11198,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 drvr._live_migration_uri(target_connection),
                 params=params, flags=0)
         mock_updated_guest_xml.assert_called_once_with(
-                guest, migrate_data, mock.ANY, get_vif_config=None)
+                guest, migrate_data, mock.ANY, get_vif_config=None,
+                new_resources=None)
 
     def test_live_migration_update_vifs_xml(self):
         """Tests that when migrate_data.vifs is populated, the destination
@@ -11225,7 +11226,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         fake_xml = '<domain type="qemu"/>'
 
         def fake_get_updated_guest_xml(guest, migrate_data, get_volume_config,
-                                       get_vif_config=None):
+                                       get_vif_config=None,
+                                       new_resources=None):
             self.assertIsNotNone(get_vif_config)
             return fake_xml
 
@@ -25873,6 +25875,29 @@ class LibvirtPMEMNamespaceTests(test.NoDBTestCase):
         self.assertEqual('4GB', vpmems[0].label)
         self.assertEqual('SMALL', vpmems[1].label)
         self.assertEqual('SMALL', vpmems[2].label)
+
+    @mock.patch('nova.virt.hardware.get_vpmems')
+    def test_sorted_migrating_vpmem_resources(self, mock_labels):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance = fake_instance.fake_instance_obj(self.context)
+        instance.flavor = objects.Flavor(
+            name='m1.small', memory_mb=2048, vcpus=2, root_gb=10,
+            ephemeral_gb=20, swap=0, extra_specs={
+                'hw:pmem': 'SMALL,4GB,SMALL'})
+        mock_labels.return_value = ['SMALL', '4GB', 'SMALL']
+        migr_context = objects.MigrationContext()
+        # original order is '4GB' 'SMALL' 'SMALL'
+        migr_context.new_resources = objects.ResourceList(objects=[
+            self.resource_0, self.resource_1, self.resource_2])
+        instance.migration_context = migr_context
+
+        new_resources = drvr._sorted_migrating_resources(
+            instance, instance.flavor)
+        # ordered vpmems are 'SMAL' '4GB' 'SMALL'
+        expected_new_resources = objects.ResourceList(objects=[
+            self.resource_1, self.resource_0, self.resource_2])
+        for i in range(3):
+            self.assertEqual(expected_new_resources[i], new_resources[i])
 
     @mock.patch('nova.privsep.libvirt.cleanup_vpmem')
     def test_cleanup_vpmems(self, mock_cleanup_vpmem):
