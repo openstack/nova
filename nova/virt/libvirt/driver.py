@@ -3473,9 +3473,9 @@ class LibvirtDriver(driver.ComputeDriver):
                 image_meta = objects.ImageMeta.from_dict(image_meta_dict)
 
         else:
-            LOG.info("Attempting an unstable device rescue", instance=instance)
-            # NOTE(lyarwood): An unstable rescue only provides the rescue
-            # device and the original root device so we don't need to provide
+            LOG.info("Attempting rescue", instance=instance)
+            # NOTE(lyarwood): A legacy rescue only provides the rescue device
+            # and the original root device so we don't need to provide
             # block_device_info to the get_disk_info call.
             block_device_info = None
 
