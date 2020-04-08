@@ -100,3 +100,18 @@ class Versions(wsgi.Resource):
             args['action'] = 'multi'
 
         return args
+
+
+class VersionsV2(wsgi.Resource):
+
+    def __init__(self):
+        super(VersionsV2, self).__init__(None)
+
+    def index(self, req, body=None):
+        builder = views_versions.get_view_builder(req)
+        ver = 'v2.0' if req.is_legacy_v2() else 'v2.1'
+        return builder.build_version(VERSIONS[ver])
+
+    def get_action_args(self, request_environment):
+        """Parse dictionary created by routes library."""
+        return {'action': 'index'}

@@ -168,6 +168,25 @@ class URLMap(paste.urlmap.URLMap):
         for (domain, app_url), app in self.applications:
             if domain and domain != host and domain != host + ':' + port:
                 continue
+            # Rudimentary "wildcard" support:
+            # By declaring a urlmap path ending in '/+', you're saying the
+            # incoming path must start with everything up to and including the
+            # '/' *and* have something after that as well. For example, path
+            # /foo/bar/+ will match /foo/bar/baz, but not /foo/bar/ or /foo/bar
+            # NOTE(efried): This assumes we'll never need a path URI component
+            #               that legitimately starts with '+'. (We could use a
+            #               more obscure character/sequence here in that case.)
+            if app_url.endswith('/+'):
+                # Must be requesting at least the path element (including /)
+                if not path_info.startswith(app_url[:-1]):
+                    continue
+                # ...but also must be requesting something after that /
+                if len(path_info) < len(app_url):
+                    continue
+                # Trim the /+ off the app_url to make it look "normal" for e.g.
+                # proper splitting of SCRIPT_NAME and PATH_INFO.
+                return app, app_url[:-2]
+            # Normal (non-wildcarded) prefix match
             if (path_info == app_url or
                     path_info.startswith(app_url + '/')):
                 return app, app_url
