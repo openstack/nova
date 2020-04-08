@@ -13,12 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import fixtures
 import mock
 
 from nova.api.openstack.compute import server_password \
     as server_password_v21
-from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
@@ -62,31 +60,3 @@ class ServerPasswordTestV21(test.NoDBTestCase):
 
         res = self.controller.index(self.fake_req, 'fake')
         self.assertEqual(res['password'], '')
-
-
-class ServerPasswordPolicyEnforcementV21(test.NoDBTestCase):
-
-    def setUp(self):
-        super(ServerPasswordPolicyEnforcementV21, self).setUp()
-        self.controller = server_password_v21.ServerPasswordController()
-        self.req = fakes.HTTPRequest.blank('')
-        self.mock_get = self.useFixture(
-            fixtures.MockPatch('nova.api.openstack.common.get_instance')).mock
-
-    def _test_policy_failed(self, method, rule_name):
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            method, self.req, fakes.FAKE_UUID)
-
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-    def test_get_password_policy_failed(self):
-        rule_name = "os_compute_api:os-server-password"
-        self._test_policy_failed(self.controller.index, rule_name)
-
-    def test_clear_password_policy_failed(self):
-        rule_name = "os_compute_api:os-server-password"
-        self._test_policy_failed(self.controller.clear, rule_name)
