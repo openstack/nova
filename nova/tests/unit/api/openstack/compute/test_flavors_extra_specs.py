@@ -272,10 +272,17 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
             'hw:cpu_policy': 'sharrred',
             'hw:cpu_policyyyyyyy': 'shared',
             'hw:foo': 'bar',
+            'resources:VCPU': 'N',
+            'resources_foo:VCPU': 'N',
+            'resources:VVCPU': '1',
+            'resources_foo:VVCPU': '1',
             'trait:STORAGE_DISK_SSD': 'forbiden',
             'trait_foo:HW_CPU_X86_AVX2': 'foo',
             'trait:bar': 'required',
             'trait_foo:bar': 'required',
+            'trait:CUSTOM_foo': 'required',
+            'trait:CUSTOM_FOO': 'bar',
+            'trait_foo:CUSTOM_BAR': 'foo',
         }
         for key, value in invalid_specs.items():
             body = {'extra_specs': {key: value}}
@@ -307,14 +314,22 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
             'hide_hypervisor_id': 'true',
             'hw:numa_nodes': '1',
             'hw:numa_cpus.0': '0-3,8-9,11,10',
+            'resources:VCPU': '4',
+            'resources_foo:VCPU': '4',
+            'resources:CUSTOM_FOO': '1',
+            'resources_foo:CUSTOM_BAR': '2',
             'trait:STORAGE_DISK_SSD': 'forbidden',
             'trait_foo:HW_CPU_X86_AVX2': 'required',
+            'trait:CUSTOM_FOO': 'forbidden',
+            'trait_foo:CUSTOM_BAR': 'required',
         }
         mock_flavor_extra_specs.side_effect = return_create_flavor_extra_specs
 
         for key, value in valid_specs.items():
             body = {"extra_specs": {key: value}}
-            req = self._get_request('1/os-extra_specs', use_admin_context=True)
+            req = self._get_request(
+                '1/os-extra_specs', use_admin_context=True, version='2.86',
+            )
             res_dict = self.controller.create(req, 1, body=body)
             self.assertEqual(value, res_dict['extra_specs'][key])
 
