@@ -47,8 +47,15 @@ def validate(name: str, value: str):
             validator.validate(name, value)
             return
 
-    namespace = name.split(':', 1)[0].split('{')[0] if ':' in name else None
-    if not namespace or namespace not in NAMESPACES:  # unregistered namespace
+    # check if there's a namespace; if not, we've done all we can do
+    if ':' not in name:  # no namespace
+        return
+
+    # if there is, check if it's one we recognize
+    for namespace in NAMESPACES:
+        if re.fullmatch(namespace, name.split(':', 1)[0]):
+            break
+    else:
         return
 
     raise exception.ValidationError(
@@ -72,8 +79,8 @@ def load_validators():
         # TODO(stephenfin): Make 'register' return a dict rather than a list?
         for validator in ext.plugin.register():
             VALIDATORS[validator.name] = validator
-            if ':' in validator.name:
-                NAMESPACES.add(validator.name.split(':', 1)[0].split('{')[0])
+            if ':' in validator.name_regex:
+                NAMESPACES.add(validator.name_regex.split(':', 1)[0])
 
 
 load_validators()

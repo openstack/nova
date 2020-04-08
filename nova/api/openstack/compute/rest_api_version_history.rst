@@ -1130,7 +1130,7 @@ for the following APIs:
 * ``POST /flavors/{flavor_id}/os-extra_specs``
 * ``PUT /flavors/{flavor_id}/os-extra_specs/{id}``
 
-Validation is only used for recognized extra spec namespaces, namely:
+Validation is only used for recognized extra spec namespaces, currently:
 ``accel``, ``aggregate_instance_extra_specs``, ``capabilities``, ``hw``,
 ``hw_rng``, ``hw_video``, ``os``, ``pci_passthrough``, ``powervm``, ``quota``,
 ``resources``, ``trait``, and ``vmware``.

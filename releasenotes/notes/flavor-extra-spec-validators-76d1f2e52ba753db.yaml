@@ -3,4 +3,19 @@ features:
   - |
     The 2.86 microversion adds support for flavor extra spec validation when
     creating or updating flavor extra specs. Use of an unrecognized or invalid
-    flavor extra spec will result in a HTTP 400 response.
+    flavor extra spec in the following namespaces will result in a HTTP 400
+    response.
+
+    - ``accel``
+    - ``aggregate_instance_extra_specs``
+    - ``capabilities``
+    - ``hw``
+    - ``hw_rng``
+    - ``hw_video``
+    - ``os``
+    - ``pci_passthrough``
+    - ``powervm``
+    - ``quota``
+    - ``resources`` (including ``_{group}`` suffixes)
+    - ``trait`` (including ``_{group}`` suffixes)
+    - ``vmware``

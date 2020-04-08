@@ -38,10 +38,6 @@ for trait in os_traits.get_traits():
                     'name': 'group',
                     'pattern': r'(_[a-zA-z0-9_]*|\d+)?',
                 },
-                {
-                    'name': 'trait',
-                    'pattern': r'[a-zA-Z0-9_]+',
-                },
             ],
         )
     )
