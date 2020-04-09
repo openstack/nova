@@ -3009,6 +3009,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         flavor.extra_specs = extra_specs
 
         image_props = {}
+        image_props['hw_architecture'] = fields.Architecture.X86_64
         if hw_machine_type is not None:
             image_props['hw_machine_type'] = hw_machine_type
         if hw_firmware_type is not None:
@@ -4855,7 +4856,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         image_meta = objects.ImageMeta.from_dict({
             "disk_format": "raw",
             "properties": {"hw_scsi_model": "virtio-scsi",
-                           "hw_disk_bus": "scsi"}})
+                           "hw_disk_bus": "scsi",
+                           "hw_architecture": fields.Architecture.X86_64}})
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.config_drive = 'True'
         conn_info = {'driver_volume_type': 'fake'}
@@ -4927,7 +4929,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         image_meta = objects.ImageMeta.from_dict({
             "disk_format": "raw",
             "properties": {"hw_scsi_model": "virtio-scsi",
-                           "hw_disk_bus": "scsi"}})
+                           "hw_disk_bus": "scsi",
+                           "hw_architecture": fields.Architecture.X86_64}})
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.config_drive = 'True'
         conn_info = {'driver_volume_type': 'fake'}
@@ -7296,6 +7299,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        image_meta.properties = objects.ImageMetaProps.from_dict(
+            {'hw_machine_type': 'fake_machine_type'})
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref,
