@@ -32,7 +32,7 @@ class ServerPasswordController(wsgi.Controller):
     def index(self, req, server_id):
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, server_id)
-        context.can(sp_policies.BASE_POLICY_NAME,
+        context.can(sp_policies.BASE_POLICY_NAME % 'show',
                     target={'project_id': instance.project_id})
 
         passw = password.extract_password(instance)
@@ -49,7 +49,7 @@ class ServerPasswordController(wsgi.Controller):
 
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, server_id)
-        context.can(sp_policies.BASE_POLICY_NAME,
+        context.can(sp_policies.BASE_POLICY_NAME % 'clear',
                     target={'project_id': instance.project_id})
         meta = password.convert_password(context, None)
         instance.system_metadata.update(meta)

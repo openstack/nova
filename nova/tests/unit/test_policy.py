@@ -429,7 +429,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-security-groups",
 "os_compute_api:os-security-groups:add",
 "os_compute_api:os-security-groups:remove",
-"os_compute_api:os-server-password",
+"os_compute_api:os-server-password:clear",
 "os_compute_api:os-server-tags:delete",
 "os_compute_api:os-server-tags:delete_all",
 "os_compute_api:os-server-tags:update",
@@ -479,6 +479,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-attach-interfaces:show",
 "os_compute_api:os-instance-actions:list",
 "os_compute_api:os-instance-actions:show",
+"os_compute_api:os-server-password:show",
 "os_compute_api:os-server-tags:index",
 "os_compute_api:os-server-tags:show",
 )
