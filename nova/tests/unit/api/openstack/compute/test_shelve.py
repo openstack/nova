@@ -13,7 +13,6 @@
 #    under the License.
 
 import mock
-from oslo_policy import policy as oslo_policy
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel
 import six
@@ -24,7 +23,6 @@ from nova.api.openstack.compute import shelve as shelve_v21
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import exception
-from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
@@ -81,129 +79,6 @@ class ShelvePolicyTestV21(test.NoDBTestCase):
         self.assertRaises(webob.exc.HTTPConflict,
                           self.controller._shelve_offload,
                           self.req, uuidsentinel.fake, {})
-
-
-class ShelvePolicyEnforcementV21(test.NoDBTestCase):
-
-    def setUp(self):
-        super(ShelvePolicyEnforcementV21, self).setUp()
-        self.controller = shelve_v21.ShelveController()
-        self.req = fakes.HTTPRequest.blank('')
-
-    @mock.patch('nova.api.openstack.common.get_instance')
-    def test_shelve_restricted_by_role(self, get_instance_mock):
-        get_instance_mock.return_value = (
-            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
-        rules = {'os_compute_api:os-shelve:shelve': 'role:admin'}
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-
-        self.assertRaises(exception.Forbidden, self.controller._shelve,
-                self.req, uuidsentinel.fake, {})
-
-    @mock.patch('nova.api.openstack.common.get_instance')
-    def test_shelve_policy_failed_with_other_project(self, get_instance_mock):
-        get_instance_mock.return_value = (
-            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
-        rule_name = "os_compute_api:os-shelve:shelve"
-        self.policy.set_rules({rule_name: "project_id:%(project_id)s"})
-        # Change the project_id in request context.
-        self.req.environ['nova.context'].project_id = 'other-project'
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller._shelve, self.req, fakes.FAKE_UUID,
-            body={'shelve': {}})
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-    @mock.patch('nova.compute.api.API.shelve')
-    @mock.patch('nova.api.openstack.common.get_instance')
-    def test_shelve_overridden_policy_pass_with_same_project(self,
-                                                             get_instance_mock,
-                                                             shelve_mock):
-        instance = fake_instance.fake_instance_obj(
-            self.req.environ['nova.context'],
-            project_id=self.req.environ['nova.context'].project_id)
-        get_instance_mock.return_value = instance
-        rule_name = "os_compute_api:os-shelve:shelve"
-        self.policy.set_rules({rule_name: "project_id:%(project_id)s"})
-        self.controller._shelve(self.req, fakes.FAKE_UUID, body={'shelve': {}})
-        shelve_mock.assert_called_once_with(self.req.environ['nova.context'],
-                                          instance)
-
-    @mock.patch('nova.api.openstack.common.get_instance')
-    def test_shelve_overridden_policy_failed_with_other_user_in_same_project(
-        self, get_instance_mock):
-        get_instance_mock.return_value = (
-            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
-        rule_name = "os_compute_api:os-shelve:shelve"
-        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
-        # Change the user_id in request context.
-        self.req.environ['nova.context'].user_id = 'other-user'
-        exc = self.assertRaises(exception.PolicyNotAuthorized,
-                                self.controller._shelve, self.req,
-                                fakes.FAKE_UUID, body={'shelve': {}})
-        self.assertEqual(
-                      "Policy doesn't allow %s to be performed." % rule_name,
-                      exc.format_message())
-
-    @mock.patch('nova.compute.api.API.shelve')
-    @mock.patch('nova.api.openstack.common.get_instance')
-    def test_shelve_overridden_policy_pass_with_same_user(self,
-                                                        get_instance_mock,
-                                                        shelve_mock):
-        instance = fake_instance.fake_instance_obj(
-            self.req.environ['nova.context'],
-            user_id=self.req.environ['nova.context'].user_id)
-        get_instance_mock.return_value = instance
-        rule_name = "os_compute_api:os-shelve:shelve"
-        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
-        self.controller._shelve(self.req, fakes.FAKE_UUID, body={'shelve': {}})
-        shelve_mock.assert_called_once_with(self.req.environ['nova.context'],
-                                          instance)
-
-    def test_shelve_offload_restricted_by_role(self):
-        rules = {'os_compute_api:os-shelve:shelve_offload': 'role:admin'}
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-
-        self.assertRaises(exception.Forbidden,
-                self.controller._shelve_offload, self.req,
-                uuidsentinel.fake, {})
-
-    def test_shelve_offload_policy_failed(self):
-        rule_name = "os_compute_api:os-shelve:shelve_offload"
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller._shelve_offload, self.req, fakes.FAKE_UUID,
-            body={'shelve_offload': {}})
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-    @mock.patch('nova.api.openstack.common.get_instance')
-    def test_unshelve_restricted_by_role(self, get_instance_mock):
-        get_instance_mock.return_value = (
-            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
-        rules = {'os_compute_api:os-shelve:unshelve': 'role:admin'}
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-
-        self.assertRaises(exception.Forbidden, self.controller._unshelve,
-                self.req, uuidsentinel.fake, body={'unshelve': {}})
-
-    @mock.patch('nova.api.openstack.common.get_instance')
-    def test_unshelve_policy_failed(self, get_instance_mock):
-        get_instance_mock.return_value = (
-            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
-        rule_name = "os_compute_api:os-shelve:unshelve"
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller._unshelve, self.req, fakes.FAKE_UUID,
-            body={'unshelve': {}})
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
 
 
 class UnshelveServerControllerTestV277(test.NoDBTestCase):
