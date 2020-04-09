@@ -1237,6 +1237,54 @@ class UpdateVolumeAttachTests(VolumeAttachTestsV279):
     @mock.patch.object(objects.BlockDeviceMapping,
                        'get_by_volume_and_instance')
     @mock.patch.object(block_device_obj.BlockDeviceMapping, 'save')
+    def test_update_volume_with_bool_from_string(
+            self, mock_bdm_save, mock_get_vol_and_inst, mock_swap):
+        vol_bdm = objects.BlockDeviceMapping(
+            self.context,
+            id=1,
+            instance_uuid=FAKE_UUID,
+            volume_id=FAKE_UUID_A,
+            source_type='volume',
+            destination_type='volume',
+            delete_on_termination=True,
+            connection_info=None,
+            tag='fake-tag',
+            device_name='/dev/fake0',
+            attachment_id=uuids.attachment_id)
+        mock_get_vol_and_inst.return_value = vol_bdm
+
+        body = {'volumeAttachment': {
+            'volumeId': FAKE_UUID_A,
+            'tag': 'fake-tag',
+            'delete_on_termination': 'False',
+            'device': '/dev/fake0',
+        }}
+        self.attachments.update(self.req, FAKE_UUID,
+                                FAKE_UUID_A, body=body)
+        mock_swap.assert_not_called()
+        mock_bdm_save.assert_called_once()
+        self.assertFalse(vol_bdm['delete_on_termination'])
+
+        # Update delete_on_termination to False
+        body['volumeAttachment']['delete_on_termination'] = '0'
+        self.attachments.update(self.req, FAKE_UUID,
+                                FAKE_UUID_A, body=body)
+        mock_swap.assert_not_called()
+        mock_bdm_save.assert_called()
+        self.assertFalse(vol_bdm['delete_on_termination'])
+
+        # Update delete_on_termination to True
+        body['volumeAttachment']['delete_on_termination'] = '1'
+        self.attachments.update(self.req, FAKE_UUID,
+                                FAKE_UUID_A, body=body)
+        mock_swap.assert_not_called()
+        mock_bdm_save.assert_called()
+        self.assertTrue(vol_bdm['delete_on_termination'])
+
+    @mock.patch.object(compute_api.API, 'swap_volume')
+    @mock.patch.object(objects.BlockDeviceMapping,
+                       'get_by_volume_and_instance')
+    @mock.patch.object(block_device_obj.BlockDeviceMapping, 'save')
     def test_update_volume_swap(self, mock_bdm_save,
                                 mock_get_vol_and_inst, mock_swap):
         vol_bdm = objects.BlockDeviceMapping(
