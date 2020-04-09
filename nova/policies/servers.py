@@ -25,50 +25,55 @@ CROSS_CELL_RESIZE = 'compute:servers:resize:cross_cell'
 
 rules = [
     policy.DocumentedRuleDefault(
-        SERVERS % 'index',
-        RULE_AOO,
-        "List all servers",
-        [
+        name=SERVERS % 'index',
+        check_str=RULE_AOO,
+        description="List all servers",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/servers'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        SERVERS % 'detail',
-        RULE_AOO,
-        "List all servers with detailed information",
-        [
+        name=SERVERS % 'detail',
+        check_str=RULE_AOO,
+        description="List all servers with detailed information",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/servers/detail'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        SERVERS % 'index:get_all_tenants',
-        base.RULE_ADMIN_API,
-        "List all servers for all projects",
-        [
+        name=SERVERS % 'index:get_all_tenants',
+        check_str=base.RULE_ADMIN_API,
+        description="List all servers for all projects",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/servers'
             }
-        ]),
+        ],
+        scope_types=['system']),
     policy.DocumentedRuleDefault(
-        SERVERS % 'detail:get_all_tenants',
-        base.RULE_ADMIN_API,
-        "List all servers with detailed information for all projects",
-        [
+        name=SERVERS % 'detail:get_all_tenants',
+        check_str=base.RULE_ADMIN_API,
+        description="List all servers with detailed information for "
+        " all projects",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/servers/detail'
             }
-        ]),
+        ],
+        scope_types=['system']),
     policy.DocumentedRuleDefault(
-        SERVERS % 'allow_all_filters',
-        base.RULE_ADMIN_API,
-        "Allow all filters when listing servers",
-        [
+        name=SERVERS % 'allow_all_filters',
+        check_str=base.RULE_ADMIN_API,
+        description="Allow all filters when listing servers",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/servers'
@@ -77,17 +82,19 @@ rules = [
                 'method': 'GET',
                 'path': '/servers/detail'
             }
-        ]),
+        ],
+        scope_types=['system']),
     policy.DocumentedRuleDefault(
-        SERVERS % 'show',
-        RULE_AOO,
-        "Show a server",
-        [
+        name=SERVERS % 'show',
+        check_str=RULE_AOO,
+        description="Show a server",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/servers/{server_id}'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     # the details in host_status are pretty sensitive, only admins
     # should do that by default.
     policy.DocumentedRuleDefault(
@@ -148,31 +155,33 @@ allow everyone.
             }
         ]),
     policy.DocumentedRuleDefault(
-        SERVERS % 'create',
-        RULE_AOO,
-        "Create a server",
-        [
+        name=SERVERS % 'create',
+        check_str=RULE_AOO,
+        description="Create a server",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers'
             }
-        ]),
+        ],
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
-        SERVERS % 'create:forced_host',
-        base.RULE_ADMIN_API,
-        """
+        name=SERVERS % 'create:forced_host',
+        check_str=base.RULE_ADMIN_API,
+        description="""
 Create a server on the specified host and/or node.
 
 In this case, the server is forced to launch on the specified
 host and/or node by bypassing the scheduler filters unlike the
 ``compute:servers:create:requested_destination`` rule.
 """,
-        [
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers'
             }
-        ]),
+        ],
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         REQUESTED_DESTINATION,
         base.RULE_ADMIN_API,
@@ -191,35 +200,39 @@ validated by the scheduler filters unlike the
             }
         ]),
     policy.DocumentedRuleDefault(
-        SERVERS % 'create:attach_volume',
-        RULE_AOO,
-        "Create a server with the requested volume attached to it",
-        [
+        name=SERVERS % 'create:attach_volume',
+        check_str=RULE_AOO,
+        description="Create a server with the requested volume attached to it",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers'
             }
-        ]),
+        ],
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
-        SERVERS % 'create:attach_network',
-        RULE_AOO,
-        "Create a server with the requested network attached to it",
-        [
+        name=SERVERS % 'create:attach_network',
+        check_str=RULE_AOO,
+        description="Create a server with the requested network attached "
+        " to it",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers'
             }
-        ]),
+        ],
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
-        SERVERS % 'create:trusted_certs',
-        RULE_AOO,
-        "Create a server with trusted image certificate IDs",
-        [
+        name=SERVERS % 'create:trusted_certs',
+        check_str=RULE_AOO,
+        description="Create a server with trusted image certificate IDs",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers'
             }
-        ]),
+        ],
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         ZERO_DISK_FLAVOR,
         base.RULE_ADMIN_API,
@@ -261,65 +274,71 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
             }
         ]),
     policy.DocumentedRuleDefault(
-        SERVERS % 'delete',
-        RULE_AOO,
-        "Delete a server",
-        [
+        name=SERVERS % 'delete',
+        check_str=RULE_AOO,
+        description="Delete a server",
+        operations=[
             {
                 'method': 'DELETE',
                 'path': '/servers/{server_id}'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        SERVERS % 'update',
-        RULE_AOO,
-        "Update a server",
-        [
+        name=SERVERS % 'update',
+        check_str=RULE_AOO,
+        description="Update a server",
+        operations=[
             {
                 'method': 'PUT',
                 'path': '/servers/{server_id}'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        SERVERS % 'confirm_resize',
-        RULE_AOO,
-        "Confirm a server resize",
-        [
+        name=SERVERS % 'confirm_resize',
+        check_str=RULE_AOO,
+        description="Confirm a server resize",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (confirmResize)'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        SERVERS % 'revert_resize',
-        RULE_AOO,
-        "Revert a server resize",
-        [
+        name=SERVERS % 'revert_resize',
+        check_str=RULE_AOO,
+        description="Revert a server resize",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (revertResize)'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        SERVERS % 'reboot',
-        RULE_AOO,
-        "Reboot a server",
-        [
+        name=SERVERS % 'reboot',
+        check_str=RULE_AOO,
+        description="Reboot a server",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (reboot)'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        SERVERS % 'resize',
-        RULE_AOO,
-        "Resize a server",
-        [
+        name=SERVERS % 'resize',
+        check_str=RULE_AOO,
+        description="Resize a server",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (resize)'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
         CROSS_CELL_RESIZE,
         base.RULE_NOBODY,
@@ -334,75 +353,82 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
             }
         ]),
     policy.DocumentedRuleDefault(
-        SERVERS % 'rebuild',
-        RULE_AOO,
-        "Rebuild a server",
-        [
+        name=SERVERS % 'rebuild',
+        check_str=RULE_AOO,
+        description="Rebuild a server",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (rebuild)'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        SERVERS % 'rebuild:trusted_certs',
-        RULE_AOO,
-        "Rebuild a server with trusted image certificate IDs",
-        [
+        name=SERVERS % 'rebuild:trusted_certs',
+        check_str=RULE_AOO,
+        description="Rebuild a server with trusted image certificate IDs",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (rebuild)'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        SERVERS % 'create_image',
-        RULE_AOO,
-        "Create an image from a server",
-        [
+        name=SERVERS % 'create_image',
+        check_str=RULE_AOO,
+        description="Create an image from a server",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (createImage)'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        SERVERS % 'create_image:allow_volume_backed',
-        RULE_AOO,
-        "Create an image from a volume backed server",
-        [
+        name=SERVERS % 'create_image:allow_volume_backed',
+        check_str=RULE_AOO,
+        description="Create an image from a volume backed server",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (createImage)'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        SERVERS % 'start',
-        RULE_AOO,
-        "Start a server",
-        [
+        name=SERVERS % 'start',
+        check_str=RULE_AOO,
+        description="Start a server",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (os-start)'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        SERVERS % 'stop',
-        RULE_AOO,
-        "Stop a server",
-        [
+        name=SERVERS % 'stop',
+        check_str=RULE_AOO,
+        description="Stop a server",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (os-stop)'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        SERVERS % 'trigger_crash_dump',
-        RULE_AOO,
-        "Trigger crash dump in a server",
-        [
+        name=SERVERS % 'trigger_crash_dump',
+        check_str=RULE_AOO,
+        description="Trigger crash dump in a server",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (trigger_crash_dump)'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
 ]
 
 

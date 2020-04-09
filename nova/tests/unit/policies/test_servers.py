@@ -121,6 +121,17 @@ class ServersPolicyTest(base.BasePolicyTest):
             self.project_reader_context, self.project_foo_context,
             self.other_project_member_context
         ]
+        # Check that project member is able to create serve
+        self.project_member_authorized_contexts = [
+            self.legacy_admin_context, self.system_admin_context,
+            self.project_admin_context, self.project_member_context,
+            self.system_member_context,
+            self.other_project_member_context,
+            self.project_reader_context, self.project_foo_context,
+            self.system_reader_context, self.system_foo_context]
+        # Check that non-project member is not able to create server
+        self.project_member_unauthorized_contexts = [
+        ]
 
     def test_index_server_policy(self):
 
@@ -241,8 +252,8 @@ class ServersPolicyTest(base.BasePolicyTest):
     def test_create_server_policy(self, mock_create):
         mock_create.return_value = ([self.instance], '')
         rule_name = policies.SERVERS % 'create'
-        self.common_policy_check(self.everyone_authorized_contexts,
-                                 self.everyone_unauthorized_contexts,
+        self.common_policy_check(self.project_member_authorized_contexts,
+                                 self.project_member_unauthorized_contexts,
                                  rule_name,
                                  self.controller.create,
                                  self.req, body=self.body)
@@ -281,8 +292,8 @@ class ServersPolicyTest(base.BasePolicyTest):
                 'block_device_mapping': [{'device_name': 'foo'}],
             },
         }
-        self.common_policy_check(self.everyone_authorized_contexts,
-                                 self.everyone_unauthorized_contexts,
+        self.common_policy_check(self.project_member_authorized_contexts,
+                                 self.project_member_unauthorized_contexts,
                                  rule_name,
                                  self.controller.create,
                                  self.req, body=body)
@@ -306,8 +317,8 @@ class ServersPolicyTest(base.BasePolicyTest):
                 }],
             },
         }
-        self.common_policy_check(self.everyone_authorized_contexts,
-                                 self.everyone_unauthorized_contexts,
+        self.common_policy_check(self.project_member_authorized_contexts,
+                                 self.project_member_unauthorized_contexts,
                                  rule_name,
                                  self.controller.create,
                                  self.req, body=body)
@@ -334,8 +345,8 @@ class ServersPolicyTest(base.BasePolicyTest):
 
             },
         }
-        self.common_policy_check(self.everyone_authorized_contexts,
-                                 self.everyone_unauthorized_contexts,
+        self.common_policy_check(self.project_member_authorized_contexts,
+                                 self.project_member_unauthorized_contexts,
                                  rule_name,
                                  self.controller.create,
                                  req, body=body)
@@ -698,3 +709,143 @@ class ServersScopeTypePolicyTest(ServersPolicyTest):
     def setUp(self):
         super(ServersScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+
+        # Check that system admin is able to list the servers
+        # for all projects.
+        self.admin_authorized_contexts = [
+            self.system_admin_context]
+        # Check that non-system/admin is not able to list the servers
+        # for all projects.
+        self.admin_unauthorized_contexts = [
+            self.legacy_admin_context, self.project_admin_context,
+            self.system_member_context, self.system_reader_context,
+            self.system_foo_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context,
+            self.other_project_member_context
+        ]
+
+        # Check if project member can create the server.
+        self.project_member_authorized_contexts = [
+            self.legacy_admin_context,
+            self.project_admin_context, self.project_member_context,
+            self.other_project_member_context, self.project_reader_context,
+            self.project_foo_context
+        ]
+        # Check if non-project member cannot create the server.
+        self.project_member_unauthorized_contexts = [
+            self.system_admin_context, self.system_member_context,
+            self.system_reader_context, self.system_foo_context,
+        ]
+
+        # Check if project admin can create the server with host.
+        self.project_admin_authorized_contexts = [
+            self.legacy_admin_context, self.project_admin_context
+        ]
+        # Check if non-project admin cannot create the server with host.
+        self.project_admin_unauthorized_contexts = [
+            self.project_member_context, self.other_project_member_context,
+            self.project_reader_context, self.project_foo_context,
+            self.system_admin_context, self.system_member_context,
+            self.system_reader_context, self.system_foo_context,
+        ]
+
+    @mock.patch('nova.compute.api.API.create')
+    @mock.patch('nova.compute.api.API.parse_availability_zone')
+    def test_create_forced_host_server_policy(self, mock_az, mock_create):
+        # These policy are project scoped only and 'create' policy is checked
+        # before 'create:forced_host' so we need to allow 'create' policy
+        # for everyone. Also skip the error message assertion because for
+        # system scoped unauth context 'create' policy fail and for project
+        # scoped unauth context 'create:forced_host' fail.
+        rule = policies.SERVERS % 'create'
+        self.policy.set_rules({rule: "@"}, overwrite=False)
+        mock_create.return_value = ([self.instance], '')
+        mock_az.return_value = ('test', 'host', None)
+        # rule_name = policies.SERVERS % 'create:forced_host'
+        self.common_policy_check(self.project_admin_authorized_contexts,
+                                 self.project_admin_unauthorized_contexts,
+                                 None,
+                                 self.controller.create,
+                                 self.req, body=self.body)
+
+    @mock.patch('nova.compute.api.API.create')
+    def test_create_attach_volume_server_policy(self, mock_create):
+        # These policy are project scoped only and 'create' policy is checked
+        # before 'create:attach_volume' so even we allow it for everyone
+        # system scoped context cannot validate theese as they fail
+        # on 'create' policy itself.
+        # So sending the 'create' rule for policy error assertion.
+        rule = policies.SERVERS % 'create'
+        self.policy.set_rules({rule: "@"}, overwrite=False)
+        mock_create.return_value = ([self.instance], '')
+        # rule_name = policies.SERVERS % 'create:attach_volume'
+        body = {
+            'server': {
+                'name': 'server_test',
+                'imageRef': uuids.fake_id,
+                'flavorRef': uuids.fake_id,
+                'block_device_mapping': [{'device_name': 'foo'}],
+            },
+        }
+        self.common_policy_check(self.project_member_authorized_contexts,
+                                 self.project_member_unauthorized_contexts,
+                                 rule,
+                                 self.controller.create,
+                                 self.req, body=body)
+
+    @mock.patch('nova.compute.api.API.create')
+    def test_create_attach_network_server_policy(self, mock_create):
+        # These policy are project scoped only and 'create' policy is checked
+        # before 'create:attach_network' so even we allow it for everyone
+        # system scoped context cannot validate theese as they fail
+        # on 'create' policy itself.
+        # So sending the 'create' rule for policy error assertion.
+        rule = policies.SERVERS % 'create'
+        self.policy.set_rules({rule: "@"}, overwrite=False)
+        mock_create.return_value = ([self.instance], '')
+        # rule_name = policies.SERVERS % 'create:attach_network'
+        body = {
+            'server': {
+                'name': 'server_test',
+                'imageRef': uuids.fake_id,
+                'flavorRef': uuids.fake_id,
+                'networks': [{
+                    'uuid': uuids.fake_id
+                }],
+            },
+        }
+        self.common_policy_check(self.project_member_authorized_contexts,
+                                 self.project_member_unauthorized_contexts,
+                                 rule,
+                                 self.controller.create,
+                                 self.req, body=body)
+
+    @mock.patch('nova.compute.api.API.create')
+    def test_create_trusted_certs_server_policy(self, mock_create):
+        # These policy are project scoped only and 'create' policy is checked
+        # before 'create:trusted_certs' so even we allow it for everyone
+        # system scoped context cannot validate theese as they fail
+        # on 'create' policy itself.
+        # So sending the 'create' rule for policy error assertion.
+        rule = policies.SERVERS % 'create'
+        self.policy.set_rules({rule: "@"}, overwrite=False)
+        req = fakes.HTTPRequest.blank('', version='2.63')
+        mock_create.return_value = ([self.instance], '')
+        # rule_name = policies.SERVERS % 'create:trusted_certs'
+        body = {
+            'server': {
+                'name': 'server_test',
+                'imageRef': uuids.fake_id,
+                'flavorRef': uuids.fake_id,
+                'trusted_image_certificates': [uuids.fake_id],
+                'networks': [{
+                    'uuid': uuids.fake_id
+                }],
+
+            },
+        }
+        self.common_policy_check(self.project_member_authorized_contexts,
+                                 self.project_member_unauthorized_contexts,
+                                 rule,
+                                 self.controller.create,
+                                 req, body=body)
