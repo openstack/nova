@@ -86,8 +86,9 @@ class ShelveController(wsgi.Controller):
     def _unshelve(self, req, id, body):
         """Restore an instance from shelved mode."""
         context = req.environ["nova.context"]
-        context.can(shelve_policies.POLICY_ROOT % 'unshelve')
         instance = common.get_instance(self.compute_api, context, id)
+        context.can(shelve_policies.POLICY_ROOT % 'unshelve',
+                    target={'project_id': instance.project_id})
 
         new_az = None
         unshelve_dict = body['unshelve']
