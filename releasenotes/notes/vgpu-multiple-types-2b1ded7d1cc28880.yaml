@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    The libvirt driver now supports defining different virtual GPU types for
+    each physical GPU. See the ``[devices]/enabled_vgpu_types`` configuration
+    option for knowing how to do it. Please refer to
+    https://docs.openstack.org/nova/latest/admin/virtual-gpu.html for further
+    documentation.

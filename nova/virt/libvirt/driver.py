@@ -429,6 +429,10 @@ class LibvirtDriver(driver.ComputeDriver):
         self._vpmems_by_name, self._vpmems_by_rc = self._discover_vpmems(
                 vpmem_conf=CONF.libvirt.pmem_namespaces)
 
+        # We default to not support vGPUs unless the configuration is set.
+        self.pgpu_type_mapping = collections.defaultdict(str)
+        self.supported_vgpu_types = self._get_supported_vgpu_types()
+
     def _discover_vpmems(self, vpmem_conf=None):
         """Discover vpmems on host and configuration.
 
@@ -791,6 +795,21 @@ class LibvirtDriver(driver.ComputeDriver):
                 dev_name = libvirt_utils.mdev_uuid2name(mdev_uuid)
                 dev_info = self._get_mediated_device_information(dev_name)
                 parent = dev_info['parent']
+                parent_type = self._get_vgpu_type_per_pgpu(parent)
+                if dev_info['type'] != parent_type:
+                    # NOTE(sbauza): The mdev was created by using a different
+                    # vGPU type. We can't recreate the mdev until the operator
+                    # modifies the configuration.
+                    parent = "{}:{}:{}.{}".format(*parent[4:].split('_'))
+                    msg = ("The instance UUID %(inst)s uses a VGPU that "
+                           "its parent pGPU %(parent)s no longer "
+                           "supports as the instance vGPU type %(type)s "
+                           "is not accepted for the pGPU. Please correct "
+                           "the configuration accordingly." %
+                           {'inst': instance_uuid,
+                            'parent': parent,
+                            'type': dev_info['type']})
+                    raise exception.InvalidLibvirtGPUConfig(reason=msg)
                 self._create_new_mediated_device(parent, uuid=mdev_uuid)
 
     def _set_multiattach_support(self):
@@ -6481,12 +6500,80 @@ class LibvirtDriver(driver.ComputeDriver):
     def _get_supported_vgpu_types(self):
         if not CONF.devices.enabled_vgpu_types:
             return []
-        # TODO(sbauza): Move this check up to compute_manager.init_host
-        if len(CONF.devices.enabled_vgpu_types) > 1:
-            LOG.warning('libvirt only supports one GPU type per compute node,'
-                        ' only first type will be used.')
-        requested_types = CONF.devices.enabled_vgpu_types[:1]
-        return requested_types
+
+        for vgpu_type in CONF.devices.enabled_vgpu_types:
+            group = getattr(CONF, 'vgpu_%s' % vgpu_type, None)
+            if group is None or not group.device_addresses:
+                first_type = CONF.devices.enabled_vgpu_types[0]
+                if len(CONF.devices.enabled_vgpu_types) > 1:
+                    # Only provide the warning if the operator provided more
+                    # than one type as it's not needed to provide groups
+                    # if you only use one vGPU type.
+                    msg = ("The vGPU type '%(type)s' was listed in '[devices] "
+                           "enabled_vgpu_types' but no corresponding "
+                           "'[vgpu_%(type)s]' group or "
+                           "'[vgpu_%(type)s] device_addresses' "
+                           "option was defined. Only the first type "
+                           "'%(ftype)s' will be used." % {'type': vgpu_type,
+                                                         'ftype': first_type})
+                    LOG.warning(msg)
+                # We need to reset the mapping table that we started to provide
+                # keys and values from previously processed vGPUs but since
+                # there is a problem for this vGPU type, we only want to
+                # support only the first type.
+                self.pgpu_type_mapping.clear()
+                return [first_type]
+            for device_address in group.device_addresses:
+                if device_address in self.pgpu_type_mapping:
+                    raise exception.InvalidLibvirtGPUConfig(
+                        reason="duplicate types for PCI ID %s" % device_address
+                    )
+                # Just checking whether the operator fat-fingered the address.
+                # If it's wrong, it will return an exception
+                try:
+                    pci_utils.parse_address(device_address)
+                except exception.PciDeviceWrongAddressFormat:
+                    raise exception.InvalidLibvirtGPUConfig(
+                        reason="incorrect PCI address: %s" % device_address
+                    )
+                self.pgpu_type_mapping[device_address] = vgpu_type
+        return CONF.devices.enabled_vgpu_types
+
+    def _get_vgpu_type_per_pgpu(self, device_address):
+        """Provides the vGPU type the pGPU supports.
+
+        :param device_address: the libvirt PCI device name,
+                               eg.'pci_0000_84_00_0'
+        """
+        # Bail out quickly if we don't support vGPUs
+        if not self.supported_vgpu_types:
+            return
+
+        if len(self.supported_vgpu_types) == 1:
+            # The operator wanted to only support one single type so we can
+            # blindly return it for every single pGPU
+            return self.supported_vgpu_types[0]
+        # The libvirt name is like 'pci_0000_84_00_0'
+        try:
+            device_address = "{}:{}:{}.{}".format(
+                *device_address[4:].split('_'))
+            # Validates whether it's a PCI ID...
+            pci_utils.parse_address(device_address)
+        # .format() can return IndexError
+        except (exception.PciDeviceWrongAddressFormat, IndexError):
+            # this is not a valid PCI address
+            LOG.warning("The PCI address %s was invalid for getting the"
+                        "related vGPU type", device_address)
+            return
+        try:
+            return self.pgpu_type_mapping.get(device_address)
+        except KeyError:
+            LOG.warning("No vGPU type was configured for PCI address: %s",
+                        device_address)
+            # We accept to return None instead of raising an exception
+            # because we prefer the callers to return the existing exceptions
+            # in case we can't find a specific pGPU
+            return
 
     def _count_mediated_devices(self, enabled_vgpu_types):
         """Counts the sysfs objects (handles) that represent a mediated device
@@ -6502,6 +6589,12 @@ class LibvirtDriver(driver.ComputeDriver):
         counts_per_parent = collections.defaultdict(int)
         mediated_devices = self._get_mediated_devices(types=enabled_vgpu_types)
         for mdev in mediated_devices:
+            parent_vgpu_type = self._get_vgpu_type_per_pgpu(mdev['parent'])
+            if mdev['type'] != parent_vgpu_type:
+                # Even if some mdev was created for another vGPU type, just
+                # verify all the mdevs related to the type that their pGPU
+                # has
+                continue
             counts_per_parent[mdev['parent']] += 1
         return counts_per_parent
 
@@ -6520,10 +6613,13 @@ class LibvirtDriver(driver.ComputeDriver):
             # dev_id is the libvirt name for the PCI device,
             # eg. pci_0000_84_00_0 which matches a PCI address of 0000:84:00.0
             dev_name = dev['dev_id']
+            dev_supported_type = self._get_vgpu_type_per_pgpu(dev_name)
             for _type in dev['types']:
+                if _type != dev_supported_type:
+                    # This is not the type the operator wanted to support for
+                    # this physical GPU
+                    continue
                 available = dev['types'][_type]['availableInstances']
-                # TODO(sbauza): Once we support multiple types, check which
-                # PCI devices are set for this type
                 # NOTE(sbauza): Even if we support multiple types, Nova will
                 # only use one per physical GPU.
                 counts_per_dev[dev_name] += available
@@ -6546,7 +6642,7 @@ class LibvirtDriver(driver.ComputeDriver):
         """
 
         # Bail out early if operator doesn't care about providing vGPUs
-        enabled_vgpu_types = self._get_supported_vgpu_types()
+        enabled_vgpu_types = self.supported_vgpu_types
         if not enabled_vgpu_types:
             return {}
         inventories = {}
@@ -6907,6 +7003,11 @@ class LibvirtDriver(driver.ComputeDriver):
         mdevs = self._get_mediated_devices(requested_types)
         available_mdevs = set()
         for mdev in mdevs:
+            parent_vgpu_type = self._get_vgpu_type_per_pgpu(mdev['parent'])
+            if mdev['type'] != parent_vgpu_type:
+                # This mdev is using a vGPU type that is not supported by the
+                # configuration option for its pGPU parent, so we can't use it.
+                continue
             # FIXME(sbauza): No longer accept the parent value to be nullable
             # once we fix the reshape functional test
             if parent is None or mdev['parent'] == parent:
@@ -6924,7 +7025,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         :returns: the newly created mdev UUID or None if not possible
         """
-        supported_types = self._get_supported_vgpu_types()
+        supported_types = self.supported_vgpu_types
         # Try to see if we can still create a new mediated device
         devices = self._get_mdev_capable_devices(supported_types)
         for device in devices:
@@ -6935,19 +7036,15 @@ class LibvirtDriver(driver.ComputeDriver):
                 # The device is not the one that was called, not creating
                 # the mdev
                 continue
-            # For the moment, the libvirt driver only supports one
-            # type per host
-            # TODO(sbauza): Once we support more than one type, make
-            # sure we lookup which type the parent pGPU supports.
-            asked_type = supported_types[0]
-            if device['types'][asked_type]['availableInstances'] > 0:
+            dev_supported_type = self._get_vgpu_type_per_pgpu(dev_name)
+            if dev_supported_type and device['types'][
+                    dev_supported_type]['availableInstances'] > 0:
                 # That physical GPU has enough room for a new mdev
                 # We need the PCI address, not the libvirt name
                 # The libvirt name is like 'pci_0000_84_00_0'
                 pci_addr = "{}:{}:{}.{}".format(*dev_name[4:].split('_'))
-                chosen_mdev = nova.privsep.libvirt.create_mdev(pci_addr,
-                                                               asked_type,
-                                                               uuid=uuid)
+                chosen_mdev = nova.privsep.libvirt.create_mdev(
+                    pci_addr, dev_supported_type, uuid=uuid)
                 return chosen_mdev
 
     @utils.synchronized(VGPU_RESOURCE_SEMAPHORE)
@@ -6968,12 +7065,8 @@ class LibvirtDriver(driver.ComputeDriver):
         vgpu_allocations = self._vgpu_allocations(allocations)
         if not vgpu_allocations:
             return
-        # TODO(sbauza): Once we have nested resource providers, find which one
-        # is having the related allocation for the specific VGPU type.
-        # For the moment, we should only have one allocation for
-        # ResourceProvider.
-        # TODO(sbauza): Iterate over all the allocations once we have
-        # nested Resource Providers. For the moment, just take the first.
+        # TODO(sbauza): For the moment, we only support allocations for only
+        # one pGPU.
         if len(vgpu_allocations) > 1:
             LOG.warning('More than one allocation was passed over to libvirt '
                         'while at the moment libvirt only supports one. Only '
@@ -7022,7 +7115,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.ComputeResourcesUnavailable(
                     reason='vGPU resource is not available')
 
-        supported_types = self._get_supported_vgpu_types()
+        supported_types = self.supported_vgpu_types
         # Which mediated devices are created but not assigned to a guest ?
         mdevs_available = self._get_existing_mdevs_not_assigned(
             parent_device, supported_types)
@@ -7383,12 +7476,9 @@ class LibvirtDriver(driver.ComputeDriver):
             'reserved': self._get_reserved_host_disk_gb_from_config(),
         }
 
-        # NOTE(sbauza): For the moment, the libvirt driver only supports
-        # providing the total number of virtual GPUs for a single GPU type. If
-        # you have multiple physical GPUs, each of them providing multiple GPU
-        # types, only one type will be used for each of the physical GPUs.
-        # If one of the pGPUs doesn't support this type, it won't be used.
-        # TODO(sbauza): Use traits to make a better world.
+        # TODO(sbauza): Use traits to providing vGPU types. For the moment,
+        # it will be only documentation support by explaining to use
+        # osc-placement to create custom traits for each of the pGPU RPs.
         self._update_provider_tree_for_vgpu(
            provider_tree, nodename, allocations=allocations)
 
@@ -7527,13 +7617,6 @@ class LibvirtDriver(driver.ComputeDriver):
             representing that resource provider in the tree
         """
         # Create the VGPU child providers if they do not already exist.
-        # TODO(mriedem): For the moment, _get_supported_vgpu_types() only
-        # returns one single type but that will be changed once we support
-        # multiple types.
-        # Note that we can't support multiple vgpu types until a reshape has
-        # been performed on the vgpu resources provided by the root provider,
-        # if any.
-
         # Dict of PGPU RPs keyed by their libvirt PCI name
         pgpu_rps = {}
         for pgpu_dev_id, inventory in inventories_dict.items():

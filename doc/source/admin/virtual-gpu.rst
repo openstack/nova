@@ -35,14 +35,32 @@ Enable GPU types (Compute)
       [devices]
       enabled_vgpu_types = nvidia-35
 
-   .. note::
+   If you want to support more than a single GPU type, you need to provide a
+   separate configuration section for each device. For example:
 
-         As of the Queens release, Nova only supports a single type. If more
-         than one vGPU type is specified (as a comma-separated list), only the
-         first one will be used.
+   .. code-block:: ini
+
+      [devices]
+      enabled_vgpu_types = nvidia-35, nvidia-36
+
+      [vgpu_nvidia-35]
+      device_addresses = 0000:84:00.0,0000:85:00.0
+
+      [vgpu_nvidia-36]
+      device_addresses = 0000:86:00.0
+
+   where you have to define which physical GPUs are supported per GPU type.
+
+   If the same PCI address is provided for two different types, nova-compute
+   will refuse to start and issue a specific error in the logs.
 
    To know which specific type(s) to mention, please refer to `How to discover
    a GPU type`_.
+
+   .. versionchanged:: 21.0.0
+
+      Supporting multiple GPU types is only supported by the Ussuri release and
+      later versions.
 
 #. Restart the ``nova-compute`` service.
 
@@ -269,6 +287,59 @@ OpenStackClient. For details on specific commands, see its documentation.
    physical GPU having the PCI ID ``0000:85:00.0``.
 
 
+(Optional) Provide custom traits for multiple GPU types
+-------------------------------------------------------
+
+Since operators want to support different GPU types per compute, it would be
+nice to have flavors asking for a specific GPU type. This is now possible
+using custom traits by decorating child Resource Providers that correspond
+to physical GPUs.
+
+.. note::
+
+   Possible improvements in a future release could consist of providing
+   automatic tagging of Resource Providers with standard traits corresponding
+   to versioned mapping of public GPU types. For the moment, this has to be
+   done manually.
+
+#. Get the list of resource providers
+
+   See `Checking allocations and inventories for virtual GPUs`_ first for getting
+   the list of Resource Providers that support a ``VGPU`` resource class.
+
+#. Define custom traits that will correspond for each to a GPU type
+
+   .. code-block:: console
+
+      $ openstack --os-placement-api-version 1.6 trait create CUSTOM_NVIDIA_11
+
+   In this example, we ask to create a custom trait named ``CUSTOM_NVIDIA_11``.
+
+#. Add the corresponding trait to the Resource Provider matching the GPU
+
+   .. code-block:: console
+
+      $ openstack --os-placement-api-version 1.6 resource provider trait set \
+          --trait CUSTOM_NVIDIA_11 e2f8607b-0683-4141-a8af-f5e20682e28c
+
+   In this case, the trait ``CUSTOM_NVIDIA_11`` will be added to the Resource
+   Provider with the UUID ``e2f8607b-0683-4141-a8af-f5e20682e28c`` that
+   corresponds to the PCI address ``0000:85:00:0`` as shown above.
+
+#. Amend the flavor to add a requested trait
+
+   .. code-block:: console
+
+      $ openstack flavor set --property trait:CUSTOM_NVIDIA_11=required vgpu_1
+
+   In this example, we add the ``CUSTOM_NVIDIA_11`` trait as a required
+   information for the ``vgpu_1`` flavor we created earlier.
+
+   This will allow the Placement service to only return the Resource Providers
+   matching this trait so only the GPUs that were decorated with will be checked
+   for this flavor.
+
+
 Caveats
 -------
 
@@ -323,6 +394,8 @@ For XenServer:
 * Cold migrating an instance to another host will have the same problem as
   resize. If you want to migrate an instance, make sure to rebuild it after the
   migration.
+
+* Multiple GPU types per compute is not supported by the XenServer driver.
 
 .. [#] https://bugs.launchpad.net/nova/+bug/1762688
 

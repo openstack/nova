@@ -1384,6 +1384,8 @@ class ComputeManager(manager.Manager):
             whitelist.Whitelist(CONF.pci.passthrough_whitelist)
 
         nova.conf.neutron.register_dynamic_opts(CONF)
+        # Even if only libvirt uses them, make it available for all drivers
+        nova.conf.devices.register_dynamic_opts(CONF)
 
         # Override the number of concurrent disk operations allowed if the
         # user has specified a limit.

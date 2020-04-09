@@ -87,6 +87,16 @@ class VGPUReshapeTests(base.ServersTestBase):
             '/resource_providers/%s/inventories' % compute_rp_uuid,
             inventories)
 
+        # enabled vgpu support
+        self.flags(
+            enabled_vgpu_types=fakelibvirt.NVIDIA_11_VGPU_TYPE,
+            group='devices')
+        # We don't want to restart the compute service or it would call for
+        # a reshape but we still want to accept some vGPU types so we call
+        # directly the needed method
+        self.compute.driver.supported_vgpu_types = (
+            self.compute.driver._get_supported_vgpu_types())
+
         # now we boot two servers with vgpu
         extra_spec = {"resources:VGPU": 1}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
@@ -139,10 +149,6 @@ class VGPUReshapeTests(base.ServersTestBase):
                 {'DISK_GB': 20, 'MEMORY_MB': 2048, 'VCPU': 2, 'VGPU': 1},
                 allocations[compute_rp_uuid]['resources'])
 
-        # enabled vgpu support
-        self.flags(
-            enabled_vgpu_types=fakelibvirt.NVIDIA_11_VGPU_TYPE,
-            group='devices')
         # restart compute which will trigger a reshape
         self.compute = self.restart_compute_service(self.compute)
 
