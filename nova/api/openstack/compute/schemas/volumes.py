@@ -96,8 +96,9 @@ del update_volume_attachment['properties']['volumeAttachment'][
     'properties']['device']
 
 # NOTE(brinzhang): Allow attachment_id, serverId, device, tag, and
-# delete_on_termination to be specified for RESTfulness, even though
-# we will not allow updating all of them.
+# delete_on_termination (i.e., follow the content of the GET response)
+# to be specified for RESTfulness, even though we will not allow updating
+# all of them.
 update_volume_attachment_v285 = {
     'type': 'object',
     'properties': {

@@ -1338,6 +1338,22 @@ class UpdateVolumeAttachTests(VolumeAttachTestsV279):
 
     @mock.patch.object(objects.BlockDeviceMapping,
                        'get_by_volume_and_instance')
+    def test_update_volume_with_changed_attachment_id_old_microversion(
+        self, mock_get_vol_and_inst):
+        body = {'volumeAttachment': {
+            'volumeId': FAKE_UUID_A,
+            'id': uuids.attachment_id,
+        }}
+        req = self._get_req(body, microversion='2.84')
+        ex = self.assertRaises(exception.ValidationError,
+                               self.attachments.update,
+                               req, FAKE_UUID,
+                               FAKE_UUID_A, body=body)
+        self.assertIn('Additional properties are not allowed',
+                      six.text_type(ex))
+
+    @mock.patch.object(objects.BlockDeviceMapping,
+                       'get_by_volume_and_instance')
     def test_update_volume_with_changed_serverId(self,
                                                  mock_get_vol_and_inst):
         vol_bdm = objects.BlockDeviceMapping(
@@ -1362,6 +1378,22 @@ class UpdateVolumeAttachTests(VolumeAttachTestsV279):
                           self.attachments.update,
                           self.req, FAKE_UUID,
                           FAKE_UUID_A, body=body)
+
+    @mock.patch.object(objects.BlockDeviceMapping,
+                       'get_by_volume_and_instance')
+    def test_update_volume_with_changed_serverId_old_microversion(
+        self, mock_get_vol_and_inst):
+        body = {'volumeAttachment': {
+            'volumeId': FAKE_UUID_A,
+            'serverId': uuids.server_id,
+        }}
+        req = self._get_req(body, microversion='2.84')
+        ex = self.assertRaises(exception.ValidationError,
+                               self.attachments.update,
+                               req, FAKE_UUID,
+                               FAKE_UUID_A, body=body)
+        self.assertIn('Additional properties are not allowed',
+                      six.text_type(ex))
 
     @mock.patch.object(objects.BlockDeviceMapping,
                        'get_by_volume_and_instance')
