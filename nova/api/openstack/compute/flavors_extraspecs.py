@@ -20,6 +20,7 @@ from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import flavors_extraspecs
 from nova.api.openstack import wsgi
 from nova.api import validation
+from nova.api.validation.extra_specs import validators
 from nova import exception
 from nova.i18n import _
 from nova.policies import flavor_extra_specs as fes_policies
@@ -28,22 +29,31 @@ from nova import utils
 
 class FlavorExtraSpecsController(wsgi.Controller):
     """The flavor extra specs API controller for the OpenStack API."""
+
     def _get_extra_specs(self, context, flavor_id):
         flavor = common.get_flavor(context, flavor_id)
         return dict(extra_specs=flavor.extra_specs)
 
-    # NOTE(gmann): Max length for numeric value is being checked
-    # explicitly as json schema cannot have max length check for numeric value
-    def _check_extra_specs_value(self, specs):
-        for value in specs.values():
-            try:
-                if isinstance(value, (six.integer_types, float)):
-                    value = six.text_type(value)
+    def _check_extra_specs_value(self, req, specs):
+        # TODO(stephenfin): Wire this up to check the API microversion
+        validation_supported = False
+        validation_mode = 'strict'
+
+        for name, value in specs.items():
+            # NOTE(gmann): Max length for numeric value is being checked
+            # explicitly as json schema cannot have max length check for
+            # numeric value
+            if isinstance(value, (six.integer_types, float)):
+                value = six.text_type(value)
+                try:
                     utils.check_string_length(value, 'extra_specs value',
                                               max_length=255)
-            except exception.InvalidInput as error:
-                raise webob.exc.HTTPBadRequest(
-                          explanation=error.format_message())
+                except exception.InvalidInput as error:
+                    raise webob.exc.HTTPBadRequest(
+                              explanation=error.format_message())
+
+            if validation_supported:
+                validators.validate(name, value, validation_mode)
 
     @wsgi.expected_errors(404)
     def index(self, req, flavor_id):
@@ -62,7 +72,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
         context.can(fes_policies.POLICY_ROOT % 'create')
 
         specs = body['extra_specs']
-        self._check_extra_specs_value(specs)
+        self._check_extra_specs_value(req, specs)
         flavor = common.get_flavor(context, flavor_id)
         try:
             flavor.extra_specs = dict(flavor.extra_specs, **specs)
@@ -79,7 +89,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
         context = req.environ['nova.context']
         context.can(fes_policies.POLICY_ROOT % 'update')
 
-        self._check_extra_specs_value(body)
+        self._check_extra_specs_value(req, body)
         if id not in body:
             expl = _('Request body and URI mismatch')
             raise webob.exc.HTTPBadRequest(explanation=expl)

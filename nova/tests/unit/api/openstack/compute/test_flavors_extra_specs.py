@@ -14,6 +14,8 @@
 #    under the License.
 
 import mock
+import testtools
+import unittest
 import webob
 
 from nova.api.openstack.compute import flavors_extraspecs \
@@ -264,6 +266,88 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
             self.assertRaises(self.bad_request, self.controller.create,
                               req, 1, body=body)
 
+    # TODO(stephenfin): Wire the microversion up
+    @unittest.expectedFailure
+    def test_create_invalid_specs_strict(self):
+        """Test behavior of strict validator."""
+        invalid_specs = {
+            'hw:numa_nodes': 'foo',
+            'hw:cpu_policy': 'sharrred',
+            'foo': 'bar',
+            'hw:cpu_policyyyyyyy': 'shared',
+        }
+        for key, value in invalid_specs.items():
+            body = {'extra_specs': {key: value}}
+            req = self._get_request(
+                '1/os-extra_specs', use_admin_context=True, version='2.82',
+            )
+            with testtools.ExpectedException(
+                self.bad_request, 'Validation failed; .*'
+            ):
+                self.controller.create(req, 1, body=body)
+
+    # TODO(stephenfin): Wire the microversion up
+    @unittest.expectedFailure
+    def test_create_invalid_specs_permissive(self):
+        """Test behavior of permissive validator."""
+        invalid_specs = {
+            'hw:numa_nodes': 'foo',
+            'hw:cpu_policy': 'sharrred',
+        }
+        for key, value in invalid_specs.items():
+            body = {'extra_specs': {key: value}}
+            req = self._get_request(
+                '1/os-extra_specs?validation=permissive',
+                use_admin_context=True, version='2.82',
+            )
+            with testtools.ExpectedException(
+                self.bad_request, 'Validation failed; .*',
+            ):
+                self.controller.create(req, 1, body=body)
+
+        valid_specs = {
+            'foo': 'bar',
+            'hw:cpu_policyyyyyyy': 'shared',
+        }
+        for key, value in valid_specs.items():
+            body = {'extra_specs': {key: value}}
+            req = self._get_request(
+                '1/os-extra_specs?validation=permissive',
+                use_admin_context=True, version='2.82',
+            )
+            self.controller.create(req, 1, body=body)
+
+    def test_create_invalid_specs_disabled(self):
+        """Test behavior of permissive validator."""
+        valid_specs = {
+            'hw:numa_nodes': 'foo',
+            'hw:cpu_policy': 'sharrred',
+            'foo': 'bar',
+            'hw:cpu_policyyyyyyy': 'shared',
+        }
+        for key, value in valid_specs.items():
+            body = {'extra_specs': {key: value}}
+            req = self._get_request(
+                '1/os-extra_specs?validation=disabled',
+                use_admin_context=True, version='2.82',
+            )
+            self.controller.create(req, 1, body=body)
+
+    # TODO(stephenfin): Wire the microversion up
+    @unittest.expectedFailure
+    def test_create_invalid_validator_mode(self):
+        """Test behavior with an invalid validator mode."""
+        body = {'extra_specs': {'hw:numa_nodes': '1'}}
+        req = self._get_request(
+            '1/os-extra_specs?validation=foo',
+            use_admin_context=True, version='2.82',
+        )
+        with testtools.ExpectedException(
+            self.bad_request,
+            'Invalid input for query parameters validation.*',
+        ):
+            self.controller.create(req, 1, body=body)
+
     @mock.patch('nova.objects.flavor._flavor_extra_specs_add')
     def test_create_valid_specs(self, mock_flavor_extra_specs):
         valid_specs = {
@@ -366,3 +450,105 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
                                 use_admin_context=True)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, 1, 'hw:numa_nodes', body=body)
+
+    # TODO(stephenfin): Wire the microversion up
+    @unittest.expectedFailure
+    def test_update_invalid_specs_strict(self):
+        """Test behavior of strict validator."""
+        invalid_specs = {
+            'hw:numa_nodes': 'foo',
+            'hw:cpu_policy': 'sharrred',
+            'foo': 'bar',
+            'hw:cpu_policyyyyyyy': 'shared',
+        }
+        for key, value in invalid_specs.items():
+            body = {key: value}
+            req = self._get_request(
+                '1/os-extra_specs/{key}?validation=strict',
+                use_admin_context=True, version='2.82',
+            )
+            with testtools.ExpectedException(
+                self.bad_request, 'Validation failed; .*'
+            ):
+                self.controller.update(req, 1, key, body=body)
+
+    # TODO(stephenfin): Wire the microversion up
+    @unittest.expectedFailure
+    def test_update_invalid_specs_permissive(self):
+        """Test behavior of permissive validator."""
+        invalid_specs = {
+            'hw:numa_nodes': 'foo',
+            'hw:cpu_policy': 'sharrred',
+        }
+        for key, value in invalid_specs.items():
+            body = {key: value}
+            req = self._get_request(
+                f'1/os-extra_specs/{key}?validation=permissive',
+                use_admin_context=True, version='2.82',
+            )
+            with testtools.ExpectedException(
+                self.bad_request, 'Validation failed; .*',
+            ):
+                self.controller.update(req, 1, key, body=body)
+
+        valid_specs = {
+            'foo': 'bar',
+            'hw:cpu_policyyyyyyy': 'shared',
+        }
+        for key, value in valid_specs.items():
+            body = {key: value}
+            req = self._get_request(
+                f'1/os-extra_specs/{key}?validation=permissive',
+                use_admin_context=True, version='2.82',
+            )
+            self.controller.update(req, 1, key, body=body)
+
+    def test_update_invalid_specs_disabled(self):
+        """Test behavior of permissive validator."""
+        valid_specs = {
+            'hw:numa_nodes': 'foo',
+            'hw:cpu_policy': 'sharrred',
+            'foo': 'bar',
+            'hw:cpu_policyyyyyyy': 'shared',
+        }
+        for key, value in valid_specs.items():
+            body = {key: value}
+            req = self._get_request(
+                f'1/os-extra_specs/{key}?validation=disabled',
+                use_admin_context=True, version='2.82',
+            )
+            self.controller.update(req, 1, key, body=body)
+
+    # TODO(stephenfin): Wire the microversion up
+    @unittest.expectedFailure
+    def test_update_invalid_validator_mode(self):
+        """Test behavior with an invalid validator mode."""
+        key = 'hw:numa_nodes'
+        body = {'hw:numa_nodes': '1'}
+        req = self._get_request(
+            '1/os-extra_specs/{key}?validation=foo',
+            use_admin_context=True, version='2.82',
+        )
+        with testtools.ExpectedException(
+            self.bad_request,
+            'Invalid input for query parameters validation.*',
+        ):
+            self.controller.update(req, 1, key, body=body)
+
+    @mock.patch('nova.objects.flavor._flavor_extra_specs_add')
+    def test_update_valid_specs(self, mock_flavor_extra_specs):
+        valid_specs = {
+            'hide_hypervisor_id': 'true',
+            'hw:numa_nodes': '1',
+            'hw:numa_cpus.0': '0-3,8-9,11,10',
+        }
+        mock_flavor_extra_specs.side_effect = return_create_flavor_extra_specs
+
+        for key, value in valid_specs.items():
+            body = {key: value}
+            req = self._get_request(
+                f'1/os-extra_specs/{key}', use_admin_context=True,
+                version='2.82',
+            )
+            res_dict = self.controller.update(req, 1, key, body=body)
+            self.assertEqual(value, res_dict[key])

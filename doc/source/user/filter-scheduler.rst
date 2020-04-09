@@ -370,33 +370,89 @@ For further details about each of those objects and their corresponding
 attributes, refer to the codebase (at least by looking at the other filters
 code) or ask for help in the #openstack-nova IRC channel.
 
-The module containing your custom filter(s) must be packaged and available in
-the same environment that nova, or specifically the :program:`nova-scheduler`
-service, is available in. As an example, consider the following sample package,
-which is the `minimal structure`__ for a standard, setuptools-based Python
-package:
+In addition, if your custom filter uses non-standard extra specs, you must
+register validators for these extra specs. Examples of validators can be found
+in the ``nova.api.validation.extra_specs`` module. These should be registered
+via the ``nova.api.extra_spec_validator`` `entrypoint`__.
 
+The module containing your custom filter(s) must be packaged and available in
+the same environment(s) that the nova controllers, or specifically the
+:program:`nova-scheduler` and :program:`nova-api` services, are available in.
+As an example, consider the following sample package, which is the `minimal
+structure`__ for a standard, setuptools-based Python package:
+
+__ https://packaging.python.org/specifications/entry-points/
 __ https://python-packaging.readthedocs.io/en/latest/minimal.html
 
 .. code-block:: none
 
-    myfilter/
-        myfilter/
+    acmefilter/
+        acmefilter/
             __init__.py
+            validators.py
         setup.py
 
-The ``myfilter/myfilter/__init__.py`` could contain something like so:
+Where ``__init__.py`` contains:
 
 .. code-block:: python
 
+    from oslo_log import log as logging
     from nova.scheduler import filters
 
+    LOG = logging.getLogger(__name__)
 
-    class MyFilter(filters.BaseHostFilter):
+    class AcmeFilter(filters.BaseHostFilter):
 
         def host_passes(self, host_state, spec_obj):
-            # do stuff here...
+            extra_spec = spec_obj.flavor.extra_specs.get('acme:foo')
+            LOG.info("Extra spec value was '%s'", extra_spec)
+
+            # do meaningful stuff here...
+
             return True
+
+``validators.py`` contains:
+
+.. code-block:: python
+
+    from nova.api.validation.extra_specs import base
+
+    def register():
+        validators = [
+            base.ExtraSpecValidator(
+                name='acme:foo',
+                description='My custom extra spec.'
+                value={
+                    'type': str,
+                    'enum': [
+                        'bar',
+                        'baz',
+                    ],
+                },
+            ),
+        ]
+
+        return validators
+
+``setup.py`` contains:
+
+.. code-block:: python
+
+    from setuptools import setup
+
+    setup(
+        name='acmefilter',
+        version='0.1',
+        description='My custom filter',
+        packages=[
+            'acmefilter'
+        ],
+        entry_points={
+            'nova.api.extra_spec_validators': [
+                'acme = acmefilter.validators',
+            ],
+        },
+    )
 
 To enable this, you would set the following in :file:`nova.conf`:
 
@@ -404,8 +460,8 @@ To enable this, you would set the following in :file:`nova.conf`:
 
     [filter_scheduler]
     available_filters = nova.scheduler.filters.all_filters
-    available_filters = myfilter.MyFilter
-    enabled_filters = ComputeFilter,MyFilter
+    available_filters = acmefilter.AcmeFilter
+    enabled_filters = ComputeFilter,AcmeFilter
 
 .. note::
 
@@ -417,9 +473,9 @@ To enable this, you would set the following in :file:`nova.conf`:
     includes the filters shipped with nova.
 
 With these settings, nova will use the ``FilterScheduler`` for the scheduler
-driver. All of the standard nova filters and the custom ``MyFilter`` filter are
-available to the ``FilterScheduler``, but just the ``ComputeFilter`` and
-``MyFilter`` will be used on each request.
+driver. All of the standard nova filters and the custom ``AcmeFilter`` filter
+are available to the ``FilterScheduler``, but just the ``ComputeFilter`` and
+``AcmeFilter`` will be used on each request.
 
 Weights
 -------
