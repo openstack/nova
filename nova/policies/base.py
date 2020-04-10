@@ -115,7 +115,10 @@ rules = [
     policy.RuleDefault(
         "project_member_api",
         "role:member and project_id:%(project_id)s",
-        "Default rule for Project level non admin APIs."),
+        "Default rule for Project level non admin APIs.",
+        deprecated_rule=DEPRECATED_ADMIN_OR_OWNER_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='21.0.0'),
     policy.RuleDefault(
         "project_reader_api",
         "role:reader and project_id:%(project_id)s",
