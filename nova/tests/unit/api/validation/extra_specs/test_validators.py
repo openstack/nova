@@ -29,7 +29,8 @@ class TestValidators(test.NoDBTestCase):
         namespaces = {
             'accel', 'aggregate_instance_extra_specs', 'capabilities', 'hw',
             'hw_rng', 'hw_video', 'os', 'pci_passthrough', 'powervm', 'quota',
-            'resources', 'trait', 'vmware',
+            'resources(?P<group>(_[a-zA-z0-9_]*|\\d+)?)',
+            'trait(?P<group>(_[a-zA-z0-9_]*|\\d+)?)', 'vmware',
         }
         self.assertTrue(
             namespaces.issubset(validators.NAMESPACES),

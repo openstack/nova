@@ -272,6 +272,10 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
             'hw:cpu_policy': 'sharrred',
             'hw:cpu_policyyyyyyy': 'shared',
             'hw:foo': 'bar',
+            'trait:STORAGE_DISK_SSD': 'forbiden',
+            'trait_foo:HW_CPU_X86_AVX2': 'foo',
+            'trait:bar': 'required',
+            'trait_foo:bar': 'required',
         }
         for key, value in invalid_specs.items():
             body = {'extra_specs': {key: value}}
@@ -303,6 +307,8 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
             'hide_hypervisor_id': 'true',
             'hw:numa_nodes': '1',
             'hw:numa_cpus.0': '0-3,8-9,11,10',
+            'trait:STORAGE_DISK_SSD': 'forbidden',
+            'trait_foo:HW_CPU_X86_AVX2': 'required',
         }
         mock_flavor_extra_specs.side_effect = return_create_flavor_extra_specs
 
