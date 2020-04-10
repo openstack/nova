@@ -4247,7 +4247,8 @@ class API(base.Base):
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.ERROR])
     def rescue(self, context, instance, rescue_password=None,
-               rescue_image_ref=None, clean_shutdown=True):
+               rescue_image_ref=None, clean_shutdown=True,
+               allow_bfv_rescue=False):
         """Rescue the given instance."""
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
@@ -4256,7 +4257,20 @@ class API(base.Base):
             if bdm.volume_id:
                 vol = self.volume_api.get(context, bdm.volume_id)
                 self.volume_api.check_attached(context, vol)
-        if compute_utils.is_volume_backed_instance(context, instance, bdms):
+
+        volume_backed = compute_utils.is_volume_backed_instance(
+            context, instance, bdms)
+
+        if volume_backed and allow_bfv_rescue:
+            cn = objects.ComputeNode.get_by_host_and_nodename(
+                context, instance.host, instance.node)
+            traits = self.placementclient.get_provider_traits(
+                context, cn.uuid).traits
+            if os_traits.COMPUTE_RESCUE_BFV not in traits:
+                reason = _("Host unable to rescue a volume-backed instance")
+                raise exception.InstanceNotRescuable(instance_id=instance.uuid,
+                                                     reason=reason)
+        elif volume_backed:
             reason = _("Cannot rescue a volume-backed instance")
             raise exception.InstanceNotRescuable(instance_id=instance.uuid,
                                                  reason=reason)

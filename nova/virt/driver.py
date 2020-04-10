@@ -125,9 +125,10 @@ CAPABILITY_TRAITS_MAP = {
     "supports_image_type_vmdk": os_traits.COMPUTE_IMAGE_TYPE_VMDK,
     # Added in os-traits 2.0.0
     "supports_image_type_ploop": os_traits.COMPUTE_IMAGE_TYPE_PLOOP,
-
     # Added in os-traits 2.1.0.
     "supports_migrate_to_same_host": os_traits.COMPUTE_SAME_HOST_COLD_MIGRATE,
+    # Added in os-traits 2.2.0.
+    "supports_bfv_rescue": os_traits.COMPUTE_RESCUE_BFV,
 }
 
 
@@ -178,6 +179,7 @@ class ComputeDriver(object):
         "supports_trusted_certs": False,
         "supports_pcpus": False,
         "supports_accelerators": False,
+        "supports_bfv_rescue": False,
 
         # Image type support flags
         "supports_image_type_aki": False,

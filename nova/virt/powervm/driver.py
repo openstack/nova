@@ -68,6 +68,7 @@ class PowerVMDriver(driver.ComputeDriver):
         # capabilities on the instance rather than on the class.
         self.capabilities = {
             'has_imagecache': False,
+            'supports_bfv_rescue': False,
             'supports_evacuate': False,
             'supports_migrate_to_same_host': False,
             'supports_attach_interface': True,
