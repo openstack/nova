@@ -156,32 +156,3 @@ class QuotaClassSetsTestV257(QuotaClassSetsTestV250):
         for resource in quota_classes_v21.FILTERED_QUOTAS_2_57:
             self.quota_resources.pop(resource, None)
         self.filtered_quotas.extend(quota_classes_v21.FILTERED_QUOTAS_2_57)
-
-
-class QuotaClassesPolicyEnforcementV21(test.NoDBTestCase):
-
-    def setUp(self):
-        super(QuotaClassesPolicyEnforcementV21, self).setUp()
-        self.controller = quota_classes_v21.QuotaClassSetsController()
-        self.req = fakes.HTTPRequest.blank('')
-
-    def test_show_policy_failed(self):
-        rule_name = "os_compute_api:os-quota-class-sets:show"
-        self.policy.set_rules({rule_name: "quota_class:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.show, self.req, fakes.FAKE_UUID)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-    def test_update_policy_failed(self):
-        rule_name = "os_compute_api:os-quota-class-sets:update"
-        self.policy.set_rules({rule_name: "quota_class:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.update, self.req, fakes.FAKE_UUID,
-            body={'quota_class_set': {}})
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
