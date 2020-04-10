@@ -383,7 +383,7 @@ necessary to add changes to other places which describe your change:
   located under `api-ref/source/`.
 
 * If the microversion changes servers related APIs, update the
-  `api-guide/source/server_concepts.rst` accordingly.
+  ``api-guide/source/server_concepts.rst`` accordingly.
 
 .. _API Reference: https://docs.openstack.org/api-ref/compute/
 
