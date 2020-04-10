@@ -31,13 +31,24 @@ class QuotaClassSetsPolicyTest(base.BasePolicyTest):
         self.controller = quota_classes.QuotaClassSetsController()
         self.req = fakes.HTTPRequest.blank('')
 
-        # Check that admin is able to update and get quota class
+        # Check that admin is able to update quota class
         self.admin_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context]
-        # Check that non-admin is not able to update and get quota class
+        # Check that non-admin is not able to update quota class
         self.admin_unauthorized_contexts = [
             self.system_member_context, self.system_reader_context,
+            self.system_foo_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context,
+            self.other_project_member_context
+        ]
+        # Check that system reader is able to get quota class
+        self.system_reader_authorized_contexts = [
+            self.legacy_admin_context, self.system_admin_context,
+            self.project_admin_context, self.system_member_context,
+            self.system_reader_context]
+        # Check that non-system reader is not able to get quota class
+        self.system_reader_unauthorized_contexts = [
             self.system_foo_context, self.project_member_context,
             self.project_reader_context, self.project_foo_context,
             self.other_project_member_context
@@ -61,8 +72,8 @@ class QuotaClassSetsPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.quota.QUOTAS.get_class_quotas')
     def test_show_quota_class_sets_policy(self, mock_get):
         rule_name = policies.POLICY_ROOT % 'show'
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
+        self.common_policy_check(self.system_reader_authorized_contexts,
+                                 self.system_reader_unauthorized_contexts,
                                  rule_name,
                                  self.controller.show,
                                  self.req, 'test_class')
@@ -92,3 +103,25 @@ class QuotaClassSetsScopeTypePolicyTest(QuotaClassSetsPolicyTest):
             self.project_reader_context, self.project_foo_context,
             self.other_project_member_context
         ]
+        # Check that system reader is able to get quota class
+        self.system_reader_authorized_contexts = [
+            self.system_admin_context, self.system_member_context,
+            self.system_reader_context]
+        # Check that non-system reader is not able to get quota class
+        self.system_reader_unauthorized_contexts = [
+            self.legacy_admin_context, self.project_admin_context,
+            self.system_foo_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context,
+            self.other_project_member_context
+        ]
+
+
+class QuotaClassSetsNoLegacyPolicyTest(QuotaClassSetsScopeTypePolicyTest):
+    """Test Quota Class Sets APIs policies with system scope enabled,
+    and no more deprecated rules that allow the legacy admin API to
+    access system APIs.
+    """
+    without_deprecated_rules = True
+
+    def setUp(self):
+        super(QuotaClassSetsNoLegacyPolicyTest, self).setUp()
