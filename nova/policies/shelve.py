@@ -23,35 +23,38 @@ POLICY_ROOT = 'os_compute_api:os-shelve:%s'
 
 shelve_policies = [
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'shelve',
-        base.RULE_ADMIN_OR_OWNER,
-        "Shelve server",
-        [
+        name=POLICY_ROOT % 'shelve',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="Shelve server",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (shelve)'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'unshelve',
-        base.RULE_ADMIN_OR_OWNER,
-        "Unshelve (restore) shelved server",
-        [
+        name=POLICY_ROOT % 'unshelve',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="Unshelve (restore) shelved server",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (unshelve)'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'shelve_offload',
-        base.RULE_ADMIN_API,
-        "Shelf-offload (remove) server",
-        [
+        name=POLICY_ROOT % 'shelve_offload',
+        check_str=base.RULE_ADMIN_API,
+        description="Shelf-offload (remove) server",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (shelveOffload)'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
 ]
 
 
