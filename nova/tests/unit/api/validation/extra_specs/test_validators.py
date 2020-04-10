@@ -12,7 +12,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import ddt
 import testtools
 
 from nova.api.validation.extra_specs import validators
@@ -20,28 +19,43 @@ from nova import exception
 from nova import test
 
 
-@ddt.ddt
 class TestValidators(test.NoDBTestCase):
 
-    @ddt.data('strict', 'permissive', 'disabled')
-    def test_spec(self, policy):
-        invalid_specs = (
-            ('hw:cpu_realtime_maskk', '^0'),
+    def test_namespaces(self):
+        """Ensure we see at least the in-tree namespaces.
+
+        If we add new namespaces, they should be added to this list.
+        """
+        namespaces = {
+            'accel', 'aggregate_instance_extra_specs', 'capabilities', 'hw',
+            'hw_rng', 'hw_video', 'os', 'pci_passthrough', 'powervm', 'quota',
+            'resources', 'trait', 'vmware',
+        }
+        self.assertTrue(
+            namespaces.issubset(validators.NAMESPACES),
+            f'{namespaces} is not a subset of {validators.NAMESPACES}',
+        )
+
+    def test_spec(self):
+        unknown_namespaces = (
             ('hhw:cpu_realtime_mask', '^0'),
             ('w:cpu_realtime_mask', '^0'),
-            ('hw:cpu_realtime_mas', '^0'),
             ('hw_cpu_realtime_mask', '^0'),
             ('foo', 'bar'),
         )
-        for key, value in invalid_specs:
-            if policy == 'strict':
-                with testtools.ExpectedException(exception.ValidationError):
-                    validators.validate(key, value, policy)
-            else:
-                validators.validate(key, value, policy)
+        for key, value in unknown_namespaces:
+            validators.validate(key, value)
 
-    @ddt.data('strict', 'permissive', 'disabled')
-    def test_value__str(self, policy):
+        known_invalid_namespaces = (
+            ('hw:cpu_realtime_maskk', '^0'),
+            ('hw:cpu_realtime_mas', '^0'),
+            ('hw:foo', 'bar'),
+        )
+        for key, value in known_invalid_namespaces:
+            with testtools.ExpectedException(exception.ValidationError):
+                validators.validate(key, value)
+
+    def test_value__str(self):
         valid_specs = (
             # patterns
             ('hw:cpu_realtime_mask', '^0'),
@@ -55,7 +69,7 @@ class TestValidators(test.NoDBTestCase):
             ('hw:pci_numa_affinity_policy', 'legacy'),
         )
         for key, value in valid_specs:
-            validators.validate(key, value, policy)
+            validators.validate(key, value)
 
         invalid_specs = (
             # patterns
@@ -70,14 +84,10 @@ class TestValidators(test.NoDBTestCase):
             ('hw:pci_numa_affinity_policy', 'lgacy'),
         )
         for key, value in invalid_specs:
-            if policy in ('strict', 'permissive'):
-                with testtools.ExpectedException(exception.ValidationError):
-                    validators.validate(key, value, policy)
-            else:
-                validators.validate(key, value, policy)
+            with testtools.ExpectedException(exception.ValidationError):
+                validators.validate(key, value)
 
-    @ddt.data('strict', 'permissive', 'disabled')
-    def test_value__int(self, policy):
+    def test_value__int(self):
         valid_specs = (
             ('hw:numa_nodes', '1'),
             ('os:monitors', '1'),
@@ -86,7 +96,7 @@ class TestValidators(test.NoDBTestCase):
             ('powervm:shared_weight', '255'),
         )
         for key, value in valid_specs:
-            validators.validate(key, value, 'strict')
+            validators.validate(key, value)
 
         invalid_specs = (
             ('hw:serial_port_count', 'five'),  # NaN
@@ -98,14 +108,10 @@ class TestValidators(test.NoDBTestCase):
             ('powervm:shared_weight', '256'),  # has max
         )
         for key, value in invalid_specs:
-            if policy in ('strict', 'permissive'):
-                with testtools.ExpectedException(exception.ValidationError):
-                    validators.validate(key, value, policy)
-            else:
-                validators.validate(key, value, policy)
+            with testtools.ExpectedException(exception.ValidationError):
+                validators.validate(key, value)
 
-    @ddt.data('strict', 'permissive', 'disabled')
-    def test_value__bool(self, policy):
+    def test_value__bool(self):
         valid_specs = (
             ('hw:cpu_realtime', '1'),
             ('hw:cpu_realtime', '0'),
@@ -113,7 +119,7 @@ class TestValidators(test.NoDBTestCase):
             ('hw:boot_menu', 'y'),
         )
         for key, value in valid_specs:
-            validators.validate(key, value, 'strict')
+            validators.validate(key, value)
 
         invalid_specs = (
             ('hw:cpu_realtime', '2'),
@@ -122,8 +128,5 @@ class TestValidators(test.NoDBTestCase):
             ('hw:boot_menu', 'yah'),
         )
         for key, value in invalid_specs:
-            if policy in ('strict', 'permissive'):
-                with testtools.ExpectedException(exception.ValidationError):
-                    validators.validate(key, value, policy)
-            else:
-                validators.validate(key, value, policy)
+            with testtools.ExpectedException(exception.ValidationError):
+                validators.validate(key, value)

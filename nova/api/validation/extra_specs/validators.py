@@ -26,19 +26,16 @@ from nova import exception
 LOG = logging.getLogger(__name__)
 
 VALIDATORS: ty.Dict[str, base.ExtraSpecValidator] = {}
+NAMESPACES: ty.Set[str] = set()
 
 
-def validate(name: str, value: str, mode: str):
+def validate(name: str, value: str):
     """Validate a given extra spec.
 
     :param name: Extra spec name.
     :param value: Extra spec value.
-    :param mode: Validation mode; one of: strict, permissive, disabled
     :raises: exception.ValidationError if validation fails.
     """
-    if mode == 'disabled':
-        return
-
     # attempt a basic lookup for extra specs without embedded parameters
     if name in VALIDATORS:
         VALIDATORS[name].validate(name, value)
@@ -50,7 +47,8 @@ def validate(name: str, value: str, mode: str):
             validator.validate(name, value)
             return
 
-    if mode == 'permissive':  # unregistered extra spec, ignore
+    namespace = name.split(':', 1)[0].split('{')[0] if ':' in name else None
+    if not namespace or namespace not in NAMESPACES:  # unregistered namespace
         return
 
     raise exception.ValidationError(
@@ -74,6 +72,8 @@ def load_validators():
         # TODO(stephenfin): Make 'register' return a dict rather than a list?
         for validator in ext.plugin.register():
             VALIDATORS[validator.name] = validator
+            if ':' in validator.name:
+                NAMESPACES.add(validator.name.split(':', 1)[0].split('{')[0])
 
 
 load_validators()
