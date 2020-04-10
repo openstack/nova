@@ -16,6 +16,7 @@
 
 from webob import exc
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import rescue
 from nova.api.openstack import wsgi
@@ -56,11 +57,12 @@ class RescueController(wsgi.Controller):
         rescue_image_ref = None
         if body['rescue']:
             rescue_image_ref = body['rescue'].get('rescue_image_ref')
-
+        allow_bfv_rescue = api_version_request.is_supported(req, '2.87')
         try:
             self.compute_api.rescue(context, instance,
                                     rescue_password=password,
-                                    rescue_image_ref=rescue_image_ref)
+                                    rescue_image_ref=rescue_image_ref,
+                                    allow_bfv_rescue=allow_bfv_rescue)
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:

@@ -92,3 +92,9 @@ class RescueJsonTest(test_servers.ServersSampleBase):
         subs['hypervisor_hostname'] = r'[\w\.\-]+'
         subs['cdrive'] = '.*'
         self._verify_response('server-get-resp-unrescue', subs, response, 200)
+
+
+class Rescuev287JsonTest(RescueJsonTest):
+    """2.87 adds support for rescuing boot from volume instances"""
+    microversion = '2.87'
+    scenarios = [('v2_87', {'api_major_version': 'v2.1'})]

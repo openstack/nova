@@ -234,6 +234,8 @@ REST_API_VERSION_HISTORY = """REST API Version History:
     * 2.86 - Add support for validation of known extra specs to the
              ``POST /flavors/{flavor_id}/os-extra_specs`` and
              ``PUT /flavors/{flavor_id}/os-extra_specs/{id}`` APIs.
+    * 2.87 - Adds support for rescuing boot from volume instances when the
+             compute host reports the COMPUTE_BFV_RESCUE capability trait.
 """
 
 # The minimum and maximum versions of the API supported
@@ -242,7 +244,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = '2.1'
-_MAX_API_VERSION = '2.86'
+_MAX_API_VERSION = '2.87'
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which are related to network, images and baremetal

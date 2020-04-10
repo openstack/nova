@@ -711,6 +711,10 @@ class SameHostColdMigrateDriver(MediumFakeDriver):
                         supports_migrate_to_same_host=True)
 
 
+class RescueBFVDriver(MediumFakeDriver):
+    capabilities = dict(FakeDriver.capabilities, supports_bfv_rescue=True)
+
+
 class PowerUpdateFakeDriver(SmallFakeDriver):
     # A specific fake driver for the power-update external event testing.
 
