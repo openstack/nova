@@ -1315,7 +1315,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
             {'id': IMAGE_VHD,
              'disk_format': 'vhd',
              'properties': {'vm_mode': 'xen'}})
-        conn.rescue(self.context, instance, [], image_meta, '')
+        conn.rescue(self.context, instance, [], image_meta, '', None)
 
         vm = xenapi_fake.get_record('VM', vm_ref)
         rescue_name = "%s-rescue" % vm["name_label"]
@@ -1351,7 +1351,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
                 self.conn._vmops, '_start',
                 side_effect=test.TestingException('Start Error')):
             self.assertRaises(test.TestingException, self.conn.rescue,
-                              self.context, instance, [], image_meta, '')
+                              self.context, instance, [], image_meta, '', [])
 
             # confirm original disk still exists:
             vdi_ref2, vdi_rec2 = vm_utils.get_vdi_for_vm_safely(session,

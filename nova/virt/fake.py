@@ -238,7 +238,7 @@ class FakeDriver(driver.ComputeDriver):
         pass
 
     def rescue(self, context, instance, network_info, image_meta,
-               rescue_password):
+               rescue_password, block_device_info):
         pass
 
     def unrescue(self, instance, network_info):

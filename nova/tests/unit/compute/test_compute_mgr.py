@@ -4301,6 +4301,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                               return_value=fake_nw_info),
             mock.patch.object(self.compute, '_get_rescue_image',
                               return_value=rescue_image_meta),
+            mock.patch.object(objects.BlockDeviceMappingList,
+                              'get_by_instance_uuid',
+                              return_value=mock.sentinel.bdms),
+            mock.patch.object(self.compute, '_get_instance_block_device_info',
+                              return_value=mock.sentinel.block_device_info),
             mock.patch.object(self.compute, '_notify_about_instance_usage'),
             mock.patch.object(self.compute, '_power_off_instance'),
             mock.patch.object(self.compute.driver, 'rescue'),
@@ -4310,8 +4315,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             mock.patch.object(instance, 'save')
         ) as (
             elevated_context, get_nw_info, get_rescue_image,
-            notify_instance_usage, power_off_instance, driver_rescue,
-            notify_usage_exists, get_power_state, instance_save
+            get_bdm_list, get_block_info, notify_instance_usage,
+            power_off_instance, driver_rescue, notify_usage_exists,
+            get_power_state, instance_save
         ):
             self.compute.rescue_instance(
                 self.context, instance, rescue_password='verybadpass',
@@ -4327,6 +4333,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             get_nw_info.assert_called_once_with(self.context, instance)
             get_rescue_image.assert_called_once_with(
                 self.context, instance, None)
+            get_bdm_list.assert_called_once_with(self.context, instance.uuid)
+            get_block_info.assert_called_once_with(self.context, instance,
+                                                   bdms=mock.sentinel.bdms)
 
             extra_usage_info = {'rescue_image_name': uuids.image_name}
             notify_calls = [
@@ -4344,7 +4353,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
             driver_rescue.assert_called_once_with(
                 self.context, instance, fake_nw_info, rescue_image_meta,
-                'verybadpass')
+                'verybadpass', mock.sentinel.block_device_info)
 
             notify_usage_exists.assert_called_once_with(self.compute.notifier,
                 self.context, instance, 'fake-mini', current_period=True)
