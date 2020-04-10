@@ -37,6 +37,7 @@ policy_data = """
     "os_compute_api:os-attach-interfaces:create": "",
     "os_compute_api:os-attach-interfaces:delete": "",
     "os_compute_api:os-baremetal-nodes": "",
+    "os_compute_api:os-console-auth-tokens": "",
     "os_compute_api:os-console-output": "",
     "os_compute_api:os-remote-consoles": "",
     "os_compute_api:os-create-backup": "",

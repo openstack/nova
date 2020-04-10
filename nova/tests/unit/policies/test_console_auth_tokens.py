@@ -31,24 +31,29 @@ class ConsoleAuthTokensPolicyTest(base.BasePolicyTest):
         self.controller = console_auth_tokens.ConsoleAuthTokensController()
         self.req = fakes.HTTPRequest.blank('', version='2.31')
 
-        # Check that admin is able to get console connection information.
-        self.admin_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
+        # Check that system reader is able to get console connection
+        # information.
+        # NOTE(gmann): Until old default rule which is admin_api is
+        # deprecated and not removed, project admin and legacy admin
+        # will be able to get console. This make sure that existing
+        # tokens will keep working even we have changed this policy defaults
+        # to reader role.
+        self.reader_authorized_contexts = [
+            self.system_admin_context, self.system_member_context,
+            self.system_reader_context, self.legacy_admin_context,
             self.project_admin_context]
         # Check that non-admin is not able to get console connection
         # information.
-        self.admin_unauthorized_contexts = [
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context, self.project_member_context,
-            self.other_project_member_context,
-            self.project_foo_context, self.project_reader_context
-        ]
+        self.reader_unauthorized_contexts = [
+            self.system_foo_context, self.other_project_member_context,
+            self.project_foo_context, self.project_member_context,
+            self.project_reader_context]
 
     @mock.patch('nova.objects.ConsoleAuthToken.validate')
     def test_console_connect_info_token_policy(self, mock_validate):
         rule_name = "os_compute_api:os-console-auth-tokens"
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
+        self.common_policy_check(self.reader_authorized_contexts,
+                                 self.reader_unauthorized_contexts,
                                  rule_name, self.controller.show,
                                  self.req, fakes.FAKE_UUID)
 
@@ -68,15 +73,15 @@ class ConsoleAuthTokensScopeTypePolicyTest(ConsoleAuthTokensPolicyTest):
         super(ConsoleAuthTokensScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
 
-        # Check that system admin is able to get console connection
+        # Check that system reader is able to get console connection
         # information.
-        self.admin_authorized_contexts = [
-            self.system_admin_context]
-        # Check that non-system-admin is not able to get console connection
+        self.reader_authorized_contexts = [
+            self.system_admin_context, self.system_member_context,
+            self.system_reader_context]
+        # Check that non-system-reader is not able to get console connection
         # information.
-        self.admin_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_member_context,
-            self.system_reader_context, self.system_foo_context,
+        self.reader_unauthorized_contexts = [
+            self.legacy_admin_context, self.system_foo_context,
             self.project_admin_context, self.project_member_context,
             self.other_project_member_context,
             self.project_foo_context, self.project_reader_context
