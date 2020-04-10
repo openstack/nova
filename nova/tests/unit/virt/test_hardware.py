@@ -14,6 +14,7 @@
 
 import collections
 import copy
+import ddt
 
 import mock
 import testtools
@@ -4376,3 +4377,18 @@ class PCINUMAAffinityPolicyTest(test.NoDBTestCase):
             hw.get_pci_numa_policy_constraint, flavor, image_meta)
         with testtools.ExpectedException(ValueError):
             image_meta.properties.hw_pci_numa_affinity_policy = "fake"
+
+
+@ddt.ddt
+class RescuePropertyTestCase(test.NoDBTestCase):
+
+    @ddt.unpack
+    @ddt.data({'props': {'hw_rescue_device': 'disk',
+                         'hw_rescue_bus': 'virtio'}, 'expected': True},
+              {'props': {'hw_rescue_device': 'disk'}, 'expected': True},
+              {'props': {'hw_rescue_bus': 'virtio'}, 'expected': True},
+              {'props': {'hw_disk_bus': 'virtio'}, 'expected': False})
+    def test_check_hw_rescue_props(self, props=None, expected=None):
+        meta = objects.ImageMeta.from_dict({'disk_format': 'raw'})
+        meta.properties = objects.ImageMetaProps.from_dict(props)
+        self.assertEqual(expected, hw.check_hw_rescue_props(meta))

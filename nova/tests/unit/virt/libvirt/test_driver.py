@@ -19590,13 +19590,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         if rescue:
             rescue_data = ct_instance
+            disk_info = {'mapping': {'root': {'dev': 'hda'},
+                                     'disk.rescue': {'dev': 'hda'}}}
         else:
             rescue_data = None
+            disk_info = {'mapping': {'disk': {}}}
 
         cfg = drvr._get_guest_config(instance_ref,
                                     _fake_network_info(self),
-                                    image_meta, {'mapping': {'disk': {}}},
-                                    rescue_data)
+                                    image_meta, disk_info, rescue_data)
         self.assertEqual("parallels", cfg.virt_type)
         self.assertEqual(instance_ref["uuid"], cfg.uuid)
         self.assertEqual(instance_ref.flavor.memory_mb * units.Ki, cfg.memory)
@@ -22532,6 +22534,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             mock_detach.assert_called_once_with(expected.to_xml(),
                                                 flags=expected_flags)
 
+    @mock.patch('nova.objects.block_device.BlockDeviceMapping.save',
+                new=mock.Mock())
+    @mock.patch('nova.objects.image_meta.ImageMeta.from_image_ref')
     @mock.patch('nova.virt.libvirt.LibvirtDriver.'
                 '_get_all_assigned_mediated_devices')
     @mock.patch('nova.virt.libvirt.utils.write_to_file')
@@ -22541,13 +22546,12 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_build_device_metadata')
     @mock.patch('nova.privsep.utils.supports_direct_io')
     @mock.patch('nova.api.metadata.base.InstanceMetadata')
-    def _test_rescue(self, instance,
-                     mock_instance_metadata, mock_supports_direct_io,
-                     mock_build_device_metadata, mock_set_host_enabled,
-                     mock_write_to_file,
-                     mock_get_mdev,
-                     image_meta_dict=None,
-                     exists=None):
+    def _test_rescue(self, instance, mock_instance_metadata,
+            mock_supports_direct_io, mock_build_device_metadata,
+            mock_set_host_enabled, mock_write_to_file, mock_get_mdev,
+            mock_get_image_meta_by_ref, image_meta_dict=None, exists=None,
+            instance_image_meta_dict=None, block_device_info=None):
+
         self.flags(instances_path=self.useFixture(fixtures.TempDir()).path)
         mock_build_device_metadata.return_value = None
         mock_supports_direct_io.return_value = True
@@ -22561,6 +22565,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             image_meta_dict = {'id': uuids.image_id, 'name': 'fake'}
         image_meta = objects.ImageMeta.from_dict(image_meta_dict)
 
+        if instance_image_meta_dict:
+            meta = objects.ImageMeta.from_dict(instance_image_meta_dict)
+            mock_get_image_meta_by_ref.return_value = meta
+
         network_info = _fake_network_info(self)
         rescue_password = 'fake_password'
 
@@ -22572,11 +22580,15 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             if post_xml_callback is not None:
                 post_xml_callback()
 
-        with mock.patch.object(
-                self.drvr, '_create_domain',
-                side_effect=fake_create_domain) as mock_create_domain:
+        with test.nested(
+            mock.patch.object(self.drvr, '_create_domain',
+                              side_effect=fake_create_domain),
+            mock.patch.object(self.drvr, '_connect_volume'),
+        ) as (mock_create_domain, mock_connect_volume):
+
             self.drvr.rescue(self.context, instance,
-                             network_info, image_meta, rescue_password, None)
+                             network_info, image_meta, rescue_password,
+                             block_device_info)
 
             self.assertTrue(mock_create_domain.called)
 
@@ -22692,6 +22704,124 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             doc.xpath('os/*[self::initrd|self::kernel]/text()')
         self.assertEqual(expected_kernel_ramdisk_paths,
                          kernel_ramdisk_paths)
+
+    @mock.patch('nova.virt.libvirt.utils.write_to_file')
+    def test_rescue_stable_device_unsupported_virt_types(self,
+        mock_libvirt_write_to_file):
+        network_info = _fake_network_info(self, 1)
+        instance = self._create_instance({'config_drive': str(True)})
+        rescue_image_meta_dict = {'id': uuids.rescue_image_id,
+                                  'name': 'rescue',
+                                  'properties': {'hw_rescue_device': 'disk',
+                                                 'hw_rescue_bus': 'virtio'}}
+        rescue_image_meta = objects.ImageMeta.from_dict(rescue_image_meta_dict)
+
+        # Assert that InstanceNotRescuable is raised for xen and lxc virt_types
+        self.flags(virt_type='xen', group='libvirt')
+        self.assertRaises(exception.InstanceNotRescuable, self.drvr.rescue,
+                          self.context, instance, network_info,
+                          rescue_image_meta, None, None)
+
+        self.flags(virt_type='lxc', group='libvirt')
+        self.assertRaises(exception.InstanceNotRescuable, self.drvr.rescue,
+                          self.context, instance, network_info,
+                          rescue_image_meta, None, None)
+
+    def test_rescue_stable_device(self):
+        # Assert the imagebackend behaviour and domain device layout
+        instance = self._create_instance({'config_drive': str(True)})
+        inst_image_meta_dict = {'id': uuids.image_id, 'name': 'fake'}
+        rescue_image_meta_dict = {'id': uuids.rescue_image_id,
+                                  'name': 'rescue',
+                                  'properties': {'hw_rescue_device': 'disk',
+                                                 'hw_rescue_bus': 'virtio'}}
+        block_device_info = {'root_device_name': '/dev/vda',
+                             'ephemerals': [
+                                {'guest_format': None,
+                                 'disk_bus': 'virtio',
+                                 'device_name': '/dev/vdb',
+                                 'size': 20,
+                                 'device_type': 'disk'}],
+                             'swap': None,
+                             'block_device_mapping': None}
+
+        backend, domain = self._test_rescue(
+                                instance,
+                                image_meta_dict=rescue_image_meta_dict,
+                                instance_image_meta_dict=inst_image_meta_dict,
+                                block_device_info=block_device_info)
+
+        # Assert that we created the expected set of disks, and no others
+        self.assertEqual(['disk.rescue', 'kernel.rescue', 'ramdisk.rescue'],
+                         sorted(backend.created_disks.keys()))
+
+        # Assert that the original disks are presented first with the rescue
+        # disk attached as the final device in the domain.
+        expected_disk_paths = [backend.disks[name].path for name
+                               in ('disk', 'disk.eph0', 'disk.config',
+                                   'disk.rescue')]
+        disk_paths = domain.xpath('devices/disk/source/@file')
+        self.assertEqual(expected_disk_paths, disk_paths)
+
+        # Assert that the disk.rescue device has a boot order of 1
+        disk_path = backend.disks['disk.rescue'].path
+        query = "devices/disk[source/@file = '%s']/boot/@order" % disk_path
+        self.assertEqual('1', domain.xpath(query)[0])
+
+    def test_rescue_stable_device_with_volume_attached(self):
+        # Assert the imagebackend behaviour and domain device layout
+        instance = self._create_instance({'config_drive': str(True)})
+        inst_image_meta_dict = {'id': uuids.image_id, 'name': 'fake'}
+        rescue_image_meta_dict = {'id': uuids.rescue_image_id,
+                                  'name': 'rescue',
+                                  'properties': {'hw_rescue_device': 'disk',
+                                                 'hw_rescue_bus': 'virtio'}}
+        conn_info = {'driver_volume_type': 'iscsi',
+                     'data': {'device_path': '/dev/sdb'}}
+        bdm = objects.BlockDeviceMapping(
+            self.context,
+            **fake_block_device.FakeDbBlockDeviceDict({
+                   'id': 1,
+                   'source_type': 'volume',
+                   'destination_type': 'volume',
+                   'device_name': '/dev/vdd'}))
+        bdms = driver_block_device.convert_volumes([bdm])
+        block_device_info = {'root_device_name': '/dev/vda',
+                             'ephemerals': [
+                                {'guest_format': None,
+                                 'disk_bus': 'virtio',
+                                 'device_name': '/dev/vdb',
+                                 'size': 20,
+                                 'device_type': 'disk'}],
+                             'swap': None,
+                             'block_device_mapping': bdms}
+        bdm = block_device_info['block_device_mapping'][0]
+        bdm['connection_info'] = conn_info
+
+        backend, domain = self._test_rescue(
+                                instance,
+                                image_meta_dict=rescue_image_meta_dict,
+                                instance_image_meta_dict=inst_image_meta_dict,
+                                block_device_info=block_device_info)
+
+        # Assert that we created the expected set of disks, and no others
+        self.assertEqual(['disk.rescue', 'kernel.rescue', 'ramdisk.rescue'],
+                         sorted(backend.created_disks.keys()))
+
+        # Assert that the original disks are presented first with the rescue
+        # disk attached as the final device in the domain.
+        expected_disk_paths = [
+            backend.disks['disk'].path, backend.disks['disk.eph0'].path,
+            backend.disks['disk.config'].path, '/dev/sdb',
+            backend.disks['disk.rescue'].path]
+        query = 'devices/disk/source/@*[name()="file" or name()="dev"]'
+        disk_paths = domain.xpath(query)
+        self.assertEqual(expected_disk_paths, disk_paths)
+
+        # Assert that the disk.rescue device has a boot order of 1
+        disk_path = backend.disks['disk.rescue'].path
+        query = "devices/disk[source/@file = '%s']/boot/@order" % disk_path
+        self.assertEqual('1', domain.xpath(query)[0])
 
     @mock.patch.object(libvirt_utils, 'get_instance_path')
     @mock.patch.object(libvirt_utils, 'load_file')

@@ -1393,6 +1393,15 @@ class UnsupportedHardware(Invalid):
                 "the '%(virt)s' virt driver")
 
 
+class UnsupportedRescueBus(Invalid):
+    msg_fmt = _("Requested rescue bus '%(bus)s' is not supported by "
+                "the '%(virt)s' virt driver")
+
+
+class UnsupportedRescueDevice(Invalid):
+    msg_fmt = _("Requested rescue device '%(device)s' is not supported")
+
+
 class Base64Exception(NovaException):
     msg_fmt = _("Invalid Base 64 data for file %(path)s")
 
