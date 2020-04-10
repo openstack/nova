@@ -16,6 +16,7 @@
 import six
 import webob
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import flavors_extraspecs
 from nova.api.openstack import wsgi
@@ -35,8 +36,9 @@ class FlavorExtraSpecsController(wsgi.Controller):
         return dict(extra_specs=flavor.extra_specs)
 
     def _check_extra_specs_value(self, req, specs):
-        # TODO(stephenfin): Wire this up to check the API microversion
-        validation_supported = False
+        validation_supported = api_version_request.is_supported(
+            req, min_version='2.86',
+        )
 
         for name, value in specs.items():
             # NOTE(gmann): Max length for numeric value is being checked

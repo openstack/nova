@@ -314,9 +314,31 @@ class TestOpenStackClient(object):
     def delete_flavor(self, flavor_id):
         return self.api_delete('/flavors/%s' % flavor_id)
 
-    def post_extra_spec(self, flavor_id, spec):
-        return self.api_post('/flavors/%s/os-extra_specs' %
-                             flavor_id, spec)
+    def get_extra_specs(self, flavor_id):
+        return self.api_get(
+            '/flavors/%s/os-extra_specs' % flavor_id
+        ).body['extra_specs']
+
+    def get_extra_spec(self, flavor_id, spec_id):
+        return self.api_get(
+            '/flavors/%s/os-extra_specs/%s' % (flavor_id, spec_id),
+        ).body
+
+    def post_extra_spec(self, flavor_id, body, **_params):
+        url = '/flavors/%s/os-extra_specs' % flavor_id
+        if _params:
+            query_string = '?%s' % parse.urlencode(list(_params.items()))
+            url += query_string
+
+        return self.api_post(url, body)
+
+    def put_extra_spec(self, flavor_id, spec_id, body, **_params):
+        url = '/flavors/%s/os-extra_specs/%s' % (flavor_id, spec_id)
+        if _params:
+            query_string = '?%s' % parse.urlencode(list(_params.items()))
+            url += query_string
+
+        return self.api_put(url, body)
 
     def get_volume(self, volume_id):
         return self.api_get('/os-volumes/%s' % volume_id).body['volume']

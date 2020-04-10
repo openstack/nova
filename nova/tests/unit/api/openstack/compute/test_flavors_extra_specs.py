@@ -15,7 +15,6 @@
 
 import mock
 import testtools
-import unittest
 import webob
 
 from nova.api.openstack.compute import flavors_extraspecs \
@@ -266,8 +265,6 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
             self.assertRaises(self.bad_request, self.controller.create,
                               req, 1, body=body)
 
-    # TODO(stephenfin): Wire the microversion up
-    @unittest.expectedFailure
     def test_create_invalid_known_namespace(self):
         """Test behavior of validator with specs from known namespace."""
         invalid_specs = {
@@ -279,7 +276,7 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
         for key, value in invalid_specs.items():
             body = {'extra_specs': {key: value}}
             req = self._get_request(
-                '1/os-extra_specs', use_admin_context=True, version='2.82',
+                '1/os-extra_specs', use_admin_context=True, version='2.86',
             )
             with testtools.ExpectedException(
                 self.bad_request, 'Validation failed; .*'
@@ -296,7 +293,7 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
         for key, value in unknown_specs.items():
             body = {'extra_specs': {key: value}}
             req = self._get_request(
-                '1/os-extra_specs', use_admin_context=True, version='2.82',
+                '1/os-extra_specs', use_admin_context=True, version='2.86',
             )
             self.controller.create(req, 1, body=body)
 
@@ -403,8 +400,6 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, 1, 'hw:numa_nodes', body=body)
 
-    # TODO(stephenfin): Wire the microversion up
-    @unittest.expectedFailure
     def test_update_invalid_specs_known_namespace(self):
         """Test behavior of validator with specs from known namespace."""
         invalid_specs = {
@@ -417,7 +412,7 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
             body = {key: value}
             req = self._get_request(
                 '1/os-extra_specs/{key}',
-                use_admin_context=True, version='2.82',
+                use_admin_context=True, version='2.86',
             )
             with testtools.ExpectedException(
                 self.bad_request, 'Validation failed; .*'
@@ -435,7 +430,7 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
             body = {key: value}
             req = self._get_request(
                 f'1/os-extra_specs/{key}',
-                use_admin_context=True, version='2.82',
+                use_admin_context=True, version='2.86',
             )
             self.controller.update(req, 1, key, body=body)
 
@@ -452,7 +447,7 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
             body = {key: value}
             req = self._get_request(
                 f'1/os-extra_specs/{key}', use_admin_context=True,
-                version='2.82',
+                version='2.86',
             )
             res_dict = self.controller.update(req, 1, key, body=body)
             self.assertEqual(value, res_dict[key])
