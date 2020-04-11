@@ -294,23 +294,6 @@ class LibvirtGenericVIFDriver(object):
         return (("qvb%s" % iface_id)[:network_model.NIC_NAME_LEN],
                 ("qvo%s" % iface_id)[:network_model.NIC_NAME_LEN])
 
-    def get_config_bridge(self, instance, vif, image_meta,
-                          inst_type, virt_type, host):
-        """Get VIF configurations for bridge type."""
-        conf = self.get_base_config(instance, vif['address'], image_meta,
-                                    inst_type, virt_type, vif['vnic_type'],
-                                    host)
-
-        designer.set_vif_host_backend_bridge_config(
-            conf, self.get_bridge_name(vif),
-            self.get_vif_devname(vif))
-
-        designer.set_vif_bandwidth_config(conf, inst_type)
-
-        self._set_mtu_config(vif, host, conf)
-
-        return conf
-
     def _set_mtu_config(self, vif, host, conf):
         """:param vif: nova.network.modle.vif
            :param host: nova.virt.libvirt.host.Host
@@ -613,8 +596,6 @@ class LibvirtGenericVIFDriver(object):
         args = (instance, vif, image_meta, inst_type, virt_type, host)
         if vif_type == network_model.VIF_TYPE_IOVISOR:
             return self.get_config_iovisor(*args)
-        elif vif_type == network_model.VIF_TYPE_BRIDGE:
-            return self.get_config_bridge(*args)
         elif vif_type == network_model.VIF_TYPE_802_QBG:
             return self.get_config_802qbg(*args)
         elif vif_type == network_model.VIF_TYPE_802_QBH:
