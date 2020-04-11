@@ -143,6 +143,17 @@ class ServicesV253JsonTest(ServicesV211JsonTest):
         def fake_hm_destroy(context, host):
             return 1
 
+        def fake_get_providers_in_tree(self, context, compute_node_id):
+            return [{
+                'uuid': compute_node_id,
+                'name': 'test',
+                'generation': 1,
+                'parent_provider_uuid': None
+            }]
+
+        def fake_get_provider_uuids_in_tree(context, compute_node_id):
+            return [compute_node_id]
+
         self.stub_out('nova.db.api.service_get_by_uuid',
                       db_service_get_by_uuid)
         self.stub_out('nova.db.api.compute_node_get_all_by_host',
@@ -152,6 +163,14 @@ class ServicesV253JsonTest(ServicesV211JsonTest):
                 fake_hm_get_by_host)
         self.stub_out('nova.objects.host_mapping.HostMapping._destroy_in_db',
             fake_hm_destroy)
+        self.stub_out(
+            'nova.scheduler.client.report.SchedulerReportClient.'
+            'get_providers_in_tree',
+            fake_get_providers_in_tree)
+        self.stub_out(
+            'nova.compute.provider_tree.ProviderTree.'
+            'get_provider_uuids_in_tree',
+            fake_get_provider_uuids_in_tree)
 
     def test_service_enable(self):
         """Enable an existing service."""

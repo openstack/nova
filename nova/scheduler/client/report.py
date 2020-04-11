@@ -2153,13 +2153,21 @@ class SchedulerReportClient(object):
                 context, host, nodename)
             for instance_uuid in instance_uuids:
                 self.delete_allocation_for_instance(context, instance_uuid)
-        try:
-            self._delete_provider(rp_uuid, global_request_id=context.global_id)
-        except (exception.ResourceProviderInUse,
-                exception.ResourceProviderDeletionFailed):
-            # TODO(efried): Raise these.  Right now this is being left a no-op
-            # for backward compatibility.
-            pass
+        # Ensure to delete resource provider in tree by top-down
+        # traversable order.
+        rps_to_refresh = self.get_providers_in_tree(context, rp_uuid)
+        self._provider_tree.populate_from_iterable(rps_to_refresh)
+        provider_uuids = self._provider_tree.get_provider_uuids_in_tree(
+            rp_uuid)
+        for provider_uuid in provider_uuids[::-1]:
+            try:
+                self._delete_provider(provider_uuid,
+                                      global_request_id=context.global_id)
+            except (exception.ResourceProviderInUse,
+                    exception.ResourceProviderDeletionFailed):
+                # TODO(efried): Raise these.  Right now this is being
+                #  left a no-op for backward compatibility.
+                pass
 
     def get_provider_by_name(self, context, name):
         """Queries the placement API for resource provider information matching

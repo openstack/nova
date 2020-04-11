@@ -3146,17 +3146,24 @@ class TestAssociations(SchedulerReportClientTestCase):
 
 class TestAllocations(SchedulerReportClientTestCase):
 
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_providers_in_tree')
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient."
                 "delete")
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient."
                 "delete_allocation_for_instance")
     @mock.patch("nova.objects.InstanceList.get_uuids_by_host_and_node")
     def test_delete_resource_provider_cascade(self, mock_by_host,
-            mock_del_alloc, mock_delete):
-        self.client._provider_tree.new_root(uuids.cn, uuids.cn, generation=1)
+            mock_del_alloc, mock_delete, mock_get_rpt):
         cn = objects.ComputeNode(uuid=uuids.cn, host="fake_host",
                 hypervisor_hostname="fake_hostname", )
         mock_by_host.return_value = [uuids.inst1, uuids.inst2]
+        mock_get_rpt.return_value = [{
+            'uuid': cn.uuid,
+            'name': mock.sentinel.name,
+            'generation': 1,
+            'parent_provider_uuid': None
+        }]
         resp_mock = mock.Mock(status_code=204)
         mock_delete.return_value = resp_mock
         self.client.delete_resource_provider(self.context, cn, cascade=True)
@@ -3168,17 +3175,24 @@ class TestAllocations(SchedulerReportClientTestCase):
             exp_url, global_request_id=self.context.global_id)
         self.assertFalse(self.client._provider_tree.exists(uuids.cn))
 
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_providers_in_tree')
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient."
                 "delete")
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient."
                 "delete_allocation_for_instance")
     @mock.patch("nova.objects.InstanceList.get_uuids_by_host_and_node")
     def test_delete_resource_provider_no_cascade(self, mock_by_host,
-            mock_del_alloc, mock_delete):
-        self.client._provider_tree.new_root(uuids.cn, uuids.cn, generation=1)
+            mock_del_alloc, mock_delete, mock_get_rpt):
         self.client._association_refresh_time[uuids.cn] = mock.Mock()
         cn = objects.ComputeNode(uuid=uuids.cn, host="fake_host",
                 hypervisor_hostname="fake_hostname", )
+        mock_get_rpt.return_value = [{
+            'uuid': cn.uuid,
+            'name': mock.sentinel.name,
+            'generation': 1,
+            'parent_provider_uuid': None
+        }]
         mock_by_host.return_value = [uuids.inst1, uuids.inst2]
         resp_mock = mock.Mock(status_code=204)
         mock_delete.return_value = resp_mock
@@ -3189,14 +3203,21 @@ class TestAllocations(SchedulerReportClientTestCase):
             exp_url, global_request_id=self.context.global_id)
         self.assertNotIn(uuids.cn, self.client._association_refresh_time)
 
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_providers_in_tree')
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient."
                 "delete")
     @mock.patch('nova.scheduler.client.report.LOG')
-    def test_delete_resource_provider_log_calls(self, mock_log, mock_delete):
-        # First, check a successful call
-        self.client._provider_tree.new_root(uuids.cn, uuids.cn, generation=1)
+    def test_delete_resource_provider_log_calls(self, mock_log, mock_delete,
+                                                get_rpt_mock):
         cn = objects.ComputeNode(uuid=uuids.cn, host="fake_host",
                 hypervisor_hostname="fake_hostname", )
+        get_rpt_mock.return_value = [{
+            'uuid': cn.uuid,
+            'name': mock.sentinel.name,
+            'generation': 1,
+            'parent_provider_uuid': None
+        }]
         resp_mock = fake_requests.FakeResponse(204)
         mock_delete.return_value = resp_mock
         self.client.delete_resource_provider(self.context, cn)
@@ -3220,15 +3241,75 @@ class TestAllocations(SchedulerReportClientTestCase):
         self.assertEqual(0, mock_log.info.call_count)
         self.assertEqual(1, mock_log.error.call_count)
 
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_providers_in_tree')
+    @mock.patch("nova.scheduler.client.report.SchedulerReportClient."
+                "delete")
+    @mock.patch('nova.scheduler.client.report.LOG')
+    def test_delete_resource_providers_by_order(self, mock_log, mock_delete,
+                                                mock_get_rpt):
+        """Ensure that more than on RP is in the tree and that all of them
+         is gets deleted in the proper order.
+        """
+        cn = objects.ComputeNode(uuid=uuids.cn, host="fake_host",
+                hypervisor_hostname="fake_hostname", )
+        mock_get_rpt.return_value = [
+            {
+                'uuid': uuids.child1,
+                'name': mock.sentinel.name,
+                'generation': 1,
+                'parent_provider_uuid': cn.uuid
+            },
+            {
+                'uuid': uuids.gc1_1,
+                'name': mock.sentinel.name,
+                'generation': 1,
+                'parent_provider_uuid': uuids.child1
+            },
+            {
+                'uuid': cn.uuid,
+                'name': mock.sentinel.name,
+                'generation': 1,
+                'parent_provider_uuid': None
+            }
+        ]
+        mock_delete.return_value = True
+        self.client.delete_resource_provider(self.context, cn)
+        self.assertEqual(3, mock_delete.call_count)
+        # Delete RP in correct order
+        mock_delete.assert_has_calls([
+            mock.call('/resource_providers/%s' % uuids.gc1_1,
+                      global_request_id=mock.ANY),
+            mock.call('/resource_providers/%s' % uuids.child1,
+                      global_request_id=mock.ANY),
+            mock.call('/resource_providers/%s' % cn.uuid,
+                      global_request_id=mock.ANY),
+        ])
+        exp_url = "Deleted resource provider %s"
+        # Logging info in correct order: uuids.gc1_1, uuids.child1, cn.uuid
+        mock_log.assert_has_calls([
+            mock.call.info(exp_url, uuids.gc1_1),
+            mock.call.info(exp_url, uuids.child1),
+            mock.call.info(exp_url, cn.uuid),
+        ])
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_providers_in_tree')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.delete',
                 new=mock.Mock(side_effect=ks_exc.EndpointNotFound()))
-    def test_delete_resource_provider_placement_exception(self):
+    def test_delete_resource_provider_placement_exception(self,
+                                                          mock_get_rpt):
         """Ensure that a ksa exception in delete_resource_provider raises
         through.
         """
-        self.client._provider_tree.new_root(uuids.cn, uuids.cn, generation=1)
         cn = objects.ComputeNode(uuid=uuids.cn, host="fake_host",
                 hypervisor_hostname="fake_hostname", )
+        mock_get_rpt.return_value = [{
+            'uuid': cn.uuid,
+            'name': mock.sentinel.name,
+            'generation': 1,
+            'parent_provider_uuid': None
+        }]
         self.assertRaises(
             ks_exc.ClientException,
             self.client.delete_resource_provider, self.context, cn)
