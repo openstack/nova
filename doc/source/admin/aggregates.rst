@@ -25,7 +25,7 @@ per-aggregate basis by setting the desired ``xxx_weight_multiplier`` aggregate
 metadata.
 
 Administrators are able to optionally expose a host aggregate as an
-:term:`availability zone`. Availability zones are different from host
+:term:`Availability Zone`. Availability zones are different from host
 aggregates in that they are explicitly exposed to the user, and hosts can only
 be in a single availability zone. Administrators can configure a default
 availability zone where instances will be scheduled when the user fails to

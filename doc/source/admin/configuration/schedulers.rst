@@ -24,7 +24,7 @@ By default, the scheduler ``driver`` is configured as a filter scheduler, as
 described in the next section. In the default configuration, this scheduler
 considers hosts that meet all the following criteria:
 
-* Are in the requested :term:`availability zone` (``AvailabilityZoneFilter``).
+* Are in the requested :term:`Availability Zone` (``AvailabilityZoneFilter``).
 
 * Can service the request (``ComputeFilter``).
 

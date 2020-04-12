@@ -33,7 +33,7 @@ Glossary
 
     Host Aggregate
         Host aggregates can be regarded as a mechanism to further partition an
-        :term:`availability zone`; while availability zones are visible to
+        :term:`Availability Zone`; while availability zones are visible to
         users, host aggregates are only visible to administrators. Host
         aggregates provide a mechanism to allow administrators to assign
         key-value pairs to groups of machines. Each node can have multiple
