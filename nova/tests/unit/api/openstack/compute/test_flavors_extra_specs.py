@@ -153,14 +153,6 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
         with mock.patch('nova.objects.Flavor.save'):
             self.controller.delete(req, 1, 'hw:numa_nodes')
 
-    def test_delete_no_admin(self):
-        self.stub_out('nova.objects.flavor._flavor_extra_specs_del',
-                      delete_flavor_extra_specs)
-
-        req = self._get_request('1/os-extra_specs/hw:numa_nodes')
-        self.assertRaises(exception.Forbidden, self.controller.delete,
-                          req, 1, 'hw numa nodes')
-
     def test_delete_spec_not_found(self):
         req = self._get_request('1/os-extra_specs/key6',
                                 use_admin_context=True)
@@ -180,13 +172,6 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
 
         self.assertEqual('shared', res_dict['extra_specs']['hw:cpu_policy'])
         self.assertEqual('1', res_dict['extra_specs']['hw:numa_nodes'])
-
-    def test_create_no_admin(self):
-        body = {'extra_specs': {'hw:numa_nodes': '1'}}
-
-        req = self._get_request('1/os-extra_specs')
-        self.assertRaises(exception.Forbidden, self.controller.create,
-                          req, 1, body=body)
 
     def test_create_flavor_not_found(self):
         body = {'extra_specs': {'hw:numa_nodes': '1'}}
@@ -328,13 +313,6 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
         res_dict = self.controller.update(req, 1, 'hw:cpu_policy', body=body)
 
         self.assertEqual('shared', res_dict['hw:cpu_policy'])
-
-    def test_update_item_no_admin(self):
-        body = {'hw:cpu_policy': 'shared'}
-
-        req = self._get_request('1/os-extra_specs/hw:cpu_policy')
-        self.assertRaises(exception.Forbidden, self.controller.update,
-                          req, 1, 'key1', body=body)
 
     def _test_update_item_bad_request(self, body):
         req = self._get_request('1/os-extra_specs/hw:cpu_policy',
