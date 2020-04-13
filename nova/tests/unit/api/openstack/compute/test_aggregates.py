@@ -116,11 +116,6 @@ class AggregateTestCaseV21(test.NoDBTestCase):
             self._assert_agg_data(AGGREGATE_LIST, _make_agg_list(result))
             self.assertTrue(mock_list.called)
 
-    def test_index_no_admin(self):
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.index,
-                          self.user_req)
-
     def test_create(self):
         with mock.patch.object(self.controller.api, 'create_aggregate',
                                return_value=AGGREGATE) as mock_create:
@@ -130,12 +125,6 @@ class AggregateTestCaseV21(test.NoDBTestCase):
             result = _transform_aggregate_az(result['aggregate'])
             self._assert_agg_data(FORMATTED_AGGREGATE, _make_agg_obj(result))
             mock_create.assert_called_once_with(self.context, 'test', 'nova1')
-
-    def test_create_no_admin(self):
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.create, self.user_req,
-                          body={"aggregate": {"name": "test",
-                                              "availability_zone": "nova1"}})
 
     def test_create_with_duplicate_aggregate_name(self):
         side_effect = exception.AggregateNameExists(aggregate_name="test")
@@ -294,11 +283,6 @@ class AggregateTestCaseV21(test.NoDBTestCase):
             self._assert_agg_data(AGGREGATE, _make_agg_obj(aggregate))
             mock_get.assert_called_once_with(self.context, '1')
 
-    def test_show_no_admin(self):
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.show,
-                          self.user_req, "1")
-
     def test_show_with_bad_aggregate(self):
         side_effect = exception.AggregateNotFound(aggregate_id='2')
         with mock.patch.object(self.controller.api, 'get_aggregate',
@@ -322,12 +306,6 @@ class AggregateTestCaseV21(test.NoDBTestCase):
             self._assert_agg_data(AGGREGATE, _make_agg_obj(result))
             mock_update.assert_called_once_with(self.context, '1',
                                                 body["aggregate"])
-
-    def test_update_no_admin(self):
-        body = {"aggregate": {"availability_zone": "nova"}}
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.update,
-                          self.user_req, "1", body=body)
 
     def test_update_with_only_name(self):
         body = {"aggregate": {"name": "new_name"}}
@@ -459,12 +437,6 @@ class AggregateTestCaseV21(test.NoDBTestCase):
             self._assert_agg_data(AGGREGATE, _make_agg_obj(aggregate))
             mock_add.assert_called_once_with(self.context, "1", "host1")
 
-    def test_add_host_no_admin(self):
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          eval(self.add_host),
-                          self.user_req, "1",
-                          body={"add_host": {"host": "host1"}})
-
     def test_add_host_with_already_added_host(self):
         side_effect = exception.AggregateHostExists(aggregate_id="1",
                                                     host="host1")
@@ -540,12 +512,6 @@ class AggregateTestCaseV21(test.NoDBTestCase):
             eval(self.remove_host)(self.req, "1",
                                    body={"remove_host": {"host": "host1"}})
             mock_rem.assert_called_once_with(self.context, "1", "host1")
-
-    def test_remove_host_no_admin(self):
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          eval(self.remove_host),
-                          self.user_req, "1",
-                          body={"remove_host": {"host": "host1"}})
 
     def test_remove_host_with_bad_aggregate(self):
         side_effect = exception.AggregateNotFound(
@@ -650,13 +616,6 @@ class AggregateTestCaseV21(test.NoDBTestCase):
         mocked.assert_called_once_with(self.context, "1",
                                        body["set_metadata"]["metadata"])
 
-    def test_set_metadata_no_admin(self):
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          eval(self.set_metadata),
-                          self.user_req, "1",
-                          body={"set_metadata": {"metadata":
-                                                    {"foo": "bar"}}})
-
     def test_set_metadata_with_bad_aggregate(self):
         body = {"set_metadata": {"metadata": {"foo": "bar"}}}
         side_effect = exception.AggregateNotFound(aggregate_id="2")
@@ -714,11 +673,6 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                                'delete_aggregate') as mock_del:
             self.controller.delete(self.req, "1")
             mock_del.assert_called_once_with(self.context, "1")
-
-    def test_delete_aggregate_no_admin(self):
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.delete,
-                          self.user_req, "1")
 
     def test_delete_aggregate_with_bad_aggregate(self):
         side_effect = exception.AggregateNotFound(

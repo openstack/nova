@@ -43,11 +43,23 @@ class AggregatesPolicyTest(base.BasePolicyTest):
             self.project_foo_context, self.project_reader_context
         ]
 
+        # Check that system reader is able to get Aggregate
+        self.system_reader_authorized_contexts = [
+            self.legacy_admin_context, self.system_admin_context,
+            self.project_admin_context, self.system_member_context,
+            self.system_reader_context]
+        # Check that non-admin is not able to get Aggregate
+        self.system_reader_unauthorized_contexts = [
+            self.system_foo_context, self.project_member_context,
+            self.other_project_member_context,
+            self.project_foo_context, self.project_reader_context
+        ]
+
     @mock.patch('nova.compute.api.AggregateAPI.get_aggregate_list')
     def test_list_aggregate_policy(self, mock_list):
         rule_name = "os_compute_api:os-aggregates:index"
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
+        self.common_policy_check(self.system_reader_authorized_contexts,
+                                 self.system_reader_unauthorized_contexts,
                                  rule_name, self.controller.index,
                                  self.req)
 
@@ -87,8 +99,8 @@ class AggregatesPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.compute.api.AggregateAPI.get_aggregate')
     def test_show_aggregate_policy(self, mock_show):
         rule_name = "os_compute_api:os-aggregates:show"
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
+        self.common_policy_check(self.system_reader_authorized_contexts,
+                                 self.system_reader_unauthorized_contexts,
                                  rule_name, self.controller.show,
                                  self.req, 1)
 
@@ -159,6 +171,17 @@ class AggregatesScopeTypePolicyTest(AggregatesPolicyTest):
             self.legacy_admin_context, self.system_member_context,
             self.system_reader_context, self.system_foo_context,
             self.project_admin_context, self.project_member_context,
+            self.other_project_member_context,
+            self.project_foo_context, self.project_reader_context
+        ]
+        # Check that system reader is able to get Aggregate
+        self.system_reader_authorized_contexts = [
+            self.system_admin_context, self.system_member_context,
+            self.system_reader_context]
+        # Check that non-admin is not able to get Aggregate
+        self.system_reader_unauthorized_contexts = [
+            self.legacy_admin_context, self.project_admin_context,
+            self.system_foo_context, self.project_member_context,
             self.other_project_member_context,
             self.project_foo_context, self.project_reader_context
         ]
