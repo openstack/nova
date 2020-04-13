@@ -52,7 +52,7 @@ class AggregateController(wsgi.Controller):
     def index(self, req):
         """Returns a list a host aggregate's id, name, availability_zone."""
         context = _get_context(req)
-        context.can(aggr_policies.POLICY_ROOT % 'index')
+        context.can(aggr_policies.POLICY_ROOT % 'index', target={})
         aggregates = self.api.get_aggregate_list(context)
         return {'aggregates': [self._marshall_aggregate(req, a)['aggregate']
                                for a in aggregates]}
@@ -67,7 +67,7 @@ class AggregateController(wsgi.Controller):
         optional availability zone.
         """
         context = _get_context(req)
-        context.can(aggr_policies.POLICY_ROOT % 'create')
+        context.can(aggr_policies.POLICY_ROOT % 'create', target={})
         host_aggregate = body["aggregate"]
         name = common.normalize_name(host_aggregate["name"])
         avail_zone = host_aggregate.get("availability_zone")
@@ -97,7 +97,7 @@ class AggregateController(wsgi.Controller):
     def show(self, req, id):
         """Shows the details of an aggregate, hosts and metadata included."""
         context = _get_context(req)
-        context.can(aggr_policies.POLICY_ROOT % 'show')
+        context.can(aggr_policies.POLICY_ROOT % 'show', target={})
 
         try:
             utils.validate_integer(id, 'id')
@@ -116,7 +116,7 @@ class AggregateController(wsgi.Controller):
     def update(self, req, id, body):
         """Updates the name and/or availability_zone of given aggregate."""
         context = _get_context(req)
-        context.can(aggr_policies.POLICY_ROOT % 'update')
+        context.can(aggr_policies.POLICY_ROOT % 'update', target={})
         updates = body["aggregate"]
         if 'name' in updates:
             updates['name'] = common.normalize_name(updates['name'])
@@ -144,7 +144,7 @@ class AggregateController(wsgi.Controller):
     def delete(self, req, id):
         """Removes an aggregate by id."""
         context = _get_context(req)
-        context.can(aggr_policies.POLICY_ROOT % 'delete')
+        context.can(aggr_policies.POLICY_ROOT % 'delete', target={})
 
         try:
             utils.validate_integer(id, 'id')
@@ -169,7 +169,7 @@ class AggregateController(wsgi.Controller):
         host = body['add_host']['host']
 
         context = _get_context(req)
-        context.can(aggr_policies.POLICY_ROOT % 'add_host')
+        context.can(aggr_policies.POLICY_ROOT % 'add_host', target={})
 
         try:
             utils.validate_integer(id, 'id')
@@ -198,7 +198,7 @@ class AggregateController(wsgi.Controller):
         host = body['remove_host']['host']
 
         context = _get_context(req)
-        context.can(aggr_policies.POLICY_ROOT % 'remove_host')
+        context.can(aggr_policies.POLICY_ROOT % 'remove_host', target={})
 
         try:
             utils.validate_integer(id, 'id')
@@ -230,7 +230,7 @@ class AggregateController(wsgi.Controller):
     def _set_metadata(self, req, id, body):
         """Replaces the aggregate's existing metadata with new metadata."""
         context = _get_context(req)
-        context.can(aggr_policies.POLICY_ROOT % 'set_metadata')
+        context.can(aggr_policies.POLICY_ROOT % 'set_metadata', target={})
 
         try:
             utils.validate_integer(id, 'id')
@@ -278,7 +278,7 @@ class AggregateController(wsgi.Controller):
     def images(self, req, id, body):
         """Allows image cache management requests."""
         context = _get_context(req)
-        context.can(aggr_policies.NEW_POLICY_ROOT % 'images')
+        context.can(aggr_policies.NEW_POLICY_ROOT % 'images', target={})
 
         try:
             utils.validate_integer(id, 'id')
