@@ -63,7 +63,7 @@ class FlavorActionController(wsgi.Controller):
     @validation.schema(flavor_access.add_tenant_access)
     def _add_tenant_access(self, req, id, body):
         context = req.environ['nova.context']
-        context.can(fa_policies.POLICY_ROOT % "add_tenant_access")
+        context.can(fa_policies.POLICY_ROOT % "add_tenant_access", target={})
 
         vals = body['addTenantAccess']
         tenant = vals['tenant']
@@ -89,7 +89,7 @@ class FlavorActionController(wsgi.Controller):
     def _remove_tenant_access(self, req, id, body):
         context = req.environ['nova.context']
         context.can(
-            fa_policies.POLICY_ROOT % "remove_tenant_access")
+            fa_policies.POLICY_ROOT % "remove_tenant_access", target={})
 
         vals = body['removeTenantAccess']
         tenant = vals['tenant']
