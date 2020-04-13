@@ -24,7 +24,7 @@ POLICY_ROOT = 'os_compute_api:os-flavor-extra-specs:%s'
 flavor_extra_specs_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'show',
-        check_str=base.RULE_ADMIN_OR_OWNER,
+        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
         description="Show an extra spec for a flavor",
         operations=[
             {
@@ -37,7 +37,7 @@ flavor_extra_specs_policies = [
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'create',
-        check_str=base.RULE_ADMIN_API,
+        check_str=base.SYSTEM_ADMIN,
         description="Create extra specs for a flavor",
         operations=[
             {
@@ -49,7 +49,7 @@ flavor_extra_specs_policies = [
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'update',
-        check_str=base.RULE_ADMIN_API,
+        check_str=base.SYSTEM_ADMIN,
         description="Update an extra spec for a flavor",
         operations=[
             {
@@ -62,7 +62,7 @@ flavor_extra_specs_policies = [
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'delete',
-        check_str=base.RULE_ADMIN_API,
+        check_str=base.SYSTEM_ADMIN,
         description="Delete an extra spec for a flavor",
         operations=[
             {
@@ -75,7 +75,7 @@ flavor_extra_specs_policies = [
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'index',
-        check_str=base.RULE_ADMIN_OR_OWNER,
+        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
         description="List extra specs for a flavor. Starting with "
         "microversion 2.47, the flavor used for a server is also returned "
         "in the response when showing server details, updating a server or "
