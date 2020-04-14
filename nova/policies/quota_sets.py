@@ -23,55 +23,60 @@ POLICY_ROOT = 'os_compute_api:os-quota-sets:%s'
 
 quota_sets_policies = [
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'update',
-        base.RULE_ADMIN_API,
-        "Update the quotas",
-        [
+        name=POLICY_ROOT % 'update',
+        check_str=base.RULE_ADMIN_API,
+        description="Update the quotas",
+        operations=[
             {
                 'method': 'PUT',
                 'path': '/os-quota-sets/{tenant_id}'
             }
-        ]),
+        ],
+        scope_types=['system']),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'defaults',
-        base.RULE_ANY,
-        "List default quotas",
-        [
+        name=POLICY_ROOT % 'defaults',
+        check_str=base.RULE_ANY,
+        description="List default quotas",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/os-quota-sets/{tenant_id}/defaults'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'show',
-        base.RULE_ADMIN_OR_OWNER,
-        "Show a quota",
-        [
+        name=POLICY_ROOT % 'show',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="Show a quota",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/os-quota-sets/{tenant_id}'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'delete',
-        base.RULE_ADMIN_API,
-        "Revert quotas to defaults",
-        [
+        name=POLICY_ROOT % 'delete',
+        check_str=base.RULE_ADMIN_API,
+        description="Revert quotas to defaults",
+        operations=[
             {
                 'method': 'DELETE',
                 'path': '/os-quota-sets/{tenant_id}'
             }
-        ]),
+        ],
+        scope_types=['system']),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'detail',
-        base.RULE_ADMIN_OR_OWNER,
-        "Show the detail of quota",
-        [
+        name=POLICY_ROOT % 'detail',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="Show the detail of quota",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/os-quota-sets/{tenant_id}/detail'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
 ]
 
 
