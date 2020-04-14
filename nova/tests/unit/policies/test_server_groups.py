@@ -10,10 +10,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import fixtures
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.api.openstack.compute import server_groups
+from nova import objects
 from nova.policies import server_groups as policies
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.policies import base
@@ -32,32 +34,76 @@ class ServerGroupPolicyTest(base.BasePolicyTest):
         self.controller = server_groups.ServerGroupController()
         self.req = fakes.HTTPRequest.blank('')
 
-        # Policy is admin_or_owner but we do not pass the project id
-        # in policy enforcement to check the ownership. project id
-        # is nothing but of server group for which request is made. So
-        # let's keep it as it is and with new defaults and sceop enbled,
-        # these can be authorized to meanigful roles.
+        self.mock_get = self.useFixture(
+            fixtures.MockPatch('nova.objects.InstanceGroup.get_by_uuid')).mock
+        self.sg = [objects.InstanceGroup(
+                    uuid=uuids.fake_id, name='fake',
+                    project_id=self.project_id, user_id='u1',
+                    policies=[], members=[]),
+                   objects.InstanceGroup(
+                    uuid=uuids.fake_id, name='fake2', project_id='proj2',
+                    user_id='u2', policies=[], members=[])]
+        self.mock_get.return_value = self.sg[0]
+
+        # Check that admin or and owner is able to get and delete
+        # the server group.
         self.admin_or_owner_authorized_contexts = [
+            self.legacy_admin_context, self.system_admin_context,
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context]
+        # Check that non-admin/owner is not able to get and delete
+        # the server group.
+        self.admin_or_owner_unauthorized_contexts = [
+            self.system_member_context, self.system_reader_context,
+            self.system_foo_context,
+            self.other_project_member_context
+        ]
+
+        # Check that everyone is able to list and create
+        # theie own server group.
+        self.everyone_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context, self.project_member_context,
             self.project_reader_context, self.project_foo_context,
             self.system_member_context, self.system_reader_context,
             self.system_foo_context,
             self.other_project_member_context]
-        self.admin_or_owner_unauthorized_contexts = [
+        self.everyone_unauthorized_contexts = [
         ]
 
-    @mock.patch('nova.objects.InstanceGroupList.get_all')
+    @mock.patch('nova.objects.InstanceGroupList.get_by_project_id')
     def test_index_server_groups_policy(self, mock_get):
         rule_name = policies.POLICY_ROOT % 'index'
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
+        self.common_policy_check(self.everyone_authorized_contexts,
+                                 self.everyone_unauthorized_contexts,
                                  rule_name,
                                  self.controller.index,
                                  self.req)
 
-    @mock.patch('nova.objects.InstanceGroup.get_by_uuid')
-    def test_show_server_groups_policy(self, mock_get):
+    @mock.patch('nova.objects.InstanceGroupList.get_all')
+    def test_index_all_project_server_groups_policy(self, mock_get_all):
+        mock_get_all.return_value = objects.InstanceGroupList(objects=self.sg)
+        # 'index' policy is checked before 'index:all_projects' so
+        # we have to allow it for everyone otherwise it will fail for
+        # unauthorized contexts here.
+        rule = policies.POLICY_ROOT % 'index'
+        self.policy.set_rules({rule: "@"}, overwrite=False)
+        admin_req = fakes.HTTPRequest.blank(
+            '/os-server-groups?all_projects=True',
+            version='2.13', use_admin_context=True)
+        # Check admin user get all projects server groups.
+        resp = self.controller.index(admin_req)
+        projs = [sg['project_id'] for sg in resp['server_groups']]
+        self.assertEqual(2, len(projs))
+        self.assertIn('proj2', projs)
+        # Check non-admin user does not get all projects server groups.
+        req = fakes.HTTPRequest.blank('/os-server-groups?all_projects=True',
+                                      version='2.13')
+        resp = self.controller.index(req)
+        projs = [sg['project_id'] for sg in resp['server_groups']]
+        self.assertNotIn('proj2', projs)
+
+    def test_show_server_groups_policy(self):
         rule_name = policies.POLICY_ROOT % 'show'
         self.common_policy_check(self.admin_or_owner_authorized_contexts,
                                  self.admin_or_owner_unauthorized_contexts,
@@ -70,14 +116,14 @@ class ServerGroupPolicyTest(base.BasePolicyTest):
         rule_name = policies.POLICY_ROOT % 'create'
         body = {'server_group': {'name': 'fake',
                                  'policies': ['affinity']}}
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
+        self.common_policy_check(self.everyone_authorized_contexts,
+                                 self.everyone_unauthorized_contexts,
                                  rule_name,
                                  self.controller.create,
                                  self.req, body=body)
 
-    @mock.patch('nova.objects.InstanceGroup.get_by_uuid')
-    def test_delete_server_groups_policy(self, mock_get):
+    @mock.patch('nova.objects.InstanceGroup.destroy')
+    def test_delete_server_groups_policy(self, mock_destroy):
         rule_name = policies.POLICY_ROOT % 'delete'
         self.common_policy_check(self.admin_or_owner_authorized_contexts,
                                  self.admin_or_owner_unauthorized_contexts,
@@ -99,3 +145,16 @@ class ServerGroupScopeTypePolicyTest(ServerGroupPolicyTest):
     def setUp(self):
         super(ServerGroupScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+
+    # TODO(gmann): Test this with system scope once we remove
+    # the hardcoded admin check
+    def test_index_all_project_server_groups_policy(self):
+        pass
+
+
+class ServerGroupNoLegacyPolicyTest(ServerGroupScopeTypePolicyTest):
+    """Test Server Group APIs policies with system scope enabled,
+    and no more deprecated rules that allow the legacy admin API to
+    access system APIs.
+    """
+    without_deprecated_rules = True

@@ -59,6 +59,18 @@ server_groups_policies = [
         scope_types=['system', 'project']
     ),
     policy.DocumentedRuleDefault(
+        name=POLICY_ROOT % 'index:all_projects',
+        check_str=base.RULE_ADMIN_API,
+        description="List all server groups for all projects",
+        operations=[
+            {
+                'path': '/os-server-groups',
+                'method': 'GET'
+            }
+        ],
+        scope_types=['system']
+    ),
+    policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'show',
         check_str=base.RULE_ADMIN_OR_OWNER,
         description="Show details of a server group",
