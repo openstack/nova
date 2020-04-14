@@ -17,9 +17,11 @@ policy_data = """
 {
     "context_is_admin": "role:admin or role:administrator",
 
+    "network:attach_external_network": "",
     "os_compute_api:servers:create": "",
     "os_compute_api:servers:create:attach_volume": "",
     "os_compute_api:servers:create:attach_network": "",
+    "os_compute_api:servers:create:forced_host": "",
     "os_compute_api:servers:create:trusted_certs": "",
     "os_compute_api:servers:create_image": "",
     "os_compute_api:servers:create_image:allow_volume_backed": "",

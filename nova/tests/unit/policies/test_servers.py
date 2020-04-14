@@ -49,6 +49,7 @@ class ServersPolicyTest(base.BasePolicyTest):
         self.rule_attach_network = policies.SERVERS % 'create:attach_network'
         self.rule_attach_volume = policies.SERVERS % 'create:attach_volume'
         self.rule_requested_destination = policies.REQUESTED_DESTINATION
+        self.rule_forced_host = policies.SERVERS % 'create:forced_host'
 
         self.req = fakes.HTTPRequest.blank('')
         user_id = self.req.environ['nova.context'].user_id
@@ -422,10 +423,9 @@ class ServersPolicyTest(base.BasePolicyTest):
         self.policy.set_rules({rule: "@"}, overwrite=False)
         mock_create.return_value = ([self.instance], '')
         mock_az.return_value = ('test', 'host', None)
-        rule_name = policies.SERVERS % 'create:forced_host'
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
-                                 rule_name,
+        self.common_policy_check(self.project_admin_authorized_contexts,
+                                 self.project_admin_unauthorized_contexts,
+                                 self.rule_forced_host,
                                  self.controller.create,
                                  self.req, body=self.body)
 
@@ -1325,6 +1325,7 @@ class ServersScopeTypePolicyTest(ServersPolicyTest):
         self.rule_attach_network = None
         self.rule_attach_volume = None
         self.rule_requested_destination = None
+        self.rule_forced_host = None
 
         # Check that system admin is able to create server with host request
         # and get server extended attributes or host status.
@@ -1385,29 +1386,6 @@ class ServersScopeTypePolicyTest(ServersPolicyTest):
             self.other_project_reader_context
         ]
 
-    @mock.patch('nova.compute.api.API.create')
-    @mock.patch('nova.compute.api.API.parse_availability_zone')
-    def test_create_forced_host_server_policy(self, mock_az, mock_create):
-        # TODO(gmann): Uncomment this once we figure out the right defaults
-        # for 'create:forced_host'
-        # The 'create' policy is checked before 'create:forced_host' so
-        # we need to allow 'create' policy for everyone. Also skip the
-        # error message assertion because for
-        # system scoped unauth context 'create' policy fail and for project
-        # scoped unauth context 'create:forced_host' fail.
-
-        # rule = policies.SERVERS % 'create'
-        # self.policy.set_rules({rule: "@"})
-        # mock_create.return_value = ([self.instance], '')
-        # mock_az.return_value = ('test', 'host', None)
-        # rule_name = policies.SERVERS % 'create:forced_host'
-        # self.common_policy_check(self.admin_authorized_contexts,
-        #                         self.admin_unauthorized_contexts,
-        #                         None,
-        #                         self.controller.create,
-        #                         self.req, body=self.body)
-        pass
-
 
 class ServersNoLegacyPolicyTest(ServersScopeTypePolicyTest):
     """Test Servers APIs policies with system scope enabled,
@@ -1461,21 +1439,6 @@ class ServersNoLegacyPolicyTest(ServersScopeTypePolicyTest):
             self.project_foo_context,
             self.system_foo_context
         ]
-        # Check that sustem reader is able to list the server
-        # for all projects.
-        # self.system_reader_authorized_contexts = [
-        #    self.system_admin_context,
-        #    self.project_admin_context, self.system_member_context,
-        #    self.system_reader_context]
-        # Check that non-system reader is not able to list the server
-        # for all projects.
-        # self.system_reader_unauthorized_contexts = [
-        #    self.legacy_admin_context, self.system_foo_context,
-        #    self.project_member_context,
-        #    self.project_reader_context, self.project_foo_context,
-        #    self.other_project_member_context,
-        #    self.other_project_reader_context
-        # ]
         # Check if project member can create the server.
         self.project_member_authorized_contexts = [
             self.legacy_admin_context, self.project_admin_context,
