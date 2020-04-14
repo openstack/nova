@@ -231,7 +231,7 @@ class ServiceController(wsgi.Controller):
     def delete(self, req, id):
         """Deletes the specified service."""
         context = req.environ['nova.context']
-        context.can(services_policies.BASE_POLICY_NAME % 'delete')
+        context.can(services_policies.BASE_POLICY_NAME % 'delete', target={})
 
         if api_version_request.is_supported(
                 req, min_version=UUID_FOR_ID_MIN_VERSION):
@@ -347,7 +347,7 @@ class ServiceController(wsgi.Controller):
         name
         """
         context = req.environ['nova.context']
-        context.can(services_policies.BASE_POLICY_NAME % 'list')
+        context.can(services_policies.BASE_POLICY_NAME % 'list', target={})
         if api_version_request.is_supported(req, min_version='2.11'):
             _services = self._get_services_list(req, ['forced_down'])
         else:
@@ -368,7 +368,7 @@ class ServiceController(wsgi.Controller):
         PUT /os-services/disable.
         """
         context = req.environ['nova.context']
-        context.can(services_policies.BASE_POLICY_NAME % 'update')
+        context.can(services_policies.BASE_POLICY_NAME % 'update', target={})
         if api_version_request.is_supported(req, min_version='2.11'):
             actions = self.actions.copy()
             actions["force-down"] = self._forced_down
@@ -395,7 +395,7 @@ class ServiceController(wsgi.Controller):
 
         # Validate the request context against the policy.
         context = req.environ['nova.context']
-        context.can(services_policies.BASE_POLICY_NAME % 'update')
+        context.can(services_policies.BASE_POLICY_NAME % 'update', target={})
 
         # Get the service by uuid.
         try:
