@@ -502,65 +502,6 @@ class UserQuotasTestV21(BaseQuotaSetsTest):
                          len(mock_createlimit.mock_calls))
 
 
-class QuotaSetsPolicyEnforcementV21(test.NoDBTestCase):
-
-    def setUp(self):
-        super(QuotaSetsPolicyEnforcementV21, self).setUp()
-        self.controller = quotas_v21.QuotaSetsController()
-        self.req = fakes.HTTPRequest.blank('')
-
-    def test_delete_policy_failed(self):
-        rule_name = "os_compute_api:os-quota-sets:delete"
-        self.policy.set_rules({rule_name: "project_id:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.delete, self.req, fakes.FAKE_UUID)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-    def test_defaults_policy_failed(self):
-        rule_name = "os_compute_api:os-quota-sets:defaults"
-        self.policy.set_rules({rule_name: "project_id:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.defaults, self.req, fakes.FAKE_UUID)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-    def test_show_policy_failed(self):
-        rule_name = "os_compute_api:os-quota-sets:show"
-        self.policy.set_rules({rule_name: "project_id:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.show, self.req, fakes.FAKE_UUID)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-    def test_detail_policy_failed(self):
-        rule_name = "os_compute_api:os-quota-sets:detail"
-        self.policy.set_rules({rule_name: "project_id:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.detail, self.req, fakes.FAKE_UUID)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-    def test_update_policy_failed(self):
-        rule_name = "os_compute_api:os-quota-sets:update"
-        self.policy.set_rules({rule_name: "project_id:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.update, self.req, fakes.FAKE_UUID,
-            body={'quota_set': {}})
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-
 class QuotaSetsTestV236(test.NoDBTestCase):
     microversion = '2.36'
 
