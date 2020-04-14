@@ -23,61 +23,65 @@ POLICY_ROOT = 'os_compute_api:os-flavor-extra-specs:%s'
 
 flavor_extra_specs_policies = [
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'show',
-        base.RULE_ADMIN_OR_OWNER,
-        "Show an extra spec for a flavor",
-        [
+        name=POLICY_ROOT % 'show',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="Show an extra spec for a flavor",
+        operations=[
             {
                 'path': '/flavors/{flavor_id}/os-extra_specs/'
                         '{flavor_extra_spec_key}',
                 'method': 'GET'
             }
-        ]
+        ],
+        scope_types=['system', 'project']
     ),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'create',
-        base.RULE_ADMIN_API,
-        "Create extra specs for a flavor",
-        [
+        name=POLICY_ROOT % 'create',
+        check_str=base.RULE_ADMIN_API,
+        description="Create extra specs for a flavor",
+        operations=[
             {
                 'path': '/flavors/{flavor_id}/os-extra_specs/',
                 'method': 'POST'
             }
-        ]
+        ],
+        scope_types=['system']
     ),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'update',
-        base.RULE_ADMIN_API,
-        "Update an extra spec for a flavor",
-        [
+        name=POLICY_ROOT % 'update',
+        check_str=base.RULE_ADMIN_API,
+        description="Update an extra spec for a flavor",
+        operations=[
             {
                 'path': '/flavors/{flavor_id}/os-extra_specs/'
                         '{flavor_extra_spec_key}',
                 'method': 'PUT'
             }
-        ]
+        ],
+        scope_types=['system']
     ),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'delete',
-        base.RULE_ADMIN_API,
-        "Delete an extra spec for a flavor",
-        [
+        name=POLICY_ROOT % 'delete',
+        check_str=base.RULE_ADMIN_API,
+        description="Delete an extra spec for a flavor",
+        operations=[
             {
                 'path': '/flavors/{flavor_id}/os-extra_specs/'
                         '{flavor_extra_spec_key}',
                 'method': 'DELETE'
             }
-        ]
+        ],
+        scope_types=['system']
     ),
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'index',
-        base.RULE_ADMIN_OR_OWNER,
-        "List extra specs for a flavor. Starting with microversion 2.47, "
-        "the flavor used for a server is also returned in the response "
-        "when showing server details, updating a server or rebuilding a "
-        "server. Starting with microversion 2.61, extra specs may be "
-        "returned in responses for the flavor resource.",
-        [
+        name=POLICY_ROOT % 'index',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="List extra specs for a flavor. Starting with "
+        "microversion 2.47, the flavor used for a server is also returned "
+        "in the response when showing server details, updating a server or "
+        "rebuilding a server. Starting with microversion 2.61, extra specs "
+        "may be returned in responses for the flavor resource.",
+        operations=[
             {
                 'path': '/flavors/{flavor_id}/os-extra_specs/',
                 'method': 'GET'
@@ -116,7 +120,8 @@ flavor_extra_specs_policies = [
                 'path': '/flavors/{flavor_id}',
                 'method': 'PUT'
             }
-        ]
+        ],
+        scope_types=['system', 'project']
     ),
 ]
 
