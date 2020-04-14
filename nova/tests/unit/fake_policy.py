@@ -56,6 +56,7 @@ policy_data = """
     "os_compute_api:ips:index": "",
     "os_compute_api:ips:show": "",
     "os_compute_api:extensions": "",
+    "os_compute_api:os-evacuate": "",
     "os_compute_api:os-flavor-access:remove_tenant_access": "",
     "os_compute_api:os-flavor-access:add_tenant_access": "",
     "os_compute_api:os-flavor-access": "",

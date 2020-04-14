@@ -144,3 +144,11 @@ class EvacuateScopeTypePolicyTest(EvacuatePolicyTest):
             self.other_project_member_context,
             self.project_foo_context, self.project_reader_context
         ]
+
+
+class EvacuateNoLegacyPolicyTest(EvacuateScopeTypePolicyTest):
+    """Test Evacuate APIs policies with system scope enabled,
+    and no more deprecated rules that allow the legacy admin API to
+    access system APIs.
+    """
+    without_deprecated_rules = True
