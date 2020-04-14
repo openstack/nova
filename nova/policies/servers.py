@@ -98,9 +98,9 @@ rules = [
     # the details in host_status are pretty sensitive, only admins
     # should do that by default.
     policy.DocumentedRuleDefault(
-        SERVERS % 'show:host_status',
-        base.RULE_ADMIN_API,
-        """
+        name=SERVERS % 'show:host_status',
+        check_str=base.RULE_ADMIN_API,
+        description="""
 Show a server with additional host status information.
 
 This means host_status will be shown irrespective of status value. If showing
@@ -112,7 +112,7 @@ Microvision 2.75 added the ``host_status`` attribute in the
 API responses which are also controlled by this policy rule, like the
 ``GET /servers*`` APIs.
 """,
-        [
+        operations=[
             {
                 'method': 'GET',
                 'path': '/servers/{server_id}'
@@ -129,11 +129,12 @@ API responses which are also controlled by this policy rule, like the
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (rebuild)'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        SERVERS % 'show:host_status:unknown-only',
-        base.RULE_ADMIN_API,
-        """
+        name=SERVERS % 'show:host_status:unknown-only',
+        check_str=base.RULE_ADMIN_API,
+        description="""
 Show a server with additional host status information, only if host status is
 UNKNOWN.
 
@@ -144,7 +145,7 @@ request. An example policy configuration could be where the
 the ``os_compute_api:servers:show:host_status:unknown-only`` rule is set to
 allow everyone.
 """,
-        [
+        operations=[
             {
                 'method': 'GET',
                 'path': '/servers/{server_id}'
@@ -161,7 +162,8 @@ allow everyone.
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (rebuild)'
             }
-        ]),
+        ],
+        scope_types=['system', 'project'],),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'create',
         check_str=base.PROJECT_MEMBER,
