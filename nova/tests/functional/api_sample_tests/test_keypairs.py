@@ -230,6 +230,9 @@ class KeyPairsV210SampleJsonTestNotAdmin(KeyPairsV210SampleJsonTest):
             user_id="fake")
 
     def test_keypairs_post_for_other_user(self):
+        rules = {'os_compute_api:os-keypairs:create':
+                     'rule:admin_api or user_id:%(user_id)s'}
+        self.policy.set_rules(rules, overwrite=False)
         key_name = 'keypair-' + uuids.fake
         subs = dict(keypair_name=key_name,
                     keypair_type=keypair_obj.KEYPAIR_TYPE_SSH,
@@ -240,6 +243,9 @@ class KeyPairsV210SampleJsonTestNotAdmin(KeyPairsV210SampleJsonTest):
 
     def test_keypairs_list_for_different_users(self):
         # get and post for other users is forbidden for non admin
+        rules = {'os_compute_api:os-keypairs:index':
+                     'rule:admin_api or user_id:%(user_id)s'}
+        self.policy.set_rules(rules, overwrite=False)
         response = self._do_get('os-keypairs?user_id=fake1')
         self.assertEqual(403, response.status_code)
 

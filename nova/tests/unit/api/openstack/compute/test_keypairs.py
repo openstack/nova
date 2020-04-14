@@ -14,16 +14,13 @@
 #    under the License.
 
 import mock
-from oslo_policy import policy as oslo_policy
 import webob
 
 from nova.api.openstack.compute import keypairs as keypairs_v21
 from nova.api.openstack import wsgi as os_wsgi
-from nova.compute import api as compute_api
 from nova import context as nova_context
 from nova import exception
 from nova import objects
-from nova import policy
 from nova import quota
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -319,93 +316,6 @@ class KeypairsTestV21(test.TestCase):
         self.assertNotIn('type', res_dict['keypair'])
 
 
-class KeypairPolicyTestV21(test.NoDBTestCase):
-    KeyPairController = keypairs_v21.KeypairController()
-    policy_path = 'os_compute_api:os-keypairs'
-
-    def setUp(self):
-        super(KeypairPolicyTestV21, self).setUp()
-
-        @staticmethod
-        def _db_key_pair_get(context, user_id, name=None):
-            if name is not None:
-                return dict(test_keypair.fake_keypair,
-                            name='foo', public_key='XXX', fingerprint='YYY',
-                            type='ssh')
-            else:
-                return db_key_pair_get_all_by_user(context, user_id)
-
-        self.stub_out("nova.objects.keypair.KeyPair._get_from_db",
-                      _db_key_pair_get)
-
-        self.req = fakes.HTTPRequest.blank('')
-
-    def test_keypair_list_fail_policy(self):
-        rules = {self.policy_path + ':index': 'role:admin'}
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-        self.assertRaises(exception.Forbidden,
-                          self.KeyPairController.index,
-                          self.req)
-
-    @mock.patch('nova.objects.KeyPairList.get_by_user')
-    def test_keypair_list_pass_policy(self, mock_get):
-        rules = {self.policy_path + ':index': ''}
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-        res = self.KeyPairController.index(self.req)
-        self.assertIn('keypairs', res)
-
-    def test_keypair_show_fail_policy(self):
-        rules = {self.policy_path + ':show': 'role:admin'}
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-        self.assertRaises(exception.Forbidden,
-                          self.KeyPairController.show,
-                          self.req, 'FAKE')
-
-    def test_keypair_show_pass_policy(self):
-        rules = {self.policy_path + ':show': ''}
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-        res = self.KeyPairController.show(self.req, 'FAKE')
-        self.assertIn('keypair', res)
-
-    def test_keypair_create_fail_policy(self):
-        body = {'keypair': {'name': 'create_test'}}
-        rules = {self.policy_path + ':create': 'role:admin'}
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-        self.assertRaises(exception.Forbidden,
-                          self.KeyPairController.create,
-                          self.req, body=body)
-
-    def _assert_keypair_create(self, mock_create, req):
-        mock_create.assert_called_with(req, 'fake_user', 'create_test', 'ssh')
-
-    @mock.patch.object(compute_api.KeypairAPI, 'create_key_pair')
-    def test_keypair_create_pass_policy(self, mock_create):
-        keypair_obj = objects.KeyPair(name='', public_key='',
-                                      fingerprint='', user_id='')
-
-        mock_create.return_value = (keypair_obj, 'dummy')
-        body = {'keypair': {'name': 'create_test'}}
-        rules = {self.policy_path + ':create': ''}
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-        res = self.KeyPairController.create(self.req, body=body)
-        self.assertIn('keypair', res)
-        req = self.req.environ['nova.context']
-        self._assert_keypair_create(mock_create, req)
-
-    def test_keypair_delete_fail_policy(self):
-        rules = {self.policy_path + ':delete': 'role:admin'}
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-        self.assertRaises(exception.Forbidden,
-                          self.KeyPairController.delete,
-                          self.req, 'FAKE')
-
-    @mock.patch('nova.objects.KeyPair.destroy_by_name')
-    def test_keypair_delete_pass_policy(self, mock_destroy):
-        rules = {self.policy_path + ':delete': ''}
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-        self.KeyPairController.delete(self.req, 'FAKE')
-
-
 class KeypairsTestV22(KeypairsTestV21):
     wsgi_api_version = '2.2'
 
@@ -448,14 +358,6 @@ class KeypairsTestV210(KeypairsTestV22):
             userid = mock_g.call_args_list[0][0][1]
             self.assertEqual('foo', userid)
 
-    def test_keypair_list_other_user_not_admin(self):
-        req = fakes.HTTPRequest.blank(self.base_url +
-                                      '/os-keypairs?user_id=foo',
-                                      version=self.wsgi_api_version)
-        with mock.patch.object(self.controller.api, 'get_key_pairs'):
-            self.assertRaises(exception.PolicyNotAuthorized,
-                              self.controller.index, req)
-
     def test_keypair_show_other_user(self):
         req = fakes.HTTPRequest.blank(self.base_url +
                                       '/os-keypairs/FAKE?user_id=foo',
@@ -465,14 +367,6 @@ class KeypairsTestV210(KeypairsTestV22):
             self.controller.show(req, 'FAKE')
             userid = mock_g.call_args_list[0][0][1]
             self.assertEqual('foo', userid)
-
-    def test_keypair_show_other_user_not_admin(self):
-        req = fakes.HTTPRequest.blank(self.base_url +
-                                      '/os-keypairs/FAKE?user_id=foo',
-                                      version=self.wsgi_api_version)
-        with mock.patch.object(self.controller.api, 'get_key_pair'):
-            self.assertRaises(exception.PolicyNotAuthorized,
-                              self.controller.show, req, 'FAKE')
 
     def test_keypair_delete_other_user(self):
         req = fakes.HTTPRequest.blank(self.base_url +
@@ -484,14 +378,6 @@ class KeypairsTestV210(KeypairsTestV22):
             self.controller.delete(req, 'FAKE')
             userid = mock_g.call_args_list[0][0][1]
             self.assertEqual('foo', userid)
-
-    def test_keypair_delete_other_user_not_admin(self):
-        req = fakes.HTTPRequest.blank(self.base_url +
-                                      '/os-keypairs/FAKE?user_id=foo',
-                                      version=self.wsgi_api_version)
-        with mock.patch.object(self.controller.api, 'delete_key_pair'):
-            self.assertRaises(exception.PolicyNotAuthorized,
-                              self.controller.delete, req, 'FAKE')
 
     def test_keypair_create_other_user(self):
         req = fakes.HTTPRequest.blank(self.base_url +
@@ -522,16 +408,6 @@ class KeypairsTestV210(KeypairsTestV22):
             userid = mock_g.call_args_list[0][0][1]
             self.assertEqual('8861f37f-034e-4ca8-8abe-6d13c074574a', userid)
         self.assertIn('keypair', res)
-
-    def test_keypair_create_other_user_not_admin(self):
-        req = fakes.HTTPRequest.blank(self.base_url +
-                                      '/os-keypairs',
-                                      version=self.wsgi_api_version)
-        body = {'keypair': {'name': 'create_test',
-                            'user_id': '8861f37f-034e-4ca8-8abe-6d13c074574a'}}
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.create,
-                          req, body=body)
 
     def test_keypair_list_other_user_invalid_in_old_microversion(self):
         req = fakes.HTTPRequest.blank(self.base_url +
