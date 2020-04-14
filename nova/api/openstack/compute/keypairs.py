@@ -106,8 +106,7 @@ class KeypairController(wsgi.Controller):
         key_type_value = params.get('type', keypair_obj.KEYPAIR_TYPE_SSH)
         user_id = user_id or context.user_id
         context.can(kp_policies.POLICY_ROOT % 'create',
-                    target={'user_id': user_id,
-                            'project_id': context.project_id})
+                    target={'user_id': user_id})
 
         return_priv_key = False
         try:
@@ -162,8 +161,7 @@ class KeypairController(wsgi.Controller):
         # handle optional user-id for admin only
         user_id = user_id or context.user_id
         context.can(kp_policies.POLICY_ROOT % 'delete',
-                    target={'user_id': user_id,
-                            'project_id': context.project_id})
+                    target={'user_id': user_id})
         try:
             self.api.delete_key_pair(context, user_id, id)
         except exception.KeypairNotFound as exc:
@@ -200,8 +198,7 @@ class KeypairController(wsgi.Controller):
         context = req.environ['nova.context']
         user_id = user_id or context.user_id
         context.can(kp_policies.POLICY_ROOT % 'show',
-                    target={'user_id': user_id,
-                            'project_id': context.project_id})
+                    target={'user_id': user_id})
 
         try:
             keypair = self.api.get_key_pair(context, user_id, id)
@@ -242,8 +239,7 @@ class KeypairController(wsgi.Controller):
         context = req.environ['nova.context']
         user_id = user_id or context.user_id
         context.can(kp_policies.POLICY_ROOT % 'index',
-                    target={'user_id': user_id,
-                            'project_id': context.project_id})
+                    target={'user_id': user_id})
 
         if api_version_request.is_supported(req, min_version='2.35'):
             limit, marker = common.get_limit_and_marker(req)
