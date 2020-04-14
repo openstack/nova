@@ -44,6 +44,7 @@ class ResetStateTestsV21(test.NoDBTestCase):
         instance.uuid = self.uuid
         instance.vm_state = 'fake'
         instance.task_state = 'fake'
+        instance.project_id = self.context.project_id
         instance.obj_reset_changes()
         return instance
 

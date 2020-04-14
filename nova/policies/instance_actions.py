@@ -53,7 +53,7 @@ but in the other hand it might leak information about the deployment
                 'path': '/servers/{server_id}/os-instance-actions/{request_id}'
             }
         ],
-        scope_types=['system']),
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'events',
         check_str=base.SYSTEM_READER,
@@ -70,7 +70,7 @@ passes, the name of the host.""",
                 'path': '/servers/{server_id}/os-instance-actions/{request_id}'
             }
         ],
-        scope_types=['system']),
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'list',
         check_str=base.PROJECT_READER_OR_SYSTEM_READER,

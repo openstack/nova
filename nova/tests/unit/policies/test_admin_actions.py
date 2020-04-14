@@ -98,6 +98,15 @@ class AdminActionsScopeTypePolicyTest(AdminActionsPolicyTest):
         super(AdminActionsScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
 
+
+class AdminActionsNoLegacyPolicyTest(AdminActionsScopeTypePolicyTest):
+    """Test Admin Actions APIs policies with system scope enabled,
+    and no more deprecated rules.
+    """
+    without_deprecated_rules = True
+
+    def setUp(self):
+        super(AdminActionsScopeTypePolicyTest, self).setUp()
         # Check that system admin is able to perform the system level actions
         # on server.
         self.admin_authorized_contexts = [
