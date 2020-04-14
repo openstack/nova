@@ -146,6 +146,8 @@ policy_data = """
     "os_compute_api:server-metadata:update_all": "",
     "os_compute_api:server-metadata:delete": "",
     "os_compute_api:server-metadata:show": "",
-    "os_compute_api:server-metadata:index": ""
+    "os_compute_api:server-metadata:index": "",
+    "compute:server:topology:index": "",
+    "compute:server:topology:host:index": "is_admin:True"
 }
 """
