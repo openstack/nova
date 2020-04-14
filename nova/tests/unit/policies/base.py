@@ -171,8 +171,26 @@ class BasePolicyTest(test.TestCase):
             args1 = copy.deepcopy(arg)
             kwargs1 = copy.deepcopy(kwarg)
             if not fatal:
-                unauthorize_response.append(
-                    ensure_return(req, *args1, **kwargs1))
+                try:
+                    unauthorize_response.append(
+                        ensure_return(req, *args1, **kwargs1))
+                    # NOTE(gmann): We need to ignore the PolicyNotAuthorized
+                    # exception here so that we can add the correct response
+                    # in unauthorize_response for the case of fatal=False.
+                    # This handle the case of multi policy checks where tests
+                    # are verifying the second policy via the response of
+                    # fatal-False and ignoring the response checks where the
+                    # first policy itself fail to pass (even test override the
+                    # first policy to allow for everyone but still, scope
+                    # checks can leads to PolicyNotAuthorized error).
+                    # For example: flavor extra specs policy for GET flavor
+                    # API. In that case, flavor extra spec policy is checked
+                    # after the GET flavor policy. So any context failing on
+                    # GET flavor will raise the  PolicyNotAuthorized and for
+                    # that case we do not have any way to verify the flavor
+                    # extra specs so skip that context to check in test.
+                except exception.PolicyNotAuthorized:
+                    continue
             else:
                 ensure_raises(req, *args1, **kwargs1)
 
