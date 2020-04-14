@@ -24,7 +24,7 @@ POLICY_ROOT = 'os_compute_api:os-quota-sets:%s'
 quota_sets_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'update',
-        check_str=base.RULE_ADMIN_API,
+        check_str=base.SYSTEM_ADMIN,
         description="Update the quotas",
         operations=[
             {
@@ -46,7 +46,7 @@ quota_sets_policies = [
         scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'show',
-        check_str=base.RULE_ADMIN_OR_OWNER,
+        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
         description="Show a quota",
         operations=[
             {
@@ -57,7 +57,7 @@ quota_sets_policies = [
         scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'delete',
-        check_str=base.RULE_ADMIN_API,
+        check_str=base.SYSTEM_ADMIN,
         description="Revert quotas to defaults",
         operations=[
             {
@@ -68,7 +68,7 @@ quota_sets_policies = [
         scope_types=['system']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'detail',
-        check_str=base.RULE_ADMIN_OR_OWNER,
+        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
         description="Show the detail of quota",
         operations=[
             {
