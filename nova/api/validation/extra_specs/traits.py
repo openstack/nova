@@ -36,11 +36,37 @@ for trait in os_traits.get_traits():
             parameters=[
                 {
                     'name': 'group',
-                    'pattern': r'(_[a-zA-z0-9_]*|\d+)?',
+                    'pattern': r'([a-zA-Z0-9_-]{1,64})?',
                 },
             ],
         )
     )
+
+EXTRA_SPEC_VALIDATORS.append(
+    base.ExtraSpecValidator(
+        name='trait{group}:CUSTOM_{trait}',
+        description=(
+            'Require or forbid trait CUSTOM_{trait}.'
+        ),
+        value={
+            'type': str,
+            'enum': [
+                'required',
+                'forbidden',
+            ],
+        },
+        parameters=[
+            {
+                'name': 'group',
+                'pattern': r'([a-zA-Z0-9_-]{1,64})?',
+            },
+            {
+                'name': 'trait',
+                'pattern': r'[A-Z0-9_]+',
+            },
+        ],
+    )
+)
 
 
 def register():

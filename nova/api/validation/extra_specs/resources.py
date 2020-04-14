@@ -32,7 +32,7 @@ for resource_class in os_resource_classes.STANDARDS:
             parameters=[
                 {
                     'name': 'group',
-                    'pattern': r'(_[a-zA-z0-9_]*|\d+)?',
+                    'pattern': r'([a-zA-Z0-9_-]{1,64})?',
                 },
             ],
         )
@@ -50,11 +50,11 @@ EXTRA_SPEC_VALIDATORS.append(
         parameters=[
             {
                 'name': 'group',
-                'pattern': r'(_[a-zA-z0-9_]*|\d+)?',
+                'pattern': r'([a-zA-Z0-9_-]{1,64})?',
             },
             {
                 'name': 'resource',
-                'pattern': r'.+',
+                'pattern': r'[A-Z0-9_]+',
             },
         ],
     )
