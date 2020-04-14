@@ -58,6 +58,20 @@ class KeypairsPolicyTest(base.BasePolicyTest):
             self.other_project_member_context
         ]
 
+        # Check that system reader is able to get
+        # other users keypairs.
+        self.system_reader_authorized_contexts = [
+            self.legacy_admin_context, self.system_admin_context,
+            self.project_admin_context, self.system_member_context,
+            self.system_reader_context]
+        # Check that non-system reader is not able to get
+        # other users keypairs.
+        self.system_reader_unauthorized_contexts = [
+            self.system_foo_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context,
+            self.other_project_member_context
+        ]
+
     @mock.patch('nova.compute.api.KeypairAPI.get_key_pairs')
     def test_index_keypairs_policy(self, mock_get):
         rule_name = policies.POLICY_ROOT % 'index'
@@ -71,8 +85,8 @@ class KeypairsPolicyTest(base.BasePolicyTest):
     def test_index_others_keypairs_policy(self, mock_get):
         req = fakes.HTTPRequest.blank('?user_id=user2', version='2.10')
         rule_name = policies.POLICY_ROOT % 'index'
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
+        self.common_policy_check(self.system_reader_authorized_contexts,
+                                 self.system_reader_unauthorized_contexts,
                                  rule_name,
                                  self.controller.index,
                                  req)
@@ -91,8 +105,8 @@ class KeypairsPolicyTest(base.BasePolicyTest):
         # Change the user_id in request context.
         req = fakes.HTTPRequest.blank('?user_id=user2', version='2.10')
         rule_name = policies.POLICY_ROOT % 'show'
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
+        self.common_policy_check(self.system_reader_authorized_contexts,
+                                 self.system_reader_unauthorized_contexts,
                                  rule_name,
                                  self.controller.show,
                                  req, fakes.FAKE_UUID)
@@ -155,3 +169,41 @@ class KeypairsScopeTypePolicyTest(KeypairsPolicyTest):
     def setUp(self):
         super(KeypairsScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+
+
+class KeypairsNoLegacyPolicyTest(KeypairsScopeTypePolicyTest):
+    """Test Keypairs APIs policies with system scope enabled,
+    and no more deprecated rules that allow the legacy admin API to
+    access system APIs.
+    """
+    without_deprecated_rules = True
+
+    def setUp(self):
+        super(KeypairsNoLegacyPolicyTest, self).setUp()
+
+        # Check that system admin is able to create, delete and get
+        # other users keypairs.
+        self.admin_authorized_contexts = [
+            self.system_admin_context]
+        # Check that system non-admin is not able to create, delete and get
+        # other users keypairs.
+        self.admin_unauthorized_contexts = [
+            self.legacy_admin_context, self.system_member_context,
+            self.system_reader_context, self.system_foo_context,
+            self.project_admin_context, self.project_member_context,
+            self.other_project_member_context,
+            self.project_foo_context, self.project_reader_context
+        ]
+        # Check that system reader is able to get
+        # other users keypairs.
+        self.system_reader_authorized_contexts = [
+            self.system_admin_context, self.system_member_context,
+            self.system_reader_context]
+        # Check that non-system reader is not able to get
+        # other users keypairs.
+        self.system_reader_unauthorized_contexts = [
+            self.legacy_admin_context, self.project_admin_context,
+            self.system_foo_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context,
+            self.other_project_member_context
+        ]
