@@ -1592,9 +1592,16 @@ class LibvirtDriver(driver.ComputeDriver):
         return vol_driver.extend_volume(connection_info, instance,
                                         requested_size)
 
-    def _is_luks_v1(self, encryption=None):
-        """Check if LUKS (v1) is the encryption 'provider'
+    def _allow_native_luksv1(self, encryption=None):
+        """Check if QEMU's native LUKSv1 decryption should be used.
         """
+        # NOTE(lyarwood): Native LUKSv1 decryption can be disabled via a
+        # workarounds configurable in order to aviod known performance issues
+        # with the libgcrypt lib.
+        if CONF.workarounds.disable_native_luksv1:
+            return False
+
+        # NOTE(lyarwood): Ensure the LUKSv1 provider is used.
         provider = None
         if encryption:
             provider = encryption.get('provider', None)
@@ -1636,7 +1643,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if encryption is None:
             encryption = self._get_volume_encryption(context, connection_info)
 
-        if encryption and self._is_luks_v1(encryption=encryption):
+        if encryption and self._allow_native_luksv1(encryption=encryption):
             # NOTE(lyarwood): Fetch the associated key for the volume and
             # decode the passphrase from the key.
             # FIXME(lyarwood): c-vol currently creates symmetric keys for use
@@ -1691,7 +1698,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # and device_path is not present in the connection_info. This avoids
         # VolumeEncryptionNotSupported being thrown when we incorrectly build
         # the encryptor below due to the secrets not being present above.
-        if (encryption and self._is_luks_v1(encryption=encryption) and
+        if (encryption and self._allow_native_luksv1(encryption=encryption) and
             not connection_info['data'].get('device_path')):
             return
         if encryption:
@@ -1878,8 +1885,8 @@ class LibvirtDriver(driver.ComputeDriver):
         # NOTE(lyarwood): https://bugzilla.redhat.com/show_bug.cgi?id=760547
         old_encrypt = self._get_volume_encryption(context, old_connection_info)
         new_encrypt = self._get_volume_encryption(context, new_connection_info)
-        if ((old_encrypt and self._is_luks_v1(old_encrypt)) or
-            (new_encrypt and self._is_luks_v1(new_encrypt))):
+        if ((old_encrypt and self._allow_native_luksv1(old_encrypt)) or
+            (new_encrypt and self._allow_native_luksv1(new_encrypt))):
             raise NotImplementedError(_("Swap volume is not supported for "
                 "encrypted volumes when native LUKS decryption is enabled."))
 
@@ -2001,7 +2008,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # volumes we need to ensure this now takes the LUKSv1 header and key
         # material into account. Otherwise QEMU will attempt and fail to grow
         # host block devices and remote RBD volumes.
-        if self._is_luks_v1(encryption):
+        if self._allow_native_luksv1(encryption):
             try:
                 # NOTE(lyarwood): Find the path to provide to qemu-img
                 if 'device_path' in connection_info['data']:

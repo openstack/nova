@@ -271,6 +271,32 @@ Related options:
 * ``compute_driver`` (libvirt)
 * ``[libvirt]/images_type`` (rbd)
 """),
+    cfg.BoolOpt(
+        'disable_native_luksv1',
+        default=False,
+        help="""
+When attaching encrypted LUKSv1 Cinder volumes to instances the Libvirt driver
+configures the encrypted disks to be natively decrypted by QEMU.
+
+A performance issue has been discovered in the libgcrypt library used by QEMU
+that serverly limits the I/O performance in this scenario.
+
+For more information please refer to the following bug report:
+
+RFE: hardware accelerated AES-XTS mode
+https://bugzilla.redhat.com/show_bug.cgi?id=1762765
+
+Enabling this workaround option will cause Nova to use the legacy dm-crypt
+based os-brick encryptor to decrypt the LUKSv1 volume.
+
+Note that enabling this option while using volumes that do not provide a host
+block device such as Ceph will result in a failure to either boot from or
+attach the volume.
+
+Related options:
+
+* ``compute_driver`` (libvirt)
+"""),
 ]
 
 
