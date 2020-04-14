@@ -290,12 +290,36 @@ Enabling this workaround option will cause Nova to use the legacy dm-crypt
 based os-brick encryptor to decrypt the LUKSv1 volume.
 
 Note that enabling this option while using volumes that do not provide a host
-block device such as Ceph will result in a failure to either boot from or
-attach the volume.
+block device such as Ceph will result in a failure to boot from or attach the
+volume to an instance. See the ``[workarounds]/rbd_block_device`` option for a
+way to avoid this for RBD.
 
 Related options:
 
 * ``compute_driver`` (libvirt)
+* ``rbd_block_device`` (workarounds)
+"""),
+    cfg.BoolOpt('rbd_volume_local_attach',
+                default=False,
+                help="""
+Attach RBD Cinder volumes to the compute as host block devices.
+
+When enabled this option instructs os-brick to connect RBD volumes locally on
+the compute host as block devices instead of natively through QEMU.
+
+This workaround does not currently support extending attached volumes.
+
+This can be used with the disable_native_luksv1 workaround configuration
+option to avoid the recently discovered performance issues found within the
+libgcrypt library.
+
+This workaround is temporary and will be removed during the W release once
+all impacted distributions have been able to update their versions of the
+libgcrypt library.
+
+Related options:
+* ``compute_driver`` (libvirt)
+* ``disable_qemu_native_luksv1`` (workarounds)
 """),
 ]
 

@@ -1,0 +1,23 @@
+---
+other:
+  - |
+    The ``[workarounds]/rbd_volume_local_attach`` configuration option has been
+    introduced. This can be used by operators to ensure RBD volumes are
+    connected to compute hosts as block devices. This can be used with
+    the ``[worarounds]/disable_native_luksv1`` configuration option to
+    workaround recently discovered performance issues found within the
+    `libgcrypt library`__ used by QEMU when natively decrypting LUKSv1
+    encrypted disks.
+
+    This workaround does not currently support extending attached volumes.
+
+    This workaround is temporary and will be removed during the W release once
+    all impacted distributions have been able to update their versions of the
+    libgcrypt library.
+
+    .. warning:: Operators must ensure no instances are running on the compute
+      host before enabling this workaround. Any instances with attached RBD
+      volumes left running on the hosts will fail to migrate or stop after this
+      workaround has been enabled.
+
+    .. __: https://bugzilla.redhat.com/show_bug.cgi?id=1762765
