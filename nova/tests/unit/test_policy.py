@@ -353,7 +353,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-services:update",
 "os_compute_api:os-services:delete",
 "os_compute_api:os-shelve:shelve_offload",
-"os_compute_api:os-simple-tenant-usage:list",
 "os_compute_api:os-availability-zone:detail",
 "os_compute_api:os-assisted-volume-snapshots:create",
 "os_compute_api:os-assisted-volume-snapshots:delete",
@@ -388,7 +387,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:server-metadata:create",
 "os_compute_api:server-metadata:update",
 "os_compute_api:server-metadata:update_all",
-"os_compute_api:os-simple-tenant-usage:show",
 "os_compute_api:os-suspend-server:suspend",
 "os_compute_api:os-suspend-server:resume",
 "os_compute_api:os-tenant-networks",
@@ -455,6 +453,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
         self.system_reader_rules = (
 "os_compute_api:servers:migrations:index",
 "os_compute_api:servers:migrations:show",
+"os_compute_api:os-simple-tenant-usage:list",
 "os_compute_api:os-migrations:index",
 "os_compute_api:os-services:list",
 "os_compute_api:os-instance-actions:events:details",
@@ -472,6 +471,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 )
 
         self.system_reader_or_owner_rules = (
+"os_compute_api:os-simple-tenant-usage:show",
 "os_compute_api:os-security-groups:list",
 "os_compute_api:os-volumes-attachments:index",
 "os_compute_api:os-volumes-attachments:show",

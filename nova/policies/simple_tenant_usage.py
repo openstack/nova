@@ -24,7 +24,7 @@ POLICY_ROOT = 'os_compute_api:os-simple-tenant-usage:%s'
 simple_tenant_usage_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'show',
-        check_str=base.RULE_ADMIN_OR_OWNER,
+        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
         description="Show usage statistics for a specific tenant",
         operations=[
             {
@@ -35,7 +35,7 @@ simple_tenant_usage_policies = [
         scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'list',
-        check_str=base.RULE_ADMIN_API,
+        check_str=base.SYSTEM_READER,
         description="List per tenant usage statistics for all tenants",
         operations=[
             {

@@ -10,6 +10,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+
 from nova.api.openstack.compute import simple_tenant_usage
 from nova.policies import simple_tenant_usage as policies
 from nova.tests.unit.api.openstack import fakes
@@ -28,45 +30,46 @@ class SimpleTenantUsagePolicyTest(base.BasePolicyTest):
         super(SimpleTenantUsagePolicyTest, self).setUp()
         self.controller = simple_tenant_usage.SimpleTenantUsageController()
         self.req = fakes.HTTPRequest.blank('')
+        self.controller._get_instances_all_cells = mock.MagicMock()
 
-        # Check that admin or and owner is able to get
+        # Check that reader(legacy admin) or and owner is able to get
         # the tenant usage statistics for a specific tenant.
-        self.admin_or_owner_authorized_contexts = [
+        self.reader_or_owner_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context]
-        # Check that non-admin/owner is not able to get
+            self.project_reader_context, self.project_foo_context,
+            self.system_member_context, self.system_reader_context]
+        # Check that non-reader(legacy non-admin) or owner is not able to get
         # the tenant usage statistics for a specific tenant.
-        self.admin_or_owner_unauthorized_contexts = [
-            self.system_member_context, self.system_reader_context,
+        self.reader_or_owner_unauthorized_contexts = [
             self.system_foo_context, self.other_project_member_context,
-            self.other_project_reader_context,
+            self.other_project_reader_context
         ]
-        # Check that admin is able to get the tenant usage statistics.
-        self.admin_authorized_contexts = [
+        # Check that reader is able to get the tenant usage statistics.
+        self.reader_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context]
-        # Check that non-admin is not able to get the tenant usage statistics.
-        self.admin_unauthorized_contexts = [
-            self.system_member_context, self.system_reader_context,
+            self.project_admin_context, self.system_member_context,
+            self.system_reader_context]
+        # Check that non-reader is not able to get the tenant usage statistics.
+        self.reader_unauthorized_contexts = [
             self.system_foo_context, self.project_member_context,
             self.other_project_member_context,
             self.project_foo_context, self.project_reader_context,
-            self.other_project_reader_context,
+            self.other_project_reader_context
         ]
 
     def test_index_simple_tenant_usage_policy(self):
         rule_name = policies.POLICY_ROOT % 'list'
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
+        self.common_policy_check(self.reader_authorized_contexts,
+                                 self.reader_unauthorized_contexts,
                                  rule_name,
                                  self.controller.index,
                                  self.req)
 
     def test_show_simple_tenant_usage_policy(self):
         rule_name = policies.POLICY_ROOT % 'show'
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
+        self.common_policy_check(self.reader_or_owner_authorized_contexts,
+                                 self.reader_or_owner_unauthorized_contexts,
                                  rule_name,
                                  self.controller.show,
                                  self.req, self.project_id)
@@ -86,15 +89,41 @@ class SimpleTenantUsageScopeTypePolicyTest(SimpleTenantUsagePolicyTest):
         super(SimpleTenantUsageScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
 
-        # Check that system admin is able to get the tenant usage statistics.
-        self.admin_authorized_contexts = [
-            self.system_admin_context]
-        # Check that non-system/admin is not able to get the tenant usage
+        # Check that system reader is able to get the tenant usage statistics.
+        self.reader_authorized_contexts = [
+            self.system_admin_context, self.system_member_context,
+            self.system_reader_context]
+        # Check that non-system/reader is not able to get the tenant usage
         # statistics.
-        self.admin_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_member_context,
-            self.system_reader_context, self.system_foo_context,
+        self.reader_unauthorized_contexts = [
+            self.legacy_admin_context, self.system_foo_context,
             self.project_admin_context, self.project_member_context,
             self.other_project_member_context,
-            self.project_foo_context, self.project_reader_context
+            self.project_foo_context, self.project_reader_context,
+            self.other_project_reader_context
+        ]
+
+
+class SimpleTenantUsageNoLegacyPolicyTest(
+        SimpleTenantUsageScopeTypePolicyTest):
+    """Test Simple Tenant Usage APIs policies with system scope enabled,
+    and no more deprecated rules that allow the legacy admin API to
+    access system APIs.
+    """
+    without_deprecated_rules = True
+
+    def setUp(self):
+        super(SimpleTenantUsageNoLegacyPolicyTest, self).setUp()
+        # Check that system reader or owner is able to get
+        # the tenant usage statistics for a specific tenant.
+        self.reader_or_owner_authorized_contexts = [
+            self.system_admin_context, self.system_member_context,
+            self.system_reader_context, self.project_admin_context,
+            self.project_member_context, self.project_reader_context]
+        # Check that non-system reader/owner is not able to get
+        # the tenant usage statistics for a specific tenant.
+        self.reader_or_owner_unauthorized_contexts = [
+            self.legacy_admin_context, self.system_foo_context,
+            self.other_project_member_context,
+            self.project_foo_context, self.other_project_reader_context
         ]
