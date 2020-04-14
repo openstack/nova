@@ -271,6 +271,9 @@ Related options:
 * ``compute_driver`` (libvirt)
 * ``[libvirt]/images_type`` (rbd)
 """),
+    # TODO(lyarwood): Remove this workaround in the W release once all
+    # supported distros have rebased to a version of libgcrypt that does not
+    # have the performance issues listed below.
     cfg.BoolOpt(
         'disable_native_luksv1',
         default=False,
@@ -299,6 +302,8 @@ Related options:
 * ``compute_driver`` (libvirt)
 * ``rbd_block_device`` (workarounds)
 """),
+    # TODO(lyarwood): Remove this workaround in the W release when the
+    # above disable_native_luksv1 configurable is removed.
     cfg.BoolOpt('rbd_volume_local_attach',
                 default=False,
                 help="""
