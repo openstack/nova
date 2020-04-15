@@ -45,22 +45,35 @@ class ServerGroupPolicyTest(base.BasePolicyTest):
                     user_id='u2', policies=[], members=[])]
         self.mock_get.return_value = self.sg[0]
 
-        # Check that admin or and owner is able to get and delete
+        # Check that admin or and owner is able to delete
         # the server group.
         self.admin_or_owner_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context, self.project_member_context,
             self.project_reader_context, self.project_foo_context]
-        # Check that non-admin/owner is not able to get and delete
+        # Check that non-admin/owner is not able to delete
         # the server group.
         self.admin_or_owner_unauthorized_contexts = [
             self.system_member_context, self.system_reader_context,
             self.system_foo_context,
             self.other_project_member_context
         ]
-
-        # Check that everyone is able to list and create
-        # theie own server group.
+        # Check that system reader or owner is able to get
+        # the server group. Due to old default everyone
+        # is allowed to perform this operation.
+        self.system_reader_or_owner_authorized_contexts = [
+            self.legacy_admin_context, self.system_admin_context,
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context, self.system_member_context,
+            self.system_reader_context, self.project_foo_context
+        ]
+        self.system_reader_or_owner_unauthorized_contexts = [
+            self.system_foo_context,
+            self.other_project_member_context
+        ]
+        # Check that everyone is able to list
+        # theie own server group. Due to old defaults everyone
+        # is able to list their server groups.
         self.everyone_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context, self.project_member_context,
@@ -70,6 +83,16 @@ class ServerGroupPolicyTest(base.BasePolicyTest):
             self.other_project_member_context]
         self.everyone_unauthorized_contexts = [
         ]
+        # Check that project member is able to create server group.
+        # Due to old defaults everyone is able to list their server groups.
+        self.project_member_authorized_contexts = [
+            self.legacy_admin_context, self.system_admin_context,
+            self.project_admin_context, self.project_member_context,
+            self.system_member_context, self.project_reader_context,
+            self.project_foo_context, self.system_reader_context,
+            self.system_foo_context,
+            self.other_project_member_context]
+        self.project_member_unauthorized_contexts = []
 
     @mock.patch('nova.objects.InstanceGroupList.get_by_project_id')
     def test_index_server_groups_policy(self, mock_get):
@@ -105,19 +128,20 @@ class ServerGroupPolicyTest(base.BasePolicyTest):
 
     def test_show_server_groups_policy(self):
         rule_name = policies.POLICY_ROOT % 'show'
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller.show,
-                                 self.req, uuids.fake_id)
+        self.common_policy_check(
+            self.system_reader_or_owner_authorized_contexts,
+            self.system_reader_or_owner_unauthorized_contexts,
+            rule_name,
+            self.controller.show,
+            self.req, uuids.fake_id)
 
     @mock.patch('nova.objects.Quotas.check_deltas')
     def test_create_server_groups_policy(self, mock_quota):
         rule_name = policies.POLICY_ROOT % 'create'
         body = {'server_group': {'name': 'fake',
                                  'policies': ['affinity']}}
-        self.common_policy_check(self.everyone_authorized_contexts,
-                                 self.everyone_unauthorized_contexts,
+        self.common_policy_check(self.project_member_authorized_contexts,
+                                 self.project_member_unauthorized_contexts,
                                  rule_name,
                                  self.controller.create,
                                  self.req, body=body)
@@ -146,6 +170,19 @@ class ServerGroupScopeTypePolicyTest(ServerGroupPolicyTest):
         super(ServerGroupScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
 
+        # Check if project scoped can create the server group.
+        self.project_member_authorized_contexts = [
+            self.legacy_admin_context, self.project_admin_context,
+            self.project_member_context, self.project_reader_context,
+            self.project_foo_context,
+            self.other_project_member_context
+        ]
+        # Check if non-project scoped cannot create the server group.
+        self.project_member_unauthorized_contexts = [
+            self.system_admin_context, self.system_member_context,
+            self.system_reader_context, self.system_foo_context
+        ]
+
     # TODO(gmann): Test this with system scope once we remove
     # the hardcoded admin check
     def test_index_all_project_server_groups_policy(self):
@@ -158,3 +195,56 @@ class ServerGroupNoLegacyPolicyTest(ServerGroupScopeTypePolicyTest):
     access system APIs.
     """
     without_deprecated_rules = True
+
+    def setUp(self):
+        super(ServerGroupNoLegacyPolicyTest, self).setUp()
+
+        # Check that system admin or and owner is able to delete
+        # the server group.
+        self.admin_or_owner_authorized_contexts = [
+            self.system_admin_context,
+            self.project_admin_context, self.project_member_context,
+        ]
+        # Check that non-system admin/owner is not able to delete
+        # the server group.
+        self.admin_or_owner_unauthorized_contexts = [
+            self.legacy_admin_context, self.system_member_context,
+            self.system_reader_context, self.system_foo_context,
+            self.project_reader_context, self.project_foo_context,
+            self.other_project_member_context
+        ]
+        # Check that system reader or owner is able to get
+        # the server group.
+        self.system_reader_or_owner_authorized_contexts = [
+            self.system_admin_context,
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context, self.system_member_context,
+            self.system_reader_context
+        ]
+        self.system_reader_or_owner_unauthorized_contexts = [
+            self.legacy_admin_context, self.system_foo_context,
+            self.other_project_member_context, self.project_foo_context
+        ]
+        self.everyone_authorized_contexts = [
+            self.legacy_admin_context, self.system_admin_context,
+            self.project_admin_context,
+            self.project_member_context, self.project_reader_context,
+            self.system_member_context, self.system_reader_context,
+            self.other_project_member_context
+        ]
+        self.everyone_unauthorized_contexts = [
+            self.project_foo_context,
+            self.system_foo_context
+        ]
+        # Check if project member can create the server group.
+        self.project_member_authorized_contexts = [
+            self.legacy_admin_context, self.project_admin_context,
+            self.project_member_context, self.other_project_member_context
+        ]
+        # Check if non-project member cannot create the server group.
+        self.project_member_unauthorized_contexts = [
+            self.system_admin_context,
+            self.system_member_context, self.system_reader_context,
+            self.system_foo_context, self.project_reader_context,
+            self.project_foo_context,
+        ]

@@ -114,6 +114,8 @@ class BasePolicyTest(test.TestCase):
                     "role:admin and system_scope:all",
                 "system_reader_api":
                     "role:reader and system_scope:all",
+                "project_member_api":
+                    "role:member and project_id:%(project_id)s",
             })
             self.policy.set_rules(self.rules_without_deprecation,
                                   overwrite=False)
