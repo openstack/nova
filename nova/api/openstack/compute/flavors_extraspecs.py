@@ -60,7 +60,8 @@ class FlavorExtraSpecsController(wsgi.Controller):
     def index(self, req, flavor_id):
         """Returns the list of extra specs for a given flavor."""
         context = req.environ['nova.context']
-        context.can(fes_policies.POLICY_ROOT % 'index')
+        context.can(fes_policies.POLICY_ROOT % 'index',
+                    target={'project_id': context.project_id})
         return self._get_extra_specs(context, flavor_id)
 
     # NOTE(gmann): Here should be 201 instead of 200 by v2.1
@@ -70,7 +71,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
     @validation.schema(flavors_extraspecs.create)
     def create(self, req, flavor_id, body):
         context = req.environ['nova.context']
-        context.can(fes_policies.POLICY_ROOT % 'create')
+        context.can(fes_policies.POLICY_ROOT % 'create', target={})
 
         specs = body['extra_specs']
         self._check_extra_specs_value(req, specs)
@@ -88,7 +89,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
     @validation.schema(flavors_extraspecs.update)
     def update(self, req, flavor_id, id, body):
         context = req.environ['nova.context']
-        context.can(fes_policies.POLICY_ROOT % 'update')
+        context.can(fes_policies.POLICY_ROOT % 'update', target={})
 
         self._check_extra_specs_value(req, body)
         if id not in body:
@@ -108,7 +109,8 @@ class FlavorExtraSpecsController(wsgi.Controller):
     def show(self, req, flavor_id, id):
         """Return a single extra spec item."""
         context = req.environ['nova.context']
-        context.can(fes_policies.POLICY_ROOT % 'show')
+        context.can(fes_policies.POLICY_ROOT % 'show',
+                    target={'project_id': context.project_id})
         flavor = common.get_flavor(context, flavor_id)
         try:
             return {id: flavor.extra_specs[id]}
@@ -125,7 +127,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
     def delete(self, req, flavor_id, id):
         """Deletes an existing extra spec."""
         context = req.environ['nova.context']
-        context.can(fes_policies.POLICY_ROOT % 'delete')
+        context.can(fes_policies.POLICY_ROOT % 'delete', target={})
         flavor = common.get_flavor(context, flavor_id)
         try:
             del flavor.extra_specs[id]
