@@ -4638,6 +4638,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock_support.assert_called_once_with()
             self.assertEqual(cfg.os_loader_type, "pflash")
 
+    @mock.patch('os.path.exists', return_value=True)
+    def test_check_uefi_support_aarch64(self, mock_exist):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self._stub_host_capabilities_cpu_arch(fields.Architecture.AARCH64)
+        self.assertTrue(drvr._has_uefi_support())
+        self.assertTrue(drvr._check_uefi_support(None))
+
     def test_get_guest_config_with_block_device(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
