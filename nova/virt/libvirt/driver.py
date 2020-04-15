@@ -6638,7 +6638,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # .format() can return IndexError
         except (exception.PciDeviceWrongAddressFormat, IndexError):
             # this is not a valid PCI address
-            LOG.warning("The PCI address %s was invalid for getting the"
+            LOG.warning("The PCI address %s was invalid for getting the "
                         "related vGPU type", device_address)
             return
         try:
