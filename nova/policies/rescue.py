@@ -35,7 +35,7 @@ for unrescue and keeping old policy for rescue.
 rescue_policies = [
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_OR_OWNER,
+        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
         description="Rescue a server",
         operations=[
             {
@@ -46,7 +46,7 @@ rescue_policies = [
         scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
         name=UNRESCUE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_OR_OWNER,
+        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
         description="Unrescue a server",
         operations=[
             {

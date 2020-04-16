@@ -219,20 +219,6 @@ class InstanceActionsScopeTypePolicyTest(InstanceActionsPolicyTest):
         super(InstanceActionsScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
 
-        # Check that system reader is able to get the
-        # instance action events
-        self.system_reader_authorized_contexts = [
-            self.system_admin_context, self.system_member_context,
-            self.system_reader_context]
-        # Check that non-system-reader is not able to
-        # get the instance action events
-        self.system_reader_unauthorized_contexts = [
-            self.system_foo_context, self.legacy_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.other_project_member_context,
-            self.project_foo_context, self.project_reader_context
-        ]
-
     @mock.patch('nova.objects.InstanceActionEventList.get_by_action')
     @mock.patch('nova.objects.InstanceAction.get_by_request_id')
     def test_show_instance_action_policy_with_show_details(

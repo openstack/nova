@@ -32,7 +32,7 @@ admin_actions_policies = [
                 'path': '/servers/{server_id}/action (os-resetState)'
             }
         ],
-        scope_types=['system']),
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'inject_network_info',
         check_str=base.SYSTEM_ADMIN,
@@ -43,7 +43,7 @@ admin_actions_policies = [
                 'path': '/servers/{server_id}/action (injectNetworkInfo)'
             }
         ],
-        scope_types=['system']),
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'reset_network',
         check_str=base.SYSTEM_ADMIN,
@@ -54,7 +54,7 @@ admin_actions_policies = [
                 'path': '/servers/{server_id}/action (resetNetwork)'
             }
         ],
-        scope_types=['system'])
+        scope_types=['system', 'project'])
 ]
 
 

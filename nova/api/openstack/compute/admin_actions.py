@@ -40,8 +40,9 @@ class AdminActionsController(wsgi.Controller):
     def _reset_network(self, req, id, body):
         """Permit admins to reset networking on a server."""
         context = req.environ['nova.context']
-        context.can(aa_policies.POLICY_ROOT % 'reset_network', target={})
         instance = common.get_instance(self.compute_api, context, id)
+        context.can(aa_policies.POLICY_ROOT % 'reset_network',
+                    target={'project_id': instance.project_id})
         try:
             self.compute_api.reset_network(context, instance)
         except exception.InstanceIsLocked as e:
@@ -53,8 +54,9 @@ class AdminActionsController(wsgi.Controller):
     def _inject_network_info(self, req, id, body):
         """Permit admins to inject network info into a server."""
         context = req.environ['nova.context']
-        context.can(aa_policies.POLICY_ROOT % 'inject_network_info', target={})
         instance = common.get_instance(self.compute_api, context, id)
+        context.can(aa_policies.POLICY_ROOT % 'inject_network_info',
+                    target={'project_id': instance.project_id})
         try:
             self.compute_api.inject_network_info(context, instance)
         except exception.InstanceIsLocked as e:
@@ -67,12 +69,13 @@ class AdminActionsController(wsgi.Controller):
     def _reset_state(self, req, id, body):
         """Permit admins to reset the state of a server."""
         context = req.environ["nova.context"]
-        context.can(aa_policies.POLICY_ROOT % 'reset_state', target={})
+        instance = common.get_instance(self.compute_api, context, id)
+        context.can(aa_policies.POLICY_ROOT % 'reset_state',
+                    target={'project_id': instance.project_id})
 
         # Identify the desired state from the body
         state = state_map[body["os-resetState"]["state"]]
 
-        instance = common.get_instance(self.compute_api, context, id)
         instance.vm_state = state
         instance.task_state = None
         instance.save(admin_state_reset=True)
