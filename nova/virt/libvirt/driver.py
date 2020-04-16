@@ -2017,8 +2017,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     path = 'unknown'
                     raise exception.DiskNotFound(location='unknown')
 
-                info = images.privileged_qemu_img_info(
-                    path, output_format='json')
+                info = images.privileged_qemu_img_info(path)
                 format_specific_data = info.format_specific['data']
                 payload_offset = format_specific_data['payload-offset']
 

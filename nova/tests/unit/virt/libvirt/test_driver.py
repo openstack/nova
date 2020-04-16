@@ -9464,8 +9464,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         mock_get_encryption_metadata.assert_called_once_with(
             self.context, drvr._volume_api, uuids.volume_id, connection_info)
-        mock_qemu_img_info.assert_called_once_with(
-            mock.sentinel.device_path, output_format='json')
+        mock_qemu_img_info.assert_called_once_with(mock.sentinel.device_path)
 
         # Assert that the Libvirt call to resize the device within the instance
         # is called with the LUKSv1 payload offset taken into account.
@@ -9522,8 +9521,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         mock_get_encryption_metadata.assert_called_once_with(
             self.context, drvr._volume_api, uuids.volume_id, connection_info)
-        mock_qemu_img_info.assert_called_once_with(
-            'rbd:pool/volume', output_format='json')
+        mock_qemu_img_info.assert_called_once_with('rbd:pool/volume')
 
         # Assert that the Libvirt call to resize the device within the instance
         # is called with the LUKSv1 payload offset taken into account.
@@ -19862,10 +19860,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('os.path.exists')
     @mock.patch('os.path.getsize')
     @mock.patch('os.path.isdir')
-    @mock.patch('oslo_concurrency.processutils.execute')
+    @mock.patch('nova.virt.images.qemu_img_info')
     @mock.patch.object(host.Host, '_get_domain')
     def test_get_instance_disk_info_parallels_ct(self, mock_get_domain,
-                                                 mock_execute,
+                                                 mock_qemu_img_info,
                                                  mock_isdir,
                                                  mock_getsize,
                                                  mock_exists,
@@ -19880,10 +19878,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     "<target dir='/'/></filesystem>"
                     "</devices></domain>")
 
-        ret = ("image: /test/disk/root.hds\n"
-               "file format: parallels\n"
-               "virtual size: 20G (21474836480 bytes)\n"
-               "disk size: 789M\n")
+        mock_qemu_img_info.return_value = mock.Mock(
+            virtual_size=21474836480, image="/test/disk/root.hds",
+            file_format="ploop", size=827327254, backing_file=None)
 
         self.flags(virt_type='parallels', group='libvirt')
         instance = objects.Instance(**self.test_instance)
@@ -19903,7 +19900,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_getsize.side_effect = getsize_sideeffect
         mock_exists.return_value = True
         mock_isdir.return_value = True
-        mock_execute.return_value = (ret, '')
 
         info = drvr.get_instance_disk_info(instance)
         info = jsonutils.loads(info)
