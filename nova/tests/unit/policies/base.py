@@ -149,9 +149,10 @@ class BasePolicyTest(test.TestCase):
         def ensure_raises(req, *args, **kwargs):
             exc = self.assertRaises(
                 exception.PolicyNotAuthorized, func, req, *arg, **kwarg)
-            self.assertEqual(
-                "Policy doesn't allow %s to be performed." %
-                rule_name, exc.format_message())
+            if rule_name is not None:
+                self.assertEqual(
+                    "Policy doesn't allow %s to be performed." %
+                    rule_name, exc.format_message())
         # Verify all the context having allowed scope and roles pass
         # the policy check.
         for context in authorized_contexts:
