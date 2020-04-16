@@ -19,6 +19,9 @@ from nova.api.openstack.compute import servers
 from nova.compute import vm_states
 from nova import exception
 from nova import objects
+from nova.objects import fields
+from nova.objects.instance_group import InstanceGroup
+from nova.policies import extended_server_attributes as ea_policies
 from nova.policies import servers as policies
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_flavor
@@ -53,7 +56,8 @@ class ServersPolicyTest(base.BasePolicyTest):
         self.instance = fake_instance.fake_instance_obj(
                 self.project_member_context,
                 id=1, uuid=uuids.fake_id, project_id=self.project_id,
-                user_id=user_id, vm_state=vm_states.ACTIVE)
+                user_id=user_id, vm_state=vm_states.ACTIVE,
+                system_metadata={}, expected_attrs=['system_metadata'])
 
         self.mock_flavor = self.useFixture(
             fixtures.MockPatch('nova.compute.flavors.get_flavor_by_flavor_id'
@@ -86,6 +90,17 @@ class ServersPolicyTest(base.BasePolicyTest):
                 'flavorRef': uuids.fake_id,
             },
         }
+        self.extended_attr = ['OS-EXT-SRV-ATTR:host',
+            'OS-EXT-SRV-ATTR:hypervisor_hostname',
+            'OS-EXT-SRV-ATTR:instance_name',
+            'OS-EXT-SRV-ATTR:hostname',
+            'OS-EXT-SRV-ATTR:kernel_id',
+            'OS-EXT-SRV-ATTR:launch_index',
+            'OS-EXT-SRV-ATTR:ramdisk_id',
+            'OS-EXT-SRV-ATTR:reservation_id',
+            'OS-EXT-SRV-ATTR:root_device_name',
+            'OS-EXT-SRV-ATTR:user_data'
+        ]
 
         # Check that admin or and owner is able to update, delete
         # or perform server action.
@@ -163,6 +178,20 @@ class ServersPolicyTest(base.BasePolicyTest):
             self.other_project_reader_context]
         # Check that non-project member is not able to create server
         self.project_member_unauthorized_contexts = [
+        ]
+        # Check that admin is able to get server extended attributes
+        # or host status.
+        self.server_attr_admin_authorized_contexts = [
+            self.legacy_admin_context, self.system_admin_context,
+            self.project_admin_context]
+        # Check that non-admin is not able to get server extended attributes
+        # or host status.
+        self.server_attr_admin_unauthorized_contexts = [
+            self.system_member_context, self.system_reader_context,
+            self.system_foo_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context,
+            self.other_project_member_context,
+            self.other_project_reader_context
         ]
 
     def test_index_server_policy(self):
@@ -783,6 +812,327 @@ class ServersPolicyTest(base.BasePolicyTest):
         body = {'trigger_crash_dump': None}
         self.controller._action_trigger_crash_dump(req,
             self.instance.uuid, body=body)
+
+    def test_server_detail_with_extended_attr_policy(self):
+        def fake_get_all(context, search_opts=None,
+                         limit=None, marker=None,
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False, all_tenants=False):
+            return objects.InstanceList(objects=self.servers)
+        self.mock_get_all.side_effect = fake_get_all
+
+        rule = policies.SERVERS % 'detail'
+        # server 'detail' policy is checked before extended attributes
+        # policy so we have to allow it for everyone otherwise it will fail
+        # first for unauthorized contexts.
+        self.policy.set_rules({rule: "@"}, overwrite=False)
+        req = fakes.HTTPRequest.blank('', version='2.3')
+        rule_name = ea_policies.BASE_POLICY_NAME
+        authorize_res, unauthorize_res = self.common_policy_check(
+            self.server_attr_admin_authorized_contexts,
+            self.server_attr_admin_unauthorized_contexts,
+            rule_name, self.controller.detail, req,
+            fatal=False)
+        for attr in self.extended_attr:
+            for resp in authorize_res:
+                self.assertIn(attr, resp['servers'][0])
+            for resp in unauthorize_res:
+                self.assertNotIn(attr, resp['servers'][0])
+
+    @mock.patch('nova.objects.BlockDeviceMappingList.bdms_by_instance_uuid')
+    @mock.patch('nova.compute.api.API.get_instance_host_status')
+    def test_server_show_with_extended_attr_policy(self, mock_get, mock_block):
+        rule = policies.SERVERS % 'show'
+        # server 'show' policy is checked before extended attributes
+        # policy so we have to allow it for everyone otherwise it will fail
+        # first for unauthorized contexts.
+        self.policy.set_rules({rule: "@"}, overwrite=False)
+        req = fakes.HTTPRequest.blank('', version='2.3')
+        rule_name = ea_policies.BASE_POLICY_NAME
+        authorize_res, unauthorize_res = self.common_policy_check(
+            self.server_attr_admin_authorized_contexts,
+            self.server_attr_admin_unauthorized_contexts,
+            rule_name, self.controller.show, req, 'fake',
+            fatal=False)
+        for attr in self.extended_attr:
+            for resp in authorize_res:
+                self.assertIn(attr, resp['server'])
+            for resp in unauthorize_res:
+                self.assertNotIn(attr, resp['server'])
+
+    @mock.patch('nova.objects.BlockDeviceMappingList.bdms_by_instance_uuid')
+    @mock.patch('nova.compute.api.API.get_instance_host_status')
+    @mock.patch('nova.compute.api.API.rebuild')
+    def test_server_rebuild_with_extended_attr_policy(self, mock_rebuild,
+        mock_get, mock_bdm):
+        rule = policies.SERVERS % 'rebuild'
+        # server 'rebuild' policy is checked before extended attributes
+        # policy so we have to allow it for everyone otherwise it will fail
+        # first for unauthorized contexts.
+        self.policy.set_rules({rule: "@"}, overwrite=False)
+        req = fakes.HTTPRequest.blank('', version='2.75')
+        rule_name = ea_policies.BASE_POLICY_NAME
+        authorize_res, unauthorize_res = self.common_policy_check(
+            self.server_attr_admin_authorized_contexts,
+            self.server_attr_admin_unauthorized_contexts,
+            rule_name, self.controller._action_rebuild,
+            req, self.instance.uuid,
+            body={'rebuild': {"imageRef": uuids.fake_id}},
+            fatal=False)
+        for attr in self.extended_attr:
+            # NOTE(gmann): user_data attribute is always present in
+            # rebuild response since 2.47.
+            if attr == 'OS-EXT-SRV-ATTR:user_data':
+                continue
+            for resp in authorize_res:
+                self.assertIn(attr, resp.obj['server'])
+            for resp in unauthorize_res:
+                self.assertNotIn(attr, resp.obj['server'])
+
+    @mock.patch('nova.objects.BlockDeviceMappingList.bdms_by_instance_uuid')
+    @mock.patch.object(InstanceGroup, 'get_by_instance_uuid')
+    @mock.patch('nova.compute.api.API.update_instance')
+    def test_server_update_with_extended_attr_policy(self,
+        mock_update, mock_group, mock_bdm):
+        rule = policies.SERVERS % 'update'
+        # server 'update' policy is checked before extended attributes
+        # policy so we have to allow it for everyone otherwise it will fail
+        # first for unauthorized contexts.
+        self.policy.set_rules({rule: "@"}, overwrite=False)
+        req = fakes.HTTPRequest.blank('', version='2.75')
+        rule_name = ea_policies.BASE_POLICY_NAME
+        authorize_res, unauthorize_res = self.common_policy_check(
+            self.server_attr_admin_authorized_contexts,
+            self.server_attr_admin_unauthorized_contexts,
+            rule_name, self.controller.update,
+            req, self.instance.uuid,
+            body={'server': {'name': 'test'}},
+            fatal=False)
+        for attr in self.extended_attr:
+            for resp in authorize_res:
+                self.assertIn(attr, resp['server'])
+            for resp in unauthorize_res:
+                self.assertNotIn(attr, resp['server'])
+
+    def test_server_detail_with_host_status_policy(self):
+        def fake_get_all(context, search_opts=None,
+                         limit=None, marker=None,
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False, all_tenants=False):
+            return objects.InstanceList(objects=self.servers)
+        self.mock_get_all.side_effect = fake_get_all
+
+        rule = policies.SERVERS % 'detail'
+        # server 'detail' policy is checked before host_status
+        # policy so we have to allow it for everyone otherwise it will fail
+        # first for unauthorized contexts.
+        self.policy.set_rules({rule: "@"}, overwrite=False)
+        req = fakes.HTTPRequest.blank('', version='2.16')
+        rule_name = policies.SERVERS % 'show:host_status'
+        authorize_res, unauthorize_res = self.common_policy_check(
+            self.server_attr_admin_authorized_contexts,
+            self.server_attr_admin_unauthorized_contexts,
+            rule_name, self.controller.detail, req,
+            fatal=False)
+        for resp in authorize_res:
+            self.assertIn('host_status', resp['servers'][0])
+        for resp in unauthorize_res:
+            self.assertNotIn('host_status', resp['servers'][0])
+
+    @mock.patch('nova.objects.BlockDeviceMappingList.bdms_by_instance_uuid')
+    @mock.patch('nova.compute.api.API.get_instance_host_status')
+    def test_server_show_with_host_status_policy(self,
+        mock_status, mock_block):
+        rule = policies.SERVERS % 'show'
+        # server 'show' policy is checked before host_status
+        # policy so we have to allow it for everyone otherwise it will fail
+        # first for unauthorized contexts.
+        self.policy.set_rules({rule: "@"}, overwrite=False)
+        req = fakes.HTTPRequest.blank('', version='2.16')
+        rule_name = policies.SERVERS % 'show:host_status'
+        authorize_res, unauthorize_res = self.common_policy_check(
+            self.server_attr_admin_authorized_contexts,
+            self.server_attr_admin_unauthorized_contexts,
+            rule_name, self.controller.show, req, 'fake',
+            fatal=False)
+        for resp in authorize_res:
+            self.assertIn('host_status', resp['server'])
+        for resp in unauthorize_res:
+            self.assertNotIn('host_status', resp['server'])
+
+    @mock.patch('nova.objects.BlockDeviceMappingList.bdms_by_instance_uuid')
+    @mock.patch('nova.compute.api.API.get_instance_host_status')
+    @mock.patch('nova.compute.api.API.rebuild')
+    def test_server_rebuild_with_host_status_policy(self, mock_rebuild,
+        mock_status, mock_bdm):
+        rule = policies.SERVERS % 'rebuild'
+        # server 'rebuild' policy is checked before host_status
+        # policy so we have to allow it for everyone otherwise it will fail
+        # first for unauthorized contexts.
+        self.policy.set_rules({rule: "@"}, overwrite=False)
+        req = fakes.HTTPRequest.blank('', version='2.75')
+        rule_name = policies.SERVERS % 'show:host_status'
+        authorize_res, unauthorize_res = self.common_policy_check(
+            self.server_attr_admin_authorized_contexts,
+            self.server_attr_admin_unauthorized_contexts,
+            rule_name, self.controller._action_rebuild,
+            req, self.instance.uuid,
+            body={'rebuild': {"imageRef": uuids.fake_id}},
+            fatal=False)
+        for resp in authorize_res:
+            self.assertIn('host_status', resp.obj['server'])
+        for resp in unauthorize_res:
+            self.assertNotIn('host_status', resp.obj['server'])
+
+    @mock.patch('nova.objects.BlockDeviceMappingList.bdms_by_instance_uuid')
+    @mock.patch.object(InstanceGroup, 'get_by_instance_uuid')
+    @mock.patch('nova.compute.api.API.update_instance')
+    def test_server_update_with_host_status_policy(self,
+        mock_update, mock_group, mock_bdm):
+        rule = policies.SERVERS % 'update'
+        # server 'update' policy is checked before host_status
+        # policy so we have to allow it for everyone otherwise it will fail
+        # first for unauthorized contexts.
+        self.policy.set_rules({rule: "@"}, overwrite=False)
+        req = fakes.HTTPRequest.blank('', version='2.75')
+        rule_name = policies.SERVERS % 'show:host_status'
+        authorize_res, unauthorize_res = self.common_policy_check(
+            self.server_attr_admin_authorized_contexts,
+            self.server_attr_admin_unauthorized_contexts,
+            rule_name, self.controller.update,
+            req, self.instance.uuid,
+            body={'server': {'name': 'test'}},
+            fatal=False)
+        for resp in authorize_res:
+            self.assertIn('host_status', resp['server'])
+        for resp in unauthorize_res:
+            self.assertNotIn('host_status', resp['server'])
+
+    @mock.patch('nova.compute.api.API.get_instances_host_statuses')
+    def test_server_detail_with_unknown_host_status_policy(self, mock_status):
+        def fake_get_all(context, search_opts=None,
+                         limit=None, marker=None,
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False, all_tenants=False):
+            return objects.InstanceList(objects=self.servers)
+        self.mock_get_all.side_effect = fake_get_all
+        host_statuses = {}
+        for server in self.servers:
+            host_statuses.update({server.uuid: fields.HostStatus.UNKNOWN})
+        mock_status.return_value = host_statuses
+        rule = policies.SERVERS % 'detail'
+        # server 'detail' policy is checked before unknown host_status
+        # policy so we have to allow it for everyone otherwise it will fail
+        # first for unauthorized contexts. To verify the unknown host_status
+        # policy we need to disallow host_status policy for everyone.
+        rule_host_status = policies.SERVERS % 'show:host_status'
+        self.policy.set_rules({
+            rule: "@",
+            rule_host_status: "!"}, overwrite=False)
+        req = fakes.HTTPRequest.blank('', version='2.16')
+        rule_name = policies.SERVERS % 'show:host_status:unknown-only'
+        authorize_res, unauthorize_res = self.common_policy_check(
+            self.server_attr_admin_authorized_contexts,
+            self.server_attr_admin_unauthorized_contexts,
+            rule_name, self.controller.detail, req,
+            fatal=False)
+        for resp in authorize_res:
+            self.assertIn('host_status', resp['servers'][0])
+            self.assertEqual(fields.HostStatus.UNKNOWN,
+                resp['servers'][0]['host_status'])
+        for resp in unauthorize_res:
+            self.assertNotIn('host_status', resp['servers'][0])
+
+    @mock.patch('nova.objects.BlockDeviceMappingList.bdms_by_instance_uuid')
+    @mock.patch('nova.compute.api.API.get_instance_host_status')
+    def test_server_show_with_unknown_host_status_policy(self,
+        mock_status, mock_block):
+        mock_status.return_value = fields.HostStatus.UNKNOWN
+        rule = policies.SERVERS % 'show'
+        # server 'show' policy is checked before unknown host_status
+        # policy so we have to allow it for everyone otherwise it will fail
+        # first for unauthorized contexts. To verify the unknown host_status
+        # policy we need to disallow host_status policy for everyone.
+        rule_host_status = policies.SERVERS % 'show:host_status'
+        self.policy.set_rules({
+            rule: "@",
+            rule_host_status: "!"}, overwrite=False)
+        req = fakes.HTTPRequest.blank('', version='2.16')
+        rule_name = policies.SERVERS % 'show:host_status:unknown-only'
+        authorize_res, unauthorize_res = self.common_policy_check(
+            self.server_attr_admin_authorized_contexts,
+            self.server_attr_admin_unauthorized_contexts,
+            rule_name, self.controller.show, req, 'fake',
+            fatal=False)
+        for resp in authorize_res:
+            self.assertIn('host_status', resp['server'])
+            self.assertEqual(
+                fields.HostStatus.UNKNOWN, resp['server']['host_status'])
+        for resp in unauthorize_res:
+            self.assertNotIn('host_status', resp['server'])
+
+    @mock.patch('nova.objects.BlockDeviceMappingList.bdms_by_instance_uuid')
+    @mock.patch('nova.compute.api.API.get_instance_host_status')
+    @mock.patch('nova.compute.api.API.rebuild')
+    def test_server_rebuild_with_unknown_host_status_policy(self, mock_rebuild,
+        mock_status, mock_bdm):
+        mock_status.return_value = fields.HostStatus.UNKNOWN
+        rule = policies.SERVERS % 'rebuild'
+        # server 'rebuild' policy is checked before unknown host_status
+        # policy so we have to allow it for everyone otherwise it will fail
+        # first for unauthorized contexts. To verify the unknown host_status
+        # policy we need to disallow host_status policy for everyone.
+        rule_host_status = policies.SERVERS % 'show:host_status'
+        self.policy.set_rules({
+            rule: "@",
+            rule_host_status: "!"}, overwrite=False)
+        req = fakes.HTTPRequest.blank('', version='2.75')
+        rule_name = policies.SERVERS % 'show:host_status:unknown-only'
+        authorize_res, unauthorize_res = self.common_policy_check(
+            self.server_attr_admin_authorized_contexts,
+            self.server_attr_admin_unauthorized_contexts,
+            rule_name, self.controller._action_rebuild,
+            req, self.instance.uuid,
+            body={'rebuild': {"imageRef": uuids.fake_id}},
+            fatal=False)
+        for resp in authorize_res:
+            self.assertIn('host_status', resp.obj['server'])
+            self.assertEqual(
+                fields.HostStatus.UNKNOWN, resp.obj['server']['host_status'])
+        for resp in unauthorize_res:
+            self.assertNotIn('host_status', resp.obj['server'])
+
+    @mock.patch('nova.objects.BlockDeviceMappingList.bdms_by_instance_uuid')
+    @mock.patch('nova.compute.api.API.get_instance_host_status')
+    @mock.patch.object(InstanceGroup, 'get_by_instance_uuid')
+    @mock.patch('nova.compute.api.API.update_instance')
+    def test_server_update_with_unknown_host_status_policy(self,
+        mock_update, mock_group, mock_status, mock_bdm):
+        mock_status.return_value = fields.HostStatus.UNKNOWN
+        rule = policies.SERVERS % 'update'
+        # server 'update' policy is checked before unknown host_status
+        # policy so we have to allow it for everyone otherwise it will fail
+        # first for unauthorized contexts. To verify the unknown host_status
+        # policy we need to disallow host_status policy for everyone.
+        rule_host_status = policies.SERVERS % 'show:host_status'
+        self.policy.set_rules({
+            rule: "@",
+            rule_host_status: "!"}, overwrite=False)
+        req = fakes.HTTPRequest.blank('', version='2.75')
+        rule_name = policies.SERVERS % 'show:host_status:unknown-only'
+        authorize_res, unauthorize_res = self.common_policy_check(
+            self.server_attr_admin_authorized_contexts,
+            self.server_attr_admin_unauthorized_contexts,
+            rule_name, self.controller.update,
+            req, self.instance.uuid,
+            body={'server': {'name': 'test'}},
+            fatal=False)
+        for resp in authorize_res:
+            self.assertIn('host_status', resp['server'])
+            self.assertEqual(
+                fields.HostStatus.UNKNOWN, resp['server']['host_status'])
+        for resp in unauthorize_res:
+            self.assertNotIn('host_status', resp['server'])
 
 
 class ServersScopeTypePolicyTest(ServersPolicyTest):
