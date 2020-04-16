@@ -448,7 +448,6 @@ class ServersController(wsgi.Controller):
     def show(self, req, id):
         """Returns server details by server id."""
         context = req.environ['nova.context']
-        context.can(server_policies.SERVERS % 'show')
         cell_down_support = api_version_request.is_supported(
             req, min_version=PARTIAL_CONSTRUCT_FOR_CELL_DOWN_MIN_VERSION)
         show_server_groups = api_version_request.is_supported(
@@ -457,6 +456,9 @@ class ServersController(wsgi.Controller):
         instance = self._get_server(
             context, req, id, is_detail=True,
             cell_down_support=cell_down_support)
+        context.can(server_policies.SERVERS % 'show',
+                    target={'project_id': instance.project_id})
+
         return self._view_builder.show(
             req, instance, cell_down_support=cell_down_support,
             show_server_groups=show_server_groups)
@@ -869,8 +871,9 @@ class ServersController(wsgi.Controller):
     @wsgi.action('confirmResize')
     def _action_confirm_resize(self, req, id, body):
         context = req.environ['nova.context']
-        context.can(server_policies.SERVERS % 'confirm_resize')
         instance = self._get_server(context, req, id)
+        context.can(server_policies.SERVERS % 'confirm_resize',
+                    target={'project_id': instance.project_id})
         try:
             self.compute_api.confirm_resize(context, instance)
         except exception.MigrationNotFound:
@@ -887,8 +890,9 @@ class ServersController(wsgi.Controller):
     @wsgi.action('revertResize')
     def _action_revert_resize(self, req, id, body):
         context = req.environ['nova.context']
-        context.can(server_policies.SERVERS % 'revert_resize')
         instance = self._get_server(context, req, id)
+        context.can(server_policies.SERVERS % 'revert_resize',
+                    target={'project_id': instance.project_id})
         try:
             self.compute_api.revert_resize(context, instance)
         except exception.MigrationNotFound:
@@ -911,8 +915,9 @@ class ServersController(wsgi.Controller):
 
         reboot_type = body['reboot']['type'].upper()
         context = req.environ['nova.context']
-        context.can(server_policies.SERVERS % 'reboot')
         instance = self._get_server(context, req, id)
+        context.can(server_policies.SERVERS % 'reboot',
+                    target={'project_id': instance.project_id})
 
         try:
             self.compute_api.reboot(context, instance, reboot_type)
@@ -1193,7 +1198,10 @@ class ServersController(wsgi.Controller):
     def _action_create_image(self, req, id, body):
         """Snapshot a server instance."""
         context = req.environ['nova.context']
-        context.can(server_policies.SERVERS % 'create_image')
+        instance = self._get_server(context, req, id)
+        target = {'project_id': instance.project_id}
+        context.can(server_policies.SERVERS % 'create_image',
+                    target=target)
 
         entity = body["createImage"]
         image_name = common.normalize_name(entity["name"])
@@ -1205,8 +1213,6 @@ class ServersController(wsgi.Controller):
                 api_version_request.MAX_IMAGE_META_PROXY_API_VERSION):
             common.check_img_metadata_properties_quota(context, metadata)
 
-        instance = self._get_server(context, req, id)
-
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid)
 
@@ -1214,7 +1220,7 @@ class ServersController(wsgi.Controller):
             if compute_utils.is_volume_backed_instance(context, instance,
                                                           bdms):
                 context.can(server_policies.SERVERS %
-                    'create_image:allow_volume_backed')
+                    'create_image:allow_volume_backed', target=target)
                 image = self.compute_api.snapshot_volume_backed(
                                                        context,
                                                        instance,
@@ -1298,7 +1304,9 @@ class ServersController(wsgi.Controller):
         """Start an instance."""
         context = req.environ['nova.context']
         instance = self._get_instance(context, id)
-        context.can(server_policies.SERVERS % 'start', instance)
+        context.can(server_policies.SERVERS % 'start',
+                    target={'user_id': instance.user_id,
+                            'project_id': instance.project_id})
         try:
             self.compute_api.start(context, instance)
         except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
