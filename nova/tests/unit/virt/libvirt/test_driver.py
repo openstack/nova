@@ -25335,8 +25335,6 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                                       mock_xml, mock_rebase, mock_commit):
         """Deleting newest snapshot -- blockRebase."""
 
-        # libvirt lib doesn't have VIR_DOMAIN_BLOCK_REBASE_RELATIVE flag
-        fakelibvirt.__dict__.pop('VIR_DOMAIN_BLOCK_REBASE_RELATIVE')
         self.stub_out('nova.virt.libvirt.driver.libvirt', fakelibvirt)
 
         instance = objects.Instance(**self.inst)
@@ -25355,9 +25353,10 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         self.assertEqual(2, mock_is_job_complete.call_count)
         mock_xml.assert_called_once_with(flags=0)
         mock_get.assert_called_once_with(instance)
-        mock_rebase.assert_called_once_with('vda', 'snap.img', 0, flags=0)
+        mock_rebase.assert_called_once_with(
+            'vda', 'snap.img', 0,
+            flags=fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_RELATIVE)
         mock_commit.assert_not_called()
-        fakelibvirt.__dict__.update({'VIR_DOMAIN_BLOCK_REBASE_RELATIVE': 8})
 
     @mock.patch('time.sleep', new=mock.Mock())
     @mock.patch.object(FakeVirtDomain, 'blockCommit')
@@ -25661,8 +25660,6 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
             def XMLDesc(self, flags):
                 return self.dom_netdisk_xml
 
-        # libvirt lib doesn't have VIR_DOMAIN_BLOCK_REBASE_RELATIVE
-        fakelibvirt.__dict__.pop('VIR_DOMAIN_BLOCK_REBASE_RELATIVE')
         self.stub_out('nova.virt.libvirt.driver.libvirt', fakelibvirt)
 
         instance = objects.Instance(**self.inst)
@@ -25687,10 +25684,9 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
             self.assertEqual(2, mock_is_job_complete.call_count)
             mock_xml.assert_called_once_with(flags=0)
             mock_get.assert_called_once_with(instance)
-            mock_rebase.assert_called_once_with('vdb', 'vdb[1]', 0, flags=0)
+            mock_rebase.assert_called_once_with('vdb', 'vdb[1]', 0,
+                flags=fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_RELATIVE)
             mock_commit.assert_not_called()
-
-        fakelibvirt.__dict__.update({'VIR_DOMAIN_BLOCK_REBASE_RELATIVE': 8})
 
     @mock.patch('time.sleep', new=mock.Mock())
     @mock.patch.object(host.Host, '_get_domain')

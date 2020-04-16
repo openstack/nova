@@ -2997,21 +2997,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 rebase_base = _get_snap_dev(rebase_base,
                                             active_disk_object.backing_store)
 
-            # NOTE(deepakcs): libvirt added support for _RELATIVE in v1.2.7,
-            # and when available this flag _must_ be used to ensure backing
-            # paths are maintained relative by qemu.
-            #
-            # If _RELATIVE flag not found, continue with old behaviour
-            # (relative backing path seems to work for this case)
-            try:
-                libvirt.VIR_DOMAIN_BLOCK_REBASE_RELATIVE
-                relative = rebase_base is not None
-            except AttributeError:
-                LOG.warning(
-                    "Relative blockrebase support was not detected. "
-                    "Continuing with old behaviour.")
-                relative = False
-
+            relative = rebase_base is not None
             LOG.debug(
                 'disk: %(disk)s, base: %(base)s, '
                 'bw: %(bw)s, relative: %(relative)s',
