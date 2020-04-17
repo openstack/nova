@@ -4,7 +4,6 @@ appdirs==1.4.3
 asn1crypto==0.24.0
 attrs==17.4.0
 automaton==1.14.0
-Babel==2.3.4
 bandit==1.1.0
 cachetools==2.0.1
 castellan==0.16.0
