@@ -185,15 +185,16 @@ class ViewBuilder(common.ViewBuilder):
 
     @staticmethod
     def _get_host_status_unknown_only(context):
-        # We will use the unknown_only variable to tell us what host status we
-        # can show, if any:
-        #   * unknown_only = False means we can show any host status.
-        #   * unknown_only = True means that we can only show host
-        #     status: UNKNOWN. If the host status is anything other than
-        #     UNKNOWN, we will not include the host_status field in the
-        #     response.
-        #   * unknown_only = None means we cannot show host status at all and
-        #     we will not include the host_status field in the response.
+        """We will use the unknown_only variable to tell us what host status we
+        can show, if any:
+          * unknown_only = False means we can show any host status.
+          * unknown_only = True means that we can only show host
+            status: UNKNOWN. If the host status is anything other than
+            UNKNOWN, we will not include the host_status field in the
+            response.
+          * unknown_only = None means we cannot show host status at all and
+            we will not include the host_status field in the response.
+        """
         unknown_only = None
         # Check show:host_status policy first because if it passes, we know we
         # can show any host status and need not check the more restrictive

@@ -11,10 +11,10 @@
 # under the License.
 
 import datetime
-import functools
 
 from oslo_utils import timeutils
 
+import nova.policies.base
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
@@ -58,7 +58,7 @@ class HostStatusPolicyTestCase(test.TestCase,
         # all users are allowed to see UNKNOWN host status only.
         self.policy.set_rules({
             self.host_status_rule: 'rule:admin_api',
-            self.host_status_unknown_only_rule: '@'},
+            self.host_status_unknown_only_rule: nova.policies.base.RULE_ANY},
             # This is needed to avoid nulling out the rest of default policy.
             overwrite=False)
         # Create a server as a normal non-admin user.
@@ -85,16 +85,18 @@ class HostStatusPolicyTestCase(test.TestCase,
         reset_state = {'os-resetState': {'state': 'active'}}
         self.admin_api.post_server_action(server['id'], reset_state)
 
-    def _test_host_status_unknown_only(self, admin_func, func):
-        # Get server as admin.
-        server = self._get_server(admin_func())
+    def _test_host_status_unknown_only(self, func_name, *args):
+        admin_func = getattr(self.admin_api, func_name)
+        func = getattr(self.api, func_name)
+        # Run the operation as admin and extract the server from the response.
+        server = self._get_server(admin_func(*args))
         # We need to wait for ACTIVE if this was a post rebuild server action,
         # else a subsequent rebuild request will fail with a 409 in the API.
         self._wait_for_state_change(server, 'ACTIVE')
         # Verify admin can see the host status UP.
         self.assertEqual('UP', server['host_status'])
         # Get server as normal non-admin user.
-        server = self._get_server(func())
+        server = self._get_server(func(*args))
         self._wait_for_state_change(server, 'ACTIVE')
         # Verify non-admin do not receive the host_status field because it is
         # not UNKNOWN.
@@ -105,49 +107,47 @@ class HostStatusPolicyTestCase(test.TestCase,
         minutes_from_now = timeutils.utcnow() + datetime.timedelta(minutes=30)
         timeutils.set_time_override(override_time=minutes_from_now)
         self.addCleanup(timeutils.clear_time_override)
-        # Get server as admin.
-        server = self._get_server(admin_func())
+        # Run the operation as admin and extract the server from the response.
+        server = self._get_server(admin_func(*args))
+        # Verify admin can see the host status UNKNOWN.
+        self.assertEqual('UNKNOWN', server['host_status'])
         # Now that the compute service is down, the rebuild will not ever
         # complete. But we're only interested in what would be returned from
         # the API post rebuild action, so reset the state to ACTIVE to allow
         # the next rebuild request to go through without a 409 error.
         self._set_server_state_active(server)
-        # Verify admin can see the host status UNKNOWN.
-        self.assertEqual('UNKNOWN', server['host_status'])
-        # Get server as normal non-admin user.
-        server = self._get_server(func())
-        self._set_server_state_active(server)
+        # Run the operation as a normal non-admin user and extract the server
+        # from the response.
+        server = self._get_server(func(*args))
         # Verify non-admin can see the host status UNKNOWN too.
         self.assertEqual('UNKNOWN', server['host_status'])
+        self._set_server_state_active(server)
         # Now, adjust the policy to make it so only admin are allowed to see
         # UNKNOWN host status only.
         self.policy.set_rules({
             self.host_status_unknown_only_rule: 'rule:admin_api'},
             overwrite=False)
-        # Get server as normal non-admin user.
-        server = self._get_server(func())
-        self._set_server_state_active(server)
+        # Run the operation as a normal non-admin user and extract the server
+        # from the response.
+        server = self._get_server(func(*args))
         # Verify non-admin do not receive the host_status field.
         self.assertNotIn('host_status', server)
+        self._set_server_state_active(server)
         # Verify that admin will not receive ths host_status field if the
         # API microversion < 2.16.
         with utils.temporary_mutation(self.admin_api, microversion='2.15'):
-            server = self._get_server(admin_func())
+            server = self._get_server(admin_func(*args))
             self.assertNotIn('host_status', server)
 
     def test_get_server_host_status_unknown_only(self):
         server = self._setup_host_status_unknown_only_test()
         # GET /servers/{server_id}
-        admin_func = functools.partial(self.admin_api.get_server, server['id'])
-        func = functools.partial(self.api.get_server, server['id'])
-        self._test_host_status_unknown_only(admin_func, func)
+        self._test_host_status_unknown_only('get_server', server['id'])
 
     def test_get_servers_detail_host_status_unknown_only(self):
         self._setup_host_status_unknown_only_test()
         # GET /servers/detail
-        admin_func = functools.partial(self.admin_api.get_servers)
-        func = functools.partial(self.api.get_servers)
-        self._test_host_status_unknown_only(admin_func, func)
+        self._test_host_status_unknown_only('get_servers')
 
     def test_put_server_host_status_unknown_only(self):
         # The host_status field is returned from PUT /servers/{server_id}
@@ -156,11 +156,9 @@ class HostStatusPolicyTestCase(test.TestCase,
         self.admin_api.microversion = '2.75'
         server = self._setup_host_status_unknown_only_test(networks='none')
         # PUT /servers/{server_id}
-        an_update = {'server': {'name': 'host-status-unknown-only'}}
-        admin_func = functools.partial(self.admin_api.put_server, server['id'],
-                                       an_update)
-        func = functools.partial(self.api.put_server, server['id'], an_update)
-        self._test_host_status_unknown_only(admin_func, func)
+        update = {'server': {'name': 'host-status-unknown-only'}}
+        self._test_host_status_unknown_only('put_server', server['id'],
+                                            update)
 
     def test_post_server_rebuild_host_status_unknown_only(self):
         # The host_status field is returned from POST
@@ -170,8 +168,5 @@ class HostStatusPolicyTestCase(test.TestCase,
         server = self._setup_host_status_unknown_only_test(networks='none')
         # POST /servers/{server_id}/action (rebuild)
         rebuild = {'rebuild': {'imageRef': self.image_uuid}}
-        admin_func = functools.partial(self.admin_api.post_server_action,
-                                       server['id'], rebuild)
-        func = functools.partial(self.api.post_server_action, server['id'],
-                                 rebuild)
-        self._test_host_status_unknown_only(admin_func, func)
+        self._test_host_status_unknown_only('post_server_action', server['id'],
+                                            rebuild)
