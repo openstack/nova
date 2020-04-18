@@ -724,14 +724,15 @@ class IronicDriver(virt_driver.ComputeDriver):
             if peer_list is None or svc.host in peer_list:
                 is_up = self.servicegroup_api.service_is_up(svc)
                 if is_up:
-                    services.add(svc.host)
+                    services.add(svc.host.lower())
         # NOTE(jroll): always make sure this service is in the list, because
         # only services that have something registered in the compute_nodes
         # table will be here so far, and we might be brand new.
-        services.add(CONF.host)
+        services.add(CONF.host.lower())
 
         self.hash_ring = hash_ring.HashRing(services,
                                             partitions=_HASH_RING_PARTITIONS)
+        LOG.debug('Hash ring members are %s', services)
 
     def _refresh_cache(self):
         # NOTE(lucasagomes): limit == 0 is an indicator to continue
@@ -777,7 +778,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             # nova while the service was down, and not yet reaped, will not be
             # reported until the periodic task cleans it up.
             elif (node.instance_uuid is None and
-                  CONF.host in
+                  CONF.host.lower() in
                   self.hash_ring.get_nodes(node.uuid.encode('utf-8'))):
                 node_cache[node.uuid] = node
 
