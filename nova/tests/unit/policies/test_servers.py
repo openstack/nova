@@ -1309,3 +1309,17 @@ class ServersNoLegacyPolicyTest(ServersScopeTypePolicyTest):
             self.project_foo_context, self.other_project_reader_context,
             self.system_reader_context, self.system_foo_context
         ]
+        # Check that system admin is able to get server extended attributes
+        # or host status.
+        self.server_attr_admin_authorized_contexts = [
+            self.system_admin_context]
+        # Check that non-system admin is not able to get server extended
+        # attributes or host status.
+        self.server_attr_admin_unauthorized_contexts = [
+            self.legacy_admin_context, self.project_admin_context,
+            self.system_member_context, self.system_reader_context,
+            self.system_foo_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context,
+            self.other_project_member_context,
+            self.other_project_reader_context
+        ]

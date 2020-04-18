@@ -99,7 +99,7 @@ rules = [
     # should do that by default.
     policy.DocumentedRuleDefault(
         name=SERVERS % 'show:host_status',
-        check_str=base.RULE_ADMIN_API,
+        check_str=base.SYSTEM_ADMIN,
         description="""
 Show a server with additional host status information.
 
@@ -133,7 +133,7 @@ API responses which are also controlled by this policy rule, like the
         scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'show:host_status:unknown-only',
-        check_str=base.RULE_ADMIN_API,
+        check_str=base.SYSTEM_ADMIN,
         description="""
 Show a server with additional host status information, only if host status is
 UNKNOWN.
