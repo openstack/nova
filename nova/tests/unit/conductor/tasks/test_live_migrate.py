@@ -57,6 +57,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 self.context, objects.Instance(), db_instance)
         self.instance.system_metadata = {'image_hw_disk_bus': 'scsi'}
         self.instance.numa_topology = None
+        self.instance.resources = None
         self.destination = "destination"
         self.block_migration = "bm"
         self.disk_over_commit = "doc"
@@ -740,3 +741,16 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                           _test, pci_requests, False, True)
         self.assertRaises(exception.MigrationPreCheckError,
                           _test, pci_requests, True, True)
+
+    def test_check_can_migrate_specific_resources(self):
+        vpmem_0 = objects.LibvirtVPMEMDevice(
+            label='4GB', name='ns_0', devpath='/dev/dax0.0',
+            size=4292870144, align=2097152)
+        resource_0 = objects.Resource(
+            provider_uuid=uuids.rp,
+            resource_class="CUSTOM_PMEM_NAMESPACE_4GB",
+            identifier='ns_0', metadata=vpmem_0)
+        self.instance.resources = objects.ResourceList(
+            objects=[resource_0])
+        self.assertRaises(exception.MigrationPreCheckError,
+                          self.task._check_can_migrate_specific_resources)
