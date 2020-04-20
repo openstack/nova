@@ -1461,6 +1461,8 @@ class TestAPI(TestAPIBase):
         """Only one network is available, it's external, and the client
            is unauthorized to use it.
         """
+        rules = {'network:attach_external_network': 'is_admin:True'}
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
         mocked_client = mock.create_autospec(client.Client)
         mock_get_client.return_value = mocked_client
         self.instance = fake_instance.fake_instance_obj(self.context,
@@ -7025,6 +7027,8 @@ class TestAllocateForInstance(test.NoDBTestCase):
             requested_networks, ordered_networks)
 
     def test_validate_requested_network_ids_raises_forbidden(self):
+        rules = {'network:attach_external_network': 'is_admin:True'}
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
         self._assert_validate_requested_network_ids_raises(
             exception.ExternalNetworkAttachForbidden,
             [{'id': "net1", 'router:external': True, 'shared': False}])

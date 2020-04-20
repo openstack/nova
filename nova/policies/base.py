@@ -47,6 +47,7 @@ in nova 23.0.0 release.
 # oslo.policy's RuleDefault objects.
 SYSTEM_ADMIN = 'rule:system_admin_api'
 SYSTEM_READER = 'rule:system_reader_api'
+PROJECT_ADMIN = 'rule:project_admin_api'
 PROJECT_MEMBER = 'rule:project_member_api'
 PROJECT_READER = 'rule:project_reader_api'
 PROJECT_MEMBER_OR_SYSTEM_ADMIN = 'rule:system_admin_or_owner'
@@ -109,6 +110,13 @@ rules = [
         name="system_reader_api",
         check_str="role:reader and system_scope:all",
         description="Default rule for System level read only APIs.",
+        deprecated_rule=DEPRECATED_ADMIN_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='21.0.0'),
+    policy.RuleDefault(
+        "project_admin_api",
+        "role:admin and project_id:%(project_id)s",
+        "Default rule for Project level admin APIs.",
         deprecated_rule=DEPRECATED_ADMIN_POLICY,
         deprecated_reason=DEPRECATED_REASON,
         deprecated_since='21.0.0'),
