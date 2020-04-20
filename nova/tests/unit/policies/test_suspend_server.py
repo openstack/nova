@@ -45,7 +45,7 @@ class SuspendServerPolicyTest(base.BasePolicyTest):
         self.mock_get.return_value = self.instance
 
         # Check that admin or and server owner is able to suspend/resume
-        # the sevrer
+        # the server
         self.admin_or_owner_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context, self.project_member_context,
@@ -92,7 +92,7 @@ class SuspendServerPolicyTest(base.BasePolicyTest):
             exc.format_message())
 
     @mock.patch('nova.compute.api.API.suspend')
-    def test_suspend_sevrer_overridden_policy_pass_with_same_user(
+    def test_suspend_server_overridden_policy_pass_with_same_user(
         self, mock_suspend):
         rule_name = policies.POLICY_ROOT % 'suspend'
         self.policy.set_rules({rule_name: "user_id:%(user_id)s"})

@@ -149,6 +149,11 @@ class BasePolicyTest(test.TestCase):
         def ensure_raises(req, *args, **kwargs):
             exc = self.assertRaises(
                 exception.PolicyNotAuthorized, func, req, *arg, **kwarg)
+            # NOTE(gmann): In case of multi-policy APIs, PolicyNotAuthorized
+            # exception can be raised from either of the policy so checking
+            # the error message, which includes the rule name, can mismatch.
+            # Tests verifying the multi policy can pass rule_name as None
+            # to skip the error message assert.
             if rule_name is not None:
                 self.assertEqual(
                     "Policy doesn't allow %s to be performed." %

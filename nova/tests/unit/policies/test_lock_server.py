@@ -12,14 +12,14 @@
 
 import fixtures
 import mock
-from nova.policies import base as base_policy
-from nova.policies import lock_server as ls_policies
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
 from nova.api.openstack.compute import lock_server
 from nova.compute import vm_states
 from nova import exception
+from nova.policies import base as base_policy
+from nova.policies import lock_server as ls_policies
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
 from nova.tests.unit.policies import base
@@ -49,7 +49,7 @@ class LockServerPolicyTest(base.BasePolicyTest):
         self.mock_get.return_value = self.instance
 
         # Check that admin or and server owner is able to lock/unlock
-        # the sevrer
+        # the server
         self.admin_or_owner_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context, self.project_member_context,
@@ -157,7 +157,7 @@ class LockServerNoLegacyPolicyTest(LockServerScopeTypePolicyTest):
     def setUp(self):
         super(LockServerNoLegacyPolicyTest, self).setUp()
         # Check that system admin or and server owner is able to lock/unlock
-        # the sevrer
+        # the server
         self.admin_or_owner_authorized_contexts = [
             self.system_admin_context,
             self.project_admin_context, self.project_member_context]
