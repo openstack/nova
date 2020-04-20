@@ -23,9 +23,9 @@ BASE_POLICY_NAME = 'os_compute_api:os-extended-server-attributes'
 
 extended_server_attributes_policies = [
     policy.DocumentedRuleDefault(
-        BASE_POLICY_NAME,
-        base.RULE_ADMIN_API,
-        """Return extended attributes for server.
+        name=BASE_POLICY_NAME,
+        check_str=base.RULE_ADMIN_API,
+        description="""Return extended attributes for server.
 
 This rule will control the visibility for a set of servers attributes:
 
@@ -43,7 +43,7 @@ Microvision 2.75 added the above attributes in the ``PUT /servers/{server_id}``
 and ``POST /servers/{server_id}/action (rebuild)`` API responses which are
 also controlled by this policy rule, like the ``GET /servers*`` APIs.
 """,
-        [
+        operations=[
             {
                 'method': 'GET',
                 'path': '/servers/{id}'
@@ -60,7 +60,8 @@ also controlled by this policy rule, like the ``GET /servers*`` APIs.
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (rebuild)'
             }
-        ]
+        ],
+        scope_types=['system', 'project']
     ),
 ]
 
