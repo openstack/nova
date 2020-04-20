@@ -184,7 +184,7 @@ class ViewBuilder(common.ViewBuilder):
         return ret
 
     @staticmethod
-    def _get_host_status_unknown_only(context):
+    def _get_host_status_unknown_only(context, instance=None):
         """We will use the unknown_only variable to tell us what host status we
         can show, if any:
           * unknown_only = False means we can show any host status.
@@ -199,16 +199,23 @@ class ViewBuilder(common.ViewBuilder):
         # Check show:host_status policy first because if it passes, we know we
         # can show any host status and need not check the more restrictive
         # show:host_status:unknown-only policy.
+        # Keeping target as None (which means policy will default these target
+        # to context.project_id) for now which is case of 'detail' API which
+        # policy is default to system and project reader.
+        target = None
+        if instance is not None:
+            target = {'project_id': instance.project_id}
         if context.can(
                 servers_policies.SERVERS % 'show:host_status',
-                fatal=False):
+                fatal=False, target=target):
             unknown_only = False
         # If we are not allowed to show any/all host status, check if we can at
         # least show only the host status: UNKNOWN.
         elif context.can(
                 servers_policies.SERVERS %
                 'show:host_status:unknown-only',
-                fatal=False):
+                fatal=False,
+                target=target):
             unknown_only = True
         return unknown_only
 
@@ -304,7 +311,8 @@ class ViewBuilder(common.ViewBuilder):
 
         if show_extended_attr is None:
             show_extended_attr = context.can(
-                esa_policies.BASE_POLICY_NAME, fatal=False)
+                esa_policies.BASE_POLICY_NAME, fatal=False,
+                target={'project_id': instance.project_id})
         if show_extended_attr:
             properties = ['host', 'name', 'node']
             if api_version_request.is_supported(request, min_version='2.3'):
@@ -358,7 +366,8 @@ class ViewBuilder(common.ViewBuilder):
                                           add_delete_on_termination)
         if (api_version_request.is_supported(request, min_version='2.16')):
             if show_host_status is None:
-                unknown_only = self._get_host_status_unknown_only(context)
+                unknown_only = self._get_host_status_unknown_only(
+                    context, instance)
                 # If we're not allowed by policy to show host status at all,
                 # don't bother requesting instance host status from the compute
                 # API.
