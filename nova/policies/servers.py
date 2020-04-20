@@ -199,9 +199,9 @@ host and/or node by bypassing the scheduler filters unlike the
         ],
         scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        REQUESTED_DESTINATION,
-        base.RULE_ADMIN_API,
-        """
+        name=REQUESTED_DESTINATION,
+        check_str=base.RULE_ADMIN_API,
+        description="""
 Create a server on the requested compute service host and/or
 hypervisor_hostname.
 
@@ -209,12 +209,13 @@ In this case, the requested host and/or hypervisor_hostname is
 validated by the scheduler filters unlike the
 ``os_compute_api:servers:create:forced_host`` rule.
 """,
-        [
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'create:attach_volume',
         check_str=base.PROJECT_MEMBER,
@@ -250,9 +251,9 @@ validated by the scheduler filters unlike the
         ],
         scope_types=['project']),
     policy.DocumentedRuleDefault(
-        ZERO_DISK_FLAVOR,
-        base.RULE_ADMIN_API,
-        """
+        name=ZERO_DISK_FLAVOR,
+        check_str=base.RULE_ADMIN_API,
+        description="""
 This rule controls the compute API validation behavior of creating a server
 with a flavor that has 0 disk, indicating the server should be volume-backed.
 
@@ -267,17 +268,18 @@ create a disk=0 flavor instance with a large image can exhaust
 the local disk of the compute (or shared storage cluster). See bug
 https://bugs.launchpad.net/nova/+bug/1739646 for details.
 """,
-        [
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        NETWORK_ATTACH_EXTERNAL,
-        'is_admin:True',
-        "Attach an unshared external network to a server",
-        [
+        name=NETWORK_ATTACH_EXTERNAL,
+        check_str='is_admin:True',
+        description="Attach an unshared external network to a server",
+        operations=[
             # Create a server with a requested network or port.
             {
                 'method': 'POST',
@@ -288,7 +290,8 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
                 'method': 'POST',
                 'path': '/servers/{server_id}/os-interface'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'delete',
         check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
@@ -356,18 +359,20 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
         ],
         scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
-        CROSS_CELL_RESIZE,
-        base.RULE_NOBODY,
-        "Resize a server across cells. By default, this is disabled for all "
-        "users and recommended to be tested in a deployment for admin users "
-        "before opening it up to non-admin users. Resizing within a cell is "
-        "the default preferred behavior even if this is enabled. ",
-        [
+        name=CROSS_CELL_RESIZE,
+        check_str=base.RULE_NOBODY,
+        description="Resize a server across cells. By default, this is "
+        "disabled for all users and recommended to be tested in a "
+        "deployment for admin users before opening it up to non-admin users. "
+        "Resizing within a cell is the default preferred behavior even if "
+        "this is enabled. ",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (resize)'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'rebuild',
         check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
