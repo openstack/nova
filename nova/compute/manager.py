@@ -5779,11 +5779,19 @@ class ComputeManager(manager.Manager):
         # automatically power on the instance after it's migrated
         power_on = old_vm_state != vm_states.STOPPED
 
+        # NOTE(sbauza): During a migration, the original allocation is against
+        # the migration UUID while the target allocation (for the destination
+        # node) is related to the instance UUID, so here we need to pass the
+        # new ones.
+        allocations = self.reportclient.get_allocs_for_consumer(
+            context, instance.uuid)['allocations']
+
         try:
             self.driver.finish_migration(context, migration, instance,
                                          disk_info,
                                          network_info,
                                          image_meta, resize_instance,
+                                         allocations,
                                          block_device_info, power_on)
         except Exception:
             # Note that we do not rollback port bindings to the source host

@@ -732,7 +732,7 @@ class ComputeDriver(object):
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance,
-                         block_device_info=None, power_on=True):
+                         allocations, block_device_info=None, power_on=True):
         """Completes a resize/migration.
 
         :param context: the context for the migration/resize
@@ -744,6 +744,9 @@ class ComputeDriver(object):
             The metadata of the image of the instance.
         :param resize_instance: True if the instance is being resized,
                                 False otherwise
+        :param allocations: Information about resources allocated to the
+                            instance via placement, of the form returned by
+                            SchedulerReportClient.get_allocs_for_consumer.
         :param block_device_info: instance volume block device info
         :param power_on: True if the instance should be powered on, False
                          otherwise
