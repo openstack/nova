@@ -1674,8 +1674,8 @@ class VMwareAPIVMTestCase(test.TestCase,
                           self.instance, 'dev2')]
             self.assertEqual(exp_detach_calls, detach_volume.call_args_list)
 
-    @mock.patch.object(vmops.VMwareVMOps, 'update_cached_instances')
-    def test_destroy(self, mock_update_cached_instances):
+    @mock.patch('nova.virt.vmwareapi.cluster_util.fetch_cluster_properties')
+    def test_destroy(self, mock_fetch):
         self._create_vm()
         info = self._get_info()
         self._check_vm_info(info, power_state.RUNNING)
@@ -1686,8 +1686,8 @@ class VMwareAPIVMTestCase(test.TestCase,
         self.assertEqual(0, len(instances))
         self.assertIsNone(vm_util.vm_ref_cache_get(self.uuid))
 
-    @mock.patch.object(vmops.VMwareVMOps, 'update_cached_instances')
-    def test_destroy_no_datastore(self, mock_update_cached_instances):
+    @mock.patch('nova.virt.vmwareapi.cluster_util.fetch_cluster_properties')
+    def test_destroy_no_datastore(self, mock_fetch):
         self._create_vm()
         info = self._get_info()
         self._check_vm_info(info, power_state.RUNNING)
@@ -1699,6 +1699,44 @@ class VMwareAPIVMTestCase(test.TestCase,
         self.conn.destroy(self.context, self.instance, self.network_info)
         instances = self.conn.list_instances()
         self.assertEqual(0, len(instances))
+
+    @mock.patch('nova.virt.vmwareapi.cluster_util.fetch_cluster_properties')
+    @mock.patch('nova.virt.vmwareapi.cluster_util.delete_vm_group')
+    @mock.patch('nova.virt.vmwareapi.vm_util._get_server_groups')
+    @mock.patch('nova.virt.vmwareapi.vm_util.update_cluster_placement')
+    def test_destroy_with_vm_group(self, mock_update_placement,
+                                         mock_get_sg,
+                                         mock_delete_group,
+                                         mock_fetch_cluster_props):
+        """Test deletion of a vm group when the deleted vm is the last in
+        the vm group
+        """
+        self._create_vm()
+        fake_server_group = collections.namedtuple('GroupInfo', ['uuid',
+                                                                'policies'])
+        fake_server_group.uuid = 'test_group'
+        mock_get_sg.return_value = [fake_server_group]
+        fake_factory = vmwareapi_fake.FakeFactory()
+
+        fake_cluster_config_info = fake_factory.create(
+            'ns0:ClusterConfigInfoEx')
+        group = fake_factory.create('ns0:ClusterVmGroup')
+        group.name = 'test_group'
+        group_info = fake_factory.create('ns0:ClusterGroupInfo')
+        group_info = group
+
+        fake_cluster_config_info.group = [group_info]
+
+        def fake_call_method(module, method, *args, **kwargs):
+            if method == "get_object_property" and "configurationEx" in args:
+                return fake_cluster_config_info
+            else:
+                return self.call_method(module, method, *args, **kwargs)
+        with (mock.patch.object(
+                self.conn._session, '_call_method', fake_call_method)):
+
+            self.conn.destroy(self.context, self.instance, self.network_info)
+            mock_delete_group.assert_called_once()
 
     def test_destroy_non_existent(self):
         self.destroy_disks = True
@@ -2132,9 +2170,8 @@ class VMwareAPIVMTestCase(test.TestCase,
         self.assertEqual('iscsi-name', connector['initiator'])
         self.assertIn('instance', connector)
 
-    @mock.patch.object(vmops.VMwareVMOps, 'update_cached_instances')
-    def test_connection_info_get_after_destroy(self,
-                                               mock_update_cached_instances):
+    @mock.patch('nova.virt.vmwareapi.cluster_util.fetch_cluster_properties')
+    def test_connection_info_get_after_destroy(self, mock_fetch):
         self._create_vm()
         self.conn.destroy(self.context, self.instance, self.network_info)
         connector = self.conn.get_volume_connector(self.instance)

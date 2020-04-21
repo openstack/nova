@@ -1499,25 +1499,7 @@ class VMwareVMOps(object):
         # Destroy a VM instance
         try:
             vm_ref = vm_util.get_vm_ref(self._session, instance)
-
             server_group_infos = vm_util._get_server_groups(context, instance)
-            if server_group_infos:
-                cluster = cluster_util.validate_vm_group(self._session, vm_ref)
-                config_info_ex = cluster.propSet[0].val
-
-                if hasattr(config_info_ex, 'group'):
-                    for key, group in enumerate(config_info_ex.group):
-                        if not hasattr(group, 'vm'):
-                            continue
-
-                        for vm in group.vm:
-                            if vm.value == vm_ref.value and len(group.vm) == 1:
-                                cluster_util.delete_vm_group(
-                                            self._session, cluster.obj,
-                                            config_info_ex.group[key])
-                                break
-                        break
-
             lst_properties = ["config.files.vmPathName", "runtime.powerState",
                               "datastore"]
             props = self._session._call_method(vutil,
@@ -1546,6 +1528,13 @@ class VMwareVMOps(object):
                 LOG.warning("In vmwareapi:vmops:_destroy_instance, got "
                             "this exception while un-registering the VM: %s",
                             excep, instance=instance)
+
+            # Delete the VM groups it was in, if they're empty now
+            server_group_uuids = set(group_info.uuid
+                                     for group_info in server_group_infos)
+            cluster_util.clean_empty_vm_groups(self._session, self._cluster,
+                                               server_group_uuids)
+
             # Delete the folder holding the VM related content on
             # the datastore.
             if destroy_disks and vm_ds_path:

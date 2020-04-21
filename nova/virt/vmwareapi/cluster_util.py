@@ -76,7 +76,7 @@ def _get_vm_group(cluster_config, group_info):
             return group
 
 
-def validate_vm_group(session, vm_ref):
+def fetch_cluster_properties(session, vm_ref):
     max_objects = 1
     vim = session.vim
     property_collector = vim.service_content.propertyCollector
@@ -305,3 +305,28 @@ def update_cluster_drs_vm_override(session, cluster, vm_ref, operation='add',
     config_spec.drsVmConfigSpec = [drs_vm_spec]
 
     reconfigure_cluster(session, cluster, config_spec)
+
+
+@utils.synchronized('vmware-vm-group-policy')
+def clean_empty_vm_groups(session, cluster, group_names=None):
+    """Delete all empty server groups
+
+    Optionally filter the server groups to delete by `group_names`.
+    """
+    cluster_config = session._call_method(vutil,
+        "get_object_property", cluster, "configurationEx")
+
+    for group in cluster_config.group:
+        if group_names is not None and group.name not in group_names:
+            continue
+
+        # hostgroup or not empty
+        if hasattr(group, 'host') or hasattr(group, 'vm') and group.vm:
+            continue
+
+        try:
+            LOG.debug("Deleting VM group %s", group.name)
+            delete_vm_group(session, cluster, group)
+            LOG.debug("VM group %s deleted successfully", group.name)
+        except Exception as e:
+            LOG.warning("Deleting VM group %s failed: %s", group.name, e)
