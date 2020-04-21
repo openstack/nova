@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    The Compute service has never supported direct booting of an instance from
+    an image that was created by the Block Storage service from an encrypted
+    volume.  Previously, this operation would result in an ACTIVE instance that
+    was unusable.  Beginning with this release, an attempt to boot from such an
+    image will result in the Compute API returning a 400 (Bad Request)
+    response.

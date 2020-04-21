@@ -736,6 +736,7 @@ class ServersController(wsgi.Controller):
         except (exception.ImageNotActive,
                 exception.ImageBadRequest,
                 exception.ImageNotAuthorized,
+                exception.ImageUnacceptable,
                 exception.FixedIpNotFoundForAddress,
                 exception.FlavorNotFound,
                 exception.FlavorDiskTooSmall,
