@@ -2116,7 +2116,7 @@ class API(base.Base):
         try:
             self._update_queued_for_deletion(context, instance, True)
         except exception.InstanceMappingNotFound:
-            LOG.info("Instance Mapping does not exist while attempting"
+            LOG.info("Instance Mapping does not exist while attempting "
                      "local delete cleanup.",
                      instance=instance)
 
