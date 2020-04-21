@@ -1,0 +1,65 @@
+---
+prelude: |
+    The 21.0.0 release includes many new features and bug fixes. Please be
+    sure to read the upgrade section which describes the required actions to
+    upgrade your cloud from 20.0.0 (Train) to 21.0.0 (Ussuri).
+
+    There are a few major changes worth mentioning. This is not an exhaustive
+    list:
+
+    - The latest Compute API microversion supported for Ussuri is v2.87.
+      Details on REST API microversions added since the 20.0.0 Train release
+      can be found in the `REST API Version History`__ page.
+
+      .. __: https://docs.openstack.org/nova/latest/reference/api-microversion-history.html
+
+    - `Image pre-caching support to compute hosts`__ using ``os-aggregates``
+      API information, allowing some distributed edge cases and preemptive
+      image caching for instance creation.
+
+      .. __: https://docs.openstack.org/nova/latest/reference/api-microversion-history.html#id74
+
+    - Support for `cold migrating and resizing servers between Nova cells`__.
+
+      .. __: https://docs.openstack.org/nova/latest/admin/configuration/cross-cell-resize.html
+
+    - Added support for `evacuate, live migrate and unshelve servers with
+      minimum bandwidth guarantees`__.
+
+      .. __: https://docs.openstack.org/api-guide/compute/port_with_resource_request.html
+
+    - New ``nova-manage placement audit`` CLI command to `find and clean up
+      orphaned resource allocations`__.
+
+      .. __: https://docs.openstack.org/nova/latest/cli/nova-manage.html
+
+    - Support for scope types and additional roles in the default nova
+      policies, allowing for richer access management including the ability to
+      configure *read-only* access to resources. This feature is disabled by
+      default.
+
+    - Support for `creating servers with accelerator devices via Cyborg`__.
+
+      .. __: https://docs.openstack.org/api-guide/compute/accelerator-support.html
+
+    - Enabled `rescue for boot-from-volume instances`__. Rescue now also allows
+      to attach stable disk devices to the rescued instance.
+
+      .. __: https://docs.openstack.org/nova/latest/user/rescue.html
+
+    - Validation for `known flavor extra specs with recognized namespaces`__.
+
+      .. __: https://docs.openstack.org/nova/latest/reference/api-microversion-history.html#id79
+
+    - Support for `heterogenous virtual GPU types per compute node`__.
+
+      .. __: https://docs.openstack.org/nova/latest/admin/virtual-gpu.html#enable-gpu-types-compute
+
+    - Python 2 is no longer supported by Nova, Python 3.6 and 3.7 are.
+
+    - Removal of the ``os-consoles`` and ``os-networks`` REST APIs. See the
+      `Upgrade Notes`_ section for more details.
+
+    - Removal of the ``nova-dhcpbridge``, ``nova-console`` and
+      ``nova-xvpvncproxy`` services. See the `Upgrade Notes`_ section for more
+      details.
