@@ -99,20 +99,6 @@ class _TestInstancePCIRequests(object):
         self.assertEqual('alias_2', requests.requests[1].alias_name)
         self.assertTrue(requests.requests[1].is_new)
 
-    def test_backport_1_0(self):
-        requests = objects.InstancePCIRequests(
-            requests=[objects.InstancePCIRequest(count=1,
-                                                 request_id=FAKE_UUID),
-                      objects.InstancePCIRequest(count=2,
-                                                 request_id=FAKE_UUID)])
-        primitive = requests.obj_to_primitive(target_version='1.0')
-        backported = objects.InstancePCIRequests.obj_from_primitive(
-            primitive)
-        self.assertEqual('1.0', backported.VERSION)
-        self.assertEqual(2, len(backported.requests))
-        self.assertFalse(backported.requests[0].obj_attr_is_set('request_id'))
-        self.assertFalse(backported.requests[1].obj_attr_is_set('request_id'))
-
     def test_obj_from_db(self):
         req = objects.InstancePCIRequests.obj_from_db(None, FAKE_UUID, None)
         self.assertEqual(FAKE_UUID, req.instance_uuid)
