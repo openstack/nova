@@ -370,6 +370,43 @@ class InstanceHelperMixin(object):
         self.api.delete_server(server['id'])
         self._wait_until_deleted(server)
 
+    def _confirm_resize(self, server):
+        self.api.post_server_action(server['id'], {'confirmResize': None})
+        server = self._wait_for_state_change(server, 'ACTIVE')
+        self._wait_for_instance_action_event(
+            server, instance_actions.CONFIRM_RESIZE,
+            'compute_confirm_resize', 'success')
+        return server
+
+    def _revert_resize(self, server):
+        # NOTE(sbauza): This method requires the caller to setup a fake
+        # notifier by stubbing it.
+        self.api.post_server_action(server['id'], {'revertResize': None})
+        server = self._wait_for_state_change(server, 'ACTIVE')
+        self._wait_for_migration_status(server, ['reverted'])
+        # Note that the migration status is changed to "reverted" in the
+        # dest host revert_resize method but the allocations are cleaned up
+        # in the source host finish_revert_resize method so we need to wait
+        # for the finish_revert_resize method to complete.
+        fake_notifier.wait_for_versioned_notifications(
+            'instance.resize_revert.end')
+        return server
+
+    def _migrate_or_resize(self, server, request):
+        if not ('resize' in request or 'migrate' in request):
+            raise Exception('_migrate_or_resize only supports resize or '
+                            'migrate requests.')
+        self.api.post_server_action(server['id'], request)
+        self._wait_for_state_change(server, 'VERIFY_RESIZE')
+
+    def _resize_server(self, server, new_flavor):
+        resize_req = {
+            'resize': {
+                'flavorRef': new_flavor
+            }
+        }
+        self._migrate_or_resize(server, resize_req)
+
 
 class _IntegratedTestBase(test.TestCase, InstanceHelperMixin):
     REQUIRES_LOCKING = True
@@ -392,6 +429,9 @@ class _IntegratedTestBase(test.TestCase, InstanceHelperMixin):
         placement = self.useFixture(func_fixtures.PlacementFixture())
         self.placement_api = placement.api
         self.neutron = self.useFixture(nova_fixtures.NeutronFixture(self))
+
+        fake_notifier.stub_notifier(self)
+        self.addCleanup(fake_notifier.reset)
 
         self._setup_services()
 
@@ -915,8 +955,7 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
 
     def _move_and_check_allocations(self, server, request, old_flavor,
                                     new_flavor, source_rp_uuid, dest_rp_uuid):
-        self.api.post_server_action(server['id'], request)
-        self._wait_for_state_change(server, 'VERIFY_RESIZE')
+        self._migrate_or_resize(server, request)
 
         def _check_allocation():
             self.assertFlavorMatchesUsage(source_rp_uuid, old_flavor)
@@ -972,13 +1011,7 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         # Resize the server to the same host and check usages in VERIFY_RESIZE
         # state
         self.flags(allow_resize_to_same_host=True)
-        resize_req = {
-            'resize': {
-                'flavorRef': new_flavor['id']
-            }
-        }
-        self.api.post_server_action(server['id'], resize_req)
-        self._wait_for_state_change(server, 'VERIFY_RESIZE')
+        self._resize_server(server, new_flavor['id'])
 
         self.assertFlavorMatchesUsage(rp_uuid, old_flavor, new_flavor)
 
@@ -1045,23 +1078,3 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         # Account for reserved_host_cpus.
         expected_vcpu_usage = CONF.reserved_host_cpus + flavor['vcpus']
         self.assertEqual(expected_vcpu_usage, hypervisor['vcpus_used'])
-
-    def _confirm_resize(self, server):
-        self.api.post_server_action(server['id'], {'confirmResize': None})
-        server = self._wait_for_state_change(server, 'ACTIVE')
-        self._wait_for_instance_action_event(
-            server, instance_actions.CONFIRM_RESIZE,
-            'compute_confirm_resize', 'success')
-        return server
-
-    def _revert_resize(self, server):
-        self.api.post_server_action(server['id'], {'revertResize': None})
-        server = self._wait_for_state_change(server, 'ACTIVE')
-        self._wait_for_migration_status(server, ['reverted'])
-        # Note that the migration status is changed to "reverted" in the
-        # dest host revert_resize method but the allocations are cleaned up
-        # in the source host finish_revert_resize method so we need to wait
-        # for the finish_revert_resize method to complete.
-        fake_notifier.wait_for_versioned_notifications(
-            'instance.resize_revert.end')
-        return server
