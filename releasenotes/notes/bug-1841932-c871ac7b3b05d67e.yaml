@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    Add support for the ``hw:hide_hypervisor_id`` extra spec. This is an
+    alias for the ``hide_hypervisor_id`` extra spec, which was not
+    compatible with the ``AggregateInstanceExtraSpecsFilter`` scheduler
+    filter. See
+    `bug 1841932 <https://bugs.launchpad.net/nova/+bug/1841932>`_ for more
+    details.
