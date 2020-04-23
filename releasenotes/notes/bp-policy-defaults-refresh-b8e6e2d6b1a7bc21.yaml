@@ -1,0 +1,137 @@
+---
+features:
+  - |
+    The Nova policies implemented the scope concept and new default roles
+    (``admin``, ``member``, and ``reader``) provided by keystone.
+upgrade:
+  - |
+    All the policies except the deprecated APIs policy have been changed to
+    implement the ``scope_type`` and new defaults. Deprecated APIs policy will
+    be moved to ``scope_type`` and new defaults in the next release.
+
+    Please refer `Policy New Defaults`_ for detail about policy new defaults
+    and migration plan.
+
+    * **Scope**
+
+      Each policy is protected with appropriate ``scope_type``. Nova support
+      two types of ``sope_type`` with their combination. ``['system']``,
+      ``['project']`` and ``['system', 'project']``.
+
+      To know each policy scope_type, please refer the `Policy Reference`_
+
+      This feature is disabled by default can be enabled via config option
+      ``[oslo_policy]enforce_scope`` in ``nova.conf``
+
+    * **New Defaults(Admin, Member and Reader)**
+
+      Policies are default to Admin, Member and Reader roles. Old roles
+      are also supproted. You can switch to new defaults via config option
+      ``[oslo_policy]enforce_new_defaults`` in ``nova.conf`` file.
+
+    * **Policies granularity**
+
+      To implement the reader roles, Below policies are made more granular
+
+      - ``os_compute_api:os-agents`` is made granular to
+
+        - ``os_compute_api:os-agents:create``
+        - ``os_compute_api:os-agents:update``
+        - ``os_compute_api:os-agents:delete``
+        - ``os_compute_api:os-agents:list``
+
+      - ``os_compute_api:os-attach-interfaces`` is made granular to
+
+        - ``os_compute_api:os-attach-interfaces:create``
+        - ``os_compute_api:os-attach-interfaces:delete``
+        - ``os_compute_api:os-attach-interfaces:show``
+        - ``os_compute_api:os-attach-interfaces:list``
+
+      - ``os_compute_api:os-deferred-delete`` is made granular to
+
+        - ``os_compute_api:os-deferred-delete:restore``
+        - ``os_compute_api:os-deferred-delete:force``
+
+      - ``os_compute_api:os-hypervisors`` is made granular to
+
+        - ``os_compute_api:os-hypervisors:list``
+        - ``os_compute_api:os-hypervisors:list-detail``
+        - ``os_compute_api:os-hypervisors:statistics``
+        - ``os_compute_api:os-hypervisors:show``
+        - ``os_compute_api:os-hypervisors:uptime``
+        - ``os_compute_api:os-hypervisors:search``
+        - ``os_compute_api:os-hypervisors:servers``
+
+      - ``os_compute_api:os-security-groups`` is made granular to
+
+        - ``os_compute_api:os-security-groups:add``
+        - ``os_compute_api:os-security-groups:remove``
+        - ``os_compute_api:os-security-groups:list``
+
+      - ``os_compute_api:os-instance-usage-audit-log`` is made granular to
+
+        - ``os_compute_api:os-instance-usage-audit-log:list``
+        - ``os_compute_api:os-instance-usage-audit-log:show``
+
+      - ``os_compute_api:os-instance-actions`` is made granular to
+
+        - ``os_compute_api:os-instance-actions:list``
+        - ``os_compute_api:os-instance-actions:show``
+
+      - ``os_compute_api:os-server-password`` is made granular to
+
+        - ``os_compute_api:os-server-password:show``
+        - ``os_compute_api:os-server-password:clear``
+
+      - ``os_compute_api:os-rescue`` is made granular to
+
+        - ``os_compute_api:os-rescue``
+        - ``os_compute_api:os-unrescue``
+
+      - ``os_compute_api:os-used-limits`` is renamed to
+
+        - ``os_compute_api:limits:other_project``
+
+      - ``os_compute_api:os-services`` is made granular to
+
+        - ``os_compute_api:os-services:list``
+        - ``os_compute_api:os-services:update``
+        - ``os_compute_api:os-services:delete``
+deprecations:
+  - |
+    During Policy new defaults, below policies are deprecated and will be
+    removed in 23.0.0 release. These are replaced by the new granular
+    policies listed in feature section.
+
+    - ``os_compute_api:os-agents``
+    - ``os_compute_api:os-attach-interfaces``
+    - ``os_compute_api:os-deferred-delete``
+    - ``os_compute_api:os-hypervisors``
+    - ``os_compute_api:os-security-groups``
+    - ``os_compute_api:os-instance-usage-audit-log``
+    - ``os_compute_api:os-instance-actions``
+    - ``os_compute_api:os-server-password``
+    - ``os_compute_api:os-used-limits``
+    - ``os_compute_api:os-services``
+fixes:
+  - |
+    Below bugs are fixed for policies default values
+
+    - https://bugs.launchpad.net/nova/+bug/1863009
+    - https://bugs.launchpad.net/nova/+bug/1869396
+    - https://bugs.launchpad.net/nova/+bug/1867840
+    - https://bugs.launchpad.net/nova/+bug/1869791
+    - https://bugs.launchpad.net/nova/+bug/1869841
+    - https://bugs.launchpad.net/nova/+bug/1869543
+    - https://bugs.launchpad.net/nova/+bug/1870883
+    - https://bugs.launchpad.net/nova/+bug/1871287
+    - https://bugs.launchpad.net/nova/+bug/1870488
+    - https://bugs.launchpad.net/nova/+bug/1870872
+    - https://bugs.launchpad.net/nova/+bug/1870484
+    - https://bugs.launchpad.net/nova/+bug/1870881
+    - https://bugs.launchpad.net/nova/+bug/1871665
+    - https://bugs.launchpad.net/nova/+bug/1870226
+
+    .. _policy-defaults-refresh: https://specs.openstack.org/openstack/nova-specs/specs/ussuri/approved/policy-defaults-refresh.html
+    .. _Policy Reference: https://docs.openstack.org/nova/latest/configuration/policy.html
+    .. _Policy New Defaults: https://docs.openstack.org/nova/latest/configuration/policy-concepts.html

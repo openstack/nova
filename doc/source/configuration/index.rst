@@ -48,6 +48,17 @@ Policy
 Nova, like most OpenStack projects, uses a policy language to restrict
 permissions on REST API actions.
 
+* :doc:`Policy Concepts <policy-concepts>`: Starting in the Ussuri
+  release, Nova API policy defines new default roles with system scope
+  capabilities. These new changes improve the security level and
+  manageability of Nova API as they are richer in terms of handling access at
+  system and project level token with 'Read' and 'Write' roles.
+
+.. toctree::
+   :hidden:
+
+   policy-concepts
+
 * :doc:`Policy Reference <policy>`: A complete reference of all
   policy points in nova and what they impact.
 
