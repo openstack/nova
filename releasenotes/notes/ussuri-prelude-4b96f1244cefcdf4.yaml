@@ -36,7 +36,9 @@ prelude: |
     - Support for scope types and additional roles in the default nova
       policies, allowing for richer access management including the ability to
       configure *read-only* access to resources. This feature is disabled by
-      default.
+      default. See the `Policy Concepts`__ documentation for more details.
+
+      .. __: https://docs.openstack.org/nova/latest/configuration/policy-concepts.html
 
     - Support for `creating servers with accelerator devices via Cyborg`__.
 
