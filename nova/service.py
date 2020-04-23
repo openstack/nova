@@ -153,6 +153,20 @@ class Service(service.Service):
         This includes starting an RPC service, initializing
         periodic tasks, etc.
         """
+        # NOTE(melwitt): Clear the cell cache holding database transaction
+        # context manager objects. We do this to ensure we create new internal
+        # oslo.db locks to avoid a situation where a child process receives an
+        # already locked oslo.db lock when it is forked. When a child process
+        # inherits a locked oslo.db lock, database accesses through that
+        # transaction context manager will never be able to acquire the lock
+        # and requests will fail with CellTimeout errors.
+        # See https://bugs.python.org/issue6721 for more information.
+        # With python 3.7, it would be possible for oslo.db to make use of the
+        # os.register_at_fork() method to reinitialize its lock. Until we
+        # require python 3.7 as a mininum version, we must handle the situation
+        # outside of oslo.db.
+        context.CELL_CACHE = {}
+
         assert_eventlet_uses_monotonic_clock()
 
         verstr = version.version_string_with_package()
@@ -308,6 +322,8 @@ class Service(service.Service):
     def reset(self):
         """reset the service."""
         self.manager.reset()
+        # Reset the cell cache that holds database transaction context managers
+        context.CELL_CACHE = {}
 
 
 class WSGIService(service.Service):
@@ -362,13 +378,18 @@ class WSGIService(service.Service):
         setup_profiler(name, self.host)
 
     def reset(self):
-        """Reset server greenpool size to default and service version cache.
+        """Reset the following:
+
+        * server greenpool size to default
+        * service version cache
+        * cell cache holding database transaction context managers
 
         :returns: None
 
         """
         self.server.reset()
         service_obj.Service.clear_min_version_cache()
+        context.CELL_CACHE = {}
 
     def _get_manager(self):
         """Initialize a Manager object appropriate for this service.
@@ -396,6 +417,20 @@ class WSGIService(service.Service):
         :returns: None
 
         """
+        # NOTE(melwitt): Clear the cell cache holding database transaction
+        # context manager objects. We do this to ensure we create new internal
+        # oslo.db locks to avoid a situation where a child process receives an
+        # already locked oslo.db lock when it is forked. When a child process
+        # inherits a locked oslo.db lock, database accesses through that
+        # transaction context manager will never be able to acquire the lock
+        # and requests will fail with CellTimeout errors.
+        # See https://bugs.python.org/issue6721 for more information.
+        # With python 3.7, it would be possible for oslo.db to make use of the
+        # os.register_at_fork() method to reinitialize its lock. Until we
+        # require python 3.7 as a mininum version, we must handle the situation
+        # outside of oslo.db.
+        context.CELL_CACHE = {}
+
         ctxt = context.get_admin_context()
         service_ref = objects.Service.get_by_host_and_binary(ctxt, self.host,
                                                              self.binary)

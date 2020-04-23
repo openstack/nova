@@ -38,9 +38,6 @@ from nova import policy
 from nova import utils
 
 LOG = logging.getLogger(__name__)
-# TODO(melwitt): This cache should be cleared whenever WSGIService receives a
-# SIGHUP and periodically based on an expiration time. Currently, none of the
-# cell caches are purged, so neither is this one, for now.
 CELL_CACHE = {}
 # NOTE(melwitt): Used for the scatter-gather utility to indicate we timed out
 # waiting for a result from a cell.
