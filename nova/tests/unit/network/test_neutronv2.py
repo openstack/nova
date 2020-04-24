@@ -292,6 +292,15 @@ class TestNeutronClient(test.NoDBTestCase):
             exception.Unauthorized,
             client.list_networks)
 
+    def test_neutron_http_retries(self):
+        retries = 42
+        self.flags(http_retries=retries, group='neutron')
+        my_context = context.RequestContext('userid',
+                                            uuids.my_tenant,
+                                            auth_token='token')
+        cl = neutronapi.get_client(my_context)
+        self.assertEqual(retries, cl.httpclient.connect_retries)
+
 
 class _TestNeutronv2Common(test.TestCase):
 
