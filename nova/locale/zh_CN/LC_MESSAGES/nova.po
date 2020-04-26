@@ -36,7 +36,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2019-12-08 15:51+0000\n"
+"POT-Creation-Date: 2020-04-25 15:32+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -52,16 +52,8 @@ msgid "\"Look for the VDIs failed"
 msgstr "查找VDI失败"
 
 #, python-format
-msgid "%(address)s is not a valid IP address."
-msgstr "%(address)s 是无效 IP 地址。"
-
-#, python-format
 msgid "%(address)s is not a valid IP v4/6 address."
 msgstr "%(address)s 不是有效的IP v4/6地址。"
-
-#, python-format
-msgid "%(address)s is not within %(cidr)s."
-msgstr "%(address)s 不属于 %(cidr)s."
 
 #, python-format
 msgid ""
@@ -77,10 +69,6 @@ msgid "%(field)s should not be part of the updates."
 msgstr "%(field)s应该是更新的部分。"
 
 #, python-format
-msgid "%(key)s must be an integer."
-msgstr "%(key)s 必须为整数。"
-
-#, python-format
 msgid "%(memsize)d MB of memory assigned, but expected %(memtotal)d MB"
 msgstr "已分配 %(memsize)d MB 内存，但需要 %(memtotal)d MB"
 
@@ -91,10 +79,6 @@ msgstr "%(path)s 没有在本地存储器上：%(reason)s"
 #, python-format
 msgid "%(path)s is not on shared storage: %(reason)s"
 msgstr "%(path)s 没有在共享存储器上：%(reason)s"
-
-#, python-format
-msgid "%(req)s is required to create a network."
-msgstr "创建网络 %(req)s  是必要的。"
 
 #, python-format
 msgid "%(total)i rows matched query %(meth)s, %(done)i migrated"
@@ -257,10 +241,6 @@ msgid "Bad Request - Invalid Parameters"
 msgstr "错误请求——参数无效"
 
 #, python-format
-msgid "Bad mac for to_global_ipv6: %s"
-msgstr "错误的to_global_ipv6 mac：%s"
-
-#, python-format
 msgid "Bad network format: missing %s"
 msgstr "错误的网络格式：丢失%s"
 
@@ -274,10 +254,6 @@ msgstr "损坏的网络格式：网络 uuid 格式不正确 (%s)"
 #, python-format
 msgid "Bad prefix for network in cidr %s"
 msgstr "cidr %s 中网络前缀不正确"
-
-#, python-format
-msgid "Bad prefix for to_global_ipv6: %s"
-msgstr "错误的to_global_ipv6前缀：%s"
 
 #, python-format
 msgid ""
@@ -381,10 +357,6 @@ msgstr "CPU 数 %(cpunum)d 大于最大值 %(cpumax)d"
 msgid "CPU number %(cpuset)s is not assigned to any node"
 msgstr "CPU 编号 %(cpuset)s 未分配为任何节点"
 
-#, python-format
-msgid "CPU pinning is not supported by the host: %(reason)s"
-msgstr "主机不支持CPU 绑定：%(reason)s"
-
 msgid "Can not add access to a public flavor."
 msgstr "不能添加访问到公共云主机类型。"
 
@@ -437,9 +409,6 @@ msgid ""
 "Cannot determine the parent storage pool for %s; cannot determine where to "
 "store images"
 msgstr "无法确定 %s 的父存储池；无法确定镜像的存储位置"
-
-msgid "Cannot disassociate auto assigned floating IP"
-msgstr "无法取消关联自动分配的浮动 IP。"
 
 msgid "Cannot find SR of content-type ISO"
 msgstr "无法找到content-type ISO的存储库"
@@ -631,10 +600,6 @@ msgid "Could not upload image %(image_id)s"
 msgstr "未能上载映像 %(image_id)s"
 
 #, python-format
-msgid "Couldn't get Link Local IP of %(interface)s :%(ex)s"
-msgstr "无法连接到 %(interface)s 的本地IP：%(ex)s"
-
-#, python-format
 msgid "Couldn't unmount the Quobyte Volume at %s"
 msgstr "不能卸载在%s的Quobyte卷"
 
@@ -657,10 +622,6 @@ msgstr "如果PBM启用，缺省的PBM策略是必须的。"
 #, python-format
 msgid "Deleted %(records)d records from table '%(table_name)s'."
 msgstr "从表格 '%(table_name)s'删除%(records)d记录。"
-
-#, python-format
-msgid "Detected existing vlan with id %(vlan)d"
-msgstr "检测到具有标识 %(vlan)d 的现有 vlan"
 
 #, python-format
 msgid "Device '%(device)s' not found."
@@ -714,16 +675,6 @@ msgstr " id: %s 磁盘没有绑定到实例。"
 #, python-format
 msgid "Driver Error: %s"
 msgstr "驱动错误：%s"
-
-#, python-format
-msgid "Duplicate networks (%s) are not allowed"
-msgstr "不允许重复的网络(%s)"
-
-#, python-format
-msgid ""
-"Either network uuid %(network_uuid)s is not present or is not assigned to "
-"the project %(project_id)s."
-msgstr "网络uuid %(network_uuid)s不存在或者没有分配到项目%(project_id)s。"
 
 #, python-format
 msgid "Error attempting to run %(method)s"
@@ -836,18 +787,10 @@ msgid "Failed to access port %(port_id)s: %(reason)s"
 msgstr "访问端口%(port_id)s失败：%(reason)s"
 
 #, python-format
-msgid "Failed to add bridge: %s"
-msgstr "添加桥%s失败"
-
-#, python-format
 msgid ""
 "Failed to add deploy parameters on node %(node)s when provisioning the "
 "instance %(instance)s"
 msgstr "在准备实例%(instance)s时，在主机%(node)s上停机部署参数失败"
-
-#, python-format
-msgid "Failed to add interface: %s"
-msgstr "未能添加接口：%s"
 
 #, python-format
 msgid "Failed to allocate the network(s) with error %s, not rescheduling."
@@ -871,10 +814,6 @@ msgstr "连接到 libvirt 失败: %(msg)s"
 #, python-format
 msgid "Failed to create vif %s"
 msgstr "创建 vif %s 失败"
-
-#, python-format
-msgid "Failed to decrypt text: %(reason)s"
-msgstr "未能对文本进行解密：%(reason)s"
 
 msgid "Failed to delete bridge"
 msgstr "删除 bridge 失败"
@@ -941,10 +880,6 @@ msgid "Failed to reboot instance: %(reason)s"
 msgstr "云主机无法重启：%(reason)s"
 
 #, python-format
-msgid "Failed to release IP %(address)s with MAC %(mac_address)s"
-msgstr "释放MAC%(mac_address)s的IP %(address)s失败"
-
-#, python-format
 msgid "Failed to remove snapshot for VM %s"
 msgstr "移除 VM %s 快照失败"
 
@@ -961,15 +896,8 @@ msgid "Failed to resume instance: %(reason)s"
 msgstr "无法恢复云主机：%(reason)s"
 
 #, python-format
-msgid "Failed to revoke certificate for %(project_id)s"
-msgstr "无法为 %(project_id)s 撤销权限"
-
-#, python-format
 msgid "Failed to run qemu-img info on %(path)s : %(error)s"
 msgstr "在%(path)s运行 qemu-img info 失败：%(error)s"
-
-msgid "Failed to run xvp."
-msgstr "未能运行 xvp。"
 
 #, python-format
 msgid "Failed to set admin password on %(instance)s because %(reason)s"
@@ -1014,10 +942,6 @@ msgid "File path %s not valid"
 msgstr "文件路径 %s 无效"
 
 #, python-format
-msgid "Fixed IP %(address)s already exists."
-msgstr "固定 IP %(address)s 已存在"
-
-#, python-format
 msgid "Fixed IP %(ip)s is not a valid ip address for network %(network_id)s."
 msgstr "对于网络%(network_id)s，固定IP %(ip)s 不是一个有效的ip地址。"
 
@@ -1029,19 +953,6 @@ msgstr "固定IP%s已在使用。"
 msgid ""
 "Fixed IP address %(address)s is already in use on instance %(instance_uuid)s."
 msgstr "在实例 %(instance_uuid)s 上，固定 IP 地址 %(address)s 已在使用中。"
-
-#, python-format
-msgid "Fixed IP address %(address)s is invalid."
-msgstr "固定IP地址 %(address)s 无效。"
-
-#, python-format
-msgid ""
-"Fixed IP address (%(address)s) does not exist in network (%(network_uuid)s)."
-msgstr "固定IP地址 (%(address)s) 在网络 (%(network_uuid)s) 中不存在。"
-
-#, python-format
-msgid "Fixed IP associate failed for network: %(net)s."
-msgstr "固定IP绑定失败：%(net)s。"
 
 #, python-format
 msgid "Fixed IP not found for address %(address)s."
@@ -1111,10 +1022,6 @@ msgid "Flavor's memory is too small for requested image."
 msgstr "相对于申请的镜像，该云主机类型的内存太小。"
 
 #, python-format
-msgid "Floating IP %(address)s already exists."
-msgstr "浮动 IP %(address)s 已存在。"
-
-#, python-format
 msgid "Floating IP %(address)s association has failed."
 msgstr "浮动IP %(address)s绑定失败。"
 
@@ -1127,16 +1034,6 @@ msgid "Floating IP %(address)s is not associated with instance %(id)s."
 msgstr "浮动 IP %(address)s 未与实例 %(id)s 关联。"
 
 #, python-format
-msgid "Floating IP %(address)s is not associated."
-msgstr "浮动 IP %(address)s 未关联。"
-
-msgid "Floating IP allocate failed."
-msgstr "浮动IP分配失败。"
-
-msgid "Floating IP is not associated"
-msgstr "未关联浮动 IP"
-
-#, python-format
 msgid "Floating IP not found for ID %(id)s."
 msgstr "找不到对应标识 %(id)s 的浮动 IP。"
 
@@ -1147,10 +1044,6 @@ msgstr "找不到对应标识 %s 的浮动 IP"
 #, python-format
 msgid "Floating IP not found for address %(address)s."
 msgstr "找不到对应地址 %(address)s 的浮动 IP。"
-
-#, python-format
-msgid "Floating IP not found for host %(host)s."
-msgstr "找不到对应主机 %(host)s 的浮动 IP。"
 
 msgid "Floating IP pool not found."
 msgstr "找不到浮动 IP 池。"
@@ -1235,10 +1128,6 @@ msgstr "IP分配操作池%s的配额。"
 
 msgid "IP allocation over quota."
 msgstr "IP分配超过配额。"
-
-#, python-format
-msgid "IPv6 netmask \"%s\" must be a netmask or integral prefix"
-msgstr "IPv6网络掩码 \"%s\" 必须是一个网络掩码或者完整的前缀"
 
 #, python-format
 msgid "Image %(image_id)s could not be found."
@@ -1366,14 +1255,6 @@ msgid "Instance %(instance_uuid)s does not specify a migration context."
 msgstr "实例 %(instance_uuid)s未指定迁移上下文"
 
 #, python-format
-msgid "Instance %(instance_uuid)s doesn't have fixed IP '%(ip)s'."
-msgstr "实例 %(instance_uuid)s 没有固定 IP“%(ip)s”。"
-
-#, python-format
-msgid "Instance %(instance_uuid)s has zero fixed IPs."
-msgstr "实例 %(instance_uuid)s 没有固定 IP。"
-
-#, python-format
 msgid ""
 "Instance %(instance_uuid)s in %(attr)s %(state)s. Cannot %(method)s while "
 "the instance is in this state."
@@ -1426,10 +1307,6 @@ msgstr "实例组 %(group_uuid)s 已存在。"
 #, python-format
 msgid "Instance group %(group_uuid)s could not be found."
 msgstr "找不到实例组 %(group_uuid)s"
-
-#, python-format
-msgid "Instance group %(group_uuid)s has no member with id %(instance_id)s."
-msgstr "实例组%(group_uuid)s没有实例%(instance_id)s。"
 
 msgid "Instance has no source host"
 msgstr "实例没有任何源主机"
@@ -1550,14 +1427,6 @@ msgid "Invalid exclusion expression %r"
 msgstr "无效排它表达式%r"
 
 #, python-format
-msgid "Invalid fixed IP Address %s in request"
-msgstr "请求中无效固定IP地址%s"
-
-#, python-format
-msgid "Invalid floating IP %s in request"
-msgstr "请求中无效浮动IP %s"
-
-#, python-format
 msgid "Invalid image format '%(format)s'"
 msgstr "无效镜像格式'%(format)s'"
 
@@ -1615,9 +1484,6 @@ msgstr "minDisk 过滤器 [%s] 无效"
 msgid "Invalid minRam filter [%s]"
 msgstr "minRam 过滤器 [%s] 无效"
 
-msgid "Invalid name"
-msgstr "无效名称"
-
 #, python-format
 msgid "Invalid port range %(from_port)s:%(to_port)s. %(msg)s"
 msgstr "无效的端口范围 %(from_port)s:%(to_port)s. %(msg)s"
@@ -1628,14 +1494,6 @@ msgstr "代理请求签名无效。"
 #, python-format
 msgid "Invalid range expression %r"
 msgstr "无效范围表达式%r"
-
-#, python-format
-msgid "Invalid reservation expiration %(expire)s."
-msgstr "预留到期 %(expire)s 无效。"
-
-#, python-format
-msgid "Invalid security group name: %(name)s."
-msgstr "无效的安全组名称：%(name)s。"
 
 msgid "Invalid service catalog json."
 msgstr "服务目录 json 无效。"
@@ -1721,10 +1579,6 @@ msgid "Limits only supported from vCenter 6.0 and above"
 msgstr "仅 vCenter 6.0 及以上版本支持限制"
 
 #, python-format
-msgid "Link Local address is not found.:%s"
-msgstr "本地IP地址没有找到：%s"
-
-#, python-format
 msgid "Live migration %(id)s for server %(uuid)s is not in progress."
 msgstr "对应服务器 %(uuid)s 的实时迁移 %(id)s 未在进行。"
 
@@ -1749,12 +1603,6 @@ msgstr "不支持映射镜像到本地。"
 #, python-format
 msgid "Marker %(marker)s could not be found."
 msgstr "找不到标记符 %(marker)s。"
-
-msgid "Maximum allowed length for 'label' is 255."
-msgstr "“标签”的最大允许长度为 255。"
-
-msgid "Maximum number of fixed IPs exceeded"
-msgstr "已超过最大固定 IP 数"
 
 msgid "Maximum number of floating IPs exceeded"
 msgstr "已超过最大浮动 IP 数"
@@ -1953,10 +1801,6 @@ msgid "Network %(network_id)s could not be found."
 msgstr "网络 %(network_id)s 没有找到。"
 
 #, python-format
-msgid "Network %(network_id)s is still in use."
-msgstr "网络 %(network_id)s 仍在使用中。"
-
-#, python-format
 msgid ""
 "Network %(network_uuid)s requires a subnet in order to boot instances on."
 msgstr "网络%(network_uuid)s需要一个子网，以便启动实例。"
@@ -1969,24 +1813,6 @@ msgstr "无法为桥 %(bridge)s 找到网络"
 msgid "Network could not be found for instance %(instance_id)s."
 msgstr "无法为实例 %(instance_id)s 找到网络。"
 
-#, python-format
-msgid "Network could not be found for uuid %(uuid)s"
-msgstr "无法为uuid %(uuid)s 找到网络"
-
-#, python-format
-msgid "Network could not be found with cidr %(cidr)s."
-msgstr "无法为cidr %(cidr)s 找到网络。"
-
-#, python-format
-msgid "Network host %(host)s has zero fixed IPs in network %(network_id)s."
-msgstr "网络主机 %(host)s 在网络 %(network_id)s 中没有固定 IP。"
-
-#, python-format
-msgid ""
-"Network must be disassociated from project %(project_id)s before it can be "
-"deleted."
-msgstr "网络在可以被删除之前必须从项目%(project_id)s解除绑定。"
-
 msgid "Network not found"
 msgstr "没有找到网络"
 
@@ -1994,10 +1820,6 @@ msgid ""
 "Network requires port_security_enabled and subnet associated in order to "
 "apply security groups."
 msgstr "网络需要关联的 port_security_enabled 和子网，以便应用安全组。"
-
-#, python-format
-msgid "Network set host failed for network %(network_id)s."
-msgstr "网络为网络%(network_id)s设置主机失败。"
 
 msgid "New volume must be detached in order to swap."
 msgstr "为了进行交换，新卷必须断开。"
@@ -2039,19 +1861,11 @@ msgstr "在 %(location)s 没有磁盘"
 msgid "No fixed IP addresses available for network: %(net)s"
 msgstr "没有可用的固定IP给网络：%(net)s"
 
-#, python-format
-msgid "No fixed IP associated with id %(id)s."
-msgstr "没有固定IP与id %(id)s 关联。"
-
 msgid "No fixed IPs associated to instance"
 msgstr "没有固定 IP 与实例相关联"
 
 msgid "No free nbd devices"
 msgstr "没有空闲NBD设备"
-
-#, python-format
-msgid "No free port available for instance %(instance)s."
-msgstr "对于实例 %(instance)s，未提供任何可用端口。"
 
 msgid "No host available on cluster"
 msgstr "没有可用的主机在集群中"
@@ -2066,9 +1880,6 @@ msgstr "找不到任何与“%s”匹配的管理程序。"
 msgid "No image locations are accessible"
 msgstr "没有镜像位置可以访问"
 
-msgid "No instances found for any event"
-msgstr "在所有事件中没有发现实例"
-
 #, python-format
 msgid ""
 "No live migration URI configured and no default available for \"%(virt_type)s"
@@ -2076,9 +1887,6 @@ msgid ""
 msgstr ""
 "未配置任何实时迁移 URI，并且未提供对应 “%(virt_type)s” hypervisor 虚拟化类型"
 "的缺省值。"
-
-msgid "No more available networks."
-msgstr "没有更多可用的网络"
 
 msgid "No more floating IPs available."
 msgstr "没有其他可用浮动 IP。"
@@ -2090,9 +1898,6 @@ msgstr "池 %s 中没有其他浮动 IP。"
 #, python-format
 msgid "No mount points found in %(root)s of %(image)s"
 msgstr "在%(image)s的%(root)s没有找到挂载点"
-
-msgid "No networks defined."
-msgstr "没有网络定义。"
 
 #, python-format
 msgid "No operating system found in %s"
@@ -2189,10 +1994,6 @@ msgstr "Nova请求的 libvirt 版本%s 或更高。"
 
 msgid "Number of Rows Archived"
 msgstr "已归档行数"
-
-#, python-format
-msgid "OVS configuration failed with: %(inner_exception)s."
-msgstr "OVS 配置失败，产生以下异常：%(inner_exception)s。"
 
 #, python-format
 msgid "Object action %(action)s failed because: %(reason)s"
@@ -2338,10 +2139,6 @@ msgid "Port update failed for port %(port_id)s: %(reason)s"
 msgstr "端口 %(port_id)s 更新失败: %(reason)s"
 
 #, python-format
-msgid "Project %(project_id)s could not be found."
-msgstr "项目 %(project_id)s 没有找到。"
-
-#, python-format
 msgid "Provided video model (%(model)s) is not supported."
 msgstr "不支持提供视频模型(%(model)s)。"
 
@@ -2377,12 +2174,6 @@ msgstr "对于资源，已超过配额：%(overs)s"
 
 msgid "Quota exceeded, too many key pairs."
 msgstr "已超过配额，密钥对太多。"
-
-msgid "Quota exceeded, too many security group rules."
-msgstr "已超过配额，安全组规则太多。"
-
-msgid "Quota exceeded, too many security groups."
-msgstr "已超过配额，安全组太多。"
 
 msgid "Quota exceeded, too many server groups."
 msgstr "已超过配额，服务器组太多。"
@@ -2421,14 +2212,6 @@ msgid ""
 msgstr "资源%(resource)s的配额限制%(limit)s 必须少于或等于%(maximum)s。"
 
 #, python-format
-msgid "Quota reservation %(uuid)s could not be found."
-msgstr "找不到配额预留 %(uuid)s。"
-
-#, python-format
-msgid "Quota usage for project %(project_id)s could not be found."
-msgstr "找不到项目 %(project_id)s 的配额使用量。"
-
-#, python-format
 msgid "Reached maximum number of retries trying to unplug VBD %s"
 msgstr "已达到尝试拔出 VBD %s 的最大重试次数"
 
@@ -2455,10 +2238,6 @@ msgstr "找不到对应实例 %(instance_uuid)s 的 RequestSpec"
 
 msgid "Requested CPU control policy not supported by host"
 msgstr "主机不支持所请求 CPU 控制策略"
-
-#, python-format
-msgid "Requested cidr (%(cidr)s) conflicts with existing cidr (%(other)s)"
-msgstr "请求的cidr(%(cidr)s)与已存在的cidr(%(other)s)冲突"
 
 #, python-format
 msgid ""
@@ -2508,10 +2287,6 @@ msgid "Root element name should be '%(name)s' not '%(tag)s'"
 msgstr "根元素名应该是 '%(name)s' 而不是'%(tag)s'"
 
 #, python-format
-msgid "Rule (%s) not found"
-msgstr "没有找到规则 (%s)"
-
-#, python-format
 msgid "Running batches of %i until complete"
 msgstr "运行 %i 的批处理直到完成"
 
@@ -2522,18 +2297,6 @@ msgstr "调度器主机过滤器 %(filter_name)s 没有找到。"
 #, python-format
 msgid "Security group %(name)s is not found for project %(project)s"
 msgstr "在项目%(project)s没有找到安全组%(name)s"
-
-#, python-format
-msgid ""
-"Security group %(security_group_id)s is already associated with the instance "
-"%(instance_id)s"
-msgstr "安全组 %(security_group_id)s 已经与实例 %(instance_id)s 关联。"
-
-#, python-format
-msgid ""
-"Security group %(security_group_id)s is not associated with the instance "
-"%(instance_id)s"
-msgstr "安全组 %(security_group_id)s 没有与实例 %(instance_id)s 关联。"
 
 #, python-format
 msgid ""
@@ -2556,32 +2319,14 @@ msgid ""
 "%(instance)s"
 msgstr "安全组%(security_group_name)s 没有与实例%(instance)s 绑定"
 
-#, python-format
-msgid "Security group %s already exists"
-msgstr "安全组 %s 已经存在"
-
-#, python-format
-msgid "Security group %s is not a string or unicode"
-msgstr "安全组 %s 既不是字符串也不是unicode"
-
-msgid "Security group id should be integer"
-msgstr "安全组id应该是整数"
-
 msgid "Security group id should be uuid"
 msgstr "安全组标识应该为 uuid"
-
-msgid "Security group is still in use"
-msgstr "安全组仍在使用中"
 
 msgid "Security group name cannot be empty"
 msgstr "安全组名称不能是空"
 
 msgid "Security group not specified"
 msgstr "没有指定安全组"
-
-#, python-format
-msgid "Security group with rule %(rule_id)s not found."
-msgstr "带有规则 %(rule_id)s 的安全组没有找到。"
 
 #, python-format
 msgid "Server %(server_id)s has no tag '%(tag)s'"
@@ -2712,9 +2457,6 @@ msgstr "已挂起"
 msgid "Swap drive requested is larger than instance type allows."
 msgstr "交换驱动器的请求大于实例类型允许。"
 
-msgid "Swap only supports host devices"
-msgstr "Swap 只支持主机设备"
-
 msgid "Table"
 msgstr "表"
 
@@ -2725,18 +2467,6 @@ msgstr "任务 %(task_name)s 已在主机 %(host)s 上运行"
 #, python-format
 msgid "Task %(task_name)s is not running on host %(host)s"
 msgstr "任务 %(task_name)s 未在主机 %(host)s 上运行"
-
-#, python-format
-msgid "The CA file for %(project)s could not be found"
-msgstr "找不到用于 %(project)s 的 CA 文件"
-
-#, python-format
-msgid "The CRL file for %(project)s could not be found"
-msgstr "找不到用于 %(project)s 的 CRL 文件"
-
-#, python-format
-msgid "The DNS entry %(name)s already exists in domain %(domain)s."
-msgstr "DNS 入口 %(name)s 已经在域中 %(domain)s 存在。"
 
 #, python-format
 msgid "The PCI address %(address)s has an incorrect format."
@@ -2758,23 +2488,12 @@ msgstr "当前驱动不支持保存瞬时分区。"
 msgid "The default PBM policy doesn't exist on the backend."
 msgstr "在后台，缺省的PBM策略不存在。"
 
-#, python-format
-msgid "The firewall filter for %s does not exist"
-msgstr "%s 的防火墙过滤器不存在"
-
 msgid "The floating IP request failed with a BadRequest"
 msgstr "由于坏的请求，浮动IP请求失败"
 
 msgid ""
 "The instance requires a newer hypervisor version than has been provided."
 msgstr "该实例需要比当前版本更新的虚拟机管理程序。"
-
-#, python-format
-msgid ""
-"The network range is not big enough to fit %(num_networks)s networks. "
-"Network size is %(network_size)s"
-msgstr ""
-"网络范围不够大，无法容纳 %(num_networks)s 个网络。网络大小为 %(network_size)s"
 
 #, python-format
 msgid "The number of defined ports: %(ports)d is over the limit: %(quota)d"
@@ -2816,11 +2535,6 @@ msgstr "不支持请求的功能"
 msgid "The specified cluster '%s' was not found in vCenter"
 msgstr "在vCenter中没有找到指定的集群'%s'"
 
-msgid ""
-"The sum between the number of networks and the vlan start cannot be greater "
-"than 4094"
-msgstr "网络数量与VLAN起始数之和不能大于4049"
-
 #, python-format
 msgid "The supplied device path (%(path)s) is in use."
 msgstr "提供的设备路径 (%(path)s) 正在使用中。"
@@ -2847,12 +2561,6 @@ msgstr "令牌“%(token)s”无效或已到期"
 
 msgid "The uuid of the cell to delete."
 msgstr "要删除的 cell 的 uuid"
-
-msgid "The vlan number cannot be greater than 4094"
-msgstr "vlan号不能超过4094"
-
-msgid "The vlan number cannot be less than 1"
-msgstr "vlan号不能小于1"
 
 #, python-format
 msgid ""
@@ -2906,12 +2614,6 @@ msgstr "此计算节点的 hypervisor 的版本低于最低受支持版本：%(v
 
 msgid "This domU must be running on the host specified by connection_url"
 msgstr "这个domU 必须运行在connection_url指定的主机上"
-
-msgid "This driver only supports type 'a'"
-msgstr "驱动仅支持类型 'a'"
-
-msgid "This driver only supports type 'a' entries."
-msgstr "驱动仅支持入口类型 'a'。"
 
 msgid ""
 "This method needs to be called with either networks=None and port_ids=None "
@@ -2995,10 +2697,6 @@ msgstr "无法将镜像转换为 %(format)s：%(exp)s"
 #, python-format
 msgid "Unable to convert image to raw: %(exp)s"
 msgstr "无法将镜像转换为原始格式：%(exp)s"
-
-#, python-format
-msgid "Unable to delete system group '%s'"
-msgstr "无法删除系统组“%s”"
 
 msgid "Unable to destroy VBD"
 msgstr "不能销毁VBD"
@@ -3147,10 +2845,6 @@ msgid "Unable to unplug VBD %s"
 msgstr "无法移除 VBD %s"
 
 #, python-format
-msgid "Unable to update system group '%s'"
-msgstr "不能更新系统组'%s'"
-
-#, python-format
 msgid "Unacceptable CPU info: %(reason)s"
 msgstr "CPU信息不能被接受：%(reason)s。"
 
@@ -3194,16 +2888,9 @@ msgstr "未知"
 msgid "Unknown action"
 msgstr "未知操作"
 
-msgid "Unknown argument: port"
-msgstr "未知参数：port"
-
 #, python-format
 msgid "Unknown auth type: %s"
 msgstr "未知认证类型：%s"
-
-#, python-format
-msgid "Unknown chain: %r"
-msgstr "未知链：%r"
 
 #, python-format
 msgid "Unknown config drive format %(format)s. Select one of iso9660 or vfat."
@@ -3286,12 +2973,6 @@ msgstr ""
 #, python-format
 msgid "VHD coalesce attempts exceeded (%d), giving up..."
 msgstr "VHD coalesce 尝试超过(%d)，放弃。。。"
-
-#, python-format
-msgid ""
-"Value (%(value)s) for parameter Group%(property)s is invalid. Content "
-"limited to '%(allowed)s'."
-msgstr "参数组%(property)s的值 (%(value)s)无效。内容限制为 '%(allowed)s'。"
 
 #, python-format
 msgid ""
@@ -3417,14 +3098,8 @@ msgstr "为了使用rbd镜像，您应该指定 images_rbd_pool标记。"
 msgid "You should specify images_volume_group flag to use LVM images."
 msgstr "为了使用LVM镜像，您应该指定 images_volume_group标记"
 
-msgid "Zero fixed IPs could be found."
-msgstr "找不到固定 IP。"
-
 msgid "Zero floating IPs available."
 msgstr "没有可用浮动 IP。"
-
-msgid "Zero floating IPs exist."
-msgstr "没有浮动 IP。"
 
 msgid "admin password can't be changed on existing disk"
 msgstr "无法在现有磁盘上更改管理员密码"
@@ -3544,9 +3219,6 @@ msgstr "keymgr.fixed_key 没有定义"
 
 msgid "l3driver call to add floating IP failed"
 msgstr "用于添加浮动 IP 的 l3driver 调用失败"
-
-msgid "ldap not installed"
-msgstr "ldap没有安装"
 
 #, python-format
 msgid "libguestfs installed but not usable (%s)"
@@ -3685,9 +3357,6 @@ msgstr "vif 类型 %s 不受支持"
 
 msgid "vif_type parameter must be present for this vif_driver implementation"
 msgstr "对于此 vif_driver 实现，必须存在 vif_type 参数"
-
-msgid "vlan must be an integer"
-msgstr "vlan必须是整数"
 
 #, python-format
 msgid "volume %s already attached"

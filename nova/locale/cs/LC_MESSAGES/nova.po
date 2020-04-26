@@ -12,7 +12,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2019-12-08 15:51+0000\n"
+"POT-Creation-Date: 2020-04-25 15:32+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -25,16 +25,8 @@ msgstr ""
 "Language-Team: Czech\n"
 
 #, python-format
-msgid "%(address)s is not a valid IP address."
-msgstr "%(address)s není platná IP adresa."
-
-#, python-format
 msgid "%(address)s is not a valid IP v4/6 address."
 msgstr "%(address)s není platná IP adresa v4/6."
-
-#, python-format
-msgid "%(address)s is not within %(cidr)s."
-msgstr "%(address)s není uvnitř %(cidr)s."
 
 #, python-format
 msgid ""
@@ -51,10 +43,6 @@ msgid "%(field)s should not be part of the updates."
 msgstr "%(field)s by nemělo být součástí aktualizací."
 
 #, python-format
-msgid "%(key)s must be an integer."
-msgstr "%(key)s musí být celé číslo."
-
-#, python-format
 msgid "%(memsize)d MB of memory assigned, but expected %(memtotal)d MB"
 msgstr "%(memsize)d MB paměti přiděleno, ale očekáváno %(memtotal)d MB"
 
@@ -65,10 +53,6 @@ msgstr "%(path)s není v místním úložišti: %(reason)s"
 #, python-format
 msgid "%(path)s is not on shared storage: %(reason)s"
 msgstr "%(path)s není ve sdíleném úložišti: %(reason)s"
-
-#, python-format
-msgid "%(req)s is required to create a network."
-msgstr "%(req)s je vyžadováno pro vytvoření sítě."
 
 #, python-format
 msgid "%(type)s hypervisor does not support PCI devices"
@@ -222,10 +206,6 @@ msgid "Attribute not supported: %(attr)s"
 msgstr "Vlastnost není podporována: %(attr)s"
 
 #, python-format
-msgid "Bad mac for to_global_ipv6: %s"
-msgstr "Špatná mac adresa pro to_global_ipv6: %s"
-
-#, python-format
 msgid "Bad network format: missing %s"
 msgstr "Špatný formát sítě: chybí %s"
 
@@ -239,10 +219,6 @@ msgstr "Špatný formát sítí: uuid sítě není ve správném formátu (%s)"
 #, python-format
 msgid "Bad prefix for network in cidr %s"
 msgstr "Špatná předpona pro síť v cidr %s"
-
-#, python-format
-msgid "Bad prefix for to_global_ipv6: %s"
-msgstr "Špatná předpona pro to_global_ipv6: %s"
 
 #, python-format
 msgid ""
@@ -345,10 +321,6 @@ msgstr "Počet CPU %(cpunum)d je větší než maximum %(cpumax)d"
 msgid "CPU number %(cpuset)s is not assigned to any node"
 msgstr "Počet CPU %(cpuset)s není přidělen k žádným uzlům"
 
-#, python-format
-msgid "CPU pinning is not supported by the host: %(reason)s"
-msgstr "Připnutí CPU není hostitelem podporováno: %(reason)s"
-
 msgid "Can not add access to a public flavor."
 msgstr "Nelze zpřístupnit veřejnou konfiguraci"
 
@@ -397,9 +369,6 @@ msgstr "Nelze připojit jeden nebo více svazků k mnoha instancím"
 #, python-format
 msgid "Cannot call %(method)s on orphaned %(objtype)s object"
 msgstr "Nelze volat %(method)s na osiřelém objektu %(objtype)s"
-
-msgid "Cannot disassociate auto assigned floating IP"
-msgstr "Nelze odloučit automaticky přidělenou plovoucí IP adresu"
 
 msgid "Cannot find SR of content-type ISO"
 msgstr "Nelze najít SR typu obsahu ISO"
@@ -585,10 +554,6 @@ msgstr ""
 msgid "Could not upload image %(image_id)s"
 msgstr "Nelze nahrát obraz %(image_id)s"
 
-#, python-format
-msgid "Couldn't get Link Local IP of %(interface)s :%(ex)s"
-msgstr "Nelze získat IP místního spojení %(interface)s :%(ex)s"
-
 msgid "Creation of virtual interface with unique mac address failed"
 msgstr "Vytváření virtuálního rozhraní s jedinečnou mac adresou selhalo"
 
@@ -606,10 +571,6 @@ msgstr "Výchozí zásada PVM je pro povolení PBM vyžadována."
 #, python-format
 msgid "Deleted %(records)d records from table '%(table_name)s'."
 msgstr "Smazáno %(records)d záznamů z tabulky '%(table_name)s'."
-
-#, python-format
-msgid "Detected existing vlan with id %(vlan)d"
-msgstr "Zjištěna existující vlan s id %(vlan)d"
 
 #, python-format
 msgid "Device '%(device)s' not found."
@@ -657,18 +618,6 @@ msgstr "Disk s id: %s nebylo připojeno k instanci."
 #, python-format
 msgid "Driver Error: %s"
 msgstr "Chyba ovladače: %s"
-
-#, python-format
-msgid "Duplicate networks (%s) are not allowed"
-msgstr "Duplicitní sítě (%s) nejsou povoleny"
-
-#, python-format
-msgid ""
-"Either network uuid %(network_uuid)s is not present or is not assigned to "
-"the project %(project_id)s."
-msgstr ""
-"Buď síť uuid %(network_uuid)s není přítomna nebo není přidělena k projektu "
-"%(project_id)s."
 
 #, python-format
 msgid ""
@@ -780,20 +729,12 @@ msgid "Failed to access port %(port_id)s: %(reason)s"
 msgstr "K portu %(port_id)s není přístup: %(reason)s"
 
 #, python-format
-msgid "Failed to add bridge: %s"
-msgstr "Nelze přidat síťový most: %s"
-
-#, python-format
 msgid ""
 "Failed to add deploy parameters on node %(node)s when provisioning the "
 "instance %(instance)s"
 msgstr ""
 "Nelze přidat parametry pro nasazení na uzlu %(node)s při poskytování "
 "instance %(instance)s"
-
-#, python-format
-msgid "Failed to add interface: %s"
-msgstr "Nelze přidat rozhraní: %s"
 
 #, python-format
 msgid "Failed to allocate the network(s) with error %s, not rescheduling."
@@ -805,10 +746,6 @@ msgstr "Nelze přidělit síť(ě), nebudou znovu naplánovány."
 #, python-format
 msgid "Failed to attach network adapter device to %(instance_uuid)s"
 msgstr "Nelze připojit zařízení síťového adaptéru k %(instance_uuid)s"
-
-#, python-format
-msgid "Failed to decrypt text: %(reason)s"
-msgstr "Nelze dešifrovat text: %(reason)s"
 
 #, python-format
 msgid "Failed to deploy instance: %(reason)s"
@@ -870,10 +807,6 @@ msgid "Failed to reboot instance: %(reason)s"
 msgstr "Nelze restartovat instanci: %(reason)s"
 
 #, python-format
-msgid "Failed to release IP %(address)s with MAC %(mac_address)s"
-msgstr "Nelze uvolnit IP adresu %(address)s s MAC %(mac_address)s"
-
-#, python-format
 msgid "Failed to remove volume(s): (%(reason)s)"
 msgstr "Nelze odpojit svazky:  (%(reason)s)"
 
@@ -886,15 +819,8 @@ msgid "Failed to resume instance: %(reason)s"
 msgstr "Nelze obnovit instanci: %(reason)s"
 
 #, python-format
-msgid "Failed to revoke certificate for %(project_id)s"
-msgstr "Nelze zrušit certifikát pro %(project_id)s"
-
-#, python-format
 msgid "Failed to run qemu-img info on %(path)s : %(error)s"
 msgstr "Nelze spustit qemu-img info na %(path)s : %(error)s"
-
-msgid "Failed to run xvp."
-msgstr "Nelze spustit xvp."
 
 #, python-format
 msgid "Failed to set admin password on %(instance)s because %(reason)s"
@@ -923,10 +849,6 @@ msgid "File path %s not valid"
 msgstr "Cesta souboru %s není paltná"
 
 #, python-format
-msgid "Fixed IP %(address)s already exists."
-msgstr "Pevná IP adresa %(address)s již existuje."
-
-#, python-format
 msgid "Fixed IP %(ip)s is not a valid ip address for network %(network_id)s."
 msgstr "Pevná IP %(ip)s není platnou ip adresou pro síť %(network_id)s."
 
@@ -939,19 +861,6 @@ msgid ""
 "Fixed IP address %(address)s is already in use on instance %(instance_uuid)s."
 msgstr ""
 "Pevná IP adresa (%(address)s) se již používá v instanci %(instance_uuid)s."
-
-#, python-format
-msgid "Fixed IP address %(address)s is invalid."
-msgstr "Pevná IP adresa %(address)s je neplatná."
-
-#, python-format
-msgid ""
-"Fixed IP address (%(address)s) does not exist in network (%(network_uuid)s)."
-msgstr "Pevná IP adresa (%(address)s) v síti (%(network_uuid)s) neexistuje."
-
-#, python-format
-msgid "Fixed IP associate failed for network: %(net)s."
-msgstr "Přidružení pevné Ip adresy selhalo u sítě: %(net)s."
 
 #, python-format
 msgid "Fixed IP not found for address %(address)s."
@@ -1024,10 +933,6 @@ msgid "Flavor's memory is too small for requested image."
 msgstr "Paměť konfigurace je na požadovaný obraz příliš malá."
 
 #, python-format
-msgid "Floating IP %(address)s already exists."
-msgstr "Plovoucí IP adresa %(address)s již existuje."
-
-#, python-format
 msgid "Floating IP %(address)s association has failed."
 msgstr "Přidružení plovoucí IP adresy %(address)s selhalo."
 
@@ -1040,16 +945,6 @@ msgid "Floating IP %(address)s is not associated with instance %(id)s."
 msgstr "Plovoucí IP adresa %(address)s není přidružena k instanci %(id)s."
 
 #, python-format
-msgid "Floating IP %(address)s is not associated."
-msgstr "Plovoucí IP %(address)s není přidružena."
-
-msgid "Floating IP allocate failed."
-msgstr "Přidělení plovoucí IP adresy selhalo."
-
-msgid "Floating IP is not associated"
-msgstr "Plovoucí IP adresa není přidružena"
-
-#, python-format
 msgid "Floating IP not found for ID %(id)s."
 msgstr "Plovoucí IP není nalezena pro ID %(id)s."
 
@@ -1060,10 +955,6 @@ msgstr "Plovoucí IP adresa nenalezena pro ID %s"
 #, python-format
 msgid "Floating IP not found for address %(address)s."
 msgstr "Plovoucí IP adresa nenalezena pro adresu %(address)s."
-
-#, python-format
-msgid "Floating IP not found for host %(host)s."
-msgstr "Plovoucí IP adresa nenalezeno pro hostitele %(host)s."
 
 msgid "Floating IP pool not found."
 msgstr "Zásoba plovoucích IP adres nenalezena."
@@ -1135,11 +1026,6 @@ msgstr "Přidělení IP adres přesahující kvótu v zásobě %s."
 
 msgid "IP allocation over quota."
 msgstr "Přidělení IP přesahuje kvótu."
-
-#, python-format
-msgid "IPv6 netmask \"%s\" must be a netmask or integral prefix"
-msgstr ""
-"Síťová maska IPv6 \"%s\" musí být síťová maska nebo nedělitelná předpona."
 
 #, python-format
 msgid "Image %(image_id)s could not be found."
@@ -1261,14 +1147,6 @@ msgid "Instance %(instance_uuid)s does not specify a migration context."
 msgstr "Instance %(instance_uuid)s neurčuje kontext přesunu."
 
 #, python-format
-msgid "Instance %(instance_uuid)s doesn't have fixed IP '%(ip)s'."
-msgstr "Instance %(instance_uuid)s  nemá pevné IP adresy '%(ip)s'."
-
-#, python-format
-msgid "Instance %(instance_uuid)s has zero fixed IPs."
-msgstr "Instance %(instance_uuid)s má nula pevných IP adres."
-
-#, python-format
 msgid ""
 "Instance %(instance_uuid)s in %(attr)s %(state)s. Cannot %(method)s while "
 "the instance is in this state."
@@ -1322,11 +1200,6 @@ msgstr "Skupina instance %(group_uuid)s již existuje."
 #, python-format
 msgid "Instance group %(group_uuid)s could not be found."
 msgstr "Skupina instance %(group_uuid)s nemohla být nalezena."
-
-#, python-format
-msgid "Instance group %(group_uuid)s has no member with id %(instance_id)s."
-msgstr ""
-"Skupina instance %(group_uuid)s nemá žádného člena s id %(instance_id)s."
 
 msgid "Instance has no source host"
 msgstr "Instance nemá žádného zdrojového hostitele"
@@ -1442,14 +1315,6 @@ msgid "Invalid exclusion expression %r"
 msgstr "Neplatný výraz vyloučení %r"
 
 #, python-format
-msgid "Invalid fixed IP Address %s in request"
-msgstr "Neplatná pevná IP adresa %s v požadavku"
-
-#, python-format
-msgid "Invalid floating IP %s in request"
-msgstr "Neplatná plovoucí IP adresa %s v požadavku"
-
-#, python-format
 msgid "Invalid image format '%(format)s'"
 msgstr "Neplatný formát obrazu '%(format)s'"
 
@@ -1504,9 +1369,6 @@ msgstr "Neplatný filtr minDisk [%s]"
 msgid "Invalid minRam filter [%s]"
 msgstr "Neplatný filtr minRam [%s]"
 
-msgid "Invalid name"
-msgstr "Neplatný název"
-
 #, python-format
 msgid "Invalid port range %(from_port)s:%(to_port)s. %(msg)s"
 msgstr "Neplatný rozsah portů %(from_port)s:%(to_port)s. %(msg)s"
@@ -1517,14 +1379,6 @@ msgstr "Neplatný podpis žádosti od prostředníka."
 #, python-format
 msgid "Invalid range expression %r"
 msgstr "Neplatný výraz rozsahu %r"
-
-#, python-format
-msgid "Invalid reservation expiration %(expire)s."
-msgstr "Neplatné vypršení rezervace %(expire)s."
-
-#, python-format
-msgid "Invalid security group name: %(name)s."
-msgstr "Neplatný název bezpečnostní skupiny: %(name)s."
 
 msgid "Invalid service catalog json."
 msgstr "Neplatný json katalog služeb"
@@ -1611,10 +1465,6 @@ msgid "Limits only supported from vCenter 6.0 and above"
 msgstr "Limity jsou podporovány pouze ve vCenter verze 6.0 a vyšší"
 
 #, python-format
-msgid "Link Local address is not found.:%s"
-msgstr "Adresa místního spojení nenalezena.: %s"
-
-#, python-format
 msgid "Malformed message body: %(reason)s"
 msgstr "Poškozené tělo zprávy: %(reason)s"
 
@@ -1635,12 +1485,6 @@ msgstr "Mapování obrazu na místní není podporováno"
 #, python-format
 msgid "Marker %(marker)s could not be found."
 msgstr "Indikátor %(marker)s nemohl být nalezen."
-
-msgid "Maximum allowed length for 'label' is 255."
-msgstr "Maximální povolená délka pro 'štítek' je 255."
-
-msgid "Maximum number of fixed IPs exceeded"
-msgstr "Překročen maximálních počet pevných IP adres"
 
 msgid "Maximum number of floating IPs exceeded"
 msgstr "Překročen maximálních počet plovoucích IP adres"
@@ -1815,10 +1659,6 @@ msgid "Network %(network_id)s could not be found."
 msgstr "Síť %(network_id)s nemohla být nalezena."
 
 #, python-format
-msgid "Network %(network_id)s is still in use."
-msgstr "Síť %(network_id)s se stále používá."
-
-#, python-format
 msgid ""
 "Network %(network_uuid)s requires a subnet in order to boot instances on."
 msgstr "Síť %(network_uuid)s vyžaduje podsíť, na které může zavádět instance."
@@ -1831,25 +1671,6 @@ msgstr "Síť nemohla být pro most %(bridge)s nalezena."
 msgid "Network could not be found for instance %(instance_id)s."
 msgstr "Síť nemohla být pro instanci %(instance_id)s nalezena."
 
-#, python-format
-msgid "Network could not be found for uuid %(uuid)s"
-msgstr "Síť nemohla být pro uuid %(uuid)s nalezena."
-
-#, python-format
-msgid "Network could not be found with cidr %(cidr)s."
-msgstr "Síť nemohla být pro cidr %(cidr)s nalezena."
-
-#, python-format
-msgid "Network host %(host)s has zero fixed IPs in network %(network_id)s."
-msgstr "Síťový hostitel %(host)s má nula pevných IP v síti %(network_id)s."
-
-#, python-format
-msgid ""
-"Network must be disassociated from project %(project_id)s before it can be "
-"deleted."
-msgstr ""
-"Síť musí být odloučena od projektu %(project_id)s než může být smazána."
-
 msgid "Network not found"
 msgstr "Síť nenalezena"
 
@@ -1859,10 +1680,6 @@ msgid ""
 msgstr ""
 "Síť vyžaduje povolení bezpečnostního portu a přidruženou podsíť, aby mohla "
 "používat bezpečnostní skupiny."
-
-#, python-format
-msgid "Network set host failed for network %(network_id)s."
-msgstr "Nastavení hostitele sítě selhalo u sítě %(network_id)s."
 
 msgid "New volume must be detached in order to swap."
 msgstr "Pro výměnu musí být nový svazek odpojen."
@@ -1900,19 +1717,11 @@ msgstr "Źádný disk ve %(location)s"
 msgid "No fixed IP addresses available for network: %(net)s"
 msgstr "Nejsou dostupné žádné pevné IP adresy pro síť: %(net)s"
 
-#, python-format
-msgid "No fixed IP associated with id %(id)s."
-msgstr "Žádná pevná IP není přidružena k %(id)s."
-
 msgid "No fixed IPs associated to instance"
 msgstr "K instanci nejsou přidruženy žádné pevné IP adresy"
 
 msgid "No free nbd devices"
 msgstr "Žádná volná zařízení nbd"
-
-#, python-format
-msgid "No free port available for instance %(instance)s."
-msgstr "Není dostupný žádný volný port pro instanci %(instance)s."
 
 msgid "No host available on cluster"
 msgstr "V clusteru není dostupný žádný hostitel"
@@ -1924,12 +1733,6 @@ msgstr "Nemohl být nalezen žádný hypervizor shodující se s '%s'."
 msgid "No image locations are accessible"
 msgstr "Nejsou přístupné žádná umístění obrazu"
 
-msgid "No instances found for any event"
-msgstr "Instance nenalezeny pro žádnou událost"
-
-msgid "No more available networks."
-msgstr "Žádné další dostupné sítě."
-
 msgid "No more floating IPs available."
 msgstr "Žádné další plovoucí IP adresy nejsou dostupné."
 
@@ -1940,9 +1743,6 @@ msgstr "Žádné další plovoucí IP adresa v zásobě %s."
 #, python-format
 msgid "No mount points found in %(root)s of %(image)s"
 msgstr "V %(root)s z %(image)s nenalezeny žádné body připojení"
-
-msgid "No networks defined."
-msgstr "Žádné sítě nejsou určeny."
 
 #, python-format
 msgid "No operating system found in %s"
@@ -2140,10 +1940,6 @@ msgid "Port id %(port_id)s could not be found."
 msgstr "Port id %(port_id)s nemohlo být nalezeno."
 
 #, python-format
-msgid "Project %(project_id)s could not be found."
-msgstr "Projekt %(project_id)s nemohl být nalezen."
-
-#, python-format
 msgid "Provided video model (%(model)s) is not supported."
 msgstr "Zadaný model videa (%(model)s) není podporován."
 
@@ -2179,12 +1975,6 @@ msgstr "Kvóta překročena pro zdroje: %(overs)s"
 
 msgid "Quota exceeded, too many key pairs."
 msgstr "Kvóta překročena, příliš mnoho párů klíčů."
-
-msgid "Quota exceeded, too many security group rules."
-msgstr "Kvóta překročena, příliš mnoho pravidel bezpečnostní skupiny."
-
-msgid "Quota exceeded, too many security groups."
-msgstr "Kvóta překročena, příliš mnoho bezpečnostních skupin."
 
 msgid "Quota exceeded, too many server groups."
 msgstr "Kvóta překročena, příliš mnoho skupin serveru."
@@ -2227,14 +2017,6 @@ msgstr ""
 "Limit kvóty %(limit)s pro %(resource)s musí být menší nebo rovno %(maximum)s."
 
 #, python-format
-msgid "Quota reservation %(uuid)s could not be found."
-msgstr "Rezervace kvóty %(uuid)s nemohla být nalezena."
-
-#, python-format
-msgid "Quota usage for project %(project_id)s could not be found."
-msgstr "Využití kvóty pro projekt %(project_id)s nemohla být nalezena."
-
-#, python-format
 msgid "Reached maximum number of retries trying to unplug VBD %s"
 msgstr "Dosaženo maximálního počtu nových pokusů o odpojení VBD %s"
 
@@ -2256,11 +2038,6 @@ msgstr "U instance %(instance_uuid)s nebyla nalezena žádost o specifikaci"
 msgid "Requested CPU control policy not supported by host"
 msgstr ""
 "Požadovaná zásada kontroly procesoru není podporována na tomto hostiteli"
-
-#, python-format
-msgid "Requested cidr (%(cidr)s) conflicts with existing cidr (%(other)s)"
-msgstr ""
-"Požadované cidr (%(cidr)s) je v konfliktu s existujícím cidr (%(other)s)"
 
 #, python-format
 msgid ""
@@ -2317,32 +2094,12 @@ msgid "Root element name should be '%(name)s' not '%(tag)s'"
 msgstr "Název kořenového prvku by měl být '%(name)s' ne '%(tag)s'"
 
 #, python-format
-msgid "Rule (%s) not found"
-msgstr "Pravidlo (%s) nenalezeno"
-
-#, python-format
 msgid "Scheduler Host Filter %(filter_name)s could not be found."
 msgstr "Filtr hostitelů plánovače %(filter_name)s nemohl být nalezen."
 
 #, python-format
 msgid "Security group %(name)s is not found for project %(project)s"
 msgstr "Bezpečnostní skupina %(name)s nenalezena v projektu %(project)s"
-
-#, python-format
-msgid ""
-"Security group %(security_group_id)s is already associated with the instance "
-"%(instance_id)s"
-msgstr ""
-"Bezpečnostní skupina %(security_group_id)s je již přidružena k instanci "
-"%(instance_id)s"
-
-#, python-format
-msgid ""
-"Security group %(security_group_id)s is not associated with the instance "
-"%(instance_id)s"
-msgstr ""
-"Bezpečnostní skupina %(security_group_id)s není přidružena k instanci "
-"%(instance_id)s"
 
 #, python-format
 msgid ""
@@ -2371,32 +2128,14 @@ msgstr ""
 "Bezpečnostní skupina %(security_group_name)s není přidružena k instanci "
 "%(instance)s"
 
-#, python-format
-msgid "Security group %s already exists"
-msgstr "Bezpečnostní skupina %s již existuje"
-
-#, python-format
-msgid "Security group %s is not a string or unicode"
-msgstr "Bezpečnostní skupina %s není řetězec nebo unicode"
-
-msgid "Security group id should be integer"
-msgstr "ID bezpečnostní skupiny by mělo být celé číslo"
-
 msgid "Security group id should be uuid"
 msgstr "IP bezpečnostní skupiny by mělo být uuid"
-
-msgid "Security group is still in use"
-msgstr "Bezpečnostní skupina se stále používá"
 
 msgid "Security group name cannot be empty"
 msgstr "Název bezpečnostní skupiny nemůže být prázdné"
 
 msgid "Security group not specified"
 msgstr "Není zadána bezpečnostní skupina"
-
-#, python-format
-msgid "Security group with rule %(rule_id)s not found."
-msgstr "Bezpečnostní skupina s pravidlem %(rule_id)s nenalezena."
 
 #, python-format
 msgid "Server disk was unable to be resized because: %(reason)s"
@@ -2510,9 +2249,6 @@ msgstr "Uspáno"
 msgid "Swap drive requested is larger than instance type allows."
 msgstr "Požadovaný odkládací disk je větší než typ instance umožňuje."
 
-msgid "Swap only supports host devices"
-msgstr "Odkládání je podporováno pouze na zařízeních hostitele"
-
 msgid "Table"
 msgstr "Tabulka"
 
@@ -2523,18 +2259,6 @@ msgstr "Úkol %(task_name)s již je spuštěn na hostiteli %(host)s"
 #, python-format
 msgid "Task %(task_name)s is not running on host %(host)s"
 msgstr "Úkol %(task_name)s není spuštěn na hostiteli %(host)s"
-
-#, python-format
-msgid "The CA file for %(project)s could not be found"
-msgstr "Soubor CA pro %(project)s nemohl být nalezen"
-
-#, python-format
-msgid "The CRL file for %(project)s could not be found"
-msgstr "Soubor CRL pro %(project)s nemohl být nalezen"
-
-#, python-format
-msgid "The DNS entry %(name)s already exists in domain %(domain)s."
-msgstr "Záznam DNS %(name)s již v doméně %(domain)s existuje."
 
 #, python-format
 msgid "The PCI address %(address)s has an incorrect format."
@@ -2556,24 +2280,12 @@ msgstr "Současný ovladač nepodporuje zachování efemerních oddílů."
 msgid "The default PBM policy doesn't exist on the backend."
 msgstr "Výchozí zásada PBM neexistuje na této podpůrné vrstvě. "
 
-#, python-format
-msgid "The firewall filter for %s does not exist"
-msgstr "Filtr brány firewall pro %s neexistuje"
-
 msgid "The floating IP request failed with a BadRequest"
 msgstr "Žádost o plovoucí IP selhala s chybou Špatný požadavek."
 
 msgid ""
 "The instance requires a newer hypervisor version than has been provided."
 msgstr "Instance vyžaduje novější verzi hypervizoru, než byla poskytnuta."
-
-#, python-format
-msgid ""
-"The network range is not big enough to fit %(num_networks)s networks. "
-"Network size is %(network_size)s"
-msgstr ""
-"Rozsah sítí není dostatečně velký, aby se vešlo %(num_networks)s sítí. "
-"Velikost sítě je %(network_size)s"
 
 #, python-format
 msgid "The number of defined ports: %(ports)d is over the limit: %(quota)d"
@@ -2613,11 +2325,6 @@ msgstr "Požadovaná funkce není podporována."
 msgid "The specified cluster '%s' was not found in vCenter"
 msgstr "Zadaný cluster '%s' nebyl nalezen ve vCenter"
 
-msgid ""
-"The sum between the number of networks and the vlan start cannot be greater "
-"than 4094"
-msgstr "Suma mezi počtem sítí a spuštění vlan nemůže být větší než 4094"
-
 #, python-format
 msgid "The supplied device path (%(path)s) is in use."
 msgstr "Zadaná cesta zařízení (%(path)s) se již používá."
@@ -2641,12 +2348,6 @@ msgstr "Cílový hostitel nemůže být ten stejný."
 #, python-format
 msgid "The token '%(token)s' is invalid or has expired"
 msgstr "Známka '%(token)s' je neplatná nebo vypršela"
-
-msgid "The vlan number cannot be greater than 4094"
-msgstr "Číslo vlan nesmí být větší než 4094"
-
-msgid "The vlan number cannot be less than 1"
-msgstr "Číslo vlan nesmí být menší než 1"
 
 #, python-format
 msgid ""
@@ -2707,12 +2408,6 @@ msgstr ""
 
 msgid "This domU must be running on the host specified by connection_url"
 msgstr "Tento domU musí být spuštěn na hostiteli zadaném v url připojení."
-
-msgid "This driver only supports type 'a'"
-msgstr "Tento ovladač podporuje pouze typ 'a'"
-
-msgid "This driver only supports type 'a' entries."
-msgstr "Tento ovladač podporuje pouze záznamy typu 'a'."
 
 msgid ""
 "This method needs to be called with either networks=None and port_ids=None "
@@ -2778,10 +2473,6 @@ msgstr "Nelze ověřit klienta ironic."
 msgid "Unable to contact guest agent. The following call timed out: %(method)s"
 msgstr ""
 "Nelze kontaktovat agenta hosta. Následujícímu volání vypršel čas: %(method)s"
-
-#, python-format
-msgid "Unable to delete system group '%s'"
-msgstr "Nelze smazat skupinu systému '%s'"
 
 #, python-format
 msgid "Unable to destroy VBD %s"
@@ -2913,10 +2604,6 @@ msgid "Unable to unplug VBD %s"
 msgstr "Nelze odpojit VBD %s"
 
 #, python-format
-msgid "Unable to update system group '%s'"
-msgstr "Nelze aktualizovat skupinu systému '%s'"
-
-#, python-format
 msgid "Unacceptable CPU info: %(reason)s"
 msgstr "Nepřijatelné informace o CPU: %(reason)s"
 
@@ -2960,13 +2647,6 @@ msgstr "Neznámé"
 
 msgid "Unknown action"
 msgstr "Neznámá činnost"
-
-msgid "Unknown argument: port"
-msgstr "Neznámý argument: port"
-
-#, python-format
-msgid "Unknown chain: %r"
-msgstr "Neznámý řetěz: %r"
 
 #, python-format
 msgid "Unknown config drive format %(format)s. Select one of iso9660 or vfat."
@@ -3052,14 +2732,6 @@ msgstr ""
 #, python-format
 msgid "VHD coalesce attempts exceeded (%d), giving up..."
 msgstr "Překročen počet pokusů (%d) o splynutí VHD, operace zrušena..."
-
-#, python-format
-msgid ""
-"Value (%(value)s) for parameter Group%(property)s is invalid. Content "
-"limited to '%(allowed)s'."
-msgstr ""
-"Hodnota (%(value)s) pro parametr Skupiny %(property)s je neplatný. Obsah je "
-"omezen na '%(allowed)s'."
 
 #, python-format
 msgid ""
@@ -3190,14 +2862,8 @@ msgstr "Pro použití obrazů rbd byste měli zadat příznak images_rbd_pool."
 msgid "You should specify images_volume_group flag to use LVM images."
 msgstr "Pro použití obrazů LVM byste měli zadat příznak  images_volume_group."
 
-msgid "Zero fixed IPs could be found."
-msgstr "Bylo nalezeno nula pevných IP adres."
-
 msgid "Zero floating IPs available."
 msgstr "Je dostupných nula plovoucích IP adres."
-
-msgid "Zero floating IPs exist."
-msgstr "Existuje nula plovoucích IP."
 
 msgid "admin password can't be changed on existing disk"
 msgstr "heslo správce nelze měnit na existujícím disku"
@@ -3301,9 +2967,6 @@ msgstr "keymgr.fixed_key není zadáno"
 
 msgid "l3driver call to add floating IP failed"
 msgstr "Volání ovladače l3 pro přidání plovoucí IP adresy selhalo"
-
-msgid "ldap not installed"
-msgstr "ldap není nainstalován"
 
 #, python-format
 msgid "libguestfs installed but not usable (%s)"
@@ -3419,9 +3082,6 @@ msgstr "vif typu %s není podporován"
 
 msgid "vif_type parameter must be present for this vif_driver implementation"
 msgstr "parametr vif_type musí být přítomen pro toto zavedení ovladače vif."
-
-msgid "vlan must be an integer"
-msgstr "vlan musí být celé číslo"
 
 #, python-format
 msgid "volume %s already attached"
