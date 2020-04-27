@@ -25,16 +25,21 @@ from nova.objects import fields
 
 
 def determine_migration_type(migration):
-    if migration['old_instance_type_id'] != migration['new_instance_type_id']:
-        return 'resize'
+    if isinstance(migration, dict):
+        old_instance_type_id = migration['old_instance_type_id']
+        new_instance_type_id = migration['new_instance_type_id']
     else:
-        return 'migration'
+        old_instance_type_id = migration.old_instance_type_id
+        new_instance_type_id = migration.new_instance_type_id
+
+    if old_instance_type_id != new_instance_type_id:
+        return 'resize'
+
+    return 'migration'
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register
-class Migration(base.NovaPersistentObject, base.NovaObject,
-                base.NovaObjectDictCompat):
+class Migration(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: String attributes updated to support unicode
     # Version 1.2: Added migration_type and hidden
@@ -82,7 +87,7 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
                 value = determine_migration_type(db_migration)
             elif key == 'uuid' and value is None:
                 continue
-            migration[key] = value
+            setattr(migration, key, value)
 
         migration._context = context
         migration.obj_reset_changes()

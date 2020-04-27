@@ -1759,8 +1759,7 @@ class ComputeManager(manager.Manager):
                 migrations = (
                     objects.MigrationList.get_in_progress_by_host_and_node(
                         context, self.host, nodename))
-                migration_vm_uuids = set([mig['instance_uuid']
-                                          for mig in migrations])
+                migration_vm_uuids = {mig.instance_uuid for mig in migrations}
 
                 total_instances = migration_vm_uuids | ins_on_host
 
@@ -5814,8 +5813,8 @@ class ComputeManager(manager.Manager):
     def _finish_resize(self, context, instance, migration, disk_info,
                        image_meta, bdms, request_spec):
         resize_instance = False  # indicates disks have been resized
-        old_instance_type_id = migration['old_instance_type_id']
-        new_instance_type_id = migration['new_instance_type_id']
+        old_instance_type_id = migration.old_instance_type_id
+        new_instance_type_id = migration.new_instance_type_id
         old_flavor = instance.flavor  # the current flavor is now old
         # NOTE(mriedem): Get the old_vm_state so we know if we should
         # power on the instance. If old_vm_state is not set we need to default
@@ -8895,8 +8894,9 @@ class ComputeManager(manager.Manager):
             action=fields.NotificationAction.LIVE_MIGRATION_POST,
             phase=fields.NotificationPhase.START)
 
-        migration = {'source_compute': self.host,
-                     'dest_compute': dest, }
+        migration = objects.Migration(
+            source_compute=self.host, dest_compute=dest,
+        )
         # For neutron, migrate_instance_start will activate the destination
         # host port bindings, if there are any created by conductor before live
         # migration started.
@@ -9587,7 +9587,7 @@ class ComputeManager(manager.Manager):
         def _set_migration_to_error(migration, reason, **kwargs):
             LOG.warning("Setting migration %(migration_id)s to error: "
                         "%(reason)s",
-                        {'migration_id': migration['id'], 'reason': reason},
+                        {'migration_id': migration.id, 'reason': reason},
                         **kwargs)
             migration.status = 'error'
             migration.save()

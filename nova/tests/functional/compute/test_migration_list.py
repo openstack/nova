@@ -64,7 +64,7 @@ class TestMigrationListObjects(test.TestCase):
             self.context, filters, limit, marker,
             sort_keys, sort_dirs)
         found_uuids = [x.uuid for x in migs]
-        had_uuids = sorted([x['uuid'] for x in self.migrations])
+        had_uuids = sorted([x.uuid for x in self.migrations])
         self.assertEqual(had_uuids, found_uuids)
 
     def test_get_instance_objects_sorted_paged(self):
@@ -80,7 +80,7 @@ class TestMigrationListObjects(test.TestCase):
             ['created_at'], ['asc'])
         self.assertEqual(len(self.migrations), len(migp1))
         migp2 = migration_list.get_migration_objects_sorted(
-            self.context, {}, None, migp1[-1]['uuid'],
+            self.context, {}, None, migp1[-1].uuid,
             ['created_at'], ['asc'])
         self.assertEqual(0, len(migp2))
 
@@ -93,7 +93,7 @@ class TestMigrationListObjects(test.TestCase):
     def test_get_sorted_with_limit(self):
         migs = migration_list.get_migration_objects_sorted(
             self.context, {}, 2, None, ['uuid'], ['asc'])
-        uuids = [mig['uuid'] for mig in migs]
+        uuids = [mig.uuid for mig in migs]
         had_uuids = [mig.uuid for mig in self.migrations]
         self.assertEqual(sorted(had_uuids)[:2], uuids)
         self.assertEqual(2, len(uuids))

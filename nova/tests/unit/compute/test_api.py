@@ -1118,7 +1118,7 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_mig_get.assert_called_once_with(
                 self.context, instance_uuid, 'finished')
             mock_confirm.assert_called_once_with(
-                self.context, inst, migration, migration['source_compute'],
+                self.context, inst, migration, migration.source_compute,
                 cast=False)
         if instance_host is not None:
             mock_get_cn.assert_called_once_with(self.context,

@@ -503,7 +503,10 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
     def test_clean_usage(self):
         inst_2 = copy.copy(self.inst)
         inst_2.uuid = uuidsentinel.instance2
-        migr = {'instance_uuid': 'uuid2', 'vm_state': vm_states.BUILDING}
+        migr = objects.Migration(
+            instance_uuid='uuid2',
+            vm_state=vm_states.BUILDING,
+        )
 
         pci_requests_obj = self._create_pci_requests_object(
             [{'count': 1, 'spec': [{'vendor_id': 'v'}]}])

@@ -139,7 +139,7 @@ class ServerMigrationsController(wsgi.Controller):
 
         # TODO(Shaohe Feng) we should share the in-progress list.
         in_progress = ['queued', 'preparing', 'running', 'post-migrating']
-        if migration.get("status") not in in_progress:
+        if migration.status not in in_progress:
             msg = _("Live migration %(id)s for server %(uuid)s is not in"
                     " progress.") % {"id": id, "uuid": server_id}
             raise exc.HTTPNotFound(explanation=msg)

@@ -3124,7 +3124,7 @@ class API:
             return
 
         client = get_client(context, admin=True)
-        dest_host = migration['dest_compute']
+        dest_host = migration.dest_compute
         for vif in instance.get_network_info():
             # Not all compute migration flows use the port binding-extended
             # API yet, so first check to see if there is a binding for the
@@ -3659,8 +3659,7 @@ class API:
             return {}
         # In case of revert, swap old and new devices to
         # update the ports back to the original devices.
-        revert = (migration and
-                  migration.get('status') == 'reverted')
+        revert = migration and migration.status == 'reverted'
         return instance.migration_context.get_pci_mapping_for_migration(revert)
 
     def _get_port_pci_dev(self, context, instance, port):

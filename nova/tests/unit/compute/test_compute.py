@@ -6303,9 +6303,7 @@ class ComputeTestCase(BaseTestCase,
         self.assertEqual('completed', migration.status)
         mock_pre.assert_called_once_with(c, instance, False, None,
                                          dest, migrate_data)
-        mock_migrate.assert_called_once_with(c, instance,
-                                             {'source_compute': instance[
-                                              'host'], 'dest_compute': dest})
+        mock_migrate.assert_called_once_with(c, instance, mock.ANY)
         mock_post.assert_called_once_with(c, instance, False, dest)
         mock_clear.assert_called_once_with(mock.ANY)
 
@@ -6388,7 +6386,6 @@ class ComputeTestCase(BaseTestCase,
         migration_obj = objects.Migration(uuid=uuids.migration,
                                           source_node=instance.node,
                                           status='completed')
-        migration = {'source_compute': srchost, 'dest_compute': dest, }
         migrate_data = objects.LibvirtLiveMigrateData(
             is_shared_instance_path=False,
             is_shared_block_storage=False,
@@ -6411,7 +6408,7 @@ class ComputeTestCase(BaseTestCase,
 
         self.assertIn('cleanup', result)
         self.assertTrue(result['cleanup'])
-        mock_migrate.assert_called_once_with(c, instance, migration)
+        mock_migrate.assert_called_once_with(c, instance, mock.ANY)
         mock_post.assert_called_once_with(c, instance, False, dest)
         mock_clear.assert_called_once_with(mock.ANY)
 
@@ -6478,10 +6475,8 @@ class ComputeTestCase(BaseTestCase,
                                         'root_device_name': None,
                                         'block_device_mapping': []},
                                         migrate_data)])
-            migration = {'source_compute': srchost,
-                         'dest_compute': dest, }
             migrate_instance_start.assert_has_calls([
-                mock.call(c, instance, migration)])
+                mock.call(c, instance, mock.ANY)])
             post_live_migration_at_destination.assert_has_calls([
                 mock.call(c, instance, False, dest)])
             post_live_migration_at_source.assert_has_calls(
@@ -7441,12 +7436,11 @@ class ComputeTestCase(BaseTestCase,
             # raise exception for uuids.migration_instance_4 to check
             # migration status does not get set to 'error' on confirm_resize
             # failure.
-            if instance['uuid'] == uuids.migration_instance_4:
+            if instance.uuid == uuids.migration_instance_4:
                 raise test.TestingException('bomb')
             self.assertIsNotNone(migration)
             for migration2 in migrations:
-                if (migration2['instance_uuid'] ==
-                        migration['instance_uuid']):
+                if migration2['instance_uuid'] == migration.instance_uuid:
                     migration2['status'] = 'confirmed'
 
         self.stub_out(
