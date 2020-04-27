@@ -39,8 +39,10 @@ from nova import exception
 # NOTE(mriedem): We only use objects as a convenience to populate the database
 # in the tests, we don't use them in the actual CLI.
 from nova import objects
+from nova import policy
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.unit import policy_fixture
 
 
 CONF = nova.conf.CONF
@@ -546,3 +548,57 @@ class TestUpgradeCheckCinderAPI(test.NoDBTestCase):
         result = self.cmd._check_cinder()
         mock_version_check.assert_called_once()
         self.assertEqual(upgradecheck.Code.SUCCESS, result.code)
+
+
+class TestUpgradeCheckPolicy(test.NoDBTestCase):
+
+    new_default_status = upgradecheck.Code.WARNING
+
+    def setUp(self):
+        super(TestUpgradeCheckPolicy, self).setUp()
+        self.cmd = status.UpgradeCommands()
+        self.rule_name = "system_admin_api"
+
+    def tearDown(self):
+        super(TestUpgradeCheckPolicy, self).tearDown()
+        # Check if policy is reset back after the upgrade check
+        self.assertIsNone(policy._ENFORCER)
+
+    def test_policy_rule_with_new_defaults(self):
+        new_default = "role:admin and system_scope:all"
+        rule = {self.rule_name: new_default}
+        self.policy.set_rules(rule, overwrite=False)
+        self.assertEqual(self.new_default_status,
+                         self.cmd._check_policy().code)
+
+    def test_policy_rule_with_old_defaults(self):
+        new_default = "is_admin:True"
+        rule = {self.rule_name: new_default}
+        self.policy.set_rules(rule, overwrite=False)
+
+        self.assertEqual(upgradecheck.Code.SUCCESS,
+                         self.cmd._check_policy().code)
+
+    def test_policy_rule_with_both_defaults(self):
+        new_default = "(role:admin and system_scope:all) or is_admin:True"
+        rule = {self.rule_name: new_default}
+        self.policy.set_rules(rule, overwrite=False)
+
+        self.assertEqual(upgradecheck.Code.SUCCESS,
+                         self.cmd._check_policy().code)
+
+    def test_policy_checks_with_fresh_init_and_no_policy_override(self):
+        self.policy = self.useFixture(policy_fixture.OverridePolicyFixture(
+                                      rules_in_file={}))
+        policy.reset()
+        self.assertEqual(upgradecheck.Code.SUCCESS,
+                         self.cmd._check_policy().code)
+
+
+class TestUpgradeCheckPolicyEnableScope(TestUpgradeCheckPolicy):
+
+    new_default_status = upgradecheck.Code.SUCCESS
+
+    def setUp(self):
+        super(TestUpgradeCheckPolicyEnableScope, self).setUp()
+        self.flags(enforce_scope=True, group="oslo_policy")
