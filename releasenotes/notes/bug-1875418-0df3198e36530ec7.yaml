@@ -1,0 +1,31 @@
+---
+upgrade:
+  - |
+    Nova policies implemented the ``scope_type`` and new defaults
+    provided by keystone. Old defaults are deprecated and still work
+    if rules are not overridden in the policy file. If you don't override
+    any policies at all, then you don't need to do anything different until the
+    W release when old deprecated rules are removed and tokens need to be
+    scoped to work with new defaults and scope of policies. For migration
+    to new policies you can refer to `this document
+    <https://docs.openstack.org/nova/latest/configuration/policy-concepts.html#migration-plan>`_.
+
+    If you are overwriting the policy rules (all or some of them) in the policy
+    file with new default values or any new value that requires scoped tokens,
+    then non-scoped tokens will not work. Also if you generate the policy
+    file with 'oslopolicy-sample-generator' json format or any other tool,
+    you will get rules defaulted in the new format, which examines the token
+    scope. Unless you turn on ``oslo_policy.enforce_scope``, scope-checking
+    rules will fail. Thus, be sure to enable ``oslo_policy.enforce_scope`` and
+    `educate <https://docs.openstack.org/nova/latest/configuration/policy-concepts.html>`_
+    end users on how to request scoped tokens from Keystone, or
+    use a pre-existing sample config file from the Train release until you are
+    ready to migrate to scoped policies. Another way is to generate the policy
+    file in yaml format as described `here
+    <https://docs.openstack.org/oslo.policy/latest/cli/index.html#oslopolicy-policy-generator>`_
+    and update the policy.yaml location in ``oslo_policy.policy_file``.
+
+    For more background about the possible problem, check `this bug
+    <https://bugs.launchpad.net/nova/+bug/1875418>`_.
+    A upgrade check has been added to the ``nova-status upgrade check``
+    command for this.
