@@ -180,6 +180,7 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         # We forgot to add the rocky placeholders
         stein_placeholders = list(range(63, 68))
         train_placeholders = list(range(68, 73))
+        ussuri_placeholders = list(range(73, 78))
         special_cases = [
             30,  # Enforcement migration, no changes to test
         ]
@@ -190,6 +191,7 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
                 queens_placeholders +
                 stein_placeholders +
                 train_placeholders +
+                ussuri_placeholders +
                 special_cases)
 
     def migrate_up(self, version, with_data=False):
