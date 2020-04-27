@@ -116,14 +116,19 @@ class _TestRequestSpecObject(object):
             else:
                 self.assertEqual(instance.get(field), getattr(spec, field))
 
-    @mock.patch.object(objects.InstancePCIRequests,
-                       'from_request_spec_instance_props')
-    def test_from_instance_with_pci_requests(self, pci_from_spec):
-        fake_pci_requests = objects.InstancePCIRequests()
-        pci_from_spec.return_value = fake_pci_requests
+    def test_from_instance_with_pci_requests(self):
+        fake_pci_requests = objects.InstancePCIRequests(
+            instance_uuid=uuids.instance,
+            requests=[
+                objects.InstancePCIRequest(
+                    count=1,
+                    spec=[{'vendor_id': '8086'}],
+                ),
+            ],
+        )
 
         instance = dict(
-            uuid=uuidutils.generate_uuid(),
+            uuid=uuids.instance,
             root_gb=10,
             ephemeral_gb=0,
             memory_mb=10,
@@ -132,14 +137,15 @@ class _TestRequestSpecObject(object):
             project_id=fakes.FAKE_PROJECT_ID,
             user_id=fakes.FAKE_USER_ID,
             availability_zone='nova',
-            pci_requests={
-                'instance_uuid': 'fakeid',
-                'requests': [{'count': 1, 'spec': [{'vendor_id': '8086'}]}]})
+            pci_requests=fake_pci_requests.obj_to_primitive(),
+        )
         spec = objects.RequestSpec()
 
         spec._from_instance(instance)
-        pci_from_spec.assert_called_once_with(instance['pci_requests'])
-        self.assertEqual(fake_pci_requests, spec.pci_requests)
+        self.assertEqual(
+            fake_pci_requests.requests[0].spec,
+            spec.pci_requests.requests[0].spec,
+        )
 
     def test_from_instance_with_numa_stuff(self):
         instance = dict(

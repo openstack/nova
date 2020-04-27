@@ -18,10 +18,8 @@ from nova.objects import base
 from nova.objects import fields
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register
-class InstancePCIRequest(base.NovaObject,
-                         base.NovaObjectDictCompat):
+class InstancePCIRequest(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added request_id field
     # Version 1.2: Added numa_policy field
@@ -70,10 +68,8 @@ class InstancePCIRequest(base.NovaObject,
             del primitive['request_id']
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register
-class InstancePCIRequests(base.NovaObject,
-                          base.NovaObjectDictCompat):
+class InstancePCIRequests(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: InstancePCIRequest 1.1
     VERSION = '1.1'
@@ -155,9 +151,3 @@ class InstancePCIRequests(base.NovaObject,
                  'request_id': x.request_id,
                  'requester_id': x.requester_id} for x in self.requests]
         return jsonutils.dumps(blob)
-
-    @classmethod
-    def from_request_spec_instance_props(cls, pci_requests):
-        objs = [InstancePCIRequest(**request)
-            for request in pci_requests['requests']]
-        return cls(requests=objs, instance_uuid=pci_requests['instance_uuid'])

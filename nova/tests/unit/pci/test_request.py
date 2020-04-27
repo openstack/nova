@@ -255,7 +255,7 @@ class PciRequestTestCase(test.NoDBTestCase):
 
         requests = request._translate_alias_to_requests(
             "QuickAssist : 3, IntelNIC: 1")
-        self.assertEqual(set([p['count'] for p in requests]), set([1, 3]))
+        self.assertEqual(set([p.count for p in requests]), set([1, 3]))
         self._verify_result(expect_request, requests)
 
     def test_translate_alias_to_requests_invalid(self):
@@ -292,7 +292,7 @@ class PciRequestTestCase(test.NoDBTestCase):
 
         requests = request._translate_alias_to_requests(
             "QuickAssist : 3, IntelNIC: 1", affinity_policy=policy)
-        self.assertEqual(set([p['count'] for p in requests]), set([1, 3]))
+        self.assertEqual(set([p.count for p in requests]), set([1, 3]))
         self._verify_result(expect_request, requests)
 
     @mock.patch.object(objects.compute_node.ComputeNode,
