@@ -14,16 +14,19 @@
 import fixtures
 import re
 
+import collections
 import mock
 import os_resource_classes as orc
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import uuidutils
 
+from nova.compute import instance_actions
 import nova.conf
 from nova import context
 from nova import objects
 from nova.tests.functional.libvirt import base
+from nova.tests.unit import policy_fixture
 from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt.libvirt import driver as libvirt_driver
 from nova.virt.libvirt import utils as libvirt_utils
@@ -149,10 +152,16 @@ class VGPUTests(VGPUTestBase):
              return_value=[]))
         self.useFixture(fixtures.MockPatch('os.rename'))
 
+        policy = self.useFixture(policy_fixture.RealPolicyFixture())
+        # Allow non-admins to see instance action events.
+        policy.set_rules({
+            'os_compute_api:os-instance-actions:events': 'rule:admin_or_owner'
+        }, overwrite=False)
+
         self.compute1 = self._start_compute_service(_DEFAULT_HOST)
 
     def assert_vgpu_usage_for_compute(self, compute, expected):
-        total_usage = 0
+        total_usages = collections.defaultdict(int)
         # We only want to get mdevs that are assigned to instances
         mdevs = compute.driver._get_all_assigned_mediated_devices()
         for mdev in mdevs:
@@ -163,10 +172,11 @@ class VGPUTests(VGPUTestBase):
             parent_rp_name = compute.host + '_' + parent_name
             parent_rp_uuid = self._get_provider_uuid_by_name(parent_rp_name)
             parent_usage = self._get_provider_usages(parent_rp_uuid)
-            if orc.VGPU in parent_usage:
-                total_usage += parent_usage[orc.VGPU]
+            if orc.VGPU in parent_usage and parent_rp_name not in total_usages:
+                # We only set the total amount if we didn't had it already
+                total_usages[parent_rp_name] = parent_usage[orc.VGPU]
         self.assertEqual(expected, len(mdevs))
-        self.assertEqual(expected, total_usage)
+        self.assertEqual(expected, sum(total_usages[k] for k in total_usages))
 
     def test_create_servers_with_vgpu(self):
         self._create_server(
@@ -222,6 +232,60 @@ class VGPUTests(VGPUTestBase):
         # In the last case, the source guest disappeared so we only have 1 vGPU
         self.assert_vgpu_usage_for_compute(self.compute1, expected=0)
         self.assert_vgpu_usage_for_compute(self.compute2, expected=1)
+
+    def test_multiple_instance_create(self):
+        body = self._build_server(
+            name=None, image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id=self.flavor, networks='auto', az=None,
+            host=self.compute1.host)
+        # Asking to multicreate two instances, each of them asking for 1 vGPU
+        body['min_count'] = 2
+        server = self.api.post_server({'server': body})
+        self._wait_for_state_change(server, 'ACTIVE')
+
+        # Let's verify we created two mediated devices and we have a total of
+        # 2 vGPUs
+        self.assert_vgpu_usage_for_compute(self.compute1, expected=2)
+
+    def test_multiple_instance_create_filling_up_capacity(self):
+        # Each pGPU created by fakelibvirt defaults to a capacity of 16 vGPUs.
+        # By default, we created a compute service with 2 pGPUs before, so we
+        # have a total capacity of 32. In theory, we should be able to find
+        # space for two instances asking for 16 vGPUs each.
+        extra_spec = {"resources:VGPU": "16"}
+        flavor = self._create_flavor(extra_spec=extra_spec)
+        body = self._build_server(
+            name=None, image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id=flavor, networks='auto', az=None,
+            host=self.compute1.host)
+        # Asking to multicreate two instances, each of them asking for 8 vGPU
+        body['min_count'] = 2
+        server = self.api.post_server({'server': body})
+        # But... we fail miserably because of bug #1874664
+        # FIXME(sbauza): Change this once we fix the above bug
+        server = self._wait_for_state_change(server, 'ERROR')
+        self.assertIn('fault', server)
+        self.assertIn('No valid host', server['fault']['message'])
+        self.assertEqual('', server['hostId'])
+        # Assert the "create" instance action exists and is failed.
+        actions = self.api.get_instance_actions(server['id'])
+        self.assertEqual(1, len(actions), actions)
+        action = actions[0]
+        self.assertEqual(instance_actions.CREATE, action['action'])
+        self.assertEqual('Error', action['message'])
+        # Get the events. There should be one with an Error result.
+        action = self.api.api_get(
+            '/servers/%s/os-instance-actions/%s' %
+            (server['id'], action['request_id'])).body['instanceAction']
+        events = action['events']
+        self.assertEqual(1, len(events), events)
+        event = events[0]
+        self.assertEqual('conductor_schedule_and_build_instances',
+                         event['event'])
+        self.assertEqual('Error', event['result'])
+        # Normally non-admins cannot see the event traceback but we enabled
+        # that via policy in setUp so assert something was recorded.
+        self.assertIn('select_destinations', event['traceback'])
 
 
 class VGPUMultipleTypesTests(VGPUTestBase):
