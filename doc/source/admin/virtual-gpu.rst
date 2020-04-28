@@ -385,6 +385,26 @@ For libvirt:
 
      This has been resolved in the Rocky release. See `bug 1762688`_.
 
+For nested vGPUs:
+
+.. note::
+
+   This information is correct as of the 21.0.0 Ussuri release. Where
+   improvements have been made or issues fixed, they are noted per item.
+
+* If creating servers with a flavor asking for vGPUs and the user wants
+  multi-create (i.e. say --max 2) then the scheduler could be returning
+  a NoValidHosts exception even if each physical GPU can support at least
+  one specific instance, if the total wanted capacity is not supported by
+  only one physical GPU.
+  (See `bug 1874664 <https://bugs.launchpad.net/nova/+bug/1874664>`_.)
+
+  For example, creating servers with a flavor asking for vGPUs, if two
+  children RPs have 4 vGPU inventories each:
+
+    - You can ask for a flavor with 2 vGPU with --max 2.
+    - But you can't ask for a flavor with 4 vGPU and --max 2.
+
 For XenServer:
 
 * Suspend and live migration with vGPUs attached depends on support from the
