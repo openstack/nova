@@ -13,7 +13,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2019-12-08 15:51+0000\n"
+"POT-Creation-Date: 2020-04-25 15:32+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -26,16 +26,8 @@ msgstr ""
 "Language-Team: Italian\n"
 
 #, python-format
-msgid "%(address)s is not a valid IP address."
-msgstr "%(address)s non è un indirizzo IP valido."
-
-#, python-format
 msgid "%(address)s is not a valid IP v4/6 address."
 msgstr "%(address)s non è un indirizzo v4/6 IP valido."
-
-#, python-format
-msgid "%(address)s is not within %(cidr)s."
-msgstr "%(address)s non è all'interno di %(cidr)s."
 
 #, python-format
 msgid ""
@@ -53,10 +45,6 @@ msgid "%(field)s should not be part of the updates."
 msgstr "%(field)s non deve fare parte degli aggiornamenti."
 
 #, python-format
-msgid "%(key)s must be an integer."
-msgstr "%(key)s deve essere un numero intero."
-
-#, python-format
 msgid "%(memsize)d MB of memory assigned, but expected %(memtotal)d MB"
 msgstr "%(memsize)d MB di memoria assegnata, ma previsti MB di %(memtotal)d"
 
@@ -67,10 +55,6 @@ msgstr "%(path)s non si trova nella memoria locale: %(reason)s"
 #, python-format
 msgid "%(path)s is not on shared storage: %(reason)s"
 msgstr "%(path)s non si trova nella memoria condivisa: %(reason)s"
-
-#, python-format
-msgid "%(req)s is required to create a network."
-msgstr "%(req)s è obbligatorio per creare una rete."
 
 #, python-format
 msgid "%(total)i rows matched query %(meth)s, %(done)i migrated"
@@ -247,10 +231,6 @@ msgid "Attribute not supported: %(attr)s"
 msgstr "Attributo non supportato: %(attr)s"
 
 #, python-format
-msgid "Bad mac for to_global_ipv6: %s"
-msgstr "mac non valido per to_global_ipv6: %s"
-
-#, python-format
 msgid "Bad network format: missing %s"
 msgstr "Formato rete non corretto: manca %s"
 
@@ -266,10 +246,6 @@ msgstr ""
 #, python-format
 msgid "Bad prefix for network in cidr %s"
 msgstr "Prefisso errato per la rete in cidr %s"
-
-#, python-format
-msgid "Bad prefix for to_global_ipv6: %s"
-msgstr "Prefisso non valido per to_global_ipv6: %s"
 
 #, python-format
 msgid ""
@@ -395,10 +371,6 @@ msgstr "Il numero CPU %(cpunum)d è superiore a quello massimo %(cpumax)d"
 msgid "CPU number %(cpuset)s is not assigned to any node"
 msgstr "Il numero CPU %(cpuset)s non è assegnato a nessun nodo"
 
-#, python-format
-msgid "CPU pinning is not supported by the host: %(reason)s"
-msgstr "Blocco CPU non supportato dall'host: %(reason)s"
-
 msgid "Can not add access to a public flavor."
 msgstr "Impossibile aggiungere l'accesso a una versione pubblica."
 
@@ -460,9 +432,6 @@ msgid ""
 msgstr ""
 "Impossibile determinare il pool di archiviazione parent per %s; impossibile "
 "determinare dove archiviare le immagini"
-
-msgid "Cannot disassociate auto assigned floating IP"
-msgstr "Impossibile separare l'IP mobile assegnato automaticamente"
 
 msgid "Cannot find SR of content-type ISO"
 msgstr "Impossibile trovare SR del tipo di contenuto ISO"
@@ -659,10 +628,6 @@ msgstr ""
 msgid "Could not upload image %(image_id)s"
 msgstr "Impossibile caricare l'immagine %(image_id)s"
 
-#, python-format
-msgid "Couldn't get Link Local IP of %(interface)s :%(ex)s"
-msgstr "Impossibile ottenere l'IP Link Local di %(interface)s :%(ex)s"
-
 msgid "Creation of virtual interface with unique mac address failed"
 msgstr ""
 "Creazione dell'interfaccia virtuale con indirizzo mac univoco non riuscita"
@@ -680,10 +645,6 @@ msgstr "La politica PBM predefinita è richiesta se PBM è abilitato."
 #, python-format
 msgid "Deleted %(records)d records from table '%(table_name)s'."
 msgstr "%(records)d record eliminati dalla tabella '%(table_name)s'."
-
-#, python-format
-msgid "Detected existing vlan with id %(vlan)d"
-msgstr "Rilevato vlan esistente con l'id %(vlan)d"
 
 #, python-format
 msgid "Device '%(device)s' not found."
@@ -738,18 +699,6 @@ msgstr "Il disco con ID: %s non è stato trovato collegato all'istanza."
 #, python-format
 msgid "Driver Error: %s"
 msgstr "Errore del driver: %s"
-
-#, python-format
-msgid "Duplicate networks (%s) are not allowed"
-msgstr "Le reti duplicate (%s) non sono consentite"
-
-#, python-format
-msgid ""
-"Either network uuid %(network_uuid)s is not present or is not assigned to "
-"the project %(project_id)s."
-msgstr ""
-"L'uuid rete %(network_uuid)s non è presente oppure non è stato assegnato al "
-"progetto %(project_id)s."
 
 #, python-format
 msgid "Error attempting to run %(method)s"
@@ -865,20 +814,12 @@ msgid "Failed to access port %(port_id)s: %(reason)s"
 msgstr "Impossibile accedere alla porta %(port_id)s: %(reason)s"
 
 #, python-format
-msgid "Failed to add bridge: %s"
-msgstr "Impossibile aggiungere il bridge: %s"
-
-#, python-format
 msgid ""
 "Failed to add deploy parameters on node %(node)s when provisioning the "
 "instance %(instance)s"
 msgstr ""
 "Impossibile aggiungere i parametri di distribuzione sul nodo  %(node)s "
 "quando si esegue il provisioning all'istanza %(instance)s"
-
-#, python-format
-msgid "Failed to add interface: %s"
-msgstr "Impossibile aggiungere l'interfaccia: %s"
 
 #, python-format
 msgid "Failed to allocate the network(s) with error %s, not rescheduling."
@@ -899,10 +840,6 @@ msgstr ""
 #, python-format
 msgid "Failed to create vif %s"
 msgstr "Impossibile creare vif %s"
-
-#, python-format
-msgid "Failed to decrypt text: %(reason)s"
-msgstr "Impossibile decodicare testo: %(reason)s"
 
 #, python-format
 msgid "Failed to deploy instance: %(reason)s"
@@ -969,10 +906,6 @@ msgid "Failed to reboot instance: %(reason)s"
 msgstr "Impossibile riavviare l'istanza: %(reason)s"
 
 #, python-format
-msgid "Failed to release IP %(address)s with MAC %(mac_address)s"
-msgstr "Impossibile rilasciare l'IP %(address)s con MAC %(mac_address)s"
-
-#, python-format
 msgid "Failed to remove volume(s): (%(reason)s)"
 msgstr "Impossibile rimuovere il volume: (%(reason)s)"
 
@@ -986,15 +919,8 @@ msgid "Failed to resume instance: %(reason)s"
 msgstr "Impossibile ripristinare l'istanza: %(reason)s"
 
 #, python-format
-msgid "Failed to revoke certificate for %(project_id)s"
-msgstr "Impossibile revocare il certificato per %(project_id)s"
-
-#, python-format
 msgid "Failed to run qemu-img info on %(path)s : %(error)s"
 msgstr "Impossibile eseguire qemu-img info in %(path)s : %(error)s"
-
-msgid "Failed to run xvp."
-msgstr "Impossibile eseguire xvp."
 
 #, python-format
 msgid "Failed to set admin password on %(instance)s because %(reason)s"
@@ -1028,10 +954,6 @@ msgid "File path %s not valid"
 msgstr "Percorso file %s non valido"
 
 #, python-format
-msgid "Fixed IP %(address)s already exists."
-msgstr "L'IP fisso %(address)s esiste già."
-
-#, python-format
 msgid "Fixed IP %(ip)s is not a valid ip address for network %(network_id)s."
 msgstr ""
 "L'IP fisso %(ip)s non è un indirizzo IP valido per la rete %(network_id)s."
@@ -1045,20 +967,6 @@ msgid ""
 "Fixed IP address %(address)s is already in use on instance %(instance_uuid)s."
 msgstr ""
 "L'indirizzo IP fisso %(address)s è già in uso nell'istanza %(instance_uuid)s."
-
-#, python-format
-msgid "Fixed IP address %(address)s is invalid."
-msgstr "L'indirizzo IP fisso %(address)s non è valido."
-
-#, python-format
-msgid ""
-"Fixed IP address (%(address)s) does not exist in network (%(network_uuid)s)."
-msgstr ""
-"L'indirizzo IP fisso (%(address)s) non esiste nella rete (%(network_uuid)s)."
-
-#, python-format
-msgid "Fixed IP associate failed for network: %(net)s."
-msgstr "Associazione IP fisso non riuscita per la rete: %(net)s."
 
 #, python-format
 msgid "Fixed IP not found for address %(address)s."
@@ -1138,10 +1046,6 @@ msgid "Flavor's memory is too small for requested image."
 msgstr "La memoria flavor è troppo piccola per l'immagine richiesta."
 
 #, python-format
-msgid "Floating IP %(address)s already exists."
-msgstr "L'IP mobile %(address)s esiste già."
-
-#, python-format
 msgid "Floating IP %(address)s association has failed."
 msgstr "Associazione IP %(address)s mobile non riuscita."
 
@@ -1154,16 +1058,6 @@ msgid "Floating IP %(address)s is not associated with instance %(id)s."
 msgstr "L'IP mobile %(address)s non è associato a un'istanza %(id)s."
 
 #, python-format
-msgid "Floating IP %(address)s is not associated."
-msgstr "L'IP mobile %(address)s non è associato."
-
-msgid "Floating IP allocate failed."
-msgstr "Allocazione IP variabile non riuscita."
-
-msgid "Floating IP is not associated"
-msgstr "L'IP mobile non è associato"
-
-#, python-format
 msgid "Floating IP not found for ID %(id)s."
 msgstr "Impossibile trovare l'IP mobile per l'ID %(id)s."
 
@@ -1174,10 +1068,6 @@ msgstr "Impossibile trovare l'IP mobile per l'ID %s."
 #, python-format
 msgid "Floating IP not found for address %(address)s."
 msgstr "Impossibile trovare l'IP mobile per l'indirizzo %(address)s."
-
-#, python-format
-msgid "Floating IP not found for host %(host)s."
-msgstr "Impossibile trovare l'IP mobile per l'host %(host)s."
 
 msgid "Floating IP pool not found."
 msgstr "Impossibile trovare pool di IP mobili."
@@ -1258,12 +1148,6 @@ msgstr "L'allocazione IP supera la quota nel pool %s."
 
 msgid "IP allocation over quota."
 msgstr "L'allocazione IP supera la quota."
-
-#, python-format
-msgid "IPv6 netmask \"%s\" must be a netmask or integral prefix"
-msgstr ""
-"La maschera di rete IPv6 \"%s\" deve essere un prefisso integrale o una "
-"maschera di rete"
 
 #, python-format
 msgid "Image %(image_id)s could not be found."
@@ -1406,14 +1290,6 @@ msgid "Instance %(instance_uuid)s does not specify a migration context."
 msgstr "L'istanza %(instance_uuid)s non specifica un contesto di migrazione."
 
 #, python-format
-msgid "Instance %(instance_uuid)s doesn't have fixed IP '%(ip)s'."
-msgstr "L'istanza %(instance_uuid)s non contiene un IP fisso '%(ip)s'."
-
-#, python-format
-msgid "Instance %(instance_uuid)s has zero fixed IPs."
-msgstr "L'istanza %(instance_uuid)s non contiene alcun IP fisso."
-
-#, python-format
 msgid ""
 "Instance %(instance_uuid)s in %(attr)s %(state)s. Cannot %(method)s while "
 "the instance is in this state."
@@ -1469,11 +1345,6 @@ msgstr "Il gruppo di istanze %(group_uuid)s esiste già."
 #, python-format
 msgid "Instance group %(group_uuid)s could not be found."
 msgstr "Impossibile trovare il gruppo di istanze %(group_uuid)s."
-
-#, python-format
-msgid "Instance group %(group_uuid)s has no member with id %(instance_id)s."
-msgstr ""
-"Il gruppo di istanze %(group_uuid)s non ha membri con l'id %(instance_id)s."
 
 msgid "Instance has no source host"
 msgstr "L'istanza non dispone alcun host di origine"
@@ -1594,14 +1465,6 @@ msgid "Invalid exclusion expression %r"
 msgstr "Espressione di esclusione %r non valida"
 
 #, python-format
-msgid "Invalid fixed IP Address %s in request"
-msgstr "Indirizzo IP fisso non valido %s nella richiesta"
-
-#, python-format
-msgid "Invalid floating IP %s in request"
-msgstr "IP mobile non valido %s nella richiesta"
-
-#, python-format
 msgid "Invalid image format '%(format)s'"
 msgstr "Formato immagine non valido '%(format)s'"
 
@@ -1656,9 +1519,6 @@ msgstr "Filtro minDisk non valido [%s]"
 msgid "Invalid minRam filter [%s]"
 msgstr "Filtro minRam non valido [%s]"
 
-msgid "Invalid name"
-msgstr "Nome non valido"
-
 #, python-format
 msgid "Invalid port range %(from_port)s:%(to_port)s. %(msg)s"
 msgstr "Intervallo di porta non valido %(from_port)s:%(to_port)s. %(msg)s"
@@ -1669,14 +1529,6 @@ msgstr "Firma della richiesta del proxy non valida."
 #, python-format
 msgid "Invalid range expression %r"
 msgstr "Espressione di intervallo %r non valida"
-
-#, python-format
-msgid "Invalid reservation expiration %(expire)s."
-msgstr "Scadenza prenotazione non valida %(expire)s."
-
-#, python-format
-msgid "Invalid security group name: %(name)s."
-msgstr "Nome gruppo di sicurezza non valido: %(name)s."
 
 msgid "Invalid service catalog json."
 msgstr "json del catalogo del servizio non è valido."
@@ -1769,10 +1621,6 @@ msgid "Limits only supported from vCenter 6.0 and above"
 msgstr "Limiti supportati solo da vCenter 6.0 e successivi"
 
 #, python-format
-msgid "Link Local address is not found.:%s"
-msgstr "L'indirizzo Link Local non è stato trovato.:%s"
-
-#, python-format
 msgid "Live migration %(id)s for server %(uuid)s is not in progress."
 msgstr "La migrazione %(id)s per il server %(uuid)s non è in corso."
 
@@ -1797,12 +1645,6 @@ msgstr "Associazione dell'immagine all'elemento locale non supportata."
 #, python-format
 msgid "Marker %(marker)s could not be found."
 msgstr "Impossibile trovare l'indicatore %(marker)s."
-
-msgid "Maximum allowed length for 'label' is 255."
-msgstr "La lunghezza massima consentita per 'label' è 255."
-
-msgid "Maximum number of fixed IPs exceeded"
-msgstr "Il numero massimo di IP fissi è stato superato"
 
 msgid "Maximum number of floating IPs exceeded"
 msgstr "Il numero massimo di IP mobili è stato superato"
@@ -2007,10 +1849,6 @@ msgid "Network %(network_id)s could not be found."
 msgstr "Impossibile trovare la rete %(network_id)s."
 
 #, python-format
-msgid "Network %(network_id)s is still in use."
-msgstr "La rete %(network_id)s è ancora in uso."
-
-#, python-format
 msgid ""
 "Network %(network_uuid)s requires a subnet in order to boot instances on."
 msgstr ""
@@ -2024,28 +1862,6 @@ msgstr "Impossibile trovare la rete per il bridge %(bridge)s"
 msgid "Network could not be found for instance %(instance_id)s."
 msgstr "Impossibile trovare la rete per l'istanza %(instance_id)s."
 
-#, python-format
-msgid "Network could not be found for uuid %(uuid)s"
-msgstr "Impossibile trovare la rete per uuid %(uuid)s"
-
-#, python-format
-msgid "Network could not be found with cidr %(cidr)s."
-msgstr "Impossibile trovare la rete con cidr %(cidr)s."
-
-#, python-format
-msgid "Network host %(host)s has zero fixed IPs in network %(network_id)s."
-msgstr ""
-"L'host di rete %(host)s non contiene alcun IP fisso nella rete "
-"%(network_id)s."
-
-#, python-format
-msgid ""
-"Network must be disassociated from project %(project_id)s before it can be "
-"deleted."
-msgstr ""
-"La rete deve essere dissociata dal progetto %(project_id)s prima di poterla "
-"cancellare."
-
 msgid "Network not found"
 msgstr "Rete non trovata"
 
@@ -2055,10 +1871,6 @@ msgid ""
 msgstr ""
 "La rete richiede port_security_enabled e la sottorete associata al fine di "
 "applicare i gruppi sicurezza."
-
-#, python-format
-msgid "Network set host failed for network %(network_id)s."
-msgstr "Impostazione host di rete non riuscita per la rete %(network_id)s."
 
 msgid "New volume must be detached in order to swap."
 msgstr "Il nuovo volume deve essere scollegato per lo scambio."
@@ -2102,19 +1914,11 @@ msgstr "Nessun disco in %(location)s"
 msgid "No fixed IP addresses available for network: %(net)s"
 msgstr "Nessun indirizzo IP fisso disponibile per la rete: %(net)s"
 
-#, python-format
-msgid "No fixed IP associated with id %(id)s."
-msgstr "Nessun IP fisso associato all'id %(id)s."
-
 msgid "No fixed IPs associated to instance"
 msgstr "Nessun IP fisso associato all'istanza"
 
 msgid "No free nbd devices"
 msgstr "Nessuna unità nbd disponibile"
-
-#, python-format
-msgid "No free port available for instance %(instance)s."
-msgstr "Nessuna porta disponibile per l'istanza %(instance)s."
 
 msgid "No host available on cluster"
 msgstr "Nessun host disponibile sul cluster"
@@ -2129,9 +1933,6 @@ msgstr "Non è stata trovata alcuna corrispondenza hypervisor '%s'."
 msgid "No image locations are accessible"
 msgstr "Nessuna ubicazione immagine è accessibile"
 
-msgid "No instances found for any event"
-msgstr "Non sono state rilevate istanze per alcun evento"
-
 #, python-format
 msgid ""
 "No live migration URI configured and no default available for \"%(virt_type)s"
@@ -2140,9 +1941,6 @@ msgstr ""
 "Nessun URI di migrazione attiva configurato e nessun valore predefinito "
 "disponibile per il tipo di virtualizzazione dell'hypervisor  \"%(virt_type)s"
 "\"."
-
-msgid "No more available networks."
-msgstr "Non vi sono più reti disponibili."
 
 msgid "No more floating IPs available."
 msgstr "IP mobili non più disponibili."
@@ -2154,9 +1952,6 @@ msgstr "Non ci sono più IP mobili nel pool %s."
 #, python-format
 msgid "No mount points found in %(root)s of %(image)s"
 msgstr "Nessun punto di montaggio trovato in %(root)s di %(image)s"
-
-msgid "No networks defined."
-msgstr "Nessuna rete definita."
 
 #, python-format
 msgid "No operating system found in %s"
@@ -2246,10 +2041,6 @@ msgstr "Nova richiede libvirt versione %s o successiva."
 
 msgid "Number of Rows Archived"
 msgstr "Numero di righe archiviate"
-
-#, python-format
-msgid "OVS configuration failed with: %(inner_exception)s."
-msgstr "Configurazione OVS non riuscita con : %(inner_exception)s."
 
 #, python-format
 msgid "Object action %(action)s failed because: %(reason)s"
@@ -2393,10 +2184,6 @@ msgid "Port id %(port_id)s could not be found."
 msgstr "Impossibile trovare l'd porta %(port_id)s."
 
 #, python-format
-msgid "Project %(project_id)s could not be found."
-msgstr "Impossibile trovare il progetto %(project_id)s."
-
-#, python-format
 msgid "Provided video model (%(model)s) is not supported."
 msgstr "Il modello video fornito (%(model)s) non è supportato."
 
@@ -2432,12 +2219,6 @@ msgstr "Quota superata per le risorse: %(overs)s"
 
 msgid "Quota exceeded, too many key pairs."
 msgstr "Quota superata, troppe coppie di chiavi."
-
-msgid "Quota exceeded, too many security group rules."
-msgstr "Quota superata, troppe regole per gruppi di sicurezza."
-
-msgid "Quota exceeded, too many security groups."
-msgstr "Quota superata, troppi gruppi di sicurezza."
 
 msgid "Quota exceeded, too many server groups."
 msgstr "Quota superata, troppi gruppi di server."
@@ -2481,15 +2262,6 @@ msgstr ""
 "uguale a %(maximum)s."
 
 #, python-format
-msgid "Quota reservation %(uuid)s could not be found."
-msgstr "Impossibile trovare la prenotazione della quota %(uuid)s."
-
-#, python-format
-msgid "Quota usage for project %(project_id)s could not be found."
-msgstr ""
-"Impossibile trovare l'utilizzo della quota per il progetto %(project_id)s."
-
-#, python-format
 msgid "Reached maximum number of retries trying to unplug VBD %s"
 msgstr "Raggiunto numero massimo di tentativi per scollegare VBD %s"
 
@@ -2520,11 +2292,6 @@ msgstr "RequestSpec non trovata per l'istanza %(instance_uuid)s"
 msgid "Requested CPU control policy not supported by host"
 msgstr ""
 "La politica di controllo della CPU richiesta non è supportata dall'host"
-
-#, python-format
-msgid "Requested cidr (%(cidr)s) conflicts with existing cidr (%(other)s)"
-msgstr ""
-"Il cidr richiesto (%(cidr)s) è in conflitto con un cidr esistente (%(other)s)"
 
 #, python-format
 msgid ""
@@ -2582,10 +2349,6 @@ msgid "Root element name should be '%(name)s' not '%(tag)s'"
 msgstr "Il nome dell'elemento root deve essere '%(name)s', non '%(tag)s'"
 
 #, python-format
-msgid "Rule (%s) not found"
-msgstr "Regola (%s) non trovata"
-
-#, python-format
 msgid "Running batches of %i until complete"
 msgstr "Esecuzione di batch di %i fino al completamento"
 
@@ -2598,22 +2361,6 @@ msgid "Security group %(name)s is not found for project %(project)s"
 msgstr ""
 "Il gruppo di sicurezza %(name)s non è stato trovato per il progetto "
 "%(project)s"
-
-#, python-format
-msgid ""
-"Security group %(security_group_id)s is already associated with the instance "
-"%(instance_id)s"
-msgstr ""
-"Il gruppo sicurezza %(security_group_id)s è già associato all'istanza "
-"%(instance_id)s"
-
-#, python-format
-msgid ""
-"Security group %(security_group_id)s is not associated with the instance "
-"%(instance_id)s"
-msgstr ""
-"Il gruppo sicurezza %(security_group_id)s non è associato all'istanza "
-"%(instance_id)s"
 
 #, python-format
 msgid ""
@@ -2642,32 +2389,14 @@ msgstr ""
 "Il gruppo di sicurezza %(security_group_name)s non è associato all'istanza "
 "%(instance)s"
 
-#, python-format
-msgid "Security group %s already exists"
-msgstr "Il gruppo di sicurezza %s esiste già"
-
-#, python-format
-msgid "Security group %s is not a string or unicode"
-msgstr "Il gruppo di sicurezza %s non è una stringa o unicode"
-
-msgid "Security group id should be integer"
-msgstr "L'id gruppo di sicurezza deve essere un numero intero"
-
 msgid "Security group id should be uuid"
 msgstr "L'id gruppo sicurezza deve essere uuid"
-
-msgid "Security group is still in use"
-msgstr "Il gruppo di sicurezza è ancora in uso"
 
 msgid "Security group name cannot be empty"
 msgstr "Il nome gruppo di sicurezza non può essere vuoto"
 
 msgid "Security group not specified"
 msgstr "Gruppo di sicurezza non specificato"
-
-#, python-format
-msgid "Security group with rule %(rule_id)s not found."
-msgstr "Impossibile trovare il gruppo di sicurezza con la regola %(rule_id)s."
 
 #, python-format
 msgid "Server disk was unable to be resized because: %(reason)s"
@@ -2793,9 +2522,6 @@ msgstr ""
 "L'unità di scambio richiesta è più grande di quanto consentito dal tipo di "
 "istanza."
 
-msgid "Swap only supports host devices"
-msgstr "Lo scambio supporta solo i dispositivi host"
-
 msgid "Table"
 msgstr "Tabella"
 
@@ -2806,18 +2532,6 @@ msgstr "L'attività %(task_name)s è già in esecuzione nell'host %(host)s"
 #, python-format
 msgid "Task %(task_name)s is not running on host %(host)s"
 msgstr "L'attività %(task_name)s non è in esecuzione nell'host %(host)s"
-
-#, python-format
-msgid "The CA file for %(project)s could not be found"
-msgstr "Impossibile trovare il file CA per %(project)s"
-
-#, python-format
-msgid "The CRL file for %(project)s could not be found"
-msgstr "Impossibile trovare il file CRL file per %(project)s"
-
-#, python-format
-msgid "The DNS entry %(name)s already exists in domain %(domain)s."
-msgstr "La voce DNS %(name)s esiste già nel dominio %(domain)s."
 
 #, python-format
 msgid "The PCI address %(address)s has an incorrect format."
@@ -2840,10 +2554,6 @@ msgstr ""
 msgid "The default PBM policy doesn't exist on the backend."
 msgstr "La politica PBM predefinita non esiste sul backend."
 
-#, python-format
-msgid "The firewall filter for %s does not exist"
-msgstr "Il filtro firewall per %s non esiste"
-
 msgid "The floating IP request failed with a BadRequest"
 msgstr "Richiesta IP mobile non riuscita con errore Richiesta non corretta"
 
@@ -2851,14 +2561,6 @@ msgid ""
 "The instance requires a newer hypervisor version than has been provided."
 msgstr ""
 "L'istanza richiede una versione di hypervisor più recente di quella fornita."
-
-#, python-format
-msgid ""
-"The network range is not big enough to fit %(num_networks)s networks. "
-"Network size is %(network_size)s"
-msgstr ""
-"L'intervallo di rete non è abbastanza grande per contenere le reti "
-"%(num_networks)s. La dimensione della rete è %(network_size)s"
 
 #, python-format
 msgid "The number of defined ports: %(ports)d is over the limit: %(quota)d"
@@ -2900,13 +2602,6 @@ msgstr "La funzionalità richiesta non è supportata."
 msgid "The specified cluster '%s' was not found in vCenter"
 msgstr "Il cluster specificato '%s' non è stato trovato in vCenter"
 
-msgid ""
-"The sum between the number of networks and the vlan start cannot be greater "
-"than 4094"
-msgstr ""
-"La somma tra il numero di reti e l'avvio di vlan non può essere superiore a "
-"4094"
-
 #, python-format
 msgid "The supplied device path (%(path)s) is in use."
 msgstr "Il percorso unità specificato (%(path)s) è in uso."
@@ -2932,12 +2627,6 @@ msgstr "L'host di destinazione non può essere lo stesso."
 #, python-format
 msgid "The token '%(token)s' is invalid or has expired"
 msgstr "Il token '%(token)s' non è valido oppure è scaduto"
-
-msgid "The vlan number cannot be greater than 4094"
-msgstr "Il numero vlan non può essere maggiore di 4094"
-
-msgid "The vlan number cannot be less than 1"
-msgstr "Il numero vlan non può essere minore di 1"
 
 #, python-format
 msgid ""
@@ -3000,12 +2689,6 @@ msgstr ""
 msgid "This domU must be running on the host specified by connection_url"
 msgstr ""
 "Questo domU deve essere in esecuzione sull'host specificato da connection_url"
-
-msgid "This driver only supports type 'a'"
-msgstr "Questo driver supporta solo il tipo 'a'"
-
-msgid "This driver only supports type 'a' entries."
-msgstr "Questo driver supporta solo le voci di tipo 'a'."
 
 msgid ""
 "This method needs to be called with either networks=None and port_ids=None "
@@ -3086,10 +2769,6 @@ msgstr "Impossibile convertire l'immagine in %(format)s: %(exp)s"
 #, python-format
 msgid "Unable to convert image to raw: %(exp)s"
 msgstr "Impossibile convertire l'immagine in immagine non elaborata: %(exp)s"
-
-#, python-format
-msgid "Unable to delete system group '%s'"
-msgstr "Impossibile eliminare il gruppo di sistema '%s'"
 
 #, python-format
 msgid "Unable to destroy VBD %s"
@@ -3222,10 +2901,6 @@ msgid "Unable to unplug VBD %s"
 msgstr "Impossibile scollegare VBD %s"
 
 #, python-format
-msgid "Unable to update system group '%s'"
-msgstr "Impossibile aggiornare il gruppo di sistema '%s'"
-
-#, python-format
 msgid "Unacceptable CPU info: %(reason)s"
 msgstr "Informazioni CPU non accettabili: %(reason)s"
 
@@ -3270,13 +2945,6 @@ msgstr "Sconosciuto"
 
 msgid "Unknown action"
 msgstr "Azione sconosciuta"
-
-msgid "Unknown argument: port"
-msgstr "Argomento sconosciuto: porta"
-
-#, python-format
-msgid "Unknown chain: %r"
-msgstr "Catena sconosciuta: %r"
 
 #, python-format
 msgid "Unknown config drive format %(format)s. Select one of iso9660 or vfat."
@@ -3364,14 +3032,6 @@ msgstr ""
 msgid "VHD coalesce attempts exceeded (%d), giving up..."
 msgstr ""
 "I tentativi di unione VHD sono stati superati (%d), rinuncia in corso..."
-
-#, python-format
-msgid ""
-"Value (%(value)s) for parameter Group%(property)s is invalid. Content "
-"limited to '%(allowed)s'."
-msgstr ""
-"Il valore (%(value)s) per il parametro Group%(property)s non è valido. "
-"Contenuto limitato a '%(allowed)s'."
 
 #, python-format
 msgid ""
@@ -3509,14 +3169,8 @@ msgstr ""
 "È necessario specificare l'indicatore images_volume_group per utilizzare le "
 "immagini LVM."
 
-msgid "Zero fixed IPs could be found."
-msgstr "Impossibile trovare un IP fisso."
-
 msgid "Zero floating IPs available."
 msgstr "Nessun IP mobile disponibile."
-
-msgid "Zero floating IPs exist."
-msgstr "Non esiste alcun IP mobile."
 
 msgid "admin password can't be changed on existing disk"
 msgstr "La password admin non può essere modificata sul disco esistente"
@@ -3623,9 +3277,6 @@ msgstr "keymgr.fixed_key non definito"
 
 msgid "l3driver call to add floating IP failed"
 msgstr "chiamata di l3driver per aggiungere IP mobile non riuscita"
-
-msgid "ldap not installed"
-msgstr "ldap non installato"
 
 #, python-format
 msgid "libguestfs installed but not usable (%s)"
@@ -3768,9 +3419,6 @@ msgid "vif_type parameter must be present for this vif_driver implementation"
 msgstr ""
 "il parametro vif_type deve essere presente per questa implementazione di "
 "vif_driver"
-
-msgid "vlan must be an integer"
-msgstr "vlan deve essere un numero intero"
 
 #, python-format
 msgid "volume %s already attached"

@@ -1,0 +1,126 @@
+# Gérald LONLAS <g.lonlas@gmail.com>, 2016. #zanata
+msgid ""
+msgstr ""
+"Project-Id-Version: nova\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2020-04-25 15:23+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2016-10-22 05:56+0000\n"
+"Last-Translator: Gérald LONLAS <g.lonlas@gmail.com>\n"
+"Language-Team: French\n"
+"Language: fr\n"
+"X-Generator: Zanata 4.3.3\n"
+"Plural-Forms: nplurals=2; plural=(n > 1)\n"
+
+msgid "/images"
+msgstr "/images"
+
+msgid "/os-baremetal-nodes"
+msgstr "/os-baremetal-nodes"
+
+msgid "/os-fixed-ips"
+msgstr "/os-fixed-ips"
+
+msgid "/os-floating-ip-dns"
+msgstr "/os-floating-ip-dns"
+
+msgid "/os-floating-ip-pools"
+msgstr "/os-floating-ip-pools"
+
+msgid "/os-floating-ips"
+msgstr "/os-floating-ips"
+
+msgid "/os-floating-ips-bulk"
+msgstr "/os-floating-ips-bulk"
+
+msgid "/os-fping"
+msgstr "/os-fping"
+
+msgid "/os-networks"
+msgstr "/os-networks"
+
+msgid "/os-security-group-default-rules"
+msgstr "/os-security-group-default-rules"
+
+msgid "/os-security-group-rules"
+msgstr "/os-security-group-rules"
+
+msgid "/os-security-groups"
+msgstr "/os-security-groups"
+
+msgid "/os-snapshots"
+msgstr "/os-snapshots"
+
+msgid "/os-volumes"
+msgstr "/os-volumes"
+
+msgid "12.0.1"
+msgstr "12.0.1"
+
+msgid "12.0.3"
+msgstr "12.0.3"
+
+msgid "12.0.4"
+msgstr "12.0.4"
+
+msgid "12.0.5"
+msgstr "12.0.5"
+
+msgid "13.0.0"
+msgstr "13.0.0"
+
+msgid "13.1.0"
+msgstr "13.1.0"
+
+msgid "13.1.1"
+msgstr "13.1.1"
+
+msgid "13.1.2"
+msgstr "13.1.2"
+
+msgid "14.0.0"
+msgstr "14.0.0"
+
+msgid "14.0.1"
+msgstr "14.0.1"
+
+msgid "Bug Fixes"
+msgstr "Corrections de bugs"
+
+msgid "Current Series Release Notes"
+msgstr "Note de la release actuelle"
+
+msgid "DEFAULT.debug"
+msgstr "DEFAULT.debug"
+
+msgid "Deprecation Notes"
+msgstr "Notes dépréciées "
+
+msgid "Known Issues"
+msgstr "Problèmes connus"
+
+msgid "Liberty Series Release Notes"
+msgstr "Note de release pour Liberty"
+
+msgid "Mitaka Series Release Notes"
+msgstr "Note de release pour Mitaka"
+
+msgid "New Features"
+msgstr "Nouvelles fonctionnalités"
+
+msgid "Newton Series Release Notes"
+msgstr "Note de release pour Newton"
+
+msgid "Other Notes"
+msgstr "Autres notes"
+
+msgid "Security Issues"
+msgstr "Problèmes de sécurités"
+
+msgid "Start using reno to manage release notes."
+msgstr "Commence à utiliser reno pour la gestion des notes de release"
+
+msgid "Upgrade Notes"
+msgstr "Notes de mises à jours"

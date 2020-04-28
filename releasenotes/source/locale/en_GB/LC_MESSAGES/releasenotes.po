@@ -1,0 +1,398 @@
+# Andi Chandler <andi@gowling.com>, 2017. #zanata
+# Andi Chandler <andi@gowling.com>, 2018. #zanata
+# Andi Chandler <andi@gowling.com>, 2020. #zanata
+msgid ""
+msgstr ""
+"Project-Id-Version: nova\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2020-04-25 15:23+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2020-04-10 03:50+0000\n"
+"Last-Translator: Andi Chandler <andi@gowling.com>\n"
+"Language-Team: English (United Kingdom)\n"
+"Language: en_GB\n"
+"X-Generator: Zanata 4.3.3\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+
+msgid "'3840x2160' is only available on Windows / Hyper-V Server 2016."
+msgstr "'3840x2160' is only available on Windows / Hyper-V Server 2016."
+
+msgid ""
+"'nova-manage db sync' can now sync the cell0 database. The cell0 db is "
+"required to store instances that cannot be scheduled to any cell. Before the "
+"'db sync' command is called a cell mapping for cell0 must have been created "
+"using 'nova-manage cell_v2 map_cell0'. This command only needs to be called "
+"when upgrading to CellsV2."
+msgstr ""
+"'nova-manage db sync' can now sync the cell0 database. The cell0 db is "
+"required to store instances that cannot be scheduled to any cell. Before the "
+"'db sync' command is called a cell mapping for cell0 must have been created "
+"using 'nova-manage cell_v2 map_cell0'. This command only needs to be called "
+"when upgrading to CellsV2."
+
+msgid ""
+"(Only if you do continuous deployment) "
+"1337890ace918fa2555046c01c8624be014ce2d8 drops support for an instance major "
+"version, which means that you must have deployed at least commit "
+"713d8cb0777afb9fe4f665b9a40cac894b04aacb before deploying this one."
+msgstr ""
+"(Only if you do continuous deployment) "
+"1337890ace918fa2555046c01c8624be014ce2d8 drops support for an instance major "
+"version, which means that you must have deployed at least commit "
+"713d8cb0777afb9fe4f665b9a40cac894b04aacb before deploying this one."
+
+msgid "**Filtering**"
+msgstr "**Filtering**"
+
+msgid "**Other**"
+msgstr "**Other**"
+
+msgid "**Ports**"
+msgstr "**Ports**"
+
+msgid "**Sorting**"
+msgstr "**Sorting**"
+
+msgid "**Volumes**"
+msgstr "**Volumes**"
+
+msgid "**os:monitors**. Guest VM number of monitors. Acceptable values::"
+msgstr "**os:monitors**. Guest VM number of monitors. Acceptable values::"
+
+msgid "**os:resolution**. Guest VM screen resolution size. Acceptable values::"
+msgstr ""
+"**os:resolution**. Guest VM screen resolution size. Acceptable values::"
+
+msgid ""
+"**os:vram**. Guest VM VRAM amount. Only available on Windows / Hyper-V "
+"Server 2016. Acceptable values::"
+msgstr ""
+"**os:vram**. Guest VM VRAM amount. Only available on Windows / Hyper-V "
+"Server 2016. Acceptable values::"
+
+msgid "/etc/nova/placement-policy.yaml"
+msgstr "/etc/nova/placement-policy.yaml"
+
+msgid "/etc/nova/policy.yaml"
+msgstr "/etc/nova/policy.yaml"
+
+msgid "/etc/placement/policy.yaml"
+msgstr "/etc/placement/policy.yaml"
+
+msgid "/images"
+msgstr "/images"
+
+msgid "/os-baremetal-nodes"
+msgstr "/os-baremetal-nodes"
+
+msgid "/os-fixed-ips"
+msgstr "/os-fixed-ips"
+
+msgid "/os-floating-ip-dns"
+msgstr "/os-floating-ip-dns"
+
+msgid "/os-floating-ip-pools"
+msgstr "/os-floating-ip-pools"
+
+msgid "/os-floating-ips"
+msgstr "/os-floating-ips"
+
+msgid "/os-floating-ips-bulk"
+msgstr "/os-floating-ips-bulk"
+
+msgid "/os-fping"
+msgstr "/os-fping"
+
+msgid "/os-networks"
+msgstr "/os-networks"
+
+msgid "/os-security-group-default-rules"
+msgstr "/os-security-group-default-rules"
+
+msgid "/os-security-group-rules"
+msgstr "/os-security-group-rules"
+
+msgid "/os-security-groups"
+msgstr "/os-security-groups"
+
+msgid "/os-snapshots"
+msgstr "/os-snapshots"
+
+msgid "/os-volumes"
+msgstr "/os-volumes"
+
+msgid "12.0.1"
+msgstr "12.0.1"
+
+msgid "12.0.3"
+msgstr "12.0.3"
+
+msgid "12.0.4"
+msgstr "12.0.4"
+
+msgid "12.0.5"
+msgstr "12.0.5"
+
+msgid "13.0.0"
+msgstr "13.0.0"
+
+msgid "13.1.0"
+msgstr "13.1.0"
+
+msgid "13.1.1"
+msgstr "13.1.1"
+
+msgid "13.1.2"
+msgstr "13.1.2"
+
+msgid "13.1.3"
+msgstr "13.1.3"
+
+msgid "13.1.4"
+msgstr "13.1.4"
+
+msgid "14.0.0"
+msgstr "14.0.0"
+
+msgid "14.0.1"
+msgstr "14.0.1"
+
+msgid "14.0.10"
+msgstr "14.0.10"
+
+msgid "14.0.2"
+msgstr "14.0.2"
+
+msgid "14.0.4"
+msgstr "14.0.4"
+
+msgid "14.0.5"
+msgstr "14.0.5"
+
+msgid "14.0.7"
+msgstr "14.0.7"
+
+msgid "14.1.0"
+msgstr "14.1.0"
+
+msgid "15.0.0"
+msgstr "15.0.0"
+
+msgid "15.0.1"
+msgstr "15.0.1"
+
+msgid "15.0.2"
+msgstr "15.0.2"
+
+msgid "15.0.5"
+msgstr "15.0.5"
+
+msgid "15.0.7"
+msgstr "15.0.7"
+
+msgid "15.0.8"
+msgstr "15.0.8"
+
+msgid "15.1.0"
+msgstr "15.1.0"
+
+msgid "15.1.1"
+msgstr "15.1.1"
+
+msgid "15.1.3"
+msgstr "15.1.3"
+
+msgid "15.1.4"
+msgstr "15.1.4"
+
+msgid "15.1.5"
+msgstr "15.1.5"
+
+msgid "15.1.5-28"
+msgstr "15.1.5-28"
+
+msgid "16.0.0"
+msgstr "16.0.0"
+
+msgid "16.0.1"
+msgstr "16.0.1"
+
+msgid "16.0.2"
+msgstr "16.0.2"
+
+msgid "16.0.3"
+msgstr "16.0.3"
+
+msgid "16.0.4"
+msgstr "16.0.4"
+
+msgid "16.1.0"
+msgstr "16.1.0"
+
+msgid "16.1.1"
+msgstr "16.1.1"
+
+msgid "16.1.2"
+msgstr "16.1.2"
+
+msgid "16.1.5"
+msgstr "16.1.5"
+
+msgid "16.1.7"
+msgstr "16.1.7"
+
+msgid "16.1.8"
+msgstr "16.1.8"
+
+msgid "16.1.8-37"
+msgstr "16.1.8-37"
+
+msgid "17.0.0"
+msgstr "17.0.0"
+
+msgid "17.0.10"
+msgstr "17.0.10"
+
+msgid "17.0.11"
+msgstr "17.0.11"
+
+msgid "17.0.12"
+msgstr "17.0.12"
+
+msgid "17.0.13"
+msgstr "17.0.13"
+
+msgid "17.0.2"
+msgstr "17.0.2"
+
+msgid "17.0.3"
+msgstr "17.0.3"
+
+msgid "17.0.4"
+msgstr "17.0.4"
+
+msgid "17.0.5"
+msgstr "17.0.5"
+
+msgid "204 NoContent on success"
+msgstr "204 NoContent on success"
+
+msgid "404 NotFound for missing resource provider"
+msgstr "404 NotFound for missing resource provider"
+
+msgid "405 MethodNotAllowed if a microversion is specified that is before"
+msgstr "405 MethodNotAllowed if a microversion is specified that is before"
+
+msgid "409 Conflict if inventory in use or if some other request concurrently"
+msgstr "409 Conflict if inventory in use or if some other request concurrently"
+
+msgid ""
+"A ``default_floating_pool`` configuration option has been added in the "
+"``[neutron]`` group. The existing ``default_floating_pool`` option in the "
+"``[DEFAULT]`` group is retained and should be used by nova-network users. "
+"Neutron users meanwhile should migrate to the new option."
+msgstr ""
+"A ``default_floating_pool`` configuration option has been added in the "
+"``[neutron]`` group. The existing ``default_floating_pool`` option in the "
+"``[DEFAULT]`` group is retained and should be used by nova-network users. "
+"Neutron users meanwhile should migrate to the new option."
+
+msgid ""
+"A ``nova-manage db purge`` command to `purge archived shadow table data`_ is "
+"now available. A new ``--purge`` option is also available for the ``nova-"
+"manage db archive_deleted_rows`` command."
+msgstr ""
+"A ``nova-manage db purge`` command to `purge archived shadow table data`_ is "
+"now available. A new ``--purge`` option is also available for the ``nova-"
+"manage db archive_deleted_rows`` command."
+
+msgid ""
+"A ``nova-manage placement heal_allocations`` command is now available to "
+"allow users of the CachingScheduler to get the placement service populated "
+"for their eventual migration to the FilterScheduler. The CachingScheduler is "
+"deprecated and could be removed as early as Stein."
+msgstr ""
+"A ``nova-manage placement heal_allocations`` command is now available to "
+"allow users of the CachingScheduler to get the placement service populated "
+"for their eventual migration to the FilterScheduler. The CachingScheduler is "
+"deprecated and could be removed as early as Stein."
+
+msgid "Current Series Release Notes"
+msgstr "Current Series Release Notes"
+
+msgid "Liberty Series Release Notes"
+msgstr "Liberty Series Release Notes"
+
+msgid "Mitaka Series Release Notes"
+msgstr "Mitaka Series Release Notes"
+
+msgid "Newton Series Release Notes"
+msgstr "Newton Series Release Notes"
+
+msgid "Ocata Series Release Notes"
+msgstr "Ocata Series Release Notes"
+
+msgid "Pike Series Release Notes"
+msgstr "Pike Series Release Notes"
+
+msgid "Queens Series Release Notes"
+msgstr "Queens Series Release Notes"
+
+msgid "Rocky Series Release Notes"
+msgstr "Rocky Series Release Notes"
+
+msgid "Stein Series Release Notes"
+msgstr "Stein Series Release Notes"
+
+msgid "Train Series Release Notes"
+msgstr "Train Series Release Notes"
+
+msgid "system_metadata"
+msgstr "system_metadata"
+
+msgid "tags              (available in 2.26+)"
+msgstr "tags              (available in 2.26+)"
+
+msgid "tags-any          (available in 2.26+)"
+msgstr "tags-any          (available in 2.26+)"
+
+msgid "task_state"
+msgstr "task_state"
+
+msgid "tenant_id"
+msgstr "tenant_id"
+
+msgid "terminated_at"
+msgstr "terminated_at"
+
+msgid "this change (1.5)"
+msgstr "this change (1.5)"
+
+msgid "total_bytes_sec"
+msgstr "total_bytes_sec"
+
+msgid "total_iops_sec - normalized IOPS"
+msgstr "total_iops_sec - normalised IOPS"
+
+msgid "trait:HW_CPU_X86_AVX2=required"
+msgstr "trait:HW_CPU_X86_AVX2=required"
+
+msgid "trait:STORAGE_DISK_SSD=required"
+msgstr "trait:STORAGE_DISK_SSD=required"
+
+msgid "updated_at"
+msgstr "updated_at"
+
+msgid "updates this resource provider"
+msgstr "updates this resource provider"
+
+msgid "user_id"
+msgstr "user_id"
+
+msgid "uuid"
+msgstr "UUID"
+
+msgid "vm_state"
+msgstr "vm_state"
