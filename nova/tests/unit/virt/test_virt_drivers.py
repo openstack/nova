@@ -39,6 +39,7 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_block_device
 from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import utils as test_utils
+from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt import block_device as driver_block_device
 from nova.virt import event as virtevent
 from nova.virt import fake
@@ -593,6 +594,10 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.assertIn('username', console_pool)
         self.assertIn('password', console_pool)
 
+    @mock.patch(
+        'nova.tests.unit.virt.libvirt.fakelibvirt.Domain.jobStats',
+        new=mock.Mock(return_value={
+            'type': fakelibvirt.VIR_DOMAIN_JOB_COMPLETED}))
     def test_live_migration(self):
         instance_ref, network_info = self._get_running_instance()
         fake_context = context.RequestContext('fake', 'fake')

@@ -24,15 +24,20 @@ import string
 import time
 
 import os_traits
+from oslo_concurrency import lockutils
 from oslo_log import log as logging
+import oslo_messaging as messaging
 
 from nova.compute import instance_actions
+from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils
 import nova.conf
 from nova import context
 from nova.db import api as db
 import nova.image.glance
 from nova import objects
+from nova.objects import base as objects_base
+from nova import rpc
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client as api_client
@@ -70,6 +75,26 @@ def generate_new_element(items, prefix, numeric=False):
         if candidate not in items:
             return candidate
         LOG.debug("Random collision on %s", candidate)
+
+
+class StubComputeRPCAPI(compute_rpcapi.ComputeAPI):
+    """Stub ComputeAPI that allows us to pin the RPC version of a host. Used to
+    simulate rolling upgrade situations where either source, dest or conductor
+    are pinned.
+    """
+
+    def __init__(self, version):
+        self.version = version
+
+    @property
+    def router(self):
+        with lockutils.lock('compute-rpcapi-router'):
+            target = messaging.Target(topic='compute', version='5.0')
+            version_cap = self.version
+            serializer = objects_base.NovaObjectSerializer()
+            rpc.get_client(target, version_cap, serializer)
+            default_client = self.get_client(target, version_cap, serializer)
+            return rpc.ClientRouter(default_client)
 
 
 class InstanceHelperMixin(object):
