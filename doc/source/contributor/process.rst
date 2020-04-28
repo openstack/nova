@@ -36,8 +36,8 @@ If you are new to Nova, please read this first: :ref:`getting_involved`.
 Dates overview
 ==============
 
-For Ussuri, please see:
-https://wiki.openstack.org/wiki/Nova/Ussuri_Release_Schedule
+For Victoria, please see:
+https://wiki.openstack.org/wiki/Nova/Victoria_Release_Schedule
 
 .. note: Throughout this document any link which references the name of a
          release cycle in the link can usually be changed to the name of the
@@ -102,9 +102,9 @@ Why we have a Spec Freeze:
 
 By the freeze date, we expect all blueprints that will be approved for the
 cycle to be listed on launchpad and all relevant specs to be merged.
-For Ussuri, blueprints can be found at
-https://blueprints.launchpad.net/nova/ussuri and specs at
-https://specs.openstack.org/openstack/nova-specs/specs/ussuri/index.html
+For Victoria, blueprints can be found at
+https://blueprints.launchpad.net/nova/victoria and specs at
+https://specs.openstack.org/openstack/nova-specs/specs/victoria/index.html
 
 Starting with Liberty, we are keeping a backlog open for submission at all
 times.
