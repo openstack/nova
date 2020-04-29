@@ -70,17 +70,6 @@ class InstanceNUMACell(base.NovaEphemeralObject,
     def __len__(self):
         return len(self.cpuset)
 
-    @classmethod
-    def _from_dict(cls, data_dict):
-        # NOTE(sahid): Used as legacy, could be renamed in
-        # _legacy_from_dict_ to the future to avoid confusing.
-        cpuset = hardware.parse_cpu_spec(data_dict.get('cpus', ''))
-        memory = data_dict.get('mem', {}).get('total', 0)
-        cell_id = data_dict.get('id')
-        pagesize = data_dict.get('pagesize')
-        return cls(id=cell_id, cpuset=cpuset,
-                   memory=memory, pagesize=pagesize)
-
     @property
     def siblings(self):
         cpu_list = sorted(list(self.cpuset))
@@ -146,29 +135,47 @@ class InstanceNUMATopology(base.NovaObject,
         }
 
     @classmethod
-    def obj_from_primitive(cls, primitive, context=None):
-        if 'nova_object.name' in primitive:
-            obj_topology = super(InstanceNUMATopology, cls).obj_from_primitive(
-                primitive, context=None)
-        else:
-            # NOTE(sahid): This compatibility code needs to stay until we can
-            # guarantee that there are no cases of the old format stored in
-            # the database (or forever, if we can never guarantee that).
-            obj_topology = InstanceNUMATopology._from_dict(primitive)
-            obj_topology.id = 0
-        return obj_topology
-
-    @classmethod
-    def obj_from_db_obj(cls, instance_uuid, db_obj):
+    def obj_from_db_obj(cls, context, instance_uuid, db_obj):
         primitive = jsonutils.loads(db_obj)
-        obj_topology = cls.obj_from_primitive(primitive)
 
-        if 'nova_object.name' not in db_obj:
-            obj_topology.instance_uuid = instance_uuid
-            # No benefit to store a list of changed fields
-            obj_topology.obj_reset_changes()
+        if 'nova_object.name' in primitive:
+            obj = cls.obj_from_primitive(primitive)
+        else:
+            obj = cls._migrate_legacy_object(context, instance_uuid, primitive)
 
-        return obj_topology
+        return obj
+
+    # TODO(stephenfin): Remove in X or later, once this has bedded in
+    @classmethod
+    def _migrate_legacy_object(cls, context, instance_uuid, primitive):
+        """Convert a pre-Liberty object to a real o.vo.
+
+        Handle an unversioned object created prior to Liberty, by transforming
+        to a versioned object and saving back the serialized version of this.
+
+        :param context: RequestContext
+        :param instance_uuid: The UUID of the instance this topology is
+            associated with.
+        :param primitive: A serialized representation of the legacy object.
+        :returns: A serialized representation of the updated object.
+        """
+        obj = cls(
+            instance_uuid=instance_uuid,
+            cells=[
+                InstanceNUMACell(
+                    id=cell.get('id'),
+                    cpuset=hardware.parse_cpu_spec(cell.get('cpus', '')),
+                    memory=cell.get('mem', {}).get('total', 0),
+                    pagesize=cell.get('pagesize'),
+                ) for cell in primitive.get('cells', [])
+            ],
+        )
+        db_obj = jsonutils.dumps(obj.obj_to_primitive())
+        values = {
+            'numa_topology': db_obj,
+        }
+        db.instance_extra_update_by_uuid(context, instance_uuid, values)
+        return obj
 
     # TODO(ndipanov) Remove this method on the major version bump to 2.0
     @base.remotable
@@ -188,7 +195,8 @@ class InstanceNUMATopology(base.NovaObject,
         if db_extra['numa_topology'] is None:
             return None
 
-        return cls.obj_from_db_obj(instance_uuid, db_extra['numa_topology'])
+        return cls.obj_from_db_obj(
+            context, instance_uuid, db_extra['numa_topology'])
 
     def _to_json(self):
         return jsonutils.dumps(self.obj_to_primitive())
@@ -196,14 +204,6 @@ class InstanceNUMATopology(base.NovaObject,
     def __len__(self):
         """Defined so that boolean testing works the same as for lists."""
         return len(self.cells)
-
-    @classmethod
-    def _from_dict(cls, data_dict):
-        # NOTE(sahid): Used as legacy, could be renamed in _legacy_from_dict_
-        # in the future to avoid confusing.
-        return cls(cells=[
-            InstanceNUMACell._from_dict(cell_dict)
-            for cell_dict in data_dict.get('cells', [])])
 
     @property
     def cpu_pinning(self):

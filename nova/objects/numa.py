@@ -119,18 +119,6 @@ class NUMACell(base.NovaObject):
                 pin_siblings.update(sib)
         self.unpin_cpus(pin_siblings)
 
-    @classmethod
-    def _from_dict(cls, data_dict):
-        cpuset = hardware.parse_cpu_spec(
-            data_dict.get('cpus', ''))
-        cpu_usage = data_dict.get('cpu_usage', 0)
-        memory = data_dict.get('mem', {}).get('total', 0)
-        memory_usage = data_dict.get('mem', {}).get('used', 0)
-        cell_id = data_dict.get('id')
-        return cls(id=cell_id, cpuset=cpuset, memory=memory,
-                   cpu_usage=cpu_usage, memory_usage=memory_usage,
-                   mempages=[], pinned_cpus=set([]), siblings=[])
-
     def can_fit_pagesize(self, pagesize, memory, use_free=True):
         """Returns whether memory can fit into a given pagesize.
 
@@ -219,18 +207,6 @@ class NUMATopology(base.NovaObject):
         """Check if any cell use SMT threads (a.k.a. Hyperthreads)"""
         return any(cell.has_threads for cell in self.cells)
 
-    @classmethod
-    def obj_from_primitive(cls, primitive, context=None):
-        if 'nova_object.name' in primitive:
-            obj_topology = super(NUMATopology, cls).obj_from_primitive(
-                primitive, context=context)
-        else:
-            # NOTE(sahid): This compatibility code needs to stay until we can
-            # guarantee that there are no cases of the old format stored in
-            # the database (or forever, if we can never guarantee that).
-            obj_topology = NUMATopology._from_dict(primitive)
-        return obj_topology
-
     def _to_json(self):
         return jsonutils.dumps(self.obj_to_primitive())
 
@@ -243,15 +219,32 @@ class NUMATopology(base.NovaObject):
         """
         return cls.obj_from_primitive(jsonutils.loads(db_obj))
 
+    @classmethod
+    def from_legacy_object(cls, primitive: str):
+        """Convert a pre-Liberty object to a (serialized) real o.vo.
+
+        :param primitive: A serialized representation of the legacy object.
+        :returns: A serialized representation of the updated object.
+        """
+        topology = cls(
+            cells=[
+                NUMACell(
+                    id=cell.get('id'),
+                    cpuset=hardware.parse_cpu_spec(cell.get('cpus', '')),
+                    cpu_usage=cell.get('cpu_usage', 0),
+                    memory=cell.get('mem', {}).get('total', 0),
+                    memory_usage=cell.get('mem', {}).get('used', 0),
+                    mempages=[],
+                    pinned_cpus=set(),
+                    siblings=[],
+                ) for cell in jsonutils.loads(primitive).get('cells', [])
+            ],
+        )
+        return topology._to_json()
+
     def __len__(self):
         """Defined so that boolean testing works the same as for lists."""
         return len(self.cells)
-
-    @classmethod
-    def _from_dict(cls, data_dict):
-        return cls(cells=[
-            NUMACell._from_dict(cell_dict)
-            for cell_dict in data_dict.get('cells', [])])
 
 
 @base.NovaObjectRegistry.register

@@ -209,6 +209,12 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
                 init_x_ratio = getattr(CONF, 'initial_%s' % key)
                 value = r if r else init_x_ratio
                 online_updates[key] = value
+            elif key == 'numa_topology' and value and (
+                    'nova_object.name' not in value):
+                # TODO(stephenfin): Remove this online migration in X or later,
+                # once this has bedded in
+                value = objects.NUMATopology.from_legacy_object(value)
+                online_updates[key] = value
             elif key == 'mapped':
                 value = 0 if value is None else value
 

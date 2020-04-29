@@ -9,6 +9,8 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
+from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel
 
 import nova.conf
@@ -167,6 +169,42 @@ class ComputeNodeTestCase(test.TestCase):
                                                              'ironic')
         self.assertEqual(1, len(cns))
         self.assertEqual(cn1.uuid, cns[0].uuid)
+
+    def test_numa_topology_online_migration_when_load(self):
+        """Ensure legacy NUMA topology objects are reserialized to o.vo's."""
+        cn = fake_compute_obj.obj_clone()
+        cn._context = self.context
+        cn.create()
+
+        legacy_topology = jsonutils.dumps({
+            "cells": [
+                {
+                    "id": 0,
+                    "cpus": "0-3",
+                    "mem": {"total": 512, "used": 256},
+                    "cpu_usage": 2,
+                },
+                {
+                    "id": 1,
+                    "cpus": "4,5,6,7",
+                    "mem": {"total": 512, "used": 0},
+                    "cpu_usage": 0,
+                }
+            ]
+        })
+        db.compute_node_update(
+            self.context, cn.id, {'numa_topology': legacy_topology})
+
+        cn_db = db.compute_node_get(self.context, cn.id)
+        self.assertEqual(legacy_topology, cn_db['numa_topology'])
+        self.assertNotIn('nova_object.name', cn_db['numa_topology'])
+
+        # trigger online migration
+        objects.ComputeNodeList.get_all(self.context)
+
+        cn_db = db.compute_node_get(self.context, cn.id)
+        self.assertNotEqual(legacy_topology, cn_db['numa_topology'])
+        self.assertIn('nova_object.name', cn_db['numa_topology'])
 
     def test_ratio_online_migration_when_load(self):
         # set cpu and disk, and leave ram unset(None)
