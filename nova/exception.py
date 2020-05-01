@@ -254,6 +254,11 @@ class TooManyDiskDevices(InvalidBDM):
     code = 403
 
 
+class InvalidBDMDiskBus(InvalidBDM):
+    msg_fmr = _("Block Device Mapping is invalid: The provided disk bus "
+                "%(disk_bus)s is not valid.")
+
+
 class InvalidAttribute(Invalid):
     msg_fmt = _("Attribute not supported: %(attr)s")
 

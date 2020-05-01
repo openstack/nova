@@ -2449,9 +2449,10 @@ disk_available_least_total:
 disk_bus:
   description: |
     Disk bus type, some hypervisors (currently only libvirt) support
-    specify this parameter. Some example disk_bus values can be: `ide`,
-    `usb`, `virtio`, `scsi`. This is not an exhaustive list as it depends
-    on the virtualization driver, and may change as more support is added.
+    specify this parameter. Some example disk_bus values can be: ``fdc``,
+    ``ide``, ``sata``, ``scsi``, ``usb``, ``virtio``, ``xen``, ``lxc``
+    and ``uml``. Support for each bus type depends on the virtualization driver
+    and underlying hypervisor.
   in: body
   required: false
   type: string

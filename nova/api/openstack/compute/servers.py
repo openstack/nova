@@ -762,6 +762,7 @@ class ServersController(wsgi.Controller):
                 exception.InvalidBDMEphemeralSize,
                 exception.InvalidBDMFormat,
                 exception.InvalidBDMSwapSize,
+                exception.InvalidBDMDiskBus,
                 exception.VolumeTypeNotFound,
                 exception.AutoDiskConfigDisabledByImage,
                 exception.InstanceGroupNotFound,
