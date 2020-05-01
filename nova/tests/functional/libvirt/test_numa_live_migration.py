@@ -21,6 +21,7 @@ from oslo_log import log as logging
 from nova.compute import manager as compute_manager
 from nova import context
 from nova import objects
+from nova import test
 from nova.tests.functional import integrated_helpers
 from nova.tests.functional.libvirt import base
 from nova.tests.unit.virt.libvirt import fake_os_brick_connector
@@ -66,37 +67,35 @@ class NUMALiveMigrationBase(base.ServersTestBase,
             'nova.virt.libvirt.driver.connector',
             fake_os_brick_connector))
 
+    def _migrate_stub(self, domain, destination, params, flags):
+        raise test.TestingException('_migrate_stub() must be implemented in '
+                                    ' tests that expect the live migration '
+                                    ' to start.')
+
     def get_host(self, server_id):
         server = self.api.get_server(server_id)
         return server['OS-EXT-SRV-ATTR:host']
 
-    def _get_host_numa_topology(self, host):
+    def _get_migration_context(self, instance_uuid):
         ctxt = context.get_admin_context()
-        return objects.NUMATopology.obj_from_db_obj(
-            objects.ComputeNode.get_by_nodename(ctxt, host).numa_topology)
-
-    def _assert_no_migration_context(self, instance_uuid):
-        ctxt = context.get_admin_context()
-        self.assertFalse(
-            objects.MigrationContext.get_by_instance_uuid(ctxt, instance_uuid))
-
-    def _assert_has_migration_context(self, instance_uuid):
-        ctxt = context.get_admin_context()
-        self.assertTrue(
-            objects.MigrationContext.get_by_instance_uuid(ctxt, instance_uuid))
+        return objects.MigrationContext.get_by_instance_uuid(ctxt,
+                                                             instance_uuid)
 
     def _assert_instance_pinned_cpus(self, uuid, instance_cpus, host_cpus):
         ctxt = context.get_admin_context()
         topology = objects.InstanceNUMATopology.get_by_instance_uuid(
             ctxt, uuid)
         self.assertEqual(1, len(topology.cells))
-        self.assertItemsEqual(instance_cpus,
+        # NOTE(artom) DictOfIntegersField has strings as keys, need to convert
+        self.assertItemsEqual([str(cpu) for cpu in instance_cpus],
                               topology.cells[0].cpu_pinning_raw.keys())
         self.assertItemsEqual(host_cpus,
                               topology.cells[0].cpu_pinning_raw.values())
 
     def _assert_host_consumed_cpus(self, host, cpus):
-        topology = self._get_host_numa_topology(host)
+        ctxt = context.get_admin_context()
+        topology = objects.NUMATopology.obj_from_db_obj(
+            objects.ComputeNode.get_by_nodename(ctxt, host).numa_topology)
         self.assertItemsEqual(cpus, topology.cells[0].pinned_cpus)
 
 
@@ -132,17 +131,12 @@ class NUMALiveMigrationPositiveBase(NUMALiveMigrationBase):
         # CPUs 0,1.
         for server_name, host in [('server_a', 'host_a'),
                                   ('server_b', 'host_b')]:
-            server = self._build_server(
-                flavor_id=flavor,
-                image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6')
-            server.update({'networks': 'none',
-                           'host': host})
-            post = {'server': server}
-            server = self.api.post_server(post)
+            server = self._create_server(flavor_id=flavor, host=host,
+                                         networks='none')
             setattr(self, server_name,
                     self._wait_for_state_change(server, 'ACTIVE'))
             self.assertEqual(host, self.get_host(server['id']))
-            self._assert_instance_pinned_cpus(server['id'], ['0', '1'], [0, 1])
+            self._assert_instance_pinned_cpus(server['id'], [0, 1], [0, 1])
 
     def _rpc_pin_host(self, hostname):
         ctxt = context.get_admin_context()
@@ -152,14 +146,6 @@ class NUMALiveMigrationPositiveBase(NUMALiveMigrationBase):
         self.assertFalse(
             dest_mgr.compute_rpcapi.router.client(
                 ctxt).can_send_version('5.3'))
-
-    def _live_migrate(self, server, migration_final_status):
-        self.api.post_server_action(
-            server['id'],
-            {'os-migrateLive': {'host': None,
-                                'block_migration': 'auto'}})
-        self._wait_for_state_change(server, 'ACTIVE')
-        self._wait_for_migration_status(server, [migration_final_status])
 
 
 class NUMALiveMigrationPositiveTests(NUMALiveMigrationPositiveBase):
@@ -177,13 +163,22 @@ class NUMALiveMigrationPositiveTests(NUMALiveMigrationPositiveBase):
         until this method is done, the last thing we do is make fakelibvirt's
         Domain.jobStats() return VIR_DOMAIN_JOB_COMPLETED.
         """
-        self._assert_has_migration_context(self.server_a['id'])
+        self.assertIsInstance(
+            self._get_migration_context(self.server_a['id']),
+            objects.MigrationContext)
 
         # During the migration, server_a is consuming CPUs 0,1 on host_a, while
         # all 4 of host_b's CPU are consumed by server_b and the incoming
         # migration.
         self._assert_host_consumed_cpus('host_a', [0, 1])
         self._assert_host_consumed_cpus('host_b', [0, 1, 2, 3])
+
+        host_a_rp = self._get_provider_uuid_by_name('host_a')
+        host_b_rp = self._get_provider_uuid_by_name('host_b')
+        usages_a = self._get_provider_usages(host_a_rp)
+        usages_b = self._get_provider_usages(host_b_rp)
+        self.assertEqual(2, usages_a['PCPU'])
+        self.assertEqual(4, usages_b['PCPU'])
 
         # In a real live migration, libvirt and QEMU on the source and
         # destination talk it out, resulting in the instance starting to exist
@@ -230,7 +225,7 @@ class NUMALiveMigrationPositiveTests(NUMALiveMigrationPositiveBase):
             self._rpc_pin_host('host_b')
         self._live_migrate(self.server_a, 'completed')
         self.assertEqual('host_b', self.get_host(self.server_a['id']))
-        self._assert_no_migration_context(self.server_a['id'])
+        self.assertIsNone(self._get_migration_context(self.server_a['id']))
 
         # At this point host_a should have no CPUs consumed (server_a has moved
         # to host_b), and host_b should have all of its CPUs consumed. In
@@ -241,14 +236,14 @@ class NUMALiveMigrationPositiveTests(NUMALiveMigrationPositiveBase):
         self._assert_host_consumed_cpus('host_a', [])
         self._assert_host_consumed_cpus('host_b', [0, 1, 2, 3])
         self._assert_instance_pinned_cpus(self.server_a['id'],
-                                          ['0', '1'], [2, 3])
+                                          [0, 1], [2, 3])
 
         self._run_periodics()
 
         self._assert_host_consumed_cpus('host_a', [])
         self._assert_host_consumed_cpus('host_b', [0, 1, 2, 3])
         self._assert_instance_pinned_cpus(self.server_a['id'],
-                                          ['0', '1'], [2, 3])
+                                          [0, 1], [2, 3])
 
         self.assertTrue(self.migrate_stub_ran)
 
@@ -262,8 +257,22 @@ class NUMALiveMigrationPositiveTests(NUMALiveMigrationPositiveBase):
         self._test(pin_dest=True)
 
     def test_bug_1843639(self):
-        orig_live_migration = \
-            compute_manager.ComputeManager.live_migration
+        """Live migrations in 'accepted' status were not considered in progress
+        before the fix for 1845146 merged, and were ignored by the update
+        available resources periodic task. From the task's POV, live-migrating
+        instances with migration status 'accepted' were considered to be on the
+        source, and any resource claims on the destination would get
+        erroneously removed. For that to happen, the task had to run at just
+        the "right" time, when the migration was in 'accepted' and had not yet
+        been moved to 'queued' by live_migration() in the compute manager.
+
+        This test triggers this race by wrapping around live_migration() and
+        running the update available resources periodic task while the
+        migration is still in 'accepted'.
+        """
+
+        self.live_migration_ran = False
+        orig_live_migration = compute_manager.ComputeManager.live_migration
 
         def live_migration(*args, **kwargs):
             self._run_periodics()
@@ -272,12 +281,22 @@ class NUMALiveMigrationPositiveTests(NUMALiveMigrationPositiveBase):
             # incoming # migration.
             self._assert_host_consumed_cpus('host_a', [0, 1])
             self._assert_host_consumed_cpus('host_b', [0, 1, 2, 3])
+
+            # The migration should also be in 'accepted' at this point in time.
+            ctxt = context.get_admin_context()
+            self.assertIsInstance(
+                objects.Migration.get_by_instance_and_status(
+                    ctxt, self.server_a['id'], 'accepted'),
+                objects.Migration)
+
+            self.live_migration_ran = True
             return orig_live_migration(*args, **kwargs)
 
         self.useFixture(fixtures.MonkeyPatch(
             'nova.compute.manager.ComputeManager.live_migration',
             live_migration))
         self._test()
+        self.assertTrue(self.live_migration_ran)
 
 
 class NUMALiveMigrationRollbackTests(NUMALiveMigrationPositiveBase):
@@ -290,7 +309,9 @@ class NUMALiveMigrationRollbackTests(NUMALiveMigrationPositiveBase):
         """Designed to stub fakelibvirt's migrateToURI3 and "fail" the
         live migration by monkeypatching jobStats() to return an error.
         """
-        self._assert_has_migration_context(self.server_a['id'])
+        self.assertIsInstance(
+            self._get_migration_context(self.server_a['id']),
+            objects.MigrationContext)
 
         # During the migration, server_a is consuming CPUs 0,1 on host_a, while
         # all 4 of host_b's CPU are consumed by server_b and the incoming
@@ -332,7 +353,7 @@ class NUMALiveMigrationRollbackTests(NUMALiveMigrationPositiveBase):
             self._rpc_pin_host('host_b')
         self._live_migrate(self.server_a, 'error')
         self.assertEqual('host_a', self.get_host(self.server_a['id']))
-        self._assert_no_migration_context(self.server_a['id'])
+        self.assertIsNone(self._get_migration_context(self.server_a['id']))
 
         # Check consumed and pinned CPUs. Things should be as they were before
         # the live migration, with CPUs 0,1 consumed on both hosts by the 2
@@ -340,7 +361,7 @@ class NUMALiveMigrationRollbackTests(NUMALiveMigrationPositiveBase):
         self._assert_host_consumed_cpus('host_a', [0, 1])
         self._assert_host_consumed_cpus('host_b', [0, 1])
         self._assert_instance_pinned_cpus(self.server_a['id'],
-                                          ['0', '1'], [0, 1])
+                                          [0, 1], [0, 1])
 
     def test_rollback(self):
         self._test()
@@ -403,15 +424,8 @@ class NUMALiveMigrationLegacyBase(NUMALiveMigrationPositiveBase):
         extra_spec = {'hw:numa_nodes': 1,
                       'hw:cpu_policy': 'dedicated'}
         flavor = self._create_flavor(vcpu=2, extra_spec=extra_spec)
-        server = self._build_server(
-            flavor_id=flavor,
-            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6')
-        server['networks'] = 'none'
-        post = {'server': server}
-        server1 = self.api.post_server(post)
-        server2 = self.api.post_server(post)
-        self._wait_for_state_change(server1, 'ACTIVE')
-        self._wait_for_state_change(server2, 'ACTIVE')
+        server1 = self._create_server(flavor_id=flavor, networks='none')
+        server2 = self._create_server(flavor_id=flavor, networks='none')
         if self.get_host(server1['id']) == 'source':
             self.migrating_server = server1
         else:
@@ -445,7 +459,8 @@ class NUMALiveMigrationLegacyTests(NUMALiveMigrationLegacyBase):
         # NOTE(artom) This is the crucial bit: by asserting that the migrating
         # instance has no migration context, we're making sure that we're
         # hitting the old, pre-claims code paths.
-        self._assert_no_migration_context(self.migrating_server['id'])
+        self.assertIsNone(
+            self._get_migration_context(self.migrating_server['id']))
         dest = self.computes['dest']
         dest.driver._host.get_connection().createXML(
             params['destination_xml'],
@@ -475,7 +490,8 @@ class NUMALiveMigrationLegacyRollbackTests(NUMALiveMigrationLegacyBase):
         # NOTE(artom) This is the crucial bit: by asserting that the migrating
         # instance has no migration context, we're making sure that we're
         # hitting the old, pre-claims code paths.
-        self._assert_no_migration_context(self.migrating_server['id'])
+        self.assertIsNone(
+            self._get_migration_context(self.migrating_server['id']))
         source = self.computes['source']
         conn = source.driver._host.get_connection()
         dom = conn.lookupByUUIDString(self.migrating_server['id'])
@@ -531,7 +547,7 @@ class NUMALiveMigrationNegativeTests(NUMALiveMigrationBase):
             check_response_status=[500])
         self._wait_for_state_change(server, 'ACTIVE')
         self._wait_for_migration_status(server, ['error'])
-        self._assert_no_migration_context(server['id'])
+        self.assertIsNone(self._get_migration_context(server['id']))
         self.assertEqual('host_a', self.get_host(server['id']))
         log_out = self.stdlog.logger.output
         self.assertIn('Migration pre-check error: '
@@ -577,7 +593,7 @@ class NUMALiveMigrationNegativeTests(NUMALiveMigrationBase):
         self._wait_for_state_change(server, 'ACTIVE')
         self._wait_for_migration_status(server, ['error'])
         self.assertEqual(initial_host, self.get_host(server['id']))
-        self._assert_no_migration_context(server['id'])
+        self.assertIsNone(self._get_migration_context(server['id']))
         log_out = self.stdlog.logger.output
         self.assertIn('Migration pre-check error: '
                       'Insufficient compute resources: '
