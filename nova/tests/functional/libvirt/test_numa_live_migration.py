@@ -18,6 +18,7 @@ import fixtures
 from oslo_config import cfg
 from oslo_log import log as logging
 
+from nova.compute import manager as compute_manager
 from nova import context
 from nova import objects
 from nova.tests.functional import integrated_helpers
@@ -259,6 +260,24 @@ class NUMALiveMigrationPositiveTests(NUMALiveMigrationPositiveBase):
 
     def test_numa_live_migration_dest_pinned(self):
         self._test(pin_dest=True)
+
+    def test_bug_1843639(self):
+        orig_live_migration = \
+            compute_manager.ComputeManager.live_migration
+
+        def live_migration(*args, **kwargs):
+            self._run_periodics()
+            # During the migration, server_a is consuming CPUs 0,1 on host_a,
+            # while all 4 of host_b's CPU are consumed by server_b and the
+            # incoming # migration.
+            self._assert_host_consumed_cpus('host_a', [0, 1])
+            self._assert_host_consumed_cpus('host_b', [0, 1, 2, 3])
+            return orig_live_migration(*args, **kwargs)
+
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.compute.manager.ComputeManager.live_migration',
+            live_migration))
+        self._test()
 
 
 class NUMALiveMigrationRollbackTests(NUMALiveMigrationPositiveBase):
