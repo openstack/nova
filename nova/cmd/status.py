@@ -40,6 +40,7 @@ from nova.db.sqlalchemy import api as db_session
 from nova import exception
 from nova.i18n import _
 from nova.objects import cell_mapping as cell_mapping_obj
+from nova import policy
 from nova import utils
 from nova import version
 from nova.volume import cinder
@@ -346,6 +347,70 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
                 six.text_type(ex))
         return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
+    def _check_policy(self):
+        """Checks to see if policy file is overwritten with the new
+        defaults.
+        """
+        msg = _("Your policy file contains rules which examine token scope, "
+                "which may be due to generation with the new defaults. "
+                "If that is done intentionally to migrate to the new rule "
+                "format, then you are required to enable the flag "
+                "'oslo_policy.enforce_scope=True' and educate end users on "
+                "how to request scoped tokens from Keystone. Another easy "
+                "and recommended way for you to achieve the same is via two "
+                "flags, 'oslo_policy.enforce_scope=True' and "
+                "'oslo_policy.enforce_new_defaults=True' and avoid "
+                "overwriting the file. Please refer to this document to "
+                "know the complete migration steps: "
+                "https://docs.openstack.org/nova/latest/configuration"
+                "/policy-concepts.html. If you did not intend to migrate "
+                "to new defaults in this upgrade, then with your current "
+                "policy file the scope checking rule will fail. A possible "
+                "reason for such a policy file is that you generated it with "
+                "'oslopolicy-sample-generator' in json format. "
+                "Three ways to fix this until you are ready to migrate to "
+                "scoped policies: 1. Generate the policy file with "
+                "'oslopolicy-sample-generator' in yaml format, keep "
+                "the generated content commented out, and update "
+                "the generated policy.yaml location in "
+                "``oslo_policy.policy_file``. "
+                "2. Use a pre-existing sample config file from the Train "
+                "release. 3. Use an empty or non-existent file to take all "
+                "the defaults.")
+        rule = "system_admin_api"
+        rule_new_default = "role:admin and system_scope:all"
+        status = upgradecheck.Result(upgradecheck.Code.SUCCESS)
+        # NOTE(gmann): Initialise the policy if it not initialized.
+        # We need policy enforcer with all the rules loaded to check
+        # their value with defaults.
+        try:
+            if policy._ENFORCER is None:
+                policy.init(suppress_deprecation_warnings=True)
+
+            # For safer side, recheck that the enforcer is available before
+            # upgrade checks. If something is wrong on oslo side and enforcer
+            # is still not available the return warning to avoid any false
+            # result.
+            if policy._ENFORCER is not None:
+                current_rule = str(policy._ENFORCER.rules[rule]).strip("()")
+                if (current_rule == rule_new_default and
+                    not CONF.oslo_policy.enforce_scope):
+                    status = upgradecheck.Result(upgradecheck.Code.WARNING,
+                                                 msg)
+            else:
+                status = upgradecheck.Result(
+                    upgradecheck.Code.WARNING,
+                    _('Policy is not initialized to check the policy rules'))
+        except Exception as ex:
+            status = upgradecheck.Result(
+                upgradecheck.Code.WARNING,
+                _('Unable to perform policy checks due to error: %s') %
+                six.text_type(ex))
+        # reset the policy state so that it can be initialized from fresh if
+        # operator changes policy file after running this upgrade checks.
+        policy.reset()
+        return status
+
     # The format of the check functions is to return an upgradecheck.Result
     # object with the appropriate upgradecheck.Code and details set. If the
     # check hits warnings or failures then those should be stored in the
@@ -362,6 +427,8 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         (_('Ironic Flavor Migration'), _check_ironic_flavor_migration),
         # Added in Train
         (_('Cinder API'), _check_cinder),
+        # Added in Ussuri
+        (_('Policy Scope-based Defaults'), _check_policy),
     )
 
 
