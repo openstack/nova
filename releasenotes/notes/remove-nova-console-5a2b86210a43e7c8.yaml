@@ -1,6 +1,9 @@
 ---
 upgrade:
   - |
+
+    .. _21.0.0.0-upgrade-notes-os-consoles:
+
     The ``nova-console`` service has been deprecated since the 19.0.0 Stein
     release and has now been removed. The following configuration options are
     therefore removed.

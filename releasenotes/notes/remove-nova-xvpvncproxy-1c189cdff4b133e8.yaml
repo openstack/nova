@@ -1,6 +1,9 @@
 ---
 upgrade:
   - |
+
+    .. _21.0.0.0-upgrade-notes-xvncproxy:
+
     The ``nova-xvpvncproxy`` service has been deprecated since the 19.0.0 Stein
     release and has now been removed. The following configuration options have
     also been removed:

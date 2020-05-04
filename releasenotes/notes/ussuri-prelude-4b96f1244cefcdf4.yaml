@@ -60,8 +60,8 @@ prelude: |
     - Python 2 is no longer supported by Nova, Python 3.6 and 3.7 are.
 
     - Removal of the ``os-consoles`` and ``os-networks`` REST APIs. See the
-      `Upgrade Notes`_ section for more details.
+      :ref:`Upgrade Notes <21.0.0.0-upgrade-notes-os-consoles>` section for more details.
 
     - Removal of the ``nova-dhcpbridge``, ``nova-console`` and
-      ``nova-xvpvncproxy`` services. See the `Upgrade Notes`_ section for more
+      ``nova-xvpvncproxy`` services. See the :ref:`Upgrade Notes <21.0.0.0-upgrade-notes-xvncproxy>` section for more
       details.
