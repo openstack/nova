@@ -30,12 +30,12 @@
       - ^tox.ini$
 
 - job:
-    name: nova-tox-functional-py36
-    parent: openstack-tox-functional-py36
+    name: nova-tox-functional-py38
+    parent: openstack-tox-functional-py38
     description: |
       Run tox-based functional tests for the OpenStack Nova project
-      under cPython version 3.6 with Nova specific irrelevant-files list.
-      Uses tox with the ``functional-py36`` environment.
+      under cPython version 3.8 with Nova specific irrelevant-files list.
+      Uses tox with the ``functional-py38`` environment.
 
       This job also provides a parent for other projects to run the nova
       functional tests on their own changes.
@@ -53,29 +53,7 @@
       # explicitly stating the work dir makes this job reusable by other
       # projects
       zuul_work_dir: src/opendev.org/openstack/nova
-      bindep_profile: test py36
-    timeout: 3600
-
-- job:
-    name: nova-tox-functional-py37
-    parent: openstack-tox-functional-py37
-    description: |
-      Run tox-based functional tests for the OpenStack Nova project
-      under cPython version 3.7 with Nova specific irrelevant-files list.
-      Uses tox with the ``functional-py37`` environment.
-
-      This job also provides a parent for other projects to run the nova
-      functional tests on their own changes.
-    required-projects:
-      # including nova here makes this job reusable by other projects
-      - openstack/nova
-      - openstack/placement
-    irrelevant-files: *functional-irrelevant-files
-    vars:
-      # explicitly stating the work dir makes this job reusable by other
-      # projects
-      zuul_work_dir: src/opendev.org/openstack/nova
-      bindep_profile: test py37
+      bindep_profile: test py38
     timeout: 3600
 
 - job:
@@ -377,7 +355,7 @@
         - nova-lvm
         - nova-multi-cell
         - nova-next
-        - nova-tox-functional-py36
+        - nova-tox-functional-py38
         - tempest-integrated-compute:
             # NOTE(gmann): Policies changes do not need to run all the
             # integration test jobs. Running only tempest and grenade
@@ -410,7 +388,7 @@
       jobs:
         - nova-grenade-multinode
         - nova-live-migration
-        - nova-tox-functional-py36
+        - nova-tox-functional-py38
         - nova-multi-cell
         - nova-next
         - tempest-integrated-compute:
@@ -452,9 +430,6 @@
             irrelevant-files: *dsvm-irrelevant-files
         - os-vif-ovs:
             irrelevant-files: *dsvm-irrelevant-files
-        # NOTE(mriedem): Consider moving nova-tox-functional-py37 to the
-        # check and gate queues once it's stable (like openstack-python37-jobs)
-        - nova-tox-functional-py37
         - devstack-platform-fedora-latest:
             irrelevant-files: *dsvm-irrelevant-files
         - devstack-platform-fedora-latest-virt-preview:
