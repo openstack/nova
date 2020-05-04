@@ -686,7 +686,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         with testtools.ExpectedException(exception.ImageUnacceptable):
             service.download(ctx, mock.sentinel.image_id)
 
-    @mock.patch('nova.image.glance.GlanceImageServiceV2._get_transfer_module')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2._get_transfer_method')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
     def test_download_direct_file_uri_v2(self, show_mock, get_tran_mock):
         self.flags(allowed_direct_url_schemes=['file'], group='glance')
@@ -712,11 +712,11 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
                                           mock.sentinel.image_id,
                                           include_locations=True)
         get_tran_mock.assert_called_once_with('file')
-        tran_mod.download.assert_called_once_with(ctx, mock.ANY,
-                                                  mock.sentinel.dst_path,
-                                                  mock.sentinel.loc_meta)
+        tran_mod.assert_called_once_with(ctx, mock.ANY,
+                                         mock.sentinel.dst_path,
+                                         mock.sentinel.loc_meta)
 
-    @mock.patch('nova.image.glance.GlanceImageServiceV2._get_transfer_module')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2._get_transfer_method')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
     @mock.patch('nova.image.glance.GlanceImageServiceV2._safe_fsync')
     def test_download_direct_exception_fallback_v2(
@@ -733,9 +733,9 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
                 }
             ]
         }
-        tran_mod = mock.MagicMock()
-        tran_mod.download.side_effect = Exception
-        get_tran_mock.return_value = tran_mod
+        tran_method = mock.MagicMock()
+        tran_method.side_effect = Exception
+        get_tran_mock.return_value = tran_method
         client = mock.MagicMock()
         client.call.return_value = fake_glance_response([1, 2, 3])
         ctx = mock.sentinel.ctx
@@ -752,9 +752,9 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
                                           mock.sentinel.image_id,
                                           include_locations=True)
         get_tran_mock.assert_called_once_with('file')
-        tran_mod.download.assert_called_once_with(ctx, mock.ANY,
-                                                  mock.sentinel.dst_path,
-                                                  mock.sentinel.loc_meta)
+        tran_method.assert_called_once_with(ctx, mock.ANY,
+                                            mock.sentinel.dst_path,
+                                            mock.sentinel.loc_meta)
         client.call.assert_called_once_with(
             ctx, 2, 'data', args=(mock.sentinel.image_id,))
         fsync_mock.assert_called_once_with(writer)
@@ -771,7 +771,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
                 ]
         )
 
-    @mock.patch('nova.image.glance.GlanceImageServiceV2._get_transfer_module')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2._get_transfer_method')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
     @mock.patch('nova.image.glance.GlanceImageServiceV2._safe_fsync')
     def test_download_direct_no_mod_fallback(
