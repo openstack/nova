@@ -53,7 +53,6 @@ MarkupSafe==1.0
 mccabe==0.6.0
 microversion-parse==0.2.1
 mock==3.0.0
-monotonic==1.4
 msgpack==0.5.6
 msgpack-python==0.5.6
 munch==2.2.0
