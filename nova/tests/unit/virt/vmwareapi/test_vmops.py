@@ -1117,6 +1117,7 @@ class VMwareVMOpsTestCase(test.TestCase):
 
     @mock.patch.object(vmops.VMwareVMOps, '_get_instance_metadata')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
+    @mock.patch.object(vmops.VMwareVMOps, '_clean_up_after_special_spawning')
     @mock.patch.object(vm_util, 'reconfigure_vm')
     @mock.patch.object(vm_util, 'get_vm_resize_spec',
                        return_value='fake-spec')
@@ -1124,6 +1125,7 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(cluster_util, 'update_cluster_drs_vm_override')
     def test_resize_vm_bigvm_upsize(self, fake_drs_override, fake_is_big_vm,
                                     fake_resize_spec, fake_reconfigure,
+                                    fake_cleanup_after_special_spawning,
                                     fake_get_extra_specs, fake_get_metadata):
         # new is big, new is big, old is not
         fake_is_big_vm.side_effect = [True, True, False]
@@ -1144,9 +1146,12 @@ class VMwareVMOpsTestCase(test.TestCase):
                                                   'vm-ref',
                                                   operation='add',
                                                   behavior=behavior)
+        expected = (self._context, int(flavor.memory_mb), flavor)
+        fake_cleanup_after_special_spawning.assert_called_once_with(*expected)
 
     @mock.patch.object(vmops.VMwareVMOps, '_get_instance_metadata')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
+    @mock.patch.object(vmops.VMwareVMOps, '_clean_up_after_special_spawning')
     @mock.patch.object(vm_util, 'reconfigure_vm')
     @mock.patch.object(vm_util, 'get_vm_resize_spec',
                        return_value='fake-spec')
@@ -1154,6 +1159,7 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(cluster_util, 'update_cluster_drs_vm_override')
     def test_resize_vm_bigvm_downsize(self, fake_drs_override, fake_is_big_vm,
                                       fake_resize_spec, fake_reconfigure,
+                                      fake_cleanup_after_special_spawning,
                                       fake_get_extra_specs, fake_get_metadata):
         # new is not big, new is not big, old is big
         fake_is_big_vm.side_effect = [False, False, True]
@@ -1172,6 +1178,8 @@ class VMwareVMOpsTestCase(test.TestCase):
                                                   self._cluster.obj,
                                                   'vm-ref',
                                                   operation='remove')
+        expected = (self._context, int(flavor.memory_mb), flavor)
+        fake_cleanup_after_special_spawning.assert_called_once_with(*expected)
 
     @mock.patch.object(vmops.VMwareVMOps, '_extend_virtual_disk')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')

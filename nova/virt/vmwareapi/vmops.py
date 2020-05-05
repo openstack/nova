@@ -1148,9 +1148,13 @@ class VMwareVMOps(object):
 
         vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
 
-        # clean up after special spawning behavior
-        if utils.vm_needs_special_spawning(int(instance.memory_mb),
-                                           instance.flavor):
+        self._clean_up_after_special_spawning(context, instance.memory_mb,
+                                              instance.flavor)
+
+    def _clean_up_after_special_spawning(self, context, instance_memory_mb,
+                                         instance_flavor):
+        if utils.vm_needs_special_spawning(int(instance_memory_mb),
+                                           instance_flavor):
             # we're using a child resource provider, so we don't have to change
             # the drivers' report-code to keep the CUSTOM_BIGVM resource, but
             # instead can independently add it or remove it on a cluster
@@ -1165,7 +1169,7 @@ class VMwareVMOps(object):
                 rp = parent_tree.data(rp_name)
             except ValueError:
                 LOG.warning('Could not find resource-provider %(rp)s for '
-                            'reserving resources after spawning a big VM.',
+                            'reserving resources after (re)starting a big VM.',
                             {'rp': rp_name})
             else:
                 # reserve the bigvm resource. this prohibits any further
@@ -1852,6 +1856,9 @@ class VMwareVMOps(object):
                         LOG.debug('DRS override was already deleted.',
                                   instance=instance)
                         ctx.reraise = False
+
+        self._clean_up_after_special_spawning(context, flavor.memory_mb,
+                                              flavor)
 
     def _resize_disk(self, instance, vm_ref, vmdk, flavor):
         extra_specs = self._get_extra_specs(instance.flavor,
