@@ -17,8 +17,6 @@
 
 """Utility methods for working with WSGI servers."""
 
-from __future__ import print_function
-
 import os.path
 import socket
 import ssl

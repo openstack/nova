@@ -11,8 +11,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 """Fixtures solely for functional tests."""
-from __future__ import absolute_import
-
 import fixtures
 from keystoneauth1 import adapter as ka
 from keystoneauth1 import session as ks

@@ -15,8 +15,6 @@
 
 """Implementation of an image service that uses Glance as the backend."""
 
-from __future__ import absolute_import
-
 import copy
 import inspect
 import itertools

@@ -42,8 +42,6 @@ Run like:
 
 """
 
-from __future__ import print_function
-
 import datetime
 import glob
 import os

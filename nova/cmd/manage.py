@@ -21,8 +21,6 @@
   CLI interface for nova management.
 """
 
-from __future__ import print_function
-
 import collections
 import functools
 import re
