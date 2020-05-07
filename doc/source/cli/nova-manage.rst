@@ -1137,9 +1137,11 @@ that port. It is possible that the missing allocation cannot be created
 either due to not having enough resource inventory on the host the instance
 resides on or because more than one resource provider could fulfill the
 request. In this case the instance needs to be manually deleted or the
-port needs to be detached.  When nova `supports migrating instances
-with guaranteed bandwidth ports`_, migration will heal missing allocations
+port needs to be detached. When nova `supports migrating instances
+with guaranteed bandwidth ports`__, migration will heal missing allocations
 for these instances.
+
+.. __: https://specs.openstack.org/openstack/nova-specs/specs/train/approved/support-move-ops-with-qos-ports.html
 
 Before the allocations for the ports are persisted in placement nova-manage
 tries to update each port in neutron to refer to the resource provider UUID
@@ -1150,46 +1152,72 @@ then the process stops with exit code ``7`` and the admin needs to do the
 rollback in neutron manually according to the description in the exit code
 section.
 
-.. _supports migrating instances with guaranteed bandwidth ports: https://specs.openstack.org/openstack/nova-specs/specs/train/approved/support-move-ops-with-qos-ports.html
-
 There is also a special case handled for instances that *do* have
 allocations created before Placement API microversion 1.8 where project_id
 and user_id values were required. For those types of allocations, the
 project_id and user_id are updated using the values from the instance.
-
-Specify ``--max-count`` to control the maximum number of instances to
-process. If not specified, all instances in each cell will be mapped in
-batches of 50. If you have a large number of instances, consider
-specifying a custom value and run the command until it exits with 0 or 4.
-
-Specify ``--verbose`` to get detailed progress output during execution.
-
-Specify ``--dry-run`` to print output but not commit any changes. The
-return code should be 4. *(Since 20.0.0 Train)*
-
-Specify ``--instance`` to process a specific instance given its UUID. If
-specified the ``--max-count`` option has no effect.
-*(Since 20.0.0 Train)*
-
-Specify ``--skip-port-allocations`` to skip the healing of the resource
-allocations of bound ports, e.g. healing bandwidth resource allocation for
-ports having minimum QoS policy rules attached. If your deployment does
-not use such a feature then the performance impact of querying neutron
-ports for each instance can be avoided with this flag.
-*(Since 20.0.0 Train)*
-
-Specify ``--cell`` to  process heal allocations within a specific cell.
-This is mutually exclusive with the ``--instance`` option.
-
-Specify ``--force`` to forcefully heal single instance allocation. This
-option needs to be passed with ``--instance``.
 
 This command requires that the
 :oslo.config:option:`api_database.connection` and
 :oslo.config:group:`placement` configuration options are set. Placement API
 >= 1.28 is required.
 
-**Return Codes**
+.. versionadded:: 18.0.0 (Rocky)
+
+.. versionchanged:: 20.0.0 (Train)
+
+    Added :option:`--dry-run`, :option:`--instance`, and
+    :option:`--skip-port-allocations` options.
+
+.. versionchanged:: 21.0.0 (Ussuri)
+
+    Added :option:`--cell` option.
+
+.. versionchanged:: 22.0.0 (Victoria)
+
+    Added :option:`--force` option.
+
+.. rubric:: Options
+
+.. option:: --max-count <max_count>
+
+    Maximum number of instances to process. If not specified, all instances in
+    each cell will be mapped in batches of 50. If you have a large number of
+    instances, consider specifying a custom value and run the command until it
+    exits with 0 or 4.
+
+.. option:: --verbose
+
+    Provide verbose output during execution.
+
+.. option:: --dry-run
+
+    Runs the command and prints output but does not commit any changes. The
+    return code should be 4.
+
+.. option::  --instance <instance_uuid>
+
+    UUID of a specific instance to process. If specified :option:`--max-count`
+    has no effect. Mutually exclusive with :option:`--cell`.
+
+.. option:: --skip-port-allocations
+
+    Skip the healing of the resource allocations of bound ports. E.g. healing
+    bandwidth resource allocation for ports having minimum QoS policy rules
+    attached. If your deployment does not use such a feature then the
+    performance impact of querying neutron ports for each instance can be
+    avoided with this flag.
+
+.. option:: --cell <cell_uuid>
+
+    Heal allocations within a specific cell. Mutually exclusive with
+    :option:`--instance`.
+
+.. option:: --force
+
+    Force heal allocations. Requires the :option:`--instance` argument.
+
+.. rubric:: Return codes
 
 .. list-table::
    :widths: 20 80
@@ -1200,7 +1228,8 @@ This command requires that the
    * - 0
      - Command completed successfully and allocations were created.
    * - 1
-     - ``--max-count`` was reached and there are more instances to process.
+     - :option:`--max-count` was reached and there are more instances to
+       process.
    * - 2
      - Unable to find a compute node record for a given instance.
    * - 3
@@ -1240,16 +1269,24 @@ in the Placement service. Requires the :oslo.config:group:`api_database`
 and :oslo.config:group:`placement` sections of the nova configuration file
 to be populated.
 
-Specify ``--verbose`` to get detailed progress output during execution.
+Specify :option:`--verbose` to get detailed progress output during execution.
 
-.. note:: Depending on the size of your deployment and the number of
+.. note::
+
+    Depending on the size of your deployment and the number of
     compute hosts in aggregates, this command could cause a non-negligible
     amount of traffic to the placement service and therefore is
     recommended to be run during maintenance windows.
 
-.. versionadded:: Rocky
+.. versionadded:: 18.0.0 (Rocky)
 
-**Return Codes**
+.. rubric:: Options
+
+.. option:: --verbose
+
+    Provide verbose output during execution.
+
+.. rubric:: Return codes
 
 .. list-table::
    :widths: 20 80
@@ -1286,20 +1323,31 @@ placement audit
 
 Iterates over all the Resource Providers (or just one if you provide the
 UUID) and then verifies if the compute allocations are either related to
-an existing instance or a migration UUID.
-If not, it will tell which allocations are orphaned.
-
-You can also ask to delete all the orphaned allocations by specifying
-``-delete``.
-
-Specify ``--verbose`` to get detailed progress output during execution.
+an existing instance or a migration UUID. If not, it will tell which
+allocations are orphaned.
 
 This command requires that the
 :oslo.config:option:`api_database.connection` and
 :oslo.config:group:`placement` configuration options are set. Placement API
 >= 1.14 is required.
 
-**Return Codes**
+.. versionadded:: 21.0.0 (Ussuri)
+
+.. rubric:: Options
+
+.. option:: --verbose
+
+    Provide verbose output during execution.
+
+.. option:: --resource_provider <provider_uuid>
+
+    UUID of a specific resource provider to verify.
+
+.. option:: --delete
+
+    Deletes orphaned allocations that were found.
+
+.. rubric:: Return codes
 
 .. list-table::
    :widths: 20 80
