@@ -2990,12 +2990,13 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                                aggregate, 'fake_host')
         self.assertIn('aggregate in error', str(ex))
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_remove_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_add_host')
     def test_remove_host_from_aggregate_error(
-            self, mock_add_host, mock_remove_host):
+            self, mock_add_host, mock_remove_host, mock_get_all_by_host):
         # Ensure we can remove a host from an aggregate even if in error.
         values = _create_service_entries(self.context)
         fake_zone = list(values.keys())[0]
@@ -3008,6 +3009,10 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                                            aggr.id,
                                            metadata)
         for aggregate_host in values[fake_zone]:
+            mock_get_all_by_host.return_value = objects.ComputeNodeList(
+                objects=[objects.ComputeNode(
+                    host=aggregate_host,
+                    hypervisor_hostname=aggregate_host)])
             aggr = self.api.add_host_to_aggregate(self.context,
                                                   aggr.id, aggregate_host)
         # let's mock the fact that the aggregate is in error!

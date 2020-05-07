@@ -11603,14 +11603,22 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertRaises(exception.AggregateNotFound,
                           self.api.delete_aggregate, self.context, aggr.id)
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_add_host')
-    def test_check_az_for_aggregate(self, mock_add_host):
+    def test_check_az_for_aggregate(self, mock_add_host, mock_get_all_by_host):
         # Ensure all conflict hosts can be returned
         values = _create_service_entries(self.context)
         fake_zone = values[0][0]
         fake_host1 = values[0][1][0]
         fake_host2 = values[0][1][1]
+        mock_get_all_by_host.return_value = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(
+                host=fake_host1,
+                hypervisor_hostname=fake_host1),
+                     objects.ComputeNode(
+                host=fake_host2,
+                hypervisor_hostname=fake_host2)])
         aggr1 = self._init_aggregate_with_host(None, 'fake_aggregate1',
                                                fake_zone, fake_host1)
         aggr1 = self._init_aggregate_with_host(aggr1, None, None, fake_host2)
@@ -11638,15 +11646,20 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertEqual(msg.event_type,
                          'aggregate.updateprop.end')
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_add_host')
-    def test_update_aggregate_no_az(self, mock_add_host):
+    def test_update_aggregate_no_az(self, mock_add_host, mock_get_all_by_host):
         # Ensure metadata without availability zone can be
         # updated,even the aggregate contains hosts belong
         # to another availability zone
         values = _create_service_entries(self.context)
         fake_zone = values[0][0]
         fake_host = values[0][1][0]
+        mock_get_all_by_host.return_value = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(
+                host=fake_host,
+                hypervisor_hostname=fake_host)])
         self._init_aggregate_with_host(None, 'fake_aggregate1',
                                        fake_zone, fake_host)
         aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
@@ -11662,15 +11675,21 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertEqual(msg.event_type,
                          'aggregate.updateprop.end')
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_add_host')
-    def test_update_aggregate_az_change(self, mock_add_host):
+    def test_update_aggregate_az_change(self, mock_add_host,
+                                        mock_get_all_by_host):
         # Ensure availability zone can be updated,
         # when the aggregate is the only one with
         # availability zone
         values = _create_service_entries(self.context)
         fake_zone = values[0][0]
         fake_host = values[0][1][0]
+        mock_get_all_by_host.return_value = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(
+                host=fake_host,
+                hypervisor_hostname=fake_host)])
         aggr1 = self._init_aggregate_with_host(None, 'fake_aggregate1',
                                                fake_zone, fake_host)
         self._init_aggregate_with_host(None, 'fake_aggregate2', None,
@@ -11686,15 +11705,21 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertEqual(msg.event_type,
                          'aggregate.updatemetadata.end')
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_add_host')
-    def test_update_aggregate_az_fails(self, mock_add_host):
+    def test_update_aggregate_az_fails(self, mock_add_host,
+                                       mock_get_all_by_host):
         # Ensure aggregate's availability zone can't be updated,
         # when aggregate has hosts in other availability zone
         fake_notifier.NOTIFICATIONS = []
         values = _create_service_entries(self.context)
         fake_zone = values[0][0]
         fake_host = values[0][1][0]
+        mock_get_all_by_host.return_value = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(
+                host=fake_host,
+                hypervisor_hostname=fake_host)])
         self._init_aggregate_with_host(None, 'fake_aggregate1',
                                        fake_zone, fake_host)
         aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
@@ -11704,6 +11729,10 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                           self.api.update_aggregate,
                           self.context, aggr2.id, metadata)
         fake_host2 = values[0][1][1]
+        mock_get_all_by_host.return_value = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(
+                host=fake_host2,
+                hypervisor_hostname=fake_host2)])
         aggr3 = self._init_aggregate_with_host(None, 'fake_aggregate3',
                                                None, fake_host2)
         metadata = {'availability_zone': fake_zone}
@@ -11721,14 +11750,20 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                           self.api.update_aggregate, self.context,
                           aggr4.id, metadata)
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_add_host')
-    def test_update_aggregate_az_fails_with_nova_az(self, mock_add_host):
+    def test_update_aggregate_az_fails_with_nova_az(self, mock_add_host,
+                                                    mock_get_all_by_host):
         # Ensure aggregate's availability zone can't be updated,
         # when aggregate has hosts in other availability zone
         fake_notifier.NOTIFICATIONS = []
         values = _create_service_entries(self.context)
         fake_host = values[0][1][0]
+        mock_get_all_by_host.return_value = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(
+                host=fake_host,
+                hypervisor_hostname=fake_host)])
         self._init_aggregate_with_host(None, 'fake_aggregate1',
                                        CONF.default_availability_zone,
                                        fake_host)
@@ -11783,16 +11818,22 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                         matchers.DictMatches({'availability_zone': 'fake_zone',
                         'foo_key2': 'foo_value2'}))
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_add_host')
     @mock.patch('nova.compute.utils.notify_about_aggregate_action')
-    def test_update_aggregate_metadata_no_az(self, mock_notify, mock_add_host):
+    def test_update_aggregate_metadata_no_az(self, mock_notify, mock_add_host,
+                                             mock_get_all_by_host):
         # Ensure metadata without availability zone can be
         # updated,even the aggregate contains hosts belong
         # to another availability zone
         values = _create_service_entries(self.context)
         fake_zone = values[0][0]
         fake_host = values[0][1][0]
+        mock_get_all_by_host.return_value = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(
+                host=fake_host,
+                hypervisor_hostname=fake_host)])
         self._init_aggregate_with_host(None, 'fake_aggregate1',
                                        fake_zone, fake_host)
         aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
@@ -11816,15 +11857,21 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertThat(aggr2.metadata,
                         matchers.DictMatches({'foo_key2': 'foo_value3'}))
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_add_host')
-    def test_update_aggregate_metadata_az_change(self, mock_add_host):
+    def test_update_aggregate_metadata_az_change(self, mock_add_host,
+                                                 mock_get_all_by_host):
         # Ensure availability zone can be updated,
         # when the aggregate is the only one with
         # availability zone
         values = _create_service_entries(self.context)
         fake_zone = values[0][0]
         fake_host = values[0][1][0]
+        mock_get_all_by_host.return_value = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(
+                host=fake_host,
+                hypervisor_hostname=fake_host)])
         aggr1 = self._init_aggregate_with_host(None, 'fake_aggregate1',
                                                fake_zone, fake_host)
         self._init_aggregate_with_host(None, 'fake_aggregate2', None,
@@ -11856,15 +11903,21 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertThat(aggr.metadata, matchers.DictMatches(
             {'availability_zone': 'new_fake_zone', 'foo_key1': 'foo_value1'}))
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_add_host')
-    def test_update_aggregate_metadata_az_fails(self, mock_add_host):
+    def test_update_aggregate_metadata_az_fails(self, mock_add_host,
+                                                mock_get_all_by_host):
         # Ensure aggregate's availability zone can't be updated,
         # when aggregate has hosts in other availability zone
         fake_notifier.NOTIFICATIONS = []
         values = _create_service_entries(self.context)
         fake_zone = values[0][0]
         fake_host = values[0][1][0]
+        mock_get_all_by_host.return_value = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(
+                host=fake_host,
+                hypervisor_hostname=fake_host)])
         self._init_aggregate_with_host(None, 'fake_aggregate1',
                                        fake_zone, fake_host)
         aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
@@ -11937,33 +11990,46 @@ class ComputeAPIAggrTestCase(BaseTestCase):
             mock.call(context=self.context, aggregate=AggregateIdMatcher(aggr),
                       action='delete', phase='end')])
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_remove_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_add_host')
-    def test_delete_non_empty_aggregate(self, mock_add_host, mock_remove_host):
+    def test_delete_non_empty_aggregate(self, mock_add_host, mock_remove_host,
+                                        mock_get_all_by_host):
         # Ensure InvalidAggregateAction is raised when non empty aggregate.
         _create_service_entries(self.context,
                                 [['fake_availability_zone', ['fake_host']]])
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          'fake_availability_zone')
+        mock_get_all_by_host.return_value = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(
+                host='fake_host',
+                hypervisor_hostname='fake_host')])
+
         self.api.add_host_to_aggregate(self.context, aggr.id, 'fake_host')
         self.assertRaises(exception.InvalidAggregateActionDelete,
                           self.api.delete_aggregate, self.context, aggr.id)
         mock_remove_host.assert_not_called()
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_add_host')
     @mock.patch('nova.compute.utils.notify_about_aggregate_action')
     @mock.patch.object(availability_zones,
                        'update_host_availability_zone_cache')
-    def test_add_host_to_aggregate(self, mock_az, mock_notify, mock_add_host):
+    def test_add_host_to_aggregate(self, mock_az, mock_notify, mock_add_host,
+                                   mock_get_all_by_host):
         # Ensure we can add a host to an aggregate.
         values = _create_service_entries(self.context)
         fake_zone = values[0][0]
         fake_host = values[0][1][0]
         aggr = self.api.create_aggregate(self.context,
                                          'fake_aggregate', fake_zone)
+        mock_get_all_by_host.return_value = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(
+                host=fake_host,
+                hypervisor_hostname=fake_host)])
 
         def fake_add_aggregate_host(*args, **kwargs):
             hosts = kwargs["aggregate"].hosts
@@ -11993,12 +12059,18 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         mock_add_host.assert_called_once_with(
             self.context, aggr.uuid, host_name=fake_host)
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_add_host')
-    def test_add_host_to_aggr_with_no_az(self, mock_add_host):
+    def test_add_host_to_aggr_with_no_az(self, mock_add_host,
+                                         mock_get_all_by_host):
         values = _create_service_entries(self.context)
         fake_zone = values[0][0]
         fake_host = values[0][1][0]
+        mock_get_all_by_host.return_value = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(
+                host=fake_host,
+                hypervisor_hostname=fake_host)])
         aggr = self.api.create_aggregate(self.context,
                                          'fake_aggregate', fake_zone)
         aggr = self.api.add_host_to_aggregate(self.context, aggr.id,
@@ -12011,13 +12083,18 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertIn(fake_host, aggr.hosts)
         self.assertIn(fake_host, aggr_no_az.hosts)
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_add_host')
-    def test_add_host_to_multi_az(self, mock_add_host):
+    def test_add_host_to_multi_az(self, mock_add_host, mock_get_all_by_host):
         # Ensure we can't add a host to different availability zone
         values = _create_service_entries(self.context)
         fake_zone = values[0][0]
         fake_host = values[0][1][0]
+        mock_get_all_by_host.return_value = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(
+                host=fake_host,
+                hypervisor_hostname=fake_host)])
         aggr = self.api.create_aggregate(self.context,
                                          'fake_aggregate', fake_zone)
         aggr = self.api.add_host_to_aggregate(self.context,
@@ -12031,13 +12108,19 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                           self.context, aggr2.id, fake_host)
         self.assertEqual(1, mock_add_host.call_count)
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_add_host')
-    def test_add_host_to_multi_az_with_nova_agg(self, mock_add_host):
+    def test_add_host_to_multi_az_with_nova_agg(self, mock_add_host,
+                                                mock_get_all_by_host):
         # Ensure we can't add a host if already existing in an agg with AZ set
         #  to default
         values = _create_service_entries(self.context)
         fake_host = values[0][1][0]
+        mock_get_all_by_host.return_value = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(
+                host=fake_host,
+                hypervisor_hostname=fake_host)])
         aggr = self.api.create_aggregate(self.context,
                                          'fake_aggregate',
                                          CONF.default_availability_zone)
@@ -12052,15 +12135,21 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                           self.context, aggr2.id, fake_host)
         self.assertEqual(1, mock_add_host.call_count)
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_add_host')
-    def test_add_host_to_aggregate_multiple(self, mock_add_host):
+    def test_add_host_to_aggregate_multiple(self, mock_add_host,
+                                            mock_get_all_by_host):
         # Ensure we can add multiple hosts to an aggregate.
         values = _create_service_entries(self.context)
         fake_zone = values[0][0]
         aggr = self.api.create_aggregate(self.context,
                                          'fake_aggregate', fake_zone)
         for host in values[0][1]:
+            mock_get_all_by_host.return_value = objects.ComputeNodeList(
+                objects=[objects.ComputeNode(
+                    host=host,
+                    hypervisor_hostname=host)])
             aggr = self.api.add_host_to_aggregate(self.context,
                                                   aggr.id, host)
         self.assertEqual(len(aggr.hosts), len(values[0][1]))
@@ -12119,6 +12208,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                           self.context, aggr.id, 'invalid_host')
         mock_add_host.assert_not_called()
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_remove_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -12127,13 +12217,18 @@ class ComputeAPIAggrTestCase(BaseTestCase):
     @mock.patch.object(availability_zones,
                        'update_host_availability_zone_cache')
     def test_remove_host_from_aggregate_active(
-            self, mock_az, mock_notify, mock_add_host, mock_remove_host):
+            self, mock_az, mock_notify, mock_add_host, mock_remove_host,
+            mock_get_all_by_host):
         # Ensure we can remove a host from an aggregate.
         values = _create_service_entries(self.context)
         fake_zone = values[0][0]
         aggr = self.api.create_aggregate(self.context,
                                          'fake_aggregate', fake_zone)
         for host in values[0][1]:
+            mock_get_all_by_host.return_value = objects.ComputeNodeList(
+                objects=[objects.ComputeNode(
+                    host=host,
+                    hypervisor_hostname=host)])
             aggr = self.api.add_host_to_aggregate(self.context,
                                                   aggr.id, host)
         host_to_remove = values[0][1][0]
@@ -12147,6 +12242,11 @@ class ComputeAPIAggrTestCase(BaseTestCase):
 
         fake_notifier.NOTIFICATIONS = []
         mock_notify.reset_mock()
+        mock_get_all_by_host.reset_mock()
+        mock_get_all_by_host.return_value = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(
+                host=host_to_remove,
+                hypervisor_hostname=host_to_remove)])
         expected = self.api.remove_host_from_aggregate(self.context,
                                                        aggr.id,
                                                        host_to_remove)
@@ -12181,6 +12281,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                           self.context, aggr.id, 'invalid_host')
         mock_remove_host.assert_not_called()
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch('nova.objects.Service.get_by_compute_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_remove_host')
@@ -12191,10 +12292,14 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                        'update_host_availability_zone_cache')
     def test_remove_host_from_aggregate_no_host_mapping_service_exists(
             self, mock_az, mock_notify, mock_add_host, mock_rm_host,
-            mock_get_service):
+            mock_get_service, mock_get_all_by_host):
         # Ensure ComputeHostNotFound is not raised when adding a host with a
         # hostname that doesn't have host mapping but has a service entry.
         fake_host = 'fake_host'
+        mock_get_all_by_host.return_value = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(
+                host=fake_host,
+                hypervisor_hostname=fake_host)])
         # This is called 4 times, during addition to aggregate for cell0 and
         # cell1, and during deletion for cell0 and cell1 as well
         mock_get_service.side_effect = [
@@ -12258,14 +12363,20 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertEqual('foo_value1', test_agg_meta['foo_key1'])
         self.assertEqual('foo_value2', test_agg_meta['foo_key2'])
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_add_host')
-    def test_aggregate_list_with_hosts(self, mock_add_host):
+    def test_aggregate_list_with_hosts(self, mock_add_host,
+                                       mock_get_all_by_host):
         values = _create_service_entries(self.context)
         fake_zone = values[0][0]
         host_aggregate = self.api.create_aggregate(self.context,
                                                    'fake_aggregate',
                                                    fake_zone)
+        mock_get_all_by_host.return_value = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(
+                host=values[0][1][0],
+                hypervisor_hostname=values[0][1][0])])
         self.api.add_host_to_aggregate(self.context, host_aggregate.id,
                                        values[0][1][0])
         aggregate_list = self.api.get_aggregate_list(self.context)
@@ -12337,6 +12448,7 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
             self.api.delete_aggregate(self.context, 1)
         delete_aggregate.assert_called_once_with(self.context, agg)
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_add_host')
     @mock.patch('nova.compute.utils.notify_about_aggregate_action')
@@ -12344,11 +12456,16 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
     @mock.patch('nova.scheduler.client.query.SchedulerQueryClient.'
                 'update_aggregates')
     def test_add_host_to_aggregate(self, update_aggregates, mock_add_agg,
-                                   mock_notify, mock_add_host):
+                                   mock_notify, mock_add_host,
+                                   mock_get_all_by_host):
         self.api.is_safe_to_update_az = mock.Mock()
         self.api._update_az_cache_for_host = mock.Mock()
         agg = objects.Aggregate(name='fake', metadata={}, uuid=uuids.agg)
         agg.add_host = mock.Mock()
+        mock_get_all_by_host.return_value = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(
+                host='fakehost',
+                hypervisor_hostname='fakehost')])
         with test.nested(
                 mock.patch.object(objects.Service, 'get_by_compute_host',
                                   return_value=objects.Service(
@@ -12363,6 +12480,7 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
         mock_add_host.assert_called_once_with(
             self.context, agg.uuid, host_name='fakehost')
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_remove_host')
     @mock.patch('nova.compute.utils.notify_about_aggregate_action')
@@ -12371,10 +12489,15 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
                 'update_aggregates')
     def test_remove_host_from_aggregate(self, update_aggregates,
                                         mock_remove_agg, mock_notify,
-                                        mock_remove_host):
+                                        mock_remove_host,
+                                        mock_get_all_by_host):
         self.api._update_az_cache_for_host = mock.Mock()
         agg = objects.Aggregate(name='fake', metadata={}, uuid=uuids.agg)
         agg.delete_host = mock.Mock()
+        mock_get_all_by_host.return_value = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(
+                host='fakehost',
+                hypervisor_hostname='fakehost')])
         with test.nested(
                 mock.patch.object(objects.Service, 'get_by_compute_host'),
                 mock.patch.object(objects.Aggregate, 'get_by_id',

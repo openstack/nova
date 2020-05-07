@@ -592,12 +592,17 @@ class ComputeAggregateAPITestCase(test.TestCase):
         mock_service_get_by_compute_host.return_value = (
             objects.Service(host='fake-host'))
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_add_host')
     @mock.patch.object(compute.LOG, 'warning')
     def test_aggregate_add_host_placement_missing_provider(
-            self, mock_log, mock_pc_add_host):
+            self, mock_log, mock_pc_add_host, mock_get_all_by_host):
         hostname = 'fake-host'
+        mock_get_all_by_host.return_value = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(
+                     host=hostname,
+                     hypervisor_hostname=hostname)])
         err = exception.ResourceProviderNotFound(name_or_uuid=hostname)
         mock_pc_add_host.side_effect = err
         aggregate = self.aggregate_api.create_aggregate(
@@ -610,10 +615,16 @@ class ComputeAggregateAPITestCase(test.TestCase):
                "nova-manage placement sync_aggregates.")
         mock_log.assert_called_with(msg, hostname, err)
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_add_host')
-    def test_aggregate_add_host_bad_placement(self, mock_pc_add_host):
+    def test_aggregate_add_host_bad_placement(self, mock_pc_add_host,
+                                              mock_get_all_by_host):
         hostname = 'fake-host'
+        mock_get_all_by_host.return_value = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(
+                     host=hostname,
+                     hypervisor_hostname=hostname)])
         mock_pc_add_host.side_effect = exception.PlacementAPIConnectFailure
         aggregate = self.aggregate_api.create_aggregate(
             self.ctxt, 'aggregate', None)
@@ -624,12 +635,18 @@ class ComputeAggregateAPITestCase(test.TestCase):
         mock_pc_add_host.assert_called_once_with(
             self.ctxt, agg_uuid, host_name=hostname)
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch('nova.objects.Aggregate.delete_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_remove_host')
     def test_aggregate_remove_host_bad_placement(
-            self, mock_pc_remove_host, mock_agg_obj_delete_host):
+            self, mock_pc_remove_host, mock_agg_obj_delete_host,
+            mock_get_all_by_host):
         hostname = 'fake-host'
+        mock_get_all_by_host.return_value = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(
+                host=hostname,
+                hypervisor_hostname=hostname)])
         mock_pc_remove_host.side_effect = exception.PlacementAPIConnectFailure
         aggregate = self.aggregate_api.create_aggregate(
             self.ctxt, 'aggregate', None)
@@ -643,13 +660,19 @@ class ComputeAggregateAPITestCase(test.TestCase):
         # should be tried first and failed with a server failure.
         mock_agg_obj_delete_host.assert_not_called()
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
     @mock.patch('nova.objects.Aggregate.delete_host')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_remove_host')
     @mock.patch.object(compute.LOG, 'warning')
     def test_aggregate_remove_host_placement_missing_provider(
-            self, mock_log, mock_pc_remove_host, mock_agg_obj_delete_host):
+            self, mock_log, mock_pc_remove_host, mock_agg_obj_delete_host,
+            mock_get_all_by_host):
         hostname = 'fake-host'
+        mock_get_all_by_host.return_value = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(
+                host=hostname,
+                hypervisor_hostname=hostname)])
         err = exception.ResourceProviderNotFound(name_or_uuid=hostname)
         mock_pc_remove_host.side_effect = err
         aggregate = self.aggregate_api.create_aggregate(
