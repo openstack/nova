@@ -240,8 +240,17 @@ class VGPUTests(VGPUTestBase):
             host=self.compute1.host)
         # Asking to multicreate two instances, each of them asking for 1 vGPU
         body['min_count'] = 2
-        server = self.api.post_server({'server': body})
-        self._wait_for_state_change(server, 'ACTIVE')
+        # Asking to get the reservation ID so we find all the servers from it
+        body['return_reservation_id'] = True
+        # We ask for two servers but the API only returns the first.
+        response = self.api.post_server({'server': body})
+        self.assertIn('reservation_id', response)
+        reservation_id = response['reservation_id']
+        # Lookup servers created by the request
+        servers = self.api.get_servers(detail=True,
+                search_opts={'reservation_id': reservation_id})
+        for server in servers:
+            self._wait_for_state_change(server, 'ACTIVE')
 
         # Let's verify we created two mediated devices and we have a total of
         # 2 vGPUs
