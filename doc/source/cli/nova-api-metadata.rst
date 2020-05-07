@@ -22,7 +22,13 @@ so there are some considerations about using this in a
 Options
 =======
 
-**General options**
+.. rubric:: General options
+
+.. include:: opts/common.rst
+
+.. rubric:: Debugger options
+
+.. include:: opts/debugger.rst
 
 Files
 =====

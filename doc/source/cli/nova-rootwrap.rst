@@ -9,7 +9,7 @@ Synopsis
 
 ::
 
-  nova-rootwrap [<options>...]
+  nova-rootwrap CONFIG_FILE COMMMAND
 
 Description
 ===========
@@ -34,11 +34,6 @@ To make allowed commands node-specific, your packaging should only install
 
    :program:`nova-rootwrap` is being slowly deprecated and replaced by
    ``oslo.privsep``, and will eventually be removed.
-
-Options
-=======
-
-**General options**
 
 Files
 =====
