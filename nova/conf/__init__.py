@@ -52,7 +52,6 @@ from nova.conf import placement
 from nova.conf import powervm
 from nova.conf import quota
 from nova.conf import rdp
-from nova.conf import remote_debug
 from nova.conf import rpc
 from nova.conf import scheduler
 from nova.conf import serial_console
@@ -119,5 +118,3 @@ workarounds.register_opts(CONF)
 wsgi.register_opts(CONF)
 xenserver.register_opts(CONF)
 zvm.register_opts(CONF)
-
-remote_debug.register_cli_opts(CONF)

@@ -27,6 +27,7 @@ from oslo_reports import guru_meditation_report as gmr
 from oslo_reports import opts as gmr_opts
 
 import nova.conf
+from nova.conf import remote_debug
 from nova import config
 from nova import exception
 from nova import objects
@@ -34,6 +35,7 @@ from nova import service
 from nova import version
 
 CONF = nova.conf.CONF
+remote_debug.register_cli_opts(CONF)
 
 
 def main():

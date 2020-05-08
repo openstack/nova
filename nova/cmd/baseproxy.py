@@ -26,13 +26,16 @@ from oslo_reports import opts as gmr_opts
 
 import nova.conf
 from nova.conf import novnc
+from nova.conf import remote_debug
 from nova.console import websocketproxy
 from nova import objects
 from nova import version
 
 
 CONF = nova.conf.CONF
+remote_debug.register_cli_opts(CONF)
 novnc.register_cli_opts(CONF)
+
 gmr_opts.set_defaults(CONF)
 objects.register_all()
 
