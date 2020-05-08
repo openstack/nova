@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 
 from nova.compute import vm_states
@@ -154,3 +155,41 @@ class InstanceObjectTestCase(test.TestCase):
         self.assertEqual(0, counts['instances'])
         self.assertEqual(0, counts['cores'])
         self.assertEqual(0, counts['ram'])
+
+    def test_numa_topology_online_migration(self):
+        """Ensure legacy NUMA topology objects are reserialized to o.vo's."""
+        instance = self._create_instance(host='fake-host', node='fake-node')
+
+        legacy_topology = jsonutils.dumps({
+            "cells": [
+                {
+                    "id": 0,
+                    "cpus": "0-3",
+                    "mem": {"total": 512},
+                    "pagesize": 4
+                },
+                {
+                    "id": 1,
+                    "cpus": "4,5,6,7",
+                    "mem": {"total": 512},
+                    "pagesize": 4
+                }
+            ]
+        })
+        db.instance_extra_update_by_uuid(
+            self.context, instance.uuid, {'numa_topology': legacy_topology})
+
+        instance_db = db.instance_extra_get_by_instance_uuid(
+            self.context, instance.uuid, ['numa_topology'])
+        self.assertEqual(legacy_topology, instance_db['numa_topology'])
+        self.assertNotIn('nova_object.name', instance_db['numa_topology'])
+
+        # trigger online migration
+        objects.InstanceList.get_by_host_and_node(
+            self.context, 'fake-host', 'fake-node',
+            expected_attrs=['numa_topology'])
+
+        instance_db = db.instance_extra_get_by_instance_uuid(
+            self.context, instance.uuid, ['numa_topology'])
+        self.assertNotEqual(legacy_topology, instance_db['numa_topology'])
+        self.assertIn('nova_object.name', instance_db['numa_topology'])

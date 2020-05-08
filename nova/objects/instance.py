@@ -901,9 +901,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         if db_topology is None:
             self.numa_topology = None
         elif db_topology is not _NO_DATA_SENTINEL:
-            self.numa_topology = \
-                objects.InstanceNUMATopology.obj_from_db_obj(self.uuid,
-                                                             db_topology)
+            self.numa_topology = objects.InstanceNUMATopology.obj_from_db_obj(
+                self._context, self.uuid, db_topology)
         else:
             try:
                 self.numa_topology = \
