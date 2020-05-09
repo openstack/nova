@@ -18,7 +18,6 @@ import copy
 
 from oslo_config import cfg
 from oslo_log import log as logging
-import six
 
 from nova import exception
 from nova.objects import fields
@@ -409,10 +408,6 @@ class PciDeviceStats(object):
 
     def __eq__(self, other):
         return self.pools == other.pools
-
-    if six.PY2:
-        def __ne__(self, other):
-            return not (self == other)
 
     def to_device_pools_obj(self):
         """Return the contents of the pools as a PciDevicePoolList object."""

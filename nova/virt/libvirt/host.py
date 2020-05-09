@@ -41,12 +41,10 @@ from eventlet import greenthread
 from eventlet import patcher
 from eventlet import tpool
 from oslo_log import log as logging
-from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import importutils
 from oslo_utils import units
 from oslo_utils import versionutils
-import six
 
 from nova.compute import utils as compute_utils
 import nova.conf
@@ -70,7 +68,7 @@ LOG = logging.getLogger(__name__)
 
 native_socket = patcher.original('socket')
 native_threading = patcher.original("threading")
-native_Queue = patcher.original("Queue" if six.PY2 else "queue")
+native_Queue = patcher.original("queue")
 
 CONF = nova.conf.CONF
 
@@ -720,7 +718,7 @@ class Host(object):
                     self._caps.host.cpu.model is not None):
                 try:
                     xml_str = self._caps.host.cpu.to_xml()
-                    if six.PY3 and isinstance(xml_str, six.binary_type):
+                    if isinstance(xml_str, bytes):
                         xml_str = xml_str.decode('utf-8')
                     features = self.get_connection().baselineCPU(
                         [xml_str],
@@ -1143,8 +1141,6 @@ class Host(object):
 
         :returns: an instance of Guest
         """
-        if six.PY2:
-            xml = encodeutils.safe_encode(xml)
         domain = self.get_connection().defineXML(xml)
         return libvirt_guest.Guest(domain)
 

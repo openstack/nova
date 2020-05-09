@@ -99,12 +99,9 @@ e6fCXWECgYEAqgpGvva5kJ1ISgNwnJbwiNw0sOT9BMOsdNZBElf0kJIIy6FMPvap
         self.assertIsInstance(enc, bytes)
         # Comparison between bytes and str raises a TypeError
         # when using python3 -bb
-        if six.PY2:
-            self.assertNotEqual(enc, self.text)
         result = self._ssh_decrypt_text(self.prikey, enc)
         self.assertIsInstance(result, bytes)
-        if six.PY3:
-            result = result.decode('utf-8')
+        result = result.decode('utf-8')
         self.assertEqual(result, self.text)
 
     def test_ssh_encrypt_failure(self):

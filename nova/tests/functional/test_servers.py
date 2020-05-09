@@ -4704,14 +4704,8 @@ class ConsumerGenerationConflictTest(
             self._wait_for_server_parameter(server,
                                             {'OS-EXT-STS:task_state': None})
 
-        # The instance action should have failed with details.
-        # save_and_reraise_exception gets different results between py2 and py3
-        # for the traceback but we want to use the more specific
-        # "claim_resources" for py3. We can remove this when we drop support
-        # for py2.
-        error_in_tb = 'claim_resources' if six.PY3 else 'select_destinations'
         self._assert_resize_migrate_action_fail(
-            server, instance_actions.MIGRATE, error_in_tb)
+            server, instance_actions.MIGRATE, 'claim_resources')
 
         # The migration is aborted so the instance is ACTIVE on the source
         # host instead of being in VERIFY_RESIZE state.

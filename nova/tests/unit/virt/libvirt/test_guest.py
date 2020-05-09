@@ -20,7 +20,6 @@ import mock
 from oslo_service import fixture as service_fixture
 from oslo_utils import encodeutils
 import six
-import testtools
 
 from nova import context
 from nova import exception
@@ -690,23 +689,6 @@ class GuestTestCase(test.NoDBTestCase):
                 'an-uri', flags=1, params={'migrate_uri': 'dest-uri',
                                            'migrate_disks': 'disk1',
                                            'destination_xml': '</xml>',
-                                           'bandwidth': 2})
-
-    @testtools.skipIf(not six.PY2, 'libvirt python3 bindings accept unicode')
-    def test_migrate_v3_unicode(self):
-        dest_xml_template = "<domain type='qemu'><name>%s</name></domain>"
-        name = u'\u00CD\u00F1st\u00E1\u00F1c\u00E9'
-        dest_xml = dest_xml_template % name
-        expect_dest_xml = dest_xml_template % encodeutils.to_utf8(name)
-        self.guest.migrate('an-uri', flags=1, migrate_uri='dest-uri',
-                           migrate_disks=[u"disk1", u"disk2"],
-                           destination_xml=dest_xml,
-                           bandwidth=2)
-        self.domain.migrateToURI3.assert_called_once_with(
-                'an-uri', flags=1, params={'migrate_uri': 'dest-uri',
-                                           'migrate_disks': ['disk1',
-                                                             'disk2'],
-                                           'destination_xml': expect_dest_xml,
                                            'bandwidth': 2})
 
     def test_abort_job(self):

@@ -26,7 +26,6 @@ from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import strutils
 from oslo_utils import versionutils
-import six
 
 import nova.conf
 from nova import exception
@@ -48,9 +47,6 @@ def parse_sr_info(connection_data, description=''):
         params = _parse_volume_info(connection_data)
         sr_identity = "%s/%s/%s" % (params['target'], params['port'],
                                     params['targetIQN'])
-        # PY2 can only support taking an ascii string to uuid5
-        if six.PY2 and isinstance(sr_identity, six.text_type):
-            sr_identity = sr_identity.encode('utf-8')
         sr_uuid = str(uuid.uuid5(SR_NAMESPACE, sr_identity))
     else:
         sr_uuid = connection_data['sr_uuid']

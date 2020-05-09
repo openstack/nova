@@ -10,8 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import six
-
 from nova.db.sqlalchemy import models
 from nova.tests.functional.api_sample_tests import test_servers
 
@@ -39,8 +37,7 @@ class ServerTagsJsonTest(test_servers.ServersSampleBase):
         subs['instance_name'] = r'instance-\d{8}'
         subs['hypervisor_hostname'] = r'[\w\.\-]+'
         subs['cdrive'] = '.*'
-        subs['user_data'] = (self.user_data if six.PY2
-                             else self.user_data.decode('utf-8'))
+        subs['user_data'] = self.user_data.decode('utf-8')
         return subs
 
     def _put_server_tags(self):

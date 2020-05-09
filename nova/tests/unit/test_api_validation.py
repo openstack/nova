@@ -263,12 +263,8 @@ class QueryParamsSchemaTestCase(test.NoDBTestCase):
         req.api_version_request = api_version.APIVersionRequest("2.3")
         ex = self.assertRaises(exception.ValidationError, self.controller.get,
                                req)
-        if six.PY3:
-            self.assertEqual("Invalid input for query parameters foo. Value: "
-                             "abc. 'abc' is not a 'uuid'", six.text_type(ex))
-        else:
-            self.assertEqual("Invalid input for query parameters foo. Value: "
-                             "abc. u'abc' is not a 'uuid'", six.text_type(ex))
+        self.assertEqual("Invalid input for query parameters foo. Value: "
+                         "abc. 'abc' is not a 'uuid'", str(ex))
 
     def test_validate_request_with_multiple_values(self):
         req = fakes.HTTPRequest.blank("/tests?foos=abc")
@@ -443,12 +439,9 @@ class PatternPropertiesTestCase(APIValidationTestCase):
         # Note(jrosenboom): This is referencing an internal python error
         # string, which is no stable interface. We need a patch in the
         # jsonschema library in order to fix this properly.
-        if six.PY3:
-            detail = "expected string or bytes-like object"
-        else:
-            detail = "expected string or buffer"
-        self.check_validation_error(self.post, body={None: 'bar'},
-                                    expected_detail=detail)
+        self.check_validation_error(
+                self.post, body={None: 'bar'},
+                expected_detail="expected string or bytes-like object")
 
 
 class StringTestCase(APIValidationTestCase):

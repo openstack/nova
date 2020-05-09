@@ -25,6 +25,7 @@ import nova.monkey_patch  # noqa
 
 import abc
 import collections
+import contextlib
 import copy
 import datetime
 import inspect
@@ -64,11 +65,6 @@ from nova.tests.unit import matchers
 from nova.tests.unit import policy_fixture
 from nova import utils
 from nova.virt import images
-
-if six.PY2:
-    import contextlib2 as contextlib
-else:
-    import contextlib
 
 CONF = cfg.CONF
 

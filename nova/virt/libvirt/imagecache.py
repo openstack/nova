@@ -29,7 +29,6 @@ from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils import encodeutils
-import six
 
 import nova.conf
 import nova.privsep.path
@@ -95,10 +94,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         self.unexplained_images, self.originals, and self.back_swap_images.
         """
 
-        if six.PY2:
-            digest_size = hashlib.sha1().digestsize * 2
-        else:
-            digest_size = hashlib.sha1().digest_size * 2
+        digest_size = hashlib.sha1().digest_size * 2
         for ent in os.listdir(base_dir):
             if len(ent) == digest_size:
                 self._store_image(base_dir, ent, original=True)

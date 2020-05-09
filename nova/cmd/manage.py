@@ -169,10 +169,7 @@ class DbCommands(object):
             else:
                 pt.add_row([k, v])
 
-        if six.PY2:
-            print(encodeutils.safe_encode(pt.get_string()))
-        else:
-            print(encodeutils.safe_encode(pt.get_string()).decode())
+        print(encodeutils.safe_encode(pt.get_string()).decode())
 
     @args('--local_cell', action='store_true',
           help='Only sync db in the local cell: do not attempt to fan-out '
