@@ -15,16 +15,13 @@
 import abc
 import os
 
-import six
-
 from nova import utils
 from nova.virt.libvirt.volume import mount
 from nova.virt.libvirt.volume import volume as libvirt_volume
 
 
-@six.add_metaclass(abc.ABCMeta)
 class LibvirtBaseFileSystemVolumeDriver(
-    libvirt_volume.LibvirtBaseVolumeDriver):
+    libvirt_volume.LibvirtBaseVolumeDriver, metaclass=abc.ABCMeta):
     """The base class for file system type volume drivers"""
 
     def __init__(self, host):
@@ -96,8 +93,8 @@ class LibvirtBaseFileSystemVolumeDriver(
         return os.path.join(mount_path, connection_info['data']['name'])
 
 
-@six.add_metaclass(abc.ABCMeta)
-class LibvirtMountedFileSystemVolumeDriver(LibvirtBaseFileSystemVolumeDriver):
+class LibvirtMountedFileSystemVolumeDriver(LibvirtBaseFileSystemVolumeDriver,
+                                           metaclass=abc.ABCMeta):
     # NOTE(mdbooth): Hopefully we'll get to the point where everything which
     # previously subclassed LibvirtBaseFileSystemVolumeDriver now subclasses
     # LibvirtMountedFileSystemVolumeDriver. If we get there, we should fold

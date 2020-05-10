@@ -79,8 +79,7 @@ def _update_utime_ignore_eacces(path):
                 ctxt.reraise = False
 
 
-@six.add_metaclass(abc.ABCMeta)
-class Image(object):
+class Image(metaclass=abc.ABCMeta):
 
     SUPPORTS_CLONE = False
 

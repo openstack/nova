@@ -737,8 +737,7 @@ class ControllerMetaclass(type):
                                                        cls_dict)
 
 
-@six.add_metaclass(ControllerMetaclass)
-class Controller(object):
+class Controller(metaclass=ControllerMetaclass):
     """Default controller."""
 
     _view_builder_class = None

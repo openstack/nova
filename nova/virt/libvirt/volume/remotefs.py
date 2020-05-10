@@ -107,8 +107,7 @@ class RemoteFilesystem(object):
                               compression=compression)
 
 
-@six.add_metaclass(abc.ABCMeta)
-class RemoteFilesystemDriver(object):
+class RemoteFilesystemDriver(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def create_file(self, host, dst_path, on_execute, on_completion):
         """Create file on the remote system.

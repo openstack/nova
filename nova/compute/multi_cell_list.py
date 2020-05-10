@@ -15,8 +15,6 @@ import copy
 import heapq
 
 import eventlet
-import six
-
 from oslo_log import log as logging
 
 import nova.conf
@@ -114,8 +112,7 @@ def query_wrapper(ctx, fn, *args, **kwargs):
             return
 
 
-@six.add_metaclass(abc.ABCMeta)
-class CrossCellLister(object):
+class CrossCellLister(metaclass=abc.ABCMeta):
     """An implementation of a cross-cell efficient lister.
 
     This primarily provides a listing implementation for fetching

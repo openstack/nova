@@ -15,8 +15,6 @@
 import abc
 import enum
 
-import six
-
 VERSION_LENGTH = 12
 SUBTYPE_LENGTH = 4
 
@@ -40,8 +38,7 @@ class AuthType(enum.IntEnum):
     MSLOGON = 0xfffffffa  # Used by UltraVNC
 
 
-@six.add_metaclass(abc.ABCMeta)
-class RFBAuthScheme(object):
+class RFBAuthScheme(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def security_type(self):

@@ -19,8 +19,6 @@ Pluggable Weighing support
 
 import abc
 
-import six
-
 from nova import loadables
 
 
@@ -63,8 +61,7 @@ class WeighedObject(object):
         return "<WeighedObject '%s': %s>" % (self.obj, self.weight)
 
 
-@six.add_metaclass(abc.ABCMeta)
-class BaseWeigher(object):
+class BaseWeigher(metaclass=abc.ABCMeta):
     """Base class for pluggable weighers.
 
     The attributes maxval and minval can be specified to set up the maximum

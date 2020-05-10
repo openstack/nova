@@ -12,13 +12,10 @@
 
 import abc
 
-import six
-
 from nova.objects import fields
 
 
-@six.add_metaclass(abc.ABCMeta)
-class MonitorBase(object):
+class MonitorBase(metaclass=abc.ABCMeta):
     """Base class for all resource monitor plugins.
 
     A monitor is responsible for adding a set of related metrics to

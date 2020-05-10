@@ -645,8 +645,7 @@ class APICoverage(object):
             testtools.matchers.ContainsAll(api_methods))
 
 
-@six.add_metaclass(abc.ABCMeta)
-class SubclassSignatureTestCase(testtools.TestCase):
+class SubclassSignatureTestCase(testtools.TestCase, metaclass=abc.ABCMeta):
     """Ensure all overridden methods of all subclasses of the class
     under test exactly match the signature of the base class.
 
