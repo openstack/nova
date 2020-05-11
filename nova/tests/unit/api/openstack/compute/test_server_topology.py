@@ -40,9 +40,8 @@ class ServerTopologyTestV278(test.NoDBTestCase):
 
     def _fake_numa(self, cpu_pinning=None):
         ce0 = numa.InstanceNUMACell(node=0, memory=1024, pagesize=4, id=0,
-            cpu_topology=None,
-            cpu_pinning=cpu_pinning,
-            cpuset=set([0, 1]))
+            cpu_topology=None, cpu_pinning=cpu_pinning,
+            cpuset=set([0, 1]), pcpuset=set())
 
         return numa.InstanceNUMATopology(cells=[ce0])
 

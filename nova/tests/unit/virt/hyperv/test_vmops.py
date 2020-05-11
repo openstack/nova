@@ -684,23 +684,27 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
                           mock_instance, image_meta)
 
     def test_get_instance_vnuma_config_bad_cpuset(self):
-        cell1 = objects.InstanceNUMACell(cpuset=set([0]), memory=1024)
-        cell2 = objects.InstanceNUMACell(cpuset=set([1, 2]), memory=1024)
+        cell1 = objects.InstanceNUMACell(
+            cpuset=set([0]), pcpuset=set(), memory=1024)
+        cell2 = objects.InstanceNUMACell(
+            cpuset=set([1, 2]), pcpuset=set(), memory=1024)
         self._check_get_instance_vnuma_config_exception(
             numa_cells=[cell1, cell2])
 
     def test_get_instance_vnuma_config_bad_memory(self):
-        cell1 = objects.InstanceNUMACell(cpuset=set([0]), memory=1024)
-        cell2 = objects.InstanceNUMACell(cpuset=set([1]), memory=2048)
+        cell1 = objects.InstanceNUMACell(
+            cpuset=set([0]), pcpuset=set(), memory=1024)
+        cell2 = objects.InstanceNUMACell(
+            cpuset=set([1]), pcpuset=set(), memory=2048)
         self._check_get_instance_vnuma_config_exception(
             numa_cells=[cell1, cell2])
 
     def test_get_instance_vnuma_config_cpu_pinning(self):
         cell1 = objects.InstanceNUMACell(
-            cpuset=set([0]), memory=1024,
+            cpuset=set([0]), pcpuset=set(), memory=1024,
             cpu_policy=fields.CPUAllocationPolicy.DEDICATED)
         cell2 = objects.InstanceNUMACell(
-            cpuset=set([1]), memory=1024,
+            cpuset=set([1]), pcpuset=set(), memory=1024,
             cpu_policy=fields.CPUAllocationPolicy.DEDICATED)
         self._check_get_instance_vnuma_config_exception(
             numa_cells=[cell1, cell2])
@@ -720,8 +724,10 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         self.assertEqual(expected_mem_per_numa, result_memory_per_numa)
 
     def test_get_instance_vnuma_config(self):
-        cell1 = objects.InstanceNUMACell(cpuset=set([0]), memory=2048)
-        cell2 = objects.InstanceNUMACell(cpuset=set([1]), memory=2048)
+        cell1 = objects.InstanceNUMACell(
+            cpuset=set([0]), pcpuset=set(), memory=2048)
+        cell2 = objects.InstanceNUMACell(
+            cpuset=set([1]), pcpuset=set(), memory=2048)
         numa_topology = objects.InstanceNUMATopology(cells=[cell1, cell2])
         self._check_get_instance_vnuma_config(numa_topology=numa_topology,
                                               expected_cpus_per_numa=1,

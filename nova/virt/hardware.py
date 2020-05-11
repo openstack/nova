@@ -916,7 +916,7 @@ def _pack_instance_onto_cores(host_cell, instance_cell,
         pinning = _get_pinning(
             1,  # we only want to "use" one thread per core
             sibling_sets[threads_per_core],
-            instance_cell.cpuset)
+            instance_cell.pcpuset)
         cpuset_reserved = _get_reserved(
             sibling_sets[1], pinning, num_cpu_reserved=num_cpu_reserved,
             cpu_thread_isolate=True)
@@ -952,7 +952,7 @@ def _pack_instance_onto_cores(host_cell, instance_cell,
 
             pinning = _get_pinning(
                 threads_no, sibling_set,
-                instance_cell.cpuset)
+                instance_cell.pcpuset)
             cpuset_reserved = _get_reserved(
                 sibling_sets[1], pinning, num_cpu_reserved=num_cpu_reserved)
             if not pinning or (num_cpu_reserved and not cpuset_reserved):
@@ -978,7 +978,7 @@ def _pack_instance_onto_cores(host_cell, instance_cell,
             sibling_set = [set([x]) for x in itertools.chain(*sibling_sets[1])]
             pinning = _get_pinning(
                 threads_no, sibling_set,
-                instance_cell.cpuset)
+                instance_cell.pcpuset)
             cpuset_reserved = _get_reserved(
                 sibling_set, pinning, num_cpu_reserved=num_cpu_reserved)
 
@@ -1079,12 +1079,12 @@ def _numa_fit_instance_cell(
     # NOTE(stephenfin): As with memory, do not allow an instance to overcommit
     # against itself on any NUMA cell
     if instance_cell.cpu_policy == fields.CPUAllocationPolicy.DEDICATED:
-        required_cpus = len(instance_cell.cpuset) + cpuset_reserved
+        required_cpus = len(instance_cell.pcpuset) + cpuset_reserved
         if required_cpus > len(host_cell.pcpuset):
             LOG.debug('Not enough host cell CPUs to fit instance cell; '
                       'required: %(required)d + %(cpuset_reserved)d as '
                       'overhead, actual: %(actual)d', {
-                          'required': len(instance_cell.cpuset),
+                          'required': len(instance_cell.pcpuset),
                           'actual': len(host_cell.pcpuset),
                           'cpuset_reserved': cpuset_reserved
                       })
@@ -1101,14 +1101,14 @@ def _numa_fit_instance_cell(
 
     if instance_cell.cpu_policy == fields.CPUAllocationPolicy.DEDICATED:
         LOG.debug('Pinning has been requested')
-        required_cpus = len(instance_cell.cpuset) + cpuset_reserved
+        required_cpus = len(instance_cell.pcpuset) + cpuset_reserved
         if required_cpus > host_cell.avail_pcpus:
             LOG.debug('Not enough available CPUs to schedule instance. '
                       'Oversubscription is not possible with pinned '
                       'instances. Required: %(required)d (%(vcpus)d + '
                       '%(num_cpu_reserved)d), actual: %(actual)d',
                       {'required': required_cpus,
-                       'vcpus': len(instance_cell.cpuset),
+                       'vcpus': len(instance_cell.pcpuset),
                        'actual': host_cell.avail_pcpus,
                        'num_cpu_reserved': cpuset_reserved})
             return None
@@ -1562,6 +1562,8 @@ def get_cpu_thread_policy_constraint(
 def _get_numa_topology_auto(
     nodes: int,
     flavor: 'objects.Flavor',
+    vcpus: ty.Set[int],
+    pcpus: ty.Set[int],
 ) -> 'objects.InstanceNUMATopology':
     """Generate a NUMA topology automatically based on CPUs and memory.
 
@@ -1571,6 +1573,8 @@ def _get_numa_topology_auto(
     :param nodes: The number of nodes required in the generated topology.
     :param flavor: The flavor used for the instance, from which to extract the
         CPU and memory count.
+    :param vcpus: A set of IDs for CPUs that should be shared.
+    :param pcpus: A set of IDs for CPUs that should be dedicated.
     """
     if (flavor.vcpus % nodes) > 0 or (flavor.memory_mb % nodes) > 0:
         raise exception.ImageNUMATopologyAsymmetric()
@@ -1580,10 +1584,10 @@ def _get_numa_topology_auto(
         ncpus = int(flavor.vcpus / nodes)
         mem = int(flavor.memory_mb / nodes)
         start = node * ncpus
-        cpuset = set(range(start, start + ncpus))
+        cpus = set(range(start, start + ncpus))
 
         cells.append(objects.InstanceNUMACell(
-            id=node, cpuset=cpuset, memory=mem))
+            id=node, cpuset=cpus & vcpus, pcpuset=cpus & pcpus, memory=mem))
 
     return objects.InstanceNUMATopology(cells=cells)
 
@@ -1591,6 +1595,8 @@ def _get_numa_topology_auto(
 def _get_numa_topology_manual(
     nodes: int,
     flavor: 'objects.Flavor',
+    vcpus: ty.Set[int],
+    pcpus: ty.Set[int],
     cpu_list: ty.List[ty.Set[int]],
     mem_list: ty.List[int],
 ) -> 'objects.InstanceNUMATopology':
@@ -1599,6 +1605,8 @@ def _get_numa_topology_manual(
     :param nodes: The number of nodes required in the generated topology.
     :param flavor: The flavor used for the instance, from which to extract the
         CPU and memory count.
+    :param vcpus: A set of IDs for CPUs that should be shared.
+    :param pcpus: A set of IDs for CPUs that should be dedicated.
     :param cpu_list: A list of sets of ints; each set in the list corresponds
         to the set of guest cores to assign to NUMA node $index.
     :param mem_list: A list of ints; each int corresponds to the amount of
@@ -1612,9 +1620,9 @@ def _get_numa_topology_manual(
 
     for node in range(nodes):
         mem = mem_list[node]
-        cpuset = cpu_list[node]
+        cpus = cpu_list[node]
 
-        for cpu in cpuset:
+        for cpu in cpus:
             if cpu > (flavor.vcpus - 1):
                 raise exception.ImageNUMATopologyCPUOutOfRange(
                     cpunum=cpu, cpumax=(flavor.vcpus - 1))
@@ -1626,7 +1634,7 @@ def _get_numa_topology_manual(
             availcpus.remove(cpu)
 
         cells.append(objects.InstanceNUMACell(
-            id=node, cpuset=cpuset, memory=mem))
+            id=node, cpuset=cpus & vcpus, pcpuset=cpus & pcpus, memory=mem))
         totalmem = totalmem + mem
 
     if availcpus:
@@ -1913,20 +1921,30 @@ def numa_get_constraints(flavor, image_meta):
     if nodes or pagesize or vpmems or cpu_policy in (
         fields.CPUAllocationPolicy.DEDICATED,
     ):
-        nodes = nodes or 1
+        # NOTE(huaqiang): Here we build the instance dedicated CPU set and the
+        # shared CPU set, through 'pcpus' and 'vcpus' respectively,
+        # which will be used later to calculate the per-NUMA-cell CPU set.
+        cpus = set(range(flavor.vcpus))
+        pcpus = set()
+        if cpu_policy == fields.CPUAllocationPolicy.DEDICATED:
+            pcpus = cpus
+        vcpus = cpus - pcpus
 
+        nodes = nodes or 1
         cpu_list = _get_numa_cpu_constraint(flavor, image_meta)
         mem_list = _get_numa_mem_constraint(flavor, image_meta)
 
         if cpu_list is None and mem_list is None:
-            numa_topology = _get_numa_topology_auto(nodes, flavor)
+            numa_topology = _get_numa_topology_auto(
+                nodes, flavor, vcpus, pcpus,
+            )
         elif cpu_list is not None and mem_list is not None:
             # If any node has data set, all nodes must have data set
             if len(cpu_list) != nodes or len(mem_list) != nodes:
                 raise exception.ImageNUMATopologyIncomplete()
 
             numa_topology = _get_numa_topology_manual(
-                nodes, flavor, cpu_list, mem_list
+                nodes, flavor, vcpus, pcpus, cpu_list, mem_list
             )
         else:
             # If one property list is specified both must be

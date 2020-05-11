@@ -5682,7 +5682,8 @@ class ComputeTestCase(BaseTestCase,
         old_inst_topology = objects.InstanceNUMATopology(
             instance_uuid=instance.uuid, cells=[
                 objects.InstanceNUMACell(
-                    id=0, cpuset=set([1, 2]), memory=512, pagesize=2048,
+                    id=0, cpuset=set(), pcpuset=set([1, 2]), memory=512,
+                    pagesize=2048,
                     cpu_policy=obj_fields.CPUAllocationPolicy.DEDICATED,
                     cpu_pinning={'0': 1, '1': 2})
         ])
@@ -5691,7 +5692,8 @@ class ComputeTestCase(BaseTestCase,
         new_inst_topology = objects.InstanceNUMATopology(
             instance_uuid=instance.uuid, cells=[
                 objects.InstanceNUMACell(
-                    id=1, cpuset=set([3, 4]), memory=512, pagesize=2048,
+                    id=1, cpuset=set(), pcpuset=set([3, 4]), memory=512,
+                    pagesize=2048,
                     cpu_policy=obj_fields.CPUAllocationPolicy.DEDICATED,
                     cpu_pinning={'0': 3, '1': 4})
         ])
@@ -8694,9 +8696,10 @@ class ComputeAPITestCase(BaseTestCase):
     def test_create_with_numa_topology(self, numa_constraints_mock):
         numa_topology = objects.InstanceNUMATopology(
             cells=[objects.InstanceNUMACell(
-                id=0, cpuset=set([1, 2]), memory=512),
+                id=0, cpuset=set([1, 2]), pcpuset=set(),
+                memory=512),
                    objects.InstanceNUMACell(
-                id=1, cpuset=set([3, 4]), memory=512)])
+                id=1, cpuset=set([3, 4]), pcpuset=set(), memory=512)])
         numa_topology.obj_reset_changes()
         numa_constraints_mock.return_value = numa_topology
 

@@ -22,12 +22,14 @@ def fake_get_numa():
     cell_0 = numa.InstanceNUMACell(node=0, memory=1024, pagesize=4, id=0,
            cpu_topology=cpu_topology,
            cpu_pinning={0: 0, 1: 5},
-           cpuset=set([0, 1]))
+           cpuset=set(),
+           pcpuset=set([0, 1]))
 
     cell_1 = numa.InstanceNUMACell(node=1, memory=2048, pagesize=4, id=1,
            cpu_topology=cpu_topology,
            cpu_pinning={2: 1, 3: 8},
-           cpuset=set([2, 3]))
+           cpuset=set(),
+           pcpuset=set([2, 3]))
 
     return numa.InstanceNUMATopology(cells=[cell_0, cell_1])
 

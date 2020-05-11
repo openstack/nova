@@ -174,16 +174,26 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
                          set([1, 2]))
 
     def test_support_requests_numa(self):
-        cells = [objects.InstanceNUMACell(id=0, cpuset=set(), memory=0),
-                 objects.InstanceNUMACell(id=1, cpuset=set(), memory=0)]
+        cells = [
+            objects.InstanceNUMACell(
+                id=0, cpuset=set(), pcpuset=set(), memory=0),
+            objects.InstanceNUMACell(
+                id=1, cpuset=set(), pcpuset=set(), memory=0),
+        ]
         self.assertTrue(self.pci_stats.support_requests(pci_requests, cells))
 
     def test_support_requests_numa_failed(self):
-        cells = [objects.InstanceNUMACell(id=0, cpuset=set(), memory=0)]
+        cells = [
+            objects.InstanceNUMACell(
+                id=0, cpuset=set(), pcpuset=set(), memory=0),
+        ]
         self.assertFalse(self.pci_stats.support_requests(pci_requests, cells))
 
     def test_support_requests_no_numa_info(self):
-        cells = [objects.InstanceNUMACell(id=0, cpuset=set(), memory=0)]
+        cells = [
+            objects.InstanceNUMACell(
+                id=0, cpuset=set(), pcpuset=set(), memory=0),
+        ]
         pci_requests = self._get_fake_requests(vendor_ids=['v3'])
         self.assertTrue(self.pci_stats.support_requests(pci_requests, cells))
 
@@ -197,7 +207,10 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         # numa node 1 has 1 device with vendor_id 'v2'
         # we request two devices with vendor_id 'v1' and 'v2'.
         # pci_numa_policy is 'preferred' so we can ignore numa affinity
-        cells = [objects.InstanceNUMACell(id=0, cpuset=set(), memory=0)]
+        cells = [
+            objects.InstanceNUMACell(
+                id=0, cpuset=set(), pcpuset=set(), memory=0),
+        ]
         pci_requests = self._get_fake_requests(
             numa_policy=fields.PCINUMAAffinityPolicy.PREFERRED)
 
@@ -206,7 +219,10 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
     def test_support_requests_no_numa_info_pci_numa_policy_required(self):
         # pci device with vendor_id 'v3' has numa_node=None.
         # pci_numa_policy is 'required' so we can't use this device
-        cells = [objects.InstanceNUMACell(id=0, cpuset=set(), memory=0)]
+        cells = [
+            objects.InstanceNUMACell(
+                id=0, cpuset=set(), pcpuset=set(), memory=0),
+        ]
         pci_requests = self._get_fake_requests(vendor_ids=['v3'],
             numa_policy=fields.PCINUMAAffinityPolicy.REQUIRED)
 
@@ -227,21 +243,31 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
                           pci_requests_multiple))
 
     def test_consume_requests_numa(self):
-        cells = [objects.InstanceNUMACell(id=0, cpuset=set(), memory=0),
-                 objects.InstanceNUMACell(id=1, cpuset=set(), memory=0)]
+        cells = [
+            objects.InstanceNUMACell(
+                id=0, cpuset=set(), pcpuset=set(), memory=0),
+            objects.InstanceNUMACell(
+                id=1, cpuset=set(), pcpuset=set(), memory=0),
+        ]
         devs = self.pci_stats.consume_requests(pci_requests, cells)
         self.assertEqual(2, len(devs))
         self.assertEqual(set(['v1', 'v2']),
                          set([dev.vendor_id for dev in devs]))
 
     def test_consume_requests_numa_failed(self):
-        cells = [objects.InstanceNUMACell(id=0, cpuset=set(), memory=0)]
+        cells = [
+            objects.InstanceNUMACell(
+                id=0, cpuset=set(), pcpuset=set(), memory=0),
+        ]
         self.assertIsNone(self.pci_stats.consume_requests(pci_requests, cells))
 
     def test_consume_requests_no_numa_info(self):
-        cells = [objects.InstanceNUMACell(id=0, cpuset=set(), memory=0)]
+        cells = [
+            objects.InstanceNUMACell(
+                id=0, cpuset=set(), pcpuset=set(), memory=0),
+        ]
         pci_request = [objects.InstancePCIRequest(count=1,
-                    spec=[{'vendor_id': 'v3'}])]
+                                                  spec=[{'vendor_id': 'v3'}])]
         devs = self.pci_stats.consume_requests(pci_request, cells)
         self.assertEqual(1, len(devs))
         self.assertEqual(set(['v3']),
@@ -258,8 +284,10 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         ``expected``.
         """
         self._add_fake_devs_with_numa()
-        cells = [objects.InstanceNUMACell(id=id, cpuset=set(), memory=0)
-                 for id in cell_ids]
+        cells = [
+            objects.InstanceNUMACell(
+                id=id, cpuset=set(), pcpuset=set(), memory=0)
+            for id in cell_ids]
 
         pci_requests = self._get_fake_requests(vendor_ids=[vendor_id],
             numa_policy=policy, count=count)

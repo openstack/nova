@@ -33,12 +33,23 @@ class InstanceNUMACell(base.NovaEphemeralObject,
     # Version 1.2: Add cpu_pinning_raw and topology fields
     # Version 1.3: Add cpu_policy and cpu_thread_policy fields
     # Version 1.4: Add cpuset_reserved field
-    VERSION = '1.4'
+    # Version 1.5: Add pcpuset field
+    VERSION = '1.5'
 
     def obj_make_compatible(self, primitive, target_version):
         super(InstanceNUMACell, self).obj_make_compatible(primitive,
-                                                        target_version)
+                                                          target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        # NOTE(huaqiang): Since version 1.5, 'cpuset' is modified to track the
+        # unpinned CPUs only, with pinned CPUs tracked via 'pcpuset' instead.
+        # For a backward compatibility, move the 'dedicated' instance CPU list
+        # from 'pcpuset' to 'cpuset'.
+        if target_version < (1, 5):
+            if (primitive['cpu_policy'] ==
+                    obj_fields.CPUAllocationPolicy.DEDICATED):
+                primitive['cpuset'] = primitive['pcpuset']
+            primitive.pop('pcpuset', None)
+
         if target_version < (1, 4):
             primitive.pop('cpuset_reserved', None)
 
@@ -49,6 +60,10 @@ class InstanceNUMACell(base.NovaEphemeralObject,
     fields = {
         'id': obj_fields.IntegerField(),
         'cpuset': obj_fields.SetOfIntegersField(),
+        'pcpuset': obj_fields.SetOfIntegersField(),
+        # These physical CPUs are reserved for use by the hypervisor
+        'cpuset_reserved': obj_fields.SetOfIntegersField(nullable=True,
+                                                         default=None),
         'memory': obj_fields.IntegerField(),
         'pagesize': obj_fields.IntegerField(nullable=True,
                                             default=None),
@@ -60,19 +75,20 @@ class InstanceNUMACell(base.NovaEphemeralObject,
                                                           default=None),
         'cpu_thread_policy': obj_fields.CPUThreadAllocationPolicyField(
             nullable=True, default=None),
-        # These physical CPUs are reserved for use by the hypervisor
-        'cpuset_reserved': obj_fields.SetOfIntegersField(nullable=True,
-                                                         default=None),
     }
 
     cpu_pinning = obj_fields.DictProxyField('cpu_pinning_raw')
 
     def __len__(self):
-        return len(self.cpuset)
+        return len(self.total_cpus)
+
+    @property
+    def total_cpus(self):
+        return self.cpuset | self.pcpuset
 
     @property
     def siblings(self):
-        cpu_list = sorted(list(self.cpuset))
+        cpu_list = sorted(list(self.total_cpus))
 
         threads = 0
         if ('cpu_topology' in self) and self.cpu_topology:
@@ -83,7 +99,7 @@ class InstanceNUMACell(base.NovaEphemeralObject,
         return list(map(set, zip(*[iter(cpu_list)] * threads)))
 
     def pin(self, vcpu, pcpu):
-        if vcpu not in self.cpuset:
+        if vcpu not in self.pcpuset:
             return
         pinning_dict = self.cpu_pinning or {}
         pinning_dict[vcpu] = pcpu
@@ -115,7 +131,7 @@ class InstanceNUMATopology(base.NovaObject,
 
     def obj_make_compatible(self, primitive, target_version):
         super(InstanceNUMATopology, self).obj_make_compatible(primitive,
-                                                        target_version)
+                                                              target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
         if target_version < (1, 3):
             primitive.pop('emulator_threads_policy', None)
@@ -136,10 +152,42 @@ class InstanceNUMATopology(base.NovaObject,
 
         if 'nova_object.name' in primitive:
             obj = cls.obj_from_primitive(primitive)
+            cls._migrate_legacy_dedicated_instance_cpuset(
+                context, instance_uuid, obj)
         else:
             obj = cls._migrate_legacy_object(context, instance_uuid, primitive)
 
         return obj
+
+    # TODO(huaqiang): Remove after Wallaby once we are sure these objects have
+    # been loaded at least once.
+    @classmethod
+    def _migrate_legacy_dedicated_instance_cpuset(cls, context, instance_uuid,
+                                                  obj):
+        # NOTE(huaqiang): We may meet some topology object with the old version
+        # 'InstanceNUMACell' cells, in that case, the 'dedicated' CPU is kept
+        # in 'InstanceNUMACell.cpuset' field, but it should be kept in
+        # 'InstanceNUMACell.pcpuset' field since Victoria. Making an upgrade
+        # and persisting to database.
+        update_db = False
+        for cell in obj.cells:
+            if len(cell.cpuset) == 0:
+                continue
+
+            if cell.cpu_policy != obj_fields.CPUAllocationPolicy.DEDICATED:
+                continue
+
+            cell.pcpuset = cell.cpuset
+            cell.cpuset = set()
+            update_db = True
+
+        if update_db:
+            db_obj = jsonutils.dumps(obj.obj_to_primitive())
+            values = {
+                'numa_topology': db_obj,
+            }
+            db.instance_extra_update_by_uuid(context, instance_uuid,
+                                             values)
 
     # TODO(stephenfin): Remove in X or later, once this has bedded in
     @classmethod
@@ -161,6 +209,7 @@ class InstanceNUMATopology(base.NovaObject,
                 InstanceNUMACell(
                     id=cell.get('id'),
                     cpuset=hardware.parse_cpu_spec(cell.get('cpus', '')),
+                    pcpuset=set(),
                     memory=cell.get('mem', {}).get('total', 0),
                     pagesize=cell.get('pagesize'),
                 ) for cell in primitive.get('cells', [])

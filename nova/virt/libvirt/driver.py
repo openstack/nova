@@ -4918,7 +4918,7 @@ class LibvirtDriver(driver.ComputeDriver):
             for instance_cell in instance_numa_topology.cells:
                 guest_cell = vconfig.LibvirtConfigGuestCPUNUMACell()
                 guest_cell.id = instance_cell.id
-                guest_cell.cpus = instance_cell.cpuset
+                guest_cell.cpus = instance_cell.total_cpus
                 guest_cell.memory = instance_cell.memory * units.Ki
 
                 # The vhost-user network backend requires file backed

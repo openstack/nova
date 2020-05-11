@@ -214,9 +214,10 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename')
     def test_check_instance_has_no_numa_passes_non_kvm(self, mock_get):
         self.flags(enable_numa_live_migration=False, group='workarounds')
-        self.task.instance.numa_topology = objects.InstanceNUMATopology(
-            cells=[objects.InstanceNUMACell(id=0, cpuset=set([0]),
-                                            memory=1024)])
+        self.task.instance.numa_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                id=0, cpuset=set([0]), pcpuset=set(), memory=1024),
+            ])
         mock_get.return_value = objects.ComputeNode(
             uuid=uuids.cn1, hypervisor_type='xen')
         self.task._check_instance_has_no_numa()
@@ -227,9 +228,10 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
     def test_check_instance_has_no_numa_passes_workaround(
             self, mock_get_min_ver, mock_get):
         self.flags(enable_numa_live_migration=True, group='workarounds')
-        self.task.instance.numa_topology = objects.InstanceNUMATopology(
-            cells=[objects.InstanceNUMACell(id=0, cpuset=set([0]),
-                                            memory=1024)])
+        self.task.instance.numa_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                id=0, cpuset=set([0]), pcpuset=set(), memory=1024),
+            ])
         mock_get.return_value = objects.ComputeNode(
             uuid=uuids.cn1, hypervisor_type='qemu')
         self.task._check_instance_has_no_numa()
@@ -243,9 +245,10 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.flags(enable_numa_live_migration=False, group='workarounds')
         mock_get.return_value = objects.ComputeNode(
             uuid=uuids.cn1, hypervisor_type='qemu')
-        self.task.instance.numa_topology = objects.InstanceNUMATopology(
-            cells=[objects.InstanceNUMACell(id=0, cpuset=set([0]),
-                                            memory=1024)])
+        self.task.instance.numa_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                id=0, cpuset=set([0]), pcpuset=set(), memory=1024),
+            ])
         self.assertRaises(exception.MigrationPreCheckError,
                           self.task._check_instance_has_no_numa)
         mock_get_min_ver.assert_called_once_with(self.context, 'nova-compute')
@@ -258,9 +261,10 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.flags(enable_numa_live_migration=False, group='workarounds')
         mock_get.return_value = objects.ComputeNode(
             uuid=uuids.cn1, hypervisor_type='qemu')
-        self.task.instance.numa_topology = objects.InstanceNUMATopology(
-            cells=[objects.InstanceNUMACell(id=0, cpuset=set([0]),
-                                            memory=1024)])
+        self.task.instance.numa_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                id=0, cpuset=set([0]), pcpuset=set(), memory=1024),
+            ])
         self.task._check_instance_has_no_numa()
         mock_get_min_ver.assert_called_once_with(self.context, 'nova-compute')
 

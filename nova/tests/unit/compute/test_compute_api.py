@@ -1692,7 +1692,8 @@ class _ComputeAPIUnitTestMixIn(object):
         fake_reqspec.flavor = fake_inst.flavor
         fake_numa_topology = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(
-                id=0, cpuset=set([0]), memory=512, pagesize=None,
+                id=0, cpuset=set([0]), pcpuset=set(), memory=512,
+                pagesize=None,
                 cpu_pinning_raw=None, cpuset_reserved=None, cpu_policy=None,
                 cpu_thread_policy=None)])
 
@@ -1852,7 +1853,8 @@ class _ComputeAPIUnitTestMixIn(object):
         fake_inst = self._create_instance_obj(params=params)
         fake_numa_topology = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(
-                id=0, cpuset=set([0]), memory=512, pagesize=None,
+                id=0, cpuset=set([0]), pcpuset=set(), memory=512,
+                pagesize=None,
                 cpu_pinning_raw=None, cpuset_reserved=None, cpu_policy=None,
                 cpu_thread_policy=None)])
 
