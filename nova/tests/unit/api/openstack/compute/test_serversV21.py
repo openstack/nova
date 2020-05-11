@@ -256,9 +256,6 @@ class ControllerTest(test.TestCase):
 
         self.controller = servers.ServersController()
         self.ips_controller = ips.IPsController()
-        policy.reset()
-        policy.init()
-        self.addCleanup(policy.reset)
         # Assume that anything that hits the compute API and looks for a
         # RequestSpec doesn't care about it, since testing logic that deep
         # should be done in nova.tests.unit.compute.test_compute_api.
