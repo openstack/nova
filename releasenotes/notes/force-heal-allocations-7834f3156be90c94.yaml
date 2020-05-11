@@ -1,0 +1,4 @@
+---
+features:
+  - Add ``--force`` option to the ``nova-manage placement heal_allocations``
+    command to forcefully heal allocations for a specific instance.

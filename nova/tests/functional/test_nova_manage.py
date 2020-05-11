@@ -783,6 +783,121 @@ class TestNovaManagePlacementHealAllocations(
         self.assertIn('Found 1 candidate instances', output)
         self.assertIn('Processed 0 instances.', output)
 
+    def test_heal_allocations_force_allocation(self):
+        """Tests the case that a specific instance allocations are
+        forcefully changed.
+        1. create server without allocations
+        2. heal allocations without forcing them.
+           Assert the allocations match the flavor
+        3. update the allocations to change MEMORY_MB to not match the flavor
+        4. run heal allocations without --force.
+           Assert the allocations still have the bogus
+           MEMORY_MB value since they were not forcefully updated.
+        5. run heal allocations with --force.
+           Assert the allocations match the flavor again
+        6. run heal allocations again.
+           You should get rc=4 back since nothing changed.
+        """
+        # 1. Create server that we will forcefully heal specifically.
+        server, rp_uuid = self._boot_and_assert_no_allocations(
+            self.flavor, 'cell1', volume_backed=True)
+
+        # 2. heal allocations without forcing them
+        result = self.cli.heal_allocations(
+            verbose=True, instance_uuid=server['id']
+        )
+        self.assertEqual(0, result, self.output.getvalue())
+
+        # assert the allocations match the flavor
+        allocs = self._get_allocations_by_server_uuid(
+          server['id'])[rp_uuid]['resources']
+        self.assertEqual(self.flavor['vcpus'], allocs['VCPU'])
+        self.assertEqual(self.flavor['ram'], allocs['MEMORY_MB'])
+
+        # 3. update the allocations to change MEMORY_MB
+        # to not match the flavor
+        alloc_body = {
+            "allocations": [
+                {
+                    "resource_provider": {
+                        "uuid": rp_uuid
+                    },
+                    "resources": {
+                        "MEMORY_MB": 1024,
+                        "VCPU": self.flavor['vcpus'],
+                        "DISK_GB": self.flavor['disk']
+                    }
+                }
+            ]
+        }
+        self.placement_api.put('/allocations/%s' % server['id'], alloc_body)
+
+        # Check allocation to see if memory has changed
+        allocs = self._get_allocations_by_server_uuid(
+            server['id'])[rp_uuid]['resources']
+        self.assertEqual(self.flavor['vcpus'], allocs['VCPU'])
+        self.assertEqual(1024, allocs['MEMORY_MB'])
+
+        # 4. run heal allocations without --force
+        result = self.cli.heal_allocations(
+            verbose=True, instance_uuid=server['id']
+        )
+        self.assertEqual(0, result, self.output.getvalue())
+        self.assertIn(
+            'Successfully updated allocations for',
+            self.output.getvalue())
+
+        # assert the allocations still have the bogus memory
+        allocs = self._get_allocations_by_server_uuid(
+          server['id'])[rp_uuid]['resources']
+        self.assertEqual(1024, allocs['MEMORY_MB'])
+
+        # call heal without force flag
+        # rc should be 4 since force flag was not used.
+        result = self.cli.heal_allocations(
+            verbose=True, instance_uuid=server['id']
+        )
+        self.assertEqual(4, result, self.output.getvalue())
+
+        # call heal with force flag and dry run
+        result = self.cli.heal_allocations(
+            dry_run=True, verbose=True,
+            instance_uuid=server['id'],
+            force=True
+        )
+        self.assertEqual(4, result, self.output.getvalue())
+        self.assertIn(
+            '[dry-run] Update allocations for instance',
+            self.output.getvalue())
+
+        # assert nothing has changed after dry run
+        allocs = self._get_allocations_by_server_uuid(
+          server['id'])[rp_uuid]['resources']
+        self.assertEqual(1024, allocs['MEMORY_MB'])
+
+        # 5. run heal allocations with --force
+        result = self.cli.heal_allocations(
+            verbose=True, instance_uuid=server['id'],
+            force=True
+        )
+        self.assertEqual(0, result, self.output.getvalue())
+        self.assertIn('Force flag passed for instance',
+                      self.output.getvalue())
+        self.assertIn('Successfully updated allocations',
+                      self.output.getvalue())
+
+        # assert the allocations match the flavor again
+        allocs = self._get_allocations_by_server_uuid(
+            server['id'])[rp_uuid]['resources']
+        self.assertEqual(self.flavor['ram'], allocs['MEMORY_MB'])
+
+        # 6. run heal allocations again and you should get rc=4
+        # back since nothing changed
+        result = self.cli.heal_allocations(
+            verbose=True, instance_uuid=server['id']
+        )
+        self.assertEqual(4, result, self.output.getvalue())
+
 
 class TestNovaManagePlacementHealPortAllocations(
         test_servers.PortResourceRequestBasedSchedulingTestBase):
