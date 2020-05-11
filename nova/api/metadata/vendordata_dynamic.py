@@ -21,7 +21,6 @@ from keystoneauth1 import exceptions as ks_exceptions
 from keystoneauth1 import loading as ks_loading
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
-import six
 
 from nova.api.metadata import vendordata
 import nova.conf
@@ -115,7 +114,7 @@ class DynamicVendorData(vendordata.VendorDataDriver):
                          'error': e},
                         instance=self.instance)
             if CONF.api.vendordata_dynamic_failure_fatal:
-                six.reraise(type(e), e, sys.exc_info()[2])
+                raise e.with_traceback(sys.exc_info()[2])
 
             return {}
 
