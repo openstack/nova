@@ -16,7 +16,6 @@ import os
 import time
 
 import mock
-from six.moves import builtins
 
 from nova import exception
 from nova.tests.unit.virt.hyperv import test_base
@@ -121,8 +120,8 @@ class PathUtilsTestCase(test_base.HyperVBaseTestCase):
         fake_windows_error = WindowsError
         self._pathutils.check_create_dir = mock.MagicMock(
             side_effect=WindowsError(pathutils.ERROR_INVALID_NAME))
-        with mock.patch.object(builtins, 'WindowsError',
-                               fake_windows_error, create=True):
+        with mock.patch('builtins.WindowsError',
+                        fake_windows_error, create=True):
             self.assertRaises(exception.AdminRequired,
                               self._pathutils._get_instances_sub_dir,
                               fake_dir_name)

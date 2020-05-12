@@ -16,7 +16,6 @@ import copy
 import mock
 import os
 from oslo_utils.fixture import uuidsentinel
-import six
 
 from nova.compute import provider_tree
 from nova import conf
@@ -331,7 +330,7 @@ class TestZVMDriver(test.NoDBTestCase):
                           allocations=None, network_info=self._network_info,
                           block_device_info=None)
 
-    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('builtins.open')
     @mock.patch('nova.image.glance.get_remote_image_service')
     @mock.patch('nova.virt.zvm.utils.ConnectorClient.call')
     def test_snapshot(self, call, get_image_service, mock_open):
@@ -421,7 +420,7 @@ class TestZVMDriver(test.NoDBTestCase):
         mock_delete.assert_called_once_with(image_id)
         image_service.delete.assert_called_once_with(self._context, image_id)
 
-    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('builtins.open')
     @mock.patch('nova.image.glance.get_remote_image_service')
     @mock.patch('nova.virt.zvm.utils.ConnectorClient.call')
     @mock.patch('nova.virt.zvm.hypervisor.Hypervisor.image_delete')

@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from io import StringIO
+
 import fixtures
 import mock
-from six.moves import StringIO
 
 import nova.privsep.idmapshift
 from nova import test

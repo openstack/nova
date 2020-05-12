@@ -19,6 +19,7 @@ import copy
 import datetime
 import ddt
 import functools
+from urllib import parse as urlparse
 
 import fixtures
 import iso8601
@@ -32,8 +33,6 @@ from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import six
-from six.moves import range
-import six.moves.urllib.parse as urlparse
 import testtools
 import webob
 

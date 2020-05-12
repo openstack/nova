@@ -15,10 +15,8 @@
 #    under the License.
 
 import mock
-import six
 
 from nova import test
-
 from nova.virt.powervm import image
 
 
@@ -28,7 +26,7 @@ class TestImage(test.TestCase):
     @mock.patch('nova.image.glance.API', autospec=True)
     def test_stream_blockdev_to_glance(self, mock_api, mock_chown):
         mock_open = mock.mock_open()
-        with mock.patch.object(six.moves.builtins, 'open', new=mock_open):
+        with mock.patch('builtins.open', new=mock_open):
             image.stream_blockdev_to_glance('context', mock_api, 'image_id',
                                             'metadata', '/dev/disk')
         mock_chown.assert_called_with('/dev/disk')

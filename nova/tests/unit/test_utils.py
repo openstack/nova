@@ -260,7 +260,7 @@ class TestCachedFile(test.NoDBTestCase):
 
         fake_contents = "lorem ipsum"
 
-        with mock.patch('six.moves.builtins.open',
+        with mock.patch('builtins.open',
                         mock.mock_open(read_data=fake_contents)):
             fresh, data = utils.read_cached_file("/this/is/a/fake")
 

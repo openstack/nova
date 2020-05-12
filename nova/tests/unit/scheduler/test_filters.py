@@ -19,7 +19,6 @@ import inspect
 
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
-from six.moves import range
 
 from nova import filters
 from nova import loadables

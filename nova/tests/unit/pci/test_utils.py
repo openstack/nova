@@ -19,7 +19,6 @@ import os
 
 import fixtures
 import mock
-from six.moves import builtins
 
 from nova import exception
 from nova.pci import utils
@@ -95,8 +94,7 @@ class GetFunctionByIfnameTestCase(test.NoDBTestCase):
     @mock.patch.object(os, 'readlink')
     def test_virtual_function(self, mock_readlink, *args):
         mock_readlink.return_value = '../../../0000.00.00.1'
-        with mock.patch.object(
-            builtins, 'open', side_effect=IOError()):
+        with mock.patch('builtins.open', side_effect=IOError()):
             address, physical_function = utils.get_function_by_ifname('eth0')
             self.assertEqual(address, '0000.00.00.1')
             self.assertFalse(physical_function)
@@ -129,14 +127,12 @@ class IsPhysicalFunctionTestCase(test.NoDBTestCase):
 
     @mock.patch('os.path.isdir', return_value=True)
     def test_virtual_function(self, *args):
-        with mock.patch.object(
-            builtins, 'open', side_effect=IOError()):
+        with mock.patch('builtins.open', side_effect=IOError()):
             self.assertFalse(utils.is_physical_function(*self.pci_args))
 
     @mock.patch('os.path.isdir', return_value=True)
     def test_physical_function(self, *args):
-        with mock.patch.object(
-            builtins, 'open', mock.mock_open(read_data='4')):
+        with mock.patch('builtins.open', mock.mock_open(read_data='4')):
             self.assertTrue(utils.is_physical_function(*self.pci_args))
 
     @mock.patch('os.path.isdir', return_value=False)

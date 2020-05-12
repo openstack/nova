@@ -19,7 +19,6 @@ import socket
 import sys
 
 import mock
-from six.moves import range
 
 from nova.compute import flavors
 import nova.conf

@@ -17,6 +17,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import urllib
+
 import netaddr
 from neutronclient.common import exceptions as n_exc
 from neutronclient.neutron import v2_0 as neutronv20
@@ -26,7 +28,6 @@ from oslo_utils import excutils
 from oslo_utils import netutils
 from oslo_utils import uuidutils
 import six
-from six.moves import urllib
 from webob import exc
 
 from nova import context as nova_context

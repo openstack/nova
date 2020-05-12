@@ -26,7 +26,6 @@ from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_utils import fileutils
 from oslo_utils.fixture import uuidsentinel as uuids
-import six
 
 from nova.compute import utils as compute_utils
 from nova import context
@@ -549,19 +548,19 @@ sunrpc /var/lib/nfs/rpc_pipefs rpc_pipefs rw,relatime 0 0
 
             # Source is given, and matches source in /proc/mounts
             proc_mnt = mock.mock_open(read_data=proc_with_mnt)
-            with mock.patch.object(six.moves.builtins, "open", proc_mnt):
+            with mock.patch('builtins.open', proc_mnt):
                 self.assertTrue(libvirt_utils.is_mounted(mount_path, source))
 
             # Source is given, and doesn't match source in /proc/mounts
             proc_mnt = mock.mock_open(read_data=proc_wrong_mnt)
-            with mock.patch.object(six.moves.builtins, "open", proc_mnt):
+            with mock.patch('builtins.open', proc_mnt):
                 self.assertFalse(libvirt_utils.is_mounted(mount_path, source))
 
             # Source is given, and mountpoint isn't present in /proc/mounts
             # Note that this shouldn't occur, as os.path.ismount should have
             # previously returned False in this case.
             proc_umnt = mock.mock_open(read_data=proc_without_mnt)
-            with mock.patch.object(six.moves.builtins, "open", proc_umnt):
+            with mock.patch('builtins.open', proc_umnt):
                 self.assertFalse(libvirt_utils.is_mounted(mount_path, source))
 
     def test_find_disk_file_device(self):

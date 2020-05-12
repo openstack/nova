@@ -19,9 +19,9 @@ and as a WSGI layer
 """
 
 import copy
+from urllib import parse as urlparse
 
 import mock
-import six.moves.urllib.parse as urlparse
 import webob
 
 from nova.api.openstack.compute import images as images_v21

@@ -12,10 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from urllib import parse
+
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 import requests
-from six.moves.urllib import parse
 
 
 LOG = logging.getLogger(__name__)

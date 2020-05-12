@@ -702,7 +702,7 @@ class ComputeTaskManager(base.Base):
             return
 
         elevated = context.elevated()
-        for (instance, host_list) in six.moves.zip(instances, host_lists):
+        for (instance, host_list) in zip(instances, host_lists):
             host = host_list.pop(0)
             if is_reschedule:
                 # If this runs in the superconductor, the first instance will
@@ -1523,7 +1523,7 @@ class ComputeTaskManager(base.Base):
         instances = []
         host_az = {}  # host=az cache to optimize multi-create
 
-        for (build_request, request_spec, host_list) in six.moves.zip(
+        for (build_request, request_spec, host_list) in zip(
                 build_requests, request_specs, host_lists):
             instance = build_request.get_new_instance(context)
             # host_list is a list of one or more Selection objects, the first
@@ -1605,8 +1605,7 @@ class ComputeTaskManager(base.Base):
                                                   block_device_mapping, tags,
                                                   cell_mapping_cache)
 
-        zipped = six.moves.zip(build_requests, request_specs, host_lists,
-                              instances)
+        zipped = zip(build_requests, request_specs, host_lists, instances)
         for (build_request, request_spec, host_list, instance) in zipped:
             if instance is None:
                 # Skip placeholders that were buried in cell0 or had their
@@ -1758,7 +1757,7 @@ class ComputeTaskManager(base.Base):
     def _cleanup_build_artifacts(self, context, exc, instances, build_requests,
                                  request_specs, block_device_mappings, tags,
                                  cell_mapping_cache):
-        for (instance, build_request, request_spec) in six.moves.zip(
+        for (instance, build_request, request_spec) in zip(
                 instances, build_requests, request_specs):
             # Skip placeholders that were buried in cell0 or had their
             # build requests deleted by the user before instance create.

@@ -15,6 +15,7 @@
 #    under the License.
 
 import datetime
+import urllib
 
 import fixtures
 import mock
@@ -22,7 +23,6 @@ from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 from oslo_utils.fixture import uuidsentinel as uuids
 import six
-from six.moves import urllib
 import webob
 from webob import exc
 

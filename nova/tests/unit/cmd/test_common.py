@@ -17,11 +17,11 @@
     Unit tests for the common functions used by different CLI interfaces.
 """
 
+from io import StringIO
 import sys
 
 import fixtures
 import mock
-from six.moves import StringIO
 
 from nova.cmd import common as cmd_common
 from nova.db import api

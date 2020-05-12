@@ -35,7 +35,6 @@ from oslo_utils import importutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import six
-from six.moves import range
 import sqlalchemy as sa
 from sqlalchemy import and_
 from sqlalchemy import Boolean

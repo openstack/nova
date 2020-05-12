@@ -15,6 +15,7 @@
 
 
 import contextlib
+import io
 import os
 import time
 
@@ -24,7 +25,6 @@ from oslo_concurrency import processutils
 from oslo_log import formatters
 from oslo_log import log as logging
 from oslo_utils.fixture import uuidsentinel as uuids
-from six.moves import cStringIO
 
 from nova.compute import manager as compute_manager
 import nova.conf
@@ -42,7 +42,7 @@ CONF = nova.conf.CONF
 def intercept_log_messages():
     try:
         mylog = logging.getLogger('nova')
-        stream = cStringIO()
+        stream = io.StringIO()
         handler = logging.logging.StreamHandler(stream)
         handler.setFormatter(formatters.ContextFormatter())
         mylog.logger.addHandler(handler)

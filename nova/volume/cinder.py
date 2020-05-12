@@ -22,6 +22,7 @@ import collections
 import copy
 import functools
 import sys
+import urllib
 
 from cinderclient import api_versions as cinder_api_versions
 from cinderclient import apiclient as cinder_apiclient
@@ -36,7 +37,6 @@ from oslo_utils import excutils
 from oslo_utils import strutils
 import retrying
 import six
-from six.moves import urllib
 
 from nova import availability_zones as az
 import nova.conf

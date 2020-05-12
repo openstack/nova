@@ -10,9 +10,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from urllib import parse as urlparse
+
 from oslo_log import log as logging
 from oslo_utils import versionutils
-import six.moves.urllib.parse as urlparse
 from sqlalchemy.sql.expression import asc
 from sqlalchemy.sql import false
 from sqlalchemy.sql import true

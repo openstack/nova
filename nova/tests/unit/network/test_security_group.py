@@ -18,7 +18,6 @@ from neutronclient.common import exceptions as n_exc
 from neutronclient.neutron import v2_0 as neutronv20
 from neutronclient.v2_0 import client
 from oslo_utils.fixture import uuidsentinel as uuids
-from six.moves import range
 
 from nova import context
 from nova import exception

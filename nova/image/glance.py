@@ -40,7 +40,6 @@ from oslo_serialization import jsonutils
 from oslo_utils import excutils
 from oslo_utils import timeutils
 import six
-from six.moves import range
 
 import nova.conf
 from nova import exception

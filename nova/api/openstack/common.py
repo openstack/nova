@@ -16,11 +16,11 @@
 import collections
 import itertools
 import re
+from urllib import parse as urlparse
 
 from oslo_log import log as logging
 from oslo_utils import strutils
 import six
-import six.moves.urllib.parse as urlparse
 import webob
 from webob import exc
 

@@ -19,7 +19,6 @@ import mock
 from oslo_policy import policy as oslo_policy
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
-from six.moves import range
 import webob
 
 from nova.api.openstack.compute import simple_tenant_usage as \

@@ -23,9 +23,7 @@ import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 import six
-from six.moves import builtins
 import testtools
-
 
 from nova.compute import vm_states
 from nova import exception
@@ -959,7 +957,7 @@ SwapCached:            0 kB
 Active:          8381604 kB
 """)
         with test.nested(
-            mock.patch.object(builtins, "open", m, create=True),
+            mock.patch('builtins.open', m, create=True),
             mock.patch.object(host.Host, "get_connection"),
         ) as (mock_file, mock_conn):
             mock_conn().getInfo.return_value = [
@@ -996,7 +994,7 @@ Active:          8381604 kB
 """)
 
         with test.nested(
-                mock.patch.object(six.moves.builtins, "open", m, create=True),
+                mock.patch('builtins.open', m, create=True),
                 mock.patch.object(host.Host,
                                   "list_guests"),
                 mock.patch.object(libvirt_driver.LibvirtDriver,
@@ -1232,8 +1230,7 @@ Active:          8381604 kB
             read_data="""cg /cgroup/cpu,cpuacct cg opt1,cpu,opt3 0 0
 cg /cgroup/memory cg opt1,opt2 0 0
 """)
-        with mock.patch(
-                "six.moves.builtins.open", m, create=True):
+        with mock.patch('builtins.open', m, create=True):
             self.assertTrue(self.host.is_cpu_control_policy_capable())
 
     def test_is_cpu_control_policy_capable_ko(self):
@@ -1241,11 +1238,10 @@ cg /cgroup/memory cg opt1,opt2 0 0
             read_data="""cg /cgroup/cpu,cpuacct cg opt1,opt2,opt3 0 0
 cg /cgroup/memory cg opt1,opt2 0 0
 """)
-        with mock.patch(
-                "six.moves.builtins.open", m, create=True):
+        with mock.patch('builtins.open', m, create=True):
             self.assertFalse(self.host.is_cpu_control_policy_capable())
 
-    @mock.patch('six.moves.builtins.open', side_effect=IOError)
+    @mock.patch('builtins.open', side_effect=IOError)
     def test_is_cpu_control_policy_capable_ioerror(self, mock_open):
         self.assertFalse(self.host.is_cpu_control_policy_capable())
 
@@ -1321,26 +1317,26 @@ class TestLibvirtSEVUnsupported(TestLibvirtSEV):
             '/sys/module/kvm_amd/parameters/sev')
 
     @mock.patch.object(os.path, 'exists', return_value=True)
-    @mock.patch.object(builtins, 'open', mock.mock_open(read_data="0\n"))
+    @mock.patch('builtins.open', mock.mock_open(read_data="0\n"))
     def test_kernel_parameter_zero(self, fake_exists):
         self.assertFalse(self.host._kernel_supports_amd_sev())
         fake_exists.assert_called_once_with(
             '/sys/module/kvm_amd/parameters/sev')
 
     @mock.patch.object(os.path, 'exists', return_value=True)
-    @mock.patch.object(builtins, 'open', mock.mock_open(read_data="1\n"))
+    @mock.patch('builtins.open', mock.mock_open(read_data="1\n"))
     def test_kernel_parameter_one(self, fake_exists):
         self.assertTrue(self.host._kernel_supports_amd_sev())
         fake_exists.assert_called_once_with(
             '/sys/module/kvm_amd/parameters/sev')
 
     @mock.patch.object(os.path, 'exists', return_value=True)
-    @mock.patch.object(builtins, 'open', mock.mock_open(read_data="1\n"))
+    @mock.patch('builtins.open', mock.mock_open(read_data="1\n"))
     def test_unsupported_without_feature(self, fake_exists):
         self.assertFalse(self.host.supports_amd_sev)
 
     @mock.patch.object(os.path, 'exists', return_value=True)
-    @mock.patch.object(builtins, 'open', mock.mock_open(read_data="1\n"))
+    @mock.patch('builtins.open', mock.mock_open(read_data="1\n"))
     @mock.patch.object(vc, '_domain_capability_features',
         new=vc._domain_capability_features_with_SEV_unsupported)
     def test_unsupported_with_feature(self, fake_exists):
@@ -1351,7 +1347,7 @@ class TestLibvirtSEVSupported(TestLibvirtSEV):
     """Libvirt driver tests for when AMD SEV support is present."""
 
     @mock.patch.object(os.path, 'exists', return_value=True)
-    @mock.patch.object(builtins, 'open', mock.mock_open(read_data="1\n"))
+    @mock.patch('builtins.open', mock.mock_open(read_data="1\n"))
     @mock.patch.object(vc, '_domain_capability_features',
                        new=vc._domain_capability_features_with_SEV)
     def test_supported_with_feature(self, fake_exists):

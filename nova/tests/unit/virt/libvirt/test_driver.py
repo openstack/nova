@@ -60,7 +60,6 @@ from oslo_utils import units
 from oslo_utils import uuidutils
 from oslo_utils import versionutils
 import six
-from six.moves import range
 
 from nova.api.metadata import base as instance_metadata
 from nova.compute import manager
@@ -15739,8 +15738,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     with test.nested(
                             mock.patch('os.path.exists',
                                        side_effect=mock_path_exists),
-                            mock.patch.object(six.moves.builtins, 'open',
-                                              fake_open)):
+                            mock.patch('builtins.open', fake_open)):
                         log_data = drvr.get_console_output(self.context,
                                                            instance)
                 finally:
@@ -20764,7 +20762,7 @@ class TestGuestConfigSysinfoSerialOS(test.NoDBTestCase):
         self.flags(sysinfo_serial="os", group="libvirt")
         theuuid = "56b40135-a973-4eb3-87bb-a2382a3e6dbc"
         with test.nested(
-                mock.patch.object(six.moves.builtins, "open",
+                mock.patch('builtins.open',
                     mock.mock_open(read_data=theuuid)),
                 self.patch_exists("/etc/machine-id", True)):
             self._test_get_guest_config_sysinfo_serial(theuuid)
@@ -20772,8 +20770,7 @@ class TestGuestConfigSysinfoSerialOS(test.NoDBTestCase):
     def test_get_guest_config_sysinfo_serial_os_empty_machine_id(self):
         self.flags(sysinfo_serial="os", group="libvirt")
         with test.nested(
-                mock.patch.object(six.moves.builtins, "open",
-                                  mock.mock_open(read_data="")),
+                mock.patch('builtins.open', mock.mock_open(read_data="")),
                 self.patch_exists("/etc/machine-id", True)):
             self.assertRaises(exception.NovaException,
                     self._test_get_guest_config_sysinfo_serial,

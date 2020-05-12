@@ -27,7 +27,7 @@ def _load_config():
     # Don't load in global context, since we can't assume
     # these modules are accessible when distutils uses
     # this module
-    from six.moves import configparser
+    import configparser
 
     from oslo_config import cfg
 

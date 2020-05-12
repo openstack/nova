@@ -13,10 +13,10 @@
 #    under the License.
 
 import datetime
+from urllib import parse
 
 import mock
 from oslo_utils import timeutils
-from six.moves.urllib import parse
 
 from nova.tests.functional.api_sample_tests import test_servers
 import nova.tests.functional.api_samples_test_base as astb
