@@ -411,7 +411,7 @@ notification_object_data = {
     'InstanceActionSnapshotPayload': '1.9-c3e0bbaaefafdfa2f8e6e504c2c9b12c',
     'InstanceExistsNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'InstanceExistsPayload': '1.2-e082c02438ee57164829afaeee3bf7f8',
-    'InstanceNUMACellPayload': '1.0-2f13614648bc46f2e29578a206561ef6',
+    'InstanceNUMACellPayload': '1.1-2a24ab42bf5e8dfa98291402725bf278',
     'InstanceNUMATopologyPayload': '1.0-247361b152047c18ae9ad1da2544a3c9',
     'InstancePCIRequestPayload': '1.0-12d0d61baf183daaafd93cbeeed2956f',
     'InstancePCIRequestsPayload': '1.0-6751cffe0c0fabd212aad624f672429a',
