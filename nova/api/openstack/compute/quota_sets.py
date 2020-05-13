@@ -112,12 +112,12 @@ class QuotaSetsController(wsgi.Controller):
     @wsgi.Controller.api_version(  # noqa
         MIN_WITHOUT_PROXY_API_SUPPORT_VERSION, '2.56')
     @wsgi.expected_errors(400)
-    def show(self, req, id):
+    def show(self, req, id):  # noqa
         return self._show(req, id, FILTERED_QUOTAS_2_36)
 
     @wsgi.Controller.api_version('2.57')  # noqa
     @wsgi.expected_errors(400)
-    def show(self, req, id):
+    def show(self, req, id):  # noqa
         return self._show(req, id, FILTERED_QUOTAS_2_57)
 
     @validation.query_schema(quota_sets.query_schema_275, '2.75')
@@ -141,12 +141,12 @@ class QuotaSetsController(wsgi.Controller):
     @wsgi.Controller.api_version(  # noqa
         MIN_WITHOUT_PROXY_API_SUPPORT_VERSION, '2.56')
     @wsgi.expected_errors(400)
-    def detail(self, req, id):
+    def detail(self, req, id):  # noqa
         return self._detail(req, id, FILTERED_QUOTAS_2_36)
 
     @wsgi.Controller.api_version('2.57')  # noqa
     @wsgi.expected_errors(400)
-    def detail(self, req, id):
+    def detail(self, req, id):  # noqa
         return self._detail(req, id, FILTERED_QUOTAS_2_57)
 
     @validation.query_schema(quota_sets.query_schema_275, '2.75')
@@ -172,13 +172,13 @@ class QuotaSetsController(wsgi.Controller):
         MIN_WITHOUT_PROXY_API_SUPPORT_VERSION, '2.56')
     @wsgi.expected_errors(400)
     @validation.schema(quota_sets.update_v236)
-    def update(self, req, id, body):
+    def update(self, req, id, body):  # noqa
         return self._update(req, id, body, FILTERED_QUOTAS_2_36)
 
     @wsgi.Controller.api_version('2.57')  # noqa
     @wsgi.expected_errors(400)
     @validation.schema(quota_sets.update_v257)
-    def update(self, req, id, body):
+    def update(self, req, id, body):  # noqa
         return self._update(req, id, body, FILTERED_QUOTAS_2_57)
 
     @validation.query_schema(quota_sets.query_schema_275, '2.75')
@@ -247,12 +247,12 @@ class QuotaSetsController(wsgi.Controller):
     @wsgi.Controller.api_version(  # noqa
         MIN_WITHOUT_PROXY_API_SUPPORT_VERSION, '2.56')
     @wsgi.expected_errors(400)
-    def defaults(self, req, id):
+    def defaults(self, req, id):  # noqa
         return self._defaults(req, id, FILTERED_QUOTAS_2_36)
 
     @wsgi.Controller.api_version('2.57')  # noqa
     @wsgi.expected_errors(400)
-    def defaults(self, req, id):
+    def defaults(self, req, id):  # noqa
         return self._defaults(req, id, FILTERED_QUOTAS_2_57)
 
     def _defaults(self, req, id, filtered_quotas):

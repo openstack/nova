@@ -29,7 +29,7 @@ def upgrade(migrate_engine):
     for table in (compute_nodes, aggregates):
         count = select([func.count()]).select_from(table).where(and_(
             table.c.deleted == 0,
-            table.c.uuid == None)).execute().scalar()  # NOQA
+            table.c.uuid == None)).execute().scalar()  # noqa
         if count > 0:
             msg = WARNING_MSG % {
                 'count': count,
@@ -45,8 +45,8 @@ def upgrade(migrate_engine):
     # if the definition is altered.
     count = select([func.count()]).select_from(pci_devices).where(and_(
         pci_devices.c.deleted == 0,
-        pci_devices.c.parent_addr == None,
-        pci_devices.c.dev_type == 'type-VF')).execute().scalar()  # NOQA
+        pci_devices.c.parent_addr == None,  # noqa
+        pci_devices.c.dev_type == 'type-VF')).execute().scalar()
     if count > 0:
         msg = WARNING_MSG % {
             'count': count,

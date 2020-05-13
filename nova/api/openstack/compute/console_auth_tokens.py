@@ -76,5 +76,5 @@ class ConsoleAuthTokensController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.31")  # noqa
     @wsgi.expected_errors((400, 404))
-    def show(self, req, id):
+    def show(self, req, id):  # noqa
         return self._show(req, id, False)

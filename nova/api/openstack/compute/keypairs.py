@@ -64,7 +64,7 @@ class KeypairController(wsgi.Controller):
     @wsgi.response(201)
     @wsgi.expected_errors((400, 403, 409))
     @validation.schema(keypairs.create_v22)
-    def create(self, req, body):
+    def create(self, req, body):  # noqa
         """Create or import keypair.
 
         Sending name will generate a key and return private_key
@@ -85,7 +85,7 @@ class KeypairController(wsgi.Controller):
     @wsgi.expected_errors((400, 403, 409))
     @validation.schema(keypairs.create_v20, "2.0", "2.0")
     @validation.schema(keypairs.create, "2.1", "2.1")
-    def create(self, req, body):
+    def create(self, req, body):  # noqa
         """Create or import keypair.
 
         Sending name will generate a key and return private_key
@@ -142,7 +142,7 @@ class KeypairController(wsgi.Controller):
     @validation.query_schema(keypairs.delete_query_schema_v20)
     @wsgi.response(204)
     @wsgi.expected_errors(404)
-    def delete(self, req, id):
+    def delete(self, req, id):  # noqa
         self._delete(req, id)
 
     @wsgi.Controller.api_version("2.10")    # noqa
@@ -150,7 +150,7 @@ class KeypairController(wsgi.Controller):
     @validation.query_schema(keypairs.delete_query_schema_v210, '2.10', '2.74')
     @wsgi.response(204)
     @wsgi.expected_errors(404)
-    def delete(self, req, id):
+    def delete(self, req, id):  # noqa
         # handle optional user-id for admin only
         user_id = self._get_user_id(req)
         self._delete(req, id, user_id=user_id)
@@ -184,13 +184,13 @@ class KeypairController(wsgi.Controller):
     @wsgi.Controller.api_version("2.2", "2.9")  # noqa
     @validation.query_schema(keypairs.show_query_schema_v20)
     @wsgi.expected_errors(404)
-    def show(self, req, id):
+    def show(self, req, id):  # noqa
         return self._show(req, id, key_type=True)
 
     @wsgi.Controller.api_version("2.1", "2.1")  # noqa
     @validation.query_schema(keypairs.show_query_schema_v20)
     @wsgi.expected_errors(404)
-    def show(self, req, id):
+    def show(self, req, id):  # noqa
         return self._show(req, id)
 
     def _show(self, req, id, key_type=False, user_id=None):
@@ -217,7 +217,7 @@ class KeypairController(wsgi.Controller):
     @wsgi.Controller.api_version("2.10", "2.34")  # noqa
     @validation.query_schema(keypairs.index_query_schema_v210)
     @wsgi.expected_errors(())
-    def index(self, req):
+    def index(self, req):  # noqa
         # handle optional user-id for admin only
         user_id = self._get_user_id(req)
         return self._index(req, key_type=True, user_id=user_id)
@@ -225,13 +225,13 @@ class KeypairController(wsgi.Controller):
     @wsgi.Controller.api_version("2.2", "2.9")  # noqa
     @validation.query_schema(keypairs.index_query_schema_v20)
     @wsgi.expected_errors(())
-    def index(self, req):
+    def index(self, req):  # noqa
         return self._index(req, key_type=True)
 
     @wsgi.Controller.api_version("2.1", "2.1")  # noqa
     @validation.query_schema(keypairs.index_query_schema_v20)
     @wsgi.expected_errors(())
-    def index(self, req):
+    def index(self, req):  # noqa
         return self._index(req)
 
     def _index(self, req, key_type=False, user_id=None, links=False):

@@ -2,7 +2,7 @@
 # of appearance. Changing the order has an impact on the overall integration
 # process, which may cause wedges in the gate later.
 
-hacking>=3.0.1,<3.1.0 # Apache-2.0
+hacking>=3.1.0,<3.2.0 # Apache-2.0
 mypy>=0.761 # MIT
 coverage!=4.4,>=4.0 # Apache-2.0
 ddt>=1.0.1 # MIT

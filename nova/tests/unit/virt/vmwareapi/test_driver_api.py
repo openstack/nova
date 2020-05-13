@@ -123,8 +123,7 @@ class VMwareDriverStartupTestCase(test.NoDBTestCase):
         self.flags(**startup_flags)
         with mock.patch(
                 'nova.virt.vmwareapi.driver.VMwareAPISession.__init__'):
-            e = self.assertRaises(
-                    Exception, driver.VMwareVCDriver, None)  # noqa
+            e = self.assertRaises(Exception, driver.VMwareVCDriver, None)  # noqa
             self.assertIs(type(e), expected_exception_type)
 
     def test_start_driver_no_user(self):

@@ -210,13 +210,13 @@ class HypervisorsController(wsgi.Controller):
     @wsgi.Controller.api_version("2.33", "2.52")  # noqa
     @validation.query_schema(hyper_schema.list_query_schema_v233)
     @wsgi.expected_errors(400)
-    def index(self, req):
+    def index(self, req):  # noqa
         limit, marker = common.get_limit_and_marker(req)
         return self._index(req, limit=limit, marker=marker, links=True)
 
     @wsgi.Controller.api_version("2.1", "2.32")  # noqa
     @wsgi.expected_errors(())
-    def index(self, req):
+    def index(self, req):  # noqa
         return self._index(req)
 
     def _index(self, req, limit=None, marker=None, links=False):
@@ -242,13 +242,13 @@ class HypervisorsController(wsgi.Controller):
     @wsgi.Controller.api_version("2.33", "2.52")  # noqa
     @validation.query_schema(hyper_schema.list_query_schema_v233)
     @wsgi.expected_errors((400))
-    def detail(self, req):
+    def detail(self, req):  # noqa
         limit, marker = common.get_limit_and_marker(req)
         return self._detail(req, limit=limit, marker=marker, links=True)
 
     @wsgi.Controller.api_version("2.1", "2.32")  # noqa
     @wsgi.expected_errors(())
-    def detail(self, req):
+    def detail(self, req):  # noqa
         return self._detail(req)
 
     def _detail(self, req, limit=None, marker=None, links=False):
@@ -300,7 +300,7 @@ class HypervisorsController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", "2.52")     # noqa F811
     @wsgi.expected_errors(404)
-    def show(self, req, id):
+    def show(self, req, id):  # noqa
         return self._show(req, id)
 
     def _show(self, req, id, with_servers=False):

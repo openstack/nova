@@ -273,7 +273,7 @@ class SimpleTenantUsageController(wsgi.Controller):
     @wsgi.Controller.api_version("2.1", "2.39")  # noqa
     @validation.query_schema(schema.index_query)
     @wsgi.expected_errors(400)
-    def index(self, req):
+    def index(self, req):  # noqa
         """Retrieve tenant_usage for all tenants."""
         return self._index(req)
 
@@ -288,7 +288,7 @@ class SimpleTenantUsageController(wsgi.Controller):
     @wsgi.Controller.api_version("2.1", "2.39")  # noqa
     @validation.query_schema(schema.show_query)
     @wsgi.expected_errors(400)
-    def show(self, req, id):
+    def show(self, req, id):  # noqa
         """Retrieve tenant_usage for a specified tenant."""
         return self._show(req, id)
 

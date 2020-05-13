@@ -881,7 +881,7 @@ class TestObjectSerializer(_BaseTestCase):
             }
 
         @base.NovaObjectRegistry.register  # noqa
-        class Parent(base.NovaObject):
+        class Parent(base.NovaObject):  # noqa
             VERSION = '1.1'
 
             fields = {

@@ -380,7 +380,7 @@ class ServiceController(wsgi.Controller):
     @wsgi.Controller.api_version(UUID_FOR_ID_MIN_VERSION)  # noqa F811
     @wsgi.expected_errors((400, 404))
     @validation.schema(services.service_update_v2_53, UUID_FOR_ID_MIN_VERSION)
-    def update(self, req, id, body):
+    def update(self, req, id, body):   # noqa
         """Perform service update
 
         Starting with microversion 2.53, the service uuid is passed in on the

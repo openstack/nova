@@ -153,7 +153,7 @@ class MigrationsController(wsgi.Controller):
     @wsgi.expected_errors(())
     @validation.query_schema(schema_migrations.list_query_schema_v20,
                              "2.23", "2.58")
-    def index(self, req):
+    def index(self, req):  # noqa
         """Return all migrations using the query parameters as filters."""
         return self._index(req, add_link=True)
 
@@ -161,7 +161,7 @@ class MigrationsController(wsgi.Controller):
     @wsgi.expected_errors(400)
     @validation.query_schema(schema_migrations.list_query_params_v259,
                              "2.59", "2.65")
-    def index(self, req):
+    def index(self, req):  # noqa
         """Return all migrations using the query parameters as filters."""
         limit, marker = common.get_limit_and_marker(req)
         return self._index(req, add_link=True, next_link=True, add_uuid=True,
@@ -176,7 +176,7 @@ class MigrationsController(wsgi.Controller):
                              "2.66", "2.79")
     @validation.query_schema(schema_migrations.list_query_params_v280,
                              "2.80")
-    def index(self, req):
+    def index(self, req):  # noqa
         """Return all migrations using the query parameters as filters."""
         limit, marker = common.get_limit_and_marker(req)
         return self._index(req, add_link=True, next_link=True, add_uuid=True,

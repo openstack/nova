@@ -31,12 +31,12 @@ class MicroversionsController(wsgi.Controller):
         return data
 
     @wsgi.Controller.api_version("2.2")  # noqa
-    def index(self, req):
+    def index(self, req):  # noqa
         data = {'param': 'val2'}
         return data
 
     @wsgi.Controller.api_version("3.0")  # noqa
-    def index(self, req):
+    def index(self, req):  # noqa
         raise webob.exc.HTTPBadRequest()
 
 
@@ -52,7 +52,7 @@ class MicroversionsController2(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.5", "3.1")  # noqa
     @wsgi.response(202)
-    def index(self, req):
+    def index(self, req): # noqa
         data = {'param': 'controller2_val2'}
         return data
 
@@ -88,7 +88,7 @@ class MicroversionsController4(wsgi.Controller):
         return data
 
     @wsgi.Controller.api_version("2.2")  # noqa
-    def _create(self, req):
+    def _create(self, req):  # noqa
         data = {'param': 'controller4_val2'}
         return data
 

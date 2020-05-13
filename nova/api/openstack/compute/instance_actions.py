@@ -77,7 +77,7 @@ class InstanceActionsController(wsgi.Controller):
         return common.get_instance(self.compute_api, context, server_id)
 
     @wsgi.Controller.api_version("2.21")  # noqa
-    def _get_instance(self, req, context, server_id):
+    def _get_instance(self, req, context, server_id):  # noqa
         with utils.temporary_mutation(context, read_deleted='yes'):
             return common.get_instance(self.compute_api, context, server_id)
 
@@ -100,7 +100,7 @@ class InstanceActionsController(wsgi.Controller):
                              "2.66")
     @validation.query_schema(schema_instance_actions.list_query_params_v258,
                              "2.58", "2.65")
-    def index(self, req, server_id):
+    def index(self, req, server_id):  # noqa
         """Returns the list of actions recorded for a given instance."""
         context = req.environ["nova.context"]
         instance = self._get_instance(req, context, server_id)

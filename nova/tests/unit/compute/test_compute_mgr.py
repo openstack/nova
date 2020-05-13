@@ -6261,6 +6261,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             mock_get_allocations, mock_ins_save, mock_spawn):
 
         accel_info = [{'k1': 'v1', 'k2': 'v2'}]
+
         @contextlib.contextmanager
         def fake_build_resources(compute_mgr, *args, **kwargs):
             yield {
