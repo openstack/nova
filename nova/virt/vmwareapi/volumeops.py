@@ -332,6 +332,10 @@ class VMwareVolumeOps(object):
             if hba.__class__.__name__ == 'HostInternetScsiHba':
                 return hba.iScsiName
 
+    def _get_connection_capabilities(self):
+        return ['vmware_service_instance_uuid:%s' %
+                self._session.vim.service_content.about.instanceUuid]
+
     def get_volume_connector(self, instance):
         """Return volume connector information."""
         try:
@@ -344,6 +348,10 @@ class VMwareVolumeOps(object):
                      'host': CONF.vmware.host_ip}
         if vm_ref:
             connector['instance'] = vutil.get_moref_value(vm_ref)
+
+        connector['connection_capabilities'] = \
+            self._get_connection_capabilities()
+
         return connector
 
     @staticmethod
