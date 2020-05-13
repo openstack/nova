@@ -18,7 +18,6 @@ import time
 
 from oslo_utils import fixture as utils_fixture
 from oslo_utils import timeutils
-import six
 
 from nova.api.openstack import api_version_request as avr
 import nova.conf
@@ -33,7 +32,7 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
     microversion = None
     sample_dir = 'servers'
 
-    user_data_contents = six.b('#!/bin/bash\n/bin/su\necho "I am in you!"\n')
+    user_data_contents = b'#!/bin/bash\n/bin/su\necho "I am in you!"\n'
     user_data = base64.b64encode(user_data_contents)
 
     common_req_names = [

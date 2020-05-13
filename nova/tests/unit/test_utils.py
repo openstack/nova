@@ -584,7 +584,7 @@ class ValidateIntegerTestCase(test.NoDBTestCase):
                           max_value=54)
         self.assertRaises(exception.InvalidInput,
                           utils.validate_integer,
-                          six.unichr(129), "UnicodeError",
+                          chr(129), "UnicodeError",
                           max_value=1000)
 
 

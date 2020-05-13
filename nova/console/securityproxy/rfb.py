@@ -123,7 +123,7 @@ class RFBSecurityProxy(base.SecurityProxy):
             raise exception.SecurityProxyNegotiationFailed(reason=reason)
 
         # Negotiate security with server
-        permitted_auth_types_cnt = six.byte2int(recv(compute_sock, 1))
+        permitted_auth_types_cnt = recv(compute_sock, 1)[0]
 
         if permitted_auth_types_cnt == 0:
             # Decode the reason why the request failed
@@ -148,8 +148,8 @@ class RFBSecurityProxy(base.SecurityProxy):
         # Negotiate security with client before we say "ok" to the server
         # send 1:[None]
         tenant_sock.sendall(auth.AUTH_STATUS_PASS +
-                            six.int2byte(auth.AuthType.NONE))
-        client_auth = six.byte2int(recv(tenant_sock, 1))
+                            bytes((auth.AuthType.NONE,)))
+        client_auth = recv(tenant_sock, 1)[0]
 
         if client_auth != auth.AuthType.NONE:
             self._fail(tenant_sock, compute_sock,
@@ -172,7 +172,7 @@ class RFBSecurityProxy(base.SecurityProxy):
             raise exception.SecurityProxyNegotiationFailed(
                 reason=_("No compute auth available: %s") % six.text_type(e))
 
-        compute_sock.sendall(six.int2byte(scheme.security_type()))
+        compute_sock.sendall(bytes((scheme.security_type(),)))
 
         LOG.debug("Using security type %d with server, None with client",
                   scheme.security_type())

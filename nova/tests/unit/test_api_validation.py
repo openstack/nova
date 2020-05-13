@@ -80,7 +80,7 @@ class ValidationRegex(test.NoDBTestCase):
         # about. The algorithm works for all ranges.
         def _get_all_chars():
             for i in range(0x7F):
-                yield six.unichr(i)
+                yield chr(i)
 
         self.useFixture(fixtures.MonkeyPatch(
             'nova.api.validation.parameter_types._get_all_chars',

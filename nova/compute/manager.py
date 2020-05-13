@@ -6663,7 +6663,7 @@ class ComputeManager(manager.Manager):
         output = self.driver.get_console_output(context, instance)
 
         if type(output) is six.text_type:
-            output = six.b(output)
+            output = output.encode("latin-1")
 
         if tail_length is not None:
             output = self._tail_log(output, tail_length)
