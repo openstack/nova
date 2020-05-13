@@ -25,7 +25,6 @@ import os_traits
 from oslo_concurrency import lockutils
 from oslo_log import log as logging
 from oslo_utils import uuidutils
-import six
 
 from nova.i18n import _
 
@@ -255,7 +254,7 @@ class ProviderTree(object):
 
     @property
     def roots(self):
-        return six.itervalues(self.roots_by_uuid)
+        return self.roots_by_uuid.values()
 
     def get_provider_uuids(self, name_or_uuid=None):
         """Return a list, in top-down traversable order, of the UUIDs of all

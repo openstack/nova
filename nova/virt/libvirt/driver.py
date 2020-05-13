@@ -809,7 +809,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # devices by looking up existing guest XMLs and doesn't use
         # the Placement API so it works with or without a vGPU reshape.
         mdevs = self._get_all_assigned_mediated_devices()
-        for (mdev_uuid, instance_uuid) in six.iteritems(mdevs):
+        for (mdev_uuid, instance_uuid) in mdevs.items():
             if not self._is_existing_mdev(mdev_uuid):
                 dev_name = libvirt_utils.mdev_uuid2name(mdev_uuid)
                 dev_info = self._get_mediated_device_information(dev_name)
@@ -7358,7 +7358,7 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.warning('More than one allocation was passed over to libvirt '
                         'while at the moment libvirt only supports one. Only '
                         'the first allocation will be looked up.')
-        rp_uuid, alloc = six.next(six.iteritems(vgpu_allocations))
+        rp_uuid, alloc = next(iter(vgpu_allocations.items()))
         vgpus_asked = alloc['resources'][orc.VGPU]
 
         # Find if we allocated against a specific pGPU (and then the allocation

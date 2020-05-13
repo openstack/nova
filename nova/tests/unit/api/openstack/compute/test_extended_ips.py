@@ -14,7 +14,6 @@
 #    under the License.
 
 from oslo_serialization import jsonutils
-import six
 
 from nova import objects
 from nova import test
@@ -120,7 +119,7 @@ class ExtendedIpsTestV21(test.TestCase):
         return jsonutils.loads(body).get('servers')
 
     def _get_ips(self, server):
-        for network in six.itervalues(server['addresses']):
+        for network in server['addresses'].values():
             for ip in network:
                 yield ip
 
