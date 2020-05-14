@@ -17,7 +17,6 @@ import copy
 import mock
 from oslo_utils.fixture import uuidsentinel
 from oslo_utils import uuidutils
-import six
 import webob
 
 from nova.api.openstack import api_version_request as avr
@@ -139,7 +138,7 @@ class ServerGroupTestV21(test.NoDBTestCase):
             req, body={'server_group': sgroup})
         self.assertIn(
             "Invalid input for field/attribute server_group",
-            six.text_type(result)
+            str(result)
         )
         # 'rules' isn't an acceptable request key before 2.64
         sgroup = server_group_template(rules=rules)
@@ -148,7 +147,7 @@ class ServerGroupTestV21(test.NoDBTestCase):
             req, body={'server_group': sgroup})
         self.assertIn(
             "Invalid input for field/attribute server_group",
-            six.text_type(result)
+            str(result)
         )
 
     def test_create_server_group(self):
@@ -772,8 +771,7 @@ class ServerGroupTestV264(ServerGroupTestV213):
                                        rules={'max_server_per_host': 3})
         result = self.assertRaises(webob.exc.HTTPBadRequest,
             self.controller.create, req, body={'server_group': sgroup})
-        self.assertIn("Only anti-affinity policy supports rules",
-                      six.text_type(result))
+        self.assertIn("Only anti-affinity policy supports rules", str(result))
 
     def test_create_anti_affinity_server_group_with_invalid_rules(self):
         req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
@@ -789,7 +787,7 @@ class ServerGroupTestV264(ServerGroupTestV213):
                 self.validation_error, self.controller.create,
                 req, body={'server_group': sgroup})
             self.assertIn(
-                "Invalid input for field/attribute", six.text_type(result)
+                "Invalid input for field/attribute", str(result)
             )
 
     @mock.patch('nova.objects.service.get_minimum_version_all_cells',
@@ -804,7 +802,7 @@ class ServerGroupTestV264(ServerGroupTestV213):
             self.controller.create, req, body={'server_group': sgroup})
         self.assertIn("Creating an anti-affinity group with rule "
                       "max_server_per_host > 1 is not yet supported.",
-                      six.text_type(result))
+                      str(result))
 
     def test_create_server_group(self):
         policies = ['affinity', 'anti-affinity']

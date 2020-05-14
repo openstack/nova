@@ -13,7 +13,6 @@
 
 
 import mock
-import six
 
 from nova import exception
 from nova import objects
@@ -212,7 +211,7 @@ class PciAddressTestCase(test.NoDBTestCase):
             devspec.PciDeviceSpec, pci_info)
         msg = ("Invalid PCI devices Whitelist config: property func ('12:6') "
                "does not parse as a hex number.")
-        self.assertEqual(msg, six.text_type(exc))
+        self.assertEqual(msg, str(exc))
 
     def test_max_func(self):
         pci_info = {"address": "0000:0a:00.%s" % (devspec.MAX_FUNC + 1),
@@ -222,7 +221,7 @@ class PciAddressTestCase(test.NoDBTestCase):
         msg = ('Invalid PCI devices Whitelist config: property func (%x) is '
                'greater than the maximum allowable value (%x).'
                   % (devspec.MAX_FUNC + 1, devspec.MAX_FUNC))
-        self.assertEqual(msg, six.text_type(exc))
+        self.assertEqual(msg, str(exc))
 
     def test_max_domain(self):
         pci_info = {"address": "%x:0a:00.5" % (devspec.MAX_DOMAIN + 1),
@@ -232,7 +231,7 @@ class PciAddressTestCase(test.NoDBTestCase):
         msg = ('Invalid PCI devices Whitelist config: property domain (%X) '
                'is greater than the maximum allowable value (%X).'
                % (devspec.MAX_DOMAIN + 1, devspec.MAX_DOMAIN))
-        self.assertEqual(msg, six.text_type(exc))
+        self.assertEqual(msg, str(exc))
 
     def test_max_bus(self):
         pci_info = {"address": "0000:%x:00.5" % (devspec.MAX_BUS + 1),
@@ -242,7 +241,7 @@ class PciAddressTestCase(test.NoDBTestCase):
         msg = ('Invalid PCI devices Whitelist config: property bus (%X) is '
                'greater than the maximum allowable value (%X).'
                % (devspec.MAX_BUS + 1, devspec.MAX_BUS))
-        self.assertEqual(msg, six.text_type(exc))
+        self.assertEqual(msg, str(exc))
 
     def test_max_slot(self):
         pci_info = {"address": "0000:0a:%x.5" % (devspec.MAX_SLOT + 1),
@@ -252,7 +251,7 @@ class PciAddressTestCase(test.NoDBTestCase):
         msg = ('Invalid PCI devices Whitelist config: property slot (%X) is '
                'greater than the maximum allowable value (%X).'
                % (devspec.MAX_SLOT + 1, devspec.MAX_SLOT))
-        self.assertEqual(msg, six.text_type(exc))
+        self.assertEqual(msg, str(exc))
 
     def test_address_is_undefined(self):
         pci_info = {"vendor_id": "8086", "product_id": "5057"}
@@ -388,7 +387,7 @@ class PciDevSpecTestCase(test.NoDBTestCase):
         self.assertEqual(
             "Invalid PCI devices Whitelist config: property vendor_id (80860) "
             "is greater than the maximum allowable value (FFFF).",
-            six.text_type(exc))
+            str(exc))
 
     def test_invalid_product_id(self):
         pci_info = {"vendor_id": "8086", "address": "*: *: *.5",
@@ -404,7 +403,7 @@ class PciDevSpecTestCase(test.NoDBTestCase):
         self.assertEqual(
             "Invalid PCI devices Whitelist config: property product_id "
             "(50570) is greater than the maximum allowable value (FFFF).",
-            six.text_type(exc))
+            str(exc))
 
     def test_devname_and_address(self):
         pci_info = {"devname": "eth0", "vendor_id": "8086",

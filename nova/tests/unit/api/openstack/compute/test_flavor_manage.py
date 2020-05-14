@@ -17,7 +17,6 @@ import copy
 
 import mock
 from oslo_serialization import jsonutils
-import six
 import webob
 
 from nova.api.openstack.compute import flavor_access as flavor_access_v21
@@ -74,7 +73,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
                 "vcpus": 2,
                 "disk": 1,
                 "OS-FLV-EXT-DATA:ephemeral": 1,
-                "id": six.text_type('1234'),
+                "id": '1234',
                 "swap": 512,
                 "rxtx_factor": 1,
                 "os-flavor-access:is_public": True,
@@ -117,7 +116,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
                 "vcpus": 2,
                 "disk": 1,
                 "OS-FLV-EXT-DATA:ephemeral": 1,
-                "id": six.text_type('1234'),
+                "id": '1234',
                 "swap": 512,
                 "rxtx_factor": 1,
                 "os-flavor-access:is_public": True,
@@ -343,7 +342,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
         ex = self.assertRaises(
             self.validation_error, self.controller._create,
             self._get_http_request(), body=self.request_body)
-        self.assertIn('description', six.text_type(ex))
+        self.assertIn('description', str(ex))
 
     def test_flavor_update_description(self):
         """With microversion <2.55 this should return a failure."""

@@ -20,7 +20,6 @@ from migrate.versioning import api as versioning_api
 import mock
 from oslo_db.sqlalchemy import utils as db_utils
 from oslo_utils.fixture import uuidsentinel
-import six
 import sqlalchemy
 
 from nova import context
@@ -537,4 +536,4 @@ class TestServicesUUIDCheck(test.TestCase):
         ex = self.assertRaises(exception.ValidationError,
                                self.migration.upgrade, self.engine)
         self.assertIn('There are still 1 unmigrated records in the '
-                      'services table.', six.text_type(ex))
+                      'services table.', str(ex))

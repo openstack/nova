@@ -24,7 +24,6 @@ from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from oslo_versionedobjects import exception as ovo_exc
-import six
 
 from nova.accelerator import cyborg
 from nova import block_device
@@ -2971,7 +2970,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                              task_state=None,
                              expected_task_state=task_states.MIGRATING,),
                         expected_ex, request_spec)
-        self.assertEqual(ex.kwargs['reason'], six.text_type(expected_ex))
+        self.assertEqual(ex.kwargs['reason'], str(expected_ex))
 
     @mock.patch.object(scheduler_utils, 'set_vm_state_and_notify')
     def test_set_vm_state_and_notify(self, mock_set):

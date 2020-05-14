@@ -14,7 +14,6 @@
 #    under the License.
 
 import mock
-import six
 import testtools
 
 from oslo_config import cfg
@@ -1110,7 +1109,7 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         # is a cast, but since we are using CastAsCall this will bubble to the
         # API.
         self.assertEqual(500, ex.response.status_code)
-        self.assertIn('NoValidHost', six.text_type(ex))
+        self.assertIn('NoValidHost', str(ex))
 
     def test_cold_migrate_with_physnet(self):
 
@@ -1260,5 +1259,4 @@ class NUMAServersRebuildTests(NUMAServersTestBase):
             client.OpenStackApiException, self._rebuild_server,
             server, self.image_ref_1)
         self.assertEqual(400, ex.response.status_code)
-        self.assertIn("An instance's NUMA topology cannot be changed",
-                      six.text_type(ex))
+        self.assertIn("An instance's NUMA topology cannot be changed", str(ex))

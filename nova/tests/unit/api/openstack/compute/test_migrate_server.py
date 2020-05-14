@@ -17,7 +17,6 @@ import fixtures
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
-import six
 import webob
 
 from nova.api.openstack import api_version_request
@@ -226,7 +225,7 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
                                    self.controller._migrate_live,
                                    self.req, instance.uuid, body=body)
             if check_response:
-                self.assertIn(six.text_type(fake_exc), ex.explanation)
+                self.assertIn(str(fake_exc), ex.explanation)
             mock_live_migrate.assert_called_once_with(
                 self.context, instance, False, self.disk_over_commit,
                 'hostname', self.force, self.async_)
@@ -601,7 +600,7 @@ class MigrateServerTestsV268(MigrateServerTestsV256):
                                self.req, fakes.FAKE_UUID, body=body)
         self.assertIn("Operation 'live-migration' not supported for "
                       "SEV-enabled instance (%s)" % instance.uuid,
-                      six.text_type(ex))
+                      str(ex))
 
     def test_live_migrate_with_forced_host(self):
         body = {'os-migrateLive': {'host': 'hostname',
@@ -610,4 +609,4 @@ class MigrateServerTestsV268(MigrateServerTestsV256):
         ex = self.assertRaises(self.validation_error,
                                self.controller._migrate_live,
                                self.req, fakes.FAKE_UUID, body=body)
-        self.assertIn('force', six.text_type(ex))
+        self.assertIn('force', str(ex))

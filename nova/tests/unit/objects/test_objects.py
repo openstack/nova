@@ -25,7 +25,6 @@ from oslo_utils import timeutils
 from oslo_versionedobjects import base as ovo_base
 from oslo_versionedobjects import exception as ovo_exc
 from oslo_versionedobjects import fixture
-import six
 
 from nova import context
 from nova import exception
@@ -257,7 +256,7 @@ class FakeIndirectionHack(fixture.FakeIndirectionAPI):
         objinst = self._ser.deserialize_entity(
             context, self._ser.serialize_entity(
                 context, objinst))
-        objmethod = six.text_type(objmethod)
+        objmethod = str(objmethod)
         args = self._ser.deserialize_entity(
             None, self._ser.serialize_entity(None, args))
         kwargs = self._ser.deserialize_entity(
@@ -272,9 +271,9 @@ class FakeIndirectionHack(fixture.FakeIndirectionAPI):
 
     def object_class_action(self, context, objname, objmethod, objver,
                             args, kwargs):
-        objname = six.text_type(objname)
-        objmethod = six.text_type(objmethod)
-        objver = six.text_type(objver)
+        objname = str(objname)
+        objmethod = str(objmethod)
+        objver = str(objver)
         args = self._ser.deserialize_entity(
             None, self._ser.serialize_entity(None, args))
         kwargs = self._ser.deserialize_entity(
@@ -292,9 +291,9 @@ class FakeIndirectionHack(fixture.FakeIndirectionAPI):
 
     def object_class_action_versions(self, context, objname, objmethod,
                                      object_versions, args, kwargs):
-        objname = six.text_type(objname)
-        objmethod = six.text_type(objmethod)
-        object_versions = {six.text_type(o): six.text_type(v)
+        objname = str(objname)
+        objmethod = str(objmethod)
+        object_versions = {str(o): str(v)
                            for o, v in object_versions.items()}
         args, kwargs = self._canonicalize_args(context, args, kwargs)
         objver = object_versions[objname]

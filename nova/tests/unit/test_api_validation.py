@@ -17,7 +17,6 @@ import re
 
 import fixtures
 from jsonschema import exceptions as jsonschema_exc
-import six
 
 from nova.api.openstack import api_version_request as api_version
 from nova.api import validation
@@ -284,7 +283,7 @@ class QueryParamsSchemaTestCase(test.NoDBTestCase):
         req.api_version_request = api_version.APIVersionRequest("2.1")
         ex = self.assertRaises(
             exception.ValidationError, self.controller.get, req)
-        self.assertIn("Query string is not UTF-8 encoded", six.text_type(ex))
+        self.assertIn("Query string is not UTF-8 encoded", str(ex))
 
     def test_strip_out_additional_properties(self):
         req = fakes.HTTPRequest.blank(

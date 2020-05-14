@@ -13,7 +13,6 @@
 import mock
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
-import six
 
 from nova.objects import resource
 from nova.tests.unit.objects import test_objects
@@ -53,8 +52,7 @@ class TestResourceObject(test_objects._LocalTest):
                               resource_class=rc,
                               identifier='foo')
         except ValueError as e:
-            self.assertEqual('Malformed Resource Class %s' % rc,
-                             six.text_type(e))
+            self.assertEqual('Malformed Resource Class %s' % rc, str(e))
         else:
             self.fail('Check malformed resource class failed.')
 

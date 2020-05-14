@@ -24,7 +24,6 @@ import mock
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
-import six
 
 from nova.accelerator.cyborg import _CyborgClient as cyborgclient
 from nova.compute import manager
@@ -178,7 +177,7 @@ class ComputeValidateDeviceTestCase(test.NoDBTestCase):
     def test_device_in_use(self):
         exc = self.assertRaises(exception.DevicePathInUse,
                           self._validate_device, '/dev/vda')
-        self.assertIn('/dev/vda', six.text_type(exc))
+        self.assertIn('/dev/vda', str(exc))
 
     def test_swap(self):
         self.instance['default_swap_device'] = "/dev/vdc"

@@ -29,7 +29,6 @@ from oslo_serialization import jsonutils
 from oslo_utils import fixture as osloutils_fixture
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
-import six
 
 from nova.compute import api as compute_api
 from nova.compute import instance_actions
@@ -778,7 +777,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
             expected = ('The maximum allowed number of disk devices (26) to '
                         'attach to a single instance has been exceeded.')
             self.assertEqual(403, ex.response.status_code)
-            self.assertIn(expected, six.text_type(ex))
+            self.assertIn(expected, str(ex))
 
 
 class ServersTestV21(ServersTest):
@@ -1206,7 +1205,7 @@ class ServerTestV269(integrated_helpers._IntegratedTestBase):
                                 self.api.get_servers,
                                 search_opts={'limit': 5})
         self.assertEqual(500, exp.response.status_code)
-        self.assertIn('NovaException', six.text_type(exp))
+        self.assertIn('NovaException', str(exp))
 
     def test_get_servers_detail_marker_in_down_cells(self):
         marker = self.down_cell_insts[2]
@@ -1215,7 +1214,7 @@ class ServerTestV269(integrated_helpers._IntegratedTestBase):
                                 self.api.get_servers,
                                 search_opts={'marker': marker})
         self.assertEqual(500, exp.response.status_code)
-        self.assertIn('oslo_db.exception.DBError', six.text_type(exp))
+        self.assertIn('oslo_db.exception.DBError', str(exp))
 
     def test_get_servers_detail_marker_sorting(self):
         marker = self.up_cell_insts[1]
@@ -1378,7 +1377,7 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase):
         ex = self.assertRaises(
             client.OpenStackApiException, self.api.api_post,
             '/servers/%s/action' % server['id'], rebuild_req_body)
-        self.assertIn('NoValidHost', six.text_type(ex))
+        self.assertIn('NoValidHost', str(ex))
 
     # A rebuild to the same host should never attempt a rebuild claim.
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.rebuild_claim',
@@ -1518,7 +1517,7 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase):
         # Assert that we failed because of the image change and not something
         # else.
         self.assertIn('Unable to rebuild with a different image for a '
-                      'volume-backed server', six.text_type(resp))
+                      'volume-backed server', str(resp))
 
 
 class ServersTestV280(integrated_helpers._IntegratedTestBase):
@@ -2279,7 +2278,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         ex = self.assertRaises(client.OpenStackApiException,
                                self.api.post_server_action,
                                server['id'], post)
-        self.assertIn("'force' was unexpected", six.text_type(ex))
+        self.assertIn("'force' was unexpected", str(ex))
 
     # NOTE(gibi): there is a similar test in SchedulerOnlyChecksTargetTest but
     # we want this test here as well because ServerMovingTest is a parent class
@@ -2706,7 +2705,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         ex = self.assertRaises(client.OpenStackApiException,
                                self.api.post_server_action,
                                server['id'], post)
-        self.assertIn("'force' was unexpected", six.text_type(ex))
+        self.assertIn("'force' was unexpected", str(ex))
 
     def test_live_migrate(self):
         source_hostname = self.compute1.host
@@ -3369,7 +3368,7 @@ class PollUnconfirmedResizesTest(integrated_helpers.ProviderUsageBaseTestCase):
                                self.api.post_server_action,
                                server['id'], {'confirmResize': None})
         self.assertEqual(409, ex.response.status_code)
-        self.assertIn('Service is unavailable at this time', six.text_type(ex))
+        self.assertIn('Service is unavailable at this time', str(ex))
         # Bring the source compute back up and try to confirm the resize which
         # should work since the migration status is still "finished".
         self.restart_compute_service(self.computes['host1'])
@@ -4575,8 +4574,7 @@ class ServerTestV256MultiCellTestCase(ServerTestV256Common):
         # the target host in cell1, it will result in a ComputeHostNotFound
         # error.
         self.assertEqual(400, ex.response.status_code)
-        self.assertIn('Compute host host2 could not be found',
-                      six.text_type(ex))
+        self.assertIn('Compute host host2 could not be found', str(ex))
 
 
 class ServerTestV256SingleCellMultiHostTestCase(ServerTestV256Common):
@@ -5911,7 +5909,7 @@ class UnsupportedPortResourceRequestBasedSchedulingTest(
         self.assertEqual(400, ex.response.status_code)
         self.assertIn('Attaching interfaces with QoS policy is '
                       'not supported for instance',
-                      six.text_type(ex))
+                      str(ex))
 
     @mock.patch('nova.tests.fixtures.NeutronFixture.create_port')
     def test_interface_attach_with_network_create_port_has_resource_request(
@@ -5939,7 +5937,7 @@ class UnsupportedPortResourceRequestBasedSchedulingTest(
         self.assertEqual(400, ex.response.status_code)
         self.assertIn('Using networks with QoS policy is not supported for '
                       'instance',
-                      six.text_type(ex))
+                      str(ex))
 
     @mock.patch('nova.tests.fixtures.NeutronFixture.create_port')
     def test_create_server_with_network_create_port_has_resource_request(
@@ -5974,7 +5972,7 @@ class UnsupportedPortResourceRequestBasedSchedulingTest(
             "Creating servers with ports having resource requests, like a "
             "port with a QoS minimum bandwidth policy, is not supported "
             "until microversion 2.72.",
-            six.text_type(ex))
+            str(ex))
 
     def test_unshelve_not_offloaded_server_with_port_resource_request(
             self):

@@ -16,7 +16,6 @@ import os
 
 import mock
 from oslo_concurrency import processutils
-import six
 
 from nova.compute import utils as compute_utils
 from nova import exception
@@ -78,7 +77,7 @@ class QemuTestCase(test.NoDBTestCase):
         exc = self.assertRaises(exception.InvalidDiskInfo,
                                 images.qemu_img_info,
                                 '/fake/path')
-        self.assertIn('qemu-img aborted by prlimits', six.text_type(exc))
+        self.assertIn('qemu-img aborted by prlimits', str(exc))
 
     @mock.patch('oslo_concurrency.processutils.execute')
     @mock.patch.object(os.path, 'exists', return_value=True)

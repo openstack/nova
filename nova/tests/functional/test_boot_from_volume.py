@@ -11,7 +11,6 @@
 #    under the License.
 
 import mock
-import six
 
 from nova import context
 from nova import objects
@@ -160,7 +159,7 @@ class BootFromVolumeTest(integrated_helpers._IntegratedTestBase):
                                {'server': server})
         self.assertEqual(400, ex.response.status_code)
         self.assertIn('You specified more local devices than the limit allows',
-                      six.text_type(ex))
+                      str(ex))
 
 
 class BootFromVolumeLargeRequestTest(test.TestCase,

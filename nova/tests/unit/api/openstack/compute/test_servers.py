@@ -32,7 +32,6 @@ from oslo_utils import fixture as utils_fixture
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
-import six
 import testtools
 import webob
 
@@ -311,7 +310,7 @@ class ServersControllerTest(ControllerTest):
                                self.controller._get_requested_networks,
                                requested_networks)
         self.assertIn('Bad networks format: network uuid is not in proper '
-                      'format', six.text_type(ex))
+                      'format', str(ex))
 
     def test_requested_networks_enabled_with_port(self):
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
@@ -2620,7 +2619,7 @@ class ServersControllerTestV273(ControllerTest):
         req = self.req(self.path_with_query % 'locked=price')
         exp = self.assertRaises(webob.exc.HTTPBadRequest,
                                 self.controller.index, req)
-        self.assertIn("Unrecognized value 'price'", six.text_type(exp))
+        self.assertIn("Unrecognized value 'price'", str(exp))
 
     def test_get_servers_with_locked_filter_empty_value(self):
         def fake_get_all(context, search_opts=None,
@@ -2637,7 +2636,7 @@ class ServersControllerTestV273(ControllerTest):
         req = self.req(self.path_with_query % 'locked=')
         exp = self.assertRaises(webob.exc.HTTPBadRequest,
                                 self.controller.index, req)
-        self.assertIn("Unrecognized value ''", six.text_type(exp))
+        self.assertIn("Unrecognized value ''", str(exp))
 
     def test_get_servers_with_locked_sort_key(self):
         def fake_get_all(context, search_opts=None,
@@ -3331,7 +3330,7 @@ class ServersControllerRebuildTestV254(ServersControllerRebuildInstanceTest):
         excpt = self.assertRaises(exception.ValidationError,
                                   self.controller._action_rebuild,
                                   self.req, FAKE_UUID, body=body)
-        self.assertIn('key_name', six.text_type(excpt))
+        self.assertIn('key_name', str(excpt))
 
     def test_rebuild_with_not_existed_keypair_name(self):
         body = {
@@ -3445,7 +3444,7 @@ class ServersControllerRebuildTestV257(ServersControllerRebuildTestV254):
         ex = self.assertRaises(exception.ValidationError,
                                self.controller._action_rebuild,
                                self.req, FAKE_UUID, body=body)
-        self.assertIn('personality', six.text_type(ex))
+        self.assertIn('personality', str(ex))
 
     def test_rebuild_user_data_old_version(self):
         """Tests that trying to rebuild with user_data before 2.57 fails."""
@@ -3460,7 +3459,7 @@ class ServersControllerRebuildTestV257(ServersControllerRebuildTestV254):
         ex = self.assertRaises(exception.ValidationError,
                                self.controller._action_rebuild,
                                self.req, FAKE_UUID, body=body)
-        self.assertIn('user_data', six.text_type(ex))
+        self.assertIn('user_data', str(ex))
 
     def test_rebuild_user_data_malformed(self):
         """Tests that trying to rebuild with malformed user_data fails."""
@@ -3473,7 +3472,7 @@ class ServersControllerRebuildTestV257(ServersControllerRebuildTestV254):
         ex = self.assertRaises(exception.ValidationError,
                                self.controller._action_rebuild,
                                self.req, FAKE_UUID, body=body)
-        self.assertIn('user_data', six.text_type(ex))
+        self.assertIn('user_data', str(ex))
 
     def test_rebuild_user_data_too_large(self):
         """Tests that passing user_data to rebuild that is too large fails."""
@@ -3486,7 +3485,7 @@ class ServersControllerRebuildTestV257(ServersControllerRebuildTestV254):
         ex = self.assertRaises(exception.ValidationError,
                                self.controller._action_rebuild,
                                self.req, FAKE_UUID, body=body)
-        self.assertIn('user_data', six.text_type(ex))
+        self.assertIn('user_data', str(ex))
 
     @mock.patch.object(context.RequestContext, 'can')
     @mock.patch('nova.db.api.instance_update_and_get_original')
@@ -3660,7 +3659,7 @@ class ServersControllerRebuildTestV263(ControllerTest):
         ex = self.assertRaises(exception.ValidationError,
                                self.controller._action_rebuild,
                                self.req, FAKE_UUID, body=self.body)
-        self.assertIn('is too short', six.text_type(ex))
+        self.assertIn('is too short', str(ex))
 
     def test_rebuild_server_with_empty_trusted_certs(self):
         """Make sure that we can't rebuild with an empty array of IDs"""
@@ -3669,7 +3668,7 @@ class ServersControllerRebuildTestV263(ControllerTest):
         ex = self.assertRaises(exception.ValidationError,
                                self.controller._action_rebuild,
                                self.req, FAKE_UUID, body=self.body)
-        self.assertIn('is too short', six.text_type(ex))
+        self.assertIn('is too short', str(ex))
 
     def test_rebuild_server_with_too_many_trusted_certs(self):
         """Make sure that we can't rebuild with an array of >50 unique IDs"""
@@ -3679,7 +3678,7 @@ class ServersControllerRebuildTestV263(ControllerTest):
         ex = self.assertRaises(exception.ValidationError,
                                self.controller._action_rebuild,
                                self.req, FAKE_UUID, body=self.body)
-        self.assertIn('is too long', six.text_type(ex))
+        self.assertIn('is too long', str(ex))
 
     def test_rebuild_server_with_nonunique_trusted_certs(self):
         """Make sure that we can't rebuild with a non-unique array of IDs"""
@@ -3688,7 +3687,7 @@ class ServersControllerRebuildTestV263(ControllerTest):
         ex = self.assertRaises(exception.ValidationError,
                                self.controller._action_rebuild,
                                self.req, FAKE_UUID, body=self.body)
-        self.assertIn('has non-unique elements', six.text_type(ex))
+        self.assertIn('has non-unique elements', str(ex))
 
     def test_rebuild_server_with_invalid_trusted_cert_id(self):
         """Make sure that we can't rebuild with non-string certificate IDs"""
@@ -3697,7 +3696,7 @@ class ServersControllerRebuildTestV263(ControllerTest):
         ex = self.assertRaises(exception.ValidationError,
                                self.controller._action_rebuild,
                                self.req, FAKE_UUID, body=self.body)
-        self.assertIn('is not of type', six.text_type(ex))
+        self.assertIn('is not of type', str(ex))
 
     def test_rebuild_server_with_invalid_trusted_certs(self):
         """Make sure that we can't rebuild with certificates in a non-array"""
@@ -3706,7 +3705,7 @@ class ServersControllerRebuildTestV263(ControllerTest):
         ex = self.assertRaises(exception.ValidationError,
                                self.controller._action_rebuild,
                                self.req, FAKE_UUID, body=self.body)
-        self.assertIn('is not of type', six.text_type(ex))
+        self.assertIn('is not of type', str(ex))
 
     def test_rebuild_server_with_trusted_certs_pre_2_63_fails(self):
         """Make sure we can't use trusted_certs before 2.63"""
@@ -3716,8 +3715,7 @@ class ServersControllerRebuildTestV263(ControllerTest):
         ex = self.assertRaises(exception.ValidationError,
                                self.controller._action_rebuild,
                                self.req, FAKE_UUID, body=self.body)
-        self.assertIn('Additional properties are not allowed',
-                      six.text_type(ex))
+        self.assertIn('Additional properties are not allowed', str(ex))
 
     def test_rebuild_server_with_trusted_certs_policy_failed(self):
         rule_name = "os_compute_api:servers:rebuild:trusted_certs"
@@ -3740,8 +3738,7 @@ class ServersControllerRebuildTestV263(ControllerTest):
         ex = self.assertRaises(webob.exc.HTTPBadRequest,
                                self._rebuild_server,
                                certs=['trusted-cert-id'])
-        self.assertIn('test cert validation error',
-                      six.text_type(ex))
+        self.assertIn('test cert validation error', str(ex))
 
 
 class ServersControllerRebuildTestV271(ControllerTest):
@@ -4335,7 +4332,7 @@ class ServersControllerCreateTest(test.TestCase):
         ex = self.assertRaises(webob.exc.HTTPBadRequest,
                                self._test_create_instance,
                                flavor=1324)
-        self.assertEqual('Flavor 1324 could not be found.', six.text_type(ex))
+        self.assertEqual('Flavor 1324 could not be found.', str(ex))
 
     def test_create_server_bad_image_uuid(self):
         self.body['server']['min_count'] = 1
@@ -4447,7 +4444,7 @@ class ServersControllerCreateTest(test.TestCase):
                                self.controller.create,
                                self.req, body=self.body)
         # Make sure the failure was about user_data and not something else.
-        self.assertIn('user_data', six.text_type(ex))
+        self.assertIn('user_data', str(ex))
 
     @mock.patch.object(compute_api.API, 'create',
                        side_effect=exception.NetworkRequiresSubnet(
@@ -6343,7 +6340,7 @@ class ServersControllerCreateTest(test.TestCase):
         # Tests that PciRequestAliasNotDefined is translated to a 400 error.
         ex = self.assertRaises(webob.exc.HTTPBadRequest,
                                self._test_create_extra, {})
-        self.assertIn('PCI alias fake_name is not defined', six.text_type(ex))
+        self.assertIn('PCI alias fake_name is not defined', str(ex))
 
     @mock.patch.object(compute_api.API, 'create',
                        side_effect=exception.PciInvalidAlias(
@@ -6352,7 +6349,7 @@ class ServersControllerCreateTest(test.TestCase):
         # Tests that PciInvalidAlias is translated to a 400 error.
         ex = self.assertRaises(webob.exc.HTTPBadRequest,
                                self._test_create_extra, {})
-        self.assertIn('Invalid PCI alias definition', six.text_type(ex))
+        self.assertIn('Invalid PCI alias definition', str(ex))
 
     def test_create_instance_with_user_data(self):
         value = base64.encode_as_text("A random string")
@@ -6577,7 +6574,7 @@ class ServersControllerCreateTestV237(test.NoDBTestCase):
         ex = self.assertRaises(
             webob.exc.HTTPBadRequest, self._create_server, 'auto')
         # make sure it was a flavor not found error and not something else
-        self.assertIn('Flavor 2 could not be found', six.text_type(ex))
+        self.assertIn('Flavor 2 could not be found', str(ex))
 
     @mock.patch.object(objects.Flavor, 'get_by_flavor_id',
                        side_effect=exception.FlavorNotFound(flavor_id='2'))
@@ -6589,7 +6586,7 @@ class ServersControllerCreateTestV237(test.NoDBTestCase):
         ex = self.assertRaises(
             webob.exc.HTTPBadRequest, self._create_server, 'none')
         # make sure it was a flavor not found error and not something else
-        self.assertIn('Flavor 2 could not be found', six.text_type(ex))
+        self.assertIn('Flavor 2 could not be found', str(ex))
 
     @mock.patch.object(objects.Flavor, 'get_by_flavor_id',
                        side_effect=exception.FlavorNotFound(flavor_id='2'))
@@ -6604,7 +6601,7 @@ class ServersControllerCreateTestV237(test.NoDBTestCase):
                 [{'uuid': 'e3b686a8-b91d-4a61-a3fc-1b74bb619ddb'},
                  {'uuid': 'e0f00941-f85f-46ec-9315-96ded58c2f14'}])
         # make sure it was a flavor not found error and not something else
-        self.assertIn('Flavor 2 could not be found', six.text_type(ex))
+        self.assertIn('Flavor 2 could not be found', str(ex))
 
     def test_create_server_legacy_neutron_network_id_fails(self):
         """Tests that we no longer support the legacy br-<uuid> format for
@@ -6688,7 +6685,7 @@ class ServersControllerCreateTestV257(test.NoDBTestCase):
         req.headers['content-type'] = 'application/json'
         ex = self.assertRaises(
             exception.ValidationError, controller.create, req, body=body)
-        self.assertIn('personality', six.text_type(ex))
+        self.assertIn('personality', str(ex))
 
 
 @mock.patch('nova.compute.utils.check_num_instances_quota',
@@ -6745,7 +6742,7 @@ class ServersControllerCreateTestV260(test.NoDBTestCase):
         ex = self.assertRaises(webob.exc.HTTPBadRequest,
                                self._post_server, '2.59')
         self.assertIn('Multiattach volumes are only supported starting with '
-                      'compute API version 2.60', six.text_type(ex))
+                      'compute API version 2.60', str(ex))
 
 
 class ServersControllerCreateTestV263(ServersControllerCreateTest):
@@ -6779,7 +6776,7 @@ class ServersControllerCreateTestV263(ServersControllerCreateTest):
         ex = self.assertRaises(
             exception.ValidationError, self.controller.create, self.req,
             body=self.body)
-        self.assertIn('is too short', six.text_type(ex))
+        self.assertIn('is too short', str(ex))
 
     def test_create_instance_with_empty_trusted_certs(self):
         """Make sure we can't create with an empty array of IDs"""
@@ -6790,7 +6787,7 @@ class ServersControllerCreateTestV263(ServersControllerCreateTest):
         ex = self.assertRaises(
             exception.ValidationError, self.controller.create, self.req,
             body=self.body)
-        self.assertIn('is too short', six.text_type(ex))
+        self.assertIn('is too short', str(ex))
 
     def test_create_instance_with_too_many_trusted_certs(self):
         """Make sure we can't create with an array of >50 unique IDs"""
@@ -6798,7 +6795,7 @@ class ServersControllerCreateTestV263(ServersControllerCreateTest):
         ex = self.assertRaises(
             exception.ValidationError, self.controller.create, self.req,
             body=self.body)
-        self.assertIn('is too long', six.text_type(ex))
+        self.assertIn('is too long', str(ex))
 
     def test_create_instance_with_nonunique_trusted_certs(self):
         """Make sure we can't create with a non-unique array of IDs"""
@@ -6806,7 +6803,7 @@ class ServersControllerCreateTestV263(ServersControllerCreateTest):
         ex = self.assertRaises(
             exception.ValidationError, self.controller.create, self.req,
             body=self.body)
-        self.assertIn('has non-unique elements', six.text_type(ex))
+        self.assertIn('has non-unique elements', str(ex))
 
     def test_create_instance_with_invalid_trusted_cert_id(self):
         """Make sure we can't create with non-string certificate IDs"""
@@ -6814,7 +6811,7 @@ class ServersControllerCreateTestV263(ServersControllerCreateTest):
         ex = self.assertRaises(
             exception.ValidationError, self.controller.create, self.req,
             body=self.body)
-        self.assertIn('is not of type', six.text_type(ex))
+        self.assertIn('is not of type', str(ex))
 
     def test_create_instance_with_invalid_trusted_certs(self):
         """Make sure we can't create with certificates in a non-array"""
@@ -6822,7 +6819,7 @@ class ServersControllerCreateTestV263(ServersControllerCreateTest):
         ex = self.assertRaises(
             exception.ValidationError, self.controller.create, self.req,
             body=self.body)
-        self.assertIn('is not of type', six.text_type(ex))
+        self.assertIn('is not of type', str(ex))
 
     def test_create_server_with_trusted_certs_pre_2_63_fails(self):
         """Make sure we can't use trusted_certs before 2.63"""
@@ -6832,8 +6829,7 @@ class ServersControllerCreateTestV263(ServersControllerCreateTest):
         ex = self.assertRaises(
             exception.ValidationError, self.controller.create, self.req,
             body=self.body)
-        self.assertIn('Additional properties are not allowed',
-                      six.text_type(ex))
+        self.assertIn('Additional properties are not allowed', str(ex))
 
     def test_create_server_with_trusted_certs_policy_failed(self):
         rule_name = "os_compute_api:servers:create:trusted_certs"
@@ -6861,8 +6857,7 @@ class ServersControllerCreateTestV263(ServersControllerCreateTest):
         ex = self.assertRaises(webob.exc.HTTPBadRequest,
                                self.controller.create, self.req,
                                body=self.body)
-        self.assertIn('test cert validation error',
-                      six.text_type(ex))
+        self.assertIn('test cert validation error', str(ex))
 
 
 class ServersControllerCreateTestV267(ServersControllerCreateTest):
@@ -6894,7 +6889,7 @@ class ServersControllerCreateTestV267(ServersControllerCreateTest):
         ex = self.assertRaises(
             exception.ValidationError, self.controller.create, self.req,
             body=self.body)
-        self.assertIn("'volume_type' was unexpected", six.text_type(ex))
+        self.assertIn("'volume_type' was unexpected", str(ex))
 
     @mock.patch.object(compute_api.API, 'create',
                        side_effect=exception.VolumeTypeNotFound(
@@ -6906,8 +6901,7 @@ class ServersControllerCreateTestV267(ServersControllerCreateTest):
         params = {'block_device_mapping_v2': self.block_device_mapping_v2}
         ex = self.assertRaises(webob.exc.HTTPBadRequest,
                                self._test_create_extra, params)
-        self.assertIn('Volume type fake-lvm-1 could not be found',
-                      six.text_type(ex))
+        self.assertIn('Volume type fake-lvm-1 could not be found', str(ex))
 
     def test_create_instance_with_volume_type_empty_string(self):
         """Test passing volume_type='' which is accepted but not used."""
@@ -6933,7 +6927,7 @@ class ServersControllerCreateTestV267(ServersControllerCreateTest):
         params = {'block_device_mapping_v2': self.block_device_mapping_v2}
         ex = self.assertRaises(exception.ValidationError,
                                self._test_create_extra, params)
-        self.assertIn('is too long', six.text_type(ex))
+        self.assertIn('is too long', str(ex))
 
 
 class ServersControllerCreateTestV274(ServersControllerCreateTest):
@@ -6965,8 +6959,7 @@ class ServersControllerCreateTestV274(ServersControllerCreateTest):
         ex = self.assertRaises(webob.exc.HTTPBadRequest,
                                self.controller.create,
                                self.req, body=self.body)
-        self.assertIn('Compute host node-invalid could not be found.',
-                      six.text_type(ex))
+        self.assertIn('Compute host node-invalid could not be found.', str(ex))
 
     def test_create_instance_with_non_string_host(self):
         self._generate_req(host=123)
@@ -6974,8 +6967,7 @@ class ServersControllerCreateTestV274(ServersControllerCreateTest):
         ex = self.assertRaises(exception.ValidationError,
                                self.controller.create,
                                self.req, body=self.body)
-        self.assertIn("Invalid input for field/attribute host.",
-                      six.text_type(ex))
+        self.assertIn("Invalid input for field/attribute host.", str(ex))
 
     def test_create_instance_with_invalid_hypervisor_hostname(self):
         get_resp = mock.Mock()
@@ -6987,8 +6979,7 @@ class ServersControllerCreateTestV274(ServersControllerCreateTest):
         ex = self.assertRaises(webob.exc.HTTPBadRequest,
                                self.controller.create,
                                self.req, body=self.body)
-        self.assertIn('Compute host node-invalid could not be found.',
-                      six.text_type(ex))
+        self.assertIn('Compute host node-invalid could not be found.', str(ex))
 
     def test_create_instance_with_non_string_hypervisor_hostname(self):
         get_resp = mock.Mock()
@@ -7001,7 +6992,7 @@ class ServersControllerCreateTestV274(ServersControllerCreateTest):
                                self.controller.create,
                                self.req, body=self.body)
         self.assertIn("Invalid input for field/attribute hypervisor_hostname.",
-                      six.text_type(ex))
+                      str(ex))
 
     def test_create_instance_with_invalid_host_and_hypervisor_hostname(self):
         self._generate_req(host='host-invalid', node='node-invalid')
@@ -7009,8 +7000,7 @@ class ServersControllerCreateTestV274(ServersControllerCreateTest):
         ex = self.assertRaises(webob.exc.HTTPBadRequest,
                                self.controller.create,
                                self.req, body=self.body)
-        self.assertIn('Compute host host-invalid could not be found.',
-                      six.text_type(ex))
+        self.assertIn('Compute host host-invalid could not be found.', str(ex))
 
     def test_create_instance_with_non_string_host_and_hypervisor_hostname(
             self):
@@ -7019,8 +7009,7 @@ class ServersControllerCreateTestV274(ServersControllerCreateTest):
         ex = self.assertRaises(exception.ValidationError,
                                self.controller.create,
                                self.req, body=self.body)
-        self.assertIn("Invalid input for field/attribute",
-                      six.text_type(ex))
+        self.assertIn("Invalid input for field/attribute", str(ex))
 
     def test_create_instance_pre_274(self):
         self._generate_req(host='host', node='node', api_version='2.73')
@@ -7028,8 +7017,7 @@ class ServersControllerCreateTestV274(ServersControllerCreateTest):
         ex = self.assertRaises(exception.ValidationError,
                                self.controller.create,
                                self.req, body=self.body)
-        self.assertIn("Invalid input for field/attribute server.",
-                      six.text_type(ex))
+        self.assertIn("Invalid input for field/attribute server.", str(ex))
 
     def test_create_instance_mutual(self):
         self._generate_req(host='host', node='node', az='nova:host:node')
@@ -7037,7 +7025,7 @@ class ServersControllerCreateTestV274(ServersControllerCreateTest):
         ex = self.assertRaises(webob.exc.HTTPBadRequest,
                                self.controller.create,
                                self.req, body=self.body)
-        self.assertIn("mutually exclusive", six.text_type(ex))
+        self.assertIn("mutually exclusive", str(ex))
 
     def test_create_instance_private_flavor(self):
         # Here we use admin context, so if we do not pass it or

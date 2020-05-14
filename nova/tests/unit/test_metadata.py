@@ -36,7 +36,6 @@ from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 from oslo_utils.fixture import uuidsentinel as uuids
 import requests
-import six
 import webob
 
 from nova.api.metadata import base
@@ -933,7 +932,7 @@ class OpenStackMetadataTestCase(test.TestCase):
                 # Verify the warning message is the one we expect which is the
                 # first and only arg to the first and only call to the warning.
                 self.assertIn('Passing insecure dynamic vendordata requests',
-                              six.text_type(warning_calls[0][0]))
+                              str(warning_calls[0][0]))
             self.assertEqual('10.0.0.1', vd['static'].get('ldap'))
             self.assertEqual('10.0.0.2', vd['static'].get('ad'))
 

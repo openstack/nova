@@ -17,7 +17,6 @@ import mock
 import ddt
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
-import six
 import webob
 
 from nova.api.openstack import api_version_request
@@ -151,8 +150,7 @@ class UnshelveServerControllerTestV277(test.NoDBTestCase):
                                 self.controller._unshelve,
                                 self.req, fakes.FAKE_UUID,
                                 body=body)
-        self.assertIn("\'availability_zone\' is a required property",
-                      six.text_type(exc))
+        self.assertIn("\'availability_zone\' is a required property", str(exc))
 
     def test_invalid_az_name_with_int(self):
         body = {
@@ -187,5 +185,4 @@ class UnshelveServerControllerTestV277(test.NoDBTestCase):
             exception.ValidationError,
             self.controller._unshelve, self.req,
             fakes.FAKE_UUID, body=body)
-        self.assertIn("Additional properties are not allowed",
-                      six.text_type(exc))
+        self.assertIn("Additional properties are not allowed", str(exc))

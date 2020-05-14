@@ -22,7 +22,6 @@ from os_vif.objects import fields as osv_fields
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_utils.fixture import uuidsentinel as uuids
-import six
 
 from nova import exception
 from nova.network import model as network_model
@@ -1215,9 +1214,9 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                           self._get_instance_xml,
                           d,
                           self.vif_macvtap_exception)
-        self.assertIn('macvtap_source', six.text_type(e))
-        self.assertIn('macvtap_mode', six.text_type(e))
-        self.assertIn('physical_interface', six.text_type(e))
+        self.assertIn('macvtap_source', str(e))
+        self.assertIn('macvtap_mode', str(e))
+        self.assertIn('physical_interface', str(e))
 
     @mock.patch('nova.virt.libvirt.vif.ensure_vlan')
     def test_macvtap_plug_vlan(self, ensure_vlan_mock):

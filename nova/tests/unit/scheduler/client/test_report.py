@@ -19,7 +19,6 @@ import mock
 import os_resource_classes as orc
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
-import six
 
 import nova.conf
 from nova import context
@@ -3588,7 +3587,7 @@ class TestAllocations(SchedulerReportClientTestCase):
             exception.AllocationUpdateFailed,
             self._test_remove_res_from_alloc, current_allocations,
             resources_to_remove, None)
-        self.assertIn('The allocation is empty', six.text_type(ex))
+        self.assertIn('The allocation is empty', str(ex))
 
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient.put")
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient.get")
@@ -3623,9 +3622,7 @@ class TestAllocations(SchedulerReportClientTestCase):
         ex = self.assertRaises(
             exception.AllocationUpdateFailed, self._test_remove_res_from_alloc,
             current_allocations, resources_to_remove, None)
-        self.assertIn(
-            "Key 'VCPU' is missing from the allocation",
-            six.text_type(ex))
+        self.assertIn("Key 'VCPU' is missing from the allocation", str(ex))
 
     def test_remove_res_from_alloc_missing_rp(self):
         current_allocations = {
@@ -3652,7 +3649,7 @@ class TestAllocations(SchedulerReportClientTestCase):
             current_allocations, resources_to_remove, None)
         self.assertIn(
             "Key '%s' is missing from the allocation" % uuids.other_rp,
-            six.text_type(ex))
+            str(ex))
 
     def test_remove_res_from_alloc_not_enough_resource_to_remove(self):
         current_allocations = {
@@ -3682,7 +3679,7 @@ class TestAllocations(SchedulerReportClientTestCase):
             'provider to remove 400 amount of NET_BW_EGR_KILOBIT_PER_SEC '
             'resources' %
             uuids.rp1,
-            six.text_type(ex))
+            str(ex))
 
     @mock.patch('time.sleep', new=mock.Mock())
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient.put")
@@ -3810,7 +3807,7 @@ class TestAllocations(SchedulerReportClientTestCase):
             self.context, uuids.consumer_uuid, resources_to_remove)
         self.assertIn(
             'due to multiple successive generation conflicts',
-            six.text_type(ex))
+            str(ex))
 
         get_call = mock.call(
             '/allocations/%s' % uuids.consumer_uuid, version='1.28',

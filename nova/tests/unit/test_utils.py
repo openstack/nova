@@ -31,7 +31,6 @@ from oslo_context import fixture as context_fixture
 from oslo_utils import encodeutils
 from oslo_utils import fixture as utils_fixture
 from oslo_utils.secretutils import md5
-import six
 
 from nova import context
 from nova import exception
@@ -215,8 +214,7 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         instance.display_name = u'\u00CD\u00F1st\u00E1\u00F1c\u00E9'
         # should be a bytes string if python2 before conversion
         self.assertIs(str, type(repr(instance)))
-        self.assertIs(six.text_type,
-                      type(utils.get_obj_repr_unicode(instance)))
+        self.assertIs(str, type(utils.get_obj_repr_unicode(instance)))
 
     @mock.patch('oslo_concurrency.processutils.execute')
     def test_ssh_execute(self, mock_execute):

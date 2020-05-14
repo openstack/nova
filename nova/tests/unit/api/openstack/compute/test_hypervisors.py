@@ -19,7 +19,6 @@ import mock
 import netaddr
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
-import six
 from webob import exc
 
 from nova.api.openstack.compute import hypervisors \
@@ -1024,7 +1023,7 @@ class HypervisorsTestV253(HypervisorsTestV252):
         ex = self.assertRaises(exc.HTTPBadRequest, self.controller.index, req)
         self.assertIn('Paging over hypervisors with the '
                       'hypervisor_hostname_pattern query parameter is not '
-                      'supported.', six.text_type(ex))
+                      'supported.', str(ex))
 
     def test_servers_with_non_integer_hypervisor_id(self):
         """This is a poorly named test, it's really checking the 404 case where
@@ -1134,7 +1133,7 @@ class HypervisorsTestV253(HypervisorsTestV252):
         req = self._get_request(True)
         ex = self.assertRaises(exc.HTTPBadRequest,
                                self.controller.show, req, '1')
-        self.assertIn('Invalid uuid 1', six.text_type(ex))
+        self.assertIn('Invalid uuid 1', str(ex))
 
     def test_show_with_servers_invalid_parameter(self):
         """Tests passing an invalid value for the with_servers query parameter
@@ -1146,7 +1145,7 @@ class HypervisorsTestV253(HypervisorsTestV252):
             url='/os-hypervisors/%s?with_servers=invalid' % hyper_id)
         ex = self.assertRaises(
             exception.ValidationError, self.controller.show, req, hyper_id)
-        self.assertIn('with_servers', six.text_type(ex))
+        self.assertIn('with_servers', str(ex))
 
     def test_show_with_servers_host_mapping_not_found(self):
         """Tests that a 404 is returned if instance_get_all_by_host raises
@@ -1195,7 +1194,7 @@ class HypervisorsTestV253(HypervisorsTestV252):
         req = self._get_request(True)
         ex = self.assertRaises(exc.HTTPBadRequest,
                                self.controller.uptime, req, '1')
-        self.assertIn('Invalid uuid 1', six.text_type(ex))
+        self.assertIn('Invalid uuid 1', str(ex))
 
     def test_detail_pagination(self):
         """Tests details paging with uuid markers."""

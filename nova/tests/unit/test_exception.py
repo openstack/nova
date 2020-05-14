@@ -18,7 +18,6 @@ import inspect
 
 import fixtures
 import mock
-import six
 from webob.util import status_reasons
 
 from nova import context
@@ -148,11 +147,10 @@ class NovaExceptionTestCase(test.NoDBTestCase):
             msg_fmt = "default message"
 
         exc = FakeNovaException()
-        self.assertEqual('default message', six.text_type(exc))
+        self.assertEqual('default message', str(exc))
 
     def test_error_msg(self):
-        self.assertEqual('test',
-                         six.text_type(exception.NovaException('test')))
+        self.assertEqual('test', str(exception.NovaException('test')))
         self.assertEqual('test',
                          exception.NovaException(Exception('test')).message)
 
@@ -161,7 +159,7 @@ class NovaExceptionTestCase(test.NoDBTestCase):
             msg_fmt = "default message: %(code)s"
 
         exc = FakeNovaException(code=500)
-        self.assertEqual('default message: 500', six.text_type(exc))
+        self.assertEqual('default message: 500', str(exc))
         self.assertEqual('default message: 500', exc.message)
 
     def test_error_msg_exception_with_kwargs(self):
@@ -169,7 +167,7 @@ class NovaExceptionTestCase(test.NoDBTestCase):
             msg_fmt = "default message: %(misspelled_code)s"
 
         exc = FakeNovaException(code=500, misspelled_code='blah')
-        self.assertEqual('default message: blah', six.text_type(exc))
+        self.assertEqual('default message: blah', str(exc))
         self.assertEqual('default message: blah', exc.message)
 
     def test_default_error_code(self):
@@ -198,7 +196,7 @@ class NovaExceptionTestCase(test.NoDBTestCase):
             msg_fmt = "some message"
 
         exc = FakeNovaException()
-        self.assertEqual(six.text_type(exc), exc.format_message())
+        self.assertEqual(str(exc), exc.format_message())
 
     def test_format_message_remote(self):
         class FakeNovaException_Remote(exception.NovaException):
@@ -208,7 +206,7 @@ class NovaExceptionTestCase(test.NoDBTestCase):
                 return "print the whole trace"
 
         exc = FakeNovaException_Remote()
-        self.assertEqual(u"print the whole trace", six.text_type(exc))
+        self.assertEqual(u"print the whole trace", str(exc))
         self.assertEqual("some message", exc.format_message())
 
     def test_format_message_remote_error(self):

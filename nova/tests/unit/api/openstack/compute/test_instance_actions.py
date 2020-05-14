@@ -20,7 +20,6 @@ import iso8601
 import mock
 from oslo_policy import policy as oslo_policy
 from oslo_utils.fixture import uuidsentinel as uuids
-import six
 from webob import exc
 
 from nova.api.openstack.compute import instance_actions as instance_actions_v21
@@ -273,7 +272,7 @@ class InstanceActionsTestV258(InstanceActionsTestV251):
         ex = self.assertRaises(exception.ValidationError,
                                self.controller.index, req)
         self.assertIn('Invalid input for query parameters changes-since',
-                      six.text_type(ex))
+                      str(ex))
 
     def test_get_action_with_invalid_params(self):
         """Tests get paging with a invalid change_since."""
@@ -281,16 +280,14 @@ class InstanceActionsTestV258(InstanceActionsTestV251):
                                  'wrong_params=xxx')
         ex = self.assertRaises(exception.ValidationError,
                                self.controller.index, req)
-        self.assertIn('Additional properties are not allowed',
-                      six.text_type(ex))
+        self.assertIn('Additional properties are not allowed', str(ex))
 
     def test_get_action_with_multi_params(self):
         """Tests get paging with multi markers."""
         req = self._get_http_req('os-instance-actions?marker=A&marker=B')
         ex = self.assertRaises(exception.ValidationError,
                                self.controller.index, req)
-        self.assertIn('Invalid input for query parameters marker',
-                      six.text_type(ex))
+        self.assertIn('Invalid input for query parameters marker', str(ex))
 
 
 class InstanceActionsTestV262(InstanceActionsTestV258):
@@ -367,7 +364,7 @@ class InstanceActionsTestV266(InstanceActionsTestV258):
         ex = self.assertRaises(exception.ValidationError,
                                self.controller.index, req)
         self.assertIn('Invalid input for query parameters changes-before',
-                      six.text_type(ex))
+                      str(ex))
 
     @mock.patch('nova.compute.api.InstanceActionAPI.actions_get')
     @mock.patch('nova.api.openstack.common.get_instance')
@@ -401,7 +398,7 @@ class InstanceActionsTestV266(InstanceActionsTestV258):
         ex = self.assertRaises(exc.HTTPBadRequest, self.controller.index,
                                req, FAKE_UUID)
         self.assertIn('The value of changes-since must be less than '
-                      'or equal to changes-before', six.text_type(ex))
+                      'or equal to changes-before', str(ex))
 
     def test_get_action_with_changes_before_old_microversion(self):
         """Tests that the changes-before query parameter is an error before
@@ -414,7 +411,7 @@ class InstanceActionsTestV266(InstanceActionsTestV258):
         ex = self.assertRaises(exception.ValidationError,
                                self.controller.index, req)
         detail = 'Additional properties are not allowed'
-        self.assertIn(detail, six.text_type(ex))
+        self.assertIn(detail, str(ex))
 
 
 class InstanceActionsTestV284(InstanceActionsTestV266):

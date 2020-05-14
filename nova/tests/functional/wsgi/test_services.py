@@ -12,7 +12,6 @@
 
 import os_resource_classes as orc
 import os_traits
-import six
 
 from nova import context as nova_context
 from nova import exception
@@ -83,7 +82,7 @@ class TestServicesAPI(integrated_helpers.ProviderUsageBaseTestCase):
                                self.admin_api.api_delete,
                                '/os-services/%s' % service['id'])
         self.assertIn('Unable to delete compute service that is hosting '
-                      'instances.', six.text_type(ex))
+                      'instances.', str(ex))
         self.assertEqual(409, ex.response.status_code)
 
         # Now delete the instance and wait for it to be gone.
@@ -198,7 +197,7 @@ class TestServicesAPI(integrated_helpers.ProviderUsageBaseTestCase):
                                '/os-services/%s' % service['id'])
         self.assertEqual(409, ex.response.status_code)
         self.assertIn('Unable to delete compute service that has in-progress '
-                      'migrations', six.text_type(ex))
+                      'migrations', str(ex))
         self.assertIn('There are 1 in-progress migrations involving the host',
                       self.stdlog.logger.output)
         # The provider is still around because we did not delete the service.
@@ -243,7 +242,7 @@ class TestServicesAPI(integrated_helpers.ProviderUsageBaseTestCase):
                                '/os-services/%s' % service['id'])
         self.assertEqual(409, ex.response.status_code)
         self.assertIn('Unable to delete compute service that has in-progress '
-                      'migrations', six.text_type(ex))
+                      'migrations', str(ex))
         self.assertIn('There are 1 in-progress migrations involving the host',
                       self.stdlog.logger.output)
         # The provider is still around because we did not delete the service.

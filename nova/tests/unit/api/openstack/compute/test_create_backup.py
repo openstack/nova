@@ -15,7 +15,6 @@
 
 import mock
 from oslo_utils import timeutils
-import six
 import webob
 
 from nova.api.openstack import common
@@ -393,7 +392,7 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
         mock_check_image.assert_called_once_with(self.context, {})
         mock_is_volume_backed.assert_called_once_with(self.context, instance)
         self.assertIn('Backup is not supported for volume-backed instances',
-                      six.text_type(ex))
+                      str(ex))
 
 
 class CreateBackupTestsV239(test.NoDBTestCase):

@@ -17,7 +17,6 @@
 import mock
 from oslo_concurrency import processutils
 from oslo_config import cfg
-import six
 
 from nova.compute import api as compute_api
 from nova import context
@@ -119,7 +118,7 @@ class CreateImportSharedTestMixIn(object):
 
         exc = self.assertRaises(exc_class, func, self.ctxt, self.ctxt.user_id,
                                 name, *args)
-        self.assertEqual(expected_message, six.text_type(exc))
+        self.assertEqual(expected_message, str(exc))
 
     def assertInvalidKeypair(self, expected_message, name):
         msg = 'Keypair data is invalid: %s' % expected_message
@@ -232,7 +231,7 @@ class ImportKeypairTestCase(KeypairAPITestCase, CreateImportSharedTestMixIn):
                                 self.ctxt, self.ctxt.user_id, 'foo',
                                 'bad key data')
         msg = u'Keypair data is invalid: failed to generate fingerprint'
-        self.assertEqual(msg, six.text_type(exc))
+        self.assertEqual(msg, str(exc))
 
 
 class GetKeypairTestCase(KeypairAPITestCase):

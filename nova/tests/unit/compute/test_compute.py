@@ -36,7 +36,6 @@ from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from oslo_utils import units
 from oslo_utils import uuidutils
-import six
 import testtools
 from testtools import matchers as testtools_matchers
 
@@ -8968,7 +8967,7 @@ class ComputeAPITestCase(BaseTestCase):
                                self.compute_api.rebuild, self.context,
                                instance, self.fake_image['id'], 'new_password')
         self.assertIn('Unable to find root block device mapping for '
-                      'volume-backed instance', six.text_type(ex))
+                      'volume-backed instance', str(ex))
 
     @mock.patch('nova.objects.RequestSpec')
     def test_rebuild_with_deleted_image(self, mock_reqspec):

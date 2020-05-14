@@ -23,7 +23,6 @@ import uuid
 import mock
 from oslo_log import log as logging
 import oslo_messaging as messaging
-import six
 
 import nova.conf
 from nova import exception
@@ -125,10 +124,10 @@ class JsonTestCase(test.NoDBTestCase):
                 e.difference)
             self.assertIn(
                 "actual:\n{'top': {'l1': {'l2': ['c', 'a', 'b', 'd']}}}",
-                six.text_type(e))
+                str(e))
             self.assertIn(
                 "expected:\n{'top': {'l1': {'l2': ['a', 'b', 'c']}}}",
-                six.text_type(e))
+                str(e))
         else:
             self.fail("This should have raised a mismatch exception")
 
@@ -206,10 +205,10 @@ class JsonTestCase(test.NoDBTestCase):
                 e.difference)
             self.assertIn(
                 "actual:\n{'top': {'l1': {'l2': ['c', 'a', 'd']}}}",
-                six.text_type(e))
+                str(e))
             self.assertIn(
                 "expected:\n{'top': {'l1': {'l2': ['a', 'b', 'c']}}}",
-                six.text_type(e))
+                str(e))
         else:
             self.fail("This should have raised a mismatch exception")
 
@@ -233,11 +232,9 @@ class JsonTestCase(test.NoDBTestCase):
         except Exception as e:
             self.assertEqual(
                 "3 != 4: path: root.top.l1.l2.c", e.difference)
-            self.assertIn("actual:\n{'top': {'l1': {'l2': {", six.text_type(e))
-            self.assertIn(
-                "expected:\n{'top': {'l1': {'l2': {", six.text_type(e))
-            self.assertIn(
-                "message: test message\n", six.text_type(e))
+            self.assertIn("actual:\n{'top': {'l1': {'l2': {", str(e))
+            self.assertIn("expected:\n{'top': {'l1': {'l2': {", str(e))
+            self.assertIn("message: test message\n", str(e))
         else:
             self.fail("This should have raised a mismatch exception")
 
@@ -310,13 +307,13 @@ class NovaExceptionReraiseFormatErrorTestCase(test.NoDBTestCase):
         # wrong kwarg
         ex = self.assertRaises(KeyError, FakeImageException,
                                bogus='wrongkwarg')
-        self.assertIn('image_id', six.text_type(ex))
+        self.assertIn('image_id', str(ex))
         # no kwarg
         ex = self.assertRaises(KeyError, FakeImageException)
-        self.assertIn('image_id', six.text_type(ex))
+        self.assertIn('image_id', str(ex))
         # not enough kwargs
         ex = self.assertRaises(KeyError, FakeImageException, image_id='image')
-        self.assertIn('type', six.text_type(ex))
+        self.assertIn('type', str(ex))
 
 
 class PatchExistsTestCase(test.NoDBTestCase):

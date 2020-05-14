@@ -19,7 +19,6 @@ Unit Tests for nova.compute.rpcapi
 import mock
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
-import six
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
@@ -534,7 +533,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             limits={},
             request_spec=objects.RequestSpec(),
             destination='dest')
-        self.assertIn('Compute too old', six.text_type(ex))
+        self.assertIn('Compute too old', str(ex))
 
     def test_prep_snapshot_based_resize_at_source(self):
         """Tests happy path for prep_snapshot_based_resize_at_source rpc call
@@ -564,7 +563,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             instance=self.fake_instance_obj,
             migration=migration_obj.Migration(),
             snapshot_id=uuids.snapshot_id)
-        self.assertIn('Compute too old', six.text_type(ex))
+        self.assertIn('Compute too old', str(ex))
 
     def test_finish_snapshot_based_resize_at_dest(self):
         """Tests happy path for finish_snapshot_based_resize_at_dest."""
@@ -595,7 +594,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             migration=migration_obj.Migration(dest_compute='dest'),
             snapshot_id=uuids.snapshot_id,
             request_spec=objects.RequestSpec())
-        self.assertIn('Compute too old', six.text_type(ex))
+        self.assertIn('Compute too old', str(ex))
 
     def test_confirm_snapshot_based_resize_at_source(self):
         """Tests happy path for confirm_snapshot_based_resize_at_source."""
@@ -622,7 +621,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             self.context,
             instance=self.fake_instance_obj,
             migration=migration_obj.Migration(source_compute='source'))
-        self.assertIn('Compute too old', six.text_type(ex))
+        self.assertIn('Compute too old', str(ex))
 
     def test_revert_snapshot_based_resize_at_dest(self):
         """Tests happy path for revert_snapshot_based_resize_at_dest."""
@@ -649,7 +648,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             self.context,
             instance=self.fake_instance_obj,
             migration=migration_obj.Migration(dest_compute='dest'))
-        self.assertIn('Compute too old', six.text_type(ex))
+        self.assertIn('Compute too old', str(ex))
 
     def test_finish_revert_snapshot_based_resize_at_source(self):
         """Tests happy path for finish_revert_snapshot_based_resize_at_source.
@@ -679,7 +678,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             self.context,
             instance=self.fake_instance_obj,
             migration=migration_obj.Migration(source_compute='source'))
-        self.assertIn('Compute too old', six.text_type(ex))
+        self.assertIn('Compute too old', str(ex))
 
     def test_reboot_instance(self):
         self.maxDiff = None
