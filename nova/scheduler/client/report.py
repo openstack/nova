@@ -29,7 +29,6 @@ from oslo_middleware import request_id
 from oslo_utils import excutils
 from oslo_utils import versionutils
 import retrying
-import six
 
 from nova.compute import provider_tree
 import nova.conf
@@ -2199,7 +2198,7 @@ class SchedulerReportClient(object):
                             global_request_id=context.global_id)
         except ks_exc.ClientException as ex:
             LOG.error('Failed to get resource provider by name: %s. Error: %s',
-                      name, six.text_type(ex))
+                      name, str(ex))
             raise exception.PlacementAPIConnectFailure()
 
         if resp.status_code == 200:

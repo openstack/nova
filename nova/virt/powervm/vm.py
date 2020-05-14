@@ -32,7 +32,6 @@ from pypowervm.wrappers import base_partition as pvm_bp
 from pypowervm.wrappers import logical_partition as pvm_lpar
 from pypowervm.wrappers import network as pvm_net
 from pypowervm.wrappers import shared_proc_pool as pvm_spp
-import six
 
 from nova.compute import power_state
 from nova import conf
@@ -153,7 +152,7 @@ def power_on(adapter, instance):
             except pvm_exc.Error as e:
                 LOG.exception("PowerVM error during power_on.",
                               instance=instance)
-                raise exc.InstancePowerOnFailure(reason=six.text_type(e))
+                raise exc.InstancePowerOnFailure(reason=str(e))
 
 
 def power_off(adapter, instance, force_immediate=False, timeout=None):
@@ -189,7 +188,7 @@ def power_off(adapter, instance, force_immediate=False, timeout=None):
             except pvm_exc.Error as e:
                 LOG.exception("PowerVM error during power_off.",
                               instance=instance)
-                raise exc.InstancePowerOffFailure(reason=six.text_type(e))
+                raise exc.InstancePowerOffFailure(reason=str(e))
         else:
             LOG.debug("Power off not required for instance %(inst)s.",
                       {'inst': instance.name})
@@ -221,7 +220,7 @@ def reboot(adapter, instance, hard):
                 power.power_on(entry, None)
         except pvm_exc.Error as e:
             LOG.exception("PowerVM error during reboot.", instance=instance)
-            raise exc.InstanceRebootFailure(reason=six.text_type(e))
+            raise exc.InstanceRebootFailure(reason=str(e))
 
 
 def delete_lpar(adapter, instance):

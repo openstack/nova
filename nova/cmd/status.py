@@ -27,7 +27,6 @@ from oslo_serialization import jsonutils
 from oslo_upgradecheck import upgradecheck
 from oslo_utils import fileutils
 import pkg_resources
-import six
 from sqlalchemy import func as sqlfunc
 from sqlalchemy import MetaData, Table, and_, select
 
@@ -343,7 +342,7 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
             return upgradecheck.Result(
                 upgradecheck.Code.WARNING,
                 _('Unable to determine Cinder API version due to error: %s') %
-                six.text_type(ex))
+                str(ex))
         return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
     def _check_policy(self):
@@ -404,7 +403,7 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
             status = upgradecheck.Result(
                 upgradecheck.Code.WARNING,
                 _('Unable to perform policy checks due to error: %s') %
-                six.text_type(ex))
+                str(ex))
         # reset the policy state so that it can be initialized from fresh if
         # operator changes policy file after running this upgrade checks.
         policy.reset()

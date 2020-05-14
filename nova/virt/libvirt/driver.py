@@ -72,7 +72,6 @@ from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import units
 from oslo_utils import uuidutils
-import six
 
 from nova.api.metadata import base as instance_metadata
 from nova.api.metadata import password
@@ -1932,7 +1931,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 LOG.exception("Failure rebasing volume %(new_path)s on "
                     "%(old_path)s.", {'new_path': new_path,
                                       'old_path': old_path})
-                raise exception.VolumeRebaseFailed(reason=six.text_type(exc))
+                raise exception.VolumeRebaseFailed(reason=str(exc))
 
             if resize_to:
                 dev.resize(resize_to * units.Gi)
@@ -4326,7 +4325,7 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.PciDevicePrepareFailed(id=dev['id'],
                                                    instance_uuid=
                                                    dev['instance_uuid'],
-                                                   reason=six.text_type(exc))
+                                                   reason=str(exc))
 
     def _detach_pci_devices(self, guest, pci_devs):
         try:

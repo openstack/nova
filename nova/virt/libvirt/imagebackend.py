@@ -30,7 +30,6 @@ from oslo_utils import excutils
 from oslo_utils import fileutils
 from oslo_utils import strutils
 from oslo_utils import units
-import six
 
 import nova.conf
 from nova import exception
@@ -402,7 +401,7 @@ class Image(metaclass=abc.ABCMeta):
                 fileutils.ensure_tree(os.path.dirname(self.disk_info_path))
                 write_to_disk_info_file()
         except OSError as e:
-            raise exception.DiskInfoReadWriteFail(reason=six.text_type(e))
+            raise exception.DiskInfoReadWriteFail(reason=str(e))
         return driver_format
 
     @staticmethod

@@ -54,7 +54,6 @@ from oslo_utils import excutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import units
-import six
 
 from nova.accelerator import cyborg
 from nova import block_device
@@ -1493,7 +1492,7 @@ class ComputeManager(manager.Manager):
                 LOG.error(
                     "Could not retrieve compute node resource provider %s and "
                     "therefore unable to error out any instances stuck in "
-                    "BUILDING state. Error: %s", cn_uuid, six.text_type(e))
+                    "BUILDING state. Error: %s", cn_uuid, str(e))
                 continue
 
             not_handled_consumers = (set(allocations) -
@@ -1972,7 +1971,7 @@ class ComputeManager(manager.Manager):
             # booting from volume, and will be recorded as an instance fault.
             # Maintain the original exception message which most likely has
             # useful details which the standard InvalidBDM error message lacks.
-            raise exception.InvalidBDM(six.text_type(ex))
+            raise exception.InvalidBDM(str(ex))
 
     def _update_instance_after_spawn(self, instance,
                                      vm_state=vm_states.ACTIVE):
@@ -2347,7 +2346,7 @@ class ComputeManager(manager.Manager):
                     exception.UnexpectedResourceProviderNameForPCIRequest
                     ) as e:
                 raise exception.BuildAbortException(
-                    reason=six.text_type(e), instance_uuid=instance.uuid)
+                    reason=str(e), instance_uuid=instance.uuid)
 
         # TODO(Luyao) cut over to get_allocs_for_consumer
         allocs = self.reportclient.get_allocations_for_consumer(
@@ -2479,7 +2478,7 @@ class ComputeManager(manager.Manager):
                     phase=fields.NotificationPhase.ERROR, exception=e,
                     bdms=block_device_mapping)
             raise exception.RescheduledException(
-                    instance_uuid=instance.uuid, reason=six.text_type(e))
+                    instance_uuid=instance.uuid, reason=str(e))
 
         # NOTE(alaski): This is only useful during reschedules, remove it now.
         instance.system_metadata.pop('network_allocated', None)
@@ -2637,10 +2636,10 @@ class ComputeManager(manager.Manager):
                     ctxt.reraise = False
                     LOG.warning('Could not clean up failed build,'
                                 ' not rescheduling. Error: %s',
-                                six.text_type(exc2))
+                                str(exc2))
                     raise exception.BuildAbortException(
                             instance_uuid=instance.uuid,
-                            reason=six.text_type(exc))
+                            reason=str(exc))
                 finally:
                     # Call Cyborg to delete accelerator requests
                     compute_utils.delete_arqs_if_needed(context, instance)
@@ -2715,7 +2714,7 @@ class ComputeManager(manager.Manager):
                 LOG.warning(
                     'Failed to update network info cache when cleaning up '
                     'allocated networks. Stale VIFs may be left on this host.'
-                    'Error: %s', six.text_type(exc)
+                    'Error: %s', str(exc)
                 )
                 return
 
@@ -2733,7 +2732,7 @@ class ComputeManager(manager.Manager):
             # mostly ignored
             LOG.warning(
                 'Cleaning up VIFs failed for instance. Error: %s',
-                six.text_type(exc), instance=instance,
+                str(exc), instance=instance,
             )
         else:
             LOG.debug('Unplugged VIFs for instance', instance=instance)
@@ -2771,7 +2770,7 @@ class ComputeManager(manager.Manager):
                 # Provide a warning that something is amiss.
                 with excutils.save_and_reraise_exception():
                     LOG.warning('Failed to deallocate network for instance; '
-                                'retrying. Error: %s', six.text_type(e),
+                                'retrying. Error: %s', str(e),
                                 instance=instance)
 
         try:
@@ -4529,7 +4528,7 @@ class ComputeManager(manager.Manager):
             # Do not let this stop us from cleaning up since the guest
             # is already gone.
             LOG.error('Failed to delete port bindings from source host. '
-                      'Error: %s', six.text_type(e), instance=instance)
+                      'Error: %s', str(e), instance=instance)
 
     def _delete_volume_attachments(self, ctxt, bdms):
         """Deletes volume attachment records for the given bdms.
@@ -4548,7 +4547,7 @@ class ComputeManager(manager.Manager):
                     self.volume_api.attachment_delete(ctxt, bdm.attachment_id)
                 except Exception as e:
                     LOG.error('Failed to delete volume attachment with ID %s. '
-                              'Error: %s', bdm.attachment_id, six.text_type(e),
+                              'Error: %s', bdm.attachment_id, str(e),
                               instance_uuid=bdm.instance_uuid)
 
     @wrap_exception()
@@ -4642,7 +4641,7 @@ class ComputeManager(manager.Manager):
             # Do not let this stop us from cleaning up since the guest
             # is already gone.
             LOG.error('Failed to delete port bindings from target host. '
-                      'Error: %s', six.text_type(e), instance=instance)
+                      'Error: %s', str(e), instance=instance)
 
         # Delete any volume attachments remaining for this target host.
         LOG.debug('Deleting volume attachments for target host.',
@@ -5125,7 +5124,7 @@ class ComputeManager(manager.Manager):
                     exception.UnexpectedResourceProviderNameForPCIRequest
                     ) as e:
                 raise exception.BuildAbortException(
-                    reason=six.text_type(e), instance_uuid=instance.uuid)
+                    reason=str(e), instance_uuid=instance.uuid)
 
         limits = filter_properties.get('limits', {})
         allocs = self.reportclient.get_allocations_for_consumer(
@@ -5360,7 +5359,7 @@ class ComputeManager(manager.Manager):
                 ctxt, instance, flavor, nodename, migration, allocations,
                 image_meta=instance.image_meta, limits=limits)
         except Exception as ex:
-            err = six.text_type(ex)
+            err = str(ex)
             LOG.warning(
                 'Cross-cell resize pre-checks failed for this host (%s). '
                 'Cleaning up. Failure: %s', self.host, err,
@@ -5457,7 +5456,7 @@ class ComputeManager(manager.Manager):
             self._power_off_instance(instance)
         except Exception as e:
             LOG.exception('Failed to power off instance.', instance=instance)
-            raise exception.InstancePowerOffFailure(reason=six.text_type(e))
+            raise exception.InstancePowerOffFailure(reason=str(e))
         instance.power_state = self._get_power_state(instance)
 
         # If a snapshot image ID was provided, we need to snapshot the guest
@@ -6645,7 +6644,7 @@ class ComputeManager(manager.Manager):
         LOG.info("Get console output", instance=instance)
         output = self.driver.get_console_output(context, instance)
 
-        if type(output) is six.text_type:
+        if type(output) is str:
             output = output.encode("latin-1")
 
         if tail_length is not None:
@@ -8491,12 +8490,12 @@ class ComputeManager(manager.Manager):
                         LOG.error('Connection for volume %s not terminated on '
                                   'source host %s during post_live_migration: '
                                   '%s', bdm.volume_id, self.host,
-                                  six.text_type(e), instance=instance)
+                                  str(e), instance=instance)
                     else:
                         LOG.error('Volume attachment %s not deleted on source '
                                   'host %s during post_live_migration: %s',
                                   bdm.attachment_id, self.host,
-                                  six.text_type(e), instance=instance)
+                                  str(e), instance=instance)
 
     @wrap_exception()
     @wrap_instance_fault
@@ -8755,7 +8754,7 @@ class ComputeManager(manager.Manager):
             LOG.error('Network cleanup failed for source host %s during post '
                       'live migration. You may need to manually clean up '
                       'resources in the network service. Error: %s',
-                      prev_host, six.text_type(e))
+                      prev_host, str(e))
         # NOTE(vish): this is necessary to update dhcp for nova-network
         # NOTE(mriedem): This is a no-op for neutron.
         self.network_api.setup_networks_on_host(context, instance, self.host)
@@ -8917,7 +8916,7 @@ class ComputeManager(manager.Manager):
                         'Network cleanup failed for destination host %s '
                         'during live migration rollback. You may need to '
                         'manually clean up resources in the network service. '
-                        'Error: %s', dest, six.text_type(e))
+                        'Error: %s', dest, str(e))
                 except Exception:
                     with excutils.save_and_reraise_exception():
                         LOG.exception(
@@ -9018,7 +9017,7 @@ class ComputeManager(manager.Manager):
                 'Network cleanup failed for destination host %s '
                 'during live migration rollback. You may need to '
                 'manually clean up resources in the network service. '
-                'Error: %s', self.host, six.text_type(e))
+                'Error: %s', self.host, str(e))
         except Exception:
             with excutils.save_and_reraise_exception():
                 # NOTE(tdurakov): even if teardown networks fails driver
@@ -9813,7 +9812,7 @@ class ComputeManager(manager.Manager):
                 except keystone_exception.ClientException as e:
                     LOG.error(
                         "Failed to delete compute node resource provider "
-                        "for compute node %s: %s", cn.uuid, six.text_type(e))
+                        "for compute node %s: %s", cn.uuid, str(e))
 
         for nodename in nodenames:
             self._update_available_resource_for_node(context, nodename,
@@ -10257,7 +10256,7 @@ class ComputeManager(manager.Manager):
                 except exception.NotFound as e:
                     LOG.info('Failed to process external instance event '
                              '%(event)s due to: %(error)s',
-                             {'event': event.key, 'error': six.text_type(e)},
+                             {'event': event.key, 'error': str(e)},
                              instance=instance)
             elif event.name == 'network-vif-deleted':
                 try:
@@ -10267,7 +10266,7 @@ class ComputeManager(manager.Manager):
                 except exception.NotFound as e:
                     LOG.info('Failed to process external instance event '
                              '%(event)s due to: %(error)s',
-                             {'event': event.key, 'error': six.text_type(e)},
+                             {'event': event.key, 'error': str(e)},
                              instance=instance)
             elif event.name == 'volume-extended':
                 self.extend_volume(context, instance, event.tag)

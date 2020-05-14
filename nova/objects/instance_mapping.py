@@ -14,7 +14,6 @@ import collections
 
 from oslo_log import log as logging
 from oslo_utils import versionutils
-import six
 from sqlalchemy.orm import exc as orm_exc
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql import false
@@ -275,7 +274,7 @@ def populate_user_id(context, max_count):
             except Exception as exp:
                 LOG.warning('Encountered exception: "%s" while querying '
                             'instances from cell: %s. Continuing to the next '
-                            'cell.', six.text_type(exp),
+                            'cell.', str(exp),
                             cms_by_id[cell_id].identity)
                 continue
         # Walk through every instance that has a mapping needing to be updated

@@ -14,7 +14,6 @@
 
 import eventlet
 import os
-import six
 import time
 
 import os_resource_classes as orc
@@ -291,7 +290,7 @@ class ZVMDriver(driver.ComputeDriver):
                 raise exception.VirtualInterfaceCreateException()
         except Exception as err:
             with excutils.save_and_reraise_exception():
-                LOG.error("Failed for vif plugging: %s", six.text_type(err),
+                LOG.error("Failed for vif plugging: %s", str(err),
                           instance=instance)
 
     def _import_spawn_image(self, context, image_meta_id, image_os_version):

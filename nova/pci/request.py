@@ -41,7 +41,6 @@
 import jsonschema
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
-import six
 
 import nova.conf
 from nova import exception
@@ -143,7 +142,7 @@ def _get_alias_from_config():
     except jsonschema.exceptions.ValidationError as exc:
         raise exception.PciInvalidAlias(reason=exc.message)
     except Exception as exc:
-        raise exception.PciInvalidAlias(reason=six.text_type(exc))
+        raise exception.PciInvalidAlias(reason=str(exc))
 
     return aliases
 

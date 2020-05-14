@@ -16,7 +16,6 @@
 import struct
 
 from oslo_log import log as logging
-import six
 
 from nova.console.rfb import auth
 from nova.console.rfb import auths
@@ -53,7 +52,7 @@ class RFBSecurityProxy(base.SecurityProxy):
         self.auth_schemes = auths.RFBAuthSchemeList()
 
     def _make_var_str(self, message):
-        message_str = six.text_type(message)
+        message_str = str(message)
         message_bytes = message_str.encode('utf-8')
         message_len = struct.pack("!I", len(message_bytes))
         return message_len + message_bytes
@@ -170,7 +169,7 @@ class RFBSecurityProxy(base.SecurityProxy):
             self._fail(tenant_sock, compute_sock,
                        _("Unable to negotiate security with server"))
             raise exception.SecurityProxyNegotiationFailed(
-                reason=_("No compute auth available: %s") % six.text_type(e))
+                reason=_("No compute auth available: %s") % str(e))
 
         compute_sock.sendall(bytes((scheme.security_type(),)))
 
@@ -184,7 +183,7 @@ class RFBSecurityProxy(base.SecurityProxy):
             # as that's information leakage
             self._fail(tenant_sock, None,
                        _("Unable to negotiate security with server"))
-            LOG.debug("Auth failed %s", six.text_type(e))
+            LOG.debug("Auth failed %s", str(e))
             raise exception.SecurityProxyNegotiationFailed(
                 reason=_("Auth handshake failed"))
 

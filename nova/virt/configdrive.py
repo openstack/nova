@@ -21,7 +21,6 @@ import shutil
 from oslo_concurrency import processutils
 from oslo_utils import fileutils
 from oslo_utils import units
-import six
 
 import nova.conf
 from nova import exception
@@ -64,7 +63,7 @@ class ConfigDriveBuilder(object):
         with open(filepath, 'wb') as f:
             # the given data can be either text or bytes. we can only write
             # bytes into files.
-            if isinstance(data, six.text_type):
+            if isinstance(data, str):
                 data = data.encode('utf-8')
             f.write(data)
 

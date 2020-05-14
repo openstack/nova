@@ -46,7 +46,6 @@ from oslo_utils import importutils
 from oslo_utils.secretutils import md5
 from oslo_utils import strutils
 from oslo_utils import timeutils
-import six
 
 import nova.conf
 from nova import exception
@@ -259,8 +258,8 @@ def utf8(value):
     if value is None or isinstance(value, bytes):
         return value
 
-    if not isinstance(value, six.text_type):
-        value = six.text_type(value)
+    if not isinstance(value, str):
+        value = str(value)
 
     return value.encode('utf-8')
 
@@ -618,7 +617,7 @@ def validate_integer(value, name, min_value=None, max_value=None):
     try:
         return strutils.validate_integer(value, name, min_value, max_value)
     except ValueError as e:
-        raise exception.InvalidInput(reason=six.text_type(e))
+        raise exception.InvalidInput(reason=str(e))
 
 
 def _serialize_profile_info():
@@ -730,7 +729,7 @@ def get_system_metadata_from_image(image_meta, flavor=None):
         if key in SM_SKIP_KEYS:
             continue
 
-        new_value = safe_truncate(six.text_type(value), 255)
+        new_value = safe_truncate(str(value), 255)
         system_meta[prefix_format % key] = new_value
 
     for key in SM_INHERITABLE_KEYS:
@@ -784,7 +783,7 @@ def get_hash_str(base_str):
 
     If base_str is a Unicode string, encode it to UTF-8.
     """
-    if isinstance(base_str, six.text_type):
+    if isinstance(base_str, str):
         base_str = base_str.encode('utf-8')
     return md5(base_str, usedforsecurity=False).hexdigest()
 
@@ -797,7 +796,7 @@ def get_sha256_str(base_str):
     or anything else that needs to be retained for a long period a salted
     hash is better.
     """
-    if isinstance(base_str, six.text_type):
+    if isinstance(base_str, str):
         base_str = base_str.encode('utf-8')
     return hashlib.sha256(base_str).hexdigest()
 
@@ -986,7 +985,7 @@ def get_sdk_adapter(service_type, check_service=False):
     except sdk_exc.ServiceDiscoveryException as e:
         raise exception.ServiceUnavailable(
             _("The %(service_type)s service is unavailable: %(error)s") %
-            {'service_type': service_type, 'error': six.text_type(e)})
+            {'service_type': service_type, 'error': str(e)})
     return getattr(conn, service_type)
 
 

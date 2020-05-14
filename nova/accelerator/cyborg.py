@@ -12,8 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import six
-
 from oslo_log import log as logging
 
 from keystoneauth1 import exceptions as ks_exc
@@ -95,7 +93,7 @@ class _CyborgClient(object):
                 err_msg = msg + str(resp)
         except ks_exc.ClientException as exc:
             err_msg = _('Could not communicate with Cyborg.')
-            LOG.exception('%s: %s', err_msg, six.text_type(exc))
+            LOG.exception('%s: %s', err_msg, str(exc))
 
         return resp, err_msg
 

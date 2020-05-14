@@ -23,7 +23,6 @@ from oslo_log import log as logging
 from oslo_utils import encodeutils
 from oslo_utils import secretutils as secutils
 from oslo_utils import strutils
-import six
 import webob.dec
 import webob.exc
 
@@ -151,8 +150,7 @@ class MetadataRequestHandler(wsgi.Application):
                           remote_address)
             msg = _('An unknown error has occurred. '
                     'Please try your request again.')
-            raise webob.exc.HTTPInternalServerError(
-                                               explanation=six.text_type(msg))
+            raise webob.exc.HTTPInternalServerError(explanation=str(msg))
 
         if meta_data is None:
             LOG.error('Failed to get metadata for IP %s: no metadata',
@@ -262,7 +260,7 @@ class MetadataRequestHandler(wsgi.Application):
 
         # instance_data is unicode-encoded, while cache_utils doesn't like
         # that. Therefore we convert to str
-        if isinstance(instance_id, six.text_type):
+        if isinstance(instance_id, str):
             instance_id = instance_id.encode('utf-8')
         return instance_id, tenant_id
 
@@ -329,8 +327,7 @@ class MetadataRequestHandler(wsgi.Application):
                           instance_id)
             msg = _('An unknown error has occurred. '
                     'Please try your request again.')
-            raise webob.exc.HTTPInternalServerError(
-                                               explanation=six.text_type(msg))
+            raise webob.exc.HTTPInternalServerError(explanation=str(msg))
 
         if meta_data is None:
             LOG.error('Failed to get metadata for instance id: %s',

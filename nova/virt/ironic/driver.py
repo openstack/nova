@@ -33,7 +33,6 @@ from oslo_serialization import jsonutils
 from oslo_service import loopingcall
 from oslo_utils import excutils
 from oslo_utils import importutils
-import six
 from tooz import hashring as hash_ring
 
 from nova.api.metadata import base as instance_metadata
@@ -453,7 +452,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                         "%(node)s when unprovisioning the instance "
                         "%(instance)s: %(reason)s",
                         {'node': node.uuid, 'instance': instance.uuid,
-                         'reason': six.text_type(e)})
+                         'reason': str(e)})
 
     def _add_volume_target_info(self, context, instance, block_device_info):
         bdms = virt_driver.block_device_info_get_mapping(block_device_info)
@@ -657,12 +656,12 @@ class IronicDriver(virt_driver.ComputeDriver):
             node_generator = self.ironic_connection.nodes(**kwargs)
         except sdk_exc.InvalidResourceQuery as e:
             LOG.error("Invalid parameters in the provided search query."
-                      "Error: %s", six.text_type(e))
+                      "Error: %s", str(e))
             raise exception.VirtDriverNotReady()
         except Exception as e:
             LOG.error("An unknown error has occurred when trying to get the "
                       "list of nodes from the Ironic inventory. Error: %s",
-                      six.text_type(e))
+                      str(e))
             raise exception.VirtDriverNotReady()
         if return_generator:
             return node_generator
@@ -1225,8 +1224,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                     files=injected_files)
             except Exception as e:
                 with excutils.save_and_reraise_exception():
-                    msg = ("Failed to build configdrive: %s" %
-                           six.text_type(e))
+                    msg = "Failed to build configdrive: %s" % str(e)
                     LOG.error(msg, instance=instance)
                     self._cleanup_deploy(node, instance, network_info)
 
@@ -1244,7 +1242,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                 LOG.error("Failed to request Ironic to provision instance "
                           "%(inst)s: %(reason)s",
                           {'inst': instance.uuid,
-                           'reason': six.text_type(e)})
+                           'reason': str(e)})
                 self._cleanup_deploy(node, instance, network_info)
 
         timer = loopingcall.FixedIntervalLoopingCall(self._wait_for_active,
@@ -1554,8 +1552,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                 # which will cause ironicclient to automatically retry for us.
                 # We can remove this workaround once we are confident that we
                 # are only running against ironic containing this fix.
-                if ('No conductor' in six.text_type(e) and
-                        attempt < last_attempt):
+                if 'No conductor' in str(e) and attempt < last_attempt:
                     LOG.warning('No ironic conductor is running; '
                                 'waiting...')
                     time.sleep(10)
@@ -1583,7 +1580,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                   {'uuid': instance.uuid,
                    'network_info': network_info_str})
         for vif in network_info:
-            port_id = six.text_type(vif['id'])
+            port_id = str(vif['id'])
             self._plug_vif(node, port_id)
 
     def _unplug_vifs(self, node, instance, network_info):
@@ -1597,7 +1594,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         if not network_info:
             return
         for vif in network_info:
-            port_id = six.text_type(vif['id'])
+            port_id = str(vif['id'])
             try:
                 self.ironicclient.call("node.vif_detach", node.uuid,
                                        port_id)
@@ -1735,8 +1732,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                     files=injected_files)
             except Exception as e:
                 with excutils.save_and_reraise_exception():
-                    msg = ("Failed to build configdrive: %s" %
-                           six.text_type(e))
+                    msg = "Failed to build configdrive: %s" % str(e)
                     LOG.error(msg, instance=instance)
                     raise exception.InstanceDeployFailure(msg)
 
@@ -1754,7 +1750,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                 ironic.exc.BadRequest) as e:     # Maintenance
             msg = (_("Failed to request Ironic to rebuild instance "
                      "%(inst)s: %(reason)s") % {'inst': instance.uuid,
-                                                'reason': six.text_type(e)})
+                                                'reason': str(e)})
             raise exception.InstanceDeployFailure(msg)
 
         # Although the target provision state is REBUILD, it will actually go
@@ -1983,7 +1979,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             LOG.warning('Error detaching VIF from node %(node)s '
                         'after deploy failed; %(reason)s',
                         {'node': instance.node,
-                         'reason': six.text_type(e)},
+                         'reason': str(e)},
                         instance=instance)
 
     def get_volume_connector(self, instance):
@@ -2145,7 +2141,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             try:
                 node = self._validate_instance_and_node(instance)
             except exception.InstanceNotFound as e:
-                raise exception.InstanceRescueFailure(reason=six.text_type(e))
+                raise exception.InstanceRescueFailure(reason=str(e))
 
             if node.provision_state == ironic_states.RESCUE:
                 raise loopingcall.LoopingCallDone()
@@ -2159,7 +2155,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                                    node_uuid, ironic_states.RESCUE,
                                    rescue_password=rescue_password)
         except Exception as e:
-            raise exception.InstanceRescueFailure(reason=six.text_type(e))
+            raise exception.InstanceRescueFailure(reason=str(e))
 
         timer = loopingcall.FixedIntervalLoopingCall(_wait_for_rescue)
         timer.start(interval=CONF.ironic.api_retry_interval).wait()
@@ -2184,8 +2180,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             try:
                 node = self._validate_instance_and_node(instance)
             except exception.InstanceNotFound as e:
-                raise exception.InstanceUnRescueFailure(
-                          reason=six.text_type(e))
+                raise exception.InstanceUnRescueFailure(reason=str(e))
 
             if node.provision_state == ironic_states.ACTIVE:
                 raise loopingcall.LoopingCallDone()
@@ -2198,7 +2193,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             self.ironicclient.call("node.set_provision_state",
                                    node_uuid, ironic_states.UNRESCUE)
         except Exception as e:
-            raise exception.InstanceUnRescueFailure(reason=six.text_type(e))
+            raise exception.InstanceUnRescueFailure(reason=str(e))
 
         timer = loopingcall.FixedIntervalLoopingCall(_wait_for_unrescue)
         timer.start(interval=CONF.ironic.api_retry_interval).wait()

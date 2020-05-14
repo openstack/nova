@@ -18,7 +18,6 @@ import os
 
 from os_win import utilsfactory
 from oslo_log import log as logging
-import six
 
 from nova import exception
 from nova import utils
@@ -99,7 +98,7 @@ class SerialConsoleOps(object):
             return log
         except IOError as err:
             raise exception.ConsoleLogOutputException(
-                instance_id=instance_name, reason=six.text_type(err))
+                instance_id=instance_name, reason=str(err))
 
     def start_console_handlers(self):
         active_instances = self._vmutils.get_active_instances()

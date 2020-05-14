@@ -18,7 +18,6 @@ import struct
 
 from oslo_config import cfg
 from oslo_log import log as logging
-import six
 
 from nova.console.rfb import auth
 from nova import exception
@@ -147,5 +146,5 @@ class RFBAuthSchemeVeNCrypt(auth.RFBAuthScheme):
 
         except ssl.SSLError as e:
             reason = _("Error establishing TLS connection to server: %s") % (
-                six.text_type(e))
+                str(e))
             raise exception.RFBAuthHandshakeFailed(reason=reason)

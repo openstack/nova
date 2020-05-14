@@ -26,7 +26,6 @@ from pypowervm.tasks import partition as pvm_par
 from pypowervm.tasks import storage as pvm_stor
 from pypowervm.tasks import vterm as pvm_vterm
 from pypowervm.wrappers import managed_system as pvm_ms
-import six
 from taskflow.patterns import linear_flow as tf_lf
 
 from nova.compute import task_states
@@ -400,7 +399,7 @@ class PowerVMDriver(driver.ComputeDriver):
         except pvm_exc.Error as e:
             LOG.exception("PowerVM error during destroy.", instance=instance)
             # Convert to a Nova exception
-            raise exc.InstanceTerminationFailure(reason=six.text_type(e))
+            raise exc.InstanceTerminationFailure(reason=str(e))
 
     def snapshot(self, context, instance, image_id, update_task_state):
         """Snapshots the specified instance.

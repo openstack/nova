@@ -34,7 +34,6 @@ from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import units
 from oslo_utils import uuidutils
-import six
 
 from nova.accelerator import cyborg
 from nova import availability_zones
@@ -286,7 +285,7 @@ def _get_image_meta_obj(image_meta_dict):
     except ValueError as e:
         # there must be invalid values in the image meta properties so
         # consider this an invalid request
-        msg = _('Invalid image metadata. Error: %s') % six.text_type(e)
+        msg = _('Invalid image metadata. Error: %s') % str(e)
         raise exception.InvalidRequest(msg)
     return image_meta
 
@@ -3049,7 +3048,7 @@ class API(base.Base):
                     LOG.error('An error occurred while listing ports '
                               'with an ip_address filter value of "%s". '
                               'Error: %s',
-                              address, six.text_type(e))
+                              address, str(e))
         return uuids
 
     def update_instance(self, context, instance, updates):
@@ -3193,7 +3192,7 @@ class API(base.Base):
                 LOG.warning("Error while trying to clean up image %(img_id)s: "
                             "%(error_msg)s",
                             {"img_id": image_meta['id'],
-                             "error_msg": six.text_type(exc)})
+                             "error_msg": str(exc)})
             attr = 'task_state'
             state = task_states.DELETING
             if type(ex) == exception.InstanceNotFound:
@@ -3303,7 +3302,7 @@ class API(base.Base):
                 with excutils.save_and_reraise_exception():
                     LOG.error("An error occurred during quiesce of instance. "
                               "Unquiescing to ensure instance is thawed. "
-                              "Error: %s", six.text_type(ex),
+                              "Error: %s", str(ex),
                               instance=instance)
                     self.compute_rpcapi.unquiesce_instance(context, instance,
                                                            mapping=None)

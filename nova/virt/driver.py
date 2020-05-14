@@ -26,7 +26,6 @@ import os_resource_classes as orc
 import os_traits
 from oslo_log import log as logging
 from oslo_utils import importutils
-import six
 
 import nova.conf
 from nova import context as nova_context
@@ -1597,7 +1596,7 @@ class ComputeDriver(object):
         """
 
         if not self._compute_event_callback:
-            LOG.debug("Discarding event %s", six.text_type(event))
+            LOG.debug("Discarding event %s", str(event))
             return
 
         if not isinstance(event, virtevent.Event):
@@ -1605,7 +1604,7 @@ class ComputeDriver(object):
                 _("Event must be an instance of nova.virt.event.Event"))
 
         try:
-            LOG.debug("Emitting event %s", six.text_type(event))
+            LOG.debug("Emitting event %s", str(event))
             self._compute_event_callback(event)
         except Exception as ex:
             LOG.error("Exception dispatching event %(event)s: %(ex)s",

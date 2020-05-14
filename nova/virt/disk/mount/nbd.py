@@ -20,7 +20,6 @@ import time
 
 from oslo_concurrency import processutils
 from oslo_log import log as logging
-import six
 
 import nova.conf
 from nova.i18n import _
@@ -83,7 +82,7 @@ class NbdMount(api.Mount):
         try:
             _out, err = nova.privsep.fs.nbd_connect(device, self.image.path)
         except processutils.ProcessExecutionError as exc:
-            err = six.text_type(exc)
+            err = str(exc)
 
         if err:
             self.error = _('qemu-nbd error: %s') % err
@@ -106,7 +105,7 @@ class NbdMount(api.Mount):
             try:
                 _out, err = nova.privsep.fs.nbd_disconnect(device)
             except processutils.ProcessExecutionError as exc:
-                err = six.text_type(exc)
+                err = str(exc)
 
             if err:
                 LOG.warning('Detaching from erroneous nbd device returned '

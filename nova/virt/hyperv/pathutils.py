@@ -14,7 +14,6 @@
 #    under the License.
 
 import os
-import six
 import tempfile
 import time
 
@@ -189,7 +188,7 @@ class PathUtils(pathutils.PathUtils):
                                         os.path.basename(tmp_file.name))
                 shared_storage = os.path.exists(src_path)
         except OSError as e:
-            raise exception.FileNotFound(six.text_type(e))
+            raise exception.FileNotFound(str(e))
 
         return shared_storage
 

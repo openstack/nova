@@ -16,7 +16,6 @@ from keystoneauth1 import exceptions as ks_exc
 from oslo_log import log as logging
 from oslo_utils import strutils
 from oslo_utils import uuidutils
-import six
 import webob.exc
 
 from nova.api.openstack import api_version_request
@@ -290,7 +289,7 @@ class ServiceController(wsgi.Controller):
                         LOG.error(
                             "Failed to delete compute node resource provider "
                             "for compute node %s: %s",
-                            compute_node.uuid, six.text_type(e))
+                            compute_node.uuid, str(e))
                 # remove the host_mapping of this host.
                 try:
                     hm = objects.HostMapping.get_by_host(context, service.host)

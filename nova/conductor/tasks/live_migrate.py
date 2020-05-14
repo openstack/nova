@@ -13,7 +13,6 @@
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import excutils
-import six
 
 from nova import availability_zones
 from nova.compute import power_state
@@ -533,8 +532,7 @@ class LiveMigrationTask(base.TaskBase):
                 # Note(ShaoHe Feng) There are types of RemoteError, such as
                 # NoSuchMethod, UnsupportedVersion, we can distinguish it by
                 # ex.exc_type.
-                raise exception.MigrationSchedulerRPCError(
-                    reason=six.text_type(ex))
+                raise exception.MigrationSchedulerRPCError(reason=str(ex))
 
             scheduler_utils.fill_provider_mapping(request_spec, selection)
 

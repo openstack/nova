@@ -39,7 +39,6 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
 from oslo_utils import timeutils
-import six
 
 import nova.conf
 from nova import exception
@@ -207,7 +206,7 @@ class GlanceClientWrapper(object):
                                'method': method, 'extra': extra})
                 if attempt == num_attempts:
                     raise exception.GlanceConnectionFailed(
-                        server=str(self.api_server), reason=six.text_type(e))
+                        server=str(self.api_server), reason=str(e))
                 time.sleep(1)
 
 
@@ -729,7 +728,7 @@ class GlanceImageServiceV2(object):
         except glanceclient.exc.HTTPForbidden:
             raise exception.ImageNotAuthorized(image_id=image_id)
         except glanceclient.exc.HTTPConflict as exc:
-            raise exception.ImageDeleteConflict(reason=six.text_type(exc))
+            raise exception.ImageDeleteConflict(reason=str(exc))
         return True
 
     def image_import_copy(self, context, image_id, stores):
@@ -1048,7 +1047,7 @@ def _translate_image_exception(image_id, exc_value):
         return exception.ImageNotFound(image_id=image_id)
     if isinstance(exc_value, glanceclient.exc.BadRequest):
         return exception.ImageBadRequest(image_id=image_id,
-                                         response=six.text_type(exc_value))
+                                         response=str(exc_value))
     if isinstance(exc_value, glanceclient.exc.HTTPOverLimit):
         return exception.ImageQuotaExceeded(image_id=image_id)
     return exc_value
@@ -1057,11 +1056,11 @@ def _translate_image_exception(image_id, exc_value):
 def _translate_plain_exception(exc_value):
     if isinstance(exc_value, (glanceclient.exc.Forbidden,
                     glanceclient.exc.Unauthorized)):
-        return exception.Forbidden(six.text_type(exc_value))
+        return exception.Forbidden(str(exc_value))
     if isinstance(exc_value, glanceclient.exc.NotFound):
-        return exception.NotFound(six.text_type(exc_value))
+        return exception.NotFound(str(exc_value))
     if isinstance(exc_value, glanceclient.exc.BadRequest):
-        return exception.Invalid(six.text_type(exc_value))
+        return exception.Invalid(str(exc_value))
     return exc_value
 
 
@@ -1079,7 +1078,7 @@ def _verify_certs(context, img_sig_cert_uuid, trusted_certs):
                     'failed for certificate: %s',
                     img_sig_cert_uuid)
         raise exception.CertificateValidationFailed(
-            cert_uuid=img_sig_cert_uuid, reason=six.text_type(e))
+            cert_uuid=img_sig_cert_uuid, reason=str(e))
 
 
 def get_remote_image_service(context, image_href):

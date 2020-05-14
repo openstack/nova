@@ -24,7 +24,6 @@ import os
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils import units
-import six
 
 import nova.conf
 from nova import exception
@@ -188,6 +187,6 @@ def remove_volumes(paths):
         try:
             nova.privsep.fs.lvremove(path)
         except processutils.ProcessExecutionError as exp:
-            errors.append(six.text_type(exp))
+            errors.append(str(exp))
     if errors:
         raise exception.VolumesNotRemoved(reason=(', ').join(errors))

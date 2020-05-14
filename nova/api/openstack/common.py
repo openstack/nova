@@ -20,7 +20,6 @@ from urllib import parse as urlparse
 
 from oslo_log import log as logging
 from oslo_utils import strutils
-import six
 import webob
 from webob import exc
 
@@ -508,7 +507,7 @@ def is_all_tenants(search_opts):
         try:
             all_tenants = strutils.bool_from_string(all_tenants, True)
         except ValueError as err:
-            raise exception.InvalidInput(six.text_type(err))
+            raise exception.InvalidInput(str(err))
     else:
         # The empty string is considered enabling all_tenants
         all_tenants = 'all_tenants' in search_opts
@@ -526,7 +525,7 @@ def is_locked(search_opts):
     try:
         locked = strutils.bool_from_string(locked, strict=True)
     except ValueError as err:
-        raise exception.InvalidInput(six.text_type(err))
+        raise exception.InvalidInput(str(err))
     return locked
 
 

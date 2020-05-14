@@ -20,7 +20,6 @@ from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils import fileutils
 from oslo_utils import importutils
-import six
 
 import nova.conf
 import nova.privsep.fs
@@ -45,7 +44,7 @@ def mount_share(mount_path, export_path,
     try:
         nova.privsep.fs.mount(export_type, export_path, mount_path, options)
     except processutils.ProcessExecutionError as exc:
-        if 'Device or resource busy' in six.text_type(exc):
+        if 'Device or resource busy' in str(exc):
             LOG.warning("%s is already mounted", export_path)
         else:
             raise
@@ -60,7 +59,7 @@ def unmount_share(mount_path, export_path):
     try:
         nova.privsep.fs.umount(mount_path)
     except processutils.ProcessExecutionError as exc:
-        if 'target is busy' in six.text_type(exc):
+        if 'target is busy' in str(exc):
             LOG.debug("The share %s is still in use.", export_path)
         else:
             LOG.exception("Couldn't unmount the share %s", export_path)
