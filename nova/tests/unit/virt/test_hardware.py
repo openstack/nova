@@ -932,9 +932,74 @@ class NUMATopologyTest(test.NoDBTestCase):
                 ),
                 "image": {
                     "properties": {
+                        "hw_cpu_policy": "shared"
                     }
                 },
                 "expect": fields.CPUAllocationPolicy.DEDICATED
+            },
+            {
+                "flavor": objects.Flavor(
+                    extra_specs={
+                        "hw:cpu_policy": "dedicated"
+                    }
+                ),
+                "image": {
+                    "properties": {
+                    }
+                },
+                "expect": fields.CPUAllocationPolicy.DEDICATED
+            },
+            {
+
+                "flavor": objects.Flavor(
+                    extra_specs={
+                        "hw:cpu_policy": "mixed"
+                    }
+                ),
+                "image": {
+                    "properties": {
+                        "hw_cpu_policy": "dedicated"
+                    }
+                },
+                "expect": exception.ImageCPUPinningForbidden
+            },
+            {
+                "flavor": objects.Flavor(
+                    extra_specs={
+                        "hw:cpu_policy": "mixed"
+                    }
+                ),
+                "image": {
+                    "properties": {
+                        "hw_cpu_policy": "mixed"
+                    }
+                },
+                "expect": fields.CPUAllocationPolicy.MIXED
+            },
+            {
+                "flavor": objects.Flavor(
+                    extra_specs={
+                        "hw:cpu_policy": "mixed"
+                    }
+                ),
+                "image": {
+                    "properties": {
+                        "hw_cpu_policy": "shared"
+                    }
+                },
+                "expect": fields.CPUAllocationPolicy.MIXED
+            },
+            {
+                "flavor": objects.Flavor(
+                    extra_specs={
+                        "hw:cpu_policy": "mixed"
+                    }
+                ),
+                "image": {
+                    "properties": {
+                    }
+                },
+                "expect": fields.CPUAllocationPolicy.MIXED
             },
             {
                 "flavor": objects.Flavor(
@@ -945,6 +1010,19 @@ class NUMATopologyTest(test.NoDBTestCase):
                 "image": {
                     "properties": {
                         "hw_cpu_policy": "dedicated"
+                    }
+                },
+                "expect": exception.ImageCPUPinningForbidden
+            },
+            {
+                "flavor": objects.Flavor(
+                    extra_specs={
+                        "hw:cpu_policy": "shared"
+                    }
+                ),
+                "image": {
+                    "properties": {
+                        "hw_cpu_policy": "mixed"
                     }
                 },
                 "expect": exception.ImageCPUPinningForbidden
@@ -982,6 +1060,15 @@ class NUMATopologyTest(test.NoDBTestCase):
                     }
                 },
                 "expect": fields.CPUAllocationPolicy.DEDICATED
+            },
+            {
+                "flavor": objects.Flavor(),
+                "image": {
+                    "properties": {
+                        "hw_cpu_policy": "mixed"
+                    }
+                },
+                "expect": fields.CPUAllocationPolicy.MIXED
             },
             {
                 "flavor": objects.Flavor(),

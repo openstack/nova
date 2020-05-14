@@ -144,7 +144,8 @@ class InstanceNUMATopologyPayload(base.NotificationPayloadBase):
 class InstanceNUMACellPayload(base.NotificationPayloadBase):
     # Version 1.0: Initial version
     # Version 1.1: Added pcpuset field
-    VERSION = '1.1'
+    # Version 1.2: Added 'mixed' to cpu_policy field
+    VERSION = '1.2'
 
     SCHEMA = {
         'id': ('numa_cell', 'id'),

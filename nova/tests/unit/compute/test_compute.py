@@ -13352,10 +13352,17 @@ class CheckRequestedImageTestCase(test.TestCase):
                           self.context, image['id'],
                           image, self.instance_type, root_bdm)
 
-    def test_cpu_policy(self):
+    @mock.patch('nova.virt.hardware.get_dedicated_cpu_constraint')
+    def test_cpu_policy(self, dedicated_cpu_mock):
         image = {'id': uuids.image_id, 'status': 'active'}
         for v in obj_fields.CPUAllocationPolicy.ALL:
             image['properties'] = {'hw_cpu_policy': v}
+            # 'mixed' policy requires a definition of 'cpu_dedicated_mask'
+            if v == obj_fields.CPUAllocationPolicy.MIXED:
+                dedicated_cpu_mock.return_value = set([0])
+            else:
+                dedicated_cpu_mock.return_value = None
+
             self.compute_api._validate_flavor_image(
                 self.context, image['id'], image, self.instance_type, None)
         image['properties'] = {'hw_cpu_policy': 'bar'}

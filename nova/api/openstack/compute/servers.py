@@ -87,6 +87,8 @@ INVALID_FLAVOR_IMAGE_EXCEPTIONS = (
     exception.PciRequestAliasNotDefined,
     exception.RealtimeConfigurationInvalid,
     exception.RealtimeMaskNotFoundOrInvalid,
+    exception.RequiredMixedInstancePolicy,
+    exception.RequiredMixedOrRealtimeCPUMask,
 )
 
 MIN_COMPUTE_MOVE_BANDWIDTH = 39
