@@ -3297,6 +3297,11 @@ class _ComputeAPIUnitTestMixIn(object):
                                           quiesce_unsupported=True,
                                           vm_state=vm_states.SUSPENDED)
 
+    def test_snapshot_volume_backed_with_pause(self):
+        self._test_snapshot_volume_backed(quiesce_required=False,
+                                          quiesce_unsupported=True,
+                                          vm_state=vm_states.PAUSED)
+
     @mock.patch.object(context, 'set_target_cell')
     @mock.patch.object(objects.BlockDeviceMapping, 'get_by_volume')
     def test_get_bdm_by_volume_id(self, mock_get_by_volume,
