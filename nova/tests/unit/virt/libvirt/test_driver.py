@@ -3816,6 +3816,335 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 self.assertEqual([instance_cell.id], memnode.nodeset)
                 self.assertEqual("strict", memnode.mode)
 
+    def test_get_guest_config_numa_host_instance_cpu_mixed(self):
+        """Test to create mixed instance libvirt configuration which has a
+        default emulator thread policy and verify the NUMA topology related
+        settings.
+        """
+        self.flags(cpu_shared_set='2-5,8-29',
+                   cpu_dedicated_set='6,7,30,31',
+                   group='compute')
+
+        instance_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                id=3, cpuset=set([0, 1]), pcpuset=set([2, 3]), memory=1024,
+                cpu_pinning={2: 30, 3: 31}
+            ),
+            objects.InstanceNUMACell(
+                id=0, cpuset=set([4, 5, 6]), pcpuset=set([7]), memory=1024,
+                cpu_pinning={7: 6}
+            ),
+        ])
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.numa_topology = instance_topology
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        flavor = objects.Flavor(memory_mb=2048, vcpus=8, root_gb=496,
+                                ephemeral_gb=8128, swap=33550336, name='fake',
+                                extra_specs={})
+        instance_ref.flavor = flavor
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = fields.Architecture.X86_64
+        caps.host.topology = fakelibvirt.NUMATopology(
+            cpu_nodes=4, cpu_sockets=1, cpu_cores=4, cpu_threads=2)
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+
+        with test.nested(
+            mock.patch.object(
+                objects.InstanceNUMATopology, "get_by_instance_uuid",
+                return_value=instance_topology),
+            mock.patch.object(host.Host, 'has_min_version', return_value=True),
+            mock.patch.object(host.Host, "get_capabilities",
+                              return_value=caps),
+            mock.patch.object(host.Host, 'get_online_cpus',
+                              return_value=set(range(32)))
+        ):
+            cfg = conn._get_guest_config(instance_ref, [],
+                                         image_meta, disk_info)
+            self.assertIsNone(cfg.cpuset)
+
+            # NOTE(huaqiang): Within a mixed instance, it is expected that the
+            # pinned and unpinned CPUs, which belong to the same instance NUMA
+            # cell, are scheduled on a same host NUMA cell, the instance pinned
+            # CPU is 1:1 scheduled to a dedicated host CPU, each unpinned CPU
+            # floats over the shared CPU list of the same host NUMA cell.
+            # The host NUMA cell's dedicated CPU list and shared CPU list are
+            # calculated from a combination of '[compute]cpu_dedicated_set',
+            # '[compute]cpu_shared_set', the host NUMA topology and the online
+            # CPUs.
+            #
+            # The first instance NUMA cell is fit into the fourth host NUMA
+            # cell due to having the same 'id' 3. Instance CPU 0 and 1 are
+            # unpinned CPUs, check each of them floats on the host NUMA cell's
+            # sharing CPUs, which are CPU 24-29.
+            self.assertEqual(0, cfg.cputune.vcpupin[0].id)
+            self.assertEqual(set(range(24, 30)), cfg.cputune.vcpupin[0].cpuset)
+            self.assertEqual(1, cfg.cputune.vcpupin[1].id)
+            self.assertEqual(set(range(24, 30)), cfg.cputune.vcpupin[1].cpuset)
+            # Check each of the instance NUMA cell's pinned CPUs is pinned to a
+            # dedicated CPU from the fourth host NUMA cell.
+            self.assertEqual(2, cfg.cputune.vcpupin[2].id)
+            self.assertEqual(set([30]), cfg.cputune.vcpupin[2].cpuset)
+            self.assertEqual(3, cfg.cputune.vcpupin[3].id)
+            self.assertEqual(set([31]), cfg.cputune.vcpupin[3].cpuset)
+
+            # Instance CPU 4-7 belong to the second instance NUMA cell, which
+            # is fit into host NUMA cell 0. CPU 4-6 are unpinned CPUs, each of
+            # them floats on the host NUMA cell's sharing CPU set, CPU 2-5.
+            self.assertEqual(4, cfg.cputune.vcpupin[4].id)
+            self.assertEqual(set(range(2, 6)), cfg.cputune.vcpupin[4].cpuset)
+            self.assertEqual(5, cfg.cputune.vcpupin[5].id)
+            self.assertEqual(set(range(2, 6)), cfg.cputune.vcpupin[5].cpuset)
+            self.assertEqual(6, cfg.cputune.vcpupin[6].id)
+            self.assertEqual(set(range(2, 6)), cfg.cputune.vcpupin[6].cpuset)
+            # Instance CPU 7 is pinned to the host NUMA cell's dedicated CPU 6.
+            self.assertEqual(set([6]), cfg.cputune.vcpupin[7].cpuset)
+            self.assertIsNotNone(cfg.cpu.numa)
+
+            # Check emulator thread is pinned to union of
+            # cfg.cputune.vcpupin[*].cpuset
+            self.assertIsInstance(cfg.cputune.emulatorpin,
+                                  vconfig.LibvirtConfigGuestCPUTuneEmulatorPin)
+            self.assertEqual(
+                set([2, 3, 4, 5, 6, 24, 25, 26, 27, 28, 29, 30, 31]),
+                cfg.cputune.emulatorpin.cpuset)
+
+            for i, (instance_cell, numa_cfg_cell) in enumerate(
+                zip(instance_topology.cells, cfg.cpu.numa.cells)
+            ):
+                self.assertEqual(i, numa_cfg_cell.id)
+                self.assertEqual(instance_cell.total_cpus, numa_cfg_cell.cpus)
+                self.assertEqual(instance_cell.memory * units.Ki,
+                                 numa_cfg_cell.memory)
+                self.assertIsNone(numa_cfg_cell.memAccess)
+
+            allnodes = set([cell.id for cell in instance_topology.cells])
+            self.assertEqual(allnodes, set(cfg.numatune.memory.nodeset))
+            self.assertEqual("strict", cfg.numatune.memory.mode)
+
+            for i, (instance_cell, memnode) in enumerate(
+                zip(instance_topology.cells, cfg.numatune.memnodes)
+            ):
+                self.assertEqual(i, memnode.cellid)
+                self.assertEqual([instance_cell.id], memnode.nodeset)
+
+    def test_get_guest_config_numa_host_instance_cpu_mixed_isolated_emu(self):
+        """Test to create mixed instance libvirt configuration which has an
+        ISOLATED emulator thread policy and verify the NUMA topology related
+        settings.
+        """
+        self.flags(cpu_shared_set='2-5,8-29',
+                   cpu_dedicated_set='6,7,30,31',
+                   group='compute')
+        instance_topology = objects.InstanceNUMATopology(
+            emulator_threads_policy=fields.CPUEmulatorThreadsPolicy.ISOLATE,
+            cells=[objects.InstanceNUMACell(
+                id=0, cpuset=set([0, 1]), pcpuset=set([2]), memory=1024,
+                cpu_pinning={2: 6},
+                cpuset_reserved=set([7]))])
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.numa_topology = instance_topology
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        flavor = objects.Flavor(memory_mb=2048, vcpus=8, root_gb=496,
+                                ephemeral_gb=8128, swap=33550336, name='fake',
+                                extra_specs={})
+        instance_ref.flavor = flavor
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = fields.Architecture.X86_64
+        caps.host.topology = fakelibvirt.NUMATopology(
+            cpu_nodes=4, cpu_sockets=1, cpu_cores=4, cpu_threads=2)
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+
+        with test.nested(
+            mock.patch.object(
+                objects.InstanceNUMATopology, "get_by_instance_uuid",
+                return_value=instance_topology),
+            mock.patch.object(host.Host, 'has_min_version',
+                              return_value=True),
+            mock.patch.object(host.Host, "get_capabilities",
+                              return_value=caps),
+            mock.patch.object(host.Host, 'get_online_cpus',
+                              return_value=set(range(32))),
+        ):
+            cfg = conn._get_guest_config(instance_ref, [],
+                                         image_meta, disk_info)
+            self.assertIsNone(cfg.cpuset)
+            # NOTE(huaqiang): The instance NUMA cell is fit into the first host
+            # NUMA cell, which is matched by the 'id' fields of two objects.
+            # CPU 2-5 are the first host NUMA cell's floating CPU set.
+            # Check any instance unpinned CPU is floating on this CPU set.
+            self.assertEqual(0, cfg.cputune.vcpupin[0].id)
+            self.assertEqual(set([2, 3, 4, 5]), cfg.cputune.vcpupin[0].cpuset)
+            self.assertEqual(1, cfg.cputune.vcpupin[1].id)
+            self.assertEqual(set([2, 3, 4, 5]), cfg.cputune.vcpupin[1].cpuset)
+            # Check instance CPU 2, a pinned CPU, is pinned to a dedicated CPU
+            # of host's first NUMA cell.
+            self.assertEqual(2, cfg.cputune.vcpupin[2].id)
+            self.assertEqual(set([6]), cfg.cputune.vcpupin[2].cpuset)
+            self.assertIsNotNone(cfg.cpu.numa)
+
+            # With an ISOLATE policy, emulator thread will be pinned to the
+            # reserved host CPU.
+            self.assertIsInstance(cfg.cputune.emulatorpin,
+                                  vconfig.LibvirtConfigGuestCPUTuneEmulatorPin)
+            self.assertEqual(set([7]), cfg.cputune.emulatorpin.cpuset)
+
+            for i, (instance_cell, numa_cfg_cell) in enumerate(
+                zip(instance_topology.cells, cfg.cpu.numa.cells)
+            ):
+                self.assertEqual(i, numa_cfg_cell.id)
+                self.assertEqual(instance_cell.total_cpus, numa_cfg_cell.cpus)
+                self.assertEqual(instance_cell.memory * units.Ki,
+                                 numa_cfg_cell.memory)
+                self.assertIsNone(numa_cfg_cell.memAccess)
+
+            allnodes = set([cell.id for cell in instance_topology.cells])
+            self.assertEqual(allnodes, set(cfg.numatune.memory.nodeset))
+            self.assertEqual("strict", cfg.numatune.memory.mode)
+
+            for i, (instance_cell, memnode) in enumerate(
+                zip(instance_topology.cells, cfg.numatune.memnodes)
+            ):
+                self.assertEqual(i, memnode.cellid)
+                self.assertEqual([instance_cell.id], memnode.nodeset)
+
+    def test_get_guest_config_numa_host_instance_cpu_mixed_realtime(self):
+        """Test of creating mixed instance libvirt configuration. which is
+        created through 'hw:cpu_realtime_mask' and 'hw:cpu_realtime' extra
+        specs, verifying the NUMA topology and real-time related settings.
+        """
+        self.flags(cpu_shared_set='2-5,8-29',
+                   cpu_dedicated_set='6,7,30,31',
+                   group='compute')
+
+        instance_topology = objects.InstanceNUMATopology(
+            cells=[
+                objects.InstanceNUMACell(
+                    id=0, cpuset=set([2]), pcpuset=set([0, 1]),
+                    cpu_pinning={0: 6, 1: 7},
+                    memory=1024, pagesize=2048),
+                objects.InstanceNUMACell(
+                    id=3, cpuset=set([3]), pcpuset=set([4, 5]),
+                    cpu_pinning={4: 30, 5: 31},
+                    memory=1024, pagesize=2048)])
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.numa_topology = instance_topology
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        # NOTE(huaqiang): libvirt driver takes the real-time CPU list from the
+        # flavor extra spec 'hw:cpu_realtime_mask'. For a mixed instance with
+        # real-time CPUs, the dedicated CPU and the real-time CPU are the
+        # same CPU set, this is checked in API layer.
+        flavor = objects.Flavor(
+            vcpus=6, memory_mb=2048, root_gb=496,
+            ephemeral_gb=8128, swap=33550336, name='fake',
+            extra_specs={
+                "hw:numa_nodes": "2",
+                "hw:cpu_realtime": "yes",
+                "hw:cpu_policy": "mixed",
+                "hw:cpu_realtime_mask": "^2-3"
+            })
+        instance_ref.flavor = flavor
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = fields.Architecture.X86_64
+        caps.host.topology = fakelibvirt.NUMATopology(
+            cpu_nodes=4, cpu_sockets=1, cpu_cores=4, cpu_threads=2)
+        for i, cell in enumerate(caps.host.topology.cells):
+            cell.mempages = fakelibvirt.create_mempages(
+                [(4, 1024 * i), (2048, i)])
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+
+        with test.nested(
+            mock.patch.object(
+                objects.InstanceNUMATopology, "get_by_instance_uuid",
+                return_value=instance_topology),
+            mock.patch.object(host.Host, 'has_min_version', return_value=True),
+            mock.patch.object(host.Host, "get_capabilities",
+                              return_value=caps),
+            mock.patch.object(host.Host, 'get_online_cpus',
+                              return_value=set(range(32))),
+        ):
+            cfg = drvr._get_guest_config(instance_ref, [],
+                                         image_meta, disk_info)
+
+            for instance_cell, numa_cfg_cell, index in zip(
+                instance_topology.cells,
+                cfg.cpu.numa.cells,
+                range(len(instance_topology.cells))
+            ):
+                self.assertEqual(index, numa_cfg_cell.id)
+                self.assertEqual(instance_cell.total_cpus, numa_cfg_cell.cpus)
+                self.assertEqual(instance_cell.memory * units.Ki,
+                                 numa_cfg_cell.memory)
+                self.assertEqual("shared", numa_cfg_cell.memAccess)
+
+            allnodes = [cell.id for cell in instance_topology.cells]
+            self.assertEqual(allnodes, cfg.numatune.memory.nodeset)
+            self.assertEqual("strict", cfg.numatune.memory.mode)
+
+            for instance_cell, memnode, index in zip(
+                instance_topology.cells,
+                cfg.numatune.memnodes,
+                range(len(instance_topology.cells))
+            ):
+                self.assertEqual(index, memnode.cellid)
+                self.assertEqual([instance_cell.id], memnode.nodeset)
+                self.assertEqual("strict", memnode.mode)
+
+            # NOTE(huaqiang): Instance first NUMA cell is fit to the first host
+            # NUMA cell. In this host NUMA cell, CPU 2-5 are the sharing CPU
+            # set, CPU 6, 7 are dedicated CPUs.
+            #
+            # Check instance CPU 0, 1 are 1:1 pinned on host NUMA cell's
+            # dedicated CPUs.
+            self.assertEqual(set([6]), cfg.cputune.vcpupin[0].cpuset)
+            self.assertEqual(set([7]), cfg.cputune.vcpupin[1].cpuset)
+            # Check CPU 2, an unpinned CPU, is floating on this host NUMA
+            # cell's sharing CPU set.
+            self.assertEqual(set([2, 3, 4, 5]), cfg.cputune.vcpupin[2].cpuset)
+
+            # The second instance NUMA cell is fit to the fourth host NUMA
+            # cell due to a same 'id'. Host CPU 24-29 are sharing CPU set, host
+            # CPU 30, 31 are dedicated CPU to be pinning.
+            #
+            # Check CPU 3 is floating on the sharing CPU set.
+            self.assertEqual(set([24, 25, 26, 27, 28, 29]),
+                             cfg.cputune.vcpupin[3].cpuset)
+            # Check CPU 4, 5 are pinned on host dedicated CPUs.
+            self.assertEqual(set([30]), cfg.cputune.vcpupin[4].cpuset)
+            self.assertEqual(set([31]), cfg.cputune.vcpupin[5].cpuset)
+
+            # Check the real-time host CPUs are excluded from the host CPU
+            # list the emulator is floating on.
+            self.assertEqual(set([2, 3, 4, 5, 24, 25, 26, 27, 28, 29]),
+                             cfg.cputune.emulatorpin.cpuset)
+
+            # Check the real-time scheduler is set, and all real-time CPUs are
+            # in the vcpusched[0].vcpus list. In nova, the real-time scheduler
+            # is always set to 'fifo', and there is always only one element in
+            # cfg.cputune.vcpusched.
+            self.assertEqual(1, len(cfg.cputune.vcpusched))
+            self.assertEqual("fifo", cfg.cputune.vcpusched[0].scheduler)
+            self.assertEqual(set([0, 1, 4, 5]), cfg.cputune.vcpusched[0].vcpus)
+
     def test_get_guest_config_numa_host_mempages_shared(self):
         self.flags(cpu_shared_set='2-5', cpu_dedicated_set=None,
                    group='compute')
