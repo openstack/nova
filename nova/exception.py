@@ -2330,3 +2330,8 @@ class RequiredMixedOrRealtimeCPUMask(Invalid):
 class MixedInstanceNotSupportByComputeService(NovaException):
     msg_fmt = _("To support 'mixed' policy instance 'nova-compute' service "
                 "must be upgraded to 'Victoria' or later.")
+
+
+class InvalidMixedInstanceDedicatedMask(Invalid):
+    msg_fmt = _("Mixed instance must have at least 1 pinned vCPU and 1 "
+                "unpinned vCPU. See 'hw:cpu_dedicated_mask'.")

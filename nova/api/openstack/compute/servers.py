@@ -89,6 +89,7 @@ INVALID_FLAVOR_IMAGE_EXCEPTIONS = (
     exception.RealtimeMaskNotFoundOrInvalid,
     exception.RequiredMixedInstancePolicy,
     exception.RequiredMixedOrRealtimeCPUMask,
+    exception.InvalidMixedInstanceDedicatedMask,
 )
 
 MIN_COMPUTE_MOVE_BANDWIDTH = 39

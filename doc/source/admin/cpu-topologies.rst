@@ -189,10 +189,10 @@ CPUs can use the CPUs of another pinned instance, thus preventing resource
 contention between instances.
 
 CPU pinning policies can be used to determine whether an instance should be
-pinned or not. There are two policies: ``dedicated`` and ``shared`` (the
-default). The ``dedicated`` CPU policy is used to specify that an instance
-should use pinned CPUs. To configure a flavor to use the ``dedicated`` CPU
-policy, run:
+pinned or not. There are three policies: ``dedicated``, ``mixed`` and
+``shared`` (the default). The ``dedicated`` CPU policy is used to specify
+that all CPUs of an instance should use pinned CPUs. To configure a flavor to
+use the ``dedicated`` CPU policy, run:
 
 .. code-block:: console
 
@@ -219,6 +219,22 @@ use pinned CPUs. To configure a flavor to use the ``shared`` CPU policy, run:
 .. code-block:: console
 
    $ openstack flavor set [FLAVOR_ID] --property hw:cpu_policy=shared
+
+The ``mixed`` CPU policy is used to specify that an instance use pinned CPUs
+along with unpinned CPUs. The instance pinned CPU is specified in the
+``hw:cpu_dedicated_mask`` extra spec. For example, to configure a flavor to
+use the ``mixed`` CPU policy with 4 vCPUs in total and the first 2 vCPUs as
+pinned CPUs:
+
+.. code-block:: console
+
+   $ openstack flavor set [FLAVOR_ID] \
+     --vcpus=4 \
+     --property hw:cpu_policy=mixed \
+     --property hw:cpu_dedicated_mask=0-1
+
+For more information about the syntax for ``hw:cpu_dedicated_mask``, refer
+to the :doc:`/user/flavors` guide.
 
 .. note::
 

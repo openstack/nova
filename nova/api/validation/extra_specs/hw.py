@@ -114,6 +114,22 @@ cpu_policy_validators = [
             ],
         },
     ),
+    base.ExtraSpecValidator(
+        name='hw:cpu_dedicated_mask',
+        description=(
+            'A mapping of **guest** CPUs to be pinned to **host** CPUs for an '
+            'instance with a ``mixed`` CPU policy. For **guest** CPUs which '
+            'are not in this mapping it will float across host cores.'
+        ),
+        value={
+            'type': str,
+            'description': (
+                'The **guest** CPU mapping to be pinned to **host** CPUs for '
+                'an instance with a ``mixed`` CPU policy.'),
+            # This pattern is identical to 'hw:cpu_realtime_mask' pattern.
+            'pattern': r'\^?\d+((-\d+)?(,\^?\d+(-\d+)?)?)*',
+        },
+    ),
 ]
 
 hugepage_validators = [
