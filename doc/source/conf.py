@@ -47,10 +47,6 @@ extensions = [
     'sphinxcontrib.rsvgconverter',
 ]
 
-# openstackdocstheme options
-repository_name = 'openstack/nova'
-bug_project = 'nova'
-bug_tag = 'doc'
 
 config_generator_config_file = '../../etc/nova/nova-config-generator.conf'
 sample_config_basename = '_static/nova'
@@ -142,11 +138,16 @@ latex_use_xindy = False
 
 # -- Options for openstackdocstheme -------------------------------------------
 
+# openstackdocstheme options
+openstackdocs_repo_name = 'openstack/nova'
+openstackdocs_bug_project = 'nova'
+openstackdocs_bug_tag = 'doc'
+
 # keep this ordered to keep mriedem happy
 #
 # NOTE(stephenfin): Projects that don't have a release branch, like TripleO and
 # reno, should not be included here
-openstack_projects = [
+openstackdocs_projects = [
     'ceilometer',
     'cinder',
     'cyborg',
