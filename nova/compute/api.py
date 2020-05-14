@@ -2965,7 +2965,7 @@ class API(base.Base):
     # NOTE(melwitt): We don't check instance lock for snapshot because lock is
     #                intended to prevent accidental change/delete of instances
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
-                                    vm_states.SUSPENDED])
+                                    vm_states.PAUSED, vm_states.SUSPENDED])
     def snapshot_volume_backed(self, context, instance, name,
                                extra_properties=None):
         """Snapshot the given volume-backed instance.
