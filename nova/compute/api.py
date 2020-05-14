@@ -2861,7 +2861,7 @@ class API(base.Base):
             else:
                 # Remaps are strings to translate to, or functions to call
                 # to do the translating as defined by the table above.
-                if isinstance(remap_object, six.string_types):
+                if isinstance(remap_object, str):
                     filters[remap_object] = value
                 else:
                     try:

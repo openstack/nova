@@ -19,7 +19,6 @@ from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import routes
-import six
 import webob.dec
 
 from nova.api import auth as api_auth
@@ -331,7 +330,7 @@ def create_info_cache(nw_cache):
                                       {'cidr': 'b33f::/64',
                                        'ips': [_ip(ip) for ip in pub1]}]}}]
 
-    if not isinstance(nw_cache, six.string_types):
+    if not isinstance(nw_cache, str):
         nw_cache = jsonutils.dumps(nw_cache)
 
     return {

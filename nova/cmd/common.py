@@ -21,7 +21,6 @@ import argparse
 import traceback
 
 from oslo_log import log as logging
-import six
 
 import nova.conf
 import nova.db.api
@@ -168,7 +167,7 @@ def get_action_fn():
     fn = CONF.category.action_fn
     fn_args = []
     for arg in CONF.category.action_args:
-        if isinstance(arg, six.binary_type):
+        if isinstance(arg, bytes):
             arg = arg.decode('utf-8')
         fn_args.append(arg)
 
@@ -177,7 +176,7 @@ def get_action_fn():
         v = getattr(CONF.category, 'action_kwarg_' + k)
         if v is None:
             continue
-        if isinstance(v, six.binary_type):
+        if isinstance(v, bytes):
             v = v.decode('utf-8')
         fn_kwargs[k] = v
 

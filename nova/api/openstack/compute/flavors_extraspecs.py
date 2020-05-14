@@ -44,7 +44,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
             # NOTE(gmann): Max length for numeric value is being checked
             # explicitly as json schema cannot have max length check for
             # numeric value
-            if isinstance(value, (six.integer_types, float)):
+            if isinstance(value, (int, float)):
                 value = six.text_type(value)
                 try:
                     utils.check_string_length(value, 'extra_specs value',

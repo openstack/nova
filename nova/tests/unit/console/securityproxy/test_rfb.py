@@ -62,8 +62,8 @@ class RFBSecurityProxyTestCase(test.NoDBTestCase):
         self._expect_tenant_recv(auth.VERSION_LENGTH, full_version_str)
 
     def _to_binary(self, val):
-        if not isinstance(val, six.binary_type):
-            val = six.binary_type(val, 'utf-8')
+        if not isinstance(val, bytes):
+            val = bytes(val, 'utf-8')
         return val
 
     def _expect_tenant_send(self, val):

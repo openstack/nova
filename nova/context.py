@@ -28,7 +28,6 @@ from oslo_context import context
 from oslo_db.sqlalchemy import enginefacade
 from oslo_log import log as logging
 from oslo_utils import timeutils
-import six
 
 from nova import exception
 from nova.i18n import _
@@ -107,7 +106,7 @@ class RequestContext(context.RequestContext):
         self.remote_address = remote_address
         if not timestamp:
             timestamp = timeutils.utcnow()
-        if isinstance(timestamp, six.string_types):
+        if isinstance(timestamp, str):
             timestamp = timeutils.parse_strtime(timestamp)
         self.timestamp = timestamp
 

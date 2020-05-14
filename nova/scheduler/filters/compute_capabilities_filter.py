@@ -15,7 +15,6 @@
 
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
-import six
 
 from nova.scheduler import filters
 from nova.scheduler.filters import extra_specs_ops
@@ -36,7 +35,7 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
         cap = host_state
         for index in range(0, len(scope)):
             try:
-                if isinstance(cap, six.string_types):
+                if isinstance(cap, str):
                     try:
                         cap = jsonutils.loads(cap)
                     except ValueError as e:

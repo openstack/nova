@@ -18,7 +18,6 @@ import pprint
 import re
 
 from oslo_serialization import jsonutils
-import six
 
 from nova import test
 from nova.tests.functional import integrated_helpers
@@ -84,7 +83,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         non_strings =  \
             {k: v for k, v in value.items() if
              (not k == 'compute_host') and
-             (not isinstance(v, six.string_types))}
+             (not isinstance(v, str))}
         if len(non_strings) > 0:
             raise TypeError("subs can't contain non-string values:"
                             "\n%(non_strings)s" %
@@ -232,7 +231,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             if error:
                 raise NoMatch('\n'.join(error))
         # template string
-        elif isinstance(expected, six.string_types) and '%' in expected:
+        elif isinstance(expected, str) and '%' in expected:
             # NOTE(vish): escape stuff for regex
             for char in '[]<>?':
                 expected = expected.replace(char, '\\%s' % char)
@@ -266,11 +265,11 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                 if match.groups():
                     matched_value = match.groups()[0]
         # string
-        elif isinstance(expected, six.string_types):
+        elif isinstance(expected, str):
 
             # NOTE(danms): Ignore whitespace in this comparison
             expected = expected.strip()
-            if isinstance(result, six.string_types):
+            if isinstance(result, str):
                 result = result.strip()
 
             if expected != result:
@@ -294,7 +293,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                                         'result_str': result_str,
                                         'result': result})
         # int
-        elif isinstance(expected, (six.integer_types, float)):
+        elif isinstance(expected, (int, float)):
             if expected != result:
                 raise NoMatch(
                         'Values do not match:\n'

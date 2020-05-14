@@ -563,7 +563,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         self.assertEqual(tx_queue_size, tx_want)
 
     def _assertXmlEqual(self, expectedXmlstr, actualXmlstr):
-        if not isinstance(actualXmlstr, six.string_types):
+        if not isinstance(actualXmlstr, str):
             actualXmlstr = etree.tostring(actualXmlstr, encoding='unicode',
                                           pretty_print=True)
         self.assertXmlEqual(expectedXmlstr, actualXmlstr)

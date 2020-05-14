@@ -17,7 +17,6 @@
 import collections
 
 from oslo_log import log as logging
-import six
 
 LOG = logging.getLogger(__name__)
 
@@ -75,7 +74,7 @@ def instance_uuids_overlap(host_state, uuids):
     Returns True if any of the supplied uuids match any of the instance.uuid
     values in the host_state.
     """
-    if isinstance(uuids, six.string_types):
+    if isinstance(uuids, str):
         uuids = [uuids]
     set_uuids = set(uuids)
     # host_state.instances is a dict whose keys are the instance uuids

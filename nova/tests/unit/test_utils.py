@@ -836,7 +836,7 @@ class UT8TestCase(test.NoDBTestCase):
     def test_not_text_type(self):
         return_value = utils.utf8(1)
         self.assertEqual(b"1", return_value)
-        self.assertIsInstance(return_value, six.binary_type)
+        self.assertIsInstance(return_value, bytes)
 
     def test_text_type_with_encoding(self):
         some_value = 'test\u2026config'

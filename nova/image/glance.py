@@ -872,8 +872,7 @@ def _convert_to_v2(image_meta):
                 # in glance only string and None property values are allowed,
                 # v1 client accepts any values and converts them to string,
                 # v2 doesn't - so we have to take care of it.
-                elif prop_value is None or isinstance(
-                        prop_value, six.string_types):
+                elif prop_value is None or isinstance(prop_value, str):
                     output[prop_name] = prop_value
                 else:
                     output[prop_name] = str(prop_value)
@@ -909,13 +908,13 @@ def _convert_timestamps_to_datetimes(image_meta):
 # NOTE(bcwaldon): used to store non-string data in glance metadata
 def _json_loads(properties, attr):
     prop = properties[attr]
-    if isinstance(prop, six.string_types):
+    if isinstance(prop, str):
         properties[attr] = jsonutils.loads(prop)
 
 
 def _json_dumps(properties, attr):
     prop = properties[attr]
-    if not isinstance(prop, six.string_types):
+    if not isinstance(prop, str):
         properties[attr] = jsonutils.dumps(prop)
 
 

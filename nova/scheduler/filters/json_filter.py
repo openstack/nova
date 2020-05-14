@@ -17,7 +17,6 @@
 import operator
 
 from oslo_serialization import jsonutils
-import six
 
 from nova.scheduler import filters
 
@@ -122,7 +121,7 @@ class JsonFilter(filters.BaseHostFilter):
         for arg in query[1:]:
             if isinstance(arg, list):
                 arg = self._process_filter(arg, host_state)
-            elif isinstance(arg, six.string_types):
+            elif isinstance(arg, str):
                 arg = self._parse_string(arg, host_state)
             if arg is not None:
                 cooked_args.append(arg)

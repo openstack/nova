@@ -2618,11 +2618,11 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             self.ctxt, instance['uuid'],
             {'access_ip_v4': netaddr.IPAddress('1.2.3.4'),
              'access_ip_v6': netaddr.IPAddress('::1')})
-        self.assertIsInstance(instance['access_ip_v4'], six.string_types)
-        self.assertIsInstance(instance['access_ip_v6'], six.string_types)
+        self.assertIsInstance(instance['access_ip_v4'], str)
+        self.assertIsInstance(instance['access_ip_v6'], str)
         instance = db.instance_get_by_uuid(self.ctxt, instance['uuid'])
-        self.assertIsInstance(instance['access_ip_v4'], six.string_types)
-        self.assertIsInstance(instance['access_ip_v6'], six.string_types)
+        self.assertIsInstance(instance['access_ip_v4'], str)
+        self.assertIsInstance(instance['access_ip_v6'], str)
 
     @mock.patch('nova.db.sqlalchemy.api._check_instance_exists_in_project',
                 return_value=None)

@@ -16,7 +16,6 @@
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import timeutils
-import six
 
 import nova.conf
 from nova import exception
@@ -61,7 +60,7 @@ class DbDriver(base.Driver):
         """
         last_heartbeat = (service_ref.get('last_seen_up') or
             service_ref['created_at'])
-        if isinstance(last_heartbeat, six.string_types):
+        if isinstance(last_heartbeat, str):
             # NOTE(russellb) If this service_ref came in over rpc via
             # conductor, then the timestamp will be a string and needs to be
             # converted back to a datetime.

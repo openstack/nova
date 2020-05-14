@@ -160,7 +160,7 @@ class DbCommands(object):
                 v = six.text_type(v)
             # if value has a newline, add in multiple rows
             # e.g. fault with stacktrace
-            if v and isinstance(v, six.string_types) and r'\n' in v:
+            if v and isinstance(v, str) and r'\n' in v:
                 lines = v.strip().split(r'\n')
                 col1 = k
                 for line in lines:

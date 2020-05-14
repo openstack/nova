@@ -20,7 +20,6 @@ import os
 import re
 
 from oslo_log import log as logging
-import six
 
 from nova import exception
 
@@ -59,9 +58,9 @@ def pci_device_prop_match(pci_dev, specs):
                 # mismatch with the tags provided by users for port
                 # binding profile and the ones configured by operators
                 # with pci whitelist option.
-                if isinstance(v, six.string_types):
+                if isinstance(v, str):
                     v = v.lower()
-                if isinstance(pci_dev_v, six.string_types):
+                if isinstance(pci_dev_v, str):
                     pci_dev_v = pci_dev_v.lower()
                 if pci_dev_v != v:
                     return False

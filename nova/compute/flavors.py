@@ -78,7 +78,7 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
         'description': description
     }
 
-    if isinstance(name, six.string_types):
+    if isinstance(name, str):
         name = name.strip()
 
     # NOTE(vish): Internally, flavorid is stored as a string but it comes

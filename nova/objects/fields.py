@@ -18,7 +18,6 @@ import re
 from cursive import signature_utils
 from oslo_serialization import jsonutils
 from oslo_versionedobjects import fields
-import six
 
 from nova import exception
 from nova.i18n import _
@@ -98,7 +97,7 @@ class ResourceClass(fields.StringPattern):
 
     @staticmethod
     def coerce(obj, attr, value):
-        if isinstance(value, six.string_types):
+        if isinstance(value, str):
             uppered = value.upper()
             if ResourceClass._REGEX.match(uppered):
                 return uppered
@@ -1060,7 +1059,7 @@ class NetworkModel(FieldType):
     def coerce(obj, attr, value):
         if isinstance(value, network_model.NetworkInfo):
             return value
-        elif isinstance(value, six.string_types):
+        elif isinstance(value, str):
             # Hmm, do we need this?
             return network_model.NetworkInfo.hydrate(value)
         else:
@@ -1090,7 +1089,7 @@ class NetworkVIFModel(FieldType):
     def coerce(obj, attr, value):
         if isinstance(value, network_model.VIF):
             return value
-        elif isinstance(value, six.string_types):
+        elif isinstance(value, str):
             return NetworkVIFModel.from_primitive(obj, attr, value)
         else:
             raise ValueError(_('A nova.network.model.VIF object is required '

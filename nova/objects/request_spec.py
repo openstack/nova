@@ -19,7 +19,6 @@ import os_resource_classes as orc
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
-import six
 
 from nova.db.sqlalchemy import api as db
 from nova.db.sqlalchemy import api_models
@@ -239,7 +238,7 @@ class RequestSpec(base.NovaObject):
             self.pci_requests = pci_requests
 
     def _from_instance_numa_topology(self, numa_topology):
-        if isinstance(numa_topology, six.string_types):
+        if isinstance(numa_topology, str):
             numa_topology = objects.InstanceNUMATopology.obj_from_primitive(
                 jsonutils.loads(numa_topology))
 

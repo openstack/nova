@@ -24,7 +24,6 @@ import oslo_messaging as messaging
 from oslo_utils import versionutils
 from oslo_versionedobjects import base as ovoo_base
 from oslo_versionedobjects import exception as ovoo_exc
-import six
 
 from nova import objects
 from nova.objects import fields as obj_fields
@@ -346,7 +345,7 @@ def serialize_args(fn):
                                  else v)
                 except Exception:
                     kwargs[k] = v.__class__.__name__
-            elif k == 'exc_tb' and v and not isinstance(v, six.string_types):
+            elif k == 'exc_tb' and v and not isinstance(v, str):
                 kwargs[k] = ''.join(traceback.format_tb(v))
             elif isinstance(v, datetime.datetime):
                 kwargs[k] = utils.strtime(v)
