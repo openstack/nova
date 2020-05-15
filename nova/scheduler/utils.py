@@ -271,20 +271,36 @@ class ResourceRequest(object):
             self.cpu_pinning_requested = True
 
             # Switch VCPU -> PCPU
-            cpus = flavor.vcpus
+            pcpus = flavor.vcpus
 
-            LOG.debug('Translating request for %(vcpu_rc)s=%(cpus)d to '
-                      '%(vcpu_rc)s=0,%(pcpu_rc)s=%(cpus)d',
+            LOG.debug('Translating request for %(vcpu_rc)s=%(pcpus)d to '
+                      '%(vcpu_rc)s=0,%(pcpu_rc)s=%(pcpus)d',
                       {'vcpu_rc': orc.VCPU, 'pcpu_rc': orc.PCPU,
-                       'cpus': cpus})
+                       'pcpus': pcpus})
 
+        if cpu_policy == obj_fields.CPUAllocationPolicy.MIXED:
+            # Get dedicated CPU list from flavor extra spec. For a mixed
+            # instance a non-empty 'hw:cpu_dedicated_mask' configuration must
+            # exist, which is already ensured in the API layer.
+            dedicated_cpus = hardware.get_dedicated_cpu_constraint(flavor)
+
+            pcpus = len(dedicated_cpus)
+            vcpus = flavor.vcpus - pcpus
+
+            # apply for the VCPU resource of a 'mixed' instance
+            self._add_resource(None, orc.VCPU, vcpus)
+
+        if cpu_policy in (
+            obj_fields.CPUAllocationPolicy.DEDICATED,
+            obj_fields.CPUAllocationPolicy.MIXED,
+        ):
             if emul_thread_policy == 'isolate':
-                cpus += 1
+                pcpus += 1
 
                 LOG.debug('Adding additional %(pcpu_rc)s to account for '
                           'emulator threads', {'pcpu_rc': orc.PCPU})
 
-            self._add_resource(None, orc.PCPU, cpus)
+            self._add_resource(None, orc.PCPU, pcpus)
 
         trait = {
             obj_fields.CPUThreadAllocationPolicy.ISOLATE: 'forbidden',
