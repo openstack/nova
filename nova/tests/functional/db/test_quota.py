@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 from oslo_utils import uuidutils
 
 from nova import context
@@ -78,7 +79,9 @@ class QuotaTestCase(test.NoDBTestCase):
 
         self.assertEqual(2, count['user']['server_group_members'])
 
-    def test_instances_cores_ram_count(self):
+    @mock.patch('nova.objects.CellMappingList.get_by_project_id',
+        wraps=objects.CellMappingList.get_by_project_id)
+    def test_instances_cores_ram_count(self, mock_get_project_cell_mappings):
         ctxt = context.RequestContext('fake-user', 'fake-project')
         mapping1 = objects.CellMapping(context=ctxt,
                                        uuid=uuidutils.generate_uuid(),
@@ -136,10 +139,22 @@ class QuotaTestCase(test.NoDBTestCase):
                                          project_id='fake-project')
             im.create()
 
-        # Count instances, cores, and ram across cells
+        # Count instances, cores, and ram across cells (all cells)
         count = quota._instances_cores_ram_count(ctxt, 'fake-project',
                                                  user_id='fake-user')
+        mock_get_project_cell_mappings.assert_not_called()
+        self.assertEqual(3, count['project']['instances'])
+        self.assertEqual(10, count['project']['cores'])
+        self.assertEqual(2560, count['project']['ram'])
+        self.assertEqual(2, count['user']['instances'])
+        self.assertEqual(6, count['user']['cores'])
+        self.assertEqual(1536, count['user']['ram'])
 
+        # Count instances, cores, and ram across cells (query cell subset)
+        self.flags(instance_list_per_project_cells=True, group='api')
+        count = quota._instances_cores_ram_count(ctxt, 'fake-project',
+                                                 user_id='fake-user')
+        mock_get_project_cell_mappings.assert_called_with(ctxt, 'fake-project')
         self.assertEqual(3, count['project']['instances'])
         self.assertEqual(10, count['project']['cores'])
         self.assertEqual(2560, count['project']['ram'])
