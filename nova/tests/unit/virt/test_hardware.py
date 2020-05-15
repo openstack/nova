@@ -1730,6 +1730,37 @@ class NUMATopologyTest(test.NoDBTestCase):
                 ),
             },
             {
+                "flavor": objects.Flavor(vcpus=6, memory_mb=2048,
+                                         extra_specs={
+                         "hw:cpu_policy": fields.CPUAllocationPolicy.MIXED,
+                         "hw:cpu_realtime": "yes",
+                         "hw:cpu_realtime_mask": "^0-2",
+                }),
+                "image": {
+                    "properties": {},
+                },
+                "expect": objects.InstanceNUMATopology(
+                    cells=[
+                        objects.InstanceNUMACell(
+                            id=0, cpuset=set([0, 1, 2]),
+                            pcpuset=set([3, 4, 5]), memory=2048,
+                            cpu_policy=fields.CPUAllocationPolicy.MIXED)]),
+            },
+            {  # Create 'mixed' instance with the 'ISOLATE' emulator
+                # thread policy
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
+                                         extra_specs={
+                                             "hw:cpu_policy": "mixed",
+                                             "hw:cpu_dedicated_mask": "3",
+                                             "hw:cpu_realtime": "yes",
+                                             "hw:cpu_realtime_mask": "^0-2"
+                }),
+                "image": {
+                    "properties": {}
+                },
+                "expect": exception.RequiredMixedOrRealtimeCPUMask,
+            },
+            {
                 # Invalid CPU thread pinning override
                 "flavor": objects.Flavor(
                     vcpus=4, memory_mb=2048,

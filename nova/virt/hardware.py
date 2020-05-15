@@ -1889,7 +1889,7 @@ def numa_get_constraints(flavor, image_meta):
 
     cpu_policy = get_cpu_policy_constraint(flavor, image_meta)
     cpu_thread_policy = get_cpu_thread_policy_constraint(flavor, image_meta)
-    rt_mask = get_realtime_cpu_constraint(flavor, image_meta)
+    realtime_cpus = get_realtime_cpu_constraint(flavor, image_meta)
     dedicated_cpus = get_dedicated_cpu_constraint(flavor)
     emu_threads_policy = get_emulator_thread_policy_constraint(flavor)
 
@@ -1961,7 +1961,7 @@ def numa_get_constraints(flavor, image_meta):
         if dedicated_cpus:
             raise exception.RequiredMixedInstancePolicy()
 
-        if rt_mask:
+        if realtime_cpus:
             raise exception.RealtimeConfigurationInvalid()
     elif cpu_policy == fields.CPUAllocationPolicy.DEDICATED:
         # 'hw:cpu_dedicated_mask' should not be defined in a flavor with
@@ -1969,8 +1969,15 @@ def numa_get_constraints(flavor, image_meta):
         if dedicated_cpus:
             raise exception.RequiredMixedInstancePolicy()
     else:  # MIXED
-        if dedicated_cpus is None:
+        if realtime_cpus and dedicated_cpus:
             raise exception.RequiredMixedOrRealtimeCPUMask()
+
+        if not (realtime_cpus or dedicated_cpus):
+            raise exception.RequiredMixedOrRealtimeCPUMask()
+
+        # NOTE(huaquiang): If using mixed with realtime, then cores listed in
+        # the realtime mask are dedicated and everything else is shared.
+        dedicated_cpus = dedicated_cpus or realtime_cpus
 
     nodes = _get_numa_node_count_constraint(flavor, image_meta)
     pagesize = _get_numa_pagesize_constraint(flavor, image_meta)
