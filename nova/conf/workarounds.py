@@ -247,6 +247,25 @@ necessary on new or upgraded deployments where the new configuration has been
 set on all hosts. By setting this option, the second lookup is disabled and the
 scheduler will only request ``PCPU``-based allocations.
 """),
+    cfg.BoolOpt('reserve_disk_resource_for_image_cache',
+               default=False,
+               help="""
+If it is set to True then the libvirt driver will reserve DISK_GB resource for
+the images stored in the image cache. If the
+:oslo.config:option:`DEFAULT.instances_path` is on different disk partition
+than the image cache directory then the driver will not reserve resource for
+the cache.
+
+Such disk reservation is done by a periodic task in the resource tracker that
+runs every :oslo.config:option:`update_resources_interval` seconds. So the
+reservation is not updated immediately when an image is cached.
+
+Related options:
+
+* :oslo.config:option:`DEFAULT.instances_path`
+* :oslo.config:option:`image_cache_subdirectory_name`
+* :oslo.config:option:`update_resources_interval`
+"""),
 ]
 
 
