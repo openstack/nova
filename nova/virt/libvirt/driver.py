@@ -7560,7 +7560,8 @@ class LibvirtDriver(driver.ComputeDriver):
             'max_unit': disk_gb,
             'step_size': 1,
             'allocation_ratio': ratios[orc.DISK_GB],
-            'reserved': self._get_reserved_host_disk_gb_from_config(),
+            'reserved': (self._get_reserved_host_disk_gb_from_config() +
+                         self._get_disk_size_reserved_for_image_cache()),
         }
 
         # TODO(sbauza): Use traits to providing vGPU types. For the moment,
@@ -9976,6 +9977,18 @@ class LibvirtDriver(driver.ComputeDriver):
             # rest of the code currently called only from spawn().
             images.fetch_to_raw(context, image_id, path)
             return True
+
+    def _get_disk_size_reserved_for_image_cache(self):
+        """Return the amount of DISK_GB resource need to be reserved for the
+        image cache.
+
+        :returns: The disk space in GB
+        """
+        if not CONF.workarounds.reserve_disk_resource_for_image_cache:
+            return 0
+
+        return compute_utils.convert_mb_to_ceil_gb(
+            self.image_cache_manager.get_disk_usage() / 1024.0 / 1024.0)
 
     def _is_path_shared_with(self, dest, path):
         # NOTE (rmk): There are two methods of determining whether we are
