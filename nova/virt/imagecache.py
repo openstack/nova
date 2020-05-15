@@ -107,3 +107,12 @@ class ImageCacheManager(object):
         populated in the cached stats will be used for the cache management.
         """
         raise NotImplementedError()
+
+    def get_disk_usage(self):
+        """Return the size of the physical disk space used for the cache.
+
+        :returns: The disk space in bytes that is occupied from
+                  CONF.instances_path or zero if the cache directory is mounted
+                  to a different disk device.
+        """
+        raise NotImplementedError()
