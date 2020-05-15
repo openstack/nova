@@ -11,6 +11,12 @@ Evacuates a server from a failed host to a new host.
 - In the request body, if ``onSharedStorage`` is set, then do not set ``adminPass``.
 - The target host should not be the same as the instance host.
 
+**Preconditions**
+
+- The failed host must be fenced and no longer running the original server.
+- The failed host must be reported as down or marked as forced down using
+  `Update Forced Down`_.
+
 Starting from API version 2.68, the ``force`` parameter is no longer accepted
 as this could not be meaningfully supported by servers with complex resource
 allocations.
