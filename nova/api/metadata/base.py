@@ -16,6 +16,7 @@
 
 """Instance Metadata information."""
 
+import itertools
 import os
 import posixpath
 
@@ -70,6 +71,7 @@ NEWTON_ONE = '2016-06-30'
 NEWTON_TWO = '2016-10-06'
 OCATA = '2017-02-22'
 ROCKY = '2018-08-27'
+VICTORIA = '2020-10-14'
 
 OPENSTACK_VERSIONS = [
     FOLSOM,
@@ -80,6 +82,7 @@ OPENSTACK_VERSIONS = [
     NEWTON_TWO,
     OCATA,
     ROCKY,
+    VICTORIA,
 ]
 
 VERSION = "version"
@@ -130,6 +133,7 @@ class InstanceMetadata(object):
         instance.ec2_ids
         instance.keypairs
         instance.device_metadata
+        instance.numa_topology
         instance = objects.Instance.obj_from_primitive(
             instance.obj_to_primitive())
 
@@ -358,6 +362,9 @@ class InstanceMetadata(object):
         if self._check_os_version(NEWTON_ONE, version):
             metadata['devices'] = self._get_device_metadata(version)
 
+        if self._check_os_version(VICTORIA, version):
+            metadata['dedicated_cpus'] = self._get_instance_dedicated_cpus()
+
         self.set_mimetype(MIME_TYPE_APPLICATION_JSON)
         return jsonutils.dump_as_bytes(metadata)
 
@@ -434,6 +441,15 @@ class InstanceMetadata(object):
 
                 device_metadata_list.append(device_metadata)
         return device_metadata_list
+
+    def _get_instance_dedicated_cpus(self):
+        dedicated_cpus = []
+        if self.instance.numa_topology:
+            dedicated_cpus = sorted(list(itertools.chain.from_iterable([
+                cell.pcpuset for cell in self.instance.numa_topology.cells
+            ])))
+
+        return dedicated_cpus
 
     def _handle_content(self, path_tokens):
         if len(path_tokens) == 1:
@@ -658,7 +674,7 @@ def get_metadata_by_instance_id(instance_id, address, ctxt=None):
     attrs = ['ec2_ids', 'flavor', 'info_cache',
              'metadata', 'system_metadata',
              'security_groups', 'keypairs',
-             'device_metadata']
+             'device_metadata', 'numa_topology']
 
     if CONF.api.local_metadata_per_cell:
         instance = objects.Instance.get_by_uuid(ctxt, instance_id,
