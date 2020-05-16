@@ -50,12 +50,6 @@ todo_include_todos = True
 master_doc = 'index'
 # General information about the project.
 project = u'Compute API Guide'
-bug_tag = u'api-guide'
-repository_name = 'openstack/nova'
-bug_project = 'nova'
-
-# Must set this variable to include year, month, day, hours, and minutes.
-html_last_updated_fmt = '%Y-%m-%d %H:%M'
 
 copyright = u'2015, OpenStack contributors'
 
@@ -146,10 +140,6 @@ html_static_path = []
 # .htaccess) here, relative to this directory. These files are copied
 # directly to the root of the documentation.
 # html_extra_path = []
-
-# If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
-# using the given strftime format.
-html_last_updated_fmt = '%Y-%m-%d %H:%M'
 
 # If true, SmartyPants will be used to convert quotes and dashes to
 # typographically correct entities.
@@ -284,9 +274,15 @@ pdf_documents = [
 
 # -- Options for openstackdocstheme -------------------------------------------
 
-openstack_projects = [
+openstackdocs_projects = [
     'glance',
     'nova',
     'neutron',
     'placement',
 ]
+
+openstackdocs_bug_tag = u'api-guide'
+openstackdocs_repo_name = 'openstack/nova'
+openstackdocs_bug_project = 'nova'
+openstackdocs_auto_version = False
+openstackdocs_auto_name = False

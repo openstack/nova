@@ -43,9 +43,9 @@ master_doc = 'index'
 copyright = u'2010-present, OpenStack Foundation'
 
 # openstackdocstheme options
-repository_name = 'openstack/nova'
-bug_project = 'nova'
-bug_tag = 'api-ref'
+openstackdocs_repo_name = 'openstack/nova'
+openstackdocs_bug_project = 'nova'
+openstackdocs_bug_tag = 'api-ref'
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
