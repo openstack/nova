@@ -8568,7 +8568,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         mock_network_migrate_finish.assert_called_once_with(
             self.context, self.instance, self.migration, None)
 
-    def test_confirm_resize_deletes_allocations(self):
+    def test_confirm_resize_deletes_allocations_and_update_scheduler(self):
+        @mock.patch.object(self.compute, '_delete_scheduler_instance_info')
         @mock.patch('nova.objects.Instance.get_by_uuid')
         @mock.patch('nova.objects.Migration.get_by_id')
         @mock.patch.object(self.migration, 'save')
@@ -8580,7 +8581,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         @mock.patch.object(self.instance, 'save')
         def do_confirm_resize(mock_save, mock_drop, mock_delete,
                               mock_confirm, mock_nwapi, mock_notify,
-                              mock_mig_save, mock_mig_get, mock_inst_get):
+                              mock_mig_save, mock_mig_get, mock_inst_get,
+                              mock_delete_scheduler_info):
 
             def fake_drop_move_claim(*args, **kwargs):
                 # RT.drop_move_claim must be called before
@@ -8605,6 +8607,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             mock_save.assert_called_with(expected_task_state=
                                          [None, task_states.DELETING,
                                          task_states.SOFT_DELETING])
+            mock_delete_scheduler_info.assert_called_once_with(
+                self.context, self.instance.uuid)
 
         do_confirm_resize()
 
