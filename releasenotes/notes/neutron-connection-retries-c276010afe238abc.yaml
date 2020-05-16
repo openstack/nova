@@ -1,0 +1,12 @@
+---
+fixes:
+  - |
+    A new config option ``[neutron]http_retries`` is added which defaults to
+    3. It controls how many times to retry a Neutron API call in response to a
+    HTTP connection failure. An example scenario where it will help is when a
+    deployment is using HAProxy and connections get closed after idle time. If
+    an incoming request tries to re-use a connection that is simultaneously
+    being torn down, a HTTP connection failure will occur and previously Nova
+    would fail the entire request. With retries, Nova can be more resilient in
+    this scenario and continue the request if a retry succeeds. Refer to
+    https://launchpad.net/bugs/1866937 for more details.
