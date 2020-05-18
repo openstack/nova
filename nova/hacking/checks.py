@@ -788,8 +788,8 @@ def no_log_warn(logical_line):
 def check_context_log(logical_line, filename, noqa):
     """check whether context is being passed to the logs
 
-    Not correct: LOG.info(_LI("Rebooting instance"), context=context)
-    Correct:  LOG.info(_LI("Rebooting instance"))
+    Not correct: LOG.info("Rebooting instance", context=context)
+    Correct:  LOG.info("Rebooting instance")
     https://bugs.launchpad.net/nova/+bug/1500896
 
     N353

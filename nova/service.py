@@ -34,7 +34,7 @@ import nova.conf
 from nova import context
 from nova import debugger
 from nova import exception
-from nova.i18n import _, _LI
+from nova.i18n import _
 from nova import objects
 from nova.objects import base as objects_base
 from nova.objects import service as service_obj
@@ -71,8 +71,8 @@ def _create_service_ref(this_service, context):
 
 def _update_service_ref(service):
     if service.version != service_obj.SERVICE_VERSION:
-        LOG.info(_LI('Updating service version for %(binary)s on '
-                     '%(host)s from %(old)i to %(new)i'),
+        LOG.info('Updating service version for %(binary)s on '
+                 '%(host)s from %(old)i to %(new)i',
                  {'binary': service.binary,
                   'host': service.host,
                   'old': service.version,
@@ -89,7 +89,7 @@ def setup_profiler(binary, host):
             project="nova",
             service=binary,
             host=host)
-        LOG.info(_LI("OSProfiler is enabled."))
+        LOG.info("OSProfiler is enabled.")
 
 
 def assert_eventlet_uses_monotonic_clock():
@@ -166,7 +166,7 @@ class Service(service.Service):
         assert_eventlet_uses_monotonic_clock()
 
         verstr = version.version_string_with_package()
-        LOG.info(_LI('Starting %(topic)s node (version %(version)s)'),
+        LOG.info('Starting %(topic)s node (version %(version)s)',
                   {'topic': self.topic, 'version': verstr})
         self.basic_config_check()
         self.manager.init_host()

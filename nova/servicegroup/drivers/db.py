@@ -20,7 +20,7 @@ import six
 
 import nova.conf
 from nova import exception
-from nova.i18n import _, _LI
+from nova.i18n import _
 from nova.servicegroup import api
 from nova.servicegroup.drivers import base
 
@@ -95,8 +95,7 @@ class DbDriver(base.Driver):
             # TODO(termie): make this pattern be more elegant.
             if getattr(service, 'model_disconnected', False):
                 service.model_disconnected = False
-                LOG.info(
-                    _LI('Recovered from being unable to report status.'))
+                LOG.info('Recovered from being unable to report status.')
         except messaging.MessagingTimeout:
             # NOTE(johngarbutt) during upgrade we will see messaging timeouts
             # as nova-conductor is restarted, so only log this error once.

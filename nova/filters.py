@@ -19,7 +19,6 @@ Filter support
 
 from oslo_log import log as logging
 
-from nova.i18n import _LI
 from nova import loadables
 
 LOG = logging.getLogger(__name__)
@@ -96,11 +95,10 @@ class BaseFilterHandler(loadables.BaseLoader):
                                  for obj in list_objs]
                     full_filter_results.append((cls_name, remaining))
                 else:
-                    LOG.info(_LI("Filter %s returned 0 hosts"), cls_name)
+                    LOG.info("Filter %s returned 0 hosts", cls_name)
                     full_filter_results.append((cls_name, None))
                     break
-                LOG.debug("Filter %(cls_name)s returned "
-                          "%(obj_len)d host(s)",
+                LOG.debug("Filter %(cls_name)s returned %(obj_len)d host(s)",
                           {'cls_name': cls_name, 'obj_len': len(list_objs)})
         if not list_objs:
             # Log the filtration history
