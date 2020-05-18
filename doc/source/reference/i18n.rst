@@ -15,9 +15,7 @@ network).
 
 One upon a time there was an effort to translate log messages in
 OpenStack projects. But starting with the Ocata release these are no
-longer being supported. Log messages **should not** be translated. Any
-use of ``_LI()``, ``_LW()``, ``_LE()``, ``_LC()`` are vestigial and
-will be removed over time. No new uses of these should be added.
+longer being supported. Log messages **should not** be translated.
 
 You should use the basic wrapper ``_()`` for strings which are not log
 messages that are expected to get to an end user::
@@ -25,6 +23,7 @@ messages that are expected to get to an end user::
     raise nova.SomeException(_('Invalid service catalogue'))
 
 Do not use ``locals()`` for formatting messages because:
+
 1. It is not as clear as using explicit dicts.
 2. It could produce hidden errors during refactoring.
 3. Changing the name of a variable causes a change in the message.

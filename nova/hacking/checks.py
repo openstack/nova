@@ -76,9 +76,7 @@ asse_true_false_with_in_or_not_in_spaces = re.compile(r"assert(True|False)"
                     r"[\[|'|\"](, .*)?\)")
 asse_raises_regexp = re.compile(r"assertRaisesRegexp\(")
 conf_attribute_set_re = re.compile(r"CONF\.[a-z0-9_.]+\s*=\s*\w")
-translated_log = re.compile(
-    r"(.)*LOG\.(audit|error|info|critical|exception)"
-    r"\(\s*_\(\s*('|\")")
+translated_log = re.compile(r"(.)*LOG\.\w+\(\s*_\(\s*('|\")")
 mutable_default_args = re.compile(r"^\s*def .+\((.+=\{\}|.+=\[\])")
 string_translation = re.compile(r"[^_]*_\(\s*('|\")")
 underscore_import_check = re.compile(r"(.)*import _(.)*")
@@ -302,21 +300,16 @@ def check_python3_xrange(logical_line):
 
 
 @core.flake8ext
-def no_translate_debug_logs(logical_line, filename):
-    """Check for 'LOG.debug(_('
+def no_translate_logs(logical_line, filename):
+    """Check for 'LOG.foo(_('
 
-    As per our translation policy,
-    https://wiki.openstack.org/wiki/LoggingStandards#Log_Translation
-    we shouldn't translate debug level logs.
-
-    * This check assumes that 'LOG' is a logger.
-    * Use filename so we can start enforcing this in specific folders instead
-      of needing to do so all at once.
+    As per our translation policy, we shouldn't translate logs.
+    This check assumes that 'LOG' is a logger.
 
     N319
     """
-    if logical_line.startswith("LOG.debug(_("):
-        yield (0, "N319 Don't translate debug level logs")
+    if translated_log.match(logical_line):
+        yield (0, "N319 Don't translate logs")
 
 
 @core.flake8ext
@@ -371,8 +364,7 @@ def check_explicit_underscore_import(logical_line, filename):
     elif (underscore_import_check.match(logical_line) or
           custom_underscore_check.match(logical_line)):
         UNDERSCORE_IMPORT_FILES.append(filename)
-    elif (translated_log.match(logical_line) or
-         string_translation.match(logical_line)):
+    elif string_translation.match(logical_line):
         yield (0, "N323: Found use of _() without explicit import of _ !")
 
 
@@ -474,14 +466,15 @@ class CheckForTransAdd(BaseASTChecker):
     CHECK_DESC = ('N326 Translated messages cannot be concatenated.  '
                   'String should be included in translated message.')
 
-    TRANS_FUNC = ['_', '_LI', '_LW', '_LE', '_LC']
+    TRANS_FUNC = ['_']
 
     def visit_BinOp(self, node):
         if isinstance(node.op, ast.Add):
-            if self._check_call_names(node.left, self.TRANS_FUNC):
-                self.add_error(node.left)
-            elif self._check_call_names(node.right, self.TRANS_FUNC):
-                self.add_error(node.right)
+            for node_x in (node.left, node.right):
+                if isinstance(node_x, ast.Call):
+                    if isinstance(node_x.func, ast.Name):
+                        if node_x.func.id == '_':
+                            self.add_error(node_x)
         super(CheckForTransAdd, self).generic_visit(node)
 
 
