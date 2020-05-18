@@ -3063,7 +3063,7 @@ class IronicDriverSyncTestCase(IronicDriverTestCase):
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    node=node.uuid)
 
-        self.driver.unrescue(instance, None)
+        self.driver.unrescue(self.ctx, instance)
         mock_sps.assert_called_once_with(node.uuid, 'unrescue')
 
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
@@ -3078,8 +3078,7 @@ class IronicDriverSyncTestCase(IronicDriverTestCase):
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    node=node.uuid)
         self.assertRaises(exception.InstanceUnRescueFailure,
-                          self.driver.unrescue,
-                          instance, None)
+                          self.driver.unrescue, self.ctx, instance)
 
     @mock.patch.object(ironic_driver.IronicDriver,
                        '_validate_instance_and_node')
@@ -3092,8 +3091,7 @@ class IronicDriverSyncTestCase(IronicDriverTestCase):
             instance_id='fake')
 
         self.assertRaises(exception.InstanceUnRescueFailure,
-                          self.driver.unrescue,
-                          instance, None)
+                          self.driver.unrescue, self.ctx, instance)
 
     @mock.patch.object(ironic_driver.IronicDriver,
                        '_validate_instance_and_node')
@@ -3108,8 +3106,7 @@ class IronicDriverSyncTestCase(IronicDriverTestCase):
                                                    node=node.uuid)
 
         self.assertRaises(exception.InstanceUnRescueFailure,
-                          self.driver.unrescue,
-                          instance, None)
+                          self.driver.unrescue, self.ctx, instance)
 
     def test__can_send_version(self):
         self.assertIsNone(

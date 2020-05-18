@@ -1365,14 +1365,14 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
         # Unrescue expects the original instance to be powered off
         conn.power_off(instance)
         xenapi_fake.create_vm(instance['name'] + '-rescue', 'Running')
-        conn.unrescue(instance, None)
+        conn.unrescue(self.context, instance)
 
     def test_unrescue_not_in_rescue(self):
         instance = self._create_instance(obj=True)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         # Ensure that it will not unrescue a non-rescued instance.
-        self.assertRaises(exception.InstanceNotInRescueMode, conn.unrescue,
-                          instance, None)
+        self.assertRaises(exception.InstanceNotInRescueMode,
+                          conn.unrescue, self.context, instance)
 
     def test_finish_revert_migration(self):
         instance = self._create_instance()

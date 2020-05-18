@@ -23272,7 +23272,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 ) as (mock_write, mock_destroy, mock_create, mock_del,
                       mock_rmtree, mock_isdir, mock_lvm_disks,
                       mock_remove_volumes, mock_glob):
-            drvr.unrescue(instance, None)
+            drvr.unrescue(self.context, instance)
             mock_destroy.assert_called_once_with(instance)
             mock_create.assert_called_once_with("fake_unrescue_xml",
                                                  fake_dom)

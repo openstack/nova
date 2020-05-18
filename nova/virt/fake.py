@@ -39,7 +39,9 @@ from nova.compute import task_states
 from nova.compute import vm_states
 import nova.conf
 from nova.console import type as ctype
+from nova import context as nova_context
 from nova import exception
+from nova import objects
 from nova.objects import diagnostics as diagnostics_obj
 from nova.objects import fields as obj_fields
 from nova.objects import migrate_data
@@ -238,7 +240,11 @@ class FakeDriver(driver.ComputeDriver):
                rescue_password, block_device_info):
         pass
 
-    def unrescue(self, instance, network_info):
+    def unrescue(
+        self,
+        context: nova_context.RequestContext,
+        instance: 'objects.Instance',
+    ):
         self.instances[instance.uuid].state = power_state.RUNNING
 
     def poll_rebooting_instances(self, timeout, instances):

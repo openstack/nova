@@ -26,7 +26,9 @@ from os_win import utilsfactory
 from oslo_log import log as logging
 import six
 
+from nova import context as nova_context
 from nova import exception
+from nova import objects
 from nova.virt import driver
 from nova.virt.hyperv import eventhandler
 from nova.virt.hyperv import hostops
@@ -38,6 +40,7 @@ from nova.virt.hyperv import serialconsoleops
 from nova.virt.hyperv import snapshotops
 from nova.virt.hyperv import vmops
 from nova.virt.hyperv import volumeops
+
 
 LOG = logging.getLogger(__name__)
 
@@ -361,7 +364,11 @@ class HyperVDriver(driver.ComputeDriver):
         self._vmops.rescue_instance(context, instance, network_info,
                                     image_meta, rescue_password)
 
-    def unrescue(self, instance, network_info):
+    def unrescue(
+        self,
+        context: nova_context.RequestContext,
+        instance: 'objects.Instance',
+    ):
         self._vmops.unrescue_instance(instance)
 
     def update_provider_tree(self, provider_tree, nodename, allocations=None):

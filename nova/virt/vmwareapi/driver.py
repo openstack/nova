@@ -37,6 +37,7 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 import nova.conf
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -650,7 +651,11 @@ class VMwareVCDriver(driver.ComputeDriver):
         """Rescue the specified instance."""
         self._vmops.rescue(context, instance, network_info, image_meta)
 
-    def unrescue(self, instance, network_info):
+    def unrescue(
+        self,
+        context: nova_context.RequestContext,
+        instance: 'objects.Instance',
+    ):
         """Unrescue the specified instance."""
         self._vmops.unrescue(instance)
 
