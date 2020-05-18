@@ -1,0 +1,13 @@
+---
+upgrade:
+  - |
+    Support for hooks has been removed. In previous versions of nova, these
+    provided a mechanism to extend nova with custom code through a plugin
+    mechanism. However, they were deprecated in 13.0.0 (Mitaka) as
+    unmaintainable long-term. `Versioned notifications`__ and `vendordata`__
+    should be used instead.
+    For more information, refer to `this thread`__.
+
+    __ https://docs.openstack.org/nova/latest/reference/notifications.html
+    __ https://docs.openstack.org/nova/latest/admin/vendordata.html
+    __ http://lists.openstack.org/pipermail/openstack-dev/2016-February/087782.html

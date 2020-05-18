@@ -6025,15 +6025,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_finish.assert_called_once_with(self.context, self.instance.uuid,
                 mock.ANY, exc_val=mock.ANY, exc_tb=mock.ANY, want_result=False)
 
-    @staticmethod
-    def _assert_build_instance_hook_called(mock_hooks, result):
-        # NOTE(coreywright): we want to test the return value of
-        # _do_build_and_run_instance, but it doesn't bubble all the way up, so
-        # mock the hooking, which allows us to test that too, though a little
-        # too intimately
-        mock_hooks.setdefault().run_post.assert_called_once_with(
-            'build_instance', result, mock.ANY, mock.ANY, f=None)
-
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(nova.compute.manager.ComputeManager,
                        '_default_block_device_names')
@@ -6349,12 +6340,23 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.InstanceActionEvent, 'event_start')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(manager.ComputeManager, '_build_and_run_instance')
-    @mock.patch('nova.hooks._HOOKS')
-    def _test_build_and_run_instance(self, mock_hooks, mock_build, mock_save,
+    def _test_build_and_run_instance(self, mock_build, mock_save,
                                      mock_start, mock_finish):
         self._do_build_instance_update(mock_save)
 
-        self.compute.build_and_run_instance(self.context, self.instance,
+        orig_do_build_and_run = self.compute._do_build_and_run_instance
+
+        def _wrapped_do_build_and_run_instance(*args, **kwargs):
+            ret = orig_do_build_and_run(*args, **kwargs)
+            self.assertEqual(build_results.ACTIVE, ret)
+            return ret
+
+        with mock.patch.object(
+            self.compute, '_do_build_and_run_instance',
+            side_effect=_wrapped_do_build_and_run_instance,
+        ):
+            self.compute.build_and_run_instance(
+                self.context, self.instance,
                 self.image, request_spec={},
                 filter_properties=self.filter_properties,
                 injected_files=self.injected_files,
@@ -6364,8 +6366,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits, host_list=fake_host_list)
 
-        self._assert_build_instance_hook_called(mock_hooks,
-                                                build_results.ACTIVE)
         self._instance_action_events(mock_start, mock_finish)
         self._assert_build_instance_update(mock_save)
         mock_build.assert_called_once_with(self.context, self.instance,
@@ -6411,8 +6411,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     @mock.patch.object(manager.ComputeManager, '_set_instance_obj_error_state')
     @mock.patch.object(conductor_api.ComputeTaskAPI, 'build_instances')
     @mock.patch.object(manager.ComputeManager, '_build_and_run_instance')
-    @mock.patch('nova.hooks._HOOKS')
-    def test_build_abort_exception(self, mock_hooks, mock_build_run,
+    def test_build_abort_exception(self, mock_build_run,
                                    mock_build, mock_set, mock_nil, mock_add,
                                    mock_clean_vol, mock_clean_net, mock_save,
                                    mock_start, mock_finish):
@@ -6420,7 +6419,19 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_build_run.side_effect = exception.BuildAbortException(reason='',
                                         instance_uuid=self.instance.uuid)
 
-        self.compute.build_and_run_instance(self.context, self.instance,
+        orig_do_build_and_run = self.compute._do_build_and_run_instance
+
+        def _wrapped_do_build_and_run_instance(*args, **kwargs):
+            ret = orig_do_build_and_run(*args, **kwargs)
+            self.assertEqual(build_results.FAILED, ret)
+            return ret
+
+        with mock.patch.object(
+            self.compute, '_do_build_and_run_instance',
+            side_effect=_wrapped_do_build_and_run_instance,
+        ):
+            self.compute.build_and_run_instance(
+                self.context, self.instance,
                 self.image, request_spec={},
                 filter_properties=self.filter_properties,
                 injected_files=self.injected_files,
@@ -6432,8 +6443,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
         self._instance_action_events(mock_start, mock_finish)
         self._assert_build_instance_update(mock_save)
-        self._assert_build_instance_hook_called(mock_hooks,
-                                                build_results.FAILED)
         mock_build_run.assert_called_once_with(self.context, self.instance,
                 self.image, self.injected_files, self.admin_pass,
                 self.requested_networks, self.security_groups,
@@ -6458,16 +6467,28 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     @mock.patch.object(manager.ComputeManager, '_set_instance_obj_error_state')
     @mock.patch.object(conductor_api.ComputeTaskAPI, 'build_instances')
     @mock.patch.object(manager.ComputeManager, '_build_and_run_instance')
-    @mock.patch('nova.hooks._HOOKS')
-    def test_rescheduled_exception(self, mock_hooks, mock_build_run,
+    def test_rescheduled_exception(self, mock_build_run,
                                    mock_build, mock_set, mock_nil,
                                    mock_save, mock_start, mock_finish):
         self._do_build_instance_update(mock_save, reschedule_update=True)
         mock_build_run.side_effect = exception.RescheduledException(reason='',
                 instance_uuid=self.instance.uuid)
 
-        with mock.patch.object(
-            self.compute.network_api, 'get_instance_nw_info',
+        orig_do_build_and_run = self.compute._do_build_and_run_instance
+
+        def _wrapped_do_build_and_run_instance(*args, **kwargs):
+            ret = orig_do_build_and_run(*args, **kwargs)
+            self.assertEqual(build_results.RESCHEDULED, ret)
+            return ret
+
+        with test.nested(
+            mock.patch.object(
+                self.compute, '_do_build_and_run_instance',
+                side_effect=_wrapped_do_build_and_run_instance,
+            ),
+            mock.patch.object(
+                self.compute.network_api, 'get_instance_nw_info',
+            ),
         ):
             self.compute.build_and_run_instance(
                 self.context, self.instance,
@@ -6481,8 +6502,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 node=self.node, limits=self.limits,
                 host_list=fake_host_list)
 
-        self._assert_build_instance_hook_called(mock_hooks,
-                                                build_results.RESCHEDULED)
         self._instance_action_events(mock_start, mock_finish)
         self._assert_build_instance_update(mock_save, reschedule_update=True)
         mock_build_run.assert_called_once_with(self.context, self.instance,
@@ -6692,15 +6711,26 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     @mock.patch.object(manager.ComputeManager, '_set_instance_obj_error_state')
     @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
     @mock.patch.object(manager.ComputeManager, '_build_and_run_instance')
-    @mock.patch('nova.hooks._HOOKS')
-    def test_rescheduled_exception_without_retry(self, mock_hooks,
+    def test_rescheduled_exception_without_retry(self,
             mock_build_run, mock_add, mock_set, mock_clean_net, mock_clean_vol,
             mock_nil, mock_save, mock_start, mock_finish):
         self._do_build_instance_update(mock_save)
         mock_build_run.side_effect = exception.RescheduledException(reason='',
                 instance_uuid=self.instance.uuid)
 
-        self.compute.build_and_run_instance(self.context, self.instance,
+        orig_do_build_and_run = self.compute._do_build_and_run_instance
+
+        def _wrapped_do_build_and_run_instance(*args, **kwargs):
+            ret = orig_do_build_and_run(*args, **kwargs)
+            self.assertEqual(build_results.FAILED, ret)
+            return ret
+
+        with mock.patch.object(
+            self.compute, '_do_build_and_run_instance',
+            side_effect=_wrapped_do_build_and_run_instance,
+        ):
+            self.compute.build_and_run_instance(
+                self.context, self.instance,
                 self.image, request_spec={},
                 filter_properties={},
                 injected_files=self.injected_files,
@@ -6710,8 +6740,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits, host_list=fake_host_list)
 
-        self._assert_build_instance_hook_called(mock_hooks,
-                build_results.FAILED)
         self._instance_action_events(mock_start, mock_finish)
         self._assert_build_instance_update(mock_save)
         mock_build_run.assert_called_once_with(self.context, self.instance,
@@ -6739,8 +6767,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                        '_nil_out_instance_obj_host_and_node')
     @mock.patch.object(conductor_api.ComputeTaskAPI, 'build_instances')
     @mock.patch.object(manager.ComputeManager, '_build_and_run_instance')
-    @mock.patch('nova.hooks._HOOKS')
-    def test_rescheduled_exception_do_not_deallocate_network(self, mock_hooks,
+    def test_rescheduled_exception_do_not_deallocate_network(self,
             mock_build_run, mock_build, mock_nil,
             mock_clean_net, mock_save, mock_start,
             mock_finish):
@@ -6748,7 +6775,19 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_build_run.side_effect = exception.RescheduledException(reason='',
                 instance_uuid=self.instance.uuid)
 
-        self.compute.build_and_run_instance(self.context, self.instance,
+        orig_do_build_and_run = self.compute._do_build_and_run_instance
+
+        def _wrapped_do_build_and_run_instance(*args, **kwargs):
+            ret = orig_do_build_and_run(*args, **kwargs)
+            self.assertEqual(build_results.RESCHEDULED, ret)
+            return ret
+
+        with mock.patch.object(
+            self.compute, '_do_build_and_run_instance',
+            side_effect=_wrapped_do_build_and_run_instance,
+        ):
+            self.compute.build_and_run_instance(
+                self.context, self.instance,
                 self.image, request_spec={},
                 filter_properties=self.filter_properties,
                 injected_files=self.injected_files,
@@ -6759,8 +6798,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 node=self.node, limits=self.limits,
                 host_list=fake_host_list)
 
-        self._assert_build_instance_hook_called(mock_hooks,
-                                                build_results.RESCHEDULED)
         self._instance_action_events(mock_start, mock_finish)
         self._assert_build_instance_update(mock_save, reschedule_update=True)
         mock_build_run.assert_called_once_with(self.context, self.instance,
@@ -6784,15 +6821,26 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                        '_nil_out_instance_obj_host_and_node')
     @mock.patch.object(conductor_api.ComputeTaskAPI, 'build_instances')
     @mock.patch.object(manager.ComputeManager, '_build_and_run_instance')
-    @mock.patch('nova.hooks._HOOKS')
-    def test_rescheduled_exception_deallocate_network(self, mock_hooks,
+    def test_rescheduled_exception_deallocate_network(self,
             mock_build_run, mock_build, mock_nil, mock_clean,
             mock_save, mock_start, mock_finish):
         self._do_build_instance_update(mock_save, reschedule_update=True)
         mock_build_run.side_effect = exception.RescheduledException(reason='',
                 instance_uuid=self.instance.uuid)
 
-        self.compute.build_and_run_instance(self.context, self.instance,
+        orig_do_build_and_run = self.compute._do_build_and_run_instance
+
+        def _wrapped_do_build_and_run_instance(*args, **kwargs):
+            ret = orig_do_build_and_run(*args, **kwargs)
+            self.assertEqual(build_results.RESCHEDULED, ret)
+            return ret
+
+        with mock.patch.object(
+            self.compute, '_do_build_and_run_instance',
+            side_effect=_wrapped_do_build_and_run_instance,
+        ):
+            self.compute.build_and_run_instance(
+                self.context, self.instance,
                 self.image, request_spec={},
                 filter_properties=self.filter_properties,
                 injected_files=self.injected_files,
@@ -6802,8 +6850,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits, host_list=fake_host_list)
 
-        self._assert_build_instance_hook_called(mock_hooks,
-                                                build_results.RESCHEDULED)
         self._instance_action_events(mock_start, mock_finish)
         self._assert_build_instance_update(mock_save, reschedule_update=True)
         mock_build_run.assert_called_once_with(self.context, self.instance,
@@ -6832,8 +6878,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     @mock.patch.object(manager.ComputeManager, '_set_instance_obj_error_state')
     @mock.patch.object(conductor_api.ComputeTaskAPI, 'build_instances')
     @mock.patch.object(manager.ComputeManager, '_build_and_run_instance')
-    @mock.patch('nova.hooks._HOOKS')
-    def _test_build_and_run_exceptions(self, exc, mock_hooks, mock_build_run,
+    def _test_build_and_run_exceptions(self, exc, mock_build_run,
                 mock_build, mock_set, mock_nil, mock_add, mock_clean_vol,
                 mock_clean_net, mock_save, mock_start, mock_finish,
                 set_error=False, cleanup_volumes=False,
@@ -6841,7 +6886,19 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self._do_build_instance_update(mock_save)
         mock_build_run.side_effect = exc
 
-        self.compute.build_and_run_instance(self.context, self.instance,
+        orig_do_build_and_run = self.compute._do_build_and_run_instance
+
+        def _wrapped_do_build_and_run_instance(*args, **kwargs):
+            ret = orig_do_build_and_run(*args, **kwargs)
+            self.assertEqual(build_results.FAILED, ret)
+            return ret
+
+        with mock.patch.object(
+            self.compute, '_do_build_and_run_instance',
+            side_effect=_wrapped_do_build_and_run_instance,
+        ):
+            self.compute.build_and_run_instance(
+                self.context, self.instance,
                 self.image, request_spec={},
                 filter_properties=self.filter_properties,
                 injected_files=self.injected_files,
@@ -6851,8 +6908,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits, host_list=fake_host_list)
 
-        self._assert_build_instance_hook_called(mock_hooks,
-                                                build_results.FAILED)
         self._instance_action_events(mock_start, mock_finish)
         self._assert_build_instance_update(mock_save)
         if cleanup_volumes:

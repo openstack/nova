@@ -37,7 +37,6 @@ import nova.conf
 from nova import context as nova_context
 from nova.db import base
 from nova import exception
-from nova import hooks
 from nova.i18n import _
 from nova.network import constants
 from nova.network import model as network_model
@@ -102,7 +101,6 @@ def get_binding_profile(port):
     return port.get(constants.BINDING_PROFILE, {}) or {}
 
 
-@hooks.add_hook('instance_network_info')
 def update_instance_cache_with_nw_info(impl, context, instance, nw_info=None):
     if instance.deleted:
         LOG.debug('Instance is deleted, no further info cache update',

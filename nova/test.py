@@ -748,12 +748,6 @@ class NoDBTestCase(TestCase):
     USES_DB = False
 
 
-class BaseHookTestCase(NoDBTestCase):
-    def assert_has_hook(self, expected_name, func):
-        self.assertTrue(hasattr(func, '__hook_name__'))
-        self.assertEqual(expected_name, func.__hook_name__)
-
-
 class MatchType(object):
     """Matches any instance of a specified type
 
