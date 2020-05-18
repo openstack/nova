@@ -30,7 +30,7 @@ from oslo_utils import excutils
 
 import nova.conf
 from nova import exception
-from nova.i18n import _, _LE, _LI
+from nova.i18n import _, _LI
 from nova import utils
 
 CONF = nova.conf.CONF
@@ -92,7 +92,7 @@ class Server(service.ServiceBase):
         try:
             self._socket = eventlet.listen(bind_addr, family, backlog=backlog)
         except EnvironmentError:
-            LOG.error(_LE("Could not bind to %(host)s:%(port)s"),
+            LOG.error("Could not bind to %(host)s:%(port)s",
                       {'host': host, 'port': port})
             raise
 
@@ -161,10 +161,11 @@ class Server(service.ServiceBase):
                                                **ssl_kwargs)
             except Exception:
                 with excutils.save_and_reraise_exception():
-                    LOG.error(_LE("Failed to start %(name)s on %(host)s"
-                                  ":%(port)s with SSL support"),
-                              {'name': self.name, 'host': self.host,
-                               'port': self.port})
+                    LOG.error(
+                        "Failed to start %(name)s on %(host)s:%(port)s with "
+                        "SSL support",
+                        {'name': self.name, 'host': self.host,
+                         'port': self.port})
 
         wsgi_kwargs = {
             'func': eventlet.wsgi.server,

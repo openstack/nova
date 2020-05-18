@@ -42,7 +42,6 @@ from nova import availability_zones as az
 import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LE
 from nova.i18n import _LW
 from nova import service_auth
 
@@ -610,28 +609,27 @@ class API(object):
             return connection_info
         except cinder_exception.ClientException as ex:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE('Initialize connection failed for volume '
-                              '%(vol)s on host %(host)s. Error: %(msg)s '
-                              'Code: %(code)s. Attempting to terminate '
-                              'connection.'),
-                          {'vol': volume_id,
-                           'host': connector.get('host'),
-                           'msg': six.text_type(ex),
-                           'code': ex.code})
+                LOG.error(
+                    'Initialize connection failed for volume %(vol)s on host '
+                    '%(host)s. Error: %(msg)s Code: %(code)s. '
+                    'Attempting to terminate connection.',
+                    {'vol': volume_id,
+                     'host': connector.get('host'),
+                     'msg': six.text_type(ex),
+                     'code': ex.code})
                 try:
                     self.terminate_connection(context, volume_id, connector)
                 except Exception as exc:
-                    LOG.error(_LE('Connection between volume %(vol)s and host '
-                                  '%(host)s might have succeeded, but attempt '
-                                  'to terminate connection has failed. '
-                                  'Validate the connection and determine if '
-                                  'manual cleanup is needed. Error: %(msg)s '
-                                  'Code: %(code)s.'),
-                              {'vol': volume_id,
-                               'host': connector.get('host'),
-                               'msg': six.text_type(exc),
-                               'code': (
-                                exc.code if hasattr(exc, 'code') else None)})
+                    LOG.error(
+                        'Connection between volume %(vol)s and host %(host)s '
+                        'might have succeeded, but attempt to terminate '
+                        'connection has failed. Validate the connection and '
+                        'determine if manual cleanup is needed. '
+                        'Error: %(msg)s Code: %(code)s.',
+                        {'vol': volume_id,
+                        'host': connector.get('host'),
+                        'msg': six.text_type(exc),
+                        'code': exc.code if hasattr(exc, 'code') else None})
 
     @translate_volume_exception
     @retrying.retry(stop_max_attempt_number=5,

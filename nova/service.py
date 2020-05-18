@@ -34,7 +34,7 @@ import nova.conf
 from nova import context
 from nova import debugger
 from nova import exception
-from nova.i18n import _, _LE, _LI, _LW
+from nova.i18n import _, _LI, _LW
 from nova import objects
 from nova.objects import base as objects_base
 from nova.objects import service as service_obj
@@ -295,7 +295,7 @@ class Service(service.Service):
         try:
             self.manager.cleanup_host()
         except Exception:
-            LOG.exception(_LE('Service error occurred during cleanup_host'))
+            LOG.exception('Service error occurred during cleanup_host')
             pass
 
         super(Service, self).stop()
@@ -312,7 +312,7 @@ class Service(service.Service):
             with utils.tempdir():
                 pass
         except Exception as e:
-            LOG.error(_LE('Temporary directory is invalid: %s'), e)
+            LOG.error('Temporary directory is invalid: %s', e)
             sys.exit(1)
 
     def reset(self):

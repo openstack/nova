@@ -24,7 +24,7 @@ from oslo_utils import excutils
 
 
 from nova import exception
-from nova.i18n import _LE, _LW
+from nova.i18n import _LW
 from nova import policies
 
 
@@ -178,7 +178,7 @@ def authorize(context, action, target=None, do_raise=True, exc=None):
                                      do_raise=do_raise, exc=exc, action=action)
     except policy.PolicyNotRegistered:
         with excutils.save_and_reraise_exception():
-            LOG.exception(_LE('Policy not registered'))
+            LOG.exception('Policy not registered')
     except policy.InvalidScope:
         LOG.debug('Policy check for %(action)s failed with scope check '
                   '%(credentials)s',
