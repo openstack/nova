@@ -79,7 +79,7 @@ class RBDVolumeProxy(object):
                 driver._disconnect_from_rados(client, ioctx)
         except rbd.Error:
             with excutils.save_and_reraise_exception():
-                LOG.exception(_("error opening rbd image %s"), name)
+                LOG.exception("error opening rbd image %s", name)
                 driver._disconnect_from_rados(client, ioctx)
 
         self.driver = driver

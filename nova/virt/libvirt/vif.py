@@ -629,7 +629,7 @@ class LibvirtGenericVIFDriver(object):
                 vnic_mac, device_id, fabric,
                 network_model.VIF_TYPE_IB_HOSTDEV, pci_slot)
         except processutils.ProcessExecutionError:
-            LOG.exception(_("Failed while plugging ib hostdev vif"),
+            LOG.exception("Failed while plugging ib hostdev vif",
                           instance=instance)
 
     def plug_hw_veb(self, instance, vif):
@@ -672,7 +672,7 @@ class LibvirtGenericVIFDriver(object):
             nova.privsep.linux_net.create_tap_dev(dev)
             nova.privsep.libvirt.plug_midonet_vif(port_id, dev)
         except processutils.ProcessExecutionError:
-            LOG.exception(_("Failed while plugging vif"), instance=instance)
+            LOG.exception("Failed while plugging vif", instance=instance)
 
     def plug_iovisor(self, instance, vif):
         """Plug using PLUMgrid IO Visor Driver
@@ -689,7 +689,7 @@ class LibvirtGenericVIFDriver(object):
             nova.privsep.libvirt.plug_plumgrid_vif(
                 dev, iface_id, vif['address'], net_id, tenant_id)
         except processutils.ProcessExecutionError:
-            LOG.exception(_("Failed while plugging vif"), instance=instance)
+            LOG.exception("Failed while plugging vif", instance=instance)
 
     def plug_tap(self, instance, vif):
         """Plug a VIF_TYPE_TAP virtual interface."""
@@ -764,7 +764,7 @@ class LibvirtGenericVIFDriver(object):
         try:
             nova.privsep.libvirt.unplug_infiniband_vif(fabric, vnic_mac)
         except Exception:
-            LOG.exception(_("Failed while unplugging ib hostdev vif"))
+            LOG.exception("Failed while unplugging ib hostdev vif")
 
     def unplug_hw_veb(self, instance, vif):
         # TODO(sean-k-mooney): remove in Train after backporting 0 mac
@@ -795,7 +795,7 @@ class LibvirtGenericVIFDriver(object):
             nova.privsep.libvirt.unplug_midonet_vif(port_id)
             nova.privsep.linux_net.delete_net_dev(dev)
         except processutils.ProcessExecutionError:
-            LOG.exception(_("Failed while unplugging vif"), instance=instance)
+            LOG.exception("Failed while unplugging vif", instance=instance)
 
     def unplug_tap(self, instance, vif):
         """Unplug a VIF_TYPE_TAP virtual interface."""
@@ -803,7 +803,7 @@ class LibvirtGenericVIFDriver(object):
         try:
             nova.privsep.linux_net.delete_net_dev(dev)
         except processutils.ProcessExecutionError:
-            LOG.exception(_("Failed while unplugging vif"), instance=instance)
+            LOG.exception("Failed while unplugging vif", instance=instance)
 
     def unplug_iovisor(self, instance, vif):
         """Unplug using PLUMgrid IO Visor Driver
@@ -816,7 +816,7 @@ class LibvirtGenericVIFDriver(object):
             nova.privsep.libvirt.unplug_plumgrid_vif(dev)
             nova.privsep.linux_net.delete_net_dev(dev)
         except processutils.ProcessExecutionError:
-            LOG.exception(_("Failed while unplugging vif"), instance=instance)
+            LOG.exception("Failed while unplugging vif", instance=instance)
 
     def _unplug_os_vif(self, instance, vif):
         instance_info = os_vif_util.nova_to_osvif_instance(instance)

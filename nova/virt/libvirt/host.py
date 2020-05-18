@@ -190,7 +190,7 @@ class Host(object):
         try:
             handler()
         except Exception:
-            LOG.exception(_('Exception handling connection event'))
+            LOG.exception('Exception handling connection event')
         finally:
             self._conn_event_handler_queue.task_done()
 
@@ -503,10 +503,8 @@ class Host(object):
         try:
             conn = self._get_connection()
         except libvirt.libvirtError as ex:
-            LOG.exception(_("Connection to libvirt failed: %s"), ex)
-            payload = dict(ip=CONF.my_ip,
-                           method='_connect',
-                           reason=ex)
+            LOG.exception("Connection to libvirt failed: %s", ex)
+            payload = {'ip': CONF.my_ip, 'method': '_connect', 'reason': ex}
             ctxt = nova_context.get_admin_context()
             rpc.get_notifier('compute').error(ctxt,
                                               'compute.libvirt.error',
