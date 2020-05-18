@@ -11,7 +11,7 @@ mock>=3.0.0 # BSD
 mox3>=0.20.0 # Apache-2.0
 psycopg2>=2.7 # LGPL/ZPL
 PyMySQL>=0.7.6 # MIT License
-pycodestyle>=2.0.0 # MIT License
+pycodestyle>=2.0.0,<2.6.0 # MIT License
 python-barbicanclient>=4.5.2 # Apache-2.0
 python-ironicclient!=2.7.1,>=2.7.0 # Apache-2.0
 requests-mock>=1.2.0 # Apache-2.0
