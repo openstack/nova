@@ -57,6 +57,7 @@ monotonic==1.4
 msgpack==0.5.6
 msgpack-python==0.5.6
 munch==2.2.0
+mypy==0.761
 netaddr==0.7.18
 netifaces==0.10.4
 networkx==1.11
