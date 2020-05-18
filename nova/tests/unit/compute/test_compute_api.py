@@ -3306,16 +3306,6 @@ class _ComputeAPIUnitTestMixIn(object):
                           quiesce_required=True,
                           quiesce_unsupported=True)
 
-    def test_snapshot_volume_backed_with_quiesce_stopped(self):
-        self._test_snapshot_volume_backed(quiesce_required=True,
-                                          quiesce_unsupported=True,
-                                          vm_state=vm_states.STOPPED)
-
-    def test_snapshot_volume_backed_with_quiesce_suspended(self):
-        self._test_snapshot_volume_backed(quiesce_required=True,
-                                          quiesce_unsupported=True,
-                                          vm_state=vm_states.SUSPENDED)
-
     def test_snapshot_volume_backed_with_suspended(self):
         self._test_snapshot_volume_backed(quiesce_required=False,
                                           quiesce_unsupported=True,
