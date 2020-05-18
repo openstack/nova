@@ -37,7 +37,6 @@ def init():
     if not (CONF.remote_debug.host and CONF.remote_debug.port):
         return
 
-    from nova.i18n import _LW
     from oslo_log import log as logging
     LOG = logging.getLogger(__name__)
 
@@ -49,12 +48,13 @@ def init():
         from pydev import pydevd
     except ImportError:
         import pydevd
+
     pydevd.settrace(host=CONF.remote_debug.host,
                     port=CONF.remote_debug.port,
                     stdoutToServer=False,
                     stderrToServer=False)
 
-    LOG.warning(_LW('WARNING: Using the remote debug option changes how '
-                    'Nova uses the eventlet library to support async IO. This '
-                    'could result in failures that do not occur under normal '
-                    'operation. Use at your own risk.'))
+    LOG.warning('WARNING: Using the remote debug option changes how '
+                'Nova uses the eventlet library to support async IO. This '
+                'could result in failures that do not occur under normal '
+                'operation. Use at your own risk.')

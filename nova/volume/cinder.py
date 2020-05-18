@@ -42,7 +42,6 @@ from nova import availability_zones as az
 import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LW
 from nova import service_auth
 
 
@@ -581,21 +580,21 @@ class API(object):
                     attachment_id = attachments.get(instance_uuid, {}).\
                             get('attachment_id')
                     if not attachment_id:
-                        LOG.warning(_LW("attachment_id couldn't be retrieved "
-                                        "for volume %(volume_id)s with "
-                                        "instance_uuid %(instance_id)s. The "
-                                        "volume has the 'multiattach' flag "
-                                        "enabled, without the attachment_id "
-                                        "Cinder most probably cannot perform "
-                                        "the detach."),
+                        LOG.warning("attachment_id couldn't be retrieved "
+                                    "for volume %(volume_id)s with "
+                                    "instance_uuid %(instance_id)s. The "
+                                    "volume has the 'multiattach' flag "
+                                    "enabled, without the attachment_id "
+                                    "Cinder most probably cannot perform "
+                                    "the detach.",
                                     {'volume_id': volume_id,
                                      'instance_id': instance_uuid})
                 else:
-                    LOG.warning(_LW("attachment_id couldn't be retrieved for "
-                                    "volume %(volume_id)s. The volume has the "
-                                    "'multiattach' flag enabled, without the "
-                                    "attachment_id Cinder most probably "
-                                    "cannot perform the detach."),
+                    LOG.warning("attachment_id couldn't be retrieved for "
+                                "volume %(volume_id)s. The volume has the "
+                                "'multiattach' flag enabled, without the "
+                                "attachment_id Cinder most probably "
+                                "cannot perform the detach.",
                                 {'volume_id': volume_id})
 
         client.volumes.detach(volume_id, attachment_id)

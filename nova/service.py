@@ -34,7 +34,7 @@ import nova.conf
 from nova import context
 from nova import debugger
 from nova import exception
-from nova.i18n import _, _LI, _LW
+from nova.i18n import _, _LI
 from nova import objects
 from nova.objects import base as objects_base
 from nova.objects import service as service_obj
@@ -282,7 +282,7 @@ class Service(service.Service):
         try:
             self.service_ref.destroy()
         except exception.NotFound:
-            LOG.warning(_LW('Service killed that has no database entry'))
+            LOG.warning('Service killed that has no database entry')
 
     def stop(self):
         """stop the service and clean up."""

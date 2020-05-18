@@ -24,7 +24,6 @@ from oslo_utils import excutils
 
 
 from nova import exception
-from nova.i18n import _LW
 from nova import policies
 
 
@@ -115,10 +114,12 @@ def _warning_for_deprecated_user_based_rules(rules):
                 if resource in rule[0]]:
             continue
         if 'user_id' in KEY_EXPR.findall(rule[1]):
-            LOG.warning(_LW("The user_id attribute isn't supported in the "
-                            "rule '%s'. All the user_id based policy "
-                            "enforcement will be removed in the "
-                            "future."), rule[0])
+            LOG.warning(
+                "The user_id attribute isn't supported in the rule '%s'. "
+                "All the user_id based policy enforcement will be removed in "
+                "the future.",
+                rule[0]
+            )
 
 
 def set_rules(rules, overwrite=True, use_conf=False):
