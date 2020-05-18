@@ -142,6 +142,7 @@ latex_use_xindy = False
 openstackdocs_repo_name = 'openstack/nova'
 openstackdocs_bug_project = 'nova'
 openstackdocs_bug_tag = 'doc'
+openstackdocs_pdf_link = True
 
 # keep this ordered to keep mriedem happy
 #
