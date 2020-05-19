@@ -51,6 +51,46 @@ documentation for the configuration options in the
    need not be downloaded (and thus cached) at the compute node at
    all.
 
+Image Caching Resource Accounting
+---------------------------------
+
+Generally the size of the image cache is not part of the data Nova
+includes when reporting available or consumed disk space. This means
+that when ``nova-compute`` reports 100G of total disk space, the
+scheduler will assume that 100G of instances may be placed
+there. Usually disk is the most plentiful resource and thus the last
+to be exhausted, so this is often not problematic. However, if many
+instances are booted from distinct images, all of which need to be
+cached in addition to the disk space used by the instances themselves,
+Nova may overcommit the disk unintentionally by failing to consider
+the size of the image cache.
+
+There are two approaches to addressing this situation:
+
+#. **Mount the image cache as a separate filesystem**. This will
+   cause Nova to report the amount of disk space available purely to
+   instances, independent of how much is consumed by the cache. Nova
+   will continue to disregard the size of the image cache and, if the
+   cache space is exhausted, builds will fail. However, available
+   disk space for instances will be correctly reported by
+   ``nova-compute`` and accurately considered by the scheduler.
+
+#. **Enable optional reserved disk amount behavior**.  The
+   configuration workaround
+   :oslo.config:option:`workarounds.reserve_disk_resource_for_image_cache`
+   will cause ``nova-compute`` to periodically update the reserved disk
+   amount to include the statically configured value, as well as the
+   amount currently consumed by the image cache. This will cause the
+   scheduler to see the available disk space decrease as the image
+   cache grows. This is not updated synchronously and thus is not a
+   perfect solution, but should vastly increase the scheduler's
+   visibility resulting in better decisions. (Note this solution is
+   currently libvirt-specific)
+
+As above, not all backends and virt drivers use image caching, and
+thus a third option may be to consider alternative infrastructure to
+eliminate this problem altogether.
+
 Image pre-caching
 -----------------
 
