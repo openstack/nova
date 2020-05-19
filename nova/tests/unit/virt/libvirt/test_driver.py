@@ -20999,6 +20999,33 @@ class TestUpdateProviderTree(test.NoDBTestCase):
         self.assertEqual(expected_inventory, self.pt.data(cn.uuid).inventory)
         self.assertEqual(expected_allocations, allocations)
 
+    @mock.patch('nova.virt.libvirt.imagecache.ImageCacheManager.'
+                'get_disk_usage', return_value=1000)
+    def test_image_cache_disk_reservation(self, mock_cache_manager):
+        self.flags(reserved_host_disk_mb=1024)
+
+        self.flags(group='workarounds',
+                   reserve_disk_resource_for_image_cache=False)
+
+        self.driver.update_provider_tree(self.pt, self.cn_rp['name'])
+
+        disk_reservation = self.pt.data(
+            self.cn_rp['uuid']).inventory['DISK_GB']['reserved']
+        # Only the reserved_host_disk_mb is counted
+        self.assertEqual(1, disk_reservation)
+
+        # Turn the cache reservation on
+        self.flags(group='workarounds',
+                   reserve_disk_resource_for_image_cache=True)
+
+        self.driver.update_provider_tree(self.pt, self.cn_rp['name'])
+
+        disk_reservation = self.pt.data(
+            self.cn_rp['uuid']).inventory['DISK_GB']['reserved']
+        # Now both the reserved_host_disk_mb and the cache size is counted
+        # Note that the mock returns bytes which is rounded up to the next GB
+        self.assertEqual(2, disk_reservation)
+
 
 class TraitsComparisonMixin(object):
 
