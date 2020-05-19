@@ -1550,11 +1550,28 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
             ["server1:1899", "server2:1920"]),
                          model)
 
+    @mock.patch.object(rbd_utils.RBDDriver, 'parent_info')
     @mock.patch.object(rbd_utils.RBDDriver, 'flatten')
-    def test_flatten(self, mock_flatten):
+    def test_flatten(self, mock_flatten, mock_parent_info):
         image = self.image_class(self.INSTANCE, self.NAME)
         image.flatten()
         mock_flatten.assert_called_once_with(image.rbd_name, pool=self.POOL)
+        mock_parent_info.assert_called_once_with(
+            image.rbd_name, pool=self.POOL)
+
+    @mock.patch.object(imagebackend, 'LOG')
+    @mock.patch.object(rbd_utils.RBDDriver, 'parent_info')
+    @mock.patch.object(rbd_utils.RBDDriver, 'flatten')
+    def test_flatten_already_flat(
+            self, mock_flatten, mock_parent_info, mock_log):
+        mock_parent_info.side_effect = exception.ImageUnacceptable(
+            image_id=1, reason='foo')
+        image = self.image_class(self.INSTANCE, self.NAME)
+        image.flatten()
+        mock_log.debug.assert_called_once()
+        mock_flatten.assert_not_called()
+        mock_parent_info.assert_called_once_with(
+            image.rbd_name, pool=self.POOL)
 
     def test_import_file(self):
         image = self.image_class(self.INSTANCE, self.NAME)

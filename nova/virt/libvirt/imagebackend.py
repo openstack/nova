@@ -970,7 +970,17 @@ class Rbd(Image):
                                           reason=reason)
 
     def flatten(self):
-        self.driver.flatten(self.rbd_name, pool=self.pool)
+        # NOTE(vdrok): only flatten images if they are not already flattened,
+        # meaning that parent info is present
+        try:
+            self.driver.parent_info(self.rbd_name, pool=self.pool)
+        except exception.ImageUnacceptable:
+            LOG.debug(
+                "Image %(img)s from pool %(pool)s has no parent info, "
+                "consider it already flat", {
+                    'img': self.rbd_name, 'pool': self.pool})
+        else:
+            self.driver.flatten(self.rbd_name, pool=self.pool)
 
     def get_model(self, connection):
         secret = None
