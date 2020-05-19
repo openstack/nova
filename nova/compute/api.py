@@ -68,6 +68,7 @@ from nova import objects
 from nova.objects import block_device as block_device_obj
 from nova.objects import external_event as external_event_obj
 from nova.objects import fields as fields_obj
+from nova.objects import image_meta as image_meta_obj
 from nova.objects import keypair as keypair_obj
 from nova.objects import quotas as quotas_obj
 from nova.pci import request as pci_request
@@ -4201,6 +4202,27 @@ class API(base.Base):
                rescue_image_ref=None, clean_shutdown=True,
                allow_bfv_rescue=False):
         """Rescue the given instance."""
+
+        if rescue_image_ref:
+            try:
+                image_meta = image_meta_obj.ImageMeta.from_image_ref(
+                    context, self.image_api, rescue_image_ref)
+            except (exception.ImageNotFound, exception.ImageBadRequest):
+                LOG.warning("Failed to fetch rescue image metadata using "
+                            "image_ref %(image_ref)s",
+                            {'image_ref': rescue_image_ref})
+                raise exception.UnsupportedRescueImage(
+                    image=rescue_image_ref)
+
+            # FIXME(lyarwood): There is currently no support for rescuing
+            # instances using a volume snapshot so fail here before we cast to
+            # the compute.
+            if image_meta.properties.get('img_block_device_mapping'):
+                LOG.warning("Unable to rescue an instance using a volume "
+                            "snapshot image with img_block_device_mapping "
+                            "image properties set")
+                raise exception.UnsupportedRescueImage(
+                    image=rescue_image_ref)
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid)

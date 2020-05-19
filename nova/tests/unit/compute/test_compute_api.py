@@ -50,6 +50,7 @@ from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
 from nova.objects import fields as fields_obj
+from nova.objects import image_meta as image_meta_obj
 from nova.objects import quotas as quotas_obj
 from nova.objects import security_group as secgroup_obj
 from nova.servicegroup import api as servicegroup_api
@@ -5167,6 +5168,7 @@ class _ComputeAPIUnitTestMixIn(object):
     def _test_rescue(self, vm_state=vm_states.ACTIVE, rescue_password=None,
                      rescue_image=None, clean_shutdown=True):
         instance = self._create_instance_obj(params={'vm_state': vm_state})
+        rescue_image_meta_obj = image_meta_obj.ImageMeta.from_dict({})
         bdms = []
         with test.nested(
             mock.patch.object(objects.BlockDeviceMappingList,
@@ -5176,10 +5178,12 @@ class _ComputeAPIUnitTestMixIn(object):
             mock.patch.object(instance, 'save'),
             mock.patch.object(self.compute_api, '_record_action_start'),
             mock.patch.object(self.compute_api.compute_rpcapi,
-                              'rescue_instance')
+                              'rescue_instance'),
+            mock.patch.object(objects.ImageMeta, 'from_image_ref',
+                              return_value=rescue_image_meta_obj),
         ) as (
             bdm_get_by_instance_uuid, volume_backed_inst, instance_save,
-            record_action_start, rpcapi_rescue_instance
+            record_action_start, rpcapi_rescue_instance, mock_find_image_ref,
         ):
             self.compute_api.rescue(self.context, instance,
                                     rescue_password=rescue_password,
@@ -5200,6 +5204,9 @@ class _ComputeAPIUnitTestMixIn(object):
                 rescue_password=rescue_password,
                 rescue_image_ref=rescue_image,
                 clean_shutdown=clean_shutdown)
+            if rescue_image:
+                mock_find_image_ref.assert_called_once_with(
+                    self.context, self.compute_api.image_api, rescue_image)
 
     def test_rescue_active(self):
         self._test_rescue()
@@ -5240,6 +5247,7 @@ class _ComputeAPIUnitTestMixIn(object):
             rpcapi_unrescue_instance.assert_called_once_with(
                 self.context, instance=instance)
 
+    @mock.patch('nova.objects.image_meta.ImageMeta.from_image_ref')
     @mock.patch('nova.objects.compute_node.ComputeNode'
                 '.get_by_host_and_nodename')
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
@@ -5247,8 +5255,7 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch('nova.objects.block_device.BlockDeviceMappingList'
                 '.get_by_instance_uuid')
     def test_rescue_bfv_with_required_trait(self, mock_get_bdms,
-                                            mock_is_volume_backed,
-                                            mock_get_cn):
+            mock_is_volume_backed, mock_get_cn, mock_image_meta_obj_from_ref):
         instance = self._create_instance_obj()
         bdms = objects.BlockDeviceMappingList(objects=[
                 objects.BlockDeviceMapping(
@@ -5256,6 +5263,8 @@ class _ComputeAPIUnitTestMixIn(object):
                     destination_type='volume', volume_type=None,
                     snapshot_id=None, volume_id=uuids.volume_id,
                     volume_size=None)])
+        rescue_image_meta_obj = image_meta_obj.ImageMeta.from_dict({})
+
         with test.nested(
             mock.patch.object(self.compute_api.placementclient,
                               'get_provider_traits'),
@@ -5269,8 +5278,9 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_get_traits, mock_get_volume, mock_check_attached,
             mock_instance_save, mock_record_start, mock_rpcapi_rescue
         ):
-            # Mock out the returned compute node, bdms and volume
+            # Mock out the returned compute node, image, bdms and volume
             mock_get_cn.return_value = mock.Mock(uuid=uuids.cn)
+            mock_image_meta_obj_from_ref.return_value = rescue_image_meta_obj
             mock_get_bdms.return_value = bdms
             mock_get_volume.return_value = mock.sentinel.volume
 
@@ -5395,6 +5405,53 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, mock.sentinel.volume)
             mock_is_volume_backed.assert_called_once_with(
                 self.context, instance, bdms)
+
+    @mock.patch('nova.objects.image_meta.ImageMeta.from_image_ref')
+    def test_rescue_from_image_ref_failure(self, mock_image_meta_obj_from_ref):
+        instance = self._create_instance_obj()
+        mock_image_meta_obj_from_ref.side_effect = [
+            exception.ImageNotFound(image_id=mock.sentinel.rescue_image_ref),
+            exception.ImageBadRequest(
+                image_id=mock.sentinel.rescue_image_ref, response='bar')]
+
+        # Assert that UnsupportedRescueImage is raised when from_image_ref
+        # returns exception.ImageNotFound
+        self.assertRaises(exception.UnsupportedRescueImage,
+                          self.compute_api.rescue, self.context, instance,
+                          rescue_image_ref=mock.sentinel.rescue_image_ref)
+
+        # Assert that UnsupportedRescueImage is raised when from_image_ref
+        # returns exception.ImageBadRequest
+        self.assertRaises(exception.UnsupportedRescueImage,
+                          self.compute_api.rescue, self.context, instance,
+                          rescue_image_ref=mock.sentinel.rescue_image_ref)
+
+        # Assert that we called from_image_ref using the provided ref
+        mock_image_meta_obj_from_ref.assert_has_calls([
+            mock.call(self.context, self.compute_api.image_api,
+                mock.sentinel.rescue_image_ref),
+            mock.call(self.context, self.compute_api.image_api,
+                mock.sentinel.rescue_image_ref)])
+
+    @mock.patch('nova.objects.image_meta.ImageMeta.from_image_ref')
+    def test_rescue_using_volume_backed_snapshot(self,
+            mock_image_meta_obj_from_ref):
+        instance = self._create_instance_obj()
+        rescue_image_obj = image_meta_obj.ImageMeta.from_dict(
+            {'min_disk': 0, 'min_ram': 0,
+             'properties': {'bdm_v2': True, 'block_device_mapping': [{}]},
+             'size': 0, 'status': 'active'})
+        mock_image_meta_obj_from_ref.return_value = rescue_image_obj
+
+        # Assert that UnsupportedRescueImage is raised
+        self.assertRaises(exception.UnsupportedRescueImage,
+                          self.compute_api.rescue, self.context, instance,
+                          rescue_image_ref=mock.sentinel.rescue_image_ref)
+
+        # Assert that we called from_image_ref using the provided ref
+        mock_image_meta_obj_from_ref.assert_called_once_with(
+            self.context, self.compute_api.image_api,
+            mock.sentinel.rescue_image_ref)
 
     def test_set_admin_password_invalid_state(self):
         # Tests that InstanceInvalidState is raised when not ACTIVE.
