@@ -70,7 +70,7 @@ master_doc = 'index'
 copyright = u'2010-present, OpenStack Foundation'
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = 'native'
 
 # -- Options for man page output ----------------------------------------------
 

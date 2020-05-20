@@ -48,7 +48,7 @@ openstackdocs_bug_project = 'nova'
 openstackdocs_bug_tag = 'api-ref'
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = 'native'
 
 # -- Options for HTML output --------------------------------------------------
 
