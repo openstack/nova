@@ -8925,50 +8925,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                  bus='virtio', should_log=False)
 
     @mock.patch('nova.virt.libvirt.blockinfo.get_info_from_bdm')
-    def test_attach_volume_with_libvirt_bug_breadcrumb(self, mock_get_info):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instance = objects.Instance(**self.test_instance)
-        connection_info = {"driver_volume_type": "fake",
-                           "data": {"device_path": "/fake",
-                                    "access_mode": "rw"}}
-        bdm = {'device_name': 'vdb',
-               'disk_bus': 'fake-bus',
-               'device_type': 'fake-type'}
-        disk_info = {'bus': bdm['disk_bus'], 'type': bdm['device_type'],
-                     'dev': 'vdb'}
-        libvirt_exc = fakelibvirt.make_libvirtError(fakelibvirt.libvirtError,
-            "unable to execute QEMU command 'object-add': Incorrect number"
-            " of padding bytes (56) found on decrypted data",
-            error_code=fakelibvirt.VIR_ERR_INTERNAL_ERROR)
-
-        with test.nested(
-            mock.patch.object(drvr._host, 'get_guest'),
-            mock.patch('nova.virt.libvirt.driver.LOG'),
-            mock.patch.object(drvr, '_connect_volume'),
-            mock.patch.object(drvr, '_disconnect_volume'),
-            mock.patch.object(drvr, '_get_volume_config'),
-            mock.patch.object(drvr, '_check_discard_for_attach_volume'),
-            mock.patch.object(drvr, '_build_device_metadata'),
-        ) as (mock_get_guest, mock_log, mock_connect_volume,
-              mock_disconnect_volume, mock_get_volume_config,
-              mock_check_discard, mock_build_metadata):
-
-            mock_conf = mock.MagicMock()
-            mock_guest = mock.MagicMock()
-            mock_guest.attach_device.side_effect = libvirt_exc
-            mock_get_volume_config.return_value = mock_conf
-            mock_get_guest.return_value = mock_guest
-            mock_get_info.return_value = disk_info
-            mock_build_metadata.return_value = objects.InstanceDeviceMetadata()
-
-            self.assertRaises(fakelibvirt.libvirtError, drvr.attach_volume,
-                self.context, connection_info, instance, "/dev/vdb",
-                disk_bus=bdm['disk_bus'], device_type=bdm['device_type'])
-            mock_log.warning.assert_called_once()
-            mock_disconnect_volume.assert_called_once()
-
-    @mock.patch('nova.virt.libvirt.blockinfo.get_info_from_bdm')
-    def test_attach_volume_with_libvirt_exception(self, mock_get_info):
+    def test_attach_volume_with_exception(self, mock_get_info):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
         connection_info = {"driver_volume_type": "fake",
