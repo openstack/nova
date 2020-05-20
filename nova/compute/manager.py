@@ -8362,7 +8362,14 @@ class ComputeManager(manager.Manager):
         # Releasing vlan.
         # (not necessary in current implementation?)
 
-        network_info = self.network_api.get_instance_nw_info(ctxt, instance)
+        network_info = None
+        try:
+            network_info = self.network_api.get_instance_nw_info(
+                ctxt, instance)
+        except Exception as e:
+            LOG.info('Unable to obtain network info: %s. Network info in '
+                     'live.migration._post.start notification will be '
+                     'omitted.', e, instance=instance)
 
         self._notify_about_instance_usage(ctxt, instance,
                                           "live_migration._post.start",
