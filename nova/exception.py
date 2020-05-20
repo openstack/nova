@@ -28,7 +28,7 @@ import six
 import webob.exc
 from webob import util as woutil
 
-from nova.i18n import _, _LE
+from nova.i18n import _
 
 LOG = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ class ConvertedException(webob.exc.WSGIHTTPException):
             try:
                 self.title = woutil.status_reasons[self.code]
             except KeyError:
-                msg = _LE("Improper or unknown HTTP status code used: %d")
+                msg = "Improper or unknown HTTP status code used: %d"
                 LOG.error(msg, code)
                 self.title = woutil.status_generic_reasons[self.code // 100]
         self.explanation = explanation
@@ -95,7 +95,7 @@ class NovaException(Exception):
     def _log_exception(self):
         # kwargs doesn't match a variable in the message
         # log the issue and the kwargs
-        LOG.exception(_LE('Exception in string format operation'))
+        LOG.exception('Exception in string format operation')
         for name, value in self.kwargs.items():
             LOG.error("%s: %s" % (name, value))  # noqa
 

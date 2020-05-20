@@ -20,7 +20,7 @@ import webob
 
 import nova.conf
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _
 
 
 CONF = nova.conf.CONF
@@ -256,5 +256,5 @@ class Loader(object):
                       {'name': name, 'path': self.config_path})
             return deploy.loadapp("config:%s" % self.config_path, name=name)
         except LookupError:
-            LOG.exception(_LE("Couldn't lookup app: %s"), name)
+            LOG.exception("Couldn't lookup app: %s", name)
             raise exception.PasteAppNotFound(name=name, path=self.config_path)

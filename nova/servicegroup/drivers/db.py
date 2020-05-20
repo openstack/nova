@@ -20,7 +20,7 @@ import six
 
 import nova.conf
 from nova import exception
-from nova.i18n import _, _LI, _LW, _LE
+from nova.i18n import _, _LI, _LW
 from nova.servicegroup import api
 from nova.servicegroup.drivers import base
 
@@ -119,7 +119,6 @@ class DbDriver(base.Driver):
             # exceptions here, but otherwise it would become possible for
             # the state reporting thread to stop abruptly, and thus leave
             # the service unusable until it's restarted.
-            LOG.exception(
-                _LE('Unexpected error while reporting service status'))
+            LOG.exception('Unexpected error while reporting service status')
             # trigger the recovery log message, if this error goes away
             service.model_disconnected = True

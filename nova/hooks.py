@@ -50,7 +50,7 @@ import functools
 from oslo_log import log as logging
 import stevedore
 
-from nova.i18n import _, _LE, _LW
+from nova.i18n import _, _LW
 
 LOG = logging.getLogger(__name__)
 NS = 'nova.hooks'
@@ -81,6 +81,7 @@ class HookManager(stevedore.hook.HookManager):
                     "Only 'pre' and 'post' type allowed")
             raise ValueError(msg)
 
+        # TODO(stephenfin): Kill this
         for e in self.extensions:
             obj = e.obj
             hook_method = getattr(obj, method_type, None)
@@ -95,14 +96,15 @@ class HookManager(stevedore.hook.HookManager):
                     else:
                         hook_method(*args, **kwargs)
                 except FatalHookException:
-                    msg = _LE("Fatal Exception running %(name)s "
-                              "%(type)s-hook: %(obj)s")
+                    msg = (
+                        "Fatal Exception running %(name)s %(type)s-hook: "
+                        "%(obj)s"
+                    )
                     LOG.exception(msg, {'name': name, 'type': method_type,
                                         'obj': obj})
                     raise
                 except Exception:
-                    msg = _LE("Exception running %(name)s "
-                              "%(type)s-hook: %(obj)s")
+                    msg = "Exception running %(name)s %(type)s-hook: %(obj)s"
                     LOG.exception(msg, {'name': name, 'type': method_type,
                                         'obj': obj})
 

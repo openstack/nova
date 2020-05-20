@@ -53,7 +53,7 @@ from six.moves import range
 from nova import block_device
 import nova.conf
 from nova import exception
-from nova.i18n import _, _LE, _LW
+from nova.i18n import _, _LW
 from nova import safe_utils
 
 profiler = importutils.try_import('osprofiler.profiler')
@@ -299,7 +299,7 @@ def parse_server_string(server_str):
         return (address, port)
 
     except (ValueError, netaddr.AddrFormatError):
-        LOG.error(_LE('Invalid server_string: %s'), server_str)
+        LOG.error('Invalid server_string: %s', server_str)
         return ('', '')
 
 
@@ -495,7 +495,7 @@ def tempdir(**kwargs):
         try:
             shutil.rmtree(tmpdir)
         except OSError as e:
-            LOG.error(_LE('Could not remove tmpdir: %s'), e)
+            LOG.error('Could not remove tmpdir: %s', e)
 
 
 class UndoManager(object):

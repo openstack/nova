@@ -34,8 +34,6 @@ _ = _translators.primary
 # the level.
 _LI = _translators.log_info
 _LW = _translators.log_warning
-_LE = _translators.log_error
-_LC = _translators.log_critical
 
 
 def translate(value, user_locale):
