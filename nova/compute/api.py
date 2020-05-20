@@ -4158,7 +4158,7 @@ class API(base.Base):
         return allow_same_host
 
     @reject_vtpm_instances(instance_actions.SHELVE)
-    @block_accelerators()
+    @block_accelerators(until_service=54)
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.PAUSED, vm_states.SUSPENDED])
@@ -4181,16 +4181,23 @@ class API(base.Base):
 
         self._record_action_start(context, instance, instance_actions.SHELVE)
 
+        accel_uuids = []
+        if instance.flavor.extra_specs.get('accel:device_profile'):
+            cyclient = cyborg.get_client(context)
+            accel_uuids = cyclient.get_arq_uuids_for_instance(instance)
+
         if not compute_utils.is_volume_backed_instance(context, instance):
             name = '%s-shelved' % instance.display_name
             image_meta = compute_utils.create_image(
                 context, instance, name, 'snapshot', self.image_api)
             image_id = image_meta['id']
             self.compute_rpcapi.shelve_instance(context, instance=instance,
-                    image_id=image_id, clean_shutdown=clean_shutdown)
+                image_id=image_id, clean_shutdown=clean_shutdown,
+                accel_uuids=accel_uuids)
         else:
-            self.compute_rpcapi.shelve_offload_instance(context,
-                    instance=instance, clean_shutdown=clean_shutdown)
+            self.compute_rpcapi.shelve_offload_instance(
+                context, instance=instance, clean_shutdown=clean_shutdown,
+                accel_uuids=accel_uuids)
 
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.SHELVED])
@@ -4202,8 +4209,14 @@ class API(base.Base):
         self._record_action_start(context, instance,
                                   instance_actions.SHELVE_OFFLOAD)
 
-        self.compute_rpcapi.shelve_offload_instance(context, instance=instance,
-            clean_shutdown=clean_shutdown)
+        accel_uuids = []
+        if instance.flavor.extra_specs.get('accel:device_profile'):
+            cyclient = cyborg.get_client(context)
+            accel_uuids = cyclient.get_arq_uuids_for_instance(instance)
+
+        self.compute_rpcapi.shelve_offload_instance(
+            context, instance=instance,
+            clean_shutdown=clean_shutdown, accel_uuids=accel_uuids)
 
     def _validate_unshelve_az(self, context, instance, availability_zone):
         """Verify the specified availability_zone during unshelve.

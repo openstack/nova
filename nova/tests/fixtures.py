@@ -3095,7 +3095,10 @@ class CyborgFixture(fixtures.Fixture):
            This function uses bindings indexed by instance UUID to
            populate the bound ARQ templates in CyborgFixture.bound_arq_list.
         """
-        arq_host_rp_list = CyborgFixture.bindings_by_instance[instance_uuid]
+        arq_host_rp_list = CyborgFixture.bindings_by_instance.get(
+                instance_uuid)
+        if not arq_host_rp_list:
+            return []
         # The above looks like:
         # [{'hostname': $hostname,
         #   'device_rp_uuid': $device_rp_uuid,
@@ -3117,7 +3120,7 @@ class CyborgFixture(fixtures.Fixture):
 
     @staticmethod
     def fake_delete_arqs_for_instance(instance_uuid):
-        return None
+        CyborgFixture.bindings_by_instance.pop(instance_uuid, None)
 
     def setUp(self):
         super(CyborgFixture, self).setUp()

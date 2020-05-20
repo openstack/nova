@@ -43,18 +43,22 @@ The lists of supported and unsupported operations are as below:
   * Rescue and unrescue.
   * Rebuild.
   * Evacuate.
+  * Shelve and unshelve.
 
 * Unsupported operations
 
   * Resize.
   * Suspend and resume.
-  * Shelve and unshelve.
   * Cold migration.
   * Live migration.
 
 .. versionchanged:: 22.0.0(Victoria)
 
    Added support for rebuild and evacuate operations.
+
+.. versionchanged:: 23.0.0(Wallaby)
+
+   Added support for shelve and unshelve operations.
 
 Some operations, such as lock and unlock, work as they are effectively
 no-ops for accelerators.

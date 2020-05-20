@@ -1,0 +1,12 @@
+---
+features:
+  - |
+    Add Cyborg shelve/unshelve support.
+
+    After shelve the ARQs are still kept bound to the instance.
+
+    After shelve offload the ARQs of the instance will be feered
+    in Cyborg.
+
+    During unshelve the ARQs will be reallocated and bound to
+    the instance if needed.

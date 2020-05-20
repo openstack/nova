@@ -380,6 +380,9 @@ class ComputeAPI(object):
                  build_and_run_instance()
         * 5.12 - Add accel_uuids (accelerator requests) parameter to
                  rebuild_instance()
+        * 5.13 - Add accel_uuids (accelerator requests) parameter to
+                 shelve_instance(), shelve_offload_instance() and
+                 unshelve_instance()
     '''
 
     VERSION_ALIASES = {
@@ -1350,40 +1353,65 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'restore_instance', instance=instance)
 
     def shelve_instance(self, ctxt, instance, image_id=None,
-                        clean_shutdown=True):
-        version = '5.0'
-        cctxt = self.router.client(ctxt).prepare(
+                        clean_shutdown=True, accel_uuids=None):
+        msg_kwargs = {
+            'instance': instance,
+            'image_id': image_id,
+            'clean_shutdown': clean_shutdown,
+            'accel_uuids': accel_uuids,
+        }
+        client = self.router.client(ctxt)
+        version = '5.13'
+        if not client.can_send_version(version):
+            if accel_uuids:
+                LOG.error("Shelve with accelerators is not supported as "
+                          "RPC version is too old.")
+                raise exception.ForbiddenWithAccelerators()
+            else:
+                msg_kwargs.pop('accel_uuids')
+            version = '5.0'
+        cctxt = client.prepare(
                 server=_compute_host(None, instance), version=version)
-        cctxt.cast(ctxt, 'shelve_instance', instance=instance,
-                   image_id=image_id, clean_shutdown=clean_shutdown)
+        cctxt.cast(ctxt, 'shelve_instance', **msg_kwargs)
 
     def shelve_offload_instance(self, ctxt, instance,
-                                clean_shutdown=True):
-        version = '5.0'
-        cctxt = self.router.client(ctxt).prepare(
+                                clean_shutdown=True, accel_uuids=None):
+        msg_kwargs = {
+            'instance': instance,
+            'clean_shutdown': clean_shutdown,
+            'accel_uuids': accel_uuids,
+        }
+        client = self.router.client(ctxt)
+        version = '5.13'
+        if not client.can_send_version(version):
+            msg_kwargs.pop('accel_uuids')
+            version = '5.0'
+        cctxt = client.prepare(
                 server=_compute_host(None, instance), version=version)
-        cctxt.cast(ctxt, 'shelve_offload_instance', instance=instance,
-                   clean_shutdown=clean_shutdown)
+        cctxt.cast(ctxt, 'shelve_offload_instance', **msg_kwargs)
 
     def unshelve_instance(self, ctxt, instance, host, request_spec, image=None,
-                          filter_properties=None, node=None):
-        version = '5.2'
+                          filter_properties=None, node=None, accel_uuids=None):
+        version = '5.13'
         msg_kwargs = {
             'instance': instance,
             'image': image,
             'filter_properties': filter_properties,
             'node': node,
             'request_spec': request_spec,
+            'accel_uuids': accel_uuids,
         }
 
         client = self.router.client(ctxt)
 
         if not client.can_send_version(version):
+            msg_kwargs.pop('accel_uuids')
+            version = '5.2'
+        if not client.can_send_version(version):
             msg_kwargs.pop('request_spec')
             version = '5.0'
 
-        cctxt = client.prepare(
-                server=host, version=version)
+        cctxt = client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'unshelve_instance', **msg_kwargs)
 
     def volume_snapshot_create(self, ctxt, instance, volume_id,

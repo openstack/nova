@@ -486,9 +486,17 @@ class InstanceHelperMixin:
         self.api.post_server_action(server['id'], {'shelve': {}})
         return self._wait_for_state_change(server, expected_state)
 
+    def _shelve_offload_server(self, server):
+        """Shelve offload a server."""
+        self.api.post_server_action(server['id'], {'shelveOffload': {}})
+        self._wait_for_server_parameter(server,
+                                        {'status': 'SHELVED_OFFLOADED',
+                                         'OS-EXT-SRV-ATTR:host': None,
+                                         'OS-EXT-AZ:availability_zone': ''})
+
     def _unshelve_server(self, server, expected_state='ACTIVE'):
         """Unshelve a server."""
-        self.api.post_server_action(server['id'], {'unshelve': {}})
+        self.api.post_server_action(server['id'], {'unshelve': None})
         return self._wait_for_state_change(server, expected_state)
 
     def _evacuate_server(

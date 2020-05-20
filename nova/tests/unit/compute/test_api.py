@@ -7637,6 +7637,127 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         # myfunc was not called
         self.assertEqual({}, args_info)
 
+    @mock.patch('nova.accelerator.cyborg._CyborgClient.'
+                'get_arq_uuids_for_instance')
+    @mock.patch.object(compute_utils, 'create_image')
+    def test_get_arqs_in_shelve(self, mock_create_img, mock_get_arq_uuids):
+        """Test get_arq_uuids_for_instance() was called if the
+        'accel:device_profile' exist in the flavor for shelve operation.
+        """
+        extra_specs = {'accel:device_profile': 'mydp'}
+        flavor = self._create_flavor(extra_specs=extra_specs)
+        params = dict(display_name="vm1")
+        instance = self._create_instance_obj(params=params, flavor=flavor)
+        mock_create_img.return_value = dict(id='fake-image-id')
+        mock_get_arq_uuids.return_value = (
+            ['983d1742-c8ca-4f8a-9f3c-3f54bbafaa7d'])
+        accel_uuids = mock_get_arq_uuids.return_value
+
+        with test.nested(
+            mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                        return_value=54),
+            mock.patch('nova.compute.utils.is_volume_backed_instance',
+                          return_value=False),
+            mock.patch.object(objects.Instance, 'save'),
+            mock.patch.object(self.compute_api, '_record_action_start'),
+            mock.patch.object(compute_rpcapi.ComputeAPI, 'shelve_instance'),
+        ) as (
+            mock_get_min, mock_volume_backend,
+            mock_instance_save, mock_record_action, mock_shelve_service
+        ):
+            self.compute_api.shelve(self.context, instance)
+        mock_get_arq_uuids.assert_called_once()
+        mock_shelve_service.assert_called_once_with(
+            self.context, instance=instance, image_id='fake-image-id',
+            clean_shutdown=True, accel_uuids=accel_uuids)
+
+    @mock.patch('nova.accelerator.cyborg._CyborgClient.'
+                'get_arq_uuids_for_instance')
+    @mock.patch.object(compute_utils, 'create_image')
+    def test_shelve_with_unsupport_accelerators(
+            self, mock_create_img, mock_get_arq_uuids):
+        """Test get_arq_uuids_for_instance() was called if the
+        'accel:device_profile' exist in the flavor for shelve operation.
+        """
+        extra_specs = {'accel:device_profile': 'mydp'}
+        flavor = self._create_flavor(extra_specs=extra_specs)
+        params = dict(display_name="vm1")
+        instance = self._create_instance_obj(params=params, flavor=flavor)
+
+        with test.nested(
+            mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                        return_value=54),
+            mock.patch('nova.compute.utils.is_volume_backed_instance',
+                          return_value=False),
+            mock.patch.object(objects.Instance, 'save'),
+            mock.patch.object(self.compute_api, '_record_action_start'),
+            mock.patch.object(compute_rpcapi.ComputeAPI, 'shelve_instance'),
+        ) as (
+            mock_get_min, mock_volume_backend,
+            mock_instance_save, mock_record_action, mock_shelve_service
+        ):
+            mock_shelve_service.side_effect = (
+                exception.ForbiddenWithAccelerators(
+                    oldest_supported_version=54,
+                    scope=mock.ANY,
+                    min_service_level=54,
+                    oldest_supported_service=54))
+            self.assertRaises(
+                exception.ForbiddenWithAccelerators,
+                self.compute_api.shelve,
+                self.context,
+                instance)
+
+    @mock.patch('nova.accelerator.cyborg._CyborgClient.'
+                'get_arq_uuids_for_instance')
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=53)
+    def test_shelve_until_service_forbidden(self, mock_get_min,
+                                            mock_get_arq_uuuids):
+        """Ensure a 'ForbiddenWithAccelerators' exception raises if any
+        compute service less than the version of 54.
+        """
+        extra_specs = {'accel:device_profile': 'mydp'}
+        flavor = self._create_flavor(extra_specs=extra_specs)
+        instance = self._create_instance_obj(flavor=flavor)
+        self.assertRaisesRegex(exception.ForbiddenWithAccelerators,
+            'Forbidden with instances that have accelerators.',
+            self.compute_api.shelve, self.context, instance)
+        mock_get_arq_uuuids.assert_not_called()
+
+    @mock.patch('nova.accelerator.cyborg._CyborgClient.'
+                'get_arq_uuids_for_instance')
+    @mock.patch.object(compute_utils, 'create_image')
+    def test_get_arqs_in_shelve_offload(self, mock_create_img,
+                                        mock_get_arq_uuids):
+        """Test get_arq_uuids_for_instance() was called if the
+        'accel:device_profile' exist in the flavor for
+        shelve offload operation.
+        """
+        extra_specs = {'accel:device_profile': 'mydp'}
+        flavor = self._create_flavor(extra_specs=extra_specs)
+        params = {'vm_state': vm_states.SHELVED}
+        instance = self._create_instance_obj(params=params, flavor=flavor)
+        mock_create_img.return_value = dict(id='fake-image-id')
+        mock_get_arq_uuids.return_value = [uuids.fake]
+        accel_uuids = mock_get_arq_uuids.return_value
+        with test.nested(
+            mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                        return_value=54),
+            mock.patch.object(objects.Instance, 'save'),
+            mock.patch.object(self.compute_api, '_record_action_start'),
+            mock.patch.object(compute_rpcapi.ComputeAPI,
+                              'shelve_offload_instance'),
+        ) as (
+            mock_get_min, mock_instance_save,
+            mock_record_action, mock_shelve_service
+        ):
+            self.compute_api.shelve_offload(self.context, instance)
+        mock_get_arq_uuids.assert_called_once()
+        mock_shelve_service.assert_called_once_with(
+            self.context, instance=instance, clean_shutdown=True,
+            accel_uuids=accel_uuids)
+
     # TODO(huaqiang): Remove in Wallaby
     @mock.patch('nova.objects.service.get_minimum_version_all_cells')
     def test__check_compute_service_for_mixed_instance(self, mock_ver):

@@ -37,7 +37,7 @@ class ShelveController(wsgi.Controller):
         self.network_api = neutron.API()
 
     @wsgi.response(202)
-    @wsgi.expected_errors((404, 409))
+    @wsgi.expected_errors((404, 403, 409))
     @wsgi.action('shelve')
     def _shelve(self, req, id, body):
         """Move an instance into shelved mode."""
@@ -55,6 +55,8 @@ class ShelveController(wsgi.Controller):
             exception.UnexpectedTaskStateError,
         ) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
+        except exception.ForbiddenWithAccelerators as e:
+            raise exc.HTTPForbidden(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                                                                   'shelve', id)
