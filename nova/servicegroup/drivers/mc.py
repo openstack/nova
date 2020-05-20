@@ -23,7 +23,7 @@ from oslo_utils import timeutils
 
 from nova import cache_utils
 import nova.conf
-from nova.i18n import _, _LI, _LW
+from nova.i18n import _, _LI
 from nova.servicegroup import api
 from nova.servicegroup.drivers import base
 
@@ -108,5 +108,7 @@ class MemcachedDriver(base.Driver):
         except Exception:
             if not getattr(service, 'model_disconnected', False):
                 service.model_disconnected = True
-                LOG.warning(_LW('Lost connection to memcache server '
-                             'for reporting service status.'))
+                LOG.warning(
+                    'Lost connection to memcache server for reporting service '
+                    'status.'
+                )

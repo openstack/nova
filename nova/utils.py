@@ -53,7 +53,7 @@ from six.moves import range
 from nova import block_device
 import nova.conf
 from nova import exception
-from nova.i18n import _, _LW
+from nova.i18n import _
 from nova import safe_utils
 
 profiler = importutils.try_import('osprofiler.profiler')
@@ -372,9 +372,9 @@ def sanitize_hostname(hostname, default_name=None):
 
     def truncate_hostname(name):
         if len(name) > 63:
-            LOG.warning(_LW("Hostname %(hostname)s is longer than 63, "
-                            "truncate it to %(truncated_name)s"),
-                            {'hostname': name, 'truncated_name': name[:63]})
+            LOG.warning("Hostname %(hostname)s is longer than 63, "
+                        "truncate it to %(truncated_name)s",
+                        {'hostname': name, 'truncated_name': name[:63]})
         return name[:63]
 
     if isinstance(hostname, six.text_type):

@@ -50,7 +50,7 @@ import functools
 from oslo_log import log as logging
 import stevedore
 
-from nova.i18n import _, _LW
+from nova.i18n import _
 
 LOG = logging.getLogger(__name__)
 NS = 'nova.hooks'
@@ -86,8 +86,8 @@ class HookManager(stevedore.hook.HookManager):
             obj = e.obj
             hook_method = getattr(obj, method_type, None)
             if hook_method:
-                LOG.warning(_LW("Hooks are deprecated as of Nova 13.0 and "
-                                "will be removed in a future release"))
+                LOG.warning("Hooks are deprecated as of Nova 13.0 and "
+                            "will be removed in a future release")
                 LOG.debug("Running %(name)s %(type)s-hook: %(obj)s",
                           {'name': name, 'type': method_type, 'obj': obj})
                 try:

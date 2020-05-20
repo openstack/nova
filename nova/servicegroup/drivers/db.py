@@ -20,7 +20,7 @@ import six
 
 import nova.conf
 from nova import exception
-from nova.i18n import _, _LI, _LW
+from nova.i18n import _, _LI
 from nova.servicegroup import api
 from nova.servicegroup.drivers import base
 
@@ -102,8 +102,10 @@ class DbDriver(base.Driver):
             # as nova-conductor is restarted, so only log this error once.
             if not getattr(service, 'model_disconnected', False):
                 service.model_disconnected = True
-                LOG.warning(_LW('Lost connection to nova-conductor '
-                             'for reporting service status.'))
+                LOG.warning(
+                    'Lost connection to nova-conductor for reporting service '
+                    'status.'
+                )
         except exception.ServiceNotFound:
             # The service may have been deleted via the API but the actual
             # process is still running. Provide a useful error message rather

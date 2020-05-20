@@ -20,7 +20,6 @@ from oslo_log import log as logging
 from oslo_utils import importutils
 
 import nova.conf
-from nova.i18n import _LW
 
 LOG = logging.getLogger(__name__)
 
@@ -47,11 +46,11 @@ class API(object):
         report_interval = CONF.report_interval
         if CONF.service_down_time <= report_interval:
             new_service_down_time = int(report_interval * 2.5)
-            LOG.warning(_LW("Report interval must be less than service down "
-                            "time. Current config: <service_down_time: "
-                            "%(service_down_time)s, report_interval: "
-                            "%(report_interval)s>. Setting service_down_time "
-                            "to: %(new_service_down_time)s"),
+            LOG.warning("Report interval must be less than service down "
+                        "time. Current config: <service_down_time: "
+                        "%(service_down_time)s, report_interval: "
+                        "%(report_interval)s>. Setting service_down_time "
+                        "to: %(new_service_down_time)s",
                         {'service_down_time': CONF.service_down_time,
                          'report_interval': report_interval,
                          'new_service_down_time': new_service_down_time})
