@@ -11175,6 +11175,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             graphics_listen_addr_vnc='10.0.0.1',
             graphics_listen_addr_spice='10.0.0.2',
             serial_listen_addr='127.0.0.1',
+            serial_listen_ports=[1234],
             target_connect_addr=target_connection,
             bdms=[],
             block_migration=False)
@@ -11207,7 +11208,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         }
         migrate_data = objects.LibvirtLiveMigrateData(
             target_connect_addr=target_connection,
-            block_migration=False)
+            block_migration=False,
+            serial_listen_addr='127.0.0.1',
+            serial_listen_ports=[1234])
         dom_mock = mock.MagicMock()
         guest = libvirt_guest.Guest(dom_mock)
         drvr._live_migration_operation(self.context, instance,
@@ -11514,7 +11517,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 mock.patch.object(guest, 'get_xml_desc',
                                   return_value=initial_xml)):
             config = libvirt_migrate.get_updated_guest_xml(guest,
-                            objects.LibvirtLiveMigrateData(bdms=[bdmi]),
+                            objects.LibvirtLiveMigrateData(
+                                bdms=[bdmi],
+                                serial_listen_addr='127.0.0.1',
+                                serial_listen_ports=[1234]),
                             drvr._get_volume_config)
             parser = etree.XMLParser(remove_blank_text=True)
             config = etree.fromstring(config, parser)
@@ -11711,7 +11717,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 mock.patch.object(guest, 'get_xml_desc',
                                   return_value=initial_xml)):
             config = libvirt_migrate.get_updated_guest_xml(guest,
-                objects.LibvirtLiveMigrateData(bdms=[bdmi]),
+                objects.LibvirtLiveMigrateData(
+                    bdms=[bdmi],
+                    serial_listen_addr = '127.0.0.1',
+                    serial_listen_ports = [1234]),
                 drvr._get_volume_config)
             self.assertEqual(target_xml, config)
 
@@ -11743,7 +11752,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                   return_value=initial_xml)):
             config = libvirt_migrate.get_updated_guest_xml(
                 guest,
-                objects.LibvirtLiveMigrateData(bdms=[bdmi]),
+                objects.LibvirtLiveMigrateData(
+                    bdms=[bdmi],
+                    serial_listen_addr='127.0.0.1',
+                    serial_listen_ports=[1234]),
                 drvr._get_volume_config)
             self.assertEqual(target_xml, config)
 
@@ -11861,6 +11873,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             graphics_listen_addr_vnc='0.0.0.0',
             graphics_listen_addr_spice='0.0.0.0',
             serial_listen_addr='127.0.0.1',
+            serial_listen_ports=[1234],
             target_connect_addr=target_connection,
             bdms=[],
             block_migration=False)
@@ -11891,6 +11904,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             graphics_listen_addr_vnc='0.0.0.0',
             graphics_listen_addr_spice='0.0.0.0',
             serial_listen_addr='127.0.0.1',
+            serial_listen_ports=[1234],
             target_connect_addr=target_connection,
             bdms=[],
             block_migration=True)
@@ -11964,6 +11978,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             graphics_listen_addr_vnc='0.0.0.0',
             graphics_listen_addr_spice='0.0.0.0',
             serial_listen_addr='127.0.0.1',
+            serial_listen_ports=[1234],
             target_connect_addr=target_connection,
             bdms=[],
             block_migration=True)
@@ -12009,6 +12024,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             graphics_listen_addr_vnc='0.0.0.0',
             graphics_listen_addr_spice='0.0.0.0',
             serial_listen_addr='127.0.0.1',
+            serial_listen_ports=[1234],
             target_connect_addr=target_connection,
             bdms=[],
             block_migration=True)
@@ -12060,6 +12076,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             graphics_listen_addr_vnc='10.0.0.1',
             graphics_listen_addr_spice='10.0.0.2',
             serial_listen_addr='127.0.0.1',
+            serial_listen_ports=[1234],
             target_connect_addr=target_connection,
             bdms=[],
             block_migration=False)

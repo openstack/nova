@@ -8744,9 +8744,7 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 migration_flags = self._live_migration_flags
 
-            serial_listen_addr = libvirt_migrate.serial_listen_addr(
-                migrate_data)
-            if not serial_listen_addr:
+            if not migrate_data.serial_listen_addr:
                 # In this context we want to ensure that serial console is
                 # disabled on source node. This is because nova couldn't
                 # retrieve serial listen address from destination node, so we
