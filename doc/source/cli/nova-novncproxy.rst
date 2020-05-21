@@ -2,21 +2,14 @@
 nova-novncproxy
 ===============
 
--------------------------------------------------------
-Websocket novnc Proxy for OpenStack Nova noVNC consoles
--------------------------------------------------------
-
-:Author: openstack@lists.openstack.org
-:Copyright: OpenStack Foundation
-:Manual section: 1
-:Manual group: cloud computing
+.. program:: nova-novncproxy
 
 Synopsis
 ========
 
 ::
 
-  nova-novncproxy [options]
+  nova-novncproxy [<options>...]
 
 Description
 ===========

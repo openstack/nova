@@ -2,21 +2,14 @@
 nova-scheduler
 ==============
 
---------------
-Nova Scheduler
---------------
-
-:Author: openstack@lists.openstack.org
-:Copyright: OpenStack Foundation
-:Manual section: 1
-:Manual group: cloud computing
+.. program:: nova-scheduler
 
 Synopsis
 ========
 
 ::
 
-  nova-scheduler [options]
+  nova-scheduler [<options>...]
 
 Description
 ===========

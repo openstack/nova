@@ -2,21 +2,14 @@
 nova-compute
 ============
 
--------------------
-Nova Compute Server
--------------------
-
-:Author: openstack@lists.openstack.org
-:Copyright: OpenStack Foundation
-:Manual section: 1
-:Manual group: cloud computing
+.. program:: nova-compute
 
 Synopsis
 ========
 
 ::
 
-  nova-compute [options]
+  nova-compute [<options>...]
 
 Description
 ===========

@@ -2,21 +2,14 @@
 nova-api-os-compute
 ===================
 
-------------------------------------------
-Server for the Nova OpenStack Compute APIs
-------------------------------------------
-
-:Author: openstack@lists.openstack.org
-:Copyright: OpenStack Foundation
-:Manual section: 1
-:Manual group: cloud computing
+.. program:: nova-api-os-compute
 
 Synopsis
 ========
 
 ::
 
-  nova-api-os-compute  [options]
+  nova-api-os-compute [<options>...]
 
 Description
 ===========

@@ -2,21 +2,14 @@
 nova-status
 ===========
 
---------------------------------------
-CLI interface for nova status commands
---------------------------------------
-
-:Author: openstack@lists.openstack.org
-:Copyright: OpenStack Foundation
-:Manual section: 1
-:Manual group: cloud computing
+.. program:: nova-status
 
 Synopsis
 ========
 
 ::
 
-  nova-status <category> <action> [<args>]
+  nova-status <category> [<action> [<options>...]]
 
 Description
 ===========
