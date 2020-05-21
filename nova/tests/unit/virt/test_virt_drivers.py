@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import base64
 from collections import deque
 import sys
 import traceback
@@ -280,13 +279,6 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     def test_set_admin_password(self):
         instance, network_info = self._get_running_instance(obj=True)
         self.connection.set_admin_password(instance, 'p4ssw0rd')
-
-    @catch_notimplementederror
-    def test_inject_file(self):
-        instance_ref, network_info = self._get_running_instance()
-        self.connection.inject_file(instance_ref,
-                                    base64.b64encode(b'/testfile'),
-                                    base64.b64encode(b'testcontents'))
 
     @catch_notimplementederror
     def test_resume_state_on_host_boot(self):

@@ -1470,15 +1470,6 @@ class VMOps(object):
         else:
             raise NotImplementedError()
 
-    def inject_file(self, instance, path, contents):
-        """Write a file to the VM instance."""
-        if self.agent_enabled(instance):
-            vm_ref = self._get_vm_opaque_ref(instance)
-            agent = self._get_agent(instance, vm_ref)
-            agent.inject_file(path, contents)
-        else:
-            raise NotImplementedError()
-
     @staticmethod
     def _sanitize_xenstore_key(key):
         """Xenstore only allows the following characters as keys:

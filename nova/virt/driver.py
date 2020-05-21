@@ -1351,21 +1351,6 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def inject_file(self, instance, b64_path, b64_contents):
-        """Writes a file on the specified instance.
-
-        The first parameter is an instance of nova.compute.service.Instance,
-        and so the instance is being specified as instance.name. The second
-        parameter is the base64-encoded path to which the file is to be
-        written on the instance; the third is the contents of the file, also
-        base64-encoded.
-
-        NOTE(russellb) This method is deprecated and will be removed once it
-        can be removed from nova.compute.manager.
-        """
-        # TODO(Vek): Need to pass context in for access to auth_token
-        raise NotImplementedError()
-
     def change_instance_metadata(self, context, instance, diff):
         """Applies a diff to the instance metadata.
 
