@@ -2429,15 +2429,23 @@ class VirtMemoryPagesTestCase(test.NoDBTestCase):
                 spec={"hw:mem_page_size": "2048"}))
 
     def test_get_requested_mempages_pagesize_from_flavor_invalid(self):
-        self.assertRaises(
+        ex = self.assertRaises(
             exception.MemoryPageSizeInvalid,
             self._test_get_requested_mempages_pagesize,
             {"hw:mem_page_size": "foo"})
+        self.assertIn("foo", str(ex))
 
-        self.assertRaises(
+        ex = self.assertRaises(
             exception.MemoryPageSizeInvalid,
             self._test_get_requested_mempages_pagesize,
             {"hw:mem_page_size": "-42"})
+        self.assertIn("-42", str(ex))
+
+        ex = self.assertRaises(
+            exception.MemoryPageSizeInvalid,
+            self._test_get_requested_mempages_pagesize,
+            {"hw:mem_page_size": "2M"})
+        self.assertIn("2M", str(ex))
 
     def test_get_requested_mempages_pagesizes_from_flavor_suffix_sweep(self):
         self.assertEqual(
