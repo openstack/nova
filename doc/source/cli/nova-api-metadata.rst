@@ -42,8 +42,8 @@ Files
 See Also
 ========
 
-* :nova-doc:`OpenStack Nova <>`
-* :nova-doc:`Using WSGI with Nova <wsgi.html>`
+:doc:`nova-api(1) <nova-api>`,
+:doc:`nova-api-os-compute(1) <nova-api-os-compute>`
 
 Bugs
 ====

@@ -151,7 +151,7 @@ Upgrade
 See Also
 ========
 
-* :nova-doc:`OpenStack Nova <>`
+:doc:`nova-manage(1) <nova-manage>`
 
 Bugs
 ====

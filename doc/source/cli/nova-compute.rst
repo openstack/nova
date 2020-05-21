@@ -41,7 +41,11 @@ Files
 See Also
 ========
 
-* :nova-doc:`OpenStack Nova <>`
+:doc:`nova-conductor(1) <nova-conductor>`,
+:doc:`nova-manage(1) <nova-manage>`,
+:doc:`nova-rootwrap(1) <nova-rootwrap>`,
+:doc:`nova-scheduler(1) <nova-scheduler>`,
+:doc:`nova-status(1) <nova-status>`
 
 Bugs
 ====

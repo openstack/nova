@@ -45,7 +45,7 @@ Files
 See Also
 ========
 
-* :nova-doc:`OpenStack Nova <>`
+:doc:`nova-compute(1) <nova-compute>`
 
 Bugs
 ====

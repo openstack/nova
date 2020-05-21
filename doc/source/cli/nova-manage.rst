@@ -1508,8 +1508,7 @@ within an environment.
 See Also
 ========
 
-* :nova-doc:`OpenStack Nova <>`
-
+:doc:`nova-status(1) <nova-status>`
 
 Bugs
 ====

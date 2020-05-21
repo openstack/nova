@@ -87,7 +87,8 @@ Files
 See Also
 ========
 
-* :nova-doc:`OpenStack Nova <>`
+:doc:`nova-serialproxy(1) <nova-serialproxy>`,
+:doc:`nova-spicehtml5proxy(1) <nova-spicehtml5proxy>`
 
 Bugs
 ====

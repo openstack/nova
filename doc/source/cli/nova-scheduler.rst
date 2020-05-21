@@ -40,7 +40,8 @@ Files
 See Also
 ========
 
-* :nova-doc:`OpenStack Nova <>`
+:doc:`nova-compute(1) <nova-compute>`,
+:doc:`nova-conductor(1) <nova-conductor>`
 
 Bugs
 ====
