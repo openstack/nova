@@ -240,51 +240,6 @@ def delete_image_on_error(function):
     return decorated_function
 
 
-# TODO(danms): Remove me after Icehouse
-# TODO(alaski): Actually remove this after Newton, assuming a major RPC bump
-# NOTE(mikal): if the method being decorated has more than one decorator, then
-# put this one first. Otherwise the various exception handling decorators do
-# not function correctly.
-def object_compat(function):
-    """Wraps a method that expects a new-world instance
-
-    This provides compatibility for callers passing old-style dict
-    instances.
-    """
-
-    @functools.wraps(function)
-    def decorated_function(self, context, *args, **kwargs):
-        def _load_instance(instance_or_dict):
-            if isinstance(instance_or_dict, dict):
-                # try to get metadata and system_metadata for most cases but
-                # only attempt to load those if the db instance already has
-                # those fields joined
-                metas = [meta for meta in ('metadata', 'system_metadata')
-                         if meta in instance_or_dict]
-                instance = objects.Instance._from_db_object(
-                    context, objects.Instance(), instance_or_dict,
-                    expected_attrs=metas)
-                instance._context = context
-                return instance
-            return instance_or_dict
-
-        try:
-            kwargs['instance'] = _load_instance(kwargs['instance'])
-        except KeyError:
-            args = (_load_instance(args[0]),) + args[1:]
-
-        migration = kwargs.get('migration')
-        if isinstance(migration, dict):
-            migration = objects.Migration._from_db_object(
-                    context.elevated(), objects.Migration(),
-                    migration)
-            kwargs['migration'] = migration
-
-        return function(self, context, *args, **kwargs)
-
-    return decorated_function
-
-
 class InstanceEvents(object):
     def __init__(self):
         self._events = {}

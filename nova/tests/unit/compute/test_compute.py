@@ -1561,48 +1561,6 @@ class ComputeTestCase(BaseTestCase,
 
         self.assertFalse(called['fault_added'])
 
-    def test_object_compat(self):
-        db_inst = fake_instance.fake_db_instance()
-
-        @compute_manager.object_compat
-        def test_fn(_self, context, instance):
-            self.assertIsInstance(instance, objects.Instance)
-            self.assertEqual(instance.uuid, db_inst['uuid'])
-            self.assertEqual(instance.metadata, db_inst['metadata'])
-            self.assertEqual(instance.system_metadata,
-                             db_inst['system_metadata'])
-        test_fn(None, self.context, instance=db_inst)
-
-    def test_object_compat_no_metas(self):
-        # Tests that we don't try to set metadata/system_metadata on the
-        # instance object using fields that aren't in the db object.
-        db_inst = fake_instance.fake_db_instance()
-        db_inst.pop('metadata', None)
-        db_inst.pop('system_metadata', None)
-
-        @compute_manager.object_compat
-        def test_fn(_self, context, instance):
-            self.assertIsInstance(instance, objects.Instance)
-            self.assertEqual(instance.uuid, db_inst['uuid'])
-            self.assertNotIn('metadata', instance)
-            self.assertNotIn('system_metadata', instance)
-        test_fn(None, self.context, instance=db_inst)
-
-    def test_object_compat_more_positional_args(self):
-        db_inst = fake_instance.fake_db_instance()
-
-        @compute_manager.object_compat
-        def test_fn(_self, context, instance, pos_arg_1, pos_arg_2):
-            self.assertIsInstance(instance, objects.Instance)
-            self.assertEqual(instance.uuid, db_inst['uuid'])
-            self.assertEqual(instance.metadata, db_inst['metadata'])
-            self.assertEqual(instance.system_metadata,
-                             db_inst['system_metadata'])
-            self.assertEqual(pos_arg_1, 'fake_pos_arg1')
-            self.assertEqual(pos_arg_2, 'fake_pos_arg2')
-
-        test_fn(None, self.context, db_inst, 'fake_pos_arg1', 'fake_pos_arg2')
-
     def test_create_instance_with_img_ref_associates_config_drive(self):
         # Make sure create associates a config drive.
 
