@@ -592,7 +592,7 @@ class LibvirtDriver(driver.ComputeDriver):
             conf.driver_io = "threads"
             LOG.warning("The guest disk driver io mode has fallen back "
                         "from 'native' to 'threads' because the "
-                        "disk cache mode is set as %(cachemode)s, which does"
+                        "disk cache mode is set as %(cachemode)s, which does "
                         "not use O_DIRECT. See the following bug report "
                         "for more details: https://launchpad.net/bugs/1841363",
                         {'cachemode': conf.driver_cache})

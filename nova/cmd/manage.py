@@ -2160,7 +2160,7 @@ class PlacementCommands(object):
             return 127
 
         if force and not instance_uuid:
-            print(_('The --instance flag is required'
+            print(_('The --instance flag is required '
                     'when using --force flag.'))
             return 127
 

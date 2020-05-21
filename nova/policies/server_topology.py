@@ -34,7 +34,7 @@ server_topology_policies = [
         # Control host NUMA node and cpu pinning information
         name=BASE_POLICY_NAME % 'host:index',
         check_str=base.SYSTEM_READER,
-        description="Show the NUMA topology data for a server with host"
+        description="Show the NUMA topology data for a server with host "
         "NUMA ID and CPU pinning information",
         operations=[
             {
