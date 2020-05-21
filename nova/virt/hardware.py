@@ -1343,20 +1343,14 @@ def _get_numa_pagesize_constraint(flavor, image_meta):
             return MEMPAGES_LARGE
         elif request == "small":
             return MEMPAGES_SMALL
-        else:
-            try:
-                request = int(request)
-            except ValueError:
-                try:
-                    request = strutils.string_to_bytes(
-                        request, return_int=True) / units.Ki
-                except ValueError:
-                    request = 0
+        elif request.isdigit():
+            return int(request)
 
-        if request <= 0:
-            raise exception.MemoryPageSizeInvalid(pagesize=request)
-
-        return request
+        try:
+            return strutils.string_to_bytes(
+                request, return_int=True) / units.Ki
+        except ValueError:
+            raise exception.MemoryPageSizeInvalid(pagesize=request) from None
 
     flavor_request, image_request = _get_flavor_image_meta(
         'mem_page_size', flavor, image_meta)
