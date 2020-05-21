@@ -151,7 +151,8 @@ Upgrade
 See Also
 ========
 
-:doc:`nova-manage(1) <nova-manage>`
+:doc:`nova-manage(1) <nova-manage>`,
+:doc:`nova-policy(1) <nova-policy>`
 
 Bugs
 ====

@@ -1508,6 +1508,7 @@ within an environment.
 See Also
 ========
 
+:doc:`nova-policy(1) <nova-policy>`,
 :doc:`nova-status(1) <nova-status>`
 
 Bugs

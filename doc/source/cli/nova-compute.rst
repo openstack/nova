@@ -33,8 +33,12 @@ Options
 Files
 =====
 
+.. todo: We shouldn't have policy configuration in this non-API service, but
+   bug #1675486 means we do have one
+
 * ``/etc/nova/nova.conf``
 * ``/etc/nova/policy.yaml``
+* ``/etc/nova/policy.d/``
 * ``/etc/nova/rootwrap.conf``
 * ``/etc/nova/rootwrap.d/``
 

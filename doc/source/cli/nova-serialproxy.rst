@@ -53,7 +53,6 @@ Files
 =====
 
 * ``/etc/nova/nova.conf``
-* ``/etc/nova/policy.yaml``
 * ``/etc/nova/rootwrap.conf``
 * ``/etc/nova/rootwrap.d/``
 
