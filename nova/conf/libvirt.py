@@ -940,6 +940,50 @@ Create sparse logical volumes (with virtualsize) if this flag is set to True.
     cfg.StrOpt('images_rbd_ceph_conf',
                default='',  # default determined by librados
                help='Path to the ceph configuration file to use'),
+    cfg.StrOpt('images_rbd_glance_store_name',
+               default='',
+               help="""
+The name of the Glance store that represents the rbd cluster in use by
+this node. If set, this will allow Nova to request that Glance copy an
+image from an existing non-local store into the one named by this option
+before booting so that proper Copy-on-Write behavior is maintained.
+
+Related options:
+
+* images_type - must be set to ``rbd``
+* images_rbd_glance_copy_poll_interval - controls the status poll frequency
+* images_rbd_glance_copy_timeout - controls the overall copy timeout
+"""),
+    cfg.IntOpt('images_rbd_glance_copy_poll_interval',
+               default=15,
+               help="""
+The interval in seconds with which to poll Glance after asking for it
+to copy an image to the local rbd store. This affects how often we ask
+Glance to report on copy completion, and thus should be short enough that
+we notice quickly, but not too aggressive that we generate undue load on
+the Glance server.
+
+Related options:
+
+* images_type - must be set to ``rbd``
+* images_rbd_glance_store_name - must be set to a store name
+"""),
+    cfg.IntOpt('images_rbd_glance_copy_timeout',
+               default=600,
+               help="""
+The overall maximum time we will wait for Glance to complete an image
+copy to our local rbd store. This should be long enough to allow large
+images to be copied over the network link between our local store and the
+one where images typically reside. The downside of setting this too long
+is just to catch the case where the image copy is stalled or proceeding too
+slowly to be useful. Actual errors will be reported by Glance and noticed
+according to the poll interval.
+
+Related options:
+* images_type - must be set to ``rbd``
+* images_rbd_glance_store_name - must be set to a store name
+* images_rbd_glance_copy_poll_interval - controls the failure time-to-notice
+"""),
     cfg.StrOpt('hw_disk_discard',
                choices=('ignore', 'unmap'),
                help="""

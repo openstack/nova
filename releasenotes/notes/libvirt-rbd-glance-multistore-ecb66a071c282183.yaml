@@ -1,0 +1,13 @@
+---
+features:
+  - |
+    The libvirt RBD image backend module can now handle a Glance
+    multistore environment where multiple RBD clusters are in use
+    across a single Nova/Glance deployment, configured as independent
+    Glance stores. In the case where an instance is booted with an
+    image that does not exist in the RBD cluster that Nova is
+    configured to use, Nova can ask Glance to copy the image from
+    whatever store it is currently in to the one that represents its
+    RBD cluster. To enable this feature, set
+    ``[libvirt]/images_rbd_glance_store_name`` to tell Nova the Glance
+    store name of the RBD cluster it uses.
