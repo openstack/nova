@@ -8615,20 +8615,18 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
 
     @mock.patch('nova.objects.MigrationContext.get_pci_mapping_for_migration')
     @mock.patch('nova.compute.utils.add_instance_fault_from_exc')
-    @mock.patch('nova.objects.Migration.get_by_id')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.compute.utils.notify_about_instance_usage')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     @mock.patch('nova.objects.Instance.save')
     def test_confirm_resize_driver_confirm_migration_fails(
             self, instance_save, notify_action, notify_usage,
-            instance_get_by_uuid, migration_get_by_id, add_fault, get_mapping):
+            instance_get_by_uuid, add_fault, get_mapping):
         """Tests the scenario that driver.confirm_migration raises some error
         to make sure the error is properly handled, like the instance and
         migration status is set to 'error'.
         """
         self.migration.status = 'confirming'
-        migration_get_by_id.return_value = self.migration
         instance_get_by_uuid.return_value = self.instance
         self.instance.migration_context = objects.MigrationContext()
 
@@ -8667,7 +8665,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         confirm_migration.assert_called_once()
         network_api.setup_networks_on_host.assert_called_once()
         instance_get_by_uuid.assert_called_once()
-        migration_get_by_id.assert_called_once()
 
     def test_confirm_resize_calls_virt_driver_with_old_pci(self):
         @mock.patch.object(self.migration, 'save')
