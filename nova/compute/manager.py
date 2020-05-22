@@ -2980,10 +2980,10 @@ class ComputeManager(manager.Manager):
         #             and to only ignore the failure if the instance
         #             is already in ERROR.
 
-        # NOTE(ameeda): The volumes already detached during the above
-        #               _shutdown_instance() call and this is why
-        #               detach is not requested from _cleanup_volumes()
-        #               in this case
+        # NOTE(ameeda): The volumes have already been detached during
+        #               the above _shutdown_instance() call and this is
+        #               why detach is not requested from
+        #               _cleanup_volumes() in this case
 
         self._cleanup_volumes(context, instance, bdms,
                 raise_exc=False, detach=False)
