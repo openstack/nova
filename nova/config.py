@@ -33,17 +33,8 @@ CONF = nova.conf.CONF
 
 
 def rabbit_heartbeat_filter(log_record):
-
-    # Note the type in the log message was fixed in
-    # change Id11db4113c9b1c3add602192c1e915218704ef27
-    # but we handle both form to allow this to be backported
-    # without consideration of the version of oslo.messaging used.
-    # TODO(sean-k-mooney): remove support for typo in follow up
-    # to allow this to be easily backported without modification.
-    messages = [
-        "Unexpected error during heartbeart thread processing",
-        "Unexpected error during heartbeat thread processing"]
-    return not any(msg in log_record.msg for msg in messages)
+    message = "Unexpected error during heartbeat thread processing"
+    return message not in log_record.msg
 
 
 def parse_args(argv, default_config_files=None, configure_db=True,
