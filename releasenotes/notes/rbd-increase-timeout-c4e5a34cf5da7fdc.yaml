@@ -1,0 +1,19 @@
+---
+features:
+  - |
+    Added params ``[libvirt]/rbd_destroy_volume_retries``, defaulting to 12,
+    and ``[libvirt]/rbd_destroy_volume_retry_interval``, defaulting to 5, that
+    Nova will use when trying to remove a volume from Ceph in a retry loop
+    that combines these parameters together. Thus, maximum elapsing time is by
+    default 60 seconds.
+fixes:
+  - |
+    Nova tries to remove a volume from Ceph in a retry loop of 10 attempts at
+    1 second intervals, totaling 10 seconds overall - which, due to 30 second
+    ceph watcher timeout, might result in intermittent object removal failures
+    on Ceph side (`bug 1856845`_). Setting default values for
+    ``[libvirt]/rbd_destroy_volume_retries`` to 12 and
+    ``[libvirt]/rbd_destroy_volume_retry_interval`` to 5, now gives Ceph
+    reasonable amount of time to complete the operation successfully.
+
+    .. _`bug 1856845`: https://bugs.launchpad.net/nova/+bug/1856845
