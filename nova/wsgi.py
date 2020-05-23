@@ -30,7 +30,7 @@ from oslo_utils import excutils
 
 import nova.conf
 from nova import exception
-from nova.i18n import _, _LI
+from nova.i18n import _
 from nova import utils
 
 CONF = nova.conf.CONF
@@ -97,7 +97,7 @@ class Server(service.ServiceBase):
             raise
 
         (self.host, self.port) = self._socket.getsockname()[0:2]
-        LOG.info(_LI("%(name)s listening on %(host)s:%(port)s"),
+        LOG.info("%(name)s listening on %(host)s:%(port)s",
                  {'name': self.name, 'host': self.host, 'port': self.port})
 
     def start(self):
@@ -202,7 +202,7 @@ class Server(service.ServiceBase):
         :returns: None
 
         """
-        LOG.info(_LI("Stopping WSGI server."))
+        LOG.info("Stopping WSGI server.")
 
         if self._server is not None:
             # Resize pool to stop new requests from being processed
@@ -222,4 +222,4 @@ class Server(service.ServiceBase):
                 self._pool.waitall()
                 self._server.wait()
         except greenlet.GreenletExit:
-            LOG.info(_LI("WSGI server has stopped."))
+            LOG.info("WSGI server has stopped.")

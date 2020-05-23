@@ -23,7 +23,7 @@ from oslo_utils import timeutils
 
 from nova import cache_utils
 import nova.conf
-from nova.i18n import _, _LI
+from nova.i18n import _
 from nova.servicegroup import api
 from nova.servicegroup.drivers import base
 
@@ -101,8 +101,9 @@ class MemcachedDriver(base.Driver):
             if getattr(service, 'model_disconnected', False):
                 service.model_disconnected = False
                 LOG.info(
-                    _LI('Recovered connection to memcache server '
-                        'for reporting service status.'))
+                    'Recovered connection to memcache server for reporting '
+                    'service status.'
+                )
 
         # TODO(vish): this should probably only catch connection errors
         except Exception:
