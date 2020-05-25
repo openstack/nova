@@ -8978,7 +8978,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertTrue(drvr._is_shared_block_storage(instance, data,
                                   block_device_info=bdi))
         self.assertEqual(0, mock_get_instance_disk_info.call_count)
-        self.assertTrue(drvr._is_storage_shared_with('foo', 'bar'))
 
     def test_is_shared_block_storage_lvm(self):
         self.flags(images_type='lvm', group='libvirt')
