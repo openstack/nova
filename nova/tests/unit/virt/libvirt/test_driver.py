@@ -4492,6 +4492,19 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_get_guest_config_windows_hyperv_all_hide_flv(self):
         # Similar to test_get_guest_config_windows_hyperv_feature2
         #   but also test hiding the HyperV signature with the flavor
+        #   extra_spec "hw:hide_hypervisor_id"
+        flavor_hide_id = fake_flavor.fake_flavor_obj(self.context,
+            extra_specs={"hw:hide_hypervisor_id": "true"},
+            expected_attrs={"extra_specs"})
+        # this works for kvm (the default, tested below) and qemu
+        self.flags(virt_type='qemu', group='libvirt')
+
+        self._test_get_guest_config_windows_hyperv(
+            flavor=flavor_hide_id, hvid_hidden=True)
+
+    def test_get_guest_config_windows_hyperv_all_hide_flv_old(self):
+        # Similar to test_get_guest_config_windows_hyperv_feature2
+        #   but also test hiding the HyperV signature with the flavor
         #   extra_spec "hide_hypervisor_id"
         flavor_hide_id = fake_flavor.fake_flavor_obj(self.context,
             extra_specs={"hide_hypervisor_id": "true"},
@@ -4516,10 +4529,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_get_guest_config_windows_hyperv_all_hide_flv_img(self):
         # Similar to test_get_guest_config_windows_hyperv_feature2
         #   but also test hiding the HyperV signature with both the flavor
-        #   extra_spec "hide_hypervisor_id" and the image property
+        #   extra_spec "hw:hide_hypervisor_id" and the image property
         #   "img_hide_hypervisor_id"
         flavor_hide_id = fake_flavor.fake_flavor_obj(self.context,
-            extra_specs={"hide_hypervisor_id": "true"},
+            extra_specs={"hw:hide_hypervisor_id": "true"},
             expected_attrs={"extra_specs"})
         self.flags(virt_type='qemu', group='libvirt')
 
@@ -6594,7 +6607,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self):
         # Input to the test: flavor extra_specs
         flavor_hide_id = fake_flavor.fake_flavor_obj(self.context,
-            extra_specs={"hide_hypervisor_id": "true"},
+            extra_specs={"hw:hide_hypervisor_id": "true"},
             expected_attrs={"extra_specs"})
 
         self.flags(virt_type='kvm', group='libvirt')
@@ -6620,7 +6633,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         # Input to the test: image metadata (true) and flavor
         #     extra_specs (true)
         flavor_hide_id = fake_flavor.fake_flavor_obj(self.context,
-            extra_specs={"hide_hypervisor_id": "true"},
+            extra_specs={"hw:hide_hypervisor_id": "true"},
             expected_attrs={"extra_specs"})
         image_meta = objects.ImageMeta.from_dict({
             "disk_format": "raw",
@@ -6647,7 +6660,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         # Input to the test: image metadata (false) and flavor
         #     extra_specs (true)
         flavor_hide_id = fake_flavor.fake_flavor_obj(self.context,
-            extra_specs={"hide_hypervisor_id": "true"},
+            extra_specs={"hw:hide_hypervisor_id": "true"},
             expected_attrs={"extra_specs"})
         image_meta = objects.ImageMeta.from_dict({
             "disk_format": "raw",
@@ -6672,7 +6685,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         # Input to the test: image metadata (true) and flavor
         #     extra_specs (false)
         flavor_hide_id = fake_flavor.fake_flavor_obj(self.context,
-            extra_specs={"hide_hypervisor_id": "false"},
+            extra_specs={"hw:hide_hypervisor_id": "false"},
             expected_attrs={"extra_specs"})
         image_meta = objects.ImageMeta.from_dict({
             "disk_format": "raw",
@@ -6719,7 +6732,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_get_guest_config_without_hiding_hypervisor_id_flavor_extra_specs(
             self):
         flavor_hide_id = fake_flavor.fake_flavor_obj(self.context,
-            extra_specs={"hide_hypervisor_id": "false"},
+            extra_specs={"hw:hide_hypervisor_id": "false"},
             expected_attrs={"extra_specs"})
 
         self.flags(virt_type='qemu', group='libvirt')

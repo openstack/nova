@@ -5161,7 +5161,9 @@ class LibvirtDriver(driver.ComputeDriver):
             flavor):
         hide_hypervisor_id = (strutils.bool_from_string(
                 flavor.extra_specs.get('hide_hypervisor_id')) or
-            image_meta.properties.get('img_hide_hypervisor_id'))
+                strutils.bool_from_string(
+                    flavor.extra_specs.get('hw:hide_hypervisor_id')) or
+                image_meta.properties.get('img_hide_hypervisor_id'))
 
         if virt_type == "xen":
             # PAE only makes sense in X86
