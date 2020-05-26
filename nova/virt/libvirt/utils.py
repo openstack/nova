@@ -238,8 +238,7 @@ def pick_disk_driver_name(
             return "file"
     elif CONF.libvirt.virt_type in ('kvm', 'qemu'):
         return "qemu"
-    else:
-        # UML doesn't want a driver_name set
+    else:  # parallels
         return None
 
 

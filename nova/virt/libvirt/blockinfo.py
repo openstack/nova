@@ -94,9 +94,12 @@ SUPPORTED_DEVICE_BUSES = {
     'qemu': ['virtio', 'scsi', 'ide', 'usb', 'fdc', 'sata'],
     'kvm': ['virtio', 'scsi', 'ide', 'usb', 'fdc', 'sata'],
     'xen': ['xen', 'ide'],
+    # we no longer support UML, but we keep track of its bus types so we can
+    # reject them for other virt types
     'uml': ['uml'],
     'lxc': ['lxc'],
-    'parallels': ['ide', 'scsi']}
+    'parallels': ['ide', 'scsi'],
+}
 SUPPORTED_DEVICE_TYPES = ('disk', 'cdrom', 'floppy', 'lun')
 
 
@@ -143,8 +146,6 @@ def get_dev_prefix_for_disk_bus(disk_bus):
         return "sd"
     elif disk_bus == "fdc":
         return "fd"
-    elif disk_bus == "uml":
-        return "ubd"
     elif disk_bus == "lxc":
         return None
     elif disk_bus == "sata":
@@ -243,10 +244,7 @@ def get_disk_bus_for_device_type(instance,
         return disk_bus
 
     # Otherwise pick a hypervisor default disk bus
-    if virt_type == "uml":
-        if device_type == "disk":
-            return "uml"
-    elif virt_type == "lxc":
+    if virt_type == "lxc":
         return "lxc"
     elif virt_type == "xen":
         guest_vm_mode = obj_fields.VMMode.get_from_instance(instance)
@@ -319,8 +317,6 @@ def get_disk_bus_for_disk_dev(virt_type, disk_dev):
         return "fdc"
     elif disk_dev.startswith('xvd'):
         return "xen"
-    elif disk_dev.startswith('ubd'):
-        return "uml"
     else:
         msg = _("Unable to determine disk bus for '%s'") % disk_dev[:1]
         raise exception.InternalError(msg)

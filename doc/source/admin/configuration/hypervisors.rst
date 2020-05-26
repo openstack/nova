@@ -2,9 +2,6 @@
 Hypervisors
 ===========
 
-.. TODO: Add UML (User-Mode Linux) hypervisor to the following list when its
-   dedicated documentation is ready.
-
 .. toctree::
    :maxdepth: 1
 
@@ -60,9 +57,6 @@ The following hypervisors are supported:
 * `zVM`_ - Server virtualization on z Systems and IBM LinuxONE, it can run Linux,
   z/OS and more.
 
-* `UML`_ - User-Mode Linux is a safe, secure way of running Linux versions and Linux
-  processes.
-
 * `Ironic`_ - OpenStack project which provisions bare metal (as opposed to virtual)
   machines.
 
@@ -101,5 +95,4 @@ virt drivers:
 .. _Virtuozzo: https://www.virtuozzo.com/products/vz7.html
 .. _PowerVM: https://www.ibm.com/us-en/marketplace/ibm-powervm
 .. _zVM: https://www.ibm.com/it-infrastructure/z/zvm
-.. _UML: http://user-mode-linux.sourceforge.net
 .. _Ironic: https://docs.openstack.org/ironic/latest/

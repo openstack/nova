@@ -478,8 +478,7 @@ The image properties that the filter checks for are:
 ``hw_vm_mode``
   describes the hypervisor application binary interface (ABI) required by the
   image. Examples are ``xen`` for Xen 3.0 paravirtual ABI, ``hvm`` for native
-  ABI, ``uml`` for User Mode Linux paravirtual ABI, ``exe`` for container virt
-  executable ABI.
+  ABI, and ``exe`` for container virt executable ABI.
 
   .. versionchanged:: 12.0.0 (Liberty)
 

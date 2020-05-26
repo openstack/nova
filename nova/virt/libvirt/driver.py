@@ -21,7 +21,7 @@
 """
 A connection to a hypervisor through libvirt.
 
-Supports KVM, LXC, QEMU, UML, XEN and Parallels.
+Supports KVM, LXC, QEMU, XEN and Parallels.
 
 """
 
@@ -1039,9 +1039,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     @staticmethod
     def _uri():
-        if CONF.libvirt.virt_type == 'uml':
-            uri = CONF.libvirt.connection_uri or 'uml:///system'
-        elif CONF.libvirt.virt_type == 'xen':
+        if CONF.libvirt.virt_type == 'xen':
             uri = CONF.libvirt.connection_uri or 'xen:///'
         elif CONF.libvirt.virt_type == 'lxc':
             uri = CONF.libvirt.connection_uri or 'lxc:///'
@@ -3753,7 +3751,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
             # NOTE(markus_z): The virt_types kvm and qemu are the only ones
             # which create a dedicated file device for the console logging.
-            # Other virt_types like xen, lxc, uml, parallels depend on the
+            # Other virt_types like xen, lxc, and parallels depend on the
             # flush of that pty device into the "console.log" file to ensure
             # that a series of "get_console_output" calls return the complete
             # content even after rebooting a guest.
@@ -4034,15 +4032,9 @@ class LibvirtDriver(driver.ComputeDriver):
                                      filename=fname,
                                      image_id=disk_images['ramdisk_id'])
 
-        if CONF.libvirt.virt_type == 'uml':
-            # PONDERING(mikal): can I assume that root is UID zero in every
-            # OS? Probably not.
-            uid = pwd.getpwnam('root').pw_uid
-            nova.privsep.path.chown(image('disk').path, uid=uid)
-
         created_disks = self._create_and_inject_local_root(
-                context, instance, booted_from_volume, suffix, disk_images,
-                injection_info, fallback_from_host)
+            context, instance, booted_from_volume, suffix, disk_images,
+            injection_info, fallback_from_host)
 
         # Lookup the filesystem type if required
         os_type_with_default = nova.privsep.fs.get_fs_type_for_os_type(
@@ -5269,8 +5261,6 @@ class LibvirtDriver(driver.ComputeDriver):
         """Returns the guest OS type based on virt type."""
         if virt_type == "lxc":
             ret = fields.VMMode.EXE
-        elif virt_type == "uml":
-            ret = fields.VMMode.UML
         elif virt_type == "xen":
             ret = fields.VMMode.XEN
         else:
@@ -5369,7 +5359,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                       fields.Architecture.X86_64):
                 guest.features.append(vconfig.LibvirtConfigGuestFeaturePAE())
 
-        if (virt_type not in ("lxc", "uml", "parallels", "xen") or
+        if (virt_type not in ("lxc", "parallels", "xen") or
                 (virt_type == "xen" and guest.os_type == fields.VMMode.HVM)):
             guest.features.append(vconfig.LibvirtConfigGuestFeatureACPI())
             guest.features.append(vconfig.LibvirtConfigGuestFeatureAPIC())
@@ -5738,20 +5728,16 @@ class LibvirtDriver(driver.ComputeDriver):
                     flavor.extra_specs.get('hw:boot_menu', 'no'))
             else:
                 guest.os_bootmenu = image_meta.properties.hw_boot_menu
-
         elif virt_type == "lxc":
             guest.os_init_path = "/sbin/init"
             guest.os_cmdline = CONSOLE
             guest.os_init_env["product_name"] = "OpenStack Nova"
-        elif virt_type == "uml":
-            guest.os_kernel = "/usr/bin/linux"
-            guest.os_root = root_device_name
         elif virt_type == "parallels":
             if guest.os_type == fields.VMMode.EXE:
                 guest.os_init_path = "/sbin/init"
 
-    def _conf_non_lxc_uml(self, virt_type, guest, root_device_name, rescue,
-                    instance, inst_path, image_meta, disk_info):
+    def _conf_non_lxc(self, virt_type, guest, root_device_name, rescue,
+                      instance, inst_path, image_meta, disk_info):
         if rescue:
             self._set_guest_for_rescue(rescue, guest, inst_path, virt_type,
                                        root_device_name)
@@ -6096,8 +6082,8 @@ class LibvirtDriver(driver.ComputeDriver):
         self._configure_guest_by_virt_type(guest, virt_type, caps, instance,
                                            image_meta, flavor,
                                            root_device_name, sev_enabled)
-        if virt_type not in ('lxc', 'uml'):
-            self._conf_non_lxc_uml(virt_type, guest, root_device_name, rescue,
+        if virt_type != 'lxc':
+            self._conf_non_lxc(virt_type, guest, root_device_name, rescue,
                     instance, inst_path, image_meta, disk_info)
 
         self._set_features(guest, instance.os_type, caps, virt_type,
@@ -6305,7 +6291,7 @@ class LibvirtDriver(driver.ComputeDriver):
     @staticmethod
     def _guest_add_spice_channel(guest):
         if (CONF.spice.enabled and CONF.spice.agent_enabled and
-                guest.virt_type not in ('lxc', 'uml', 'xen')):
+                guest.virt_type not in ('lxc', 'xen')):
             channel = vconfig.LibvirtConfigGuestChannel()
             channel.type = 'spicevmc'
             channel.target_name = "com.redhat.spice.0"
@@ -6373,13 +6359,13 @@ class LibvirtDriver(driver.ComputeDriver):
         # those versions are. We'll just let libvirt report the
         # errors appropriately if the user enables both.
         add_video_driver = False
-        if CONF.vnc.enabled and guest.virt_type not in ('lxc', 'uml'):
+        if CONF.vnc.enabled and guest.virt_type not in ('lxc',):
             graphics = vconfig.LibvirtConfigGuestGraphics()
             graphics.type = "vnc"
             graphics.listen = CONF.vnc.server_listen
             guest.add_device(graphics)
             add_video_driver = True
-        if CONF.spice.enabled and guest.virt_type not in ('lxc', 'uml', 'xen'):
+        if CONF.spice.enabled and guest.virt_type not in ('lxc', 'xen'):
             graphics = vconfig.LibvirtConfigGuestGraphics()
             graphics.type = "spice"
             graphics.listen = CONF.spice.server_listen

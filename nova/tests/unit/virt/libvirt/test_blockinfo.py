@@ -1004,10 +1004,9 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
                 ('scsi', ("kvm", "sdf")),
                 ('virtio', ("kvm", "vds")),
                 ('fdc', ("kvm", "fdc")),
-                ('uml', ("kvm", "ubd")),
                 ('xen', ("xen", "sdf")),
-                ('xen', ("xen", "xvdb"))
-                )
+                ('xen', ("xen", "xvdb")),
+        )
         for res, args in expected:
             self.assertEqual(res, blockinfo.get_disk_bus_for_disk_dev(*args))
 
@@ -1307,7 +1306,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
     def test_get_rescue_bus(self):
         # Assert that all supported device bus types are returned. Stable
         # device rescue is not supported by xen or lxc so ignore these.
-        for virt_type in ['qemu', 'kvm', 'uml', 'parallels']:
+        for virt_type in ['qemu', 'kvm', 'parallels']:
             for bus in blockinfo.SUPPORTED_DEVICE_BUSES[virt_type]:
                 meta = self._get_rescue_image_meta({'hw_rescue_bus': bus})
                 self.assertEqual(bus, blockinfo.get_rescue_bus(None, virt_type,
