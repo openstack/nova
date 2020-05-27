@@ -2087,3 +2087,77 @@ class TestSafeFSync(test.NoDBTestCase):
         """Validate fsync not called for socket."""
         self.common(mock_isfifo, False, mock_issock, True, mock_fstat)
         mock_fsync.assert_not_called()
+
+
+class TestImportCopy(test.NoDBTestCase):
+
+    """Tests the image import/copy methods."""
+
+    def _test_import(self, exception=None):
+        client = mock.MagicMock()
+        if exception:
+            client.call.side_effect = exception
+        else:
+            client.call.return_value = True
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageServiceV2(client)
+        service.image_import_copy(ctx, mock.sentinel.image_id,
+                                  [mock.sentinel.store])
+        return client
+
+    def test_image_import_copy_success(self):
+        client = self._test_import()
+        client.call.assert_called_once_with(
+            mock.sentinel.ctx, 2, 'image_import',
+            args=(mock.sentinel.image_id,),
+            kwargs={'method': 'copy-image',
+                    'stores': [mock.sentinel.store]})
+
+    def test_image_import_copy_not_found(self):
+        self.assertRaises(exception.ImageNotFound,
+                          self._test_import,
+                          glanceclient.exc.NotFound)
+
+    def test_image_import_copy_not_authorized(self):
+        self.assertRaises(exception.ImageNotAuthorized,
+                          self._test_import,
+                          glanceclient.exc.HTTPForbidden)
+
+    def test_image_import_copy_failed_workflow(self):
+        self.assertRaises(exception.ImageImportImpossible,
+                          self._test_import,
+                          glanceclient.exc.HTTPConflict)
+
+    def test_image_import_copy_failed_already_imported(self):
+        self.assertRaises(exception.ImageBadRequest,
+                          self._test_import,
+                          glanceclient.exc.HTTPBadRequest)
+
+    def test_api(self):
+        api = glance.API()
+        with mock.patch.object(api, '_get_session_and_image_id') as g:
+            session = mock.MagicMock()
+            g.return_value = session, mock.sentinel.image_id
+            api.copy_image_to_store(mock.sentinel.ctx,
+                                    mock.sentinel.image_id,
+                                    mock.sentinel.store)
+        session.image_import_copy.assert_called_once_with(
+            mock.sentinel.ctx, mock.sentinel.image_id,
+            [mock.sentinel.store])
+
+    def test_api_to_client(self):
+        # Test all the way down to the client to test the interface between
+        # API and GlanceImageServiceV2
+        wrapper = mock.MagicMock()
+        client = glance.GlanceImageServiceV2(client=wrapper)
+        api = glance.API()
+        with mock.patch.object(api, '_get_session_and_image_id') as m:
+            m.return_value = (client, mock.sentinel.image_id)
+            api.copy_image_to_store(mock.sentinel.ctx,
+                                    mock.sentinel.image_id,
+                                    mock.sentinel.store)
+        wrapper.call.assert_called_once_with(
+            mock.sentinel.ctx, 2, 'image_import',
+            args=(mock.sentinel.image_id,),
+            kwargs={'method': 'copy-image',
+                    'stores': [mock.sentinel.store]})

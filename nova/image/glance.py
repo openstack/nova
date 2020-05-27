@@ -654,6 +654,41 @@ class GlanceImageServiceV2(object):
             raise exception.ImageDeleteConflict(reason=six.text_type(exc))
         return True
 
+    def image_import_copy(self, context, image_id, stores):
+        """Copy an image to another store using image_import.
+
+        This triggers the Glance image_import API with an opinionated
+        method of 'copy-image' to a list of stores. This will initiate
+        a copy of the image from one of the existing stores to the
+        stores provided.
+
+        :param context: The RequestContext
+        :param image_id: The image to copy
+        :param stores: A list of stores to copy the image to
+
+        :raises: ImageNotFound if the image does not exist.
+        :raises: ImageNotAuthorized if the user is not permitted to
+                 import/copy this image
+        :raises: ImageImportImpossible if the image cannot be imported
+                 for workflow reasons (not active, etc)
+        :raises: ImageBadRequest if the image is already in the requested
+                 store (which may be a race)
+        """
+        try:
+            self._client.call(context, 2, 'image_import', args=(image_id,),
+                              kwargs={'method': 'copy-image',
+                                      'stores': stores})
+        except glanceclient.exc.NotFound:
+            raise exception.ImageNotFound(image_id=image_id)
+        except glanceclient.exc.HTTPForbidden:
+            raise exception.ImageNotAuthorized(image_id=image_id)
+        except glanceclient.exc.HTTPConflict as exc:
+            raise exception.ImageImportImpossible(image_id=image_id,
+                                                  reason=str(exc))
+        except glanceclient.exc.HTTPBadRequest as exc:
+            raise exception.ImageBadRequest(image_id=image_id,
+                                            response=str(exc))
+
 
 def _extract_query_params_v2(params):
     _params = {}
@@ -1189,3 +1224,13 @@ class API(object):
         return session.download(context, image_id, data=data,
                                 dst_path=dest_path,
                                 trusted_certs=trusted_certs)
+
+    def copy_image_to_store(self, context, image_id, store):
+        """Initiate a store-to-store copy in glance.
+
+        :param context: The RequestContext.
+        :param image_id: The image to copy.
+        :param store: The glance store to target the copy.
+        """
+        session, image_id = self._get_session_and_image_id(context, image_id)
+        return session.image_import_copy(context, image_id, [store])
