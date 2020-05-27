@@ -66,34 +66,6 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
             'vnc': '127.0.0.1',
             'spice': None}, addrs)
 
-    def test_serial_listen_addr(self):
-        data = objects.LibvirtLiveMigrateData(
-            serial_listen_addr='127.0.0.1')
-        addr = migration.serial_listen_addr(data)
-        self.assertEqual('127.0.0.1', addr)
-
-    def test_serial_listen_addr_emtpy(self):
-        data = objects.LibvirtLiveMigrateData()
-        addr = migration.serial_listen_addr(data)
-        self.assertIsNone(addr)
-
-    def test_serial_listen_addr_None(self):
-        data = objects.LibvirtLiveMigrateData()
-        data.serial_listen_addr = None
-        addr = migration.serial_listen_addr(data)
-        self.assertIsNone(addr)
-
-    def test_serial_listen_ports(self):
-        data = objects.LibvirtLiveMigrateData(
-            serial_listen_ports=[1, 2, 3])
-        ports = migration.serial_listen_ports(data)
-        self.assertEqual([1, 2, 3], ports)
-
-    def test_serial_listen_ports_emtpy(self):
-        data = objects.LibvirtLiveMigrateData()
-        ports = migration.serial_listen_ports(data)
-        self.assertEqual([], ports)
-
     @mock.patch('lxml.etree.tostring')
     @mock.patch.object(migration, '_update_memory_backing_xml')
     @mock.patch.object(migration, '_update_perf_events_xml')
