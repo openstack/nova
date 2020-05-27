@@ -1147,8 +1147,12 @@ def _instances_cores_ram_count(context, project_id, user_id=None):
     # this filtering if there is more than one non-cell0 cell.
     # TODO(tssurya): Consider adding a scatter_gather_cells_for_project
     # variant that makes this native to nova.context.
-    cell_mappings = objects.CellMappingList.get_by_project_id(
-        context, project_id)
+    if CONF.api.instance_list_per_project_cells:
+        cell_mappings = objects.CellMappingList.get_by_project_id(
+            context, project_id)
+    else:
+        nova_context.load_cells()
+        cell_mappings = nova_context.CELLS
     results = nova_context.scatter_gather_cells(
         context, cell_mappings, nova_context.CELL_TIMEOUT,
         objects.InstanceList.get_counts, project_id, user_id=user_id)
