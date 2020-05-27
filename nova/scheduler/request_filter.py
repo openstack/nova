@@ -181,8 +181,9 @@ def require_image_type_support(ctxt, request_spec):
     disk_format = request_spec.image.disk_format
     trait_name = 'COMPUTE_IMAGE_TYPE_%s' % disk_format.upper()
     if not hasattr(os_traits, trait_name):
-        LOG.error(('Computed trait name %r is not valid; '
-                   'is os-traits up to date?'), trait_name)
+        LOG.error(
+            'Computed trait name %r is not valid; is os-traits up to date?',
+            trait_name)
         return False
 
     request_spec.root_required.add(trait_name)
@@ -218,8 +219,8 @@ def transform_image_metadata(ctxt, request_spec):
                 '-', '_').upper()
             trait_name = f'{prefix}_{value}'
             if not hasattr(os_traits, trait_name):
-                LOG.error(('Computed trait name %r is not valid; '
-                           'is os-traits up to date?'), trait_name)
+                LOG.error('Computed trait name %r is not valid; '
+                          'is os-traits up to date?', trait_name)
                 return False
 
             trait_names.append(trait_name)

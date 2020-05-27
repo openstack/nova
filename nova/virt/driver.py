@@ -1894,7 +1894,7 @@ def load_compute_driver(virtapi, compute_driver=None):
             return driver
         raise ValueError()
     except ImportError:
-        LOG.exception(_("Unable to load the virtualization driver"))
+        LOG.exception("Unable to load the virtualization driver")
         sys.exit(1)
     except ValueError:
         LOG.exception("Compute driver '%s' from 'nova.virt' is not of type "

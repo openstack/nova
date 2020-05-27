@@ -1125,7 +1125,7 @@ class VMwareVMOps(object):
             LOG.warning('Instance does not exist on backend',
                         instance=instance)
         except Exception:
-            LOG.exception(_('Destroy instance failed'), instance=instance)
+            LOG.exception('Destroy instance failed', instance=instance)
         finally:
             vm_util.vm_ref_cache_delete(instance.uuid)
 

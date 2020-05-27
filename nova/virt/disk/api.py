@@ -416,7 +416,7 @@ def teardown_container(container_dir, container_root_device=None):
                 LOG.debug('No release necessary for block device %s',
                           container_root_device)
     except Exception:
-        LOG.exception(_('Failed to teardown container filesystem'))
+        LOG.exception('Failed to teardown container filesystem')
 
 
 def clean_lxc_namespace(container_dir):
@@ -429,7 +429,7 @@ def clean_lxc_namespace(container_dir):
         img = _DiskImage(image=None, mount_dir=container_dir)
         img.umount()
     except Exception:
-        LOG.exception(_('Failed to umount container filesystem'))
+        LOG.exception('Failed to umount container filesystem')
 
 
 def inject_data_into_fs(fs, key, net, metadata, admin_password, files,

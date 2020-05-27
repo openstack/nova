@@ -54,8 +54,8 @@ class ResourcePool(object):
                 aggregate.update_metadata(metadata)
             op(host)
         except Exception:
-            LOG.exception(_('Aggregate %(aggregate_id)s: unrecoverable '
-                            'state during operation on %(host)s'),
+            LOG.exception('Aggregate %(aggregate_id)s: unrecoverable '
+                          'state during operation on %(host)s',
                           {'aggregate_id': aggregate.id, 'host': host})
 
     def add_to_aggregate(self, context, aggregate, host, slave_info=None):

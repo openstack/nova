@@ -1825,17 +1825,18 @@ class LibvirtDriver(driver.ComputeDriver):
         except libvirt.libvirtError as ex:
             with excutils.save_and_reraise_exception():
                 if 'Incorrect number of padding bytes' in six.text_type(ex):
-                    LOG.warning(_('Failed to attach encrypted volume due to a '
-                                  'known Libvirt issue, see the following bug '
-                                  'for details: '
-                                  'https://bugzilla.redhat.com/1447297'))
+                    LOG.warning(
+                        'Failed to attach encrypted volume due to a known '
+                        'Libvirt issue, see the following bug for details: '
+                        'https://bugzilla.redhat.com/1447297'
+                    )
                 else:
-                    LOG.exception(_('Failed to attach volume at mountpoint: '
-                                    '%s'), mountpoint, instance=instance)
+                    LOG.exception('Failed to attach volume at mountpoint: %s',
+                                  mountpoint, instance=instance)
                 self._disconnect_volume(context, connection_info, instance,
                                         encryption=encryption)
         except Exception:
-            LOG.exception(_('Failed to attach volume at mountpoint: %s'),
+            LOG.exception('Failed to attach volume at mountpoint: %s',
                           mountpoint, instance=instance)
             with excutils.save_and_reraise_exception():
                 self._disconnect_volume(context, connection_info, instance,
@@ -2468,7 +2469,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                                image_file)
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.exception(_("Failed to snapshot image"))
+                LOG.exception("Failed to snapshot image")
                 failed_snap = metadata.pop('location', None)
                 if failed_snap:
                     failed_snap = {'url': str(failed_snap)}
@@ -2677,8 +2678,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                                     snapshot_id,
                                                     status)
         except Exception:
-            LOG.exception(_('Failed to send updated snapshot status '
-                            'to volume service.'))
+            LOG.exception('Failed to send updated snapshot status '
+                          'to volume service.')
 
     def _volume_snapshot_create(self, context, instance, guest,
                                 volume_id, new_file):
@@ -2789,8 +2790,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 # If the image says that quiesce is required then we fail.
                 if self._requires_quiesce(image_meta):
                     raise
-                LOG.exception(_('Unable to create quiesced VM snapshot, '
-                                'attempting again with quiescing disabled.'),
+                LOG.exception('Unable to create quiesced VM snapshot, '
+                              'attempting again with quiescing disabled.',
                               instance=instance)
         except (exception.InstanceQuiesceNotSupported,
                 exception.QemuGuestAgentNotEnabled) as err:
@@ -2804,8 +2805,8 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.snapshot(snapshot, no_metadata=True, disk_only=True,
                            reuse_ext=True, quiesce=False)
         except libvirt.libvirtError:
-            LOG.exception(_('Unable to create VM snapshot, '
-                            'failing volume_snapshot operation.'),
+            LOG.exception('Unable to create VM snapshot, '
+                          'failing volume_snapshot operation.',
                           instance=instance)
 
             raise
@@ -2855,9 +2856,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                          volume_id, create_info['new_file'])
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.exception(_('Error occurred during '
-                                'volume_snapshot_create, '
-                                'sending error status to Cinder.'),
+                LOG.exception('Error occurred during volume_snapshot_create, '
+                              'sending error status to Cinder.',
                               instance=instance)
                 self._volume_snapshot_update_status(
                     context, snapshot_id, 'error')
@@ -3110,9 +3110,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                          snapshot_id, delete_info=delete_info)
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.exception(_('Error occurred during '
-                                'volume_snapshot_delete, '
-                                'sending error status to Cinder.'),
+                LOG.exception('Error occurred during volume_snapshot_delete, '
+                              'sending error status to Cinder.',
                               instance=instance)
                 self._volume_snapshot_update_status(
                     context, snapshot_id, 'error_deleting')
@@ -3385,11 +3384,11 @@ class LibvirtDriver(driver.ComputeDriver):
             elif error_code == libvirt.VIR_ERR_OPERATION_INVALID:
                 raise exception.InstanceNotRunning(instance_id=instance.uuid)
 
-            LOG.exception(_('Error from libvirt while injecting an NMI to '
-                            '%(instance_uuid)s: '
-                            '[Error Code %(error_code)s] %(ex)s'),
-                          {'instance_uuid': instance.uuid,
-                           'error_code': error_code, 'ex': ex})
+            LOG.exception(
+                'Error from libvirt while injecting an NMI to '
+                '%(instance_uuid)s: [Error Code %(error_code)s] %(ex)s',
+                {'instance_uuid': instance.uuid,
+                 'error_code': error_code, 'ex': ex})
             raise
 
     def suspend(self, context, instance):

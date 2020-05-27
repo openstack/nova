@@ -528,7 +528,7 @@ class API(base.Base):
             # need resource allocation manipulation in placement but might also
             # need a new scheduling if resource on this host is not available.
             if port.get(constants.RESOURCE_REQUEST, None):
-                msg = _(
+                msg = (
                     "The auto-created port %(port_id)s is being deleted due "
                     "to its network having QoS policy.")
                 LOG.info(msg, {'port_id': port_id})

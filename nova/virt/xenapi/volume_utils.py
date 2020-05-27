@@ -175,7 +175,7 @@ def introduce_vdi(session, sr_ref, vdi_uuid=None, target_lun=None):
             session.call_xenapi("SR.scan", sr_ref)
             vdi_ref = _get_vdi_ref(session, sr_ref, vdi_uuid, target_lun)
     except session.XenAPI.Failure:
-        LOG.exception(_('Unable to introduce VDI on SR'))
+        LOG.exception('Unable to introduce VDI on SR')
         raise exception.StorageError(
                 reason=_('Unable to introduce VDI on SR %s') % sr_ref)
 
@@ -190,7 +190,7 @@ def introduce_vdi(session, sr_ref, vdi_uuid=None, target_lun=None):
         vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
         LOG.debug(vdi_rec)
     except session.XenAPI.Failure:
-        LOG.exception(_('Unable to get record of VDI'))
+        LOG.exception('Unable to get record of VDI')
         raise exception.StorageError(
                 reason=_('Unable to get record of VDI %s on') % vdi_ref)
 
@@ -212,7 +212,7 @@ def introduce_vdi(session, sr_ref, vdi_uuid=None, target_lun=None):
                                     vdi_rec['xenstore_data'],
                                     vdi_rec['sm_config'])
     except session.XenAPI.Failure:
-        LOG.exception(_('Unable to introduce VDI for SR'))
+        LOG.exception('Unable to introduce VDI for SR')
         raise exception.StorageError(
                 reason=_('Unable to introduce VDI for SR %s') % sr_ref)
 
@@ -310,7 +310,7 @@ def find_sr_from_vbd(session, vbd_ref):
         vdi_ref = session.call_xenapi("VBD.get_VDI", vbd_ref)
         sr_ref = session.call_xenapi("VDI.get_SR", vdi_ref)
     except session.XenAPI.Failure:
-        LOG.exception(_('Unable to find SR from VBD'))
+        LOG.exception('Unable to find SR from VBD')
         raise exception.StorageError(
                 reason=_('Unable to find SR from VBD %s') % vbd_ref)
     return sr_ref
@@ -321,9 +321,9 @@ def find_sr_from_vdi(session, vdi_ref):
     try:
         sr_ref = session.call_xenapi("VDI.get_SR", vdi_ref)
     except session.XenAPI.Failure:
-        LOG.exception(_('Unable to find SR from VDI'))
+        LOG.exception('Unable to find SR from VDI')
         raise exception.StorageError(
-                reason=_('Unable to find SR from VDI %s') % vdi_ref)
+            reason=_('Unable to find SR from VDI %s') % vdi_ref)
     return sr_ref
 
 

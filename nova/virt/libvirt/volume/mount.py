@@ -24,7 +24,6 @@ import six
 
 import nova.conf
 from nova import exception
-from nova.i18n import _
 import nova.privsep.fs
 import nova.privsep.path
 
@@ -312,13 +311,12 @@ class _HostMountState(object):
                         # We're not going to raise the exception because we're
                         # in the desired state anyway. However, this is still
                         # unusual so we'll log it.
-                        LOG.exception(_('Error mounting %(fstype)s export '
-                                        '%(export)s on %(mountpoint)s. '
-                                        'Continuing because mountpount is '
-                                        'mounted despite this.'),
-                                      {'fstype': fstype, 'export': export,
-                                       'mountpoint': mountpoint})
-
+                        LOG.exception(
+                            'Error mounting %(fstypes export %(export)s on '
+                            '%(mountpoint)s. Continuing because mountpount is '
+                            'mounted despite this.',
+                            {'fstype': fstype, 'export': export,
+                             'mountpoint': mountpoint})
                     else:
                         # If the mount failed there's no reason for us to keep
                         # a record of it. It will be created again if the

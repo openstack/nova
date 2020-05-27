@@ -1128,8 +1128,8 @@ class VMOps(object):
                 undo_mgr, old_vdi_ref)
             transfer_vhd_to_dest(new_vdi_ref, new_vdi_uuid)
         except Exception as error:
-            LOG.exception(_("_migrate_disk_resizing_down failed. Restoring "
-                            "orig vm"), instance=instance)
+            LOG.exception("_migrate_disk_resizing_down failed. Restoring "
+                          "orig vm", instance=instance)
             undo_mgr._rollback()
             raise exception.InstanceFaultRollback(error)
 
@@ -1311,16 +1311,16 @@ class VMOps(object):
                 transfer_ephemeral_disks_then_all_leaf_vdis()
 
         except Exception as error:
-            LOG.exception(_("_migrate_disk_resizing_up failed. "
-                            "Restoring orig vm due_to: %s."),
-                          error, instance=instance)
+            LOG.exception(
+                "_migrate_disk_resizing_up failed; restoring orig vm due_to: "
+                "%s.", error, instance=instance)
             try:
                 self._restore_orig_vm_and_cleanup_orphan(instance)
                 # TODO(johngarbutt) should also cleanup VHDs at destination
             except Exception as rollback_error:
-                LOG.warning("_migrate_disk_resizing_up failed to "
-                            "rollback: %s", rollback_error,
-                            instance=instance)
+                LOG.warning(
+                    "_migrate_disk_resizing_up failed to rollback: %s",
+                    rollback_error, instance=instance)
             raise exception.InstanceFaultRollback(error)
 
     def _apply_orig_vm_name_label(self, instance, vm_ref):
@@ -1708,7 +1708,7 @@ class VMOps(object):
                         sr_ref = volume_utils.find_sr_by_uuid(self._session,
                                                               sr_uuid)
                 except Exception:
-                    LOG.exception(_('Failed to find an SR for volume %s'),
+                    LOG.exception('Failed to find an SR for volume %s',
                                   volume_id, instance=instance)
 
                 try:
@@ -1719,7 +1719,7 @@ class VMOps(object):
                                   'instance but no SR was found for it',
                                   volume_id, instance=instance)
                 except Exception:
-                    LOG.exception(_('Failed to forget the SR for volume %s'),
+                    LOG.exception('Failed to forget the SR for volume %s',
                                   volume_id, instance=instance)
             return
 
@@ -1926,7 +1926,7 @@ class VMOps(object):
             raw_console_data = vm_management.get_console_log(
                 self._session, dom_id)
         except self._session.XenAPI.Failure:
-            LOG.exception(_("Guest does not have a console available"))
+            LOG.exception("Guest does not have a console available")
             raise exception.ConsoleNotAvailable()
 
         return zlib.decompress(base64.b64decode(raw_console_data))
@@ -2261,7 +2261,7 @@ class VMOps(object):
                                                      nwref,
                                                      options)
         except self._session.XenAPI.Failure:
-            LOG.exception(_('Migrate Receive failed'))
+            LOG.exception('Migrate Receive failed')
             msg = _('Migrate Receive failed')
             raise exception.MigrationPreCheckError(reason=msg)
         return migrate_data
@@ -2564,7 +2564,7 @@ class VMOps(object):
                     self._call_live_migrate_command(
                         "VM.migrate_send", vm_ref, migrate_data)
                 except self._session.XenAPI.Failure:
-                    LOG.exception(_('Migrate Send failed'))
+                    LOG.exception('Migrate Send failed')
                     raise exception.MigrationError(
                         reason=_('Migrate Send failed'))
 
@@ -2574,9 +2574,11 @@ class VMOps(object):
             else:
                 host_ref = self._get_host_opaque_ref(destination_hostname)
                 if not host_ref:
-                    LOG.exception(_("Destination host %s was not found in the"
-                                    " same shared storage pool as source "
-                                    "host."), destination_hostname)
+                    LOG.exception(
+                        "Destination host %s was not found in the same shared "
+                        "storage pool as source host.",
+                        destination_hostname
+                    )
                     raise exception.MigrationError(
                         reason=_('No host with name %s found')
                         % destination_hostname)
@@ -2626,7 +2628,7 @@ class VMOps(object):
                 if sr_ref:
                     volume_utils.forget_sr(self._session, sr_ref)
             except Exception:
-                LOG.exception(_('Failed to forget the SR for volume %s'),
+                LOG.exception('Failed to forget the SR for volume %s',
                               params['id'], instance=instance)
 
         # delete VIF and network in destination host
@@ -2640,8 +2642,10 @@ class VMOps(object):
             try:
                 self.vif_driver.delete_network_and_bridge(instance, vif['id'])
             except Exception:
-                LOG.exception(_('Failed to delete networks and bridges with '
-                                'VIF %s'), vif['id'], instance=instance)
+                LOG.exception(
+                    'Failed to delete networks and bridges with VIF %s',
+                    vif['id'], instance=instance,
+                )
 
     def get_per_instance_usage(self):
         """Get usage info about each active instance."""
@@ -2703,7 +2707,7 @@ class VMOps(object):
                                      device=device)
             except exception.NovaException:
                 with excutils.save_and_reraise_exception():
-                    LOG.exception(_('attach network interface %s failed.'),
+                    LOG.exception('attach network interface %s failed.',
                                   vif['id'], instance=instance)
                     try:
                         self.vif_driver.unplug(instance, vif, vm_ref)
@@ -2726,5 +2730,5 @@ class VMOps(object):
             raise
         except exception.NovaException:
             with excutils.save_and_reraise_exception():
-                LOG.exception(_('detach network interface %s failed.'),
+                LOG.exception('detach network interface %s failed.',
                               vif['id'], instance=instance)

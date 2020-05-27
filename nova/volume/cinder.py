@@ -800,8 +800,8 @@ class API(object):
                 # NOTE: It is unnecessary to output BadRequest(400) error log,
                 # because operators don't need to debug such cases.
                 if getattr(ex, 'code', None) != 400:
-                    LOG.error(('Create attachment failed for volume '
-                               '%(volume_id)s. Error: %(msg)s Code: %(code)s'),
+                    LOG.error('Create attachment failed for volume '
+                              '%(volume_id)s. Error: %(msg)s Code: %(code)s',
                               {'volume_id': volume_id,
                                'msg': six.text_type(ex),
                                'code': getattr(ex, 'code', None)},
@@ -826,8 +826,8 @@ class API(object):
             return translated_attach_ref
         except cinder_exception.ClientException as ex:
             with excutils.save_and_reraise_exception():
-                LOG.error(('Show attachment failed for attachment '
-                           '%(id)s. Error: %(msg)s Code: %(code)s'),
+                LOG.error('Show attachment failed for attachment '
+                          '%(id)s. Error: %(msg)s Code: %(code)s',
                           {'id': attachment_id,
                            'msg': six.text_type(ex),
                            'code': getattr(ex, 'code', None)})
@@ -873,8 +873,8 @@ class API(object):
             return translated_attach_ref
         except cinder_exception.ClientException as ex:
             with excutils.save_and_reraise_exception():
-                LOG.error(('Update attachment failed for attachment '
-                           '%(id)s. Error: %(msg)s Code: %(code)s'),
+                LOG.error('Update attachment failed for attachment '
+                          '%(id)s. Error: %(msg)s Code: %(code)s',
                           {'id': attachment_id,
                            'msg': six.text_type(ex),
                            'code': getattr(ex, 'code', None)})
@@ -890,8 +890,8 @@ class API(object):
                     attachment_id)
         except cinder_exception.ClientException as ex:
             with excutils.save_and_reraise_exception():
-                LOG.error(('Delete attachment failed for attachment '
-                           '%(id)s. Error: %(msg)s Code: %(code)s'),
+                LOG.error('Delete attachment failed for attachment '
+                          '%(id)s. Error: %(msg)s Code: %(code)s',
                           {'id': attachment_id,
                            'msg': six.text_type(ex),
                            'code': getattr(ex, 'code', None)})
@@ -913,8 +913,8 @@ class API(object):
                     attachment_id)
         except cinder_exception.ClientException as ex:
             with excutils.save_and_reraise_exception():
-                LOG.error(('Complete attachment failed for attachment '
-                           '%(id)s. Error: %(msg)s Code: %(code)s'),
+                LOG.error('Complete attachment failed for attachment '
+                          '%(id)s. Error: %(msg)s Code: %(code)s',
                           {'id': attachment_id,
                            'msg': six.text_type(ex),
                            'code': getattr(ex, 'code', None)})

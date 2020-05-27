@@ -77,8 +77,8 @@ class VolumeOps(object):
                 tries_left -= 1
                 if not tries_left:
                     LOG.exception(
-                        _("Failed to attach volume %(connection_info)s "
-                          "to instance %(instance_name)s. "),
+                        "Failed to attach volume %(connection_info)s "
+                        "to instance %(instance_name)s.",
                         {'connection_info':
                             strutils.mask_dict_password(connection_info),
                          'instance_name': instance_name})

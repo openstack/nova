@@ -48,10 +48,10 @@ CONF = nova.conf.CONF
 
 
 def invalid_option(option_name, recommended_value):
-    LOG.exception(_('Current value of '
-                    'CONF.xenserver.%(option)s option incompatible with '
-                    'CONF.xenserver.independent_compute=True.  '
-                    'Consider using "%(recommended)s"'),
+    LOG.exception('Current value of '
+                  'CONF.xenserver.%(option)s option incompatible with '
+                  'CONF.xenserver.independent_compute=True.  '
+                  'Consider using "%(recommended)s"',
                   {'option': option_name,
                    'recommended': recommended_value})
     raise exception.NotSupportedWithOption(
@@ -139,7 +139,7 @@ class XenAPIDriver(driver.ComputeDriver):
             try:
                 vm_utils.cleanup_attached_vdis(self._session)
             except Exception:
-                LOG.exception(_('Failure while cleaning up attached VDIs'))
+                LOG.exception('Failure while cleaning up attached VDIs')
 
     def instance_exists(self, instance):
         """Checks existence of an instance on the host.

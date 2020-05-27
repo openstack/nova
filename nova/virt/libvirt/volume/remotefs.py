@@ -23,7 +23,6 @@ from oslo_utils import importutils
 import six
 
 import nova.conf
-from nova.i18n import _
 import nova.privsep.fs
 from nova import utils
 
@@ -64,7 +63,7 @@ def unmount_share(mount_path, export_path):
         if 'target is busy' in six.text_type(exc):
             LOG.debug("The share %s is still in use.", export_path)
         else:
-            LOG.exception(_("Couldn't unmount the share %s"), export_path)
+            LOG.exception("Couldn't unmount the share %s", export_path)
 
 
 class RemoteFilesystem(object):

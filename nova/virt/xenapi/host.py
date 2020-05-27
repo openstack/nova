@@ -105,9 +105,10 @@ class Host(object):
 
                     break
                 except XenAPI.Failure:
-                    LOG.exception(_('Unable to migrate VM %(vm_ref)s '
-                                    'from %(host)s'),
-                                  {'vm_ref': vm_ref, 'host': host})
+                    LOG.exception(
+                        'Unable to migrate VM %(vm_refs from %(host)s',
+                        {'vm_ref': vm_ref, 'host': host},
+                    )
                     instance.host = host
                     instance.vm_state = vm_states.ACTIVE
                     instance.save()
@@ -371,7 +372,7 @@ class HostState(object):
                     allocated += vdi_physical
                 physical_used += vdi_physical
             except (ValueError, self._session.XenAPI.Failure):
-                LOG.exception(_('Unable to get size for vdi %s'), vdi_ref)
+                LOG.exception('Unable to get size for vdi %s', vdi_ref)
 
         return (allocated, physical_used)
 
@@ -511,7 +512,7 @@ def call_xenhost(session, method, arg_dict):
             return ''
         return jsonutils.loads(result)
     except ValueError:
-        LOG.exception(_("Unable to get updated status"))
+        LOG.exception("Unable to get updated status")
         return None
     except session.XenAPI.Failure as e:
         LOG.error("The call to %(method)s returned "
@@ -531,7 +532,7 @@ def _call_host_management(session, method, *args):
             return ''
         return jsonutils.loads(result)
     except ValueError:
-        LOG.exception(_("Unable to get updated status"))
+        LOG.exception("Unable to get updated status")
         return None
     except session.XenAPI.Failure as e:
         LOG.error("The call to %(method)s returned an error: %(e)s.",

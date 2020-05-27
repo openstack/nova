@@ -1390,7 +1390,7 @@ def destroy_vm(session, instance, vm_ref=None):
         session._wait_for_task(destroy_task)
         LOG.info("Destroyed the VM", instance=instance)
     except Exception:
-        LOG.exception(_('Destroy VM failed'), instance=instance)
+        LOG.exception('Destroy VM failed', instance=instance)
 
 
 def create_virtual_disk(session, dc_ref, adapter_type, disk_type,

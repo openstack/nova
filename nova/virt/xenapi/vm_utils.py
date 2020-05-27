@@ -264,7 +264,7 @@ def destroy_vm(session, instance, vm_ref):
     try:
         session.VM.destroy(vm_ref)
     except session.XenAPI.Failure:
-        LOG.exception(_('Destroy VM failed'))
+        LOG.exception('Destroy VM failed')
         return
 
     LOG.debug("VM destroyed", instance=instance)
@@ -280,7 +280,7 @@ def clean_shutdown_vm(session, instance, vm_ref):
     try:
         session.call_xenapi('VM.clean_shutdown', vm_ref)
     except session.XenAPI.Failure:
-        LOG.exception(_('Shutting down VM (cleanly) failed.'))
+        LOG.exception('Shutting down VM (cleanly) failed.')
         return False
     return True
 
@@ -295,7 +295,7 @@ def hard_shutdown_vm(session, instance, vm_ref):
     try:
         session.call_xenapi('VM.hard_shutdown', vm_ref)
     except session.XenAPI.Failure:
-        LOG.exception(_('Shutting down VM (hard) failed'))
+        LOG.exception('Shutting down VM (hard) failed')
         return False
     return True
 
@@ -362,14 +362,14 @@ def unplug_vbd(session, vbd_ref, this_vm_ref):
                          {'vbd_ref': vbd_ref, 'num_attempt': num_attempt,
                           'max_attempts': max_attempts, 'err': err})
             else:
-                LOG.exception(_('Unable to unplug VBD'))
+                LOG.exception('Unable to unplug VBD')
                 raise exception.StorageError(
-                        reason=_('Unable to unplug VBD %s') % vbd_ref)
+                    reason=_('Unable to unplug VBD %s') % vbd_ref)
 
     raise exception.StorageError(
-            reason=_('Reached maximum number of retries '
-                     'trying to unplug VBD %s')
-                        % vbd_ref)
+        reason=_('Reached maximum number of retries '
+                 'trying to unplug VBD %s')
+                    % vbd_ref)
 
 
 def destroy_vbd(session, vbd_ref):
@@ -377,9 +377,9 @@ def destroy_vbd(session, vbd_ref):
     try:
         session.call_xenapi('VBD.destroy', vbd_ref)
     except session.XenAPI.Failure:
-        LOG.exception(_('Unable to destroy VBD'))
+        LOG.exception('Unable to destroy VBD')
         raise exception.StorageError(
-                reason=_('Unable to destroy VBD %s') % vbd_ref)
+            reason=_('Unable to destroy VBD %s') % vbd_ref)
 
 
 def create_vbd(session, vm_ref, vdi_ref, userdevice, vbd_type='disk',
@@ -1534,7 +1534,7 @@ def _fetch_disk_image(context, session, instance, name_label, image_id,
             return {vdi_role: dict(uuid=vdi_uuid, file=None)}
     except (session.XenAPI.Failure, IOError, OSError) as e:
         # We look for XenAPI and OS failures.
-        LOG.exception(_("Failed to fetch glance image"), instance=instance)
+        LOG.exception("Failed to fetch glance image", instance=instance)
         e.args = e.args + ([dict(type=ImageType.to_string(image_type),
                                  uuid=vdi_uuid,
                                  file=filename)],)
@@ -1629,7 +1629,7 @@ def lookup_vm_vdis(session, vm_ref):
                     # This is not an attached volume
                     vdi_refs.append(vdi_ref)
             except session.XenAPI.Failure:
-                LOG.exception(_('"Look for the VDIs failed'))
+                LOG.exception('Look for the VDIs failed')
     return vdi_refs
 
 
@@ -1809,7 +1809,7 @@ def compile_diagnostics(vm_rec):
 
         return diags
     except expat.ExpatError as e:
-        LOG.exception(_('Unable to parse rrd of %s'), e)
+        LOG.exception('Unable to parse rrd of %s', e)
         return {"Unable to retrieve diagnostics": e}
 
 
@@ -1959,8 +1959,8 @@ def _get_rrd(server, vm_uuid):
             vm_uuid))
         return xml.read()
     except IOError:
-        LOG.exception(_('Unable to obtain RRD XML for VM %(vm_uuid)s with '
-                        'server details: %(server)s.'),
+        LOG.exception('Unable to obtain RRD XML for VM %(vm_uuid)s with '
+                      'server details: %(server)s.',
                       {'vm_uuid': vm_uuid, 'server': server})
         return None
 

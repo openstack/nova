@@ -100,7 +100,7 @@ def umount_volume(mnt_base):
         if 'Device or resource busy' in six.text_type(exc):
             LOG.error("The Quobyte volume at %s is still in use.", mnt_base)
         else:
-            LOG.exception(_("Couldn't unmount the Quobyte Volume at %s"),
+            LOG.exception("Couldn't unmount the Quobyte Volume at %s",
                           mnt_base)
 
 

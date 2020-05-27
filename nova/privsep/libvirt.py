@@ -26,7 +26,6 @@ from oslo_log import log as logging
 from oslo_utils import units
 from oslo_utils import uuidutils
 
-from nova.i18n import _
 import nova.privsep
 
 
@@ -167,7 +166,7 @@ def readpty(path):
 
             return f.read()
 
-    except Exception as e:
+    except Exception as exc:
         # NOTE(mikal): dear internet, I see you looking at me with your
         # judging eyes. There's a story behind why we do this. You see, the
         # previous implementation did this:
@@ -186,8 +185,9 @@ def readpty(path):
         #
         # Therefore for now we log the errors, but keep on rolling. Volunteers
         # to help clean this up are welcome and will receive free beverages.
-        LOG.info(_('Ignored error while reading from instance console '
-                   'pty: %s'), e)
+        LOG.info(
+            'Ignored error while reading from instance console pty: %s', exc
+        )
         return ''
 
 
