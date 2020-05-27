@@ -66,14 +66,6 @@ def _monkey_patch():
     import threading
     orig_threading.current_thread.__globals__['_active'] = threading._active
 
-    # NOTE(rpodolyaka): import oslo_service first, so that it makes eventlet
-    # hub use a monotonic clock to avoid issues with drifts of system time (see
-    # LP 1510234 for details)
-    # NOTE(mdbooth): This was fixed in eventlet 0.21.0. Remove when bumping
-    # eventlet version.
-    import oslo_service  # noqa
-    eventlet.hubs.use_hub("oslo_service:service_hub")
-
     # NOTE(mdbooth): Log here instead of earlier to avoid loading oslo logging
     # before monkey patching.
     # NOTE(mdbooth): Ideally we would raise an exception here, as this is
