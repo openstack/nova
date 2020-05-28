@@ -369,7 +369,7 @@ class ServerGroupTestV21(ServerGroupTestBase):
         self.assertNotEqual(servers[0]['OS-EXT-SRV-ATTR:host'],
                             migrated_server['OS-EXT-SRV-ATTR:host'])
 
-    def test_migrate_with_anti_affinity_stale_scheduler_instance_info(self):
+    def test_migrate_with_anti_affinity_confirm_updates_scheduler(self):
         # Start additional host to test migration with anti-affinity
         compute3 = self.start_service('compute', host='host3')
 
@@ -398,23 +398,12 @@ class ServerGroupTestV21(ServerGroupTestBase):
         self.admin_api.post_server_action(servers[1]['id'], post)
         self._wait_for_state_change(self.admin_api, servers[1], 'ACTIVE')
 
-        # NOTE(gibi): This is bug 1869050. The confirm resize does to update
-        # the scheduler instance info so the migrate_server occupies two host
-        # according to the stale information in the scheduler.
-        # Alternatively waiting for the periodic _sync_scheduler_instance_info
-        # call would update the stale data.
+        server3 = self._boot_a_server_to_group(created_group)
 
-        server3 = self._boot_a_server_to_group(
-            created_group, expected_status='ERROR')
-        self.assertIn('No valid host', server3['fault']['message'])
-
-        # When bug 1869050 is fixed the following is expected:
-        # server3 = self._boot_a_server_to_group(created_group)
-        #
-        # # we have 3 servers that should occupy 3 different hosts
-        # hosts = {server['OS-EXT-SRV-ATTR:host']
-        #          for server in [servers[0], migrated_server, server3]}
-        # self.assertEqual(3, len(hosts))
+        # we have 3 servers that should occupy 3 different hosts
+        hosts = {server['OS-EXT-SRV-ATTR:host']
+                 for server in [servers[0], migrated_server, server3]}
+        self.assertEqual(3, len(hosts))
 
     def test_resize_to_same_host_with_anti_affinity(self):
         self.flags(allow_resize_to_same_host=True)
