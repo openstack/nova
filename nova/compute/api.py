@@ -4668,27 +4668,6 @@ class API(base.Base):
                                    supports_multiattach=supports_multiattach,
                                    delete_on_termination=delete_on_termination)
 
-    # TODO(stephenfin): Fold this back in now that cells v1 no longer needs to
-    # override it.
-    def _detach_volume(self, context, instance, volume):
-        """Detach volume from instance.
-
-        This method is separated to make it easier for cells version
-        to override.
-        """
-        try:
-            self.volume_api.begin_detaching(context, volume['id'])
-        except exception.InvalidInput as exc:
-            raise exception.InvalidVolume(reason=exc.format_message())
-        attachments = volume.get('attachments', {})
-        attachment_id = None
-        if attachments and instance.uuid in attachments:
-            attachment_id = attachments[instance.uuid]['attachment_id']
-        self._record_action_start(
-            context, instance, instance_actions.DETACH_VOLUME)
-        self.compute_rpcapi.detach_volume(context, instance=instance,
-                volume_id=volume['id'], attachment_id=attachment_id)
-
     def _detach_volume_shelved_offloaded(self, context, instance, volume):
         """Detach a volume from an instance in shelved offloaded state.
 
@@ -4728,7 +4707,18 @@ class API(base.Base):
         if instance.vm_state == vm_states.SHELVED_OFFLOADED:
             self._detach_volume_shelved_offloaded(context, instance, volume)
         else:
-            self._detach_volume(context, instance, volume)
+            try:
+                self.volume_api.begin_detaching(context, volume['id'])
+            except exception.InvalidInput as exc:
+                raise exception.InvalidVolume(reason=exc.format_message())
+            attachments = volume.get('attachments', {})
+            attachment_id = None
+            if attachments and instance.uuid in attachments:
+                attachment_id = attachments[instance.uuid]['attachment_id']
+            self._record_action_start(
+                context, instance, instance_actions.DETACH_VOLUME)
+            self.compute_rpcapi.detach_volume(context, instance=instance,
+                    volume_id=volume['id'], attachment_id=attachment_id)
 
     def _count_attachments_for_swap(self, ctxt, volume):
         """Counts the number of attachments for a swap-related volume.
