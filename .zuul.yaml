@@ -384,6 +384,9 @@
         - cyborg-tempest:
             irrelevant-files: *dsvm-irrelevant-files
             voting: false
+        - barbican-simple-crypto-devstack-tempest:
+            irrelevant-files: *dsvm-irrelevant-files
+            voting: false
     gate:
       jobs:
         - nova-grenade-multinode
@@ -404,8 +407,6 @@
         - ironic-tempest-bfv:
             irrelevant-files: *dsvm-irrelevant-files
         - ironic-tempest-ipa-wholedisk-direct-tinyipa-multinode:
-            irrelevant-files: *dsvm-irrelevant-files
-        - barbican-simple-crypto-devstack-tempest:
             irrelevant-files: *dsvm-irrelevant-files
         - legacy-grenade-dsvm-neutron-multinode-zero-downtime:
             irrelevant-files: *dsvm-irrelevant-files
