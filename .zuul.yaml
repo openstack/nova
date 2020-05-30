@@ -341,7 +341,6 @@
             voting: false
             irrelevant-files: *dsvm-irrelevant-files
         - devstack-plugin-ceph-tempest-py3:
-            voting: false
             irrelevant-files: *dsvm-irrelevant-files
         - neutron-tempest-linuxbridge:
             irrelevant-files:
