@@ -2,21 +2,14 @@
 nova-serialproxy
 ================
 
-------------------------------------------------------
-Websocket serial Proxy for OpenStack Nova serial ports
-------------------------------------------------------
-
-:Author: openstack@lists.launchpad.net
-:Copyright: OpenStack Foundation
-:Manual section: 1
-:Manual group: cloud computing
+.. program:: nova-serialproxy
 
 Synopsis
 ========
 
 ::
 
-  nova-serialproxy [options]
+  nova-serialproxy [<options>...]
 
 Description
 ===========

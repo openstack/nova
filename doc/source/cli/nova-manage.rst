@@ -4,21 +4,12 @@ nova-manage
 
 .. program:: nova-manage
 
--------------------------------------------
-Control and manage cloud computer instances
--------------------------------------------
-
-:Author: openstack@lists.openstack.org
-:Copyright: OpenStack Foundation
-:Manual section: 1
-:Manual group: cloud computing
-
 Synopsis
 ========
 
 ::
 
-  nova-manage <category> <action> [<args>]
+  nova-manage <category> [<action> [<options>...]]
 
 Description
 ===========

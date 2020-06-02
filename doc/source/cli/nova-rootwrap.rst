@@ -2,21 +2,14 @@
 nova-rootwrap
 =============
 
----------------------
-Root wrapper for Nova
----------------------
-
-:Author: openstack@lists.openstack.org
-:Copyright: OpenStack Foundation
-:Manual section: 1
-:Manual group: cloud computing
+.. program:: nova-rootwrap
 
 Synopsis
 ========
 
 ::
 
-  nova-rootwrap [options]
+  nova-rootwrap [<options>...]
 
 Description
 ===========

@@ -78,22 +78,46 @@ pygments_style = 'native'
 # List of tuples 'sourcefile', 'target', u'title', u'Authors name', 'manual'
 
 _man_pages = [
-    ('nova-api', u'Cloud controller fabric'),
-    ('nova-api-metadata', u'Cloud controller fabric'),
-    ('nova-api-os-compute', u'Cloud controller fabric'),
-    ('nova-compute', u'Cloud controller fabric'),
-    ('nova-conductor', u'Cloud controller fabric'),
-    ('nova-manage', u'Cloud controller fabric'),
-    ('nova-novncproxy', u'Cloud controller fabric'),
-    ('nova-rootwrap', u'Cloud controller fabric'),
-    ('nova-scheduler', u'Cloud controller fabric'),
-    ('nova-serialproxy', u'Cloud controller fabric'),
-    ('nova-spicehtml5proxy', u'Cloud controller fabric'),
-    ('nova-status', u'Cloud controller fabric'),
+    ('nova-api', 'Server for the OpenStack Compute API service.'),
+    (
+        'nova-api-metadata',
+        'Server for the OpenStack Compute metadata API service.',
+    ),
+    (
+        'nova-api-os-compute',
+        'Server for the OpenStack Compute API service.',
+    ),
+    ('nova-compute', 'Server for the OpenStack Compute compute service.'),
+    ('nova-conductor', 'Server for the OpenStack Compute conductor service.'),
+    ('nova-manage', 'Management tool for the OpenStack Compute services.'),
+    (
+        'nova-novncproxy',
+        'Server for the OpenStack Compute VNC console proxy service.'
+    ),
+    (
+        'nova-rootwrap',
+        'Root wrapper daemon for the OpenStack Compute service.',
+    ),
+    (
+        'nova-scheduler',
+        'Server for the OpenStack Compute scheduler service.',
+    ),
+    (
+        'nova-serialproxy',
+        'Server for the OpenStack Compute serial console proxy service.',
+    ),
+    (
+        'nova-spicehtml5proxy',
+        'Server for the OpenStack Compute SPICE console proxy service.',
+    ),
+    (
+        'nova-status',
+        'Inspect configuration status for the OpenStack Compute services.',
+    ),
 ]
 
 man_pages = [
-    ('cli/%s' % name, name, description, [u'OpenStack'], 1)
+    ('cli/%s' % name, name, description, ['openstack@lists.openstack.org'], 1)
     for name, description in _man_pages]
 
 # -- Options for HTML output --------------------------------------------------
