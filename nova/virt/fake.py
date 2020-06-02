@@ -230,9 +230,6 @@ class FakeDriver(driver.ComputeDriver):
     def set_admin_password(self, instance, new_pass):
         pass
 
-    def inject_file(self, instance, b64_path, b64_contents):
-        pass
-
     def resume_state_on_host_boot(self, context, instance, network_info,
                                   block_device_info=None):
         pass

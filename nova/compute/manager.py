@@ -4045,27 +4045,6 @@ class ComputeManager(manager.Manager):
             raise exception.InstancePasswordSetFailed(
                 instance=instance.uuid, reason=_msg)
 
-    @wrap_exception()
-    @reverts_task_state
-    @wrap_instance_fault
-    def inject_file(self, context, path, file_contents, instance):
-        """Write a file to the specified path in an instance on this host."""
-        # NOTE(russellb) Remove this method, as well as the underlying virt
-        # driver methods, when the compute rpc interface is bumped to 4.x
-        # as it is no longer used.
-        context = context.elevated()
-        current_power_state = self._get_power_state(context, instance)
-        expected_state = power_state.RUNNING
-        if current_power_state != expected_state:
-            LOG.warning('trying to inject a file into a non-running '
-                        '(state: %(current_state)s expected: '
-                        '%(expected_state)s)',
-                        {'current_state': current_power_state,
-                         'expected_state': expected_state},
-                        instance=instance)
-        LOG.info('injecting file to %s', path, instance=instance)
-        self.driver.inject_file(instance, path, file_contents)
-
     def _get_rescue_image(self, context, instance, rescue_image_ref=None):
         """Determine what image should be used to boot the rescue VM."""
         # 1. If rescue_image_ref is passed in, use that for rescue.

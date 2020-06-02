@@ -263,12 +263,6 @@ class XenAPIDriver(driver.ComputeDriver):
         """Set the root/admin password on the VM instance."""
         self._vmops.set_admin_password(instance, new_pass)
 
-    def inject_file(self, instance, b64_path, b64_contents):
-        """Create a file on the VM instance. The file path and contents
-        should be base64-encoded.
-        """
-        self._vmops.inject_file(instance, b64_path, b64_contents)
-
     def change_instance_metadata(self, context, instance, diff):
         """Apply a diff to the instance metadata."""
         self._vmops.change_instance_metadata(instance, diff)
