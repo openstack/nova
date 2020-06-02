@@ -2143,8 +2143,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self.vif_driver.plug(instance, vif)
         cfg = self.vif_driver.get_config(instance, vif, image_meta,
                                          instance.flavor,
-                                         CONF.libvirt.virt_type,
-                                         self._host)
+                                         CONF.libvirt.virt_type)
         try:
             state = guest.get_power_state(self._host)
             live = state in (power_state.RUNNING, power_state.PAUSED)
@@ -2185,7 +2184,7 @@ class LibvirtDriver(driver.ComputeDriver):
         cfg = self.vif_driver.get_config(instance, vif,
                                          instance.image_meta,
                                          instance.flavor,
-                                         CONF.libvirt.virt_type, self._host)
+                                         CONF.libvirt.virt_type)
         interface = guest.get_interface_by_cfg(cfg)
         try:
             self.vif_driver.unplug(instance, vif)
@@ -4284,8 +4283,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                                      vif,
                                                      instance.image_meta,
                                                      instance.flavor,
-                                                     CONF.libvirt.virt_type,
-                                                     self._host)
+                                                     CONF.libvirt.virt_type)
                     LOG.debug('Attaching direct passthrough port %(port)s '
                               'to %(dom)s', {'port': vif, 'dom': guest.id},
                               instance=instance)
@@ -5953,8 +5951,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         for vif in network_info:
             config = self.vif_driver.get_config(
-                instance, vif, image_meta,
-                flavor, virt_type, self._host)
+                instance, vif, image_meta, flavor, virt_type,
+            )
             guest.add_device(config)
 
         self._create_consoles(virt_type, guest, instance, flavor, image_meta)
@@ -8884,7 +8882,7 @@ class LibvirtDriver(driver.ComputeDriver):
                         image_meta=instance.image_meta,
                         inst_type=instance.flavor,
                         virt_type=CONF.libvirt.virt_type,
-                        host=self._host)
+                    )
                     self._detach_direct_passthrough_vifs(context,
                         migrate_data, instance)
                 new_resources = None

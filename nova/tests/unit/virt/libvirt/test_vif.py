@@ -32,7 +32,6 @@ from nova import test
 from nova.tests.unit.virt import fakelibosinfo
 from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt.libvirt import config as vconfig
-from nova.virt.libvirt import host
 from nova.virt.libvirt import vif
 
 CONF = cfg.CONF
@@ -591,10 +590,8 @@ class LibvirtVifTestCase(test.NoDBTestCase):
             image_meta = objects.ImageMeta.from_dict({})
 
         conf = self._get_conf()
-        hostimpl = host.Host("qemu:///system")
         nic = driver.get_config(self.instance, vif, image_meta,
-                                flavor, CONF.libvirt.virt_type,
-                                hostimpl)
+                                flavor, CONF.libvirt.virt_type)
         # TODO(stephenfin): There doesn't appear to be any reason we should do
         # this: just return 'nic.to_xml()' and remove '_get_node'
         conf.add_device(nic)

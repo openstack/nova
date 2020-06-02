@@ -18515,8 +18515,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         expected = drvr.vif_driver.get_config(instance, network_info[0],
                                               fake_image_meta,
                                               instance.get_flavor(),
-                                              CONF.libvirt.virt_type,
-                                              drvr._host)
+                                              CONF.libvirt.virt_type)
         mock_get_config = self.useFixture(fixtures.MockPatchObject(
             drvr.vif_driver, 'get_config')).mock
         mock_get_config.return_value = expected
@@ -18533,7 +18532,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         mock_get_config.assert_called_once_with(
             instance, network_info[0], test.MatchType(objects.ImageMeta),
-            test.MatchType(objects.Flavor), CONF.libvirt.virt_type, drvr._host)
+            test.MatchType(objects.Flavor), CONF.libvirt.virt_type)
 
     @mock.patch.object(lockutils, "external_lock")
     def test_attach_interface_get_config(self, mock_lock):
@@ -22461,7 +22460,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             {'id': instance.image_ref})
         expected = self.drvr.vif_driver.get_config(
             instance, network_info[0], fake_image_meta, instance.flavor,
-            CONF.libvirt.virt_type, self.drvr._host)
+            CONF.libvirt.virt_type)
         with test.nested(
             mock.patch.object(host.Host, '_get_domain', return_value=domain),
             mock.patch.object(domain, 'attachDeviceFlags'),
@@ -22484,7 +22483,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             mock_info.assert_called_with()
             mock_get_config.assert_called_with(
                 instance, network_info[0], fake_image_meta, instance.flavor,
-                CONF.libvirt.virt_type, self.drvr._host)
+                CONF.libvirt.virt_type)
             mock_build_device_metadata.assert_called_with(self.context,
                                                           instance)
             mock_attach_device_flags.assert_called_with(
@@ -22524,7 +22523,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             {'id': instance.image_ref})
         expected = self.drvr.vif_driver.get_config(
             instance, network_info[0], fake_image_meta, instance.flavor,
-            CONF.libvirt.virt_type, self.drvr._host)
+            CONF.libvirt.virt_type)
         mock_build.return_value = objects.InstanceDeviceMetadata()
 
         with test.nested(
@@ -22536,8 +22535,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 
             mock_get_config.assert_called_once_with(
                 instance, network_info[0], test.MatchType(objects.ImageMeta),
-                test.MatchType(objects.Flavor), CONF.libvirt.virt_type,
-                self.drvr._host)
+                test.MatchType(objects.Flavor), CONF.libvirt.virt_type)
             mock_get_domain.assert_called_once_with(instance)
             mock_info.assert_called_once_with()
             mock_build.assert_called_once_with(self.context, instance)
@@ -22620,8 +22618,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         mock_get_guest.assert_called_once_with(instance)
         mock_get_config.assert_called_once_with(
             instance, network_info[0], test.MatchType(objects.ImageMeta),
-            test.MatchType(objects.Flavor), CONF.libvirt.virt_type,
-            self.drvr._host)
+            test.MatchType(objects.Flavor), CONF.libvirt.virt_type)
         mock_get_interface.assert_has_calls(
             [mock.call(expected_cfg) for x in range(len(get_interface_calls))])
 
@@ -22759,8 +22756,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             self.assertEqual(4, mock_get_interface.call_count)
             mock_get_config.assert_called_once_with(
                 instance, network_info[0], test.MatchType(objects.ImageMeta),
-                test.MatchType(objects.Flavor), CONF.libvirt.virt_type,
-                self.drvr._host)
+                test.MatchType(objects.Flavor), CONF.libvirt.virt_type)
             mock_get_domain.assert_called_once_with(instance)
             mock_info.assert_called_once_with()
             mock_detach.assert_called_once_with(expected.to_xml(),
