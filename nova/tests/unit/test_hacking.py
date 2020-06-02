@@ -173,15 +173,15 @@ class HackingTestCase(test.NoDBTestCase):
         self.assertEqual(len(list(checks.assert_true_or_false_with_in(
             "self.assertFalse(some in list1 and some2 in list2)"))), 0)
 
-    def test_no_translate_debug_logs(self):
-        self.assertEqual(len(list(checks.no_translate_debug_logs(
+    def test_no_translate_logs(self):
+        self.assertEqual(len(list(checks.no_translate_logs(
             "LOG.debug(_('foo'))", "nova/scheduler/foo.py"))), 1)
 
-        self.assertEqual(len(list(checks.no_translate_debug_logs(
+        self.assertEqual(len(list(checks.no_translate_logs(
             "LOG.debug('foo')", "nova/scheduler/foo.py"))), 0)
 
-        self.assertEqual(len(list(checks.no_translate_debug_logs(
-            "LOG.info(_('foo'))", "nova/scheduler/foo.py"))), 0)
+        self.assertEqual(len(list(checks.no_translate_logs(
+            "LOG.info(_('foo'))", "nova/scheduler/foo.py"))), 1)
 
     def test_no_setting_conf_directly_in_tests(self):
         self.assertEqual(len(list(checks.no_setting_conf_directly_in_tests(
@@ -216,22 +216,16 @@ class HackingTestCase(test.NoDBTestCase):
 
     def test_check_explicit_underscore_import(self):
         self.assertEqual(len(list(checks.check_explicit_underscore_import(
-            "LOG.info(_('My info message'))",
-            "cinder/tests/other_files.py"))), 1)
-        self.assertEqual(len(list(checks.check_explicit_underscore_import(
             "msg = _('My message')",
             "cinder/tests/other_files.py"))), 1)
         self.assertEqual(len(list(checks.check_explicit_underscore_import(
             "from cinder.i18n import _",
             "cinder/tests/other_files.py"))), 0)
         self.assertEqual(len(list(checks.check_explicit_underscore_import(
-            "LOG.info(_('My info message'))",
-            "cinder/tests/other_files.py"))), 0)
-        self.assertEqual(len(list(checks.check_explicit_underscore_import(
             "msg = _('My message')",
             "cinder/tests/other_files.py"))), 0)
         self.assertEqual(len(list(checks.check_explicit_underscore_import(
-            "from cinder.i18n import _, _LW",
+            "from cinder.i18n import _",
             "cinder/tests/other_files2.py"))), 0)
         self.assertEqual(len(list(checks.check_explicit_underscore_import(
             "msg = _('My message')",
@@ -403,23 +397,14 @@ class HackingTestCase(test.NoDBTestCase):
 
 
                _ = fake_tran
-               _LI = _
-               _LW = _
-               _LE = _
-               _LC = _
 
 
                def f(a, b):
                    msg = _('test') + 'add me'
-                   msg = _LI('test') + 'add me'
-                   msg = _LW('test') + 'add me'
-                   msg = _LE('test') + 'add me'
-                   msg = _LC('test') + 'add me'
                    msg = 'add to me' + _('test')
                    return msg
                """
-        errors = [(13, 10, 'N326'), (14, 10, 'N326'), (15, 10, 'N326'),
-                  (16, 10, 'N326'), (17, 10, 'N326'), (18, 24, 'N326')]
+        errors = [(9, 10, 'N326'), (10, 24, 'N326')]
         self._assert_has_errors(code, checker, expected_errors=errors)
 
         code = """

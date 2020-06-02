@@ -25,7 +25,7 @@ Nova Specific Commandments
   assertIsInstance(A, B).
 - [N317] Change assertEqual(type(A), B) by optimal assert like
   assertIsInstance(A, B)
-- [N319] Validate that debug level logs are not translated.
+- [N319] Validate that logs are not translated.
 - [N320] Setting CONF.* attributes directly in tests is forbidden. Use
   self.flags(option=value) instead.
 - [N322] Method's default argument shouldn't be mutable
