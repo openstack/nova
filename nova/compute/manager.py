@@ -2384,20 +2384,18 @@ class ComputeManager(manager.Manager):
             with excutils.save_and_reraise_exception():
                 self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
-                tb = traceback.format_exc()
                 compute_utils.notify_about_instance_create(
                     context, instance, self.host,
                     phase=fields.NotificationPhase.ERROR, exception=e,
-                    bdms=block_device_mapping, tb=tb)
+                    bdms=block_device_mapping)
         except exception.ComputeResourcesUnavailable as e:
             LOG.debug(e.format_message(), instance=instance)
             self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
-            tb = traceback.format_exc()
             compute_utils.notify_about_instance_create(
                     context, instance, self.host,
                     phase=fields.NotificationPhase.ERROR, exception=e,
-                    bdms=block_device_mapping, tb=tb)
+                    bdms=block_device_mapping)
             raise exception.RescheduledException(
                     instance_uuid=instance.uuid, reason=e.format_message())
         except exception.BuildAbortException as e:
@@ -2405,21 +2403,19 @@ class ComputeManager(manager.Manager):
                 LOG.debug(e.format_message(), instance=instance)
                 self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
-                tb = traceback.format_exc()
                 compute_utils.notify_about_instance_create(
                     context, instance, self.host,
                     phase=fields.NotificationPhase.ERROR, exception=e,
-                    bdms=block_device_mapping, tb=tb)
+                    bdms=block_device_mapping)
         except exception.NoMoreFixedIps as e:
             LOG.warning('No more fixed IP to be allocated',
                         instance=instance)
             self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
-            tb = traceback.format_exc()
             compute_utils.notify_about_instance_create(
                     context, instance, self.host,
                     phase=fields.NotificationPhase.ERROR, exception=e,
-                    bdms=block_device_mapping, tb=tb)
+                    bdms=block_device_mapping)
             msg = _('Failed to allocate the network(s) with error %s, '
                     'not rescheduling.') % e.format_message()
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
@@ -2434,11 +2430,10 @@ class ComputeManager(manager.Manager):
                           instance=instance)
             self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
-            tb = traceback.format_exc()
             compute_utils.notify_about_instance_create(
                     context, instance, self.host,
                     phase=fields.NotificationPhase.ERROR, exception=e,
-                    bdms=block_device_mapping, tb=tb)
+                    bdms=block_device_mapping)
             msg = _('Failed to allocate the network(s), not rescheduling.')
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=msg)
@@ -2457,11 +2452,10 @@ class ComputeManager(manager.Manager):
                 exception.RequestedVRamTooHigh) as e:
             self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
-            tb = traceback.format_exc()
             compute_utils.notify_about_instance_create(
                     context, instance, self.host,
                     phase=fields.NotificationPhase.ERROR, exception=e,
-                    bdms=block_device_mapping, tb=tb)
+                    bdms=block_device_mapping)
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=e.format_message())
         except Exception as e:
@@ -2469,11 +2463,10 @@ class ComputeManager(manager.Manager):
                           instance=instance)
             self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
-            tb = traceback.format_exc()
             compute_utils.notify_about_instance_create(
                     context, instance, self.host,
                     phase=fields.NotificationPhase.ERROR, exception=e,
-                    bdms=block_device_mapping, tb=tb)
+                    bdms=block_device_mapping)
             raise exception.RescheduledException(
                     instance_uuid=instance.uuid, reason=six.text_type(e))
 
@@ -2505,11 +2498,10 @@ class ComputeManager(manager.Manager):
             with excutils.save_and_reraise_exception():
                 self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
-                tb = traceback.format_exc()
                 compute_utils.notify_about_instance_create(
                     context, instance, self.host,
                     phase=fields.NotificationPhase.ERROR, exception=e,
-                    bdms=block_device_mapping, tb=tb)
+                    bdms=block_device_mapping)
 
         self._update_scheduler_instance_info(context, instance)
         self._notify_about_instance_usage(context, instance, 'create.end',
@@ -3280,13 +3272,11 @@ class ComputeManager(manager.Manager):
                               block_device_info=new_block_device_info)
 
     def _notify_instance_rebuild_error(self, context, instance, error, bdms):
-        tb = traceback.format_exc()
         self._notify_about_instance_usage(context, instance,
                                           'rebuild.error', fault=error)
         compute_utils.notify_about_instance_rebuild(
             context, instance, self.host,
-            phase=fields.NotificationPhase.ERROR, exception=error, bdms=bdms,
-            tb=tb)
+            phase=fields.NotificationPhase.ERROR, exception=error, bdms=bdms)
 
     @messaging.expected_exceptions(exception.PreserveEphemeralNotSupported)
     @wrap_exception()
@@ -3793,12 +3783,11 @@ class ComputeManager(manager.Manager):
                             instance, error, exc_info)
                     self._notify_about_instance_usage(context, instance,
                             'reboot.error', fault=error)
-                    tb = traceback.format_exc()
                     compute_utils.notify_about_instance_action(
                         context, instance, self.host,
                         action=fields.NotificationAction.REBOOT,
                         phase=fields.NotificationPhase.ERROR,
-                        exception=error, bdms=bdms, tb=tb
+                        exception=error, bdms=bdms
                     )
                     ctxt.reraise = False
                 else:
@@ -5329,7 +5318,7 @@ class ComputeManager(manager.Manager):
                 action=fields.NotificationAction.RESIZE,
                 phase=fields.NotificationPhase.ERROR,
                 exception=error,
-                tb=','.join(traceback.format_exception(*exc_info)))
+            )
 
         if rescheduled:
             self._log_original_error(exc_info, instance_uuid)
@@ -5342,7 +5331,7 @@ class ComputeManager(manager.Manager):
                 action=fields.NotificationAction.RESIZE,
                 phase=fields.NotificationPhase.ERROR,
                 exception=exc_info[1],
-                tb=','.join(traceback.format_exception(*exc_info)))
+            )
         else:
             # not re-scheduling
             six.reraise(*exc_info)
@@ -7043,13 +7032,12 @@ class ComputeManager(manager.Manager):
                                   exc, instance=instance)
                 else:
                     self.volume_api.unreserve_volume(context, bdm.volume_id)
-                tb = traceback.format_exc()
                 compute_utils.notify_about_volume_attach_detach(
                     context, instance, self.host,
                     action=fields.NotificationAction.VOLUME_ATTACH,
                     phase=fields.NotificationPhase.ERROR,
                     exception=e,
-                    volume_id=bdm.volume_id, tb=tb)
+                    volume_id=bdm.volume_id)
 
         info = {'volume_id': bdm.volume_id}
         self._notify_about_instance_usage(
@@ -7250,11 +7238,10 @@ class ComputeManager(manager.Manager):
         except Exception as ex:
             failed = True
             with excutils.save_and_reraise_exception():
-                tb = traceback.format_exc()
                 compute_utils.notify_about_volume_swap(
                     context, instance, self.host,
                     fields.NotificationPhase.ERROR,
-                    old_volume_id, new_volume_id, ex, tb)
+                    old_volume_id, new_volume_id, ex)
                 if new_cinfo:
                     msg = ("Failed to swap volume %(old_volume_id)s "
                            "for %(new_volume_id)s")
@@ -7563,12 +7550,11 @@ class ComputeManager(manager.Manager):
                         instance=instance)
             self._deallocate_port_for_instance(context, instance, port_id)
 
-            tb = traceback.format_exc()
             compute_utils.notify_about_instance_action(
                 context, instance, self.host,
                 action=fields.NotificationAction.INTERFACE_ATTACH,
                 phase=fields.NotificationPhase.ERROR,
-                exception=ex, tb=tb)
+                exception=ex)
 
             raise exception.InterfaceAttachFailed(
                 instance_uuid=instance.uuid)

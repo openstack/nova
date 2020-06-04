@@ -826,7 +826,7 @@ class _BaseTaskTestCase(object):
         mock_notify.assert_called_once_with(
             self.context, 'build_instances',
             instance.uuid, test.MatchType(dict), 'error',
-            test.MatchType(exc.MaxRetriesExceeded), test.MatchType(str))
+            test.MatchType(exc.MaxRetriesExceeded))
 
     @mock.patch.object(conductor_manager.ComputeTaskManager,
             '_destroy_build_request')
@@ -2228,13 +2228,11 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         mock_notify.assert_called_once_with(
             test.MatchType(context.RequestContext), 'build_instances',
             instance.uuid, test.MatchType(dict), 'error',
-            test.MatchType(Exception), test.MatchType(str))
+            test.MatchType(Exception))
         request_spec_dict = mock_notify.call_args_list[0][0][3]
         for key in ('instance_type', 'num_instances', 'instance_properties',
                     'image'):
             self.assertIn(key, request_spec_dict)
-        tb = mock_notify.call_args_list[0][0][6]
-        self.assertIn('Traceback (most recent call last):', tb)
 
     @mock.patch('nova.objects.TagList.destroy')
     @mock.patch('nova.objects.TagList.create')
@@ -2465,13 +2463,11 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         mock_notify.assert_called_once_with(
             test.MatchType(context.RequestContext), 'build_instances',
             instance.uuid, test.MatchType(dict), 'error',
-            test.MatchType(exc.TooManyInstances), test.MatchType(str))
+            test.MatchType(exc.TooManyInstances))
         request_spec_dict = mock_notify.call_args_list[0][0][3]
         for key in ('instance_type', 'num_instances', 'instance_properties',
                     'image'):
             self.assertIn(key, request_spec_dict)
-        tb = mock_notify.call_args_list[0][0][6]
-        self.assertIn('Traceback (most recent call last):', tb)
 
     @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')
     @mock.patch('nova.objects.quotas.Quotas.check_deltas')
@@ -2712,19 +2708,19 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             mock.call(
                 test.MatchType(context.RequestContext), 'build_instances',
                 bare_br.instance_uuid, test.MatchType(dict), 'error',
-                test.MatchType(Exception), test.MatchType(str)),
+                test.MatchType(Exception)),
             mock.call(
                 test.MatchType(context.RequestContext), 'build_instances',
                 inst_br.instance_uuid, test.MatchType(dict), 'error',
-                test.MatchType(Exception), test.MatchType(str)),
+                test.MatchType(Exception)),
             mock.call(
                 test.MatchType(context.RequestContext), 'build_instances',
                 deleted_br.instance_uuid, test.MatchType(dict), 'error',
-                test.MatchType(Exception), test.MatchType(str)),
+                test.MatchType(Exception)),
             mock.call(
                 test.MatchType(context.RequestContext), 'build_instances',
                 fast_deleted_br.instance_uuid, test.MatchType(dict), 'error',
-                test.MatchType(Exception), test.MatchType(str))],
+                test.MatchType(Exception))],
             any_order=True)
 
         for i in range(0, 3):
@@ -2760,7 +2756,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         mock_notify.assert_called_once_with(
             test.MatchType(context.RequestContext), 'build_instances',
             inst.uuid, test.MatchType(dict), 'error',
-            test.MatchType(Exception), test.MatchType(str))
+            test.MatchType(Exception))
         # traceback.format_exc() returns 'NoneType'
         # because an exception is not raised in this test.
         # So the argument for traceback is not checked.
@@ -3480,13 +3476,11 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         mock_notify.assert_called_once_with(
             self.context, 'build_instances',
             instance.uuid, test.MatchType(dict), 'error',
-            test.MatchType(exc.MaxRetriesExceeded), test.MatchType(str))
+            test.MatchType(exc.MaxRetriesExceeded))
         request_spec_dict = mock_notify.call_args_list[0][0][3]
         for key in ('instance_type', 'num_instances', 'instance_properties',
                     'image'):
             self.assertIn(key, request_spec_dict)
-        tb = mock_notify.call_args_list[0][0][6]
-        self.assertIn('Traceback (most recent call last):', tb)
 
     @mock.patch('nova.compute.utils.notify_about_compute_task_error')
     @mock.patch('nova.objects.Instance.save')
@@ -3518,13 +3512,11 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         mock_notify.assert_called_once_with(
             self.context, 'build_instances',
             instance.uuid, test.MatchType(dict), 'error',
-            test.MatchType(exc.NoValidHost), test.MatchType(str))
+            test.MatchType(exc.NoValidHost))
         request_spec_dict = mock_notify.call_args_list[0][0][3]
         for key in ('instance_type', 'num_instances', 'instance_properties',
                     'image'):
             self.assertIn(key, request_spec_dict)
-        tb = mock_notify.call_args_list[0][0][6]
-        self.assertIn('Traceback (most recent call last):', tb)
 
     @mock.patch('nova.scheduler.utils.claim_resources', return_value=True)
     @mock.patch('nova.scheduler.utils.fill_provider_mapping')

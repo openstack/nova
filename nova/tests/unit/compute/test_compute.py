@@ -424,8 +424,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                 mock.call(self.context, instance, 'fake-mini',
                           action='volume_attach', phase='error',
                           volume_id=uuids.volume_id,
-                          exception=expected_exception,
-                          tb=mock.ANY),
+                          exception=expected_exception),
             ])
             mock_event.assert_called_once_with(
                 self.context, 'compute_attach_volume', CONF.host,
@@ -465,8 +464,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                 mock.call(self.context, instance, 'fake-mini',
                           action='volume_attach', phase='error',
                           volume_id=uuids.volume_id,
-                          exception=expected_exception,
-                          tb=mock.ANY),
+                          exception=expected_exception),
             ])
 
     @mock.patch.object(compute_manager.LOG, 'debug')
@@ -514,8 +512,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                 mock.call(self.context, instance, 'fake-mini',
                           action='volume_attach', phase='error',
                           volume_id=uuids.volume_id,
-                          exception=expected_exception,
-                          tb=mock.ANY),
+                          exception=expected_exception),
             ])
             mock_event.assert_called_once_with(
                 self.context, 'compute_attach_volume', CONF.host,
@@ -3153,7 +3150,7 @@ class ComputeTestCase(BaseTestCase,
                 notify_action_call_list.append(
                     mock.call(econtext, instance, 'fake-mini',
                               action='reboot', phase='error', exception=fault,
-                              bdms=bdms, tb=mock.ANY))
+                              bdms=bdms))
             notify_call_list.append(mock.call(econtext, instance,
                                               'reboot.end'))
             notify_action_call_list.append(
@@ -10450,7 +10447,7 @@ class ComputeAPITestCase(BaseTestCase):
                 mock.call(self.context, instance, self.compute.host,
                           action='interface_attach',
                           exception=mock_attach.side_effect,
-                          phase='error', tb=mock.ANY)])
+                          phase='error')])
 
     @mock.patch.object(compute_utils, 'notify_about_instance_action')
     def test_detach_interface(self, mock_notify):
@@ -12583,11 +12580,12 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
             raise test.TestingException("Original")
         except Exception:
             exc_info = sys.exc_info()
-            # because we're not retrying, we should re-raise the exception
-            self.assertRaises(test.TestingException,
-                self.compute._reschedule_resize_or_reraise, self.context,
-                self.instance, exc_info, self.instance_type,
-                self.request_spec, filter_properties, None)
+
+        # because we're not retrying, we should re-raise the exception
+        self.assertRaises(test.TestingException,
+            self.compute._reschedule_resize_or_reraise, self.context,
+            self.instance, exc_info, self.instance_type,
+            self.request_spec, filter_properties, None)
 
     def test_reschedule_resize_or_reraise_no_retry_info(self):
         """Test behavior when ``filter_properties`` doesn't contain 'retry'.
@@ -12601,11 +12599,12 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
             raise test.TestingException("Original")
         except Exception:
             exc_info = sys.exc_info()
-            # because we're not retrying, we should re-raise the exception
-            self.assertRaises(test.TestingException,
-                self.compute._reschedule_resize_or_reraise, self.context,
-                self.instance, exc_info, self.instance_type,
-                self.request_spec, filter_properties, None)
+
+        # because we're not retrying, we should re-raise the exception
+        self.assertRaises(test.TestingException,
+            self.compute._reschedule_resize_or_reraise, self.context,
+            self.instance, exc_info, self.instance_type,
+            self.request_spec, filter_properties, None)
 
     @mock.patch.object(compute_manager.ComputeManager, '_instance_update')
     @mock.patch('nova.conductor.api.ComputeTaskAPI.resize_instance',
@@ -12623,23 +12622,24 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
             raise test.TestingException('Original')
         except Exception:
             exc_info = sys.exc_info()
-            self.assertRaises(test.TestingException,
-                self.compute._reschedule_resize_or_reraise, self.context,
-                self.instance, exc_info, self.instance_type,
-                self.request_spec, filter_properties, None)
 
-            mock_update.assert_called_once_with(
-                self.context, mock.ANY, task_state=task_states.RESIZE_PREP)
-            mock_resize.assert_called_once_with(
-                self.context, mock.ANY,
-                {'filter_properties': filter_properties}, self.instance_type,
-                request_spec=self.request_spec, host_list=None)
-            mock_notify.assert_called_once_with(
-                self.context, self.instance, 'fake-mini', action='resize',
-                phase='error', exception=mock_resize.side_effect, tb=mock.ANY)
-            # If not rescheduled, the original resize exception should not be
-            # logged.
-            mock_log.assert_not_called()
+        self.assertRaises(test.TestingException,
+            self.compute._reschedule_resize_or_reraise, self.context,
+            self.instance, exc_info, self.instance_type,
+            self.request_spec, filter_properties, None)
+
+        mock_update.assert_called_once_with(
+            self.context, mock.ANY, task_state=task_states.RESIZE_PREP)
+        mock_resize.assert_called_once_with(
+            self.context, mock.ANY,
+            {'filter_properties': filter_properties}, self.instance_type,
+            request_spec=self.request_spec, host_list=None)
+        mock_notify.assert_called_once_with(
+            self.context, self.instance, 'fake-mini', action='resize',
+            phase='error', exception=mock_resize.side_effect)
+        # If not rescheduled, the original resize exception should not be
+        # logged.
+        mock_log.assert_not_called()
 
     @mock.patch.object(compute_manager.ComputeManager, '_instance_update')
     @mock.patch('nova.conductor.api.ComputeTaskAPI.resize_instance')
@@ -12654,21 +12654,21 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
         except Exception:
             exc_info = sys.exc_info()
 
-            self.compute._reschedule_resize_or_reraise(
-                self.context, self.instance, exc_info, self.instance_type,
-                self.request_spec, filter_properties, None)
+        self.compute._reschedule_resize_or_reraise(
+            self.context, self.instance, exc_info, self.instance_type,
+            self.request_spec, filter_properties, None)
 
-            mock_update.assert_called_once_with(
-                self.context, mock.ANY, task_state=task_states.RESIZE_PREP)
-            mock_resize.assert_called_once_with(
-                self.context, mock.ANY,
-                {'filter_properties': filter_properties}, self.instance_type,
-                request_spec=self.request_spec, host_list=None)
-            mock_notify.assert_called_once_with(
-                self.context, self.instance, 'fake-mini', action='resize',
-                phase='error', exception=exc_info[1], tb=mock.ANY)
-            # If rescheduled, the original resize exception should be logged.
-            mock_log.assert_called_once_with(exc_info, self.instance.uuid)
+        mock_update.assert_called_once_with(
+            self.context, mock.ANY, task_state=task_states.RESIZE_PREP)
+        mock_resize.assert_called_once_with(
+            self.context, mock.ANY,
+            {'filter_properties': filter_properties}, self.instance_type,
+            request_spec=self.request_spec, host_list=None)
+        mock_notify.assert_called_once_with(
+            self.context, self.instance, 'fake-mini', action='resize',
+            phase='error', exception=exc_info[1])
+        # If rescheduled, the original resize exception should be logged.
+        mock_log.assert_called_once_with(exc_info, self.instance.uuid)
 
 
 class ComputeInactiveImageTestCase(BaseTestCase):

@@ -9,9 +9,9 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-import inspect
 
-import six
+import inspect
+import traceback as tb
 
 from nova.notifications.objects import base
 from nova.objects import base as nova_base
@@ -41,19 +41,38 @@ class ExceptionPayload(base.NotificationPayloadBase):
         self.traceback = traceback
 
     @classmethod
-    def from_exc_and_traceback(cls, fault, traceback):
-        trace = inspect.trace()[-1]
+    def from_exception(cls, fault: Exception):
+        traceback = fault.__traceback__
+
+        # NOTE(stephenfin): inspect.trace() will only return something if we're
+        # inside the scope of an exception handler. If we are not, we fallback
+        # to extracting information from the traceback. This is lossy, since
+        # the stack stops at the exception handler, not the exception raise.
+        # Check the inspect docs for more information.
+        #
+        # https://docs.python.org/3/library/inspect.html#types-and-members
+        trace = inspect.trace()
+        if trace:
+            module = inspect.getmodule(trace[-1][0])
+            function_name = trace[-1][3]
+        else:
+            module = inspect.getmodule(traceback)
+            function_name = traceback.tb_frame.f_code.co_name
+
+        module_name = module.__name__ if module else 'unknown'
+
         # TODO(gibi): apply strutils.mask_password on exception_message and
         # consider emitting the exception_message only if the safe flag is
         # true in the exception like in the REST API
-        module = inspect.getmodule(trace[0])
-        module_name = module.__name__ if module else 'unknown'
         return cls(
-                function_name=trace[3],
-                module_name=module_name,
-                exception=fault.__class__.__name__,
-                exception_message=six.text_type(fault),
-                traceback=traceback)
+            function_name=function_name,
+            module_name=module_name,
+            exception=fault.__class__.__name__,
+            exception_message=str(fault),
+            # NOTE(stephenfin): the first argument to format_exception is
+            # ignored since Python 3.5
+            traceback=','.join(tb.format_exception(None, fault, traceback)),
+        )
 
 
 @base.notification_sample('compute-exception.json')

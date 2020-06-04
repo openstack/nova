@@ -17,7 +17,6 @@
 import collections
 import re
 import sys
-import traceback
 
 import os_resource_classes as orc
 import os_traits
@@ -840,8 +839,7 @@ def set_vm_state_and_notify(context, instance_uuid, service, method, updates,
     event_type = '%s.%s' % (service, method)
     notifier.error(context, event_type, payload)
     compute_utils.notify_about_compute_task_error(
-        context, method, instance_uuid, request_spec, vm_state, ex,
-        traceback.format_exc())
+        context, method, instance_uuid, request_spec, vm_state, ex)
 
 
 def build_filter_properties(scheduler_hints, forced_host,

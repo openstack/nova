@@ -34,7 +34,6 @@ import os
 import socket
 import sys
 import threading
-import traceback
 
 from eventlet import greenio
 from eventlet import greenthread
@@ -510,7 +509,7 @@ class Host(object):
                                               'compute.libvirt.error',
                                               payload)
             compute_utils.notify_about_libvirt_connect_error(
-                ctxt, ip=CONF.my_ip, exception=ex, tb=traceback.format_exc())
+                ctxt, ip=CONF.my_ip, exception=ex)
             raise exception.HypervisorUnavailable(host=CONF.host)
 
         return conn

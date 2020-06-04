@@ -99,7 +99,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         mock_notify_task.assert_called_once_with(
             self.context, method, expected_uuid,
             payload_request_spec, updates['vm_state'],
-            exc_info, test.MatchType(str))
+            exc_info)
 
     def test_set_vm_state_and_notify_request_spec_dict(self):
         """Tests passing a legacy dict format request spec to
