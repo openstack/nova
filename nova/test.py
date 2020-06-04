@@ -52,6 +52,7 @@ import six
 from six.moves import builtins
 import testtools
 
+from nova.api.openstack import wsgi_app
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
 from nova import exception
@@ -284,6 +285,10 @@ class TestCase(base.BaseTestCase):
         # NOTE(melwitt): Reset the cached set of projects
         quota.UID_QFD_POPULATED_CACHE_BY_PROJECT = set()
         quota.UID_QFD_POPULATED_CACHE_ALL = False
+
+        # make sure that the wsgi app is fully initialized for all testcase
+        # instead of only once initialized for test worker
+        wsgi_app.init_global_data.reset()
 
     def _setup_cells(self):
         """Setup a normal cellsv2 environment.
