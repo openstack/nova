@@ -958,11 +958,9 @@ SwapCached:            0 kB
 Active:          8381604 kB
 """)
         with test.nested(
-                mock.patch.object(six.moves.builtins, "open", m, create=True),
-                mock.patch.object(host.Host,
-                                  "get_connection"),
-                mock.patch('sys.platform', 'linux2'),
-                ) as (mock_file, mock_conn, mock_platform):
+            mock.patch.object(builtins, "open", m, create=True),
+            mock.patch.object(host.Host, "get_connection"),
+        ) as (mock_file, mock_conn):
             mock_conn().getInfo.return_value = [
                 obj_fields.Architecture.X86_64, 15814, 8, 1208, 1, 1, 4, 2]
 
@@ -1002,8 +1000,7 @@ Active:          8381604 kB
                                   "list_guests"),
                 mock.patch.object(libvirt_driver.LibvirtDriver,
                                   "_conn"),
-                mock.patch('sys.platform', 'linux2'),
-                ) as (mock_file, mock_list, mock_conn, mock_platform):
+        ) as (mock_file, mock_list, mock_conn):
             mock_list.return_value = [
                 libvirt_guest.Guest(DiagFakeDomain(0, 15814)),
                 libvirt_guest.Guest(DiagFakeDomain(1, 750)),
@@ -1016,10 +1013,9 @@ Active:          8381604 kB
 
     def test_get_memory_used_xen(self):
         self.flags(virt_type='xen', group='libvirt')
-        with test.nested(
-                mock.patch.object(self.host, "_sum_domain_memory_mb"),
-                mock.patch('sys.platform', 'linux2')
-                ) as (mock_sumDomainMemory, mock_platform):
+        with mock.patch.object(
+            self.host, "_sum_domain_memory_mb"
+        ) as mock_sumDomainMemory:
             mock_sumDomainMemory.return_value = 8192
             self.assertEqual(8192, self.host.get_memory_mb_used())
             mock_sumDomainMemory.assert_called_once_with(include_host=True)
@@ -1042,11 +1038,7 @@ Active:          8381604 kB
             def UUIDString(self):
                 return uuids.fake
 
-        with test.nested(
-                mock.patch.object(host.Host,
-                                  "list_guests"),
-                mock.patch('sys.platform', 'linux2'),
-        ) as (mock_list, mock_platform):
+        with mock.patch.object(host.Host, 'list_guests') as mock_list:
             mock_list.return_value = [
                 libvirt_guest.Guest(DiagFakeDomain(0, 4096)),
                 libvirt_guest.Guest(DiagFakeDomain(1, 2048)),
@@ -1060,10 +1052,9 @@ Active:          8381604 kB
         self.flags(file_backed_memory=1048576,
                    group='libvirt')
 
-        with test.nested(
-                mock.patch.object(self.host, "_sum_domain_memory_mb"),
-                mock.patch('sys.platform', 'linux2')
-                ) as (mock_sumDomainMemory, mock_platform):
+        with mock.patch.object(
+            self.host, "_sum_domain_memory_mb"
+        ) as mock_sumDomainMemory:
             mock_sumDomainMemory.return_value = 8192
             self.assertEqual(8192, self.host.get_memory_mb_used())
             mock_sumDomainMemory.assert_called_once_with(include_host=False)

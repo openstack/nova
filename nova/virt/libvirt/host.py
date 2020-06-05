@@ -32,7 +32,6 @@ import inspect
 import operator
 import os
 import socket
-import sys
 import threading
 import traceback
 
@@ -1103,9 +1102,6 @@ class Host(object):
 
         :returns: the total usage of memory(MB).
         """
-        if sys.platform.upper() not in ['LINUX2', 'LINUX3']:
-            return 0
-
         if CONF.libvirt.virt_type == 'xen':
             # For xen, report the sum of all domains, with
             return self._sum_domain_memory_mb(include_host=True)
