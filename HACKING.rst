@@ -31,9 +31,7 @@ Nova Specific Commandments
 - [N322] Method's default argument shouldn't be mutable
 - [N323] Ensure that the _() function is explicitly imported to ensure proper translations.
 - [N324] Ensure that jsonutils.%(fun)s must be used instead of json.%(fun)s
-- [N325] str() and unicode() cannot be used on an exception.  Remove use or use six.text_type()
 - [N326] Translated messages cannot be concatenated.  String should be included in translated message.
-- [N327] Do not use xrange(). xrange() is not compatible with Python 3. Use range() or six.moves.range() instead.
 - [N332] Check that the api_version decorator is the first decorator on a method
 - [N334] Change assertTrue/False(A in/not in B, message) to the more specific
   assertIn/NotIn(A, B, message)
@@ -48,9 +46,6 @@ Nova Specific Commandments
 - [N341] contextlib.nested is deprecated
 - [N342] Config options should be in the central location ``nova/conf/``
 - [N343] Check for common double word typos
-- [N344] Python 3: do not use dict.iteritems.
-- [N345] Python 3: do not use dict.iterkeys.
-- [N346] Python 3: do not use dict.itervalues.
 - [N348] Deprecated library function os.popen()
 - [N349] Check for closures in tests which are not used
 - [N350] Policy registration should be in the central location ``nova/policies/``

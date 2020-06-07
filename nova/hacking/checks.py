@@ -32,7 +32,6 @@ import os
 import re
 
 from hacking import core
-import six
 
 
 UNDERSCORE_IMPORT_FILES = []
@@ -293,13 +292,6 @@ def assert_equal_type(logical_line):
 
 
 @core.flake8ext
-def check_python3_xrange(logical_line):
-    if re.search(r"\bxrange\s*\(", logical_line):
-        yield (0, "N327: Do not use xrange(). 'xrange()' is not compatible "
-                  "with Python 3. Use range() or six.moves.range() instead.")
-
-
-@core.flake8ext
 def no_translate_logs(logical_line, filename):
     """Check for 'LOG.foo(_('
 
@@ -398,58 +390,6 @@ def check_api_version_decorator(logical_line, previous_logical, blank_before,
     if blank_before == 0 and re.match(api_version_re, logical_line) \
            and re.match(decorator_re, previous_logical):
         yield (0, msg)
-
-
-class CheckForStrUnicodeExc(BaseASTChecker):
-    """Checks for the use of str() or unicode() on an exception.
-
-    This currently only handles the case where str() or unicode()
-    is used in the scope of an exception handler.  If the exception
-    is passed into a function, returned from an assertRaises, or
-    used on an exception created in the same scope, this does not
-    catch it.
-    """
-
-    name = 'check_for_string_unicode_exc'
-    version = '1.0'
-
-    CHECK_DESC = ('N325 str() and unicode() cannot be used on an '
-                  'exception.  Remove or use six.text_type()')
-
-    def __init__(self, tree, filename):
-        super(CheckForStrUnicodeExc, self).__init__(tree, filename)
-        self.name = []
-        self.already_checked = []
-
-    # Python 2 produces ast.TryExcept and ast.TryFinally nodes, but Python 3
-    # only produces ast.Try nodes.
-    if six.PY2:
-        def visit_TryExcept(self, node):
-            for handler in node.handlers:
-                if handler.name:
-                    self.name.append(handler.name.id)
-                    super(CheckForStrUnicodeExc, self).generic_visit(node)
-                    self.name = self.name[:-1]
-                else:
-                    super(CheckForStrUnicodeExc, self).generic_visit(node)
-    else:
-        def visit_Try(self, node):
-            for handler in node.handlers:
-                if handler.name:
-                    self.name.append(handler.name)
-                    super(CheckForStrUnicodeExc, self).generic_visit(node)
-                    self.name = self.name[:-1]
-                else:
-                    super(CheckForStrUnicodeExc, self).generic_visit(node)
-
-    def visit_Call(self, node):
-        if self._check_call_names(node, ['str', 'unicode']):
-            if node not in self.already_checked:
-                self.already_checked.append(node)
-                if isinstance(node.args[0], ast.Name):
-                    if node.args[0].id in self.name:
-                        self.add_error(node.args[0])
-        super(CheckForStrUnicodeExc, self).generic_visit(node)
 
 
 class CheckForTransAdd(BaseASTChecker):
@@ -721,30 +661,6 @@ def check_doubled_words(physical_line, filename):
 
     if match:
         return (0, msg % {'word': match.group(1)})
-
-
-@core.flake8ext
-def check_python3_no_iteritems(logical_line):
-    msg = ("N344: Use items() instead of dict.iteritems().")
-
-    if re.search(r".*\.iteritems\(\)", logical_line):
-        yield (0, msg)
-
-
-@core.flake8ext
-def check_python3_no_iterkeys(logical_line):
-    msg = ("N345: Use six.iterkeys() instead of dict.iterkeys().")
-
-    if re.search(r".*\.iterkeys\(\)", logical_line):
-        yield (0, msg)
-
-
-@core.flake8ext
-def check_python3_no_itervalues(logical_line):
-    msg = ("N346: Use six.itervalues() instead of dict.itervalues().")
-
-    if re.search(r".*\.itervalues\(\)", logical_line):
-        yield (0, msg)
 
 
 @core.flake8ext
