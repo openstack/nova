@@ -159,6 +159,12 @@ databases, service credentials, and API endpoints.
       | url          | http://controller:8774/v2.1               |
       +--------------+-------------------------------------------+
 
+#. Install Placement service and configure user and endpoints:
+
+   * Refer to the :placement-doc:`Placement service install guide
+     <install/install-rdo.html#configure-user-and-endpoints>`
+     for more information.
+
 Install and configure components
 --------------------------------
 
