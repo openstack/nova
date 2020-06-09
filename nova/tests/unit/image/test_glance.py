@@ -1724,11 +1724,13 @@ class TestCreate(test.NoDBTestCase):
 class TestUpdate(test.NoDBTestCase):
 
     """Tests the update method of the GlanceImageServiceV2."""
+    @mock.patch('nova.utils.tpool_execute',
+                side_effect=nova.utils.tpool_execute)
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
     @mock.patch('nova.image.glance._translate_from_glance')
     @mock.patch('nova.image.glance._translate_to_glance')
     def test_update_success_v2(
-            self, trans_to_mock, trans_from_mock, show_mock):
+            self, trans_to_mock, trans_from_mock, show_mock, texec_mock):
         image = {
             'id': mock.sentinel.image_id,
             'name': mock.sentinel.name,
@@ -1777,6 +1779,10 @@ class TestUpdate(test.NoDBTestCase):
                        data=mock.sentinel.data)
 
         self.assertEqual(3, client.call.call_count)
+        texec_mock.assert_called_once_with(
+            client.call, ctx, 2, 'upload',
+            args=(mock.sentinel.image_id,
+                  mock.sentinel.data))
 
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
     @mock.patch('nova.image.glance._translate_from_glance')

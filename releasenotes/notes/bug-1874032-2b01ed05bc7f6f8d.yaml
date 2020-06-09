@@ -1,0 +1,8 @@
+fixes:
+  - |
+    This release contains a fix for `bug 1874032`_ which delegates snapshot
+    upload into a dedicated thread. This ensures nova compute service stability
+    on busy environment during snapshot, when concurrent snapshots or any
+    other tasks slow down storage performance.
+
+    .. _bug 1874032: https://launchpad.net/bugs/1874032

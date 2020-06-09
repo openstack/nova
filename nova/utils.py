@@ -698,6 +698,11 @@ def spawn_n(func, *args, **kwargs):
     eventlet.spawn_n(context_wrapper, *args, **kwargs)
 
 
+def tpool_execute(func, *args, **kwargs):
+    """Run func in a native thread"""
+    eventlet.tpool.execute(func, *args, **kwargs)
+
+
 def is_none_string(val):
     """Check if a string represents a None value.
     """
