@@ -15,6 +15,7 @@ import collections
 from oslo_log import log as logging
 from oslo_utils import versionutils
 import six
+from sqlalchemy.orm import exc as orm_exc
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql import false
 from sqlalchemy.sql import func
@@ -161,8 +162,16 @@ class InstanceMapping(base.NovaTimestampObject, base.NovaObject):
     def save(self):
         changes = self.obj_get_changes()
         changes = self._update_with_cell_id(changes)
-        db_mapping = self._save_in_db(self._context, self.instance_uuid,
-                changes)
+        try:
+            db_mapping = self._save_in_db(self._context, self.instance_uuid,
+                    changes)
+        except orm_exc.StaleDataError:
+            # NOTE(melwitt): If the instance mapping has been deleted out from
+            # under us by conductor (delete requested while booting), we will
+            # encounter a StaleDataError after we retrieved the row and try to
+            # update it after it's been deleted. We can treat this like an
+            # instance mapping not found and allow the caller to handle it.
+            raise exception.InstanceMappingNotFound(uuid=self.instance_uuid)
         self._from_db_object(self._context, self, db_mapping)
         self.obj_reset_changes()
 
