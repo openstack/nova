@@ -819,22 +819,43 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._create_new_mediated_device(parent, uuid=mdev_uuid)
 
     def _check_file_backed_memory_support(self):
-        if CONF.libvirt.file_backed_memory:
-            # file_backed_memory is only compatible with qemu/kvm virts
-            if CONF.libvirt.virt_type not in ("qemu", "kvm"):
-                raise exception.InternalError(
-                    _('Running Nova with file_backed_memory and virt_type '
-                      '%(type)s is not supported. file_backed_memory is only '
-                      'supported with qemu and kvm types.') %
-                    {'type': CONF.libvirt.virt_type})
+        if not CONF.libvirt.file_backed_memory:
+            return
 
-            # file-backed memory doesn't work with memory overcommit.
-            # Block service startup if file-backed memory is enabled and
-            # ram_allocation_ratio is not 1.0
-            if CONF.ram_allocation_ratio != 1.0:
-                raise exception.InternalError(
-                    'Running Nova with file_backed_memory requires '
-                    'ram_allocation_ratio configured to 1.0')
+        # file_backed_memory is only compatible with qemu/kvm virts
+        if CONF.libvirt.virt_type not in ("qemu", "kvm"):
+            raise exception.InternalError(
+                _('Running Nova with file_backed_memory and virt_type '
+                  '%(type)s is not supported. file_backed_memory is only '
+                  'supported with qemu and kvm types.') %
+                {'type': CONF.libvirt.virt_type})
+
+        # file-backed memory doesn't work with memory overcommit.
+        # Block service startup if file-backed memory is enabled and
+        # ram_allocation_ratio is not 1.0
+        if CONF.ram_allocation_ratio != 1.0:
+            raise exception.InternalError(
+                'Running Nova with file_backed_memory requires '
+                'ram_allocation_ratio configured to 1.0')
+
+        if CONF.reserved_host_memory_mb:
+            # this is a hard failure as placement won't allow total < reserved
+            if CONF.reserved_host_memory_mb >= CONF.libvirt.file_backed_memory:
+                msg = _(
+                    "'[libvirt] file_backed_memory', which represents total "
+                    "memory reported to placement, must be greater than "
+                    "reserved memory configured via '[DEFAULT] "
+                    "reserved_host_memory_mb'"
+                )
+                raise exception.InternalError(msg)
+
+            # TODO(stephenfin): Change this to an exception in W or later
+            LOG.warning(
+                "Reserving memory via '[DEFAULT] reserved_host_memory_mb' "
+                "is not compatible with file-backed memory. Consider "
+                "setting '[DEFAULT] reserved_host_memory_mb' to 0. This will "
+                "be an error in a future release."
+            )
 
     def _check_my_ip(self):
         ips = compute_utils.get_machine_ips()

@@ -46,14 +46,22 @@ Libvirt
    capability requires libvirt version 4.4.0 or newer.
 
 Qemu
-   File-backed memory requires qemu version 2.6.0 or newer.Discard capability
+   File-backed memory requires qemu version 2.6.0 or newer. Discard capability
    requires qemu version 2.10.0 or newer.
 
 Memory overcommit
    File-backed memory is not compatible with memory overcommit.
-   ``ram_allocation_ratio`` must be set to ``1.0`` in ``nova.conf``, and the
-   host must not be added to a :doc:`host aggregate </admin/aggregates>`
-   with ``ram_allocation_ratio`` set to anything but ``1.0``.
+   :oslo.config:option:`ram_allocation_ratio` must be set to ``1.0`` in
+   ``nova.conf``, and the host must not be added to a :doc:`host aggregate
+   </admin/aggregates>` with ``ram_allocation_ratio`` set to anything but
+   ``1.0``.
+
+Reserved memory
+   When configured, file-backed memory is reported as total system memory to
+   placement, with RAM used as cache. Reserved memory corresponds to disk
+   space not set aside for file-backed memory.
+   :oslo.config:option:`reserved_host_memory_mb` should be set to ``0`` in
+   ``nova.conf``.
 
 Huge pages
    File-backed memory is not compatible with huge pages. Instances with huge
