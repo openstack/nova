@@ -1341,6 +1341,39 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertRaises(exception.InternalError,
                           drvr._check_file_backed_memory_support)
 
+    def test__check_file_backed_memory_support__total_lt_reserved(self):
+        """Ensure an error is raised if total memory < reserved.
+
+        Placement won't allow $resource.total < $resource.reserved, so we need
+        to catch this early.
+        """
+        self.flags(file_backed_memory=1024, group='libvirt')
+        self.flags(ram_allocation_ratio=1.0, reserved_host_memory_mb=4096)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.assertRaises(
+            exception.InternalError, drvr._check_file_backed_memory_support,
+        )
+
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    def test__check_file_backed_memory_support__has_reserved(self, mock_log):
+        """Ensure a warning is issued if memory is reserved.
+
+        It doesn't make sense to "reserve" memory when file-backed memory is in
+        use. We should report things so as to avoid confusion.
+        """
+        self.flags(file_backed_memory=8192, group='libvirt')
+        self.flags(ram_allocation_ratio=1.0)
+        # we don't need to configure '[DEFAULT] reserved_host_memory_mb' since
+        # it defaults to 512 (MB)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr._check_file_backed_memory_support()
+        mock_log.assert_called_once()
+        self.assertIn(
+            "Reserving memory via '[DEFAULT] reserved_host_memory_mb' is not "
+            "compatible",
+            six.text_type(mock_log.call_args[0]),
+        )
+
     def test__check_cpu_compatibility_start_ok(self):
         self.flags(cpu_mode="custom",
                    cpu_models=["Penryn"],
