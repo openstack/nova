@@ -3438,6 +3438,12 @@ class API(base.Base):
         self._checks_for_create_and_rebuild(context, image_id, image,
                 flavor, metadata, files_to_inject, root_bdm)
 
+        # Check the state of the volume. If it is not in-use, an exception
+        # will occur when creating attachment during reconstruction,
+        # resulting in the failure of reconstruction and the instance
+        # turning into an error state.
+        self._check_volume_status(context, bdms)
+
         # NOTE(sean-k-mooney): When we rebuild with a new image we need to
         # validate that the NUMA topology does not change as we do a NOOP claim
         # in resource tracker. As such we cannot allow the resource usage or
@@ -3536,6 +3542,17 @@ class API(base.Base):
                 orig_sys_metadata=orig_sys_metadata, bdms=bdms,
                 preserve_ephemeral=preserve_ephemeral, host=host,
                 request_spec=request_spec)
+
+    def _check_volume_status(self, context, bdms):
+        """Check whether the status of the volume is "in-use".
+
+        :param context: A context.RequestContext
+        :param bdms: BlockDeviceMappingList of BDMs for the instance
+        """
+        for bdm in bdms:
+            if bdm.volume_id:
+                vol = self.volume_api.get(context, bdm.volume_id)
+                self.volume_api.check_attached(context, vol)
 
     @staticmethod
     def _validate_numa_rebuild(instance, image, flavor):
@@ -4207,10 +4224,7 @@ class API(base.Base):
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid)
-        for bdm in bdms:
-            if bdm.volume_id:
-                vol = self.volume_api.get(context, bdm.volume_id)
-                self.volume_api.check_attached(context, vol)
+        self._check_volume_status(context, bdms)
 
         volume_backed = compute_utils.is_volume_backed_instance(
             context, instance, bdms)
