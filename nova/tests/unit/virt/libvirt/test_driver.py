@@ -2009,9 +2009,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                               drvr._host.get_connection)
         mock_get.assert_called_once_with()
         mock_notify.assert_called_once_with(self.context, ip=CONF.my_ip,
-                                            exception=fake_error, tb=mock.ANY)
-        _, kwargs = mock_notify.call_args
-        self.assertIn('Traceback (most recent call last):', kwargs['tb'])
+                                            exception=fake_error)
 
     @mock.patch.object(fakelibvirt.virConnect, "nodeDeviceLookupByName")
     @mock.patch.object(fakelibvirt.virNodeDevice, "dettach")

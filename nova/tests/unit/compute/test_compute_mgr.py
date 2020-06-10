@@ -2595,7 +2595,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 self.compute.host,
                 fields.NotificationPhase.ERROR,
                 uuids.old_volume, uuids.new_volume,
-                test.MatchType(expected_exception), mock.ANY)
+                test.MatchType(expected_exception))
         else:
             self.compute.swap_volume(self.context, uuids.old_volume,
                                      uuids.new_volume, instance1, None)
@@ -5017,7 +5017,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         )
         mock_notify.assert_called_once_with(
             mock.ANY, instance, 'fake-mini', phase='error', exception=exc,
-            bdms=None, tb=mock.ANY)
+            bdms=None)
 
     def test_rebuild_deleting(self):
         instance = fake_instance.fake_instance_obj(self.context)
@@ -5168,7 +5168,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             elevated_context, instance, 'fake-node', node_type='destination')
         mock_notify.assert_called_once_with(
             elevated_context, instance, 'fake-mini', bdms=None, exception=exc,
-            phase='error', tb=mock.ANY)
+            phase='error')
         # Make sure the instance vm_state did not change.
         self.assertEqual(vm_states.ACTIVE, instance.vm_state)
 
@@ -7152,7 +7152,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 mock.call(self.context, self.instance, 'fake-mini',
                           phase='start', bdms=[]),
                 mock.call(self.context, self.instance, 'fake-mini',
-                          phase='error', exception=exc, bdms=[], tb=mock.ANY)])
+                          phase='error', exception=exc, bdms=[])])
 
             save.assert_has_calls([
                 mock.call(),

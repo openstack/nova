@@ -13,8 +13,6 @@
 # under the License.
 
 import sys
-import traceback
-import unittest
 
 from nova.notifications.objects import exception
 from nova import test
@@ -22,40 +20,34 @@ from nova import test
 
 class TestExceptionPayload(test.NoDBTestCase):
 
-    # Failing due to bug #1881455
-    @unittest.expectedFailure
-    def test_from_exc_and_traceback(self):
+    def test_from_exception(self):
         try:
             raise Exception('foo')
         except Exception:
             exc_info = sys.exc_info()
-            tb = traceback.format_exc()
 
-        payload = exception.ExceptionPayload.from_exc_and_traceback(
-            exc_info[1], tb)
+        payload = exception.ExceptionPayload.from_exception(exc_info[1])
 
         self.assertEqual(
             'nova.tests.unit.notifications.objects.test_exception',
             payload.module_name,
         )
         self.assertEqual(
-            'test_from_exc_and_traceback', payload.function_name)
+            'test_from_exception', payload.function_name)
         self.assertEqual('foo', payload.exception_message)
 
-    def test_from_exc_and_traceback_nested(self):
+    def test_from_exception_nested(self):
         try:
             raise Exception('foo')
         except Exception:
             exc_info = sys.exc_info()
-            tb = traceback.format_exc()
 
-            payload = exception.ExceptionPayload.from_exc_and_traceback(
-                exc_info[1], tb)
+            payload = exception.ExceptionPayload.from_exception(exc_info[1])
 
         self.assertEqual(
             'nova.tests.unit.notifications.objects.test_exception',
             payload.module_name,
         )
         self.assertEqual(
-            'test_from_exc_and_traceback_nested', payload.function_name)
+            'test_from_exception_nested', payload.function_name)
         self.assertEqual('foo', payload.exception_message)

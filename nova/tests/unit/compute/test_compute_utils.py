@@ -19,7 +19,6 @@
 import copy
 import datetime
 import string
-import traceback
 
 import mock
 from oslo_serialization import jsonutils
@@ -733,11 +732,10 @@ class UsageInfoTestCase(test.TestCase):
             # To get exception trace, raise and catch an exception
             raise test.TestingException('Volume swap error.')
         except Exception as ex:
-            tb = traceback.format_exc()
             compute_utils.notify_about_volume_swap(
                 self.context, instance, 'fake-compute',
                 fields.NotificationPhase.ERROR,
-                uuids.old_volume_id, uuids.new_volume_id, ex, tb)
+                uuids.old_volume_id, uuids.new_volume_id, ex)
 
         self.assertEqual(len(fake_notifier.VERSIONED_NOTIFICATIONS), 1)
         notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
