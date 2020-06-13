@@ -123,4 +123,4 @@ Interoperability tests
 
 The DefCore committee maintains a list that contains a subset of Tempest tests.
 These are used to verify if a particular Nova deployment's API responds as
-expected. For more details, see: https://opendev.org/openstack/interop
+expected. For more details, see: https://opendev.org/osf/interop
