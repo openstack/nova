@@ -27,12 +27,9 @@ from nova.compute import api as compute
 from nova import exception
 from nova.i18n import _
 from nova.network import neutron
-from nova import objects
 from nova.policies import migrate_server as ms_policies
 
 LOG = logging.getLogger(__name__)
-
-MIN_COMPUTE_MOVE_BANDWIDTH = 39
 
 
 class MigrateServerController(wsgi.Controller):
@@ -58,19 +55,6 @@ class MigrateServerController(wsgi.Controller):
         if (api_version_request.is_supported(req, min_version='2.56') and
             body['migrate'] is not None):
             host_name = body['migrate'].get('host')
-
-        if common.instance_has_port_with_resource_request(
-                instance.uuid, self.network_api):
-            # TODO(gibi): Remove when nova only supports compute newer than
-            # Train
-            source_service = objects.Service.get_by_host_and_binary(
-                context, instance.host, 'nova-compute')
-            if source_service.version < MIN_COMPUTE_MOVE_BANDWIDTH:
-                msg = _("The migrate action on a server with ports having "
-                        "resource requests, like a port with a QoS "
-                        "minimum bandwidth policy, is not yet supported "
-                        "on the source compute")
-                raise exc.HTTPConflict(explanation=msg)
 
         try:
             self.compute_api.resize(req.environ['nova.context'], instance,
@@ -133,22 +117,6 @@ class MigrateServerController(wsgi.Controller):
                                                         strict=True)
             disk_over_commit = strutils.bool_from_string(disk_over_commit,
                                                          strict=True)
-
-        # We could potentially move this check to conductor and avoid the
-        # extra API call to neutron when we support move operations with ports
-        # having resource requests.
-        if (common.instance_has_port_with_resource_request(
-                    instance.uuid, self.network_api) and not
-                common.supports_port_resource_request_during_move()):
-            LOG.warning("The os-migrateLive action on a server with ports "
-                        "having resource requests, like a port with a QoS "
-                        "minimum bandwidth policy, is not supported until "
-                        "every nova-compute is upgraded to Ussuri")
-            msg = _("The os-migrateLive action on a server with ports having "
-                    "resource requests, like a port with a QoS minimum "
-                    "bandwidth policy, is not supported by this cluster right "
-                    "now")
-            raise exc.HTTPBadRequest(explanation=msg)
 
         try:
             self.compute_api.live_migrate(context, instance, block_migration,
