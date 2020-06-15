@@ -373,6 +373,22 @@ class TestNeutronDriver(test.NoDBTestCase):
         self.mocked_client.update_port.assert_called_once_with(
             port_id, {'port': {'security_groups': [sg_id]}})
 
+    def test_add_to_instance_duplicate_sg_name(self):
+        sg_name = 'web_server'
+        with mock.patch.object(neutronv20, 'find_resourceid_by_name_or_id',
+                               side_effect=n_exc.NeutronClientNoUniqueMatch):
+            self.assertRaises(exception.NoUniqueMatch,
+                              sg_api.add_to_instance, self.context,
+                              objects.Instance(uuid=uuids.instance), sg_name)
+
+    def test_remove_from_instance_duplicate_sg_name(self):
+        sg_name = 'web_server'
+        with mock.patch.object(neutronv20, 'find_resourceid_by_name_or_id',
+                               side_effect=n_exc.NeutronClientNoUniqueMatch):
+            self.assertRaises(exception.NoUniqueMatch,
+                              sg_api.remove_from_instance, self.context,
+                              objects.Instance(uuid=uuids.instance), sg_name)
+
 
 class TestNeutronDriverWithoutMock(test.NoDBTestCase):
 

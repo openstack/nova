@@ -665,6 +665,8 @@ def remove_from_instance(context, instance, security_group_name):
             neutron, 'security_group',
             security_group_name,
             context.project_id)
+    except n_exc.NeutronClientNoUniqueMatch as e:
+        raise exception.NoUniqueMatch(e)
     except n_exc.NeutronClientException as e:
         if e.status_code == 404:
             msg = (_("Security group %(name)s is not found for "
