@@ -1,0 +1,15 @@
+---
+upgrade:
+  - |
+    When using file-backed memory, the ``nova-compute`` service will now fail
+    to start if the amount of reserved memory configured using ``[DEFAULT]
+    reserved_host_memory_mb`` is equal to or greater than the total amount of
+    memory configured using ``[libvirt] file_backed_memory``. Where reserved
+    memory is less than the total amount of memory configured, a warning will
+    be raised. This warning will become an error in a future release.
+
+    The former combination is invalid as it would suggest reserved memory is
+    greater than total memory available, while the latter is considered
+    incorrect behavior as reserving of file-backed memory can and should be
+    achieved by reducing the filespace allocated as memory by modifying
+    ``[libvirt] file_backed_memory``.
