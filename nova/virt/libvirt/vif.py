@@ -65,6 +65,7 @@ SUPPORTED_VIF_MODELS = {
         network_model.VIF_MODEL_PCNET,
         network_model.VIF_MODEL_RTL8139,
         network_model.VIF_MODEL_E1000,
+        network_model.VIF_MODEL_E1000E,
         network_model.VIF_MODEL_LAN9118,
         network_model.VIF_MODEL_SPAPR_VLAN],
     'kvm': [
@@ -73,6 +74,7 @@ SUPPORTED_VIF_MODELS = {
         network_model.VIF_MODEL_PCNET,
         network_model.VIF_MODEL_RTL8139,
         network_model.VIF_MODEL_E1000,
+        network_model.VIF_MODEL_E1000E,
         network_model.VIF_MODEL_SPAPR_VLAN],
     'xen': [
         network_model.VIF_MODEL_NETFRONT,
