@@ -601,8 +601,9 @@ CPU real-time policy
   .. important::
 
      While most of your instance vCPUs can run with a real-time policy, you must
-     mark at least one vCPU as non-real-time, to be used for both non-real-time
-     guest processes and emulator overhead (housekeeping) processes.
+     either mark at least one vCPU as non-real-time to be account for emulator
+     overhead (housekeeping) or explicitly configure an :ref:`emulator thread
+     policy <extra-specs-emulator-threads-policy>`.
 
   .. important::
 
@@ -632,6 +633,13 @@ CPU real-time policy
 
      The ``hw:cpu_realtime_mask`` option is only valid if ``hw:cpu_realtime``
      is set to ``yes``.
+
+  .. versionchanged:: 22.0.0 (Victoria)
+
+     Previously, it was necessary to specify ``hw:cpu_realtime_mask`` when
+     ``hw:cpu_realtime`` was set to yes. Starting in Victoria, it is possible
+     to omit this when an emulator thread policy is configured using the
+     ``hw:emulator_threads_policy`` extra spec.
 
 .. _extra-specs-emulator-threads-policy:
 

@@ -1894,9 +1894,8 @@ class LibguestfsCannotReadKernel(Invalid):
 
 
 class RealtimeMaskNotFoundOrInvalid(Invalid):
-    msg_fmt = _("Realtime policy needs vCPU(s) mask configured with at least "
-                "1 RT vCPU and 1 ordinary vCPU. See hw:cpu_realtime_mask "
-                "or hw_cpu_realtime_mask")
+    msg_fmt = _("Use of realtime CPUs requires either one or more "
+                "non-realtime CPU(s) or offloaded emulator threads.")
 
 
 class OsInfoNotFound(NotFound):

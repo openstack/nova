@@ -3887,6 +3887,18 @@ class CPURealtimeTestCase(test.NoDBTestCase):
             exception.RealtimeMaskNotFoundOrInvalid,
             hw.get_realtime_cpu_constraint, flavor, image)
 
+    def test_all_cpus_w_emulator_policy(self):
+        # The mask has no exclusion but there's an emulator thread policy
+        flavor = objects.Flavor(
+            vcpus=3, memory_mb=2048, extra_specs={
+                'hw:cpu_realtime': 'true',
+                'hw:emulator_threads_policy': 'isolate'
+            },
+        )
+        image = objects.ImageMeta.from_dict({"properties": {}})
+        rt = hw.get_realtime_cpu_constraint(flavor, image)
+        self.assertEqual({0, 1, 2}, rt)
+
     def test_invalid_mask_rt_cpus_out_of_range(self):
         # The mask is not just an exclusion mask, and the RT range specifies
         # an invalid vCPU number.

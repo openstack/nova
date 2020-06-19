@@ -1705,16 +1705,19 @@ def get_realtime_cpu_constraint(
     # Image masks are used ahead of flavor masks as they will have more
     # specific requirements
     mask = image_mask or flavor_mask
-    if not mask:
-        raise exception.RealtimeMaskNotFoundOrInvalid()
 
     vcpus_set = set(range(flavor.vcpus))
-    vcpus_rt = parse_cpu_spec("0-%d,%s" % (flavor.vcpus - 1, mask))
+    if mask:
+        vcpus_rt = parse_cpu_spec("0-%d,%s" % (flavor.vcpus - 1, mask))
+    else:
+        vcpus_rt = set(range(flavor.vcpus))
 
     if not vcpus_rt:
         raise exception.RealtimeMaskNotFoundOrInvalid()
 
-    if vcpus_set == vcpus_rt:
+    # TODO(stephenfin): Do this check in numa_get_constraints instead
+    emu_policy = get_emulator_thread_policy_constraint(flavor)
+    if vcpus_set == vcpus_rt and not emu_policy:
         raise exception.RealtimeMaskNotFoundOrInvalid()
 
     if not vcpus_rt.issubset(vcpus_set):

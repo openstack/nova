@@ -3027,6 +3027,34 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertTrue(membacking.locked)
         self.assertFalse(membacking.sharedpages)
 
+    def test_get_guest_memory_backing_config_realtime_invalid_share(self):
+        """Test behavior when there is no pool of shared CPUS on which to place
+        the emulator threads, isolating them from the instance CPU processes.
+        """
+        extra_specs = {
+            "hw:cpu_realtime": "yes",
+            "hw:cpu_policy": "dedicated",
+            "hw:emulator_threads_policy": "share",
+        }
+        flavor = objects.Flavor(
+            name='m1.small',
+            memory_mb=6,
+            vcpus=28,
+            root_gb=496,
+            ephemeral_gb=8128,
+            swap=33550336,
+            extra_specs=extra_specs)
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        # this should fail because there is nowhere to place the emulator
+        # threads
+        self.assertRaises(
+            exception.RealtimeMaskNotFoundOrInvalid,
+            drvr._get_guest_memory_backing_config,
+            None, None, flavor, image_meta,
+        )
+
     def _test_sev_enabled(self, expected=None, host_sev_enabled=False,
                           enc_extra_spec=None, enc_image_prop=None,
                           hw_machine_type=None, hw_firmware_type=None):
