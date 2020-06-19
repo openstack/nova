@@ -356,26 +356,32 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         self._age_and_verify_swap_images(context, base_dir)
 
     def get_disk_usage(self):
-        if not self.cache_dir_is_on_same_dev_as_instances_dir:
-            return 0
+        try:
+            # If the cache is on a different device than the instance dir then
+            # it does not consume the same disk resource as instances.
+            # NOTE(gibi): this does not work on Windows properly as st_dev is
+            # always 0
+            if (os.stat(CONF.instances_path).st_dev !=
+                    os.stat(self.cache_dir).st_dev):
+                return 0
 
-        # NOTE(gibi): we need to use the disk size occupied from the file
-        # system as images in the cache will not grow to their virtual size.
-        # NOTE(gibi): st.blocks is always measured in 512 byte blocks see man
-        # fstat
-        return sum(
-            os.stat(os.path.join(self.cache_dir, f)).st_blocks * 512
-            for f in os.listdir(self.cache_dir)
-            if os.path.isfile(os.path.join(self.cache_dir, f)))
+            # NOTE(gibi): we need to use the disk size occupied from the file
+            # system as images in the cache will not grow to their virtual
+            # size.
+            # NOTE(gibi): st.blocks is always measured in 512 byte blocks see
+            # man fstat
+            return sum(
+                os.stat(os.path.join(self.cache_dir, f)).st_blocks * 512
+                for f in os.listdir(self.cache_dir)
+                if os.path.isfile(os.path.join(self.cache_dir, f)))
+        except OSError:
+            # NOTE(gibi): An error here can mean many things. E.g. the cache
+            # dir does not exists yet, the cache dir is deleted between the
+            # listdir() and the stat() calls, or a file is deleted between
+            # the listdir() and the stat() calls.
+            return 0
 
     @property
     def cache_dir(self):
         return os.path.join(
             CONF.instances_path, CONF.image_cache.subdirectory_name)
-
-    @property
-    def cache_dir_is_on_same_dev_as_instances_dir(self):
-        # NOTE(gibi): this does not work on Windows properly as st_dev is
-        # always 0
-        return (os.stat(CONF.instances_path).st_dev ==
-                os.stat(self.cache_dir).st_dev)
