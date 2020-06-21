@@ -73,7 +73,6 @@ import nova.conf
 import nova.context
 from nova import exception
 from nova import exception_wrapper
-from nova import hooks
 from nova.i18n import _
 from nova.image import glance
 from nova import manager
@@ -2114,7 +2113,6 @@ class ComputeManager(manager.Manager):
                 'Trusted image certificates provided on host that does not '
                 'support certificate validation.')
 
-    @hooks.add_hook('build_instance')
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event(prefix='compute')
@@ -2896,7 +2894,6 @@ class ComputeManager(manager.Manager):
         if exc_info is not None and raise_exc:
             six.reraise(exc_info[0], exc_info[1], exc_info[2])
 
-    @hooks.add_hook("delete_instance")
     def _delete_instance(self, context, instance, bdms):
         """Delete an instance on this host.
 

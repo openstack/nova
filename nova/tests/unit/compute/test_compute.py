@@ -13383,18 +13383,3 @@ class CheckRequestedImageTestCase(test.TestCase):
                           self.compute_api._validate_flavor_image,
                           self.context, image['id'], image, self.instance_type,
                           None)
-
-
-class ComputeHooksTestCase(test.BaseHookTestCase):
-    def test_delete_instance_has_hook(self):
-        delete_func = compute_manager.ComputeManager._delete_instance
-        self.assert_has_hook('delete_instance', delete_func)
-
-    def test_create_instance_has_hook(self):
-        create_func = compute.API.create
-        self.assert_has_hook('create_instance', create_func)
-
-    def test_build_instance_has_hook(self):
-        build_instance_func = (compute_manager.ComputeManager.
-                               _do_build_and_run_instance)
-        self.assert_has_hook('build_instance', build_instance_func)

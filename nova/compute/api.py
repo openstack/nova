@@ -58,7 +58,6 @@ from nova.db import base
 from nova.db.sqlalchemy import api as db_api
 from nova import exception
 from nova import exception_wrapper
-from nova import hooks
 from nova.i18n import _
 from nova.image import glance
 from nova.network import constants
@@ -1927,7 +1926,6 @@ class API(base.Base):
                         "is specified.")
                 raise exception.InvalidFixedIpAndMaxCountRequest(reason=msg)
 
-    @hooks.add_hook("create_instance")
     def create(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
                min_count=None, max_count=None,
