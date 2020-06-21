@@ -30,6 +30,7 @@ mysql-devel [platform:rpm test]
 mysql-server
 openssh-client [platform:dpkg]
 openssh-clients [platform:rpm]
+openssl
 pkg-config [platform:dpkg test]
 pkgconfig [platform:rpm test]
 postgresql
