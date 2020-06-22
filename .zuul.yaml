@@ -253,6 +253,7 @@
             voting: false
             irrelevant-files: *dsvm-irrelevant-files
         - neutron-grenade-multinode:
+            voting: false
             irrelevant-files: *dsvm-irrelevant-files
         - neutron-tempest-linuxbridge:
             irrelevant-files:
@@ -261,7 +262,8 @@
               # code; we don't need to run this on all changes, nor do we run
               # it in the gate.
               - ^(?!nova/network/.*)(?!nova/virt/libvirt/vif.py).*$
-        - nova-grenade-live-migration
+        - nova-grenade-live-migration:
+            voting: false
         - nova-live-migration
         - nova-lvm
         - nova-next
@@ -275,10 +277,10 @@
         - tempest-slow-py3:
             irrelevant-files: *dsvm-irrelevant-files
         - grenade-py3:
+            voting: false
             irrelevant-files: *dsvm-irrelevant-files
     gate:
       jobs:
-        - nova-grenade-live-migration
         - nova-live-migration
         - nova-tox-functional
         - nova-tox-functional-py35
@@ -286,8 +288,6 @@
         - tempest-full-py3:
             irrelevant-files: *dsvm-irrelevant-files
         - tempest-slow-py3:
-            irrelevant-files: *dsvm-irrelevant-files
-        - grenade-py3:
             irrelevant-files: *dsvm-irrelevant-files
     experimental:
       jobs:
