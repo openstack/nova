@@ -282,25 +282,6 @@ class FakeLibvirtTests(test.NoDBTestCase):
         etree.fromstring(conn.getDomainCapabilities(
             '/usr/bin/qemu-kvm', 'x86_64', 'q35', 'kvm', 0))
 
-    def test_nwfilter_define_undefine(self):
-        conn = self.get_openAuth_curry_func()('qemu:///system')
-        # Will raise an exception if it's not valid XML
-        xml = '''<filter name='nova-instance-instance-789' chain='root'>
-                    <uuid>946878c6-3ad3-82b2-87f3-c709f3807f58</uuid>
-                 </filter>'''
-
-        conn.nwfilterDefineXML(xml)
-        nwfilter = conn.nwfilterLookupByName('nova-instance-instance-789')
-        nwfilter.undefine()
-        try:
-            conn.nwfilterLookupByName('nova-instance-instance-789320334')
-        except libvirt.libvirtError as e:
-            self.assertEqual(e.get_error_code(), libvirt.VIR_ERR_NO_NWFILTER)
-            self.assertEqual(e.get_error_domain(), libvirt.VIR_FROM_NWFILTER)
-            return
-        raise self.failureException("Invalid NWFilter name didn't"
-                                    " raise libvirtError")
-
     def test_compareCPU_compatible(self):
         conn = self.get_openAuth_curry_func()('qemu:///system')
 
