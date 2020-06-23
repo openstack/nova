@@ -131,7 +131,7 @@ class TestRequestFilter(test.NoDBTestCase):
         reqspec = objects.RequestSpec(flavor=fake_flavor, image=fake_image)
         result = request_filter.isolate_aggregates(self.context, reqspec)
         self.assertTrue(result)
-        self.assertItemsEqual(
+        self.assertCountEqual(
             set([uuids.agg1, uuids.agg2, uuids.agg4]),
             reqspec.requested_destination.forbidden_aggregates)
         mock_getnotmd.assert_called_once_with(
@@ -322,7 +322,7 @@ class TestRequestFilter(test.NoDBTestCase):
             ','.join(sorted([uuids.agg4])),
             ','.join(sorted(
                 reqspec.requested_destination.aggregates[1].split(','))))
-        self.assertItemsEqual(
+        self.assertCountEqual(
             set([uuids.agg1, uuids.agg2, uuids.agg3]),
             reqspec.requested_destination.forbidden_aggregates)
         mock_getmd.assert_has_calls([

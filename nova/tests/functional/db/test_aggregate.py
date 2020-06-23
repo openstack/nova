@@ -587,7 +587,7 @@ class AggregateObjectTestCase(test.TestCase):
             value='required')
 
         self.assertEqual(2, len(aggs))
-        self.assertItemsEqual([2, 3], [a.id for a in aggs])
+        self.assertCountEqual([2, 3], [a.id for a in aggs])
 
     def test_matching_aggregates_multiple_keys(self):
         """All matching aggregates for multiple keys."""
@@ -641,7 +641,7 @@ class AggregateObjectTestCase(test.TestCase):
             'trait:', value='required')
 
         self.assertEqual(2, len(aggs))
-        self.assertItemsEqual([2, 5], [a.id for a in aggs])
+        self.assertCountEqual([2, 5], [a.id for a in aggs])
 
     def test_get_non_matching_by_metadata_keys_empty_keys(self):
         """Test aggregates non matching by metadata with empty keys."""
@@ -669,7 +669,7 @@ class AggregateObjectTestCase(test.TestCase):
             self.context, [], 'trait:', value='required')
 
         self.assertEqual(5, len(aggs))
-        self.assertItemsEqual([1, 2, 3, 4, 5], [a.id for a in aggs])
+        self.assertCountEqual([1, 2, 3, 4, 5], [a.id for a in aggs])
 
     def test_get_non_matching_by_metadata_keys_empty_key_prefix(self):
         """Test aggregates non matching by metadata with empty key_prefix."""

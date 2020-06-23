@@ -87,16 +87,16 @@ class NUMALiveMigrationBase(base.ServersTestBase,
             ctxt, uuid)
         self.assertEqual(1, len(topology.cells))
         # NOTE(artom) DictOfIntegersField has strings as keys, need to convert
-        self.assertItemsEqual([str(cpu) for cpu in instance_cpus],
+        self.assertCountEqual([str(cpu) for cpu in instance_cpus],
                               topology.cells[0].cpu_pinning_raw.keys())
-        self.assertItemsEqual(host_cpus,
+        self.assertCountEqual(host_cpus,
                               topology.cells[0].cpu_pinning_raw.values())
 
     def _assert_host_consumed_cpus(self, host, cpus):
         ctxt = context.get_admin_context()
         topology = objects.NUMATopology.obj_from_db_obj(
             objects.ComputeNode.get_by_nodename(ctxt, host).numa_topology)
-        self.assertItemsEqual(cpus, topology.cells[0].pinned_cpus)
+        self.assertCountEqual(cpus, topology.cells[0].pinned_cpus)
 
 
 class NUMALiveMigrationPositiveBase(NUMALiveMigrationBase):
