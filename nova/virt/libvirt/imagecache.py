@@ -359,8 +359,6 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         try:
             # If the cache is on a different device than the instance dir then
             # it does not consume the same disk resource as instances.
-            # NOTE(gibi): this does not work on Windows properly as st_dev is
-            # always 0
             if (os.stat(CONF.instances_path).st_dev !=
                     os.stat(self.cache_dir).st_dev):
                 return 0

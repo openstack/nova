@@ -28,6 +28,7 @@ import random
 import re
 import shutil
 import signal
+import sys
 import testtools
 import threading
 import time
@@ -1052,6 +1053,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.flags(virt_type='parallels', group='libvirt')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertTrue(drvr.capabilities['supports_image_type_ploop'])
+
+    def test_driver_raises_on_non_linux_platform(self):
+        with utils.temporary_mutation(sys, platform='darwin'):
+            self.assertRaises(
+                exception.InternalError, libvirt_driver.LibvirtDriver,
+                fake.FakeVirtAPI(), False)
 
     def create_fake_libvirt_mock(self, **kwargs):
         """Defining mocks for LibvirtDriver(libvirt is not used)."""
