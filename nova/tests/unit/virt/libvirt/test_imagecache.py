@@ -674,12 +674,12 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                                                   lock_path=lock_path)
 
     @mock.patch('os.stat')
-    def test_cache_dir_is_on_same_dev_as_instances_dir(self, mock_stat):
+    def test_get_disk_usage_cache_is_on_different_disk(self, mock_stat):
         mock_stat.side_effect = [mock.Mock(st_dev=0), mock.Mock(st_dev=1)]
-
         manager = imagecache.ImageCacheManager()
 
-        self.assertFalse(manager.cache_dir_is_on_same_dev_as_instances_dir)
+        self.assertEqual(0, manager.get_disk_usage())
+
         mock_stat.assert_has_calls([
             mock.call(CONF.instances_path),
             mock.call(
@@ -687,37 +687,34 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                     CONF.instances_path,
                     CONF.image_cache.subdirectory_name))])
 
-        mock_stat.reset_mock()
-        mock_stat.side_effect = [mock.Mock(st_dev=0), mock.Mock(st_dev=0)]
-        self.assertTrue(manager.cache_dir_is_on_same_dev_as_instances_dir)
-
-    @mock.patch('nova.virt.libvirt.imagecache.ImageCacheManager.'
-                'cache_dir_is_on_same_dev_as_instances_dir',
-                new=mock.PropertyMock(return_value=False))
-    def test_get_disk_usage_cache_is_on_different_disk(self):
-        manager = imagecache.ImageCacheManager()
-
-        self.assertEqual(0, manager.get_disk_usage())
-
     @mock.patch('os.listdir')
-    @mock.patch('nova.virt.libvirt.imagecache.ImageCacheManager.'
-                'cache_dir_is_on_same_dev_as_instances_dir',
-                new=mock.PropertyMock(return_value=True))
-    def test_get_disk_usage_empty(self, mock_listdir):
+    @mock.patch('os.stat')
+    def test_get_disk_usage_empty(self, mock_stat, mock_listdir):
+        mock_stat.side_effect = [mock.Mock(st_dev=0), mock.Mock(st_dev=0)]
         mock_listdir.return_value = []
 
         manager = imagecache.ImageCacheManager()
 
         self.assertEqual(0, manager.get_disk_usage())
 
+    @mock.patch('os.stat')
+    @mock.patch('os.listdir')
+    def test_get_disk_usage_cache_dir_missing(self, mock_listdir, mock_stat):
+        mock_stat.side_effect = [mock.Mock(st_dev=0), FileNotFoundError]
+
+        manager = imagecache.ImageCacheManager()
+
+        self.assertEqual(0, manager.get_disk_usage())
+        mock_listdir.assert_not_called()
+
     @mock.patch('os.path.isfile')
     @mock.patch('os.listdir')
     @mock.patch('os.stat')
-    @mock.patch('nova.virt.libvirt.imagecache.ImageCacheManager.'
-                'cache_dir_is_on_same_dev_as_instances_dir',
-                new=mock.PropertyMock(return_value=True))
     def test_get_disk_usage(self, mock_stat, mock_listdir, mock_isfile):
         mock_stat.side_effect = [
+            # cache and instances dirs are on the same dev
+            mock.Mock(st_dev=0),
+            mock.Mock(st_dev=0),
             # stat calls on each file in the cache directory to get the size
             mock.Mock(st_blocks=10),  # foo
             mock.Mock(st_blocks=20),  # bar
@@ -733,3 +730,27 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
         # size is calculated from as st_blocks * 512
         self.assertEqual(10 * 512 + 20 * 512, manager.get_disk_usage())
+
+    @mock.patch('os.path.isfile')
+    @mock.patch('os.listdir')
+    @mock.patch('os.stat')
+    def test_get_disk_usage_io_error_while_reading(
+            self, mock_stat, mock_listdir, mock_isfile):
+        mock_stat.side_effect = [
+            # cache and instances dirs are on the same dev
+            mock.Mock(st_dev=0),
+            mock.Mock(st_dev=0),
+            # stat calls on each file in the cache directory to get the size
+            mock.Mock(st_blocks=10),  # foo
+            IOError,  # error while checking bar
+        ]
+        mock_listdir.return_value = ['foo', 'bar', 'some-dir']
+        mock_isfile.side_effect = [
+            True,  # foo
+            True,  # bar
+            False,  # some-dir
+        ]
+
+        manager = imagecache.ImageCacheManager()
+
+        self.assertEqual(0, manager.get_disk_usage())
