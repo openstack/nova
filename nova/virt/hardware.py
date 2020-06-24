@@ -1720,9 +1720,20 @@ def vcpus_realtime_topology(
     if not mask:
         raise exception.RealtimeMaskNotFoundOrInvalid()
 
+    vcpus_set = set(range(flavor.vcpus))
     vcpus_rt = parse_cpu_spec("0-%d,%s" % (flavor.vcpus - 1, mask))
-    if len(vcpus_rt) < 1:
+
+    if not vcpus_rt:
         raise exception.RealtimeMaskNotFoundOrInvalid()
+
+    if vcpus_set == vcpus_rt:
+        raise exception.RealtimeMaskNotFoundOrInvalid()
+
+    if not vcpus_rt.issubset(vcpus_set):
+        msg = _("Realtime policy vCPU(s) mask is configured with RT vCPUs "
+                "that are not a subset of the vCPUs in the flavor. See "
+                "hw:cpu_realtime_mask or hw_cpu_realtime_mask")
+        raise exception.RealtimeMaskNotFoundOrInvalid(msg)
 
     return vcpus_rt
 

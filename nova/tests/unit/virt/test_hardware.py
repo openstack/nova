@@ -3658,9 +3658,48 @@ class CPURealtimeTestCase(test.NoDBTestCase):
             exception.RealtimeMaskNotFoundOrInvalid,
             hw.vcpus_realtime_topology, flavor, image)
 
-    def test_mask_badly_configured(self):
+    def test_invalid_mask_no_rt_cpus(self):
+        # The mask excludes all vCPUs from being RT
         flavor = objects.Flavor(vcpus=3, memory_mb=2048,
                                 extra_specs={"hw:cpu_realtime_mask": "^0-2"})
+        image = objects.ImageMeta.from_dict({"properties": {}})
+        self.assertRaises(
+            exception.RealtimeMaskNotFoundOrInvalid,
+            hw.vcpus_realtime_topology, flavor, image)
+
+    def test_invalid_mask_exclude_out_of_range(self):
+        # The mask excludes an invalidly high vCPU number.
+        flavor = objects.Flavor(vcpus=3, memory_mb=2048,
+                                extra_specs={"hw:cpu_realtime_mask": "^3"})
+        image = objects.ImageMeta.from_dict({"properties": {}})
+        self.assertRaises(
+            exception.RealtimeMaskNotFoundOrInvalid,
+            hw.vcpus_realtime_topology, flavor, image)
+
+    def test_explicit_range(self):
+        # The mask is not just an exclusion mask.  This is unexpected but
+        # the code doesn't prevent it.
+        flavor = objects.Flavor(vcpus=3, memory_mb=2048,
+                                extra_specs={"hw:cpu_realtime_mask": "0-2,^0"})
+        image = objects.ImageMeta.from_dict({"properties": {}})
+        rt = hw.vcpus_realtime_topology(flavor, image)
+        self.assertEqual({1, 2}, rt)
+
+    def test_invalid_mask_no_exclusion_wo_emulator_policy(self):
+        # The mask has no exclusion and there's no emulator thread policy
+        # configured
+        flavor = objects.Flavor(vcpus=3, memory_mb=2048,
+                                extra_specs={"hw:cpu_realtime_mask": "0-2"})
+        image = objects.ImageMeta.from_dict({"properties": {}})
+        self.assertRaises(
+            exception.RealtimeMaskNotFoundOrInvalid,
+            hw.vcpus_realtime_topology, flavor, image)
+
+    def test_invalid_mask_rt_cpus_out_of_range(self):
+        # The mask is not just an exclusion mask, and the RT range specifies
+        # an invalid vCPU number.
+        flavor = objects.Flavor(vcpus=3, memory_mb=2048,
+                                extra_specs={"hw:cpu_realtime_mask": "0-3,^0"})
         image = objects.ImageMeta.from_dict({"properties": {}})
         self.assertRaises(
             exception.RealtimeMaskNotFoundOrInvalid,
