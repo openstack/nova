@@ -591,6 +591,10 @@ class ImageBadRequest(Invalid):
                 "%(response)s")
 
 
+class ImageImportImpossible(Invalid):
+    msg_fmt = _("Import of image %(image_id)s refused: %(reason)s")
+
+
 class ImageQuotaExceeded(NovaException):
     msg_fmt = _("Quota exceeded or out of space for image %(image_id)s "
                 "in the image service.")
