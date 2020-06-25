@@ -213,7 +213,7 @@ class LibvirtConfigDomainCapsDevices(LibvirtConfigObject):
     def parse_dom(self, xmldoc):
         super().parse_dom(xmldoc)
 
-        for c in xmldoc.getchildren():
+        for c in list(xmldoc):
             device = self.DEVICE_PARSERS.get(c.tag)
             if device:
                 device = device()
@@ -281,7 +281,7 @@ class LibvirtConfigDomainCapsFeatureSev(LibvirtConfigObject):
         if xmldoc.get('supported') == 'yes':
             self.supported = True
 
-        for c in xmldoc.getchildren():
+        for c in list(xmldoc):
             if c.tag == 'reducedPhysBits':
                 self.reduced_phys_bits = int(c.text)
             elif c.tag == 'cbitpos':
@@ -3326,14 +3326,14 @@ class LibvirtConfigGuestVPMEM(LibvirtConfigGuestDevice):
         self.model = xmldoc.get("model")
         self.access = xmldoc.get("access")
 
-        for c in xmldoc.getchildren():
+        for c in list(xmldoc):
             if c.tag == "source":
-                for sub in c.getchildren():
+                for sub in list(c):
                     if sub.tag == "path":
                         self.source_path = sub.text
                     if sub.tag == "alignsize":
                         self.align_size = sub.text
             elif c.tag == "target":
-                for sub in c.getchildren():
+                for sub in list(c):
                     if sub.tag == "size":
                         self.target_size = sub.text
