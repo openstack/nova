@@ -2026,6 +2026,9 @@ class VMwareVMOps(object):
                                                 block_device_info)
         # Relocate the instance back, if needed
         if instance.uuid not in self.list_instances():
+            # Get the root disk vmdk object's adapter type
+            adapter_type = vmdk.adapter_type
+
             self._detach_volumes(instance, block_device_info)
             LOG.debug("Relocating VM for reverting migration",
                       instance=instance)
@@ -2043,7 +2046,7 @@ class VMwareVMOps(object):
                                                  self._cluster,
                                                  vm_ref)
             finally:
-                self._attach_volumes(instance, block_device_info)
+                self._attach_volumes(instance, block_device_info, adapter_type)
 
         if power_on:
             vm_util.power_on_instance(self._session, instance)
@@ -2062,6 +2065,11 @@ class VMwareVMOps(object):
         # If the dest_compute is different from the source_compute, it means we
         # need to relocate the VM here since we are running on the dest_compute
         if migration.source_compute != migration.dest_compute:
+            # Get the root disk vmdk object's adapter type
+            vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
+                                         uuid=instance.uuid)
+            adapter_type = vmdk.adapter_type
+
             self._detach_volumes(instance, block_device_info)
             reattach_volumes = True
             LOG.debug("Relocating VM for migration to %s",
@@ -2075,7 +2083,8 @@ class VMwareVMOps(object):
                 with excutils.save_and_reraise_exception():
                     LOG.error("Relocating the VM failed with error: %s", e,
                               instance=instance)
-                    self._attach_volumes(instance, block_device_info)
+                    self._attach_volumes(instance, block_device_info,
+                                         adapter_type)
 
             vm_util.update_cluster_placement(self._session, context,
                                              instance, self._cluster, vm_ref)
@@ -2107,7 +2116,7 @@ class VMwareVMOps(object):
 
         # 6. Attach the volumes (if necessary)
         if reattach_volumes:
-            self._attach_volumes(instance, block_device_info)
+            self._attach_volumes(instance, block_device_info, adapter_type)
         self._update_instance_progress(context, instance,
                                        step=6,
                                        total_steps=RESIZE_TOTAL_STEPS)
@@ -2175,14 +2184,16 @@ class VMwareVMOps(object):
         for disk in block_devices:
             self._volumeops.detach_volume(disk['connection_info'], instance)
 
-    def _attach_volumes(self, instance, block_device_info):
+    def _attach_volumes(self, instance, block_device_info, adapter_type):
         disks = driver.block_device_info_get_mapping(block_device_info)
         # make sure the disks are attached by the boot_index order (if any)
         for disk in sorted(disks,
                            key=lambda d: d['boot_index']
                            if 'boot_index' in d and d['boot_index'] > -1
                            else len(disks)):
-            self._volumeops.attach_volume(disk['connection_info'], instance)
+            adapter_type = disk.get('disk_bus') or adapter_type
+            self._volumeops.attach_volume(disk['connection_info'], instance,
+                                          adapter_type)
 
     def _find_esx_host(self, cluster_ref, ds_ref):
         """Find ESX host in the specified cluster which is also connected to
