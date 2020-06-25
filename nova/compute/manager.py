@@ -827,9 +827,11 @@ class ComputeManager(manager.Manager):
             # if this is an unpinned instance and the host only has
             # 'cpu_dedicated_set' configured, we need to tell the operator to
             # correct their configuration
-            if not (instance.numa_topology and
-                        instance.numa_topology.cpu_pinning_requested):
-
+            if not instance.numa_topology or (
+                instance.numa_topology.cpu_policy in (
+                    None, fields.CPUAllocationPolicy.SHARED
+                )
+            ):
                 # we don't need to check 'vcpu_pin_set' since it can't coexist
                 # alongside 'cpu_dedicated_set'
                 if (CONF.compute.cpu_dedicated_set and

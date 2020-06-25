@@ -82,10 +82,6 @@ class InstanceNUMACell(base.NovaEphemeralObject,
 
         return list(map(set, zip(*[iter(cpu_list)] * threads)))
 
-    @property
-    def cpu_pinning_requested(self):
-        return self.cpu_policy == obj_fields.CPUAllocationPolicy.DEDICATED
-
     def pin(self, vcpu, pcpu):
         if vcpu not in self.cpuset:
             return
@@ -205,16 +201,25 @@ class InstanceNUMATopology(base.NovaObject,
         """Defined so that boolean testing works the same as for lists."""
         return len(self.cells)
 
+    # TODO(stephenfin): We should add a real 'cpu_policy' field on this object
+    # and deprecate the one found on the cell
+    @property
+    def cpu_policy(self):
+        cpu_policy = set(cell.cpu_policy for cell in self.cells)
+        if len(cpu_policy) > 1:
+            # NOTE(stephenfin): This should never happen in real life; it's to
+            # prevent programmer error.
+            raise exception.InternalError(
+                'Instance NUMA cells must have the same CPU policy.'
+            )
+        return cpu_policy.pop()
+
     @property
     def cpu_pinning(self):
         """Return a set of all host CPUs this NUMATopology is pinned to."""
         return set(itertools.chain.from_iterable([
             cell.cpu_pinning.values() for cell in self.cells
             if cell.cpu_pinning]))
-
-    @property
-    def cpu_pinning_requested(self):
-        return all(cell.cpu_pinning_requested for cell in self.cells)
 
     def clear_host_pinning(self):
         """Clear any data related to how instance is pinned to the host.
