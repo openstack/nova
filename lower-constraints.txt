@@ -7,7 +7,7 @@ automaton==1.14.0
 bandit==1.1.0
 cachetools==2.0.1
 castellan==0.16.0
-cffi==1.11.5
+cffi==1.14.0
 cliff==2.11.0
 cmd2==0.8.1
 colorama==0.3.9
@@ -30,7 +30,7 @@ futurist==1.8.0
 gabbi==1.35.0
 gitdb2==2.0.3
 GitPython==2.1.8
-greenlet==0.4.10
+greenlet==0.4.15
 idna==2.6
 iso8601==0.1.11
 Jinja2==2.10
@@ -44,9 +44,9 @@ keystoneauth1==3.16.0
 keystonemiddleware==4.20.0
 kombu==4.6.1
 linecache2==1.0.0
-lxml==3.4.1
+lxml==4.5.0
 Mako==1.0.7
-MarkupSafe==1.0
+MarkupSafe==1.1.1
 microversion-parse==0.2.1
 mock==3.0.0
 msgpack==0.5.6
@@ -56,7 +56,7 @@ mypy==0.761
 netaddr==0.7.18
 netifaces==0.10.4
 networkx==2.1.0
-numpy==1.14.2
+numpy==1.19.0
 openstacksdk==0.35.0
 os-brick==3.1.0
 os-client-config==1.29.0
@@ -91,7 +91,7 @@ osprofiler==1.4.0
 ovs==2.10.0
 ovsdbapp==0.15.0
 packaging==17.1
-paramiko==2.0.0
+paramiko==2.7.1
 Paste==2.0.2
 PasteDeploy==1.5.0
 pbr==2.0.0
@@ -99,7 +99,7 @@ pluggy==0.6.0
 ply==3.11
 prettytable==0.7.1
 psutil==3.2.2
-psycopg2==2.7
+psycopg2==2.8
 py==1.5.2
 pyasn1==0.4.2
 pyasn1-modules==0.2.1
@@ -108,7 +108,7 @@ pycparser==2.18
 pyinotify==0.9.6
 pyroute2==0.5.4
 PyJWT==1.7.0
-PyMySQL==0.7.6
+PyMySQL==0.8.0
 pyOpenSSL==17.5.0
 pyparsing==2.2.0
 pyperclip==1.6.0
@@ -125,7 +125,7 @@ python-mimeparse==1.6.0
 python-neutronclient==6.7.0
 python-subunit==1.4.0
 pytz==2018.3
-PyYAML==3.12
+PyYAML==3.13
 repoze.lru==0.7
 requests==2.14.2
 requests-mock==1.2.0
