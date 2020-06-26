@@ -1843,23 +1843,6 @@ class LibvirtDriver(driver.ComputeDriver):
             instance.device_metadata = self._build_device_metadata(
                 context, instance)
             instance.save()
-
-        # TODO(lyarwood) Remove the following breadcrumb once all supported
-        # distributions provide Libvirt 3.3.0 or earlier with
-        # https://libvirt.org/git/?p=libvirt.git;a=commit;h=7189099 applied.
-        except libvirt.libvirtError as ex:
-            with excutils.save_and_reraise_exception():
-                if 'Incorrect number of padding bytes' in six.text_type(ex):
-                    LOG.warning(
-                        'Failed to attach encrypted volume due to a known '
-                        'Libvirt issue, see the following bug for details: '
-                        'https://bugzilla.redhat.com/1447297'
-                    )
-                else:
-                    LOG.exception('Failed to attach volume at mountpoint: %s',
-                                  mountpoint, instance=instance)
-                self._disconnect_volume(context, connection_info, instance,
-                                        encryption=encryption)
         except Exception:
             LOG.exception('Failed to attach volume at mountpoint: %s',
                           mountpoint, instance=instance)
