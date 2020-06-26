@@ -36,8 +36,8 @@ class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject):
 
     fields = {
         'instance_uuid': fields.UUIDField(),
-        'network_info': fields.Field(fields.NetworkModel(), nullable=True),
-        }
+        'network_info': fields.NetworkModelField(nullable=True),
+    }
 
     @staticmethod
     def _from_db_object(context, info_cache, db_obj):

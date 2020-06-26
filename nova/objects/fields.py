@@ -1353,6 +1353,14 @@ class InstancePowerStateField(BaseEnumField):
     AUTO_TYPE = InstancePowerState()
 
 
+class NetworkModelField(AutoTypedField):
+    AUTO_TYPE = NetworkModel()
+
+
+class NetworkVIFModelField(AutoTypedField):
+    AUTO_TYPE = NetworkVIFModel()
+
+
 class ListOfListsOfStringsField(AutoTypedField):
     AUTO_TYPE = List(List(fields.String()))
 

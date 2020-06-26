@@ -551,7 +551,7 @@ class TestNetworkModel(TestField):
     def setUp(self):
         super(TestNetworkModel, self).setUp()
         model = network_model.NetworkInfo()
-        self.field = fields.Field(fields.NetworkModel())
+        self.field = fields.NetworkModelField()
         self.coerce_good_values = [(model, model), (model.json(), model)]
         self.coerce_bad_values = [[], 'foo']
         self.to_primitive_values = [(model, model.json())]
@@ -570,7 +570,7 @@ class TestNetworkVIFModel(TestField):
         super(TestNetworkVIFModel, self).setUp()
         model = network_model.VIF('6c197bc7-820c-40d5-8aff-7116b993e793')
         primitive = jsonutils.dumps(model)
-        self.field = fields.Field(fields.NetworkVIFModel())
+        self.field = fields.NetworkVIFModelField()
         self.coerce_good_values = [(model, model), (primitive, model)]
         self.coerce_bad_values = [[], 'foo']
         self.to_primitive_values = [(model, primitive)]
