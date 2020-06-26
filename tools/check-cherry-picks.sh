@@ -4,7 +4,17 @@
 # to verify that they're all on either master or stable/ branches
 #
 
-hashes=$(git show --format='%b' --quiet $1 | sed -nr 's/^.cherry picked from commit (.*).$/\1/p')
+commit_hash=""
+
+# Check if the patch is a merge patch by counting the number of parents.
+# If the patch has 2 parents, then the 2nd parent is the patch we want
+# to validate.
+parent_number=$(git show --format='%P' --quiet | awk '{print NF}')
+if [ $parent_number -eq 2 ]; then
+    commit_hash=$(git show --format='%P' --quiet | awk '{print $NF}')
+fi
+
+hashes=$(git show --format='%b' --quiet $commit_hash | sed -nr 's/^.cherry picked from commit (.*).$/\1/p')
 checked=0
 branches+=""
 for hash in $hashes; do
