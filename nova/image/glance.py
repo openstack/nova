@@ -43,7 +43,6 @@ import six.moves.urllib.parse as urlparse
 
 import nova.conf
 from nova import exception
-import nova.image.download as image_xfers
 from nova import objects
 from nova.objects import fields
 from nova import profiler
@@ -217,24 +216,10 @@ class GlanceImageServiceV2(object):
 
     def __init__(self, client=None):
         self._client = client or GlanceClientWrapper()
-        # NOTE(jbresnah) build the table of download handlers at the beginning
-        # so that operators can catch errors at load time rather than whenever
-        # a user attempts to use a module.  Note this cannot be done in glance
-        # space when this python module is loaded because the download module
-        # may require configuration options to be parsed.
+        # NOTE(danms): This used to be built from a list of external modules
+        # that were loaded at runtime. Preserve this list for implementations
+        # to be added here.
         self._download_handlers = {}
-        download_modules = image_xfers.load_transfer_modules()
-
-        for scheme, mod in download_modules.items():
-            if scheme not in CONF.glance.allowed_direct_url_schemes:
-                continue
-
-            try:
-                self._download_handlers[scheme] = mod.get_download_handler()
-            except Exception as ex:
-                LOG.error('When loading the module %(module_str)s the '
-                          'following error occurred: %(ex)s',
-                          {'module_str': str(mod), 'ex': ex})
 
     def show(self, context, image_id, include_locations=False,
              show_deleted=True):
@@ -273,15 +258,12 @@ class GlanceImageServiceV2(object):
 
         return image
 
-    def _get_transfer_module(self, scheme):
+    def _get_transfer_method(self, scheme):
+        """Returns a transfer method for scheme, or None."""
         try:
             return self._download_handlers[scheme]
         except KeyError:
             return None
-        except Exception:
-            LOG.error("Failed to instantiate the download handler "
-                      "for %(scheme)s", {'scheme': scheme})
-        return
 
     def detail(self, context, **kwargs):
         """Calls out to Glance for a list of detailed image information."""
@@ -323,10 +305,10 @@ class GlanceImageServiceV2(object):
                 loc_url = entry['url']
                 loc_meta = entry['metadata']
                 o = urlparse.urlparse(loc_url)
-                xfer_mod = self._get_transfer_module(o.scheme)
-                if xfer_mod:
+                xfer_method = self._get_transfer_method(o.scheme)
+                if xfer_method:
                     try:
-                        xfer_mod.download(context, o, dst_path, loc_meta)
+                        xfer_method(context, o, dst_path, loc_meta)
                         LOG.info("Successfully transferred using %s", o.scheme)
                         return
                     except Exception:

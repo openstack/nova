@@ -1,0 +1,5 @@
+---
+upgrade:
+  - |
+    The ``nova.image.download`` entry point hook has been removed, per the deprecation
+    announcement in the 17.0.0 (Queens) release.
