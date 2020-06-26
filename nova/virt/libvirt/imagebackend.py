@@ -25,6 +25,7 @@ from castellan import key_manager
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from oslo_service import loopingcall
 from oslo_utils import excutils
 from oslo_utils import fileutils
 from oslo_utils import strutils
@@ -958,7 +959,77 @@ class Rbd(Image):
     def is_shared_block_storage():
         return True
 
-    def clone(self, context, image_id_or_uri):
+    def copy_to_store(self, context, image_meta):
+        store_name = CONF.libvirt.images_rbd_glance_store_name
+        image_id = image_meta['id']
+        try:
+            IMAGE_API.copy_image_to_store(context, image_id, store_name)
+        except exception.ImageBadRequest:
+            # NOTE(danms): This means that we raced with another node to start
+            # the copy. Fall through to polling the image for completion
+            pass
+        except exception.ImageImportImpossible as exc:
+            # NOTE(danms): This means we can not do this operation at all,
+            # so fold this into the kind of imagebackend failure that is
+            # expected by our callers
+            raise exception.ImageUnacceptable(image_id=image_id,
+                                              reason=str(exc))
+
+        def _wait_for_copy():
+            image = IMAGE_API.get(context, image_id, include_locations=True)
+            if store_name in image.get('os_glance_failed_import', []):
+                # Our store is reported as failed
+                raise loopingcall.LoopingCallDone('failed import')
+            elif (store_name not in image.get('os_glance_importing_to_stores',
+                                              []) and
+                  store_name in image['stores']):
+                # No longer importing and our store is listed in the stores
+                raise loopingcall.LoopingCallDone()
+            else:
+                LOG.debug('Glance reports copy of image %(image)s to '
+                          'rbd store %(store)s is still in progress',
+                          {'image': image_id,
+                           'store': store_name})
+                return True
+
+        LOG.info('Asking glance to copy image %(image)s to our '
+                 'rbd store %(store)s',
+                 {'image': image_id,
+                  'store': store_name})
+
+        timer = loopingcall.FixedIntervalWithTimeoutLoopingCall(_wait_for_copy)
+
+        # NOTE(danms): We *could* do something more complicated like try
+        # to scale our polling interval based on image size. The problem with
+        # that is that we do not get progress indication from Glance, so if
+        # we scale our interval to something long, and happen to poll right
+        # near the end of the copy, we will wait another long interval before
+        # realizing that the copy is complete. A simple interval per compute
+        # allows an operator to set this short on central/fast/inexpensive
+        # computes, and longer on nodes that are remote/slow/expensive across
+        # a slower link.
+        interval = CONF.libvirt.images_rbd_glance_copy_poll_interval
+        timeout = CONF.libvirt.images_rbd_glance_copy_timeout
+        try:
+            result = timer.start(interval=interval, timeout=timeout).wait()
+        except loopingcall.LoopingCallTimeOut:
+            raise exception.ImageUnacceptable(
+                image_id=image_id,
+                reason='Copy to store %(store)s timed out' % {
+                    'store': store_name})
+
+        if result is not True:
+            raise exception.ImageUnacceptable(
+                image_id=image_id,
+                reason=('Copy to store %(store)s unsuccessful '
+                        'because: %(reason)s') % {'store': store_name,
+                                                  'reason': result})
+
+        LOG.info('Image %(image)s copied to rbd store %(store)s',
+                 {'image': image_id,
+                  'store': store_name})
+
+    def clone(self, context, image_id_or_uri, copy_to_store=True):
         image_meta = IMAGE_API.get(context, image_id_or_uri,
                                    include_locations=True)
         locations = image_meta['locations']
@@ -974,6 +1045,12 @@ class Rbd(Image):
             if self.driver.is_cloneable(location, image_meta):
                 LOG.debug('Selected location: %(loc)s', {'loc': location})
                 return self.driver.clone(location, self.rbd_name)
+
+        # Not clone-able in our ceph, so try to get glance to copy it for us
+        # and then retry
+        if CONF.libvirt.images_rbd_glance_store_name and copy_to_store:
+            self.copy_to_store(context, image_meta)
+            return self.clone(context, image_id_or_uri, copy_to_store=False)
 
         reason = _('No image locations are accessible')
         raise exception.ImageUnacceptable(image_id=image_id_or_uri,
