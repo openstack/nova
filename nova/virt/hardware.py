@@ -1127,8 +1127,6 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None,
     # NOTE(stephenfin): As with memory, do not allow an instance to overcommit
     # against itself on any NUMA cell
     if instance_cell.cpu_policy == fields.CPUAllocationPolicy.DEDICATED:
-        # TODO(stephenfin): Is 'cpuset_reserved' present if consuming emulator
-        # threads from shared CPU pools? If so, we don't want to add this here
         required_cpus = len(instance_cell.cpuset) + cpuset_reserved
         if required_cpus > len(host_cell.pcpuset):
             LOG.debug('Not enough host cell CPUs to fit instance cell; '
@@ -1140,14 +1138,12 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None,
                       })
             return
     else:
-        required_cpus = len(instance_cell.cpuset) + cpuset_reserved
+        required_cpus = len(instance_cell.cpuset)
         if required_cpus > len(host_cell.cpuset):
             LOG.debug('Not enough host cell CPUs to fit instance cell; '
-                      'required: %(required)d + %(cpuset_reserved)d as '
-                      'overhead, actual: %(actual)d', {
+                      'required: %(required)d, actual: %(actual)d', {
                           'required': len(instance_cell.cpuset),
                           'actual': len(host_cell.cpuset),
-                          'cpuset_reserved': cpuset_reserved
                       })
             return
 
