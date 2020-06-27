@@ -744,8 +744,7 @@ class API(base.Base):
         # Only validate values of flavor/image so the return results of
         # following 'get' functions are not used.
         hardware.get_number_of_serial_ports(instance_type, image_meta)
-        if hardware.is_realtime_enabled(instance_type):
-            hardware.vcpus_realtime_topology(instance_type, image_meta)
+        hardware.get_realtime_cpu_constraint(instance_type, image_meta)
         hardware.get_cpu_topology_constraints(instance_type, image_meta)
         if validate_numa:
             hardware.numa_get_constraints(instance_type, image_meta)

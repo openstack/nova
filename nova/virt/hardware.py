@@ -1674,37 +1674,26 @@ def _get_hyperthreading_trait(
     return None
 
 
-def _get_realtime_constraint(
+# NOTE(stephenfin): This must be public as it's used elsewhere
+def get_realtime_cpu_constraint(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',
-) -> ty.Optional[str]:
+) -> ty.Optional[ty.Set[int]]:
     """Validate and return the requested realtime CPU mask.
 
     :param flavor: ``nova.objects.Flavor`` instance
     :param image_meta: ``nova.objects.ImageMeta`` instance
-    :returns: The realtime CPU mask requested, else None.
+    :returns: The realtime CPU set requested, else None.
     """
+    if not is_realtime_enabled(flavor):
+        return None
+
     flavor_mask, image_mask = _get_flavor_image_meta(
         'cpu_realtime_mask', flavor, image_meta)
 
     # Image masks are used ahead of flavor masks as they will have more
     # specific requirements
-    return image_mask or flavor_mask
-
-
-def vcpus_realtime_topology(
-    flavor: 'objects.Flavor',
-    image_meta: 'objects.ImageMeta',
-) -> ty.Set[int]:
-    """Determines instance vCPUs used as RT for a given spec.
-
-    :param flavor: ``nova.objects.Flavor`` instance
-    :param image_meta: ``nova.objects.ImageMeta`` instance
-    :raises: exception.RealtimeMaskNotFoundOrInvalid if mask was not found or
-        is invalid.
-    :returns: The realtime CPU mask requested.
-    """
-    mask = _get_realtime_constraint(flavor, image_meta)
+    mask = image_mask or flavor_mask
     if not mask:
         raise exception.RealtimeMaskNotFoundOrInvalid()
 
@@ -1854,7 +1843,7 @@ def numa_get_constraints(flavor, image_meta):
 
     cpu_policy = get_cpu_policy_constraint(flavor, image_meta)
     cpu_thread_policy = get_cpu_thread_policy_constraint(flavor, image_meta)
-    rt_mask = _get_realtime_constraint(flavor, image_meta)
+    rt_mask = get_realtime_cpu_constraint(flavor, image_meta)
     emu_threads_policy = get_emulator_thread_policy_constraint(flavor)
 
     # handle explicit VCPU/PCPU resource requests and the HW_CPU_HYPERTHREADING
@@ -1920,13 +1909,10 @@ def numa_get_constraints(flavor, image_meta):
         if emu_threads_policy == fields.CPUEmulatorThreadsPolicy.ISOLATE:
             raise exception.BadRequirementEmulatorThreadsPolicy()
 
-        if is_realtime_enabled(flavor):
+        if rt_mask:
             raise exception.RealtimeConfigurationInvalid()
 
         return numa_topology
-
-    if is_realtime_enabled(flavor) and not rt_mask:
-        raise exception.RealtimeMaskNotFoundOrInvalid()
 
     if numa_topology:
         for cell in numa_topology.cells:
