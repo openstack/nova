@@ -623,7 +623,8 @@ class VMwareVCDriver(driver.ComputeDriver):
         if block_device_info is not None:
             try:
                 self._detach_instance_volumes(instance, block_device_info)
-            except vexc.ManagedObjectNotFoundException:
+            except (vexc.ManagedObjectNotFoundException,
+                    exception.InstanceNotFound):
                 LOG.warning('Instance does not exists. Proceeding to '
                             'delete instance properties on datastore',
                             instance=instance)

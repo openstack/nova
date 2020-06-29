@@ -1593,6 +1593,17 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         self._destroy_instance_without_vm_ref(
             task_state=task_states.RESIZE_REVERTING)
 
+    def test_destroy_instance_with_vm_ref_and_with_volumes(self):
+        self.destroy_disks = True
+        self._create_instance()
+        bdi = {'block_device_mapping': ['foo']}
+        with mock.patch.object(self.conn._vmops,
+                               "destroy") as mock_destroy:
+            self.conn.destroy(self.context, self.instance, self.network_info,
+                              bdi, self.destroy_disks)
+            mock_destroy.assert_called_once_with(self.instance,
+                                                 self.destroy_disks)
+
     def _rescue(self, config_drive=False):
         # validate that the power on is only called once
         self._power_on = vm_util.power_on_instance
