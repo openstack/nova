@@ -685,7 +685,7 @@ class ComputeManager(manager.Manager):
             # the user can rebuild the instance (in ERROR state) on the source
             # host.
             'status': ['accepted', 'pre-migrating', 'done'],
-            'migration_type': 'evacuation',
+            'migration_type': fields.MigrationType.EVACUATION,
         }
         with utils.temporary_mutation(context, read_deleted='yes'):
             evacuations = objects.MigrationList.get_by_filters(context,
@@ -8475,9 +8475,10 @@ class ComputeManager(manager.Manager):
         # NOTE(mriedem): This is a no-op for neutron.
         self.network_api.setup_networks_on_host(context, instance,
                                                          self.host)
-        migration = objects.Migration(source_compute=instance.host,
-                                      dest_compute=self.host,
-                                      migration_type='live-migration')
+        migration = objects.Migration(
+            source_compute=instance.host,
+            dest_compute=self.host,
+            migration_type=fields.MigrationType.LIVE_MIGRATION)
         self.network_api.migrate_instance_finish(
             context, instance, migration, provider_mappings=None)
 

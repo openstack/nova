@@ -57,9 +57,7 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
         'new_instance_type_id': fields.IntegerField(nullable=True),
         'instance_uuid': fields.StringField(nullable=True),
         'status': fields.StringField(nullable=True),
-        'migration_type': fields.EnumField(['migration', 'resize',
-                                            'live-migration', 'evacuation'],
-                                           nullable=False),
+        'migration_type': fields.MigrationTypeField(nullable=False),
         'hidden': fields.BooleanField(nullable=False, default=False),
         'memory_total': fields.IntegerField(nullable=True),
         'memory_processed': fields.IntegerField(nullable=True),
@@ -204,6 +202,14 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
 
     def is_same_host(self):
         return self.source_compute == self.dest_compute
+
+    @property
+    def is_live_migration(self):
+        return self.migration_type == fields.MigrationType.LIVE_MIGRATION
+
+    @property
+    def is_resize(self):
+        return self.migration_type == fields.MigrationType.RESIZE
 
 
 @base.NovaObjectRegistry.register

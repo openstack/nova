@@ -456,7 +456,7 @@ class ComputeTaskManager(base.Base):
         migration.status = 'accepted'
         migration.instance_uuid = instance.uuid
         migration.source_compute = instance.host
-        migration.migration_type = 'live-migration'
+        migration.migration_type = fields.MigrationType.LIVE_MIGRATION
         if instance.obj_attr_is_set('flavor'):
             migration.old_instance_type_id = instance.flavor.id
             migration.new_instance_type_id = instance.flavor.id
