@@ -10,7 +10,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from unittest import mock
+
 from nova import context as nova_context
+from nova import exception
+from nova.objects import service
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
@@ -93,7 +97,44 @@ class ServiceTestCase(test.TestCase,
         self._wait_for_state_change(server, 'ACTIVE')
         # Cell cache should be populated after creating a server.
         self.assertTrue(nova_context.CELL_CACHE)
-        self.metadata.stop()
-        self.metadata.start()
+        # we need to mock nova.utils.raise_if_old_compute() that is run at
+        # service startup as that will check the global service level which
+        # populates the cell cache
+        with mock.patch("nova.utils.raise_if_old_compute"):
+            self.metadata.stop()
+            self.metadata.start()
         # Cell cache should be empty after the service reset.
         self.assertEqual({}, nova_context.CELL_CACHE)
+
+
+class TestOldComputeCheck(
+        test.TestCase, integrated_helpers.InstanceHelperMixin):
+
+    def test_conductor_fails_to_start_with_old_compute(self):
+        old_version = service.SERVICE_VERSION_ALIASES[
+            service.OLDEST_SUPPORTED_SERVICE_VERSION] - 1
+        with mock.patch(
+                "nova.objects.service.get_minimum_version_all_cells",
+                return_value=old_version):
+            self.assertRaises(
+                exception.TooOldComputeService, self.start_service,
+                'conductor')
+
+    def test_api_fails_to_start_with_old_compute(self):
+        old_version = service.SERVICE_VERSION_ALIASES[
+            service.OLDEST_SUPPORTED_SERVICE_VERSION] - 1
+        with mock.patch(
+                "nova.objects.service.get_minimum_version_all_cells",
+                return_value=old_version):
+            self.assertRaises(
+                exception.TooOldComputeService, self.useFixture,
+                nova_fixtures.OSAPIFixture(api_version='v2.1'))
+
+    def test_compute_fails_to_start_with_old_compute(self):
+        old_version = service.SERVICE_VERSION_ALIASES[
+            service.OLDEST_SUPPORTED_SERVICE_VERSION] - 1
+        with mock.patch(
+                "nova.objects.service.get_minimum_version_all_cells",
+                return_value=old_version):
+            self.assertRaises(
+                exception.TooOldComputeService, self._start_compute, 'host1')

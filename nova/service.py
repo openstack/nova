@@ -249,6 +249,8 @@ class Service(service.Service):
 
         debugger.init()
 
+        utils.raise_if_old_compute()
+
         service_obj = cls(host, binary, topic, manager,
                           report_interval=report_interval,
                           periodic_enable=periodic_enable,

@@ -257,6 +257,9 @@ Immediately after RC
 
     * Example: https://review.opendev.org/543580
 
+  * Bump the oldest supported compute service version
+    * https://review.opendev.org/#/c/738482/
+
 * Create the launchpad series for the next cycle
 
 * Set the development focus of the project to the new cycle series
