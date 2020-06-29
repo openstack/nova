@@ -553,6 +553,14 @@ class ServiceTooOld(Invalid):
                 "Unable to continue.")
 
 
+class TooOldComputeService(Invalid):
+    msg_fmt = _("Current Nova version does not support computes older than "
+                "%(oldest_supported_version)s but the minimum compute service "
+                "level in your %(scope)s is %(min_service_level)d and the "
+                "oldest supported service level is "
+                "%(oldest_supported_service)d.")
+
+
 class DestinationDiskExists(Invalid):
     msg_fmt = _("The supplied disk path (%(path)s) already exists, "
                 "it is expected not to exist.")

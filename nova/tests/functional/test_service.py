@@ -10,7 +10,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from unittest import mock
+
 from nova import context as nova_context
+from nova.objects import service
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
@@ -98,3 +101,40 @@ class ServiceTestCase(test.TestCase,
         self.metadata.start()
         # Cell cache should be empty after the service reset.
         self.assertEqual({}, nova_context.CELL_CACHE)
+
+
+class TestOldComputeCheck(
+        test.TestCase, integrated_helpers.InstanceHelperMixin):
+
+    def test_conductor_warns_if_old_compute(self):
+        old_version = service.SERVICE_VERSION_ALIASES[
+            service.OLDEST_SUPPORTED_SERVICE_VERSION] - 1
+        with mock.patch(
+                "nova.objects.service.get_minimum_version_all_cells",
+                return_value=old_version):
+            self.start_service('conductor')
+            self.assertIn(
+                'Current Nova version does not support computes older than',
+                self.stdlog.logger.output)
+
+    def test_api_warns_if_old_compute(self):
+        old_version = service.SERVICE_VERSION_ALIASES[
+            service.OLDEST_SUPPORTED_SERVICE_VERSION] - 1
+        with mock.patch(
+                "nova.objects.service.get_minimum_version_all_cells",
+                return_value=old_version):
+            self.useFixture(nova_fixtures.OSAPIFixture(api_version='v2.1'))
+            self.assertIn(
+                'Current Nova version does not support computes older than',
+                self.stdlog.logger.output)
+
+    def test_compute_warns_if_old_compute(self):
+        old_version = service.SERVICE_VERSION_ALIASES[
+            service.OLDEST_SUPPORTED_SERVICE_VERSION] - 1
+        with mock.patch(
+                "nova.objects.service.get_minimum_version_all_cells",
+                return_value=old_version):
+            self._start_compute('host1')
+            self.assertIn(
+                'Current Nova version does not support computes older than',
+                self.stdlog.logger.output)

@@ -17,12 +17,14 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_service import _options as service_opts
 from paste import deploy
+import six
 
 from nova import config
 from nova import context
 from nova import exception
 from nova import objects
 from nova import service
+from nova import utils
 
 CONF = cfg.CONF
 
@@ -40,6 +42,11 @@ def _get_config_files(env=None):
 
 
 def _setup_service(host, name):
+    try:
+        utils.raise_if_old_compute()
+    except exception.TooOldComputeService as e:
+        logging.getLogger(__name__).warning(six.text_type(e))
+
     binary = name if name.startswith('nova-') else "nova-%s" % name
 
     ctxt = context.get_admin_context()

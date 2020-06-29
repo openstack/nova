@@ -268,6 +268,24 @@ class ServiceTestCase(test.NoDBTestCase):
             serv.reset()
             mock_reset.assert_called_once_with()
 
+    @mock.patch('nova.conductor.api.API.wait_until_ready')
+    @mock.patch('nova.utils.raise_if_old_compute')
+    def test_old_compute_version_check_happens_after_wait_for_conductor(
+            self, mock_check_old, mock_wait):
+        obj_base.NovaObject.indirection_api = mock.MagicMock()
+
+        def fake_wait(*args, **kwargs):
+            mock_check_old.assert_not_called()
+
+        mock_wait.side_effect = fake_wait
+
+        service.Service.create(
+            self.host, self.binary, self.topic,
+            'nova.tests.unit.test_service.FakeManager')
+
+        mock_check_old.assert_called_once_with()
+        mock_wait.assert_called_once_with(mock.ANY)
+
 
 class TestWSGIService(test.NoDBTestCase):
 
