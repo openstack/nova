@@ -37,6 +37,7 @@ from nova import context
 from nova import exception
 from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
+from nova.objects import service as service_obj
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit.objects import test_objects
@@ -1207,3 +1208,89 @@ class TestGetSDKAdapter(test.NoDBTestCase):
         self.mock_get_confgrp.assert_called_once_with(self.service_type)
         self.mock_connection.assert_not_called()
         self.mock_get_auth_sess.assert_not_called()
+
+
+class TestOldComputeCheck(test.NoDBTestCase):
+
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells')
+    def test_no_compute(self, mock_get_min_service):
+        mock_get_min_service.return_value = 0
+
+        utils.raise_if_old_compute()
+
+        mock_get_min_service.assert_called_once_with(
+            mock.ANY, ['nova-compute'])
+
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells')
+    def test_old_but_supported_compute(self, mock_get_min_service):
+        oldest = service_obj.SERVICE_VERSION_ALIASES[
+            service_obj.OLDEST_SUPPORTED_SERVICE_VERSION]
+        mock_get_min_service.return_value = oldest
+
+        utils.raise_if_old_compute()
+
+        mock_get_min_service.assert_called_once_with(
+            mock.ANY, ['nova-compute'])
+
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells')
+    def test_new_compute(self, mock_get_min_service):
+        mock_get_min_service.return_value = service_obj.SERVICE_VERSION
+
+        utils.raise_if_old_compute()
+
+        mock_get_min_service.assert_called_once_with(
+            mock.ANY, ['nova-compute'])
+
+    @mock.patch('nova.objects.service.Service.get_minimum_version')
+    def test_too_old_compute_cell(self, mock_get_min_service):
+        self.flags(group='api_database', connection=None)
+        oldest = service_obj.SERVICE_VERSION_ALIASES[
+            service_obj.OLDEST_SUPPORTED_SERVICE_VERSION]
+        mock_get_min_service.return_value = oldest - 1
+
+        ex = self.assertRaises(
+            exception.TooOldComputeService, utils.raise_if_old_compute)
+
+        self.assertIn('cell', str(ex))
+        mock_get_min_service.assert_called_once_with(mock.ANY, 'nova-compute')
+
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells')
+    def test_too_old_compute_top_level(self, mock_get_min_service):
+        self.flags(group='api_database', connection='fake db connection')
+        oldest = service_obj.SERVICE_VERSION_ALIASES[
+            service_obj.OLDEST_SUPPORTED_SERVICE_VERSION]
+        mock_get_min_service.return_value = oldest - 1
+
+        ex = self.assertRaises(
+            exception.TooOldComputeService, utils.raise_if_old_compute)
+
+        self.assertIn('system', str(ex))
+        mock_get_min_service.assert_called_once_with(
+            mock.ANY, ['nova-compute'])
+
+    @mock.patch.object(utils.LOG, 'warning')
+    @mock.patch('nova.objects.service.Service.get_minimum_version')
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells')
+    def test_api_db_is_configured_but_the_service_cannot_access_db(
+            self, mock_get_all, mock_get, mock_warn):
+        # This is the case when the nova-compute service is wrongly configured
+        # with db credentials but nova-compute is never allowed to access the
+        # db directly.
+        mock_get_all.side_effect = exception.DBNotAllowed(
+            binary='nova-compute')
+
+        oldest = service_obj.SERVICE_VERSION_ALIASES[
+            service_obj.OLDEST_SUPPORTED_SERVICE_VERSION]
+        mock_get.return_value = oldest - 1
+
+        ex = self.assertRaises(
+            exception.TooOldComputeService, utils.raise_if_old_compute)
+
+        self.assertIn('cell', str(ex))
+        mock_get_all.assert_called_once_with(mock.ANY, ['nova-compute'])
+        mock_get.assert_called_once_with(mock.ANY, 'nova-compute')
+        mock_warn.assert_called_once_with(
+            'This service is configured for access to the API database but is '
+            'not allowed to directly access the database. You should run this '
+            'service without the [api_database]/connection config option. The '
+            'service version check will only query the local cell.')

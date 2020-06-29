@@ -23,6 +23,7 @@ from nova import context
 from nova import exception
 from nova import objects
 from nova import service
+from nova import utils
 
 CONF = cfg.CONF
 
@@ -40,6 +41,11 @@ def _get_config_files(env=None):
 
 
 def _setup_service(host, name):
+    try:
+        utils.raise_if_old_compute()
+    except exception.TooOldComputeService as e:
+        logging.getLogger(__name__).warning(str(e))
+
     binary = name if name.startswith('nova-') else "nova-%s" % name
 
     ctxt = context.get_admin_context()
