@@ -203,9 +203,10 @@ def is_ipv6_supported():
     has_ipv6_support = socket.has_ipv6
     try:
         s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+        s.bind(('::1', 0))
         s.close()
     except socket.error as e:
-        if e.errno == errno.EAFNOSUPPORT:
+        if e.errno == errno.EAFNOSUPPORT or e.errno == errno.EADDRNOTAVAIL:
             has_ipv6_support = False
         else:
             raise
