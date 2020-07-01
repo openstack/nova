@@ -884,7 +884,7 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
                'trusted image certificate IDs must be provided in '
                'order to validate an image certificate.')
         mock_log.debug.assert_called_once_with(msg)
-        msg = ('Image signature verification succeeded for image: %s')
+        msg = ('Image signature verification succeeded for image %s')
         mock_log.info.assert_called_once_with(msg, image_id)
 
     @mock.patch.object(six.moves.builtins, 'open')
