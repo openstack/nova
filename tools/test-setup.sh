@@ -23,8 +23,8 @@ sudo -H mysqladmin -u root password $DB_ROOT_PW
 sudo -H mysql -u root -p$DB_ROOT_PW -h localhost -e "
     DELETE FROM mysql.user WHERE User='';
     FLUSH PRIVILEGES;
-    GRANT ALL PRIVILEGES ON *.*
-        TO '$DB_USER'@'%' identified by '$DB_PW' WITH GRANT OPTION;"
+    CREATE USER '$DB_USER'@'%' IDENTIFIED BY '$DB_PW';
+    GRANT ALL PRIVILEGES ON *.* TO '$DB_USER'@'%' WITH GRANT OPTION;"
 
 # Now create our database.
 mysql -u $DB_USER -p$DB_PW -h 127.0.0.1 -e "
