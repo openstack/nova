@@ -748,6 +748,40 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         self.assertIsInstance(compute._build_semaphore,
                               compute_utils.UnlimitedSemaphore)
 
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_snapshot_instance')
+    def _test_max_concurrent_snapshots(self, mock_si, mock_inst_save):
+
+        with mock.patch.object(self.compute,
+                               '_snapshot_semaphore') as mock_sem:
+            instance = objects.Instance(uuid=uuidutils.generate_uuid())
+            for i in (1, 2, 3):
+                self.compute.snapshot_instance(self.context,
+                                               mock.sentinel.image,
+                                               instance)
+            self.assertEqual(3, mock_sem.__enter__.call_count)
+
+    def test_max_concurrent_snapshots_limited(self):
+        self.flags(max_concurrent_snapshots=2)
+        self._test_max_concurrent_snapshots()
+
+    def test_max_concurrent_snapshots_unlimited(self):
+        self.flags(max_concurrent_snapshots=0)
+        self._test_max_concurrent_snapshots()
+
+    def test_max_concurrent_snapshots_semaphore_limited(self):
+        self.flags(max_concurrent_snapshots=123)
+        self.assertEqual(123,
+                         manager.ComputeManager()._snapshot_semaphore.balance)
+
+    def test_max_concurrent_snapshots_semaphore_unlimited(self):
+        self.flags(max_concurrent_snapshots=0)
+        compute = manager.ComputeManager()
+        self.assertEqual(0, compute._snapshot_semaphore.balance)
+        self.assertIsInstance(compute._snapshot_semaphore,
+                              compute_utils.UnlimitedSemaphore)
+
     def test_nil_out_inst_obj_host_and_node_sets_nil(self):
         instance = fake_instance.fake_instance_obj(self.context,
                                                    uuid=uuids.instance,

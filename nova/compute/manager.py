@@ -542,6 +542,11 @@ class ComputeManager(manager.Manager):
                 CONF.max_concurrent_builds)
         else:
             self._build_semaphore = compute_utils.UnlimitedSemaphore()
+        if CONF.max_concurrent_snapshots > 0:
+            self._snapshot_semaphore = eventlet.semaphore.Semaphore(
+                CONF.max_concurrent_snapshots)
+        else:
+            self._snapshot_semaphore = compute_utils.UnlimitedSemaphore()
         if CONF.max_concurrent_live_migrations > 0:
             self._live_migration_executor = futurist.GreenThreadPoolExecutor(
                 max_workers=CONF.max_concurrent_live_migrations)
@@ -3819,8 +3824,9 @@ class ComputeManager(manager.Manager):
                       instance=instance)
             return
 
-        self._snapshot_instance(context, image_id, instance,
-                                task_states.IMAGE_SNAPSHOT)
+        with self._snapshot_semaphore:
+            self._snapshot_instance(context, image_id, instance,
+                                    task_states.IMAGE_SNAPSHOT)
 
     def _snapshot_instance(self, context, image_id, instance,
                            expected_task_state):

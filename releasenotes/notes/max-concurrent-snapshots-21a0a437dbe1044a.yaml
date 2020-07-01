@@ -1,0 +1,12 @@
+---
+features:
+  - |
+    A new configuration option, ``[DEFAULT]/max_concurrent_snapshots``,
+    has been added. This allow operator to configure maximum concurrent
+    snapshots on a compute host and prevent resource overuse related
+    to snapshot.
+upgrade:
+  - |
+    Previously, the number of concurrent snapshots was unlimited, now it is
+    limited via ``[DEFAULT]/max_concurrent_snapshots``, which currently
+    defaults to 5.
