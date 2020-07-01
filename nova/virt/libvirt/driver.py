@@ -39,6 +39,7 @@ import os
 import pwd
 import random
 import shutil
+import sys
 import tempfile
 import time
 import typing as ty
@@ -329,6 +330,10 @@ class LibvirtDriver(driver.ComputeDriver):
             "supports_bfv_rescue": True,
         }
         super(LibvirtDriver, self).__init__(virtapi)
+
+        if not sys.platform.startswith('linux'):
+            raise exception.InternalError(
+                _('The libvirt driver only works on Linux'))
 
         global libvirt
         if libvirt is None:
