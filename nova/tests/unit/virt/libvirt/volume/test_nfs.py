@@ -99,3 +99,17 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
                                                     ['-o', 'intr,nfsvers=3'])])
         self.mock_umount.assert_has_calls([mock.call(export_mnt_base)])
         self.mock_rmdir.assert_has_calls([mock.call(export_mnt_base)])
+
+    def test_extend_volume(self):
+        libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_host)
+        export_string = '192.168.1.1:/nfs/share1'
+        connection_info = {'data': {'export': export_string,
+                                    'name': self.name}}
+        instance = mock.sentinel.instance
+        requested_size = 10
+
+        new_size = libvirt_driver.extend_volume(connection_info,
+                                                instance,
+                                                requested_size)
+
+        self.assertEqual(requested_size, new_size)
