@@ -26600,8 +26600,23 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         not running should trigger a blockRebase using qemu-img not libvirt.
         In this test, we rebase the image with another image as backing file.
         """
+        dom_xml = """
+              <domain type='kvm'>
+                <devices>
+                  <disk type='file'>
+                     <source file='/var/lib/nova/instances/%s/disk1_file'/>
+                     <target dev='vda' bus='virtio'/>
+                     <serial>0e38683e-f0af-418f-a3f1-6b67ea0f919d</serial>
+                  </disk>
+                  <disk type='block'>
+                    <source dev='/path/to/dev/1'/>
+                    <target dev='vdb' bus='virtio' serial='1234'/>
+                  </disk>
+                </devices>
+              </domain>""" % self.inst['uuid']
+
         mock_domain, guest = self._setup_block_rebase_domain_and_guest_mocks(
-                                self.dom_xml)
+                                dom_xml)
 
         instance = objects.Instance(**self.inst)
         snapshot_id = 'snapshot-1234'
@@ -26612,10 +26627,13 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                                               self.delete_info_1)
 
         mock_disk_op_sema.__enter__.assert_called_once()
-        mock_qemu_img_info.assert_called_once_with("snap.img")
-        mock_execute.assert_called_once_with('qemu-img', 'rebase',
-                                             '-b', 'snap.img', '-F',
-                                             'fake_fmt', 'disk1_file')
+        mock_qemu_img_info.assert_called_once_with(
+            "/var/lib/nova/instances/%s/snap.img" % instance.uuid)
+        mock_execute.assert_called_once_with(
+            'qemu-img', 'rebase',
+            '-b', '/var/lib/nova/instances/%s/snap.img' % instance.uuid,
+            '-F', 'fake_fmt',
+            '/var/lib/nova/instances/%s/disk1_file' % instance.uuid)
 
     @mock.patch.object(compute_utils, 'disk_ops_semaphore')
     @mock.patch.object(host.Host, "has_min_version",
