@@ -6641,9 +6641,13 @@ class LibvirtDriver(driver.ComputeDriver):
         """Returns a dict of NET device."""
         devname = pci_utils.get_net_name_by_vf_pci_address(vf_address)
         if not devname:
-            return
+            return None
 
-        virtdev = self._host.device_lookup_by_name(devname)
+        try:
+            virtdev = self._host.device_lookup_by_name(devname)
+        except libvirt.libvirtError as ex:
+            LOG.warning(ex)
+            return None
         xmlstr = virtdev.XMLDesc(0)
         cfgdev = vconfig.LibvirtConfigNodeDevice()
         cfgdev.parse_str(xmlstr)
