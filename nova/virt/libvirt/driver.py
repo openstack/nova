@@ -2314,11 +2314,6 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         try:
             guest = self._host.get_guest(instance)
-
-            # TODO(sahid): We are converting all calls from a
-            # virDomain object to use nova.virt.libvirt.Guest.
-            # We should be able to remove virt_dom at the end.
-            virt_dom = guest._domain
         except exception.InstanceNotFound:
             raise exception.InstanceNotRunning(instance_id=instance.uuid)
 
@@ -2353,6 +2348,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         snapshot_name = uuidutils.generate_uuid(dashed=False)
 
+        # store current state so we know what to resume back to if we suspend
         state = guest.get_power_state(self._host)
 
         # NOTE(dgenin): Instances with LVM encrypted ephemeral storage require
@@ -2389,8 +2385,8 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             live_snapshot = False
 
-        self._prepare_domain_for_snapshot(context, live_snapshot, state,
-                                          instance)
+        self._suspend_guest_for_snapshot(
+            context, live_snapshot, state, instance)
 
         root_disk = self.image_backend.by_libvirt_path(
             instance, disk_path, image_type=source_type)
@@ -2409,8 +2405,8 @@ class LibvirtDriver(driver.ComputeDriver):
             metadata['location'] = root_disk.direct_snapshot(
                 context, snapshot_name, image_format, image_id,
                 instance.image_ref)
-            self._snapshot_domain(context, live_snapshot, virt_dom, state,
-                                  instance)
+            self._resume_guest_after_snapshot(
+                context, live_snapshot, state, instance, guest)
             self._image_api.update(context, image_id, metadata,
                                    purge_props=False)
         except (NotImplementedError, exception.ImageUnacceptable,
@@ -2434,8 +2430,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 # not safe to run with live_snapshot.
                 live_snapshot = False
                 # Suspend the guest, so this is no longer a live snapshot
-                self._prepare_domain_for_snapshot(context, live_snapshot,
-                                                  state, instance)
+                self._suspend_guest_for_snapshot(
+                    context, live_snapshot, state, instance)
 
             snapshot_directory = CONF.libvirt.snapshots_directory
             fileutils.ensure_tree(snapshot_directory)
@@ -2467,8 +2463,8 @@ class LibvirtDriver(driver.ComputeDriver):
                     else:
                         raise
                 finally:
-                    self._snapshot_domain(context, live_snapshot, virt_dom,
-                                          state, instance)
+                    self._resume_guest_after_snapshot(
+                        context, live_snapshot, state, instance, guest)
 
                 # Upload that image to the image service
                 update_task_state(task_state=task_states.IMAGE_UPLOADING,
@@ -2492,29 +2488,53 @@ class LibvirtDriver(driver.ComputeDriver):
 
         LOG.info("Snapshot image upload complete", instance=instance)
 
-    def _prepare_domain_for_snapshot(self, context, live_snapshot, state,
-                                     instance):
+    def _needs_suspend_resume_for_snapshot(
+        self,
+        live_snapshot: bool,
+        state: str,
+    ):
         # NOTE(dkang): managedSave does not work for LXC
-        if CONF.libvirt.virt_type != 'lxc' and not live_snapshot:
-            if state == power_state.RUNNING or state == power_state.PAUSED:
-                self.suspend(context, instance)
+        if CONF.libvirt.virt_type == 'lxc':
+            return False
 
-    def _snapshot_domain(self, context, live_snapshot, virt_dom, state,
-                         instance):
-        guest = None
-        # NOTE(dkang): because previous managedSave is not called
-        #              for LXC, _create_domain must not be called.
-        if CONF.libvirt.virt_type != 'lxc' and not live_snapshot:
-            if state == power_state.RUNNING:
-                guest = self._create_domain(domain=virt_dom)
-            elif state == power_state.PAUSED:
-                guest = self._create_domain(domain=virt_dom, pause=True)
+        # Live snapshots do not necessitate suspending the domain
+        if live_snapshot:
+            return False
 
-            if guest is not None:
-                self._attach_pci_devices(
-                    guest, pci_manager.get_instance_pci_devs(instance))
-                self._attach_direct_passthrough_ports(
-                    context, instance, guest)
+        # ...and neither does a non-running domain
+        return state in (power_state.RUNNING, power_state.PAUSED)
+
+    def _suspend_guest_for_snapshot(
+        self,
+        context: nova_context.RequestContext,
+        live_snapshot: bool,
+        state: str,
+        instance: 'objects.Instance',
+    ):
+        if not self._needs_suspend_resume_for_snapshot(live_snapshot, state):
+            return
+
+        self.suspend(context, instance)
+
+    def _resume_guest_after_snapshot(
+        self,
+        context: nova_context.RequestContext,
+        live_snapshot: bool,
+        state: str,
+        instance: 'objects.Instance',
+        guest: libvirt_guest.Guest,
+    ):
+        if not self._needs_suspend_resume_for_snapshot(live_snapshot, state):
+            return
+
+        state = guest.get_power_state(self._host)
+
+        # TODO(stephenfin): Any reason we couldn't use 'self.resume' here?
+        guest.launch(pause=state == power_state.PAUSED)
+
+        self._attach_pci_devices(
+            guest, pci_manager.get_instance_pci_devs(instance))
+        self._attach_direct_passthrough_ports(context, instance, guest)
 
     def _can_set_admin_password(self, image_meta):
 
@@ -3189,11 +3209,10 @@ class LibvirtDriver(driver.ComputeDriver):
             # NOTE(ivoks): By checking domain IDs, we make sure we are
             #              not recreating domain that's already running.
             if old_domid != new_domid:
-                if state in [power_state.SHUTDOWN,
-                             power_state.CRASHED]:
+                if state in (power_state.SHUTDOWN, power_state.CRASHED):
                     LOG.info("Instance shutdown successfully.",
                              instance=instance)
-                    self._create_domain(domain=guest._domain)
+                    guest.launch()
                     timer = loopingcall.FixedIntervalLoopingCall(
                         self._wait_for_running, instance)
                     timer.start(interval=0.5).wait()
@@ -3268,9 +3287,9 @@ class LibvirtDriver(driver.ComputeDriver):
         # on which vif type we're using and we are working with a stale network
         # info cache here, so won't rely on waiting for neutron plug events.
         # vifs_already_plugged=True means "do not wait for neutron plug events"
-        self._create_domain_and_network(context, xml, instance, network_info,
-                                        block_device_info=block_device_info,
-                                        vifs_already_plugged=True)
+        self._create_guest_with_network(
+            context, xml, instance, network_info, block_device_info,
+            vifs_already_plugged=True)
         self._prepare_pci_devices_for_use(
             pci_manager.get_instance_pci_devs(instance, 'all'))
 
@@ -3417,9 +3436,9 @@ class LibvirtDriver(driver.ComputeDriver):
         """resume the specified instance."""
         xml = self._get_existing_domain_xml(instance, network_info,
                                             block_device_info)
-        guest = self._create_domain_and_network(context, xml, instance,
-                           network_info, block_device_info=block_device_info,
-                           vifs_already_plugged=True)
+        guest = self._create_guest_with_network(
+            context, xml, instance, network_info, block_device_info,
+            vifs_already_plugged=True)
         self._attach_pci_devices(guest,
             pci_manager.get_instance_pci_devs(instance))
         self._attach_direct_passthrough_ports(
@@ -3566,7 +3585,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                   mdevs=mdevs,
                                   block_device_info=block_device_info)
         self._destroy(instance)
-        self._create_domain(xml, post_xml_callback=gen_confdrive)
+        self._create_guest(xml, post_xml_callback=gen_confdrive)
 
     def unrescue(
         self,
@@ -3577,14 +3596,9 @@ class LibvirtDriver(driver.ComputeDriver):
         instance_dir = libvirt_utils.get_instance_path(instance)
         unrescue_xml_path = os.path.join(instance_dir, 'unrescue.xml')
         xml = libvirt_utils.load_file(unrescue_xml_path)
-        guest = self._host.get_guest(instance)
 
-        # TODO(sahid): We are converting all calls from a
-        # virDomain object to use nova.virt.libvirt.Guest.
-        # We should be able to remove virt_dom at the end.
-        virt_dom = guest._domain
         self._destroy(instance)
-        self._create_domain(xml, virt_dom)
+        self._create_guest(xml)
         os.unlink(unrescue_xml_path)
         rescue_files = os.path.join(instance_dir, "*.rescue")
         for rescue_file in glob.iglob(rescue_files):
@@ -3631,9 +3645,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                   disk_info, image_meta,
                                   block_device_info=block_device_info,
                                   mdevs=mdevs, accel_info=accel_info)
-        self._create_domain_and_network(
-            context, xml, instance, network_info,
-            block_device_info=block_device_info,
+        self._create_guest_with_network(
+            context, xml, instance, network_info, block_device_info,
             post_xml_callback=gen_confdrive,
             power_on=power_on,
             cleanup_instance_dir=created_instance_dir,
@@ -6437,22 +6450,23 @@ class LibvirtDriver(driver.ComputeDriver):
         finally:
             self._create_domain_cleanup_lxc(instance)
 
-    # TODO(sahid): Consider renaming this to _create_guest.
-    def _create_domain(self, xml=None, domain=None,
-                       power_on=True, pause=False, post_xml_callback=None):
-        """Create a domain.
+    def _create_guest(
+        self,
+        xml: str,
+        power_on: bool = True,
+        pause: bool = False,
+        post_xml_callback: ty.Callable = None,
+    ) -> libvirt_guest.Guest:
+        """Create a Guest from XML.
 
-        Either domain or xml must be passed in. If both are passed, then
-        the domain definition is overwritten from the xml.
+        Create a Guest, which in turn creates a libvirt domain, from XML,
+        optionally starting it after creation.
 
-        :returns guest.Guest: Guest just created
+        :returns guest.Guest: Created guest.
         """
-        if xml:
-            guest = libvirt_guest.Guest.create(xml, self._host)
-            if post_xml_callback is not None:
-                post_xml_callback()
-        else:
-            guest = libvirt_guest.Guest(domain)
+        guest = libvirt_guest.Guest.create(xml, self._host)
+        if post_xml_callback is not None:
+            post_xml_callback()
 
         if power_on or pause:
             guest.launch(pause=pause)
@@ -6490,8 +6504,8 @@ class LibvirtDriver(driver.ComputeDriver):
                           cleanup_instance_dir=cleanup_instance_dir,
                           cleanup_instance_disks=cleanup_instance_disks)
 
-    def _create_domain_and_network(self, context, xml, instance, network_info,
-                                   block_device_info=None, power_on=True,
+    def _create_guest_with_network(self, context, xml, instance, network_info,
+                                   block_device_info, power_on=True,
                                    vifs_already_plugged=False,
                                    post_xml_callback=None,
                                    external_events=None,
@@ -6517,7 +6531,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 with self._lxc_disk_handler(context, instance,
                                             instance.image_meta,
                                             block_device_info):
-                    guest = self._create_domain(
+                    guest = self._create_guest(
                         xml, pause=pause, power_on=power_on,
                         post_xml_callback=post_xml_callback)
         except exception.VirtualInterfaceCreateException:
@@ -10330,12 +10344,10 @@ class LibvirtDriver(driver.ComputeDriver):
         # and the status change in the port might go undetected by the neutron
         # L2 agent (or neutron server) so neutron may not know that the VIF was
         # unplugged in the first place and never send an event.
-        guest = self._create_domain_and_network(context, xml, instance,
-                                        network_info,
-                                        block_device_info=block_device_info,
-                                        power_on=power_on,
-                                        vifs_already_plugged=True,
-                                        post_xml_callback=gen_confdrive)
+        guest = self._create_guest_with_network(
+            context, xml, instance, network_info, block_device_info,
+            power_on=power_on, vifs_already_plugged=True,
+            post_xml_callback=gen_confdrive)
         if power_on:
             timer = loopingcall.FixedIntervalLoopingCall(
                                                     self._wait_for_running,
@@ -10402,10 +10414,9 @@ class LibvirtDriver(driver.ComputeDriver):
         if events:
             LOG.debug('Instance is using plug-time events: %s', events,
                       instance=instance)
-        self._create_domain_and_network(
-            context, xml, instance, network_info,
-            block_device_info=block_device_info, power_on=power_on,
-            external_events=events)
+        self._create_guest_with_network(
+            context, xml, instance, network_info, block_device_info,
+            power_on=power_on, external_events=events)
 
         if power_on:
             timer = loopingcall.FixedIntervalLoopingCall(

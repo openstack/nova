@@ -61,12 +61,16 @@ class GuestTestCase(test.NoDBTestCase):
         libvirt_guest.Guest.create("xml", self.host)
         mock_define.assert_called_once_with("xml")
 
+    @mock.patch.object(libvirt_guest.LOG, 'error')
     @mock.patch.object(fakelibvirt.Connection, 'defineXML')
-    def test_create_exception(self, mock_define):
+    def test_create_exception(self, mock_define, mock_log):
+        fake_xml = '<test>this is a test</test>'
         mock_define.side_effect = test.TestingException
         self.assertRaises(test.TestingException,
                           libvirt_guest.Guest.create,
-                          "foo", self.host)
+                          fake_xml, self.host)
+        # ensure the XML is logged
+        self.assertIn(fake_xml, str(mock_log.call_args[0]))
 
     def test_launch(self):
         self.guest.launch()
@@ -77,17 +81,21 @@ class GuestTestCase(test.NoDBTestCase):
         self.domain.createWithFlags.assert_called_once_with(
             fakelibvirt.VIR_DOMAIN_START_PAUSED)
 
+    @mock.patch.object(libvirt_guest.LOG, 'error')
+    @mock.patch.object(encodeutils, 'safe_decode')
+    def test_launch_exception(self, mock_safe_decode, mock_log):
+        fake_xml = '<test>this is a test</test>'
+        self.domain.createWithFlags.side_effect = test.TestingException
+        mock_safe_decode.return_value = fake_xml
+        self.assertRaises(test.TestingException, self.guest.launch)
+        self.assertEqual(1, mock_safe_decode.called)
+        # ensure the XML is logged
+        self.assertIn(fake_xml, str(mock_log.call_args[0]))
+
     def test_shutdown(self):
         self.domain.shutdown = mock.MagicMock()
         self.guest.shutdown()
         self.domain.shutdown.assert_called_once_with()
-
-    @mock.patch.object(encodeutils, 'safe_decode')
-    def test_launch_exception(self, mock_safe_decode):
-        self.domain.createWithFlags.side_effect = test.TestingException
-        mock_safe_decode.return_value = "</xml>"
-        self.assertRaises(test.TestingException, self.guest.launch)
-        self.assertEqual(1, mock_safe_decode.called)
 
     def test_get_interfaces(self):
         self.domain.XMLDesc.return_value = """<domain>

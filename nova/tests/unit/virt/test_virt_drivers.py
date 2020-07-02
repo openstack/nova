@@ -294,9 +294,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
                                image_meta, '', None)
 
     @catch_notimplementederror
-    @mock.patch('os.unlink')
-    @mock.patch('nova.virt.libvirt.utils.load_file', return_value='')
-    def test_unrescue_unrescued_instance(self, mock_load_file, mock_unlink):
+    def test_unrescue_unrescued_instance(self):
         instance_ref, _ = self._get_running_instance()
         self.connection.unrescue(self.ctxt, instance_ref)
 
@@ -888,6 +886,19 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         CONF.set_override('force_raw_images', False)
         self.assertRaises(exception.InvalidConfiguration,
                           self.connection.init_host, 'myhostname')
+
+    @mock.patch('os.unlink')
+    @mock.patch('nova.virt.libvirt.utils.load_file')
+    def test_unrescue_unrescued_instance(self, mock_load_file, mock_unlink):
+        instance_ref, _ = self._get_running_instance()
+        # fake out 'unrescue.xml'
+        mock_load_file.return_value = self.connection._get_existing_domain_xml(
+            instance_ref, None,
+        )
+
+        super().test_unrescue_unrescued_instance()
+
+        self.assertIn('unrescue.xml', mock_load_file.call_args[0][0])
 
     def test_force_hard_reboot(self):
         self.flags(wait_soft_reboot_seconds=0, group='libvirt')
