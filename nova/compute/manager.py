@@ -9924,10 +9924,38 @@ class ComputeManager(manager.Manager):
         if vm_state in (vm_states.BUILDING,
                         vm_states.RESCUED,
                         vm_states.RESIZED,
-                        vm_states.SUSPENDED,
                         vm_states.ERROR):
             # TODO(maoy): we ignore these vm_state for now.
             pass
+        elif vm_state == vm_states.SUSPENDED:
+            if not CONF.sync_power_state_unexpected_call_stop:
+                if vm_power_state in (power_state.SHUTDOWN,
+                                      power_state.CRASHED):
+                    LOG.warning("Instance shutdown by itself. "
+                                "Current vm_state: %(vm_state)s, "
+                                "current task_state: %(task_state)s, "
+                                "original DB power_state: %(db_power_state)s, "
+                                "current VM power_state: %(vm_power_state)s",
+                                {'vm_state': vm_state,
+                                 'task_state': db_instance.task_state,
+                                 'db_power_state': orig_db_power_state,
+                                 'vm_power_state': vm_power_state},
+                                instance=db_instance)
+                    db_instance.vm_state = vm_states.STOPPED
+                    db_instance.save()
+                elif vm_power_state == power_state.RUNNING:
+                    LOG.warning("Instance started running by itself. "
+                                "Current vm_state: %(vm_state)s, "
+                                "current task_state: %(task_state)s, "
+                                "original DB power_state: %(db_power_state)s, "
+                                "current VM power_state: %(vm_power_state)s",
+                                {'vm_state': vm_state,
+                                 'task_state': db_instance.task_state,
+                                 'db_power_state': orig_db_power_state,
+                                 'vm_power_state': vm_power_state},
+                                instance=db_instance)
+                    db_instance.vm_state = vm_states.ACTIVE
+                    db_instance.save()
         elif vm_state == vm_states.ACTIVE:
             # The only rational power state should be RUNNING
             if vm_power_state in (power_state.SHUTDOWN,
