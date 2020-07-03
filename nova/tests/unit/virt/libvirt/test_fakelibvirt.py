@@ -457,7 +457,7 @@ class FakeLibvirtTests(test.NoDBTestCase):
         vf_xml = """<device>
   <name>pci_0000_81_00_1</name>
   <path>/sys/devices/pci0000:80/0000:80:01.0/0000:81:00.1</path>
-  <parent>pci_0000_80_01_0</parent>
+  <parent>pci_0000_81_00_0</parent>
   <driver>
     <name>ixgbevf</name>
   </driver>

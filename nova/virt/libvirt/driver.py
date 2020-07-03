@@ -6908,35 +6908,41 @@ class LibvirtDriver(driver.ComputeDriver):
         cpu_info['features'] = features
         return cpu_info
 
-    def _get_pcinet_info(self, vf_address):
+    def _get_pcinet_info(
+        self,
+        dev: 'libvirt.virNodeDevice',
+        net_devs: ty.List['libvirt.virNodeDevice']
+    ) -> ty.Optional[ty.List[str]]:
         """Returns a dict of NET device."""
-        devname = pci_utils.get_net_name_by_vf_pci_address(vf_address)
-        if not devname:
+        net_dev = {dev.parent(): dev for dev in net_devs}.get(dev.name(), None)
+        if net_dev is None:
             return None
-
-        try:
-            virtdev = self._host.device_lookup_by_name(devname)
-        except libvirt.libvirtError as ex:
-            LOG.warning(ex)
-            return None
-        xmlstr = virtdev.XMLDesc(0)
+        xmlstr = net_dev.XMLDesc(0)
         cfgdev = vconfig.LibvirtConfigNodeDevice()
         cfgdev.parse_str(xmlstr)
-        return {'name': cfgdev.name,
-                'capabilities': cfgdev.pci_capability.features}
+        return cfgdev.pci_capability.features
 
-    def _get_pcidev_info(self, devname):
+    def _get_pcidev_info(
+        self,
+        devname: str,
+        dev: 'libvirt.virNodeDevice',
+        net_devs: ty.List['libvirt.virNodeDevice']
+    ) -> ty.Dict[str, ty.Union[str, dict]]:
         """Returns a dict of PCI device."""
 
-        def _get_device_type(cfgdev, pci_address):
+        def _get_device_type(
+            cfgdev: vconfig.LibvirtConfigNodeDevice,
+            pci_address: str,
+            device: 'libvirt.virNodeDevice',
+            net_devs: ty.List['libvirt.virNodeDevice']
+        ) -> ty.Dict[str, str]:
             """Get a PCI device's device type.
 
             An assignable PCI device can be a normal PCI device,
             a SR-IOV Physical Function (PF), or a SR-IOV Virtual
-            Function (VF). Only normal PCI devices or SR-IOV VFs
-            are assignable, while SR-IOV PFs are always owned by
-            hypervisor.
+            Function (VF).
             """
+            net_dev_parents = {dev.parent() for dev in net_devs}
             for fun_cap in cfgdev.pci_capability.fun_capability:
                 if fun_cap.type == 'virt_functions':
                     return {
@@ -6954,35 +6960,34 @@ class LibvirtDriver(driver.ComputeDriver):
                         'parent_addr': phys_address,
                     }
                     parent_ifname = None
-                    try:
+                    # NOTE(sean-k-mooney): if the VF is a parent of a netdev
+                    # the PF should also have a netdev.
+                    if device.name() in net_dev_parents:
                         parent_ifname = pci_utils.get_ifname_by_pci_address(
                             pci_address, pf_interface=True)
-                    except exception.PciDeviceNotFoundById:
-                        # NOTE(sean-k-mooney): we ignore this error as it
-                        # is expected when the virtual function is not a NIC.
-                        pass
-                    if parent_ifname:
                         result['parent_ifname'] = parent_ifname
                     return result
 
             return {'dev_type': fields.PciDeviceType.STANDARD}
 
-        def _get_device_capabilities(device, address):
+        def _get_device_capabilities(
+            device_dict: dict,
+            device: 'libvirt.virNodeDevice',
+            net_devs: ty.List['libvirt.virNodeDevice']
+        ) -> ty.Dict[str, ty.Dict[str, ty.Optional[ty.List[str]]]]:
             """Get PCI VF device's additional capabilities.
 
             If a PCI device is a virtual function, this function reads the PCI
             parent's network capabilities (must be always a NIC device) and
             appends this information to the device's dictionary.
             """
-            if device.get('dev_type') == fields.PciDeviceType.SRIOV_VF:
-                pcinet_info = self._get_pcinet_info(address)
+            if device_dict.get('dev_type') == fields.PciDeviceType.SRIOV_VF:
+                pcinet_info = self._get_pcinet_info(device, net_devs)
                 if pcinet_info:
-                    return {'capabilities':
-                                {'network': pcinet_info.get('capabilities')}}
+                    return {'capabilities': {'network': pcinet_info}}
             return {}
 
-        virtdev = self._host.device_lookup_by_name(devname)
-        xmlstr = virtdev.XMLDesc(0)
+        xmlstr = dev.XMLDesc(0)
         cfgdev = vconfig.LibvirtConfigNodeDevice()
         cfgdev.parse_str(xmlstr)
 
@@ -7003,8 +7008,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # requirement by DataBase Model
         device['label'] = 'label_%(vendor_id)s_%(product_id)s' % device
-        device.update(_get_device_type(cfgdev, address))
-        device.update(_get_device_capabilities(device, address))
+        device.update(_get_device_type(cfgdev, address, dev, net_devs))
+        device.update(_get_device_capabilities(device, dev, net_devs))
         return device
 
     def _get_pci_passthrough_devices(self):
@@ -7022,28 +7027,13 @@ class LibvirtDriver(driver.ComputeDriver):
         :returns: a JSON string containing a list of the assignable PCI
                   devices information
         """
-        # Bail early if we know we can't support `listDevices` to avoid
-        # repeated warnings within a periodic task
-        if not getattr(self, '_list_devices_supported', True):
-            return jsonutils.dumps([])
-
-        try:
-            dev_names = self._host.list_pci_devices() or []
-        except libvirt.libvirtError as ex:
-            error_code = ex.get_error_code()
-            if error_code == libvirt.VIR_ERR_NO_SUPPORT:
-                self._list_devices_supported = False
-                LOG.warning("URI %(uri)s does not support "
-                            "listDevices: %(error)s",
-                            {'uri': self._uri(),
-                             'error': encodeutils.exception_to_unicode(ex)})
-                return jsonutils.dumps([])
-            else:
-                raise
-
-        pci_info = []
-        for name in dev_names:
-            pci_info.append(self._get_pcidev_info(name))
+        dev_flags = (libvirt.VIR_CONNECT_LIST_NODE_DEVICES_CAP_NET |
+                     libvirt.VIR_CONNECT_LIST_NODE_DEVICES_CAP_PCI_DEV)
+        devices = {dev.name(): dev for dev in
+                   self._host.list_all_devices(flags=dev_flags)}
+        net_devs = [dev for dev in devices.values() if "net" in dev.listCaps()]
+        pci_info = [self._get_pcidev_info(name, dev, net_devs) for name, dev
+                    in devices.items() if "pci" in dev.listCaps()]
 
         return jsonutils.dumps(pci_info)
 

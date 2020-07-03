@@ -128,8 +128,8 @@ CONF = nova.conf.CONF
 
 _fake_network_info = fake_network.fake_get_instance_nw_info
 
-_fake_NodeDevXml = \
-    {"pci_0000_04_00_3": """
+_fake_NodeDevXml = {
+    "pci_0000_04_00_3": """
         <device>
         <name>pci_0000_04_00_3</name>
         <parent>pci_0000_00_01_1</parent>
@@ -154,7 +154,7 @@ _fake_NodeDevXml = \
     "pci_0000_04_10_7": """
       <device>
          <name>pci_0000_04_10_7</name>
-         <parent>pci_0000_00_01_1</parent>
+         <parent>pci_0000_04_00_3</parent>
          <driver>
          <name>igbvf</name>
          </driver>
@@ -176,7 +176,7 @@ _fake_NodeDevXml = \
     "pci_0000_04_11_7": """
       <device>
          <name>pci_0000_04_11_7</name>
-         <parent>pci_0000_00_01_1</parent>
+         <parent>pci_0000_04_00_3</parent>
          <driver>
          <name>igbvf</name>
          </driver>
@@ -282,6 +282,26 @@ _fake_NodeDevXml = \
         </pci-express>
       </capability>
     </device>""",
+        "net_enp2s1_02_9a_a1_37_be_54": """
+    <device>
+      <name>net_enp2s1_02_9a_a1_37_be_54</name>
+      <path>/sys/devices/pci0000:00/0000:04:00.3/0000:04:10.7/net/enp2s1</path>
+      <parent>pci_0000_04_10_7</parent>
+      <capability type='net'>
+        <interface>enp2s1</interface>
+        <address>02:9a:a1:37:be:54</address>
+        <link state='down'/>
+        <feature name='rx'/>
+        <feature name='tx'/>
+        <feature name='sg'/>
+        <feature name='tso'/>
+        <feature name='gso'/>
+        <feature name='gro'/>
+        <feature name='rxvlan'/>
+        <feature name='txvlan'/>
+        <capability type='80203'/>
+      </capability>
+    </device>""",
     "net_enp2s2_02_9a_a1_37_be_54": """
     <device>
       <name>net_enp2s2_02_9a_a1_37_be_54</name>
@@ -342,6 +362,15 @@ _fake_NodeDevXml = \
     </device>
     """,
     }
+
+_fake_NodeDevXml_parents = {
+    name: etree.fromstring(xml).find("parent").text
+    for name, xml in _fake_NodeDevXml.items()
+}
+
+_fake_NodeDevXml_children = defaultdict(list)
+for key, val in _fake_NodeDevXml_parents.items():
+    _fake_NodeDevXml_children[val].append(key)
 
 _fake_cpu_info = {
     "arch": "test_arch",
@@ -17225,70 +17254,55 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         dev_name = "net_enp2s2_02_9a_a1_37_be_54"
         parent_address = "pci_0000_04_11_7"
-        node_dev = FakeNodeDevice(_fake_NodeDevXml[dev_name])
-
-        with mock.patch.object(pci_utils, 'get_net_name_by_vf_pci_address',
-                return_value=dev_name) as mock_get_net_name, \
-                mock.patch.object(drvr._host, 'device_lookup_by_name',
-                return_value=node_dev) as mock_dev_lookup:
-            actualvf = drvr._get_pcinet_info(parent_address)
-            expect_vf = {
-                "name": dev_name,
-                "capabilities": ["rx", "tx", "sg", "tso", "gso", "gro",
-                                 "rxvlan", "txvlan"]
-            }
-            self.assertEqual(expect_vf, actualvf)
-            mock_get_net_name.assert_called_once_with(parent_address)
-            mock_dev_lookup.assert_called_once_with(dev_name)
-
-    def test_get_pcinet_info_raises(self):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        dev_name = "net_enp2s2_02_9a_a1_37_be_54"
-        parent_address = "pci_0000_04_11_7"
-
-        with mock.patch.object(pci_utils, 'get_net_name_by_vf_pci_address',
-                return_value=dev_name) as mock_get_net_name, \
-                mock.patch.object(
-                    drvr._host, 'device_lookup_by_name',
-                    side_effect=fakelibvirt.libvirtError("message")
-                ) as mock_dev_lookup:
-            actualvf = drvr._get_pcinet_info(parent_address)
-            self.assertIsNone(actualvf)
-            mock_get_net_name.assert_called_once_with(parent_address)
-            mock_dev_lookup.assert_called_once_with(dev_name)
+        net_dev = fakelibvirt.NodeDevice(
+            drvr._get_connection(), xml=_fake_NodeDevXml[dev_name])
+        pci_dev = fakelibvirt.NodeDevice(
+            drvr._get_connection(), xml=_fake_NodeDevXml[parent_address])
+        actualvf = drvr._get_pcinet_info(pci_dev, [net_dev])
+        expect_vf = ["rx", "tx", "sg", "tso", "gso", "gro", "rxvlan", "txvlan"]
+        self.assertEqual(expect_vf, actualvf)
 
     @mock.patch.object(pci_utils, 'get_ifname_by_pci_address')
     def test_get_pcidev_info_non_nic(self, mock_get_ifname):
-        self.stub_out('nova.virt.libvirt.host.Host.device_lookup_by_name',
-                      lambda self, name: FakeNodeDevice(
-                          _fake_NodeDevXml[name]))
-
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        id = "pci_0000_04_10_7"
-        mock_get_ifname.side_effect = exception.PciDeviceNotFoundById(id=id)
-        actualvf = drvr._get_pcidev_info(id)
+        dev_name = "pci_0000_04_11_7"
+        pci_dev = fakelibvirt.NodeDevice(
+            drvr._get_connection(), xml=_fake_NodeDevXml[dev_name])
+        actual_vf = drvr._get_pcidev_info(dev_name, pci_dev, [])
         expect_vf = {
-            "dev_id": id,
-            "address": "0000:04:10.7",
-            "product_id": '1520',
-            "numa_node": None,
-            "vendor_id": '8086',
-            "label": 'label_8086_1520',
+            "dev_id": dev_name, "address": "0000:04:11.7",
+            "product_id": '1520', "numa_node": 0,
+            "vendor_id": '8086', "label": 'label_8086_1520',
             "dev_type": fields.PciDeviceType.SRIOV_VF,
             'parent_addr': '0000:04:00.3',
-            }
-        self.assertEqual(expect_vf, actualvf)
+        }
+        self.assertEqual(expect_vf, actual_vf)
+        mock_get_ifname.assert_not_called()
 
     @mock.patch.object(pci_utils, 'get_ifname_by_pci_address',
                 return_value='ens1')
     def test_get_pcidev_info(self, mock_get_ifname):
-        self.stub_out('nova.virt.libvirt.host.Host.device_lookup_by_name',
-                      lambda self, name: FakeNodeDevice(
-                          _fake_NodeDevXml[name]))
-
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
-        actualvf = drvr._get_pcidev_info("pci_0000_04_00_3")
+        devs = {
+            "pci_0000_04_00_3", "pci_0000_04_10_7", "pci_0000_04_11_7",
+            "pci_0000_04_00_1", "pci_0000_03_00_0", "pci_0000_03_00_1"
+        }
+        node_devs = {}
+        for dev_name in devs:
+            node_devs[dev_name] = (
+                fakelibvirt.NodeDevice(
+                    drvr._get_connection(), xml=_fake_NodeDevXml[dev_name]))
+            for child in _fake_NodeDevXml_children[dev_name]:
+                node_devs[child] = (
+                    fakelibvirt.NodeDevice(
+                        drvr._get_connection(),
+                        xml=_fake_NodeDevXml[child]))
+        net_devs = [
+            dev for dev in node_devs.values() if dev.name() not in devs]
+
+        name = "pci_0000_04_00_3"
+        actual_vf = drvr._get_pcidev_info(name, node_devs[name], net_devs)
         expect_vf = {
             "dev_id": "pci_0000_04_00_3",
             "address": "0000:04:00.3",
@@ -17298,9 +17312,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             "label": 'label_8086_1521',
             "dev_type": fields.PciDeviceType.SRIOV_PF,
             }
-        self.assertEqual(expect_vf, actualvf)
+        self.assertEqual(expect_vf, actual_vf)
 
-        actualvf = drvr._get_pcidev_info("pci_0000_04_10_7")
+        name = "pci_0000_04_10_7"
+        actual_vf = drvr._get_pcidev_info(name, node_devs[name], net_devs)
         expect_vf = {
             "dev_id": "pci_0000_04_10_7",
             "address": "0000:04:10.7",
@@ -17311,29 +17326,32 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             "dev_type": fields.PciDeviceType.SRIOV_VF,
             "parent_addr": '0000:04:00.3',
             "parent_ifname": "ens1",
+            "capabilities": {
+                "network": ["rx", "tx", "sg", "tso", "gso", "gro",
+                            "rxvlan", "txvlan"]},
             }
-        self.assertEqual(expect_vf, actualvf)
+        self.assertEqual(expect_vf, actual_vf)
 
-        with mock.patch.object(pci_utils, 'get_net_name_by_vf_pci_address',
-                return_value="net_enp2s2_02_9a_a1_37_be_54"):
-            actualvf = drvr._get_pcidev_info("pci_0000_04_11_7")
-            expect_vf = {
-                "dev_id": "pci_0000_04_11_7",
-                "address": "0000:04:11.7",
-                "product_id": '1520',
-                "vendor_id": '8086',
-                "numa_node": 0,
-                "label": 'label_8086_1520',
-                "dev_type": fields.PciDeviceType.SRIOV_VF,
-                "parent_addr": '0000:04:00.3',
-                "capabilities": {
-                    "network": ["rx", "tx", "sg", "tso", "gso", "gro",
-                                "rxvlan", "txvlan"]},
-                "parent_ifname": "ens1",
-                }
-            self.assertEqual(expect_vf, actualvf)
+        name = "pci_0000_04_11_7"
+        actual_vf = drvr._get_pcidev_info(name, node_devs[name], net_devs)
+        expect_vf = {
+            "dev_id": "pci_0000_04_11_7",
+            "address": "0000:04:11.7",
+            "product_id": '1520',
+            "vendor_id": '8086',
+            "numa_node": 0,
+            "label": 'label_8086_1520',
+            "dev_type": fields.PciDeviceType.SRIOV_VF,
+            "parent_addr": '0000:04:00.3',
+            "capabilities": {
+                "network": ["rx", "tx", "sg", "tso", "gso", "gro",
+                            "rxvlan", "txvlan"]},
+            "parent_ifname": "ens1",
+        }
+        self.assertEqual(expect_vf, actual_vf)
 
-        actualvf = drvr._get_pcidev_info("pci_0000_04_00_1")
+        name = "pci_0000_04_00_1"
+        actual_vf = drvr._get_pcidev_info(name, node_devs[name], net_devs)
         expect_vf = {
             "dev_id": "pci_0000_04_00_1",
             "address": "0000:04:00.1",
@@ -17343,9 +17361,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             "label": 'label_15b3_1013',
             "dev_type": fields.PciDeviceType.STANDARD,
             }
-        self.assertEqual(expect_vf, actualvf)
+        self.assertEqual(expect_vf, actual_vf)
 
-        actualvf = drvr._get_pcidev_info("pci_0000_03_00_0")
+        name = "pci_0000_03_00_0"
+        actual_vf = drvr._get_pcidev_info(name, node_devs[name], net_devs)
         expect_vf = {
             "dev_id": "pci_0000_03_00_0",
             "address": "0000:03:00.0",
@@ -17355,9 +17374,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             "label": 'label_15b3_1013',
             "dev_type": fields.PciDeviceType.SRIOV_PF,
             }
-        self.assertEqual(expect_vf, actualvf)
+        self.assertEqual(expect_vf, actual_vf)
 
-        actualvf = drvr._get_pcidev_info("pci_0000_03_00_1")
+        name = "pci_0000_03_00_1"
+        actual_vf = drvr._get_pcidev_info(name, node_devs[name], net_devs)
         expect_vf = {
             "dev_id": "pci_0000_03_00_1",
             "address": "0000:03:00.1",
@@ -17367,36 +17387,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             "label": 'label_15b3_1013',
             "dev_type": fields.PciDeviceType.SRIOV_PF,
             }
-        self.assertEqual(expect_vf, actualvf)
-
-    def test_list_devices_not_supported(self):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-
-        # Handle just the NO_SUPPORT error
-        not_supported_exc = fakelibvirt.make_libvirtError(
-                fakelibvirt.libvirtError,
-                'this function is not supported by the connection driver:'
-                ' virNodeNumOfDevices',
-                error_code=fakelibvirt.VIR_ERR_NO_SUPPORT)
-
-        with mock.patch.object(host.Host, '_list_devices',
-                               side_effect=not_supported_exc):
-            self.assertEqual('[]', drvr._get_pci_passthrough_devices())
-
-        # We cache not supported status to avoid emitting too many logging
-        # messages. Clear this value to test the other exception case.
-        del drvr._list_devices_supported
-
-        # Other errors should not be caught
-        other_exc = fakelibvirt.make_libvirtError(
-            fakelibvirt.libvirtError,
-            'other exc',
-            error_code=fakelibvirt.VIR_ERR_NO_DOMAIN)
-
-        with mock.patch.object(host.Host, '_list_devices',
-                               side_effect=other_exc):
-            self.assertRaises(fakelibvirt.libvirtError,
-                              drvr._get_pci_passthrough_devices)
+        self.assertEqual(expect_vf, actual_vf)
 
     @mock.patch.object(pci_utils, 'get_ifname_by_pci_address',
                 return_value='ens1')
@@ -17404,13 +17395,31 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                        return_value=['pci_0000_04_00_3', 'pci_0000_04_10_7',
                                      'pci_0000_04_11_7'])
     def test_get_pci_passthrough_devices(self, mock_list, mock_get_ifname):
-        self.stub_out('nova.virt.libvirt.host.Host.device_lookup_by_name',
-                      lambda self, name: FakeNodeDevice(
-                          _fake_NodeDevXml[name]))
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        actjson = drvr._get_pci_passthrough_devices()
 
+        devs = ['pci_0000_04_00_3', 'pci_0000_04_10_7', 'pci_0000_04_11_7']
+        node_devs = {}
+        for dev_name in devs:
+            node_devs[dev_name] = (
+                fakelibvirt.NodeDevice(
+                    drvr._get_connection(), xml=_fake_NodeDevXml[dev_name]))
+            for child in _fake_NodeDevXml_children[dev_name]:
+                node_devs[child] = (
+                    fakelibvirt.NodeDevice(
+                        drvr._get_connection(),
+                        xml=_fake_NodeDevXml[child]))
+
+        self.useFixture(fixtures.MockPatchObject(
+            drvr._host, 'list_all_devices',
+            return_value=node_devs.values()))
+
+        self.stub_out(
+            'nova.virt.libvirt.host.Host.device_lookup_by_name',
+            lambda self, name: node_devs.get(name))
+
+        actjson = drvr._get_pci_passthrough_devices()
+        mock_list.assert_not_called()
         expectvfs = [
             {
                 "dev_id": "pci_0000_04_00_3",
@@ -17449,17 +17458,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         actualvfs = jsonutils.loads(actjson)
         for dev in range(len(actualvfs)):
             for key in actualvfs[dev].keys():
-                if key not in ['phys_function', 'virt_functions', 'label']:
+                if key not in ['phys_function', 'virt_functions',
+                               'label', 'capabilities']:
                     self.assertEqual(expectvfs[dev][key], actualvfs[dev][key])
-        mock_list.assert_called_once_with()
 
         # The first call for every VF is to determine parent_ifname and
         # the second call to determine the MAC address.
         mock_get_ifname.assert_has_calls([
             mock.call('0000:04:10.7', pf_interface=True),
-            mock.call('0000:04:10.7', False),
             mock.call('0000:04:11.7', pf_interface=True),
-            mock.call('0000:04:11.7', False)
         ])
 
     @mock.patch.object(host.Host, 'has_min_version',
