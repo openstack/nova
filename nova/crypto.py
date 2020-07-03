@@ -25,6 +25,9 @@ import io
 import os
 import typing as ty
 
+from castellan.common import exception as castellan_exception
+from castellan.common.objects import passphrase
+from castellan import key_manager
 from cryptography.hazmat import backends
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
@@ -35,14 +38,27 @@ from oslo_log import log as logging
 import paramiko
 
 import nova.conf
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
+from nova import objects
 from nova import utils
 
 
 LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
+
+_KEYMGR = None
+
+_VTPM_SECRET_BYTE_LENGTH = 384
+
+
+def _get_key_manager():
+    global _KEYMGR
+    if _KEYMGR is None:
+        _KEYMGR = key_manager.API(configuration=CONF)
+    return _KEYMGR
 
 
 def generate_fingerprint(public_key: str) -> str:
@@ -148,3 +164,93 @@ def _create_x509_openssl_config(conffile: str, upn: str):
 
     with open(conffile, 'w') as file:
         file.write(content % upn)
+
+
+def ensure_vtpm_secret(
+    context: nova_context.RequestContext,
+    instance: 'objects.Instance',
+) -> ty.Tuple[str, str]:
+    """Communicates with the key manager service to retrieve or create a secret
+    for an instance's emulated TPM.
+
+    When creating a secret, its UUID is saved to the instance's system_metadata
+    as ``vtpm_secret_uuid``.
+
+    :param context: Nova auth context.
+    :param instance: Instance object.
+    :return: A tuple comprising (secret_uuid, passphrase).
+    :raise: castellan_exception.ManagedObjectNotFoundError if communication
+        with the key manager API fails, or if a vtpm_secret_uuid was present in
+        the instance's system metadata but could not be found in the key
+        manager service.
+    """
+    key_mgr = _get_key_manager()
+
+    secret_uuid = instance.system_metadata.get('vtpm_secret_uuid')
+    if secret_uuid is not None:
+        # Try to retrieve the secret from the key manager
+        try:
+            secret = key_mgr.get(context, secret_uuid)
+            # assert secret_uuid == secret.id ?
+            LOG.debug(
+                "Found existing vTPM secret with UUID %s.",
+                secret_uuid, instance=instance)
+            return secret.id, secret.get_encoded()
+        except castellan_exception.ManagedObjectNotFoundError:
+            LOG.warning(
+                "Despite being set on the instance, failed to find a vTPM "
+                "secret with UUID %s. This should only happen if the secret "
+                "was manually deleted from the key manager service. Your vTPM "
+                "is likely to be unrecoverable.",
+                secret_uuid, instance=instance)
+            raise
+
+    # If we get here, the instance has no vtpm_secret_uuid. Create a new one
+    # and register it with the key manager.
+    secret = base64.b64encode(os.urandom(_VTPM_SECRET_BYTE_LENGTH))
+    # Castellan ManagedObject
+    cmo = passphrase.Passphrase(
+        secret, name="vTPM secret for instance %s" % instance.uuid)
+    secret_uuid = key_mgr.store(context, cmo)
+    LOG.debug("Created vTPM secret with UUID %s",
+              secret_uuid, instance=instance)
+
+    instance.system_metadata['vtpm_secret_uuid'] = secret_uuid
+    instance.save()
+    return secret_uuid, secret
+
+
+def delete_vtpm_secret(
+    context: nova_context.RequestContext,
+    instance: 'objects.Instance',
+):
+    """Communicates with the key manager service to destroy the secret for an
+    instance's emulated TPM.
+
+    This operation is idempotent: if the instance never had a vTPM secret, OR
+    if the secret has already been deleted, it is a no-op.
+
+    The ``vtpm_secret_uuid`` member of the instance's system_metadata is
+    cleared as a side effect of this method.
+
+    :param context: Nova auth context.
+    :param instance: Instance object.
+    :return: None
+    :raise: castellan_exception.ManagedObjectNotFoundError if communication
+        with the key manager API.
+    """
+    secret_uuid = instance.system_metadata.get('vtpm_secret_uuid')
+    if not secret_uuid:
+        return
+
+    key_mgr = _get_key_manager()
+    try:
+        key_mgr.delete(context, secret_uuid)
+        LOG.debug("Deleted vTPM secret with UUID %s",
+                  secret_uuid, instance=instance)
+    except castellan_exception.ManagedObjectNotFoundError:
+        LOG.debug("vTPM secret with UUID %s already deleted or never existed.",
+                  secret_uuid, instance=instance)
+
+    del instance.system_metadata['vtpm_secret_uuid']
+    instance.save()
