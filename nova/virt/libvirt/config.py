@@ -958,6 +958,33 @@ class LibvirtConfigGuestDevice(LibvirtConfigObject):
         return False
 
 
+class LibvirtConfigGuestVTPM(LibvirtConfigGuestDevice):
+
+    def __init__(self, vtpm_config, vtpm_secret_uuid, **kwargs):
+        super(LibvirtConfigGuestVTPM, self).__init__(root_name="tpm", **kwargs)
+
+        self.version = vtpm_config.version
+        self.model = vtpm_config.model
+        self.secret_uuid = vtpm_secret_uuid
+
+    def format_dom(self):
+        # <tpm model='$model'>
+        dev = super(LibvirtConfigGuestVTPM, self).format_dom()
+        dev.set("model", self.model)
+        #     <backend type='emulator' version='$version'>
+        back = etree.Element("backend")
+        back.set("type", "emulator")
+        back.set("version", self.version)
+        #         <encryption secret='$secret_uuid'/>
+        enc = etree.Element("encryption")
+        enc.set("secret", self.secret_uuid)
+
+        back.append(enc)
+        dev.append(back)
+
+        return dev
+
+
 class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
 
     def __init__(self, **kwargs):
@@ -3272,7 +3299,7 @@ class LibvirtConfigSecret(LibvirtConfigObject):
             root.append(self._text_node("uuid", str(self.uuid)))
         usage = self._new_node("usage")
         usage.set("type", self.usage_type)
-        if self.usage_type == 'ceph':
+        if self.usage_type in ('ceph', 'vtpm'):
             usage.append(self._text_node('name', str(self.usage_id)))
         elif self.usage_type == 'iscsi':
             usage.append(self._text_node('target', str(self.usage_id)))

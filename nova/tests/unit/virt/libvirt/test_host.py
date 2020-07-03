@@ -917,6 +917,7 @@ class HostTestCase(test.NoDBTestCase):
         self.host.create_secret('ceph', 'cephvol')
         self.host.create_secret('iscsi', 'iscsivol')
         self.host.create_secret('volume', 'vol')
+        self.host.create_secret('vtpm', 'vtpmdev')
         self.assertRaises(exception.NovaException,
                           self.host.create_secret, "foo", "foovol")
 

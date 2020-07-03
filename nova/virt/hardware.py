@@ -42,6 +42,11 @@ MEMPAGES_LARGE = -2
 MEMPAGES_ANY = -3
 
 
+class VTPMConfig(ty.NamedTuple):
+    version: str
+    model: str
+
+
 def get_vcpu_pin_set():
     """Parse ``vcpu_pin_set`` config.
 

@@ -19,6 +19,7 @@ from oslo_utils import units
 from nova.objects import fields as obj_fields
 from nova import test
 from nova.tests.unit.virt.libvirt import fake_libvirt_data
+from nova.virt import hardware
 from nova.virt.libvirt import config
 
 
@@ -3729,8 +3730,8 @@ class LibvirtConfigSecretTest(LibvirtConfigBaseTest):
 
     def test_config_secret_volume(self):
         secret = config.LibvirtConfigSecret()
-        secret.ephemeral = True
-        secret.private = True
+        secret.ephemeral = False
+        secret.private = False
         secret.description = 'sample desc'
         secret.uuid = 'c7a5fdbd-edaf-9455-926a-d65c16db1809'
         secret.usage_type = 'volume'
@@ -3738,7 +3739,7 @@ class LibvirtConfigSecretTest(LibvirtConfigBaseTest):
 
         xml = secret.to_xml()
         expected_xml = """
-        <secret ephemeral="yes" private="yes">
+        <secret ephemeral="no" private="no">
           <description>sample desc</description>
           <uuid>c7a5fdbd-edaf-9455-926a-d65c16db1809</uuid>
           <usage type="volume">
@@ -3750,15 +3751,15 @@ class LibvirtConfigSecretTest(LibvirtConfigBaseTest):
 
     def test_config_secret_ceph(self):
         secret = config.LibvirtConfigSecret()
-        secret.ephemeral = True
-        secret.private = True
+        secret.ephemeral = False
+        secret.private = False
         secret.description = 'sample desc'
         secret.usage_type = 'ceph'
         secret.usage_id = 'sample_name'
 
         xml = secret.to_xml()
         expected_xml = """
-        <secret ephemeral="yes" private="yes">
+        <secret ephemeral="no" private="no">
           <description>sample desc</description>
           <usage type="ceph">
             <name>sample_name</name>
@@ -3767,17 +3768,36 @@ class LibvirtConfigSecretTest(LibvirtConfigBaseTest):
 
         self.assertXmlEqual(expected_xml, xml)
 
-    def test_config_secret_iscsi(self):
+    def test_config_secret_vtpm(self):
         secret = config.LibvirtConfigSecret()
         secret.ephemeral = True
         secret.private = True
+        secret.usage_type = 'vtpm'
+        secret.usage_id = 'sample_name'
+        secret.uuid = uuids.vtpm
+
+        xml = secret.to_xml()
+        expected_xml = f"""
+        <secret ephemeral="yes" private="yes">
+          <uuid>{uuids.vtpm}</uuid>
+          <usage type="vtpm">
+            <name>sample_name</name>
+          </usage>
+        </secret>"""
+
+        self.assertXmlEqual(expected_xml, xml)
+
+    def test_config_secret_iscsi(self):
+        secret = config.LibvirtConfigSecret()
+        secret.ephemeral = False
+        secret.private = False
         secret.description = 'sample desc'
         secret.usage_type = 'iscsi'
         secret.usage_id = 'sample_target'
 
         xml = secret.to_xml()
         expected_xml = """
-        <secret ephemeral="yes" private="yes">
+        <secret ephemeral="no" private="no">
           <description>sample desc</description>
           <usage type="iscsi">
             <target>sample_target</target>
@@ -3937,3 +3957,51 @@ class LibvirtConfigDomainCapsDevicesTests(LibvirtConfigBaseTest):
             obj.disk, config.LibvirtConfigDomainCapsDiskBuses)
         self.assertIsInstance(
             obj.video, config.LibvirtConfigDomainCapsVideoModels)
+
+
+class LibvirtConfigTPMTest(LibvirtConfigBaseTest):
+
+    def test_config_tpm_tis_1_2(self):
+        vtpm_config = hardware.VTPMConfig('1.2', 'tpm-tis')
+        vtpm_secret_uuid = 'b028130c-bdcb-4d5f-9bca-b9175ca6c28c'
+        expected_xml = """
+        <tpm model='tpm-tis'>
+          <backend type='emulator' version='1.2'>
+            <encryption secret='b028130c-bdcb-4d5f-9bca-b9175ca6c28c'/>
+          </backend>
+        </tpm>"""
+
+        tpm = config.LibvirtConfigGuestVTPM(vtpm_config, vtpm_secret_uuid)
+        xml = tpm.to_xml()
+
+        self.assertXmlEqual(expected_xml, xml)
+
+    def test_config_tpm_tis_2_0(self):
+        vtpm_config = hardware.VTPMConfig('2.0', 'tpm-tis')
+        vtpm_secret_uuid = 'b028130c-bdcb-4d5f-9bca-b9175ca6c28c'
+        expected_xml = """
+        <tpm model='tpm-tis'>
+          <backend type='emulator' version='2.0'>
+            <encryption secret='b028130c-bdcb-4d5f-9bca-b9175ca6c28c'/>
+          </backend>
+        </tpm>"""
+
+        tpm = config.LibvirtConfigGuestVTPM(vtpm_config, vtpm_secret_uuid)
+        xml = tpm.to_xml()
+
+        self.assertXmlEqual(expected_xml, xml)
+
+    def test_config_tpm_crb_2_0(self):
+        vtpm_config = hardware.VTPMConfig('2.0', 'tpm-crb')
+        vtpm_secret_uuid = 'b028130c-bdcb-4d5f-9bca-b9175ca6c28c'
+        expected_xml = """
+        <tpm model='tpm-crb'>
+          <backend type='emulator' version='2.0'>
+            <encryption secret='b028130c-bdcb-4d5f-9bca-b9175ca6c28c'/>
+          </backend>
+        </tpm>"""
+
+        tpm = config.LibvirtConfigGuestVTPM(vtpm_config, vtpm_secret_uuid)
+        xml = tpm.to_xml()
+
+        self.assertXmlEqual(expected_xml, xml)
