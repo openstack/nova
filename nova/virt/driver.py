@@ -182,6 +182,7 @@ class ComputeDriver(object):
         "supports_pcpus": False,
         "supports_accelerators": False,
         "supports_bfv_rescue": False,
+        "supports_vtpm": False,
 
         # Image type support flags
         "supports_image_type_aki": False,

@@ -819,10 +819,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                            '_destroy_evacuated_instances')
         @mock.patch.object(manager.ComputeManager,
                           '_validate_pinning_configuration')
+        @mock.patch.object(manager.ComputeManager,
+                          '_validate_vtpm_configuration')
         @mock.patch.object(manager.ComputeManager, '_init_instance')
         @mock.patch.object(self.compute, '_update_scheduler_instance_info')
         def _do_mock_calls(mock_update_scheduler, mock_inst_init,
-                           mock_validate_pinning,
+                           mock_validate_vtpm, mock_validate_pinning,
                            mock_destroy, mock_admin_ctxt, mock_host_get,
                            mock_init_host,
                            mock_error_interrupted, mock_get_nodes):
@@ -837,6 +839,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.compute.init_host()
 
             mock_validate_pinning.assert_called_once_with(inst_list)
+            mock_validate_vtpm.assert_called_once_with(inst_list)
             mock_destroy.assert_called_once_with(
                 self.context, {uuids.our_node_uuid: our_node})
             mock_inst_init.assert_has_calls(
@@ -1026,8 +1029,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         """
         active_instance = fake_instance.fake_instance_obj(
             self.context, host=self.compute.host, uuid=uuids.active_instance)
+        active_instance.system_metadata = {}
         evacuating_instance = fake_instance.fake_instance_obj(
             self.context, host=self.compute.host, uuid=uuids.evac_instance)
+        evacuating_instance.system_metadata = {}
         instance_list = objects.InstanceList(self.context,
             objects=[active_instance, evacuating_instance])
 
@@ -1121,6 +1126,23 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         fails.
         """
         mock_validate_pinning.side_effect = exception.InvalidConfiguration
+
+        self.assertRaises(exception.InvalidConfiguration,
+                          self.compute.init_host)
+
+    @mock.patch.object(objects.InstanceList, 'get_by_host',
+                       new=mock.Mock())
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_validate_pinning_configuration',
+                new=mock.Mock())
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_validate_vtpm_configuration')
+    def test_init_host_vtpm_configuration_validation_failure(self,
+            mock_validate_vtpm):
+        """Test that we fail init_host if the vTPM configuration check
+        fails.
+        """
+        mock_validate_vtpm.side_effect = exception.InvalidConfiguration
 
         self.assertRaises(exception.InvalidConfiguration,
                           self.compute.init_host)
@@ -1318,6 +1340,51 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         support PCPUs.
         """
         self._test__validate_pinning_configuration(supports_pcpus=False)
+
+    def _test__validate_vtpm_configuration(self, supports_vtpm):
+        instance_1 = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance_1)
+        instance_2 = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance_2)
+        instance_3 = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance_3)
+        image_meta = objects.ImageMeta.from_dict({})
+
+        instance_2.flavor.extra_specs = {'hw:tpm_version': '2.0'}
+
+        instance_3.deleted = True
+
+        instances = objects.InstanceList(objects=[
+            instance_1, instance_2, instance_3])
+
+        with test.nested(
+            mock.patch.dict(
+                self.compute.driver.capabilities, supports_vtpm=supports_vtpm,
+            ),
+            mock.patch.object(
+                objects.ImageMeta, 'from_instance', return_value=image_meta,
+            ),
+        ):
+            self.compute._validate_vtpm_configuration(instances)
+
+    def test__validate_vtpm_configuration_unsupported(self):
+        """Test that the check fails if the driver does not support vTPM and
+        instances request it.
+        """
+        ex = self.assertRaises(
+            exception.InvalidConfiguration,
+            self._test__validate_vtpm_configuration,
+            supports_vtpm=False)
+        self.assertIn(
+            'This host has instances with the vTPM feature enabled, but the '
+            'host is not correctly configured; ',
+            str(ex))
+
+    def test__validate_vtpm_configuration_supported(self):
+        """Test that the entire check is skipped if the driver supports
+        vTPM.
+        """
+        self._test__validate_vtpm_configuration(supports_vtpm=True)
 
     def test__get_power_state_InstanceNotFound(self):
         instance = fake_instance.fake_instance_obj(

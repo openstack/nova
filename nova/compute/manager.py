@@ -879,6 +879,26 @@ class ComputeManager(manager.Manager):
                     {'cpus': list(pinned_cpus)},
                     instance=instance)
 
+    def _validate_vtpm_configuration(self, instances):
+        if self.driver.capabilities.get('supports_vtpm', False):
+            return
+
+        for instance in instances:
+            if instance.deleted:
+                continue
+
+            # NOTE(stephenfin): We don't have an attribute on the instance to
+            # check for this, so we need to inspect the flavor/image metadata
+            if hardware.get_vtpm_constraint(
+                instance.flavor, instance.image_meta,
+            ):
+                msg = _(
+                    'This host has instances with the vTPM feature enabled, '
+                    'but the host is not correctly configured; enable '
+                    'vTPM support.'
+                )
+                raise exception.InvalidConfiguration(msg)
+
     def _reset_live_migration(self, context, instance):
         migration = None
         try:
@@ -1364,6 +1384,7 @@ class ComputeManager(manager.Manager):
         self.init_virt_events()
 
         self._validate_pinning_configuration(instances)
+        self._validate_vtpm_configuration(instances)
 
         # NOTE(gibi): At this point the compute_nodes of the resource tracker
         # has not been populated yet so we cannot rely on the resource tracker
