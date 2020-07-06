@@ -9858,7 +9858,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 dk_size = qemu_img_info.disk_size
                 virt_size = qemu_img_info.virtual_size
                 backing_file = libvirt_utils.get_disk_backing_file(path)
-                over_commit_size = int(virt_size) - dk_size
+                over_commit_size = max(0, int(virt_size) - dk_size)
 
             elif disk_type == 'file':
                 dk_size = os.stat(path).st_blocks * 512

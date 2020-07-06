@@ -16817,6 +16817,34 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(expected_over_committed_disk_size,
                          disk_info[0]['over_committed_disk_size'])
 
+    @mock.patch('nova.virt.disk.api.get_disk_info')
+    @mock.patch('nova.virt.libvirt.utils.get_disk_backing_file',
+                return_value='file')
+    def test_get_instance_disk_info_from_config_negative(self,
+            mock_backing_file, mock_disk_info):
+        """Test that over_committed_disk_size  is set to 0 when
+        disk_actual_size is greater than disk_virtual_size
+        """
+        config = vconfig.LibvirtConfigGuest()
+
+        disk_config = vconfig.LibvirtConfigGuestDisk()
+        disk_config.source_type = "file"
+        disk_config.source_path = "fake"
+        disk_config.driver_format = 'qcow2'
+        config.devices.append(disk_config)
+
+        disk_virtual_size = 53687091200
+        disk_actual_size = 54000000000
+        expected_over_committed_disk_size = 0
+
+        mock_disk_info.return_value = mock.Mock(disk_size=disk_actual_size,
+                                                virtual_size=disk_virtual_size)
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        disk_info = drvr._get_instance_disk_info_from_config(config, None)
+        self.assertEqual(expected_over_committed_disk_size,
+                         disk_info[0]['over_committed_disk_size'])
+
     def test_cpu_info(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
