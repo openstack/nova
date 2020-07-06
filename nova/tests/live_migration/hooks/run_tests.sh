@@ -42,6 +42,7 @@ echo '2. NFS testing is skipped due to setup failures with Ubuntu 16.04'
 #nfs_teardown
 
 echo '3. test with Ceph for root + ephemeral disks'
+GetOSVersion
 prepare_ceph
 GLANCE_API_CONF=${GLANCE_API_CONF:-/etc/glance/glance-api.conf}
 configure_and_start_glance
