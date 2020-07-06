@@ -59,10 +59,10 @@ class FilterSchedulerTestCase(test.NoDBTestCase):
     @mock.patch.object(host_manager.HostManager, '_init_aggregates',
                        new=mock.Mock())
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient',
-                autospec=True, new=mock.Mock())
+                autospec=True)
     @mock.patch('nova.scheduler.client.query.SchedulerQueryClient',
-                autospec=True, new=mock.Mock())
-    def setUp(self):
+                autospec=True)
+    def setUp(self, mock_sch_query, mock_sch_report):
         super(FilterSchedulerTestCase, self).setUp()
 
         self.driver = filter_scheduler.FilterScheduler()
