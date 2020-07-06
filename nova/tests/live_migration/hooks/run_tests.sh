@@ -54,6 +54,7 @@ if [[ "$GRENADE_OLD_BRANCH" == "stable/ocata" ]]; then
     echo '3. Grenade testing with Ceph is disabled until bug 1691769 is fixed or Queens.'
 else
     echo '3. test with Ceph for root + ephemeral disks'
+    GetOSVersion
     prepare_ceph
     GLANCE_API_CONF=${GLANCE_API_CONF:-/etc/glance/glance-api.conf}
     configure_and_start_glance
