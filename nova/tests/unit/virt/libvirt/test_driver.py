@@ -16912,6 +16912,22 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock_get_net_name.assert_called_once_with(parent_address)
             mock_dev_lookup.assert_called_once_with(dev_name)
 
+    def test_get_pcinet_info_raises(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        dev_name = "net_enp2s2_02_9a_a1_37_be_54"
+        parent_address = "pci_0000_04_11_7"
+
+        with mock.patch.object(pci_utils, 'get_net_name_by_vf_pci_address',
+                return_value=dev_name) as mock_get_net_name, \
+                mock.patch.object(
+                    drvr._host, 'device_lookup_by_name',
+                    side_effect=fakelibvirt.libvirtError("message")
+                ) as mock_dev_lookup:
+            actualvf = drvr._get_pcinet_info(parent_address)
+            self.assertIsNone(actualvf)
+            mock_get_net_name.assert_called_once_with(parent_address)
+            mock_dev_lookup.assert_called_once_with(dev_name)
+
     @mock.patch.object(pci_utils, 'get_ifname_by_pci_address')
     def test_get_pcidev_info_non_nic(self, mock_get_ifname):
         self.stub_out('nova.virt.libvirt.host.Host.device_lookup_by_name',
