@@ -106,6 +106,9 @@ MIN_COMPUTE_SYNC_COMPUTE_STATUS_DISABLED = 38
 MIN_COMPUTE_CROSS_CELL_RESIZE = 47
 MIN_COMPUTE_SAME_HOST_COLD_MIGRATE = 48
 
+# TODO(huaqiang): Remove in Wallaby
+MIN_VER_NOVA_COMPUTE_MIXED_POLICY = 52
+
 # FIXME(danms): Keep a global cache of the cells we find the
 # first time we look. This needs to be refreshed on a timer or
 # trigger.
@@ -710,6 +713,28 @@ class API(base.Base):
         API._validate_flavor_image_numa_pci(
             image, instance_type, validate_numa=validate_numa,
             validate_pci=validate_pci)
+
+    # TODO(huaqiang): Remove in Wallaby when there is no nova-compute node
+    # having a version prior to Victoria.
+    @staticmethod
+    def _check_compute_service_for_mixed_instance(numa_topology):
+        """Check if the nova-compute service is ready to support mixed instance
+        when the CPU allocation policy is 'mixed'.
+        """
+        # No need to check the instance with no NUMA topology associated with.
+        if numa_topology is None:
+            return
+
+        # No need to check if instance CPU policy is not 'mixed'
+        if numa_topology.cpu_policy != fields_obj.CPUAllocationPolicy.MIXED:
+            return
+
+        # Catch a request creating a mixed instance, make sure all nova-compute
+        # service have been upgraded and support the mixed policy.
+        minimal_version = objects.service.get_minimum_version_all_cells(
+            nova_context.get_admin_context(), ['nova-compute'])
+        if minimal_version < MIN_VER_NOVA_COMPUTE_MIXED_POLICY:
+            raise exception.MixedInstanceNotSupportByComputeService()
 
     @staticmethod
     def _validate_flavor_image_numa_pci(image, instance_type,
@@ -1448,6 +1473,12 @@ class API(base.Base):
                     user_data, metadata, access_ip_v4, access_ip_v6,
                     requested_networks, config_drive, auto_disk_config,
                     reservation_id, max_count, supports_port_resource_request)
+
+        # TODO(huaqiang): Remove in Wallaby
+        # check nova-compute nodes have been updated to Victoria to support the
+        # mixed CPU policy for creating a new instance.
+        numa_topology = base_options.get('numa_topology')
+        self._check_compute_service_for_mixed_instance(numa_topology)
 
         # max_net_count is the maximum number of instances requested by the
         # user adjusted for any network quota constraints, including
@@ -3917,6 +3948,12 @@ class API(base.Base):
         if not same_instance_type:
             request_spec.numa_topology = hardware.numa_get_constraints(
                 new_instance_type, instance.image_meta)
+            # TODO(huaqiang): Remove in Wallaby
+            # check nova-compute nodes have been updated to Victoria to resize
+            # instance to a new mixed instance from a dedicated or shared
+            # instance.
+            self._check_compute_service_for_mixed_instance(
+                request_spec.numa_topology)
 
         instance.task_state = task_states.RESIZE_PREP
         instance.progress = 0

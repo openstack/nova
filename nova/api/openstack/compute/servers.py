@@ -767,7 +767,8 @@ class ServersController(wsgi.Controller):
         except (exception.PortInUse,
                 exception.InstanceExists,
                 exception.NetworkAmbiguous,
-                exception.NoUniqueMatch) as error:
+                exception.NoUniqueMatch,
+                exception.MixedInstanceNotSupportByComputeService) as error:
             raise exc.HTTPConflict(explanation=error.format_message())
 
         # If the caller wanted a reservation_id, return it
@@ -960,7 +961,8 @@ class ServersController(wsgi.Controller):
                 explanation=error.format_message())
         except (exception.InstanceIsLocked,
                 exception.InstanceNotReady,
-                exception.ServiceUnavailable) as e:
+                exception.ServiceUnavailable,
+                exception.MixedInstanceNotSupportByComputeService) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
