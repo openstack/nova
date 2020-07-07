@@ -113,6 +113,28 @@ class ShardFilter(filters.BaseHostFilter):
         if nova_utils.is_baremetal_flavor(spec_obj.flavor):
             return True
 
+        host_shard_aggrs = [aggr for aggr in host_state.aggregates
+                            if aggr.name.startswith(self._SHARD_PREFIX)]
+
+        host_shard_names = set(aggr.name for aggr in host_shard_aggrs)
+        if not host_shard_names:
+            LOG.error('%(host_state)s is not in an aggregate starting with '
+                      '%(shard_prefix)s.',
+                      {'host_state': host_state,
+                       'shard_prefix': self._SHARD_PREFIX})
+            return False
+
+        # forbid changing the shard of an instance
+        instance_host = spec_obj.get_scheduler_hint('source_host')
+        host_shard_hosts = set()
+        host_shard_hosts.update(*(aggr.hosts for aggr in host_shard_aggrs))
+        if instance_host and instance_host not in host_shard_hosts:
+            LOG.debug('%(host_state)s is in another shard than the '
+                      'instance\'s %(instance_host)s',
+                      {'host_state': host_state,
+                       'instance_host': instance_host})
+            return False
+
         project_id = spec_obj.project_id
 
         shards = self._get_shards(project_id)
@@ -126,26 +148,17 @@ class ShardFilter(filters.BaseHostFilter):
                       {'project_id': project_id})
             return False
 
-        configured_shards_set = set(aggr.name for aggr in host_state.aggregates
-                                if aggr.name.startswith(self._SHARD_PREFIX))
-        if not configured_shards_set:
-            LOG.error('%(host_state)s is not in an aggregate starting with '
-                      '%(shard_prefix)s.',
-                      {'host_state': host_state,
-                       'shard_prefix': self._SHARD_PREFIX})
-            return False
-
-        if configured_shards_set & set(shards):
+        if host_shard_names & set(shards):
             LOG.debug('%(host_state)s shard %(host_shard)s found in project '
                       'shards %(project_shards)s.',
                       {'host_state': host_state,
-                       'host_shard': configured_shards_set,
+                       'host_shard': host_shard_names,
                        'project_shards': shards})
             return True
         else:
             LOG.debug('%(host_state)s shard %(host_shard)s not found in '
                       'project shards %(project_shards)s.',
                       {'host_state': host_state,
-                       'host_shard': configured_shards_set,
+                       'host_shard': host_shard_names,
                        'project_shards': shards})
             return False

@@ -65,7 +65,9 @@ class TestShardFilter(test.NoDBTestCase):
 
     @mock.patch('nova.scheduler.filters.utils.aggregate_metadata_get_by_host')
     def test_shard_baremetal_passes(self, agg_mock):
-        host = fakes.FakeHostState('host1', 'compute', {})
+        aggs = [objects.Aggregate(id=1, name='some-az-a', hosts=['host1']),
+                objects.Aggregate(id=1, name='vc-a-0', hosts=['host1'])]
+        host = fakes.FakeHostState('host1', 'compute', {'aggregates': aggs})
         extra_specs = {'capabilities:cpu_arch': 'x86_64'}
         spec_obj = objects.RequestSpec(
             context=mock.sentinel.ctx, project_id='foo',
@@ -76,7 +78,9 @@ class TestShardFilter(test.NoDBTestCase):
                 'ShardFilter._update_cache')
     @mock.patch('nova.scheduler.filters.utils.aggregate_metadata_get_by_host')
     def test_shard_project_not_found(self, agg_mock, mock_update_cache):
-        host = fakes.FakeHostState('host1', 'compute', {})
+        aggs = [objects.Aggregate(id=1, name='some-az-a', hosts=['host1']),
+                objects.Aggregate(id=1, name='vc-a-0', hosts=['host1'])]
+        host = fakes.FakeHostState('host1', 'compute', {'aggregates': aggs})
         spec_obj = objects.RequestSpec(
             context=mock.sentinel.ctx, project_id='bar',
             flavor=objects.Flavor(extra_specs={}))
@@ -84,7 +88,9 @@ class TestShardFilter(test.NoDBTestCase):
 
     @mock.patch('nova.scheduler.filters.utils.aggregate_metadata_get_by_host')
     def test_shard_project_no_shards(self, agg_mock):
-        host = fakes.FakeHostState('host1', 'compute', {})
+        aggs = [objects.Aggregate(id=1, name='some-az-a', hosts=['host1']),
+                objects.Aggregate(id=1, name='vc-a-0', hosts=['host1'])]
+        host = fakes.FakeHostState('host1', 'compute', {'aggregates': aggs})
         spec_obj = objects.RequestSpec(
             context=mock.sentinel.ctx, project_id='foo',
             flavor=objects.Flavor(extra_specs={}))
@@ -103,7 +109,7 @@ class TestShardFilter(test.NoDBTestCase):
         self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
 
     def test_shard_host_no_shards_in_aggregate(self):
-        aggs = [objects.Aggregate(id=1, name='some-az-a')]
+        aggs = [objects.Aggregate(id=1, name='some-az-a', hosts=['host1'])]
         host = fakes.FakeHostState('host1', 'compute', {'aggregates': aggs})
         spec_obj = objects.RequestSpec(
             context=mock.sentinel.ctx, project_id='foo',
@@ -112,8 +118,8 @@ class TestShardFilter(test.NoDBTestCase):
         self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
 
     def test_shard_project_shard_match_host_shard(self):
-        aggs = [objects.Aggregate(id=1, name='some-az-a'),
-                objects.Aggregate(id=1, name='vc-a-0')]
+        aggs = [objects.Aggregate(id=1, name='some-az-a', hosts=['host1']),
+                objects.Aggregate(id=1, name='vc-a-0', hosts=['host1'])]
         host = fakes.FakeHostState('host1', 'compute', {'aggregates': aggs})
         spec_obj = objects.RequestSpec(
             context=mock.sentinel.ctx, project_id='foo',
@@ -122,11 +128,52 @@ class TestShardFilter(test.NoDBTestCase):
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
     def test_shard_project_shard_do_not_match_host_shard(self):
-        aggs = [objects.Aggregate(id=1, name='some-az-a'),
-                objects.Aggregate(id=1, name='vc-a-1')]
+        aggs = [objects.Aggregate(id=1, name='some-az-a', hosts=['host1']),
+                objects.Aggregate(id=1, name='vc-a-1', hosts=['host1'])]
         host = fakes.FakeHostState('host1', 'compute', {'aggregates': aggs})
         spec_obj = objects.RequestSpec(
             context=mock.sentinel.ctx, project_id='foo',
             flavor=objects.Flavor(extra_specs={}))
 
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_shard_project_has_multiple_shards_per_az(self):
+        aggs = [objects.Aggregate(id=1, name='some-az-a', hosts=['host1']),
+                objects.Aggregate(id=1, name='vc-a-1', hosts=['host1'])]
+        host = fakes.FakeHostState('host1', 'compute', {'aggregates': aggs})
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx, project_id='foo',
+            flavor=objects.Flavor(extra_specs={}))
+
+        self.filt_cls._PROJECT_SHARD_CACHE['foo'] = ['vc-a-0', 'vc-a-1',
+                                                     'vc-b-0']
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_shard_project_has_multiple_shards_per_az_resize_same_shard(self):
+        aggs = [objects.Aggregate(id=1, name='some-az-a', hosts=['host1',
+                                                                 'host2']),
+                objects.Aggregate(id=1, name='vc-a-1', hosts=['host1',
+                                                              'host2'])]
+        host = fakes.FakeHostState('host1', 'compute', {'aggregates': aggs})
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx, project_id='foo',
+            flavor=objects.Flavor(extra_specs={}),
+            scheduler_hints=dict(source_host=['host2']))
+
+        self.filt_cls._PROJECT_SHARD_CACHE['foo'] = ['vc-a-0', 'vc-a-1',
+                                                     'vc-b-0']
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_shard_project_has_multiple_shards_per_az_resize_other_shard(self):
+        aggs = [objects.Aggregate(id=1, name='some-az-a', hosts=['host1',
+                                                                 'host2']),
+                objects.Aggregate(id=1, name='vc-a-1', hosts=['host1'])]
+        host = fakes.FakeHostState('host1', 'compute', {'aggregates': aggs})
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx, project_id='foo',
+            flavor=objects.Flavor(extra_specs={}),
+            scheduler_hints=dict(source_host=['host2']))
+
+        self.filt_cls._PROJECT_SHARD_CACHE['foo'] = ['vc-a-0', 'vc-a-1',
+                                                     'vc-b-0']
         self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
