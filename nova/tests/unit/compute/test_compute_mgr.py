@@ -5407,6 +5407,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                        '_error_out_instance_on_exception')
     def test_rebuild_driver_error_same_host(self, mock_error, mock_aiffe):
         instance = fake_instance.fake_instance_obj(self.context)
+        instance.node = None
         ex = test.TestingException('foo')
         rt = self._mock_rt()
         self.assertRaises(test.TestingException,

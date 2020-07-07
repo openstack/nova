@@ -1514,6 +1514,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
 
     def test_destroy_instance_without_compute(self):
         instance = fake_instance.fake_instance_obj(None)
+        instance.node = None
         self.destroy_disks = True
         with mock.patch.object(self.conn._vmops,
                                "destroy") as mock_destroy:

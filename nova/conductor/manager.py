@@ -340,6 +340,14 @@ class ComputeTaskManager:
     @staticmethod
     def _get_request_spec_for_cold_migrate(context, instance, flavor,
                                            filter_properties, request_spec):
+        # NOTE(jkulik): We need the instance's current host in at least one
+        # filter to make sure we don't pass vCenter boundaries, i.e. shards
+        if instance.obj_attr_is_set('host'):
+            scheduler_hints = {'source_host': [instance.host],
+                               'source_node': [instance.node]}
+            sh = filter_properties.setdefault('scheduler_hints', {})
+            sh.update(scheduler_hints)
+
         # NOTE(sbauza): If a reschedule occurs when prep_resize(), then
         # it only provides filter_properties legacy dict back to the
         # conductor with no RequestSpec part of the payload for <Stein
@@ -374,6 +382,11 @@ class ComputeTaskManager:
             # original RequestSpec object for make sure the scheduler verifies
             # the right one and not the original flavor
             request_spec.flavor = flavor
+            if (not request_spec.obj_attr_is_set('scheduler_hints') or
+                request_spec.scheduler_hints is None):
+                request_spec._from_hints(scheduler_hints)
+            else:
+                request_spec.scheduler_hints.update(scheduler_hints)
         return request_spec
 
     def _cold_migrate(self, context, instance, flavor, filter_properties,

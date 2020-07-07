@@ -46,10 +46,12 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         super(LiveMigrationTaskTestCase, self).setUp()
         self.context = nova_context.get_admin_context()
         self.instance_host = "host"
+        self.instance_node = "node"
         self.instance_uuid = uuids.instance
         self.instance_image = "image_ref"
         db_instance = fake_instance.fake_db_instance(
                 host=self.instance_host,
+                node=self.instance_node,
                 uuid=self.instance_uuid,
                 power_state=power_state.RUNNING,
                 vm_state = vm_states.ACTIVE,
