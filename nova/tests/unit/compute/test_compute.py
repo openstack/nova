@@ -684,7 +684,7 @@ class ComputeVolumeTestCase(BaseTestCase):
             'delete_on_termination': False,
         }]
 
-        image_meta = utils.get_bdm_image_metadata(
+        image_meta = block_device.get_bdm_image_metadata(
             self.context, self.compute_api.image_api,
             self.compute_api.volume_api, block_device_mapping)
         if metadata:
@@ -705,7 +705,7 @@ class ComputeVolumeTestCase(BaseTestCase):
             'delete_on_termination': False,
         }]
 
-        image_meta = utils.get_bdm_image_metadata(
+        image_meta = block_device.get_bdm_image_metadata(
             self.context, self.compute_api.image_api,
             self.compute_api.volume_api, block_device_mapping,
             legacy_bdm=False)
@@ -740,7 +740,7 @@ class ComputeVolumeTestCase(BaseTestCase):
             'delete_on_termination': True,
         }]
 
-        image_meta = utils.get_bdm_image_metadata(
+        image_meta = block_device.get_bdm_image_metadata(
             self.context, self.compute_api.image_api,
             self.compute_api.volume_api, block_device_mapping,
             legacy_bdm=False)

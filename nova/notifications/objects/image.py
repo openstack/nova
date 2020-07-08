@@ -68,7 +68,7 @@ class ImageMetaPayload(base.NotificationPayloadBase):
     #   * created_at
     #
     # c. It cannot be got in the boot from volume case.
-    #    See VIM_IMAGE_ATTRIBUTES in nova/utils.py.
+    #    See VIM_IMAGE_ATTRIBUTES in nova/block_device.py.
     #
     #   * id (not 'image_id')
     #   * visibility
