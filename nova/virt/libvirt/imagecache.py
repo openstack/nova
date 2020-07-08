@@ -419,3 +419,28 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         # perform the aging and image verification
         self._age_and_verify_cached_images(context, all_instances, base_dir)
         self._age_and_verify_swap_images(context, base_dir)
+
+    def get_disk_usage(self):
+        if not self.cache_dir_is_on_same_dev_as_instances_dir:
+            return 0
+
+        # NOTE(gibi): we need to use the disk size occupied from the file
+        # system as images in the cache will not grow to their virtual size.
+        # NOTE(gibi): st.blocks is always measured in 512 byte blocks see man
+        # fstat
+        return sum(
+            os.stat(os.path.join(self.cache_dir, f)).st_blocks * 512
+            for f in os.listdir(self.cache_dir)
+            if os.path.isfile(os.path.join(self.cache_dir, f)))
+
+    @property
+    def cache_dir(self):
+        return os.path.join(
+            CONF.instances_path, CONF.image_cache_subdirectory_name)
+
+    @property
+    def cache_dir_is_on_same_dev_as_instances_dir(self):
+        # NOTE(gibi): this does not work on Windows properly as st_dev is
+        # always 0
+        return (os.stat(CONF.instances_path).st_dev ==
+                os.stat(self.cache_dir).st_dev)

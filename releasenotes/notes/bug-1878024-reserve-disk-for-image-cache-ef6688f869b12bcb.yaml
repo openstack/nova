@@ -1,0 +1,10 @@
+---
+fixes:
+  - |
+    A new ``[workarounds]/reserve_disk_resource_for_image_cache`` config
+    option was added to fix the `bug 1878024`_ where the images in the compute
+    image cache overallocate the local disk. If this new config is set then the
+    libvirt driver will reserve DISK_GB resources in placement based on the
+    actual disk usage of the image cache.
+
+    .. _bug 1878024: https://bugs.launchpad.net/nova/+bug/1878024
