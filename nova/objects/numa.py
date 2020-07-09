@@ -106,16 +106,34 @@ class NUMACell(base.NovaObject):
         self.pinned_cpus -= cpus
 
     def pin_cpus_with_siblings(self, cpus):
+        """Pin (consume) both thread siblings if one of them is requested to
+        be pinned.
+
+        :param cpus: set of CPUs to pin
+        """
         pin_siblings = set()
         for sib in self.siblings:
             if cpus & sib:
+                # NOTE(artom) If the intersection between cpus and sib is not
+                # empty - IOW, the CPU we want to pin has sibligns - pin the
+                # sibling as well. This is because we normally got here because
+                # the `isolate` CPU thread policy is set, so we don't want to
+                # place guest CPUs on host thread siblings.
                 pin_siblings.update(sib)
         self.pin_cpus(pin_siblings)
 
     def unpin_cpus_with_siblings(self, cpus):
+        """Unpin (free up) both thread siblings if one of them is requested to
+        be freed.
+
+        :param cpus: set of CPUs to unpin.
+        """
         pin_siblings = set()
         for sib in self.siblings:
             if cpus & sib:
+                # NOTE(artom) This is the inverse operation of
+                # pin_cpus_with_siblings() - see the NOTE there. If the CPU
+                # we're unpinning has siblings, unpin the sibling as well.
                 pin_siblings.update(sib)
         self.unpin_cpus(pin_siblings)
 
