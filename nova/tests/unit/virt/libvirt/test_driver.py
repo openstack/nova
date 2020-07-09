@@ -24846,31 +24846,78 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             self.assertRaises(fakelibvirt.libvirtError,
                               self.drvr.trigger_crash_dump, instance)
 
-    @mock.patch.object(libvirt_driver.LOG, 'debug')
-    def test_get_volume_driver_invalid_connector_exception(self, mock_debug):
-        """Tests that the driver doesn't fail to initialize if one of the
-        imported volume drivers raises InvalidConnectorProtocol from os-brick.
-        """
-        # make a copy of the normal list and add a volume driver that raises
-        # the handled os-brick exception when imported.
-        libvirt_volume_drivers_copy = copy.copy(
-            libvirt_driver.libvirt_volume_drivers)
-        libvirt_volume_drivers_copy.append(
-            'invalid=nova.tests.unit.virt.libvirt.test_driver.'
-            'FakeInvalidVolumeDriver'
+    def test_get_volume_driver_invalid_type(self):
+        # Assert that VolumeDriverNotFound is raised when an invalid type is
+        # provided in the connection_info
+        self.assertRaises(
+            exception.VolumeDriverNotFound,
+            self.drvr._get_volume_driver,
+            {'driver_volume_type': 'foo'}
         )
-        with mock.patch.object(libvirt_driver, 'libvirt_volume_drivers',
-                               libvirt_volume_drivers_copy):
-            drvr = libvirt_driver.LibvirtDriver(
-                fake.FakeVirtAPI(), read_only=True
-            )
-        # make sure we didn't register the invalid volume driver
-        self.assertNotIn('invalid', drvr.volume_drivers)
-        # make sure we logged something
-        mock_debug.assert_called_with(
-            ('Unable to load volume driver %s. '
-             'It is not supported on this host.'),
-            'nova.tests.unit.virt.libvirt.test_driver.FakeInvalidVolumeDriver'
+
+        # Assert that VolumeDriverNotFound is raised when driver_volume_type
+        # is missing in the provided connection_info.
+        self.assertRaises(
+            exception.VolumeDriverNotFound,
+            self.drvr._get_volume_driver,
+            {}
+        )
+
+    @mock.patch('oslo_utils.importutils.import_class')
+    def test_get_volume_driver(self, mock_import_class):
+        # Assert the behaviour of _get_volume_driver and the driver cache
+        # Use a valid VOLUME_DRIVERS key but mock out the import of the class
+        driver_volume_type = 'iscsi'
+        connection_info = {
+            'driver_volume_type': driver_volume_type
+        }
+        mock_driver = mock.Mock()
+        mock_class = mock.Mock(return_value=mock_driver)
+        mock_import_class.return_value = mock_class
+
+        # Assert that the cache is empty
+        self.assertEqual(0, len(self.drvr.volume_drivers))
+
+        # Assert that repeat calls return the same instance of mock_driver
+        self.assertEqual(
+            mock_driver,
+            self.drvr._get_volume_driver(connection_info)
+        )
+        self.assertEqual(
+            mock_driver,
+            self.drvr._get_volume_driver(connection_info)
+        )
+
+        # Assert that we only imported the class once
+        mock_import_class.assert_called_once_with(
+            libvirt_driver.VOLUME_DRIVERS.get('iscsi'))
+
+        # Assert that the cache only contains the mock_driver instance
+        self.assertEqual(1, len(self.drvr.volume_drivers))
+        self.assertEqual(
+            mock_driver,
+            self.drvr.volume_drivers.get(driver_volume_type)
+        )
+
+    @mock.patch('oslo_utils.importutils.import_class')
+    def test_get_volume_driver_unsupported_protocol(self, mock_import_class):
+        # Assert that VolumeDriverNotSupported is raised when os-brick raises
+        # InvalidConnectorProtocol while building the connector
+        connection_info = {
+            'driver_volume_type': 'iscsi'
+        }
+        mock_driver = mock.Mock(
+            side_effect=brick_exception.InvalidConnectorProtocol)
+        mock_class = mock.Mock(side_effect=mock_driver)
+        mock_import_class.return_value = mock_class
+
+        ex = self.assertRaises(
+            exception.VolumeDriverNotSupported,
+            self.drvr._get_volume_driver,
+            connection_info
+        )
+        self.assertIn('volume driver is not supported on this platform',
+                      str(ex)
         )
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
