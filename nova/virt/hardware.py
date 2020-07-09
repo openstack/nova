@@ -1575,9 +1575,20 @@ def get_cpu_thread_policy_constraint(
     return policy
 
 
-def _get_numa_topology_auto(nodes, flavor):
-    if ((flavor.vcpus % nodes) > 0 or
-        (flavor.memory_mb % nodes) > 0):
+def _get_numa_topology_auto(
+    nodes: int,
+    flavor: 'objects.Flavor',
+) -> 'objects.InstanceNUMATopology':
+    """Generate a NUMA topology automatically based on CPUs and memory.
+
+    This is "automatic" because there's no user-provided per-node configuration
+    here - it's all auto-generated based on the number of nodes.
+
+    :param nodes: The number of nodes required in the generated topology.
+    :param flavor: The flavor used for the instance, from which to extract the
+        CPU and memory count.
+    """
+    if (flavor.vcpus % nodes) > 0 or (flavor.memory_mb % nodes) > 0:
         raise exception.ImageNUMATopologyAsymmetric()
 
     cells = []
@@ -1593,7 +1604,23 @@ def _get_numa_topology_auto(nodes, flavor):
     return objects.InstanceNUMATopology(cells=cells)
 
 
-def _get_numa_topology_manual(nodes, flavor, cpu_list, mem_list):
+def _get_numa_topology_manual(
+    nodes: int,
+    flavor: 'objects.Flavor',
+    cpu_list: ty.List[ty.Set[int]],
+    mem_list: ty.List[int],
+) -> 'objects.InstanceNUMATopology':
+    """Generate a NUMA topology based on user-provided NUMA topology hints.
+
+    :param nodes: The number of nodes required in the generated topology.
+    :param flavor: The flavor used for the instance, from which to extract the
+        CPU and memory count.
+    :param cpu_list: A list of sets of ints; each set in the list corresponds
+        to the set of guest cores to assign to NUMA node $index.
+    :param mem_list: A list of ints; each int corresponds to the amount of
+        memory to assign to NUMA node $index.
+    :returns: The generated instance NUMA topology.
+    """
     cells = []
     totalmem = 0
 
@@ -1810,36 +1837,6 @@ def numa_get_constraints(flavor, image_meta):
              and implicitly requested resources of hyperthreading traits
     :returns: objects.InstanceNUMATopology, or None
     """
-    numa_topology = None
-
-    nodes = _get_numa_node_count_constraint(flavor, image_meta)
-    pagesize = _get_numa_pagesize_constraint(flavor, image_meta)
-    vpmems = get_vpmems(flavor)
-
-    if nodes or pagesize or vpmems:
-        nodes = nodes or 1
-
-        cpu_list = _get_numa_cpu_constraint(flavor, image_meta)
-        mem_list = _get_numa_mem_constraint(flavor, image_meta)
-
-        if cpu_list is None and mem_list is None:
-            numa_topology = _get_numa_topology_auto(
-                nodes, flavor)
-        elif cpu_list is not None and mem_list is not None:
-            # If any node has data set, all nodes must have data set
-            if len(cpu_list) != nodes or len(mem_list) != nodes:
-                raise exception.ImageNUMATopologyIncomplete()
-
-            numa_topology = _get_numa_topology_manual(
-                nodes, flavor, cpu_list, mem_list
-            )
-        else:
-            # If one property list is specified both must be
-            raise exception.ImageNUMATopologyIncomplete()
-
-        # We currently support same pagesize for all cells.
-        for c in numa_topology.cells:
-            setattr(c, 'pagesize', pagesize)
 
     cpu_policy = get_cpu_policy_constraint(flavor, image_meta)
     cpu_thread_policy = get_cpu_thread_policy_constraint(flavor, image_meta)
@@ -1912,23 +1909,51 @@ def numa_get_constraints(flavor, image_meta):
         if rt_mask:
             raise exception.RealtimeConfigurationInvalid()
 
-        return numa_topology
+    nodes = _get_numa_node_count_constraint(flavor, image_meta)
+    pagesize = _get_numa_pagesize_constraint(flavor, image_meta)
+    vpmems = get_vpmems(flavor)
 
-    if numa_topology:
-        for cell in numa_topology.cells:
-            cell.cpu_policy = cpu_policy
-            cell.cpu_thread_policy = cpu_thread_policy
-    else:
-        single_cell = objects.InstanceNUMACell(
-            id=0,
-            cpuset=set(range(flavor.vcpus)),
-            memory=flavor.memory_mb,
-            cpu_policy=cpu_policy,
-            cpu_thread_policy=cpu_thread_policy)
-        numa_topology = objects.InstanceNUMATopology(cells=[single_cell])
+    # NOTE(stephenfin): There are currently four things that will configure a
+    # NUMA topology for an instance:
+    #
+    # - The user explicitly requesting one
+    # - The use of CPU pinning
+    # - The use of hugepages
+    # - The use of vPMEM
+    if nodes or pagesize or vpmems or cpu_policy in (
+        fields.CPUAllocationPolicy.DEDICATED,
+    ):
+        nodes = nodes or 1
 
-    if emu_threads_policy:
+        cpu_list = _get_numa_cpu_constraint(flavor, image_meta)
+        mem_list = _get_numa_mem_constraint(flavor, image_meta)
+
+        if cpu_list is None and mem_list is None:
+            numa_topology = _get_numa_topology_auto(nodes, flavor)
+        elif cpu_list is not None and mem_list is not None:
+            # If any node has data set, all nodes must have data set
+            if len(cpu_list) != nodes or len(mem_list) != nodes:
+                raise exception.ImageNUMATopologyIncomplete()
+
+            numa_topology = _get_numa_topology_manual(
+                nodes, flavor, cpu_list, mem_list
+            )
+        else:
+            # If one property list is specified both must be
+            raise exception.ImageNUMATopologyIncomplete()
+
+        # We currently support the same pagesize, CPU policy and CPU thread
+        # policy for all cells, but these are still stored on a per-cell
+        # basis :(
+        for c in numa_topology.cells:
+            setattr(c, 'pagesize', pagesize)
+            setattr(c, 'cpu_policy', cpu_policy)
+            setattr(c, 'cpu_thread_policy', cpu_thread_policy)
+
+        # ...but emulator threads policy is not \o/
         numa_topology.emulator_threads_policy = emu_threads_policy
+    else:
+        numa_topology = None
 
     return numa_topology
 
