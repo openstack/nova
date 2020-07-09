@@ -223,7 +223,7 @@ use pinned CPUs. To configure a flavor to use the ``shared`` CPU policy, run:
 .. note::
 
    For more information about the syntax for ``hw:cpu_policy``, refer to the
-   :doc:`/admin/flavors` guide.
+   :doc:`/user/flavors` guide.
 
 It is also possible to configure the CPU policy via image metadata. This can
 be useful when packaging applications that require real-time or near real-time
@@ -334,7 +334,7 @@ This does not utilize traits and, as such, there is no trait-based equivalent.
 .. note::
 
    For more information about the syntax for ``hw:cpu_thread_policy``, refer to
-   the :doc:`/admin/flavors` guide.
+   the :doc:`/user/flavors` guide.
 
 As with CPU policies, it also possible to configure the CPU thread policy via
 image metadata. This can be useful when packaging applications that require
@@ -421,7 +421,7 @@ instance should be run on the pool of host cores listed in
 .. note::
 
    For more information about the syntax for ``hw:emulator_threads_policy``,
-   refer to the :doc:`/admin/flavors` guide.
+   refer to the :doc:`/user/flavors` guide.
 
 Customizing instance CPU topologies
 -----------------------------------
@@ -475,7 +475,7 @@ Similarly, to configure a flavor to use one core and one thread, run:
    with ten cores fails.
 
 For more information about the syntax for ``hw:cpu_sockets``, ``hw:cpu_cores``
-and ``hw:cpu_threads``, refer to the :doc:`/admin/flavors` guide.
+and ``hw:cpu_threads``, refer to the :doc:`/user/flavors` guide.
 
 It is also possible to set upper limits on the number of sockets, cores, and
 threads used. Unlike the hard values above, it is not necessary for this exact
@@ -490,7 +490,7 @@ instance topology, run:
 
 For more information about the syntax for ``hw:cpu_max_sockets``,
 ``hw:cpu_max_cores``, and ``hw:cpu_max_threads``, refer to the
-:doc:`/admin/flavors` guide.
+:doc:`/user/flavors` guide.
 
 Applications are frequently packaged as images. For applications that prefer
 certain CPU topologies, configure image metadata to hint that created instances
