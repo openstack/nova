@@ -44,7 +44,7 @@ Possible values:
   (i.e. "http://10.0.1.0:9292" or "https://my.glance.server/image").
 """),
     cfg.IntOpt('num_retries',
-        default=0,
+        default=3,
         min=0,
         help="""
 Enable glance operation retries.
