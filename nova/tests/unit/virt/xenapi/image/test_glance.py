@@ -148,7 +148,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         mock_sr_path.assert_called_once_with(self.session)
         mock_extra_header.assert_called_once_with(self.context)
         mock_upload.assert_called_once_with(
-            self.session, 0, mock.ANY, mock.ANY, 'fake_image_uuid',
+            self.session, 3, mock.ANY, mock.ANY, 'fake_image_uuid',
             'fake_sr_path', 'fake_extra_header', **params)
 
     @mock.patch.object(utils, 'get_auto_disk_config_from_instance')
@@ -169,7 +169,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         mock_sr_path.assert_called_once_with(self.session)
         mock_extra_header.assert_called_once_with(self.context)
         mock_upload.assert_called_once_with(
-            self.session, 0, mock.ANY, mock.ANY, 'fake_image_uuid',
+            self.session, 3, mock.ANY, mock.ANY, 'fake_image_uuid',
             'fake_sr_path', 'fake_extra_header', **params)
         mock_disk_config.assert_called_once_with(self.instance)
 
@@ -190,7 +190,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         mock_sr_path.assert_called_once_with(self.session)
         mock_extra_header.assert_called_once_with(self.context)
         mock_upload.assert_called_once_with(
-            self.session, 0, mock.ANY, mock.ANY, 'fake_image_uuid',
+            self.session, 3, mock.ANY, mock.ANY, 'fake_image_uuid',
             'fake_sr_path', 'fake_extra_header', **params)
         mock_disk_config.assert_called_once_with(self.instance)
 
@@ -211,7 +211,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         mock_sr_path.assert_called_once_with(self.session)
         mock_extra_header.assert_called_once_with(self.context)
         mock_upload.assert_called_once_with(
-            self.session, 0, mock.ANY, mock.ANY, 'fake_image_uuid',
+            self.session, 3, mock.ANY, mock.ANY, 'fake_image_uuid',
             'fake_sr_path', 'fake_extra_header', **params)
 
     @mock.patch.object(common_glance, 'generate_identity_headers')
@@ -231,7 +231,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         mock_sr_path.assert_called_once_with(self.session)
         mock_extra_header.assert_called_once_with(self.context)
         mock_upload.assert_called_once_with(
-            self.session, 0, mock.ANY, mock.ANY, 'fake_image_uuid',
+            self.session, 3, mock.ANY, mock.ANY, 'fake_image_uuid',
             'fake_sr_path', 'fake_extra_header', **params)
 
     @mock.patch.object(time, 'sleep')
@@ -330,5 +330,5 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         mock_sr_path.assert_called_once_with(self.session)
         mock_extra_header.assert_called_once_with(self.context)
         mock_upload.assert_called_once_with(
-            self.session, 0, mock.ANY, mock.ANY, 'fake_image_uuid',
+            self.session, 3, mock.ANY, mock.ANY, 'fake_image_uuid',
             'fake_sr_path', 'fake_extra_header', **params)

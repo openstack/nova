@@ -1,0 +1,11 @@
+---
+upgrade:
+  - |
+    The default for ``[glance] num_retries`` has changed from ``0`` to ``3``.
+    The option controls how many times to retry a Glance API call in response
+    to a HTTP connection failure. When deploying Glance behind HAproxy it is
+    possible for a response to arrive just after the HAproxy idle time. As a
+    result, an exception will be raised when the connection is closed resulting
+    in a failed request. By increasing the default value, Nova can be more
+    resilient to this scenario were HAproxy is misconfigured by retrying the
+    request.
