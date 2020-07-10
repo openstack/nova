@@ -444,8 +444,6 @@
             irrelevant-files: *dsvm-irrelevant-files
         - nova-tempest-v2-api:
             irrelevant-files: *dsvm-irrelevant-files
-        - legacy-tempest-dsvm-neutron-dvr-multinode-full:
-            irrelevant-files: *dsvm-irrelevant-files
         - neutron-tempest-dvr-ha-multinode-full:
             irrelevant-files: *dsvm-irrelevant-files
         - neutron-tempest-iptables_hybrid:
