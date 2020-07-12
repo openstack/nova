@@ -872,7 +872,7 @@ iface eth1 inet static
         diff_host = objects.Migration(source_compute='fake-host1',
                                       dest_compute='fake-host2')
         # Same-host migrations will have all events be plug-time.
-        self.assertItemsEqual(
+        self.assertCountEqual(
             [('network-vif-plugged', uuids.normal_vif),
              ('network-vif-plugged', uuids.hybrid_vif)],
             network_info.get_plug_time_events(same_host))

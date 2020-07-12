@@ -5845,7 +5845,7 @@ class TestAPI(TestAPIBase):
             [None, None, None, None, uuids.trusted_port],
             [pci_req.requester_id for pci_req in pci_requests.requests])
 
-        self.assertItemsEqual(
+        self.assertCountEqual(
             ['physnet1', 'physnet2', 'physnet3', 'physnet4'],
             network_metadata.physnets)
         self.assertTrue(network_metadata.tunneled)

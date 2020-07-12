@@ -6913,7 +6913,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         # and only for the non-default security group name.
         scget.assert_called_once_with(self.context, 'fake-security-group')
         # Assert we translated the non-default secgroup name to uuid.
-        self.assertItemsEqual(['default', uuids.secgroup_uuid],
+        self.assertCountEqual(['default', uuids.secgroup_uuid],
                               security_groups)
 
     @mock.patch('nova.compute.api.API._record_action_start')
