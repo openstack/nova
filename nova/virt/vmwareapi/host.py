@@ -34,6 +34,8 @@ from nova.virt.vmwareapi import vm_util
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
+SERVICE_DISABLED_REASON = 'set by vmwareapi host_state'
+
 
 def _get_ds_capacity_and_freespace(session, cluster=None,
                                    datastore_regex=None):
@@ -60,7 +62,14 @@ class VCState(object):
         self._cluster = cluster
         self._datastore_regex = datastore_regex
         self._stats = {}
-        self._auto_service_disabled = False
+        ctx = context.get_admin_context()
+        try:
+            service = objects.Service.get_by_compute_host(ctx, CONF.host)
+            self._auto_service_disabled = service.disabled \
+                        and service.disabled_reason == SERVICE_DISABLED_REASON
+        except exception.ComputeHostNotFound:
+            # this can happend on newly-added hosts
+            self._auto_service_disabled = False
         about_info = self._session._call_method(vim_util, "get_about_info")
         self._hypervisor_type = about_info.name
         self._hypervisor_version = versionutils.convert_version_to_int(
@@ -120,6 +129,6 @@ class VCState(object):
         ctx = context.get_admin_context()
         service = objects.Service.get_by_compute_host(ctx, CONF.host)
         service.disabled = not enabled
-        service.disabled_reason = 'set by vmwareapi host_state'
+        service.disabled_reason = SERVICE_DISABLED_REASON
         service.save()
         self._auto_service_disabled = service.disabled

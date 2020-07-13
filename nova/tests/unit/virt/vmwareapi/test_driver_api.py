@@ -162,7 +162,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         return objects.Service(**service_ref)
 
     @mock.patch.object(driver.VMwareVCDriver, '_register_openstack_extension')
-    def setUp(self, mock_register):
+    @mock.patch.object(objects.Service, 'get_by_compute_host')
+    def setUp(self, mock_svc, mock_register):
         super(VMwareAPIVMTestCase, self).setUp()
         ds_util.dc_cache_reset()
         vm_util.vm_refs_cache_reset()
@@ -183,6 +184,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         vmwareapi_fake.reset()
         self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
         service = self._create_service(host=HOST)
+        mock_svc.return_value = service
 
         self.conn = driver.VMwareVCDriver(None, False)
         self.assertFalse(service.disabled)
