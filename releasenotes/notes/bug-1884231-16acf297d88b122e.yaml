@@ -9,3 +9,8 @@ features:
     It is now possible to allocate all cores in an instance to realtime and
     omit the ``hw:cpu_realtime_mask`` extra spec. This requires specifying the
     ``hw:emulator_threads_policy`` extra spec.
+  - |
+    It is now possible to specify a mask in ``hw:cpu_realtime_mask`` without a
+    leading ``^``. When this is ommitted, the value will specify the cores that
+    should be included in the set of realtime cores, as opposed to those that
+    should be excluded.

@@ -36,8 +36,7 @@ realtime_validators = [
         ),
         value={
             'type': str,
-            # NOTE(stephenfin): Yes, these things *have* to start with '^'
-            'pattern': r'\^\d+((-\d+)?(,\^?\d+(-\d+)?)?)*',
+            'pattern': r'(\^)?\d+((-\d+)?(,\^?\d+(-\d+)?)?)*',
         },
     ),
 ]

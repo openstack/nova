@@ -625,9 +625,11 @@ CPU real-time policy
     - ``yes``: The guest vCPUs will have a real-time policy
 
   CPU-REALTIME-MASK (coremask):
-    A coremask indicating which vCPUs **will not** have a real-time policy. This
-    should start with a ``^``. For example, a value of ``^0-1`` indicates that
-    all vCPUs *except* vCPUs ``0`` and ``1`` will have a real-time policy.
+    A coremask indicating which vCPUs **will** or, if starting with a ``^``,
+    **will not** have a real-time policy. For example, a value of ``0-5``
+    indicates that vCPUs ``0`` to ``5`` will have a real-time policy.
+    Conversely, a value of ``^0-1`` indicates that all vCPUs *except* vCPUs
+    ``0`` and ``1`` will have a real-time policy.
 
   .. note::
 
@@ -640,6 +642,12 @@ CPU real-time policy
      ``hw:cpu_realtime`` was set to yes. Starting in Victoria, it is possible
      to omit this when an emulator thread policy is configured using the
      ``hw:emulator_threads_policy`` extra spec.
+
+  .. versionchanged:: 22.0.0 (Victoria)
+
+     Previously, the leading carat was necessary and omitting it would be
+     equivalent to not setting the mask, resulting in a failure to spawn
+     the instance.
 
 .. _extra-specs-emulator-threads-policy:
 
