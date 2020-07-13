@@ -21,10 +21,10 @@ import sys
 import traceback
 
 from keystoneauth1 import exceptions as ks_exc
+import microversion_parse
 from oslo_config import cfg
 from oslo_upgradecheck import common_checks
 from oslo_upgradecheck import upgradecheck
-import pkg_resources
 import sqlalchemy as sa
 from sqlalchemy import func as sqlfunc
 
@@ -175,9 +175,9 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         try:
             # TODO(efried): Use ksa's version filtering in _placement_get
             versions = self._placement_get("/")
-            max_version = pkg_resources.parse_version(
+            max_version = microversion_parse.parse_version_string(
                 versions["versions"][0]["max_version"])
-            needs_version = pkg_resources.parse_version(
+            needs_version = microversion_parse.parse_version_string(
                 MIN_PLACEMENT_MICROVERSION)
             if max_version < needs_version:
                 msg = (_('Placement API version %(needed)s needed, '

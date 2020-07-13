@@ -14,11 +14,11 @@
 import copy
 import ddt
 from keystoneauth1 import exceptions as kse
+import microversion_parse
 import mock
 import os_resource_classes as orc
 import os_traits as ot
 from oslo_utils.fixture import uuidsentinel as uuids
-import pkg_resources
 
 from nova.cmd import status
 from nova.compute import provider_tree
@@ -39,9 +39,6 @@ from nova.tests.functional import fixtures as func_fixtures
 
 CONF = conf.CONF
 
-CMD_STATUS_MIN_MICROVERSION = pkg_resources.parse_version(
-    status.MIN_PLACEMENT_MICROVERSION)
-
 
 class VersionCheckingReportClient(report.SchedulerReportClient):
     """This wrapper around SchedulerReportClient checks microversions for
@@ -57,14 +54,18 @@ class VersionCheckingReportClient(report.SchedulerReportClient):
         if not microversion:
             return
 
-        seen_microversion = pkg_resources.parse_version(microversion)
-        if seen_microversion > CMD_STATUS_MIN_MICROVERSION:
+        min_microversion = microversion_parse.parse_version_string(
+            status.MIN_PLACEMENT_MICROVERSION)
+        got_microversion = microversion_parse.parse_version_string(
+            microversion)
+        if got_microversion > min_microversion:
             raise ValueError(
                 "Report client is using microversion %s, but nova.cmd.status "
                 "is only requiring %s. See "
                 "I4369f7fb1453e896864222fa407437982be8f6b5 for an example of "
                 "how to bump the minimum requirement." %
-                (microversion, status.MIN_PLACEMENT_MICROVERSION))
+                (got_microversion, min_microversion)
+            )
 
     def get(self, *args, **kwargs):
         self._check_microversion(kwargs)
