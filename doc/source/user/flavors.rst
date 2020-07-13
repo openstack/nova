@@ -645,7 +645,7 @@ CPU real-time policy
 
   .. versionchanged:: 22.0.0 (Victoria)
 
-     Previously, the leading carat was necessary and omitting it would be
+     Previously, the leading caret was necessary and omitting it would be
      equivalent to not setting the mask, resulting in a failure to spawn
      the instance.
 
