@@ -237,12 +237,14 @@ class VCPUTopologyTest(test.NoDBTestCase):
     def test_validate_config(self):
         testdata = [
             {  # Flavor sets preferred topology only
-                "flavor": objects.Flavor(vcpus=16, memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_sockets": "8",
-                    "hw:cpu_cores": "2",
-                    "hw:cpu_threads": "1",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=16, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_sockets": "8",
+                        "hw:cpu_cores": "2",
+                        "hw:cpu_threads": "1",
+                    }
+                ),
                 "image": {
                     "properties": {}
                 },
@@ -251,13 +253,15 @@ class VCPUTopologyTest(test.NoDBTestCase):
                 )
             },
             {  # Image topology overrides flavor
-                "flavor": objects.Flavor(vcpus=16, memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_sockets": "8",
-                    "hw:cpu_cores": "2",
-                    "hw:cpu_threads": "1",
-                    "hw:cpu_max_threads": "2",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=16, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_sockets": "8",
+                        "hw:cpu_cores": "2",
+                        "hw:cpu_threads": "1",
+                        "hw:cpu_max_threads": "2",
+                    }
+                ),
                 "image": {
                     "properties": {
                         "hw_cpu_sockets": "4",
@@ -270,12 +274,14 @@ class VCPUTopologyTest(test.NoDBTestCase):
                 )
             },
             {  # Partial image topology overrides flavor
-                "flavor": objects.Flavor(vcpus=16, memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_sockets": "8",
-                    "hw:cpu_cores": "2",
-                    "hw:cpu_threads": "1",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=16, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_sockets": "8",
+                        "hw:cpu_cores": "2",
+                        "hw:cpu_threads": "1",
+                    }
+                ),
                 "image": {
                     "properties": {
                         "hw_cpu_sockets": "2",
@@ -286,10 +292,12 @@ class VCPUTopologyTest(test.NoDBTestCase):
                 )
             },
             {  # Restrict use of threads
-                "flavor": objects.Flavor(vcpus=16, memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_max_threads": "2",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=16, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_max_threads": "2",
+                    }
+                ),
                 "image": {
                     "properties": {
                         "hw_cpu_max_threads": "1",
@@ -300,11 +308,13 @@ class VCPUTopologyTest(test.NoDBTestCase):
                 )
             },
             {  # Force use of at least two sockets
-                "flavor": objects.Flavor(vcpus=16, memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_max_cores": "8",
-                    "hw:cpu_max_threads": "1",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=16, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_max_cores": "8",
+                        "hw:cpu_max_threads": "1",
+                    }
+                ),
                 "image": {
                     "properties": {}
                 },
@@ -313,11 +323,13 @@ class VCPUTopologyTest(test.NoDBTestCase):
                 )
             },
             {  # Image limits reduce flavor
-                "flavor": objects.Flavor(vcpus=16, memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_max_cores": "8",
-                    "hw:cpu_max_threads": "1",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=16, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_max_cores": "8",
+                        "hw:cpu_max_threads": "1",
+                    }
+                ),
                 "image": {
                     "properties": {
                         "hw_cpu_max_cores": "4",
@@ -328,12 +340,14 @@ class VCPUTopologyTest(test.NoDBTestCase):
                 )
             },
             {  # Image limits kill flavor preferred
-                "flavor": objects.Flavor(vcpus=16, memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_sockets": "2",
-                    "hw:cpu_cores": "8",
-                    "hw:cpu_threads": "1",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=16, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_sockets": "2",
+                        "hw:cpu_cores": "8",
+                        "hw:cpu_threads": "1",
+                    }
+                ),
                 "image": {
                     "properties": {
                         "hw_cpu_max_cores": "4",
@@ -344,11 +358,13 @@ class VCPUTopologyTest(test.NoDBTestCase):
                 )
             },
             {  # Image limits cannot exceed flavor
-                "flavor": objects.Flavor(vcpus=16, memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_max_cores": "8",
-                    "hw:cpu_max_threads": "1",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=16, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_max_cores": "8",
+                        "hw:cpu_max_threads": "1",
+                    }
+                ),
                 "image": {
                     "properties": {
                         "hw_cpu_max_cores": "16",
@@ -357,11 +373,13 @@ class VCPUTopologyTest(test.NoDBTestCase):
                 "expect": exception.ImageVCPULimitsRangeExceeded,
             },
             {  # Image preferred cannot exceed flavor
-                "flavor": objects.Flavor(vcpus=16, memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_max_cores": "8",
-                    "hw:cpu_max_threads": "1",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=16, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_max_cores": "8",
+                        "hw:cpu_max_threads": "1",
+                    }
+                ),
                 "image": {
                     "properties": {
                         "hw_cpu_cores": "16",
@@ -374,9 +392,8 @@ class VCPUTopologyTest(test.NoDBTestCase):
         for topo_test in testdata:
             image_meta = objects.ImageMeta.from_dict(topo_test["image"])
             if type(topo_test["expect"]) == tuple:
-                (preferred,
-                 maximum) = hw.get_cpu_topology_constraints(
-                     topo_test["flavor"], image_meta)
+                (preferred, maximum) = hw.get_cpu_topology_constraints(
+                    topo_test["flavor"], image_meta)
 
                 self.assertEqual(topo_test["expect"][0], preferred.sockets)
                 self.assertEqual(topo_test["expect"][1], preferred.cores)
@@ -392,14 +409,14 @@ class VCPUTopologyTest(test.NoDBTestCase):
 
     def test_invalid_flavor_values(self):
         extra_specs = {
-                    # test non-integer value of these extra specs
-                    "hw:cpu_sockets": "8",
-                    "hw:cpu_cores": "2",
-                    "hw:cpu_threads": "1",
-                    "hw:cpu_max_sockets": "8",
-                    "hw:cpu_max_cores": "2",
-                    "hw:cpu_max_threads": "1",
-            }
+            # test non-integer value of these extra specs
+            "hw:cpu_sockets": "8",
+            "hw:cpu_cores": "2",
+            "hw:cpu_threads": "1",
+            "hw:cpu_max_sockets": "8",
+            "hw:cpu_max_cores": "2",
+            "hw:cpu_max_threads": "1",
+        }
         image_meta = objects.ImageMeta.from_dict({"properties": {}})
 
         for key in extra_specs:
@@ -505,9 +522,9 @@ class VCPUTopologyTest(test.NoDBTestCase):
                 for topology in hw._get_possible_cpu_topologies(
                         topo_test["vcpus"],
                         objects.VirtCPUTopology(
-                                        sockets=topo_test["maxsockets"],
-                                        cores=topo_test["maxcores"],
-                                        threads=topo_test["maxthreads"]),
+                            sockets=topo_test["maxsockets"],
+                            cores=topo_test["maxcores"],
+                            threads=topo_test["maxthreads"]),
                         topo_test["allow_threads"]):
                     actual.append([topology.sockets,
                                    topology.cores,
@@ -618,12 +635,14 @@ class VCPUTopologyTest(test.NoDBTestCase):
         testdata = [
             {  # Flavor sets preferred topology only
                 "allow_threads": True,
-                "flavor": objects.Flavor(vcpus=16, memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_sockets": "8",
-                    "hw:cpu_cores": "2",
-                    "hw:cpu_threads": "1"
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=16, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_sockets": "8",
+                        "hw:cpu_cores": "2",
+                        "hw:cpu_threads": "1"
+                    }
+                ),
                 "image": {
                     "properties": {}
                 },
@@ -631,13 +650,15 @@ class VCPUTopologyTest(test.NoDBTestCase):
             },
             {  # Image topology overrides flavor
                 "allow_threads": True,
-                "flavor": objects.Flavor(vcpus=16, memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_sockets": "8",
-                    "hw:cpu_cores": "2",
-                    "hw:cpu_threads": "1",
-                    "hw:cpu_maxthreads": "2",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=16, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_sockets": "8",
+                        "hw:cpu_cores": "2",
+                        "hw:cpu_threads": "1",
+                        "hw:cpu_maxthreads": "2",
+                    }
+                ),
                 "image": {
                     "properties": {
                         "hw_cpu_sockets": "4",
@@ -649,13 +670,15 @@ class VCPUTopologyTest(test.NoDBTestCase):
             },
             {  # Image topology overrides flavor
                 "allow_threads": False,
-                "flavor": objects.Flavor(vcpus=16, memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_sockets": "8",
-                    "hw:cpu_cores": "2",
-                    "hw:cpu_threads": "1",
-                    "hw:cpu_maxthreads": "2",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=16, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_sockets": "8",
+                        "hw:cpu_cores": "2",
+                        "hw:cpu_threads": "1",
+                        "hw:cpu_maxthreads": "2",
+                    }
+                ),
                 "image": {
                     "properties": {
                         "hw_cpu_sockets": "4",
@@ -667,12 +690,14 @@ class VCPUTopologyTest(test.NoDBTestCase):
             },
             {  # Partial image topology overrides flavor
                 "allow_threads": True,
-                "flavor": objects.Flavor(vcpus=16, memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_sockets": "8",
-                    "hw:cpu_cores": "2",
-                    "hw:cpu_threads": "1"
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=16, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_sockets": "8",
+                        "hw:cpu_cores": "2",
+                        "hw:cpu_threads": "1"
+                    }
+                ),
                 "image": {
                     "properties": {
                         "hw_cpu_sockets": "2"
@@ -682,10 +707,12 @@ class VCPUTopologyTest(test.NoDBTestCase):
             },
             {  # Restrict use of threads
                 "allow_threads": True,
-                "flavor": objects.Flavor(vcpus=16, memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_max_threads": "1"
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=16, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_max_threads": "1"
+                    }
+                ),
                 "image": {
                     "properties": {}
                 },
@@ -693,11 +720,13 @@ class VCPUTopologyTest(test.NoDBTestCase):
             },
             {  # Force use of at least two sockets
                 "allow_threads": True,
-                "flavor": objects.Flavor(vcpus=16, memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_max_cores": "8",
-                    "hw:cpu_max_threads": "1",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=16, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_max_cores": "8",
+                        "hw:cpu_max_threads": "1",
+                    }
+                ),
                 "image": {
                     "properties": {}
                 },
@@ -705,12 +734,14 @@ class VCPUTopologyTest(test.NoDBTestCase):
             },
             {  # Image limits reduce flavor
                 "allow_threads": True,
-                "flavor": objects.Flavor(vcpus=16, memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_max_sockets": "8",
-                    "hw:cpu_max_cores": "8",
-                    "hw:cpu_max_threads": "1",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=16, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_max_sockets": "8",
+                        "hw:cpu_max_cores": "8",
+                        "hw:cpu_max_threads": "1",
+                    }
+                ),
                 "image": {
                     "properties": {
                         "hw_cpu_max_sockets": 4,
@@ -720,12 +751,14 @@ class VCPUTopologyTest(test.NoDBTestCase):
             },
             {  # Image limits kill flavor preferred
                 "allow_threads": True,
-                "flavor": objects.Flavor(vcpus=16, memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_sockets": "2",
-                    "hw:cpu_cores": "8",
-                    "hw:cpu_threads": "1",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=16, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_sockets": "2",
+                        "hw:cpu_cores": "8",
+                        "hw:cpu_threads": "1",
+                    }
+                ),
                 "image": {
                     "properties": {
                         "hw_cpu_max_cores": 4,
@@ -735,41 +768,45 @@ class VCPUTopologyTest(test.NoDBTestCase):
             },
             {  # NUMA needs threads, only cores requested by flavor
                 "allow_threads": True,
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_cores": "2",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_cores": "2",
+                    }
+                ),
                 "image": {
                     "properties": {
                         "hw_cpu_max_cores": 2,
                     }
                 },
-                "numa_topology": objects.InstanceNUMATopology(
-                    cells=[
-                        objects.InstanceNUMACell(
-                            id=0, cpuset=set([0, 1]), memory=1024,
-                            cpu_topology=objects.VirtCPUTopology(
-                                sockets=1, cores=1, threads=2)),
-                        objects.InstanceNUMACell(
-                            id=1, cpuset=set([2, 3]), memory=1024)]),
+                "numa_topology": objects.InstanceNUMATopology(cells=[
+                    objects.InstanceNUMACell(
+                        id=0, cpuset=set([0, 1]), memory=1024,
+                        cpu_topology=objects.VirtCPUTopology(
+                            sockets=1, cores=1, threads=2)),
+                    objects.InstanceNUMACell(
+                        id=1, cpuset=set([2, 3]), memory=1024),
+                ]),
                 "expect": [1, 2, 2]
             },
             {  # NUMA needs threads, but more than requested by flavor - the
                # least amount of threads wins
                 "allow_threads": True,
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_threads": "2",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_threads": "2",
+                    }
+                ),
                 "image": {
                     "properties": {}
                 },
-                "numa_topology": objects.InstanceNUMATopology(
-                    cells=[
-                        objects.InstanceNUMACell(
-                            id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
-                            cpu_topology=objects.VirtCPUTopology(
-                                sockets=1, cores=1, threads=4))]),
+                "numa_topology": objects.InstanceNUMATopology(cells=[
+                    objects.InstanceNUMACell(
+                        id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
+                        cpu_topology=objects.VirtCPUTopology(
+                            sockets=1, cores=1, threads=4)),
+                ]),
                 "expect": [2, 1, 2]
             },
             {  # NUMA needs threads, but more than limit in flavor - the
@@ -777,59 +814,64 @@ class VCPUTopologyTest(test.NoDBTestCase):
                # count wins. So with desired 4, max of 3, and
                # vcpu count of 4, we should get 2 threads.
                 "allow_threads": True,
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_max_sockets": "5",
-                    "hw:cpu_max_cores": "2",
-                    "hw:cpu_max_threads": "3",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_max_sockets": "5",
+                        "hw:cpu_max_cores": "2",
+                        "hw:cpu_max_threads": "3",
+                    }
+                ),
                 "image": {
                     "properties": {}
                 },
-                "numa_topology": objects.InstanceNUMATopology(
-                    cells=[
-                        objects.InstanceNUMACell(
-                            id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
-                            cpu_topology=objects.VirtCPUTopology(
-                                sockets=1, cores=1, threads=4))]),
+                "numa_topology": objects.InstanceNUMATopology(cells=[
+                    objects.InstanceNUMACell(
+                        id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
+                        cpu_topology=objects.VirtCPUTopology(
+                            sockets=1, cores=1, threads=4)),
+                ]),
                 "expect": [2, 1, 2]
             },
             {  # NUMA needs threads, but thread count does not
                # divide into flavor vcpu count, so we must
                # reduce thread count to closest divisor
                 "allow_threads": True,
-                "flavor": objects.Flavor(vcpus=6, memory_mb=2048,
-                                         extra_specs={
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=6, memory_mb=2048,
+                    extra_specs={}
+                ),
                 "image": {
                     "properties": {}
                 },
-                "numa_topology": objects.InstanceNUMATopology(
-                    cells=[
-                        objects.InstanceNUMACell(
-                            id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
-                            cpu_topology=objects.VirtCPUTopology(
-                                sockets=1, cores=1, threads=4))]),
+                "numa_topology": objects.InstanceNUMATopology(cells=[
+                    objects.InstanceNUMACell(
+                        id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
+                        cpu_topology=objects.VirtCPUTopology(
+                            sockets=1, cores=1, threads=4)),
+                ]),
                 "expect": [2, 1, 3]
             },
             {  # NUMA needs different number of threads per cell - the least
                # amount of threads wins
                 "allow_threads": True,
-                "flavor": objects.Flavor(vcpus=8, memory_mb=2048,
-                                         extra_specs={}),
+                "flavor": objects.Flavor(
+                    vcpus=8, memory_mb=2048,
+                    extra_specs={}
+                ),
                 "image": {
                     "properties": {}
                 },
-                "numa_topology": objects.InstanceNUMATopology(
-                    cells=[
-                        objects.InstanceNUMACell(
-                            id=0, cpuset=set([0, 1, 2, 3]), memory=1024,
+                "numa_topology": objects.InstanceNUMATopology(cells=[
+                    objects.InstanceNUMACell(
+                        id=0, cpuset=set([0, 1, 2, 3]), memory=1024,
+                        cpu_topology=objects.VirtCPUTopology(
+                            sockets=1, cores=2, threads=2)),
+                    objects.InstanceNUMACell(
+                        id=1, cpuset=set([4, 5, 6, 7]), memory=1024,
                             cpu_topology=objects.VirtCPUTopology(
-                                sockets=1, cores=2, threads=2)),
-                        objects.InstanceNUMACell(
-                            id=1, cpuset=set([4, 5, 6, 7]), memory=1024,
-                            cpu_topology=objects.VirtCPUTopology(
-                                sockets=1, cores=1, threads=4))]),
+                                sockets=1, cores=1, threads=4)),
+                ]),
                 "expect": [4, 1, 2]
             },
         ]
@@ -852,9 +894,11 @@ class NUMATopologyTest(test.NoDBTestCase):
     def test_cpu_policy_constraint(self):
         testdata = [
             {
-                "flavor": objects.Flavor(extra_specs={
-                    "hw:cpu_policy": "dedicated"
-                }),
+                "flavor": objects.Flavor(
+                    extra_specs={
+                        "hw:cpu_policy": "dedicated"
+                    }
+                ),
                 "image": {
                     "properties": {
                         "hw_cpu_policy": "dedicated"
@@ -863,9 +907,11 @@ class NUMATopologyTest(test.NoDBTestCase):
                 "expect": fields.CPUAllocationPolicy.DEDICATED
             },
             {
-                "flavor": objects.Flavor(extra_specs={
-                    "hw:cpu_policy": "dedicated"
-                }),
+                "flavor": objects.Flavor(
+                    extra_specs={
+                        "hw:cpu_policy": "dedicated"
+                    }
+                ),
                 "image": {
                     "properties": {
                         "hw_cpu_policy": "shared"
@@ -874,9 +920,11 @@ class NUMATopologyTest(test.NoDBTestCase):
                 "expect": fields.CPUAllocationPolicy.DEDICATED
             },
             {
-                "flavor": objects.Flavor(extra_specs={
-                    "hw:cpu_policy": "dedicated"
-                }),
+                "flavor": objects.Flavor(
+                    extra_specs={
+                        "hw:cpu_policy": "dedicated"
+                    }
+                ),
                 "image": {
                     "properties": {
                     }
@@ -884,9 +932,11 @@ class NUMATopologyTest(test.NoDBTestCase):
                 "expect": fields.CPUAllocationPolicy.DEDICATED
             },
             {
-                "flavor": objects.Flavor(extra_specs={
-                    "hw:cpu_policy": "shared"
-                }),
+                "flavor": objects.Flavor(
+                    extra_specs={
+                        "hw:cpu_policy": "shared"
+                    }
+                ),
                 "image": {
                     "properties": {
                         "hw_cpu_policy": "dedicated"
@@ -895,9 +945,11 @@ class NUMATopologyTest(test.NoDBTestCase):
                 "expect": exception.ImageCPUPinningForbidden
             },
             {
-                "flavor": objects.Flavor(extra_specs={
-                    "hw:cpu_policy": "shared"
-                }),
+                "flavor": objects.Flavor(
+                    extra_specs={
+                        "hw:cpu_policy": "shared"
+                    }
+                ),
                 "image": {
                     "properties": {
                         "hw_cpu_policy": "shared"
@@ -906,9 +958,11 @@ class NUMATopologyTest(test.NoDBTestCase):
                 "expect": fields.CPUAllocationPolicy.SHARED
             },
             {
-                "flavor": objects.Flavor(extra_specs={
-                    "hw:cpu_policy": "shared"
-                }),
+                "flavor": objects.Flavor(
+                    extra_specs={
+                        "hw:cpu_policy": "shared"
+                    }
+                ),
                 "image": {
                     "properties": {
                     }
@@ -942,9 +996,11 @@ class NUMATopologyTest(test.NoDBTestCase):
                 "expect": None
             },
             {
-                "flavor": objects.Flavor(extra_specs={
-                    "hw:cpu_policy": "invalid"
-                }),
+                "flavor": objects.Flavor(
+                    extra_specs={
+                        "hw:cpu_policy": "invalid"
+                    }
+                ),
                 "image": {
                     "properties": {
                     }
@@ -973,104 +1029,119 @@ class NUMATopologyTest(test.NoDBTestCase):
     def test_topology_constraints(self):
         testdata = [
             {
-                "flavor": objects.Flavor(vcpus=8, memory_mb=2048,
-                                         extra_specs={
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=8, memory_mb=2048,
+                    extra_specs={}
+                ),
                 "image": {
                 },
                 "expect": None,
             },
             {
-                "flavor": objects.Flavor(vcpus=8, memory_mb=2048, extra_specs={
-                    "hw:numa_nodes": 2
-                }),
-                "image": {
-                },
-                "expect": objects.InstanceNUMATopology(cells=
-                    [
-                        objects.InstanceNUMACell(
-                            id=0, cpuset=set([0, 1, 2, 3]), memory=1024),
-                        objects.InstanceNUMACell(
-                            id=1, cpuset=set([4, 5, 6, 7]), memory=1024),
-                    ]),
+                "flavor": objects.Flavor(
+                    vcpus=8, memory_mb=2048,
+                    extra_specs={
+                        "hw:numa_nodes": 2
+                    }
+                ),
+                "image": {},
+                "expect": objects.InstanceNUMATopology(cells=[
+                    objects.InstanceNUMACell(
+                        id=0, cpuset=set([0, 1, 2, 3]), memory=1024),
+                    objects.InstanceNUMACell(
+                        id=1, cpuset=set([4, 5, 6, 7]), memory=1024),
+                ]),
             },
             {
-                "flavor": objects.Flavor(vcpus=8, memory_mb=2048, extra_specs={
-                    "hw:mem_page_size": 2048
-                }),
-                "image": {
-                },
+                "flavor": objects.Flavor(
+                    vcpus=8, memory_mb=2048,
+                    extra_specs={
+                        "hw:mem_page_size": 2048
+                    }
+                ),
+                "image": {},
                 "expect": objects.InstanceNUMATopology(cells=[
-                        objects.InstanceNUMACell(
-                            id=0, cpuset=set([0, 1, 2, 3, 4, 5, 6, 7]),
-                            memory=2048, pagesize=2048)
-                    ]),
+                    objects.InstanceNUMACell(
+                        id=0, cpuset=set([0, 1, 2, 3, 4, 5, 6, 7]),
+                        memory=2048, pagesize=2048),
+                ]),
             },
             {
                 # a nodes number of zero should lead to an
                 # exception
-                "flavor": objects.Flavor(vcpus=8, memory_mb=2048, extra_specs={
-                    "hw:numa_nodes": 0
-                }),
-                "image": {
-                },
+                "flavor": objects.Flavor(
+                    vcpus=8, memory_mb=2048,
+                    extra_specs={
+                        "hw:numa_nodes": 0
+                    }
+                ),
+                "image": {},
                 "expect": exception.InvalidNUMANodesNumber,
             },
             {
                 # a negative nodes number should lead to an
                 # exception
-                "flavor": objects.Flavor(vcpus=8, memory_mb=2048, extra_specs={
-                    "hw:numa_nodes": -1
-                }),
-                "image": {
-                },
+                "flavor": objects.Flavor(
+                    vcpus=8, memory_mb=2048,
+                    extra_specs={
+                        "hw:numa_nodes": -1
+                    }
+                ),
+                "image": {},
                 "expect": exception.InvalidNUMANodesNumber,
             },
             {
                 # a nodes number not numeric should lead to an
                 # exception
-                "flavor": objects.Flavor(vcpus=8, memory_mb=2048, extra_specs={
-                    "hw:numa_nodes": 'x'
-                }),
-                "image": {
-                },
+                "flavor": objects.Flavor(
+                    vcpus=8, memory_mb=2048,
+                    extra_specs={
+                        "hw:numa_nodes": 'x'
+                    }
+                ),
+                "image": {},
                 "expect": exception.InvalidNUMANodesNumber,
             },
             {
                 # vcpus is not a multiple of nodes, so it
                 # is an error to not provide cpu/mem mapping
-                "flavor": objects.Flavor(vcpus=8, memory_mb=2048, extra_specs={
-                    "hw:numa_nodes": 3
-                }),
-                "image": {
-                },
+                "flavor": objects.Flavor(
+                    vcpus=8, memory_mb=2048,
+                    extra_specs={
+                        "hw:numa_nodes": 3
+                    }
+                ),
+                "image": {},
                 "expect": exception.ImageNUMATopologyAsymmetric,
             },
             {
-                "flavor": objects.Flavor(vcpus=8, memory_mb=2048, extra_specs={
-                    "hw:numa_nodes": 3,
-                    "hw:numa_cpus.0": "0-3",
-                    "hw:numa_mem.0": "1024",
-                    "hw:numa_cpus.1": "4,6",
-                    "hw:numa_mem.1": "512",
-                    "hw:numa_cpus.2": "5,7",
-                    "hw:numa_mem.2": "512",
-                }),
-                "image": {
-                },
-                "expect": objects.InstanceNUMATopology(cells=
-                    [
-                        objects.InstanceNUMACell(
-                            id=0, cpuset=set([0, 1, 2, 3]), memory=1024),
-                        objects.InstanceNUMACell(
-                            id=1, cpuset=set([4, 6]), memory=512),
-                        objects.InstanceNUMACell(
-                            id=2, cpuset=set([5, 7]), memory=512)
-                    ]),
+                "flavor": objects.Flavor(
+                    vcpus=8, memory_mb=2048,
+                    extra_specs={
+                        "hw:numa_nodes": 3,
+                        "hw:numa_cpus.0": "0-3",
+                        "hw:numa_mem.0": "1024",
+                        "hw:numa_cpus.1": "4,6",
+                        "hw:numa_mem.1": "512",
+                        "hw:numa_cpus.2": "5,7",
+                        "hw:numa_mem.2": "512",
+                    }
+                ),
+                "image": {},
+                "expect": objects.InstanceNUMATopology(cells=[
+                    objects.InstanceNUMACell(
+                        id=0, cpuset=set([0, 1, 2, 3]), memory=1024),
+                    objects.InstanceNUMACell(
+                        id=1, cpuset=set([4, 6]), memory=512),
+                    objects.InstanceNUMACell(
+                        id=2, cpuset=set([5, 7]), memory=512),
+                ]),
             },
             {
-                "flavor": objects.Flavor(vcpus=8, memory_mb=2048, extra_specs={
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=8, memory_mb=2048,
+                    extra_specs={}
+                ),
                 "image": {
                     "properties": {
                         "hw_numa_nodes": 3,
@@ -1082,141 +1153,152 @@ class NUMATopologyTest(test.NoDBTestCase):
                         "hw_numa_mem.2": "512",
                     },
                 },
-                "expect": objects.InstanceNUMATopology(cells=
-                    [
-                        objects.InstanceNUMACell(
-                            id=0, cpuset=set([0, 1, 2, 3]), memory=1024),
-                        objects.InstanceNUMACell(
-                            id=1, cpuset=set([4, 6]), memory=512),
-                        objects.InstanceNUMACell(
-                            id=2, cpuset=set([5, 7]), memory=512)
-                    ]),
+                "expect": objects.InstanceNUMATopology(cells=[
+                    objects.InstanceNUMACell(
+                        id=0, cpuset=set([0, 1, 2, 3]), memory=1024),
+                    objects.InstanceNUMACell(
+                        id=1, cpuset=set([4, 6]), memory=512),
+                    objects.InstanceNUMACell(
+                        id=2, cpuset=set([5, 7]), memory=512),
+                ]),
             },
             {
                 # Request a CPU that is out of range
                 # wrt vCPU count
-                "flavor": objects.Flavor(vcpus=8, memory_mb=2048,
-                                         extra_specs={
-                    "hw:numa_nodes": 1,
-                    "hw:numa_cpus.0": "0-16",
-                    "hw:numa_mem.0": "2048",
-                }),
-                "image": {
-                },
+                "flavor": objects.Flavor(
+                    vcpus=8, memory_mb=2048,
+                    extra_specs={
+                        "hw:numa_nodes": 1,
+                        "hw:numa_cpus.0": "0-16",
+                        "hw:numa_mem.0": "2048",
+                    }
+                ),
+                "image": {},
                 "expect": exception.ImageNUMATopologyCPUOutOfRange,
             },
             {
                 # Request the same CPU in two nodes
-                "flavor": objects.Flavor(vcpus=8, memory_mb=2048,
-                                         extra_specs={
-                    "hw:numa_nodes": 2,
-                    "hw:numa_cpus.0": "0-7",
-                    "hw:numa_mem.0": "1024",
-                    "hw:numa_cpus.1": "0-7",
-                    "hw:numa_mem.1": "1024",
-                }),
-                "image": {
-                },
+                "flavor": objects.Flavor(
+                    vcpus=8, memory_mb=2048,
+                    extra_specs={
+                        "hw:numa_nodes": 2,
+                        "hw:numa_cpus.0": "0-7",
+                        "hw:numa_mem.0": "1024",
+                        "hw:numa_cpus.1": "0-7",
+                        "hw:numa_mem.1": "1024",
+                    }
+                ),
+                "image": {},
                 "expect": exception.ImageNUMATopologyCPUDuplicates,
             },
             {
                 # Request with some CPUs not assigned
-                "flavor": objects.Flavor(vcpus=8, memory_mb=2048,
-                                         extra_specs={
-                    "hw:numa_nodes": 2,
-                    "hw:numa_cpus.0": "0-2",
-                    "hw:numa_mem.0": "1024",
-                    "hw:numa_cpus.1": "3-4",
-                    "hw:numa_mem.1": "1024",
-                }),
-                "image": {
-                },
+                "flavor": objects.Flavor(
+                    vcpus=8, memory_mb=2048,
+                    extra_specs={
+                        "hw:numa_nodes": 2,
+                        "hw:numa_cpus.0": "0-2",
+                        "hw:numa_mem.0": "1024",
+                        "hw:numa_cpus.1": "3-4",
+                        "hw:numa_mem.1": "1024",
+                    }
+                ),
+                "image": {},
                 "expect": exception.ImageNUMATopologyCPUsUnassigned,
             },
             {
                 # Request too little memory vs flavor total
-                "flavor": objects.Flavor(vcpus=8, memory_mb=2048,
-                                         extra_specs={
-                    "hw:numa_nodes": 2,
-                    "hw:numa_cpus.0": "0-3",
-                    "hw:numa_mem.0": "512",
-                    "hw:numa_cpus.1": "4-7",
-                    "hw:numa_mem.1": "512",
-                }),
-                "image": {
-                },
+                "flavor": objects.Flavor(
+                    vcpus=8, memory_mb=2048,
+                    extra_specs={
+                        "hw:numa_nodes": 2,
+                        "hw:numa_cpus.0": "0-3",
+                        "hw:numa_mem.0": "512",
+                        "hw:numa_cpus.1": "4-7",
+                        "hw:numa_mem.1": "512",
+                    }
+                ),
+                "image": {},
                 "expect": exception.ImageNUMATopologyMemoryOutOfRange,
             },
             {
                 # Request too much memory vs flavor total
-                "flavor": objects.Flavor(vcpus=8, memory_mb=2048,
-                                         extra_specs={
-                    "hw:numa_nodes": 2,
-                    "hw:numa_cpus.0": "0-3",
-                    "hw:numa_mem.0": "1576",
-                    "hw:numa_cpus.1": "4-7",
-                    "hw:numa_mem.1": "1576",
-                }),
-                "image": {
-                },
+                "flavor": objects.Flavor(
+                    vcpus=8, memory_mb=2048,
+                    extra_specs={
+                        "hw:numa_nodes": 2,
+                        "hw:numa_cpus.0": "0-3",
+                        "hw:numa_mem.0": "1576",
+                        "hw:numa_cpus.1": "4-7",
+                        "hw:numa_mem.1": "1576",
+                    }
+                ),
+                "image": {},
                 "expect": exception.ImageNUMATopologyMemoryOutOfRange,
             },
             {
                 # Request missing mem.0
-                "flavor": objects.Flavor(vcpus=8, memory_mb=2048,
-                                         extra_specs={
-                    "hw:numa_nodes": 2,
-                    "hw:numa_cpus.0": "0-3",
-                    "hw:numa_mem.1": "1576",
-                }),
-                "image": {
-                },
+                "flavor": objects.Flavor(
+                    vcpus=8, memory_mb=2048,
+                    extra_specs={
+                        "hw:numa_nodes": 2,
+                        "hw:numa_cpus.0": "0-3",
+                        "hw:numa_mem.1": "1576",
+                    }
+                ),
+                "image": {},
                 "expect": exception.ImageNUMATopologyIncomplete,
             },
             {
                 # Request missing cpu.0
-                "flavor": objects.Flavor(vcpus=8, memory_mb=2048,
-                                         extra_specs={
-                    "hw:numa_nodes": 2,
-                    "hw:numa_mem.0": "1576",
-                    "hw:numa_cpus.1": "4-7",
-                }),
-                "image": {
-                },
+                "flavor": objects.Flavor(
+                    vcpus=8, memory_mb=2048,
+                    extra_specs={
+                        "hw:numa_nodes": 2,
+                        "hw:numa_mem.0": "1576",
+                        "hw:numa_cpus.1": "4-7",
+                    }
+                ),
+                "image": {},
                 "expect": exception.ImageNUMATopologyIncomplete,
             },
             {
                 # Request missing mem.1
-                "flavor": objects.Flavor(vcpus=8, memory_mb=2048,
-                                         extra_specs={
-                    "hw:numa_nodes": 2,
-                    "hw:numa_cpus.0": "0-3",
-                    "hw:numa_cpus.1": "4-7",
-                    "hw:numa_mem.0": "1576",
-                }),
-                "image": {
-                },
+                "flavor": objects.Flavor(
+                    vcpus=8, memory_mb=2048,
+                    extra_specs={
+                        "hw:numa_nodes": 2,
+                        "hw:numa_cpus.0": "0-3",
+                        "hw:numa_cpus.1": "4-7",
+                        "hw:numa_mem.0": "1576",
+                    }
+                ),
+                "image": {},
                 "expect": exception.ImageNUMATopologyIncomplete,
             },
             {
                 # Request missing cpu.1
-                "flavor": objects.Flavor(vcpus=8, memory_mb=2048,
-                                         extra_specs={
-                    "hw:numa_nodes": 2,
-                    "hw:numa_cpus.0": "0-3",
-                    "hw:numa_mem.0": "1024",
-                    "hw:numa_mem.1": "1024",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=8, memory_mb=2048,
+                    extra_specs={
+                        "hw:numa_nodes": 2,
+                        "hw:numa_cpus.0": "0-3",
+                        "hw:numa_mem.0": "1024",
+                        "hw:numa_mem.1": "1024",
+                    }
+                ),
                 "image": {
                 },
                 "expect": exception.ImageNUMATopologyIncomplete,
             },
             {
                 # Image attempts to override flavor
-                "flavor": objects.Flavor(vcpus=8, memory_mb=2048,
-                                         extra_specs={
-                    "hw:numa_nodes": 2,
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=8, memory_mb=2048,
+                    extra_specs={
+                        "hw:numa_nodes": 2,
+                    }
+                ),
                 "image": {
                     "properties": {
                         "hw_numa_nodes": 4}
@@ -1225,90 +1307,103 @@ class NUMATopologyTest(test.NoDBTestCase):
             },
             {
                 # NUMA + CPU pinning requested in the flavor
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
-                                         extra_specs={
-                     "hw:numa_nodes": 2,
-                     "hw:cpu_policy": fields.CPUAllocationPolicy.DEDICATED
-                }),
-                "image": {
-                },
-                "expect": objects.InstanceNUMATopology(cells=
-                    [
-                        objects.InstanceNUMACell(
-                            id=0, cpuset=set([0, 1]), memory=1024,
-                            cpu_policy=fields.CPUAllocationPolicy.DEDICATED),
-                        objects.InstanceNUMACell(
-                            id=1, cpuset=set([2, 3]), memory=1024,
-                            cpu_policy=fields.CPUAllocationPolicy.DEDICATED)])
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:numa_nodes": 2,
+                        "hw:cpu_policy": fields.CPUAllocationPolicy.DEDICATED
+                    }
+                ),
+                "image": {},
+                "expect": objects.InstanceNUMATopology(cells=[
+                    objects.InstanceNUMACell(
+                        id=0, cpuset=set([0, 1]), memory=1024,
+                        cpu_policy=fields.CPUAllocationPolicy.DEDICATED),
+                    objects.InstanceNUMACell(
+                        id=1, cpuset=set([2, 3]), memory=1024,
+                        cpu_policy=fields.CPUAllocationPolicy.DEDICATED),
+                ])
             },
             {
                 # no NUMA + CPU pinning requested in the flavor
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
-                                         extra_specs={
-                         "hw:cpu_policy": fields.CPUAllocationPolicy.DEDICATED
-                }),
-                "image": {
-                },
-                "expect": objects.InstanceNUMATopology(cells=
-                    [
-                        objects.InstanceNUMACell(
-                            id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
-                            cpu_policy=fields.CPUAllocationPolicy.DEDICATED)])
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_policy": fields.CPUAllocationPolicy.DEDICATED
+                    }
+                ),
+                "image": {},
+                "expect": objects.InstanceNUMATopology(cells=[
+                    objects.InstanceNUMACell(
+                        id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
+                        cpu_policy=fields.CPUAllocationPolicy.DEDICATED),
+                ])
             },
             {
                 # NUMA + CPU pinning requested in the image
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
-                                         extra_specs={
-                         "hw:numa_nodes": 2
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:numa_nodes": 2
+                    }
+                ),
                 "image": {
                     "properties": {
                         "hw_cpu_policy": fields.CPUAllocationPolicy.DEDICATED
-                        }},
-                "expect": objects.InstanceNUMATopology(cells=
-                    [
-                        objects.InstanceNUMACell(
-                            id=0, cpuset=set([0, 1]), memory=1024,
-                            cpu_policy=fields.CPUAllocationPolicy.DEDICATED),
-                        objects.InstanceNUMACell(
-                            id=1, cpuset=set([2, 3]), memory=1024,
-                            cpu_policy=fields.CPUAllocationPolicy.DEDICATED)])
+                        }
+                },
+                "expect": objects.InstanceNUMATopology(cells=[
+                    objects.InstanceNUMACell(
+                        id=0, cpuset=set([0, 1]), memory=1024,
+                        cpu_policy=fields.CPUAllocationPolicy.DEDICATED),
+                    objects.InstanceNUMACell(
+                        id=1, cpuset=set([2, 3]), memory=1024,
+                        cpu_policy=fields.CPUAllocationPolicy.DEDICATED),
+                ])
             },
             {
                 # no NUMA + CPU pinning requested in the image
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
-                                         extra_specs={}),
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={}
+                ),
                 "image": {
                     "properties": {
                         "hw_cpu_policy": fields.CPUAllocationPolicy.DEDICATED
-                    }},
-                "expect": objects.InstanceNUMATopology(cells=
-                    [
-                        objects.InstanceNUMACell(
-                            id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
-                            cpu_policy=fields.CPUAllocationPolicy.DEDICATED)])
+                    }
+                },
+                "expect": objects.InstanceNUMATopology(cells=[
+                    objects.InstanceNUMACell(
+                        id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
+                        cpu_policy=fields.CPUAllocationPolicy.DEDICATED),
+                ])
             },
             {
                 # Invalid CPU pinning override
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
-                                         extra_specs={
-                     "hw:numa_nodes": 2,
-                     "hw:cpu_policy": fields.CPUAllocationPolicy.SHARED
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:numa_nodes": 2,
+                        "hw:cpu_policy": fields.CPUAllocationPolicy.SHARED
+                    }
+                ),
                 "image": {
                     "properties": {
-                        "hw_cpu_policy": fields.CPUAllocationPolicy.DEDICATED}
+                        "hw_cpu_policy": fields.CPUAllocationPolicy.DEDICATED
+                    }
                 },
                 "expect": exception.ImageCPUPinningForbidden,
             },
             {
                 # Invalid CPU pinning policy with realtime
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
-                                         extra_specs={
-                         "hw:cpu_policy": fields.CPUAllocationPolicy.SHARED,
-                         "hw:cpu_realtime": "yes",
-                         "hw:cpu_realtime_mask": "0-3,^0",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_policy": fields.CPUAllocationPolicy.SHARED,
+                        "hw:cpu_realtime": "yes",
+                        "hw:cpu_realtime_mask": "0-3,^0",
+                    }
+                ),
                 "image": {
                     "properties": {}
                 },
@@ -1316,48 +1411,54 @@ class NUMATopologyTest(test.NoDBTestCase):
             },
             {
                 # Invalid CPU thread pinning override
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
-                                         extra_specs={
-                         "hw:numa_nodes": 2,
-                         "hw:cpu_policy": fields.CPUAllocationPolicy.DEDICATED,
-                         "hw:cpu_thread_policy":
-                             fields.CPUThreadAllocationPolicy.ISOLATE,
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:numa_nodes": 2,
+                        "hw:cpu_policy": fields.CPUAllocationPolicy.DEDICATED,
+                        "hw:cpu_thread_policy":
+                            fields.CPUThreadAllocationPolicy.ISOLATE,
+                    }
+                ),
                 "image": {
                     "properties": {
                         "hw_cpu_policy": fields.CPUAllocationPolicy.DEDICATED,
                         "hw_cpu_thread_policy":
                             fields.CPUThreadAllocationPolicy.REQUIRE,
-                        }
+                    }
                 },
                 "expect": exception.ImageCPUThreadPolicyForbidden,
             },
             {
                 # CPU thread pinning override set to default value
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
-                                         extra_specs={
-                         "hw:numa_nodes": 1,
-                         "hw:cpu_policy": fields.CPUAllocationPolicy.DEDICATED,
-                         "hw:cpu_thread_policy":
-                             fields.CPUThreadAllocationPolicy.PREFER,
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:numa_nodes": 1,
+                        "hw:cpu_policy": fields.CPUAllocationPolicy.DEDICATED,
+                        "hw:cpu_thread_policy":
+                            fields.CPUThreadAllocationPolicy.PREFER,
+                    }
+                ),
                 "image": {},
-                "expect": objects.InstanceNUMATopology(cells=
-                    [
-                        objects.InstanceNUMACell(
-                            id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
-                            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
-                            cpu_thread_policy=
-                                fields.CPUThreadAllocationPolicy.PREFER)])
+                "expect": objects.InstanceNUMATopology(cells=[
+                    objects.InstanceNUMACell(
+                        id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
+                        cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                        cpu_thread_policy=
+                        fields.CPUThreadAllocationPolicy.PREFER),
+                ])
             },
             {
                 # Invalid CPU pinning policy with CPU thread pinning
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
-                                         extra_specs={
-                         "hw:cpu_policy": fields.CPUAllocationPolicy.SHARED,
-                         "hw:cpu_thread_policy":
-                             fields.CPUThreadAllocationPolicy.ISOLATE,
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_policy": fields.CPUAllocationPolicy.SHARED,
+                        "hw:cpu_thread_policy":
+                            fields.CPUThreadAllocationPolicy.ISOLATE,
+                    }
+                ),
                 "image": {
                     "properties": {}
                 },
@@ -1365,31 +1466,37 @@ class NUMATopologyTest(test.NoDBTestCase):
             },
             {
                 # Invalid vCPUs mask with realtime
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
-                                         extra_specs={
-                                             "hw:cpu_policy": "dedicated",
-                                             "hw:cpu_realtime": "yes",
-                                         }),
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_policy": "dedicated",
+                        "hw:cpu_realtime": "yes",
+                    }
+                ),
                 "image": {
                     "properties": {}
                 },
                 "expect": exception.RealtimeMaskNotFoundOrInvalid,
             },
             {   # We pass an invalid option
-                "flavor": objects.Flavor(vcpus=16, memory_mb=2048,
-                                         extra_specs={
-                    "hw:emulator_threads_policy": "foo",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=16, memory_mb=2048,
+                    extra_specs={
+                        "hw:emulator_threads_policy": "foo",
+                    }
+                ),
                 "image": {
                     "properties": {}
                 },
                 "expect": exception.InvalidEmulatorThreadsPolicy,
             },
             {   # We request emulator threads option without numa topology
-                "flavor": objects.Flavor(vcpus=16, memory_mb=2048,
-                                         extra_specs={
-                    "hw:emulator_threads_policy": "isolate",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=16, memory_mb=2048,
+                    extra_specs={
+                        "hw:emulator_threads_policy": "isolate",
+                    }
+                ),
                 "image": {
                     "properties": {}
                 },
@@ -1397,29 +1504,35 @@ class NUMATopologyTest(test.NoDBTestCase):
             },
             {   # We request a valid emulator threads options with
                 # cpu_policy based from flavor
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
-                                         extra_specs={
-                    "hw:emulator_threads_policy": "isolate",
-                    "hw:cpu_policy": "dedicated",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:emulator_threads_policy": "isolate",
+                        "hw:cpu_policy": "dedicated",
+                    }
+                ),
                 "image": {
                     "properties": {}
                 },
                 "expect": objects.InstanceNUMATopology(
                     emulator_threads_policy=
-                      fields.CPUEmulatorThreadsPolicy.ISOLATE,
+                    fields.CPUEmulatorThreadsPolicy.ISOLATE,
                     cells=[
                         objects.InstanceNUMACell(
                             id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
                             cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
-                        )]),
+                        ),
+                    ]
+),
             },
             {   # We request a valid emulator threads options with cpu
                 # policy based from image
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
-                                         extra_specs={
-                    "hw:emulator_threads_policy": "isolate",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:emulator_threads_policy": "isolate",
+                    }
+                ),
                 "image": {
                     "properties": {
                         "hw_cpu_policy": "dedicated",
@@ -1427,19 +1540,23 @@ class NUMATopologyTest(test.NoDBTestCase):
                 },
                 "expect": objects.InstanceNUMATopology(
                     emulator_threads_policy=
-                      fields.CPUEmulatorThreadsPolicy.ISOLATE,
+                    fields.CPUEmulatorThreadsPolicy.ISOLATE,
                     cells=[
                         objects.InstanceNUMACell(
                             id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
                             cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
-                        )]),
+                        ),
+                    ]
+                ),
             },
             {
                 # Invalid CPU pinning policy
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_policy": "foo",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_policy": "foo",
+                    }
+                ),
                 "image": {
                     "properties": {}
                 },
@@ -1447,11 +1564,13 @@ class NUMATopologyTest(test.NoDBTestCase):
             },
             {
                 # Invalid CPU thread pinning
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_policy": fields.CPUAllocationPolicy.DEDICATED,
-                    "hw:cpu_thread_policy": "foo",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_policy": fields.CPUAllocationPolicy.DEDICATED,
+                        "hw:cpu_thread_policy": "foo",
+                    }
+                ),
                 "image": {
                     "properties": {}
                 },
@@ -1459,10 +1578,12 @@ class NUMATopologyTest(test.NoDBTestCase):
             },
             {
                 # Invalid CPU thread pinning in image
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_policy": fields.CPUAllocationPolicy.SHARED,
-                 }),
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_policy": fields.CPUAllocationPolicy.SHARED,
+                    }
+                ),
                 "image": {
                     "properties": {
                         "hw_cpu_policy": fields.CPUAllocationPolicy.DEDICATED,
@@ -1471,111 +1592,138 @@ class NUMATopologyTest(test.NoDBTestCase):
                 "expect": exception.ImageCPUPinningForbidden,
             },
             {
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048, extra_specs={
-                    "hw:pmem": '2GB'}),
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:pmem": '2GB',
+                    }
+                ),
                 "image": {},
-                "expect": objects.InstanceNUMATopology(cells=
-                    [
-                        objects.InstanceNUMACell(
-                            id=0, cpuset=set([0, 1, 2, 3]), memory=2048),
-                    ]),
+                "expect": objects.InstanceNUMATopology(cells=[
+                    objects.InstanceNUMACell(
+                        id=0, cpuset=set([0, 1, 2, 3]), memory=2048),
+                ]),
             },
             {
                 # We request PCPUs explicitly
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
-                                         extra_specs={
-                    "resources:PCPU": "4",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "resources:PCPU": "4",
+                    }
+                ),
                 "image": {
                     "properties": {}
                 },
-                "expect": objects.InstanceNUMATopology(
-                    cells=[
-                        objects.InstanceNUMACell(
-                            id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
-                            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
-                        )]),
+                "expect": objects.InstanceNUMATopology(cells=[
+                    objects.InstanceNUMACell(
+                        id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
+                        cpu_policy=fields.CPUAllocationPolicy.DEDICATED),
+                ]),
             },
             {
                 # We request the HW_CPU_HYPERTHREADING trait explicitly
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
-                                         extra_specs={
-                    "resources:PCPU": "4",
-                    "trait:HW_CPU_HYPERTHREADING": "forbidden",
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "resources:PCPU": "4",
+                        "trait:HW_CPU_HYPERTHREADING": "forbidden",
+                    }
+                ),
                 "image": {
                     "properties": {}
                 },
-                "expect": objects.InstanceNUMATopology(
-                    cells=[
-                        objects.InstanceNUMACell(
-                            id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
-                            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
-                            cpu_thread_policy=
-                                fields.CPUThreadAllocationPolicy.ISOLATE,
-                        )]),
+                "expect": objects.InstanceNUMATopology(cells=[
+                    objects.InstanceNUMACell(
+                        id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
+                        cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                        cpu_thread_policy=
+                        fields.CPUThreadAllocationPolicy.ISOLATE)
+                ]),
             },
             {
                 # Requesting both implicit and explicit PCPUs
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_policy": fields.CPUAllocationPolicy.DEDICATED,
-                    "resources:PCPU": "4",
-                }),
-                "image": {"properties": {}},
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_policy": fields.CPUAllocationPolicy.DEDICATED,
+                        "resources:PCPU": "4",
+                    }
+                ),
+                "image": {
+                    "properties": {}
+                },
                 "expect": exception.InvalidRequest,
             },
             {
                 # Requesting both PCPUs and VCPUs
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
-                                         extra_specs={
-                    "resources:PCPU": "2",
-                    "resources:VCPU": "2",
-                }),
-                "image": {"properties": {}},
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "resources:PCPU": "2",
+                        "resources:VCPU": "2",
+                    }
+                ),
+                "image": {
+                    "properties": {}
+                },
                 "expect": exception.InvalidRequest,
             },
             {
                 # Mismatch between PCPU requests and flavor.vcpus
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
-                                         extra_specs={
-                    "resources:PCPU": "5",
-                }),
-                "image": {"properties": {}},
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "resources:PCPU": "5",
+                    }
+                ),
+                "image": {
+                    "properties": {}
+                },
                 "expect": exception.InvalidRequest,
             },
             {
                 # Mismatch between PCPU requests and flavor.vcpus with
                 # 'isolate' emulator thread policy
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
-                                         extra_specs={
-                    "hw:emulator_threads_policy": "isolate",
-                    "resources:PCPU": "4",
-                }),
-                "image": {"properties": {}},
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:emulator_threads_policy": "isolate",
+                        "resources:PCPU": "4",
+                    }
+                ),
+                "image": {
+                    "properties": {}
+                },
                 "expect": exception.InvalidRequest,
             },
             {
                 # Mismatch between implicit and explicit HW_CPU_HYPERTHREADING
                 # trait (flavor)
-                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_thread_policy":
-                        fields.CPUThreadAllocationPolicy.ISOLATE,
-                    "trait:HW_CPU_HYPERTHREADING": "required",
-                }),
-                "image": {"properties": {}},
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_thread_policy":
+                            fields.CPUThreadAllocationPolicy.ISOLATE,
+                        "trait:HW_CPU_HYPERTHREADING": "required",
+                    }
+                ),
+                "image": {
+                    "properties": {}
+                },
                 "expect": exception.InvalidRequest,
             },
             {
                 # Mismatch between implicit and explicit HW_CPU_HYPERTHREADING
                 # trait (image)
-                "flavor": objects.Flavor(vcpus=4, name='foo', memory_mb=2048,
-                                         extra_specs={
-                    "hw:cpu_policy": fields.CPUAllocationPolicy.DEDICATED,
-                    "hw:cpu_thread_policy":
-                        fields.CPUThreadAllocationPolicy.ISOLATE,
-                }),
+                "flavor": objects.Flavor(
+                    vcpus=4, name='foo', memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_policy": fields.CPUAllocationPolicy.DEDICATED,
+                        "hw:cpu_thread_policy":
+                            fields.CPUThreadAllocationPolicy.ISOLATE,
+                    }
+                ),
                 "image": {
                     "properties": {
                         "trait:HW_CPU_HYPERTHREADING": "required",
@@ -2329,10 +2477,10 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
         with mock.patch.object(stats.PciDeviceStats,
                 'support_requests', return_value= False):
             fitted_instance1 = hw.numa_fit_instance_to_host(
-                                                        self.host,
-                                                        self.instance1,
-                                                        pci_requests=pci_reqs,
-                                                        pci_stats=pci_stats)
+                self.host,
+                self.instance1,
+                pci_requests=pci_reqs,
+                pci_stats=pci_stats)
             self.assertIsNone(fitted_instance1)
 
     def test_get_fitting_pci_avoided(self):
