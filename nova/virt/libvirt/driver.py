@@ -5420,14 +5420,32 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _get_guest_memory_backing_config(
             self, inst_topology, numatune, flavor, image_meta):
+        wantsrealtime = hardware.is_realtime_enabled(flavor)
+        if (
+            wantsrealtime and
+            hardware.get_emulator_thread_policy_constraint(flavor) ==
+                fields.CPUEmulatorThreadsPolicy.SHARE and
+            not CONF.compute.cpu_shared_set
+        ):
+            # NOTE(stephenfin) Yes, it's horrible that we're doing this here,
+            # but the shared policy unfortunately has different behavior
+            # depending on whether the '[compute] cpu_shared_set' is configured
+            # or not and we need it to be configured. Also note that we have
+            # already handled other conditions, such as no emulator thread
+            # policy being configured whatsoever, at the API level.
+            LOG.warning(
+                'Instance is requesting real-time CPUs with pooled '
+                'emulator threads, but a shared CPU pool has not been '
+                'configured on this host.'
+            )
+            raise exception.RealtimeMaskNotFoundOrInvalid()
+
         wantsmempages = False
         if inst_topology:
             for cell in inst_topology.cells:
                 if cell.pagesize:
                     wantsmempages = True
                     break
-
-        wantsrealtime = hardware.is_realtime_enabled(flavor)
 
         wantsfilebacked = CONF.libvirt.file_backed_memory > 0
 
