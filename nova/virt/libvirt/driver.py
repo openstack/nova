@@ -2349,7 +2349,7 @@ class LibvirtDriver(driver.ComputeDriver):
         snapshot_name = uuidutils.generate_uuid(dashed=False)
 
         # store current state so we know what to resume back to if we suspend
-        state = guest.get_power_state(self._host)
+        original_power_state = guest.get_power_state(self._host)
 
         # NOTE(dgenin): Instances with LVM encrypted ephemeral storage require
         #               cold snapshots. Currently, checking for encryption is
@@ -2363,14 +2363,14 @@ class LibvirtDriver(driver.ComputeDriver):
             not CONF.workarounds.disable_libvirt_livesnapshot and
             # NOTE(stephenfin): Live snapshotting doesn't make sense for
             # shutdown instances
-            state != power_state.SHUTDOWN
+            original_power_state != power_state.SHUTDOWN
         ):
             live_snapshot = True
         else:
             live_snapshot = False
 
         self._suspend_guest_for_snapshot(
-            context, live_snapshot, state, instance)
+            context, live_snapshot, original_power_state, instance)
 
         root_disk = self.image_backend.by_libvirt_path(
             instance, disk_path, image_type=source_type)
@@ -2390,7 +2390,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 context, snapshot_name, image_format, image_id,
                 instance.image_ref)
             self._resume_guest_after_snapshot(
-                context, live_snapshot, state, instance, guest)
+                context, live_snapshot, original_power_state, instance, guest)
             self._image_api.update(context, image_id, metadata,
                                    purge_props=False)
         except (NotImplementedError, exception.ImageUnacceptable,
@@ -2415,7 +2415,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 live_snapshot = False
                 # Suspend the guest, so this is no longer a live snapshot
                 self._suspend_guest_for_snapshot(
-                    context, live_snapshot, state, instance)
+                    context, live_snapshot, original_power_state, instance)
 
             snapshot_directory = CONF.libvirt.snapshots_directory
             fileutils.ensure_tree(snapshot_directory)
@@ -2448,7 +2448,8 @@ class LibvirtDriver(driver.ComputeDriver):
                         raise
                 finally:
                     self._resume_guest_after_snapshot(
-                        context, live_snapshot, state, instance, guest)
+                        context, live_snapshot, original_power_state, instance,
+                        guest)
 
                 # Upload that image to the image service
                 update_task_state(task_state=task_states.IMAGE_UPLOADING,
@@ -2475,7 +2476,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _needs_suspend_resume_for_snapshot(
         self,
         live_snapshot: bool,
-        state: str,
+        current_power_state: int,
     ):
         # NOTE(dkang): managedSave does not work for LXC
         if CONF.libvirt.virt_type == 'lxc':
@@ -2486,35 +2487,37 @@ class LibvirtDriver(driver.ComputeDriver):
             return False
 
         # ...and neither does a non-running domain
-        return state in (power_state.RUNNING, power_state.PAUSED)
+        return current_power_state in (power_state.RUNNING, power_state.PAUSED)
 
     def _suspend_guest_for_snapshot(
         self,
         context: nova_context.RequestContext,
         live_snapshot: bool,
-        state: str,
+        current_power_state: int,
         instance: 'objects.Instance',
     ):
-        if not self._needs_suspend_resume_for_snapshot(live_snapshot, state):
-            return
-
-        self.suspend(context, instance)
+        if self._needs_suspend_resume_for_snapshot(
+            live_snapshot, current_power_state,
+        ):
+            self.suspend(context, instance)
 
     def _resume_guest_after_snapshot(
         self,
         context: nova_context.RequestContext,
         live_snapshot: bool,
-        state: str,
+        original_power_state: int,
         instance: 'objects.Instance',
         guest: libvirt_guest.Guest,
     ):
-        if not self._needs_suspend_resume_for_snapshot(live_snapshot, state):
+        if not self._needs_suspend_resume_for_snapshot(
+            live_snapshot, original_power_state,
+        ):
             return
 
-        state = guest.get_power_state(self._host)
+        current_power_state = guest.get_power_state(self._host)
 
         # TODO(stephenfin): Any reason we couldn't use 'self.resume' here?
-        guest.launch(pause=state == power_state.PAUSED)
+        guest.launch(pause=current_power_state == power_state.PAUSED)
 
         self._attach_pci_devices(
             guest, pci_manager.get_instance_pci_devs(instance))
