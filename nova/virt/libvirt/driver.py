@@ -244,6 +244,7 @@ QEMU_MAX_SERIAL_PORTS = 4
 # Qemu supports 4 serial consoles, we remove 1 because of the PTY one defined
 ALLOWED_QEMU_SERIAL_PORTS = QEMU_MAX_SERIAL_PORTS - 1
 
+VGPU_RESOURCE_SEMAPHORE = 'vgpu_resources'
 
 LIBVIRT_PERF_EVENT_PREFIX = 'VIR_PERF_PARAM_'
 
@@ -262,13 +263,6 @@ MIN_QEMU_NATIVE_TLS_VERSION = (2, 11, 0)
 # before the SIGKILL signal takes effect.
 MIN_LIBVIRT_BETTER_SIGKILL_HANDLING = (4, 7, 0)
 
-VGPU_RESOURCE_SEMAPHORE = "vgpu_resources"
-
-# see https://libvirt.org/formatdomain.html#elementsVideo
-MIN_LIBVIRT_VIDEO_MODEL_VERSIONS = {
-    fields.VideoModel.NONE: (4, 6, 0),
-}
-
 # Persistent Memory (PMEM/NVDIMM) Device Support
 MIN_LIBVIRT_PMEM_SUPPORT = (5, 0, 0)
 MIN_QEMU_PMEM_SUPPORT = (3, 1, 0)
@@ -282,6 +276,13 @@ MIN_LIBVIRT_VIR_ERR_DEVICE_MISSING = (4, 1, 0)
 # Virtual TPM (vTPM) support
 MIN_LIBVIRT_VTPM = (5, 6, 0)
 MIN_QEMU_VTPM = (2, 11, 0)
+
+MIN_LIBVIRT_S390X_CPU_COMPARE = (5, 9, 0)
+
+# see https://libvirt.org/formatdomain.html#elementsVideo
+MIN_LIBVIRT_VIDEO_MODEL_VERSIONS = {
+    fields.VideoModel.NONE: (4, 6, 0),
+}
 
 
 class LibvirtDriver(driver.ComputeDriver):
@@ -8842,12 +8843,13 @@ class LibvirtDriver(driver.ComputeDriver):
         # s390x doesn't support cpu model in host info, so compare
         # cpu info will raise an error anyway, thus have to avoid check
         # see bug 1854126 for more info
-        min_libvirt_version = (5, 9, 0)
-        if (cpu.arch in (arch.S390X, arch.S390) and
-                not self._host.has_min_version(min_libvirt_version)):
+        if (
+            cpu.arch in (arch.S390X, arch.S390) and
+            not self._host.has_min_version(MIN_LIBVIRT_S390X_CPU_COMPARE)
+        ):
             LOG.debug("on s390x platform, the min libvirt version "
                       "support cpu model compare is %s",
-                      min_libvirt_version)
+                      MIN_LIBVIRT_S390X_CPU_COMPARE)
             return
 
         u = ("http://libvirt.org/html/libvirt-libvirt-host.html#"
