@@ -783,15 +783,13 @@ restricting flavors via host aggregates.
     cfg.ListOpt('enabled_perf_events',
                default=[],
                help= """
+Performance events to monitor and collect statistics for.
+
 This will allow you to specify a list of events to monitor low-level
-performance of guests, and collect related statsitics via the libvirt
-driver, which in turn uses the Linux kernel's `perf` infrastructure.
+performance of guests, and collect related statistics via the libvirt
+driver, which in turn uses the Linux kernel's ``perf`` infrastructure.
 With this config attribute set, Nova will generate libvirt guest XML to
-monitor the specified events.  For more information, refer to the
-"Performance monitoring events" section here:
-https://libvirt.org/formatdomain.html#elementsPerf.  And here:
-https://libvirt.org/html/libvirt-libvirt-domain.html -- look for
-``VIR_PERF_PARAM_*``
+monitor the specified events.
 
 For example, to monitor the count of CPU cycles (total/elapsed) and the
 count of cache misses, enable them as follows::
@@ -800,12 +798,11 @@ count of cache misses, enable them as follows::
     enabled_perf_events = cpu_clock, cache_misses
 
 Possible values: A string list.  The list of supported events can be
-found here: https://libvirt.org/formatdomain.html#elementsPerf.
+found `here`__. Note that Intel CMT events - ``cmt``, ``mbmbt`` and
+``mbml`` - are unsupported by recent Linux kernel versions (4.14+) and will be
+ignored by nova.
 
-Note that support for Intel CMT events (`cmt`, `mbmbt`, `mbml`) is
-deprecated, and will be removed in the "Stein" release.  That's because
-the upstream Linux kernel (from 4.14 onwards) has deleted support for
-Intel CMT, because it is broken by design.
+__ https://libvirt.org/formatdomain.html#elementsPerf.
 """),
     cfg.IntOpt('num_pcie_ports',
                default=0,

@@ -1,0 +1,7 @@
+---
+upgrade:
+  - |
+    Intel CMT perf events - ``cmt``, ``mbmt``, and ``mbml`` - are no longer
+    supported by the ``[libvirt] enabled_perf_events`` config option. These
+    event types were broken by design and are not supported in recent Linux
+    kernels (4.14+).
