@@ -3530,7 +3530,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 # NOTE(lyarwood): If instance.image_ref isn't set attempt to
                 # lookup the original image_meta from the bdms. This will
                 # return an empty dict if no valid image_meta is found.
-                image_meta_dict = utils.get_bdm_image_metadata(
+                image_meta_dict = block_device.get_bdm_image_metadata(
                     context, self._image_api, self._volume_api,
                     block_device_info['block_device_mapping'],
                     legacy_bdm=False)

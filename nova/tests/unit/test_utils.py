@@ -31,7 +31,6 @@ from oslo_context import context as common_context
 from oslo_context import fixture as context_fixture
 from oslo_utils import encodeutils
 from oslo_utils import fixture as utils_fixture
-from oslo_utils import units
 import six
 
 from nova import context
@@ -735,43 +734,6 @@ class GetImageFromSystemMetadataTestCase(test.NoDBTestCase):
         # Verify that the empty properties have not been inherited
         for key in utils.SM_INHERITABLE_KEYS:
             self.assertNotIn(key, image)
-
-
-class GetImageMetadataFromVolumeTestCase(test.NoDBTestCase):
-    def test_inherit_image_properties(self):
-        properties = {"fake_prop": "fake_value"}
-        volume = {"volume_image_metadata": properties}
-        image_meta = utils.get_image_metadata_from_volume(volume)
-        self.assertEqual(properties, image_meta["properties"])
-
-    def test_image_size(self):
-        volume = {"size": 10}
-        image_meta = utils.get_image_metadata_from_volume(volume)
-        self.assertEqual(10 * units.Gi, image_meta["size"])
-
-    def test_image_status(self):
-        volume = {}
-        image_meta = utils.get_image_metadata_from_volume(volume)
-        self.assertEqual("active", image_meta["status"])
-
-    def test_values_conversion(self):
-        properties = {"min_ram": "5", "min_disk": "7"}
-        volume = {"volume_image_metadata": properties}
-        image_meta = utils.get_image_metadata_from_volume(volume)
-        self.assertEqual(5, image_meta["min_ram"])
-        self.assertEqual(7, image_meta["min_disk"])
-
-    def test_suppress_not_image_properties(self):
-        properties = {"min_ram": "256", "min_disk": "128",
-                      "image_id": "fake_id", "image_name": "fake_name",
-                      "container_format": "ami", "disk_format": "ami",
-                      "size": "1234", "checksum": "fake_checksum"}
-        volume = {"volume_image_metadata": properties}
-        image_meta = utils.get_image_metadata_from_volume(volume)
-        self.assertEqual({}, image_meta["properties"])
-        self.assertEqual(0, image_meta["size"])
-        # volume's properties should not be touched
-        self.assertNotEqual({}, properties)
 
 
 class SafeTruncateTestCase(test.NoDBTestCase):

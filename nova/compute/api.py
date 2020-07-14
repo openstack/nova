@@ -1432,7 +1432,7 @@ class API(base.Base):
                         "when booting from volume")
                 raise exception.CertificateValidationFailed(message=msg)
             image_id = None
-            boot_meta = utils.get_bdm_image_metadata(
+            boot_meta = block_device.get_bdm_image_metadata(
                 context, self.image_api, self.volume_api, block_device_mapping,
                 legacy_bdm)
 

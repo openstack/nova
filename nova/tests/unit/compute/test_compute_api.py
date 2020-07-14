@@ -3491,95 +3491,6 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.context, mock.sentinel.volume_id,
                           mock.sentinel.snapshot_id, mock.sentinel.delete_info)
 
-    def _test_boot_volume_bootable(self, is_bootable=False):
-        def get_vol_data(*args, **kwargs):
-            return {'bootable': is_bootable}
-        block_device_mapping = [{
-            'id': 1,
-            'device_name': 'vda',
-            'no_device': None,
-            'virtual_name': None,
-            'snapshot_id': None,
-            'volume_id': '1',
-            'delete_on_termination': False,
-        }]
-
-        expected_meta = {'min_disk': 0, 'min_ram': 0, 'properties': {},
-                         'size': 0, 'status': 'active'}
-
-        with mock.patch.object(self.compute_api.volume_api, 'get',
-                               side_effect=get_vol_data):
-            if not is_bootable:
-                self.assertRaises(exception.InvalidBDMVolumeNotBootable,
-                                  utils.get_bdm_image_metadata,
-                                  self.context, self.compute_api.image_api,
-                                  self.compute_api.volume_api,
-                                  block_device_mapping)
-            else:
-                meta = utils.get_bdm_image_metadata(
-                    self.context, self.compute_api.image_api,
-                    self.compute_api.volume_api, block_device_mapping)
-                self.assertEqual(expected_meta, meta)
-
-    def test_boot_volume_non_bootable(self):
-        self._test_boot_volume_bootable(False)
-
-    def test_boot_volume_bootable(self):
-        self._test_boot_volume_bootable(True)
-
-    def test_boot_volume_basic_property(self):
-        block_device_mapping = [{
-            'id': 1,
-            'device_name': 'vda',
-            'no_device': None,
-            'virtual_name': None,
-            'snapshot_id': None,
-            'volume_id': '1',
-            'delete_on_termination': False,
-        }]
-        fake_volume = {"volume_image_metadata":
-                       {"min_ram": 256, "min_disk": 128, "foo": "bar"}}
-        with mock.patch.object(self.compute_api.volume_api, 'get',
-                               return_value=fake_volume):
-            meta = utils.get_bdm_image_metadata(
-                self.context, self.compute_api.image_api,
-                self.compute_api.volume_api, block_device_mapping)
-            self.assertEqual(256, meta['min_ram'])
-            self.assertEqual(128, meta['min_disk'])
-            self.assertEqual('active', meta['status'])
-            self.assertEqual('bar', meta['properties']['foo'])
-
-    def test_boot_volume_snapshot_basic_property(self):
-        block_device_mapping = [{
-            'id': 1,
-            'device_name': 'vda',
-            'no_device': None,
-            'virtual_name': None,
-            'snapshot_id': '2',
-            'volume_id': None,
-            'delete_on_termination': False,
-        }]
-        fake_volume = {"volume_image_metadata":
-                       {"min_ram": 256, "min_disk": 128, "foo": "bar"}}
-        fake_snapshot = {"volume_id": "1"}
-        with test.nested(
-                mock.patch.object(self.compute_api.volume_api, 'get',
-                    return_value=fake_volume),
-                mock.patch.object(self.compute_api.volume_api, 'get_snapshot',
-                    return_value=fake_snapshot)) as (
-                            volume_get, volume_get_snapshot):
-            meta = utils.get_bdm_image_metadata(
-                self.context, self.compute_api.image_api,
-                self.compute_api.volume_api, block_device_mapping)
-            self.assertEqual(256, meta['min_ram'])
-            self.assertEqual(128, meta['min_disk'])
-            self.assertEqual('active', meta['status'])
-            self.assertEqual('bar', meta['properties']['foo'])
-            volume_get_snapshot.assert_called_once_with(self.context,
-                    block_device_mapping[0]['snapshot_id'])
-            volume_get.assert_called_once_with(self.context,
-                    fake_snapshot['volume_id'])
-
     def _create_instance_with_disabled_disk_config(self, object=False):
         sys_meta = {"image_auto_disk_config": "Disabled"}
         params = {"system_metadata": sys_meta}
@@ -4429,25 +4340,6 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.compute_api.swap_volume,
                           self.context, instance,
                           volume_id, new_volume_id)
-
-    @mock.patch.object(cinder.API, 'get',
-             side_effect=exception.CinderConnectionFailed(reason='error'))
-    def test_get_bdm_image_metadata_with_cinder_down(self, mock_get):
-        bdms = [objects.BlockDeviceMapping(
-                **fake_block_device.FakeDbBlockDeviceDict(
-                {
-                 'id': 1,
-                 'volume_id': 1,
-                 'source_type': 'volume',
-                 'destination_type': 'volume',
-                 'device_name': 'vda',
-                 }))]
-        self.assertRaises(exception.CinderConnectionFailed,
-                          utils.get_bdm_image_metadata,
-                          self.context,
-                          self.compute_api.image_api,
-                          self.compute_api.volume_api,
-                          bdms, legacy_bdm=True)
 
     def test_get_volumes_for_bdms_errors(self):
         """Simple test to make sure _get_volumes_for_bdms raises up errors."""

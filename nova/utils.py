@@ -18,7 +18,6 @@
 """Utilities and helper functions."""
 
 import contextlib
-import copy
 import datetime
 import functools
 import hashlib
@@ -46,11 +45,9 @@ from oslo_utils import excutils
 from oslo_utils import importutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
-from oslo_utils import units
 import six
 from six.moves import range
 
-from nova import block_device
 import nova.conf
 from nova import exception
 from nova.i18n import _
@@ -77,12 +74,6 @@ SM_SKIP_KEYS = (
     'mappings', 'block_device_mapping',
     # Modern names
     'img_mappings', 'img_block_device_mapping',
-)
-# Image attributes which Cinder stores in volume image metadata
-# as regular properties
-VIM_IMAGE_ATTRIBUTES = (
-    'image_id', 'image_name', 'size', 'checksum',
-    'container_format', 'disk_format', 'min_ram', 'min_disk',
 )
 
 _FILE_CACHE = {}
@@ -785,89 +776,6 @@ def get_image_from_system_metadata(system_meta):
 
     image_meta['properties'] = properties
 
-    return image_meta
-
-
-def get_bdm_image_metadata(context, image_api, volume_api,
-                           block_device_mapping, legacy_bdm=True):
-    """Attempt to retrive image metadata from a given block_device_mapping.
-
-    If we are booting from a volume, we need to get the volume details from
-    Cinder and make sure we pass the metadata back accordingly.
-
-    :param context: request context
-    :param image_api: Image API
-    :param volume_api: Volume API
-    :param block_device_mapping:
-    :param legacy_bdm:
-    """
-    if not block_device_mapping:
-        return {}
-
-    for bdm in block_device_mapping:
-        if (legacy_bdm and
-                block_device.get_device_letter(
-                   bdm.get('device_name', '')) != 'a'):
-            continue
-        elif not legacy_bdm and bdm.get('boot_index') != 0:
-            continue
-
-        volume_id = bdm.get('volume_id')
-        snapshot_id = bdm.get('snapshot_id')
-        if snapshot_id:
-            # NOTE(alaski): A volume snapshot inherits metadata from the
-            # originating volume, but the API does not expose metadata
-            # on the snapshot itself.  So we query the volume for it below.
-            snapshot = volume_api.get_snapshot(context, snapshot_id)
-            volume_id = snapshot['volume_id']
-
-        if bdm.get('image_id'):
-            try:
-                image_id = bdm['image_id']
-                image_meta = image_api.get(context, image_id)
-                return image_meta
-            except Exception:
-                raise exception.InvalidBDMImage(id=image_id)
-        elif volume_id:
-            try:
-                volume = volume_api.get(context, volume_id)
-            except exception.CinderConnectionFailed:
-                raise
-            except Exception:
-                raise exception.InvalidBDMVolume(id=volume_id)
-
-            if not volume.get('bootable', True):
-                raise exception.InvalidBDMVolumeNotBootable(id=volume_id)
-
-            return get_image_metadata_from_volume(volume)
-    return {}
-
-
-def get_image_metadata_from_volume(volume):
-    properties = copy.copy(volume.get('volume_image_metadata', {}))
-    image_meta = {'properties': properties}
-    # Volume size is no longer related to the original image size,
-    # so we take it from the volume directly. Cinder creates
-    # volumes in Gb increments, and stores size in Gb, whereas
-    # glance reports size in bytes. As we're returning glance
-    # metadata here, we need to convert it.
-    image_meta['size'] = volume.get('size', 0) * units.Gi
-    # NOTE(yjiang5): restore the basic attributes
-    # NOTE(mdbooth): These values come from volume_glance_metadata
-    # in cinder. This is a simple key/value table, and all values
-    # are strings. We need to convert them to ints to avoid
-    # unexpected type errors.
-    for attr in VIM_IMAGE_ATTRIBUTES:
-        val = properties.pop(attr, None)
-        if attr in ('min_ram', 'min_disk'):
-            image_meta[attr] = int(val or 0)
-    # NOTE(mriedem): Set the status to 'active' as a really old hack
-    # from when this method was in the compute API class and is
-    # needed for _validate_flavor_image which makes sure the image
-    # is 'active'. For volume-backed servers, if the volume is not
-    # available because the image backing the volume is not active,
-    # then the compute API trying to reserve the volume should fail.
-    image_meta['status'] = 'active'
     return image_meta
 
 
