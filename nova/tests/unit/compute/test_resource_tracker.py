@@ -3863,10 +3863,19 @@ class TestPciTrackerDelegationMethods(BaseTestCase):
         pci_requests = objects.InstancePCIRequests(
             requests=[request],
             instance_uuid=self.instance.uuid)
-        self.rt.claim_pci_devices(self.context, pci_requests)
+        self.rt.claim_pci_devices(
+            self.context, pci_requests, mock.sentinel.numa_topology)
         self.rt.pci_tracker.claim_instance.assert_called_once_with(
-            self.context, pci_requests, None)
+            self.context, pci_requests, mock.sentinel.numa_topology)
         self.assertTrue(self.rt.pci_tracker.save.called)
+
+    def test_unclaim_pci_devices(self):
+        self.rt.unclaim_pci_devices(
+            self.context, mock.sentinel.pci_device, mock.sentinel.instance)
+
+        self.rt.pci_tracker.free_device.assert_called_once_with(
+            mock.sentinel.pci_device, mock.sentinel.instance)
+        self.rt.pci_tracker.save.assert_called_once_with(self.context)
 
     def test_allocate_pci_devices_for_instance(self):
         self.rt.allocate_pci_devices_for_instance(self.context, self.instance)

@@ -687,6 +687,7 @@ class API(base.Base):
             # under user's zone.
             self._reset_port_dns_name(network, port_id, neutron)
 
+    # TODO(gibi): remove unused attach flag
     def _validate_requested_port_ids(self, context, instance, neutron,
                                      requested_networks, attach=False):
         """Processes and validates requested networks for allocation.
@@ -719,8 +720,6 @@ class API(base.Base):
             attached to another instance.
         :raises nova.exception.PortNotUsableDNS: If a requested port has a
             value assigned to its dns_name attribute.
-        :raises nova.exception.AttachSRIOVPortNotSupported: If a requested port
-            is an SR-IOV port and ``attach=True``.
         """
         ports = {}
         ordered_networks = []
@@ -757,16 +756,6 @@ class API(base.Base):
 
                     # Make sure the port is usable
                     _ensure_no_port_binding_failure(port)
-
-                    # Make sure the port can be attached.
-                    if attach:
-                        # SR-IOV port attach is not supported.
-                        vnic_type = port.get('binding:vnic_type',
-                                             network_model.VNIC_TYPE_NORMAL)
-                        if vnic_type in network_model.VNIC_TYPES_SRIOV:
-                            raise exception.AttachSRIOVPortNotSupported(
-                                port_id=port['id'],
-                                instance_uuid=instance.uuid)
 
                     # If requesting a specific port, automatically process
                     # the network for that port as if it were explicitly
@@ -1006,6 +995,7 @@ class API(base.Base):
 
         return requests_and_created_ports
 
+    # TODO(gibi): remove the unused attach flag
     def allocate_for_instance(self, context, instance,
                               requested_networks,
                               security_groups=None, bind_host_id=None,
@@ -1697,6 +1687,7 @@ class API(base.Base):
         update_instance_cache_with_nw_info(self, context, instance,
                                            network_model.NetworkInfo([]))
 
+    # TODO(gibi): remove this unused function
     def allocate_port_for_instance(self, context, instance, port_id,
                                    network_id=None, requested_ip=None,
                                    bind_host_id=None, tag=None):

@@ -7472,8 +7472,9 @@ class ComputeManager(manager.Manager):
             # cinder v3 api flow
             self.volume_api.attachment_delete(context, bdm.attachment_id)
 
-    def _deallocate_port_for_instance(self, context, instance, port_id,
-                                      raise_on_failure=False):
+    def _deallocate_port_for_instance(
+            self, context, instance, port_id, raise_on_failure=False,
+            pci_device=None):
         try:
             result = self.network_api.deallocate_port_for_instance(
                 context, instance, port_id)
@@ -7486,6 +7487,17 @@ class ComputeManager(manager.Manager):
                             {'port_id': port_id, 'error': ex},
                             instance=instance)
         else:
+            if pci_device:
+                self.rt.unclaim_pci_devices(context, pci_device, instance)
+
+                # remove pci device from instance
+                instance.pci_devices.objects.remove(pci_device)
+
+                # remove pci request from instance
+                instance.pci_requests.requests = [
+                    pci_req for pci_req in instance.pci_requests.requests
+                    if pci_req.request_id != pci_device.request_id]
+
             if port_allocation:
                 # Deallocate the resources in placement that were used by the
                 # detached port.
@@ -7505,6 +7517,73 @@ class ComputeManager(manager.Manager):
                                     '%(error)s',
                                     {'port_id': port_id, 'error': ex},
                                     instance=instance)
+
+    def _claim_pci_device_for_interface_attach(
+        self,
+        context: nova.context.RequestContext,
+        instance: 'objects.Instance',
+        requested_networks: 'objects.NetworkRequestsList'
+    ) -> ty.Optional['objects.PciDevice']:
+        """Claim PCI device if the requested interface needs it
+
+        If a PCI device is claimed then the requested_networks is updated
+        with the pci request id and the pci_requests and pci_devices fields
+        of the instance is also updated accordingly.
+
+        :param context: nova.context.RequestContext
+        :param instance: the objects.Instance to where the interface is being
+            attached
+        :param requested_networks: the objects.NetworkRequestList describing
+            the requested interface. The requested_networks.objects list shall
+            have a single item.
+        :raises ValueError: if there is more than one interface requested
+        :raises InterfaceAttachFailed: if the PCI device claim fails
+        :returns: An objects.PciDevice describing the claimed PCI device for
+            the interface or None if no device is requested
+        """
+
+        if len(requested_networks.objects) != 1:
+            raise ValueError(
+                "Only support one interface per interface attach request")
+
+        requested_network = requested_networks.objects[0]
+
+        pci_numa_affinity_policy = hardware.get_pci_numa_policy_constraint(
+            instance.flavor, instance.image_meta)
+        pci_reqs = objects.InstancePCIRequests(
+            requests=[], instance_uuid=instance.uuid)
+        self.network_api.create_resource_requests(
+            context, requested_networks, pci_reqs,
+            affinity_policy=pci_numa_affinity_policy)
+
+        if not pci_reqs.requests:
+            # The requested port does not require a PCI device so nothing to do
+            return None
+
+        if len(pci_reqs.requests) > 1:
+            raise ValueError(
+                "Only support one interface per interface attach request")
+
+        pci_req = pci_reqs.requests[0]
+
+        devices = self.rt.claim_pci_devices(
+            context, pci_reqs, instance.numa_topology)
+
+        if not devices:
+            LOG.info('Failed to claim PCI devices during interface attach '
+                     'for PCI request %s', pci_req, instance=instance)
+            raise exception.InterfaceAttachPciClaimFailed(
+                instance_uuid=instance.uuid)
+
+        device = devices[0]
+
+        # Update the requested network with the pci request id
+        requested_network.pci_request_id = pci_req.request_id
+
+        instance.pci_requests.requests.append(pci_req)
+        instance.pci_devices.objects.append(device)
+
+        return device
 
     # TODO(mriedem): There are likely race failures which can result in
     # NotFound and QuotaError exceptions getting traced as well.
@@ -7554,9 +7633,29 @@ class ComputeManager(manager.Manager):
             phase=fields.NotificationPhase.START)
 
         bind_host_id = self.driver.network_binding_host_id(context, instance)
-        network_info = self.network_api.allocate_port_for_instance(
-            context, instance, port_id, network_id, requested_ip,
-            bind_host_id=bind_host_id, tag=tag)
+
+        requested_networks = objects.NetworkRequestList(
+            objects=[
+                objects.NetworkRequest(
+                    network_id=network_id,
+                    port_id=port_id,
+                    address=requested_ip,
+                    tag=tag,
+                )
+            ]
+        )
+
+        pci_device = self._claim_pci_device_for_interface_attach(
+            context, instance, requested_networks)
+
+        network_info = self.network_api.allocate_for_instance(
+            context,
+            instance,
+            requested_networks,
+            bind_host_id=bind_host_id,
+            attach=True,
+        )
+
         if len(network_info) != 1:
             LOG.error('allocate_port_for_instance returned %(ports)s '
                       'ports', {'ports': len(network_info)})
@@ -7575,7 +7674,8 @@ class ComputeManager(manager.Manager):
                         "port %(port_id)s, reason: %(msg)s",
                         {'port_id': port_id, 'msg': ex},
                         instance=instance)
-            self._deallocate_port_for_instance(context, instance, port_id)
+            self._deallocate_port_for_instance(
+                context, instance, port_id, pci_device=pci_device)
 
             compute_utils.notify_about_instance_action(
                 context, instance, self.host,
@@ -7585,6 +7685,20 @@ class ComputeManager(manager.Manager):
 
             raise exception.InterfaceAttachFailed(
                 instance_uuid=instance.uuid)
+
+        if pci_device:
+            # NOTE(gibi): The _claim_pci_device_for_interface_attach() call
+            # found a pci device but it only marked the device as claimed. The
+            # periodic update_available_resource would move the device to
+            # allocated state. But as driver.attach_interface() has been
+            # succeeded we now know that the interface is also allocated
+            # (used by) to the instance. So make sure the pci tracker also
+            # tracks this device as allocated. This way we can avoid a possible
+            # race condition when a detach arrives for a device that is only
+            # in claimed state.
+            self.rt.allocate_pci_devices_for_instance(context, instance)
+
+        instance.save()
 
         compute_utils.notify_about_instance_action(
             context, instance, self.host,
@@ -7620,6 +7734,26 @@ class ComputeManager(manager.Manager):
             raise exception.PortNotFound(_("Port %s is not "
                                            "attached") % port_id)
 
+        pci_device = None
+        pci_req = pci_req_module.get_instance_pci_request_from_vif(
+            context, instance, condemned)
+
+        pci_device = None
+        if pci_req:
+            pci_devices = [pci_device
+                            for pci_device in instance.pci_devices.objects
+                            if pci_device.request_id == pci_req.request_id]
+
+            if not pci_devices:
+                LOG.warning(
+                    "Detach interface failed, port_id=%(port_id)s, "
+                    "reason: PCI device not found for PCI request %(pci_req)s",
+                    {'port_id': port_id, 'pci_req': pci_req})
+                raise exception.InterfaceDetachFailed(
+                    instance_uuid=instance.uuid)
+
+            pci_device = pci_devices[0]
+
         compute_utils.notify_about_instance_action(
             context, instance, self.host,
             action=fields.NotificationAction.INTERFACE_DETACH,
@@ -7640,7 +7774,10 @@ class ComputeManager(manager.Manager):
             raise exception.InterfaceDetachFailed(instance_uuid=instance.uuid)
         else:
             self._deallocate_port_for_instance(
-                context, instance, port_id, raise_on_failure=True)
+                context, instance, port_id, raise_on_failure=True,
+                pci_device=pci_device)
+
+        instance.save()
 
         compute_utils.notify_about_instance_action(
             context, instance, self.host,

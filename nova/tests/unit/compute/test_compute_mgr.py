@@ -2545,19 +2545,21 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                                       db_instance)
         e = exception.InterfaceAttachFailed(instance_uuid=f_instance.uuid)
 
+        @mock.patch.object(self.compute,
+                           '_claim_pci_device_for_interface_attach',
+                           return_value=None)
         @mock.patch.object(compute_utils, 'EventReporter')
         @mock.patch.object(compute_utils, 'notify_about_instance_action')
         @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
         @mock.patch.object(self.compute.network_api,
-                           'allocate_port_for_instance',
-                           side_effect=e)
+                           'allocate_for_instance', side_effect=e)
         @mock.patch.object(self.compute, '_instance_update',
                            side_effect=lambda *a, **k: {})
-        def do_test(update, meth, add_fault, notify, event):
+        def do_test(update, meth, add_fault, notify, event, mock_claim_pci):
             self.assertRaises(exception.InterfaceAttachFailed,
                               self.compute.attach_interface,
-                              self.context, f_instance, 'net_id', 'port_id',
-                              None, None)
+                              self.context, f_instance, uuids.network_id,
+                              uuids.port_id, None, None)
             add_fault.assert_has_calls([
                     mock.call(self.context, f_instance, e,
                               mock.ANY)])

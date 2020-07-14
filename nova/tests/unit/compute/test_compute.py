@@ -10271,13 +10271,16 @@ class ComputeAPITestCase(BaseTestCase):
         req_ip = '1.2.3.4'
         lock_name = 'interface-%s-%s' % (instance.uuid, port_id)
         mock_allocate = mock.Mock(return_value=nwinfo)
-        self.compute.network_api.allocate_port_for_instance = mock_allocate
+        self.compute.network_api.allocate_for_instance = mock_allocate
 
         with test.nested(
             mock.patch.dict(self.compute.driver.capabilities,
                              supports_attach_interface=True),
-            mock.patch('oslo_concurrency.lockutils.lock')
-        ) as (cap, mock_lock):
+            mock.patch('oslo_concurrency.lockutils.lock'),
+            mock.patch.object(self.compute,
+            '_claim_pci_device_for_interface_attach',
+            return_value=None)
+        ) as (cap, mock_lock, mock_claim_pci):
             vif = self.compute.attach_interface(self.context,
                                                 instance,
                                                 network_id,
@@ -10285,8 +10288,15 @@ class ComputeAPITestCase(BaseTestCase):
                                                 req_ip, None)
         self.assertEqual(vif['id'], port_id)
         mock_allocate.assert_called_once_with(
-            self.context, instance, port_id, network_id, req_ip,
-            bind_host_id='fake-mini', tag=None)
+            self.context, instance,
+            test.MatchType(objects.NetworkRequestList),
+            bind_host_id='fake-mini', attach=True)
+        network_requests = mock_allocate.mock_calls[0][1][2]
+        self.assertEqual(1, len(network_requests.objects))
+        network_request = network_requests[0]
+        self.assertEqual(network_id, network_request.network_id)
+        self.assertEqual(port_id, network_request.port_id)
+        self.assertEqual(req_ip, str(network_request.address))
         mock_notify.assert_has_calls([
             mock.call(self.context, instance, self.compute.host,
                       action='interface_attach', phase='start'),
@@ -10295,6 +10305,79 @@ class ComputeAPITestCase(BaseTestCase):
         mock_lock.assert_called_once_with(lock_name, mock.ANY, mock.ANY,
                 mock.ANY, delay=mock.ANY, do_log=mock.ANY, fair=mock.ANY,
                 semaphores=mock.ANY)
+        mock_claim_pci.assert_called_once_with(
+            self.context, instance, network_requests)
+        return nwinfo, port_id
+
+    @mock.patch.object(compute_utils, 'notify_about_instance_action')
+    def test_attach_sriov_interface(self, mock_notify):
+        instance = self._create_fake_instance_obj()
+        instance.pci_requests = objects.InstancePCIRequests(requests=[])
+        instance.pci_devices = objects.PciDeviceList(objects=[])
+        instance.numa_topology = objects.InstanceNUMATopology()
+
+        nwinfo = [fake_network_cache_model.new_vif()]
+        network_id = nwinfo[0]['network']['id']
+        port_id = nwinfo[0]['id']
+        req_ip = '1.2.3.4'
+        mock_allocate = mock.Mock(return_value=nwinfo)
+        self.compute.network_api.allocate_for_instance = mock_allocate
+
+        with test.nested(
+            mock.patch.dict(self.compute.driver.capabilities,
+                            supports_attach_interface=True),
+            mock.patch.object(self.compute.network_api,
+                              'create_resource_requests'),
+            mock.patch.object(self.compute.rt, 'claim_pci_devices'),
+            mock.patch.object(self.compute.rt,
+                              'allocate_pci_devices_for_instance'),
+            mock.patch.object(instance, 'save')
+        ) as (
+                mock_capabilities, mock_create_resource_req, mock_claim_pci,
+                mock_allocate_pci, mock_save):
+
+            pci_req = objects.InstancePCIRequest(request_id=uuids.pci_req)
+            pci_device = objects.PciDevice(request_id=pci_req.request_id)
+            mock_claim_pci.return_value = [pci_device]
+
+            def create_resource_req(context, requested_networks,
+                                    pci_requests=None, affinity_policy=None):
+                # Simulate that the requested port is an SRIOV port
+                pci_requests.requests.append(pci_req)
+
+            mock_create_resource_req.side_effect = create_resource_req
+
+            vif = self.compute.attach_interface(
+                self.context, instance, network_id, port_id, req_ip, None)
+
+        self.assertEqual(vif['id'], port_id)
+        mock_allocate.assert_called_once_with(
+            self.context, instance,
+            test.MatchType(objects.NetworkRequestList),
+            bind_host_id='fake-mini', attach=True)
+        network_requests = mock_allocate.mock_calls[0][1][2]
+        self.assertEqual(1, len(network_requests.objects))
+        network_request = network_requests[0]
+        self.assertEqual(network_id, network_request.network_id)
+        self.assertEqual(port_id, network_request.port_id)
+        self.assertEqual(req_ip, str(network_request.address))
+
+        mock_create_resource_req.assert_called_once_with(
+            self.context, network_requests,
+            test.MatchType(objects.InstancePCIRequests),
+            affinity_policy=None)
+        mock_claim_pci.assert_called_once_with(
+            self.context, test.MatchType(objects.InstancePCIRequests),
+            instance.numa_topology)
+        pci_reqs = mock_claim_pci.mock_calls[0][1][1]
+        self.assertEqual([pci_req], pci_reqs.requests)
+        mock_allocate_pci.assert_called_once_with(self.context, instance)
+
+        mock_save.assert_called_once_with()
+
+        self.assertIn(pci_req, instance.pci_requests.requests)
+        self.assertIn(pci_device, instance.pci_devices.objects)
+
         return nwinfo, port_id
 
     @mock.patch.object(compute_utils, 'notify_about_instance_action')
@@ -10305,11 +10388,16 @@ class ComputeAPITestCase(BaseTestCase):
         port_id = nwinfo[0]['id']
         req_ip = '1.2.3.4'
         mock_allocate = mock.Mock(return_value=nwinfo)
-        self.compute.network_api.allocate_port_for_instance = mock_allocate
+        self.compute.network_api.allocate_for_instance = mock_allocate
 
-        with mock.patch.dict(self.compute.driver.capabilities,
-                             supports_attach_interface=True,
-                             supports_tagged_attach_interface=True):
+        with test.nested(
+            mock.patch.dict(self.compute.driver.capabilities,
+                            supports_attach_interface=True,
+                            supports_tagged_attach_interface=True),
+            mock.patch.object(self.compute,
+                              '_claim_pci_device_for_interface_attach',
+                              return_value=None)
+        ) as (mock_capabilities, mock_claim_pci):
             vif = self.compute.attach_interface(self.context,
                                                 instance,
                                                 network_id,
@@ -10317,13 +10405,24 @@ class ComputeAPITestCase(BaseTestCase):
                                                 req_ip, tag='foo')
         self.assertEqual(vif['id'], port_id)
         mock_allocate.assert_called_once_with(
-            self.context, instance, port_id, network_id, req_ip,
-            bind_host_id='fake-mini', tag='foo')
+            self.context, instance,
+            test.MatchType(objects.NetworkRequestList),
+            bind_host_id='fake-mini', attach=True)
+        network_requests = mock_allocate.mock_calls[0][1][2]
+        self.assertEqual(1, len(network_requests.objects))
+        network_request = network_requests[0]
+        self.assertEqual(network_id, network_request.network_id)
+        self.assertEqual(port_id, network_request.port_id)
+        self.assertEqual(req_ip, str(network_request.address))
+        self.assertEqual('foo', network_request.tag)
         mock_notify.assert_has_calls([
             mock.call(self.context, instance, self.compute.host,
                       action='interface_attach', phase='start'),
             mock.call(self.context, instance, self.compute.host,
                       action='interface_attach', phase='end')])
+        mock_claim_pci.assert_called_once_with(
+            self.context, instance, network_requests)
+
         return nwinfo, port_id
 
     def test_tagged_attach_interface_raises(self):
@@ -10357,23 +10456,34 @@ class ComputeAPITestCase(BaseTestCase):
             mock.patch.object(compute_utils, 'notify_about_instance_action'),
             mock.patch.object(self.compute.driver, 'attach_interface'),
             mock.patch.object(self.compute.network_api,
-                              'allocate_port_for_instance'),
+                              'allocate_for_instance'),
             mock.patch.object(self.compute.network_api,
                               'deallocate_port_for_instance'),
             mock.patch.dict(self.compute.driver.capabilities,
-                            supports_attach_interface=True)) as (
+                            supports_attach_interface=True),
+            mock.patch.object(self.compute,
+                              '_claim_pci_device_for_interface_attach',
+                              return_value=None),
+        ) as (
                 mock_notify, mock_attach, mock_allocate, mock_deallocate,
-                mock_dict):
+                mock_dict, mock_claim_pci):
 
             mock_allocate.return_value = nwinfo
             mock_attach.side_effect = exception.NovaException("attach_failed")
             self.assertRaises(exception.InterfaceAttachFailed,
                               self.compute.attach_interface, self.context,
                               instance, network_id, port_id, req_ip, None)
-            mock_allocate.assert_called_once_with(self.context, instance,
-                                                  port_id, network_id, req_ip,
-                                                  bind_host_id='fake-host',
-                                                  tag=None)
+            mock_allocate.assert_called_once_with(
+                self.context, instance,
+                test.MatchType(objects.NetworkRequestList),
+                bind_host_id='fake-host', attach=True)
+            network_requests = mock_allocate.mock_calls[0][1][2]
+            self.assertEqual(1, len(network_requests.objects))
+            network_request = network_requests[0]
+            self.assertEqual(network_id, network_request.network_id)
+            self.assertEqual(port_id, network_request.port_id)
+            self.assertEqual(req_ip, str(network_request.address))
+
             mock_deallocate.assert_called_once_with(self.context, instance,
                                                     port_id)
             mock_notify.assert_has_calls([
@@ -10383,6 +10493,139 @@ class ComputeAPITestCase(BaseTestCase):
                           action='interface_attach',
                           exception=mock_attach.side_effect,
                           phase='error')])
+            mock_claim_pci.assert_called_once_with(
+                self.context, instance, network_requests)
+
+    def test_attach_sriov_interface_failed_in_driver(self):
+        new_type = flavors.get_flavor_by_flavor_id('4')
+        instance = objects.Instance(
+            id=42,
+            uuid=uuids.interface_failed_instance,
+            image_ref='foo',
+            system_metadata={},
+            flavor=new_type,
+            host='fake-host',
+            pci_requests=objects.InstancePCIRequests(requests=[]),
+            pci_devices=objects.PciDeviceList(objects=[]),
+            numa_topology=objects.InstanceNUMATopology())
+
+        nwinfo = [fake_network_cache_model.new_vif()]
+        network_id = nwinfo[0]['network']['id']
+        port_id = nwinfo[0]['id']
+        req_ip = '1.2.3.4'
+
+        with test.nested(
+            mock.patch.object(compute_utils, 'notify_about_instance_action'),
+            mock.patch.object(self.compute.driver, 'attach_interface'),
+            mock.patch.object(self.compute.network_api,
+                              'allocate_for_instance'),
+            mock.patch.object(self.compute.network_api,
+                              'deallocate_port_for_instance',
+                              return_value=(mock.sentinel.nw_info, {})),
+            mock.patch.dict(self.compute.driver.capabilities,
+                            supports_attach_interface=True),
+            mock.patch.object(self.compute.network_api,
+                              'create_resource_requests'),
+            mock.patch.object(self.compute.rt, 'claim_pci_devices'),
+            mock.patch.object(self.compute.rt, 'unclaim_pci_devices')
+        ) as (
+                mock_notify, mock_attach, mock_allocate, mock_deallocate,
+                mock_dict, mock_create_resource_req, mock_claim_pci,
+                mock_unclaim_pci):
+
+            pci_req = objects.InstancePCIRequest(request_id=uuids.pci_req)
+            pci_device = objects.PciDevice(request_id=pci_req.request_id)
+            mock_claim_pci.return_value = [pci_device]
+
+            def create_resource_req(context, requested_networks,
+                                    pci_requests=None, affinity_policy=None):
+                # Simulate that the requested port is an SRIOV port
+                pci_requests.requests.append(pci_req)
+
+            mock_create_resource_req.side_effect = create_resource_req
+            mock_allocate.return_value = nwinfo
+            mock_attach.side_effect = exception.NovaException("attach_failed")
+
+            self.assertRaises(
+                exception.InterfaceAttachFailed, self.compute.attach_interface,
+                self.context, instance, network_id, port_id, req_ip, None)
+
+            mock_allocate.assert_called_once_with(
+                self.context, instance,
+                test.MatchType(objects.NetworkRequestList),
+                bind_host_id='fake-host', attach=True)
+            network_requests = mock_allocate.mock_calls[0][1][2]
+            self.assertEqual(1, len(network_requests.objects))
+            network_request = network_requests[0]
+            self.assertEqual(network_id, network_request.network_id)
+            self.assertEqual(port_id, network_request.port_id)
+            self.assertEqual(req_ip, str(network_request.address))
+
+            mock_deallocate.assert_called_once_with(
+                self.context, instance, port_id)
+            mock_create_resource_req.assert_called_once_with(
+                self.context, network_requests,
+                test.MatchType(objects.InstancePCIRequests),
+                affinity_policy=None)
+            mock_claim_pci.assert_called_once_with(
+                self.context, test.MatchType(objects.InstancePCIRequests),
+                instance.numa_topology)
+            pci_reqs = mock_claim_pci.mock_calls[0][1][1]
+            self.assertEqual([pci_req], pci_reqs.requests)
+
+            mock_unclaim_pci.assert_called_once_with(
+                self.context, pci_device, instance)
+
+            self.assertNotIn(pci_req, instance.pci_requests.requests)
+            self.assertNotIn(pci_device, instance.pci_devices.objects)
+
+    def test_attach_sriov_interface_pci_claim_fails(self):
+        instance = self._create_fake_instance_obj()
+        instance.pci_requests = objects.InstancePCIRequests(requests=[])
+        instance.pci_devices = objects.PciDeviceList(objects=[])
+        instance.numa_topology = objects.InstanceNUMATopology()
+
+        nwinfo = [fake_network_cache_model.new_vif()]
+        network_id = nwinfo[0]['network']['id']
+        port_id = nwinfo[0]['id']
+        req_ip = '1.2.3.4'
+
+        with test.nested(
+            mock.patch.dict(self.compute.driver.capabilities,
+                            supports_attach_interface=True),
+            mock.patch.object(self.compute.network_api,
+                              'create_resource_requests'),
+            mock.patch.object(self.compute.rt, 'claim_pci_devices',
+                              return_value=[]),
+        ) as (
+                mock_capabilities, mock_create_resource_req, mock_claim_pci):
+
+            pci_req = objects.InstancePCIRequest(request_id=uuids.pci_req)
+
+            def create_resource_req(context, requested_networks,
+                                    pci_requests=None, affinity_policy=None):
+                # Simulate that the requested port is an SRIOV port
+                pci_requests.requests.append(pci_req)
+
+            mock_create_resource_req.side_effect = create_resource_req
+
+            ex = self.assertRaises(
+                messaging.ExpectedException, self.compute.attach_interface,
+                self.context, instance, network_id, port_id, req_ip, None)
+            wrapped_exc = ex.exc_info[1]
+            self.assertEqual(
+                exception.InterfaceAttachPciClaimFailed, type(wrapped_exc))
+            mock_create_resource_req.assert_called_once_with(
+                self.context, test.MatchType(objects.NetworkRequestList),
+                test.MatchType(objects.InstancePCIRequests),
+                affinity_policy=None)
+            mock_claim_pci.assert_called_once_with(
+                self.context, test.MatchType(objects.InstancePCIRequests),
+                instance.numa_topology)
+            pci_reqs = mock_claim_pci.mock_calls[0][1][1]
+            self.assertEqual([pci_req], pci_reqs.requests)
+
+            self.assertNotIn(pci_req, instance.pci_requests.requests)
 
     @mock.patch.object(compute_utils, 'notify_about_instance_action')
     def test_detach_interface(self, mock_notify):
@@ -10393,17 +10636,33 @@ class ComputeAPITestCase(BaseTestCase):
         instance.info_cache.network_info = network_model.NetworkInfo.hydrate(
             nwinfo)
         lock_name = 'interface-%s-%s' % (instance.uuid, port_id)
+        pci_req = objects.InstancePCIRequest(request_id=uuids.pci_req_id)
+        other_pci_req = objects.InstancePCIRequest(
+            request_id=uuids.another_pci_req_id)
+        instance.pci_requests = objects.InstancePCIRequests(
+            requests=[pci_req, other_pci_req])
+        pci_dev = objects.PciDevice(request_id=uuids.pci_req_id)
+        another_pci_dev = objects.PciDevice(
+            request_id=uuids.another_pci_req_id)
+        instance.pci_devices = objects.PciDeviceList(
+            objects=[pci_dev, another_pci_dev])
 
         port_allocation = {uuids.rp1: {'NET_BW_EGR_KILOBIT_PER_SEC': 10000}}
         with test.nested(
-                mock.patch.object(
-                    self.compute.reportclient,
-                    'remove_resources_from_instance_allocation'),
-                mock.patch.object(self.compute.network_api,
-                    'deallocate_port_for_instance',
-                    return_value=([], port_allocation)),
-                mock.patch('oslo_concurrency.lockutils.lock')) as (
-                mock_remove_alloc, mock_deallocate, mock_lock):
+            mock.patch.object(
+                self.compute.reportclient,
+                'remove_resources_from_instance_allocation'),
+            mock.patch.object(self.compute.network_api,
+                'deallocate_port_for_instance',
+                return_value=([], port_allocation)),
+            mock.patch('oslo_concurrency.lockutils.lock'),
+            mock.patch('nova.pci.request.get_instance_pci_request_from_vif',
+                       return_value=pci_req),
+            mock.patch.object(self.compute.rt, 'unclaim_pci_devices'),
+            mock.patch.object(instance, 'save')
+        ) as (
+                mock_remove_alloc, mock_deallocate, mock_lock,
+                mock_get_pci_req, mock_unclaim_pci, mock_instance_save):
             self.compute.detach_interface(self.context, instance, port_id)
 
             mock_deallocate.assert_called_once_with(
@@ -10420,6 +10679,11 @@ class ComputeAPITestCase(BaseTestCase):
         mock_lock.assert_called_once_with(lock_name, mock.ANY, mock.ANY,
                 mock.ANY, delay=mock.ANY, do_log=mock.ANY, fair=mock.ANY,
                 semaphores=mock.ANY)
+        mock_unclaim_pci.assert_called_once_with(
+            self.context, pci_dev, instance)
+        self.assertNotIn(pci_req, instance.pci_requests.requests)
+        self.assertNotIn(pci_dev, instance.pci_devices.objects)
+        mock_instance_save.assert_called_once_with()
 
     @mock.patch('nova.compute.manager.LOG.log')
     def test_detach_interface_failed(self, mock_log):
@@ -10482,6 +10746,46 @@ class ComputeAPITestCase(BaseTestCase):
         mock_notify.assert_has_calls([
             mock.call(self.context, instance, self.compute.host,
                       action='interface_detach', phase='start')])
+
+    @mock.patch.object(compute_manager.LOG, 'warning')
+    def test_detach_sriov_interface_pci_device_not_found(self, mock_warning):
+        nwinfo, port_id = self.test_attach_interface()
+        instance = self._create_fake_instance_obj()
+        instance.info_cache = objects.InstanceInfoCache.new(
+            self.context, uuids.info_cache_instance)
+        instance.info_cache.network_info = network_model.NetworkInfo.hydrate(
+            nwinfo)
+        pci_req = objects.InstancePCIRequest(request_id=uuids.pci_req_id)
+        other_pci_req = objects.InstancePCIRequest(
+            request_id=uuids.another_pci_req_id)
+        instance.pci_requests = objects.InstancePCIRequests(
+            requests=[pci_req, other_pci_req])
+
+        another_pci_dev = objects.PciDevice(
+            request_id=uuids.another_pci_req_id)
+        instance.pci_devices = objects.PciDeviceList(
+            objects=[another_pci_dev])
+
+        with test.nested(
+            mock.patch.object(self.compute.network_api,
+                'deallocate_port_for_instance',
+                new=mock.NonCallableMock()),
+            mock.patch('oslo_concurrency.lockutils.lock'),
+            mock.patch('nova.pci.request.get_instance_pci_request_from_vif',
+                       return_value=pci_req),
+            mock.patch.object(self.compute.rt, 'unclaim_pci_devices',
+                new=mock.NonCallableMock()),
+        ) as (
+                mock_deallocate, mock_lock, mock_get_pci_req,
+                mock_unclaim_pci):
+            self.assertRaises(exception.InterfaceDetachFailed,
+                self.compute.detach_interface, self.context, instance, port_id)
+
+        self.assertIn(pci_req, instance.pci_requests.requests)
+        mock_warning.assert_called_once_with(
+            'Detach interface failed, port_id=%(port_id)s, reason: '
+            'PCI device not found for PCI request %(pci_req)s',
+            {'port_id': port_id, 'pci_req': pci_req})
 
     def test_attach_volume_new_flow(self):
         fake_bdm = fake_block_device.FakeDbBlockDeviceDict(
