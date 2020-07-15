@@ -51,6 +51,28 @@ class LibvirtReportTraitsTestBase(
 
 
 class LibvirtReportTraitsTests(LibvirtReportTraitsTestBase):
+    # These must match the capabilities in
+    # nova.virt.libvirt.driver.LibvirtDriver.capabilities
+    expected_libvirt_driver_capability_traits = set([
+        trait for trait in [
+            ost.COMPUTE_ACCELERATORS,
+            ost.COMPUTE_DEVICE_TAGGING,
+            ost.COMPUTE_NET_ATTACH_INTERFACE,
+            ost.COMPUTE_NET_ATTACH_INTERFACE_WITH_TAG,
+            ost.COMPUTE_VOLUME_ATTACH_WITH_TAG,
+            ost.COMPUTE_VOLUME_EXTEND,
+            ost.COMPUTE_VOLUME_MULTI_ATTACH,
+            ost.COMPUTE_TRUSTED_CERTS,
+            ost.COMPUTE_IMAGE_TYPE_AKI,
+            ost.COMPUTE_IMAGE_TYPE_AMI,
+            ost.COMPUTE_IMAGE_TYPE_ARI,
+            ost.COMPUTE_IMAGE_TYPE_ISO,
+            ost.COMPUTE_IMAGE_TYPE_QCOW2,
+            ost.COMPUTE_IMAGE_TYPE_RAW,
+            ost.COMPUTE_RESCUE_BFV,
+        ]
+    ])
+
     def test_report_cpu_traits(self):
         self.assertEqual([], self._get_all_providers())
         self.start_compute()
