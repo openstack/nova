@@ -1116,13 +1116,11 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
 
         # Now hard reboot the server in the source cell and it should go back
         # to ACTIVE.
-        self.api.post_server_action(server['id'], {'reboot': {'type': 'HARD'}})
-        self._wait_for_state_change(server, 'ACTIVE')
+        self._reboot_server(server, hard=True)
 
         # Now retry the resize without the fault in the target host to make
         # sure things are OK (no duplicate entry errors in the target DB).
-        self.api.post_server_action(server['id'], body)
-        self._wait_for_state_change(server, 'VERIFY_RESIZE')
+        self._resize_server(server, flavor2)
 
     def _assert_instance_not_in_cell(self, cell_name, server_id):
         cell = self.cell_mappings[cell_name]
@@ -1189,10 +1187,8 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
 
         # Now hard reboot the server in the source cell and it should go back
         # to ACTIVE.
-        self.api.post_server_action(server['id'], {'reboot': {'type': 'HARD'}})
-        self._wait_for_state_change(server, 'ACTIVE')
+        self._reboot_server(server, hard=True)
 
         # Now retry the resize without the fault in the target host to make
         # sure things are OK (no duplicate entry errors in the target DB).
-        self.api.post_server_action(server['id'], body)
-        self._wait_for_state_change(server, 'VERIFY_RESIZE')
+        self._resize_server(server, flavor2)

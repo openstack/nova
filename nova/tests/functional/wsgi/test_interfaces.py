@@ -29,32 +29,25 @@ class InterfaceFullstack(integrated_helpers._IntegratedTestBase):
 
     def test_detach_interface_negative_invalid_state(self):
         # Create server with network
-        created_server = self._create_server(
+        server = self._create_server(
             networks=[{'uuid': '3cb9bc59-5699-4588-a4b1-b87f96708bc6'}])
-        created_server_id = created_server['id']
-        found_server = self._wait_for_state_change(created_server, 'ACTIVE')
+        self.addCleanup(self._delete_server, server)
 
         post = {
             'interfaceAttachment': {
                 'net_id': "3cb9bc59-5699-4588-a4b1-b87f96708bc6"
             }
         }
-        self.api.attach_interface(created_server_id, post)
+        self.api.attach_interface(server['id'], post)
 
-        response = self.api.get_port_interfaces(created_server_id)[0]
-        port_id = response['port_id']
+        ports = self.api.get_port_interfaces(server['id'])
 
         # Change status from ACTIVE to SUSPENDED for negative test
-        post = {'suspend': {}}
-        self.api.post_server_action(created_server_id, post)
-        found_server = self._wait_for_state_change(found_server, 'SUSPENDED')
+        server = self._suspend_server(server)
 
         # Detach port interface in SUSPENDED (not ACTIVE, etc.)
-        ex = self.assertRaises(client.OpenStackApiException,
-                               self.api.detach_interface,
-                               created_server_id, port_id)
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            self.api.detach_interface,
+            server['id'], ports[0]['port_id'])
         self.assertEqual(409, ex.response.status_code)
-        self.assertEqual('SUSPENDED', found_server['status'])
-
-        # Cleanup
-        self._delete_server(found_server)

@@ -393,6 +393,20 @@ class InstanceHelperMixin:
         self.api.delete_server(server['id'])
         self._wait_until_deleted(server)
 
+    def _reboot_server(self, server, hard=False, expected_state='ACTIVE'):
+        """Reboot a server."""
+        self.api.post_server_action(
+            server['id'], {'reboot': {'type': 'HARD' if hard else 'SOFT'}},
+        )
+        fake_notifier.wait_for_versioned_notifications('instance.reboot.end')
+        return self._wait_for_state_change(server, expected_state)
+
+    def _resize_server(self, server, flavor_id):
+        self.api.post_server_action(
+            server['id'], {'resize': {'flavorRef': flavor_id}})
+        fake_notifier.wait_for_versioned_notifications('instance.resize.end')
+        return self._wait_for_state_change(server, 'VERIFY_RESIZE')
+
     def _confirm_resize(self, server):
         self.api.post_server_action(server['id'], {'confirmResize': None})
         server = self._wait_for_state_change(server, 'ACTIVE')
@@ -415,29 +429,25 @@ class InstanceHelperMixin:
             'instance.resize_revert.end')
         return server
 
-    def _migrate_or_resize(self, server, request):
-        if 'resize' not in request and 'migrate' not in request:
-            raise Exception('_migrate_or_resize only supports resize or '
-                            'migrate requests.')
-        self.api.post_server_action(server['id'], request)
-        self._wait_for_state_change(server, 'VERIFY_RESIZE')
-
-    def _resize_server(self, server, new_flavor):
-        resize_req = {
-            'resize': {
-                'flavorRef': new_flavor
-            }
-        }
-        self._migrate_or_resize(server, resize_req)
-
     def _live_migrate(self, server, migration_expected_state,
                       server_expected_state='ACTIVE'):
         self.api.post_server_action(
             server['id'],
-            {'os-migrateLive': {'host': None,
-                                'block_migration': 'auto'}})
+            {'os-migrateLive': {'host': None, 'block_migration': 'auto'}})
         self._wait_for_state_change(server, server_expected_state)
         self._wait_for_migration_status(server, [migration_expected_state])
+
+    def _suspend_server(self, server, expected_state='SUSPENDED'):
+        """Suspend a server."""
+        self.api.post_server_action(server['id'], {'suspend': {}})
+        fake_notifier.wait_for_versioned_notifications('instance.suspend.end')
+        return self._wait_for_state_change(server, expected_state)
+
+    def _resume_server(self, server, expected_state='ACTIVE'):
+        """Resume a server."""
+        self.api.post_server_action(server['id'], {'resume': {}})
+        fake_notifier.wait_for_versioned_notifications('instance.resume.end')
+        return self._wait_for_state_change(server, expected_state)
 
 
 class PlacementHelperMixin:
@@ -827,7 +837,13 @@ class PlacementInstanceHelperMixin(InstanceHelperMixin, PlacementHelperMixin):
         self, server, request, old_flavor, new_flavor, source_rp_uuid,
         dest_rp_uuid,
     ):
-        self._migrate_or_resize(server, request)
+        if 'resize' not in request and 'migrate' not in request:
+            raise Exception(
+                '_move_and_check_allocations only supports resize or migrate '
+                'requests.')
+
+        self.api.post_server_action(server['id'], request)
+        self._wait_for_state_change(server, 'VERIFY_RESIZE')
 
         def _check_allocation():
             self.assertFlavorMatchesUsage(source_rp_uuid, old_flavor)
