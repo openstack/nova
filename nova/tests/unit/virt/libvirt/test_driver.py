@@ -2973,7 +2973,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 ])])
         inst_topology = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(
-                id=3, cpuset=set([0, 1]), memory=1024, pagesize=2048)])
+                id=3, cpuset=set([0, 1]), pcpuset=set(), memory=1024,
+                pagesize=2048),
+        ])
 
         numa_tune = vconfig.LibvirtConfigGuestNUMATune()
         numa_tune.memnodes = [vconfig.LibvirtConfigGuestNUMATuneMemNode()]
@@ -3004,7 +3006,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 ])])
         inst_topology = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(
-                id=3, cpuset=set([0, 1]), memory=1024, pagesize=4)])
+                id=3, cpuset=set([0, 1]), pcpuset=set(), memory=1024,
+                pagesize=4),
+        ])
 
         numa_tune = vconfig.LibvirtConfigGuestNUMATune()
         numa_tune.memnodes = [vconfig.LibvirtConfigGuestNUMATuneMemNode()]
@@ -3307,7 +3311,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 ])])
         inst_topology = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(
-                id=3, cpuset=set([0, 1]), memory=1024, pagesize=2048)])
+                id=3, cpuset=set([0, 1]), pcpuset=set(), memory=1024,
+                pagesize=2048),
+        ])
 
         numa_tune = vconfig.LibvirtConfigGuestNUMATune()
         numa_tune.memnodes = [vconfig.LibvirtConfigGuestNUMATuneMemNode()]
@@ -3433,10 +3439,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                                 pagesize, mock_host,
                                                 mock_caps, mock_lib_version,
                                                 mock_version, mock_type):
-        instance_topology = objects.InstanceNUMATopology(
-                    cells=[objects.InstanceNUMACell(
-                        id=0, cpuset=set([0]),
-                        memory=1024, pagesize=pagesize)])
+        instance_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                id=0, cpuset=set([0]), pcpuset=set(),
+                memory=1024, pagesize=pagesize),
+        ])
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.numa_topology = instance_topology
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
@@ -3534,11 +3541,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(
         host.Host, "is_cpu_control_policy_capable", return_value=True)
     def test_get_guest_config_non_numa_host_instance_topo(self, is_able):
-        instance_topology = objects.InstanceNUMATopology(
-                    cells=[objects.InstanceNUMACell(
-                        id=0, cpuset=set([0]), memory=1024),
-                           objects.InstanceNUMACell(
-                        id=1, cpuset=set([2]), memory=1024)])
+        instance_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                id=0, cpuset=set([0]), pcpuset=set(), memory=1024),
+            objects.InstanceNUMACell(
+                id=1, cpuset=set([2]), pcpuset=set(), memory=1024),
+        ])
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.numa_topology = instance_topology
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
@@ -3575,7 +3583,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             for instance_cell, numa_cfg_cell in zip(
                     instance_topology.cells, cfg.cpu.numa.cells):
                 self.assertEqual(instance_cell.id, numa_cfg_cell.id)
-                self.assertEqual(instance_cell.cpuset, numa_cfg_cell.cpus)
+                self.assertEqual(instance_cell.total_cpus, numa_cfg_cell.cpus)
                 self.assertEqual(instance_cell.memory * units.Ki,
                                  numa_cfg_cell.memory)
 
@@ -3585,12 +3593,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.flags(cpu_shared_set='0-5', cpu_dedicated_set=None,
                    group='compute')
 
-        instance_topology = objects.InstanceNUMATopology(
-                    cells=[objects.InstanceNUMACell(
-                        id=1, cpuset=set([0, 1]), memory=1024, pagesize=None),
-                           objects.InstanceNUMACell(
-                               id=2, cpuset=set([2, 3]), memory=1024,
-                               pagesize=None)])
+        instance_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                id=1, cpuset=set([0, 1]), pcpuset=set(), memory=1024,
+                pagesize=None),
+            objects.InstanceNUMACell(
+                id=2, cpuset=set([2, 3]), pcpuset=set(), memory=1024,
+                pagesize=None),
+        ])
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.numa_topology = instance_topology
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
@@ -3644,7 +3654,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     cfg.cpu.numa.cells,
                     range(len(instance_topology.cells))):
                 self.assertEqual(index, numa_cfg_cell.id)
-                self.assertEqual(instance_cell.cpuset, numa_cfg_cell.cpus)
+                self.assertEqual(instance_cell.total_cpus, numa_cfg_cell.cpus)
                 self.assertEqual(instance_cell.memory * units.Ki,
                                  numa_cfg_cell.memory)
 
@@ -3661,11 +3671,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 self.assertEqual("strict", memnode.mode)
 
     def test_get_guest_config_numa_host_instance_topo_reordered(self):
-        instance_topology = objects.InstanceNUMATopology(
-                    cells=[objects.InstanceNUMACell(
-                        id=3, cpuset=set([0, 1]), memory=1024),
-                           objects.InstanceNUMACell(
-                        id=0, cpuset=set([2, 3]), memory=1024)])
+        instance_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                id=3, cpuset=set([0, 1]), pcpuset=set(), memory=1024),
+            objects.InstanceNUMACell(
+                id=0, cpuset=set([2, 3]), pcpuset=set(), memory=1024),
+        ])
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.numa_topology = instance_topology
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
@@ -3718,7 +3729,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     instance_topology.cells,
                     cfg.cpu.numa.cells)):
                 self.assertEqual(index, numa_cfg_cell.id)
-                self.assertEqual(instance_cell.cpuset, numa_cfg_cell.cpus)
+                self.assertEqual(instance_cell.total_cpus, numa_cfg_cell.cpus)
                 self.assertEqual(instance_cell.memory * units.Ki,
                                  numa_cfg_cell.memory)
                 self.assertIsNone(numa_cfg_cell.memAccess)
@@ -3735,13 +3746,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 self.assertEqual("strict", memnode.mode)
 
     def test_get_guest_config_numa_host_instance_topo_cpu_pinning(self):
-        instance_topology = objects.InstanceNUMATopology(
-                    cells=[objects.InstanceNUMACell(
-                        id=1, cpuset=set([0, 1]), memory=1024,
-                        cpu_pinning={0: 24, 1: 25}),
-                           objects.InstanceNUMACell(
-                        id=0, cpuset=set([2, 3]), memory=1024,
-                        cpu_pinning={2: 0, 3: 1})])
+        instance_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                id=1, cpuset=set(), pcpuset=set([0, 1]), memory=1024,
+                cpu_pinning={0: 24, 1: 25}),
+            objects.InstanceNUMACell(
+                id=0, cpuset=set(), pcpuset=set([2, 3]), memory=1024,
+                cpu_pinning={2: 0, 3: 1}),
+        ])
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.numa_topology = instance_topology
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
@@ -3796,7 +3808,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             for i, (instance_cell, numa_cfg_cell) in enumerate(zip(
                     instance_topology.cells, cfg.cpu.numa.cells)):
                 self.assertEqual(i, numa_cfg_cell.id)
-                self.assertEqual(instance_cell.cpuset, numa_cfg_cell.cpus)
+                self.assertEqual(instance_cell.total_cpus, numa_cfg_cell.cpus)
                 self.assertEqual(instance_cell.memory * units.Ki,
                                  numa_cfg_cell.memory)
                 self.assertIsNone(numa_cfg_cell.memAccess)
@@ -3815,14 +3827,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.flags(cpu_shared_set='2-5', cpu_dedicated_set=None,
                    group='compute')
 
-        instance_topology = objects.InstanceNUMATopology(
-            cells=[
-                objects.InstanceNUMACell(
-                    id=1, cpuset=set([0, 1]),
-                    memory=1024, pagesize=2048),
-                objects.InstanceNUMACell(
-                    id=2, cpuset=set([2, 3]),
-                    memory=1024, pagesize=2048)])
+        instance_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                id=1, cpuset=set([0, 1]), pcpuset=set(), memory=1024,
+                pagesize=2048),
+            objects.InstanceNUMACell(
+                id=2, cpuset=set([2, 3]), pcpuset=set(), memory=1024,
+                pagesize=2048),
+        ])
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.numa_topology = instance_topology
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
@@ -3864,7 +3876,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     cfg.cpu.numa.cells,
                     range(len(instance_topology.cells))):
                 self.assertEqual(index, numa_cfg_cell.id)
-                self.assertEqual(instance_cell.cpuset, numa_cfg_cell.cpus)
+                self.assertEqual(instance_cell.total_cpus, numa_cfg_cell.cpus)
                 self.assertEqual(instance_cell.memory * units.Ki,
                                  numa_cfg_cell.memory)
                 self.assertEqual("shared", numa_cfg_cell.memAccess)
@@ -3888,18 +3900,18 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.flags(cpu_shared_set=None, cpu_dedicated_set='4-7',
                    group='compute')
 
-        instance_topology = objects.InstanceNUMATopology(
-            cells=[
-                objects.InstanceNUMACell(
-                    id=2, cpuset=set([0, 1]),
-                    cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
-                    cpu_pinning={0: 4, 1: 5},
-                    memory=1024, pagesize=2048),
-                objects.InstanceNUMACell(
-                    id=3, cpuset=set([2, 3]),
-                    cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
-                    cpu_pinning={2: 6, 3: 7},
-                    memory=1024, pagesize=2048)])
+        instance_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                id=2, cpuset=set(), pcpuset=set([0, 1]),
+                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                cpu_pinning={0: 4, 1: 5},
+                memory=1024, pagesize=2048),
+            objects.InstanceNUMACell(
+                id=3, cpuset=set(), pcpuset=set([2, 3]),
+                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                cpu_pinning={2: 6, 3: 7},
+                memory=1024, pagesize=2048),
+        ])
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.numa_topology = instance_topology
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
@@ -3946,7 +3958,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     cfg.cpu.numa.cells,
                     range(len(instance_topology.cells))):
                 self.assertEqual(index, numa_cfg_cell.id)
-                self.assertEqual(instance_cell.cpuset, numa_cfg_cell.cpus)
+                self.assertEqual(instance_cell.total_cpus, numa_cfg_cell.cpus)
                 self.assertEqual(instance_cell.memory * units.Ki,
                                  numa_cfg_cell.memory)
                 self.assertEqual("shared", numa_cfg_cell.memAccess)
@@ -3988,16 +4000,17 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 fields.CPUEmulatorThreadsPolicy.ISOLATE),
             cells=[
                 objects.InstanceNUMACell(
-                    id=0, cpuset=set([0, 1]),
+                    id=0, cpuset=set(), pcpuset=set([0, 1]),
                     memory=1024, pagesize=2048,
                     cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
                     cpu_pinning={0: 4, 1: 5},
                     cpuset_reserved=set([6])),
                 objects.InstanceNUMACell(
-                    id=1, cpuset=set([2, 3]),
+                    id=1, cpuset=set(), pcpuset=set([2, 3]),
                     memory=1024, pagesize=2048,
                     cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
-                    cpu_pinning={2: 7, 3: 8})])
+                    cpu_pinning={2: 7, 3: 8}),
+            ])
 
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.numa_topology = instance_topology
@@ -4043,16 +4056,17 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 fields.CPUEmulatorThreadsPolicy.SHARE),
             cells=[
                 objects.InstanceNUMACell(
-                    id=0, cpuset=set([0, 1]),
+                    id=0, cpuset=set(), pcpuset=set([0, 1]),
                     memory=1024, pagesize=2048,
                     cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
                     cpu_pinning={0: 4, 1: 5},
                     cpuset_reserved=set([6])),
                 objects.InstanceNUMACell(
-                    id=1, cpuset=set([2, 3]),
+                    id=1, cpuset=set(), pcpuset=set([2, 3]),
                     memory=1024, pagesize=2048,
                     cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
-                    cpu_pinning={2: 7, 3: 8})])
+                    cpu_pinning={2: 7, 3: 8}),
+            ])
 
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.numa_topology = instance_topology
@@ -4092,16 +4106,17 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 fields.CPUEmulatorThreadsPolicy.SHARE),
             cells=[
                 objects.InstanceNUMACell(
-                    id=0, cpuset=set([0, 1]),
+                    id=0, cpuset=set(), pcpuset=set([0, 1]),
                     memory=1024, pagesize=2048,
                     cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
                     cpu_pinning={0: 2, 1: 3},
                     cpuset_reserved=set([6])),
                 objects.InstanceNUMACell(
-                    id=1, cpuset=set([2, 3]),
+                    id=1, cpuset=set(), pcpuset=set([2, 3]),
                     memory=1024, pagesize=2048,
                     cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
-                    cpu_pinning={2: 4, 3: 5})])
+                    cpu_pinning={2: 4, 3: 5}),
+            ])
 
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.numa_topology = instance_topology
@@ -4140,8 +4155,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     def test_get_cpu_numa_config_from_instance(self):
         topology = objects.InstanceNUMATopology(cells=[
-            objects.InstanceNUMACell(id=0, cpuset=set([1, 2]), memory=128),
-            objects.InstanceNUMACell(id=1, cpuset=set([3, 4]), memory=128),
+            objects.InstanceNUMACell(
+                id=0, cpuset=set([1, 2]), pcpuset=set(), memory=128),
+            objects.InstanceNUMACell(
+                id=1, cpuset=set([3, 4]), pcpuset=set(), memory=128),
         ])
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         conf = drvr._get_cpu_numa_config_from_instance(topology, True)
@@ -4165,9 +4182,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                        return_value=True)
     def test_get_memnode_numa_config_from_instance(self, mock_numa):
         instance_topology = objects.InstanceNUMATopology(cells=[
-            objects.InstanceNUMACell(id=0, cpuset=set([1, 2]), memory=128),
-            objects.InstanceNUMACell(id=1, cpuset=set([3, 4]), memory=128),
-            objects.InstanceNUMACell(id=16, cpuset=set([5, 6]), memory=128)
+            objects.InstanceNUMACell(
+                id=0, cpuset=set([1, 2]), pcpuset=set(), memory=128),
+            objects.InstanceNUMACell(
+                id=1, cpuset=set([3, 4]), pcpuset=set(), memory=128),
+            objects.InstanceNUMACell(
+                id=16, cpuset=set([5, 6]), pcpuset=set(), memory=128),
         ])
 
         host_topology = objects.NUMATopology(cells=[
@@ -4212,14 +4232,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(host.Host, "get_capabilities")
     def test_does_not_want_hugepages(self, mock_caps, mock_numa):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance_topology = objects.InstanceNUMATopology(
-            cells=[
-                objects.InstanceNUMACell(
-                    id=1, cpuset=set([0, 1]),
-                    memory=1024, pagesize=4),
-                objects.InstanceNUMACell(
-                    id=2, cpuset=set([2, 3]),
-                    memory=1024, pagesize=4)])
+        instance_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                id=1, cpuset=set([0, 1]), pcpuset=set(),
+                memory=1024, pagesize=4),
+            objects.InstanceNUMACell(
+                id=2, cpuset=set([2, 3]), pcpuset=set(),
+                memory=1024, pagesize=4),
+        ])
 
         caps = vconfig.LibvirtConfigCaps()
         caps.host = vconfig.LibvirtConfigCapsHost()
@@ -4257,11 +4277,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         instance_topology = objects.InstanceNUMATopology(
             cells=[
                 objects.InstanceNUMACell(
-                    id=1, cpuset=set([0, 1]),
+                    id=1, cpuset=set([0, 1]), pcpuset=set(),
                     memory=1024, pagesize=2048),
                 objects.InstanceNUMACell(
-                    id=2, cpuset=set([2, 3]),
-                    memory=1024, pagesize=2048)])
+                    id=2, cpuset=set([2, 3]), pcpuset=set(),
+                    memory=1024, pagesize=2048),
+            ])
 
         caps = vconfig.LibvirtConfigCaps()
         caps.host = vconfig.LibvirtConfigCapsHost()
@@ -20955,19 +20976,17 @@ class TestUpdateProviderTree(test.NoDBTestCase):
             id=1, uuid=uuids.instance_a, **base_instance)
         instance_a.numa_topology = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(
-                id=0,
-                cpuset=set([0, 1]),
-                memory=1024)])
+                id=0, cpuset=set([0, 1]), pcpuset=set(), memory=1024),
+        ])
 
         instance_b = objects.Instance(
             id=2, uuid=uuids.instance_b, **base_instance)
         instance_b.numa_topology = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(
-                id=0,
-                cpuset=set([0, 1]),
+                id=0, cpuset=set(), pcpuset=set([0, 1]),
                 cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
-                cpu_pinning={0: 2, 1: 3},
-                memory=1024)])
+                cpu_pinning={0: 2, 1: 3}, memory=1024),
+        ])
 
         instance_c = objects.Instance(
             id=3, uuid=uuids.instance_c, **base_instance)
@@ -20980,11 +20999,10 @@ class TestUpdateProviderTree(test.NoDBTestCase):
             id=4, uuid=uuids.instance_d, **base_instance)
         instance_d.numa_topology = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(
-                id=0,
-                cpuset=set([0, 1]),
+                id=0, cpuset=set(), pcpuset=set([0, 1]),
                 cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
-                cpu_pinning={0: 0, 1: 1},
-                memory=1024)])
+                cpu_pinning={0: 0, 1: 1}, memory=1024),
+        ])
 
         migration = objects.Migration(
             id=42,

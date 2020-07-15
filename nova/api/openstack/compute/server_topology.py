@@ -53,7 +53,7 @@ class ServerTopologyController(wsgi.Controller):
 
         for cell_ in instance.numa_topology.cells:
             cell = {}
-            cell['vcpu_set'] = cell_.cpuset
+            cell['vcpu_set'] = cell_.total_cpus
             cell['siblings'] = cell_.siblings
             cell['memory_mb'] = cell_.memory
 

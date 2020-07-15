@@ -1240,14 +1240,18 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
         numa_wo_pinning = test_instance_numa.get_fake_obj_numa_topology(
             self.context)
+        numa_wo_pinning.cells[0].pcpuset = set()
+        numa_wo_pinning.cells[1].pcpuset = set()
         instance_2.numa_topology = numa_wo_pinning
 
         numa_w_pinning = test_instance_numa.get_fake_obj_numa_topology(
             self.context)
         numa_w_pinning.cells[0].pin_vcpus((1, 10), (2, 11))
+        numa_w_pinning.cells[0].cpuset = set()
         numa_w_pinning.cells[0].cpu_policy = (
             fields.CPUAllocationPolicy.DEDICATED)
         numa_w_pinning.cells[1].pin_vcpus((3, 0), (4, 1))
+        numa_w_pinning.cells[1].cpuset = set()
         numa_w_pinning.cells[1].cpu_policy = (
             fields.CPUAllocationPolicy.DEDICATED)
         instance_3.numa_topology = numa_w_pinning

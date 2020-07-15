@@ -153,9 +153,9 @@ _2MB = 2 * units.Mi / units.Ki
 _INSTANCE_NUMA_TOPOLOGIES = {
     '2mb': objects.InstanceNUMATopology(cells=[
         objects.InstanceNUMACell(
-            id=0, cpuset=set([1]), memory=_2MB, pagesize=0),
+            id=0, cpuset=set([1]), pcpuset=set(), memory=_2MB, pagesize=0),
         objects.InstanceNUMACell(
-            id=1, cpuset=set([3]), memory=_2MB, pagesize=0)]),
+            id=1, cpuset=set([3]), pcpuset=set(), memory=_2MB, pagesize=0)]),
 }
 
 _NUMA_LIMIT_TOPOLOGIES = {

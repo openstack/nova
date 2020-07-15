@@ -47,7 +47,7 @@ class ServerTopologyPolicyTest(base.BasePolicyTest):
                     node=0, memory=1024, pagesize=4, id=123,
                     cpu_topology=None,
                     cpu_pinning={},
-                    cpuset=set([0, 1]))])
+                    cpuset=set([0, 1]), pcpuset=set())])
 
         # Check that system reader or and server owner is able to get
         # the server topology.

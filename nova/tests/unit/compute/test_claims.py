@@ -186,13 +186,14 @@ class ClaimTestCase(test.NoDBTestCase):
     def test_numa_topology_no_limit(self):
         huge_instance = objects.InstanceNUMATopology(
                 cells=[objects.InstanceNUMACell(
-                    id=1, cpuset=set([1, 2]), memory=512)])
+                    id=1, cpuset=set([1, 2]), pcpuset=set(), memory=512)])
         self._claim(numa_topology=huge_instance)
 
     def test_numa_topology_fails(self):
         huge_instance = objects.InstanceNUMATopology(
                 cells=[objects.InstanceNUMACell(
-                    id=1, cpuset=set([1, 2, 3, 4, 5]), memory=2048)])
+                    id=1, cpuset=set([1, 2, 3, 4, 5]), pcpuset=set(),
+                    memory=2048)])
         limit_topo = objects.NUMATopologyLimits(
             cpu_allocation_ratio=1, ram_allocation_ratio=1)
         self.assertRaises(exception.ComputeResourcesUnavailable,
@@ -203,7 +204,7 @@ class ClaimTestCase(test.NoDBTestCase):
     def test_numa_topology_passes(self):
         huge_instance = objects.InstanceNUMATopology(
                 cells=[objects.InstanceNUMACell(
-                    id=1, cpuset=set([1, 2]), memory=512)])
+                    id=1, cpuset=set([1, 2]), pcpuset=set(), memory=512)])
         limit_topo = objects.NUMATopologyLimits(
             cpu_allocation_ratio=1, ram_allocation_ratio=1)
         self._claim(limits={'numa_topology': limit_topo},
@@ -230,7 +231,7 @@ class ClaimTestCase(test.NoDBTestCase):
 
         huge_instance = objects.InstanceNUMATopology(
                 cells=[objects.InstanceNUMACell(
-                    id=1, cpuset=set([1, 2]), memory=512)])
+                    id=1, cpuset=set([1, 2]), pcpuset=set(), memory=512)])
 
         self._claim(requests=requests, numa_topology=huge_instance)
 
@@ -265,7 +266,7 @@ class ClaimTestCase(test.NoDBTestCase):
 
         huge_instance = objects.InstanceNUMATopology(
                 cells=[objects.InstanceNUMACell(
-                    id=1, cpuset=set([1, 2]), memory=512)])
+                    id=1, cpuset=set([1, 2]), pcpuset=set(), memory=512)])
 
         self.assertRaises(exception.ComputeResourcesUnavailable,
                           self._claim,
@@ -294,7 +295,7 @@ class ClaimTestCase(test.NoDBTestCase):
 
         huge_instance = objects.InstanceNUMATopology(
                 cells=[objects.InstanceNUMACell(
-                    id=1, cpuset=set([1, 2]), memory=512)])
+                    id=1, cpuset=set([1, 2]), pcpuset=set(), memory=512)])
 
         self._claim(requests=requests, numa_topology=huge_instance)
 
@@ -381,11 +382,12 @@ class LiveMigrationClaimTestCase(ClaimTestCase):
         instance_type = self._fake_instance_type()
         instance = self._fake_instance()
         instance.numa_topology = objects.InstanceNUMATopology(
-            cells=[objects.InstanceNUMACell(id=1, cpuset=set([1, 2]),
-                                            memory=512, pagesize=2)])
+            cells=[objects.InstanceNUMACell(
+                id=1, cpuset=set([1, 2]),
+                pcpuset=set(), memory=512, pagesize=2)])
         claimed_numa_topology = objects.InstanceNUMATopology(
-            cells=[objects.InstanceNUMACell(id=1, cpuset=set([1, 2]),
-                                            memory=512, pagesize=1)])
+            cells=[objects.InstanceNUMACell(
+            id=1, cpuset=set([1, 2]), pcpuset=set(), memory=512, pagesize=1)])
         with mock.patch('nova.virt.hardware.numa_fit_instance_to_host',
                         return_value=claimed_numa_topology):
             self.assertRaisesRegex(
@@ -402,8 +404,9 @@ class LiveMigrationClaimTestCase(ClaimTestCase):
         # This topology cannot fit in self.compute_node
         # (see _fake_compute_node())
         numa_topology = objects.InstanceNUMATopology(
-            cells=[objects.InstanceNUMACell(id=1, cpuset=set([1, 2, 3]),
-                                            memory=1024)])
+            cells=[objects.InstanceNUMACell(
+            id=1, cpuset=set([1, 2, 3]), pcpuset=set(),
+            memory=1024)])
         with test.nested(
             mock.patch('nova.virt.hardware.numa_get_constraints',
                         return_value=numa_topology),

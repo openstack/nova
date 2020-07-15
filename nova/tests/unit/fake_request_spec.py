@@ -20,8 +20,10 @@ from nova.tests.unit import fake_flavor
 
 
 INSTANCE_NUMA_TOPOLOGY = objects.InstanceNUMATopology(
-        cells=[objects.InstanceNUMACell(id=0, cpuset=set([1, 2]), memory=512),
-              objects.InstanceNUMACell(id=1, cpuset=set([3, 4]), memory=512)])
+        cells=[objects.InstanceNUMACell(id=0, cpuset=set([1, 2]),
+                                        pcpuset=set(), memory=512),
+              objects.InstanceNUMACell(id=1, cpuset=set([3, 4]),
+                                       pcpuset=set(), memory=512)])
 INSTANCE_NUMA_TOPOLOGY.obj_reset_changes(recursive=True)
 
 IMAGE_META = objects.ImageMeta.from_dict(
