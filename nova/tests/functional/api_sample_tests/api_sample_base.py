@@ -65,7 +65,7 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
     # Note that API sample tests also use this in substitutions to validate
     # that URLs in responses (e.g. location of a server just created) are
     # correctly constructed.
-    _use_project_id = True
+    USE_PROJECT_ID = True
     # Availability zones for the API samples tests. Can be overridden by
     # sub-classes. If set, the AvailabilityZoneFilter is not used.
     availability_zones = ['us-west']
@@ -80,7 +80,7 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
         # test v2.18 code without project id
         ('v2_1_noproject_id', {
             'api_major_version': 'v2.1',
-            '_use_project_id': False,
+            'USE_PROJECT_ID': False,
             '_additional_fixtures': [
                 api_paste_fixture.ApiPasteNoProjectId]})
     ]

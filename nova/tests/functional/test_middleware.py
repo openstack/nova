@@ -43,7 +43,7 @@ class TestCORSMiddleware(api_sample_base.ApiSampleTestBaseV21):
 
         # With the project_id in the URL, we get the 300 'multiple choices'
         # response from nova.api.openstack.compute.versions.Versions.
-        self.exp_version_status = 300 if self._use_project_id else 200
+        self.exp_version_status = 300 if self.USE_PROJECT_ID else 200
 
         # Initialize the application after all the config overrides are in
         # place.
