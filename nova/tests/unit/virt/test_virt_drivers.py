@@ -297,8 +297,8 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     @mock.patch('os.unlink')
     @mock.patch('nova.virt.libvirt.utils.load_file', return_value='')
     def test_unrescue_unrescued_instance(self, mock_load_file, mock_unlink):
-        instance_ref, network_info = self._get_running_instance()
-        self.connection.unrescue(instance_ref, network_info)
+        instance_ref, _ = self._get_running_instance()
+        self.connection.unrescue(self.ctxt, instance_ref)
 
     @catch_notimplementederror
     @mock.patch('os.unlink')
@@ -307,7 +307,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         instance_ref, network_info = self._get_running_instance()
         self.connection.rescue(self.ctxt, instance_ref, network_info,
                                image_meta, '', None)
-        self.connection.unrescue(instance_ref, network_info)
+        self.connection.unrescue(self.ctxt, instance_ref)
 
     @catch_notimplementederror
     def test_poll_rebooting_instances(self):

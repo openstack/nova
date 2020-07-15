@@ -625,8 +625,9 @@ class TestCase(base.BaseTestCase):
                          baseclass)
 
         for name in sorted(implmethods.keys()):
-            baseargs = utils.getargspec(basemethods[name])
-            implargs = utils.getargspec(implmethods[name])
+            # NOTE(stephenfin): We ignore type annotations
+            baseargs = utils.getargspec(basemethods[name])[:-1]
+            implargs = utils.getargspec(implmethods[name])[:-1]
 
             self.assertEqual(baseargs, implargs,
                              "%s args don't match base class %s" %

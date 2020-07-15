@@ -29,12 +29,13 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import units
 from oslo_utils import versionutils
-
 import six.moves.urllib.parse as urlparse
 
 import nova.conf
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
+from nova import objects
 from nova.virt import driver
 from nova.virt.xenapi import host
 from nova.virt.xenapi import pool
@@ -316,7 +317,11 @@ class XenAPIDriver(driver.ComputeDriver):
         """Set the ability to power on/off an instance."""
         self._vmops.set_bootable(instance, is_bootable)
 
-    def unrescue(self, instance, network_info):
+    def unrescue(
+        self,
+        context: nova_context.RequestContext,
+        instance: 'objects.Instance',
+    ):
         """Unrescue the specified instance."""
         self._vmops.unrescue(instance)
 

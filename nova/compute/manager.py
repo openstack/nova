@@ -4127,6 +4127,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def unrescue_instance(self, context, instance):
+        orig_context = context
         context = context.elevated()
         LOG.info('Unrescuing', instance=instance)
 
@@ -4138,8 +4139,7 @@ class ComputeManager(manager.Manager):
             phase=fields.NotificationPhase.START)
 
         with self._error_out_instance_on_exception(context, instance):
-            self.driver.unrescue(instance,
-                                 network_info)
+            self.driver.unrescue(orig_context, instance)
 
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = None

@@ -4447,7 +4447,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             ]
             notify_instance_usage.assert_has_calls(notify_calls)
 
-            driver_unrescue.assert_called_once_with(instance, fake_nw_info)
+            driver_unrescue.assert_called_once_with(self.context, instance)
             mock_notify.assert_has_calls([
                 mock.call(self.context, instance, 'fake-mini',
                       action='unrescue', phase='start'),

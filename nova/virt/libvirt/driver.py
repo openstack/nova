@@ -3568,9 +3568,12 @@ class LibvirtDriver(driver.ComputeDriver):
         self._destroy(instance)
         self._create_domain(xml, post_xml_callback=gen_confdrive)
 
-    def unrescue(self, instance, network_info):
-        """Reboot the VM which is being rescued back into primary images.
-        """
+    def unrescue(
+        self,
+        context: nova_context.RequestContext,
+        instance: 'objects.Instance',
+    ):
+        """Reboot the VM which is being rescued back into primary images."""
         instance_dir = libvirt_utils.get_instance_path(instance)
         unrescue_xml_path = os.path.join(instance_dir, 'unrescue.xml')
         xml = libvirt_utils.load_file(unrescue_xml_path)

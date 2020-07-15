@@ -29,7 +29,9 @@ from oslo_utils import importutils
 import six
 
 import nova.conf
+from nova import context as nova_context
 from nova.i18n import _
+from nova import objects
 from nova.virt import event as virtevent
 
 CONF = nova.conf.CONF
@@ -879,12 +881,16 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def unrescue(self, instance, network_info):
+    def unrescue(
+        self,
+        context: nova_context.RequestContext,
+        instance: 'objects.Instance',
+    ):
         """Unrescue the specified instance.
 
+        :param context: security context
         :param instance: nova.objects.instance.Instance
         """
-        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def power_off(self, instance, timeout=0, retry_interval=0):

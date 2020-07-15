@@ -18,6 +18,7 @@
 A driver wrapping the Ironic API, such that Nova may provision
 bare metal resources.
 """
+
 import base64
 from distutils import version
 import gzip
@@ -2166,13 +2167,15 @@ class IronicDriver(virt_driver.ComputeDriver):
         LOG.info('Successfully rescued Ironic node %(node)s',
                  {'node': node_uuid}, instance=instance)
 
-    def unrescue(self, instance, network_info):
+    def unrescue(
+        self,
+        context: nova_context.RequestContext,
+        instance: 'objects.Instance',
+    ):
         """Unrescue the specified instance.
 
+        :param context: security context
         :param instance: nova.objects.instance.Instance
-        :param nova.network.model.NetworkInfo network_info:
-            Necessary network information for the unrescue. Ignored by this
-            driver.
         """
         LOG.debug('Unrescue called for instance', instance=instance)
 

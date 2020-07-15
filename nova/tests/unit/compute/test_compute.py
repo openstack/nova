@@ -2248,11 +2248,10 @@ class ComputeTestCase(BaseTestCase,
 
         self.stub_out('nova.virt.fake.FakeDriver.rescue', fake_rescue)
 
-        def fake_unrescue(self, instance_ref, network_info):
+        def fake_unrescue(self, context, instance_ref):
             called['unrescued'] = True
 
-        self.stub_out('nova.virt.fake.FakeDriver.unrescue',
-                       fake_unrescue)
+        self.stub_out('nova.virt.fake.FakeDriver.unrescue', fake_unrescue)
 
         instance = self._create_fake_instance_obj()
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
@@ -2327,10 +2326,10 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch('nova.context.RequestContext.elevated')
     def test_unrescue_notifications(self, mock_context, mock_notify):
         # Ensure notifications on instance rescue.
-        def fake_unrescue(self, instance_ref, network_info):
+        def fake_unrescue(self, context, instance_ref):
             pass
-        self.stub_out('nova.virt.fake.FakeDriver.unrescue',
-                       fake_unrescue)
+
+        self.stub_out('nova.virt.fake.FakeDriver.unrescue', fake_unrescue)
         context = self.context
         mock_context.return_value = context
 
