@@ -1,3 +1,4 @@
+nova/crypto.py
 nova/virt/driver.py
 nova/virt/hardware.py
 nova/virt/libvirt/__init__.py
