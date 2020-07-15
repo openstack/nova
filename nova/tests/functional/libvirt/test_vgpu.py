@@ -40,6 +40,11 @@ _DEFAULT_HOST = 'host1'
 
 class VGPUTestBase(base.ServersTestBase):
 
+    # We want to target some hosts for some created instances
+    api_major_version = 'v2.1'
+    microversion = 'latest'
+    ADMIN_API = True
+
     FAKE_LIBVIRT_VERSION = 5000000
     FAKE_QEMU_VERSION = 3001000
 
@@ -130,11 +135,6 @@ class VGPUTestBase(base.ServersTestBase):
 
 
 class VGPUTests(VGPUTestBase):
-
-    # We want to target some hosts for some created instances
-    api_major_version = 'v2.1'
-    ADMIN_API = True
-    microversion = 'latest'
 
     def setUp(self):
         super(VGPUTests, self).setUp()
@@ -327,8 +327,7 @@ class VGPUMultipleTypesTests(VGPUTestBase):
     def test_create_servers_with_vgpu(self):
         self._create_server(
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
-            flavor_id=self.flavor, host=self.compute1.host,
-            expected_state='ACTIVE')
+            flavor_id=self.flavor, networks='auto', host=self.compute1.host)
         mdevs = self.compute1.driver._get_mediated_devices()
         self.assertEqual(1, len(mdevs))
 
@@ -388,8 +387,7 @@ class VGPUMultipleTypesTests(VGPUTestBase):
             # Use the new flavor for booting
             server = self._create_server(
                 image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
-                flavor_id=flavor, host=self.compute1.host,
-                expected_state='ACTIVE')
+                flavor_id=flavor, networks='auto', host=self.compute1.host)
 
             # Get the instance we just created
             inst = objects.Instance.get_by_uuid(self.context, server['id'])

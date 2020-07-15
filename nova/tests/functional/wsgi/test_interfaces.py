@@ -15,10 +15,10 @@
 # under the License.
 
 from nova.tests.functional.api import client
-from nova.tests.functional import test_servers
+from nova.tests.functional import integrated_helpers
 
 
-class InterfaceFullstack(test_servers.ServersTestBase):
+class InterfaceFullstack(integrated_helpers._IntegratedTestBase):
     """Tests for port interfaces command.
 
     Functional Test Scope:

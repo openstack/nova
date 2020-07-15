@@ -30,8 +30,6 @@ class ResizeEvacuateTestCase(integrated_helpers._IntegratedTestBase):
     # Set variables used in the parent class.
     REQUIRES_LOCKING = False
     ADMIN_API = True
-    _image_ref_parameter = 'imageRef'
-    _flavor_ref_parameter = 'flavorRef'
     api_major_version = 'v2.1'
     microversion = '2.11'  # Need at least 2.11 for the force-down API
 

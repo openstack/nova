@@ -16,10 +16,10 @@
 from nova.api import openstack
 from nova.api.openstack import wsgi
 from nova.tests.functional.api import client
-from nova.tests.functional import test_servers
+from nova.tests.functional import integrated_helpers
 
 
-class LegacyV2CompatibleTestBase(test_servers.ServersTestBase):
+class LegacyV2CompatibleTestBase(integrated_helpers._IntegratedTestBase):
     api_major_version = 'v2'
 
     def setUp(self):

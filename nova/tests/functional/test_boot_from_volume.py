@@ -20,12 +20,11 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client as api_client
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.functional import test_servers
 from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import policy_fixture
 
 
-class BootFromVolumeTest(test_servers.ServersTestBase):
+class BootFromVolumeTest(integrated_helpers._IntegratedTestBase):
 
     def _get_hypervisor_stats(self):
         response = self.admin_api.api_get('/os-hypervisors/statistics')

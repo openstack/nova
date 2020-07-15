@@ -22,7 +22,7 @@ import mock
 from nova import conf
 from nova.objects import fields as obj_fields
 from nova.tests import fixtures as nova_fixtures
-from nova.tests.functional import test_servers as base
+from nova.tests.functional import integrated_helpers
 from nova.tests.unit.virt.libvirt import fake_imagebackend
 from nova.tests.unit.virt.libvirt import fakelibvirt
 
@@ -30,7 +30,8 @@ from nova.tests.unit.virt.libvirt import fakelibvirt
 CONF = conf.CONF
 
 
-class ServersTestBase(base.ServersTestBase):
+class ServersTestBase(integrated_helpers._IntegratedTestBase):
+    """A libvirt-specific variant of the integrated test base."""
 
     ADDITIONAL_FILTERS = []
 
