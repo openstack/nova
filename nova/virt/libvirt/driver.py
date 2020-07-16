@@ -10043,6 +10043,26 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         self.unplug_vifs(instance, network_info)
 
+    def _qemu_monitor_announce_self(self, instance):
+        """Send announce_self command to QEMU monitor.
+
+        This is to trigger generation of broadcast RARP frames to
+        update network switches. This is best effort.
+        """
+        if not CONF.workarounds.enable_qemu_monitor_announce_self:
+            return
+
+        LOG.info('Sending announce-self command to QEMU monitor',
+                 instance=instance)
+
+        try:
+            guest = self._host.get_guest(instance)
+            guest.announce_self()
+        except Exception:
+            LOG.warning('Failed to send announce-self command to QEMU monitor',
+                        instance=instance)
+            LOG.exception()
+
     def post_live_migration_at_destination(self, context,
                                            instance,
                                            network_info,
@@ -10058,6 +10078,7 @@ class LibvirtDriver(driver.ComputeDriver):
         :param block_migration: if true, post operation of block_migration.
         """
         self._reattach_instance_vifs(context, instance, network_info)
+        self._qemu_monitor_announce_self(instance)
 
     def _get_instance_disk_info_from_config(self, guest_config,
                                             block_device_info):
