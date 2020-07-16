@@ -241,7 +241,7 @@ Related options:
 """),
     cfg.StrOpt('live_migration_scheme',
                help="""
-URI scheme used for live migration.
+URI scheme for live migration used by the source of live migration traffic.
 
 Override the default libvirt live migration scheme (which is dependent on
 virt_type). If this option is set to None, nova will automatically choose a
@@ -257,7 +257,11 @@ Related options:
 """),
     cfg.HostAddressOpt('live_migration_inbound_addr',
                        help="""
-Target used for live migration traffic.
+IP address used as the live migration address for this host.
+
+This option indicates the IP address which should be used as the target for
+live migration traffic when migrating to this hypervisor. This metadata is then
+used by the source of the live migration traffic to construct a migration URI.
 
 If this option is set to None, the hostname of the migration target compute
 node will be used.
@@ -266,11 +270,6 @@ This option is useful in environments where the live-migration traffic can
 impact the network plane significantly. A separate network for live-migration
 traffic can then use this config option and avoids the impact on the
 management network.
-
-Related options:
-
-* ``live_migration_tunnelled``: The live_migration_inbound_addr value is
-  ignored if tunneling is enabled.
 """),
     cfg.StrOpt('live_migration_uri',
                deprecated_for_removal=True,
@@ -281,11 +280,11 @@ allow to change live migration scheme and target URI: ``live_migration_scheme``
 and ``live_migration_inbound_addr`` respectively.
 """,
                help="""
-Live migration target URI to use.
+Live migration target URI used by the source of live migration traffic.
 
 Override the default libvirt live migration target URI (which is dependent
 on virt_type). Any included "%s" is replaced with the migration target
-hostname.
+hostname, or `live_migration_inbound_addr` if set.
 
 If this option is set to None (which is the default), Nova will automatically
 generate the `live_migration_uri` value based on only 4 supported `virt_type`
@@ -320,11 +319,6 @@ encryption support in the hypervisor. Enabling this option will definitely
 impact performance massively.
 
 Note that this option is NOT compatible with use of block migration.
-
-Related options:
-
-* ``live_migration_inbound_addr``: The live_migration_inbound_addr value is
-  ignored if tunneling is enabled.
 """),
     cfg.IntOpt('live_migration_bandwidth',
                default=0,
