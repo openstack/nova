@@ -48,6 +48,12 @@ if ty.TYPE_CHECKING:
 else:
     libvirt = None
 
+try:
+    import libvirtmod_qemu
+except ImportError:
+    libvirtmod_qemu = None
+
+
 LOG = logging.getLogger(__name__)
 
 VIR_DOMAIN_NOSTATE = 0
@@ -631,6 +637,10 @@ class Guest(object):
     def migrate_start_postcopy(self):
         """Switch running live migration to post-copy mode"""
         self._domain.migrateStartPostCopy()
+
+    def announce_self(self):
+        libvirtmod_qemu.virDomainQemuMonitorCommand(
+            self._domain._o, 'announce_self', 1)
 
     def get_job_info(self):
         """Get job info for the domain
