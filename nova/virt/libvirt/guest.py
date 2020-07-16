@@ -406,14 +406,22 @@ class Guest(object):
             except libvirt.libvirtError as ex:
                 with excutils.save_and_reraise_exception(reraise=False) as ctx:
                     errcode = ex.get_error_code()
+                    # TODO(lyarwood): Remove libvirt.VIR_ERR_OPERATION_FAILED
+                    # and libvirt.VIR_ERR_INTERNAL_ERROR once
+                    # MIN_LIBVIRT_VERSION is >= 4.1.0
                     if errcode in (libvirt.VIR_ERR_OPERATION_FAILED,
-                                   libvirt.VIR_ERR_INTERNAL_ERROR):
+                                   libvirt.VIR_ERR_INTERNAL_ERROR,
+                                   libvirt.VIR_ERR_DEVICE_MISSING):
+                        # TODO(lyarwood): Remove the following error message
+                        # check once we only care about VIR_ERR_DEVICE_MISSING
                         errmsg = ex.get_error_message()
                         if 'not found' in errmsg:
                             # This will be raised if the live domain
                             # detach fails because the device is not found
                             raise exception.DeviceNotFound(
                                 device=alternative_device_name)
+                    # TODO(lyarwood): Remove libvirt.VIR_ERR_INVALID_ARG once
+                    # MIN_LIBVIRT_VERSION is >= 4.1.0
                     elif errcode == libvirt.VIR_ERR_INVALID_ARG:
                         errmsg = ex.get_error_message()
                         if 'no target device' in errmsg:
