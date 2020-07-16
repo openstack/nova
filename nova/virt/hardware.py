@@ -1171,10 +1171,39 @@ def _get_flavor_image_meta(
     flavor_key = ':'.join(['hw', key])
     image_key = '_'.join(['hw', key])
 
-    flavor_policy = flavor.get('extra_specs', {}).get(flavor_key, default)
-    image_policy = image_meta.properties.get(image_key, default)
+    flavor_value = flavor.get('extra_specs', {}).get(flavor_key, default)
+    image_value = image_meta.properties.get(image_key, default)
 
-    return flavor_policy, image_policy
+    return flavor_value, image_value
+
+
+def _get_unique_flavor_image_meta(
+    key: str,
+    flavor: 'objects.Flavor',
+    image_meta: 'objects.ImageMeta',
+    default: ty.Any = None
+) -> ty.Any:
+    """A variant of '_get_flavor_image_meta' that errors out on conflicts."""
+    flavor_value, image_value = _get_flavor_image_meta(
+        key, flavor, image_meta, default,
+    )
+    if image_value and flavor_value and image_value != flavor_value:
+        msg = _(
+            "Flavor %(flavor_name)s has hw:%(key)s extra spec explicitly "
+            "set to %(flavor_val)s, conflicting with image %(image_name)s "
+            "which has hw_%(key)s explicitly set to %(image_val)s."
+        )
+        raise exception.FlavorImageConflict(
+            msg % {
+                'key': key,
+                'flavor_name': flavor.name,
+                'flavor_val': flavor_value,
+                'image_name': image_meta.name,
+                'image_val': image_value,
+            },
+        )
+
+    return flavor_value or image_value
 
 
 def get_mem_encryption_constraint(
@@ -1812,6 +1841,47 @@ def get_pci_numa_policy_constraint(flavor, image_meta):
         raise exception.InvalidPCINUMAAffinity(policy=policy)
 
     return policy
+
+
+def get_vtpm_constraint(
+    flavor: 'objects.Flavor',
+    image_meta: 'objects.ImageMeta',
+) -> ty.Optional[VTPMConfig]:
+    """Validate and return the requested vTPM configuration.
+
+    :param flavor: ``nova.objects.Flavor`` instance
+    :param image_meta: ``nova.objects.ImageMeta`` instance
+    :raises: nova.exception.FlavorImageConflict if a value is specified in both
+        the flavor and the image, but the values do not match
+    :raises: nova.exception.Invalid if a value or combination of values is
+        invalid
+    :returns: A named tuple containing the vTPM version and model, else None.
+    """
+    version = _get_unique_flavor_image_meta('tpm_version', flavor, image_meta)
+    if version is None:
+        return None
+
+    if version not in fields.TPMVersion.ALL:
+        raise exception.Invalid(
+            "Invalid TPM version %(version)r. Allowed values: %(valid)s." %
+            {'version': version, 'valid': ', '.join(fields.TPMVersion.ALL)}
+        )
+
+    model = _get_unique_flavor_image_meta('tpm_model', flavor, image_meta)
+    if model is None:
+        # model defaults to TIS
+        model = fields.TPMModel.TIS
+    elif model not in fields.TPMModel.ALL:
+        raise exception.Invalid(
+            "Invalid TPM model %(model)r. Allowed values: %(valid)s." %
+            {'model': model, 'valid': ', '.join(fields.TPMModel.ALL)}
+        )
+    elif model == fields.TPMModel.CRB and version != fields.TPMVersion.v2_0:
+        raise exception.Invalid(
+            "TPM model CRB is only valid with TPM version 2.0."
+        )
+
+    return VTPMConfig(version, model)
 
 
 def numa_get_constraints(flavor, image_meta):

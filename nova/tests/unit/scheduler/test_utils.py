@@ -1119,6 +1119,56 @@ class TestUtils(TestUtilsBase):
         rr = utils.ResourceRequest(rs)
         self.assertResourceRequestsEqual(expected, rr)
 
+    def test_resource_request_with_vtpm_1_2(self):
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
+            extra_specs={'hw:tpm_version': '1.2', 'hw:tpm_model': 'tpm-tis'},
+        )
+        image = objects.ImageMeta(
+            properties=objects.ImageMetaProps(
+                hw_tpm_version='1.2',
+                hw_tpm_model='tpm-tis',
+            )
+        )
+        expected = FakeResourceRequest()
+        expected._rg_by_id[None] = objects.RequestGroup(
+            use_same_provider=False,
+            required_traits={'COMPUTE_SECURITY_TPM_1_2'},
+            resources={
+                'VCPU': 1,
+                'MEMORY_MB': 1024,
+                'DISK_GB': 15,
+            },
+        )
+        rs = objects.RequestSpec(flavor=flavor, image=image, is_bfv=False)
+        rr = utils.ResourceRequest(rs)
+        self.assertResourceRequestsEqual(expected, rr)
+
+    def test_resource_request_with_vtpm_2_0(self):
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
+            extra_specs={'hw:tpm_version': '2.0', 'hw:tpm_model': 'tpm-crb'},
+        )
+        image = objects.ImageMeta(
+            properties=objects.ImageMetaProps(
+                hw_tpm_version='2.0',
+                hw_tpm_model='tpm-crb',
+            )
+        )
+        expected = FakeResourceRequest()
+        expected._rg_by_id[None] = objects.RequestGroup(
+            use_same_provider=False,
+            required_traits={'COMPUTE_SECURITY_TPM_2_0'},
+            resources={
+                'VCPU': 1,
+                'MEMORY_MB': 1024,
+                'DISK_GB': 15,
+            },
+        )
+        rs = objects.RequestSpec(flavor=flavor, image=image, is_bfv=False)
+        rr = utils.ResourceRequest(rs)
+        self.assertResourceRequestsEqual(expected, rr)
+
     def test_resource_request_add_group_inserts_the_group(self):
         flavor = objects.Flavor(
             vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0)

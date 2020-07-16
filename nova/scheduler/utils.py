@@ -167,6 +167,8 @@ class ResourceRequest(object):
 
         self._translate_vpmems_request(request_spec.flavor)
 
+        self._translate_vtpm_request(request_spec.flavor, image)
+
         self.strip_zeros()
 
     def _process_requested_resources(self, request_spec):
@@ -212,6 +214,20 @@ class ResourceRequest(object):
             # unsuffixed request group, granular request groups are not
             # supported in image traits
             self._add_trait(None, trait, "required")
+
+    def _translate_vtpm_request(self, flavor, image):
+        vtpm_config = hardware.get_vtpm_constraint(flavor, image)
+        if not vtpm_config:
+            return
+
+        # Require the appropriate vTPM version support trait on a host.
+        if vtpm_config.version == obj_fields.TPMVersion.v1_2:
+            trait = os_traits.COMPUTE_SECURITY_TPM_1_2
+        else:
+            trait = os_traits.COMPUTE_SECURITY_TPM_2_0
+
+        self._add_trait(None, trait, "required")
+        LOG.debug("Requiring emulated TPM support via trait %s.", trait)
 
     def _translate_memory_encryption(self, flavor, image):
         """When the hw:mem_encryption extra spec or the hw_mem_encryption
