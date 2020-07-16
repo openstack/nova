@@ -1944,9 +1944,6 @@ def numa_get_constraints(flavor, image_meta):
         # 'dedicated' policy.
         if dedicated_cpus:
             raise exception.RequiredMixedInstancePolicy()
-        # But for an instance with 'dedicated' CPU allocation policy, all
-        # CPUs are 'dedicated' CPUs, which is 1:1 pinned to a host CPU.
-        dedicated_cpus = set(range(flavor.vcpus))
     else:  # MIXED
         # FIXME(huaqiang): So far, 'mixed' instance is not supported
         # and the 'dedicated_cpus' variable is set to 'None' due to being not
@@ -1960,7 +1957,13 @@ def numa_get_constraints(flavor, image_meta):
     pagesize = _get_numa_pagesize_constraint(flavor, image_meta)
     vpmems = get_vpmems(flavor)
 
+    # If 'hw:cpu_dedicated_mask' is not found in flavor extra specs, the
+    # 'dedicated_cpus' variable is None, while we hope it being an empty set.
     dedicated_cpus = dedicated_cpus or set()
+    if cpu_policy == fields.CPUAllocationPolicy.DEDICATED:
+        # But for an instance with 'dedicated' CPU allocation policy, all
+        # CPUs are 'dedicated' CPUs, which is 1:1 pinned to a host CPU.
+        dedicated_cpus = set(range(flavor.vcpus))
 
     # NOTE(stephenfin): There are currently four things that will configure a
     # NUMA topology for an instance:
