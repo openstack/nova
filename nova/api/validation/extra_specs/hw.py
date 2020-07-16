@@ -63,14 +63,17 @@ cpu_policy_validators = [
             'CPUs can run on. If ``shared`` (default), guest CPUs can be '
             'overallocated but cannot float across host cores. If '
             '``dedicated``, guest CPUs cannot be overallocated but are '
-            'individually pinned to their own host core.'
+            'individually pinned to their own host core. ``mixed`` is a '
+            'policy with which the guest is mixing the overallocated and '
+            'pinned guest CPUs.'
         ),
         value={
             'type': str,
             'description': 'The CPU policy.',
             'enum': [
                 'dedicated',
-                'shared'
+                'shared',
+                'mixed',
             ],
         },
     ),

@@ -1505,8 +1505,15 @@ def get_cpu_policy_constraint(
 
     if flavor_policy == fields.CPUAllocationPolicy.DEDICATED:
         cpu_policy = flavor_policy
-    elif flavor_policy == fields.CPUAllocationPolicy.SHARED:
+    elif flavor_policy == fields.CPUAllocationPolicy.MIXED:
         if image_policy == fields.CPUAllocationPolicy.DEDICATED:
+            raise exception.ImageCPUPinningForbidden()
+        cpu_policy = flavor_policy
+    elif flavor_policy == fields.CPUAllocationPolicy.SHARED:
+        if image_policy in (
+            fields.CPUAllocationPolicy.MIXED,
+            fields.CPUAllocationPolicy.DEDICATED,
+        ):
             raise exception.ImageCPUPinningForbidden()
         cpu_policy = flavor_policy
     elif image_policy in fields.CPUAllocationPolicy.ALL:
@@ -1694,6 +1701,21 @@ def _get_hyperthreading_trait(
 
 
 # NOTE(stephenfin): This must be public as it's used elsewhere
+# TODO(Huaqiang): To be filled with the logic of parsing
+# 'hw:cpu_dedicated_mask' and relevant test cases in later patches once the
+# code is ready to build up an instance in 'mixed' CPU allocation policy.
+def get_dedicated_cpu_constraint(
+    flavor: 'objects.Flavor',
+) -> ty.Optional[ty.Set[int]]:
+    """Validate and return the requested dedicated CPU mask.
+
+    :param flavor: ``nova.objects.Flavor`` instance
+    :returns: The dedicated CPUs requested, else None.
+    """
+    return None
+
+
+# NOTE(stephenfin): This must be public as it's used elsewhere
 def get_realtime_cpu_constraint(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',
@@ -1833,12 +1855,18 @@ def numa_get_constraints(flavor, image_meta):
              with invalid value in image or flavor.
     :raises: exception.InvalidRequest if there is a conflict between explicitly
              and implicitly requested resources of hyperthreading traits
+    :raises: exception.RequiredMixedInstancePolicy if dedicated CPU mask is
+             provided in flavor while CPU policy is not 'mixed'.
+    :raises: exception.RequiredMixedOrRealtimeCPUMask the mixed policy instance
+             dedicated CPU mask can only be specified through either
+             'hw:cpu_realtime_mask' or 'hw:cpu_dedicated_mask', not both.
     :returns: objects.InstanceNUMATopology, or None
     """
 
     cpu_policy = get_cpu_policy_constraint(flavor, image_meta)
     cpu_thread_policy = get_cpu_thread_policy_constraint(flavor, image_meta)
     rt_mask = get_realtime_cpu_constraint(flavor, image_meta)
+    dedicated_cpus = get_dedicated_cpu_constraint(flavor)
     emu_threads_policy = get_emulator_thread_policy_constraint(flavor)
 
     # handle explicit VCPU/PCPU resource requests and the HW_CPU_HYPERTHREADING
@@ -1904,12 +1932,35 @@ def numa_get_constraints(flavor, image_meta):
         if emu_threads_policy == fields.CPUEmulatorThreadsPolicy.ISOLATE:
             raise exception.BadRequirementEmulatorThreadsPolicy()
 
+        # 'hw:cpu_dedicated_mask' should not be defined in a flavor with
+        # 'shared' policy.
+        if dedicated_cpus:
+            raise exception.RequiredMixedInstancePolicy()
+
         if rt_mask:
             raise exception.RealtimeConfigurationInvalid()
+    elif cpu_policy == fields.CPUAllocationPolicy.DEDICATED:
+        # 'hw:cpu_dedicated_mask' should not be defined in a flavor with
+        # 'dedicated' policy.
+        if dedicated_cpus:
+            raise exception.RequiredMixedInstancePolicy()
+        # But for an instance with 'dedicated' CPU allocation policy, all
+        # CPUs are 'dedicated' CPUs, which is 1:1 pinned to a host CPU.
+        dedicated_cpus = set(range(flavor.vcpus))
+    else:  # MIXED
+        # FIXME(huaqiang): So far, 'mixed' instance is not supported
+        # and the 'dedicated_cpus' variable is set to 'None' due to being not
+        # ready to parse 'hw:cpu_dedicated_mask'.
+        # The logic of parsing 'hw:cpu_dedicated_mask' should be added once
+        # the code is ready for setting up an 'mixed' instance.
+        if dedicated_cpus is None:
+            raise exception.RequiredMixedOrRealtimeCPUMask()
 
     nodes = _get_numa_node_count_constraint(flavor, image_meta)
     pagesize = _get_numa_pagesize_constraint(flavor, image_meta)
     vpmems = get_vpmems(flavor)
+
+    dedicated_cpus = dedicated_cpus or set()
 
     # NOTE(stephenfin): There are currently four things that will configure a
     # NUMA topology for an instance:
@@ -1920,14 +1971,13 @@ def numa_get_constraints(flavor, image_meta):
     # - The use of vPMEM
     if nodes or pagesize or vpmems or cpu_policy in (
         fields.CPUAllocationPolicy.DEDICATED,
+        fields.CPUAllocationPolicy.MIXED,
     ):
         # NOTE(huaqiang): Here we build the instance dedicated CPU set and the
         # shared CPU set, through 'pcpus' and 'vcpus' respectively,
         # which will be used later to calculate the per-NUMA-cell CPU set.
         cpus = set(range(flavor.vcpus))
-        pcpus = set()
-        if cpu_policy == fields.CPUAllocationPolicy.DEDICATED:
-            pcpus = cpus
+        pcpus = dedicated_cpus
         vcpus = cpus - pcpus
 
         nodes = nodes or 1

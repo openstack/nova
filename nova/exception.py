@@ -2318,3 +2318,14 @@ class AcceleratorRequestOpFailed(NovaException):
 
 class InvalidLibvirtGPUConfig(NovaException):
     msg_fmt = _('Invalid configuration for GPU devices: %(reason)s')
+
+
+class RequiredMixedInstancePolicy(Invalid):
+    msg_fmt = _("Cannot specify 'hw:cpu_dedicated_mask' without the "
+                "'mixed' policy.")
+
+
+class RequiredMixedOrRealtimeCPUMask(Invalid):
+    msg_fmt = _("Must specify either 'hw:cpu_dedicated_mask' or "
+                "'hw:cpu_realtime_mask' when using 'mixed' CPU policy"
+                " instance.")

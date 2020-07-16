@@ -120,7 +120,8 @@ class ImageMetaPropsPayload(base.NotificationPayloadBase):
     # Version 1.1: Added 'gop', 'virtio' and  'none' to hw_video_model field
     # Version 1.2: Added hw_pci_numa_affinity_policy field
     # Version 1.3: Added hw_mem_encryption, hw_pmu and hw_time_hpet fields
-    VERSION = '1.3'
+    # Version 1.4: Added 'mixed' to hw_cpu_policy field
+    VERSION = '1.4'
 
     SCHEMA = {
         k: ('image_meta_props', k) for k in image_meta.ImageMetaProps.fields}

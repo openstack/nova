@@ -69,6 +69,7 @@ class TestValidators(test.NoDBTestCase):
             ('hw:cpu_thread_policy', 'prefer'),
             ('hw:emulator_threads_policy', 'isolate'),
             ('hw:pci_numa_affinity_policy', 'legacy'),
+            ('hw:cpu_policy', 'mixed'),
         )
         for key, value in valid_specs:
             validators.validate(key, value)

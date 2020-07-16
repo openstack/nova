@@ -272,8 +272,9 @@ class CPUAllocationPolicy(BaseNovaEnum):
 
     DEDICATED = "dedicated"
     SHARED = "shared"
+    MIXED = "mixed"
 
-    ALL = (DEDICATED, SHARED)
+    ALL = (DEDICATED, SHARED, MIXED)
 
 
 class CPUThreadAllocationPolicy(BaseNovaEnum):
