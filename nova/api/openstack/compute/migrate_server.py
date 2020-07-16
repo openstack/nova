@@ -78,9 +78,12 @@ class MigrateServerController(wsgi.Controller):
         except (exception.TooManyInstances, exception.QuotaError,
                 exception.ForbiddenWithAccelerators) as e:
             raise exc.HTTPForbidden(explanation=e.format_message())
-        except (exception.InstanceIsLocked,
-                exception.InstanceNotReady,
-                exception.ServiceUnavailable) as e:
+        except (
+            exception.InstanceIsLocked,
+            exception.InstanceNotReady,
+            exception.OperationNotSupportedForVTPM,
+            exception.ServiceUnavailable,
+        ) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
@@ -169,7 +172,10 @@ class MigrateServerController(wsgi.Controller):
                               "'%(ex)s'", {'ex': ex})
             else:
                 raise exc.HTTPBadRequest(explanation=ex.format_message())
-        except exception.OperationNotSupportedForSEV as e:
+        except (
+            exception.OperationNotSupportedForSEV,
+            exception.OperationNotSupportedForVTPM,
+        ) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())

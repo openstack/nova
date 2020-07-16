@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import ddt
 import fixtures
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
@@ -48,6 +49,7 @@ class MockSetAdminPassword(object):
         self.password = password
 
 
+@ddt.ddt
 class ServerActionsControllerTestV21(test.TestCase):
     image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
     image_base_url = 'http://localhost:9292/images/'
@@ -69,6 +71,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         fakes.stub_out_compute_api_snapshot(self)
         fake.stub_out_image_service(self)
         self.flags(enable_instance_password=True, group='api')
+        # TODO(stephenfin): Use uuidsentinel instead of this
         self._image_href = '155d900f-4e14-4e4c-a73d-069cbf4541e6'
 
         self.controller = self._get_controller()
@@ -87,7 +90,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.image_api = glance.API()
         # Assume that anything that hits the compute API and looks for a
         # RequestSpec doesn't care about it, since testing logic that deep
-        # should be done in nova.tests.unit.compute.test_compute_api.
+        # should be done in nova.tests.unit.compute.test_api.
         mock_reqspec = mock.patch('nova.objects.RequestSpec')
         mock_reqspec.start()
         self.addCleanup(mock_reqspec.stop)
@@ -379,12 +382,22 @@ class ServerActionsControllerTestV21(test.TestCase):
         # pep3333 requires applications produces headers which are str
         self.assertEqual(str, type(robj['location']))
 
+    @ddt.data(
+        exception.InstanceIsLocked(instance_uuid=uuids.instance),
+        exception.OperationNotSupportedForVTPM(
+            instance_uuid=uuids.instance, operation='foo'),
+    )
+    @mock.patch('nova.compute.api.API.rebuild')
+    def test_rebuild__http_conflict_error(self, exc, mock_rebuild):
+        mock_rebuild.side_effect = exc
+        self.assertRaises(
+            webob.exc.HTTPConflict,
+            self.controller._action_rebuild,
+            self.req, uuids.instance,
+            body={'rebuild': {'imageRef': uuids.image}})
+
     def test_rebuild_raises_conflict_on_invalid_state(self):
-        body = {
-            "rebuild": {
-                "imageRef": self._image_href,
-            },
-        }
+        body = {'rebuild': {'imageRef': uuids.image}}
 
         def fake_rebuild(*args, **kwargs):
             raise exception.InstanceInvalidState(attr='fake_attr',
@@ -842,6 +855,17 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_resize,
                           self.req, FAKE_UUID, body=body)
+
+    @mock.patch('nova.compute.api.API.resize')
+    def test_resize__vtpm_rejected(self, mock_resize):
+        """Test that 'OperationNotSupportedForVTPM' exception is translated."""
+        mock_resize.side_effect = exception.OperationNotSupportedForVTPM(
+            instance_uuid=uuids.instance, operation='foo')
+        body = {'resize': {'flavorRef': 'http://localhost/3'}}
+        self.assertRaises(
+            webob.exc.HTTPConflict,
+            self.controller._action_resize,
+            self.req, FAKE_UUID, body=body)
 
     def test_confirm_resize_server(self):
         body = dict(confirmResize=None)

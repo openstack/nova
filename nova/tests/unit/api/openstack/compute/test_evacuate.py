@@ -112,6 +112,14 @@ class EvacuateTestV21(test.NoDBTestCase):
                                       'adminPass': 'MyNewPass'},
                                      uuid='BAD_UUID')
 
+    @mock.patch('nova.compute.api.API.evacuate')
+    def test_evacuate__with_vtpm(self, mock_evacuate):
+        mock_evacuate.side_effect = exception.OperationNotSupportedForVTPM(
+            instance_uuid=uuids.instance, operation='foo')
+        self._check_evacuate_failure(
+            webob.exc.HTTPConflict,
+            {'host': 'foo', 'onSharedStorage': 'False', 'adminPass': 'bar'})
+
     def test_evacuate_with_active_service(self):
         def fake_evacuate(*args, **kwargs):
             raise exception.ComputeServiceInUse("Service still in use")

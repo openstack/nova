@@ -63,19 +63,20 @@ class RescueController(wsgi.Controller):
                                     rescue_password=password,
                                     rescue_image_ref=rescue_image_ref,
                                     allow_bfv_rescue=allow_bfv_rescue)
-        except exception.InstanceIsLocked as e:
+        except (
+            exception.InstanceIsLocked,
+            exception.OperationNotSupportedForVTPM,
+            exception.InvalidVolume,
+        ) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
-        except exception.InstanceInvalidState as state_error:
-            common.raise_http_conflict_for_instance_invalid_state(state_error,
-                                                                  'rescue', id)
-        except exception.InvalidVolume as volume_error:
-            raise exc.HTTPConflict(explanation=volume_error.format_message())
+        except exception.InstanceInvalidState as e:
+            common.raise_http_conflict_for_instance_invalid_state(
+                e, 'rescue', id)
         except (
             exception.InstanceNotRescuable,
             exception.UnsupportedRescueImage,
-        ) as non_rescuable:
-            raise exc.HTTPBadRequest(
-                explanation=non_rescuable.format_message())
+        ) as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
 
         if CONF.api.enable_instance_password:
             return {'adminPass': password}

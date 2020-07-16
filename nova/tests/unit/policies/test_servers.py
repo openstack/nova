@@ -1218,6 +1218,9 @@ class ServersPolicyTest(base.BasePolicyTest):
                                  self.controller.create,
                                  req, body=body)
 
+    @mock.patch(
+        'nova.objects.Instance.image_meta',
+        new=objects.ImageMeta.from_dict({}))
     @mock.patch('nova.compute.api.API._check_requested_networks')
     @mock.patch('nova.compute.api.API._allow_resize_to_same_host')
     @mock.patch('nova.objects.RequestSpec.get_by_instance_uuid')

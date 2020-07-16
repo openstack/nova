@@ -229,18 +229,38 @@ def check_instance_lock(function):
 
 
 def reject_sev_instances(operation):
-    """Decorator.  Raise OperationNotSupportedForSEV if instance has SEV
-    enabled.
+    """Reject requests to decorated function if instance has SEV enabled.
+
+    Raise OperationNotSupportedForSEV if instance has SEV enabled.
     """
 
     def outer(f):
-        @six.wraps(f)
+        @functools.wraps(f)
         def inner(self, context, instance, *args, **kw):
             if hardware.get_mem_encryption_constraint(instance.flavor,
                                                       instance.image_meta):
                 raise exception.OperationNotSupportedForSEV(
                     instance_uuid=instance.uuid,
                     operation=operation)
+            return f(self, context, instance, *args, **kw)
+        return inner
+    return outer
+
+
+def reject_vtpm_instances(operation):
+    """Reject requests to decorated function if instance has vTPM enabled.
+
+    Raise OperationNotSupportedForVTPM if instance has vTPM enabled.
+    """
+
+    def outer(f):
+        @functools.wraps(f)
+        def inner(self, context, instance, *args, **kw):
+            if hardware.get_vtpm_constraint(
+                instance.flavor, instance.image_meta,
+            ):
+                raise exception.OperationNotSupportedForVTPM(
+                    instance_uuid=instance.uuid, operation=operation)
             return f(self, context, instance, *args, **kw)
         return inner
     return outer
@@ -3372,6 +3392,7 @@ class API(base.Base):
             if img_arch:
                 fields_obj.Architecture.canonicalize(img_arch)
 
+    @reject_vtpm_instances(instance_actions.REBUILD)
     @block_accelerators
     # TODO(stephenfin): We should expand kwargs out to named args
     @check_instance_lock
@@ -3868,6 +3889,10 @@ class API(base.Base):
 
         return node
 
+    # TODO(stephenfin): This logic would be so much easier to grok if we
+    # finally split resize and cold migration into separate code paths
+    # TODO(stephenfin): The 'block_accelerators' decorator doesn't take into
+    # account the accelerators requested in the new flavor
     @block_accelerators
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
@@ -3931,6 +3956,31 @@ class API(base.Base):
 
         if same_instance_type and flavor_id:
             raise exception.CannotResizeToSameFlavor()
+
+        # NOTE(stephenfin): We use this instead of the 'reject_vtpm_instances'
+        # decorator since the operation can differ depending on args, and for
+        # resize we have two flavors to worry about
+        if same_instance_type:
+            if hardware.get_vtpm_constraint(
+                current_instance_type, instance.image_meta,
+            ):
+                raise exception.OperationNotSupportedForVTPM(
+                    instance_uuid=instance.uuid,
+                    operation=instance_actions.MIGRATE)
+        else:
+            if hardware.get_vtpm_constraint(
+                current_instance_type, instance.image_meta,
+            ):
+                raise exception.OperationNotSupportedForVTPM(
+                    instance_uuid=instance.uuid,
+                    operation=instance_actions.RESIZE)
+
+            if hardware.get_vtpm_constraint(
+                new_instance_type, instance.image_meta,
+            ):
+                raise exception.OperationNotSupportedForVTPM(
+                    instance_uuid=instance.uuid,
+                    operation=instance_actions.RESIZE)
 
         # ensure there is sufficient headroom for upsizes
         if flavor_id:
@@ -4071,6 +4121,7 @@ class API(base.Base):
             allow_same_host = CONF.allow_resize_to_same_host
         return allow_same_host
 
+    @reject_vtpm_instances(instance_actions.SHELVE)
     @block_accelerators
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
@@ -4256,6 +4307,7 @@ class API(base.Base):
         self._record_action_start(context, instance, instance_actions.RESUME)
         self.compute_rpcapi.resume_instance(context, instance)
 
+    @reject_vtpm_instances(instance_actions.RESCUE)
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.ERROR])
@@ -4940,6 +4992,7 @@ class API(base.Base):
         return _metadata
 
     @block_accelerators
+    @reject_vtpm_instances(instance_actions.LIVE_MIGRATION)
     @reject_sev_instances(instance_actions.LIVE_MIGRATION)
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED])
@@ -5069,6 +5122,7 @@ class API(base.Base):
         self.compute_rpcapi.live_migration_abort(context,
                 instance, migration.id)
 
+    @reject_vtpm_instances(instance_actions.EVACUATE)
     @block_accelerators
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.ERROR])

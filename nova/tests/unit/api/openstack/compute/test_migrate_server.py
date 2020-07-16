@@ -138,6 +138,11 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
                                               allowed=0)
         self._test_migrate_exception(exc_info, webob.exc.HTTPForbidden)
 
+    def test_migrate_vtpm_not_supported(self):
+        exc_info = exception.OperationNotSupportedForVTPM(
+            instance_uuid=uuids.instance, operation='foo')
+        self._test_migrate_exception(exc_info, webob.exc.HTTPConflict)
+
     def _test_migrate_live_succeeded(self, param):
         instance = self._stub_instance_get()
 
@@ -281,6 +286,13 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
         self._test_migrate_live_failed_with_exception(
             exception.InstanceInvalidState(
                 instance_uuid='', state='', attr='', method=''),
+            expected_exc=webob.exc.HTTPConflict,
+            check_response=False)
+
+    def test_migrate_live_vtpm_not_supported(self):
+        self._test_migrate_live_failed_with_exception(
+            exception.OperationNotSupportedForVTPM(
+                instance_uuid=uuids.instance, operation='foo'),
             expected_exc=webob.exc.HTTPConflict,
             check_response=False)
 
@@ -601,8 +613,10 @@ class MigrateServerTestsV268(MigrateServerTestsV256):
 
     @mock.patch('nova.virt.hardware.get_mem_encryption_constraint',
                 new=mock.Mock(return_value=True))
-    @mock.patch.object(objects.instance.Instance, 'image_meta')
-    def test_live_migrate_sev_rejected(self, mock_image):
+    @mock.patch.object(
+        objects.instance.Instance, 'image_meta',
+        new=objects.ImageMeta.from_dict({}))
+    def test_live_migrate_sev_rejected(self):
         instance = self._stub_instance_get()
         body = {'os-migrateLive': {'host': 'hostname',
                                    'block_migration': 'auto'}}

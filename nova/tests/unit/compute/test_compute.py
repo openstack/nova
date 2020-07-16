@@ -9056,7 +9056,6 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_rebuild_in_error_not_launched(self):
         instance = self._create_fake_instance_obj(params={'image_ref': ''})
-        flavor = instance.flavor
         self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
                       self.fake_show)
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
@@ -9066,8 +9065,7 @@ class ComputeAPITestCase(BaseTestCase):
                            {"vm_state": vm_states.ERROR,
                             "launched_at": None})
 
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        instance['flavor'] = flavor
+        instance = objects.Instance.get_by_uuid(self.context, instance.uuid)
 
         self.assertRaises(exception.InstanceInvalidState,
                           self.compute_api.rebuild,

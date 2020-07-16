@@ -258,7 +258,7 @@ class ControllerTest(test.TestCase):
         self.ips_controller = ips.IPsController()
         # Assume that anything that hits the compute API and looks for a
         # RequestSpec doesn't care about it, since testing logic that deep
-        # should be done in nova.tests.unit.compute.test_compute_api.
+        # should be done in nova.tests.unit.compute.test_api.
         mock_reqspec = mock.patch('nova.objects.RequestSpec')
         mock_reqspec.start()
         self.addCleanup(mock_reqspec.stop)

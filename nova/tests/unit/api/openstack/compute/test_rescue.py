@@ -13,9 +13,10 @@
 #   under the License.
 
 import mock
-import webob
 
+import ddt
 from oslo_utils.fixture import uuidsentinel as uuids
+import webob
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack.compute import rescue as rescue_v21
@@ -44,6 +45,7 @@ def fake_compute_get(*args, **kwargs):
                                            uuid=UUID, **kwargs)
 
 
+@ddt.ddt
 class RescueTestV21(test.NoDBTestCase):
 
     image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
@@ -63,11 +65,16 @@ class RescueTestV21(test.NoDBTestCase):
     def _allow_bfv_rescue(self):
         return api_version_request.is_supported(self.fake_req, '2.87')
 
-    @mock.patch.object(compute.api.API, "rescue")
-    def test_rescue_from_locked_server(self, mock_rescue):
-        mock_rescue.side_effect = exception.InstanceIsLocked(
-            instance_uuid=UUID)
-
+    @ddt.data(
+        exception.InstanceIsLocked(instance_uuid=uuids.instance),
+        exception.OperationNotSupportedForVTPM(
+            instance_uuid=uuids.instance, operation='foo'),
+        exception.InvalidVolume(reason='foo'),
+    )
+    @mock.patch.object(compute.api.API, 'rescue')
+    def test_rescue__http_conflict_error(self, exc, mock_rescue):
+        """Test that exceptions are translated into HTTP Conflict errors."""
+        mock_rescue.side_effect = exc
         body = {"rescue": {"adminPass": "AABBCC112233"}}
         self.assertRaises(webob.exc.HTTPConflict,
                           self.controller._rescue,

@@ -533,6 +533,12 @@ class OperationNotSupportedForSEV(NovaException):
     code = 409
 
 
+class OperationNotSupportedForVTPM(NovaException):
+    msg_fmt = _("Operation '%(operation)s' not supported for vTPM-enabled "
+                "instance (%(instance_uuid)s).")
+    code = 409
+
+
 class InvalidHypervisorType(Invalid):
     msg_fmt = _("The supplied hypervisor type of is invalid.")
 

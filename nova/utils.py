@@ -537,6 +537,8 @@ def instance_meta(instance):
         return metadata_to_dict(instance['metadata'])
 
 
+# TODO(stephenfin): Instance.system_metadata is always a dict now (thanks,
+# o.vo) so this check (and the function as a whole) can be removed
 def instance_sys_meta(instance):
     if not instance.get('system_metadata'):
         return {}

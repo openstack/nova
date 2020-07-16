@@ -51,8 +51,11 @@ class ShelveController(wsgi.Controller):
                             'project_id': instance.project_id})
         try:
             self.compute_api.shelve(context, instance)
-        except (exception.InstanceIsLocked,
-                exception.UnexpectedTaskStateError) as e:
+        except (
+            exception.InstanceIsLocked,
+            exception.OperationNotSupportedForVTPM,
+            exception.UnexpectedTaskStateError,
+        ) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
