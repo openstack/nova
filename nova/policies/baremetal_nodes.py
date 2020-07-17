@@ -23,13 +23,13 @@ BASE_POLICY_NAME = 'os_compute_api:os-baremetal-nodes'
 
 baremetal_nodes_policies = [
     policy.DocumentedRuleDefault(
-        BASE_POLICY_NAME,
-        base.RULE_ADMIN_API,
-        """List and show details of bare metal nodes.
+        name=BASE_POLICY_NAME,
+        check_str=base.RULE_ADMIN_API,
+        description="""List and show details of bare metal nodes.
 
 These APIs are proxy calls to the Ironic service and are deprecated.
 """,
-        [
+        operations=[
             {
                 'method': 'GET',
                 'path': '/os-baremetal-nodes'
@@ -38,7 +38,8 @@ These APIs are proxy calls to the Ironic service and are deprecated.
                 'method': 'GET',
                 'path': '/os-baremetal-nodes/{node_id}'
             }
-        ]),
+        ],
+        scope_types=['system']),
 ]
 
 
