@@ -121,6 +121,7 @@ from nova.virt.libvirt.storage import lvm
 from nova.virt.libvirt.storage import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import vif as libvirt_vif
+from nova.virt.libvirt.volume import fs as fs_drivers
 from nova.virt.libvirt.volume import volume as volume_drivers
 
 
@@ -9148,6 +9149,20 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         # Assert that the os-brick encryptors are attached
         mock_encryptor.attach_volume.assert_called_once_with(
             self.context, **encryption)
+
+    def test_should_disconnect_target_multi_attach_filesystem_driver(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        volume_driver = mock.MagicMock(
+            spec=fs_drivers.LibvirtMountedFileSystemVolumeDriver)
+        self.assertTrue(drvr._should_disconnect_target(
+            self.context, None, True, volume_driver, None))
+
+    def test_should_disconnect_target_single_attach_filesystem_driver(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        volume_driver = mock.MagicMock(
+            spec=fs_drivers.LibvirtMountedFileSystemVolumeDriver)
+        self.assertTrue(drvr._should_disconnect_target(
+            self.context, None, False, volume_driver, None))
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_volume_encryption')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_volume_encryptor')

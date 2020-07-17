@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    `Bug #1888022 <https://launchpad.net/bugs/1888022>`_:
+    An issue that prevented detach of multi-attached fs-based volumes
+    is resolved.
