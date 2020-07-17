@@ -85,15 +85,13 @@ from nova.volume import cinder
 
 LOG = logging.getLogger(__name__)
 
-get_notifier = functools.partial(rpc.get_notifier, service='compute')
 # NOTE(gibi): legacy notification used compute as a service but these
 # calls still run on the client side of the compute service which is
 # nova-api. By setting the binary to nova-api below, we can make sure
 # that the new versioned notifications has the right publisher_id but the
 # legacy notifications does not change.
-wrap_exception = functools.partial(exception_wrapper.wrap_exception,
-                                   get_notifier=get_notifier,
-                                   binary='nova-api')
+wrap_exception = functools.partial(
+    exception_wrapper.wrap_exception, service='compute', binary='nova-api')
 CONF = nova.conf.CONF
 
 AGGREGATE_ACTION_UPDATE = 'Update'
@@ -328,7 +326,7 @@ class API(base.Base):
         self.compute_task_api = conductor.ComputeTaskAPI()
         self.servicegroup_api = servicegroup.API()
         self.host_api = HostAPI(self.compute_rpcapi, self.servicegroup_api)
-        self.notifier = rpc.get_notifier('compute', CONF.host)
+        self.notifier = rpc.get_notifier('compute')
         if CONF.ephemeral_storage_encryption.enabled:
             self.key_manager = key_manager.API()
         # Help us to record host in EventReporter
@@ -6326,10 +6324,12 @@ class AggregateAPI(base.Base):
 class KeypairAPI(base.Base):
     """Subset of the Compute Manager API for managing key pairs."""
 
-    get_notifier = functools.partial(rpc.get_notifier, service='api')
-    wrap_exception = functools.partial(exception_wrapper.wrap_exception,
-                                       get_notifier=get_notifier,
-                                       binary='nova-api')
+    wrap_exception = functools.partial(
+        exception_wrapper.wrap_exception, service='api', binary='nova-api')
+
+    def __init__(self):
+        super().__init__()
+        self.notifier = rpc.get_notifier('api')
 
     def _notify(self, context, event_suffix, keypair_name):
         payload = {
@@ -6337,8 +6337,7 @@ class KeypairAPI(base.Base):
             'user_id': context.user_id,
             'key_name': keypair_name,
         }
-        notify = self.get_notifier()
-        notify.info(context, 'keypair.%s' % event_suffix, payload)
+        self.notifier.info(context, 'keypair.%s' % event_suffix, payload)
 
     def _validate_new_key_pair(self, context, user_id, key_name, key_type):
         safe_chars = "_- " + string.digits + string.ascii_letters

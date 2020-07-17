@@ -227,12 +227,11 @@ def get_server(target, endpoints, serializer=None):
                                     access_policy=access_policy)
 
 
-def get_notifier(service, host=None, publisher_id=None):
+def get_notifier(service, host=None):
     assert LEGACY_NOTIFIER is not None
-    if not publisher_id:
-        publisher_id = "%s.%s" % (service, host or CONF.host)
+    publisher_id = '%s.%s' % (service, host or CONF.host)
     return LegacyValidatingNotifier(
-            LEGACY_NOTIFIER.prepare(publisher_id=publisher_id))
+        LEGACY_NOTIFIER.prepare(publisher_id=publisher_id))
 
 
 def get_versioned_notifier(publisher_id):

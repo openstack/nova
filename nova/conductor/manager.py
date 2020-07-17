@@ -244,7 +244,7 @@ class ComputeTaskManager(base.Base):
         self.servicegroup_api = servicegroup.API()
         self.query_client = query.SchedulerQueryClient()
         self.report_client = report.SchedulerReportClient()
-        self.notifier = rpc.get_notifier('compute', CONF.host)
+        self.notifier = rpc.get_notifier('compute')
         # Help us to record host in EventReporter
         self.host = CONF.host
 

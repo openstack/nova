@@ -12,11 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import functools
-
 from nova import context
 from nova import exception_wrapper
-from nova import rpc
 from nova import test
 from nova.tests.unit import fake_notifier
 
@@ -30,10 +27,7 @@ class FakeVersionedNotifierTestCase(test.NoDBTestCase):
 
         self.context = context.RequestContext()
 
-    _get_notifier = functools.partial(rpc.get_notifier, 'compute')
-
-    @exception_wrapper.wrap_exception(get_notifier=_get_notifier,
-                                      binary='nova-compute')
+    @exception_wrapper.wrap_exception(service='compute', binary='nova-compute')
     def _raise_exception(self, context):
         raise test.TestingException
 

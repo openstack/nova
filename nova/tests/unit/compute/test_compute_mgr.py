@@ -7131,14 +7131,19 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_succeeded.assert_not_called()
 
     @mock.patch.object(manager.ComputeManager, '_do_build_and_run_instance')
-    @mock.patch('nova.exception_wrapper._emit_exception_notification')
-    @mock.patch('nova.compute.utils.add_instance_fault_from_exc')
+    @mock.patch(
+        'nova.exception_wrapper._emit_versioned_exception_notification',
+        new=mock.Mock())
+    @mock.patch(
+        'nova.exception_wrapper._emit_legacy_exception_notification',
+        new=mock.Mock())
+    @mock.patch(
+        'nova.compute.utils.add_instance_fault_from_exc', new=mock.Mock())
     @mock.patch.object(manager.ComputeManager, '_build_failed')
     @mock.patch.object(manager.ComputeManager, '_build_succeeded')
-    def test_build_exceptions_reported(self, mock_succeeded,
-                                       mock_failed,
-                                       mock_if, mock_notify,
-                                       mock_dbari):
+    def test_build_exceptions_reported(
+        self, mock_succeeded, mock_failed, mock_dbari,
+    ):
         mock_dbari.side_effect = test.TestingException()
         instance = objects.Instance(uuid=uuids.instance,
                                     task_state=None)
