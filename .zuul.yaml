@@ -407,8 +407,6 @@
             irrelevant-files: *dsvm-irrelevant-files
         - ironic-tempest-ipa-wholedisk-direct-tinyipa-multinode:
             irrelevant-files: *dsvm-irrelevant-files
-        - legacy-grenade-dsvm-neutron-multinode-zero-downtime:
-            irrelevant-files: *dsvm-irrelevant-files
         - devstack-plugin-nfs-tempest-full:
             irrelevant-files: *dsvm-irrelevant-files
         - nova-osprofiler-redis
@@ -417,8 +415,6 @@
         - tempest-pg-full:
             irrelevant-files: *dsvm-irrelevant-files
         - nova-tempest-full-oslo.versionedobjects:
-            irrelevant-files: *dsvm-irrelevant-files
-        - legacy-tempest-dsvm-nova-libvirt-kvm-apr:
             irrelevant-files: *dsvm-irrelevant-files
         - nova-tempest-v2-api:
             irrelevant-files: *dsvm-irrelevant-files
