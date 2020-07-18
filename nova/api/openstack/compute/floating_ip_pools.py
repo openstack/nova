@@ -44,6 +44,6 @@ class FloatingIPPoolsController(wsgi.Controller):
     def index(self, req):
         """Return a list of pools."""
         context = req.environ['nova.context']
-        context.can(fip_policies.BASE_POLICY_NAME)
+        context.can(fip_policies.BASE_POLICY_NAME, target={})
         pools = self.network_api.get_floating_ip_pools(context)
         return _translate_floating_ip_pools_view(pools)

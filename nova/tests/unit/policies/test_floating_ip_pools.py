@@ -65,3 +65,10 @@ class FloatingIPPoolsScopeTypePolicyTest(FloatingIPPoolsPolicyTest):
     def setUp(self):
         super(FloatingIPPoolsScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+
+
+class FloatingIPPoolsNoLegacyPolicyTest(FloatingIPPoolsScopeTypePolicyTest):
+    """Test Floating IP Pools APIs policies with system scope enabled,
+    and no more deprecated rules.
+    """
+    without_deprecated_rules = True
