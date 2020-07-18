@@ -23,10 +23,11 @@ BASE_POLICY_NAME = 'os_compute_api:os-floating-ips'
 
 floating_ips_policies = [
     policy.DocumentedRuleDefault(
-        BASE_POLICY_NAME,
-        base.RULE_ADMIN_OR_OWNER,
-        "Manage a project's floating IPs. These APIs are all deprecated.",
-        [
+        name=BASE_POLICY_NAME,
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="Manage a project's floating IPs. "
+        "These APIs are all deprecated.",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (addFloatingIp)'
@@ -51,7 +52,8 @@ floating_ips_policies = [
                 'method': 'DELETE',
                 'path': '/os-floating-ips/{floating_ip_id}'
             },
-        ]),
+        ],
+        scope_types=['system', 'project']),
 ]
 
 
