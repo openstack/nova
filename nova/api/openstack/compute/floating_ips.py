@@ -186,12 +186,13 @@ class FloatingIPActionController(wsgi.Controller):
     def _add_floating_ip(self, req, id, body):
         """Associate floating_ip to an instance."""
         context = req.environ['nova.context']
-        context.can(fi_policies.BASE_POLICY_NAME)
+        instance = common.get_instance(self.compute_api, context, id,
+                                       expected_attrs=['flavor'])
+        context.can(fi_policies.BASE_POLICY_NAME,
+                    target={'project_id': instance.project_id})
 
         address = body['addFloatingIp']['address']
 
-        instance = common.get_instance(self.compute_api, context, id,
-                                       expected_attrs=['flavor'])
         cached_nwinfo = instance.get_network_info()
         if not cached_nwinfo:
             LOG.warning(
@@ -265,9 +266,17 @@ class FloatingIPActionController(wsgi.Controller):
     def _remove_floating_ip(self, req, id, body):
         """Dissociate floating_ip from an instance."""
         context = req.environ['nova.context']
-        context.can(fi_policies.BASE_POLICY_NAME)
 
         address = body['removeFloatingIp']['address']
+
+        # get the associated instance object (if any)
+        instance = get_instance_by_floating_ip_addr(self, context, address)
+
+        target = {}
+        if instance:
+            target = {'project_id': instance.project_id}
+        context.can(fi_policies.BASE_POLICY_NAME,
+                    target=target)
 
         # get the floating ip object
         try:
@@ -276,9 +285,6 @@ class FloatingIPActionController(wsgi.Controller):
         except exception.FloatingIpNotFoundForAddress:
             msg = _("floating IP not found")
             raise webob.exc.HTTPNotFound(explanation=msg)
-
-        # get the associated instance object (if any)
-        instance = get_instance_by_floating_ip_addr(self, context, address)
 
         # disassociate if associated
         if instance and floating_ip['port_id'] and instance.uuid == id:

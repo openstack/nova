@@ -14,14 +14,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import fixtures
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 import webob
 
 from nova.api.openstack.compute import floating_ips as fips_v21
+from nova.compute import vm_states
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
+from nova.tests.unit import fake_instance
 
 
 class FloatingIpTestV21(test.NoDBTestCase):
@@ -147,6 +150,15 @@ class FloatingIPActionPolicyEnforcementV21(test.NoDBTestCase):
         super(FloatingIPActionPolicyEnforcementV21, self).setUp()
         self.controller = fips_v21.FloatingIPActionController()
         self.req = fakes.HTTPRequest.blank('')
+        uuid = uuids.fake_id
+        self.instance = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'],
+            id=2, uuid=uuid, availability_zone='nova',
+            vm_state=vm_states.ACTIVE,
+            project_id=self.req.environ['nova.context'].project_id)
+        self.mock_get = self.useFixture(
+            fixtures.MockPatch('nova.compute.api.API.get')).mock
+        self.mock_get.return_value = self.instance
 
     def _common_policy_check(self, func, *arg, **kwarg):
         rule_name = "os_compute_api:os-floating-ips"
@@ -161,13 +173,16 @@ class FloatingIPActionPolicyEnforcementV21(test.NoDBTestCase):
     def test_add_policy_failed(self):
         body = dict(addFloatingIp=dict(address='10.10.10.11'))
         self._common_policy_check(
-            self.controller._add_floating_ip, self.req, uuids.fake, body=body)
+            self.controller._add_floating_ip, self.req,
+            self.instance.uuid, body=body)
 
-    def test_remove_policy_failed(self):
+    @mock.patch('nova.network.neutron.API.get_instance_id_by_floating_address')
+    def test_remove_policy_failed(self, mock_get):
+        mock_get.return_value = self.instance.uuid
         body = dict(removeFloatingIp=dict(address='10.10.10.10'))
         self._common_policy_check(
             self.controller._remove_floating_ip, self.req,
-            uuids.fake, body=body)
+            self.instance.uuid, body=body)
 
 
 class FloatingIpsDeprecationTest(test.NoDBTestCase):
