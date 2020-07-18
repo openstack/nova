@@ -770,6 +770,7 @@ class Domain(object):
         self._has_saved_state = False
         self._snapshots = {}
         self._id = self._connection._id_counter
+        self._job_type = VIR_DOMAIN_JOB_UNBOUNDED
 
     def _parse_definition(self, xml):
         try:
@@ -1237,7 +1238,17 @@ class Domain(object):
         return [0] * 12
 
     def jobStats(self, flags=0):
-        return {}
+        # NOTE(artom) By returning VIR_DOMAIN_JOB_UNBOUNDED, we're pretending a
+        # job is constantly running. Tests are expected to call the
+        # complete_job or fail_job methods when they're ready for jobs (read:
+        # live migrations) to "complete".
+        return {'type': self._job_type}
+
+    def complete_job(self):
+        self._job_type = VIR_DOMAIN_JOB_COMPLETED
+
+    def fail_job(self):
+        self._job_type = VIR_DOMAIN_JOB_FAILED
 
     def injectNMI(self, flags=0):
         return 0
