@@ -7650,15 +7650,18 @@ class ComputeManager(manager.Manager):
                 LOG.info('Destination was ready for NUMA live migration, '
                          'but source is either too old, or is set to an '
                          'older upgrade level.', instance=instance)
-            # Create migrate_data vifs
-            migrate_data.vifs = \
-                migrate_data_obj.VIFMigrateData.create_skeleton_migrate_vifs(
-                    instance.get_network_info())
-            # Claim PCI devices for VIFs on destination (if needed)
-            port_id_to_pci = self._claim_pci_for_instance_vifs(ctxt, instance)
-            # Update migrate VIFs with the newly claimed PCI devices
-            self._update_migrate_vifs_profile_with_pci(migrate_data.vifs,
-                                                       port_id_to_pci)
+            if self.network_api.supports_port_binding_extension(ctxt):
+                # Create migrate_data vifs
+                migrate_data.vifs = \
+                    migrate_data_obj.\
+                    VIFMigrateData.create_skeleton_migrate_vifs(
+                        instance.get_network_info())
+                # Claim PCI devices for VIFs on destination (if needed)
+                port_id_to_pci = self._claim_pci_for_instance_vifs(
+                    ctxt, instance)
+                # Update migrate VIFs with the newly claimed PCI devices
+                self._update_migrate_vifs_profile_with_pci(
+                    migrate_data.vifs, port_id_to_pci)
         finally:
             self.driver.cleanup_live_migration_destination_check(ctxt,
                     dest_check_data)
@@ -7826,8 +7829,12 @@ class ComputeManager(manager.Manager):
             # determine if it should wait for a 'network-vif-plugged' event
             # from neutron before starting the actual guest transfer in the
             # hypervisor
+            using_multiple_port_bindings = (
+                'vifs' in migrate_data and migrate_data.vifs)
             migrate_data.wait_for_vif_plugged = (
-                CONF.compute.live_migration_wait_for_vif_plug)
+                CONF.compute.live_migration_wait_for_vif_plug and
+                using_multiple_port_bindings
+            )
 
             # NOTE(tr3buchet): setup networks on destination host
             self.network_api.setup_networks_on_host(context, instance,

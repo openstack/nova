@@ -18,6 +18,7 @@
 """Tests for compute service."""
 
 import datetime
+import fixtures as std_fixtures
 from itertools import chain
 import operator
 import sys
@@ -6133,13 +6134,19 @@ class ComputeTestCase(BaseTestCase,
             return fake_network.fake_get_instance_nw_info(self)
 
         self.stub_out('nova.network.neutron.API.get_instance_nw_info', stupid)
-
+        self.useFixture(
+            std_fixtures.MonkeyPatch(
+                'nova.network.neutron.API.supports_port_binding_extension',
+                lambda *args: True))
         # creating instance testdata
         instance = self._create_fake_instance_obj({'host': 'dummy'})
         c = context.get_admin_context()
         fake_notifier.NOTIFICATIONS = []
         migrate_data = objects.LibvirtLiveMigrateData(
             is_shared_instance_path=False)
+        vifs = migrate_data_obj.VIFMigrateData.create_skeleton_migrate_vifs(
+                stupid())
+        migrate_data.vifs = vifs
         mock_pre.return_value = migrate_data
 
         with mock.patch.object(self.compute.network_api,
