@@ -1468,14 +1468,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.VPMEMCleanupFailed(dev=vpmem.devpath,
                                                    error=e)
 
-    def _detach_encrypted_volumes(self, instance, block_device_info):
-        """Detaches encrypted volumes attached to instance."""
-        disks = self._get_instance_disk_info(instance, block_device_info)
-        for path in [
-            d['path'] for d in disks if dmcrypt.is_encrypted(d['path'])
-        ]:
-            dmcrypt.delete_volume(path)
-
     def _get_serial_ports_from_guest(self, guest, mode=None):
         """Returns an iterator over serial port(s) configured on guest.
 
@@ -1522,7 +1514,11 @@ class LibvirtDriver(driver.ComputeDriver):
     def _cleanup_lvm(self, instance, block_device_info):
         """Delete all LVM disks for given instance object."""
         if instance.get('ephemeral_key_uuid') is not None:
-            self._detach_encrypted_volumes(instance, block_device_info)
+            # detach encrypted volumes
+            disks = self._get_instance_disk_info(instance, block_device_info)
+            for disk in disks:
+                if dmcrypt.is_encrypted(disk['path']):
+                    dmcrypt.delete_volume(disk['path'])
 
         disks = self._lvm_disks(instance)
         if disks:
