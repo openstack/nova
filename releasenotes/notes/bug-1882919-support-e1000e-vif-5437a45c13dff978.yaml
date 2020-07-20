@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    Previously, attempting to configure an instance with the ``e1000e`` or
+    legacy ``VirtualE1000e`` VIF types on a host using the QEMU/KVM driver
+    would result in an incorrect ``UnsupportedHardware`` exception. These
+    interfaces are now correctly marked as supported.
