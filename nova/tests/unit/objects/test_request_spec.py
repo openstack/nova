@@ -1005,7 +1005,7 @@ class TestRequestGroupObject(test.NoDBTestCase):
         self.assertIn('requester_id', primitive)
         self.assertIn('provider_uuids', primitive)
         self.assertIn('required_traits', primitive)
-        self.assertItemsEqual(
+        self.assertCountEqual(
                 primitive['forbidden_aggregates'], set(['agg3', 'agg4']))
         primitive = req_obj.obj_to_primitive(
             target_version='1.2',
@@ -1078,7 +1078,7 @@ class TestDestinationObject(test.NoDBTestCase):
         obj_primitive = data(obj.obj_to_primitive(target_version='1.4',
                                                   version_manifest=manifest))
         self.assertIn('forbidden_aggregates', obj_primitive)
-        self.assertItemsEqual(obj_primitive['forbidden_aggregates'],
+        self.assertCountEqual(obj_primitive['forbidden_aggregates'],
                               set(['agg3', 'agg4']))
         self.assertIn('aggregates', obj_primitive)
 
