@@ -8111,21 +8111,6 @@ class ComputeTestCase(BaseTestCase,
                 event.EVENT_LIFECYCLE_STOPPED)
         self.compute.handle_events(event_instance)
 
-    @mock.patch.object(objects.Migration, 'get_by_id')
-    def test_confirm_resize_roll_back_quota_migration_not_found(self,
-            mock_get_by_id):
-        instance = self._create_fake_instance_obj()
-
-        migration = objects.Migration()
-        migration.instance_uuid = instance.uuid
-        migration.status = 'finished'
-        migration.id = 0
-
-        mock_get_by_id.side_effect = exception.MigrationNotFound(
-                migration_id=0)
-        self.compute.confirm_resize(self.context, instance=instance,
-                                    migration=migration)
-
     @mock.patch.object(instance_obj.Instance, 'get_by_uuid')
     def test_confirm_resize_roll_back_quota_instance_not_found(self,
             mock_get_by_id):

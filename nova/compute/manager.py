@@ -4176,29 +4176,19 @@ class ComputeManager(manager.Manager):
         source host.
         """
         @utils.synchronized(instance.uuid)
-        def do_confirm_resize(context, instance, migration_id):
-            # NOTE(wangpan): Get the migration status from db, if it has been
-            #                confirmed, we do nothing and return here
-            LOG.debug("Going to confirm migration %s", migration_id,
+        def do_confirm_resize(context, instance, migration):
+            LOG.debug("Going to confirm migration %s", migration.id,
                       instance=instance)
-            try:
-                # TODO(russellb) Why are we sending the migration object just
-                # to turn around and look it up from the db again?
-                migration = objects.Migration.get_by_id(
-                                    context.elevated(), migration_id)
-            except exception.MigrationNotFound:
-                LOG.error("Migration %s is not found during confirmation",
-                          migration_id, instance=instance)
-                return
 
             if migration.status == 'confirmed':
                 LOG.info("Migration %s is already confirmed",
-                         migration_id, instance=instance)
+                         migration.id, instance=instance)
                 return
-            elif migration.status not in ('finished', 'confirming'):
+
+            if migration.status not in ('finished', 'confirming'):
                 LOG.warning("Unexpected confirmation status '%(status)s' "
                             "of migration %(id)s, exit confirmation process",
-                            {"status": migration.status, "id": migration_id},
+                            {"status": migration.status, "id": migration.id},
                             instance=instance)
                 return
 
@@ -4242,7 +4232,7 @@ class ComputeManager(manager.Manager):
                     self._delete_scheduler_instance_info(
                         context, instance.uuid)
 
-        do_confirm_resize(context, instance, migration.id)
+        do_confirm_resize(context, instance, migration)
 
     def _get_updated_nw_info_with_pci_mapping(self, nw_info, pci_mapping):
         # NOTE(adrianc): This method returns a copy of nw_info if modifications
