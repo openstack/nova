@@ -360,6 +360,34 @@ class _ComputeAPIUnitTestMixIn(object):
         self._test_specified_ip_and_multiple_instances_helper(
             requested_networks)
 
+    # TODO(huaqiang): Remove in Wallaby
+    # TODO(huaqiang): To be removed when 'hw:cpu_dedicated_mask' could be
+    # parsed from flavor extra spec.
+    @mock.patch('nova.virt.hardware.get_dedicated_cpu_constraint',
+                mock.Mock(return_value=set([0, 1, 2])))
+    @mock.patch('nova.compute.api.API._check_requested_networks',
+                new=mock.Mock(return_value=1))
+    @mock.patch('nova.virt.hardware.get_pci_numa_policy_constraint',
+                return_value=None)
+    def test_create_mixed_instance_compute_version_fail(self, mock_pci):
+        """Ensure a 'MixedInstanceNotSupportByComputeService' exception raises
+        when all 'nova-compute' nodes have not been upgraded to or after
+        Victoria.
+        """
+        extra_specs = {
+            "hw:cpu_policy": "mixed",
+            "hw:cpu_dedicated_mask": "^3"
+        }
+        flavor = self._create_flavor(vcpus=4, extra_specs=extra_specs)
+
+        self.assertRaises(exception.MixedInstanceNotSupportByComputeService,
+                          self.compute_api.create, self.context, flavor,
+                          image_href=None)
+        # Ensure the exception is raised right after the call of
+        # '_validate_and_build_base_options's since
+        # 'get_pci_numa_policy_constraint' is only called in this method.
+        mock_pci.assert_called_once()
+
     @mock.patch('nova.objects.BlockDeviceMapping.save')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'reserve_block_device_name')
     def test_create_volume_bdm_call_reserve_dev_name(self, mock_reserve,
@@ -2335,6 +2363,56 @@ class _ComputeAPIUnitTestMixIn(object):
                                                     read_deleted="no")
         else:
             self.fail("Exception not raised")
+
+    # TODO(huaqiang): Remove in Wallaby
+    # TODO(huaqiang): To be removed when 'hw:cpu_dedicated_mask' could be
+    # parsed from flavor extra spec.
+    @mock.patch('nova.virt.hardware.get_dedicated_cpu_constraint',
+                mock.Mock(return_value=set([3])))
+    @mock.patch('nova.compute.api.API.get_instance_host_status',
+                new=mock.Mock(return_value=fields_obj.HostStatus.UP))
+    @mock.patch.object(compute_utils, 'is_volume_backed_instance',
+                       new=mock.Mock(return_value=True))
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                new=mock.Mock(return_value=51))
+    @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
+    @mock.patch.object(utils, 'get_image_from_system_metadata')
+    @mock.patch.object(flavors, 'get_flavor_by_flavor_id')
+    def test_resize_mixed_instance_compute_version_low_fails(
+            self, mock_get_flavor, mock_image, mock_spec):
+        """Check resizing an mixed policy instance fails if some
+        nova-compute node is not upgraded to Victory yet.
+        """
+        numa_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                id=0, cpuset=set(), pcpuset=set([0, 1, 2, 3]), memory=1024,
+                pagesize=None, cpu_pinning_raw=None, cpuset_reserved=None,
+                cpu_policy='dedicated', cpu_thread_policy=None)
+        ])
+        flavor = objects.Flavor(id=1, name='current', vcpus=4, memory_mb=1024,
+                                root_gb=10, disabled=False,
+                                extra_specs={
+                                    "hw:cpu_policy": "dedicated"
+                                })
+        new_flavor = objects.Flavor(id=2, name='new', vcpus=4, memory_mb=1024,
+                                    root_gb=10, disabled=False,
+                                    extra_specs={
+                                        "hw:cpu_policy": "mixed",
+                                        "hw:cpu_dedicated_mask": "^0-2",
+                                    })
+        image = {"properties": {}}
+        params = {
+            'vcpus': 4,
+            'numa_topology': numa_topology,
+        }
+
+        mock_image.return_value = image
+        mock_get_flavor.return_value = new_flavor
+        instance = self._create_instance_obj(params=params, flavor=flavor)
+        self.assertRaises(exception.MixedInstanceNotSupportByComputeService,
+                          self.compute_api.resize, self.context,
+                          instance, flavor_id='flavor-new')
+        mock_spec.assert_called_once()
 
     @mock.patch.object(compute_api.API, '_record_action_start')
     @mock.patch.object(objects.Instance, 'save')
@@ -7301,6 +7379,29 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             self._test_block_accelerators, instance, args_info)
         # myfunc was not called
         self.assertEqual({}, args_info)
+
+    # TODO(huaqiang): Remove in Wallaby
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells')
+    def test__check_compute_service_for_mixed_instance(self, mock_ver):
+        """Ensure a 'MixedInstanceNotSupportByComputeService' exception raises
+        if any compute node has not been upgraded to Victoria or later.
+        """
+        mock_ver.side_effect = [52, 51]
+        fake_numa_topo = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                id=0, cpuset=set([0]), pcpuset=set([1]), memory=512,
+                cpu_policy='mixed')
+        ])
+
+        self.compute_api._check_compute_service_for_mixed_instance(
+            fake_numa_topo)
+        # 'get_minimum_version_all_cells' has been called
+        mock_ver.assert_called()
+
+        self.assertRaises(
+            exception.MixedInstanceNotSupportByComputeService,
+            self.compute_api._check_compute_service_for_mixed_instance,
+            fake_numa_topo)
 
 
 class DiffDictTestCase(test.NoDBTestCase):

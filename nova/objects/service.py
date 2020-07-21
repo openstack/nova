@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 51
+SERVICE_VERSION = 52
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -184,6 +184,8 @@ SERVICE_VERSION_HISTORY = (
     # Add accel_uuids (accelerator requests) param to build_and_run_instance
     {'compute_rpc': '5.11'},
     # Version 51: Add support for live migration with vpmem
+    {'compute_rpc': '5.11'},
+    # Version 52: Add support for the 'mixed' CPU allocation policy
     {'compute_rpc': '5.11'},
 )
 
