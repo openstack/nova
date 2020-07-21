@@ -1080,6 +1080,70 @@ class TestUtils(TestUtilsBase):
         self.assertResourceRequestsEqual(expected, rr)
         self.assertFalse(rr.cpu_pinning_requested)
 
+    # TODO(huaqiang): Remove the mocked 'get_dedicated_cpu_constraint' once
+    # get_dedicated_cpu_constraint function is ready.
+    @mock.patch('nova.virt.hardware.get_dedicated_cpu_constraint',
+                new=mock.Mock(return_value={2, 3}))
+    def test_resource_request_init_with_mixed_cpus(self):
+        """Ensure the mixed instance properly requests the PCPU, VCPU,
+        MEMORY_MB, DISK_GB resources.
+        """
+        flavor = objects.Flavor(
+            vcpus=4, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
+            extra_specs={
+                'hw:cpu_policy': 'mixed',
+                'hw:cpu_dedicated_mask': '2,3'
+            })
+
+        rs = objects.RequestSpec(flavor=flavor)
+        expected = FakeResourceRequest()
+        expected._rg_by_id[None] = objects.RequestGroup(
+            use_same_provider=False,
+            resources={
+                'PCPU': 2,
+                'VCPU': 2,
+                'MEMORY_MB': 1024,
+                'DISK_GB': 15,
+            },
+            required_traits=set(),
+        )
+        rr = utils.ResourceRequest(rs)
+        self.assertResourceRequestsEqual(expected, rr)
+
+    # TODO(huaqiang): Remove the mocked 'get_dedicated_cpu_constraint' once
+    # get_dedicated_cpu_constraint function is ready.
+    @mock.patch('nova.virt.hardware.get_dedicated_cpu_constraint',
+                new=mock.Mock(return_value={2, 3}))
+    def test_resource_request_init_with_mixed_cpus_isolate_emulator(self):
+        """Ensure the mixed instance properly requests the PCPU, VCPU,
+        MEMORY_MB, DISK_GB resources, ensure an extra PCPU resource is
+        requested due to a ISOLATE emulator thread policy.
+        """
+        flavor = objects.Flavor(
+            vcpus=4, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
+            extra_specs={
+                'hw:cpu_policy': 'mixed',
+                'hw:cpu_dedicated_mask': '2,3',
+                'hw:emulator_threads_policy': 'isolate',
+            })
+
+        rs = objects.RequestSpec(flavor=flavor)
+        expected = FakeResourceRequest()
+        expected._rg_by_id[None] = objects.RequestGroup(
+            use_same_provider=False,
+            resources={
+                # An extra PCPU resource is requested due to 'ISOLATE' emulator
+                # thread policy.
+                'PCPU': 3,
+                'VCPU': 2,
+                'MEMORY_MB': 1024,
+                'DISK_GB': 15,
+            },
+            required_traits=set(),
+        )
+        rr = utils.ResourceRequest(rs)
+        self.assertResourceRequestsEqual(expected, rr)
+
     def test_resource_request_init_is_bfv(self):
         flavor = objects.Flavor(
             vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=1555)
