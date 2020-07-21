@@ -3020,7 +3020,7 @@ class ComputeTestCase(BaseTestCase,
             mock.call(econtext, instance, 'fake-mini', action='reboot',
                       phase='start', bdms=bdms)]
 
-        ps_call_list = [mock.call(econtext, instance)]
+        ps_call_list = [mock.call(instance)]
         db_call_list = [mock.call(econtext, instance['uuid'],
                                   {'task_state': task_pending,
                                    'expected_task_state': expected_tasks,
@@ -3060,12 +3060,12 @@ class ComputeTestCase(BaseTestCase,
         # Power state should be updated again
         if not fail_reboot or fail_running:
             new_power_state = fake_power_state2
-            ps_call_list.append(mock.call(econtext, instance))
+            ps_call_list.append(mock.call(instance))
             mock_get_power.side_effect = chain(mock_get_power.side_effect,
                                                [fake_power_state2])
         else:
             new_power_state = fake_power_state3
-            ps_call_list.append(mock.call(econtext, instance))
+            ps_call_list.append(mock.call(instance))
             mock_get_power.side_effect = chain(mock_get_power.side_effect,
                                                [fake_power_state3])
 
@@ -5494,8 +5494,8 @@ class ComputeTestCase(BaseTestCase,
                     self.context, instance, bdms='fake_bdms')
             mock_terminate_vol_conn.assert_called_once_with(self.context,
                     instance, 'fake_bdms')
-            mock_get_power_off_values.assert_called_once_with(self.context,
-                    instance, clean_shutdown)
+            mock_get_power_off_values.assert_called_once_with(
+                instance, clean_shutdown)
             self.assertEqual(migration.dest_compute, instance.host)
             self.compute.terminate_instance(self.context, instance, [])
 
@@ -8083,8 +8083,7 @@ class ComputeTestCase(BaseTestCase,
 
         self.compute.handle_events(event.LifecycleEvent(uuid, lifecycle_event))
 
-        mock_get.assert_called_once_with(mock.ANY,
-            test.ContainKeyValue('uuid', uuid))
+        mock_get.assert_called_once_with(test.ContainKeyValue('uuid', uuid))
         if actual_state == vm_power_state:
             mock_sync.assert_called_once_with(mock.ANY,
                 test.ContainKeyValue('uuid', uuid),

@@ -139,8 +139,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             mock.call(self.context, instance, 'shelve.start'),
             mock.call(self.context, instance, 'shelve.end')]
         mock_power_off_call_list = []
-        mock_get_power_state_call_list = [
-            mock.call(self.context, instance)]
+        mock_get_power_state_call_list = [mock.call(instance)]
 
         if clean_shutdown:
             if guest_power_state == power_state.PAUSED:
@@ -157,8 +156,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 mock.call(self.context, instance, 'shelve_offload.start'),
                 mock.call(self.context, instance, 'shelve_offload.end')])
             mock_power_off_call_list.append(mock.call(instance, 0, 0))
-            mock_get_power_state_call_list.append(mock.call(self.context,
-                                                            instance))
+            mock_get_power_state_call_list.append(mock.call(instance))
 
         mock_notify_instance_usage.assert_has_calls(
             mock_notify_instance_usage_call_list)
@@ -252,8 +250,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         # instance.host is replaced with host because
         # original instance.host is clear after
         # ComputeManager.shelve_offload_instance execute
-        mock_get_power_state.assert_called_once_with(
-            self.context, instance)
+        mock_get_power_state.assert_called_once_with(instance)
         mock_update_resource_tracker.assert_called_once_with(self.context,
                                                              instance)
         mock_delete_alloc.assert_called_once_with(self.context, instance)
@@ -369,7 +366,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 block_device_info='fake_bdm')
         self.mock_get_allocations.assert_called_once_with(self.context,
                                                           instance.uuid)
-        mock_get_power_state.assert_called_once_with(self.context, instance)
+        mock_get_power_state.assert_called_once_with(instance)
 
         self.assertNotIn('shelved_at', instance.system_metadata)
         self.assertNotIn('shelved_image_id', instance.system_metadata)
@@ -472,7 +469,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 allocations={}, network_info=[], block_device_info='fake_bdm')
         self.mock_get_allocations.assert_called_once_with(self.context,
                                                           instance.uuid)
-        mock_get_power_state.assert_called_once_with(self.context, instance)
+        mock_get_power_state.assert_called_once_with(instance)
 
     @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
