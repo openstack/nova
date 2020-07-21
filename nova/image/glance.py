@@ -326,59 +326,88 @@ class GlanceImageServiceV2(object):
             raise exception.ImageUnacceptable(image_id=image_id,
                 reason='Image has no associated data')
 
-        # Retrieve properties for verification of Glance image signature
-        verifier = self._get_verifier(context, image_id, trusted_certs)
+        return self._verify_and_write(context, image_id, trusted_certs,
+                                      image_chunks, data, dst_path)
+
+    def _verify_and_write(self, context, image_id, trusted_certs,
+                          image_chunks, data, dst_path):
+        """Perform image signature verification and save the image file if needed.
+
+        This function writes the content of the image_chunks iterator either to
+        a file object provided by the data parameter or to a filepath provided
+        by dst_path parameter. If none of them are provided then no data will
+        be written out but instead image_chunks iterator is returned.
+
+        :param image_id: The UUID of the image
+        :param trusted_certs: A 'nova.objects.trusted_certs.TrustedCerts'
+                              object with a list of trusted image certificate
+                              IDs.
+        :param image_chunks An iterator pointing to the image data
+        :param data: File object to use when writing the image.
+            If passed as None and dst_path is provided, new file is opened.
+        :param dst_path: Filepath to transfer the image file to.
+        :returns an iterable with image data, or nothing. Iterable is returned
+            only when data param is None and dst_path is not provided (assuming
+            the caller wants to process the data by itself).
+
+        """
 
         close_file = False
         if data is None and dst_path:
             data = open(dst_path, 'wb')
             close_file = True
 
+        write_image = True
         if data is None:
+            write_image = False
 
-            # Perform image signature verification
-            if verifier:
-                try:
-                    for chunk in image_chunks:
-                        verifier.update(chunk)
-                    verifier.verify()
+        # Retrieve properties for verification of Glance image signature
+        verifier = self._get_verifier(context, image_id, trusted_certs)
 
-                    LOG.info('Image signature verification succeeded '
-                             'for image: %s', image_id)
+        # Exit early if we do not need write nor verify
+        if verifier is None and write_image is False:
+            if data is None:
+                return image_chunks
+            else:
+                return
 
-                except cryptography.exceptions.InvalidSignature:
-                    with excutils.save_and_reraise_exception():
-                        LOG.error('Image signature verification failed '
-                                  'for image: %s', image_id)
-            return image_chunks
-        else:
-            try:
-                for chunk in image_chunks:
-                    if verifier:
-                        verifier.update(chunk)
-                    data.write(chunk)
+        try:
+            for chunk in image_chunks:
                 if verifier:
-                    verifier.verify()
-                    LOG.info('Image signature verification succeeded '
-                             'for image %s', image_id)
-            except cryptography.exceptions.InvalidSignature:
+                    verifier.update(chunk)
+                if write_image:
+                    data.write(chunk)
+            if verifier:
+                verifier.verify()
+                LOG.info('Image signature verification succeeded '
+                         'for image %s', image_id)
+        except cryptography.exceptions.InvalidSignature:
+            if write_image:
                 data.truncate(0)
-                with excutils.save_and_reraise_exception():
-                    LOG.error('Image signature verification failed '
-                              'for image: %s', image_id)
-            except Exception as ex:
+            with excutils.save_and_reraise_exception():
+                LOG.error('Image signature verification failed '
+                          'for image %s', image_id)
+        except Exception as ex:
+            if write_image:
                 with excutils.save_and_reraise_exception():
                     LOG.error("Error writing to %(path)s: %(exception)s",
                               {'path': dst_path, 'exception': ex})
-            finally:
-                if close_file:
-                    # Ensure that the data is pushed all the way down to
-                    # persistent storage. This ensures that in the event of a
-                    # subsequent host crash we don't have running instances
-                    # using a corrupt backing file.
-                    data.flush()
-                    self._safe_fsync(data)
-                    data.close()
+            else:
+                with excutils.save_and_reraise_exception():
+                    LOG.error("Error during image verification: %s", ex)
+
+        finally:
+            if close_file:
+                # Ensure that the data is pushed all the way down to
+                # persistent storage. This ensures that in the event of a
+                # subsequent host crash we don't have running instances
+                # using a corrupt backing file.
+                data.flush()
+                self._safe_fsync(data)
+                data.close()
+
+        if data is None:
+            return image_chunks
 
     def _get_verifier(self, context, image_id, trusted_certs):
         verifier = None
