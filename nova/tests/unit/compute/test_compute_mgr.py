@@ -1235,6 +1235,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.context, uuid=uuids.instance_3)
         instance_4 = fake_instance.fake_instance_obj(
             self.context, uuid=uuids.instance_4)
+        instance_5 = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance_5)
 
         instance_1.numa_topology = None
 
@@ -1258,12 +1260,34 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
         instance_4.deleted = True
 
+        numa_mixed_pinning = test_instance_numa.get_fake_obj_numa_topology(
+            self.context)
+        numa_mixed_pinning.cells[0].cpuset = set([5, 6])
+        numa_mixed_pinning.cells[0].pin_vcpus((1, 8), (2, 9))
+        numa_mixed_pinning.cells[0].cpu_policy = (
+            fields.CPUAllocationPolicy.MIXED)
+        numa_mixed_pinning.cells[1].cpuset = set([7, 8])
+        numa_mixed_pinning.cells[1].pin_vcpus((3, 10), (4, 11))
+        numa_mixed_pinning.cells[1].cpu_policy = (
+            fields.CPUAllocationPolicy.MIXED)
+        instance_5.numa_topology = numa_mixed_pinning
+        instance_5.vcpus = 8
+
         instances = objects.InstanceList(objects=[
-            instance_1, instance_2, instance_3, instance_4])
+            instance_1, instance_2, instance_3, instance_4, instance_5])
 
         with mock.patch.dict(self.compute.driver.capabilities,
                              supports_pcpus=supports_pcpus):
             self.compute._validate_pinning_configuration(instances)
+
+    def test__validate_pinning_configuration_valid_config(self):
+        """Test that configuring proper 'cpu_dedicated_set' and
+        'cpu_shared_set', all tests passed.
+        """
+        self.flags(cpu_shared_set='2-7', cpu_dedicated_set='0-1,8-15',
+                   group='compute')
+
+        self._test__validate_pinning_configuration()
 
     def test__validate_pinning_configuration_invalid_unpinned_config(self):
         """Test that configuring only 'cpu_dedicated_set' when there are
@@ -1308,10 +1332,16 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                       six.text_type(mock_log.call_args[0]))
 
     def test__validate_pinning_configuration_no_config(self):
-        """Test that the entire check is skipped if there's no host
-        configuration.
+        """Test that not configuring 'cpu_dedicated_set' or 'cpu_shared_set'
+         when there are mixed instances on the host results in an error.
         """
-        self._test__validate_pinning_configuration()
+        ex = self.assertRaises(
+            exception.InvalidConfiguration,
+            self._test__validate_pinning_configuration)
+        self.assertIn("This host has mixed instance requesting both pinned "
+                      "and unpinned CPUs but hasn't set aside unpinned CPUs "
+                      "for this purpose;",
+                      six.text_type(ex))
 
     def test__validate_pinning_configuration_not_supported(self):
         """Test that the entire check is skipped if the driver doesn't even
