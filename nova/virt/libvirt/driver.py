@@ -4975,19 +4975,24 @@ class LibvirtDriver(driver.ComputeDriver):
                     cell_pairs.append((guest_config_cell, host_cell))
         return cell_pairs
 
-    def _get_pin_cpuset(self, vcpu, object_numa_cell, host_cell):
+    def _get_pin_cpuset(self, vcpu, inst_cell, host_cell):
         """Returns the config object of LibvirtConfigGuestCPUTuneVCPUPin.
+
         Prepares vcpupin config for the guest with the following caveats:
 
-            a) If there is pinning information in the cell, we pin vcpus to
-               individual CPUs
+            a) If the specified instance vCPU is intended to be pinned, we pin
+               it to the previously selected host CPU.
             b) Otherwise we float over the whole host NUMA node
         """
         pin_cpuset = vconfig.LibvirtConfigGuestCPUTuneVCPUPin()
         pin_cpuset.id = vcpu
 
-        if object_numa_cell.cpu_pinning:
-            pin_cpuset.cpuset = set([object_numa_cell.cpu_pinning[vcpu]])
+        # 'InstanceNUMACell.cpu_pinning' tracks the CPU pinning pair for guest
+        # CPU and host CPU. If the guest CPU is in the keys of 'cpu_pinning',
+        # fetch the host CPU from it and pin on it, otherwise, let the guest
+        # CPU be floating on the sharing CPU set belonging to this NUMA cell.
+        if inst_cell.cpu_pinning and vcpu in inst_cell.cpu_pinning:
+            pin_cpuset.cpuset = set([inst_cell.cpu_pinning[vcpu]])
         else:
             pin_cpuset.cpuset = host_cell.cpuset
 
