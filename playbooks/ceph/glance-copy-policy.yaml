@@ -1,0 +1,10 @@
+- hosts: controller
+  tasks:
+    - name: create local.sh
+      become: yes
+      blockinfile:
+        path: /opt/stack/devstack/local.sh
+        create: True
+        mode: 0777
+        block: |
+          echo $'{"copy_image": "\'public\':%(visibility)s"}' > /etc/glance/policy.json

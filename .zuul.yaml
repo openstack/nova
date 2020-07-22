@@ -322,6 +322,55 @@
       # Run compute API and only the test_server_basic_ops scenario tests.
       tempest_test_regex: ^tempest\.(scenario\.test_server_basic_ops|(api\.compute))
 
+- job:
+    name: nova-ceph-multistore
+    parent: devstack-plugin-ceph-tempest-py3
+    description: |
+      Just like the normal ceph job, but with glance multistore
+    irrelevant-files: *dsvm-irrelevant-files
+    required-projects:
+      - openstack/nova
+    pre-run:
+      - playbooks/ceph/glance-copy-policy.yaml
+    vars:
+      # NOTE(danms): These tests create an empty non-raw image, which nova
+      # will refuse because we set never_download_image_if_on_rbd in this job.
+      # Just skip these tests for this case.
+      tempest_black_regex: .*encrypted_cinder_volumes.*
+      devstack_localrc:
+        GLANCE_STANDALONE: True
+        GLANCE_USE_IMPORT_WORKFLOW: True
+      devstack_local_conf:
+        post-config:
+          $NOVA_CONF:
+            libvirt:
+              images_rbd_glance_store_name: robust
+            workarounds:
+              never_download_image_if_on_rbd: True
+          $GLANCE_API_CONF:
+            DEFAULT:
+              enabled_backends: "cheap:file, robust:rbd"
+              default_log_levels: "amqp=WARN, amqplib=WARN, boto=WARN, qpid=WARN, sqlalchemy=WARN, suds=INFO, oslo.messaging=INFO, oslo_messaging=INFO, iso8601=WARN, requests.packages.urllib3.connectionpool=WARN, urllib3.connectionpool=WARN, websocket=WARN, requests.packages.urllib3.util.retry=WARN, urllib3.util.retry=WARN, keystonemiddleware=WARN, routes.middleware=WARN, stevedore=WARN, taskflow=WARN, keystoneauth=WARN, oslo.cache=INFO, dogpile.core.dogpile=INFO, oslo_policy=DEBUG"
+            glance_store:
+              default_backend: cheap
+              stores: file, http, rbd
+              default_store: file
+            robust:
+              rbd_store_pool: images
+              rbd_store_user: glance
+              rbd_store_ceph_conf: /etc/ceph/ceph.conf
+            cheap:
+              filesystem_store_datadir: /opt/stack/data/glance/images/
+            os_glance_staging_store:
+              filesystem_store_datadir: /opt/stack/data/glance/os_glance_staging_store/
+            os_glance_tasks_store:
+              filesystem_store_datadir: /opt/stack/data/glance/os_glance_tasks_store/
+          $GLANCE_IMAGE_IMPORT_CONF:
+            image_import_opts:
+              image_import_plugins: "['image_conversion']"
+            image_conversion:
+              output_format: raw
+
 - project:
     # Please try to keep the list of job names sorted alphabetically.
     templates:
@@ -340,7 +389,7 @@
         - ironic-tempest-ipa-wholedisk-bios-agent_ipmitool-tinyipa:
             voting: false
             irrelevant-files: *dsvm-irrelevant-files
-        - devstack-plugin-ceph-tempest-py3:
+        - nova-ceph-multistore:
             irrelevant-files: *dsvm-irrelevant-files
         - neutron-tempest-linuxbridge:
             irrelevant-files:
