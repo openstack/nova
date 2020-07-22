@@ -108,7 +108,7 @@ class ExtraSpecs(object):
                  storage_policy=None, cores_per_socket=None,
                  memory_limits=None, disk_io_limits=None,
                  vif_limits=None, hv_enabled=None, firmware=None,
-                 hw_video_ram=None):
+                 hw_video_ram=None, numa_prefer_ht=None):
         """ExtraSpecs object holds extra_specs for the instance."""
         self.cpu_limits = cpu_limits or Limits()
         self.memory_limits = memory_limits or Limits()
@@ -120,6 +120,7 @@ class ExtraSpecs(object):
         self.hv_enabled = hv_enabled
         self.firmware = firmware
         self.hw_video_ram = hw_video_ram
+        self.numa_prefer_ht = numa_prefer_ht
 
 
 def vm_value_cache_reset():
@@ -339,6 +340,13 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
         opt.value = CONF.vmware.smbios_asset_tag
         extra_config.append(opt)
 
+    # big VMs need to prefer HT threads to stay in NUMA nodes
+    if extra_specs.numa_prefer_ht is not None:
+        opt = client_factory.create('ns0:OptionValue')
+        opt.key = 'numa.vcpu.preferHT'
+        opt.value = extra_specs.numa_prefer_ht
+        extra_config.append(opt)
+
     config_spec.extraConfig = extra_config
 
     append_vif_infos_to_config_spec(client_factory, config_spec,
@@ -420,6 +428,16 @@ def get_vm_resize_spec(client_factory, vcpus, memory_mb, extra_specs,
     resize_spec.memoryAllocation = _get_allocation_info(
         client_factory, extra_specs.memory_limits,
         'ns0:ResourceAllocationInfo')
+
+    extra_config = []
+    # big VMs need to prefer HT threads to stay in NUMA nodes
+    if extra_specs.numa_prefer_ht is not None:
+        opt = client_factory.create('ns0:OptionValue')
+        opt.key = 'numa.vcpu.preferHT'
+        opt.value = extra_specs.numa_prefer_ht
+        extra_config.append(opt)
+
+    resize_spec.extraConfig = extra_config
 
     if metadata:
         resize_spec.annotation = metadata

@@ -339,6 +339,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         memoryAllocation.shares.level = 'normal'
         memoryAllocation.shares.shares = 0
         expected.memoryAllocation = memoryAllocation
+        expected.extraConfig = []
 
         self.assertEqual(expected, result)
 
@@ -370,6 +371,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         memoryAllocation.shares.level = 'normal'
         memoryAllocation.shares.shares = 0
         expected.memoryAllocation = memoryAllocation
+        expected.extraConfig = []
 
         self.assertEqual(expected, result)
 
