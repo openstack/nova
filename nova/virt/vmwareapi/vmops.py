@@ -1827,8 +1827,8 @@ class VMwareVMOps(object):
         vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
 
         old_flavor = instance.old_flavor
-        new_is_big = utils.is_big_vm(int(old_flavor.memory_mb), old_flavor)
-        old_is_big = utils.is_big_vm(int(flavor.memory_mb), flavor)
+        old_is_big = utils.is_big_vm(int(old_flavor.memory_mb), old_flavor)
+        new_is_big = utils.is_big_vm(int(flavor.memory_mb), flavor)
 
         if not old_is_big and new_is_big:
             # Make sure we don't automatically move around "big" VMs

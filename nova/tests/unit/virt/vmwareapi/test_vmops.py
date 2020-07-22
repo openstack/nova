@@ -36,7 +36,6 @@ from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
-from nova import utils
 from nova import version
 from nova.virt import hardware
 from nova.virt.vmwareapi import cluster_util
@@ -1123,19 +1122,16 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(vm_util, 'reconfigure_vm')
     @mock.patch.object(vm_util, 'get_vm_resize_spec',
                        return_value='fake-spec')
-    @mock.patch.object(utils, 'is_big_vm')
     @mock.patch.object(cluster_util, 'update_cluster_drs_vm_override')
-    def test_resize_vm_bigvm_upsize(self, fake_drs_override, fake_is_big_vm,
-                                    fake_resize_spec, fake_reconfigure,
+    def test_resize_vm_bigvm_upsize(self, fake_drs_override, fake_resize_spec,
+                                    fake_reconfigure,
                                     fake_cleanup_after_special_spawning,
                                     fake_get_extra_specs, fake_get_metadata):
-        # new is big, new is big, old is not
-        fake_is_big_vm.side_effect = [True, False]
         extra_specs = vm_util.ExtraSpecs()
         fake_get_extra_specs.return_value = extra_specs
         fake_get_metadata.return_value = self._metadata
-        flavor = objects.Flavor(name='m1.small',
-                                memory_mb=1024,
+        flavor = objects.Flavor(name='bigvm-test',
+                                memory_mb=CONF.bigvm_mb,
                                 vcpus=2,
                                 extra_specs={})
         instance = self._instance.obj_clone()
@@ -1157,14 +1153,11 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(vm_util, 'reconfigure_vm')
     @mock.patch.object(vm_util, 'get_vm_resize_spec',
                        return_value='fake-spec')
-    @mock.patch.object(utils, 'is_big_vm')
     @mock.patch.object(cluster_util, 'update_cluster_drs_vm_override')
-    def test_resize_vm_bigvm_downsize(self, fake_drs_override, fake_is_big_vm,
+    def test_resize_vm_bigvm_downsize(self, fake_drs_override,
                                       fake_resize_spec, fake_reconfigure,
                                       fake_cleanup_after_special_spawning,
                                       fake_get_extra_specs, fake_get_metadata):
-        # new is not big, new is not big, old is big
-        fake_is_big_vm.side_effect = [False, True]
         extra_specs = vm_util.ExtraSpecs()
         fake_get_extra_specs.return_value = extra_specs
         fake_get_metadata.return_value = self._metadata
@@ -1174,6 +1167,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                                 extra_specs={})
         instance = self._instance.obj_clone()
         instance.old_flavor = instance.flavor.obj_clone()
+        instance.old_flavor.memory_mb = CONF.bigvm_mb
         self._vmops._resize_vm(self._context, instance, 'vm-ref', flavor,
                                None)
         fake_drs_override.assert_called_once_with(self._session,
