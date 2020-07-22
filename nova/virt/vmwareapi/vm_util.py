@@ -369,6 +369,9 @@ def get_vm_resize_spec(client_factory, vcpus, memory_mb, extra_specs,
     resize_spec.cpuAllocation = _get_allocation_info(
         client_factory, extra_specs.cpu_limits,
         'ns0:ResourceAllocationInfo')
+    resize_spec.memoryAllocation = _get_allocation_info(
+        client_factory, extra_specs.memory_limits,
+        'ns0:ResourceAllocationInfo')
     resize_spec.memoryReservationLockedToMax = memory_reservation_locked
 
     if metadata:
