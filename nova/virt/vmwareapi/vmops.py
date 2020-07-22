@@ -353,6 +353,9 @@ class VMwareVMOps(object):
                 if value:
                     setattr(getattr(extra_specs, resource + '_limits'),
                             key, type(value))
+        if CONF.vmware.reserve_all_memory \
+                or utils.is_big_vm(int(flavor.memory_mb), flavor):
+            extra_specs.memory_limits.reservation = int(flavor.memory_mb)
         extra_specs.cpu_limits.validate()
         extra_specs.memory_limits.validate()
         extra_specs.disk_io_limits.validate()
@@ -1674,16 +1677,12 @@ class VMwareVMOps(object):
         """Resizes the VM according to the flavor."""
         client_factory = self._session.vim.client.factory
         extra_specs = self._get_extra_specs(flavor, image_meta)
-        reservation_locked = CONF.vmware.reserve_all_memory \
-                                or utils.is_big_vm(int(flavor.memory_mb),
-                                                   flavor)
         metadata = self._get_instance_metadata(context, instance,
                                                flavor=flavor)
         vm_resize_spec = vm_util.get_vm_resize_spec(client_factory,
                                                     int(flavor.vcpus),
                                                     int(flavor.memory_mb),
                                                     extra_specs,
-                                                    reservation_locked,
                                                     metadata=metadata)
         vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
 
@@ -1874,16 +1873,12 @@ class VMwareVMOps(object):
         # Reconfigure the VM properties
         extra_specs = self._get_extra_specs(instance.flavor,
                                             instance.image_meta)
-        reservation_locked = CONF.vmware.reserve_all_memory \
-                             or utils.is_big_vm(int(instance.flavor.memory_mb),
-                                                instance.flavor)
         metadata = self._get_instance_metadata(context, instance)
         vm_resize_spec = vm_util.get_vm_resize_spec(
             client_factory,
             int(instance.flavor.vcpus),
             int(instance.flavor.memory_mb),
             extra_specs,
-            reservation_locked,
             metadata=metadata)
         vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
 

@@ -40,7 +40,6 @@ import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.network import model as network_model
-from nova.utils import is_big_vm
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import session
 from nova.virt.vmwareapi import vim_util
@@ -374,11 +373,6 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
             client_factory, extra_specs.memory_limits,
             'ns0:ResourceAllocationInfo')
 
-    reservation_lock = CONF.vmware.reserve_all_memory \
-                            or is_big_vm(int(instance.memory_mb),
-                                         instance.flavor)
-    config_spec.memoryReservationLockedToMax = reservation_lock
-
     if extra_specs.firmware:
         config_spec.firmware = extra_specs.firmware
 
@@ -490,7 +484,7 @@ def get_vm_boot_spec(client_factory, device):
 
 
 def get_vm_resize_spec(client_factory, vcpus, memory_mb, extra_specs,
-                       memory_reservation_locked, metadata=None):
+                       metadata=None):
     """Provides updates for a VM spec."""
     resize_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
     resize_spec.numCPUs = vcpus
@@ -501,7 +495,10 @@ def get_vm_resize_spec(client_factory, vcpus, memory_mb, extra_specs,
     resize_spec.memoryAllocation = _get_allocation_info(
         client_factory, extra_specs.memory_limits,
         'ns0:ResourceAllocationInfo')
-    resize_spec.memoryReservationLockedToMax = memory_reservation_locked
+    # NOTE(jkulik) We used to set this setting instead of `memoryAllocation`,
+    # so we need to deconfigure it on VMs created before the patch adding
+    # `memoryAllocation` support on resize.
+    resize_spec.memoryReservationLockedToMax = False
 
     if metadata:
         resize_spec.annotation = metadata
