@@ -26683,24 +26683,26 @@ class LibvirtSnapshotTests(_BaseSnapshotTests):
         """
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
         image = self._create_image()
-        for p_state in (power_state.SHUTDOWN, power_state.PAUSED):
-            mock_guest = mock.Mock(spec=libvirt_guest.Guest)
-            mock_guest.get_power_state.return_value = p_state
-            mock_guest._domain = mock.Mock()
-            mock_get_guest.return_value = mock_guest
-            # Make _suspend_guest_for_snapshot short-circuit and fail, we just
-            # want to know that it was called with the correct live_snapshot
-            # argument based on the power_state.
-            with mock.patch.object(
-                drvr, '_suspend_guest_for_snapshot',
-                side_effect=test.TestingException,
-            ) as mock_suspend:
-                self.assertRaises(test.TestingException,
-                                  drvr.snapshot, self.context,
-                                  self.instance_ref, image['id'],
-                                  self.mock_update_task_state)
-            mock_suspend.assert_called_once_with(
-                self.context, False, p_state, self.instance_ref)
+        state = power_state.SHUTDOWN
+        mock_guest = mock.Mock(spec=libvirt_guest.Guest)
+        mock_guest.get_power_state.return_value = state
+        mock_guest._domain = mock.Mock()
+        mock_get_guest.return_value = mock_guest
+
+        # Make _suspend_guest_for_snapshot short-circuit and fail, we just
+        # want to know that it was called with the correct live_snapshot
+        # argument based on the power_state.
+        with mock.patch.object(
+            drvr, '_suspend_guest_for_snapshot',
+            side_effect=test.TestingException,
+        ) as mock_suspend:
+            self.assertRaises(test.TestingException,
+                              drvr.snapshot, self.context,
+                              self.instance_ref, image['id'],
+                              self.mock_update_task_state)
+
+        mock_suspend.assert_called_once_with(
+            self.context, False, state, self.instance_ref)
 
 
 class LXCSnapshotTests(LibvirtSnapshotTests):
