@@ -2366,18 +2366,6 @@ class LibvirtDriver(driver.ComputeDriver):
             state != power_state.SHUTDOWN
         ):
             live_snapshot = True
-            # Abort is an idempotent operation, so make sure any block
-            # jobs which may have failed are ended. This operation also
-            # confirms the running instance, as opposed to the system as a
-            # whole, has a new enough version of the hypervisor (bug 1193146).
-            try:
-                guest.get_block_device(disk_path).abort_job()
-            except libvirt.libvirtError as ex:
-                error_code = ex.get_error_code()
-                if error_code == libvirt.VIR_ERR_CONFIG_UNSUPPORTED:
-                    live_snapshot = False
-                else:
-                    pass
         else:
             live_snapshot = False
 
