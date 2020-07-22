@@ -98,7 +98,8 @@ class FakeCompute(object):
     def _get_provider_traits(self, context, rp_uuid):
         return mock.Mock(traits=self.provider_traits[rp_uuid])
 
-    def _set_traits_for_provider(self, context, rp_uuid, traits):
+    def _set_traits_for_provider(
+            self, context, rp_uuid, traits, generation=None):
         self.provider_traits[rp_uuid] = traits
 
     def _event_waiter(self):
