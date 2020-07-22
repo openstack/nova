@@ -420,6 +420,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         memoryAllocation.shares.shares = 0
         expected.memoryAllocation = memoryAllocation
         expected.memoryReservationLockedToMax = False
+        expected.extraConfig = []
 
         self.assertEqual(expected, result)
 
@@ -452,6 +453,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         memoryAllocation.shares.shares = 0
         expected.memoryAllocation = memoryAllocation
         expected.memoryReservationLockedToMax = False
+        expected.extraConfig = []
 
         self.assertEqual(expected, result)
 
