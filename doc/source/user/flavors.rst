@@ -467,7 +467,8 @@ CPU pinning policy
   .. note::
 
      The ``hw:cpu_dedicated_mask`` option is only valid if ``hw:cpu_policy``
-     is set to ``mixed``.
+     is set to ``mixed`` and cannot be configured with ``hw:cpu_realtime_mask``
+     at the same time.
 
   Valid CPU-THREAD-POLICY values are:
 

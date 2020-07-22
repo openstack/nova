@@ -1080,17 +1080,10 @@ class TestUtils(TestUtilsBase):
         self.assertResourceRequestsEqual(expected, rr)
         self.assertFalse(rr.cpu_pinning_requested)
 
-    def test_resource_request_init_with_mixed_cpus(self):
-        """Ensure the mixed instance properly requests the PCPU, VCPU,
-        MEMORY_MB, DISK_GB resources.
-        """
+    def _test_resource_request_init_with_mixed_cpus(self, extra_specs):
         flavor = objects.Flavor(
             vcpus=4, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
-            extra_specs={
-                'hw:cpu_policy': 'mixed',
-                'hw:cpu_dedicated_mask': '2,3'
-            })
-
+            extra_specs=extra_specs)
         rs = objects.RequestSpec(flavor=flavor)
         expected = FakeResourceRequest()
         expected._rg_by_id[None] = objects.RequestGroup(
@@ -1106,19 +1099,33 @@ class TestUtils(TestUtilsBase):
         rr = utils.ResourceRequest(rs)
         self.assertResourceRequestsEqual(expected, rr)
 
-    def test_resource_request_init_with_mixed_cpus_isolate_emulator(self):
-        """Ensure the mixed instance properly requests the PCPU, VCPU,
-        MEMORY_MB, DISK_GB resources, ensure an extra PCPU resource is
-        requested due to a ISOLATE emulator thread policy.
+    def test_resource_request_init_with_mixed_cpus_dedicated(self):
+        """Ensure the mixed instance, which is generated through
+        'hw:cpu_dedicated_mask' extra spec, properly requests the PCPU, VCPU,
+        MEMORY_MB and DISK_GB resources.
         """
+        extra_specs = {
+            'hw:cpu_policy': 'mixed',
+            'hw:cpu_dedicated_mask': '2,3'
+        }
+        self._test_resource_request_init_with_mixed_cpus(extra_specs)
+
+    def test_resource_request_init_with_mixed_cpus_realtime(self):
+        """Ensure the mixed instance, which is generated through real-time CPU
+        interface, properly requests the PCPU, VCPU, MEMORY_BM and DISK_GB
+        resources.
+        """
+        extra_specs = {
+            'hw:cpu_policy': 'mixed',
+            "hw:cpu_realtime": "yes",
+            "hw:cpu_realtime_mask": '2,3'
+        }
+        self._test_resource_request_init_with_mixed_cpus(extra_specs)
+
+    def _test_resource_request_init_with_mixed_cpus_iso_emu(self, extra_specs):
         flavor = objects.Flavor(
             vcpus=4, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
-            extra_specs={
-                'hw:cpu_policy': 'mixed',
-                'hw:cpu_dedicated_mask': '2,3',
-                'hw:emulator_threads_policy': 'isolate',
-            })
-
+            extra_specs=extra_specs)
         rs = objects.RequestSpec(flavor=flavor)
         expected = FakeResourceRequest()
         expected._rg_by_id[None] = objects.RequestGroup(
@@ -1135,6 +1142,33 @@ class TestUtils(TestUtilsBase):
         )
         rr = utils.ResourceRequest(rs)
         self.assertResourceRequestsEqual(expected, rr)
+
+    def test_resource_request_init_with_mixed_cpus_iso_emu_realtime(self):
+        """Ensure the mixed instance, which is generated through the
+        'hw:cpu_dedicated_mask' extra spec, specs, properly requests the PCPU,
+        VCPU, MEMORY_MB, DISK_GB resources, ensure an extra PCPU resource is
+        requested due to a ISOLATE emulator thread policy.
+        """
+        extra_specs = {
+            'hw:cpu_policy': 'mixed',
+            'hw:cpu_dedicated_mask': '2,3',
+            'hw:emulator_threads_policy': 'isolate',
+        }
+        self._test_resource_request_init_with_mixed_cpus_iso_emu(extra_specs)
+
+    def test_resource_request_init_with_mixed_cpus_iso_emu_dedicated(self):
+        """Ensure the mixed instance, which is generated through realtime extra
+        specs, properly requests the PCPU, VCPU, MEMORY_MB, DISK_GB resources,
+        ensure an extra PCPU resource is requested due to a ISOLATE emulator
+        thread policy.
+        """
+        extra_specs = {
+            'hw:cpu_policy': 'mixed',
+            "hw:cpu_realtime": "yes",
+            "hw:cpu_realtime_mask": '2,3',
+            'hw:emulator_threads_policy': 'isolate',
+        }
+        self._test_resource_request_init_with_mixed_cpus_iso_emu(extra_specs)
 
     def test_resource_request_init_is_bfv(self):
         flavor = objects.Flavor(

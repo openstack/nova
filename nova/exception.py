@@ -2326,9 +2326,11 @@ class RequiredMixedInstancePolicy(Invalid):
 
 
 class RequiredMixedOrRealtimeCPUMask(Invalid):
-    msg_fmt = _("Must specify either 'hw:cpu_dedicated_mask' or "
-                "'hw:cpu_realtime_mask' when using 'mixed' CPU policy"
-                " instance.")
+    msg_fmt = _("Dedicated CPU set can be specified from either "
+                "'hw:cpu_dedicated_mask' or 'hw:cpu_realtime_mask' when "
+                "using 'mixed' CPU policy. 'hw:cpu_dedicated_mask' and "
+                "'hw:cpu_realtime_mask' can not be specified at the same "
+                "time, or be specified with none of them.")
 
 
 class MixedInstanceNotSupportByComputeService(NovaException):

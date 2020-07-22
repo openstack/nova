@@ -280,11 +280,13 @@ class ResourceRequest(object):
 
         if cpu_policy == obj_fields.CPUAllocationPolicy.MIXED:
             # Get dedicated CPU list from flavor extra spec. For a mixed
-            # instance a non-empty 'hw:cpu_dedicated_mask' configuration must
-            # exist, which is already ensured in the API layer.
+            # instance a non-empty 'hw:cpu_dedicated_mask' or realtime CPU
+            # mask configuration must exist, which is already ensured in
+            # the API layer.
             dedicated_cpus = hardware.get_dedicated_cpu_constraint(flavor)
+            realtime_cpus = hardware.get_realtime_cpu_constraint(flavor, image)
 
-            pcpus = len(dedicated_cpus)
+            pcpus = len(dedicated_cpus or realtime_cpus)
             vcpus = flavor.vcpus - pcpus
 
             # apply for the VCPU resource of a 'mixed' instance

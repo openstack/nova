@@ -221,10 +221,12 @@ use pinned CPUs. To configure a flavor to use the ``shared`` CPU policy, run:
    $ openstack flavor set [FLAVOR_ID] --property hw:cpu_policy=shared
 
 The ``mixed`` CPU policy is used to specify that an instance use pinned CPUs
-along with unpinned CPUs. The instance pinned CPU is specified in the
-``hw:cpu_dedicated_mask`` extra spec. For example, to configure a flavor to
-use the ``mixed`` CPU policy with 4 vCPUs in total and the first 2 vCPUs as
-pinned CPUs:
+along with unpinned CPUs. The instance pinned CPU could be specified in the
+``hw:cpu_dedicated_mask`` or, if real-time is enabled
+(``hw:cpu_realtime``\ = yes), in the ``hw:cpu_realtime_mask`` extra spec. For
+example, to configure a flavor to use the ``mixed`` CPU policy with 4 vCPUs in
+total and the first 2 vCPUs as pinned CPUs, with the ``hw:cpu_realtime_mask``
+extra spec, run:
 
 .. code-block:: console
 
@@ -233,13 +235,21 @@ pinned CPUs:
      --property hw:cpu_policy=mixed \
      --property hw:cpu_dedicated_mask=0-1
 
-For more information about the syntax for ``hw:cpu_dedicated_mask``, refer
-to the :doc:`/user/flavors` guide.
+To create the mixed instance with the real-time extra specs, run:
+
+.. code-block:: console
+
+   $ openstack flavor set [FLAVOR_ID] \
+     --vcpus=4 \
+     --property hw:cpu_policy=mixed \
+     --property hw:cpu_realtime=yes \
+     --property hw:cpu_realtime_mask=0-1
 
 .. note::
 
-   For more information about the syntax for ``hw:cpu_policy``, refer to the
-   :doc:`/admin/flavors` guide.
+   For more information about the syntax for ``hw:cpu_policy``,
+   ``hw:cpu_dedicated_mask``, ``hw:realtime_cpu`` and ``hw:cpu_realtime_mask``,
+   refer to the :doc:`/user/flavors` guide.
 
 It is also possible to configure the CPU policy via image metadata. This can
 be useful when packaging applications that require real-time or near real-time
