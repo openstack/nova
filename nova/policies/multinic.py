@@ -23,13 +23,13 @@ BASE_POLICY_NAME = 'os_compute_api:os-multinic'
 
 multinic_policies = [
     policy.DocumentedRuleDefault(
-        BASE_POLICY_NAME,
-        base.RULE_ADMIN_OR_OWNER,
-        """Add or remove a fixed IP address from a server.
+        name=BASE_POLICY_NAME,
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="""Add or remove a fixed IP address from a server.
 
 These APIs are proxy calls to the Network service. These are all
 deprecated.""",
-        [
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (addFixedIp)'
@@ -38,7 +38,8 @@ deprecated.""",
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (removeFixedIp)'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
 ]
 
 
