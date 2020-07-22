@@ -1080,10 +1080,6 @@ class TestUtils(TestUtilsBase):
         self.assertResourceRequestsEqual(expected, rr)
         self.assertFalse(rr.cpu_pinning_requested)
 
-    # TODO(huaqiang): Remove the mocked 'get_dedicated_cpu_constraint' once
-    # get_dedicated_cpu_constraint function is ready.
-    @mock.patch('nova.virt.hardware.get_dedicated_cpu_constraint',
-                new=mock.Mock(return_value={2, 3}))
     def test_resource_request_init_with_mixed_cpus(self):
         """Ensure the mixed instance properly requests the PCPU, VCPU,
         MEMORY_MB, DISK_GB resources.
@@ -1110,10 +1106,6 @@ class TestUtils(TestUtilsBase):
         rr = utils.ResourceRequest(rs)
         self.assertResourceRequestsEqual(expected, rr)
 
-    # TODO(huaqiang): Remove the mocked 'get_dedicated_cpu_constraint' once
-    # get_dedicated_cpu_constraint function is ready.
-    @mock.patch('nova.virt.hardware.get_dedicated_cpu_constraint',
-                new=mock.Mock(return_value={2, 3}))
     def test_resource_request_init_with_mixed_cpus_isolate_emulator(self):
         """Ensure the mixed instance properly requests the PCPU, VCPU,
         MEMORY_MB, DISK_GB resources, ensure an extra PCPU resource is

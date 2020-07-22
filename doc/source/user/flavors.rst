@@ -458,6 +458,16 @@ CPU pinning policy
     an overcommit ratio of 1.0. For example, if a two vCPU guest is pinned to a
     single host core with two threads, then the guest will get a topology of
     one socket, one core, two threads.
+  - ``mixed``: This policy will create an instance combined with the ``shared``
+    policy vCPUs and ``dedicated`` policy vCPUs, as a result, some guest vCPUs
+    will be freely float across host pCPUs and the rest of guest vCPUs will be
+    pinned to host pCPUs. The pinned guest vCPUs are configured using the
+    ``hw:cpu_dedicated_mask`` extra spec.
+
+  .. note::
+
+     The ``hw:cpu_dedicated_mask`` option is only valid if ``hw:cpu_policy``
+     is set to ``mixed``.
 
   Valid CPU-THREAD-POLICY values are:
 
@@ -477,8 +487,8 @@ CPU pinning policy
 
   .. note::
 
-     The ``hw:cpu_thread_policy`` option is only valid if ``hw:cpu_policy`` is
-     set to ``dedicated``.
+     The ``hw:cpu_thread_policy`` option is valid if ``hw:cpu_policy`` is set
+     to ``dedicated`` or ``mixed``.
 
 .. _pci_numa_affinity_policy:
 

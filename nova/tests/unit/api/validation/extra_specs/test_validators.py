@@ -62,6 +62,7 @@ class TestValidators(test.NoDBTestCase):
             ('hw:cpu_realtime_mask', '0'),
             ('hw:cpu_realtime_mask', '^0'),
             ('hw:cpu_realtime_mask', '^0,2-3,1'),
+            ('hw:cpu_dedicated_mask', '0-4,^2,6'),
             ('hw:mem_page_size', 'large'),
             ('hw:mem_page_size', '2kbit'),
             ('hw:mem_page_size', '1GB'),

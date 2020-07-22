@@ -1712,9 +1712,6 @@ def _get_hyperthreading_trait(
 
 
 # NOTE(stephenfin): This must be public as it's used elsewhere
-# TODO(Huaqiang): To be filled with the logic of parsing
-# 'hw:cpu_dedicated_mask' and relevant test cases in later patches once the
-# code is ready to build up an instance in 'mixed' CPU allocation policy.
 def get_dedicated_cpu_constraint(
     flavor: 'objects.Flavor',
 ) -> ty.Optional[ty.Set[int]]:
@@ -1723,7 +1720,26 @@ def get_dedicated_cpu_constraint(
     :param flavor: ``nova.objects.Flavor`` instance
     :returns: The dedicated CPUs requested, else None.
     """
-    return None
+    mask = flavor.get('extra_specs', {}).get('hw:cpu_dedicated_mask')
+    if not mask:
+        return None
+
+    if mask.strip().startswith('^'):
+        pcpus = parse_cpu_spec("0-%d,%s" % (flavor.vcpus - 1, mask))
+    else:
+        pcpus = parse_cpu_spec("%s" % (mask))
+
+    cpus = set(range(flavor.vcpus))
+    vcpus = cpus - pcpus
+    if not pcpus or not vcpus:
+        raise exception.InvalidMixedInstanceDedicatedMask()
+
+    if not pcpus.issubset(cpus):
+        msg = _('Mixed instance dedicated vCPU(s) mask is not a subset of '
+                'vCPUs in the flavor. See "hw:cpu_dedicated_mask"')
+        raise exception.InvalidMixedInstanceDedicatedMask(msg)
+
+    return pcpus
 
 
 # NOTE(stephenfin): This must be public as it's used elsewhere
@@ -1871,6 +1887,8 @@ def numa_get_constraints(flavor, image_meta):
     :raises: exception.RequiredMixedOrRealtimeCPUMask the mixed policy instance
              dedicated CPU mask can only be specified through either
              'hw:cpu_realtime_mask' or 'hw:cpu_dedicated_mask', not both.
+    :raises: exception.InvalidMixedInstanceDedicatedMask if specify an invalid
+             CPU mask for 'hw:cpu_dedicated_mask'.
     :returns: objects.InstanceNUMATopology, or None
     """
 
@@ -1956,11 +1974,6 @@ def numa_get_constraints(flavor, image_meta):
         if dedicated_cpus:
             raise exception.RequiredMixedInstancePolicy()
     else:  # MIXED
-        # FIXME(huaqiang): So far, 'mixed' instance is not supported
-        # and the 'dedicated_cpus' variable is set to 'None' due to being not
-        # ready to parse 'hw:cpu_dedicated_mask'.
-        # The logic of parsing 'hw:cpu_dedicated_mask' should be added once
-        # the code is ready for setting up an 'mixed' instance.
         if dedicated_cpus is None:
             raise exception.RequiredMixedOrRealtimeCPUMask()
 

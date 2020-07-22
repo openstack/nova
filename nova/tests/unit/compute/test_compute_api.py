@@ -361,10 +361,6 @@ class _ComputeAPIUnitTestMixIn(object):
             requested_networks)
 
     # TODO(huaqiang): Remove in Wallaby
-    # TODO(huaqiang): To be removed when 'hw:cpu_dedicated_mask' could be
-    # parsed from flavor extra spec.
-    @mock.patch('nova.virt.hardware.get_dedicated_cpu_constraint',
-                mock.Mock(return_value=set([0, 1, 2])))
     @mock.patch('nova.compute.api.API._check_requested_networks',
                 new=mock.Mock(return_value=1))
     @mock.patch('nova.virt.hardware.get_pci_numa_policy_constraint',
@@ -2365,10 +2361,6 @@ class _ComputeAPIUnitTestMixIn(object):
             self.fail("Exception not raised")
 
     # TODO(huaqiang): Remove in Wallaby
-    # TODO(huaqiang): To be removed when 'hw:cpu_dedicated_mask' could be
-    # parsed from flavor extra spec.
-    @mock.patch('nova.virt.hardware.get_dedicated_cpu_constraint',
-                mock.Mock(return_value=set([3])))
     @mock.patch('nova.compute.api.API.get_instance_host_status',
                 new=mock.Mock(return_value=fields_obj.HostStatus.UP))
     @mock.patch.object(compute_utils, 'is_volume_backed_instance',

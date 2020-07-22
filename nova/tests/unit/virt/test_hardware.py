@@ -1508,6 +1508,228 @@ class NUMATopologyTest(test.NoDBTestCase):
                 "expect": exception.RealtimeConfigurationInvalid,
             },
             {
+                # NUMA + mixed policy instance and vCPU is evenly distributed
+                "flavor": objects.Flavor(
+                    vcpus=8, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_policy": fields.CPUAllocationPolicy.MIXED,
+                        "hw:cpu_dedicated_mask": "3,7",
+                        "hw:numa_nodes": "2",
+                    }
+                ),
+                "image": {
+                    "properties": {}
+                },
+                "expect": objects.InstanceNUMATopology(cells=[
+                    objects.InstanceNUMACell(
+                        id=0, cpuset=set([0, 1, 2]), pcpuset=set([3]),
+                        memory=1024,
+                        cpu_policy=fields.CPUAllocationPolicy.MIXED),
+                    objects.InstanceNUMACell(
+                        id=1, cpuset=set([4, 5, 6]), pcpuset=set([7]),
+                        memory=1024,
+                        cpu_policy=fields.CPUAllocationPolicy.MIXED),
+                ])
+            },
+            {
+                # mixed policy instance
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_policy": fields.CPUAllocationPolicy.MIXED,
+                        "hw:cpu_dedicated_mask": "1,3"
+                    }
+                ),
+                "image": {
+                    "properties": {}
+                },
+                "expect": objects.InstanceNUMATopology(cells=[
+                    objects.InstanceNUMACell(
+                        id=0, cpuset=set([0, 2]), pcpuset=set([1, 3]),
+                        memory=2048,
+                        cpu_policy=fields.CPUAllocationPolicy.MIXED),
+                ])
+            },
+            {
+                # mixed policy instance, 'hw:cpu_dedicated_mask' specifies the
+                # exclusive CPU set.
+                "flavor": objects.Flavor(
+                    vcpus=8, memory_mb=4096,
+                    extra_specs={
+                        "hw:cpu_policy": fields.CPUAllocationPolicy.MIXED,
+                        "hw:cpu_dedicated_mask": "^3-5",
+                        "hw:numa_nodes": "2",
+                    }
+                ),
+                "image": {
+                    "properties": {}
+                },
+                "expect": objects.InstanceNUMATopology(cells=[
+                    objects.InstanceNUMACell(
+                        id=0, cpuset=set([3]), pcpuset=set([0, 1, 2]),
+                        memory=2048,
+                        cpu_policy=fields.CPUAllocationPolicy.MIXED),
+                    objects.InstanceNUMACell(
+                        id=1, cpuset=set([4, 5]), pcpuset=set([6, 7]),
+                        memory=2048,
+                        cpu_policy=fields.CPUAllocationPolicy.MIXED),
+                ])
+            },
+            {
+                # NUMA + mixed policy instance
+                "flavor": objects.Flavor(
+                    vcpus=8, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_policy": fields.CPUAllocationPolicy.MIXED,
+                        "hw:cpu_dedicated_mask": "1,3",
+                        "hw:numa_nodes": "2",
+                        "hw:numa_cpus.0": "0-1",
+                        "hw:numa_mem.0": "1024",
+                        "hw:numa_cpus.1": "2-7",
+                        "hw:numa_mem.1": "1024",
+                    }
+                ),
+                "image": {
+                    "properties": {}
+                },
+                "expect": objects.InstanceNUMATopology(cells=[
+                    objects.InstanceNUMACell(
+                        id=0, cpuset=set([0]), pcpuset=set([1]),
+                        memory=1024,
+                        cpu_policy=fields.CPUAllocationPolicy.MIXED),
+                    objects.InstanceNUMACell(
+                        id=1, cpuset=set([2, 4, 5, 6, 7]),
+                        pcpuset=set([3]), memory=1024,
+                        cpu_policy=fields.CPUAllocationPolicy.MIXED),
+                ])
+            },
+            {
+                # dedicated CPU distributes in one NUMA cell
+                "flavor": objects.Flavor(
+                    vcpus=8, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_policy": fields.CPUAllocationPolicy.MIXED,
+                        "hw:cpu_dedicated_mask": "7",
+                        "hw:numa_nodes": "2",
+                        "hw:numa_cpus.0": "0-1",
+                        "hw:numa_mem.0": "1024",
+                        "hw:numa_cpus.1": "2-7",
+                        "hw:numa_mem.1": "1024",
+                    }
+                ),
+                "image": {
+                    "properties": {}
+                },
+                "expect": objects.InstanceNUMATopology(cells=[
+                    objects.InstanceNUMACell(
+                        id=0, cpuset=set([0, 1]), pcpuset=set(),
+                        memory=1024,
+                        cpu_policy=fields.CPUAllocationPolicy.MIXED),
+                    objects.InstanceNUMACell(
+                        id=1, cpuset=set([2, 3, 4, 5, 6]),
+                        pcpuset=set([7]), memory=1024,
+                        cpu_policy=fields.CPUAllocationPolicy.MIXED),
+                ])
+            },
+            {
+                # CPU number in 'hw:cpu_dedicated_mask' should not be equal to
+                # flavor.vcpus
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_policy": fields.CPUAllocationPolicy.MIXED,
+                        "hw:cpu_dedicated_mask": "0-3",
+                    }
+                ),
+                "image": {
+                    "properties": {}
+                },
+                "expect": exception.InvalidMixedInstanceDedicatedMask,
+            },
+            {
+                # CPU ID in 'hw:cpu_dedicated_mask' should not exceed
+                # flavor.vcpus
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_policy": fields.CPUAllocationPolicy.MIXED,
+                        "hw:cpu_dedicated_mask": "0-3,4",
+                    }
+                ),
+                "image": {
+                    "properties": {}
+                },
+                "expect": exception.InvalidMixedInstanceDedicatedMask,
+            },
+            {
+                # 'hw:cpu_dedicated_mask' should not be defined along with
+                # 'hw:cpu_policy=shared'
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_policy": fields.CPUAllocationPolicy.SHARED,
+                        "hw:cpu_dedicated_mask": "0"
+                    }
+                ),
+                "image": {
+                    "properties": {}
+                },
+                "expect": exception.RequiredMixedInstancePolicy,
+            },
+            {
+                # 'hw:cpu_dedicated_mask' should not be defined along with
+                # 'hw:cpu_policy=dedicated'
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_policy": fields.CPUAllocationPolicy.DEDICATED,
+                        "hw:cpu_dedicated_mask": "0"
+                    }
+                ),
+                "image": {
+                    "properties": {}
+                },
+                "expect": exception.RequiredMixedInstancePolicy,
+            },
+            {
+                # 'hw:cpu_dedicated_mask' should be defined along with
+                # 'hw:cpu_policy=mixed'
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:cpu_policy": fields.CPUAllocationPolicy.MIXED,
+                    }
+                ),
+                "image": {
+                    "properties": {}
+                },
+                "expect": exception.RequiredMixedOrRealtimeCPUMask,
+            },
+            {
+                # Create 'mixed' instance with the 'ISOLATE' emulator
+                # thread policy
+                "flavor": objects.Flavor(
+                    vcpus=4, memory_mb=2048,
+                    extra_specs={
+                        "hw:emulator_threads_policy": "isolate",
+                        "hw:cpu_policy": "mixed",
+                        "hw:cpu_dedicated_mask": "3"
+                    }
+                ),
+                "image": {
+                    "properties": {}
+                },
+                "expect": objects.InstanceNUMATopology(
+                    emulator_threads_policy=
+                    fields.CPUEmulatorThreadsPolicy.ISOLATE,
+                    cells=[objects.InstanceNUMACell(
+                        id=0, cpuset=set([0, 1, 2]),
+                        pcpuset=set([3]), memory=2048,
+                        cpu_policy=fields.CPUAllocationPolicy.MIXED)
+                    ]
+                ),
+            },
+            {
                 # Invalid CPU thread pinning override
                 "flavor": objects.Flavor(
                     vcpus=4, memory_mb=2048,
