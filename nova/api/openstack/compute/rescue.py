@@ -70,7 +70,10 @@ class RescueController(wsgi.Controller):
                                                                   'rescue', id)
         except exception.InvalidVolume as volume_error:
             raise exc.HTTPConflict(explanation=volume_error.format_message())
-        except exception.InstanceNotRescuable as non_rescuable:
+        except (
+            exception.InstanceNotRescuable,
+            exception.UnsupportedRescueImage,
+        ) as non_rescuable:
             raise exc.HTTPBadRequest(
                 explanation=non_rescuable.format_message())
 

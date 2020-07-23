@@ -1406,6 +1406,10 @@ class UnsupportedRescueDevice(Invalid):
     msg_fmt = _("Requested rescue device '%(device)s' is not supported")
 
 
+class UnsupportedRescueImage(Invalid):
+    msg_fmt = _("Requested rescue image '%(image)s' is not supported")
+
+
 class Base64Exception(NovaException):
     msg_fmt = _("Invalid Base 64 data for file %(path)s")
 
