@@ -127,7 +127,7 @@ class SecurityGroupsPolicyTest(base.BasePolicyTest):
         # as target to policy and always pass. If requester is not admin
         # or owner of security groups then neutron will be returning the
         # appropriate error.
-        self.everyone_authorized_contexts = [
+        self.reader_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context, self.project_member_context,
             self.project_reader_context, self.project_foo_context,
@@ -136,22 +136,26 @@ class SecurityGroupsPolicyTest(base.BasePolicyTest):
             self.system_foo_context,
             self.other_project_member_context
         ]
-        self.everyone_unauthorized_contexts = []
+        self.reader_unauthorized_contexts = []
+        self.sys_admin_or_owner_authorized_contexts = (
+            self.reader_authorized_contexts)
+        self.sys_admin_or_owner_unauthorized_contexts = (
+            self.reader_unauthorized_contexts)
 
     @mock.patch('nova.network.security_group_api.list')
     def test_list_security_groups_policy(self, mock_get):
-        rule_name = policies.BASE_POLICY_NAME
-        self.common_policy_check(self.everyone_authorized_contexts,
-                                 self.everyone_unauthorized_contexts,
+        rule_name = policies.POLICY_NAME % 'get'
+        self.common_policy_check(self.reader_authorized_contexts,
+                                 self.reader_unauthorized_contexts,
                                  rule_name,
                                  self.controller.index,
                                  self.req)
 
     @mock.patch('nova.network.security_group_api.get')
     def test_show_security_groups_policy(self, mock_get):
-        rule_name = policies.BASE_POLICY_NAME
-        self.common_policy_check(self.everyone_authorized_contexts,
-                                 self.everyone_unauthorized_contexts,
+        rule_name = policies.POLICY_NAME % 'show'
+        self.common_policy_check(self.reader_authorized_contexts,
+                                 self.reader_unauthorized_contexts,
                                  rule_name,
                                  self.controller.show,
                                  self.req, uuids.fake_id)
@@ -159,24 +163,24 @@ class SecurityGroupsPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.network.security_group_api.get')
     @mock.patch('nova.network.security_group_api.update_security_group')
     def test_update_security_groups_policy(self, mock_update, mock_get):
-        rule_name = policies.BASE_POLICY_NAME
+        rule_name = policies.POLICY_NAME % 'update'
         body = {'security_group': {
             'name': 'test',
             'description': 'test-desc'}}
-        self.common_policy_check(self.everyone_authorized_contexts,
-                                 self.everyone_unauthorized_contexts,
+        self.common_policy_check(self.sys_admin_or_owner_authorized_contexts,
+                                 self.sys_admin_or_owner_unauthorized_contexts,
                                  rule_name,
                                  self.controller.update,
                                  self.req, uuids.fake_id, body=body)
 
     @mock.patch('nova.network.security_group_api.create_security_group')
     def test_create_security_groups_policy(self, mock_create):
-        rule_name = policies.BASE_POLICY_NAME
+        rule_name = policies.POLICY_NAME % 'create'
         body = {'security_group': {
             'name': 'test',
             'description': 'test-desc'}}
-        self.common_policy_check(self.everyone_authorized_contexts,
-                                 self.everyone_unauthorized_contexts,
+        self.common_policy_check(self.sys_admin_or_owner_authorized_contexts,
+                                 self.sys_admin_or_owner_unauthorized_contexts,
                                  rule_name,
                                  self.controller.create,
                                  self.req, body=body)
@@ -184,9 +188,9 @@ class SecurityGroupsPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.network.security_group_api.get')
     @mock.patch('nova.network.security_group_api.destroy')
     def test_delete_security_groups_policy(self, mock_destroy, mock_get):
-        rule_name = policies.BASE_POLICY_NAME
-        self.common_policy_check(self.everyone_authorized_contexts,
-                                 self.everyone_unauthorized_contexts,
+        rule_name = policies.POLICY_NAME % 'delete'
+        self.common_policy_check(self.sys_admin_or_owner_authorized_contexts,
+                                 self.sys_admin_or_owner_unauthorized_contexts,
                                  rule_name,
                                  self.controller.delete,
                                  self.req, uuids.fake_id)
@@ -194,13 +198,13 @@ class SecurityGroupsPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.network.security_group_api.get')
     @mock.patch('nova.network.security_group_api.create_security_group_rule')
     def test_create_security_group_rules_policy(self, mock_create, mock_get):
-        rule_name = policies.BASE_POLICY_NAME
+        rule_name = policies.POLICY_NAME % 'rule:create'
         body = {'security_group_rule': {
             'ip_protocol': 'test', 'group_id': uuids.fake_id,
             'parent_group_id': uuids.fake_id,
             'from_port': 22, 'from_port': 22}}
-        self.common_policy_check(self.everyone_authorized_contexts,
-                                 self.everyone_unauthorized_contexts,
+        self.common_policy_check(self.sys_admin_or_owner_authorized_contexts,
+                                 self.sys_admin_or_owner_unauthorized_contexts,
                                  rule_name,
                                  self.rule_ctr.create,
                                  self.req, body=body)
@@ -210,9 +214,9 @@ class SecurityGroupsPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.network.security_group_api.remove_rules')
     def test_delete_security_group_rules_policy(self, mock_remove, mock_get,
             mock_rules):
-        rule_name = policies.BASE_POLICY_NAME
-        self.common_policy_check(self.everyone_authorized_contexts,
-                                 self.everyone_unauthorized_contexts,
+        rule_name = policies.POLICY_NAME % 'rule:delete'
+        self.common_policy_check(self.sys_admin_or_owner_authorized_contexts,
+                                 self.sys_admin_or_owner_unauthorized_contexts,
                                  rule_name,
                                  self.rule_ctr.delete,
                                  self.req, uuids.fake_id)
@@ -296,4 +300,52 @@ class ServerSecurityGroupsNoLegacyPolicyTest(
             self.legacy_admin_context, self.project_foo_context,
             self.system_foo_context, self.other_project_member_context,
             self.other_project_reader_context
+        ]
+
+
+class SecurityGroupsNoLegacyPolicyTest(SecurityGroupsScopeTypePolicyTest):
+    """Test Security Groups APIs policies with system scope enabled,
+    and no more deprecated rules that allow the legacy admin API to
+    access system_admin_or_owner APIs.
+    """
+    without_deprecated_rules = True
+    rules_without_deprecation = {
+        policies.POLICY_NAME % 'get':
+            base_policy.PROJECT_READER_OR_SYSTEM_READER,
+        policies.POLICY_NAME % 'show':
+            base_policy.PROJECT_READER_OR_SYSTEM_READER,
+        policies.POLICY_NAME % 'create':
+            base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        policies.POLICY_NAME % 'update':
+            base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        policies.POLICY_NAME % 'delete':
+            base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+            policies.POLICY_NAME % 'rule:create':
+            base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+            policies.POLICY_NAME % 'rule:delete':
+            base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN}
+
+    def setUp(self):
+        super(SecurityGroupsNoLegacyPolicyTest, self).setUp()
+
+        self.reader_authorized_contexts = [
+            self.legacy_admin_context, self.system_admin_context,
+            self.project_admin_context,
+            self.project_member_context, self.project_reader_context,
+            self.system_member_context, self.system_reader_context,
+            self.other_project_member_context
+        ]
+        self.reader_unauthorized_contexts = [
+            self.project_foo_context,
+            self.system_foo_context
+        ]
+        self.sys_admin_or_owner_authorized_contexts = [
+            self.system_admin_context, self.system_member_context,
+            self.project_admin_context, self.project_member_context,
+            self.legacy_admin_context, self.other_project_member_context
+        ]
+        self.sys_admin_or_owner_unauthorized_contexts = [
+            self.system_reader_context,
+            self.project_reader_context, self.project_foo_context,
+            self.system_foo_context, self.other_project_reader_context
         ]

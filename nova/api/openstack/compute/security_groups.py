@@ -37,12 +37,6 @@ LOG = logging.getLogger(__name__)
 SG_NOT_FOUND = object()
 
 
-def _authorize_context(req):
-    context = req.environ['nova.context']
-    context.can(sg_policies.BASE_POLICY_NAME)
-    return context
-
-
 class SecurityGroupControllerBase(object):
     """Base class for Security Group controllers."""
 
@@ -155,7 +149,8 @@ class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
     @wsgi.expected_errors((400, 404))
     def show(self, req, id):
         """Return data about the given security group."""
-        context = _authorize_context(req)
+        context = req.environ['nova.context']
+        context.can(sg_policies.POLICY_NAME % 'show')
 
         try:
             id = security_group_api.validate_id(id)
@@ -173,7 +168,8 @@ class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
     @wsgi.response(202)
     def delete(self, req, id):
         """Delete a security group."""
-        context = _authorize_context(req)
+        context = req.environ['nova.context']
+        context.can(sg_policies.POLICY_NAME % 'delete')
 
         try:
             id = security_group_api.validate_id(id)
@@ -189,7 +185,8 @@ class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
     @wsgi.expected_errors(404)
     def index(self, req):
         """Returns a list of security groups."""
-        context = _authorize_context(req)
+        context = req.environ['nova.context']
+        context.can(sg_policies.POLICY_NAME % 'get')
 
         search_opts = {}
         search_opts.update(req.GET)
@@ -210,7 +207,8 @@ class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
     @wsgi.expected_errors((400, 403))
     def create(self, req, body):
         """Creates a new security group."""
-        context = _authorize_context(req)
+        context = req.environ['nova.context']
+        context.can(sg_policies.POLICY_NAME % 'create')
 
         security_group = self._from_body(body, 'security_group')
 
@@ -235,7 +233,8 @@ class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
     @wsgi.expected_errors((400, 404))
     def update(self, req, id, body):
         """Update a security group."""
-        context = _authorize_context(req)
+        context = req.environ['nova.context']
+        context.can(sg_policies.POLICY_NAME % 'update')
 
         try:
             id = security_group_api.validate_id(id)
@@ -270,8 +269,8 @@ class SecurityGroupRulesController(SecurityGroupControllerBase,
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.expected_errors((400, 403, 404))
     def create(self, req, body):
-        context = _authorize_context(req)
-
+        context = req.environ['nova.context']
+        context.can(sg_policies.POLICY_NAME % 'rule:create')
         sg_rule = self._from_body(body, 'security_group_rule')
         group_id = sg_rule.get('group_id')
         source_group = {}
@@ -345,7 +344,8 @@ class SecurityGroupRulesController(SecurityGroupControllerBase,
     @wsgi.expected_errors((400, 404, 409))
     @wsgi.response(202)
     def delete(self, req, id):
-        context = _authorize_context(req)
+        context = req.environ['nova.context']
+        context.can(sg_policies.POLICY_NAME % 'rule:delete')
 
         try:
             id = security_group_api.validate_id(id)

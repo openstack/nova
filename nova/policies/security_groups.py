@@ -35,37 +35,103 @@ in nova 23.0.0 release.
 
 security_groups_policies = [
     policy.DocumentedRuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_OR_OWNER,
-        description="""List, show, add, or remove security groups.
-
-APIs which are directly related to security groups resource are deprecated:
-Lists, shows information for, creates, updates and deletes
-security groups. Creates and deletes security group rules. All these
-APIs are deprecated.""",
+        name=POLICY_NAME % 'get',
+        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        description="List security groups. This API is deprecated.",
         operations=[
             {
                 'method': 'GET',
                 'path': '/os-security-groups'
-            },
+            }
+        ],
+        scope_types=['system', 'project'],
+        deprecated_rule=DEPRECATED_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='22.0.0'),
+    policy.DocumentedRuleDefault(
+        name=POLICY_NAME % 'show',
+        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        description="Show security group. This API is deprecated.",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/os-security-groups/{security_group_id}'
-            },
+            }
+        ],
+        scope_types=['system', 'project'],
+        deprecated_rule=DEPRECATED_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='22.0.0'),
+    policy.DocumentedRuleDefault(
+        name=POLICY_NAME % 'create',
+        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        description="Create security group. This API is deprecated.",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/os-security-groups'
-            },
+            }
+        ],
+        scope_types=['system', 'project'],
+        deprecated_rule=DEPRECATED_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='22.0.0'),
+    policy.DocumentedRuleDefault(
+        name=POLICY_NAME % 'update',
+        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        description="Update security group. This API is deprecated.",
+        operations=[
             {
                 'method': 'PUT',
                 'path': '/os-security-groups/{security_group_id}'
-            },
+            }
+        ],
+        scope_types=['system', 'project'],
+        deprecated_rule=DEPRECATED_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='22.0.0'),
+    policy.DocumentedRuleDefault(
+        name=POLICY_NAME % 'delete',
+        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        description="Delete security group. This API is deprecated.",
+        operations=[
             {
                 'method': 'DELETE',
                 'path': '/os-security-groups/{security_group_id}'
             },
         ],
-        scope_types=['system', 'project']),
+        scope_types=['system', 'project'],
+        deprecated_rule=DEPRECATED_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='22.0.0'),
+    policy.DocumentedRuleDefault(
+        name=POLICY_NAME % 'rule:create',
+        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        description="Create security group Rule. This API is deprecated.",
+        operations=[
+            {
+                'method': 'POST',
+                'path': '/os-security-group-rules'
+            }
+        ],
+        scope_types=['system', 'project'],
+        deprecated_rule=DEPRECATED_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='22.0.0'),
+    policy.DocumentedRuleDefault(
+        name=POLICY_NAME % 'rule:delete',
+        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        description="Delete security group Rule. This API is deprecated.",
+        operations=[
+            {
+                'method': 'DELETE',
+                'path': '/os-security-group-rules/{security_group_id}'
+            },
+        ],
+        scope_types=['system', 'project'],
+        deprecated_rule=DEPRECATED_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='22.0.0'),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'list',
         check_str=base.PROJECT_READER_OR_SYSTEM_READER,
