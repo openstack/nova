@@ -5899,55 +5899,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             [mock.call(host='127.0.0.1', port=10000),
              mock.call(host='127.0.0.1', port=10001)])
 
-    @mock.patch('os.stat', return_value=mock.Mock(st_blocks=0))
-    @mock.patch('os.path.getsize', return_value=0)
-    @mock.patch('nova.virt.libvirt.storage.lvm.get_volume_size',
-                return_value='fake-size')
-    def test_detach_encrypted_volumes(self, mock_get_volume_size,
-                                      mock_getsize, mock_stat):
-        """Test that unencrypted volumes are not disconnected with dmcrypt."""
-        instance = objects.Instance(**self.test_instance)
-        xml = """
-              <domain type='kvm'>
-                  <devices>
-                      <disk type='file'>
-                          <driver name='fake-driver' type='fake-type' />
-                          <source file='filename'/>
-                          <target dev='vdc' bus='virtio'/>
-                      </disk>
-                      <disk type='block' device='disk'>
-                          <driver name='fake-driver' type='fake-type' />
-                          <source dev='/dev/mapper/disk'/>
-                          <target dev='vda'/>
-                      </disk>
-                      <disk type='block' device='disk'>
-                          <driver name='fake-driver' type='fake-type' />
-                          <source dev='/dev/mapper/swap'/>
-                          <target dev='vdb'/>
-                      </disk>
-                  </devices>
-              </domain>
-              """
-        dom = FakeVirtDomain(fake_xml=xml)
-        instance.ephemeral_key_uuid = uuids.ephemeral_key_uuid  # encrypted
-
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-
-        @mock.patch.object(dmcrypt, 'delete_volume')
-        @mock.patch.object(conn._host, '_get_domain', return_value=dom)
-        def detach_encrypted_volumes(block_device_info,
-                                     mock_get_domain, mock_delete_volume):
-            conn._detach_encrypted_volumes(instance, block_device_info)
-
-            mock_get_domain.assert_called_once_with(instance)
-            self.assertFalse(mock_delete_volume.called)
-
-        block_device_info = {'root_device_name': '/dev/vda',
-                             'ephemerals': [],
-                             'block_device_mapping': []}
-
-        detach_encrypted_volumes(block_device_info)
-
     @mock.patch.object(libvirt_guest.Guest, "get_xml_desc")
     def test_get_serial_ports_from_guest(self, mock_get_xml_desc):
         i = self._test_get_serial_ports_from_guest(None,
