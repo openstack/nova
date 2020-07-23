@@ -1,0 +1,22 @@
+---
+features:
+  - |
+    Add the ``mixed`` instance CPU allocation policy for instance mixing with
+    both ``PCPU`` and ``VCPU`` resources. This is useful for applications that
+    wish to schedule the CPU intensive workload on the ``PCPU`` and the other
+    workloads on ``VCPU``. The mixed policy avoids the necessity of making
+    all instance CPUs to be pinned CPUs, as a result, reduces the consuption
+    of pinned CPUs and increases the instance density.
+
+    Extend the real-time instance with the ``mixed`` CPU allocation policy. In
+    comparing with ``dedicated`` policy real-time instance, the non-real-time
+    CPUs are not longer required to be pinned on dedicated host CPUs, but
+    float on a range of host CPUs sharing with other instances.
+  - |
+    Add the extra spec ``hw:cpu_dedicated_mask`` to set the pinned CPUs for
+    the mixed instance. This is a core mask and can be used to include or
+    exclude CPUs. Any core not included or explicitly excluded is treated as a
+    shared CPU.
+  - |
+    Export instance pinned CPU list through the ``dedicated_cpus`` section in
+    the metadata service API.
