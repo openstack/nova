@@ -74,6 +74,25 @@ LIBVIRT_POWER_STATE = {
     VIR_DOMAIN_PMSUSPENDED: power_state.SUSPENDED,
 }
 
+# https://libvirt.org/html/libvirt-libvirt-domain.html#virDomainBlockJobType
+VIR_DOMAIN_BLOCK_JOB_TYPE_UNKNOWN = 0
+VIR_DOMAIN_BLOCK_JOB_TYPE_PULL = 1
+VIR_DOMAIN_BLOCK_JOB_TYPE_COPY = 2
+VIR_DOMAIN_BLOCK_JOB_TYPE_COMMIT = 3
+VIR_DOMAIN_BLOCK_JOB_TYPE_ACTIVE_COMMIT = 4
+VIR_DOMAIN_BLOCK_JOB_TYPE_BACKUP = 5
+VIR_DOMAIN_BLOCK_JOB_TYPE_LAST = 6
+
+LIBVIRT_BLOCK_JOB_TYPE = {
+    VIR_DOMAIN_BLOCK_JOB_TYPE_UNKNOWN: 'UNKNOWN',
+    VIR_DOMAIN_BLOCK_JOB_TYPE_PULL: 'PULL',
+    VIR_DOMAIN_BLOCK_JOB_TYPE_COPY: 'COPY',
+    VIR_DOMAIN_BLOCK_JOB_TYPE_COMMIT: 'COMMIT',
+    VIR_DOMAIN_BLOCK_JOB_TYPE_ACTIVE_COMMIT: 'ACTIVE_COMMIT',
+    VIR_DOMAIN_BLOCK_JOB_TYPE_BACKUP: 'BACKUP',
+    VIR_DOMAIN_BLOCK_JOB_TYPE_LAST: 'LAST',
+}
+
 
 class Guest(object):
 
@@ -851,6 +870,13 @@ class BlockDevice(object):
         # NOTE(mdbooth): See comment above: it may not have succeeded.
         if status is None:
             return True
+
+        # Track blockjob progress in DEBUG, helpful when reviewing failures.
+        job_type = LIBVIRT_BLOCK_JOB_TYPE.get(
+            status.job, f"Unknown to Nova ({status.job})")
+        LOG.debug("%(job_type)s block job progress, current cursor: %(cur)s "
+                  "final cursor: %(end)s",
+                  {'job_type': job_type, 'cur': status.cur, 'end': status.end})
 
         # NOTE(slaweq): because of bug in libvirt, which is described in
         # http://www.redhat.com/archives/libvir-list/2016-September/msg00017.html
