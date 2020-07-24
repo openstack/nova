@@ -6621,9 +6621,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('nova.virt.disk.api.setup_container')
     @mock.patch('oslo_utils.fileutils.ensure_tree')
     @mock.patch('nova.virt.libvirt.utils.get_instance_path')
-    def test_unmount_fs_if_error_during_lxc_create_guest(self,
-            mock_get_inst_path, mock_ensure_tree, mock_setup_container,
-            mock_get_info, mock_teardown):
+    def test_create_guest_with_network__unmount_fs_if_error_during_lxc_create(
+        self, mock_get_inst_path, mock_ensure_tree, mock_setup_container,
+        mock_get_info, mock_teardown,
+    ):
         """If we hit an error during a `_create_guest` call to `libvirt+lxc`
         we need to ensure the guest FS is unmounted from the host so that any
         future `lvremove` calls will work.
@@ -18541,8 +18542,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('nova.virt.disk.api.setup_container')
     @mock.patch('oslo_utils.fileutils.ensure_tree')
     @mock.patch('nova.virt.libvirt.utils.get_instance_path')
-    def test_create_guest_lxc(self, mock_get_inst_path, mock_ensure_tree,
-                           mock_setup_container, mock_get_info, mock_clean):
+    def test_create_guest_with_network__lxc(
+        self, mock_get_inst_path, mock_ensure_tree, mock_setup_container,
+        mock_get_info, mock_clean,
+    ):
         self.flags(virt_type='lxc', group='libvirt')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         mock_instance = mock.MagicMock()
@@ -18586,7 +18589,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('nova.virt.disk.api.setup_container')
     @mock.patch('oslo_utils.fileutils.ensure_tree')
     @mock.patch('nova.virt.libvirt.utils.get_instance_path')
-    def test_create_guest_lxc_id_maps(
+    def test_create_guest_with_network__lxc_id_maps(
         self, mock_get_inst_path, mock_ensure_tree, mock_setup_container,
         mock_chown, mock_get_info, mock_clean,
     ):
@@ -18649,7 +18652,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('nova.virt.disk.api.setup_container')
     @mock.patch('oslo_utils.fileutils.ensure_tree')
     @mock.patch('nova.virt.libvirt.utils.get_instance_path')
-    def test_create_guest_lxc_not_running(
+    def test_create_guest_with_network__lxc_not_running(
         self, mock_get_inst_path, mock_ensure_tree, mock_setup_container,
         mock_get_info, mock_teardown,
     ):
@@ -19010,7 +19013,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                             mock.sentinel.image_meta,
                                             vif_direct)
 
-    def test_create_propagates_exceptions(self):
+    def test_create_guest_with_network__propagates_exceptions(self):
         self.flags(virt_type='lxc', group='libvirt')
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -19032,7 +19035,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                               'xml',
                               instance, None, None)
 
-    def test_create_without_pause(self):
+    def test_create_guest_with_network__without_pause(self):
         self.flags(virt_type='lxc', group='libvirt')
 
         @contextlib.contextmanager
@@ -19054,8 +19057,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual(0, create.call_args_list[0][1]['pause'])
             self.assertEqual(0, domain.resume.call_count)
 
-    def _test_create_with_network_events(self, neutron_failure=None,
-                                         power_on=True, events=None):
+    def _test_create_guest_with_network__events(
+        self, neutron_failure=None, power_on=True, events=None,
+    ):
         generated_events = []
         events_passed_to_prepare = []
 
@@ -19125,45 +19129,45 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         else:
             self.assertEqual(0, prepare.call_count)
 
-    def test_create_with_network_events_passed_in(self):
-        self._test_create_with_network_events(
+    def test_create_guest_with_network__events_neutron(self):
+        self._test_create_guest_with_network__events()
+
+    def test_create_guest_with_network__events_passed_in(self):
+        self._test_create_guest_with_network__events(
             events=[('network-vif-plugged', uuids.fake_vif)])
 
-    def test_create_with_network_events_passed_in_0_timeout(self):
+    def test_create_guest_with_network__events_passed_in_0_timeout(self):
         self.flags(vif_plugging_timeout=0)
-        self._test_create_with_network_events(
+        self._test_create_guest_with_network__events(
             events=[('network-vif-plugged', uuids.fake_vif)])
 
-    def test_create_with_network_events_neutron(self):
-        self._test_create_with_network_events()
-
-    def test_create_with_network_events_neutron_power_off(self):
+    def test_create_guest_with_network_events_neutron_power_off(self):
         # Tests that we don't wait for events if we don't start the instance.
-        self._test_create_with_network_events(power_on=False)
+        self._test_create_guest_with_network__events(power_on=False)
 
-    def test_create_with_network_events_neutron_nowait(self):
+    def test_create_guest_with_network__events_nowait(self):
         self.flags(vif_plugging_timeout=0)
-        self._test_create_with_network_events()
+        self._test_create_guest_with_network__events()
 
-    def test_create_with_network_events_neutron_failed_nonfatal_timeout(self):
+    def test_create_guest_with_network__events_failed_nonfatal_timeout(self):
         self.flags(vif_plugging_is_fatal=False)
-        self._test_create_with_network_events(neutron_failure='timeout')
+        self._test_create_guest_with_network__events(neutron_failure='timeout')
 
-    def test_create_with_network_events_neutron_failed_fatal_timeout(self):
+    def test_create_guest_with_network__events_failed_fatal_timeout(self):
         self.assertRaises(exception.VirtualInterfaceCreateException,
-                          self._test_create_with_network_events,
+                          self._test_create_guest_with_network__events,
                           neutron_failure='timeout')
 
-    def test_create_with_network_events_neutron_failed_nonfatal_error(self):
+    def test_create_guest_with_network__events_failed_nonfatal_error(self):
         self.flags(vif_plugging_is_fatal=False)
-        self._test_create_with_network_events(neutron_failure='error')
+        self._test_create_guest_with_network__events(neutron_failure='error')
 
-    def test_create_with_network_events_neutron_failed_fatal_error(self):
+    def test_create_guest_with_network__events_failed_fatal_error(self):
         self.assertRaises(exception.VirtualInterfaceCreateException,
-                          self._test_create_with_network_events,
+                          self._test_create_guest_with_network__events,
                           neutron_failure='error')
 
-    def test_create_with_other_error(self):
+    def test_create_guest_with_network__with_other_error(self):
         drvr = libvirt_driver.LibvirtDriver(mock.MagicMock(), False)
 
         @mock.patch.object(drvr, 'plug_vifs')
@@ -19241,7 +19245,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch('os_brick.encryptors.get_encryption_metadata')
     @mock.patch('nova.virt.libvirt.blockinfo.get_info_from_bdm')
-    def test_create_with_bdm(self, get_info_from_bdm, get_encryption_metadata):
+    def test_create_guest_with_network__with_bdm(
+        self, get_info_from_bdm, get_encryption_metadata,
+    ):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
         mock_dom = mock.MagicMock()
