@@ -328,6 +328,7 @@ class LibvirtDriver(driver.ComputeDriver):
             "supports_pcpus": True,
             "supports_accelerators": True,
             "supports_bfv_rescue": True,
+            "supports_vtpm": False,
         }
         super(LibvirtDriver, self).__init__(virtapi)
 

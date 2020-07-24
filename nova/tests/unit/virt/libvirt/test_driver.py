@@ -1013,6 +1013,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                          'Driver capabilities for '
                          '\'supports_image_type_ploop\' '
                          'is invalid')
+        self.assertFalse(
+            drvr.capabilities['supports_vtpm'],
+            "Driver capabilities for 'supports_vtpm' is invalid",
+        )
 
     def test_driver_capabilities_qcow2_with_rbd(self):
         self.flags(images_type='rbd', group='libvirt')
