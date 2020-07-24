@@ -95,7 +95,7 @@ class StubComputeRPCAPI(compute_rpcapi.ComputeAPI):
             return rpc.ClientRouter(default_client)
 
 
-class InstanceHelperMixin(object):
+class InstanceHelperMixin:
 
     def _wait_for_server_parameter(
             self, server, expected_params, max_retries=10, api=None):
@@ -416,7 +416,7 @@ class InstanceHelperMixin(object):
         return server
 
     def _migrate_or_resize(self, server, request):
-        if not ('resize' in request or 'migrate' in request):
+        if 'resize' not in request and 'migrate' not in request:
             raise Exception('_migrate_or_resize only supports resize or '
                             'migrate requests.')
         self.api.post_server_action(server['id'], request)
@@ -437,6 +437,522 @@ class InstanceHelperMixin(object):
                                 'block_migration': 'auto'}})
         self._wait_for_state_change(server, 'ACTIVE')
         self._wait_for_migration_status(server, [migration_final_status])
+
+
+class PlacementHelperMixin:
+    """A helper mixin for interacting with placement."""
+
+    def _get_all_resource_classes(self):
+        resp = self.placement_api.get(
+            '/resource_classes', version='1.2'
+        ).body['resource_classes']
+        return [d['name'] for d in resp]
+
+    def _get_all_providers(self):
+        return self.placement_api.get(
+            '/resource_providers', version='1.14'
+        ).body['resource_providers']
+
+    def _get_all_rp_uuids_in_a_tree(self, in_tree_rp_uuid):
+        rps = self.placement_api.get(
+            '/resource_providers?in_tree=%s' % in_tree_rp_uuid,
+            version='1.20',
+        ).body['resource_providers']
+        return [rp['uuid'] for rp in rps]
+
+    def _post_resource_provider(self, rp_name):
+        return self.placement_api.post(
+            '/resource_providers', version='1.20', body={'name': rp_name}
+        ).body
+
+    def _get_resource_provider_by_uuid(self, rp_uuid):
+        return self.placement_api.get(
+            '/resource_providers/%s' % rp_uuid, version='1.15',
+        ).body
+
+    def _get_provider_usages(self, provider_uuid):
+        return self.placement_api.get(
+            '/resource_providers/%s/usages' % provider_uuid
+        ).body['usages']
+
+    # TODO(stephenfin): Rename to '_get_provider_allocations'
+    def _get_allocations_by_provider_uuid(self, rp_uuid):
+        return self.placement_api.get(
+            '/resource_providers/%s/allocations' % rp_uuid
+        ).body['allocations']
+
+    def _get_provider_traits(self, rp_uuid):
+        """Get traits for the specified provider.
+
+        :param rp_uuid: UUID of the resource provider to update
+        :returns: Dict object with the results.
+        """
+        return self.placement_api.get(
+            '/resource_providers/%s/traits' % rp_uuid, version='1.6'
+        ).body['traits']
+
+    def _set_provider_traits(self, rp_uuid, traits):
+        """Set traits for the specified provider.
+
+        This will overwrite any existing traits.
+
+        :param rp_uuid: UUID of the resource provider to update.
+        :param traits: List of trait strings to set on the provider.
+        :returns: APIResponse object with the results.
+        """
+        provider = self.placement_api.get(
+            '/resource_providers/%s' % rp_uuid
+        ).body
+        return self.placement_api.put(
+            '/resource_providers/%s/traits' % rp_uuid,
+            {
+                'resource_provider_generation': provider['generation'],
+                'traits': traits
+            },
+            version='1.6',
+        )
+
+    def _get_provider_inventory(self, rp_uuid):
+        return self.placement_api.get(
+            '/resource_providers/%s/inventories' % rp_uuid
+        ).body['inventories']
+
+    # TODO(stephenfin): Rename '_set_provider_inventory'
+    def _set_inventory(self, rp_uuid, inv_body):
+        """This will set the inventory for a given resource provider.
+
+        :param rp_uuid: UUID of the resource provider to update
+        :param inv_body: inventory to set on the provider
+        :returns: APIResponse object with the results
+        """
+        return self.placement_api.post(
+            '/resource_providers/%s/inventories' % rp_uuid,
+            version='1.15', body=inv_body
+        ).body
+
+    # TODO(stephenfin): Rename '_update_provider_inventory'
+    def _update_inventory(self, rp_uuid, inv_body):
+        """This will update the inventory for a given resource provider.
+
+        :param rp_uuid: UUID of the resource provider to update
+        :param inv_body: inventory to set on the provider
+        :returns: APIResponse object with the results
+        """
+        return self.placement_api.put(
+            '/resource_providers/%s/inventories' % rp_uuid, body=inv_body,
+        ).body
+
+    def _get_provider_aggregates(self, rp_uuid):
+        return self.placement_api.get(
+            '/resource_providers/%s/aggregates' % rp_uuid, version='1.1'
+        ).body['aggregates']
+
+    # TODO(stephenfin): Rename '_set_provider_aggregates'
+    def _set_aggregate(self, rp_uuid, agg_id):
+        provider = self.placement_api.get(
+            '/resource_providers/%s' % rp_uuid
+        ).body
+        return self.placement_api.put(
+            '/resource_providers/%s/aggregates' % rp_uuid,
+            body={
+                'aggregates': [agg_id],
+                'resource_provider_generation': provider['generation'],
+            },
+            version='1.19',
+        ).body
+
+    def _get_all_traits(self):
+        return self.placement_api.get('/traits', version='1.6').body['traits']
+
+    def _create_trait(self, trait):
+        return self.placement_api.put('/traits/%s' % trait, {}, version='1.6')
+
+    def _delete_trait(self, trait):
+        return self.placement_api.delete('/traits/%s' % trait, version='1.6')
+
+    def assertRequestMatchesUsage(self, requested_resources, root_rp_uuid):
+        # It matches the usages of the whole tree against the request
+        rp_uuids = self._get_all_rp_uuids_in_a_tree(root_rp_uuid)
+        # NOTE(gibi): flattening the placement usages means we cannot
+        # verify the structure here. However I don't see any way to define this
+        # function for nested and non-nested trees in a generic way.
+        total_usage = collections.defaultdict(int)
+        for rp in rp_uuids:
+            usage = self._get_provider_usages(rp)
+            for rc, amount in usage.items():
+                total_usage[rc] += amount
+        # Cannot simply do an assertEqual(expected, actual) as usages always
+        # contain every RC even if the usage is 0 and the flavor could also
+        # contain explicit 0 request for some resources.
+        # So if the flavor contains an explicit 0 resource request (e.g. in
+        # case of ironic resources:VCPU=0) then this code needs to assert that
+        # such resource has 0 usage in the tree. In the other hand if the usage
+        # contains 0 value for some resources that the flavor does not request
+        # then that is totally fine.
+        for rc, value in requested_resources.items():
+            self.assertIn(
+                rc, total_usage,
+                'The requested resource class not found in the total_usage of '
+                'the RP tree')
+            self.assertEqual(
+                value,
+                total_usage[rc],
+                'The requested resource amount does not match with the total '
+                'resource usage of the RP tree')
+        for rc, value in total_usage.items():
+            if value != 0:
+                self.assertEqual(
+                    requested_resources[rc],
+                    value,
+                    'The requested resource amount does not match with the '
+                    'total resource usage of the RP tree')
+
+    def assertFlavorMatchesUsage(self, root_rp_uuid, *flavors):
+        resources = collections.defaultdict(int)
+        for flavor in flavors:
+            res = self._resources_from_flavor(flavor)
+            for rc, value in res.items():
+                resources[rc] += value
+        self.assertRequestMatchesUsage(resources, root_rp_uuid)
+
+    def _resources_from_flavor(self, flavor):
+        resources = collections.defaultdict(int)
+        resources['VCPU'] = flavor['vcpus']
+        resources['MEMORY_MB'] = flavor['ram']
+        resources['DISK_GB'] = flavor['disk']
+        for key, value in flavor['extra_specs'].items():
+            if key.startswith('resources'):
+                resources[key.split(':')[1]] += value
+        return resources
+
+    def assertFlavorMatchesAllocation(
+        self, flavor, consumer_uuid, root_rp_uuid,
+    ):
+        # NOTE(gibi): This function does not handle sharing RPs today.
+        expected_rps = self._get_all_rp_uuids_in_a_tree(root_rp_uuid)
+        allocations = self._get_allocations_by_server_uuid(consumer_uuid)
+        # NOTE(gibi): flattening the placement allocation means we cannot
+        # verify the structure here. However I don't see any way to define this
+        # function for nested and non-nested trees in a generic way.
+        total_allocation = collections.defaultdict(int)
+        for rp, alloc in allocations.items():
+            self.assertIn(
+                rp, expected_rps,
+                'Unexpected, out of tree RP in the allocation')
+            for rc, value in alloc['resources'].items():
+                total_allocation[rc] += value
+
+        self.assertEqual(
+            self._resources_from_flavor(flavor),
+            total_allocation,
+            'The resources requested in the flavor does not match with total '
+            'allocation in the RP tree')
+
+    def get_migration_uuid_for_instance(self, instance_uuid):
+        # NOTE(danms): This is too much introspection for a test like this, but
+        # we can't see the migration uuid from the API, so we just encapsulate
+        # the peek behind the curtains here to keep it out of the tests.
+        # TODO(danms): Get the migration uuid from the API once it is exposed
+        ctxt = context.get_admin_context()
+        migrations = db.migration_get_all_by_filters(
+            ctxt, {'instance_uuid': instance_uuid})
+        self.assertEqual(
+            1, len(migrations),
+            'Test expected a single migration but found %i' % len(migrations))
+        return migrations[0].uuid
+
+
+class PlacementInstanceHelperMixin(InstanceHelperMixin, PlacementHelperMixin):
+    """A placement-aware variant of InstanceHelperMixin."""
+
+    # TODO(stephenfin): Rename to '_get_server_allocations'
+    def _get_allocations_by_server_uuid(self, server_uuid):
+        return self.placement_api.get(
+            '/allocations/%s' % server_uuid
+        ).body['allocations']
+
+    def _wait_for_server_allocations(self, consumer_id, max_retries=20):
+        retry_count = 0
+        while True:
+            alloc = self._get_allocations_by_server_uuid(consumer_id)
+            if alloc:
+                break
+            retry_count += 1
+            if retry_count == max_retries:
+                self.fail('Wait for server allocations failed, '
+                          'server=%s' % (consumer_id))
+            time.sleep(0.5)
+        return alloc
+
+    def _get_provider_uuid_by_host(self, host):
+        # NOTE(gibi): the compute node id is the same as the compute node
+        # provider uuid on that compute
+        return self.admin_api.api_get(
+            'os-hypervisors?hypervisor_hostname_pattern=%s' % host
+        ).body['hypervisors'][0]['id']
+
+    # TODO(stephenfin): Rename to '_create_server_and_check_allocations'
+    def _boot_and_check_allocations(
+        self, flavor, source_hostname, networks='none',
+    ):
+        """Boot an instance and check that the resource allocation is correct
+
+        After booting an instance on the given host with a given flavor it
+        asserts that both the providers usages and resource allocations match
+        with the resources requested in the flavor. It also asserts that
+        running the periodic update_available_resource call does not change the
+        resource state.
+
+        :param flavor: the flavor the instance will be booted with
+        :param source_hostname: the name of the host the instance will be
+                                booted on
+        :param networks: list of network dicts passed to the server create API
+            or "none" or "auto"
+        :return: the API representation of the booted instance
+        """
+        server_req = self._build_server(
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id=flavor['id'],
+            networks=networks,
+        )
+        server_req['availability_zone'] = 'nova:%s' % source_hostname
+        LOG.info('booting on %s', source_hostname)
+        created_server = self.api.post_server({'server': server_req})
+        server = self._wait_for_state_change(created_server, 'ACTIVE')
+
+        # Verify that our source host is what the server ended up on
+        self.assertEqual(source_hostname, server['OS-EXT-SRV-ATTR:host'])
+
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+
+        # Before we run periodics, make sure that we have allocations/usages
+        # only on the source host
+        self.assertFlavorMatchesUsage(source_rp_uuid, flavor)
+
+        # Check that the other providers has no usage
+        for rp_uuid in [self._get_provider_uuid_by_host(hostname)
+                        for hostname in self.computes.keys()
+                        if hostname != source_hostname]:
+            self.assertRequestMatchesUsage(
+                {'VCPU': 0, 'MEMORY_MB': 0, 'DISK_GB': 0}, rp_uuid)
+
+        # Check that the server only allocates resource from the host it is
+        # booted on
+        self.assertFlavorMatchesAllocation(
+            flavor, server['id'], source_rp_uuid)
+        self._run_periodics()
+
+        # After running the periodics but before we start any other operation,
+        # we should have exactly the same allocation/usage information as
+        # before running the periodics
+
+        # Check usages on the selected host after boot
+        self.assertFlavorMatchesUsage(source_rp_uuid, flavor)
+
+        # Check that the server only allocates resource from the host it is
+        # booted on
+        self.assertFlavorMatchesAllocation(
+            flavor, server['id'], source_rp_uuid)
+
+        # Check that the other providers has no usage
+        for rp_uuid in [self._get_provider_uuid_by_host(hostname)
+                        for hostname in self.computes.keys()
+                        if hostname != source_hostname]:
+            self.assertRequestMatchesUsage(
+                {'VCPU': 0, 'MEMORY_MB': 0, 'DISK_GB': 0}, rp_uuid)
+
+        return server
+
+    # TODO(stephenfin): Rename to '_delete_server_and_check_allocations'
+    def _delete_and_check_allocations(self, server):
+        """Delete the instance and asserts that the allocations are cleaned
+
+        If the server was moved (resized or live migrated), also checks that
+        migration-based allocations are also cleaned up.
+
+        :param server: The API representation of the instance to be deleted
+        :returns: The uuid of the migration record associated with the resize
+            or cold migrate operation
+        """
+        # First check to see if there is a related migration record so we can
+        # assert its allocations (if any) are not leaked.
+        with utils.temporary_mutation(self.admin_api, microversion='2.59'):
+            migrations = self.admin_api.api_get(
+                '/os-migrations?instance_uuid=%s' % server['id']
+            ).body['migrations']
+
+        if migrations:
+            # If there is more than one migration, they are sorted by
+            # created_at in descending order so we'll get the last one
+            # which is probably what we'd always want anyway.
+            migration_uuid = migrations[0]['uuid']
+        else:
+            migration_uuid = None
+
+        self._delete_server(server)
+
+        # NOTE(gibi): The resource allocation is deleted after the instance is
+        # destroyed in the db so wait_until_deleted might return before the
+        # the resource are deleted in placement. So we need to wait for the
+        # instance.delete.end notification as that is emitted after the
+        # resources are freed.
+
+        fake_notifier.wait_for_versioned_notifications('instance.delete.end')
+
+        for rp_uuid in [
+            self._get_provider_uuid_by_host(hostname)
+            for hostname in self.computes.keys()
+        ]:
+            self.assertRequestMatchesUsage(
+                {'VCPU': 0, 'MEMORY_MB': 0, 'DISK_GB': 0}, rp_uuid)
+
+        # and no allocations for the deleted server
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(0, len(allocations))
+
+        if migration_uuid:
+            # and no allocations for the delete migration
+            allocations = self._get_allocations_by_server_uuid(migration_uuid)
+            self.assertEqual(0, len(allocations))
+
+        return migration_uuid
+
+    def _move_and_check_allocations(
+        self, server, request, old_flavor, new_flavor, source_rp_uuid,
+        dest_rp_uuid,
+    ):
+        self._migrate_or_resize(server, request)
+
+        def _check_allocation():
+            self.assertFlavorMatchesUsage(source_rp_uuid, old_flavor)
+            self.assertFlavorMatchesUsage(dest_rp_uuid, new_flavor)
+
+            # The instance should own the new_flavor allocation against the
+            # destination host created by the scheduler
+            self.assertFlavorMatchesAllocation(new_flavor, server['id'],
+                                               dest_rp_uuid)
+
+            # The migration should own the old_flavor allocation against the
+            # source host created by conductor
+            migration_uuid = self.get_migration_uuid_for_instance(server['id'])
+            self.assertFlavorMatchesAllocation(old_flavor, migration_uuid,
+                                               source_rp_uuid)
+
+        # OK, so the move operation has run, but we have not yet confirmed or
+        # reverted the move operation. Before we run periodics, make sure
+        # that we have allocations/usages on BOTH the source and the
+        # destination hosts.
+        _check_allocation()
+        self._run_periodics()
+        _check_allocation()
+
+        # Make sure the RequestSpec.flavor matches the new_flavor.
+        ctxt = context.get_admin_context()
+        reqspec = objects.RequestSpec.get_by_instance_uuid(ctxt, server['id'])
+        self.assertEqual(new_flavor['id'], reqspec.flavor.flavorid)
+
+    # TODO(stephenfin): Rename to '_migrate_server_and_check_allocations'
+    def _migrate_and_check_allocations(
+        self, server, flavor, source_rp_uuid, dest_rp_uuid,
+    ):
+        request = {'migrate': None}
+        self._move_and_check_allocations(
+            server, request=request, old_flavor=flavor, new_flavor=flavor,
+            source_rp_uuid=source_rp_uuid, dest_rp_uuid=dest_rp_uuid)
+
+    # TODO(stephenfin): Rename to '_resize_server_and_check_allocations'
+    def _resize_and_check_allocations(
+        self, server, old_flavor, new_flavor, source_rp_uuid, dest_rp_uuid,
+    ):
+        request = {
+            'resize': {
+                'flavorRef': new_flavor['id']
+            }
+        }
+        self._move_and_check_allocations(
+            server, request=request, old_flavor=old_flavor,
+            new_flavor=new_flavor, source_rp_uuid=source_rp_uuid,
+            dest_rp_uuid=dest_rp_uuid)
+
+    # TODO(stephenfin): Rename to
+    # '_resize_server_to_same_host_and_check_allocations'
+    def _resize_to_same_host_and_check_allocations(
+        self, server, old_flavor, new_flavor, rp_uuid,
+    ):
+        # Resize the server to the same host and check usages in VERIFY_RESIZE
+        # state
+        self.flags(allow_resize_to_same_host=True)
+        self._resize_server(server, new_flavor['id'])
+
+        self.assertFlavorMatchesUsage(rp_uuid, old_flavor, new_flavor)
+
+        # The instance should hold a new_flavor allocation
+        self.assertFlavorMatchesAllocation(new_flavor, server['id'],
+                                           rp_uuid)
+
+        # The migration should hold an old_flavor allocation
+        migration_uuid = self.get_migration_uuid_for_instance(server['id'])
+        self.assertFlavorMatchesAllocation(old_flavor, migration_uuid,
+                                           rp_uuid)
+
+        # We've resized to the same host and have doubled allocations for both
+        # the old and new flavor on the same host. Run the periodic on the
+        # compute to see if it tramples on what the scheduler did.
+        self._run_periodics()
+
+        # In terms of usage, it's still double on the host because the instance
+        # and the migration each hold an allocation for the new and old
+        # flavors respectively.
+        self.assertFlavorMatchesUsage(rp_uuid, old_flavor, new_flavor)
+
+        # The instance should hold a new_flavor allocation
+        self.assertFlavorMatchesAllocation(new_flavor, server['id'],
+                                           rp_uuid)
+
+        # The migration should hold an old_flavor allocation
+        self.assertFlavorMatchesAllocation(old_flavor, migration_uuid,
+                                           rp_uuid)
+
+    def _check_allocation_during_evacuate(
+        self, flavor, server_uuid, source_root_rp_uuid, dest_root_rp_uuid,
+    ):
+        allocations = self._get_allocations_by_server_uuid(server_uuid)
+        self.assertEqual(2, len(allocations))
+        self.assertFlavorMatchesUsage(source_root_rp_uuid, flavor)
+        self.assertFlavorMatchesUsage(dest_root_rp_uuid, flavor)
+
+    def assert_hypervisor_usage(
+        self, compute_node_uuid, flavor, volume_backed,
+    ):
+        """Asserts the given hypervisor's resource usage matches the
+        given flavor (assumes a single instance on the hypervisor).
+
+        :param compute_node_uuid: UUID of the ComputeNode to check.
+        :param flavor: "flavor" entry dict from from GET /flavors/{flavor_id}
+        :param volume_backed: True if the flavor is used with a volume-backed
+            server, False otherwise.
+        """
+        # GET /os-hypervisors/{uuid} requires at least 2.53
+        with utils.temporary_mutation(self.admin_api, microversion='2.53'):
+            hypervisor = self.admin_api.api_get(
+                '/os-hypervisors/%s' % compute_node_uuid
+            ).body['hypervisor']
+
+        if volume_backed:
+            expected_disk_usage = 0
+        else:
+            expected_disk_usage = flavor['disk']
+
+        # Account for reserved_host_disk_mb.
+        expected_disk_usage += compute_utils.convert_mb_to_ceil_gb(
+            CONF.reserved_host_disk_mb)
+        self.assertEqual(expected_disk_usage, hypervisor['local_gb_used'])
+        # Account for reserved_host_memory_mb.
+        expected_ram_usage = CONF.reserved_host_memory_mb + flavor['ram']
+        self.assertEqual(expected_ram_usage, hypervisor['memory_mb_used'])
+        # Account for reserved_host_cpus.
+        expected_vcpu_usage = CONF.reserved_host_cpus + flavor['vcpus']
+        self.assertEqual(expected_vcpu_usage, hypervisor['vcpus_used'])
 
 
 class _IntegratedTestBase(test.TestCase, InstanceHelperMixin):
@@ -581,9 +1097,7 @@ class _IntegratedTestBase(test.TestCase, InstanceHelperMixin):
             put_traits_req, version='1.6')
 
 
-# FIXME(sbauza): There is little value to have this be a whole base testclass
-# instead of a mixin only providing methods for accessing Placement endpoint.
-class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
+class ProviderUsageBaseTestCase(test.TestCase, PlacementInstanceHelperMixin):
     """Base test class for functional tests that check provider usage
     and consumer allocations in Placement during various operations.
 
@@ -624,466 +1138,3 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         self.scheduler_service = self.start_service('scheduler')
 
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
-
-    def _get_provider_uuid_by_host(self, host):
-        # NOTE(gibi): the compute node id is the same as the compute node
-        # provider uuid on that compute
-        resp = self.admin_api.api_get(
-            'os-hypervisors?hypervisor_hostname_pattern=%s' % host).body
-        return resp['hypervisors'][0]['id']
-
-    def _get_provider_usages(self, provider_uuid):
-        return self.placement_api.get(
-            '/resource_providers/%s/usages' % provider_uuid).body['usages']
-
-    def _get_allocations_by_server_uuid(self, server_uuid):
-        return self.placement_api.get(
-            '/allocations/%s' % server_uuid).body['allocations']
-
-    def _wait_for_server_allocations(self, consumer_id, max_retries=20):
-        retry_count = 0
-        while True:
-            alloc = self._get_allocations_by_server_uuid(consumer_id)
-            if alloc:
-                break
-            retry_count += 1
-            if retry_count == max_retries:
-                self.fail('Wait for server allocations failed, '
-                          'server=%s' % (consumer_id))
-            time.sleep(0.5)
-        return alloc
-
-    def _get_allocations_by_provider_uuid(self, rp_uuid):
-        return self.placement_api.get(
-            '/resource_providers/%s/allocations' % rp_uuid).body['allocations']
-
-    def _get_all_providers(self):
-        return self.placement_api.get(
-            '/resource_providers', version='1.14').body['resource_providers']
-
-    def _create_trait(self, trait):
-        return self.placement_api.put('/traits/%s' % trait, {}, version='1.6')
-
-    def _delete_trait(self, trait):
-        return self.placement_api.delete('/traits/%s' % trait, version='1.6')
-
-    def _get_provider_traits(self, provider_uuid):
-        return self.placement_api.get(
-            '/resource_providers/%s/traits' % provider_uuid,
-            version='1.6').body['traits']
-
-    def _set_provider_traits(self, rp_uuid, traits):
-        """This will overwrite any existing traits.
-
-        :param rp_uuid: UUID of the resource provider to update
-        :param traits: list of trait strings to set on the provider
-        :returns: APIResponse object with the results
-        """
-        provider = self.placement_api.get(
-            '/resource_providers/%s' % rp_uuid).body
-        put_traits_req = {
-            'resource_provider_generation': provider['generation'],
-            'traits': traits
-        }
-        return self.placement_api.put(
-            '/resource_providers/%s/traits' % rp_uuid,
-            put_traits_req, version='1.6')
-
-    def _get_all_resource_classes(self):
-        dicts = self.placement_api.get(
-            '/resource_classes', version='1.2').body['resource_classes']
-        return [d['name'] for d in dicts]
-
-    def _get_all_traits(self):
-        return self.placement_api.get('/traits', version='1.6').body['traits']
-
-    def _get_provider_inventory(self, rp_uuid):
-        return self.placement_api.get(
-            '/resource_providers/%s/inventories' % rp_uuid).body['inventories']
-
-    def _get_provider_aggregates(self, rp_uuid):
-        return self.placement_api.get(
-            '/resource_providers/%s/aggregates' % rp_uuid,
-            version='1.1').body['aggregates']
-
-    def _post_resource_provider(self, rp_name):
-        return self.placement_api.post(
-            url='/resource_providers',
-            version='1.20', body={'name': rp_name}).body
-
-    def _set_inventory(self, rp_uuid, inv_body):
-        """This will set the inventory for a given resource provider.
-
-        :param rp_uuid: UUID of the resource provider to update
-        :param inv_body: inventory to set on the provider
-        :returns: APIResponse object with the results
-        """
-        return self.placement_api.post(
-            url= ('/resource_providers/%s/inventories' % rp_uuid),
-            version='1.15', body=inv_body).body
-
-    def _update_inventory(self, rp_uuid, inv_body):
-        """This will update the inventory for a given resource provider.
-
-        :param rp_uuid: UUID of the resource provider to update
-        :param inv_body: inventory to set on the provider
-        :returns: APIResponse object with the results
-        """
-        return self.placement_api.put(
-            url= ('/resource_providers/%s/inventories' % rp_uuid),
-            body=inv_body).body
-
-    def _get_resource_provider_by_uuid(self, rp_uuid):
-        return self.placement_api.get(
-            '/resource_providers/%s' % rp_uuid, version='1.15').body
-
-    def _set_aggregate(self, rp_uuid, agg_id):
-        provider = self.placement_api.get(
-            '/resource_providers/%s' % rp_uuid).body
-        post_agg_req = {"aggregates": [agg_id],
-                        "resource_provider_generation": provider['generation']}
-        return self.placement_api.put(
-            '/resource_providers/%s/aggregates' % rp_uuid, version='1.19',
-            body=post_agg_req).body
-
-    def _get_all_rp_uuids_in_a_tree(self, in_tree_rp_uuid):
-        rps = self.placement_api.get(
-            '/resource_providers?in_tree=%s' % in_tree_rp_uuid,
-            version='1.20').body['resource_providers']
-        return [rp['uuid'] for rp in rps]
-
-    def assertRequestMatchesUsage(self, requested_resources, root_rp_uuid):
-        # It matches the usages of the whole tree against the request
-        rp_uuids = self._get_all_rp_uuids_in_a_tree(root_rp_uuid)
-        # NOTE(gibi): flattening the placement usages means we cannot
-        # verify the structure here. However I don't see any way to define this
-        # function for nested and non-nested trees in a generic way.
-        total_usage = collections.defaultdict(int)
-        for rp in rp_uuids:
-            usage = self._get_provider_usages(rp)
-            for rc, amount in usage.items():
-                total_usage[rc] += amount
-        # Cannot simply do an assertEqual(expected, actual) as usages always
-        # contain every RC even if the usage is 0 and the flavor could also
-        # contain explicit 0 request for some resources.
-        # So if the flavor contains an explicit 0 resource request (e.g. in
-        # case of ironic resources:VCPU=0) then this code needs to assert that
-        # such resource has 0 usage in the tree. In the other hand if the usage
-        # contains 0 value for some resources that the flavor does not request
-        # then that is totally fine.
-        for rc, value in requested_resources.items():
-            self.assertIn(
-                rc, total_usage,
-                'The requested resource class not found in the total_usage of '
-                'the RP tree')
-            self.assertEqual(
-                value,
-                total_usage[rc],
-                'The requested resource amount does not match with the total '
-                'resource usage of the RP tree')
-        for rc, value in total_usage.items():
-            if value != 0:
-                self.assertEqual(
-                    requested_resources[rc],
-                    value,
-                    'The requested resource amount does not match with the '
-                    'total resource usage of the RP tree')
-
-    def assertFlavorMatchesUsage(self, root_rp_uuid, *flavors):
-        resources = collections.defaultdict(int)
-        for flavor in flavors:
-            res = self._resources_from_flavor(flavor)
-            for rc, value in res.items():
-                resources[rc] += value
-        self.assertRequestMatchesUsage(resources, root_rp_uuid)
-
-    def _resources_from_flavor(self, flavor):
-        resources = collections.defaultdict(int)
-        resources['VCPU'] = flavor['vcpus']
-        resources['MEMORY_MB'] = flavor['ram']
-        resources['DISK_GB'] = flavor['disk']
-        for key, value in flavor['extra_specs'].items():
-            if key.startswith('resources'):
-                resources[key.split(':')[1]] += value
-        return resources
-
-    def assertFlavorMatchesAllocation(self, flavor, consumer_uuid,
-                                      root_rp_uuid):
-        # NOTE(gibi): This function does not handle sharing RPs today.
-        expected_rps = self._get_all_rp_uuids_in_a_tree(root_rp_uuid)
-        allocations = self._get_allocations_by_server_uuid(consumer_uuid)
-        # NOTE(gibi): flattening the placement allocation means we cannot
-        # verify the structure here. However I don't see any way to define this
-        # function for nested and non-nested trees in a generic way.
-        total_allocation = collections.defaultdict(int)
-        for rp, alloc in allocations.items():
-            self.assertIn(rp, expected_rps, 'Unexpected, out of tree RP in the'
-                                            ' allocation')
-            for rc, value in alloc['resources'].items():
-                total_allocation[rc] += value
-
-        self.assertEqual(
-            self._resources_from_flavor(flavor),
-            total_allocation,
-            'The resources requested in the flavor does not match with total '
-            'allocation in the RP tree')
-
-    def get_migration_uuid_for_instance(self, instance_uuid):
-        # NOTE(danms): This is too much introspection for a test like this, but
-        # we can't see the migration uuid from the API, so we just encapsulate
-        # the peek behind the curtains here to keep it out of the tests.
-        # TODO(danms): Get the migration uuid from the API once it is exposed
-        ctxt = context.get_admin_context()
-        migrations = db.migration_get_all_by_filters(
-            ctxt, {'instance_uuid': instance_uuid})
-        self.assertEqual(1, len(migrations),
-                         'Test expected a single migration, '
-                         'but found %i' % len(migrations))
-        return migrations[0].uuid
-
-    def _boot_and_check_allocations(
-            self, flavor, source_hostname, networks='none'):
-        """Boot an instance and check that the resource allocation is correct
-
-        After booting an instance on the given host with a given flavor it
-        asserts that both the providers usages and resource allocations match
-        with the resources requested in the flavor. It also asserts that
-        running the periodic update_available_resource call does not change the
-        resource state.
-
-        :param flavor: the flavor the instance will be booted with
-        :param source_hostname: the name of the host the instance will be
-                                booted on
-        :param networks: list of network dicts passed to the server create API
-            or "none" or "auto"
-        :return: the API representation of the booted instance
-        """
-        server_req = self._build_server(
-            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
-            flavor_id=flavor['id'],
-            networks=networks)
-        server_req['availability_zone'] = 'nova:%s' % source_hostname
-        LOG.info('booting on %s', source_hostname)
-        created_server = self.api.post_server({'server': server_req})
-        server = self._wait_for_state_change(created_server, 'ACTIVE')
-
-        # Verify that our source host is what the server ended up on
-        self.assertEqual(source_hostname, server['OS-EXT-SRV-ATTR:host'])
-
-        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
-
-        # Before we run periodics, make sure that we have allocations/usages
-        # only on the source host
-        self.assertFlavorMatchesUsage(source_rp_uuid, flavor)
-
-        # Check that the other providers has no usage
-        for rp_uuid in [self._get_provider_uuid_by_host(hostname)
-                        for hostname in self.computes.keys()
-                        if hostname != source_hostname]:
-            self.assertRequestMatchesUsage({'VCPU': 0,
-                                            'MEMORY_MB': 0,
-                                            'DISK_GB': 0}, rp_uuid)
-
-        # Check that the server only allocates resource from the host it is
-        # booted on
-        self.assertFlavorMatchesAllocation(flavor, server['id'],
-                                           source_rp_uuid)
-        self._run_periodics()
-
-        # After running the periodics but before we start any other operation,
-        # we should have exactly the same allocation/usage information as
-        # before running the periodics
-
-        # Check usages on the selected host after boot
-        self.assertFlavorMatchesUsage(source_rp_uuid, flavor)
-
-        # Check that the server only allocates resource from the host it is
-        # booted on
-        self.assertFlavorMatchesAllocation(flavor, server['id'],
-                                           source_rp_uuid)
-
-        # Check that the other providers has no usage
-        for rp_uuid in [self._get_provider_uuid_by_host(hostname)
-                        for hostname in self.computes.keys()
-                        if hostname != source_hostname]:
-            self.assertRequestMatchesUsage({'VCPU': 0,
-                                            'MEMORY_MB': 0,
-                                            'DISK_GB': 0}, rp_uuid)
-        return server
-
-    def _delete_and_check_allocations(self, server):
-        """Delete the instance and asserts that the allocations are cleaned
-
-        If the server was moved (resized or live migrated), also checks that
-        migration-based allocations are also cleaned up.
-
-        :param server: The API representation of the instance to be deleted
-        :returns: The uuid of the migration record associated with the resize
-            or cold migrate operation
-        """
-
-        # First check to see if there is a related migration record so we can
-        # assert its allocations (if any) are not leaked.
-        with utils.temporary_mutation(self.admin_api, microversion='2.59'):
-            migrations = self.admin_api.api_get(
-                '/os-migrations?instance_uuid=%s' %
-                server['id']).body['migrations']
-        if migrations:
-            # If there is more than one migration, they are sorted by
-            # created_at in descending order so we'll get the last one
-            # which is probably what we'd always want anyway.
-            migration_uuid = migrations[0]['uuid']
-        else:
-            migration_uuid = None
-
-        self._delete_server(server)
-
-        # NOTE(gibi): The resource allocation is deleted after the instance is
-        # destroyed in the db so wait_until_deleted might return before the
-        # the resource are deleted in placement. So we need to wait for the
-        # instance.delete.end notification as that is emitted after the
-        # resources are freed.
-
-        fake_notifier.wait_for_versioned_notifications('instance.delete.end')
-
-        for rp_uuid in [self._get_provider_uuid_by_host(hostname)
-                        for hostname in self.computes.keys()]:
-            self.assertRequestMatchesUsage({'VCPU': 0,
-                                            'MEMORY_MB': 0,
-                                            'DISK_GB': 0}, rp_uuid)
-
-        # and no allocations for the deleted server
-        allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(0, len(allocations))
-
-        if migration_uuid:
-            # and no allocations for the delete migration
-            allocations = self._get_allocations_by_server_uuid(migration_uuid)
-            self.assertEqual(0, len(allocations))
-        return migration_uuid
-
-    def _move_and_check_allocations(self, server, request, old_flavor,
-                                    new_flavor, source_rp_uuid, dest_rp_uuid):
-        self._migrate_or_resize(server, request)
-
-        def _check_allocation():
-            self.assertFlavorMatchesUsage(source_rp_uuid, old_flavor)
-            self.assertFlavorMatchesUsage(dest_rp_uuid, new_flavor)
-
-            # The instance should own the new_flavor allocation against the
-            # destination host created by the scheduler
-            self.assertFlavorMatchesAllocation(new_flavor, server['id'],
-                                               dest_rp_uuid)
-
-            # The migration should own the old_flavor allocation against the
-            # source host created by conductor
-            migration_uuid = self.get_migration_uuid_for_instance(server['id'])
-            self.assertFlavorMatchesAllocation(old_flavor, migration_uuid,
-                                               source_rp_uuid)
-
-        # OK, so the move operation has run, but we have not yet confirmed or
-        # reverted the move operation. Before we run periodics, make sure
-        # that we have allocations/usages on BOTH the source and the
-        # destination hosts.
-        _check_allocation()
-        self._run_periodics()
-        _check_allocation()
-
-        # Make sure the RequestSpec.flavor matches the new_flavor.
-        ctxt = context.get_admin_context()
-        reqspec = objects.RequestSpec.get_by_instance_uuid(ctxt, server['id'])
-        self.assertEqual(new_flavor['id'], reqspec.flavor.flavorid)
-
-    def _migrate_and_check_allocations(self, server, flavor, source_rp_uuid,
-                                       dest_rp_uuid):
-        request = {
-            'migrate': None
-        }
-        self._move_and_check_allocations(
-            server, request=request, old_flavor=flavor, new_flavor=flavor,
-            source_rp_uuid=source_rp_uuid, dest_rp_uuid=dest_rp_uuid)
-
-    def _resize_and_check_allocations(self, server, old_flavor, new_flavor,
-                                      source_rp_uuid, dest_rp_uuid):
-        request = {
-            'resize': {
-                'flavorRef': new_flavor['id']
-            }
-        }
-        self._move_and_check_allocations(
-            server, request=request, old_flavor=old_flavor,
-            new_flavor=new_flavor, source_rp_uuid=source_rp_uuid,
-            dest_rp_uuid=dest_rp_uuid)
-
-    def _resize_to_same_host_and_check_allocations(self, server, old_flavor,
-                                                   new_flavor, rp_uuid):
-        # Resize the server to the same host and check usages in VERIFY_RESIZE
-        # state
-        self.flags(allow_resize_to_same_host=True)
-        self._resize_server(server, new_flavor['id'])
-
-        self.assertFlavorMatchesUsage(rp_uuid, old_flavor, new_flavor)
-
-        # The instance should hold a new_flavor allocation
-        self.assertFlavorMatchesAllocation(new_flavor, server['id'],
-                                           rp_uuid)
-
-        # The migration should hold an old_flavor allocation
-        migration_uuid = self.get_migration_uuid_for_instance(server['id'])
-        self.assertFlavorMatchesAllocation(old_flavor, migration_uuid,
-                                           rp_uuid)
-
-        # We've resized to the same host and have doubled allocations for both
-        # the old and new flavor on the same host. Run the periodic on the
-        # compute to see if it tramples on what the scheduler did.
-        self._run_periodics()
-
-        # In terms of usage, it's still double on the host because the instance
-        # and the migration each hold an allocation for the new and old
-        # flavors respectively.
-        self.assertFlavorMatchesUsage(rp_uuid, old_flavor, new_flavor)
-
-        # The instance should hold a new_flavor allocation
-        self.assertFlavorMatchesAllocation(new_flavor, server['id'],
-                                           rp_uuid)
-
-        # The migration should hold an old_flavor allocation
-        self.assertFlavorMatchesAllocation(old_flavor, migration_uuid,
-                                           rp_uuid)
-
-    def _check_allocation_during_evacuate(
-            self, flavor, server_uuid, source_root_rp_uuid, dest_root_rp_uuid):
-
-        allocations = self._get_allocations_by_server_uuid(server_uuid)
-        self.assertEqual(2, len(allocations))
-        self.assertFlavorMatchesUsage(source_root_rp_uuid, flavor)
-        self.assertFlavorMatchesUsage(dest_root_rp_uuid, flavor)
-
-    def assert_hypervisor_usage(self, compute_node_uuid, flavor,
-                                volume_backed):
-        """Asserts the given hypervisor's resource usage matches the
-        given flavor (assumes a single instance on the hypervisor).
-
-        :param compute_node_uuid: UUID of the ComputeNode to check.
-        :param flavor: "flavor" entry dict from from GET /flavors/{flavor_id}
-        :param volume_backed: True if the flavor is used with a volume-backed
-            server, False otherwise.
-        """
-        # GET /os-hypervisors/{uuid} requires at least 2.53
-        with utils.temporary_mutation(self.admin_api, microversion='2.53'):
-            hypervisor = self.admin_api.api_get(
-                '/os-hypervisors/%s' % compute_node_uuid).body['hypervisor']
-        if volume_backed:
-            expected_disk_usage = 0
-        else:
-            expected_disk_usage = flavor['disk']
-        # Account for reserved_host_disk_mb.
-        expected_disk_usage += compute_utils.convert_mb_to_ceil_gb(
-            CONF.reserved_host_disk_mb)
-        self.assertEqual(expected_disk_usage, hypervisor['local_gb_used'])
-        # Account for reserved_host_memory_mb.
-        expected_ram_usage = CONF.reserved_host_memory_mb + flavor['ram']
-        self.assertEqual(expected_ram_usage, hypervisor['memory_mb_used'])
-        # Account for reserved_host_cpus.
-        expected_vcpu_usage = CONF.reserved_host_cpus + flavor['vcpus']
-        self.assertEqual(expected_vcpu_usage, hypervisor['vcpus_used'])
