@@ -25,8 +25,6 @@ class TestMultiattachVolumes(integrated_helpers._IntegratedTestBase):
     # These are all used in _IntegratedTestBase.
     api_major_version = 'v2.1'
     microversion = '2.60'
-    _image_ref_parameter = 'imageRef'
-    _flavor_ref_parameter = 'flavorRef'
 
     def setUp(self):
         # Everything has been upgraded to the latest code to support

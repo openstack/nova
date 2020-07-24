@@ -25,10 +25,10 @@ from sqlalchemy import select
 from nova import context
 from nova.db import api as db
 from nova.db.sqlalchemy import api as sqlalchemy_api
-from nova.tests.functional import test_servers
+from nova.tests.functional import integrated_helpers
 
 
-class TestDatabaseArchive(test_servers.ServersTestBase):
+class TestDatabaseArchive(integrated_helpers._IntegratedTestBase):
     """Tests DB API for archiving (soft) deleted records"""
 
     def setUp(self):

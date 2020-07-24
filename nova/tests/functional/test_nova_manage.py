@@ -1765,8 +1765,6 @@ class TestNovaManagePlacementAudit(
 class TestDBArchiveDeletedRows(integrated_helpers._IntegratedTestBase):
     """Functional tests for the "nova-manage db archive_deleted_rows" CLI."""
     api_major_version = 'v2.1'
-    _image_ref_parameter = 'imageRef'
-    _flavor_ref_parameter = 'flavorRef'
 
     def setUp(self):
         super(TestDBArchiveDeletedRows, self).setUp()

@@ -61,30 +61,8 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class ServersTestBase(integrated_helpers._IntegratedTestBase):
+class ServersTest(integrated_helpers._IntegratedTestBase):
     api_major_version = 'v2'
-    _force_delete_parameter = 'forceDelete'
-    _image_ref_parameter = 'imageRef'
-    _flavor_ref_parameter = 'flavorRef'
-    _access_ipv4_parameter = 'accessIPv4'
-    _access_ipv6_parameter = 'accessIPv6'
-    _return_resv_id_parameter = 'return_reservation_id'
-    _min_count_parameter = 'min_count'
-
-    def setUp(self):
-        super(ServersTestBase, self).setUp()
-
-    def _get_access_ips_params(self):
-        return {self._access_ipv4_parameter: "172.19.0.2",
-                self._access_ipv6_parameter: "fe80::2"}
-
-    def _verify_access_ips(self, server):
-        self.assertEqual('172.19.0.2',
-                         server[self._access_ipv4_parameter])
-        self.assertEqual('fe80::2', server[self._access_ipv6_parameter])
-
-
-class ServersTest(ServersTestBase):
 
     def test_get_servers(self):
         # Simple check that listing servers works.
@@ -225,22 +203,20 @@ class ServersTest(ServersTestBase):
                           self.api.post_server, post)
 
         # With an invalid imageRef, this throws 500.
-        server[self._image_ref_parameter] = uuids.fake
+        server['imageRef'] = uuids.fake
         # TODO(justinsb): Check whatever the spec says should be thrown here
         self.assertRaises(client.OpenStackApiException,
                           self.api.post_server, post)
 
         # Add a valid imageRef
-        server[self._image_ref_parameter] = good_server.get(
-            self._image_ref_parameter)
+        server['imageRef'] = good_server.get('imageRef')
 
         # Without flavorRef, this throws 500
         # TODO(justinsb): Check whatever the spec says should be thrown here
         self.assertRaises(client.OpenStackApiException,
                           self.api.post_server, post)
 
-        server[self._flavor_ref_parameter] = good_server.get(
-            self._flavor_ref_parameter)
+        server['flavorRef'] = good_server.get('flavorRef')
 
         # Without a name, this throws 500
         # TODO(justinsb): Check whatever the spec says should be thrown here
@@ -407,8 +383,7 @@ class ServersTest(ServersTestBase):
                                                    'SOFT_DELETED')
 
         # Force delete server
-        self.api.post_server_action(created_server_id,
-                                    {self._force_delete_parameter: {}})
+        self.api.post_server_action(created_server_id, {'forceDelete': {}})
 
         # Wait for real deletion
         self._wait_until_deleted(found_server)
@@ -516,13 +491,16 @@ class ServersTest(ServersTestBase):
         # rebuild the server with metadata and other server attributes
         post = {}
         post['rebuild'] = {
-            self._image_ref_parameter: "76fa36fc-c930-4bf3-8c8a-ea2a2420deb6",
-            "name": "blah",
-            self._access_ipv4_parameter: "172.19.0.2",
-            self._access_ipv6_parameter: "fe80::2",
-            "metadata": {'some': 'thing'},
+            'imageRef': '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
+            'name': 'blah',
+            'accessIPv4': '172.19.0.2',
+            'accessIPv6': 'fe80::2',
+            'metadata': {'some': 'thing'},
         }
-        post['rebuild'].update(self._get_access_ips_params())
+        post['rebuild'].update({
+            'accessIPv4': '172.19.0.2',
+            'accessIPv6': 'fe80::2',
+        })
 
         self.api.post_server_action(created_server_id, post)
         LOG.debug("rebuilt server: %s", created_server)
@@ -532,14 +510,15 @@ class ServersTest(ServersTestBase):
         self.assertEqual(created_server_id, found_server['id'])
         self.assertEqual({'some': 'thing'}, found_server.get('metadata'))
         self.assertEqual('blah', found_server.get('name'))
-        self.assertEqual(post['rebuild'][self._image_ref_parameter],
+        self.assertEqual(post['rebuild']['imageRef'],
                          found_server.get('image')['id'])
-        self._verify_access_ips(found_server)
+        self.assertEqual('172.19.0.2', found_server['accessIPv4'])
+        self.assertEqual('fe80::2', found_server['accessIPv6'])
 
         # rebuild the server with empty metadata and nothing else
         post = {}
         post['rebuild'] = {
-            self._image_ref_parameter: "76fa36fc-c930-4bf3-8c8a-ea2a2420deb6",
+            'imageRef': "76fa36fc-c930-4bf3-8c8a-ea2a2420deb6",
             "metadata": {},
         }
 
@@ -551,9 +530,10 @@ class ServersTest(ServersTestBase):
         self.assertEqual(created_server_id, found_server['id'])
         self.assertEqual({}, found_server.get('metadata'))
         self.assertEqual('blah', found_server.get('name'))
-        self.assertEqual(post['rebuild'][self._image_ref_parameter],
+        self.assertEqual(post['rebuild']['imageRef'],
                          found_server.get('image')['id'])
-        self._verify_access_ips(found_server)
+        self.assertEqual('172.19.0.2', found_server['accessIPv4'])
+        self.assertEqual('fe80::2', found_server['accessIPv6'])
 
         # Cleanup
         self._delete_server(found_server)
@@ -584,8 +564,8 @@ class ServersTest(ServersTestBase):
         # Create 2 servers, setting 'return_reservation_id, which should
         # return a reservation_id
         server = self._build_server()
-        server[self._min_count_parameter] = 2
-        server[self._return_resv_id_parameter] = True
+        server['min_count'] = 2
+        server['return_reservation_id'] = True
         post = {'server': server}
         response = self.api.post_server(post)
         self.assertIn('reservation_id', response)
@@ -816,7 +796,7 @@ class ServersTestV21(ServersTest):
     api_major_version = 'v2.1'
 
 
-class ServersTestV219(ServersTestBase):
+class ServersTestV219(integrated_helpers._IntegratedTestBase):
     api_major_version = 'v2.1'
 
     def _create_server(self, set_desc = True, desc = None):
@@ -838,13 +818,16 @@ class ServersTestV219(ServersTestBase):
         new_name = integrated_helpers.generate_random_alphanumeric(8)
         post = {}
         post['rebuild'] = {
-            "name": new_name,
-            self._image_ref_parameter: "76fa36fc-c930-4bf3-8c8a-ea2a2420deb6",
-            self._access_ipv4_parameter: "172.19.0.2",
-            self._access_ipv6_parameter: "fe80::2",
-            "metadata": {'some': 'thing'},
+            'name': new_name,
+            'imageRef': '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
+            'accessIPv4': '172.19.0.2',
+            'accessIPv6': 'fe80::2',
+            'metadata': {'some': 'thing'},
         }
-        post['rebuild'].update(self._get_access_ips_params())
+        post['rebuild'].update({
+            'accessIPv4': '172.19.0.2',
+            'accessIPv6': 'fe80::2',
+        })
         if set_desc:
             post['rebuild']['description'] = desc
         self.api.api_post('/servers/%s/action' % server_id, post)
@@ -1021,7 +1004,7 @@ class ServersTestV219(ServersTestBase):
         self._rebuild_assertRaisesRegex(server_id, 'x' * 256)
 
 
-class ServerTestV220(ServersTestBase):
+class ServerTestV220(integrated_helpers._IntegratedTestBase):
     api_major_version = 'v2.1'
 
     def setUp(self):
@@ -1096,7 +1079,7 @@ class ServerTestV220(ServersTestBase):
         self._delete_server(found_server)
 
 
-class ServerTestV269(ServersTestBase):
+class ServerTestV269(integrated_helpers._IntegratedTestBase):
     api_major_version = 'v2.1'
     NUMBER_OF_CELLS = 3
 
@@ -1551,7 +1534,7 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase):
                       'volume-backed server', six.text_type(resp))
 
 
-class ServersTestV280(ServersTestBase):
+class ServersTestV280(integrated_helpers._IntegratedTestBase):
     api_major_version = 'v2.1'
 
     def setUp(self):
@@ -4550,7 +4533,7 @@ class TraitsBasedSchedulingTest(integrated_helpers.ProviderUsageBaseTestCase):
                          server['fault']['message'])
 
 
-class ServerTestV256Common(ServersTestBase):
+class ServerTestV256Common(integrated_helpers._IntegratedTestBase):
     api_major_version = 'v2.1'
     microversion = '2.56'
     ADMIN_API = True

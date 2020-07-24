@@ -33,18 +33,14 @@ class SecgroupsFullstack(testscenarios.WithScenarios, test.TestCase):
 
     """
     REQUIRES_LOCKING = True
-    _image_ref_parameter = 'imageRef'
-    _flavor_ref_parameter = 'flavorRef'
 
     # This test uses ``testscenarios`` which matrix multiplies the
     # test across the scenarios listed below setting the attributes
     # in the dictionary on ``self`` for each scenario.
     scenarios = [
-        ('v2', {
-            'api_major_version': 'v2'}),
+        ('v2', {'api_major_version': 'v2'}),
         # test v2.1 base microversion
-        ('v2_1', {
-            'api_major_version': 'v2.1'}),
+        ('v2_1', {'api_major_version': 'v2.1'}),
     ]
 
     def setUp(self):
@@ -65,19 +61,18 @@ class SecgroupsFullstack(testscenarios.WithScenarios, test.TestCase):
         image = self.api.get_images()[0]
         LOG.info("Image: %s", image)
 
-        if self._image_ref_parameter in image:
-            image_href = image[self._image_ref_parameter]
+        if 'imageRef' in image:
+            image_href = image['imageRef']
         else:
             image_href = image['id']
             image_href = 'http://fake.server/%s' % image_href
 
         # We now have a valid imageId
-        server[self._image_ref_parameter] = image_href
+        server['imageRef'] = image_href
 
         # Set a valid flavorId
         flavor = self.api.get_flavors()[1]
-        server[self._flavor_ref_parameter] = ('http://fake.server/%s'
-                                              % flavor['id'])
+        server['flavorRef'] = 'http://fake.server/%s' % flavor['id']
         server['name'] = name
         return server
 

@@ -14,10 +14,10 @@ from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
-from nova.tests.functional import test_servers
+from nova.tests.functional import integrated_helpers
 
 
-class ImagesTest(test_servers.ServersTestBase):
+class ImagesTest(integrated_helpers._IntegratedTestBase):
 
     def test_create_images_negative_invalid_state(self):
         # Create server

@@ -60,9 +60,6 @@ class VirtualInterfaceListMigrationTestCase(
     ADMIN_API = True
     api_major_version = 'v2.1'
 
-    _image_ref_parameter = 'imageRef'
-    _flavor_ref_parameter = 'flavorRef'
-
     def setUp(self):
         super(VirtualInterfaceListMigrationTestCase, self).setUp()
 

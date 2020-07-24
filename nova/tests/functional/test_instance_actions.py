@@ -22,12 +22,11 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.functional import test_servers
 from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import policy_fixture
 
 
-class InstanceActionsTestV2(test_servers.ServersTestBase):
+class InstanceActionsTestV2(integrated_helpers._IntegratedTestBase):
     """Tests Instance Actions API"""
 
     def test_get_instance_actions(self):
