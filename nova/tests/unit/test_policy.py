@@ -445,7 +445,10 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-server-groups:delete",
 "os_compute_api:os-shelve:shelve",
 "os_compute_api:os-shelve:unshelve",
-"os_compute_api:os-volumes",
+"os_compute_api:os-volumes:create",
+"os_compute_api:os-volumes:delete",
+"os_compute_api:os-volumes:snapshots:create",
+"os_compute_api:os-volumes:snapshots:delete",
 "os_compute_api:os-volumes-attachments:create",
 "os_compute_api:os-volumes-attachments:delete",
 "os_compute_api:os-volumes-attachments:update",
@@ -489,6 +492,12 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-server-password:show",
 "os_compute_api:os-server-tags:index",
 "os_compute_api:os-server-tags:show",
+"os_compute_api:os-volumes:list",
+"os_compute_api:os-volumes:detail",
+"os_compute_api:os-volumes:show",
+"os_compute_api:os-volumes:snapshots:show",
+"os_compute_api:os-volumes:snapshots:list",
+"os_compute_api:os-volumes:snapshots:detail",
 )
 
         self.allow_nobody_rules = (

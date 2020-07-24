@@ -104,7 +104,7 @@ class VolumeController(wsgi.Controller):
     def show(self, req, id):
         """Return data about the given volume."""
         context = req.environ['nova.context']
-        context.can(vol_policies.BASE_POLICY_NAME)
+        context.can(vol_policies.POLICY_NAME % 'show')
 
         try:
             vol = self.volume_api.get(context, id)
@@ -119,7 +119,7 @@ class VolumeController(wsgi.Controller):
     def delete(self, req, id):
         """Delete a volume."""
         context = req.environ['nova.context']
-        context.can(vol_policies.BASE_POLICY_NAME)
+        context.can(vol_policies.POLICY_NAME % 'delete')
 
         try:
             self.volume_api.delete(context, id)
@@ -133,6 +133,8 @@ class VolumeController(wsgi.Controller):
     @wsgi.expected_errors(())
     def index(self, req):
         """Returns a summary list of volumes."""
+        context = req.environ['nova.context']
+        context.can(vol_policies.POLICY_NAME % 'list')
         return self._items(req, entity_maker=_translate_volume_summary_view)
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
@@ -140,12 +142,13 @@ class VolumeController(wsgi.Controller):
     @wsgi.expected_errors(())
     def detail(self, req):
         """Returns a detailed list of volumes."""
+        context = req.environ['nova.context']
+        context.can(vol_policies.POLICY_NAME % 'detail')
         return self._items(req, entity_maker=_translate_volume_detail_view)
 
     def _items(self, req, entity_maker):
         """Returns a list of volumes, transformed through entity_maker."""
         context = req.environ['nova.context']
-        context.can(vol_policies.BASE_POLICY_NAME)
 
         volumes = self.volume_api.get_all(context)
         limited_list = common.limited(volumes, req)
@@ -158,7 +161,7 @@ class VolumeController(wsgi.Controller):
     def create(self, req, body):
         """Creates a new volume."""
         context = req.environ['nova.context']
-        context.can(vol_policies.BASE_POLICY_NAME)
+        context.can(vol_policies.POLICY_NAME % 'create')
 
         vol = body['volume']
 
@@ -573,7 +576,7 @@ class SnapshotController(wsgi.Controller):
     def show(self, req, id):
         """Return data about the given snapshot."""
         context = req.environ['nova.context']
-        context.can(vol_policies.BASE_POLICY_NAME)
+        context.can(vol_policies.POLICY_NAME % 'snapshots:show')
 
         try:
             vol = self.volume_api.get_snapshot(context, id)
@@ -588,7 +591,7 @@ class SnapshotController(wsgi.Controller):
     def delete(self, req, id):
         """Delete a snapshot."""
         context = req.environ['nova.context']
-        context.can(vol_policies.BASE_POLICY_NAME)
+        context.can(vol_policies.POLICY_NAME % 'snapshots:delete')
 
         try:
             self.volume_api.delete_snapshot(context, id)
@@ -600,6 +603,8 @@ class SnapshotController(wsgi.Controller):
     @wsgi.expected_errors(())
     def index(self, req):
         """Returns a summary list of snapshots."""
+        context = req.environ['nova.context']
+        context.can(vol_policies.POLICY_NAME % 'snapshots:list')
         return self._items(req, entity_maker=_translate_snapshot_summary_view)
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
@@ -607,12 +612,13 @@ class SnapshotController(wsgi.Controller):
     @wsgi.expected_errors(())
     def detail(self, req):
         """Returns a detailed list of snapshots."""
+        context = req.environ['nova.context']
+        context.can(vol_policies.POLICY_NAME % 'snapshots:detail')
         return self._items(req, entity_maker=_translate_snapshot_detail_view)
 
     def _items(self, req, entity_maker):
         """Returns a list of snapshots, transformed through entity_maker."""
         context = req.environ['nova.context']
-        context.can(vol_policies.BASE_POLICY_NAME)
 
         snapshots = self.volume_api.get_all_snapshots(context)
         limited_list = common.limited(snapshots, req)
@@ -625,7 +631,7 @@ class SnapshotController(wsgi.Controller):
     def create(self, req, body):
         """Creates a new snapshot."""
         context = req.environ['nova.context']
-        context.can(vol_policies.BASE_POLICY_NAME)
+        context.can(vol_policies.POLICY_NAME % 'snapshots:create')
 
         snapshot = body['snapshot']
         volume_id = snapshot['volume_id']
