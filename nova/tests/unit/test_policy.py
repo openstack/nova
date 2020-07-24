@@ -396,7 +396,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:server-metadata:update_all",
 "os_compute_api:os-suspend-server:suspend",
 "os_compute_api:os-suspend-server:resume",
-"os_compute_api:os-tenant-networks",
 "os_compute_api:extensions",
 "os_compute_api:servers:confirm_resize",
 "os_compute_api:servers:create",
@@ -458,6 +457,8 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 )
 
         self.system_reader_rules = (
+"os_compute_api:os-tenant-networks:list",
+"os_compute_api:os-tenant-networks:show",
 "os_compute_api:servers:migrations:index",
 "os_compute_api:servers:migrations:show",
 "os_compute_api:os-simple-tenant-usage:list",
