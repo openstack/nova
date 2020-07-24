@@ -121,7 +121,8 @@ class ImageMetaPropsPayload(base.NotificationPayloadBase):
     # Version 1.2: Added hw_pci_numa_affinity_policy field
     # Version 1.3: Added hw_mem_encryption, hw_pmu and hw_time_hpet fields
     # Version 1.4: Added 'mixed' to hw_cpu_policy field
-    VERSION = '1.4'
+    # Version 1.5: Added 'hw_tpm_model' and 'hw_tpm_version' fields
+    VERSION = '1.5'
 
     SCHEMA = {
         k: ('image_meta_props', k) for k in image_meta.ImageMetaProps.fields}

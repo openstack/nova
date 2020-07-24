@@ -510,6 +510,21 @@ class RNGModel(BaseNovaEnum):
     ALL = (VIRTIO,)
 
 
+class TPMModel(BaseNovaEnum):
+
+    TIS = "tpm-tis"
+    CRB = "tpm-crb"
+
+    ALL = (TIS, CRB)
+
+
+class TPMVersion(BaseNovaEnum):
+    v1_2 = "1.2"
+    v2_0 = "2.0"
+
+    ALL = (v1_2, v2_0)
+
+
 class SCSIModel(BaseNovaEnum):
 
     BUSLOGIC = "buslogic"
@@ -1228,6 +1243,14 @@ class OSTypeField(BaseEnumField):
 
 class RNGModelField(BaseEnumField):
     AUTO_TYPE = RNGModel()
+
+
+class TPMModelField(BaseEnumField):
+    AUTO_TYPE = TPMModel()
+
+
+class TPMVersionField(BaseEnumField):
+    AUTO_TYPE = TPMVersion()
 
 
 class SCSIModelField(BaseEnumField):

@@ -371,6 +371,35 @@ feature_flag_validators = [
         },
     ),
     base.ExtraSpecValidator(
+        name='hw:tpm_model',
+        description=(
+            'The model of the attached TPM device.'
+        ),
+        value={
+            'type': str,
+            'description': 'A TPM model',
+            'enum': [
+                'tpm-tis',
+                'tpm-crb',
+            ],
+        },
+    ),
+    base.ExtraSpecValidator(
+        name='hw:tpm_version',
+        description=(
+            "The TPM version. Required if requesting a vTPM via the "
+            "'hw:tpm_model' extra spec or equivalent image metadata property."
+        ),
+        value={
+            'type': str,
+            'description': 'A TPM version.',
+            'enum': [
+                '1.2',
+                '2.0',
+            ],
+        },
+    ),
+    base.ExtraSpecValidator(
         name='hw:watchdog_action',
         description=(
             'The action to take when the watchdog timer is kicked. Only '

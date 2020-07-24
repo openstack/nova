@@ -5515,6 +5515,65 @@ class PCINUMAAffinityPolicyTest(test.NoDBTestCase):
 
 
 @ddt.ddt
+class VTPMConfigTest(test.NoDBTestCase):
+
+    @ddt.unpack
+    @ddt.data(
+        # pass: no configuration
+        (None, None, None, None, None),
+        # pass: flavor-only (TIS) configuration
+        ('1.2', 'tpm-tis', None, None, hw.VTPMConfig('1.2', 'tpm-tis')),
+        # pass: image-only (TIS) configuration
+        (None, None, '1.2', 'tpm-tis', hw.VTPMConfig('1.2', 'tpm-tis')),
+        # pass: identical image and flavor (TIS) configuration
+        ('1.2', 'tpm-tis', '1.2', 'tpm-tis', hw.VTPMConfig('1.2', 'tpm-tis')),
+        # pass: identical image and flavor (CRB) configuration
+        ('2.0', 'tpm-crb', '2.0', 'tpm-crb', hw.VTPMConfig('2.0', 'tpm-crb')),
+        # fail: mismatched image and flavor configuration
+        ('1.2', 'tpm-tis', '2.0', 'tpm-crb', exception.FlavorImageConflict),
+        # fail: invalid version
+        ('1.3', 'tpm-tis', None, None, exception.Invalid),
+        # fail: invalid model
+        ('1.2', 'tpm-foo', None, None, exception.Invalid),
+        # fail: invalid version/model combination
+        ('1.2', 'tpm-crb', None, None, exception.Invalid),
+    )
+    def test_get_vtpm_constraint(
+        self, flavor_version, flavor_model, image_version, image_model,
+        expected,
+    ):
+        extra_specs = {}
+
+        if flavor_version:
+            extra_specs['hw:tpm_version'] = flavor_version
+
+        if flavor_model:
+            extra_specs['hw:tpm_model'] = flavor_model
+
+        image_meta_props = {}
+
+        if image_version:
+            image_meta_props['hw_tpm_version'] = image_version
+
+        if image_model:
+            image_meta_props['hw_tpm_model'] = image_model
+
+        flavor = objects.Flavor(
+            name='foo', vcpus=1, memory_mb=1024, extra_specs=extra_specs)
+        image_meta = objects.ImageMeta.from_dict(
+            {'name': 'bar', 'properties': image_meta_props})
+
+        if isinstance(expected, type) and issubclass(expected, Exception):
+            self.assertRaises(
+                expected, hw.get_vtpm_constraint, flavor, image_meta,
+            )
+        else:
+            self.assertEqual(
+                expected, hw.get_vtpm_constraint(flavor, image_meta),
+            )
+
+
+@ddt.ddt
 class RescuePropertyTestCase(test.NoDBTestCase):
 
     @ddt.unpack
