@@ -32,6 +32,22 @@ LOG = logging.getLogger(__name__)
 class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
     compute_driver = 'fake.MediumFakeDriver'
 
+    # These must match the capabilities in
+    # nova.virt.fake.FakeDriver.capabilities
+    expected_fake_driver_capability_traits = set([
+        trait for trait in [
+            os_traits.COMPUTE_ACCELERATORS,
+            os_traits.COMPUTE_IMAGE_TYPE_RAW,
+            os_traits.COMPUTE_DEVICE_TAGGING,
+            os_traits.COMPUTE_NET_ATTACH_INTERFACE,
+            os_traits.COMPUTE_NET_ATTACH_INTERFACE_WITH_TAG,
+            os_traits.COMPUTE_VOLUME_ATTACH_WITH_TAG,
+            os_traits.COMPUTE_VOLUME_EXTEND,
+            os_traits.COMPUTE_VOLUME_MULTI_ATTACH,
+            os_traits.COMPUTE_TRUSTED_CERTS,
+        ]
+    ])
+
     def setUp(self):
         super(ProviderTreeTests, self).setUp()
         # Before starting compute, placement has no providers registered
