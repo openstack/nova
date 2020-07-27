@@ -9523,6 +9523,19 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         self.assertIn('Exception while attempting to rollback',
                 mock_log.exception.call_args[0][0])
 
+    @mock.patch('nova.volume.cinder.API.attachment_delete')
+    def test_rollback_volume_bdms_after_pre_failure(
+            self, mock_delete_attachment):
+        instance = fake_instance.fake_instance_obj(
+            self.context, uuid=uuids.instance)
+        original_bdms = bdms = self._generate_volume_bdm_list(instance)
+        self.compute._rollback_volume_bdms(
+            self.context, bdms, original_bdms, instance)
+        # Assert that attachment_delete isn't called when the bdms have already
+        # been rolled back by a failure in pre_live_migration to reference the
+        # source bdms.
+        mock_delete_attachment.assert_not_called()
+
     @mock.patch.object(objects.ComputeNode,
                        'get_first_node_by_host_for_old_compat')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
