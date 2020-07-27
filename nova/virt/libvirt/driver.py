@@ -21,8 +21,7 @@
 """
 A connection to a hypervisor through libvirt.
 
-Supports KVM, LXC, QEMU, XEN and Parallels.
-
+Supports KVM, LXC, QEMU, and Parallels.
 """
 
 import binascii
@@ -938,10 +937,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         migration_flags |= libvirt.VIR_MIGRATE_LIVE
 
-        # Adding p2p flag only if xen is not in use, because xen does not
-        # support p2p migrations
-        if CONF.libvirt.virt_type != 'xen':
-            migration_flags |= libvirt.VIR_MIGRATE_PEER2PEER
+        # Enable support for p2p migrations
+        migration_flags |= libvirt.VIR_MIGRATE_PEER2PEER
 
         # Adding VIR_MIGRATE_UNDEFINE_SOURCE because, without it, migrated
         # instance will remain defined on the source host
@@ -1039,9 +1036,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     @staticmethod
     def _uri():
-        if CONF.libvirt.virt_type == 'xen':
-            uri = CONF.libvirt.connection_uri or 'xen:///'
-        elif CONF.libvirt.virt_type == 'lxc':
+        if CONF.libvirt.virt_type == 'lxc':
             uri = CONF.libvirt.connection_uri or 'lxc:///'
         elif CONF.libvirt.virt_type == 'parallels':
             uri = CONF.libvirt.connection_uri or 'parallels:///system'
@@ -1054,7 +1049,6 @@ class LibvirtDriver(driver.ComputeDriver):
         uris = {
             'kvm': 'qemu+%(scheme)s://%(dest)s/system',
             'qemu': 'qemu+%(scheme)s://%(dest)s/system',
-            'xen': 'xenmigr://%(dest)s/system',
             'parallels': 'parallels+tcp://%(dest)s/system',
         }
         dest = oslo_netutils.escape_ipv6(dest)
@@ -3200,8 +3194,6 @@ class LibvirtDriver(driver.ComputeDriver):
         # NOTE(vish): This actually could take slightly longer than the
         #             FLAG defines depending on how long the get_info
         #             call takes to return.
-        self._prepare_pci_devices_for_use(
-            pci_manager.get_instance_pci_devs(instance, 'all'))
         for x in range(CONF.libvirt.wait_soft_reboot_seconds):
             guest = self._host.get_guest(instance)
 
@@ -3294,8 +3286,6 @@ class LibvirtDriver(driver.ComputeDriver):
         self._create_guest_with_network(
             context, xml, instance, network_info, block_device_info,
             vifs_already_plugged=True)
-        self._prepare_pci_devices_for_use(
-            pci_manager.get_instance_pci_devs(instance, 'all'))
 
         def _wait_for_reboot():
             """Called at an interval until the VM is running again."""
@@ -3535,14 +3525,15 @@ class LibvirtDriver(driver.ComputeDriver):
         if hardware.check_hw_rescue_props(image_meta):
             LOG.info("Attempting a stable device rescue", instance=instance)
             # NOTE(lyarwood): Stable device rescue is not supported when using
-            # the LXC and Xen virt_types as they do not support the required
+            # the LXC virt_type as it does not support the required
             # <boot order=''> definitions allowing an instance to boot from the
             # rescue device added as a final device to the domain.
-            if virt_type in ('lxc', 'xen'):
-                reason = ("Stable device rescue is not supported by virt_type "
-                          "%s", virt_type)
-                raise exception.InstanceNotRescuable(instance_id=instance.uuid,
-                                                     reason=reason)
+            if virt_type == 'lxc':
+                reason = _(
+                    "Stable device rescue is not supported by virt_type '%s'"
+                )
+                raise exception.InstanceNotRescuable(
+                    instance_id=instance.uuid, reason=reason % virt_type)
             # NOTE(lyarwood): Stable device rescue provides the original disk
             # mapping of the instance with the rescue device appened to the
             # end. As a result we need to provide the original image_meta, the
@@ -3751,10 +3742,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
             # NOTE(markus_z): The virt_types kvm and qemu are the only ones
             # which create a dedicated file device for the console logging.
-            # Other virt_types like xen, lxc, and parallels depend on the
-            # flush of that pty device into the "console.log" file to ensure
-            # that a series of "get_console_output" calls return the complete
-            # content even after rebooting a guest.
+            # Other virt_types like lxc and parallels depend on the flush of
+            # that PTY device into the "console.log" file to ensure that a
+            # series of "get_console_output" calls return the complete content
+            # even after rebooting a guest.
             nova.privsep.path.writefile(console_log, 'a+', data)
 
             # set console path to logfile, not to pty device
@@ -4889,7 +4880,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _set_managed_mode(self, pcidev):
         # only kvm support managed mode
-        if CONF.libvirt.virt_type in ('xen', 'parallels',):
+        if CONF.libvirt.virt_type in ('parallels',):
             pcidev.managed = 'no'
         if CONF.libvirt.virt_type in ('kvm', 'qemu'):
             pcidev.managed = 'yes'
@@ -5261,8 +5252,6 @@ class LibvirtDriver(driver.ComputeDriver):
         """Returns the guest OS type based on virt type."""
         if virt_type == "lxc":
             ret = fields.VMMode.EXE
-        elif virt_type == "xen":
-            ret = fields.VMMode.XEN
         else:
             ret = fields.VMMode.HVM
         return ret
@@ -5353,19 +5342,11 @@ class LibvirtDriver(driver.ComputeDriver):
                     flavor.extra_specs.get('hw:hide_hypervisor_id')) or
                 image_meta.properties.get('img_hide_hypervisor_id'))
 
-        if virt_type == "xen":
-            # PAE only makes sense in X86
-            if caps.host.cpu.arch in (fields.Architecture.I686,
-                                      fields.Architecture.X86_64):
-                guest.features.append(vconfig.LibvirtConfigGuestFeaturePAE())
-
-        if (virt_type not in ("lxc", "parallels", "xen") or
-                (virt_type == "xen" and guest.os_type == fields.VMMode.HVM)):
+        if virt_type in ('qemu', 'kvm'):
             guest.features.append(vconfig.LibvirtConfigGuestFeatureACPI())
             guest.features.append(vconfig.LibvirtConfigGuestFeatureAPIC())
 
-        if (virt_type in ("qemu", "kvm") and
-                os_type == 'windows'):
+        if virt_type in ('qemu', 'kvm') and os_type == 'windows':
             hv = vconfig.LibvirtConfigGuestFeatureHyperV()
             hv.relaxed = True
 
@@ -5426,9 +5407,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # be overridden by the user with image_meta.properties, which
         # is carried out in the next if statement below this one.
         guestarch = libvirt_utils.get_arch(image_meta)
-        if guest.os_type == fields.VMMode.XEN:
-            video.type = 'xen'
-        elif CONF.libvirt.virt_type == 'parallels':
+        if CONF.libvirt.virt_type == 'parallels':
             video.type = 'vga'
         elif guestarch in (fields.Architecture.PPC,
                            fields.Architecture.PPC64,
@@ -5694,12 +5673,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _configure_guest_by_virt_type(self, guest, virt_type, caps, instance,
                                       image_meta, flavor, root_device_name,
                                       sev_enabled):
-        if virt_type == "xen":
-            if guest.os_type == fields.VMMode.HVM:
-                guest.os_loader = CONF.libvirt.xen_hvmloader_path
-            else:
-                guest.os_cmdline = CONSOLE
-        elif virt_type in ("kvm", "qemu"):
+        if virt_type in ("kvm", "qemu"):
             if caps.host.cpu.arch in (fields.Architecture.I686,
                                       fields.Architecture.X86_64):
                 guest.sysinfo = self._get_guest_config_sysinfo(instance)
@@ -6290,8 +6264,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
     @staticmethod
     def _guest_add_spice_channel(guest):
-        if (CONF.spice.enabled and CONF.spice.agent_enabled and
-                guest.virt_type not in ('lxc', 'xen')):
+        if (
+            CONF.spice.enabled and CONF.spice.agent_enabled and
+            guest.virt_type != 'lxc'
+        ):
             channel = vconfig.LibvirtConfigGuestChannel()
             channel.type = 'spicevmc'
             channel.target_name = "com.redhat.spice.0"
@@ -6299,15 +6275,13 @@ class LibvirtDriver(driver.ComputeDriver):
 
     @staticmethod
     def _guest_add_memory_balloon(guest):
-        virt_type = guest.virt_type
-        # Memory balloon device only support 'qemu/kvm' and 'xen' hypervisor
-        if (virt_type in ('xen', 'qemu', 'kvm') and
-                    CONF.libvirt.mem_stats_period_seconds > 0):
+        # Memory balloon device only support 'qemu/kvm' hypervisor
+        if (
+            guest.virt_type in ('qemu', 'kvm') and
+            CONF.libvirt.mem_stats_period_seconds > 0
+        ):
             balloon = vconfig.LibvirtConfigMemoryBalloon()
-            if virt_type in ('qemu', 'kvm'):
-                balloon.model = 'virtio'
-            else:
-                balloon.model = 'xen'
+            balloon.model = 'virtio'
             balloon.period = CONF.libvirt.mem_stats_period_seconds
             guest.add_device(balloon)
 
@@ -6330,13 +6304,12 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _guest_add_pci_devices(self, guest, instance):
         virt_type = guest.virt_type
-        if virt_type in ('xen', 'qemu', 'kvm'):
+        if virt_type in ('qemu', 'kvm'):
             # Get all generic PCI devices (non-SR-IOV).
             for pci_dev in pci_manager.get_instance_pci_devs(instance):
                 guest.add_device(self._get_guest_pci_device(pci_dev))
         else:
-            # PCI devices is only supported for hypervisors
-            #  'xen', 'qemu' and 'kvm'.
+            # PCI devices is only supported for QEMU/KVM hypervisor
             if pci_manager.get_instance_pci_devs(instance, 'all'):
                 raise exception.PciDeviceUnsupportedHypervisor(type=virt_type)
 
@@ -6365,7 +6338,7 @@ class LibvirtDriver(driver.ComputeDriver):
             graphics.listen = CONF.vnc.server_listen
             guest.add_device(graphics)
             add_video_driver = True
-        if CONF.spice.enabled and guest.virt_type not in ('lxc', 'xen'):
+        if CONF.spice.enabled and guest.virt_type != 'lxc':
             graphics = vconfig.LibvirtConfigGuestGraphics()
             graphics.type = "spice"
             graphics.listen = CONF.spice.server_listen

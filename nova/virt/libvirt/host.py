@@ -77,7 +77,6 @@ CONF = nova.conf.CONF
 # This list is for libvirt hypervisor drivers that need special handling.
 # This is *not* the complete list of supported hypervisor drivers.
 HV_DRIVER_QEMU = "QEMU"
-HV_DRIVER_XEN = "Xen"
 
 SEV_KERNEL_PARAM_FILE = '/sys/module/kvm_amd/parameters/sev'
 
@@ -622,31 +621,27 @@ class Host(object):
                     'ex': ex})
             raise exception.InternalError(msg)
 
-    def list_guests(self, only_running=True, only_guests=True):
+    def list_guests(self, only_running=True):
         """Get a list of Guest objects for nova instances
 
         :param only_running: True to only return running instances
-        :param only_guests: True to filter out any host domain (eg Dom-0)
 
         See method "list_instance_domains" for more information.
 
         :returns: list of Guest objects
         """
-        return [libvirt_guest.Guest(dom) for dom in self.list_instance_domains(
-            only_running=only_running, only_guests=only_guests)]
+        domains = self.list_instance_domains(only_running=only_running)
+        return [libvirt_guest.Guest(dom) for dom in domains]
 
-    def list_instance_domains(self, only_running=True, only_guests=True):
+    def list_instance_domains(self, only_running=True):
         """Get a list of libvirt.Domain objects for nova instances
 
         :param only_running: True to only return running instances
-        :param only_guests: True to filter out any host domain (eg Dom-0)
 
         Query libvirt to a get a list of all libvirt.Domain objects
         that correspond to nova instances. If the only_running parameter
         is true this list will only include active domains, otherwise
-        inactive domains will be included too. If the only_guests parameter
-        is true the list will have any "host" domain (aka Xen Domain-0)
-        filtered out.
+        inactive domains will be included too.
 
         :returns: list of libvirt.Domain objects
         """
@@ -662,8 +657,6 @@ class Host(object):
 
         doms = []
         for dom in alldoms:
-            if only_guests and dom.ID() == 0:
-                continue
             doms.append(dom)
 
         return doms
@@ -1073,14 +1066,10 @@ class Host(object):
         else:
             return self._get_hardware_info()[1]
 
-    def _sum_domain_memory_mb(self, include_host=True):
-        """Get the total memory consumed by guest domains
-
-        If include_host is True, subtract available host memory from guest 0
-        to get real used memory within dom0 within xen
-        """
+    def _sum_domain_memory_mb(self):
+        """Get the total memory consumed by guest domains."""
         used = 0
-        for guest in self.list_guests(only_guests=False):
+        for guest in self.list_guests():
             try:
                 # TODO(sahid): Use get_info...
                 dom_mem = int(guest._get_domain_info()[2])
@@ -1089,12 +1078,7 @@ class Host(object):
                             " %(uuid)s, exception: %(ex)s",
                             {"uuid": guest.uuid, "ex": e})
                 continue
-            if include_host and guest.id == 0:
-                # Memory usage for the host domain (dom0 in xen) is the
-                # reported memory minus available memory
-                used += (dom_mem - self._get_avail_memory_kb())
-            else:
-                used += dom_mem
+            used += dom_mem
         # Convert it to MB
         return used // units.Ki
 
@@ -1115,13 +1099,10 @@ class Host(object):
 
         :returns: the total usage of memory(MB).
         """
-        if CONF.libvirt.virt_type == 'xen':
-            # For xen, report the sum of all domains, with
-            return self._sum_domain_memory_mb(include_host=True)
-        elif CONF.libvirt.file_backed_memory > 0:
+        if CONF.libvirt.file_backed_memory > 0:
             # For file_backed_memory, report the total usage of guests,
             # ignoring host memory
-            return self._sum_domain_memory_mb(include_host=False)
+            return self._sum_domain_memory_mb()
         else:
             return (self.get_memory_mb_total() -
                    (self._get_avail_memory_kb() // units.Ki))

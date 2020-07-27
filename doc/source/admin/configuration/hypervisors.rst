@@ -8,7 +8,6 @@ Hypervisors
    hypervisor-basics
    hypervisor-kvm
    hypervisor-qemu
-   hypervisor-xen-libvirt
    hypervisor-lxc
    hypervisor-vmware
    hypervisor-hyper-v
@@ -38,10 +37,6 @@ The following hypervisors are supported:
 
 * `VMware vSphere`_ 5.1.0 and newer - Runs VMware-based Linux and Windows
   images through a connection with a vCenter server.
-
-* `Xen (using libvirt)`_ - Xen Project Hypervisor using libvirt as
-  management interface into ``nova-compute`` to run Linux, Windows, FreeBSD and
-  NetBSD virtual machines.
 
 * `Hyper-V`_ - Server virtualization with Microsoft Hyper-V, use to run
   Windows, Linux, and FreeBSD virtual machines.  Runs ``nova-compute`` natively
@@ -90,7 +85,6 @@ virt drivers:
 .. _LXC: https://linuxcontainers.org
 .. _QEMU: https://wiki.qemu.org/Manual
 .. _VMware vSphere: https://www.vmware.com/support/vsphere-hypervisor.html
-.. _Xen (using libvirt): https://www.xenproject.org
 .. _Hyper-V: https://docs.microsoft.com/en-us/windows-server/virtualization/hyper-v/hyper-v-technology-overview
 .. _Virtuozzo: https://www.virtuozzo.com/products/vz7.html
 .. _PowerVM: https://www.ibm.com/us-en/marketplace/ibm-powervm

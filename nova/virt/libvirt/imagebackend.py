@@ -144,6 +144,7 @@ class Image(metaclass=abc.ABCMeta):
         """
         pass
 
+    # TODO(stephenfin): Remove the unused hypervisor_version parameter
     def libvirt_info(self, disk_info, cache_mode,
                      extra_specs, hypervisor_version, boot_order=None,
                      disk_unit=None):
@@ -165,9 +166,10 @@ class Image(metaclass=abc.ABCMeta):
         info.driver_discard = self.discard_mode
         info.driver_io = self.driver_io
         info.driver_format = self.driver_format
-        driver_name = libvirt_utils.pick_disk_driver_name(hypervisor_version,
-                                                          self.is_block_dev)
-        info.driver_name = driver_name
+        if CONF.libvirt.virt_type in ('qemu', 'kvm'):
+            # the QEMU backend supports multiple backends, so tell libvirt
+            # which one to use
+            info.driver_name = 'qemu'
         info.source_path = self.path
         info.boot_order = boot_order
 
@@ -856,6 +858,7 @@ class Rbd(Image):
 
         self.discard_mode = CONF.libvirt.hw_disk_discard
 
+    # TODO(stephenfin): Remove the unused hypervisor_version parameter
     def libvirt_info(self, disk_info, cache_mode,
                      extra_specs, hypervisor_version, boot_order=None,
                      disk_unit=None):

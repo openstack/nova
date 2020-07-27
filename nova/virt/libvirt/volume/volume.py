@@ -18,13 +18,13 @@
 
 from oslo_log import log as logging
 
+import nova.conf
 from nova import exception
 from nova import profiler
 from nova.virt import block_device as driver_block_device
 from nova.virt.libvirt import config as vconfig
-from nova.virt.libvirt import utils as libvirt_utils
 
-
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -38,10 +38,6 @@ class LibvirtBaseVolumeDriver(object):
     def get_config(self, connection_info, disk_info):
         """Returns xml for libvirt."""
         conf = vconfig.LibvirtConfigGuestDisk()
-        conf.driver_name = libvirt_utils.pick_disk_driver_name(
-            self.host.get_version(),
-            self.is_block_dev
-        )
 
         conf.source_device = disk_info['type']
         conf.driver_format = "raw"
@@ -49,6 +45,11 @@ class LibvirtBaseVolumeDriver(object):
         conf.target_dev = disk_info['dev']
         conf.target_bus = disk_info['bus']
         conf.serial = connection_info.get('serial')
+
+        if CONF.libvirt.virt_type in ('qemu', 'kvm'):
+            # the QEMU backend supports multiple backends, so tell libvirt
+            # which one to use
+            conf.driver_name = 'qemu'
 
         # Support for block size tuning
         data = {}

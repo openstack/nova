@@ -906,15 +906,6 @@ class LibvirtVifTestCase(test.NoDBTestCase):
 
             self._assertModel(xml, network_model.VIF_MODEL_VIRTIO, "qemu")
 
-    def test_model_xen(self):
-        self.flags(use_virtio_for_bridges=True,
-                   virt_type='xen',
-                   group='libvirt')
-
-        d = vif.LibvirtGenericVIFDriver()
-        xml = self._get_instance_xml(d, self.vif_bridge)
-        self._assertModel(xml)
-
     def test_generic_driver_none(self):
         d = vif.LibvirtGenericVIFDriver()
         self.assertRaises(exception.NovaException,
@@ -1094,7 +1085,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
             self, mock_create_tap_dev, mock_set_mtu, mock_device_exists):
 
         self.flags(use_virtio_for_bridges=True,
-                   virt_type='xen',
+                   virt_type='lxc',
                    group='libvirt')
 
         d1 = vif.LibvirtGenericVIFDriver()

@@ -2059,27 +2059,6 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
         obj2.parse_str(xml)
         self.assertXmlEqual(xml, obj2.to_xml())
 
-    def test_config_bridge_xen(self):
-        obj = config.LibvirtConfigGuestInterface()
-        obj.net_type = "bridge"
-        obj.source_dev = "br0"
-        obj.mac_addr = "CA:FE:BE:EF:CA:FE"
-        obj.script = "/path/to/test-vif-openstack"
-
-        xml = obj.to_xml()
-        self.assertXmlEqual(xml, """
-            <interface type="bridge">
-              <mac address="CA:FE:BE:EF:CA:FE"/>
-              <source bridge="br0"/>
-              <script path="/path/to/test-vif-openstack"/>
-            </interface>""")
-
-        # parse the xml from the first object into a new object and make sure
-        # they are the same
-        obj2 = config.LibvirtConfigGuestInterface()
-        obj2.parse_str(xml)
-        self.assertXmlEqual(xml, obj2.to_xml())
-
     def test_config_8021Qbh(self):
         obj = config.LibvirtConfigGuestInterface()
         obj.net_type = "direct"
@@ -2459,100 +2438,6 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
                 <gid start="0" target="10000" count="1"/>
               </idmap>
             </domain>""", xml)
-
-    def test_config_xen_pv(self):
-        obj = config.LibvirtConfigGuest()
-        obj.virt_type = "xen"
-        obj.memory = 100 * units.Mi
-        obj.vcpus = 2
-        obj.cpuset = set([0, 1, 3, 4, 5])
-        obj.name = "demo"
-        obj.uuid = "b38a3f43-4be2-4046-897f-b67c2f5e0147"
-        obj.os_type = "linux"
-        obj.os_kernel = "/tmp/vmlinuz"
-        obj.os_initrd = "/tmp/ramdisk"
-        obj.os_cmdline = "console=xvc0"
-
-        disk = config.LibvirtConfigGuestDisk()
-        disk.source_type = "file"
-        disk.source_path = "/tmp/img"
-        disk.target_dev = "/dev/xvda"
-        disk.target_bus = "xen"
-
-        obj.add_device(disk)
-
-        xml = obj.to_xml()
-        self.assertXmlEqual(xml, """
-            <domain type="xen">
-              <uuid>b38a3f43-4be2-4046-897f-b67c2f5e0147</uuid>
-              <name>demo</name>
-              <memory>104857600</memory>
-              <vcpu cpuset="0-1,3-5">2</vcpu>
-              <os>
-                <type>linux</type>
-                <kernel>/tmp/vmlinuz</kernel>
-                <initrd>/tmp/ramdisk</initrd>
-                <cmdline>console=xvc0</cmdline>
-              </os>
-              <devices>
-                <disk type="file" device="disk">
-                  <source file="/tmp/img"/>
-                  <target bus="xen" dev="/dev/xvda"/>
-                </disk>
-              </devices>
-            </domain>""")
-
-    def test_config_xen_hvm(self):
-        obj = config.LibvirtConfigGuest()
-        obj.virt_type = "xen"
-        obj.memory = 100 * units.Mi
-        obj.vcpus = 2
-        obj.cpuset = set([0, 1, 3, 4, 5])
-        obj.name = "demo"
-        obj.uuid = "b38a3f43-4be2-4046-897f-b67c2f5e0147"
-        obj.os_type = "hvm"
-        obj.os_loader = '/usr/lib/xen/boot/hvmloader'
-        obj.os_root = "root=xvda"
-        obj.os_cmdline = "console=xvc0"
-        obj.features = [
-            config.LibvirtConfigGuestFeatureACPI(),
-            config.LibvirtConfigGuestFeatureAPIC(),
-            config.LibvirtConfigGuestFeaturePAE(),
-        ]
-
-        disk = config.LibvirtConfigGuestDisk()
-        disk.source_type = "file"
-        disk.source_path = "/tmp/img"
-        disk.target_dev = "/dev/xvda"
-        disk.target_bus = "xen"
-
-        obj.add_device(disk)
-
-        xml = obj.to_xml()
-        self.assertXmlEqual(xml, """
-            <domain type="xen">
-              <uuid>b38a3f43-4be2-4046-897f-b67c2f5e0147</uuid>
-              <name>demo</name>
-              <memory>104857600</memory>
-              <vcpu cpuset="0-1,3-5">2</vcpu>
-              <os>
-                <type>hvm</type>
-                <loader>/usr/lib/xen/boot/hvmloader</loader>
-                <cmdline>console=xvc0</cmdline>
-                <root>root=xvda</root>
-              </os>
-              <features>
-                <acpi/>
-                <apic/>
-                <pae/>
-              </features>
-              <devices>
-                <disk type="file" device="disk">
-                  <source file="/tmp/img"/>
-                  <target bus="xen" dev="/dev/xvda"/>
-                </disk>
-              </devices>
-            </domain>""")
 
     def test_config_kvm(self):
         obj = fake_libvirt_data.fake_kvm_guest()

@@ -57,7 +57,8 @@ SUPPORTED_VIF_MODELS = {
         network_model.VIF_MODEL_E1000E,
         network_model.VIF_MODEL_LAN9118,
         network_model.VIF_MODEL_SPAPR_VLAN,
-        network_model.VIF_MODEL_VMXNET3],
+        network_model.VIF_MODEL_VMXNET3,
+    ],
     'kvm': [
         network_model.VIF_MODEL_VIRTIO,
         network_model.VIF_MODEL_NE2K_PCI,
@@ -66,18 +67,14 @@ SUPPORTED_VIF_MODELS = {
         network_model.VIF_MODEL_E1000,
         network_model.VIF_MODEL_E1000E,
         network_model.VIF_MODEL_SPAPR_VLAN,
-        network_model.VIF_MODEL_VMXNET3],
-    'xen': [
-        network_model.VIF_MODEL_NETFRONT,
-        network_model.VIF_MODEL_NE2K_PCI,
-        network_model.VIF_MODEL_PCNET,
-        network_model.VIF_MODEL_RTL8139,
-        network_model.VIF_MODEL_E1000],
+        network_model.VIF_MODEL_VMXNET3,
+    ],
     'lxc': [],
     'parallels': [
         network_model.VIF_MODEL_VIRTIO,
         network_model.VIF_MODEL_RTL8139,
-        network_model.VIF_MODEL_E1000],
+        network_model.VIF_MODEL_E1000,
+    ],
 }
 
 

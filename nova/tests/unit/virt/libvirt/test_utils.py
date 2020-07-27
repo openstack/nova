@@ -22,7 +22,6 @@ import tempfile
 import ddt
 import mock
 import os_traits
-from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_utils import fileutils
 from oslo_utils.fixture import uuidsentinel as uuids
@@ -157,76 +156,6 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
             mock_ploop_init.assert_has_calls([
                 mock.call('5G', 'expanded', expected_fs_type,
                           '/some/path/root.hds')])
-
-    def test_pick_disk_driver_name(self):
-        type_map = {'kvm': ([True, 'qemu'], [False, 'qemu'], [None, 'qemu']),
-                    'qemu': ([True, 'qemu'], [False, 'qemu'], [None, 'qemu']),
-                    'lxc': ([True, None], [False, None], [None, None])}
-        # NOTE(aloga): Xen is tested in test_pick_disk_driver_name_xen
-
-        version = 1005001
-        for (virt_type, checks) in type_map.items():
-            self.flags(virt_type=virt_type, group='libvirt')
-            for (is_block_dev, expected_result) in checks:
-                result = libvirt_utils.pick_disk_driver_name(version,
-                                                             is_block_dev)
-                self.assertEqual(result, expected_result)
-
-    @mock.patch('nova.privsep.libvirt.xend_probe')
-    @mock.patch('oslo_concurrency.processutils.execute')
-    def test_pick_disk_driver_name_xen(self, mock_execute, mock_xend_probe):
-
-        def execute_side_effect(*args, **kwargs):
-            if args == ('tap-ctl', 'check'):
-                if mock_execute.blktap is True:
-                    return ('ok\n', '')
-                elif mock_execute.blktap is False:
-                    return ('some error\n', '')
-                else:
-                    raise OSError(2, "No such file or directory")
-            raise Exception('Unexpected call')
-        mock_execute.side_effect = execute_side_effect
-
-        def xend_probe_side_effect():
-            if mock_execute.xend is True:
-                return ('', '')
-            elif mock_execute.xend is False:
-                raise processutils.ProcessExecutionError("error")
-            else:
-                raise OSError(2, "No such file or directory")
-        mock_xend_probe.side_effect = xend_probe_side_effect
-
-        self.flags(virt_type="xen", group='libvirt')
-        versions = [4000000, 4001000, 4002000, 4003000, 4005000]
-        for version in versions:
-            # block dev
-            result = libvirt_utils.pick_disk_driver_name(version, True)
-            self.assertEqual(result, "phy")
-            self.assertFalse(mock_execute.called)
-            mock_execute.reset_mock()
-            # file dev
-            for blktap in True, False, None:
-                mock_execute.blktap = blktap
-                for xend in True, False, None:
-                    mock_execute.xend = xend
-                    result = libvirt_utils.pick_disk_driver_name(version,
-                                                                 False)
-                    # qemu backend supported only by libxl which is
-                    # production since xen 4.2. libvirt use libxl if
-                    # xend service not started.
-                    if version >= 4002000 and xend is not True:
-                        self.assertEqual(result, 'qemu')
-                    elif blktap:
-                        if version == 4000000:
-                            self.assertEqual(result, 'tap')
-                        else:
-                            self.assertEqual(result, 'tap2')
-                    else:
-                        self.assertEqual(result, 'file')
-                    # default is_block_dev False
-                    self.assertEqual(result,
-                        libvirt_utils.pick_disk_driver_name(version))
-                    mock_execute.reset_mock()
 
     def test_copy_image(self):
         dst_fd, dst_path = tempfile.mkstemp()

@@ -1000,12 +1000,10 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
 
     def test_success_get_disk_bus_for_disk_dev(self):
         expected = (
-                ('ide', ("kvm", "hda")),
-                ('scsi', ("kvm", "sdf")),
-                ('virtio', ("kvm", "vds")),
-                ('fdc', ("kvm", "fdc")),
-                ('xen', ("xen", "sdf")),
-                ('xen', ("xen", "xvdb")),
+            ('ide', ("kvm", "hda")),
+            ('scsi', ("kvm", "sdf")),
+            ('virtio', ("kvm", "vds")),
+            ('fdc', ("kvm", "fdc")),
         )
         for res, args in expected:
             self.assertEqual(res, blockinfo.get_disk_bus_for_disk_dev(*args))
@@ -1219,15 +1217,6 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
                                                'device_type': 'disk'},
                                               {}, 'virtio')
         mock_get_info.reset_mock()
-        # xen with incompatible root_device_name/disk_bus combination
-        root_bdm['disk_bus'] = 'xen'
-        blockinfo.get_root_info(instance, 'xen', image_meta, root_bdm,
-                                'xen', 'ide', root_device_name='sda')
-        mock_get_info.assert_called_once_with(instance, 'xen', image_meta,
-                                              {'device_name': 'xvda',
-                                               'disk_bus': 'xen',
-                                               'device_type': 'disk'},
-                                              {}, 'xen')
 
     def test_get_boot_order_simple(self):
         disk_info = {
@@ -1305,7 +1294,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
 
     def test_get_rescue_bus(self):
         # Assert that all supported device bus types are returned. Stable
-        # device rescue is not supported by xen or lxc so ignore these.
+        # device rescue is not supported by lxc so ignore this.
         for virt_type in ['qemu', 'kvm', 'parallels']:
             for bus in blockinfo.SUPPORTED_DEVICE_BUSES[virt_type]:
                 meta = self._get_rescue_image_meta({'hw_rescue_bus': bus})

@@ -33,7 +33,6 @@ from nova.tests.unit.virt.libvirt import fake_libvirt_data
 from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt import event
 from nova.virt.libvirt import config as vconfig
-from nova.virt.libvirt import driver as libvirt_driver
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
 
@@ -270,20 +269,18 @@ class HostTestCase(test.NoDBTestCase):
         ev = event.LifecycleEvent(
             "cef19ce0-0ca2-11df-855d-b19fbce37686",
             event.EVENT_LIFECYCLE_STOPPED)
-        for uri in ("qemu:///system", "xen:///"):
-            spawn_after_mock = mock.Mock()
-            greenthread.spawn_after = spawn_after_mock
-            hostimpl = host.Host(uri,
-                                 lifecycle_event_handler=lambda e: None)
-            hostimpl._event_emit_delayed(ev)
-            spawn_after_mock.assert_called_once_with(
-                15, hostimpl._event_emit, ev)
+        spawn_after_mock = mock.Mock()
+        greenthread.spawn_after = spawn_after_mock
+        hostimpl = host.Host(
+            'qemu:///system', lifecycle_event_handler=lambda e: None)
+        hostimpl._event_emit_delayed(ev)
+        spawn_after_mock.assert_called_once_with(
+            15, hostimpl._event_emit, ev)
 
     @mock.patch.object(greenthread, 'spawn_after')
     def test_event_emit_delayed_call_delayed_pending(self, spawn_after_mock):
-        hostimpl = host.Host("xen:///",
-                             lifecycle_event_handler=lambda e: None)
-
+        hostimpl = host.Host(
+            'qemu:///system', lifecycle_event_handler=lambda e: None)
         uuid = "cef19ce0-0ca2-11df-855d-b19fbce37686"
         gt_mock = mock.Mock()
         hostimpl._events_delayed[uuid] = gt_mock
@@ -294,8 +291,8 @@ class HostTestCase(test.NoDBTestCase):
         self.assertTrue(spawn_after_mock.called)
 
     def test_event_delayed_cleanup(self):
-        hostimpl = host.Host("xen:///",
-                             lifecycle_event_handler=lambda e: None)
+        hostimpl = host.Host(
+            'qemu:///system', lifecycle_event_handler=lambda e: None)
         uuid = "cef19ce0-0ca2-11df-855d-b19fbce37686"
         ev = event.LifecycleEvent(
             uuid, event.EVENT_LIFECYCLE_STARTED)
@@ -517,14 +514,13 @@ class HostTestCase(test.NoDBTestCase):
 
     @mock.patch.object(fakelibvirt.Connection, "listAllDomains")
     def test_list_instance_domains(self, mock_list_all):
-        vm0 = FakeVirtDomain(id=0, name="Domain-0")  # Xen dom-0
         vm1 = FakeVirtDomain(id=3, name="instance00000001")
         vm2 = FakeVirtDomain(id=17, name="instance00000002")
         vm3 = FakeVirtDomain(name="instance00000003")
         vm4 = FakeVirtDomain(name="instance00000004")
 
         def fake_list_all(flags):
-            vms = [vm0]
+            vms = []
             if flags & fakelibvirt.VIR_CONNECT_LIST_DOMAINS_ACTIVE:
                 vms.extend([vm1, vm2])
             if flags & fakelibvirt.VIR_CONNECT_LIST_DOMAINS_INACTIVE:
@@ -556,26 +552,13 @@ class HostTestCase(test.NoDBTestCase):
         self.assertEqual(doms[2].name(), vm3.name())
         self.assertEqual(doms[3].name(), vm4.name())
 
-        doms = self.host.list_instance_domains(only_guests=False)
-
-        mock_list_all.assert_called_once_with(
-            fakelibvirt.VIR_CONNECT_LIST_DOMAINS_ACTIVE)
-        mock_list_all.reset_mock()
-
-        self.assertEqual(len(doms), 3)
-        self.assertEqual(doms[0].name(), vm0.name())
-        self.assertEqual(doms[1].name(), vm1.name())
-        self.assertEqual(doms[2].name(), vm2.name())
-
     @mock.patch.object(host.Host, "list_instance_domains")
     def test_list_guests(self, mock_list_domains):
         dom0 = mock.Mock(spec=fakelibvirt.virDomain)
         dom1 = mock.Mock(spec=fakelibvirt.virDomain)
-        mock_list_domains.return_value = [
-            dom0, dom1]
-        result = self.host.list_guests(True, False)
-        mock_list_domains.assert_called_once_with(
-            only_running=True, only_guests=False)
+        mock_list_domains.return_value = [dom0, dom1]
+        result = self.host.list_guests(True)
+        mock_list_domains.assert_called_once_with(only_running=True)
         self.assertEqual(dom0, result[0]._domain)
         self.assertEqual(dom1, result[1]._domain)
 
@@ -964,60 +947,6 @@ Active:          8381604 kB
 
             self.assertEqual(6866, self.host.get_memory_mb_used())
 
-    def test_sum_domain_memory_mb_xen(self):
-        class DiagFakeDomain(object):
-            def __init__(self, id, memmb):
-                self.id = id
-                self.memmb = memmb
-
-            def info(self):
-                return [0, 0, self.memmb * 1024]
-
-            def ID(self):
-                return self.id
-
-            def name(self):
-                return "instance000001"
-
-            def UUIDString(self):
-                return uuids.fake
-
-        m = mock.mock_open(read_data="""
-MemTotal:       16194180 kB
-MemFree:          233092 kB
-MemAvailable:    8892356 kB
-Buffers:          567708 kB
-Cached:          8362404 kB
-SwapCached:            0 kB
-Active:          8381604 kB
-""")
-
-        with test.nested(
-                mock.patch('builtins.open', m, create=True),
-                mock.patch.object(host.Host,
-                                  "list_guests"),
-                mock.patch.object(libvirt_driver.LibvirtDriver,
-                                  "_conn"),
-        ) as (mock_file, mock_list, mock_conn):
-            mock_list.return_value = [
-                libvirt_guest.Guest(DiagFakeDomain(0, 15814)),
-                libvirt_guest.Guest(DiagFakeDomain(1, 750)),
-                libvirt_guest.Guest(DiagFakeDomain(2, 1042))]
-            mock_conn.getInfo.return_value = [
-                obj_fields.Architecture.X86_64, 15814, 8, 1208, 1, 1, 4, 2]
-
-            self.assertEqual(8657, self.host._sum_domain_memory_mb())
-            mock_list.assert_called_with(only_guests=False)
-
-    def test_get_memory_used_xen(self):
-        self.flags(virt_type='xen', group='libvirt')
-        with mock.patch.object(
-            self.host, "_sum_domain_memory_mb"
-        ) as mock_sumDomainMemory:
-            mock_sumDomainMemory.return_value = 8192
-            self.assertEqual(8192, self.host.get_memory_mb_used())
-            mock_sumDomainMemory.assert_called_once_with(include_host=True)
-
     def test_sum_domain_memory_mb_file_backed(self):
         class DiagFakeDomain(object):
             def __init__(self, id, memmb):
@@ -1043,8 +972,7 @@ Active:          8381604 kB
                 libvirt_guest.Guest(DiagFakeDomain(2, 1024)),
                 libvirt_guest.Guest(DiagFakeDomain(3, 1024))]
 
-            self.assertEqual(8192,
-                    self.host._sum_domain_memory_mb(include_host=False))
+            self.assertEqual(8192, self.host._sum_domain_memory_mb())
 
     def test_get_memory_used_file_backed(self):
         self.flags(file_backed_memory=1048576,
@@ -1055,7 +983,7 @@ Active:          8381604 kB
         ) as mock_sumDomainMemory:
             mock_sumDomainMemory.return_value = 8192
             self.assertEqual(8192, self.host.get_memory_mb_used())
-            mock_sumDomainMemory.assert_called_once_with(include_host=False)
+            mock_sumDomainMemory.assert_called_once_with()
 
     def test_get_cpu_stats(self):
         stats = self.host.get_cpu_stats()

@@ -59,7 +59,7 @@ variables / types used
 
  * 'disk_bus': the guest bus type ('ide', 'virtio', 'scsi', etc)
 
- * 'disk_dev': the device name 'vda', 'hdc', 'sdf', 'xvde' etc
+ * 'disk_dev': the device name 'vda', 'hdc', 'sdf', etc
 
  * 'device_type': type of device eg 'disk', 'cdrom', 'floppy'
 
@@ -93,12 +93,12 @@ BOOT_DEV_FOR_TYPE = {'disk': 'hd', 'cdrom': 'cdrom', 'floppy': 'fd'}
 SUPPORTED_DEVICE_BUSES = {
     'qemu': ['virtio', 'scsi', 'ide', 'usb', 'fdc', 'sata'],
     'kvm': ['virtio', 'scsi', 'ide', 'usb', 'fdc', 'sata'],
-    'xen': ['xen', 'ide'],
-    # we no longer support UML, but we keep track of its bus types so we can
-    # reject them for other virt types
-    'uml': ['uml'],
     'lxc': ['lxc'],
     'parallels': ['ide', 'scsi'],
+    # we no longer support UML or Xen, but we keep track of their bus types so
+    # we can reject them for other virt types
+    'xen': ['xen', 'ide'],
+    'uml': ['uml'],
 }
 SUPPORTED_DEVICE_TYPES = ('disk', 'cdrom', 'floppy', 'lun')
 
@@ -138,8 +138,6 @@ def get_dev_prefix_for_disk_bus(disk_bus):
         return "hd"
     elif disk_bus == "virtio":
         return "vd"
-    elif disk_bus == "xen":
-        return "xvd"
     elif disk_bus == "scsi":
         return "sd"
     elif disk_bus == "usb":
@@ -244,15 +242,7 @@ def get_disk_bus_for_device_type(instance,
         return disk_bus
 
     # Otherwise pick a hypervisor default disk bus
-    if virt_type == "lxc":
-        return "lxc"
-    elif virt_type == "xen":
-        guest_vm_mode = obj_fields.VMMode.get_from_instance(instance)
-        if guest_vm_mode == obj_fields.VMMode.HVM:
-            return "ide"
-        else:
-            return "xen"
-    elif virt_type in ("qemu", "kvm"):
+    if virt_type in ("qemu", "kvm"):
         if device_type == "cdrom":
             guestarch = libvirt_utils.get_arch(image_meta)
             if guestarch in (
@@ -278,6 +268,8 @@ def get_disk_bus_for_device_type(instance,
             return "virtio"
         elif device_type == "floppy":
             return "fdc"
+    elif virt_type == "lxc":
+        return "lxc"
     elif virt_type == "parallels":
         if device_type == "cdrom":
             return "ide"
@@ -293,12 +285,11 @@ def get_disk_bus_for_device_type(instance,
 def get_disk_bus_for_disk_dev(virt_type, disk_dev):
     """Determine the disk bus for a disk device.
 
-       Given a disk device like 'hda', 'sdf', 'xvdb', etc
-       guess what the most appropriate disk bus is for
-       the currently configured virtualization technology
+    Given a disk device like 'hda' or 'sdf', guess what the most appropriate
+    disk bus is for the currently configured virtualization technology
 
-       Returns the disk bus, or raises an Exception if
-       the disk device prefix is unknown.
+    :return: The preferred disk bus for the given disk prefix.
+    :raises: InternalError if the disk device prefix is unknown.
     """
 
     if disk_dev.startswith('hd'):
@@ -307,16 +298,11 @@ def get_disk_bus_for_disk_dev(virt_type, disk_dev):
         # Reverse mapping 'sd' is not reliable
         # there are many possible mappings. So
         # this picks the most likely mappings
-        if virt_type == "xen":
-            return "xen"
-        else:
-            return "scsi"
+        return "scsi"
     elif disk_dev.startswith('vd'):
         return "virtio"
     elif disk_dev.startswith('fd'):
         return "fdc"
-    elif disk_dev.startswith('xvd'):
-        return "xen"
     else:
         msg = _("Unable to determine disk bus for '%s'") % disk_dev[:1]
         raise exception.InternalError(msg)
@@ -455,16 +441,11 @@ def get_root_info(instance, virt_type, image_meta, root_bdm,
 
     if not get_device_name(root_bdm) and root_device_name:
         root_bdm = root_bdm.copy()
-        # it can happen, eg for libvirt+Xen, that the root_device_name is
-        # incompatible with the disk bus. In that case fix the root_device_name
-        if virt_type == 'xen':
-            dev_prefix = get_dev_prefix_for_disk_bus(disk_bus)
-            if not root_device_name.startswith(dev_prefix):
-                letter = block_device.get_device_letter(root_device_name)
-                root_device_name = '%s%s' % (dev_prefix, letter)
         root_bdm['device_name'] = root_device_name
-    return get_info_from_bdm(instance, virt_type, image_meta,
-                             root_bdm, {}, disk_bus)
+
+    return get_info_from_bdm(
+        instance, virt_type, image_meta, root_bdm, {}, disk_bus,
+    )
 
 
 def default_device_names(virt_type, context, instance, block_device_info,

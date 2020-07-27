@@ -1,0 +1,9 @@
+---
+upgrade:
+  - |
+    Support for the libvirt+xen hypervisor model has been removed. This has
+    not been validated in some time and was not supported.
+  - |
+    The ``[libvirt] xen_hvmloader_path`` config option has been removed. This
+    was only used with the libvirt+xen hypervisor, which is no longer
+    supported.
