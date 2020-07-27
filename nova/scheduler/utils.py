@@ -149,10 +149,10 @@ class ResourceRequest(object):
 
         if (orc.VCPU not in merged_resources and
                 orc.PCPU not in merged_resources):
-            self._add_resource(None, orc.VCPU, request_spec.vcpus)
+            self._add_resource(orc.VCPU, request_spec.vcpus)
 
         if orc.MEMORY_MB not in merged_resources:
-            self._add_resource(None, orc.MEMORY_MB, request_spec.memory_mb)
+            self._add_resource(orc.MEMORY_MB, request_spec.memory_mb)
 
         if orc.DISK_GB not in merged_resources:
             disk = request_spec.ephemeral_gb
@@ -161,7 +161,7 @@ class ResourceRequest(object):
                 disk += request_spec.root_gb
 
             if disk:
-                self._add_resource(None, orc.DISK_GB, disk)
+                self._add_resource(orc.DISK_GB, disk)
 
         self._translate_memory_encryption(request_spec.flavor, image)
 
@@ -199,11 +199,11 @@ class ResourceRequest(object):
 
             # Process "resources[$S]"
             if prefix == self.XS_RES_PREFIX:
-                self._add_resource(suffix, name, val)
+                self._add_resource(name, val, group=suffix)
 
             # Process "trait[$S]"
             elif prefix == self.XS_TRAIT_PREFIX:
-                self._add_trait(suffix, name, val)
+                self._add_trait(name, val, group=suffix)
 
     def _process_image_meta(self, image):
         if not image or 'properties' not in image:
@@ -213,7 +213,7 @@ class ResourceRequest(object):
             # required traits from the image are always added to the
             # unsuffixed request group, granular request groups are not
             # supported in image traits
-            self._add_trait(None, trait, "required")
+            self._add_trait(trait, 'required')
 
     def _translate_vtpm_request(self, flavor, image):
         vtpm_config = hardware.get_vtpm_constraint(flavor, image)
@@ -226,7 +226,7 @@ class ResourceRequest(object):
         else:
             trait = os_traits.COMPUTE_SECURITY_TPM_2_0
 
-        self._add_trait(None, trait, "required")
+        self._add_trait(trait, 'required')
         LOG.debug("Requiring emulated TPM support via trait %s.", trait)
 
     def _translate_memory_encryption(self, flavor, image):
@@ -242,7 +242,7 @@ class ResourceRequest(object):
             # No memory encryption required, so no further action required.
             return
 
-        self._add_resource(None, orc.MEM_ENCRYPTION_CONTEXT, 1)
+        self._add_resource(orc.MEM_ENCRYPTION_CONTEXT, 1)
         LOG.debug("Added %s=1 to requested resources",
                   orc.MEM_ENCRYPTION_CONTEXT)
 
@@ -260,7 +260,7 @@ class ResourceRequest(object):
                 "PMEM_NAMESPACE_" + vpmem_label)
             amount_by_rc[resource_class] += 1
         for resource_class, amount in amount_by_rc.items():
-            self._add_resource(None, resource_class, amount)
+            self._add_resource(resource_class, amount)
             LOG.debug("Added resource %s=%d to requested resources",
                       resource_class, amount)
 
@@ -306,7 +306,7 @@ class ResourceRequest(object):
             vcpus = flavor.vcpus - pcpus
 
             # apply for the VCPU resource of a 'mixed' instance
-            self._add_resource(None, orc.VCPU, vcpus)
+            self._add_resource(orc.VCPU, vcpus)
 
         if cpu_policy in (
             obj_fields.CPUAllocationPolicy.DEDICATED,
@@ -318,7 +318,7 @@ class ResourceRequest(object):
                 LOG.debug('Adding additional %(pcpu_rc)s to account for '
                           'emulator threads', {'pcpu_rc': orc.PCPU})
 
-            self._add_resource(None, orc.PCPU, pcpus)
+            self._add_resource(orc.PCPU, pcpus)
 
         trait = {
             obj_fields.CPUThreadAllocationPolicy.ISOLATE: 'forbidden',
@@ -328,7 +328,7 @@ class ResourceRequest(object):
             LOG.debug('Adding %(trait)s=%(value)s trait',
                       {'trait': os_traits.HW_CPU_HYPERTHREADING,
                        'value': trait})
-            self._add_trait(None, os_traits.HW_CPU_HYPERTHREADING, trait)
+            self._add_trait(os_traits.HW_CPU_HYPERTHREADING, trait)
 
     @property
     def group_policy(self):
@@ -393,11 +393,19 @@ class ResourceRequest(object):
 
         self._rg_by_id[request_group.requester_id] = request_group
 
-    def _add_resource(self, groupid, rclass, amount):
-        self.get_request_group(groupid).add_resource(rclass, amount)
+    def _add_resource(self, rclass, amount, group=None):
+        """Add resource request to specified request group.
 
-    def _add_trait(self, groupid, trait_name, trait_type):
-        self.get_request_group(groupid).add_trait(trait_name, trait_type)
+        Defaults to the unsuffixed request group if no group is provided.
+        """
+        self.get_request_group(group).add_resource(rclass, amount)
+
+    def _add_trait(self, trait_name, trait_type, group=None):
+        """Add trait request to specified group.
+
+        Defaults to the unsuffixed request group if no group is provided.
+        """
+        self.get_request_group(group).add_trait(trait_name, trait_type)
 
     def _add_group_policy(self, policy):
         # The only valid values for group_policy are 'none' and 'isolate'.
