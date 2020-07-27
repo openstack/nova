@@ -47,3 +47,9 @@ class LibvirtNFSVolumeDriver(fs.LibvirtMountedFileSystemVolumeDriver):
             options.extend(conn_options.split(' '))
 
         return options
+
+    def extend_volume(self, connection_info, instance, requested_size):
+        # There is nothing to do for NFS volumes. libvirt will extend the file
+        # on the NFS share, and resize the disk device within the instance by
+        # calling virDomainBlockResize.
+        return requested_size
