@@ -533,3 +533,5 @@
             irrelevant-files: *dsvm-irrelevant-files
         - devstack-platform-fedora-latest-virt-preview:
             irrelevant-files: *dsvm-irrelevant-files
+        - devstack-plugin-ceph-compute-local-ephemeral:
+            irrelevant-files: *dsvm-irrelevant-files
