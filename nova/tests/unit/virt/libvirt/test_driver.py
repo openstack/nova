@@ -1102,9 +1102,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         timeout = CONF.vif_plugging_timeout
 
         events = []
-        if (drvr._conn_supports_start_paused and
-                not vifs_already_plugged and
-                power_on and timeout):
+        if (
+            CONF.libvirt.virt_type in ('kvm', 'qemu') and
+            not vifs_already_plugged and power_on and timeout
+        ):
             events = drvr._get_neutron_events(network_info)
 
         return bool(events)

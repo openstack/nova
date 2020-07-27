@@ -147,6 +147,9 @@ DEFAULT_UEFI_LOADER_PATH = {
 }
 
 MAX_CONSOLE_BYTES = 100 * units.Ki
+VALID_DISK_CACHEMODES = [
+    "default", "none", "writethrough", "writeback", "directsync", "unsafe",
+]
 
 # The libvirt driver will prefix any disable reason codes with this string.
 DISABLE_PREFIX = 'AUTO: '
@@ -344,11 +347,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self._host = host.Host(self._uri(), read_only,
                                lifecycle_event_handler=self.emit_event,
                                conn_event_handler=self._handle_conn_event)
-        self._initiator = None
-        self._fc_wwnns = None
-        self._fc_wwpns = None
         self._supported_perf_events = []
-        self.__has_hyperthreading = None
 
         self.vif_driver = libvirt_vif.LibvirtGenericVIFDriver()
 
@@ -364,19 +363,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self.disk_cachemodes = {}
 
-        self.valid_cachemodes = ["default",
-                                 "none",
-                                 "writethrough",
-                                 "writeback",
-                                 "directsync",
-                                 "unsafe",
-                                ]
-        self._conn_supports_start_paused = CONF.libvirt.virt_type in ('kvm',
-                                                                      'qemu')
-
         for mode_str in CONF.libvirt.disk_cachemodes:
             disk_type, sep, cache_mode = mode_str.partition('=')
-            if cache_mode not in self.valid_cachemodes:
+            if cache_mode not in VALID_DISK_CACHEMODES:
                 LOG.warning('Invalid cachemode %(cache_mode)s specified '
                             'for disk type %(disk_type)s.',
                             {'cache_mode': cache_mode, 'disk_type': disk_type})
@@ -6500,11 +6489,13 @@ class LibvirtDriver(driver.ComputeDriver):
                                    external_events=None,
                                    cleanup_instance_dir=False,
                                    cleanup_instance_disks=False):
-
         """Do required network setup and create domain."""
+
         timeout = CONF.vif_plugging_timeout
-        if (self._conn_supports_start_paused and not
-                vifs_already_plugged and power_on and timeout):
+        if (
+            CONF.libvirt.virt_type in ('kvm', 'qemu') and
+            not vifs_already_plugged and power_on and timeout
+        ):
             events = (external_events if external_events
                       else self._get_neutron_events(network_info))
         else:
