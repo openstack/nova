@@ -741,20 +741,14 @@ class WarningsFixture(fixtures.Fixture):
         # this gets kind of crazy given the way that upstream python libs use
         # this.
         warnings.simplefilter("once", DeprecationWarning)
-        warnings.filterwarnings('ignore',
-                                message='With-statements now directly support'
-                                        ' multiple context managers')
-        # NOTE(sdague): nova does not use pkg_resources directly, this
-        # is all very long standing deprecations about other tools
-        # using it. None of this is useful to Nova development.
-        warnings.filterwarnings('ignore',
-            module='pkg_resources')
+
         # NOTE(sdague): this remains an unresolved item around the way
         # forward on is_admin, the deprecation is definitely really premature.
         warnings.filterwarnings('ignore',
             message='Policy enforcement is depending on the value of is_admin.'
                     ' This key is deprecated. Please update your policy '
                     'file to use the standard policy values.')
+
         # NOTE(mriedem): Ignore scope check UserWarnings from oslo.policy.
         warnings.filterwarnings('ignore',
                                 message="Policy .* failed scope check",
