@@ -23,8 +23,8 @@ class TestVolAttachmentsDuringPreLiveMigration(
     """Regression test for bug 1889108.
 
     This regression test asserts that the original source volume attachments
-    are incorrectly removed during the rollback from pre_live_migration
-    failures on the destination.
+    are not removed during the rollback from pre_live_migration failures on the
+    destination.
     """
 
     # Default self.api to the self.admin_api as live migration is admin only
@@ -95,9 +95,7 @@ class TestVolAttachmentsDuringPreLiveMigration(
         server = self.api.get_server(server['id'])
         self.assertEqual(src_host, server['OS-EXT-SRV-ATTR:host'])
 
-        # FIXME(lyarwood): Assert that both the src and dest attachments have
-        # been removed. Only the dest attachment should be removed during the
-        # rollback of a pre_live_migration failure.
+        # Assert that the src attachment is still present
         attachments = self.cinder.volume_to_attachment.get(volume_id)
-        self.assertNotIn(src_attachment_id, attachments.keys())
-        self.assertEqual(0, len(attachments))
+        self.assertIn(src_attachment_id, attachments.keys())
+        self.assertEqual(1, len(attachments))
