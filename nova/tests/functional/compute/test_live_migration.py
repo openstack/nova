@@ -54,7 +54,6 @@ class LiveMigrationCinderFailure(integrated_helpers._IntegratedTestBase):
         self.compute2 = self.start_service('compute', host='host2')
 
     def test_live_migrate_attachment_delete_fails(self):
-        self.useFixture(nova_fixtures.CinderFixture(self))
         server = self.api.post_server({
             'server': {
                 'flavorRef': 1,
@@ -104,10 +103,6 @@ class TestVolAttachmentsDuringLiveMigration(
     # Default self.api to the self.admin_api as live migration is admin only
     ADMIN_API = True
     microversion = 'latest'
-
-    def setUp(self):
-        super().setUp()
-        self.cinder = self.useFixture(nova_fixtures.CinderFixture(self))
 
     def _setup_compute_service(self):
         self._start_compute('src')

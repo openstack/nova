@@ -57,8 +57,6 @@ class DeleteWithReservedVolumes(integrated_helpers._IntegratedTestBase):
         return self._wait_for_state_change(server, 'ERROR')
 
     def test_delete_with_reserved_volumes_new(self):
-        self.cinder = self.useFixture(
-            nova_fixtures.CinderFixture(self))
 
         # Create a server which should go to ERROR state because we don't
         # have any active computes.

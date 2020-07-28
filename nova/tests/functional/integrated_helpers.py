@@ -998,6 +998,7 @@ class _IntegratedTestBase(test.TestCase, PlacementInstanceHelperMixin):
         self.placement_api = placement.api
 
         self.neutron = self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.cinder = self.useFixture(nova_fixtures.CinderFixture(self))
 
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)

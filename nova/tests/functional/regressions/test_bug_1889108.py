@@ -31,10 +31,6 @@ class TestVolAttachmentsDuringPreLiveMigration(
     ADMIN_API = True
     microversion = 'latest'
 
-    def setUp(self):
-        super().setUp()
-        self.cinder = self.useFixture(nova_fixtures.CinderFixture(self))
-
     def _setup_compute_service(self):
         self._start_compute('src')
         self._start_compute('dest')
