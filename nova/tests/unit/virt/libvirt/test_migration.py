@@ -153,42 +153,49 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
         self.assertXmlEqual(res, new_xml)
 
     def test_update_numa_xml(self):
-        xml = textwrap.dedent("""
+        doc = etree.fromstring("""
             <domain>
-                <cputune>
-                    <vcpupin vcpu="0" cpuset="0,1,2,^2"/>
-                    <vcpupin vcpu="1" cpuset="2-4,^4"/>
-                    <emulatorpin cpuset="8-10,^8"/>
-                    <vcpusched vcpus="10-12,^12" priority="13"/>
-                </cputune>
-                <numatune>
-                    <memory nodeset="4,5,6,7"/>
-                    <memnode cellid="2" nodeset="4-6,^6"/>
-                    <memnode cellid="3" nodeset="6-8,^8"/>
-                </numatune>
+              <cputune>
+                <vcpupin vcpu="0" cpuset="0,1,2,^2"/>
+                <vcpupin vcpu="1" cpuset="2-4,^4"/>
+                <emulatorpin cpuset="8-10,^8"/>
+                <vcpusched vcpus="10" priority="13" scheduler="fifo"/>
+                <vcpusched vcpus="11" priority="13" scheduler="fifo"/>
+              </cputune>
+              <numatune>
+                <memory nodeset="4,5,6,7"/>
+                <memnode cellid="2" nodeset="4-6,^6"/>
+                <memnode cellid="3" nodeset="6-8,^8"/>
+              </numatune>
             </domain>""")
-        doc = etree.fromstring(xml)
         data = objects.LibvirtLiveMigrateData(
             dst_numa_info=objects.LibvirtLiveMigrateNUMAInfo(
-                cpu_pins={'0': set([10, 11]),
-                          '1': set([12, 13])},
-                cell_pins={'2': set([14, 15]),
-                           '3': set([16, 17])},
+                cpu_pins={'0': set([10, 11]), '1': set([12, 13])},
+                cell_pins={'2': set([14, 15]), '3': set([16, 17])},
                 emulator_pins=set([18, 19]),
                 sched_vcpus=set([20, 21]),
                 sched_priority=22))
-        res = etree.tostring(migration._update_numa_xml(copy.deepcopy(doc),
-                                                        data),
-                             encoding='unicode')
-        doc.find('./cputune/vcpupin/[@vcpu="0"]').set('cpuset', '10-11')
-        doc.find('./cputune/vcpupin/[@vcpu="1"]').set('cpuset', '12-13')
-        doc.find('./cputune/emulatorpin').set('cpuset', '18-19')
-        doc.find('./cputune/vcpusched').set('vcpus', '20-21')
-        doc.find('./cputune/vcpusched').set('priority', '22')
-        doc.find('./numatune/memory').set('nodeset', '14-17')
-        doc.find('./numatune/memnode/[@cellid="2"]').set('nodeset', '14-15')
-        doc.find('./numatune/memnode/[@cellid="3"]').set('nodeset', '16-17')
-        self.assertXmlEqual(res, etree.tostring(doc, encoding='unicode'))
+
+        result = etree.tostring(
+            migration._update_numa_xml(copy.deepcopy(doc), data),
+            encoding='unicode')
+
+        expected = textwrap.dedent("""
+            <domain>
+              <cputune>
+                <vcpupin vcpu="0" cpuset="10-11"/>
+                <vcpupin vcpu="1" cpuset="12-13"/>
+                <emulatorpin cpuset="18-19"/>
+                <vcpusched vcpus="20-21" priority="22" scheduler="fifo"/>
+              </cputune>
+              <numatune>
+                <memory nodeset="14-17"/>
+                <memnode cellid="2" nodeset="14-15"/>
+                <memnode cellid="3" nodeset="16-17"/>
+              </numatune>
+            </domain>""")
+
+        self.assertXmlEqual(expected, result)
 
     def test_update_numa_xml_no_updates(self):
         xml = textwrap.dedent("""
