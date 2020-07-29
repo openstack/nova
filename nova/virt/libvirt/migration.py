@@ -123,9 +123,23 @@ def _update_numa_xml(xml_doc, migrate_data):
         memory.set('nodeset', hardware.format_cpu_spec(set(all_cells)))
 
     if 'sched_vcpus' and 'sched_priority' in info:
-        vcpusched = xml_doc.find('./cputune/vcpusched')
-        vcpusched.set('vcpus', hardware.format_cpu_spec(info.sched_vcpus))
-        vcpusched.set('priority', str(info.sched_priority))
+        cputune = xml_doc.find('./cputune')
+
+        # delete the old variant(s)
+        for elem in cputune.findall('./vcpusched'):
+            elem.getparent().remove(elem)
+
+        # ...and create a new, shiny one
+        vcpusched = vconfig.LibvirtConfigGuestCPUTuneVCPUSched()
+        vcpusched.vcpus = info.sched_vcpus
+        vcpusched.priority = info.sched_priority
+        # TODO(stephenfin): Stop assuming scheduler type. We currently only
+        # create these elements for real-time instances and 'fifo' is the only
+        # scheduler policy we currently support so this is reasonably safe to
+        # assume, but it's still unnecessary
+        vcpusched.scheduler = 'fifo'
+
+        cputune.append(vcpusched.format_dom())
 
     LOG.debug('_update_numa_xml output xml=%s',
               etree.tostring(xml_doc, encoding='unicode', pretty_print=True))
