@@ -376,13 +376,14 @@ class InstanceHelperMixin(object):
 
         self.fail('The line "%(log_line)s" did not appear in the log')
 
-    def _live_migrate(self, server, migration_final_status):
+    def _live_migrate(self, server, migration_expected_state,
+                      server_expected_state='ACTIVE'):
         self.api.post_server_action(
             server['id'],
             {'os-migrateLive': {'host': None,
                                 'block_migration': 'auto'}})
-        self._wait_for_state_change(self.api, server, 'ACTIVE')
-        self._wait_for_migration_status(server, [migration_final_status])
+        self._wait_for_state_change(self.api, server, server_expected_state)
+        self._wait_for_migration_status(server, [migration_expected_state])
 
 
 class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
