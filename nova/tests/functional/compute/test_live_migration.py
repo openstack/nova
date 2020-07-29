@@ -167,16 +167,12 @@ class TestVolAttachmentsDuringLiveMigration(
 
         # Migrate the instance and wait until the migration errors out thanks
         # to our mocked version of live_migration raising TestingException
-        self.api.post_server_action(
-            server['id'],
-            {'os-migrateLive': {'host': None, 'block_migration': 'auto'}})
-        self._wait_for_migration_status(server, ['error'])
+        self._live_migrate(server, 'error', server_expected_state='ERROR')
 
         # Assert that we called the fake live_migration method
         mock_lm.assert_called_once()
 
-        # Assert that the instance is listed as ERROR on the source
-        self._wait_for_state_change(server, 'ERROR')
+        # Assert that the instance is on the source
         server = self.api.get_server(server['id'])
         self.assertEqual(src_host, server['OS-EXT-SRV-ATTR:host'])
 
