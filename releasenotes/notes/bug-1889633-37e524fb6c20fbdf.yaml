@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    An issue that could result in instances with the ``isolate`` thread policy
+    (``hw:cpu_thread_policy=isolate``) being scheduled to hosts with SMT
+    (HyperThreading) and consuming ``VCPU`` instead of ``PCPU`` has been
+    resolved. See `bug #1889633`__ for more information.
+
+    .. __: https://bugs.launchpad.net/nova/+bug/1889633

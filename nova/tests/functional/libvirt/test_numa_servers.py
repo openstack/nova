@@ -383,12 +383,7 @@ class NUMAServersTest(NUMAServersTestBase):
         }
         flavor_id = self._create_flavor(vcpu=2, extra_spec=extra_spec)
 
-        # FIXME(stephenfin): This should go to error status since there should
-        # not be a host available
-        expected_usage = {
-            'DISK_GB': 20, 'MEMORY_MB': 2048, 'PCPU': 0, 'VCPU': 2,
-        }
-        self._run_build_test(flavor_id, expected_usage=expected_usage)
+        self._run_build_test(flavor_id, end_status='ERROR')
 
     def test_create_server_with_pcpu(self):
         """Create a server using an explicit 'resources:PCPU' request.
