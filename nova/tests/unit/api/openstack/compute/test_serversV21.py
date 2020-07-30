@@ -5056,7 +5056,8 @@ class ServersControllerCreateTest(test.TestCase):
                           (exception.InvalidBDMVolume, {'id': 'fake'}),
                           (exception.InvalidBDMImage, {'id': 'fake'}),
                           (exception.InvalidBDMBootSequence, {}),
-                          (exception.InvalidBDMLocalsLimit, {}))
+                          (exception.InvalidBDMLocalsLimit, {}),
+                          (exception.InvalidBDMDiskBus, {'disk_bus': 'foo'}))
 
         ex_iter = iter(bdm_exceptions)
 

@@ -4616,6 +4616,23 @@ class _ComputeAPIUnitTestMixIn(object):
                           bdms, image_cache, volumes)
         mock_get_image.assert_called_once_with(self.context, image_id)
 
+    @mock.patch('nova.compute.api.API._get_image')
+    def test_validate_bdm_disk_bus(self, mock_get_image):
+        """Tests that _validate_bdm fail if an invalid disk_bus is provided
+        """
+        instance = self._create_instance_obj()
+        bdms = objects.BlockDeviceMappingList(objects=[
+            objects.BlockDeviceMapping(
+                boot_index=0, image_id=instance.image_ref,
+                source_type='image', destination_type='volume',
+                volume_type=None, snapshot_id=None, volume_id=None,
+                volume_size=1, disk_bus='virtio-scsi')])
+        image_cache = volumes = {}
+        self.assertRaises(exception.InvalidBDMDiskBus,
+                          self.compute_api._validate_bdm,
+                          self.context, instance, objects.Flavor(),
+                          bdms, image_cache, volumes)
+
     def test_the_specified_volume_type_id_assignment_to_name(self):
         """Test _check_requested_volume_type method is called, if the user
         is using the volume type ID, assign volume_type to volume type name.
