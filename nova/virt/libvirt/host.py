@@ -449,7 +449,7 @@ class Host(object):
             rpc.get_notifier('compute').error(nova_context.get_admin_context(),
                                               'compute.libvirt.error',
                                               payload)
-            raise exception.HypervisorUnavailable(host=CONF.host)
+            raise exception.HypervisorUnavailable()
 
         return conn
 
