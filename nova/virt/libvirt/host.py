@@ -509,7 +509,7 @@ class Host(object):
                                               payload)
             compute_utils.notify_about_libvirt_connect_error(
                 ctxt, ip=CONF.my_ip, exception=ex)
-            raise exception.HypervisorUnavailable(host=CONF.host)
+            raise exception.HypervisorUnavailable()
 
         return conn
 
