@@ -3020,10 +3020,13 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         got_topo = objects.VirtCPUTopology(sockets=1, cores=5, threads=1)
         self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
 
+    # TODO(stephenfin): Remove when we drop support for vcpu_pin_set
     def test_get_pinning_isolate_policy_too_few_fully_free_cores(self):
         host_pin = objects.NUMACell(
             id=0,
-            cpuset=set(),
+            # Simulate a legacy host with vcpu_pin_set configuration,
+            # meaning cpuset == pcpuset
+            cpuset=set([0, 1, 2, 3]),
             pcpuset=set([0, 1, 2, 3]),
             memory=4096,
             memory_usage=0,
@@ -3038,10 +3041,13 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
         self.assertIsNone(inst_pin)
 
+    # TODO(stephenfin): Remove when we drop support for vcpu_pin_set
     def test_get_pinning_isolate_policy_no_fully_free_cores(self):
         host_pin = objects.NUMACell(
             id=0,
-            cpuset=set(),
+            # Simulate a legacy host with vcpu_pin_set configuration,
+            # meaning cpuset == pcpuset
+            cpuset=set([0, 1, 2, 3]),
             pcpuset=set([0, 1, 2, 3]),
             memory=4096,
             memory_usage=0,
@@ -3056,10 +3062,13 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
         self.assertIsNone(inst_pin)
 
+    # TODO(stephenfin): Remove when we drop support for vcpu_pin_set
     def test_get_pinning_isolate_policy_fits(self):
         host_pin = objects.NUMACell(
             id=0,
-            cpuset=set(),
+            # Simulate a legacy host with vcpu_pin_set configuration,
+            # meaning cpuset == pcpuset
+            cpuset=set([0, 1, 2, 3]),
             pcpuset=set([0, 1, 2, 3]),
             memory=4096,
             memory_usage=0,
@@ -3076,10 +3085,13 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         got_topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=1)
         self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
 
+    # TODO(stephenfin): Remove when we drop support for vcpu_pin_set
     def test_get_pinning_isolate_policy_fits_ht_host(self):
         host_pin = objects.NUMACell(
             id=0,
-            cpuset=set(),
+            # Simulate a legacy host with vcpu_pin_set configuration,
+            # meaning cpuset == pcpuset
+            cpuset=set([0, 1, 2, 3]),
             pcpuset=set([0, 1, 2, 3]),
             memory=4096,
             memory_usage=0,
@@ -3096,10 +3108,13 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         got_topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=1)
         self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
 
+    # TODO(stephenfin): Remove when we drop support for vcpu_pin_set
     def test_get_pinning_isolate_policy_fits_w_usage(self):
         host_pin = objects.NUMACell(
             id=0,
-            cpuset=set(),
+            # Simulate a legacy host with vcpu_pin_set configuration,
+            # meaning cpuset == pcpuset
+            cpuset=set([0, 1, 2, 3, 4, 5, 6, 7]),
             pcpuset=set([0, 1, 2, 3, 4, 5, 6, 7]),
             memory=4096,
             memory_usage=0,
@@ -3115,6 +3130,38 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         self.assertInstanceCellPinned(inst_pin)
         got_topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=1)
         self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
+
+    # TODO(stephenfin): Remove when we drop support for vcpu_pin_set
+    @mock.patch.object(hw, 'LOG')
+    def test_get_pinning_isolate_policy_bug_1889633(self, mock_log):
+        host_pin = objects.NUMACell(
+            id=0,
+            cpuset={0, 1, 4, 5},
+            pcpuset={2, 3, 6, 7},
+            memory=4096,
+            memory_usage=0,
+            pinned_cpus=set(),
+            siblings=[{0, 4}, {1, 5}, {2, 6}, {3, 7}],
+            mempages=[],
+        )
+        inst_pin = objects.InstanceNUMACell(
+            cpuset=set(),
+            pcpuset={0, 1},
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+            cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE,
+        )
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2,
+        )
+
+        # host has hyperthreads, which means no NUMA topology should be built
+        inst_topo = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
+        self.assertIsNone(inst_topo)
+        self.assertIn(
+            'Host supports hyperthreads, but instance requested no',
+            mock_log.warning.call_args[0][0],
+        )
 
 
 class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
@@ -3823,11 +3870,14 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
 
         self.assertEqual(set([0, 1]), host_topo.cells[0].pinned_cpus)
 
+    # TODO(stephenfin): Remove when we drop support for vcpu_pin_set
     def test_isolate_w_isolate_thread_alloc(self):
         host_topo = objects.NUMATopology(cells=[
             objects.NUMACell(
                 id=0,
-                cpuset=set(),
+                # Simulate a legacy host with vcpu_pin_set configuration,
+                # meaning cpuset == pcpuset
+                cpuset=set([0, 1, 2, 3, 4, 5]),
                 pcpuset=set([0, 1, 2, 3, 4, 5]),
                 memory=2048,
                 cpu_usage=0,
@@ -3850,11 +3900,14 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
         self.assertEqual({0: 0, 1: 2}, inst_topo.cells[0].cpu_pinning)
         self.assertEqual(set([4]), inst_topo.cells[0].cpuset_reserved)
 
+    # TODO(stephenfin): Remove when we drop support for vcpu_pin_set
     def test_isolate_w_isolate_thread_alloc_usage(self):
         host_topo = objects.NUMATopology(cells=[
             objects.NUMACell(
                 id=0,
-                cpuset=set(),
+                # Simulate a legacy host with vcpu_pin_set configuration,
+                # meaning cpuset == pcpuset
+                cpuset=set([0, 1, 2, 3, 4, 5]),
                 pcpuset=set([0, 1, 2, 3, 4, 5]),
                 memory=2048,
                 cpu_usage=0,
@@ -3910,11 +3963,14 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
         self.assertEqual({0: 2, 1: 3}, inst_topo.cells[0].cpu_pinning)
         self.assertEqual(set([1]), inst_topo.cells[0].cpuset_reserved)
 
+    # TODO(stephenfin): Remove when we drop support for vcpu_pin_set
     def test_asymmetric_host_w_isolate_thread_alloc(self):
         host_topo = objects.NUMATopology(cells=[
             objects.NUMACell(
                 id=0,
-                cpuset=set(),
+                # Simulate a legacy host with vcpu_pin_set configuration,
+                # meaning cpuset == pcpuset
+                cpuset=set([1, 2, 3, 4, 5]),
                 pcpuset=set([1, 2, 3, 4, 5]),
                 memory=2048,
                 cpu_usage=0,
@@ -3924,8 +3980,7 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
                 mempages=[objects.NUMAPagesTopology(
                     size_kb=4, total=524288, used=0)])])
         inst_topo = objects.InstanceNUMATopology(
-            emulator_threads_policy=(
-                fields.CPUEmulatorThreadsPolicy.ISOLATE),
+            emulator_threads_policy=fields.CPUEmulatorThreadsPolicy.ISOLATE,
             cells=[objects.InstanceNUMACell(
                 id=0,
                 cpuset=set([0, 1]), memory=2048,
