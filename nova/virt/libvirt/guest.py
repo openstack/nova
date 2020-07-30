@@ -878,17 +878,9 @@ class BlockDevice(object):
                   "final cursor: %(end)s",
                   {'job_type': job_type, 'cur': status.cur, 'end': status.end})
 
-        # NOTE(slaweq): because of bug in libvirt, which is described in
-        # http://www.redhat.com/archives/libvir-list/2016-September/msg00017.html
-        # if status.end == 0 job is not started yet so it is not finished
-        # NOTE(mdbooth): The fix was committed upstream here:
-        #   http://libvirt.org/git/?p=libvirt.git;a=commit;h=988218c
-        # The earliest tag which contains this commit is v2.3.0-rc1, so we
-        # should be able to remove this workaround when MIN_LIBVIRT_VERSION
-        # reaches 2.3.0, or we move to handling job events instead.
         # NOTE(lyarwood): Use the mirror element to determine if we can pivot
         # to the new disk once blockjobinfo reports progress as complete.
-        if status.end != 0 and status.cur == status.end:
+        if status.cur == status.end:
             disk = self._guest.get_disk(self._disk)
             if disk and disk.mirror:
                 return disk.mirror.ready == 'yes'
