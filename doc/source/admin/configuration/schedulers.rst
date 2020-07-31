@@ -414,7 +414,7 @@ ImagePropertiesFilter
 Filters hosts based on properties defined on the instance's image.  It passes
 hosts that can support the specified image properties contained in the
 instance. Properties include the architecture, hypervisor type, hypervisor
-version (for Xen hypervisor type only), and virtual machine mode.
+version, and virtual machine mode.
 
 For example, an instance might require a host that runs an ARM-based processor,
 and QEMU as the hypervisor.  You can decorate an image with these properties by
@@ -422,44 +422,60 @@ using:
 
 .. code-block:: console
 
-   $ openstack image set --architecture arm --property hypervisor_type=qemu \
+   $ openstack image set --architecture arm --property img_hv_type=qemu \
      img-uuid
 
 The image properties that the filter checks for are:
 
-``architecture``
-  describes the machine architecture required by the image.  Examples are
+``hw_architecture``
+  Describes the machine architecture required by the image.  Examples are
   ``i686``, ``x86_64``, ``arm``, and ``ppc64``.
 
-``hypervisor_type``
-  describes the hypervisor required by the image.  Examples are ``xen``,
-  ``qemu``, and ``xenapi``.
+  .. versionchanged:: 12.0.0 (Liberty)
+
+      This was previously called ``architecture``.
+
+``img_hv_type``
+  Describes the hypervisor required by the image.  Examples are ``qemu``,
+  ``xenapi``, and ``hyperv``.
 
   .. note::
 
      ``qemu`` is used for both QEMU and KVM hypervisor types.
 
-``hypervisor_version_requires``
-  describes the hypervisor version required by the image.  The property is
-  supported for Xen hypervisor type only.  It can be used to enable support for
-  multiple hypervisor versions, and to prevent instances with newer Xen tools
+  .. versionchanged:: 12.0.0 (Liberty)
+
+      This was previously called ``hypervisor_type``.
+
+``img_hv_requested_version``
+  Describes the hypervisor version required by the image.  The property is
+  supported for HyperV hypervisor type only.  It can be used to enable support for
+  multiple hypervisor versions, and to prevent instances with newer HyperV tools
   from being provisioned on an older version of a hypervisor. If available, the
   property value is compared to the hypervisor version of the compute host.
 
   To filter the hosts by the hypervisor version, add the
-  ``hypervisor_version_requires`` property on the image as metadata and pass an
+  ``img_hv_requested_version`` property on the image as metadata and pass an
   operator and a required hypervisor version as its value:
 
   .. code-block:: console
 
-     $ openstack image set --property hypervisor_type=xen --property \
-       hypervisor_version_requires=">=4.3" img-uuid
+     $ openstack image set --property hypervisor_type=hyperv --property \
+       hypervisor_version_requires=">=6000" img-uuid
 
-``vm_mode``
+  .. versionchanged:: 12.0.0 (Liberty)
+
+      This was previously called ``hypervisor_version_requires``.
+
+``hw_vm_mode``
   describes the hypervisor application binary interface (ABI) required by the
   image. Examples are ``xen`` for Xen 3.0 paravirtual ABI, ``hvm`` for native
   ABI, ``uml`` for User Mode Linux paravirtual ABI, ``exe`` for container virt
   executable ABI.
+
+  .. versionchanged:: 12.0.0 (Liberty)
+
+      This was previously called ``vm_mode``.
 
 IsolatedHostsFilter
 -------------------
