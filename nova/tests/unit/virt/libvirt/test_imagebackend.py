@@ -178,11 +178,9 @@ class _ImageTestCase(object):
             'type': 'cdrom',
         }
 
-        disk = image.libvirt_info(disk_info,
-                                  cache_mode="none",
-                                  extra_specs=extra_specs,
-                                  hypervisor_version=4004001,
-                                  boot_order="1")
+        disk = image.libvirt_info(
+            disk_info, cache_mode="none", extra_specs=extra_specs,
+            boot_order="1")
 
         self.assertIsInstance(disk, vconfig.LibvirtConfigGuestDisk)
         self.assertEqual("/dev/vda", disk.target_dev)
@@ -215,9 +213,8 @@ class _ImageTestCase(object):
             'dev': '/dev/sda',
             'type': 'disk',
         }
-        disk = image.libvirt_info(disk_info, cache_mode='none', extra_specs={},
-                                  hypervisor_version=4004001,
-                                  disk_unit=disk_unit)
+        disk = image.libvirt_info(
+            disk_info, cache_mode='none', extra_specs={}, disk_unit=disk_unit)
         if disk_unit:
             self.assertEqual(0, disk.device_addr.controller)
             self.assertEqual(disk_unit, disk.device_addr.unit)
