@@ -1,0 +1,204 @@
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+# expected_messages is a list of matches. If the test matches _all_ of the
+# values in the list, it will pass.
+
+no_metadata:
+  config: {}
+  expected_messages: ['Unable to detect schema version:']
+no_schema_version:
+  config:
+    meta: {}
+  expected_messages: ['Unable to detect schema version:']
+invalid_schema_version:
+  config:
+    meta:
+      schema_version: '99.99'
+  expected_messages: ['Unsupported schema major version: 99']
+property__source_file_present_value:
+  config:
+    meta:
+      schema_version: '1.0'
+    __source_file: "present"
+  expected_messages:
+    - "{} is not allowed for"
+    - "validating 'not' in schema['properties']['__source_file']"
+property__source_file_present_null:
+  config:
+    meta:
+      schema_version: '1.0'
+    __source_file: null
+  expected_messages:
+    - "{} is not allowed for"
+    - "validating 'not' in schema['properties']['__source_file']"
+provider_invalid_uuid:
+  config:
+    meta:
+      schema_version: '1.0'
+    providers:
+      - identification:
+          uuid: not quite a uuid
+  expected_messages:
+      - "'not quite a uuid'"
+      - "Failed validating"
+      - "'^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$'"
+provider_null_uuid:
+  config:
+    meta:
+      schema_version: '1.0'
+    providers:
+      - identification:
+          uuid: null
+  expected_messages:
+      - "The provider config file test_path did not pass validation for schema version 1.0"
+      - "None is not"
+      - "'^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$'"
+      - "'type': 'string'"
+provider_empty_name:
+  config:
+    meta:
+      schema_version: '1.0'
+    providers:
+      - identification:
+          name: ''
+  expected_messages: ["'' is too short"]
+provider_null_name:
+  config:
+    meta:
+      schema_version: '1.0'
+    providers:
+      - identification:
+          name: null
+  expected_messages: ["None is not of type 'string'"]
+provider_no_name_or_uuid:
+  config:
+    meta:
+      schema_version: '1.0'
+    providers:
+      - identification:
+  expected_messages: ["Failed validating 'type' in schema['properties']['providers']['items']['properties']['identification']"]
+provider_uuid_and_name:
+  config:
+    meta:
+      schema_version: '1.0'
+    providers:
+      - identification:
+          name: custom_provider
+          uuid: aa884151-b4e2-4e82-9fd4-81cfcd01abb9
+  expected_messages:
+    - "'name': 'custom_provider'"
+    - "'uuid': 'aa884151-b4e2-4e82-9fd4-81cfcd01abb9'"
+    - "has too many properties"
+provider_no_identification:
+  config:
+    meta:
+      schema_version: '1.0'
+    providers:
+      - {}
+  expected_messages: ["'identification' is a required property"]
+inventories_additional_resource_class_no_total:
+  config:
+    meta:
+      schema_version: '1.0'
+    providers:
+      - identification:
+          uuid: aa884151-b4e2-4e82-9fd4-81cfcd01abb9
+        inventories:
+          additional:
+            - RESOURCE1: {}
+  expected_messages: ["'total' is a required property"]
+inventories_additional_resource_class_invalid_total:
+  config:
+    meta:
+      schema_version: '1.0'
+    providers:
+      - identification:
+          uuid: aa884151-b4e2-4e82-9fd4-81cfcd01abb9
+        inventories:
+          additional:
+            - RESOURCE1:
+                total: invalid_total
+  expected_messages: ["'invalid_total' is not of type 'integer'"]
+inventories_additional_resource_class_additional_property:
+  config:
+    meta:
+      schema_version: '1.0'
+    providers:
+      - identification:
+          uuid: aa884151-b4e2-4e82-9fd4-81cfcd01abb9
+        inventories:
+          additional:
+            - RESOURCE1:
+                total: 1
+                additional_property: 2
+  expected_messages: ["Additional properties are not allowed ('additional_property' was unexpected)"]
+inventories_one_invalid_additional_resource_class:
+  config:
+    meta:
+      schema_version: '1.0'
+    providers:
+      - identification:
+          uuid: aa884151-b4e2-4e82-9fd4-81cfcd01abb9
+        inventories:
+          additional:
+            - RESOURCE1:
+                total: 1
+            - RESOURCE2: {}
+  expected_messages: ["'total' is a required property"]
+inventories_invalid_additional_resource_class_name:
+  config:
+    meta:
+      schema_version: '1.0'
+    providers:
+      - identification:
+          uuid: aa884151-b4e2-4e82-9fd4-81cfcd01abb9
+        inventories:
+          additional:
+            - INVALID_RESOURCE_CLASS_NAME_!@#$%^&*()_+:
+                total: 1
+  expected_messages: ["'INVALID_RESOURCE_CLASS_NAME_!@#$%^&*()_+' does not match any of the regexes"]
+traits_one_additional_trait_invalid:
+  config:
+    meta:
+      schema_version: '1.0'
+    providers:
+      - identification:
+          uuid: aa884151-b4e2-4e82-9fd4-81cfcd01abb9
+        traits:
+          additional:
+            - TRAIT1: invalid_trait
+  expected_messages: ["{'TRAIT1': 'invalid_trait'} is not of type 'string'"]
+traits_multiple_additional_traits_two_invalid:
+  config:
+    meta:
+      schema_version: '1.0'
+    providers:
+      - identification:
+          uuid: aa884151-b4e2-4e82-9fd4-81cfcd01abb9
+        traits:
+          additional:
+            - TRAIT1: invalid
+            - TRAIT2
+            - TRAIT3: invalid
+  expected_messages: ["{'TRAIT1': 'invalid'} is not of type 'string'"]
+traits_invalid_trait_name:
+  config:
+    meta:
+      schema_version: '1.0'
+    providers:
+      - identification:
+          uuid: aa884151-b4e2-4e82-9fd4-81cfcd01abb9
+        traits:
+          additional:
+            - INVALID_TRAIT_NAME_!@#$%^&*()_+
+  expected_messages: ["'INVALID_TRAIT_NAME_!@#$%^&*()_+' does not match '^[A-Z0-9_]{1,255}$'"]
