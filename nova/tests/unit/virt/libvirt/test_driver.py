@@ -25313,6 +25313,25 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         mock_et.assert_not_called()
         mock_isdir.assert_not_called()
 
+    @mock.patch('nova.virt.images.qemu_img_info',
+                return_value=mock.Mock(file_format="fake_fmt"))
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_rebase_with_qemu_img(self, mock_execute, mock_qemu_img_info):
+        """rebasing disk image to another backing file"""
+        self.drvr._rebase_with_qemu_img("disk", "backing_file")
+        mock_qemu_img_info.assert_called_once_with("backing_file")
+        mock_execute.assert_called_once_with('qemu-img', 'rebase',
+                                             '-b', 'backing_file', '-F',
+                                             'fake_fmt', 'disk')
+
+        # Flatten disk image when no backing file is given.
+        mock_qemu_img_info.reset_mock()
+        mock_execute.reset_mock()
+        self.drvr._rebase_with_qemu_img("disk", None)
+        self.assertEqual(0, mock_qemu_img_info.call_count)
+        mock_execute.assert_called_once_with('qemu-img', 'rebase',
+                                             '-b', '', 'disk')
+
 
 class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
     """Test for LibvirtDriver.get_all_volume_usage."""

@@ -2894,31 +2894,14 @@ class LibvirtDriver(driver.ComputeDriver):
         timer.start(interval=0.5).wait()
 
     @staticmethod
-    def _rebase_with_qemu_img(guest, device, active_disk_object,
-                              rebase_base):
-        """Rebase a device tied to a guest using qemu-img.
+    def _rebase_with_qemu_img(source_path, rebase_base):
+        """Rebase a disk using qemu-img.
 
-        :param guest:the Guest which owns the device being rebased
-        :type guest: nova.virt.libvirt.guest.Guest
-        :param device: the guest block device to rebase
-        :type device: nova.virt.libvirt.guest.BlockDevice
-        :param active_disk_object: the guest block device to rebase
-        :type active_disk_object: nova.virt.libvirt.config.\
-                                    LibvirtConfigGuestDisk
+        :param source_path: the disk source path to rebase
+        :type source_path: string
         :param rebase_base: the new parent in the backing chain
         :type rebase_base: None or string
         """
-
-        # It's unsure how well qemu-img handles network disks for
-        # every protocol. So let's be safe.
-        active_protocol = active_disk_object.source_protocol
-        if active_protocol is not None:
-            msg = _("Something went wrong when deleting a volume snapshot: "
-                    "rebasing a %(protocol)s network disk using qemu-img "
-                    "has not been fully tested") % {'protocol':
-                    active_protocol}
-            LOG.error(msg)
-            raise exception.InternalError(msg)
 
         if rebase_base is None:
             # If backing_file is specified as "" (the empty string), then
@@ -2934,7 +2917,7 @@ class LibvirtDriver(driver.ComputeDriver):
             b_file_fmt = images.qemu_img_info(backing_file).file_format
             qemu_img_extra_arg = ['-F', b_file_fmt]
 
-        qemu_img_extra_arg.append(active_disk_object.source_path)
+        qemu_img_extra_arg.append(source_path)
         # execute operation with disk concurrency semaphore
         with compute_utils.disk_ops_semaphore:
             processutils.execute("qemu-img", "rebase", "-b", backing_file,
@@ -3082,7 +3065,18 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 LOG.debug('Guest is not running so doing a block rebase '
                           'using "qemu-img rebase"', instance=instance)
-                self._rebase_with_qemu_img(guest, dev, active_disk_object,
+
+                # It's unsure how well qemu-img handles network disks for
+                # every protocol. So let's be safe.
+                active_protocol = active_disk_object.source_protocol
+                if active_protocol is not None:
+                    msg = _("Something went wrong when deleting a volume "
+                            "snapshot: rebasing a %(protocol)s network disk "
+                            "using qemu-img has not been fully tested"
+                           ) % {'protocol': active_protocol}
+                    LOG.error(msg)
+                    raise exception.InternalError(msg)
+                self._rebase_with_qemu_img(active_disk_object.source_path,
                                            rebase_base)
 
         else:
