@@ -2602,7 +2602,7 @@ class ComputeManager(manager.Manager):
                 arqs = self._get_bound_arq_resources(
                         context, dp_name, instance, accel_uuids)
         except (Exception, eventlet.timeout.Timeout) as exc:
-            LOG.exception(exc.format_message())
+            LOG.exception(exc)
             self._build_resources_cleanup(instance, network_info)
             compute_utils.delete_arqs_if_needed(context, instance)
             msg = _('Failure getting accelerator requests.')
