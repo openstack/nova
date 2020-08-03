@@ -11,10 +11,10 @@ mock>=3.0.0 # BSD
 psycopg2>=2.7 # LGPL/ZPL
 PyMySQL>=0.7.6 # MIT License
 python-barbicanclient>=4.5.2 # Apache-2.0
-python-ironicclient!=2.7.1,>=2.7.0 # Apache-2.0
+python-ironicclient>=3.0.0 # Apache-2.0
 requests-mock>=1.2.0 # Apache-2.0
 oslotest>=3.8.0 # Apache-2.0
-stestr>=1.0.0 # Apache-2.0
+stestr>=2.0.0 # Apache-2.0
 osprofiler>=1.4.0 # Apache-2.0
 testresources>=2.0.0 # Apache-2.0/BSD
 testscenarios>=0.4 # Apache-2.0/BSD
